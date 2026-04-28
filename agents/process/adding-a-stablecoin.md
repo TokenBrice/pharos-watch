@@ -2,9 +2,9 @@
 
 Reference for adding a tracked asset to Pharos.
 
-Current source of truth is the JSON registry under `shared/data/stablecoins/`, loaded by `shared/lib/stablecoins/index.ts` and validated by `shared/lib/stablecoins/schema.ts`. Pre-launch entries live in their own `pre-launch.json` file. The older `shared/lib/stablecoins.ts` and helper-constructor paths are obsolete; the Claude/Codex skills (`stablecoin-info-fetch`, `contract-populate`, `contract-enrich`, `reserve-research`, `write-ai-summaries`, `resilience-classify`, `pre-launch-update`, `coingecko-id-verif`) remain supported and can be used per their own triggers.
+Current source of truth is the per-coin JSON registry under `shared/data/stablecoins/coins/*.json`, loaded through the generated runtime aggregate `shared/data/stablecoins/coins.generated.json`, and validated by `shared/lib/stablecoins/schema.ts`. Pre-launch entries are ordinary per-coin files with `status: "pre-launch"`. The older `shared/lib/stablecoins.ts`, helper-constructor paths, and legacy category-shard edit paths are obsolete; the Claude/Codex skills (`stablecoin-info-fetch`, `contract-populate`, `contract-enrich`, `reserve-research`, `write-ai-summaries`, `resilience-classify`, `pre-launch-update`, `coingecko-id-verif`) remain supported and can be used per their own triggers.
 
-> Completion gate: do not consider the job done until every phase below has been evaluated. The minimum normal diff is the registry JSON, `shared/data/stablecoins/canonical-order.json`, `data/logos.json`, and `data/ai-summaries.json`. If the asset needs runtime coverage, also evaluate yield, live reserves, redemption backstops, mint/burn, Bluechip, and history-backfill branches.
+> Completion gate: do not consider the job done until every phase below has been evaluated. The minimum normal diff is the per-coin registry JSON, regenerated `shared/data/stablecoins/coins.generated.json`, `shared/data/stablecoins/canonical-order.json`, `data/logos.json`, and `data/ai-summaries.json`. If the asset needs runtime coverage, also evaluate yield, live reserves, redemption backstops, mint/burn, Bluechip, and history-backfill branches.
 
 ---
 
@@ -12,11 +12,9 @@ Current source of truth is the JSON registry under `shared/data/stablecoins/`, l
 
 | File | Purpose |
 |------|---------|
-| `shared/data/stablecoins/usd-major.json` | Major active USD-pegged assets |
-| `shared/data/stablecoins/usd-minor.json` | Long-tail active USD-pegged assets |
-| `shared/data/stablecoins/non-usd.json` | Active non-USD fiat pegs and `VAR` assets |
-| `shared/data/stablecoins/commodity.json` | Active gold/silver-pegged assets |
-| `shared/data/stablecoins/pre-launch.json` | All pre-launch entries regardless of peg |
+| `shared/data/stablecoins/coins/*.json` | Editable source of truth for active and pre-launch stablecoin metadata |
+| `shared/data/stablecoins/coins.generated.json` | Generated/runtime aggregate; regenerate with `tsx scripts/generate-stablecoin-per-coin-asset.ts` |
+| `shared/data/stablecoins/usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, `pre-launch.json` | Read-only legacy compatibility shells; do not add entries |
 | `shared/data/stablecoins/canonical-order.json` | Canonical tracked order used to build `TRACKED_STABLECOINS` |
 | `shared/data/stablecoins/AGENTS.md` | Agent notes pinned to the registry directory |
 | `data/logos.json` | Static logo map used by the frontend |
@@ -43,7 +41,9 @@ Useful repo references before editing:
 ## Guardrails
 
 - Use canonical Pharos IDs in `ticker-issuer` format, all lowercase.
-- New tracked entries belong in JSON assets, not in executable TypeScript arrays.
+- New tracked entries belong in per-coin JSON assets, not in executable TypeScript arrays or legacy category shards.
+- Regenerate `shared/data/stablecoins/coins.generated.json` after per-coin metadata edits; do not edit the generated aggregate by hand.
+- Keep `shared/data/stablecoins/usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, and `pre-launch.json` empty compatibility shells. `npm run check:stablecoin-data` guards this.
 - New keys in `data/logos.json` and `data/ai-summaries.json` must use canonical stablecoin IDs even though legacy numeric keys still exist.
 - Do not add manual supply overrides. Pharos uses DefiLlama first, then the existing fallback paths documented in `docs/data-pipeline.md`.
 - Do not treat `infrastructures` and `dependencies` as interchangeable. `infrastructures` is project taxonomy; `dependencies` is the asset graph.
@@ -57,7 +57,7 @@ Useful repo references before editing:
 
 ### 0a. Active vs pre-launch
 
-Both feed into `TRACKED_STABLECOINS`, but they live in different registry files and behave differently at runtime:
+Both feed into `TRACKED_STABLECOINS` from the per-coin catalog, but they behave differently at runtime:
 
 - `status` omitted or `"active"`: included in `ACTIVE_STABLECOINS`, worker/runtime surfaces can process it.
 - `status: "pre-launch"`: excluded from `ACTIVE_STABLECOINS`, appears on `/upcoming/`, and renders the pre-launch detail variant instead of the normal live detail page.
@@ -74,13 +74,12 @@ If the asset is pre-launch, also collect:
 
 Do not expect pre-launch assets to show up in live worker-driven coverage until the status flips to active.
 
-### 0b. Pick the correct registry file
+### 0b. Create or update the per-coin registry file
 
-- `pre-launch.json`: every asset with `status: "pre-launch"`, regardless of peg. Move the entry out once it activates.
-- `usd-major.json`: only for clearly top-tier active USD assets that belong with the major cohort already curated there.
-- `usd-minor.json`: default for most active USD-pegged additions.
-- `non-usd.json`: active non-USD fiat pegs plus `VAR`.
-- `commodity.json`: active `GOLD` and `SILVER`.
+- Add or update exactly one JSON file under `shared/data/stablecoins/coins/`, normally named for the canonical stablecoin ID.
+- Set `status: "pre-launch"` in that per-coin file for upcoming assets, regardless of peg. Remove the pre-launch status once the asset activates and has enough live metadata for active public surfaces.
+- Do not add entries to `pre-launch.json`, `usd-major.json`, `usd-minor.json`, `non-usd.json`, or `commodity.json`; those legacy shards are read-only compatibility shells and should remain empty.
+- After editing per-coin files, regenerate `shared/data/stablecoins/coins.generated.json`.
 
 ### 0c. Update canonical order
 
@@ -132,7 +131,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 ### Always collect
 
 - `id`, `name`, `symbol`
-- target registry file
+- target per-coin registry file
 - lifecycle status: active or pre-launch
 - `flags.backing`
 - `flags.pegCurrency`
@@ -275,7 +274,7 @@ Override when the defaults would hide real structure, especially for:
 
 ## Phase 4 - Edit The Registry
 
-Add the new object to the chosen JSON file using current field names and current enum values.
+Add the new object to the asset's per-coin JSON file using current field names and current enum values.
 
 ### Minimal active-asset skeleton
 
@@ -313,7 +312,8 @@ Add the new object to the chosen JSON file using current field names and current
 
 ### Current registry editing checklist
 
-- Add the JSON object to the right file.
+- Add or update the asset's JSON object in `shared/data/stablecoins/coins/*.json`.
+- Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/generate-stablecoin-per-coin-asset.ts`.
 - Add the ID to `shared/data/stablecoins/canonical-order.json`.
 - Keep new keys canonical and consistent with the current schema.
 - For active assets, ensure there is a runtime cache admission path:
@@ -496,6 +496,7 @@ Use `tags` sparingly for editorial categorization, not for core classification.
 For a normal stablecoin addition, run at least:
 
 ```bash
+tsx scripts/generate-stablecoin-per-coin-asset.ts
 npm run check:stablecoin-data
 npm run validate:prebuild
 npm test

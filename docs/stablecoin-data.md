@@ -6,8 +6,9 @@ Stablecoin metadata is the checked-in source of truth for the asset universe. Us
 
 | Surface | Source |
 | --- | --- |
-| Legacy metadata shards | `shared/data/stablecoins/usd-major.json`, `shared/data/stablecoins/usd-minor.json`, `shared/data/stablecoins/non-usd.json`, `shared/data/stablecoins/commodity.json`, `shared/data/stablecoins/pre-launch.json` |
-| Per-coin migration sources | `shared/data/stablecoins/coins/*.json`, compiled into `shared/data/stablecoins/coins.generated.json` for runtime imports |
+| Editable catalog source of truth | `shared/data/stablecoins/coins/*.json` |
+| Generated runtime aggregate | `shared/data/stablecoins/coins.generated.json`, regenerated with `tsx scripts/generate-stablecoin-per-coin-asset.ts` |
+| Legacy compatibility shells | `shared/data/stablecoins/usd-major.json`, `shared/data/stablecoins/usd-minor.json`, `shared/data/stablecoins/non-usd.json`, `shared/data/stablecoins/commodity.json`, `shared/data/stablecoins/pre-launch.json` |
 | Canonical display/order list | `shared/data/stablecoins/canonical-order.json` |
 | Loader and active/pre-launch splits | `shared/lib/stablecoins/index.ts` |
 | Defunct/cemetery metadata | `shared/data/dead-stablecoins.json`, loaded separately by `shared/lib/dead-stablecoins.ts` |
@@ -18,25 +19,26 @@ Stablecoin metadata is the checked-in source of truth for the asset universe. Us
 
 `ACTIVE_STABLECOINS` excludes pre-launch entries. PSI-only shadow assets are intentionally outside the public tracked registry and exist only for historical PSI replay.
 
-During `WS-7` migration, the catalog is intentionally mixed-source:
+The editable stablecoin catalog lives in per-coin files under `shared/data/stablecoins/coins/*.json`. `shared/data/stablecoins/coins.generated.json` is the checked-in generated/runtime aggregate; do not edit it by hand. Regenerate it after catalog edits with:
 
-- legacy shards remain supported for compatibility
-- new per-coin files may live under `shared/data/stablecoins/coins/`
-- a stablecoin ID may exist in exactly one source system at a time
-- `shared/data/stablecoins/coins.generated.json` is the checked-in runtime aggregate for per-coin files
+```bash
+tsx scripts/generate-stablecoin-per-coin-asset.ts
+```
+
+Legacy category shards remain only as read-only compatibility shells. Do not add or move entries into `usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, or `pre-launch.json`; they should remain empty, and `npm run check:stablecoin-data` guards that source layout.
 
 ## Editing Rules
 
 - Keep IDs canonical and stable: lowercase `ticker-issuer` format, aligned with `shared/lib/stablecoin-id-registry.ts`.
-- Add the entry to exactly one source system, then update `canonical-order.json`.
-- If the entry lives in `shared/data/stablecoins/coins/*.json`, regenerate `shared/data/stablecoins/coins.generated.json`.
+- Add or update exactly one file under `shared/data/stablecoins/coins/*.json`, then update `canonical-order.json`.
+- Regenerate `shared/data/stablecoins/coins.generated.json` after per-coin edits.
 - Preserve existing supply policy. Primary supply comes from DefiLlama through the existing fallback path; do not add manual, on-chain, CMC, or DEX supply overrides.
 - Contract metadata belongs under each coin's `contracts` array. Use verified chain IDs and decimals from source metadata or explorers before adding them.
 - Use `liveReservesConfig`, `yieldConfig`, and other feature configs only when the relevant pipeline already supports that source family.
 - `variantOf` and `variantKind` are active-only parent-wrapper metadata. Use them only for wrapped/staked, strategy-vault, or bond-leg products whose user expectation is still direct exposure to another tracked stablecoin; they co-require, the parent must be active, non-variant, and non-`navToken`, and the child must keep `pegReferenceId === variantOf` plus `flags.navToken === true`.
-- Pre-launch assets stay in `pre-launch.json` until they have enough live metadata for active public surfaces.
-- Shadow assets belong only in `shared/lib/shadow-stablecoins.ts`, not in the main JSON shards.
-- Duplicate IDs across legacy shards and per-coin files are invalid and fail validation.
+- Pre-launch assets are ordinary per-coin catalog files with `status: "pre-launch"` until they have enough live metadata for active public surfaces.
+- Shadow assets belong only in `shared/lib/shadow-stablecoins.ts`, not in the editable per-coin catalog.
+- Duplicate IDs across per-coin files or legacy compatibility shells are invalid and fail validation.
 
 ## Required Checks
 
@@ -53,7 +55,7 @@ If the change affects page counts, feature coverage, reserve coverage, source fa
 
 ## Cache Admission
 
-`scripts/check-stablecoin-data.ts` validates schema shape, canonical-order consistency, mixed-source duplicate IDs, `coins.generated.json` freshness, wrapper-variant invariants, and whether active assets have a static path into `/api/stablecoins` cache admission. If that check fails, fix metadata or pipeline support rather than bypassing the guard.
+`scripts/check-stablecoin-data.ts` validates schema shape, canonical-order consistency, duplicate IDs, legacy-shell emptiness, `coins.generated.json` freshness, wrapper-variant invariants, and whether active assets have a static path into `/api/stablecoins` cache admission. If that check fails, fix metadata or pipeline support rather than bypassing the guard.
 
 Common admission fields:
 
