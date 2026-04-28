@@ -15,6 +15,11 @@ Goal: plan a ClaudeVille-like Pharos special page: an old-school fantasy RPG isl
 - `07-review.md` — independent review notes and revisions.
 - `08-implementation-plan.md` — precise replacement plan for shipping PharosVille at `/pharosville/`.
 - `09-xhigh-review-synthesis.md` — five-agent xhigh review synthesis and plan corrections.
+- `10-v1-refinement-plan.md` — refinement plan for the current barebones v1 route, informed by a six-agent follow-up exploration.
+- `11-pixellab-phase-2-lighthouse-plan.md` — Pixellab MCP Phase 2 plan and Alexandria-style lighthouse proof workflow.
+- `12-chain-harbor-docks-plan.md` — top-six chain harbor dock sprite replacement plan.
+- `13-ship-liveliness-motion-plan.md` — deterministic ship movement, chain-presence docking cadence, and peg-risk water-zone implementation plan.
+- `14-ship-liveliness-handover.md` — handover notes for ship motion implementation, runtime debug fields, and Phase 5 validation follow-up.
 
 ## Primary Inputs Inspected
 
