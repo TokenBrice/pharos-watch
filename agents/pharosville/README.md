@@ -13,7 +13,7 @@ Goal: plan a ClaudeVille-like Pharos special page: an old-school fantasy RPG isl
 - `05-rollout-plan.md` — phased implementation plan with deliverables and validation.
 - `06-risks-and-validation.md` — main challenges, mitigations, testing plan, and acceptance criteria.
 - `07-review.md` — independent review notes and revisions.
-- `08-implementation-plan.md` — precise replacement plan for shipping PharosVille at `/lighthouse/`.
+- `08-implementation-plan.md` — precise replacement plan for shipping PharosVille at `/pharosville/`.
 - `09-xhigh-review-synthesis.md` — five-agent xhigh review synthesis and plan corrections.
 
 ## Primary Inputs Inspected
@@ -55,6 +55,6 @@ ClaudeVille:
 
 ## Summary Verdict
 
-Feasible, but it should be treated as a product surface, not a decorative map. The current implementation target is a full visual replacement of `/lighthouse/` using a new world model and renderer under `src/app/lighthouse/`, inspired by ClaudeVille's Canvas 2D architecture and sprite workflow. Screens below `1280px` are a desktop-only fallback for v0.1, not a mobile/tablet canvas. Existing Pharos endpoints are sufficient without Worker changes. Pixellab is suitable for the asset pipeline after the renderer and data contract are stable.
+Feasible, but it should be treated as a product surface, not a decorative map. The current implementation target is a full visual replacement of `/pharosville/` using a new world model and renderer under `src/app/pharosville/`, inspired by ClaudeVille's Canvas 2D architecture and sprite workflow. Screens below `1280px` are a desktop-only fallback for v0.1, not a mobile/tablet canvas. Existing Pharos endpoints are sufficient without Worker changes. Pixellab is suitable for the asset pipeline after the renderer and data contract are stable.
 
 Independent xhigh review originally returned "conditional go" and identified data-contract, accessibility, and performance gaps. Those fixes have been folded into this pack; see `07-review.md` for the review trail and final readiness notes.

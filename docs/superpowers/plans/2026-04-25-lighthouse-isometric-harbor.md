@@ -21,7 +21,7 @@
 Single source of truth. Every code-drawn `Graphics` call and every PixelLab asset must clamp to these.
 
 ```ts
-// src/app/lighthouse/systems/palette.ts
+// src/app/pharosville/systems/palette.ts
 export const HARBOR_PALETTE = {
   // Sea & sky
   deep_sea_2:        "#0a0e1d",
@@ -110,7 +110,7 @@ This replaces Section 6 of the source spec. Every entry cites a real symbol veri
 ### 0.4 File structure (locked)
 
 ```
-src/app/lighthouse/
+src/app/pharosville/
 ├── page.tsx                              # SEO/metadata; static
 ├── client.tsx                            # SSR boundary, hooks, error wrapper
 ├── harbor-scene-client.tsx               # Canvas 2D mount, RAF loop; ssr:false dynamic-imported
@@ -180,14 +180,14 @@ git commit -m "spike: install pixi/gsap for CSP probe"
 ### Task 0.2: Build the smallest hello-world canvas
 
 **Files (transient, deleted at end of Phase 0):**
-- Create: src/app/lighthouse-spike/page.tsx (no longer present after spike cleanup)
-- Create: src/app/lighthouse-spike/client.tsx (no longer present after spike cleanup)
-- Create: src/app/lighthouse-spike/hello-pixi.tsx (no longer present after spike cleanup)
+- Create: src/app/pharosville-spike/page.tsx (no longer present after spike cleanup)
+- Create: src/app/pharosville-spike/client.tsx (no longer present after spike cleanup)
+- Create: src/app/pharosville-spike/hello-pixi.tsx (no longer present after spike cleanup)
 
 - [ ] **Step 1: Write the page route**
 
 ```tsx
-// src/app/lighthouse-spike/page.tsx
+// src/app/pharosville-spike/page.tsx
 import dynamic from "next/dynamic";
 const Client = dynamic(() => import("./client").then((m) => ({ default: m.SpikeClient })), { ssr: false });
 export const metadata = { robots: { index: false, follow: false } };
@@ -199,7 +199,7 @@ export default function Page() {
 - [ ] **Step 2: Write the client wrapper**
 
 ```tsx
-// src/app/lighthouse-spike/client.tsx
+// src/app/pharosville-spike/client.tsx
 "use client";
 import dynamic from "next/dynamic";
 const HelloPixi = dynamic(() => import("./hello-pixi").then((m) => ({ default: m.HelloPixi })), { ssr: false });
@@ -211,7 +211,7 @@ export function SpikeClient() {
 - [ ] **Step 3: Write the Pixi probe**
 
 ```tsx
-// src/app/lighthouse-spike/hello-pixi.tsx
+// src/app/pharosville-spike/hello-pixi.tsx
 "use client";
 import { useEffect, useRef, useState } from "react";
 
@@ -316,7 +316,7 @@ Write findings to `docs/superpowers/audits/2026-04-25-pixi-v8-csp.md`:
 - [ ] **Step 8: Delete the spike route and commit**
 
 ```bash
-rm -rf src/app/lighthouse-spike
+rm -rf src/app/pharosville-spike
 git add -A
 git commit -m "spike: pixi v8 CSP probe results recorded"
 ```
@@ -345,13 +345,13 @@ Goal: ship a deletable scaffold (route + dynamic boundary + a11y ledger + palett
 ### Task 1.2: Anchor palette constant + tint helper
 
 **Files:**
-- Create: `src/app/lighthouse/systems/palette.ts`
-- Create: `src/app/lighthouse/systems/palette.test.ts`
+- Create: `src/app/pharosville/systems/palette.ts`
+- Create: `src/app/pharosville/systems/palette.test.ts`
 
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// src/app/lighthouse/systems/palette.test.ts
+// src/app/pharosville/systems/palette.test.ts
 import { describe, it, expect } from "vitest";
 import { HARBOR_PALETTE, hexToInt, paletteOrThrow } from "./palette";
 
@@ -383,7 +383,7 @@ describe("HARBOR_PALETTE", () => {
 - [ ] **Step 2: Run, expect fail**
 
 ```bash
-npx vitest run src/app/lighthouse/systems/palette.test.ts
+npx vitest run src/app/pharosville/systems/palette.test.ts
 ```
 
 Expected: FAIL — module not found.
@@ -391,7 +391,7 @@ Expected: FAIL — module not found.
 - [ ] **Step 3: Implement**
 
 ```ts
-// src/app/lighthouse/systems/palette.ts
+// src/app/pharosville/systems/palette.ts
 export const HARBOR_PALETTE = {
   deep_sea_2: "#0a0e1d",
   deep_sea_1: "#141a30",
@@ -437,7 +437,7 @@ export function paletteOrThrow(key: HarborPaletteKey): string {
 - [ ] **Step 4: Run, expect pass**
 
 ```bash
-npx vitest run src/app/lighthouse/systems/palette.test.ts
+npx vitest run src/app/pharosville/systems/palette.test.ts
 ```
 
 Expected: PASS, 5 tests.
@@ -445,7 +445,7 @@ Expected: PASS, 5 tests.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/app/lighthouse/systems/palette.ts src/app/lighthouse/systems/palette.test.ts
+git add src/app/pharosville/systems/palette.ts src/app/pharosville/systems/palette.test.ts
 git commit -m "feat(lighthouse): anchor 24-color palette + tint helpers"
 ```
 
@@ -524,13 +524,13 @@ git commit -m "feat(psi): add PSI_SWEEP_DURATION constant for lighthouse beam"
 ### Task 1.4: Isometric projection math
 
 **Files:**
-- Create: `src/app/lighthouse/systems/isometric.ts`
-- Create: `src/app/lighthouse/systems/isometric.test.ts`
+- Create: `src/app/pharosville/systems/isometric.ts`
+- Create: `src/app/pharosville/systems/isometric.test.ts`
 
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// src/app/lighthouse/systems/isometric.test.ts
+// src/app/pharosville/systems/isometric.test.ts
 import { describe, it, expect } from "vitest";
 import { TILE_W, TILE_H, worldToScreen, screenToWorld, depthKey } from "./isometric";
 
@@ -573,13 +573,13 @@ describe("isometric projection", () => {
 - [ ] **Step 2: Run, expect fail**
 
 ```bash
-npx vitest run src/app/lighthouse/systems/isometric.test.ts
+npx vitest run src/app/pharosville/systems/isometric.test.ts
 ```
 
 - [ ] **Step 3: Implement**
 
 ```ts
-// src/app/lighthouse/systems/isometric.ts
+// src/app/pharosville/systems/isometric.ts
 export const TILE_W = 64;
 export const TILE_H = 32;
 export const SCENE_GRID = 40;
@@ -612,26 +612,26 @@ export function depthKey({ tileX, tileY, elevation }: DepthInput): number {
 - [ ] **Step 4: Run, expect pass**
 
 ```bash
-npx vitest run src/app/lighthouse/systems/isometric.test.ts
+npx vitest run src/app/pharosville/systems/isometric.test.ts
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/app/lighthouse/systems/isometric.ts src/app/lighthouse/systems/isometric.test.ts
+git add src/app/pharosville/systems/isometric.ts src/app/pharosville/systems/isometric.test.ts
 git commit -m "feat(lighthouse): isometric projection + depth key math"
 ```
 
 ### Task 1.5: Classification → BoatStyle mapping
 
 **Files:**
-- Create: `src/app/lighthouse/systems/classification-to-boat.ts`
-- Create: `src/app/lighthouse/systems/classification-to-boat.test.ts`
+- Create: `src/app/pharosville/systems/classification-to-boat.ts`
+- Create: `src/app/pharosville/systems/classification-to-boat.test.ts`
 
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// src/app/lighthouse/systems/classification-to-boat.test.ts
+// src/app/pharosville/systems/classification-to-boat.test.ts
 import { describe, it, expect } from "vitest";
 import { boatStyleFor } from "./classification-to-boat";
 
@@ -662,13 +662,13 @@ describe("boatStyleFor", () => {
 - [ ] **Step 2: Run, expect fail**
 
 ```bash
-npx vitest run src/app/lighthouse/systems/classification-to-boat.test.ts
+npx vitest run src/app/pharosville/systems/classification-to-boat.test.ts
 ```
 
 - [ ] **Step 3: Implement**
 
 ```ts
-// src/app/lighthouse/systems/classification-to-boat.ts
+// src/app/pharosville/systems/classification-to-boat.ts
 import type { GovernanceType, BackingType } from "@shared/lib/classification";
 
 export type BoatStyle = "galleon" | "brigantine" | "schooner" | "junk";
@@ -692,27 +692,27 @@ export function boatStyleFor({ governance, backing }: Input): BoatStyle {
 - [ ] **Step 4: Run, expect pass**
 
 ```bash
-npx vitest run src/app/lighthouse/systems/classification-to-boat.test.ts
+npx vitest run src/app/pharosville/systems/classification-to-boat.test.ts
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/app/lighthouse/systems/classification-to-boat.ts src/app/lighthouse/systems/classification-to-boat.test.ts
+git add src/app/pharosville/systems/classification-to-boat.ts src/app/pharosville/systems/classification-to-boat.test.ts
 git commit -m "feat(lighthouse): (governance, backing) -> boat style mapping"
 ```
 
 ### Task 1.6: SceneData type + adapter
 
 **Files:**
-- Create: `src/app/lighthouse/systems/scene-data.ts`
-- Create: `src/app/lighthouse/systems/scene-data.test.ts`
-- Create: `src/app/lighthouse/__fixtures__/scene-data.ts`
+- Create: `src/app/pharosville/systems/scene-data.ts`
+- Create: `src/app/pharosville/systems/scene-data.test.ts`
+- Create: `src/app/pharosville/__fixtures__/scene-data.ts`
 
 - [ ] **Step 1: Write fixture**
 
 ```ts
-// src/app/lighthouse/__fixtures__/scene-data.ts
+// src/app/pharosville/__fixtures__/scene-data.ts
 import type { ChainsResponse } from "@shared/types/chains";
 import type { StablecoinDataPayload } from "@shared/types/market";
 import type { StabilityIndexResponse } from "@shared/types/stability";
@@ -772,7 +772,7 @@ export const fixtureStablecoins = {
 - [ ] **Step 2: Write the failing test**
 
 ```ts
-// src/app/lighthouse/systems/scene-data.test.ts
+// src/app/pharosville/systems/scene-data.test.ts
 import { describe, it, expect } from "vitest";
 import { buildSceneData } from "./scene-data";
 import {
@@ -842,13 +842,13 @@ describe("buildSceneData", () => {
 - [ ] **Step 3: Run, expect fail**
 
 ```bash
-npx vitest run src/app/lighthouse/systems/scene-data.test.ts
+npx vitest run src/app/pharosville/systems/scene-data.test.ts
 ```
 
 - [ ] **Step 4: Implement**
 
 ```ts
-// src/app/lighthouse/systems/scene-data.ts
+// src/app/pharosville/systems/scene-data.ts
 import type { ChainsResponse, ChainSummary, ChainTopStablecoin } from "@shared/types/chains";
 import type { StablecoinDataPayload } from "@shared/types/market";
 import type { StabilityIndexResponse, StressSignalsAllResponse } from "@shared/types/stability";
@@ -1027,28 +1027,28 @@ function buildBoat(
 - [ ] **Step 5: Run, expect pass**
 
 ```bash
-npx vitest run src/app/lighthouse/systems/scene-data.test.ts
+npx vitest run src/app/pharosville/systems/scene-data.test.ts
 ```
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/app/lighthouse/systems/scene-data.ts \
-        src/app/lighthouse/systems/scene-data.test.ts \
-        src/app/lighthouse/__fixtures__/scene-data.ts
+git add src/app/pharosville/systems/scene-data.ts \
+        src/app/pharosville/systems/scene-data.test.ts \
+        src/app/pharosville/__fixtures__/scene-data.ts
 git commit -m "feat(lighthouse): SceneData adapter (hooks-agnostic)"
 ```
 
 ### Task 1.7: A11y ledger (single, replaces both legacy)
 
 **Files:**
-- Create: `src/app/lighthouse/lighthouse-a11y-ledger.tsx`
-- Create: `src/app/lighthouse/lighthouse-a11y-ledger.test.tsx`
+- Create: `src/app/pharosville/lighthouse-a11y-ledger.tsx`
+- Create: `src/app/pharosville/lighthouse-a11y-ledger.test.tsx`
 
 - [ ] **Step 1: Write the failing test**
 
 ```tsx
-// src/app/lighthouse/lighthouse-a11y-ledger.test.tsx
+// src/app/pharosville/lighthouse-a11y-ledger.test.tsx
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { LighthouseA11yLedger } from "./lighthouse-a11y-ledger";
@@ -1100,13 +1100,13 @@ describe("LighthouseA11yLedger", () => {
 - [ ] **Step 2: Run, expect fail**
 
 ```bash
-npx vitest run src/app/lighthouse/lighthouse-a11y-ledger.test.tsx
+npx vitest run src/app/pharosville/lighthouse-a11y-ledger.test.tsx
 ```
 
 - [ ] **Step 3: Implement**
 
 ```tsx
-// src/app/lighthouse/lighthouse-a11y-ledger.tsx
+// src/app/pharosville/lighthouse-a11y-ledger.tsx
 import type { SceneData } from "./systems/scene-data";
 
 export function LighthouseA11yLedger({ scene }: { scene: SceneData }) {
@@ -1165,28 +1165,28 @@ function formatUsd(n: number): string {
 - [ ] **Step 4: Run, expect pass**
 
 ```bash
-npx vitest run src/app/lighthouse/lighthouse-a11y-ledger.test.tsx
+npx vitest run src/app/pharosville/lighthouse-a11y-ledger.test.tsx
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/app/lighthouse/lighthouse-a11y-ledger.tsx \
-        src/app/lighthouse/lighthouse-a11y-ledger.test.tsx
+git add src/app/pharosville/lighthouse-a11y-ledger.tsx \
+        src/app/pharosville/lighthouse-a11y-ledger.test.tsx
 git commit -m "feat(lighthouse): unified sr-only a11y ledger"
 ```
 
 ### Task 1.8: Reduced-motion helper + timeline registry
 
 **Files:**
-- Create: `src/app/lighthouse/systems/reduced-motion.ts`
-- Create: `src/app/lighthouse/systems/timeline-registry.ts`
-- Create: `src/app/lighthouse/systems/reduced-motion.test.ts`
+- Create: `src/app/pharosville/systems/reduced-motion.ts`
+- Create: `src/app/pharosville/systems/timeline-registry.ts`
+- Create: `src/app/pharosville/systems/reduced-motion.test.ts`
 
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// src/app/lighthouse/systems/reduced-motion.test.ts
+// src/app/pharosville/systems/reduced-motion.test.ts
 import { describe, it, expect, vi } from "vitest";
 import { observeReducedMotion } from "./reduced-motion";
 
@@ -1219,13 +1219,13 @@ describe("observeReducedMotion", () => {
 - [ ] **Step 2: Run, expect fail**
 
 ```bash
-npx vitest run src/app/lighthouse/systems/reduced-motion.test.ts
+npx vitest run src/app/pharosville/systems/reduced-motion.test.ts
 ```
 
 - [ ] **Step 3: Implement**
 
 ```ts
-// src/app/lighthouse/systems/reduced-motion.ts
+// src/app/pharosville/systems/reduced-motion.ts
 type MM = (q: string) => MediaQueryList;
 
 export function observeReducedMotion(
@@ -1241,7 +1241,7 @@ export function observeReducedMotion(
 ```
 
 ```ts
-// src/app/lighthouse/systems/timeline-registry.ts
+// src/app/pharosville/systems/timeline-registry.ts
 import type gsapType from "gsap";
 
 export interface TimelineRegistry {
@@ -1265,50 +1265,50 @@ export function createTimelineRegistry(gsap: typeof gsapType): TimelineRegistry 
 - [ ] **Step 4: Run, expect pass**
 
 ```bash
-npx vitest run src/app/lighthouse/systems/reduced-motion.test.ts
+npx vitest run src/app/pharosville/systems/reduced-motion.test.ts
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/app/lighthouse/systems/reduced-motion.ts \
-        src/app/lighthouse/systems/timeline-registry.ts \
-        src/app/lighthouse/systems/reduced-motion.test.ts
+git add src/app/pharosville/systems/reduced-motion.ts \
+        src/app/pharosville/systems/timeline-registry.ts \
+        src/app/pharosville/systems/reduced-motion.test.ts
 git commit -m "feat(lighthouse): reduced-motion observer + timeline registry"
 ```
 
 ### Task 1.9: Page shell — `page.tsx` + `client.tsx` (no canvas yet)
 
 **Files:**
-- Create: `src/app/lighthouse/page.tsx` (overwrites old route)
-- Create: `src/app/lighthouse/client.tsx` (overwrites old client)
-- Delete: every other file currently under `src/app/lighthouse/`
-- Delete: every file under `src/app/lighthouse-2/`
+- Create: `src/app/pharosville/page.tsx` (overwrites old route)
+- Create: `src/app/pharosville/client.tsx` (overwrites old client)
+- Delete: every other file currently under `src/app/pharosville/`
+- Delete: every file under `src/app/pharosville-2/`
 
 - [ ] **Step 1: Delete legacy routes**
 
 ```bash
-rm -rf src/app/lighthouse-2
-rm src/app/lighthouse/cinematic-model.ts \
-   src/app/lighthouse/cinematic-model.test.ts \
-   src/app/lighthouse/lighthouse-stage.tsx \
-   src/app/lighthouse/lighthouse-stage.css \
-   src/app/lighthouse/lighthouse-stage.test.tsx \
-   src/app/lighthouse/lighthouse-fullscreen-dialog.tsx \
-   src/app/lighthouse/lighthouse-fullscreen-dialog.test.tsx \
-   src/app/lighthouse/lighthouse-a11y-ledger.tsx \
-   src/app/lighthouse/page.test.tsx \
-   src/app/lighthouse/client.tsx \
-   src/app/lighthouse/page.tsx
-rm -rf src/app/lighthouse/layers
+rm -rf src/app/pharosville-2
+rm src/app/pharosville/cinematic-model.ts \
+   src/app/pharosville/cinematic-model.test.ts \
+   src/app/pharosville/lighthouse-stage.tsx \
+   src/app/pharosville/lighthouse-stage.css \
+   src/app/pharosville/lighthouse-stage.test.tsx \
+   src/app/pharosville/lighthouse-fullscreen-dialog.tsx \
+   src/app/pharosville/lighthouse-fullscreen-dialog.test.tsx \
+   src/app/pharosville/lighthouse-a11y-ledger.tsx \
+   src/app/pharosville/page.test.tsx \
+   src/app/pharosville/client.tsx \
+   src/app/pharosville/page.tsx
+rm -rf src/app/pharosville/layers
 ```
 
-(The new `lighthouse-a11y-ledger.tsx` from Task 1.7 was created at the same path — re-add it from git after the deletion: `git checkout HEAD -- src/app/lighthouse/lighthouse-a11y-ledger.tsx src/app/lighthouse/lighthouse-a11y-ledger.test.tsx`.)
+(The new `lighthouse-a11y-ledger.tsx` from Task 1.7 was created at the same path — re-add it from git after the deletion: `git checkout HEAD -- src/app/pharosville/lighthouse-a11y-ledger.tsx src/app/pharosville/lighthouse-a11y-ledger.test.tsx`.)
 
 - [ ] **Step 2: Write the new page**
 
 ```tsx
-// src/app/lighthouse/page.tsx
+// src/app/pharosville/page.tsx
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
@@ -1347,7 +1347,7 @@ export default function LighthousePage() {
 - [ ] **Step 3: Write the new client (no Pixi yet — placeholder)**
 
 ```tsx
-// src/app/lighthouse/client.tsx
+// src/app/pharosville/client.tsx
 "use client";
 import dynamic from "next/dynamic";
 import { useChains } from "@/hooks/use-chains";
@@ -1401,7 +1401,7 @@ export function LighthouseClient() {
 - [ ] **Step 4: Stub `harbor-scene-client.tsx` (renders empty canvas)**
 
 ```tsx
-// src/app/lighthouse/harbor-scene-client.tsx
+// src/app/pharosville/harbor-scene-client.tsx
 "use client";
 import { useEffect, useRef } from "react";
 import type { SceneData } from "./systems/scene-data";
@@ -1432,7 +1432,7 @@ export function HarborSceneClient(_props: { scene: SceneData }) {
 }
 ```
 
-Also create `src/app/lighthouse/harbor-scene.css`:
+Also create `src/app/pharosville/harbor-scene.css`:
 
 ```css
 .harbor-scene-canvas {
@@ -1474,14 +1474,14 @@ git commit -m "feat(lighthouse): replace legacy routes with new shell + a11y led
 import { readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 
-const palette = await import("../src/app/lighthouse/systems/palette.ts").catch(() => null);
+const palette = await import("../src/app/pharosville/systems/palette.ts").catch(() => null);
 if (!palette) {
   console.error("[check-harbor-palette] could not import palette.ts");
   process.exit(2);
 }
 const allowed = new Set(Object.values(palette.HARBOR_PALETTE).map((h) => h.toLowerCase()));
 
-const files = execSync("git ls-files src/app/lighthouse | grep -E '\\.(ts|tsx)$' | grep -v test", { encoding: "utf8" })
+const files = execSync("git ls-files src/app/pharosville | grep -E '\\.(ts|tsx)$' | grep -v test", { encoding: "utf8" })
   .trim().split("\n").filter(Boolean);
 
 const offenders = [];
@@ -1585,14 +1585,14 @@ export interface FrameState {
 ### Task 2.1: Canvas mount, DPR-aware sizing, RAF loop
 
 **Files:**
-- Modify: `src/app/lighthouse/harbor-scene-client.tsx`
-- Modify: `src/app/lighthouse/harbor-scene.css`
-- Create: `src/app/lighthouse/systems/scene-render.ts`
+- Modify: `src/app/pharosville/harbor-scene-client.tsx`
+- Modify: `src/app/pharosville/harbor-scene.css`
+- Create: `src/app/pharosville/systems/scene-render.ts`
 
 - [ ] **Step 1: Implement the render orchestrator**
 
 ```ts
-// src/app/lighthouse/systems/scene-render.ts
+// src/app/pharosville/systems/scene-render.ts
 import type { SceneData } from "./scene-data";
 
 export interface FrameState {
@@ -1628,7 +1628,7 @@ export function createInitialFrameState(scene: SceneData): FrameState {
 - [ ] **Step 2: Replace stub with real Canvas 2D shell + RAF loop**
 
 ```tsx
-// src/app/lighthouse/harbor-scene-client.tsx
+// src/app/pharosville/harbor-scene-client.tsx
 "use client";
 import { useEffect, useRef } from "react";
 import { HARBOR_PALETTE } from "./systems/palette";
@@ -1703,7 +1703,7 @@ export function HarborSceneClient({ scene }: { scene: SceneData }) {
 - [ ] **Step 3: CSS**
 
 ```css
-/* src/app/lighthouse/harbor-scene.css */
+/* src/app/pharosville/harbor-scene.css */
 .harbor-scene-wrap {
   position: relative;
   width: 100%;
@@ -1732,22 +1732,22 @@ Expected: build succeeds, no SSR errors. `/lighthouse/` renders a flat 70vh dark
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/app/lighthouse/harbor-scene-client.tsx \
-        src/app/lighthouse/harbor-scene.css \
-        src/app/lighthouse/systems/scene-render.ts
+git add src/app/pharosville/harbor-scene-client.tsx \
+        src/app/pharosville/harbor-scene.css \
+        src/app/pharosville/systems/scene-render.ts
 git commit -m "feat(lighthouse): canvas 2d shell with DPR-aware RAF loop"
 ```
 
 ### Task 2.2: Sky layer (gradient + stars + moon)
 
 **Files:**
-- Create: `src/app/lighthouse/layers/sky-layer.ts`
-- Create: `src/app/lighthouse/systems/rng.ts` (deterministic LCG used by multiple layers)
+- Create: `src/app/pharosville/layers/sky-layer.ts`
+- Create: `src/app/pharosville/systems/rng.ts` (deterministic LCG used by multiple layers)
 
 - [ ] **Step 1: Deterministic RNG**
 
 ```ts
-// src/app/lighthouse/systems/rng.ts
+// src/app/pharosville/systems/rng.ts
 export function mulberry32(seed: number): () => number {
   let s = seed >>> 0;
   return () => {
@@ -1763,7 +1763,7 @@ export function mulberry32(seed: number): () => number {
 - [ ] **Step 2: Sky layer builder**
 
 ```ts
-// src/app/lighthouse/layers/sky-layer.ts
+// src/app/pharosville/layers/sky-layer.ts
 import { HARBOR_PALETTE } from "../systems/palette";
 import type { DrawableLayer, FrameState } from "../systems/scene-render";
 import { mulberry32 } from "../systems/rng";
@@ -1839,20 +1839,20 @@ Open `/lighthouse/` — confirm a starry night gradient renders with a moon top-
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/app/lighthouse/layers/sky-layer.ts \
-        src/app/lighthouse/systems/rng.ts \
-        src/app/lighthouse/harbor-scene-client.tsx
+git add src/app/pharosville/layers/sky-layer.ts \
+        src/app/pharosville/systems/rng.ts \
+        src/app/pharosville/harbor-scene-client.tsx
 git commit -m "feat(lighthouse): sky layer (gradient + stars + moon)"
 ```
 
 ### Task 2.3: Water layer — 3-frequency scanline waves
 
-**Files:** `src/app/lighthouse/layers/water-layer.ts`
+**Files:** `src/app/pharosville/layers/water-layer.ts`
 
 - [ ] **Step 1: Implement**
 
 ```ts
-// src/app/lighthouse/layers/water-layer.ts
+// src/app/pharosville/layers/water-layer.ts
 import { HARBOR_PALETTE } from "../systems/palette";
 import type { DrawableLayer, FrameState } from "../systems/scene-render";
 
@@ -1909,19 +1909,19 @@ DevTools → Rendering → Emulate CSS media feature `prefers-reduced-motion: re
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/app/lighthouse/layers/water-layer.ts \
-        src/app/lighthouse/harbor-scene-client.tsx
+git add src/app/pharosville/layers/water-layer.ts \
+        src/app/pharosville/harbor-scene-client.tsx
 git commit -m "feat(lighthouse): water layer with 3-frequency waves + foam"
 ```
 
 ### Task 2.4: Lamp/window light layer (atmosphere)
 
-**Files:** `src/app/lighthouse/layers/lamp-layer.ts`
+**Files:** `src/app/pharosville/layers/lamp-layer.ts`
 
 - [ ] **Step 1: Implement**
 
 ```ts
-// src/app/lighthouse/layers/lamp-layer.ts
+// src/app/pharosville/layers/lamp-layer.ts
 import { HARBOR_PALETTE } from "../systems/palette";
 import type { DrawableLayer, FrameState } from "../systems/scene-render";
 
@@ -1965,14 +1965,14 @@ const layers: DrawableLayer[] = [buildSkyLayer(), buildWaterLayer(), lampLayer];
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/app/lighthouse/layers/lamp-layer.ts \
-        src/app/lighthouse/harbor-scene-client.tsx
+git add src/app/pharosville/layers/lamp-layer.ts \
+        src/app/pharosville/harbor-scene-client.tsx
 git commit -m "feat(lighthouse): lamp layer scaffold (atmosphere)"
 ```
 
 ### Task 2.5: Auto-drift parallax breath
 
-**Files:** modify `src/app/lighthouse/harbor-scene-client.tsx`
+**Files:** modify `src/app/pharosville/harbor-scene-client.tsx`
 
 - [ ] **Step 1: Wrap the layer pass in a translated context**
 
@@ -1994,7 +1994,7 @@ Confirm the scene drifts gently (~3 minute cycle period); reduced-motion locks p
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/app/lighthouse/harbor-scene-client.tsx
+git add src/app/pharosville/harbor-scene-client.tsx
 git commit -m "feat(lighthouse): auto-drift parallax breath (reduced-motion safe)"
 ```
 
@@ -2011,13 +2011,13 @@ Goal: the hero island lighthouse with volumetric beam + boat factories for all f
 ### Task 3.1: Lighthouse sprite — tower + lantern + beam (Canvas 2D draw fn)
 
 **Files:**
-- Create: `src/app/lighthouse/sprites/lighthouse-sprite.ts`
-- Create: `src/app/lighthouse/sprites/lighthouse-sprite.test.ts`
+- Create: `src/app/pharosville/sprites/lighthouse-sprite.ts`
+- Create: `src/app/pharosville/sprites/lighthouse-sprite.test.ts`
 
 - [ ] **Step 1: Test the geometry constants**
 
 ```ts
-// src/app/lighthouse/sprites/lighthouse-sprite.test.ts
+// src/app/pharosville/sprites/lighthouse-sprite.test.ts
 import { describe, it, expect } from "vitest";
 import { LIGHTHOUSE_GEOM } from "./lighthouse-sprite";
 
@@ -2037,7 +2037,7 @@ describe("lighthouse geometry", () => {
 - [ ] **Step 2: Implement the draw function**
 
 ```ts
-// src/app/lighthouse/sprites/lighthouse-sprite.ts
+// src/app/pharosville/sprites/lighthouse-sprite.ts
 import { HARBOR_PALETTE } from "../systems/palette";
 
 export const LIGHTHOUSE_GEOM = {
@@ -2152,27 +2152,27 @@ export function drawLighthouse(
 - [ ] **Step 3: Run tests**
 
 ```bash
-npx vitest run src/app/lighthouse/sprites/lighthouse-sprite.test.ts
+npx vitest run src/app/pharosville/sprites/lighthouse-sprite.test.ts
 ```
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/app/lighthouse/sprites/lighthouse-sprite.ts \
-        src/app/lighthouse/sprites/lighthouse-sprite.test.ts
+git add src/app/pharosville/sprites/lighthouse-sprite.ts \
+        src/app/pharosville/sprites/lighthouse-sprite.test.ts
 git commit -m "feat(lighthouse): lighthouse draw fn (tower + lantern + beam)"
 ```
 
 ### Task 3.2: Boat sprite (4 styles, S/L sizes — Canvas 2D draw fn)
 
 **Files:**
-- Create: `src/app/lighthouse/sprites/boat-sprite.ts`
-- Create: `src/app/lighthouse/sprites/boat-sprite.test.ts`
+- Create: `src/app/pharosville/sprites/boat-sprite.ts`
+- Create: `src/app/pharosville/sprites/boat-sprite.test.ts`
 
 - [ ] **Step 1: Test boat sprite produces a Container with expected bounds**
 
 ```ts
-// src/app/lighthouse/sprites/boat-sprite.test.ts
+// src/app/pharosville/sprites/boat-sprite.test.ts
 import { describe, it, expect } from "vitest";
 import { BOAT_DIMENSIONS } from "./boat-sprite";
 
@@ -2195,7 +2195,7 @@ describe("boat dimensions", () => {
 - [ ] **Step 2: Implement the draw function**
 
 ```ts
-// src/app/lighthouse/sprites/boat-sprite.ts
+// src/app/pharosville/sprites/boat-sprite.ts
 import { HARBOR_PALETTE } from "../systems/palette";
 import type { BoatStyle } from "../systems/classification-to-boat";
 
@@ -2326,25 +2326,25 @@ function strokeLine(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: n
 - [ ] **Step 3: Run tests**
 
 ```bash
-npx vitest run src/app/lighthouse/sprites/boat-sprite.test.ts
+npx vitest run src/app/pharosville/sprites/boat-sprite.test.ts
 ```
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/app/lighthouse/sprites/boat-sprite.ts \
-        src/app/lighthouse/sprites/boat-sprite.test.ts
+git add src/app/pharosville/sprites/boat-sprite.ts \
+        src/app/pharosville/sprites/boat-sprite.test.ts
 git commit -m "feat(lighthouse): boat draw fn — 4 styles, 2 sizes, pennant + aura"
 ```
 
 ### Task 3.3: Boat layer (state map + per-frame draw with idle bob)
 
-**Files:** `src/app/lighthouse/layers/boat-layer.ts`
+**Files:** `src/app/pharosville/layers/boat-layer.ts`
 
 - [ ] **Step 1: Implement**
 
 ```ts
-// src/app/lighthouse/layers/boat-layer.ts
+// src/app/pharosville/layers/boat-layer.ts
 import type { DrawableLayer, FrameState } from "../systems/scene-render";
 import { drawBoat } from "../sprites/boat-sprite";
 import type { SceneBoat } from "../systems/scene-data";
@@ -2409,20 +2409,20 @@ function hashPhase(id: string): number {
 - [ ] **Step 2: Commit**
 
 ```bash
-git add src/app/lighthouse/layers/boat-layer.ts
+git add src/app/pharosville/layers/boat-layer.ts
 git commit -m "feat(lighthouse): boat layer with id-stable bob and Y-sort"
 ```
 
 ### Task 3.4: GSAP timelines — beam sweep + decoupled lantern pulse + lighthouse layer
 
 **Files:**
-- Create: `src/app/lighthouse/systems/animation.ts`
-- Create: `src/app/lighthouse/layers/lighthouse-layer.ts`
+- Create: `src/app/pharosville/systems/animation.ts`
+- Create: `src/app/pharosville/layers/lighthouse-layer.ts`
 
 - [ ] **Step 1: Animation helpers (renderer-agnostic — tween value objects)**
 
 ```ts
-// src/app/lighthouse/systems/animation.ts
+// src/app/pharosville/systems/animation.ts
 import gsap from "gsap";
 import type { TimelineRegistry } from "./timeline-registry";
 
@@ -2464,7 +2464,7 @@ export function setBeamSweepDuration(tween: gsap.core.Tween, seconds: number): v
 - [ ] **Step 2: Lighthouse layer — reads tweened state, draws each frame**
 
 ```ts
-// src/app/lighthouse/layers/lighthouse-layer.ts
+// src/app/pharosville/layers/lighthouse-layer.ts
 import { drawLighthouse } from "../sprites/lighthouse-sprite";
 import type { DrawableLayer, FrameState } from "../systems/scene-render";
 
@@ -2544,9 +2544,9 @@ Open `/lighthouse/` — beam rotates around the lantern (volumetric triangle), l
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/app/lighthouse/systems/animation.ts \
-        src/app/lighthouse/layers/lighthouse-layer.ts \
-        src/app/lighthouse/harbor-scene-client.tsx
+git add src/app/pharosville/systems/animation.ts \
+        src/app/pharosville/layers/lighthouse-layer.ts \
+        src/app/pharosville/harbor-scene-client.tsx
 git commit -m "feat(lighthouse): GSAP beam sweep + decoupled lantern pulse"
 ```
 
@@ -2562,12 +2562,12 @@ Goal: real harbours from real chains data, full diff-and-mutate sync, patrol rou
 
 ### Task 4.1: Harbor island draw fn
 
-**Files:** `src/app/lighthouse/sprites/harbor-island-sprite.ts`
+**Files:** `src/app/pharosville/sprites/harbor-island-sprite.ts`
 
 - [ ] **Step 1: Implement**
 
 ```ts
-// src/app/lighthouse/sprites/harbor-island-sprite.ts
+// src/app/pharosville/sprites/harbor-island-sprite.ts
 import { HARBOR_PALETTE } from "../systems/palette";
 import type { SceneHarbor } from "../systems/scene-data";
 
@@ -2657,18 +2657,18 @@ function poly(ctx: CanvasRenderingContext2D, pts: number[]): void {
 - [ ] **Step 2: Commit**
 
 ```bash
-git add src/app/lighthouse/sprites/harbor-island-sprite.ts
+git add src/app/pharosville/sprites/harbor-island-sprite.ts
 git commit -m "feat(lighthouse): harbor island draw fn (resilience-tiered docks)"
 ```
 
 ### Task 4.2: Harbor layer + scene placement (Canvas 2D)
 
-**Files:** `src/app/lighthouse/layers/harbor-layer.ts`
+**Files:** `src/app/pharosville/layers/harbor-layer.ts`
 
 - [ ] **Step 1: Implement** with off-center lighthouse anchor and triangle composition
 
 ```ts
-// src/app/lighthouse/layers/harbor-layer.ts
+// src/app/pharosville/layers/harbor-layer.ts
 import { drawHarborIsland } from "../sprites/harbor-island-sprite";
 import { worldToScreen } from "../systems/isometric";
 import type { DrawableLayer, FrameState } from "../systems/scene-render";
@@ -2740,20 +2740,20 @@ export function buildHarborLayer(): HarborLayerAPI {
 - [ ] **Step 2: Commit**
 
 ```bash
-git add src/app/lighthouse/layers/harbor-layer.ts
+git add src/app/pharosville/layers/harbor-layer.ts
 git commit -m "feat(lighthouse): harbor layer with off-center triangle composition"
 ```
 
 ### Task 4.3: Patrol route generator + sailing boats
 
 **Files:**
-- Create: `src/app/lighthouse/systems/patrol.ts`
-- Create: `src/app/lighthouse/systems/patrol.test.ts`
+- Create: `src/app/pharosville/systems/patrol.ts`
+- Create: `src/app/pharosville/systems/patrol.test.ts`
 
 - [ ] **Step 1: Test path generator**
 
 ```ts
-// src/app/lighthouse/systems/patrol.test.ts
+// src/app/pharosville/systems/patrol.test.ts
 import { describe, it, expect } from "vitest";
 import { generatePatrolPath } from "./patrol";
 
@@ -2780,7 +2780,7 @@ describe("generatePatrolPath", () => {
 - [ ] **Step 2: Implement**
 
 ```ts
-// src/app/lighthouse/systems/patrol.ts
+// src/app/pharosville/systems/patrol.ts
 export interface Pt { x: number; y: number; }
 
 export function generatePatrolPath(home: Pt, beacon: Pt, seed: string): Pt[] {
@@ -2807,14 +2807,14 @@ function stringRng(seed: string): () => number {
 - [ ] **Step 3: Run tests, commit**
 
 ```bash
-npx vitest run src/app/lighthouse/systems/patrol.test.ts
-git add src/app/lighthouse/systems/patrol.ts src/app/lighthouse/systems/patrol.test.ts
+npx vitest run src/app/pharosville/systems/patrol.test.ts
+git add src/app/pharosville/systems/patrol.ts src/app/pharosville/systems/patrol.test.ts
 git commit -m "feat(lighthouse): deterministic Bezier patrol path generator"
 ```
 
 ### Task 4.4: Scene render — apply SceneData to layers each render
 
-**Files:** modify `src/app/lighthouse/harbor-scene-client.tsx`
+**Files:** modify `src/app/pharosville/harbor-scene-client.tsx`
 
 - [ ] **Step 1: Apply scene whenever `scene` prop or canvas size changes**
 
@@ -2869,18 +2869,18 @@ useEffect(() => {
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/app/lighthouse/harbor-scene-client.tsx
+git add src/app/pharosville/harbor-scene-client.tsx
 git commit -m "feat(lighthouse): scene application effect (live data)"
 ```
 
 ### Task 4.5: UI overlay (chain labels + keyboard targets)
 
-**Files:** `src/app/lighthouse/layers/ui-overlay.tsx`
+**Files:** `src/app/pharosville/layers/ui-overlay.tsx`
 
 - [ ] **Step 1: Implement HTML overlay**
 
 ```tsx
-// src/app/lighthouse/layers/ui-overlay.tsx
+// src/app/pharosville/layers/ui-overlay.tsx
 import type { SceneData } from "../systems/scene-data";
 
 interface OverlayProps {
@@ -2923,13 +2923,13 @@ Add `.harbor-overlay__label` styles to `harbor-scene.css`. The button is keyboar
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/app/lighthouse/layers/ui-overlay.tsx src/app/lighthouse/harbor-scene.css src/app/lighthouse/harbor-scene-client.tsx
+git add src/app/pharosville/layers/ui-overlay.tsx src/app/pharosville/harbor-scene.css src/app/pharosville/harbor-scene-client.tsx
 git commit -m "feat(lighthouse): keyboard-accessible HTML overlay for harbour labels"
 ```
 
 ### Task 4.6: Reduced-motion freeze logic (deterministic composition)
 
-**Files:** modify `src/app/lighthouse/harbor-scene-client.tsx`
+**Files:** modify `src/app/pharosville/harbor-scene-client.tsx`
 
 When reduced-motion fires (already pausing GSAP via parent timeline + `frame.reducedMotion = true`), we want a deterministic frozen frame:
 - Beam: rotate to point at the largest harbour (highest `totalUsd`).
@@ -2942,7 +2942,7 @@ The water/lamp/boat layers already check `frame.reducedMotion`. The only thing m
 - [ ] **Step 1: Add a freeze helper**
 
 ```ts
-// src/app/lighthouse/systems/reduced-motion-freeze.ts
+// src/app/pharosville/systems/reduced-motion-freeze.ts
 import type { SceneData } from "./scene-data";
 import type { HarborPlacement } from "../layers/harbor-layer";
 
@@ -2997,8 +2997,8 @@ const disposeRm = observeReducedMotion((m) => {
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/app/lighthouse/systems/reduced-motion-freeze.ts \
-        src/app/lighthouse/harbor-scene-client.tsx
+git add src/app/pharosville/systems/reduced-motion-freeze.ts \
+        src/app/pharosville/harbor-scene-client.tsx
 git commit -m "feat(lighthouse): deterministic reduced-motion freeze composition"
 ```
 
@@ -3012,12 +3012,12 @@ PR title: `feat(lighthouse): isometric harbor — Phase 4 harbours + live data`.
 
 ### Task 5.1: Playwright visual regression test
 
-**Files:** `tests/visual/lighthouse.spec.ts`
+**Files:** `tests/visual/pharosville.spec.ts`
 
 - [ ] **Step 1: Write the test** (uses reduced-motion for determinism)
 
 ```ts
-// tests/visual/lighthouse.spec.ts
+// tests/visual/pharosville.spec.ts
 import { test, expect } from "@playwright/test";
 
 test.use({ reducedMotion: "reduce" });
@@ -3033,8 +3033,8 @@ test("lighthouse renders deterministic frozen scene", async ({ page }) => {
 - [ ] **Step 2: Run, baseline, commit**
 
 ```bash
-npx playwright test tests/visual/lighthouse.spec.ts --update-snapshots
-git add tests/visual/lighthouse.spec.ts tests/visual/__screenshots__/
+npx playwright test tests/visual/pharosville.spec.ts --update-snapshots
+git add tests/visual/pharosville.spec.ts tests/visual/__screenshots__/
 git commit -m "test(lighthouse): playwright visual regression under reduced-motion"
 ```
 

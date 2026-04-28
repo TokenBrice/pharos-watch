@@ -1,4 +1,4 @@
-// src/app/lighthouse/harbor-scene-client.tsx
+// src/app/pharosville/harbor-scene-client.tsx
 "use client";
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";

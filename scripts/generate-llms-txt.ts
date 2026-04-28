@@ -81,7 +81,7 @@ const coreDataLinks = [
     "Historical and current market structure for non-USD stablecoin cohorts.",
   ],
   ["Chains", absolute("/chains/"), "Per-chain stablecoin distribution and health."],
-  ["PharosVille", absolute("/lighthouse/"), "Beta desktop RPG island-city prototype for Pharos stablecoin signals."],
+  ["PharosVille", absolute("/pharosville/"), "Beta desktop RPG island-city prototype for Pharos stablecoin signals."],
   ["Flows", absolute("/flows/"), "Mint/burn flow dashboards."],
   ["Blacklist Tracker", absolute("/blacklist/"), "Issuer freeze events and exposure."],
   ["Dependency Map", absolute("/dependency-map/"), "Inter-stablecoin dependency graph."],

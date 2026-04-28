@@ -9,7 +9,7 @@ export function FeedbackButton() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  if (pathname?.startsWith("/lighthouse")) return null;
+  if (pathname?.startsWith("/pharosville") || pathname?.startsWith("/lighthouse")) return null;
 
   return (
     <>

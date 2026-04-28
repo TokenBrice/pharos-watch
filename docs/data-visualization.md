@@ -136,7 +136,7 @@ Most Pharos narrative modules are SVG-based. For standard data volumes (≤250 c
 
 Animation is **CSS keyframes**, not JS rAF loops. The React component injects CSS custom properties for values that depend on data (`--psi-pulse-dur`, `--psi-beam-origin-x`, `--nc-beam-angle`). Keyframes stay static. No animation frame loops, no react-spring, no GSAP.
 
-Exception: PharosVille at `/lighthouse/` deliberately uses Canvas 2D for a ClaudeVille-style isometric world with tile projection, camera bounds, depth sorting, sprite layers, culling, and 200+ possible entities. Its compensating requirements are documented in [lighthouse-page.md](./lighthouse-page.md): pure world model, DOM parity, reduced-motion deterministic render with no running RAF loop, no canvas runtime below `1280px` wide or `760px` tall, backing-store budget checks, and no CSP relaxation.
+Exception: PharosVille at `/pharosville/` deliberately uses Canvas 2D for a ClaudeVille-style isometric world with tile projection, camera bounds, depth sorting, sprite layers, culling, and 200+ possible entities. Its compensating requirements are documented in [pharosville-page.md](./pharosville-page.md): pure world model, DOM parity, reduced-motion deterministic render with no running RAF loop, no canvas runtime below `1280px` wide or `760px` tall, backing-store budget checks, and no CSP relaxation.
 
 ### `prefers-reduced-motion` is a hard requirement
 

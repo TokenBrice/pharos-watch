@@ -10,13 +10,13 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFileSync } from "node:fs";
 
-const trackedFiles = execFileSync("git", ["ls-files", "src/app/lighthouse"], { encoding: "utf8" }).split("\n");
+const trackedFiles = execFileSync("git", ["ls-files", "src/app/pharosville"], { encoding: "utf8" }).split("\n");
 const files = [
-  "src/app/lighthouse/page.tsx",
-  "src/app/lighthouse/client.tsx",
-  "src/app/lighthouse/desktop-only-fallback.tsx",
-  "src/app/lighthouse/pharosville-world.tsx",
-  "src/app/lighthouse/pharosville.css",
+  "src/app/pharosville/page.tsx",
+  "src/app/pharosville/client.tsx",
+  "src/app/pharosville/desktop-only-fallback.tsx",
+  "src/app/pharosville/pharosville-world.tsx",
+  "src/app/pharosville/pharosville.css",
 ].filter((file) => existsSync(file) || trackedFiles.includes(file));
 
 const bannedPatterns = [

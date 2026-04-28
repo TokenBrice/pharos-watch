@@ -1,18 +1,18 @@
 # PharosVille Page
 
-Contract for `/lighthouse/`, the beta PharosVille route.
+Contract for `/pharosville/`, the beta PharosVille route.
 
-`/lighthouse/` is being replaced visually with a data-driven old-school RPG island city. The public URL remains `/lighthouse/` for now, while the page name and route copy use PharosVille.
+`/pharosville/` is a data-driven old-school RPG island city for exploring Pharos stablecoin signals.
 
 ## Route Contract
 
-- **Page shell:** `src/app/lighthouse/page.tsx`
-- **Viewport gate:** `src/app/lighthouse/client.tsx`
-- **Desktop fallback:** `src/app/lighthouse/desktop-only-fallback.tsx`
-- **World shell:** `src/app/lighthouse/pharosville-world.tsx`
-- **Route styles:** `src/app/lighthouse/pharosville.css`
+- **Page shell:** `src/app/pharosville/page.tsx`
+- **Viewport gate:** `src/app/pharosville/client.tsx`
+- **Desktop fallback:** `src/app/pharosville/desktop-only-fallback.tsx`
+- **World shell:** `src/app/pharosville/pharosville-world.tsx`
+- **Route styles:** `src/app/pharosville/pharosville.css`
 
-The Server Component owns metadata, canonical `/lighthouse/`, breadcrumb JSON-LD, and the screen-reader H1. The client component performs the desktop viewport gate before mounting the browser-only world module.
+The Server Component owns metadata, canonical `/pharosville/`, breadcrumb JSON-LD, and the screen-reader H1. The client component performs the desktop viewport gate before mounting the browser-only world module.
 
 Screens below `1280px` wide or `760px` tall render a DOM fallback with links to the main analytical pages. They must not mount the canvas, world queries, asset manifest loader, or sprite decode path.
 
@@ -64,7 +64,7 @@ Compensating gates:
 
 ## Visual Regression
 
-`tests/visual/lighthouse.spec.ts` covers:
+`tests/visual/pharosville.spec.ts` covers:
 
 - desktop canvas shell at `1440 x 1000`
 - nonblank canvas pixels, terrain/water pixel coverage, and backing-store budget
@@ -88,7 +88,7 @@ Visual tests route-mock `/api/*` and `/_site-data/*` data before asserting map s
 
 Update this file when any of the following change:
 
-- `/lighthouse/` route shell, metadata, or desktop gate
+- `/pharosville/` route shell, metadata, or desktop gate
 - PharosVille data mapping
 - canvas mount, renderer, or world-model contract
 - DOM parity, keyboard access, or detail-panel behavior

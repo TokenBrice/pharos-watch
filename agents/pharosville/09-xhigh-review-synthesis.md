@@ -18,7 +18,7 @@ The review verdict was conditional go. The concept is feasible and compelling, b
 
 ### Product And Data Semantics
 
-- `08` is now the source of truth: replace `/lighthouse/`, do not create `/pharosville/` for v0.1.
+- `08` is now the source of truth: PharosVille owns `/pharosville/`; `/lighthouse/` is legacy redirect-only.
 - Production must never render fixture/default market data as live analytics.
 - Risk placement now uses per-source freshness instead of a global stale flag.
 - NAV missing peg summary is handled before generic missing-data fog.
@@ -34,7 +34,7 @@ The review verdict was conditional go. The concept is feasible and compelling, b
 
 ### Frontend Integration
 
-- Docs, public docs registry, LLM output, smoke expectations, and visual tests must update in the same PR that changes `/lighthouse/`.
+- Docs, public docs registry, LLM output, smoke expectations, and visual tests must update in the same PR that changes `/pharosville/`.
 - A pure model PR can land first only if it is unused by the public route.
 - The desktop gate now precedes query hooks, world model creation, canvas loading, manifest fetch, and sprite decode.
 - The plan now calls out `shared/lib/public-docs.ts`, `docs/README.md`, `docs/scripts.md`, and `scripts/lib/validate-contract.mjs`.
@@ -78,7 +78,7 @@ The review verdict was conditional go. The concept is feasible and compelling, b
 
 ## Remaining Implementation Decisions
 
-- Whether beta `/lighthouse/` should remain in sitemap/LLM exports while `noindex,follow` is active. The plan allows it only if docs call out beta status.
+- Whether beta `/pharosville/` should remain in sitemap/LLM exports while `noindex,follow` is active. The plan allows it only if docs call out beta status.
 - Whether PR 0 lands as an unused model-only slice or PR 1 performs the first route-visible replacement with docs/tests in the same change.
 - Whether the first production art pass ships in v0.1 or waits for v0.1.x after placeholder renderer validation.
 

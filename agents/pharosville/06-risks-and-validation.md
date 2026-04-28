@@ -1,6 +1,6 @@
 # Risks And Validation
 
-Note: `08-implementation-plan.md` is the current source of truth for v0.1 acceptance gates. This file has been reconciled for `/lighthouse/` replacement and desktop-only world scope, but defer to `08` where details differ.
+Note: `08-implementation-plan.md` is the current source of truth for v0.1 acceptance gates. This file has been reconciled for `/pharosville/` replacement and desktop-only world scope, but defer to `08` where details differ.
 
 ## Major Risks
 

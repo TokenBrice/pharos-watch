@@ -1,28 +1,29 @@
 import type { Metadata } from "next";
-import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
-import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import Link from "next/link";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { LighthouseClient } from "./client";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "PharosVille",
-  description:
-    "A beta desktop RPG island-city prototype for exploring Pharos stablecoin market signals.",
-  canonical: "/lighthouse/",
+  description: "PharosVille has moved to /pharosville/.",
+  canonical: "/pharosville/",
   robots: {
     index: false,
     follow: true,
   },
 });
 
-export default function LighthousePage() {
+export default function LegacyLighthouseRedirectPage() {
   return (
-    <div className="relative left-1/2 w-[100vw] -translate-x-1/2 md:w-[calc(100vw-var(--sidebar-width-expanded))]">
-      <BreadcrumbJsonLd items={[{ name: "Home", url: "/" }, { name: "PharosVille", url: "/lighthouse/" }]} />
-      <h1 id="lighthouse-heading" className="sr-only">PharosVille</h1>
-      <SectionErrorBoundary name="PharosVille" supportingText="Refresh the page to retry the PharosVille map.">
-        <LighthouseClient />
-      </SectionErrorBoundary>
-    </div>
+    <main className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center gap-4 text-center">
+      <meta httpEquiv="refresh" content="0; url=/pharosville/" />
+      <script dangerouslySetInnerHTML={{ __html: "location.replace('/pharosville/')" }} />
+      <h1 className="text-2xl font-semibold">PharosVille has moved</h1>
+      <p className="text-sm text-muted-foreground">
+        The old Lighthouse route now lives at PharosVille.
+      </p>
+      <Link className="pharos-focus-ring rounded-md border border-border px-4 py-2 text-sm" href="/pharosville/">
+        Open PharosVille
+      </Link>
+    </main>
   );
 }

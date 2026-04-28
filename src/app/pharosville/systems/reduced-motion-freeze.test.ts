@@ -1,4 +1,4 @@
-// src/app/lighthouse/systems/reduced-motion-freeze.test.ts
+// src/app/pharosville/systems/reduced-motion-freeze.test.ts
 import { describe, it, expect } from "vitest";
 import { pickLargestHarborPlacement, aimBeamAt } from "./reduced-motion-freeze";
 import type { HarborPlacement } from "../layers/harbor-layer";

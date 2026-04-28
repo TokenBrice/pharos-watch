@@ -32,7 +32,7 @@ function useDesktopViewport() {
   return isDesktop;
 }
 
-export function LighthouseClient() {
+export function PharosVilleClient() {
   const isDesktop = useDesktopViewport();
 
   if (isDesktop === null) {

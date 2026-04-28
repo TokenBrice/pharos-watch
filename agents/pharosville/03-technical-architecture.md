@@ -1,13 +1,13 @@
 # Technical Architecture
 
-Note: `08-implementation-plan.md` is the current source of truth for v0.1 sequencing. This architecture note describes the reconciled `/lighthouse/` replacement direction, but defer to `08` where details differ.
+Note: `08-implementation-plan.md` is the current source of truth for v0.1 sequencing. This architecture note describes the reconciled `/pharosville/` replacement direction, but defer to `08` where details differ.
 
 ## Route Shape
 
 Current implementation route:
 
 ```text
-src/app/lighthouse/
+src/app/pharosville/
   page.tsx
   client.tsx
   desktop-only-fallback.tsx

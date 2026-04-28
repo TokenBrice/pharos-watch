@@ -1,4 +1,4 @@
-// src/app/lighthouse/systems/reduced-motion-freeze.ts
+// src/app/pharosville/systems/reduced-motion-freeze.ts
 import type { SceneData } from "./scene-data";
 import type { HarborPlacement } from "../layers/harbor-layer";
 

@@ -1,11 +1,11 @@
 # Feasibility
 
-Note: `08-implementation-plan.md` is the current source of truth for v0.1 implementation details. This feasibility note has been reconciled for `/lighthouse/` replacement and desktop-only world scope, but defer to `08` for sequencing.
+Note: `08-implementation-plan.md` is the current source of truth for v0.1 implementation details. This feasibility note has been reconciled for `/pharosville/` replacement and desktop-only world scope, but defer to `08` for sequencing.
 
 ## Assumptions
 
-- The current target is a full visual replacement of the existing `/lighthouse/` route, not a new `/pharosville/` route.
-- `/lighthouse/` may be mined for pure data-adapter ideas only. Its current visual language is explicitly not the target.
+- The current target is a full visual replacement of the existing `/pharosville/` route, not a new `/pharosville/` route.
+- `/pharosville/` may be mined for pure data-adapter ideas only. Its current visual language is explicitly not the target.
 - ClaudeVille is the strongest reference for visual and architectural direction: authored isometric world, Canvas 2D renderer, sprite manifest, camera/minimap, DOM side panels, and data-to-place contract.
 - The first production version should use existing Pharos public data surfaces. New Worker endpoints should be deferred until a clear performance or payload reason exists.
 - The world must remain analytically useful to Pharos users. It can be charming, but every visual cue must answer a real market or risk question.

@@ -48,7 +48,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [methodology-page.md](./methodology-page.md) - `/methodology/` section-to-source mapping and changelog/update contract
 - [stablecoin-detail-page.md](./stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, view-model wiring, section order, and fallback/staleness rules
 - [chains-page.md](./chains-page.md) - `/chains/` leaderboard, `/chains/[chain]/` profile contract, and Chain Health Score wiring
-- [lighthouse-page.md](./lighthouse-page.md) - `/lighthouse/` PharosVille route, desktop gate, canvas exception, and data-to-world contract
+- [pharosville-page.md](./pharosville-page.md) - `/pharosville/` PharosVille route, desktop gate, canvas exception, and data-to-world contract
 - [cemetery-and-compare.md](./cemetery-and-compare.md) - `/cemetery/` and `/compare/` data and URL contracts
 - [dependency-map.md](./dependency-map.md) - dependency-graph construction, rendering, and interaction model
 - [coverage-page.md](./coverage-page.md) - `/coverage/` matrix contract, source mapping, and update rules
@@ -72,7 +72,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/changelog/`                                   | [architecture.md](./architecture.md)                                                                                                                  |
 | `/chains/`                                      | [chains-page.md](./chains-page.md), [chain-health.md](./chain-health.md), [api-reference.md](./api-reference.md)                                      |
 | `/chains/[chain]/`                              | [chains-page.md](./chains-page.md), [chain-health.md](./chain-health.md), [api-reference.md](./api-reference.md)                                      |
-| `/lighthouse/`                                  | [lighthouse-page.md](./lighthouse-page.md), [architecture.md](./architecture.md)                                                                      |
+| `/pharosville/`                                  | [pharosville-page.md](./pharosville-page.md), [architecture.md](./architecture.md)                                                                      |
 | `/compare/`                                     | [cemetery-and-compare.md](./cemetery-and-compare.md)                                                                                                  |
 | `/compare/[slug]/`                              | [cemetery-and-compare.md](./cemetery-and-compare.md)                                                                                                  |
 | `/coverage/`                                    | [coverage-page.md](./coverage-page.md)                                                                                                                |

@@ -7,8 +7,8 @@ import {
   fixtureStablecoins,
   fixtureStress,
   makePegCoin,
-} from "../../src/app/lighthouse/__fixtures__/pharosville-world";
-import { MAX_MAIN_CANVAS_PIXELS, MAX_TOTAL_BACKING_PIXELS } from "../../src/app/lighthouse/systems/canvas-budget";
+} from "../../src/app/pharosville/__fixtures__/pharosville-world";
+import { MAX_MAIN_CANVAS_PIXELS, MAX_TOTAL_BACKING_PIXELS } from "../../src/app/pharosville/systems/canvas-budget";
 import type { PegSummaryResponse, StressSignalsAllResponse } from "@shared/types";
 
 test.use({ reducedMotion: "reduce" });
@@ -84,7 +84,7 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
   await mockPharosVilleData(page);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/lighthouse/");
+  await page.goto("/pharosville/");
   const canvas = page.getByTestId("pharosville-canvas");
   await expect(canvas).toBeVisible();
   await expect(page.getByLabel("Map entity count")).toHaveText("94 entities");
@@ -168,7 +168,7 @@ test("pharosville renders a stressed ship in storm-shelf detail", async ({ page 
   });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/lighthouse/");
+  await page.goto("/pharosville/");
 
   const clickedDetailId = await clickMapTarget(page, "ship", "ship.usdt-tether");
   expect(clickedDetailId).toBe("ship.usdt-tether");
@@ -222,7 +222,7 @@ test("pharosville narrow fallback avoids world runtime requests", async ({ page 
   const worldRequests = await captureWorldRequests(page);
 
   await page.setViewportSize({ width: 1279, height: 900 });
-  await page.goto("/lighthouse/");
+  await page.goto("/pharosville/");
 
   await expect(page.getByText("PharosVille needs a wider harbor.")).toBeVisible();
   await expect(page.getByTestId("pharosville-canvas")).toHaveCount(0);
@@ -236,7 +236,7 @@ test("pharosville short desktop fallback avoids clipped map", async ({ page }) =
   const worldRequests = await captureWorldRequests(page);
 
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto("/lighthouse/");
+  await page.goto("/pharosville/");
 
   await expect(page.getByText("PharosVille needs a wider harbor.")).toBeVisible();
   await expect(page.getByTestId("pharosville-canvas")).toHaveCount(0);
@@ -252,7 +252,7 @@ test("pharosville ultrawide canvas keeps DPR backing store capped", async ({ bas
   const page = await context.newPage();
   await mockPharosVilleData(page);
   try {
-    await page.goto(new URL("/lighthouse/", baseURL ?? "http://127.0.0.1:3000").toString());
+    await page.goto(new URL("/pharosville/", baseURL ?? "http://127.0.0.1:3000").toString());
     await page.waitForFunction(() => {
       const debug = (window as typeof window & {
         __pharosVilleDebug?: { assetsLoaded?: boolean; camera: unknown; canvasBudget: unknown };
@@ -301,7 +301,7 @@ test("pharosville canvas interactions update details and camera", async ({ page 
   await mockPharosVilleData(page);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/lighthouse/");
+  await page.goto("/pharosville/");
   await expect(page.getByLabel("Map entity count")).toHaveText("94 entities");
 
   await clickMapTarget(page, "lighthouse");
@@ -409,7 +409,7 @@ test.describe("pharosville normal motion", () => {
     await mockPharosVilleData(page);
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto("/lighthouse/");
+    await page.goto("/pharosville/");
 
     await page.waitForFunction(() => {
       const debug = (window as typeof window & {

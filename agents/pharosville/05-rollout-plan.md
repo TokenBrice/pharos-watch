@@ -9,7 +9,7 @@ Goal: lock the semantic contract before rendering complexity.
 Deliverables:
 
 - `agents/pharosville/` research pack.
-- Route decision: replace the existing `/lighthouse/` visual experience; keep `/lighthouse/` as the public URL for v0.1.
+- Route decision: replace the existing `/pharosville/` visual experience; keep `/pharosville/` as the public URL for v0.1.
 - Written world model and data mappings.
 - Fixture dataset covering:
   - healthy top stablecoin.
@@ -34,10 +34,10 @@ Goal: convert existing Pharos data into a deterministic world snapshot.
 
 Files:
 
-- `src/app/lighthouse/systems/world-types.ts`
-- `src/app/lighthouse/systems/pharosville-world.ts`
-- `src/app/lighthouse/systems/world-layout.ts`
-- `src/app/lighthouse/systems/clustering.ts`
+- `src/app/pharosville/systems/world-types.ts`
+- `src/app/pharosville/systems/pharosville-world.ts`
+- `src/app/pharosville/systems/world-layout.ts`
+- `src/app/pharosville/systems/clustering.ts`
 - tests beside these modules
 
 Inputs:
@@ -83,7 +83,7 @@ Deliverables:
 
 Validation:
 
-- `npx vitest run src/app/lighthouse/systems`
+- `npx vitest run src/app/pharosville/systems`
 - adapter tests for missing/stale inputs
 - overloaded dataset test with 215+ active assets
 - fixture cases for null PSI current, unknown bands, stale report cards, missing DEWS, frozen assets in stablecoins payload, NAV tokens, and low price confidence
@@ -98,13 +98,13 @@ Goal: make the page real with code-drawn placeholder visuals.
 
 Files:
 
-- `src/app/lighthouse/page.tsx`
-- `src/app/lighthouse/client.tsx`
-- `src/app/lighthouse/desktop-only-fallback.tsx`
-- `src/app/lighthouse/pharosville-world.tsx`
-- `src/app/lighthouse/pharosville.css`
-- `src/app/lighthouse/renderer/*`
-- `src/app/lighthouse/components/*`
+- `src/app/pharosville/page.tsx`
+- `src/app/pharosville/client.tsx`
+- `src/app/pharosville/desktop-only-fallback.tsx`
+- `src/app/pharosville/pharosville-world.tsx`
+- `src/app/pharosville/pharosville.css`
+- `src/app/pharosville/renderer/*`
+- `src/app/pharosville/components/*`
 
 Deliverables:
 
@@ -218,12 +218,12 @@ Goal: integrate cleanly with Pharos docs and release process.
 
 Deliverables:
 
-- rewrite `docs/lighthouse-page.md` as the PharosVille route contract
+- rewrite `docs/pharosville-page.md` as the PharosVille route contract
 - update `docs/architecture.md`
 - update docs index if required
 - sitemap/robots decision:
   - beta: `noindex,follow`
-  - stable public: indexable with canonical `/lighthouse/` unless a later route migration is approved
+  - stable public: indexable with canonical `/pharosville/` unless a later route migration is approved
 - visual test docs
 - changelog entry if public-facing
 - beta gate:
