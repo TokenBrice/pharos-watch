@@ -13,6 +13,7 @@ import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { PSI_HEX_COLORS } from "@shared/lib/psi-colors";
 import { buildPegSummaryCoinMap, buildReportCardMap } from "@/lib/stablecoin-lookups";
+import { logosById } from "@/lib/logos";
 import { buildChainDocks } from "./chain-docks";
 import { clusterLongTailShips } from "./clustering";
 import {
@@ -29,10 +30,15 @@ import { resolveShipVisual } from "./ship-visuals";
 import { buildVisualCueRegistry } from "./visual-cue-registry";
 import type {
   DetailModel,
+  DockNode,
   LighthouseNode,
   PharosVilleFreshness,
   PharosVilleWorld,
+  ShipChainPresence,
+  ShipDockVisit,
   ShipNode,
+  ShipRiskPlacement,
+  ShipWaterZone,
 } from "./world-types";
 
 export interface PharosVilleInputs {
@@ -67,17 +73,42 @@ function buildLighthouse(stability: StabilityIndexResponse | null | undefined): 
   };
 }
 
-function dominantChain(asset: StablecoinData): string | null {
-  const entries = [...canonicalizeChainCirculating(asset.chainCirculating).entries()];
-  if (entries.length === 0) return null;
-  entries.sort((a, b) => b[1].current - a[1].current);
-  return entries[0]?.[0] ?? null;
-}
-
 function activeAssets(stablecoins: StablecoinListResponse | null | undefined): StablecoinData[] {
   return (stablecoins?.peggedAssets ?? []).filter((asset) => (
     ACTIVE_IDS.has(asset.id) && ACTIVE_META_BY_ID.has(asset.id) && asset.frozen !== true
   ));
+}
+
+export function waterZoneForPlacement(placement: ShipRiskPlacement): ShipWaterZone {
+  if (placement === "safe-harbor" || placement === "breakwater-edge") return "safe";
+  if (placement === "harbor-mouth-watch" || placement === "outer-rough-water") return "muddy";
+  if (placement === "storm-shelf") return "storm";
+  if (placement === "data-fog") return "fog";
+  return "ledger";
+}
+
+function buildShipChainPresence(asset: StablecoinData, renderedDockChainIds: ReadonlySet<string>): ShipChainPresence[] {
+  const entries = [...canonicalizeChainCirculating(asset.chainCirculating).entries()]
+    .filter(([, point]) => point.current > 0)
+    .sort((a, b) => b[1].current - a[1].current || a[0].localeCompare(b[0]));
+  const totalUsd = entries.reduce((sum, [, point]) => sum + point.current, 0);
+  if (totalUsd <= 0) return [];
+
+  return entries.map(([chainId, point]) => ({
+    chainId,
+    currentUsd: point.current,
+    share: point.current / totalUsd,
+    hasRenderedDock: renderedDockChainIds.has(chainId),
+  }));
+}
+
+function normalizeDockVisitWeights(visits: ShipDockVisit[]): ShipDockVisit[] {
+  const totalWeight = visits.reduce((sum, visit) => sum + visit.weight, 0);
+  if (totalWeight <= 0) return visits;
+  return visits.map((visit) => ({
+    ...visit,
+    weight: visit.weight / totalWeight,
+  }));
 }
 
 function shipTile(asset: StablecoinData, placement: ShipNode["riskPlacement"]): { x: number; y: number } {
@@ -88,10 +119,11 @@ function shipTile(asset: StablecoinData, placement: ShipNode["riskPlacement"]): 
   });
 }
 
-function buildShips(inputs: PharosVilleInputs): ShipNode[] {
+function buildShips(inputs: PharosVilleInputs, docks: readonly DockNode[]): ShipNode[] {
   const pegById = buildPegSummaryCoinMap(inputs.pegSummary?.coins);
   const reportCardById = buildReportCardMap(inputs.reportCards?.cards) ?? {};
   const stressById = inputs.stress?.signals ?? {};
+  const renderedDockChainIds = new Set(docks.map((dock) => dock.chainId));
 
   const ships = activeAssets(inputs.stablecoins).map((asset) => {
     const meta = ACTIVE_META_BY_ID.get(asset.id);
@@ -104,6 +136,9 @@ function buildShips(inputs: PharosVilleInputs): ShipNode[] {
       stress: stressById[asset.id],
       freshness: inputs.freshness,
     });
+    const chainPresence = buildShipChainPresence(asset, renderedDockChainIds);
+    const dominantChainId = chainPresence[0]?.chainId ?? null;
+    const homeDockChainId = chainPresence.find((presence) => presence.hasRenderedDock)?.chainId ?? null;
     const recent = getRecentChange(asset);
     return {
       id: asset.id,
@@ -113,10 +148,16 @@ function buildShips(inputs: PharosVilleInputs): ShipNode[] {
       asset,
       meta,
       reportCard,
+      logoSrc: logosById[asset.id] ?? null,
       tile: shipTile(asset, risk.placement),
-      dockChainId: dominantChain(asset),
+      chainPresence,
+      dockVisits: [],
+      dominantChainId,
+      homeDockChainId,
+      dockChainId: homeDockChainId,
       marketCapUsd: getCirculatingRaw(asset),
       riskPlacement: risk.placement,
+      riskZone: waterZoneForPlacement(risk.placement),
       placementEvidence: risk.evidence,
       visual: resolveShipVisual(asset, meta, reportCard),
       change24hUsd: recent.change24hUsd,
@@ -125,6 +166,54 @@ function buildShips(inputs: PharosVilleInputs): ShipNode[] {
     };
   });
   return spreadShipsAcrossWater(ships);
+}
+
+function dockMooringTile(dock: DockNode, index: number, occupied: ReadonlySet<string>): { x: number; y: number } {
+  const outwardX = dock.tile.x < 31.5 ? -1 : dock.tile.x > 31.5 ? 1 : 0;
+  const outwardY = dock.tile.y < 31.5 ? -1 : dock.tile.y > 31.5 ? 1 : 0;
+  const fanX = outwardY === 0 ? 0 : -outwardY;
+  const fanY = outwardX === 0 ? 0 : outwardX;
+  const depth = 2 + Math.floor(index / 5);
+  const lane = (index % 5) - 2;
+
+  return nearestAvailableWaterTile({
+    x: Math.max(0, Math.min(63, dock.tile.x + outwardX * depth + fanX * lane)),
+    y: Math.max(0, Math.min(63, dock.tile.y + outwardY * depth + fanY * lane)),
+  }, occupied);
+}
+
+function assignDockVisits(ships: readonly ShipNode[], docks: readonly DockNode[]): ShipNode[] {
+  const dockByChainId = new Map(docks.map((dock) => [dock.chainId, dock]));
+  const occupied = new Set<string>();
+  const dockedIndex = new Map<string, number>();
+
+  return ships
+    .toSorted((a, b) => b.marketCapUsd - a.marketCapUsd || a.id.localeCompare(b.id))
+    .map((ship) => {
+      const visits = ship.chainPresence
+        .filter((presence) => presence.hasRenderedDock)
+        .flatMap((presence) => {
+          const dock = dockByChainId.get(presence.chainId);
+          if (!dock) return [];
+
+          const index = dockedIndex.get(dock.chainId) ?? 0;
+          dockedIndex.set(dock.chainId, index + 1);
+          const mooringTile = dockMooringTile(dock, index, occupied);
+          occupied.add(`${mooringTile.x}.${mooringTile.y}`);
+          return [{
+            chainId: presence.chainId,
+            dockId: dock.id,
+            weight: Math.max(0.08, presence.share),
+            mooringTile,
+          }];
+        });
+
+      return {
+        ...ship,
+        dockChainId: ship.homeDockChainId ?? null,
+        dockVisits: normalizeDockVisitWeights(visits),
+      };
+    });
 }
 
 function spreadShipsAcrossWater(ships: ShipNode[]): ShipNode[] {
@@ -153,12 +242,8 @@ export function buildPharosVilleWorld(inputs: PharosVilleInputs): PharosVilleWor
   const map = buildPharosVilleMap();
   const lighthouse = buildLighthouse(inputs.stability);
   const docks = buildChainDocks(inputs.chains);
-  const allShips = buildShips(inputs);
-  const renderedDockIds = new Set(docks.map((dock) => dock.chainId));
-  const dockedShips = allShips.map((ship) => ({
-    ...ship,
-    dockChainId: ship.dockChainId && renderedDockIds.has(ship.dockChainId) ? ship.dockChainId : null,
-  }));
+  const allShips = buildShips(inputs, docks);
+  const dockedShips = assignDockVisits(allShips, docks);
   const { visibleShips, clusters } = clusterLongTailShips(dockedShips);
   const graves = graveNodesFromEntries(inputs.cemeteryEntries ?? CEMETERY_ENTRIES);
   const baseWorld = {
@@ -174,7 +259,7 @@ export function buildPharosVilleWorld(inputs: PharosVilleInputs): PharosVilleWor
     effects: [],
     legends: [
       { id: "legend.psi", label: "Lighthouse", description: "PSI composite status" },
-      { id: "legend.docks", label: "Docks", description: "Chain stablecoin supply" },
+      { id: "legend.docks", label: "Docks", description: "Top chain harbors by stablecoin supply" },
       { id: "legend.ships", label: "Ships", description: "Active stablecoins" },
       { id: "legend.cemetery", label: "Cemetery", description: "Dead and frozen assets" },
     ],

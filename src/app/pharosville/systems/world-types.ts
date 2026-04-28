@@ -42,6 +42,22 @@ export interface ShipVisual {
   scale: number;
 }
 
+export interface ShipChainPresence {
+  chainId: string;
+  currentUsd: number;
+  share: number;
+  hasRenderedDock: boolean;
+}
+
+export interface ShipDockVisit {
+  chainId: string;
+  dockId: string;
+  weight: number;
+  mooringTile: { x: number; y: number };
+}
+
+export type ShipWaterZone = "safe" | "muddy" | "storm" | "fog" | "ledger";
+
 export interface LighthouseNode {
   id: "lighthouse";
   kind: "lighthouse";
@@ -59,13 +75,22 @@ export interface DockNode {
   kind: "dock";
   label: string;
   chainId: string;
+  assetId: string;
   tile: { x: number; y: number };
   totalUsd: number;
   size: number;
   healthBand: ChainSummary["healthBand"];
   stablecoinCount: number;
   concentration: number | null;
+  harboredStablecoins: DockStablecoin[];
   detailId: string;
+}
+
+export interface DockStablecoin {
+  id: string;
+  symbol: string;
+  share: number;
+  supplyUsd: number;
 }
 
 export interface ShipNode {
@@ -76,10 +101,16 @@ export interface ShipNode {
   asset: StablecoinData;
   meta: StablecoinMeta;
   reportCard: ReportCard | null;
+  logoSrc: string | null;
   tile: { x: number; y: number };
+  chainPresence: ShipChainPresence[];
+  dockVisits: ShipDockVisit[];
+  dominantChainId: string | null;
+  homeDockChainId: string | null;
   dockChainId: string | null;
   marketCapUsd: number;
   riskPlacement: ShipRiskPlacement;
+  riskZone: ShipWaterZone;
   placementEvidence: PlacementEvidence;
   visual: ShipVisual;
   change24hUsd: number | null;
@@ -110,7 +141,12 @@ export interface GraveNode {
   kind: "grave";
   label: string;
   entry: CemeteryEntry;
+  logoSrc: string | null;
   tile: { x: number; y: number };
+  visual: {
+    marker: "headstone" | "cross" | "obelisk" | "slab";
+    scale: number;
+  };
   detailId: string;
 }
 
@@ -134,6 +170,7 @@ export interface DetailModel {
   summary: string;
   facts: Array<{ label: string; value: string }>;
   links: Array<{ label: string; href: string }>;
+  membersHeading?: string;
   members?: Array<{ id: string; label: string; href: string; value?: string }>;
 }
 
