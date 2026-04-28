@@ -41,3 +41,14 @@ Rationale:
 ## Follow-Up
 
 Revisit by 2026-05-28, or sooner if a Next.js 16 patch release updates the vendored PostCSS to `8.5.10` or later. At that point, prefer the supported Next patch over an npm override.
+
+## Phase 10 Re-Check
+
+Rechecked during the J2 dependency follow-up on 2026-04-28:
+
+- `npm audit --json --audit-level=low` still reports only the two moderate Next/PostCSS findings above.
+- `npm run audit:deps` still passes because the production gate fails on high/critical advisories.
+- `next@16.2.4` remains the current supported stable release, and the checked canary still vendors `postcss@8.4.31`.
+- Routine patch/minor candidates for Wrangler, Cloudflare types, Tailwind, Vitest, React Query, Lucide, and Viem do not change this advisory path.
+
+Decision unchanged: defer routine dependency updates to normal maintenance and wait for a supported Next.js patch before changing this risk acceptance.
