@@ -193,9 +193,10 @@ grave nodes with local logo paths, deterministic scatter placement, and varied
 marker scale/shape. Ship base sprites follow the stablecoin governance class
 (CeFi, CeFi-Dep, DeFi), and ship scale uses compressed market-cap tiers rather
 than linear area, with intentionally exaggerated $1B+ tiers so major issuers are
-recognizable landmarks. Ship representative tile placement uses a rendered
-chain-harbor mooring when positive chain supply maps to a rendered dock, while a
-separate peg/DEWS risk anchor remains the route waypoint. Core EVM chain harbors
+recognizable landmarks. Ship representative tile placement uses the current
+peg/DEWS risk-water idle tile, or Ledger Mooring for NAV ledger assets, while
+rendered chain-harbor moorings remain active route stops when positive chain
+supply maps to a rendered dock. Core EVM chain harbors
 (Ethereum, Base, Arbitrum, Polygon) occupy the southwest EVM bay, with Ethereum
 anchored as the central cove landmark and the L2 docks around its sides. BSC,
 Tron, Solana, Aptos, and other non-core top-chain harbors use distributed
@@ -218,11 +219,13 @@ cadence.
 The same world model now also emits two selectable inland data buildings along a
 thin road spine: Royal Mint And Burn Foundry for configured mint/burn flow
 telemetry and Exit Route Gatehouse for DEX liquidity plus modeled redemption
-backstops. Data Fog, Ledger Mooring, and the DEWS sea districts are modeled as
-named risk-water areas with terrain, printed labels, deterministic route
-anchors, detail facts, and accessibility-ledger parity. The PharosVille scene no
-longer encodes freeze/blacklist tracker activity; that product surface remains
-outside the world map. A main-island road spine ties the southwest harbor,
+backstops. Ledger Mooring and the five DEWS sea districts are modeled as named
+risk-water areas with terrain, printed labels, deterministic route anchors,
+detail facts, and accessibility-ledger parity; stale or low-confidence placement
+inputs are exposed as evidence caveats instead of a separate sea zone. The
+PharosVille scene no longer encodes freeze/blacklist tracker activity; that
+product surface remains outside the world map. A main-island road spine ties the
+southwest harbor,
 memorial precinct, civic anchors, and lighthouse approach together as visual
 composition only. The main-island buildings use deferred Pixellab sprites. All
 world elements expose local deterministic Canvas effects, DOM detail facts, and

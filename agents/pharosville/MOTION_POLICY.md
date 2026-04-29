@@ -40,9 +40,9 @@ renders deterministic static frames and must not keep a RAF loop alive.
 
 ## Ship Risk-Water Motion
 
-- `calm`, `watch`, `alert`, `warning`, and `danger` map to the separated DEWS sea districts from Calm Anchorage through Danger Strait. `fog` maps to peripheral Data Fog, and `ledger` maps to Ledger Mooring in a quiet basin clear of top-chain harbor traffic.
+- `calm`, `watch`, `alert`, `warning`, and `danger` map to the separated DEWS sea districts from Calm Anchorage through Danger Strait. `ledger` maps to Ledger Mooring in a quiet basin clear of top-chain harbor traffic.
 - Higher DEWS turbulence should increase risk-water dwell, drift radius, and sailing wake intensity in this order: calm < watch < alert < warning < danger.
-- Docked reduced-motion ships freeze at their representative harbor mooring. Dockless reduced-motion ships freeze at their risk-water patrol sample. In both cases, details and the accessibility ledger must expose named risk-water area and risk-water zone.
+- Reduced-motion ships freeze at their risk-water idle tile, or Ledger Mooring for NAV ledger assets. Details and the accessibility ledger must expose named risk-water area, risk-water zone, home dock, chain presence, docking cadence, and evidence caveats.
 - Dockless normal-motion patrols must not collapse to a near-static loop. If a named area is too small for meaningful travel, use current or adjacent same-purpose sea anchors while keeping samples on water tiles.
 
 ## Debug Contract

@@ -3,6 +3,19 @@
 Date: 2026-04-29
 Status: reviewed and revised plan; no runtime code changed
 
+Execution update, 2026-04-30:
+
+- The user supplied a placement diagram after implementation began. The current
+  execution target follows that diagram: Calm Anchorage owns the large west-edge
+  basin, Watch Breakwater sits above the island in the northwest/top-left water,
+  Alert Channel occupies the top-center channel, Warning Shoals wraps the
+  lighthouse-side northeast water, and Danger Strait attaches to the far east
+  edge. Ledger Mooring remains below the island.
+- This supersedes the earlier "all five DEWS zones north of the island"
+  topology constraint for Calm Anchorage and Danger Strait while preserving the
+  edge-adjacency, distinct visual identity, neutral-route, Data Fog removal, and
+  ship idle/motion requirements.
+
 ## Request
 
 Settle PharosVille sea-zone design, sea-zone function, interaction behavior, and
@@ -61,8 +74,9 @@ The requested target state is:
 - There is no `data-fog` placement, `fog` ship water zone, Data Fog detail,
   Data Fog label, Data Fog hit target, Data Fog accessibility row, or Data Fog
   visual-test expectation.
-- All five DEWS zones are visibly north of the island and are ordered as an
-  escalation field from broad protected water to storm strait.
+- The five DEWS zones follow the user-provided placement diagram and are ordered
+  as an escalation field from broad protected western water to far-east storm
+  strait.
 - Calm Anchorage is the largest DEWS terrain area; Watch Breakwater is large;
   Alert Channel is medium; Warning Shoals and Danger Strait are small.
 - Every named zone satisfies the literal corner-edge adjacency contract and
@@ -646,7 +660,7 @@ Acceptance:
 
 - Docs no longer describe Data Fog as a named PharosVille area.
 - Docs explicitly say idle ships sit in current DEWS zones or Ledger Mooring.
-- Docs describe all five DEWS zones as north of the island.
+- Docs describe the user-provided diagram layout for all five DEWS zones.
 
 ## Test Plan
 

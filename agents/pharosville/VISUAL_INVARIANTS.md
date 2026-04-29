@@ -26,9 +26,9 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 - Docks are capped by `MAX_CHAIN_HARBORS`; they represent top-chain stablecoin supply, not all chains.
 - The cemetery remains a compact memorial precinct separated from the EVM bay and lighthouse approach.
 - Two inland data buildings, Royal Mint And Burn Foundry and Exit Route Gatehouse, sit along the main-island road spine with a quiet memorial precinct between the harbor edge and civic anchors.
-- DEWS sea geography progresses across the northwest and northern red field as Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, and Danger Strait. Warning Shoals and Danger Strait must stay outside the lighthouse tower label-occlusion lane, and the water west/south of the lighthouse must stay free of named semantic-water areas and full label overlap.
-- Calm Anchorage is intentionally the largest DEWS water block and should fill the open western/southwestern basin to reduce calm-ship overlap around the western harbor/shore.
-- Data Fog should remain a peripheral degraded-evidence pocket in the lower-right brackish sea, and Ledger Mooring should remain a quiet owned basin below the harbor in ledger water. Freeze/blacklist tracker activity remains outside PharosVille and belongs to the `/blacklist/` product surface.
+- DEWS sea geography follows the current placement diagram: Calm Anchorage owns the large west-edge basin, Watch Breakwater sits above the island in the northwest/top-left water, Alert Channel occupies the top-center channel, Warning Shoals wraps the lighthouse-side northeast water, and Danger Strait attaches to the far east edge. Warning Shoals and Danger Strait must keep label hit targets clear of the lighthouse tower rectangle.
+- Calm Anchorage is intentionally the largest DEWS water block and should fill the open western basin to reduce calm-ship overlap around the western harbor/shore.
+- Ledger Mooring should remain a quiet owned basin below the harbor in ledger water. Freeze/blacklist tracker activity remains outside PharosVille and belongs to the `/blacklist/` product surface.
 
 ## Entity Semantics
 
@@ -42,19 +42,19 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 | Long-tail cluster | Count-capped grouped active stablecoins sharing a risk placement, named risk-water area, and risk zone | One aggregated issuer |
 | Cemetery marker | Dead/frozen lifecycle asset with cause-aware visual style | Active market status |
 | Data building | Non-ship Pharos product summary | Methodology text, raw tables, or guarantees |
-| Fog/data fog | Missing, stale, or low-confidence evidence | Confirmed depeg/stress |
+| Evidence caveat | Missing, stale, or low-confidence evidence | Confirmed depeg/stress |
 
 ## Ship And Risk Rules
 
 - Ship class comes from governance/backing metadata via `ship-visuals.ts`.
 - Ship size is a compressed market-cap tier, not linear area.
 - Active depeg and DANGER evidence outrank calm chain presence for risk placement.
-- Stale or missing peg evidence maps to degraded evidence/data fog, not storm risk.
+- Stale or missing peg evidence maps to an evidence caveat on Calm Anchorage fallback placement, not storm risk or a separate named zone.
 - Fresh DEWS bands map to the named sea districts: CALM to Calm Anchorage, WATCH to Watch Breakwater, ALERT to Alert Channel, WARNING to Warning Shoals, and DANGER to Danger Strait.
-- Data Fog and Ledger Mooring are named non-DEWS risk-water areas. If ships can reference them, they must also have printed labels, area hit targets, detail facts, and accessibility-ledger rows.
+- Ledger Mooring is the only non-DEWS named risk-water area. If ships can reference it, it must also have a printed label, area hit target, detail facts, and accessibility-ledger row.
 - Printed water-area labels render above entity sprites and their hit targets win inside the printed label rectangle. This keeps all zone names visible and selectable even near tall landmarks.
 - Reduced-motion representative placement uses deterministic static positions and no RAF loop.
-- Docked reduced-motion ships freeze at harbor moorings; dockless ships freeze at risk-water patrol samples. Details and the accessibility ledger must still expose the named risk-water area and risk zone.
+- Reduced-motion ships freeze at risk-water idle tiles, or Ledger Mooring for NAV ledger assets. Details and the accessibility ledger must still expose the named risk-water area and risk zone.
 - Normal motion samples, hit testing, selected rings, follow-selected behavior, and debug state must use the same motion model.
 - Water routes must stay on water tiles where tests assert that contract.
 

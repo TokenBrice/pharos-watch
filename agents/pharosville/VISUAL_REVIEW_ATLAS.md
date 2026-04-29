@@ -24,7 +24,7 @@ Use focused entries while developing:
 | Entry | Command | What to inspect |
 | --- | --- | --- |
 | Desktop canvas shell | `npx playwright test tests/visual/pharosville.spec.ts --grep "desktop canvas shell"` | World framing, building clickability, water/land pixel stats, hidden old auxiliary UI, asset load state. |
-| Named risk-water areas | `npx playwright test tests/visual/pharosville.spec.ts --grep "named risk water"` | Calm, Watch, Alert, Warning, Danger, Data Fog, and Ledger Mooring labels all remain visible, win label clicks, and select browser details with matching risk-water zones. |
+| Named risk-water areas | `npx playwright test tests/visual/pharosville.spec.ts --grep "named risk water"` | Calm, Watch, Alert, Warning, Danger, and Ledger Mooring labels all remain visible, win label clicks, and select browser details with matching risk-water zones. |
 | Stressed ship detail | `npx playwright test tests/visual/pharosville.spec.ts --grep "stressed ship"` | USDT active-depeg fixture selects a ship, shows Danger Strait/storm-shelf risk water, risk zone `danger`, and evidence fields. |
 | Narrow fallback | `npx playwright test tests/visual/pharosville.spec.ts --grep "narrow fallback"` | No canvas/runtime requests under `1280px` width. |
 | Short fallback | `npx playwright test tests/visual/pharosville.spec.ts --grep "short desktop"` | No clipped canvas under `760px` height. |
@@ -42,8 +42,8 @@ Historical visual-review images under `agents/screenshots/` and notes in `agents
 Use this checklist when approving screenshot changes:
 
 - The world reads as a maritime analytical map, not a generic game backdrop.
-- The lighthouse, EVM bay, cemetery, civic data core, DEWS water areas, Data Fog, and Ledger Mooring are all visually distinguishable.
-- The DEWS sea reads as a clear escalation route: Calm Anchorage fills the northwest/western basin, including the open water left of the harbor approach, Watch and Alert step through the northern channel, Warning Shoals and Danger Strait stay in the northern red field clear of the lighthouse footprint, Data Fog reads as a lower-right peripheral degraded-evidence pocket, and Ledger Mooring reads as quiet ledger water below the harbor away from Solana/top-chain harbor traffic.
+- The lighthouse, EVM bay, cemetery, civic data core, DEWS water areas, and Ledger Mooring are all visually distinguishable.
+- The DEWS sea reads as a clear escalation route matching the current diagram: Calm Anchorage fills the large west-edge basin, Watch Breakwater sits above the island in northwest/top-left water, Alert Channel occupies the top-center channel, Warning Shoals wraps the lighthouse-side northeast water without label collision, Danger Strait attaches to the far east edge, and Ledger Mooring reads as quiet ledger water below the harbor away from Solana/top-chain harbor traffic.
 - Ships remain readable at default zoom; very large stablecoins are capped rather than overwhelming the map.
 - Dock flags/logos identify chain harbors without becoming large label boards.
 - Risk water escalation is visible but does not make stale/missing evidence or NAV ledger water look like active depeg.
