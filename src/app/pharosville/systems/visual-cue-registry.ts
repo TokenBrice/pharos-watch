@@ -31,7 +31,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       visual: "ship route and docking cadence",
       sourceField: "stablecoins.peggedAssets[].chainCirculating, pegSummary.coins[], stress.signals[]",
       questionAnswered: "Where can this ship dock, how often does it visit, and which risk water anchors its route?",
-      failureState: "reduced-motion static risk position / data fog",
+      failureState: "reduced-motion static harbor mooring or risk patrol / data fog",
       domEquivalent: "ship detail route facts and accessibility ledger",
     },
     {
