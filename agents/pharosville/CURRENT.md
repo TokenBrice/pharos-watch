@@ -33,7 +33,7 @@ Historical plans in this directory are context, not live instructions. If they c
 - The world model should stay pure and deterministic. Canvas drawing, hit testing, selected rings, follow-selected behavior, and debug frame state must sample the same motion model.
 - Reduced-motion users get a deterministic non-animated frame without a running RAF loop.
 - Canvas is not the only source of analytical meaning. Any new visual signal needs matching detail-panel or accessibility-ledger text.
-- Ship placement and water zones express peg/DEWS risk. Dock visits express positive chain presence and supply share; they must not imply bridge volume, transaction flow, or real-time transfers.
+- Ship placement and semantic water zones express peg/DEWS risk or source confidence. Dock visits express positive chain presence and supply share; they must not imply bridge volume, transaction flow, or real-time transfers.
 - Stale or missing peg evidence maps to data fog or degraded evidence, not storm/depeg risk.
 - Stablecoin supply values from the list payload are already USD-denominated. Use `getCirculatingRaw()` for market-cap visual tiers.
 - Local runtime assets come from `public/pharosville/assets/` and `manifest.json`. Do not reference Pixellab URLs or remote assets at runtime.
@@ -41,6 +41,8 @@ Historical plans in this directory are context, not live instructions. If they c
 ## Current Visual Model
 
 - Chain harbors are built from top chain supply and capped by `MAX_CHAIN_HARBORS` in `chain-docks.ts`.
+- The authored map is `56 x 56` tiles. Deep outer water is intentionally a narrow perimeter shelf, not a large default border.
+- Sea terrain is semantic: harbor water, brackish stale-evidence water, alert current, warning shoals, storm strait, frozen water, generic navigable water, and deep outer shelf each have distinct palette/texture handling.
 - Dock sprites are rank/preference selected through manifest IDs such as `dock.grand-quay`, `dock.rollup-ferry-slip`, and `dock.bridge-pontoon`.
 - Ship class is derived from governance/backing metadata:
   - centralized -> treasury galleon
