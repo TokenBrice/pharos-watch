@@ -24,7 +24,7 @@ export const DOCK_TILES = [
   { x: 36, y: 46 },
 ];
 
-export const CEMETERY_CENTER = { x: 31.8, y: 24.8 } as const;
+export const CEMETERY_CENTER = { x: 30.3, y: 27.8 } as const;
 export const CEMETERY_RADIUS = { x: 3.35, y: 2.25 } as const;
 
 type GraveMarker = GraveNode["visual"]["marker"];
