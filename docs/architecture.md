@@ -215,15 +215,17 @@ the DOM detail panel remains the accessible source of analytical truth,
 including route source, risk water, home dock, chain presence, and docking
 cadence.
 
-The same world model now also emits five selectable main-island data landmarks
-for non-ship Pharos products: Royal Mint And Burn Foundry for configured
-mint/burn flow telemetry, North Froze Pole for the observed blacklist/freeze
-tracker, Exit Route Gatehouse for DEX liquidity plus modeled redemption
-backstops, Yield Orchard And Moonwell for yield source context, and Dependency
-Loom / Chainworks for direct report-card dependency graph links. Each landmark
-uses a deferred Pixellab sprite, local deterministic Canvas effects, DOM detail
-facts, and accessibility-ledger parity; reduced motion freezes procedural
-movement while preserving static status encodings.
+The same world model now also emits four selectable main-island data buildings
+and one northern frozen-water path for non-ship Pharos products: Royal Mint And Burn
+Foundry for configured mint/burn flow telemetry, Exit Route Gatehouse for DEX
+liquidity plus modeled redemption backstops, Yield Orchard And Moonwell for
+yield source context, Dependency Loom / Chainworks for direct report-card
+dependency graph links, and North Froze Pole as an ice-textured water route at
+the map's absolute north edge for freeze/blacklist tracker activity. The
+main-island buildings use deferred Pixellab sprites, while North Froze Pole is
+drawn as terrain plus a named water-area sign. All expose local deterministic
+Canvas effects, DOM detail facts, and accessibility-ledger parity; reduced
+motion freezes procedural movement while preserving static status encodings.
 
 Canvas 2D remains the renderer choice. PixiJS v8 was rejected during the
 2026-04-25 spike (see `docs/superpowers/audits/2026-04-25-pixi-v8-csp.md`)
