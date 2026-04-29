@@ -21,10 +21,10 @@ PharosVille is a desktop-only experience. Mobile and tablet compatibility is exp
 The current implementation includes the desktop PharosVille v0.1 baseline:
 
 - desktop-gated route, with a short-screen fallback as well as the narrow-screen fallback
-- Canvas 2D sea-first island map on eligible desktop viewports, with a reshaped coastal island and roughly 76–84% water by tile count
+- Canvas 2D sea-first island map on eligible desktop viewports, with a reshaped coastal island and roughly 82–88% water by tile count
 - authored terrain metadata layered over canonical movement tiles, including harbor water, storm water, fog water, beach, grass, rock, cliff, hill, road, and shore variants
 - Pharos lighthouse placed on the northeast headland at tile `{ x: 44, y: 18 }`, sitting on elevated terrain with a road/stair connection back toward town
-- docks are arranged around a southwest harbor cove, while the cemetery sits on a separated lowland edge
+- docks are arranged around a southwest harbor cove, while the cemetery sits in a compact southwest main-island lowland precinct separated from the lighthouse and dock interaction zones
 - live aggregate Pharos queries mounted only after the desktop gate
 - pure world model for PSI, docks, active ships, clusters, cemetery, details, and visual cues
 - docks are capped to the top six chains by stablecoin supply; each dock uses a distinct Pixellab harbor sprite by rank, scales from both global share and absolute billion-dollar supply tiers, and lists that chain's highest-supply stablecoins in DOM details
@@ -38,7 +38,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - visible RPG-styled toolbar, click-anchored detail panel, blank-map click-to-close behavior, and screen-reader accessibility ledger
 - canvas hit testing for lighthouse, docks, ships, clusters, and graves
 - mouse/touch drag pan, wheel zoom, toolbar pan/zoom/reset/follow/clear controls, keyboard arrow pan, Escape clear, and fullscreen inspection mode
-- normal-motion canvas loop for the lighthouse great-fire flicker, water shimmer, decorative birds/lights/haze, and deterministic ship route sampling, with expensive wake effects capped to selected/top/recent ships
+- normal-motion canvas loop for the lighthouse great-fire flicker, water shimmer, decorative time-derived day/night sky mood, decorative birds/lights/haze, and deterministic ship route sampling, with expensive wake effects capped to selected/top/recent ships
 - deterministic reduced-motion render with no running animation frame loop
 - desktop, stressed-ship, short-screen, ultrawide backing-store, interaction, and motion visual coverage
 - controlled Pixellab asset manifest with critical and deferred sprite loading under `public/pharosville/assets/`

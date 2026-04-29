@@ -21,7 +21,7 @@ type SelectableEntity =
   | PharosVilleWorld["graves"][number];
 
 function targetSize(entity: SelectableEntity): { height: number; width: number; yOffset: number } {
-  if (entity.kind === "lighthouse") return { height: 112, width: 56, yOffset: -62 };
+  if (entity.kind === "lighthouse") return { height: 190, width: 96, yOffset: -82 };
   if (entity.kind === "dock") return { height: 38, width: 96, yOffset: 0 };
   if (entity.kind === "ship") return { height: 48, width: 56, yOffset: -16 };
   if (entity.kind === "ship-cluster") return { height: 48, width: 48, yOffset: -12 };
@@ -46,7 +46,10 @@ function assetDrawPoint(input: {
   let x = point.x;
   let y = point.y;
   let scale = camera.zoom * asset.entry.displayScale;
-  if (entity.kind === "dock") {
+  if (entity.kind === "lighthouse") {
+    y += 3 * camera.zoom;
+    scale *= 1.48;
+  } else if (entity.kind === "dock") {
     const reach = (26 + entity.size * 6) * camera.zoom;
     x += entity.tile.x < mapWidth / 2 ? -reach * 0.25 : reach * 0.25;
     y += 10 * camera.zoom;

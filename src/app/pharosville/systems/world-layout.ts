@@ -7,7 +7,7 @@ export const LIGHTHOUSE_TILE = { x: 44, y: 18 } as const;
 
 export const REGION_TILES: Record<ShipRiskPlacement, { x: number; y: number }> = {
   "safe-harbor": { x: 28, y: 41 },
-  "breakwater-edge": { x: 23, y: 47 },
+  "breakwater-edge": { x: 25, y: 48 },
   "harbor-mouth-watch": { x: 36, y: 47 },
   "outer-rough-water": { x: 50, y: 44 },
   "storm-shelf": { x: 54, y: 52 },
@@ -16,16 +16,16 @@ export const REGION_TILES: Record<ShipRiskPlacement, { x: number; y: number }> =
 };
 
 export const DOCK_TILES = [
-  { x: 19, y: 39 },
+  { x: 20, y: 37 },
   { x: 23, y: 35 },
   { x: 35, y: 39 },
-  { x: 34, y: 44 },
-  { x: 22, y: 46 },
-  { x: 33, y: 46 },
+  { x: 36, y: 44 },
+  { x: 37, y: 45 },
+  { x: 36, y: 46 },
 ];
 
-export const CEMETERY_CENTER = { x: 15.8, y: 47.6 } as const;
-export const CEMETERY_RADIUS = { x: 5.1, y: 3.65 } as const;
+export const CEMETERY_CENTER = { x: 17.4, y: 43.4 } as const;
+export const CEMETERY_RADIUS = { x: 4.35, y: 3.15 } as const;
 
 type GraveMarker = GraveNode["visual"]["marker"];
 
@@ -74,7 +74,9 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
   const headland = lighthouseHeadlandValue(x, y);
   const cemetery = cemeteryValue(x, y);
   const nearIslandEdge = island > 0.82;
-  const harborWater = island < 1 && ((harbor < 0.9 && y > 34 && x < 37) || (approach < 0.94 && y > 42));
+  const harborWater = island < 1
+    && cemetery > 1.18
+    && ((harbor < 0.9 && y > 34 && x < 37) || (approach < 0.94 && y > 42));
 
   if (isOutOfBounds(x, y) || island >= 1 || harborWater) {
     if (harborWater) return "harbor-water";
@@ -108,11 +110,11 @@ function canonicalTileKind(kind: TerrainKind): TileKind {
 
 function islandValue(x: number, y: number): number {
   return Math.min(
-    ellipseValue(x, y, 31.5, 32.2, 18.3, 13.1),
-    ellipseValue(x, y, 42.3, 21.8, 8.2, 7.0),
-    ellipseValue(x, y, 43.2, 28.7, 7.4, 7.8),
-    ellipseValue(x, y, 28.8, 43.8, 12.8, 6.6),
-    ellipseValue(x, y, CEMETERY_CENTER.x, CEMETERY_CENTER.y, CEMETERY_RADIUS.x + 1.25, CEMETERY_RADIUS.y + 0.9),
+    ellipseValue(x, y, 31.4, 31.7, 14.4, 10.5),
+    ellipseValue(x, y, 42.8, 21.4, 7.4, 6.2),
+    ellipseValue(x, y, 42.8, 28.0, 6.1, 6.7),
+    ellipseValue(x, y, 28.0, 42.6, 10.8, 5.6),
+    ellipseValue(x, y, CEMETERY_CENTER.x, CEMETERY_CENTER.y, CEMETERY_RADIUS.x + 1.0, CEMETERY_RADIUS.y + 0.85),
   );
 }
 
@@ -128,7 +130,7 @@ function harborCoveValue(x: number, y: number): number {
 }
 
 function harborApproachValue(x: number, y: number): number {
-  return ellipseValue(x, y, 28.0, 51.0, 5.2, 9.0);
+  return ellipseValue(x, y, 30.0, 47.6, 5.8, 7.8);
 }
 
 function isOutOfBounds(x: number, y: number): boolean {
@@ -341,7 +343,7 @@ function cemeteryValue(x: number, y: number) {
 }
 
 function cemeteryReserved(tile: { x: number; y: number }) {
-  const chapel = ellipseValue(tile.x, tile.y, 13.42, 46.28, 0.72, 0.54) < 1;
+  const chapel = ellipseValue(tile.x, tile.y, CEMETERY_CENTER.x - 2.05, CEMETERY_CENTER.y - 1.28, 0.72, 0.54) < 1;
   const memorial = ellipseValue(tile.x, tile.y, CEMETERY_CENTER.x, CEMETERY_CENTER.y, 0.67, 0.49) < 1;
   const northPath = Math.abs(tile.x - (CEMETERY_CENTER.x + Math.sin((tile.y - CEMETERY_CENTER.y) * 1.12) * 0.16)) < 0.17
     && tile.y > CEMETERY_CENTER.y - CEMETERY_RADIUS.y * 0.94

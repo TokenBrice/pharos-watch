@@ -132,10 +132,10 @@ describe("hit-testing", () => {
 
     const target = targets.find((entry) => entry.detailId === lighthouse.detailId);
 
-    expect(target?.rect.x).toBeCloseTo(point.x - 30 * camera.zoom);
-    expect(target?.rect.y).toBeCloseTo(point.y - 108 * camera.zoom);
-    expect(target?.rect.width).toBeCloseTo(60 * camera.zoom);
-    expect(target?.rect.height).toBeCloseTo(112 * camera.zoom);
+    expect(target?.rect.x).toBeCloseTo(point.x - 44.4 * camera.zoom);
+    expect(target?.rect.y).toBeCloseTo(point.y - 156.84 * camera.zoom);
+    expect(target?.rect.width).toBeCloseTo(88.8 * camera.zoom);
+    expect(target?.rect.height).toBeCloseTo(165.76 * camera.zoom);
   });
 });
 

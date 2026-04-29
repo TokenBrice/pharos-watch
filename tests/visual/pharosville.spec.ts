@@ -137,8 +137,8 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
   const waterRatioMatch = ledgerText?.match(/(\d+(?:\.\d+)?)% water/);
   expect(waterRatioMatch).not.toBeNull();
   const waterPercent = Number(waterRatioMatch?.[1]);
-  expect(waterPercent).toBeGreaterThanOrEqual(76);
-  expect(waterPercent).toBeLessThanOrEqual(84);
+  expect(waterPercent).toBeGreaterThanOrEqual(82);
+  expect(waterPercent).toBeLessThanOrEqual(88);
   await page.waitForFunction(() => {
     const debug = (window as typeof window & {
       __pharosVilleDebug?: { assetsLoaded?: boolean; camera: unknown; targets: unknown[] };

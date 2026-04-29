@@ -43,6 +43,8 @@ const TERRAIN_TEXTURE = {
 const LIGHTHOUSE_HEADLAND = {
   cliff: "#4d564e",
   grass: "#6f7d50",
+  halo: "rgba(222, 196, 119, 0.16)",
+  moss: "#82905b",
   road: "#8e6740",
   shadow: "rgba(10, 12, 12, 0.42)",
   stone: "#7b7d70",
@@ -66,19 +68,58 @@ const VILLAGE_LIGHTS = [
 ] as const;
 
 const BIRDS = [
-  { anchorX: -2.8, anchorY: -2.1, radiusX: 2.6, radiusY: 1.1, scale: 0.78, speed: 0.34, phase: 0.1 },
-  { anchorX: -1.4, anchorY: -3.3, radiusX: 3.1, radiusY: 1.4, scale: 0.68, speed: 0.27, phase: 1.9 },
-  { anchorX: 1.8, anchorY: -2.7, radiusX: 2.2, radiusY: 0.95, scale: 0.62, speed: 0.31, phase: 3.4 },
-  { anchorX: -18.5, anchorY: -9.2, radiusX: 6.5, radiusY: 1.8, scale: 0.54, speed: 0.18, phase: 0.6 },
-  { anchorX: -27.5, anchorY: 5.4, radiusX: 5.8, radiusY: 1.5, scale: 0.48, speed: 0.21, phase: 2.8 },
-  { anchorX: 9.5, anchorY: -13.5, radiusX: 7.2, radiusY: 2.1, scale: 0.5, speed: 0.16, phase: 4.2 },
-  { anchorX: 16.2, anchorY: 4.2, radiusX: 4.6, radiusY: 1.2, scale: 0.42, speed: 0.24, phase: 5.3 },
+  { anchorX: -4.2, anchorY: -3.2, radiusX: 3.8, radiusY: 1.4, scale: 1.14, speed: 0.24, phase: 0.1 },
+  { anchorX: -1.4, anchorY: -5.2, radiusX: 4.4, radiusY: 1.7, scale: 0.98, speed: 0.2, phase: 1.9 },
+  { anchorX: 2.8, anchorY: -4.3, radiusX: 3.2, radiusY: 1.2, scale: 0.9, speed: 0.23, phase: 3.4 },
+  { anchorX: -18.5, anchorY: -10.8, radiusX: 8.5, radiusY: 2.2, scale: 0.76, speed: 0.13, phase: 0.6 },
+  { anchorX: -29.5, anchorY: 4.4, radiusX: 7.4, radiusY: 1.8, scale: 0.68, speed: 0.15, phase: 2.8 },
+  { anchorX: 10.5, anchorY: -15.5, radiusX: 8.8, radiusY: 2.6, scale: 0.72, speed: 0.12, phase: 4.2 },
+  { anchorX: 18.2, anchorY: 2.2, radiusX: 6.2, radiusY: 1.6, scale: 0.62, speed: 0.18, phase: 5.3 },
+  { anchorX: 7.2, anchorY: -7.6, radiusX: 5.2, radiusY: 1.5, scale: 0.84, speed: 0.19, phase: 2.2 },
+  { anchorX: -9.8, anchorY: -8.2, radiusX: 5.8, radiusY: 1.7, scale: 0.82, speed: 0.17, phase: 4.9 },
 ] as const;
 
 const ATMOSPHERE_BANDS = [
   { alpha: 0.11, rx: 280, ry: 24, tileX: 16, tileY: 13, phase: 0.3 },
   { alpha: 0.08, rx: 230, ry: 19, tileX: 48, tileY: 11, phase: 2.1 },
   { alpha: 0.07, rx: 210, ry: 16, tileX: 53, tileY: 39, phase: 4.4 },
+] as const;
+
+const SKY_MOODS = {
+  day: {
+    horizon: "#d9a65b",
+    mist: "rgba(255, 225, 164, 0.22)",
+    starAlpha: 0,
+    top: "#496f8b",
+    waterVeil: "rgba(52, 101, 121, 0.16)",
+  },
+  night: {
+    horizon: "#14294a",
+    mist: "rgba(200, 219, 205, 0.12)",
+    starAlpha: 0.46,
+    top: "#100b12",
+    waterVeil: "rgba(7, 9, 16, 0.22)",
+  },
+} as const;
+
+const SKY_STARS = [
+  { x: 0.11, y: 0.1, size: 1.1 },
+  { x: 0.18, y: 0.22, size: 0.8 },
+  { x: 0.31, y: 0.14, size: 1 },
+  { x: 0.44, y: 0.08, size: 0.7 },
+  { x: 0.58, y: 0.18, size: 1.2 },
+  { x: 0.69, y: 0.09, size: 0.8 },
+  { x: 0.83, y: 0.16, size: 1 },
+  { x: 0.92, y: 0.26, size: 0.7 },
+] as const;
+
+const HEADLAND_TERRAIN_ACCENTS = [
+  { dx: -1.6, dy: -0.5, size: 0.76 },
+  { dx: -0.9, dy: -1.1, size: 0.92 },
+  { dx: 0.2, dy: -1.3, size: 1 },
+  { dx: 1.1, dy: -0.8, size: 0.86 },
+  { dx: 1.7, dy: 0.1, size: 0.72 },
+  { dx: -1.2, dy: 0.7, size: 0.68 },
 ] as const;
 
 const SHIP_COLORS = {
@@ -128,12 +169,7 @@ export interface DrawPharosVilleInput {
 export function drawPharosVille(input: DrawPharosVilleInput) {
   const { ctx, height, width } = input;
   ctx.imageSmoothingEnabled = false;
-  const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, "#100b12");
-  gradient.addColorStop(0.48, "#14294a");
-  gradient.addColorStop(1, "#070910");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, width, height);
+  drawSky(input);
 
   drawTerrain(input);
   drawAtmosphere(input);
@@ -150,6 +186,53 @@ export function drawPharosVille(input: DrawPharosVilleInput) {
   drawLighthouse(input);
   drawBirds(input);
   drawSelection(input);
+}
+
+function drawSky({ camera, ctx, height, motion, width, world }: DrawPharosVilleInput) {
+  const mood = skyMood(motion);
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, mood.top);
+  gradient.addColorStop(0.52, mood.horizon);
+  gradient.addColorStop(1, "#070910");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.save();
+  ctx.globalAlpha = 0.72;
+  const beacon = tileToScreen(world.lighthouse.tile, camera);
+  const glow = ctx.createRadialGradient(
+    beacon.x,
+    beacon.y - 122 * camera.zoom,
+    14 * camera.zoom,
+    beacon.x,
+    beacon.y - 122 * camera.zoom,
+    260 * camera.zoom,
+  );
+  glow.addColorStop(0, "rgba(255, 213, 119, 0.32)");
+  glow.addColorStop(0.34, mood.mist);
+  glow.addColorStop(1, "rgba(255, 213, 119, 0)");
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.ellipse(beacon.x, beacon.y - 122 * camera.zoom, 260 * camera.zoom, 115 * camera.zoom, -0.08, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.globalAlpha = mood.starAlpha;
+  ctx.fillStyle = "#f5e7b8";
+  for (const star of SKY_STARS) {
+    const size = Math.max(1, star.size * camera.zoom);
+    ctx.fillRect(Math.round(width * star.x), Math.round(height * star.y), size, size);
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = mood.waterVeil;
+  ctx.fillRect(0, Math.round(height * 0.52), width, Math.ceil(height * 0.48));
+  ctx.restore();
+}
+
+function skyMood(motion: PharosVilleCanvasMotion) {
+  if (motion.reducedMotion) return SKY_MOODS.night;
+  const cycle = (Math.sin(motion.timeSeconds * 0.018) + 1) / 2;
+  return cycle > 0.54 ? SKY_MOODS.day : SKY_MOODS.night;
 }
 
 function drawTerrain({ camera, ctx, motion, world }: DrawPharosVilleInput) {
@@ -327,16 +410,25 @@ function drawGrassTexture(ctx: CanvasRenderingContext2D, x: number, y: number, z
   ctx.restore();
 }
 
-function drawAtmosphere({ camera, ctx, motion }: DrawPharosVilleInput) {
+function drawAtmosphere({ camera, ctx, motion, world }: DrawPharosVilleInput) {
   const time = motion.reducedMotion ? 0 : motion.timeSeconds;
+  const mood = skyMood(motion);
+  const beacon = tileToScreen(world.lighthouse.tile, camera);
   ctx.save();
+  ctx.fillStyle = mood.mist;
+  ctx.beginPath();
+  ctx.ellipse(beacon.x - 18 * camera.zoom, beacon.y - 92 * camera.zoom, 220 * camera.zoom, 54 * camera.zoom, -0.16, 0, Math.PI * 2);
+  ctx.fill();
+
   for (const band of ATMOSPHERE_BANDS) {
     const p = tileToScreen({ x: band.tileX, y: band.tileY }, camera);
     const drift = Math.sin(time * 0.18 + band.phase) * 12 * camera.zoom;
-    ctx.strokeStyle = `rgba(200, 219, 205, ${band.alpha})`;
-    ctx.lineWidth = Math.max(1, 5 * camera.zoom);
+    ctx.strokeStyle = mood === SKY_MOODS.day
+      ? `rgba(255, 230, 181, ${band.alpha + 0.05})`
+      : `rgba(200, 219, 205, ${band.alpha})`;
+    ctx.lineWidth = Math.max(1, 6.5 * camera.zoom);
     ctx.beginPath();
-    ctx.ellipse(p.x + drift, p.y, band.rx * camera.zoom, band.ry * camera.zoom, -0.1, 0, Math.PI * 2);
+    ctx.ellipse(p.x + drift, p.y - 18 * camera.zoom, band.rx * camera.zoom, band.ry * camera.zoom, -0.1, 0, Math.PI * 2);
     ctx.stroke();
   }
   ctx.restore();
@@ -344,33 +436,66 @@ function drawAtmosphere({ camera, ctx, motion }: DrawPharosVilleInput) {
 
 function drawLighthouseHeadland({ camera, ctx, world }: DrawPharosVilleInput) {
   const center = tileToScreen(world.lighthouse.tile, camera);
+  const terrain = lighthouseTerrain(world);
+  const crownColor = isElevatedTileKind(terrain) ? LIGHTHOUSE_HEADLAND.moss : LIGHTHOUSE_HEADLAND.grass;
   const zoom = camera.zoom;
   ctx.save();
-  drawDiamond(ctx, center.x, center.y + 11 * zoom, 58 * zoom, 29 * zoom, LIGHTHOUSE_HEADLAND.shadow);
-  drawDiamond(ctx, center.x, center.y + 6 * zoom, 52 * zoom, 25 * zoom, LIGHTHOUSE_HEADLAND.cliff);
-  drawTileLowerFacet(ctx, center.x, center.y + 6 * zoom, 52 * zoom, 25 * zoom, "rgba(25, 29, 27, 0.58)");
-  drawDiamond(ctx, center.x, center.y - 2 * zoom, 42 * zoom, 21 * zoom, LIGHTHOUSE_HEADLAND.grass);
-  drawDiamond(ctx, center.x + 1 * zoom, center.y - 3 * zoom, 30 * zoom, 15 * zoom, LIGHTHOUSE_HEADLAND.stone);
+
+  ctx.fillStyle = LIGHTHOUSE_HEADLAND.halo;
+  ctx.beginPath();
+  ctx.ellipse(center.x, center.y + 14 * zoom, 118 * zoom, 42 * zoom, -0.08, 0, Math.PI * 2);
+  ctx.fill();
+
+  drawDiamond(ctx, center.x, center.y + 30 * zoom, 154 * zoom, 72 * zoom, LIGHTHOUSE_HEADLAND.shadow);
+  drawDiamond(ctx, center.x - 2 * zoom, center.y + 20 * zoom, 136 * zoom, 62 * zoom, LIGHTHOUSE_HEADLAND.cliff);
+  drawTileLowerFacet(ctx, center.x - 2 * zoom, center.y + 20 * zoom, 136 * zoom, 62 * zoom, "rgba(25, 29, 27, 0.64)");
+  drawDiamond(ctx, center.x + 2 * zoom, center.y + 7 * zoom, 110 * zoom, 50 * zoom, crownColor);
+  drawDiamond(ctx, center.x + 4 * zoom, center.y - 8 * zoom, 72 * zoom, 33 * zoom, LIGHTHOUSE_HEADLAND.stone);
+
+  for (const accent of HEADLAND_TERRAIN_ACCENTS) {
+    const accentPoint = tileToScreen({
+      x: world.lighthouse.tile.x + accent.dx,
+      y: world.lighthouse.tile.y + accent.dy,
+    }, camera);
+    const accentFill = isWaterTileKind(terrain)
+      ? "rgba(142, 196, 184, 0.22)"
+      : isShoreTileKind(terrain)
+        ? "rgba(237, 204, 137, 0.28)"
+        : "rgba(174, 185, 107, 0.22)";
+    drawDiamond(ctx, accentPoint.x, accentPoint.y + 8 * zoom, 34 * zoom * accent.size, 15 * zoom * accent.size, accentFill);
+  }
 
   ctx.strokeStyle = LIGHTHOUSE_HEADLAND.road;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  ctx.lineWidth = Math.max(2, 3.2 * zoom);
+  ctx.lineWidth = Math.max(3, 5.2 * zoom);
   ctx.beginPath();
-  ctx.moveTo(center.x - 2 * zoom, center.y + 4 * zoom);
-  ctx.lineTo(center.x - 15 * zoom, center.y + 15 * zoom);
-  ctx.lineTo(center.x - 26 * zoom, center.y + 17 * zoom);
+  ctx.moveTo(center.x + 2 * zoom, center.y - 2 * zoom);
+  ctx.lineTo(center.x - 24 * zoom, center.y + 22 * zoom);
+  ctx.lineTo(center.x - 54 * zoom, center.y + 29 * zoom);
+  ctx.lineTo(center.x - 72 * zoom, center.y + 25 * zoom);
   ctx.stroke();
 
   ctx.strokeStyle = "rgba(223, 198, 132, 0.3)";
-  ctx.lineWidth = Math.max(1, zoom);
+  ctx.lineWidth = Math.max(1, 1.4 * zoom);
   ctx.beginPath();
-  ctx.moveTo(center.x - 14 * zoom, center.y + 13 * zoom);
-  ctx.lineTo(center.x - 19 * zoom, center.y + 18 * zoom);
-  ctx.moveTo(center.x - 8 * zoom, center.y + 9 * zoom);
-  ctx.lineTo(center.x - 13 * zoom, center.y + 14 * zoom);
+  ctx.moveTo(center.x - 42 * zoom, center.y + 23 * zoom);
+  ctx.lineTo(center.x - 51 * zoom, center.y + 32 * zoom);
+  ctx.moveTo(center.x - 23 * zoom, center.y + 13 * zoom);
+  ctx.lineTo(center.x - 33 * zoom, center.y + 22 * zoom);
+  ctx.moveTo(center.x + 18 * zoom, center.y + 5 * zoom);
+  ctx.lineTo(center.x + 48 * zoom, center.y + 18 * zoom);
+  ctx.moveTo(center.x - 48 * zoom, center.y + 43 * zoom);
+  ctx.lineTo(center.x + 43 * zoom, center.y + 39 * zoom);
   ctx.stroke();
   ctx.restore();
+}
+
+function lighthouseTerrain(world: PharosVilleWorld): TerrainKind {
+  const tile = world.map.tiles.find((candidate) => (
+    candidate.x === world.lighthouse.tile.x && candidate.y === world.lighthouse.tile.y
+  ));
+  return tile?.terrain ?? tile?.kind ?? "hill";
 }
 
 function drawCemeteryGround({ camera, ctx, world }: DrawPharosVilleInput) {
@@ -682,33 +807,87 @@ function drawStoneLantern(ctx: CanvasRenderingContext2D, point: ScreenPoint, zoo
 
 function drawLighthouse({ assets, camera, ctx, motion, world }: DrawPharosVilleInput) {
   const center = tileToScreen(world.lighthouse.tile, camera);
+  const assetCenter = { x: center.x, y: center.y + 3 * camera.zoom };
   const lighthouseAsset = assets?.get("landmark.lighthouse");
+  const epicZoom = camera.zoom * 1.48;
   const firePoint = lighthouseAsset
-    ? lighthouseBeaconPoint(lighthouseAsset, center, camera.zoom)
-    : { x: center.x, y: center.y - 88 * camera.zoom };
+    ? lighthouseBeaconPoint(lighthouseAsset, assetCenter, epicZoom)
+    : { x: center.x, y: center.y - 148 * camera.zoom };
   if (lighthouseAsset) {
-    drawAsset(ctx, lighthouseAsset, center.x, center.y, camera.zoom);
-    if (!world.lighthouse.unavailable) drawLighthouseBeam(ctx, firePoint, camera.zoom, motion);
-    drawLighthouseFire(ctx, firePoint, camera.zoom, world.lighthouse.color, motion);
+    drawLighthousePedestal(ctx, center, camera.zoom);
+    drawAsset(ctx, lighthouseAsset, assetCenter.x, assetCenter.y, epicZoom);
+    if (!world.lighthouse.unavailable) drawLighthouseBeam(ctx, firePoint, camera.zoom * 1.35, motion);
+    drawLighthouseFire(ctx, firePoint, camera.zoom * 1.32, world.lighthouse.color, motion);
     return;
   }
 
   ctx.save();
   ctx.translate(center.x, center.y);
   ctx.scale(camera.zoom, camera.zoom);
-  ctx.fillStyle = "#f4f0d2";
-  ctx.fillRect(-14, -76, 28, 62);
+  ctx.fillStyle = "rgba(10, 12, 12, 0.42)";
+  ctx.beginPath();
+  ctx.ellipse(2, 3, 34, 11, 0, 0, Math.PI * 2);
+  ctx.fill();
   ctx.fillStyle = "#d8d0ad";
-  ctx.fillRect(-19, -17, 38, 15);
-  ctx.fillStyle = "#a97b34";
-  ctx.fillRect(-10, -88, 20, 12);
+  ctx.fillRect(-31, -23, 62, 21);
+  ctx.fillStyle = "#a99973";
+  ctx.fillRect(-24, -35, 48, 14);
+  ctx.fillStyle = "#f4f0d2";
+  ctx.beginPath();
+  ctx.moveTo(-18, -34);
+  ctx.lineTo(18, -34);
+  ctx.lineTo(12, -134);
+  ctx.lineTo(-12, -134);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "rgba(92, 82, 60, 0.28)";
+  ctx.beginPath();
+  ctx.moveTo(5, -34);
+  ctx.lineTo(18, -34);
+  ctx.lineTo(12, -134);
+  ctx.lineTo(3, -134);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#b34b37";
+  ctx.fillRect(-14, -109, 28, 11);
+  ctx.fillRect(-15, -73, 30, 11);
+  ctx.fillStyle = "#28313a";
+  ctx.fillRect(-5, -50, 10, 18);
+  ctx.fillStyle = "#c89a43";
+  ctx.fillRect(-19, -148, 38, 15);
+  ctx.fillStyle = "#392e26";
+  ctx.fillRect(-24, -153, 48, 6);
+  ctx.fillStyle = "#f4e9ad";
+  ctx.fillRect(-13, -146, 26, 10);
+  ctx.fillStyle = "#723927";
+  ctx.beginPath();
+  ctx.moveTo(-20, -153);
+  ctx.lineTo(0, -172);
+  ctx.lineTo(20, -153);
+  ctx.closePath();
+  ctx.fill();
   ctx.fillStyle = world.lighthouse.color;
   ctx.beginPath();
-  ctx.arc(0, -90, 12, 0, Math.PI * 2);
+  ctx.arc(0, -150, 16, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
-  if (!world.lighthouse.unavailable) drawLighthouseBeam(ctx, firePoint, camera.zoom, motion);
-  drawLighthouseFire(ctx, firePoint, camera.zoom, world.lighthouse.color, motion);
+  if (!world.lighthouse.unavailable) drawLighthouseBeam(ctx, firePoint, camera.zoom * 1.35, motion);
+  drawLighthouseFire(ctx, firePoint, camera.zoom * 1.32, world.lighthouse.color, motion);
+}
+
+function drawLighthousePedestal(ctx: CanvasRenderingContext2D, center: ScreenPoint, zoom: number) {
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  ctx.scale(zoom, zoom);
+  ctx.fillStyle = "rgba(10, 12, 12, 0.34)";
+  ctx.beginPath();
+  ctx.ellipse(0, 4, 42, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#8e8978";
+  ctx.fillRect(-30, -20, 60, 20);
+  ctx.fillStyle = "#c9bea0";
+  ctx.fillRect(-23, -30, 46, 12);
+  ctx.restore();
 }
 
 function lighthouseBeaconPoint(
@@ -798,15 +977,24 @@ function drawLighthouseBeam(
   ctx.fillStyle = "#f5d176";
   ctx.beginPath();
   ctx.moveTo(point.x + 4 * zoom, point.y - 2 * zoom);
-  ctx.lineTo(point.x + 190 * zoom, point.y - 55 * zoom);
-  ctx.lineTo(point.x + 172 * zoom, point.y + 18 * zoom);
+  ctx.lineTo(point.x + 250 * zoom, point.y - 74 * zoom);
+  ctx.lineTo(point.x + 228 * zoom, point.y + 28 * zoom);
   ctx.closePath();
   ctx.fill();
 
-  ctx.globalAlpha = 0.18;
+  ctx.globalAlpha = pulse * 0.72;
+  ctx.fillStyle = "#fff1bb";
+  ctx.beginPath();
+  ctx.moveTo(point.x - 5 * zoom, point.y);
+  ctx.lineTo(point.x - 168 * zoom, point.y - 42 * zoom);
+  ctx.lineTo(point.x - 154 * zoom, point.y + 25 * zoom);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.globalAlpha = 0.24;
   ctx.fillStyle = "#ffe2a0";
   ctx.beginPath();
-  ctx.ellipse(point.x, point.y - 2 * zoom, 42 * zoom, 18 * zoom, -0.08, 0, Math.PI * 2);
+  ctx.ellipse(point.x, point.y - 2 * zoom, 58 * zoom, 24 * zoom, -0.08, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
@@ -1422,26 +1610,35 @@ function drawBirds({ camera, ctx, motion, world }: DrawPharosVilleInput) {
     };
     const p = tileToScreen(tile, camera);
     const wing = motion.reducedMotion ? 0.34 : 0.34 + Math.sin(time * 5.2 + bird.phase) * 0.18;
-    drawBird(ctx, p.x, p.y - 34 * camera.zoom * bird.scale, camera.zoom * bird.scale, wing);
+    drawBird(ctx, p.x, p.y - 46 * camera.zoom * bird.scale, camera.zoom * bird.scale, wing, Math.cos(angle));
   }
   ctx.restore();
 }
 
-function drawBird(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: number, wing: number) {
+function drawBird(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: number, wing: number, bank: number) {
+  const direction = bank >= 0 ? 1 : -1;
   ctx.save();
-  ctx.strokeStyle = "rgba(231, 232, 216, 0.78)";
-  ctx.lineWidth = Math.max(1, 1.4 * zoom);
+  ctx.translate(x, y);
+  ctx.scale(direction, 1);
+  ctx.strokeStyle = "rgba(241, 235, 207, 0.86)";
+  ctx.lineWidth = Math.max(1, 1.8 * zoom);
   ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(x - 8 * zoom, y);
-  ctx.quadraticCurveTo(x - 4 * zoom, y - 8 * zoom * wing, x, y);
-  ctx.quadraticCurveTo(x + 4 * zoom, y - 8 * zoom * wing, x + 8 * zoom, y);
+  ctx.moveTo(-12 * zoom, 0);
+  ctx.quadraticCurveTo(-6 * zoom, -13 * zoom * wing, -1 * zoom, 0);
+  ctx.quadraticCurveTo(6 * zoom, -13 * zoom * wing, 13 * zoom, -1 * zoom);
   ctx.stroke();
-  ctx.strokeStyle = "rgba(31, 40, 43, 0.28)";
-  ctx.lineWidth = Math.max(1, zoom);
+
+  ctx.fillStyle = "rgba(24, 30, 31, 0.74)";
   ctx.beginPath();
-  ctx.moveTo(x - 3 * zoom, y + 1 * zoom);
-  ctx.lineTo(x + 3 * zoom, y + 1 * zoom);
+  ctx.ellipse(1 * zoom, 1 * zoom, 3.2 * zoom, 1.6 * zoom, -0.08, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(27, 35, 37, 0.38)";
+  ctx.lineWidth = Math.max(1, 1.1 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(-5 * zoom, 1 * zoom);
+  ctx.lineTo(6 * zoom, 1 * zoom);
   ctx.stroke();
   ctx.restore();
 }
