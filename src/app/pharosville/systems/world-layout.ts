@@ -1,9 +1,12 @@
 import type { GraveNode, PharosVilleMap, PharosVilleTile, ShipRiskPlacement, TerrainKind, TileKind } from "./world-types";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
+import { stableOffset, stableUnit } from "./stable-random";
 
 export const PHAROSVILLE_MAP_WIDTH = 64;
 export const PHAROSVILLE_MAP_HEIGHT = 64;
 export const LIGHTHOUSE_TILE = { x: 44, y: 18 } as const;
+export const CIVIC_CORE_CENTER = { x: 34, y: 30 } as const;
+export const CIVIC_CORE_RADIUS = 6.5;
 
 export const REGION_TILES: Record<ShipRiskPlacement, { x: number; y: number }> = {
   "safe-harbor": { x: 29, y: 44 },
@@ -125,6 +128,7 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
 
   if (x === LIGHTHOUSE_TILE.x && y === LIGHTHOUSE_TILE.y) return "hill";
   if (isRoadTile(x, y) && cemetery > 1.08) return "road";
+  if (isCivicPlazaTile(x, y)) return "road";
   if (cemetery < 1) return "grass";
   if ((harbor < 1.23 && y > 33 && x < 38) || (approach < 1.2 && y > 42)) return "beach";
   if (headland < 1.04) {
@@ -220,8 +224,9 @@ function isRoadTile(x: number, y: number): boolean {
   const path = [
     { x: 19, y: 39 },
     { x: 21, y: 35 },
-    { x: 30, y: 33 },
-    { x: 37, y: 29 },
+    { x: 29, y: 32 },
+    { x: 34, y: 30 },
+    { x: 38, y: 27 },
     { x: 41, y: 23 },
     { x: 43, y: 19 },
   ];
@@ -230,6 +235,11 @@ function isRoadTile(x: number, y: number): boolean {
     if (!next) return false;
     return distanceToSegment(x, y, point, next) <= 0.62;
   });
+}
+
+function isCivicPlazaTile(x: number, y: number): boolean {
+  return ellipseValue(x, y, CIVIC_CORE_CENTER.x, CIVIC_CORE_CENTER.y + 1.1, 4.4, 2.6) < 1
+    && cemeteryValue(x, y) > 1.08;
 }
 
 function distanceToSegment(
@@ -425,18 +435,6 @@ function cemeteryReserved(tile: { x: number; y: number }) {
   return chapel || memorial || northPath || crossPath;
 }
 
-function stableUnit(id: string): number {
-  let hash = 0;
-  for (let index = 0; index < id.length; index += 1) hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
-  return hash / 0xffffffff;
-}
-
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
-}
-
-export function stableOffset(id: string, span: number): number {
-  let hash = 0;
-  for (let index = 0; index < id.length; index += 1) hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
-  return (hash % (span * 2 + 1)) - span;
 }

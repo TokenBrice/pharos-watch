@@ -3,9 +3,13 @@ import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import {
   buildPharosVilleMap,
   CEMETERY_CENTER,
+  CEMETERY_RADIUS,
+  CIVIC_CORE_CENTER,
+  CIVIC_CORE_RADIUS,
   DOCK_TILES,
   graveNodesFromEntries,
   isElevatedTileKind,
+  isLandTileKind,
   isWaterTileKind,
   LIGHTHOUSE_TILE,
   nearestAvailableWaterTile,
@@ -25,6 +29,9 @@ describe("buildPharosVilleMap", () => {
     expect(map.waterRatio).toBeGreaterThanOrEqual(0.82);
     expect(map.waterRatio).toBeLessThanOrEqual(0.88);
     expect(map.tiles.every((tile) => tile.terrain)).toBe(true);
+    const centroid = landCentroid(map.tiles);
+    expect(Math.abs(centroid.x - CIVIC_CORE_CENTER.x)).toBeLessThan(0.25);
+    expect(Math.abs(centroid.y - CIVIC_CORE_CENTER.y)).toBeLessThan(0.25);
     expect([...new Set(map.tiles.map((tile) => tile.terrain))]).toEqual(expect.arrayContaining([
       "alert-water",
       "harbor-water",
@@ -40,6 +47,13 @@ describe("buildPharosVilleMap", () => {
     ]));
   });
 
+  it("defines a civic core around the island center", () => {
+    expect(CIVIC_CORE_CENTER).toEqual({ x: 34, y: 30 });
+    expect(CIVIC_CORE_RADIUS).toBe(6.5);
+    expect(isLandTileKind(tileKindAt(CIVIC_CORE_CENTER.x, CIVIC_CORE_CENTER.y))).toBe(true);
+    expect(terrainKindAt(CIVIC_CORE_CENTER.x, CIVIC_CORE_CENTER.y)).toBe("road");
+  });
+
   it("places the lighthouse on an elevated northeast headland with a road and water-facing cliff", () => {
     expect(LIGHTHOUSE_TILE).toEqual({ x: 44, y: 18 });
     expect(LIGHTHOUSE_TILE.x < 28 || LIGHTHOUSE_TILE.x > 36 || LIGHTHOUSE_TILE.y < 26 || LIGHTHOUSE_TILE.y > 36).toBe(true);
@@ -51,6 +65,18 @@ describe("buildPharosVilleMap", () => {
       && cardinalNeighbors(tile).some((neighbor) => isWaterTileKind(tileKindAt(neighbor.x, neighbor.y)))
     ));
     expect(hasWaterFacingCliff).toBe(true);
+  });
+
+  it("routes the harbor road through the civic plaza without paving the cemetery", () => {
+    expect(terrainKindAt(20, 37)).toBe("road");
+    expect(terrainKindAt(21, 35)).toBe("road");
+    expect(terrainKindAt(29, 32)).toBe("road");
+    expect(terrainKindAt(34, 30)).toBe("road");
+    expect(terrainKindAt(38, 27)).toBe("road");
+    expect(terrainKindAt(43, 19)).toBe("road");
+    expect(terrainKindAt(31, 31)).toBe("road");
+    expect(terrainKindAt(32, 31)).toBe("road");
+    expect(terrainKindAt(Math.round(CEMETERY_CENTER.x), Math.round(CEMETERY_CENTER.y))).toBe("grass");
   });
 
   it("keeps risk and fog anchors on matching water terrain", () => {
@@ -90,6 +116,7 @@ describe("buildPharosVilleMap", () => {
 
     expect(graves).toHaveLength(CEMETERY_ENTRIES.length);
     expect(CEMETERY_CENTER).toEqual({ x: 36.4, y: 32.8 });
+    expect(CEMETERY_RADIUS).toEqual({ x: 4.0, y: 2.9 });
     expect(CEMETERY_CENTER.x).toBeGreaterThan(31);
     expect(CEMETERY_CENTER.x).toBeLessThan(LIGHTHOUSE_TILE.x);
     expect(tileKindAt(Math.round(CEMETERY_CENTER.x), Math.round(CEMETERY_CENTER.y))).toBe("land");
@@ -119,6 +146,14 @@ function nearbyTiles(center: { x: number; y: number }, radius: number): { x: num
     }
   }
   return tiles;
+}
+
+function landCentroid(tiles: Array<{ x: number; y: number; kind: string }>): { x: number; y: number } {
+  const landTiles = tiles.filter((tile) => !isWaterTileKind(tile.kind));
+  return {
+    x: landTiles.reduce((sum, tile) => sum + tile.x, 0) / landTiles.length,
+    y: landTiles.reduce((sum, tile) => sum + tile.y, 0) / landTiles.length,
+  };
 }
 
 function cardinalNeighbors(tile: { x: number; y: number }): { x: number; y: number }[] {

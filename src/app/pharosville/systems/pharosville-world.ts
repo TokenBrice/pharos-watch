@@ -31,10 +31,11 @@ import {
   detailForShip,
 } from "./detail-model";
 import { buildDataBuildings, buildNorthFrozePoleArea } from "./data-buildings";
-import { buildPharosVilleMap, graveNodesFromEntries, isWaterTileKind, LIGHTHOUSE_TILE, nearestAvailableWaterTile, nearestWaterTile, REGION_TILES, stableOffset, terrainKindAt, tileKindAt } from "./world-layout";
+import { buildPharosVilleMap, graveNodesFromEntries, isWaterTileKind, LIGHTHOUSE_TILE, nearestAvailableWaterTile, nearestWaterTile, REGION_TILES, terrainKindAt, tileKindAt } from "./world-layout";
 import { getRecentChange } from "./recent-change";
 import { resolveShipRiskPlacement } from "./risk-placement";
 import { resolveShipVisual } from "./ship-visuals";
+import { stableHash, stableOffset, stableUnit } from "./stable-random";
 import { buildVisualCueRegistry } from "./visual-cue-registry";
 import type {
   DetailModel,
@@ -480,16 +481,6 @@ function buildDetailIndex(world: Omit<PharosVilleWorld, "detailIndex" | "visualC
     ...world.buildings.map(detailForBuilding),
   ];
   return Object.fromEntries(details.map((detail) => [detail.id, detail]));
-}
-
-function stableUnit(id: string) {
-  return stableHash(id) / 0xffffffff;
-}
-
-function stableHash(id: string) {
-  let hash = 0;
-  for (let index = 0; index < id.length; index += 1) hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
-  return hash;
 }
 
 function clamp(value: number, min: number, max: number) {

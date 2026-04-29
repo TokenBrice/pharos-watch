@@ -9,7 +9,8 @@ The scenery contract is recorded in
 It defines PharosVille as a dark-first maritime observatory island-city: lighthouse
 for PSI, harbors for chain supply, ships for active stablecoins, cemetery for
 dead/frozen lifecycle assets, four main-island data buildings for non-ship
-Pharos products, and North Froze Pole as a frozen northern water area for
+Pharos products arranged around a central civic data core, and North Froze Pole
+as a frozen northern water area for
 observed freeze/blacklist activity. The ClaudeVille transfer boundary is
 contracts and validation habits only; fantasy-village scenery, decorative lore
 copy, non-semantic palettes, extra typography systems, and canvas-only data
@@ -36,6 +37,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - authored terrain metadata layered over canonical movement tiles, including harbor water, alert water, warning shoals water, storm water, fog water, beach, grass, rock, cliff, hill, road, and shore variants
 - named DEWS water-zone posts showing live band counts from `stress.signals[]`, plus subtle dock mast flags using chain logos or short crest marks
 - Pharos lighthouse placed on the northeast headland at tile `{ x: 44, y: 18 }`, sitting on elevated terrain with a road/stair connection back toward town
+- a main-island road/plaza spine ties the southwest harbor, central civic data core, and lighthouse approach together without changing any data semantics
 - Ethereum, Base, Arbitrum, and Polygon are arranged in the southwest EVM bay, with Ethereum as the central cove landmark and Base/Arbitrum/Polygon on the surrounding bay sides; BSC, Tron, Solana, Aptos, and other non-core top-chain harbors use distributed outer-coast dock slots; the cemetery sits on the main island to the right of the EVM bay and left of the lighthouse
 - live aggregate Pharos queries mounted only after the desktop gate
 - pure world model for PSI, docks, active ships, clusters, cemetery, thematic data buildings, northern water areas, details, and visual cues
@@ -48,7 +50,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - ship docking cadence comes from `stablecoins.chainCirculating` chain presence, while risk water comes from `pegSummary.coins[]` and `stress.signals[]`; DOM details expose the route source, risk water, home dock, chain-presence count, and cadence text
 - active ships draw their logo on the sail when a local logo asset is available
 - long-tail stablecoins beyond the individual ship budget are split into count-capped water-zone cluster markers rather than one large pile
-- four selectable main-island data buildings use Pixellab sprites plus deterministic Canvas overlays:
+- four selectable main-island data buildings are arranged around a central civic data core on the main island and use Pixellab sprites plus deterministic Canvas overlays:
   - Royal Mint And Burn Foundry = configured issuance-chain mint/burn events from `mintBurnFlows.gauge`, `coins[]`, `hourly[]`, `scope`, and `sync`
   - Exit Route Gatehouse = DEX liquidity telemetry plus modeled redemption backstops from `dexLiquidity[__global__]`, per-coin DEX liquidity, and `redemptionBackstops.coins`
   - Yield Orchard And Moonwell = yield ranking source breadth, benchmark context, source switches, anomalies, and safety snapshot coverage from `yieldRankings`
@@ -61,7 +63,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - mouse/touch drag pan, wheel zoom, toolbar pan/zoom/reset/follow/clear controls, keyboard arrow pan, Escape clear, and fullscreen inspection mode
 - normal-motion canvas loop for the lighthouse great-fire flicker, water shimmer, decorative time-derived dawn/day/dusk/night sky with sun, crescent moon, stars, constellations, cloud bands, decorative birds/lights/haze, and deterministic ship route sampling, with expensive wake effects capped to selected/top/recent ships
 - deterministic reduced-motion render with no running animation frame loop
-- desktop, stressed-ship, short-screen, ultrawide backing-store, interaction, and motion visual coverage
+- desktop, stressed-ship, short-screen, ultrawide backing-store, interaction, central-core invariants, building-interaction, and motion visual coverage
 - controlled Pixellab asset manifest with critical and deferred sprite loading under `public/pharosville/assets/`
 - asset validation through `npm run check:pharosville-assets`
 - no production fixture/default market data
@@ -81,7 +83,7 @@ The planned PharosVille visual grammar is:
 - ship representative position and docking cadence = positive chain supply across the rendered top-ten chain harbors, shown as slow water-only passages rather than real-time transfer flow
 - sea/weather = aggregate DEWS breadth
 - cemetery = dead and frozen assets from merged cemetery data, with each tomb marker using its local cemetery logo when available and a cause-of-death plaque keyed to the same color taxonomy as the cemetery legend
-- main-island data buildings and northern water path = non-ship Pharos data products:
+- main-island data buildings and northern water path = non-ship Pharos data products, with the four data buildings visually grouped around a central civic data core and road/plaza spine on the main island:
   - Royal Mint And Burn Foundry = configured issuance-chain mint/burn flow state (`minting`, `burning`, `balanced`, `quiet`, `stale`, or `unavailable`)
   - Exit Route Gatehouse = combined DEX liquidity and redemption-route backstop state (`deep-exit`, `thin-exit`, `concentrated`, `stale`, or `unavailable`), with detail copy caveating that these are not guarantees of executable exit capacity
   - Yield Orchard And Moonwell = yield source breadth and benchmark context, avoiding any claim that higher APY is safer
@@ -125,7 +127,7 @@ Compensating gates:
 - ultrawide canvas DPR/backing-store caps
 - reduced-motion ship sample stability with no RAF loop
 - normal-motion RAF startup, moving ship samples, moving ship click targets, and DOM/detail route parity
-- thematic building targets, detail facts, visual-cue registry entries, and asset manifest validation
+- thematic building targets, central civic-core placement invariants, building click/selection interactions, detail facts, visual-cue registry entries, and asset manifest validation
 - no world API, site-data, manifest, or asset requests under the fallback
 
 Visual tests route-mock `/api/*` and `/_site-data/*` data before asserting map semantics.

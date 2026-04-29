@@ -15,7 +15,15 @@ import {
   makeReportCard,
 } from "../__fixtures__/pharosville-world";
 import { buildPharosVilleWorld } from "./pharosville-world";
-import { terrainKindAt, tileKindAt } from "./world-layout";
+import {
+  CEMETERY_CENTER,
+  CEMETERY_RADIUS,
+  CIVIC_CORE_CENTER,
+  CIVIC_CORE_RADIUS,
+  DOCK_TILES,
+  terrainKindAt,
+  tileKindAt,
+} from "./world-layout";
 
 describe("buildPharosVilleWorld", () => {
   it("builds deterministic core entities without React or canvas", () => {
@@ -48,6 +56,16 @@ describe("buildPharosVilleWorld", () => {
     expect(world.graves[0]?.logoSrc).toBe("/logos/cemetery/nubits.png");
     expect(world.detailIndex["lighthouse"]).toBeDefined();
     expect(world.buildings).toHaveLength(4);
+    expect(Object.fromEntries(world.buildings.map((building) => [building.buildingType, building.tile]))).toEqual({
+      "mint-burn-foundry": { x: 29, y: 30 },
+      "exit-route-gatehouse": { x: 31, y: 34 },
+      "yield-orchard-moonwell": { x: 40, y: 30 },
+      "dependency-loom-chainworks": { x: 34, y: 28 },
+    });
+    expect(world.buildings.every((building) => tileKindAt(building.tile.x, building.tile.y) === "land")).toBe(true);
+    expect(world.buildings.every((building) => distance(building.tile, CIVIC_CORE_CENTER) <= CIVIC_CORE_RADIUS)).toBe(true);
+    expect(world.buildings.every((building) => cemeteryValue(building.tile) > 1.08)).toBe(true);
+    expect(world.buildings.every((building) => DOCK_TILES.every((dock) => distance(building.tile, dock) > 5))).toBe(true);
     expect(terrainKindAt(0, 0)).toBe("frozen-water");
     expect(world.detailIndex["building.mint-burn-foundry"]?.title).toBe("Royal Mint And Burn Foundry");
     expect(world.detailIndex["area.north-froze-pole"]?.title).toBe("North Froze Pole");
@@ -531,6 +549,15 @@ describe("buildPharosVilleWorld", () => {
     expect(world.shipClusters.every((cluster) => ["water", "deep-water"].includes(tileKindAt(cluster.tile.x, cluster.tile.y)))).toBe(true);
   });
 });
+
+function cemeteryValue(tile: { x: number; y: number }) {
+  return ((tile.x - CEMETERY_CENTER.x) / CEMETERY_RADIUS.x) ** 2
+    + ((tile.y - CEMETERY_CENTER.y) / CEMETERY_RADIUS.y) ** 2;
+}
+
+function distance(a: { x: number; y: number }, b: { x: number; y: number }) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
 
 function bandSignals(band: "ALERT" | "WATCH" | "CALM", count: number) {
   return Object.fromEntries(Array.from({ length: count }, (_, index) => [

@@ -28,12 +28,19 @@ type DebugTarget = {
   rect: { height: number; width: number; x: number; y: number };
 };
 
+type DebugCamera = {
+  offsetX: number;
+  offsetY: number;
+  zoom: number;
+};
+
 type PharosVilleVisualDebug = {
   animationFramePending?: boolean;
   assetLoadErrors?: unknown[];
   assetsLoaded?: boolean;
-  camera?: unknown;
+  camera?: DebugCamera | null;
   canvasBudget?: unknown;
+  canvasSize?: { x: number; y: number };
   criticalAssetsLoaded?: boolean;
   deferredAssetsLoaded?: boolean;
   motionFrameCount?: number;
@@ -65,6 +72,25 @@ const PHAROSVILLE_SHARED_SHELL_ENDPOINTS = new Set([
   "/_site-data/peg-summary",
   "/_site-data/stability-index",
 ]);
+const BUILDING_DETAIL_IDS = [
+  "building.mint-burn-foundry",
+  "building.exit-route-gatehouse",
+  "building.yield-orchard-moonwell",
+  "building.dependency-loom-chainworks",
+] as const;
+const BUILDING_DETAIL_LABELS: Record<(typeof BUILDING_DETAIL_IDS)[number], string> = {
+  "building.mint-burn-foundry": "Royal Mint And Burn Foundry",
+  "building.exit-route-gatehouse": "Exit Route Gatehouse",
+  "building.yield-orchard-moonwell": "Yield Orchard And Moonwell",
+  "building.dependency-loom-chainworks": "Dependency Loom / Chainworks",
+};
+const TARGET_CLICK_POINTS = [
+  [0.5, 0.5],
+  [0.25, 0.25],
+  [0.75, 0.25],
+  [0.25, 0.75],
+  [0.75, 0.75],
+] as const;
 
 async function mockPharosVilleData(page: Page) {
   await mockPharosVillePayloads(page, {
@@ -361,7 +387,7 @@ async function clickMapTargetWithPoint(page: Page, kind: string, detailId?: stri
         targets: DebugTarget[];
       };
     }).__pharosVilleDebug;
-    const candidates = debug?.targets.filter((entry) => entry.kind === targetKind && (!targetDetailId || entry.detailId === targetDetailId)) ?? [];
+    const candidates = debug?.targets?.filter((entry) => entry.kind === targetKind && (!targetDetailId || entry.detailId === targetDetailId)) ?? [];
     for (const candidate of candidates) {
       const points = [
         [0.5, 0.5],
@@ -375,7 +401,7 @@ async function clickMapTargetWithPoint(page: Page, kind: string, detailId?: stri
       }));
       const point = points.find((candidatePoint) => {
         const topTarget = debug?.targets
-          .filter((entry) => (
+          ?.filter((entry) => (
             candidatePoint.x >= entry.rect.x
             && candidatePoint.x <= entry.rect.x + entry.rect.width
             && candidatePoint.y >= entry.rect.y
@@ -398,6 +424,137 @@ async function clickMapTargetWithPoint(page: Page, kind: string, detailId?: stri
     position: value.point,
   });
   return { detailId: value.detailId, point: value.point };
+}
+
+async function waitForBuildingTargets(page: Page) {
+  await page.waitForFunction((detailIds) => {
+    const debug = (window as typeof window & {
+      __pharosVilleDebug?: PharosVilleVisualDebug;
+    }).__pharosVilleDebug;
+    const buildingTargets = debug?.targets?.filter((target) => target.kind === "building") ?? [];
+    return Boolean(
+      debug?.criticalAssetsLoaded
+      && debug.deferredAssetsLoaded
+      && (debug.assetLoadErrors?.length ?? 0) === 0
+      && detailIds.every((detailId) => buildingTargets.some((target) => target.detailId === detailId))
+      && buildingTargets.length >= detailIds.length
+    );
+  }, [...BUILDING_DETAIL_IDS]);
+}
+
+async function expectNoAssetLoadErrors(page: Page) {
+  const statusHandle = await page.waitForFunction(() => {
+    const debug = (window as typeof window & {
+      __pharosVilleDebug?: PharosVilleVisualDebug;
+    }).__pharosVilleDebug;
+    if (!debug) return null;
+    const assetLoadErrors = debug.assetLoadErrors ?? [];
+    if (assetLoadErrors.length > 0 || (debug.criticalAssetsLoaded && debug.deferredAssetsLoaded)) {
+      return {
+        assetLoadErrors,
+        criticalAssetsLoaded: debug.criticalAssetsLoaded ?? false,
+        deferredAssetsLoaded: debug.deferredAssetsLoaded ?? false,
+      };
+    }
+    return null;
+  });
+  const status = await statusHandle.jsonValue();
+  expect(status.assetLoadErrors).toEqual([]);
+  expect(status.criticalAssetsLoaded).toBe(true);
+  expect(status.deferredAssetsLoaded).toBe(true);
+}
+
+async function expectBuildingTargetsClickable(page: Page) {
+  const result = await page.evaluate(({ clickPoints, detailIds, guardKinds }) => {
+    const debug = (window as typeof window & {
+      __pharosVilleDebug?: PharosVilleVisualDebug;
+    }).__pharosVilleDebug;
+    const targets = debug?.targets ?? [];
+    const buildings = detailIds
+      .map((detailId) => targets.find((target) => target.kind === "building" && target.detailId === detailId) ?? null)
+      .filter((target): target is DebugTarget => target !== null);
+    const missing = detailIds.filter((detailId) => !buildings.some((target) => target.detailId === detailId));
+
+    function containsPoint(target: DebugTarget, point: { x: number; y: number }) {
+      return (
+        point.x >= target.rect.x
+        && point.x <= target.rect.x + target.rect.width
+        && point.y >= target.rect.y
+        && point.y <= target.rect.y + target.rect.height
+      );
+    }
+
+    function rectsOverlap(first: DebugTarget, second: DebugTarget) {
+      return (
+        first.rect.x < second.rect.x + second.rect.width
+        && first.rect.x + first.rect.width > second.rect.x
+        && first.rect.y < second.rect.y + second.rect.height
+        && first.rect.y + first.rect.height > second.rect.y
+      );
+    }
+
+    function topTargetAt(point: { x: number; y: number }) {
+      return targets
+        .filter((target) => containsPoint(target, point))
+        .toSorted((first, second) => second.priority - first.priority)[0] ?? null;
+    }
+
+    function unoccludedPoint(target: DebugTarget) {
+      for (const [x, y] of clickPoints) {
+        const point = {
+          x: target.rect.x + target.rect.width * x,
+          y: target.rect.y + target.rect.height * y,
+        };
+        if (topTargetAt(point)?.detailId === target.detailId) return point;
+      }
+      return null;
+    }
+
+    const unselectable: string[] = [];
+    const blockedOverlaps: string[] = [];
+    for (const building of buildings) {
+      const point = unoccludedPoint(building);
+      if (!point) unselectable.push(building.detailId);
+      const guardedOverlaps = targets.filter((target) => (
+        target.detailId !== building.detailId
+        && guardKinds.includes(target.kind)
+        && rectsOverlap(building, target)
+      ));
+      if (guardedOverlaps.length > 0 && !point) {
+        blockedOverlaps.push(...guardedOverlaps.map((target) => `${building.detailId} overlaps ${target.kind}:${target.detailId}`));
+      }
+    }
+
+    const centers = buildings.map((target) => ({
+      x: target.rect.x + target.rect.width / 2,
+      y: target.rect.y + target.rect.height / 2,
+    }));
+    const xs = centers.map((point) => point.x);
+    const ys = centers.map((point) => point.y);
+    const zoom = debug?.camera?.zoom ?? 1;
+
+    return {
+      blockedOverlaps,
+      centerSpread: {
+        height: ys.length > 0 ? Math.max(...ys) - Math.min(...ys) : Number.POSITIVE_INFINITY,
+        maxHeight: 200 * zoom,
+        maxWidth: 340 * zoom,
+        width: xs.length > 0 ? Math.max(...xs) - Math.min(...xs) : Number.POSITIVE_INFINITY,
+      },
+      missing,
+      unselectable,
+    };
+  }, {
+    clickPoints: TARGET_CLICK_POINTS.map(([x, y]) => [x, y] as [number, number]),
+    detailIds: [...BUILDING_DETAIL_IDS],
+    guardKinds: ["dock", "area", "grave"],
+  });
+
+  expect(result.missing).toEqual([]);
+  expect(result.unselectable).toEqual([]);
+  expect(result.blockedOverlaps).toEqual([]);
+  expect(result.centerSpread.width).toBeLessThanOrEqual(result.centerSpread.maxWidth);
+  expect(result.centerSpread.height).toBeLessThanOrEqual(result.centerSpread.maxHeight);
 }
 
 test("pharosville renders desktop canvas shell", async ({ page }) => {
@@ -426,6 +583,8 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
     }).__pharosVilleDebug;
     return Boolean(debug?.criticalAssetsLoaded && debug.camera && (debug.targets?.length ?? 0) > 0);
   });
+  await waitForBuildingTargets(page);
+  await expectNoAssetLoadErrors(page);
 
   const box = await canvas.boundingBox();
   expect(box?.width).toBeGreaterThan(1000);
@@ -451,6 +610,7 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
   expect(pixelStats.waterPixels).toBeGreaterThan(pixelStats.landPixels * 2);
   expect(pixelStats.landPixels / pixelStats.backingPixels).toBeLessThan(0.45);
   expect(pixelStats.waterPixels / pixelStats.backingPixels).toBeLessThan(0.9);
+  await expectBuildingTargetsClickable(page);
   await expect(page).toHaveScreenshot("pharosville-desktop-shell.png");
 });
 
@@ -502,10 +662,20 @@ test("pharosville renders a stressed ship in storm-shelf detail", async ({ page 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/pharosville/");
+  await expectNoAssetLoadErrors(page);
 
   const clickedDetailId = await clickMapTarget(page, "ship", "ship.usdt-tether");
   expect(clickedDetailId).toBe("ship.usdt-tether");
   await waitForSelectedDetail(page, "ship.usdt-tether");
+  const detailPanel = page.getByTestId("pharosville-detail-panel");
+  await expect(detailPanel).toContainText("Tether");
+  await expect(detailPanel).toContainText("Active depeg event");
+  await expect(detailPanel).toContainText("Risk placement");
+  await expect(detailPanel).toContainText("storm-shelf");
+  await expect(detailPanel).toContainText("Risk water");
+  await expect(detailPanel).toContainText("storm");
+  await expect(detailPanel).toContainText("Evidence");
+  await expect(detailPanel).toContainText("pegSummary.coins[].activeDepeg");
 });
 
 async function denyPharosVilleViewportGatedRequests(page: Page) {
@@ -655,6 +825,18 @@ test("pharosville canvas interactions update details and camera", async ({ page 
   await clickBlankMap(page);
   await waitForSelectedDetail(page, null);
   await expect(page.getByTestId("pharosville-detail-panel")).toHaveCount(0);
+
+  await waitForBuildingTargets(page);
+  await expectBuildingTargetsClickable(page);
+  for (const detailId of BUILDING_DETAIL_IDS) {
+    const selection = await clickMapTargetWithPoint(page, "building", detailId);
+    expect(selection.detailId).toBe(detailId);
+    await waitForSelectedDetail(page, detailId);
+    await expect(page.getByTestId("pharosville-detail-panel")).toBeVisible();
+    await expect(page.getByTestId("pharosville-detail-panel")).toContainText(BUILDING_DETAIL_LABELS[detailId]);
+    await page.getByRole("button", { name: "Clear selection" }).click();
+    await waitForSelectedDetail(page, null);
+  }
 
   await page.getByTestId("pharosville-world").focus();
   await page.keyboard.press("Escape");

@@ -216,28 +216,32 @@ including route source, risk water, home dock, chain presence, and docking
 cadence.
 
 The same world model now also emits four selectable main-island data buildings
-and one northern frozen-water path for non-ship Pharos products: Royal Mint And Burn
-Foundry for configured mint/burn flow telemetry, Exit Route Gatehouse for DEX
-liquidity plus modeled redemption backstops, Yield Orchard And Moonwell for
-yield source context, Dependency Loom / Chainworks for direct report-card
-dependency graph links, and North Froze Pole as an ice-textured water route at
-the map's absolute north edge for freeze/blacklist tracker activity. The
-main-island buildings use deferred Pixellab sprites, while North Froze Pole is
-drawn as terrain plus a named water-area sign. All expose local deterministic
-Canvas effects, DOM detail facts, and accessibility-ledger parity; reduced
-motion freezes procedural movement while preserving static status encodings.
+arranged around a central civic data core, plus one northern frozen-water path
+for non-ship Pharos products: Royal Mint And Burn Foundry for configured
+mint/burn flow telemetry, Exit Route Gatehouse for DEX liquidity plus modeled
+redemption backstops, Yield Orchard And Moonwell for yield source context,
+Dependency Loom / Chainworks for direct report-card dependency graph links, and
+North Froze Pole as an ice-textured water route at the map's absolute north edge
+for freeze/blacklist tracker activity. A main-island road/plaza spine ties the
+southwest harbor, civic core, and lighthouse approach together as visual
+composition only. The main-island buildings use deferred Pixellab sprites, while
+North Froze Pole is drawn as terrain plus a named water-area sign. All expose
+local deterministic Canvas effects, DOM detail facts, and accessibility-ledger
+parity; reduced motion freezes procedural movement while preserving static
+status encodings.
 
 Canvas 2D remains the renderer choice. PixiJS v8 was rejected during the
-2026-04-25 spike (see `docs/superpowers/audits/2026-04-25-pixi-v8-csp.md`)
-because the shader path requires `unsafe-eval`, which Pharos's CSP disallows.
+2026-04-25 spike because the shader path requires `unsafe-eval`, which Pharos's
+CSP disallows.
 
 Visual coverage lives in `tests/visual/pharosville.spec.ts` and currently checks
 the reduced-motion desktop canvas shell, stressed ship semantics, narrow and
 short fallback/no-runtime contracts, visible toolbar/detail surfaces,
 click-anchored detail placement, blank-map click-to-close behavior,
-interaction/camera behavior, ultrawide backing-store caps, reduced-motion static ship samples with no RAF,
-normal-motion moving ship samples, moving ship hit targets, and DOM route-fact
-parity.
+interaction/camera behavior, ultrawide backing-store caps, civic-core placement
+invariants, building click/selection interactions, reduced-motion static ship
+samples with no RAF, normal-motion moving ship samples, moving ship hit targets,
+and DOM route-fact parity.
 
 ---
 

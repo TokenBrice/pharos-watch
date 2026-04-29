@@ -54,15 +54,10 @@ const LIGHTHOUSE_HEADLAND = {
   stone: "#7b7d70",
 } as const;
 
-const BUILDINGS = [
-  [31, 38, "#b9a066", "#474031"],
-  [24, 35, "#dcc078", "#74522f"],
-] as const;
-
 const VILLAGE_LIGHTS = [
-  { x: 30.75, y: 37.4, size: 0.58 },
-  { x: 24.2, y: 34.65, size: 0.56 },
-  { x: 31.7, y: 31.9, size: 0.5 },
+  { x: 30.1, y: 31.8, size: 0.54 },
+  { x: 33.2, y: 30.1, size: 0.5 },
+  { x: 37.2, y: 29.5, size: 0.52 },
 ] as const;
 
 const BIRDS = [
@@ -222,7 +217,6 @@ export function drawPharosVille(input: DrawPharosVilleInput) {
   drawCemeteryGround(input);
   drawLighthouseHeadland(input);
   drawCemeteryContext(input);
-  drawBuildings(input);
   drawThematicBuildings(input);
   drawDocks(input);
   drawAreaSigns(input);
@@ -1323,13 +1317,6 @@ function drawPixelFlame(ctx: CanvasRenderingContext2D, points: Array<[number, nu
   });
   ctx.closePath();
   ctx.fill();
-}
-
-function drawBuildings({ camera, ctx }: DrawPharosVilleInput) {
-  for (const [x, y, color, roof] of BUILDINGS) {
-    const p = tileToScreen({ x, y }, camera);
-    drawBuilding(ctx, p.x, p.y, color, roof, camera.zoom);
-  }
 }
 
 function drawThematicBuildings({ assets, camera, ctx, motion, world }: DrawPharosVilleInput) {
@@ -2752,22 +2739,6 @@ function drawDiamond(ctx: CanvasRenderingContext2D, x: number, y: number, width:
   ctx.closePath();
   ctx.fillStyle = fill;
   ctx.fill();
-}
-
-function drawBuilding(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, roof: string, zoom: number) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(zoom, zoom);
-  ctx.fillStyle = color;
-  ctx.fillRect(-8, -22, 16, 18);
-  ctx.fillStyle = roof;
-  ctx.beginPath();
-  ctx.moveTo(-10, -22);
-  ctx.lineTo(0, -34);
-  ctx.lineTo(10, -22);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
 }
 
 function drawShip(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, sail: string, hull: string, zoom: number) {

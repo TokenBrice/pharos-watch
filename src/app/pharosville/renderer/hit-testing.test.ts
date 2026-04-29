@@ -5,7 +5,22 @@ import { fitCameraToMap, tileToScreen } from "../systems/projection";
 import type { PharosVilleAssetManifestEntry } from "../systems/asset-manifest";
 import type { ShipMotionSample } from "../systems/motion";
 import type { LoadedPharosVilleAsset } from "./asset-manager";
-import { collectHitTargets, hitTest } from "./hit-testing";
+import { collectHitTargets, hitTest, type HitTarget } from "./hit-testing";
+
+const BUILDING_DETAIL_IDS = [
+  "building.mint-burn-foundry",
+  "building.exit-route-gatehouse",
+  "building.yield-orchard-moonwell",
+  "building.dependency-loom-chainworks",
+] as const;
+
+const TARGET_CLICK_POINTS = [
+  [0.5, 0.5],
+  [0.25, 0.25],
+  [0.75, 0.25],
+  [0.25, 0.75],
+  [0.75, 0.75],
+] as const;
 
 describe("hit-testing", () => {
   const world = buildPharosVilleWorld({
@@ -38,17 +53,16 @@ describe("hit-testing", () => {
     expect(match?.detailId).toBe(ship?.detailId);
   });
 
-  it("selects thematic buildings from their tile target", () => {
-    const building = world.buildings.find((entry) => entry.detailId === "building.mint-burn-foundry");
+  it.each(BUILDING_DETAIL_IDS)("selects thematic building %s from an unoccluded target point", (detailId) => {
+    const building = world.buildings.find((entry) => entry.detailId === detailId);
     expect(building).toBeDefined();
-    const target = collectHitTargets({ camera, selectedDetailId: building!.detailId, world })
-      .find((entry) => entry.detailId === building!.detailId);
+    const targets = collectHitTargets({ camera, world });
+    const target = targets.find((entry) => entry.detailId === detailId);
     expect(target).toBeDefined();
 
-    expect(hitTest(collectHitTargets({ camera, selectedDetailId: building!.detailId, world }), {
-      x: target!.rect.x + target!.rect.width / 2,
-      y: target!.rect.y + target!.rect.height / 2,
-    })?.detailId).toBe(building!.detailId);
+    const point = unoccludedTargetPoint(targets, target!);
+    expect(point, `${detailId} should have an unoccluded center or quadrant click point`).not.toBeNull();
+    expect(hitTest(targets, point!)?.detailId).toBe(detailId);
   });
 
   it("selects the North Froze Pole as a northern water area", () => {
@@ -178,4 +192,15 @@ function motionSample(shipId: string, tile: { x: number; y: number }): ShipMotio
     heading: { x: 1, y: 0 },
     wakeIntensity: 0.4,
   };
+}
+
+function unoccludedTargetPoint(targets: readonly HitTarget[], target: HitTarget): { x: number; y: number } | null {
+  for (const [x, y] of TARGET_CLICK_POINTS) {
+    const point = {
+      x: target.rect.x + target.rect.width * x,
+      y: target.rect.y + target.rect.height * y,
+    };
+    if (hitTest(targets, point)?.detailId === target.detailId) return point;
+  }
+  return null;
 }

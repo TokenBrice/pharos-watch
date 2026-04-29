@@ -24,10 +24,10 @@ export interface DataBuildingInputs {
 }
 
 const BUILDING_TILES: Record<BuildingType, { x: number; y: number }> = {
-  "mint-burn-foundry": { x: 22, y: 30 },
-  "exit-route-gatehouse": { x: 40, y: 40 },
-  "yield-orchard-moonwell": { x: 46, y: 30 },
-  "dependency-loom-chainworks": { x: 30, y: 40 },
+  "mint-burn-foundry": { x: 29, y: 30 },
+  "dependency-loom-chainworks": { x: 34, y: 28 },
+  "yield-orchard-moonwell": { x: 40, y: 30 },
+  "exit-route-gatehouse": { x: 31, y: 34 },
 };
 
 const BUILDING_LABELS: Record<BuildingType, string> = {
