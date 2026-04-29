@@ -11,7 +11,7 @@ export interface ShipWaterPath {
   totalLength: number;
 }
 
-export type ShipMotionState = "moored" | "departing" | "sailing" | "risk-drift" | "arriving";
+export type ShipMotionState = "idle" | "moored" | "departing" | "sailing" | "risk-drift" | "arriving";
 
 export interface ShipMotionRoute {
   shipId: string;
@@ -77,7 +77,6 @@ const ZONE_DWELL: Record<ShipWaterZone, { dockDwell: number; riskDwell: number; 
   alert: { riskDwell: 0.38, dockDwell: 0.18, transit: 0.44 },
   calm: { riskDwell: 0.24, dockDwell: 0.24, transit: 0.52 },
   danger: { riskDwell: 0.58, dockDwell: 0.06, transit: 0.36 },
-  fog: { riskDwell: 0.55, dockDwell: 0.08, transit: 0.37 },
   ledger: { riskDwell: 0.48, dockDwell: 0.1, transit: 0.42 },
   warning: { riskDwell: 0.46, dockDwell: 0.12, transit: 0.42 },
   watch: { riskDwell: 0.3, dockDwell: 0.22, transit: 0.48 },
@@ -87,7 +86,6 @@ const OPEN_WATER_PATROL_WAYPOINTS: Record<ShipWaterZone, readonly { x: number; y
   alert: [...SHIP_WATER_ANCHORS["harbor-mouth-watch"], ...SHIP_WATER_ANCHORS["outer-rough-water"], ...SHIP_WATER_ANCHORS["breakwater-edge"]],
   calm: SHIP_WATER_ANCHORS["safe-harbor"],
   danger: [...SHIP_WATER_ANCHORS["storm-shelf"], ...SHIP_WATER_ANCHORS["outer-rough-water"]],
-  fog: SHIP_WATER_ANCHORS["data-fog"],
   ledger: SHIP_WATER_ANCHORS["ledger-mooring"],
   warning: [...SHIP_WATER_ANCHORS["outer-rough-water"], ...SHIP_WATER_ANCHORS["storm-shelf"]],
   watch: [...SHIP_WATER_ANCHORS["breakwater-edge"], ...SHIP_WATER_ANCHORS["safe-harbor"]],
@@ -169,13 +167,12 @@ export function resolveShipMotionSample(input: {
 }): ShipMotionSample {
   const route = input.plan.shipRoutes.get(input.ship.id);
   if (input.reducedMotion || !route) {
-    const reducedStop = route ? primaryDockStop(input.ship, route.dockStops) : null;
     return {
       shipId: input.ship.id,
-      tile: reducedStop?.mooringTile ?? input.ship.riskTile,
-      state: reducedStop ? "moored" : "risk-drift",
+      tile: route?.riskTile ?? input.ship.riskTile,
+      state: "idle",
       zone: input.ship.riskZone,
-      currentDockId: reducedStop?.dockId ?? null,
+      currentDockId: null,
       heading: { x: 0, y: 0 },
       wakeIntensity: 0,
     };
@@ -322,33 +319,34 @@ function weightedDockStopSchedule(shipId: string, visits: readonly ShipDockVisit
   return repeated;
 }
 
-function dockStopForScheduleIndex(route: ShipMotionRoute, scheduleIndex: number) {
-  if (route.dockStopSchedule.length === 0) return null;
-  const dockId = route.dockStopSchedule[positiveModulo(scheduleIndex, route.dockStopSchedule.length)];
-  return route.dockStops.find((stop) => stop.dockId === dockId) ?? null;
-}
-
 function scheduledDockStopsForCycle(
   route: ShipMotionRoute,
   cycleIndex: number,
   scheduledStopCount: number,
 ): Array<ShipMotionRoute["dockStops"][number]> {
-  const scheduleOffset = positiveModulo(cycleIndex * scheduledStopCount, route.dockStopSchedule.length);
   const scheduledStops: Array<ShipMotionRoute["dockStops"][number]> = [];
-  for (let index = 0; index < route.dockStopSchedule.length && scheduledStops.length < scheduledStopCount; index += 1) {
-    const stop = dockStopForScheduleIndex(route, scheduleOffset + index);
+  const homeStop = route.homeDockId
+    ? route.dockStops.find((stop) => stop.dockId === route.homeDockId) ?? null
+    : null;
+  if (homeStop && scheduledStopCount > 0) scheduledStops.push(homeStop);
+
+  const slots = scheduledStopCount - scheduledStops.length;
+  const scheduledNonHomeIds = route.dockStopSchedule
+    .filter((dockId, index, dockIds) => dockId !== homeStop?.dockId && dockIds.indexOf(dockId) === index);
+  const fallbackNonHomeIds = route.dockStops
+    .map((stop) => stop.dockId)
+    .filter((dockId) => dockId !== homeStop?.dockId);
+  const nonHomeIds = scheduledNonHomeIds.length > 0 ? scheduledNonHomeIds : fallbackNonHomeIds;
+  const offset = nonHomeIds.length > 0 ? positiveModulo(cycleIndex * Math.max(1, slots), nonHomeIds.length) : 0;
+
+  for (let index = 0; index < nonHomeIds.length && scheduledStops.length < scheduledStopCount; index += 1) {
+    const dockId = nonHomeIds[positiveModulo(offset + index, nonHomeIds.length)]!;
+    const stop = route.dockStops.find((entry) => entry.dockId === dockId) ?? null;
     if (!stop || scheduledStops.some((entry) => entry.dockId === stop.dockId)) continue;
     scheduledStops.push(stop);
   }
 
-  const homeStop = route.homeDockId
-    ? route.dockStops.find((stop) => stop.dockId === route.homeDockId) ?? null
-    : null;
-  const stops = homeStop
-    ? [homeStop, ...scheduledStops.filter((stop) => stop.dockId !== homeStop.dockId)]
-    : scheduledStops;
-
-  return stops.slice(0, scheduledStopCount);
+  return scheduledStops.slice(0, scheduledStopCount);
 }
 
 function dockStopCount(renderedDockCount: number) {
@@ -659,7 +657,6 @@ function mooredSample(
 
 function mooredRadiusForZone(zone: ShipWaterZone): { x: number; y: number } {
   if (zone === "danger") return { x: 0.22, y: 0.14 };
-  if (zone === "fog") return { x: 0.2, y: 0.13 };
   if (zone === "warning") return { x: 0.24, y: 0.16 };
   if (zone === "alert") return { x: 0.26, y: 0.17 };
   return { x: 0.28, y: 0.18 };
@@ -685,7 +682,6 @@ function riskDriftSample(route: ShipMotionRoute, timeSeconds: number, progress: 
 function driftRadiusForZone(zone: ShipWaterZone): { x: number; y: number } {
   if (zone === "danger") return { x: 0.54, y: 0.36 };
   if (zone === "warning") return { x: 0.48, y: 0.32 };
-  if (zone === "fog") return { x: 0.5, y: 0.32 };
   if (zone === "alert") return { x: 0.44, y: 0.3 };
   if (zone === "watch") return { x: 0.4, y: 0.28 };
   return { x: 0.38, y: 0.26 };
@@ -696,7 +692,6 @@ function transitWakeIntensityForZone(zone: ShipWaterZone): number {
   if (zone === "warning") return 0.58;
   if (zone === "alert") return 0.5;
   if (zone === "watch") return 0.42;
-  if (zone === "fog") return 0.28;
   if (zone === "ledger") return 0.34;
   return 0.35;
 }
@@ -706,7 +701,6 @@ function patrolWakeIntensityForZone(zone: ShipWaterZone): number {
   if (zone === "warning") return 0.54;
   if (zone === "alert") return 0.48;
   if (zone === "watch") return 0.38;
-  if (zone === "fog") return 0.22;
   if (zone === "ledger") return 0.3;
   return 0.28;
 }

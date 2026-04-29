@@ -118,7 +118,6 @@ function areaIdForRiskWaterPlacement(placement: ShipNode["riskPlacement"], band:
 
 function sourceFieldsForRiskWaterPlacement(placement: ShipNode["riskPlacement"], band: DewsAreaBand | null): string[] {
   if (band) return ["stress.signals[]"];
-  if (placement === "data-fog") return ["pegSummary.coins[]", "stablecoins.price", "stablecoins.priceConfidence", "freshness"];
   if (placement === "ledger-mooring") return ["meta.flags.navToken", "pegSummary.coins"];
   return ["pegSummary.coins[]", "stress.signals[]"];
 }
@@ -126,7 +125,6 @@ function sourceFieldsForRiskWaterPlacement(placement: ShipNode["riskPlacement"],
 function summaryForRiskWaterPlacement(placement: ShipNode["riskPlacement"], band: DewsAreaBand | null): string {
   const area = riskWaterAreaForPlacement(placement);
   if (band) return `${area.label} uses ${area.waterStyle} for DEWS ${band} placement.`;
-  if (placement === "data-fog") return "Data Fog uses brackish stale-evidence water for missing, stale, or low-confidence peg evidence.";
   if (placement === "ledger-mooring") return "Ledger Mooring uses ledger water for NAV ledger assets that do not have a standard peg-summary row.";
   return `${area.label} is a named risk-water area.`;
 }
@@ -307,15 +305,11 @@ function assignDockVisits(ships: readonly ShipNode[], docks: readonly DockNode[]
         });
 
       const normalizedVisits = normalizeDockVisitWeights(visits);
-      const representativeTile = normalizedVisits.find((visit) => visit.chainId === ship.homeDockChainId)?.mooringTile
-        ?? normalizedVisits[0]?.mooringTile
-        ?? ship.tile;
-
       return {
         ...ship,
         dockChainId: ship.homeDockChainId ?? null,
         dockVisits: normalizedVisits,
-        tile: representativeTile,
+        tile: ship.riskTile,
       };
     });
 }

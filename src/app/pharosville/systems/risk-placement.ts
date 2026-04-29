@@ -64,21 +64,21 @@ export function resolveShipRiskPlacement(input: RiskPlacementInput): {
 
   if (pegCoin?.activeDepeg && freshness.pegSummaryStale) {
     return {
-      placement: "data-fog",
+      placement: "safe-harbor",
       evidence: evidence("Active depeg evidence is stale", ["pegSummary.coins[].activeDepeg", "freshness.pegSummaryStale"], true),
     };
   }
 
   if (!pegCoin || asset.price == null || asset.priceConfidence === "low") {
     return {
-      placement: "data-fog",
-      evidence: evidence("Missing or low-confidence price evidence", ["pegSummary.coins", "stablecoins.price", "stablecoins.priceConfidence"], freshness.pegSummaryStale),
+      placement: "safe-harbor",
+      evidence: evidence("Missing or low-confidence price evidence", ["pegSummary.coins", "stablecoins.price", "stablecoins.priceConfidence"], true),
     };
   }
 
   if (freshness.pegSummaryStale || freshness.stressStale) {
     return {
-      placement: "data-fog",
+      placement: "safe-harbor",
       evidence: evidence("Risk evidence is stale", ["freshness.pegSummaryStale", "freshness.stressStale"], true),
     };
   }

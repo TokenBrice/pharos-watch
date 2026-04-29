@@ -3,10 +3,10 @@ import { areaLabelPlacementForArea } from "./area-labels";
 import { tileToIso } from "./projection";
 import { DEWS_AREA_PLACEMENTS, RISK_WATER_AREAS } from "./risk-water-areas";
 import { LIGHTHOUSE_TILE, terrainKindAt } from "./world-layout";
-import type { AreaNode, DewsAreaBand, ShipRiskPlacement } from "./world-types";
+import type { AreaNode, DewsAreaBand, ShipRiskPlacement, TerrainKind } from "./world-types";
 
 const WEST_TO_EAST_DEWS_BANDS: DewsAreaBand[] = ["CALM", "WATCH", "ALERT", "WARNING", "DANGER"];
-const NON_DEWS_RISK_PLACEMENTS = ["data-fog", "ledger-mooring"] as const satisfies readonly ShipRiskPlacement[];
+const NON_DEWS_RISK_PLACEMENTS = ["ledger-mooring"] as const satisfies readonly ShipRiskPlacement[];
 
 describe("areaLabelPlacementForArea", () => {
   it("keeps rendered DEWS labels ordered left-to-right around the lighthouse", () => {
@@ -26,19 +26,13 @@ describe("areaLabelPlacementForArea", () => {
       previousIso = iso;
     }
     expect(isoByBand.get("WARNING")!.y).toBeLessThan(lighthouseIso.y);
-    expect(isoByBand.get("DANGER")!.x).toBeGreaterThan(isoByBand.get("WARNING")!.x + 96);
+    expect(isoByBand.get("DANGER")!.x).toBeGreaterThan(isoByBand.get("WARNING")!.x + 16);
   });
 
   it("keeps non-DEWS risk water labels on their semantic water", () => {
-    const expectedTerrains: Record<ShipRiskPlacement, string> = {
-      "breakwater-edge": "watch-water",
-      "data-fog": "brackish-water",
-      "harbor-mouth-watch": "alert-water",
+    const expectedTerrains = {
       "ledger-mooring": "ledger-water",
-      "outer-rough-water": "warning-water",
-      "safe-harbor": "calm-water",
-      "storm-shelf": "storm-water",
-    };
+    } as const satisfies Record<(typeof NON_DEWS_RISK_PLACEMENTS)[number], TerrainKind>;
 
     for (const placement of NON_DEWS_RISK_PLACEMENTS) {
       const area = riskWaterAreaNode(placement);

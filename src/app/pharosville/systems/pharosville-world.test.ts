@@ -117,7 +117,7 @@ describe("buildPharosVilleWorld", () => {
     expect(world.detailIndex["building.exit-route-gatehouse"]?.members?.[0]?.label).toContain("USDC");
   });
 
-  it("spreads safe ships across the northern calm anchorage", () => {
+  it("spreads safe ships across the western calm anchorage", () => {
     const ids = Array.from(ACTIVE_IDS).slice(0, 36);
     const world = buildPharosVilleWorld({
       stablecoins: {
@@ -158,7 +158,7 @@ describe("buildPharosVilleWorld", () => {
     }
   });
 
-  it("anchors rendered ships at harbor moorings while preserving the risk tile", () => {
+  it("assigns rendered dock visits while preserving the representative risk tile", () => {
     const input = {
       stablecoins: fixtureStablecoins,
       chains: fixtureChains,
@@ -182,7 +182,8 @@ describe("buildPharosVilleWorld", () => {
     expect(usdt?.dominantChainId).toBe("ethereum");
     expect(ethereumVisit).toBeDefined();
     expect(ethereumVisit?.dockId).toBe(ethereumDock?.id);
-    expect(ethereumVisit?.mooringTile).toEqual(usdt?.tile);
+    expect(usdt?.tile).toEqual(usdt?.riskTile);
+    expect(ethereumVisit?.mooringTile).not.toEqual(usdt?.tile);
     expect(ethereumVisit?.mooringTile).not.toEqual(usdt?.riskTile);
     expect(ethereumVisit?.mooringTile).toBeDefined();
     expect(["water", "deep-water"]).toContain(tileKindAt(ethereumVisit?.mooringTile.x ?? -1, ethereumVisit?.mooringTile.y ?? -1));
@@ -234,7 +235,6 @@ describe("buildPharosVilleWorld", () => {
         .map((area) => [area.band, area.count]),
     );
     const alertArea = world.areas.find((area) => area.band === "ALERT");
-    const dataFogArea = world.areas.find((area) => area.riskPlacement === "data-fog");
     const ledgerArea = world.areas.find((area) => area.riskPlacement === "ledger-mooring");
     const usdc = world.ships[0];
 
@@ -249,23 +249,19 @@ describe("buildPharosVilleWorld", () => {
     expect(alertArea?.label).toBe("Alert Channel");
     expect(alertArea?.riskPlacement).toBe("harbor-mouth-watch");
     expect(alertArea?.tile ? terrainKindAt(alertArea.tile.x, alertArea.tile.y) : null).toBe("alert-water");
-    expect(dataFogArea).toMatchObject({ label: "Data Fog", riskZone: "fog", detailId: "area.risk-water.data-fog" });
+    expect(world.areas.map((area) => area.detailId)).not.toContain("area.risk-water.data-fog");
     expect(ledgerArea).toMatchObject({ label: "Ledger Mooring", riskZone: "ledger", detailId: "area.risk-water.ledger-mooring" });
-    expect(dataFogArea?.tile ? terrainKindAt(dataFogArea.tile.x, dataFogArea.tile.y) : null).toBe("brackish-water");
     expect(ledgerArea?.tile ? terrainKindAt(ledgerArea.tile.x, ledgerArea.tile.y) : null).toBe("ledger-water");
-    expect(world.detailIndex["area.risk-water.data-fog"]?.facts).toEqual(expect.arrayContaining([
-      { label: "Risk water zone", value: "fog" },
-      { label: "Risk placement", value: "data-fog" },
-    ]));
+    expect(world.detailIndex["area.risk-water.data-fog"]).toBeUndefined();
     expect(world.detailIndex["area.risk-water.ledger-mooring"]?.facts).toEqual(expect.arrayContaining([
       { label: "Risk water zone", value: "ledger" },
       { label: "Risk placement", value: "ledger-mooring" },
     ]));
-    expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 38, y: 6 });
-    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 50, y: 4 });
+    expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 47, y: 14 });
+    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 55, y: 14 });
     expect(world.areas.every((area) => area.id.startsWith("area.dews.") || area.id.startsWith("area.risk-water."))).toBe(true);
-    expect(terrainKindAt(38, 6)).toBe("warning-water");
-    expect(terrainKindAt(50, 4)).toBe("storm-water");
+    expect(terrainKindAt(47, 14)).toBe("warning-water");
+    expect(terrainKindAt(55, 14)).toBe("storm-water");
     expect(usdc?.riskPlacement).toBe("harbor-mouth-watch");
     expect(usdc?.riskZone).toBe("alert");
     expect(usdc?.riskWaterLabel).toBe("Alert Channel");
@@ -541,7 +537,8 @@ describe("buildPharosVilleWorld", () => {
     expect(usdc?.riskZone).toBe("danger");
     expect(usdc?.riskWaterLabel).toBe("Danger Strait");
     expect(usdc?.dockVisits?.map((visit) => visit.chainId)).toEqual(["ethereum"]);
-    expect(usdc?.dockVisits?.[0]?.mooringTile).toEqual(usdc?.tile);
+    expect(usdc?.tile).toEqual(usdc?.riskTile);
+    expect(usdc?.dockVisits?.[0]?.mooringTile).not.toEqual(usdc?.tile);
     expect(usdc?.dockVisits?.[0]?.mooringTile).not.toEqual(usdc?.riskTile);
     expect(["water", "deep-water"]).toContain(tileKindAt(usdc?.dockVisits?.[0]?.mooringTile.x ?? -1, usdc?.dockVisits?.[0]?.mooringTile.y ?? -1));
     expect(["water", "deep-water"]).toContain(tileKindAt(usdc?.riskTile.x ?? -1, usdc?.riskTile.y ?? -1));

@@ -124,7 +124,7 @@ describe("hit-testing", () => {
   });
 
   it("aligns area hit targets to shared cartographic label placement", () => {
-    const area = world.areas.find((entry) => entry.detailId === "area.risk-water.data-fog");
+    const area = world.areas.find((entry) => entry.detailId === "area.dews.calm");
     expect(area).toBeDefined();
     const placement = areaLabelPlacementForArea(area!);
     const labelPoint = tileToScreen(placement.anchorTile, camera);

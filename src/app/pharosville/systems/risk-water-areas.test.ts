@@ -26,7 +26,7 @@ import {
 import type { DewsAreaBand } from "./world-types";
 
 const WEST_TO_EAST_DEWS_BANDS: DewsAreaBand[] = ["CALM", "WATCH", "ALERT", "WARNING", "DANGER"];
-const LIGHTHOUSE_CLEARANCE = { minX: 30, maxX: 45, minY: 18, maxY: 34 } as const;
+const LIGHTHOUSE_CLEARANCE = { minX: 30, maxX: 45, minY: 26, maxY: 34 } as const;
 
 describe("risk water areas", () => {
   it("defines one source of truth for every ship risk placement", () => {
@@ -90,24 +90,15 @@ describe("risk water areas", () => {
     expect(isoByBand.get("DANGER")!.x).toBeGreaterThan(isoByBand.get("WARNING")!.x + 96);
   });
 
-  it("moves Data Fog and Ledger Mooring to distinct bottom sea exception zones", () => {
+  it("keeps Ledger Mooring as the only bottom sea exception zone", () => {
     const ledger = RISK_WATER_AREAS["ledger-mooring"];
-    const dataFog = RISK_WATER_AREAS["data-fog"];
-
-    expect(dataFog.regionTile).toEqual({ x: 50, y: 49 });
-    expect(dataFog.labelTile).toEqual({ x: 50, y: 49 });
-    expect(dataFog.terrain).toBe("brackish-water");
-    expect(dataFog.regionTile.x).toBeGreaterThan(ledger.regionTile.x);
-    expect(dataFog.regionTile.y).toBeGreaterThanOrEqual(46);
-    expect(minDistance([dataFog.regionTile], [ledger.regionTile])).toBeGreaterThanOrEqual(7);
 
     expect(ledger.regionTile).toEqual({ x: 43, y: 49 });
     expect(ledger.labelTile).toEqual({ x: 43, y: 49 });
     expect(ledger.terrain).toBe("ledger-water");
     expect(ledger.validTerrains).toEqual(["ledger-water"]);
     expect(minDistance([ledger.regionTile, ...ledger.shipAnchors], DOCK_TILES)).toBeGreaterThanOrEqual(5);
-    expect(tileToIso(dataFog.labelTile).x).toBeGreaterThan(tileToIso(ledger.labelTile).x);
-    expect(tileToIso(dataFog.labelTile).y).toBeGreaterThanOrEqual(tileToIso(ledger.labelTile).y);
+    expect(ledger.shipAnchors.some((anchor) => anchor.y === PHAROSVILLE_MAP_HEIGHT - 1)).toBe(true);
   });
 
   it("keeps named risk water out of the lighthouse west/south clearance lane", () => {
@@ -128,13 +119,13 @@ describe("risk water areas", () => {
     }
   });
 
-  it("uses the red northwest and northern sea across all five DEWS bands", () => {
+  it("matches the authored DEWS placement diagram", () => {
     const expectedSamples = [
-      { band: "CALM", tile: { x: 12, y: 32 }, terrain: "calm-water" },
-      { band: "WATCH", tile: { x: 14, y: 17 }, terrain: "watch-water" },
-      { band: "ALERT", tile: { x: 25, y: 12 }, terrain: "alert-water" },
-      { band: "WARNING", tile: { x: 38, y: 6 }, terrain: "warning-water" },
-      { band: "DANGER", tile: { x: 50, y: 4 }, terrain: "storm-water" },
+      { band: "CALM", tile: { x: 8, y: 29 }, terrain: "calm-water" },
+      { band: "WATCH", tile: { x: 23, y: 14 }, terrain: "watch-water" },
+      { band: "ALERT", tile: { x: 35, y: 10 }, terrain: "alert-water" },
+      { band: "WARNING", tile: { x: 47, y: 16 }, terrain: "warning-water" },
+      { band: "DANGER", tile: { x: 54, y: 18 }, terrain: "storm-water" },
     ] as const;
 
     for (const sample of expectedSamples) {
@@ -143,20 +134,23 @@ describe("risk water areas", () => {
       expect(terrainKindAt(sample.tile.x, sample.tile.y)).toBe(sample.terrain);
     }
 
-    expect(terrainKindAt(7, 43)).toBe("calm-water");
-    expect(terrainKindAt(15, 44)).toBe("calm-water");
-    expect(RISK_WATER_AREAS["data-fog"].regionTile.y).toBeGreaterThan(45);
+    expect(terrainKindAt(0, 28)).toBe("calm-water");
+    expect(terrainKindAt(24, 0)).toBe("watch-water");
+    expect(terrainKindAt(35, 0)).toBe("alert-water");
+    expect(terrainKindAt(54, 10)).toBe("warning-water");
+    expect(terrainKindAt(55, 14)).toBe("storm-water");
     expect(RISK_WATER_AREAS["ledger-mooring"].regionTile.y).toBeGreaterThan(45);
   });
 
-  it("keeps every DEWS zone in the same continuous northern sea component", () => {
+  it("keeps every named sea zone attached to the map edge and in the same water component", () => {
     const component = connectedWaterTileKeys(RISK_WATER_AREAS[DEWS_AREA_PLACEMENTS.CALM].labelTile);
 
-    for (const band of WEST_TO_EAST_DEWS_BANDS) {
-      const area = RISK_WATER_AREAS[DEWS_AREA_PLACEMENTS[band]];
+    for (const area of Object.values(RISK_WATER_AREAS)) {
+      const authoredTiles = [area.regionTile, area.labelTile, ...area.shipAnchors];
 
       expect(component.has(tileKey(area.labelTile))).toBe(true);
       expect(component.has(tileKey(area.regionTile))).toBe(true);
+      expect(authoredTiles.some((tile) => isEdgeAdjacent(tile)), area.placement).toBe(true);
     }
   });
 
@@ -216,6 +210,13 @@ function isInLighthouseClearance(tile: { x: number; y: number }): boolean {
     && tile.x <= LIGHTHOUSE_CLEARANCE.maxX
     && tile.y >= LIGHTHOUSE_CLEARANCE.minY
     && tile.y <= LIGHTHOUSE_CLEARANCE.maxY;
+}
+
+function isEdgeAdjacent(tile: { x: number; y: number }): boolean {
+  return tile.x <= 1
+    || tile.y <= 1
+    || tile.x >= PHAROSVILLE_MAP_WIDTH - 2
+    || tile.y >= PHAROSVILLE_MAP_HEIGHT - 2;
 }
 
 function tileKey(tile: { x: number; y: number }): string {

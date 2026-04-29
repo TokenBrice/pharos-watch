@@ -45,10 +45,10 @@ const AREA_LABEL_PLACEMENTS_BY_BAND: Partial<Record<DewsAreaBand, AreaLabelPlace
   },
   ALERT: {
     align: "center",
-    dx: -0.6,
-    dy: -1.2,
-    hitboxHeight: 30,
-    maxWidth: 108,
+    dx: -10.4,
+    dy: 2,
+    hitboxHeight: 24,
+    maxWidth: 80,
     rotation: 0.08,
   },
   WARNING: {
@@ -70,14 +70,6 @@ const AREA_LABEL_PLACEMENTS_BY_BAND: Partial<Record<DewsAreaBand, AreaLabelPlace
 };
 
 const AREA_LABEL_PLACEMENTS_BY_DETAIL_ID: Record<string, AreaLabelPlacement> = {
-  "area.risk-water.data-fog": {
-    align: "center",
-    dx: -0.25,
-    dy: -0.85,
-    hitboxHeight: 28,
-    maxWidth: 92,
-    rotation: -0.1,
-  },
   "area.risk-water.ledger-mooring": {
     align: "center",
     dx: -0.4,

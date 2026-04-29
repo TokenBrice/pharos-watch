@@ -43,6 +43,15 @@ function dockingCadenceLabel(node: ShipNode): string {
   return `${cadence}; ${pluralize(chainCount, "positive chain deployment")}, ${pluralize(renderedDockCount, "rendered dock stop")}`;
 }
 
+function representativePositionLabel(node: ShipNode): string {
+  if (node.riskPlacement === "ledger-mooring") return "Ledger Mooring idle";
+  return `${node.riskWaterLabel} idle`;
+}
+
+function evidenceStatusLabel(node: ShipNode): string {
+  return node.placementEvidence.stale ? `Caveat: ${node.placementEvidence.reason}` : "Fresh current placement evidence";
+}
+
 export function detailForLighthouse(node: LighthouseNode): DetailModel {
   return {
     id: node.detailId,
@@ -93,7 +102,7 @@ export function detailForShip(node: ShipNode): DetailModel {
       { label: "Market cap", value: marketCapLabel(node.marketCapUsd) },
       { label: "Ship class", value: node.visual.classLabel },
       { label: "Size tier", value: node.visual.sizeLabel },
-      { label: "Representative position", value: node.homeDockChainId ? `${chainLabel(node.homeDockChainId)} harbor mooring` : "Risk water patrol" },
+      { label: "Representative position", value: representativePositionLabel(node) },
       { label: "Risk water area", value: node.riskWaterLabel },
       { label: "Risk water zone", value: node.riskZone },
       { label: "Risk placement key", value: node.riskPlacement },
@@ -101,6 +110,7 @@ export function detailForShip(node: ShipNode): DetailModel {
       { label: "Chains present", value: chainsPresentLabel(node) },
       { label: "Docking cadence", value: dockingCadenceLabel(node) },
       { label: "Route source", value: "stablecoins.chainCirculating, pegSummary.coins[], stress.signals[]" },
+      { label: "Evidence status", value: evidenceStatusLabel(node) },
       { label: "Evidence", value: node.placementEvidence.sourceFields.join(", ") },
     ],
     links: [{ label: "Stablecoin", href: `/stablecoin/${node.id}/` }],

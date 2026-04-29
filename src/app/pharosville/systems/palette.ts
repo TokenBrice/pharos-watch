@@ -1,3 +1,7 @@
+import { THREAT_BAND_HEX } from "@shared/lib/classification";
+
+import type { DewsAreaBand } from "./world-types";
+
 export const HARBOR_PALETTE = {
   deep_sea_2: "#0a0e1d",
   deep_sea_1: "#141a30",
@@ -55,10 +59,8 @@ export function paletteRgba(key: HarborPaletteKey, alpha: number): string {
 
 export type WaterTextureKind =
   | "alert"
-  | "brackish"
   | "calm"
   | "deep"
-  | "fog"
   | "harbor"
   | "ledger"
   | "storm"
@@ -82,13 +84,6 @@ export const WATER_TERRAIN_STYLES = {
     texture: "alert",
     wave: "rgba(236, 221, 162, 0.24)",
   },
-  "brackish-water": {
-    accent: "rgba(132, 142, 89, 0.28)",
-    base: "#223f35",
-    inner: "rgba(81, 100, 64, 0.34)",
-    texture: "brackish",
-    wave: "rgba(169, 190, 146, 0.2)",
-  },
   "calm-water": {
     accent: "rgba(181, 231, 214, 0.24)",
     base: "#238c73",
@@ -102,13 +97,6 @@ export const WATER_TERRAIN_STYLES = {
     inner: "rgba(1, 5, 13, 0.3)",
     texture: "deep",
     wave: "rgba(116, 151, 178, 0.1)",
-  },
-  "fog-water": {
-    accent: "rgba(205, 214, 210, 0.24)",
-    base: "#334760",
-    inner: "rgba(197, 208, 206, 0.22)",
-    texture: "fog",
-    wave: "rgba(214, 226, 217, 0.18)",
   },
   "harbor-water": {
     accent: "rgba(171, 219, 205, 0.24)",
@@ -153,6 +141,14 @@ export const WATER_TERRAIN_STYLES = {
     wave: "rgba(186, 231, 225, 0.16)",
   },
 } as const satisfies Record<string, WaterTerrainStyle>;
+
+export const DEWS_AREA_LABEL_COLORS = {
+  CALM: THREAT_BAND_HEX.CALM,
+  WATCH: THREAT_BAND_HEX.WATCH,
+  ALERT: THREAT_BAND_HEX.ALERT,
+  WARNING: THREAT_BAND_HEX.WARNING,
+  DANGER: THREAT_BAND_HEX.DANGER,
+} as const satisfies Record<DewsAreaBand, string>;
 
 export function waterTerrainStyle(kind: string): WaterTerrainStyle | null {
   return WATER_TERRAIN_STYLES[kind as keyof typeof WATER_TERRAIN_STYLES] ?? null;

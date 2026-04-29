@@ -20,7 +20,7 @@ describe("resolveShipRiskPlacement", () => {
     expect(result.placement).toBe("storm-shelf");
   });
 
-  it("places NAV tokens with missing peg rows at ledger mooring before generic fog", () => {
+  it("places NAV tokens with missing peg rows at ledger mooring before generic evidence caveats", () => {
     expect(susdeMeta).toBeDefined();
     const result = resolveShipRiskPlacement({
       asset: makeAsset({ id: "susde-ethena", symbol: "sUSDe" }),
@@ -70,7 +70,8 @@ describe("resolveShipRiskPlacement", () => {
       freshness: { stressStale: true },
     });
 
-    expect(result.placement).toBe("data-fog");
+    expect(result.placement).toBe("safe-harbor");
+    expect(result.evidence.stale).toBe(true);
   });
 
   it("does not treat stale active-depeg evidence as a live storm signal", () => {
@@ -83,7 +84,22 @@ describe("resolveShipRiskPlacement", () => {
       freshness: { pegSummaryStale: true },
     });
 
-    expect(result.placement).toBe("data-fog");
+    expect(result.placement).toBe("safe-harbor");
+    expect(result.evidence.stale).toBe(true);
+  });
+
+  it("keeps missing or low-confidence evidence in Calm Anchorage with an evidence caveat", () => {
+    expect(usdcMeta).toBeDefined();
+    const result = resolveShipRiskPlacement({
+      asset: makeAsset({ id: "usdc-circle", symbol: "USDC", priceConfidence: "low" }),
+      meta: usdcMeta!,
+      pegCoin: undefined,
+      stress: undefined,
+      freshness: {},
+    });
+
+    expect(result.placement).toBe("safe-harbor");
+    expect(result.evidence.reason).toBe("Missing or low-confidence price evidence");
     expect(result.evidence.stale).toBe(true);
   });
 });

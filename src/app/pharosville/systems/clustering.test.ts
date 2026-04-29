@@ -84,8 +84,8 @@ describe("clusterLongTailShips", () => {
       makeShip(4, 200, "outer-rough-water"),
       makeShip(5, 100, "ledger-mooring"),
       makeShip(6, 90, "ledger-mooring"),
-      makeShip(7, 80, "data-fog"),
-      makeShip(8, 70, "data-fog"),
+      makeShip(7, 80, "breakwater-edge"),
+      makeShip(8, 70, "safe-harbor"),
     ];
 
     const result = clusterLongTailShips(ships, 0);
@@ -102,14 +102,17 @@ describe("clusterLongTailShips", () => {
     expect(terrainByPlacement["storm-shelf"]).toBe("storm-water");
     expect(terrainByPlacement["outer-rough-water"]).toBe("warning-water");
     expect(terrainByPlacement["ledger-mooring"]).toBe("ledger-water");
-    expect(terrainByPlacement["data-fog"]).toBe("brackish-water");
+    expect(terrainByPlacement["breakwater-edge"]).toBe("watch-water");
+    expect(terrainByPlacement["safe-harbor"]).toBe("calm-water");
     expect(zoneByPlacement["storm-shelf"]).toBe("danger");
     expect(zoneByPlacement["outer-rough-water"]).toBe("warning");
     expect(zoneByPlacement["ledger-mooring"]).toBe("ledger");
-    expect(zoneByPlacement["data-fog"]).toBe("fog");
+    expect(zoneByPlacement["breakwater-edge"]).toBe("watch");
+    expect(zoneByPlacement["safe-harbor"]).toBe("calm");
     expect(labelByPlacement["storm-shelf"]).toBe("Danger Strait");
     expect(labelByPlacement["outer-rough-water"]).toBe("Warning Shoals");
     expect(labelByPlacement["ledger-mooring"]).toBe("Ledger Mooring");
-    expect(labelByPlacement["data-fog"]).toBe("Data Fog");
+    expect(labelByPlacement["breakwater-edge"]).toBe("Watch Breakwater");
+    expect(labelByPlacement["safe-harbor"]).toBe("Calm Anchorage");
   });
 });

@@ -148,10 +148,10 @@ function buildMintBurnFoundry(
       })),
     visual: {
       accent: BUILDING_ACCENTS["mint-burn-foundry"],
-      dataFogIntensity: status === "stale" ? 0.62 : 0,
       intensity: activityIntensity,
       scale: 1,
       secondaryIntensity: clamp01(mintIntensity),
+      staleHazeIntensity: status === "stale" ? 0.62 : 0,
       tertiaryIntensity: clamp01(burnIntensity),
     },
   });
@@ -253,10 +253,10 @@ function buildExitRouteGatehouse(
     members: weakestExitMembers(dexEntries, redemptionBackstops, reportCards),
     visual: {
       accent: BUILDING_ACCENTS["exit-route-gatehouse"],
-      dataFogIntensity: status === "stale" ? 0.7 : 0,
       intensity: Math.max(depthIntensity, volumeIntensity * 0.7),
       scale: 1,
       secondaryIntensity: volumeIntensity,
+      staleHazeIntensity: status === "stale" ? 0.7 : 0,
       tertiaryIntensity: status === "concentrated" ? 1 : openRouteShare,
     },
   });
@@ -296,10 +296,10 @@ function makeBuilding(input: {
 function unavailableVisual(buildingType: BuildingType): BuildingNode["visual"] {
   return {
     accent: BUILDING_ACCENTS[buildingType],
-    dataFogIntensity: 0.72,
     intensity: 0.16,
     scale: 1,
     secondaryIntensity: 0.08,
+    staleHazeIntensity: 0.72,
     tertiaryIntensity: 0.08,
   };
 }

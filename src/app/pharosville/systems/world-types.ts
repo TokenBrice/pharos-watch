@@ -7,13 +7,11 @@ export type TileKind = "deep-water" | "water" | "shore" | "land" | "road";
 export type TerrainKind =
   | TileKind
   | "alert-water"
-  | "brackish-water"
   | "calm-water"
   | "harbor-water"
   | "watch-water"
   | "warning-water"
   | "storm-water"
-  | "fog-water"
   | "ledger-water"
   | "beach"
   | "grass"
@@ -43,7 +41,6 @@ export type ShipRiskPlacement =
   | "harbor-mouth-watch"
   | "outer-rough-water"
   | "storm-shelf"
-  | "data-fog"
   | "ledger-mooring";
 
 export interface PlacementEvidence {
@@ -101,7 +98,7 @@ export interface ShipDockVisit {
   mooringTile: { x: number; y: number };
 }
 
-export type ShipWaterZone = "calm" | "watch" | "alert" | "warning" | "danger" | "fog" | "ledger";
+export type ShipWaterZone = "calm" | "watch" | "alert" | "warning" | "danger" | "ledger";
 
 export interface LighthouseNode {
   id: "lighthouse";
@@ -217,10 +214,10 @@ export type BuildingStatus =
 
 export interface DataLandmarkVisual {
   accent: string;
-  dataFogIntensity: number;
   intensity: number;
   scale: number;
   secondaryIntensity: number;
+  staleHazeIntensity: number;
   tertiaryIntensity: number;
 }
 

@@ -51,17 +51,6 @@ describe("motion", () => {
           pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true }),
         }),
       },
-      {
-        zone: "fog",
-        expectedTerrains: ["brackish-water"],
-        minDistance: 4,
-        world: worldForShip({
-          chainCirculating: {},
-          chains: ["ethereum"],
-          freshness: { pegSummaryStale: true },
-          pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true }),
-        }),
-      },
       { zone: "ledger", expectedTerrains: ["ledger-water"], minDistance: 4, world: worldForShip({ chainCirculating: {}, chains: ["ethereum"], navToken: true }) },
     ];
 
@@ -181,14 +170,14 @@ describe("motion", () => {
     expect(new Set(multiRoute.dockStopSchedule).size).toBeGreaterThan(new Set(singleRoute.dockStopSchedule).size);
   });
 
-  it("returns a static harbor mooring for reduced-motion docked samples", () => {
+  it("returns a static risk-water idle position for reduced-motion docked samples", () => {
     const ship = world.ships[0]!;
     const plan = buildMotionPlan(world, ship.detailId);
     const sample = resolveShipMotionSample({ plan, reducedMotion: true, ship, timeSeconds: 120 });
 
-    expect(sample.tile).toEqual(ship.tile);
-    expect(sample.state).toBe("moored");
-    expect(sample.currentDockId).toBe(ship.dockVisits[0]?.dockId);
+    expect(sample.tile).toEqual(ship.riskTile);
+    expect(sample.state).toBe("idle");
+    expect(sample.currentDockId).toBeNull();
     expect(sample.zone).toBe(ship.riskZone);
     expect(sample.wakeIntensity).toBe(0);
   });
@@ -259,15 +248,6 @@ describe("motion", () => {
           pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true }),
         }),
       },
-      {
-        expectedTerrains: ["brackish-water"],
-        world: worldForShip({
-          chainCirculating: {},
-          chains: ["ethereum"],
-          freshness: { pegSummaryStale: true },
-          pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true }),
-        }),
-      },
       { expectedTerrains: ["ledger-water"], world: worldForShip({ chainCirculating: {}, chains: ["ethereum"], navToken: true }) },
     ];
 
@@ -277,7 +257,7 @@ describe("motion", () => {
 
       expect(waypoint).toBeDefined();
       expect(entry.expectedTerrains).toContain(terrainKindAt(waypoint?.x ?? -1, waypoint?.y ?? -1));
-      if (route.zone === "fog" || route.zone === "ledger") {
+      if (route.zone === "ledger") {
         expect(waypoint?.y).toBeGreaterThanOrEqual(46);
       } else if (route.zone === "calm") {
         expect(waypoint?.y).toBeLessThanOrEqual(45);
@@ -332,7 +312,7 @@ describe("motion", () => {
 
   it("routes over semantic water terrain only", () => {
     const map = buildPharosVilleMap();
-    const route = buildShipWaterRoute({ from: { x: 50, y: 4 }, to: { x: 25, y: 12 }, map });
+    const route = buildShipWaterRoute({ from: { x: 54, y: 18 }, to: { x: 35, y: 10 }, map });
 
     expect(route.points.length).toBeGreaterThan(1);
     expect(terrainKindInMap(map, route.points[0]!)).toBe("storm-water");
@@ -424,21 +404,20 @@ describe("motion", () => {
     }
   });
 
-  it("keeps danger and fog ships near risk water more than docks", () => {
+  it("keeps danger and ledger ships near risk water more than docks", () => {
     const dangerWorld = worldForShip({
       chainCirculating: chainCirculating(["Ethereum"]),
       chains: ["ethereum"],
       pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true }),
     });
-    const fogWorld = worldForShip({
+    const ledgerWorld = worldForShip({
       chainCirculating: chainCirculating(["Ethereum"]),
       chains: ["ethereum"],
-      freshness: { pegSummaryStale: true },
-      pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true }),
+      navToken: true,
     });
 
     expect(riskVsDockDwell(dangerWorld).riskSamples).toBeGreaterThan(riskVsDockDwell(dangerWorld).dockSamples);
-    expect(riskVsDockDwell(fogWorld).riskSamples).toBeGreaterThan(riskVsDockDwell(fogWorld).dockSamples);
+    expect(riskVsDockDwell(ledgerWorld).riskSamples).toBeGreaterThan(riskVsDockDwell(ledgerWorld).dockSamples);
   });
 
   it("derives lighthouse fire flicker speed from PSI band and score", () => {

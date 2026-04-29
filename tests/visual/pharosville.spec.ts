@@ -107,7 +107,6 @@ const RISK_WATER_AREA_DETAILS = [
   { detailId: "area.dews.alert", label: "Alert Channel", zone: "alert" },
   { detailId: "area.dews.warning", label: "Warning Shoals", zone: "warning" },
   { detailId: "area.dews.danger", label: "Danger Strait", zone: "danger" },
-  { detailId: "area.risk-water.data-fog", label: "Data Fog", zone: "fog" },
   { detailId: "area.risk-water.ledger-mooring", label: "Ledger Mooring", zone: "ledger" },
 ] as const;
 const TARGET_CLICK_POINTS = [
@@ -1172,9 +1171,10 @@ async function waitForMovingShipSample(page: Page) {
   expect(second.motionFrameCount).toBeGreaterThan(first.motionFrameCount);
 
   const firstById = new Map(first.shipMotionSamples.map((sample) => [sample.id, sample]));
+  const transitStates = new Set(["departing", "arriving", "sailing"]);
   const movedSample = second.shipMotionSamples.find((sample) => {
     const previous = firstById.get(sample.id);
-    return Boolean(previous && sample.state !== "moored" && Math.hypot(sample.x - previous.x, sample.y - previous.y) > 0.001);
+    return Boolean(previous && transitStates.has(sample.state) && Math.hypot(sample.x - previous.x, sample.y - previous.y) > 0.25);
   });
   expect(movedSample).toBeDefined();
   return movedSample!;

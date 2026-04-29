@@ -59,7 +59,6 @@ describe("buildPharosVilleMap", () => {
     expect(Math.abs(centroid.y - CIVIC_CORE_CENTER.y)).toBeLessThan(1.3);
     expect([...new Set(map.tiles.map((tile) => tile.terrain))]).toEqual(expect.arrayContaining([
       "alert-water",
-      "brackish-water",
       "calm-water",
       "harbor-water",
       "ledger-water",
@@ -110,25 +109,24 @@ describe("buildPharosVilleMap", () => {
     expect(terrainKindAt(Math.round(CEMETERY_CENTER.x), Math.round(CEMETERY_CENTER.y))).toBe("grass");
   });
 
-  it("keeps risk and fog anchors on matching water terrain", () => {
+  it("keeps risk anchors on matching water terrain", () => {
     expect(Object.values(REGION_TILES).every((tile) => isWaterTileKind(tileKindAt(tile.x, tile.y)))).toBe(true);
     expect(terrainKindAt(REGION_TILES["safe-harbor"].x, REGION_TILES["safe-harbor"].y)).toBe("calm-water");
     expect(terrainKindAt(REGION_TILES["breakwater-edge"].x, REGION_TILES["breakwater-edge"].y)).toBe("watch-water");
     expect(terrainKindAt(REGION_TILES["harbor-mouth-watch"].x, REGION_TILES["harbor-mouth-watch"].y)).toBe("alert-water");
     expect(terrainKindAt(REGION_TILES["outer-rough-water"].x, REGION_TILES["outer-rough-water"].y)).toBe("warning-water");
     expect(terrainKindAt(REGION_TILES["storm-shelf"].x, REGION_TILES["storm-shelf"].y)).toBe("storm-water");
-    expect(terrainKindAt(REGION_TILES["data-fog"].x, REGION_TILES["data-fog"].y)).toBe("brackish-water");
     expect(terrainKindAt(REGION_TILES["ledger-mooring"].x, REGION_TILES["ledger-mooring"].y)).toBe("ledger-water");
     expect(terrainKindAt(0, 0)).toBe("deep-water");
   });
 
-  it("extends Calm Anchorage across the open western basin", () => {
+  it("uses the west-edge open water for Calm Anchorage", () => {
     const westernBasinSamples = [
-      { x: 4, y: 43 },
-      { x: 7, y: 43 },
-      { x: 12, y: 44 },
-      { x: 15, y: 44 },
-      { x: 20, y: 43 },
+      { x: 0, y: 25 },
+      { x: 4, y: 31 },
+      { x: 8, y: 29 },
+      { x: 13, y: 33 },
+      { x: 18, y: 31 },
     ];
 
     for (const tile of westernBasinSamples) {
@@ -136,9 +134,9 @@ describe("buildPharosVilleMap", () => {
     }
   });
 
-  it("keeps the lighthouse west and south sea lane generic water", () => {
+  it("keeps the south lighthouse sea lane generic water", () => {
     for (let x = 30; x <= 45; x += 1) {
-      for (let y = 18; y <= 34; y += 1) {
+      for (let y = 26; y <= 34; y += 1) {
         const terrain = terrainKindAt(x, y);
         if (!isWaterTileKind(terrain)) continue;
         expect(terrain, `${x}.${y}`).toBe("water");

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { HARBOR_PALETTE, WATER_TERRAIN_STYLES, hexToInt, paletteOrThrow, paletteRgba, waterTerrainStyle } from "./palette";
+import { THREAT_BAND_HEX } from "@shared/lib/classification";
+import { DEWS_AREA_LABEL_COLORS, HARBOR_PALETTE, WATER_TERRAIN_STYLES, hexToInt, paletteOrThrow, paletteRgba, waterTerrainStyle } from "./palette";
 
 describe("HARBOR_PALETTE", () => {
   it("contains 25 entries", () => {
@@ -33,10 +34,8 @@ describe("HARBOR_PALETTE", () => {
   it("defines explicit styles for every rendered water terrain", () => {
     expect(Object.keys(WATER_TERRAIN_STYLES).sort()).toEqual([
       "alert-water",
-      "brackish-water",
       "calm-water",
       "deep-water",
-      "fog-water",
       "harbor-water",
       "ledger-water",
       "storm-water",
@@ -44,7 +43,6 @@ describe("HARBOR_PALETTE", () => {
       "watch-water",
       "water",
     ]);
-    expect(waterTerrainStyle("brackish-water")?.texture).toBe("brackish");
     expect(waterTerrainStyle("calm-water")?.texture).toBe("calm");
     expect(waterTerrainStyle("ledger-water")?.texture).toBe("ledger");
     expect(waterTerrainStyle("watch-water")?.texture).toBe("watch");
@@ -61,6 +59,16 @@ describe("HARBOR_PALETTE", () => {
     expect(hexDistance(WATER_TERRAIN_STYLES["calm-water"].base, WATER_TERRAIN_STYLES["alert-water"].base)).toBeGreaterThan(32);
     expect(WATER_TERRAIN_STYLES["warning-water"].accent).not.toBe(WATER_TERRAIN_STYLES.water.accent);
     expect(WATER_TERRAIN_STYLES["ledger-water"].base).not.toBe(WATER_TERRAIN_STYLES["calm-water"].base);
+  });
+
+  it("uses canonical DEWS threat colors for water-area labels", () => {
+    expect(DEWS_AREA_LABEL_COLORS).toEqual({
+      CALM: THREAT_BAND_HEX.CALM,
+      WATCH: THREAT_BAND_HEX.WATCH,
+      ALERT: THREAT_BAND_HEX.ALERT,
+      WARNING: THREAT_BAND_HEX.WARNING,
+      DANGER: THREAT_BAND_HEX.DANGER,
+    });
   });
 });
 

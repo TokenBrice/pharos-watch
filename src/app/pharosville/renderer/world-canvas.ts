@@ -1,5 +1,5 @@
 import { areaLabelPlacementForArea } from "../systems/area-labels";
-import { waterTerrainStyle, type WaterTerrainStyle } from "../systems/palette";
+import { DEWS_AREA_LABEL_COLORS, waterTerrainStyle, type WaterTerrainStyle } from "../systems/palette";
 import { tileToScreen, type IsoCamera, type ScreenPoint } from "../systems/projection";
 import {
   CEMETERY_CENTER,
@@ -210,7 +210,7 @@ export function drawPharosVille(input: DrawPharosVilleInput): PharosVilleRenderM
     drawableCount: entityMetrics.drawableCount + selectionDrawableCount,
     drawableCounts,
     movingShipCount: Array.from(input.shipMotionSamples?.values() ?? [])
-      .filter((sample) => sample.state !== "risk-drift" && sample.state !== "moored").length,
+      .filter((sample) => sample.state !== "idle" && sample.state !== "risk-drift" && sample.state !== "moored").length,
     visibleTileCount,
   };
 }
@@ -622,20 +622,12 @@ function drawWaterTerrainTexture(
     drawAlertChannelTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
     return;
   }
-  if (texture === "brackish") {
-    drawBrackishWaterTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
-    return;
-  }
   if (texture === "calm") {
     drawCalmWaterTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
     return;
   }
   if (texture === "deep") {
     drawDeepSeaTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
-    return;
-  }
-  if (texture === "fog") {
-    drawFogWaterTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
     return;
   }
   if (texture === "harbor") {
@@ -748,36 +740,6 @@ function drawCalmWaterTexture(
   ctx.restore();
 }
 
-function drawBrackishWaterTexture(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  zoom: number,
-  tileX: number,
-  tileY: number,
-  motion: PharosVilleCanvasMotion,
-  style: WaterTerrainStyle,
-) {
-  const murk = motion.reducedMotion ? 0.18 : 0.16 + Math.sin(motion.timeSeconds * 0.55 + tileX * 0.41) * 0.04;
-  ctx.save();
-  ctx.fillStyle = withAlpha(style.accent, Math.max(0.14, murk));
-  if ((tileX * 3 + tileY * 11) % 4 === 0) {
-    drawDiamond(ctx, x - 3 * zoom, y + 2 * zoom, 10 * zoom, 4 * zoom, ctx.fillStyle);
-  }
-  ctx.strokeStyle = withAlpha(style.wave, 0.24);
-  ctx.lineWidth = Math.max(1, zoom);
-  ctx.beginPath();
-  ctx.moveTo(x - 9 * zoom, y + 5 * zoom);
-  ctx.lineTo(x - 3 * zoom, y + 1 * zoom);
-  ctx.lineTo(x + 4 * zoom, y + 5 * zoom);
-  if ((tileX + tileY) % 2 === 0) {
-    ctx.moveTo(x + 7 * zoom, y - 2 * zoom);
-    ctx.lineTo(x + 11 * zoom, y + 1 * zoom);
-  }
-  ctx.stroke();
-  ctx.restore();
-}
-
 function drawDeepSeaTexture(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -796,31 +758,6 @@ function drawDeepSeaTexture(
   ctx.beginPath();
   ctx.moveTo(x - 8 * zoom, y);
   ctx.lineTo(x + 6 * zoom, y + 3 * zoom);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawFogWaterTexture(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  zoom: number,
-  tileX: number,
-  tileY: number,
-  motion: PharosVilleCanvasMotion,
-  style: WaterTerrainStyle,
-) {
-  const veil = motion.reducedMotion ? 0.16 : 0.12 + Math.sin(motion.timeSeconds * 0.42 + tileY * 0.33) * 0.04;
-  ctx.save();
-  ctx.strokeStyle = withAlpha(style.wave, Math.max(0.1, veil));
-  ctx.lineWidth = Math.max(1, 1.4 * zoom);
-  ctx.beginPath();
-  ctx.moveTo(x - 13 * zoom, y - 1 * zoom);
-  ctx.lineTo(x + 12 * zoom, y + 3 * zoom);
-  if ((tileX * 5 + tileY * 3) % 5 === 0) {
-    ctx.moveTo(x - 7 * zoom, y + 6 * zoom);
-    ctx.lineTo(x + 8 * zoom, y + 8 * zoom);
-  }
   ctx.stroke();
   ctx.restore();
 }
@@ -1826,7 +1763,7 @@ function drawBuildingProceduralEffects(
       throw new Error(`Unhandled PharosVille building type: ${exhaustive}`);
     }
   }
-  drawBuildingDataFog(ctx, building, point, zoom, time);
+  drawBuildingStaleHaze(ctx, building, point, zoom, time);
 }
 
 function drawFoundryEffects(
@@ -1935,16 +1872,16 @@ function drawGatehouseEffects(
   ctx.restore();
 }
 
-function drawBuildingDataFog(
+function drawBuildingStaleHaze(
   ctx: CanvasRenderingContext2D,
   building: PharosVilleWorld["buildings"][number],
   point: ScreenPoint,
   zoom: number,
   time: number,
 ) {
-  if (building.visual.dataFogIntensity <= 0) return;
+  if (building.visual.staleHazeIntensity <= 0) return;
   ctx.save();
-  ctx.globalAlpha = building.visual.dataFogIntensity;
+  ctx.globalAlpha = building.visual.staleHazeIntensity;
   ctx.fillStyle = "rgba(193, 207, 203, 0.24)";
   for (let index = 0; index < 3; index += 1) {
     const phase = (time * 0.08 + index * 0.3) % 1;
@@ -2064,16 +2001,11 @@ function drawWaterAreaLabels({ camera, ctx, world }: DrawPharosVilleInput) {
 }
 
 function dewsAreaColor(band: NonNullable<PharosVilleWorld["areas"][number]["band"]>) {
-  if (band === "DANGER") return "#d85645";
-  if (band === "WARNING") return "#e08d45";
-  if (band === "ALERT") return "#e0b84c";
-  if (band === "WATCH") return "#83b98a";
-  return "#8fc7bb";
+  return DEWS_AREA_LABEL_COLORS[band];
 }
 
 function riskWaterAreaColor(zone: PharosVilleWorld["areas"][number]["riskZone"]) {
   if (zone === "ledger") return "#d9b974";
-  if (zone === "fog") return "#a9be92";
   return "#d8b56a";
 }
 

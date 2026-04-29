@@ -64,13 +64,11 @@ const WATER_TERRAIN_KINDS = new Set<TerrainKind>([
   "deep-water",
   "water",
   "alert-water",
-  "brackish-water",
   "calm-water",
   "harbor-water",
   "watch-water",
   "warning-water",
   "storm-water",
-  "fog-water",
   "ledger-water",
 ]);
 
@@ -118,7 +116,6 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
     if (isWarningShoals(x, y)) return "warning-water";
     if (isAlertChannel(x, y)) return "alert-water";
     if (isWatchBreakwater(x, y)) return "watch-water";
-    if (isDataFog(x, y)) return "brackish-water";
     if (isLedgerMooring(x, y)) return "ledger-water";
     if (isCalmAnchorage(x, y)) return "calm-water";
     if (isDeepSeaShelf(x, y)) return "deep-water";
@@ -175,57 +172,63 @@ function harborApproachValue(x: number, y: number): number {
 }
 
 function isAlertChannel(x: number, y: number): boolean {
-  return ellipseValue(x, y, 25.4, 11.8, 7.9, 4.7) < 1
-    && x >= 20
-    && x <= 33
-    && y >= 7
-    && y <= 16;
+  const channel = ellipseValue(x, y, 35.0, 10.2, 7.6, 6.3) < 1
+    && x >= 28
+    && x <= 42
+    && y >= 4
+    && y <= 19;
+  const northEdgeAttachment = y <= 1
+    && x >= 34
+    && x <= 39;
+  return channel || northEdgeAttachment;
 }
 
 function isWarningShoals(x: number, y: number): boolean {
-  return ellipseValue(x, y, 38.6, 6.4, 6.4, 4.3) < 1
-    && x >= 33
-    && x <= 45
-    && y >= 2
-    && y <= 12;
+  const shoals = ellipseValue(x, y, 47.0, 16.5, 6.3, 7.5) < 1
+    && x >= 41
+    && x <= 53
+    && y >= 9
+    && y <= 25;
+  const eastEdgeAttachment = x >= 54
+    && y >= 8
+    && y <= 11;
+  return shoals || eastEdgeAttachment;
 }
 
 function isDangerStrait(x: number, y: number): boolean {
-  return ellipseValue(x, y, 50.0, 4.0, 5.2, 3.2) < 1
-    && x >= 44
-    && x <= 54
-    && y <= 9;
+  const strait = ellipseValue(x, y, 53.5, 18.2, 4.7, 6.2) < 1
+    && x >= 50
+    && x <= 55
+    && y >= 12
+    && y <= 25;
+  const eastEdgeAttachment = x >= 54
+    && y >= 14
+    && y <= 24;
+  return strait || eastEdgeAttachment;
 }
 
 function isWatchBreakwater(x: number, y: number): boolean {
-  const northwestBelt = ellipseValue(x, y, 14.4, 16.6, 11.6, 7.3) < 1
-    && x >= 4
-    && x <= 26
-    && y >= 8
-    && y <= 24;
-  const reclaimedNorthwestCorner = ellipseValue(x, y, 6.4, 7.0, 6.8, 4.7) < 1
-    && x <= 14
-    && y <= 13;
-  return northwestBelt || reclaimedNorthwestCorner;
+  const breakwater = ellipseValue(x, y, 23.1, 13.7, 12.2, 8.2) < 1
+    && x >= 11
+    && x <= 35
+    && y >= 5
+    && y <= 23;
+  const northEdgeAttachment = y <= 1
+    && x >= 22
+    && x <= 28;
+  return breakwater || northEdgeAttachment;
 }
 
 function isCalmAnchorage(x: number, y: number): boolean {
-  const northwestAnchorage = ellipseValue(x, y, 12.4, 32.6, 16.1, 11.2) < 1
-    && x <= 29
-    && y >= 22
-    && y <= 42;
-  const westernBasin = ellipseValue(x, y, 10.8, 40.7, 16.0, 6.4) < 1
-    && x >= 2
-    && x <= 27
-    && y >= 34
-    && y <= 47;
-  const lowerWestPocket = ellipseValue(x, y, 7.5, 43.2, 10.5, 4.8) < 1
-    && x >= 2
-    && x <= 22
-    && y >= 38
-    && y <= 48;
-
-  return northwestAnchorage || westernBasin || lowerWestPocket;
+  const anchorage = ellipseValue(x, y, 9.0, 29.4, 17.2, 11.7) < 1
+    && x >= 0
+    && x <= 25
+    && y >= 18
+    && y <= 41;
+  const westEdgeAttachment = x <= 9
+    && y >= 20
+    && y <= 38;
+  return anchorage || westEdgeAttachment;
 }
 
 function isCemeteryCausewayTile(x: number, y: number): boolean {
@@ -249,20 +252,17 @@ function isDeepSeaShelf(x: number, y: number): boolean {
   return false;
 }
 
-function isDataFog(x: number, y: number): boolean {
-  return ellipseValue(x, y, 50.0, 49.2, 4.8, 3.4) < 1
-    && x >= 47
-    && x <= 54
-    && y >= 46
-    && y <= 52;
-}
-
 function isLedgerMooring(x: number, y: number): boolean {
-  return ellipseValue(x, y, 43.2, 49.0, 4.6, 3.2) < 1
+  const mooring = ellipseValue(x, y, 43.2, 49.0, 4.6, 3.2) < 1
     && x >= 39
     && x <= 47
     && y >= 47
     && y <= 51;
+  const southEdgeAttachment = x >= 41
+    && x <= 45
+    && y >= 51
+    && y <= MAX_TILE_Y;
+  return mooring || southEdgeAttachment;
 }
 
 function isRoadTile(x: number, y: number): boolean {
