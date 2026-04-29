@@ -47,8 +47,10 @@ describe("buildPharosVilleWorld", () => {
     expect(world.graves).toHaveLength(3);
     expect(world.graves[0]?.logoSrc).toBe("/logos/cemetery/nubits.png");
     expect(world.detailIndex["lighthouse"]).toBeDefined();
-    expect(world.buildings).toHaveLength(5);
+    expect(world.buildings).toHaveLength(4);
+    expect(terrainKindAt(0, 0)).toBe("frozen-water");
     expect(world.detailIndex["building.mint-burn-foundry"]?.title).toBe("Royal Mint And Burn Foundry");
+    expect(world.detailIndex["area.north-froze-pole"]?.title).toBe("North Froze Pole");
     expect(world.visualCues.length).toBeGreaterThan(0);
   });
 
@@ -92,10 +94,14 @@ describe("buildPharosVilleWorld", () => {
 
     expect(statuses).toMatchObject({
       "mint-burn-foundry": "minting",
-      "north-froze-pole": "recent-freeze",
       "exit-route-gatehouse": "deep-exit",
       "yield-orchard-moonwell": "broad-coverage",
       "dependency-loom-chainworks": "high-hub-concentration",
+    });
+    expect(world.areas.find((area) => area.id === "area.north-froze-pole")).toMatchObject({
+      kind: "area",
+      dataAreaType: "north-froze-pole",
+      status: "recent-freeze",
     });
     expect(world.detailIndex["building.exit-route-gatehouse"]?.facts).toEqual(expect.arrayContaining([
       { label: "Caveat", value: "DEX telemetry and modeled redemption routes are not guarantees of executable exit capacity." },
@@ -221,6 +227,8 @@ describe("buildPharosVilleWorld", () => {
     expect(alertArea?.tile ? terrainKindAt(alertArea.tile.x, alertArea.tile.y) : null).toBe("alert-water");
     expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 49, y: 46 });
     expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 55, y: 53 });
+    expect(world.areas.find((area) => area.id === "area.north-froze-pole")?.tile).toEqual({ x: 0, y: 0 });
+    expect(terrainKindAt(0, 0)).toBe("frozen-water");
     expect(terrainKindAt(49, 46)).toBe("warning-water");
     expect(terrainKindAt(55, 53)).toBe("storm-water");
     expect(usdc?.riskPlacement).toBe("harbor-mouth-watch");

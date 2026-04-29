@@ -26,6 +26,7 @@ describe("hit-testing", () => {
     expect(targets.some((target) => target.detailId === "lighthouse")).toBe(true);
     expect(targets.some((target) => target.kind === "ship")).toBe(true);
     expect(targets.some((target) => target.kind === "building")).toBe(true);
+    expect(targets.some((target) => target.kind === "area")).toBe(true);
   });
 
   it("selects the top-priority target under the pointer", () => {
@@ -48,6 +49,19 @@ describe("hit-testing", () => {
       x: target!.rect.x + target!.rect.width / 2,
       y: target!.rect.y + target!.rect.height / 2,
     })?.detailId).toBe(building!.detailId);
+  });
+
+  it("selects the North Froze Pole as a northern water area", () => {
+    const area = world.areas.find((entry) => entry.detailId === "area.north-froze-pole");
+    expect(area).toBeDefined();
+    const target = collectHitTargets({ camera, selectedDetailId: area!.detailId, world })
+      .find((entry) => entry.detailId === area!.detailId);
+    expect(target).toBeDefined();
+
+    expect(hitTest(collectHitTargets({ camera, selectedDetailId: area!.detailId, world }), {
+      x: target!.rect.x + target!.rect.width / 2,
+      y: target!.rect.y + target!.rect.height / 2,
+    })?.detailId).toBe(area!.detailId);
   });
 
 
