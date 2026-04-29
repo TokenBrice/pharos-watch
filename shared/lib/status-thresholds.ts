@@ -68,7 +68,7 @@ export function hasRepresentativeOnchainRatioSample(trackedCoins: number): boole
 }
 
 // --- Missing price thresholds ---
-// Raised 2026-04-13 (see agents/plans/historical/2026-04-13-status-stability-hardening-plan.md).
+// Raised 2026-04-13 after status-stability hardening.
 // Prior values 0.15/0.40 were too tight for the then-current 181-active-coin
 // tracked set: the normal operating point hovered near 15% (~26-27 persistently
 // missing prices), producing 2-3 visible healthy↔degraded transitions per day

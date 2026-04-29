@@ -60,7 +60,7 @@ When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` also verifies that 
 
 ## PharosVille Route Checks
 
-For `/pharosville/` work, start with `agents/pharosville/TESTING.md` and use the route-focused checks before broadening to the full repo gate.
+For `/pharosville/` work, start with [pharosville/TESTING.md](./pharosville/TESTING.md) and use the route-focused checks before broadening to the full repo gate.
 
 Common focused commands:
 

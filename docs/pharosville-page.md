@@ -5,7 +5,7 @@ Contract for `/pharosville/`, the beta PharosVille route.
 `/pharosville/` is a data-driven old-school RPG island city for exploring Pharos stablecoin signals.
 
 The scenery contract is recorded in
-[`agents/specs/2026-04-29-pharosville-scenery-brief.md`](../agents/specs/2026-04-29-pharosville-scenery-brief.md).
+[`docs/pharosville/scenery-brief.md`](./pharosville/scenery-brief.md).
 It defines PharosVille as a dark-first maritime observatory island-city: lighthouse
 for PSI, harbors for chain supply, ships for active stablecoins, cemetery for
 dead/frozen lifecycle assets, two inland data buildings for non-ship

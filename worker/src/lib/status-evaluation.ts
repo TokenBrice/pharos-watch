@@ -111,8 +111,8 @@ export async function evaluateStatusAndPersist(db: D1Database, now: number): Pro
 
 /**
  * Count `status_transitions` rows inserted in the last 24 hours. Used only
- * as an observability signal (Workstream 5 of
- * agents/plans/2026-04-13-status-stability-hardening-plan.md). A failed
+ * as an observability signal added during 2026-04-13 status-stability hardening.
+ * A failed
  * count query logs a warning and returns 0 — this is diagnostic-only and
  * must not break the main status response.
  */

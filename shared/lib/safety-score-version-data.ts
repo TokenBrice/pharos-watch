@@ -138,7 +138,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
         "Aave V3 direct-minter facilitators contribute medium-risk residual slices; FlashMinter and unmapped facilitators contribute high-risk slices",
         "Unmapped residual share accumulates into metadata.unknownExposurePct so material unknown exposure can degrade the GHO sync consistently with other reserve adapters",
         "If the facilitator registry is unreadable in a run, the entire residual is treated as unknown so the fail-closed unknown-exposure policy still applies",
-        "Direct GhoReserve / GhoDirectFacilitator / RemoteGSM reads remain a follow-up tracked in agents/tasks/reserve-coverage-tracker.md pending verified Aave deployment addresses",
+        "Direct GhoReserve / GhoDirectFacilitator / RemoteGSM reads remain a follow-up tracked in docs/trackers/reserve-coverage.md pending verified Aave deployment addresses",
       ],
       commits: [],
       reconstructed: false,

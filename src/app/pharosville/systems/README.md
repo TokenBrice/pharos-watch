@@ -46,4 +46,4 @@ npm test -- src/app/pharosville/systems/risk-placement.test.ts
 npm test -- src/app/pharosville/systems/visual-cue-registry.test.ts
 ```
 
-Use `agents/pharosville/SCENARIO_CATALOG.md` to choose scenario-specific checks.
+Use `docs/pharosville/SCENARIO_CATALOG.md` to choose scenario-specific checks.

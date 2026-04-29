@@ -16,7 +16,7 @@ function formatRatio(value: number): string {
  * this floor and `STATUS_ONCHAIN_THRESHOLDS.ratioMinTrackedCoins` (10), the
  * cause is legitimate partial-coverage drift worth surfacing.
  *
- * See Workstream 3 of agents/plans/2026-04-13-status-stability-hardening-plan.md.
+ * Added during 2026-04-13 status-stability hardening.
  */
 const ONCHAIN_LOW_SAMPLE_STRUCTURAL_FLOOR = 3;
 

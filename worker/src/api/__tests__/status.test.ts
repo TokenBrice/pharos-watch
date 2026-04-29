@@ -1898,7 +1898,7 @@ describe("handleStatus", () => {
     expect(body.dataQuality.onchainDivergenceRatio).toBe(0.5);
     expect(body.dataQualityStatus).toBe("healthy");
     expect(body.rawOverallStatus).toBe("healthy");
-    // As of Workstream 3 of agents/plans/2026-04-13-status-stability-hardening-plan.md,
+    // As of the 2026-04-13 status-stability hardening,
     // `onchain_monitor_low_sample` is suppressed below the structural floor
     // (tracked < 3) because the 2-coin population is the permanent state of
     // the Kinesis-only writer set, not a diagnostic worth surfacing. The
@@ -2309,7 +2309,7 @@ describe("handleStatus", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Workstream 1 of agents/plans/2026-04-13-status-stability-hardening-plan.md
+  // 2026-04-13 status-stability hardening: missing-price thresholds.
   // -------------------------------------------------------------------------
   //
   // Raise `missingPriceRatio` thresholds from 0.15/0.40 to 0.18/0.45 so the
@@ -2432,8 +2432,7 @@ describe("handleStatus", () => {
   // active canonical set, giving a baseline missing ratio that was always
   // flapping near the 15% threshold. Restricting the denominator to
   // ACTIVE_STABLECOINS drops the prod baseline to the true canonical-missing
-  // ratio. See
-  // agents/research/2026-04-13-missing-price-coins-audit.md.
+  // ratio.
   describe("missingPriceRatio canonical scoping", () => {
     function buildMixedCacheDb(params: {
       canonicalTotal: number;
@@ -2529,7 +2528,7 @@ describe("handleStatus", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Workstream 3 of agents/plans/2026-04-13-status-stability-hardening-plan.md
+  // 2026-04-13 status-stability hardening: on-chain low-sample suppression.
   // -------------------------------------------------------------------------
   //
   // Suppress the `onchain_monitor_low_sample` info cause when the on-chain
@@ -2607,7 +2606,7 @@ describe("handleStatus", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Workstream 5 of agents/plans/2026-04-13-status-stability-hardening-plan.md
+  // 2026-04-13 status-stability hardening: transition-count observability.
   // -------------------------------------------------------------------------
   //
   // Surface the 24-hour transition count in the status summary so operators

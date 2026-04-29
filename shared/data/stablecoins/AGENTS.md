@@ -6,7 +6,7 @@ Applies to `shared/data/stablecoins/**`.
 
 - `docs/classification.md`
 - `docs/shadow-stablecoins.md` for PSI-only exclusions
-- `agents/process/adding-a-stablecoin.md` when adding a new asset
+- `docs/process/adding-a-stablecoin.md` when adding a new asset
 
 ## Rules
 

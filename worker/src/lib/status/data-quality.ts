@@ -90,7 +90,8 @@ export async function getDataQuality(
   // canonical-order.json) that ride in the cache but are not actively
   // tracked, and pre-launch canonical coins legitimately have no price yet.
   // Counting either inflates the ratio and drives false degradations.
-  // See agents/research/2026-04-13-missing-price-coins-audit.md.
+  // DefiLlama residuals and pre-launch canonical coins should not drive the
+  // active canonical missing-price ratio.
   const activeCanonicalAssets = stablecoinAssets.filter((asset) => ACTIVE_IDS.has(asset.id));
   const totalStablecoins = activeCanonicalAssets.length;
   const missingPrices = activeCanonicalAssets.filter(

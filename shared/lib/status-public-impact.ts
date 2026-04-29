@@ -7,8 +7,8 @@ import type { StatusCause } from "../types/status";
  * on-chain monitor) are intentionally excluded so the public transition
  * history and the `/api/health`-backed hero badge tell one coherent story.
  *
- * See agents/plans/historical/2026-04-13-status-stability-hardening-plan.md Workstream 4
- * for the design rationale and the list of included/excluded codes.
+ * The 2026-04-13 status-stability hardening defined the included/excluded
+ * code list.
  */
 const PUBLIC_IMPACT_CODES: ReadonlySet<string> = new Set([
   "cache_ratio_stale",

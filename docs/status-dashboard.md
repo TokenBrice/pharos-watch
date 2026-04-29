@@ -258,7 +258,7 @@ The `missingPriceRatio` thresholds were raised on 2026-04-13 to eliminate bounda
 | degraded | > 18% | `missing_prices_degraded` | warning | yes → `degraded` |
 | stale    | > 45% | `missing_prices_stale`    | critical | yes → `stale`    |
 
-The `missing_prices_elevated` info cause exists to preserve operator observability in the 15-18% band without forcing a visible status transition. See `agents/plans/historical/2026-04-13-status-stability-hardening-plan.md` for the full rationale.
+The `missing_prices_elevated` info cause exists to preserve operator observability in the 15-18% band without forcing a visible status transition.
 
 `dataQuality.sourceFailures` still records failed data-quality subqueries, but those failures now emit info-level causes and increment `summary.diagnosticIssueCount` instead of degrading `dataQualityStatus` on their own. Only the stablecoins cache remains a hard dependency in this path.
 

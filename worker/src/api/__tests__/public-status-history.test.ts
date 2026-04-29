@@ -190,7 +190,7 @@ describe("handlePublicStatusHistory", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Workstream 4 of agents/plans/2026-04-13-status-stability-hardening-plan.md
+  // 2026-04-13 status-stability hardening: public-impact filtering.
   // -------------------------------------------------------------------------
   //
   // The public transition history should only surface transitions whose

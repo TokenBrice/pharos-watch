@@ -112,7 +112,7 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
 });
 
 // ---------------------------------------------------------------------------
-// Workstream 2 of agents/plans/2026-04-13-status-stability-hardening-plan.md
+// 2026-04-13 status-stability hardening: watch-tier cron bootstrap handling.
 // ---------------------------------------------------------------------------
 //
 // A watch-tier cron with zero historical cron_runs rows is in bootstrap mode,

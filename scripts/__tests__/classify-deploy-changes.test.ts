@@ -58,7 +58,7 @@ describe("hasPagesDeployImpact", () => {
 
 describe("hasDeployImpact", () => {
   it("returns false when the diff does not touch deploy surfaces", () => {
-    expect(hasDeployImpact(["docs/testing.md", "agents/plans/example.md"])).toBe(false);
+    expect(hasDeployImpact(["docs/testing.md", "docs/process/example.md"])).toBe(false);
   });
 
   it("returns true when either Pages or worker deploy surfaces changed", () => {
@@ -184,7 +184,7 @@ describe("classifyDeployChanges", () => {
   });
 
   it("skips the deploy path for docs-only push diffs", () => {
-    const execFile = () => "docs/testing.md\nagents/plans/notes.md\n";
+    const execFile = () => "docs/testing.md\ndocs/process/notes.md\n";
 
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
@@ -196,7 +196,7 @@ describe("classifyDeployChanges", () => {
     expect(result.deployRequired).toBe(false);
     expect(result.workerChanged).toBe(false);
     expect(result.pagesChanged).toBe(false);
-    expect(result.changedFiles).toEqual(["docs/testing.md", "agents/plans/notes.md"]);
+    expect(result.changedFiles).toEqual(["docs/testing.md", "docs/process/notes.md"]);
   });
 
   it("passes push refs to git diff as arguments", () => {

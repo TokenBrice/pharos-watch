@@ -12,7 +12,7 @@ import {
 
 describe("buildCommandPlan", () => {
   it("skips the merge gate when no deploy surfaces changed", () => {
-    expect(buildCommandPlan(["docs/testing.md", "agents/plans/notes.md"])).toEqual([]);
+    expect(buildCommandPlan(["docs/testing.md", "docs/process/notes.md"])).toEqual([]);
   });
 
   it("runs the Pages path without worker typecheck for frontend export changes", () => {

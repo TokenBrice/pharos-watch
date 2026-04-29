@@ -1,7 +1,7 @@
 # Documentation Index
 
 Verified entry point for the `/docs` corpus. Use this file to find the authoritative document for a system or workflow before editing.
-Application source-of-truth docs live in `/docs/` and [../README.md](../README.md). `/agents/` is a working-artifact archive unless a file there explicitly says otherwise.
+Application source-of-truth docs live in `/docs/` and [../README.md](../README.md). Durable process, tracker, and route-maintenance guidance should live in `/docs/`, not in a separate agent archive.
 
 ## Start Here
 
@@ -13,6 +13,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [worker-infrastructure.md](./worker-infrastructure.md) - Worker env bindings, cron slots, cache/auth behavior, and status endpoints
 - [deployment-process.md](./deployment-process.md) - local merge gate, worktree flow, and CI deploy sequence
 - [testing.md](./testing.md) - test commands, CI gates, coverage thresholds, and helpers
+- [process/agent-artifacts.md](./process/agent-artifacts.md) - routing for durable process docs, trackers, route-maintenance notes, and temporary artifacts
 
 ## System And Operations
 
@@ -29,6 +30,8 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [deployment-process.md](./deployment-process.md) - production deploy workflow and merge-gate policy
 - [testing.md](./testing.md) - lint/test/coverage workflow and test inventory
 - [scripts.md](./scripts.md) - operational and CI helper script inventory
+- [process/adding-a-stablecoin.md](./process/adding-a-stablecoin.md) - repeatable checklist for adding active and pre-launch stablecoins
+- [trackers/reserve-coverage.md](./trackers/reserve-coverage.md) - deferred live-reserve coverage candidates and blocked follow-ups
 
 ## Runbooks
 
@@ -49,6 +52,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [stablecoin-detail-page.md](./stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, view-model wiring, section order, and fallback/staleness rules
 - [chains-page.md](./chains-page.md) - `/chains/` leaderboard, `/chains/[chain]/` profile contract, and Chain Health Score wiring
 - [pharosville-page.md](./pharosville-page.md) - `/pharosville/` PharosVille route, desktop gate, canvas exception, and data-to-world contract
+- [pharosville/README.md](./pharosville/README.md) - PharosVille maintenance pack for route-specific implementation, visual, asset, and testing guidance
 - [cemetery-and-compare.md](./cemetery-and-compare.md) - `/cemetery/` and `/compare/` data and URL contracts
 - [dependency-map.md](./dependency-map.md) - dependency-graph construction, rendering, and interaction model
 - [coverage-page.md](./coverage-page.md) - `/coverage/` matrix contract, source mapping, and update rules

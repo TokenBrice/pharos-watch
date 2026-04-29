@@ -199,7 +199,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 
 ## Documentation
 
-Current source-of-truth product docs live in `/docs/` and this README. `/agents/` stores working notes, plans, audits, and research history; treat it as archival context unless a file there explicitly says otherwise.
+Current source-of-truth product docs live in `/docs/` and this README. Durable process guidance now belongs under `/docs/`; see [docs/process/agent-artifacts.md](./docs/process/agent-artifacts.md) for artifact routing.
 
 - [docs/README.md](./docs/README.md) - verified documentation index and topic map
 - [docs/alt-pegs-page.md](./docs/alt-pegs-page.md) - `/alt-pegs/` route contract, crawlability pattern, and homepage integration
@@ -340,7 +340,7 @@ GitHub Actions now runs the shared validate gate on pull requests to `main` via 
 
 For the canonical delivery workflow (including worktree merge flow and the repo pre-push merge gate), see [docs/deployment-process.md](./docs/deployment-process.md).
 For the full Worker, Pages Functions, and frontend runtime binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).
-For mint/burn ingestion diagnostics and recovery, use [docs/runbooks/mint-burn-integrity.md](./docs/runbooks/mint-burn-integrity.md) for operator remediation and [docs/mint-burn-flows.md](./docs/mint-burn-flows.md) for pipeline details; do not use `/agents/` notes as runbooks.
+For mint/burn ingestion diagnostics and recovery, use [docs/runbooks/mint-burn-integrity.md](./docs/runbooks/mint-burn-integrity.md) for operator remediation and [docs/mint-burn-flows.md](./docs/mint-burn-flows.md) for pipeline details; historical notes are not runbooks.
 
 1. **Validate gate:** `npm run validate:prebuild` (runs the audit, lint/typecheck, doc, data, route, cron, unused-code, world-map, and worker-boundary guardrails) → `npm run build` + `npm run seo:check` when Pages-impacting files changed → `npm run test:noncritical` → `npm run coverage:critical` → `npm run typecheck:worker` + `npm run typecheck:worker-scripts` when worker-impacting files changed
 2. **Worker candidate upload + preview smoke:** `npm ci` → capture the currently live Worker version ID → `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote` → `cd worker && npx --no-install wrangler versions upload` → `npm run test:smoke-api` against that uploaded preview URL

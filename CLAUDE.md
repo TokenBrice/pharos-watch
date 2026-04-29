@@ -15,7 +15,7 @@ Live: https://pharos.watch
 
 ## Operating Rules
 
-- Put agent-generated plans, audits, research, and process notes in `/agents/`.
+- Put durable agent/process guidance in `/docs/`; use `docs/process/agent-artifacts.md` for artifact routing. `/agents/` is gitignored local scratch space for temporary plans, audits, research, screenshots, and handoff notes only.
 - Treat `/docs/` and `README.md` as the verified documentation corpus.
 - Preserve existing product and design system patterns unless explicitly asked for a redesign.
 - Read only the docs relevant to the area you touch. Start with `docs/architecture.md`, `docs/api-reference.md`, `docs/testing.md`, and `docs/worker-and-api-limits.md`.

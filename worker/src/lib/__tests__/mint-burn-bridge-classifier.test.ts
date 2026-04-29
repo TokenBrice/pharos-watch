@@ -466,7 +466,7 @@ describe("CCIP/CCTP classifier — bridge MINTS", () => {
 });
 
 describe("LayerZero OFT classifier — endpoint-only signal", () => {
-  // Fixture references from agents/research/2026-04-08-usdai-mint-burn-bridge-investigation.md.
+  // Fixture references the USD.AI LayerZero bridge classification investigation.
   // `layerZeroOftBridgeDetection` takes ONLY `knownBridgeContractAddresses`; the emitter
   // (LAYERZERO_ENDPOINT_V2), topics (PACKET_SENT/PACKET_DELIVERED), and selectors are
   // hardcoded inside the helper. We use those canonical defaults here.
