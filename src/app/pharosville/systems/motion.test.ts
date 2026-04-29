@@ -146,6 +146,7 @@ describe("motion", () => {
           timeSeconds: route.cycleSeconds * (index / 40) - route.phaseSeconds,
         });
 
+        expect(inMapBounds(sampleWorld.map, sample.tile), `${route.zone} sample ${index} bounds`).toBe(true);
         expect(tileKindForSample(sample.tile), `${route.zone} sample ${index}`).toMatch(/water/);
       }
     }
@@ -157,6 +158,7 @@ describe("motion", () => {
 
     expect(route.points.length).toBeGreaterThan(1);
     for (const point of route.points) {
+      expect(inMapBounds(map, point)).toBe(true);
       expect(tileKindForSample(point)).toMatch(/water/);
     }
   });
@@ -169,6 +171,7 @@ describe("motion", () => {
     expect(firstRoute.points).toEqual(secondRoute.points);
     expect(firstRoute.points.some((point) => pointLineDistance(point, firstRoute.from, firstRoute.to) > 2)).toBe(true);
     for (const point of firstRoute.points) {
+      expect(inMapBounds(map, point)).toBe(true);
       expect(tileKindForSample(point)).toMatch(/water/);
     }
   });
@@ -313,6 +316,12 @@ function tileKindInMap(map: PharosVilleMap, tile: { x: number; y: number }) {
   const x = Math.round(tile.x);
   const y = Math.round(tile.y);
   return map.tiles[y * map.width + x]?.kind;
+}
+
+function inMapBounds(map: PharosVilleMap, tile: { x: number; y: number }) {
+  const x = Math.round(tile.x);
+  const y = Math.round(tile.y);
+  return x >= 0 && y >= 0 && x < map.width && y < map.height;
 }
 
 function riskVsDockDwell(sampleWorld: PharosVilleWorld): { dockSamples: number; riskSamples: number } {

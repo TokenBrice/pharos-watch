@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { HARBOR_PALETTE, hexToInt, paletteOrThrow, paletteRgba } from "./palette";
+import { HARBOR_PALETTE, WATER_TERRAIN_STYLES, hexToInt, paletteOrThrow, paletteRgba, waterTerrainStyle } from "./palette";
 
 describe("HARBOR_PALETTE", () => {
   it("contains 25 entries", () => {
@@ -28,5 +28,21 @@ describe("HARBOR_PALETTE", () => {
     expect(paletteRgba("lantern_warm", 0.5)).toBe("rgba(212, 154, 62, 0.5)");
     expect(paletteRgba("deep_sea_2", 0)).toBe("rgba(10, 14, 29, 0)");
     expect(paletteRgba("foam_white", 1)).toBe("rgba(232, 238, 240, 1)");
+  });
+
+  it("defines explicit styles for every rendered water terrain", () => {
+    expect(Object.keys(WATER_TERRAIN_STYLES).sort()).toEqual([
+      "alert-water",
+      "brackish-water",
+      "deep-water",
+      "fog-water",
+      "frozen-water",
+      "harbor-water",
+      "storm-water",
+      "warning-water",
+      "water",
+    ]);
+    expect(waterTerrainStyle("brackish-water")?.texture).toBe("brackish");
+    expect(waterTerrainStyle("unknown")).toBeNull();
   });
 });

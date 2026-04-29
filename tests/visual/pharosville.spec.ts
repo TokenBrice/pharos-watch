@@ -572,11 +572,12 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
   await expect(page.getByTestId("pharosville-keyboard-entity-browser")).toHaveCount(0);
   await expect(page.getByTestId("pharosville-minimap")).toHaveCount(0);
   const ledgerText = await page.getByTestId("pharosville-accessibility-ledger").textContent();
+  expect(ledgerText).toContain("56 by 56 tiles");
   const waterRatioText = ledgerText?.split(" tiles, ")[1]?.split("% water.")[0];
   expect(waterRatioText).toBeDefined();
   const waterPercent = Number(waterRatioText);
-  expect(waterPercent).toBeGreaterThanOrEqual(82);
-  expect(waterPercent).toBeLessThanOrEqual(88);
+  expect(waterPercent).toBeGreaterThanOrEqual(78);
+  expect(waterPercent).toBeLessThanOrEqual(83);
   await page.waitForFunction(() => {
     const debug = (window as typeof window & {
       __pharosVilleDebug?: PharosVilleVisualDebug;
@@ -609,7 +610,7 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
   expect(pixelStats.waterPixels).toBeGreaterThan(25_000);
   expect(pixelStats.waterPixels).toBeGreaterThan(pixelStats.landPixels * 2);
   expect(pixelStats.landPixels / pixelStats.backingPixels).toBeLessThan(0.45);
-  expect(pixelStats.waterPixels / pixelStats.backingPixels).toBeLessThan(0.9);
+  expect(pixelStats.waterPixels / pixelStats.backingPixels).toBeLessThan(0.86);
   await expectBuildingTargetsClickable(page);
   await expect(page).toHaveScreenshot("pharosville-desktop-shell.png");
 });
@@ -805,6 +806,9 @@ test("pharosville canvas interactions update details and camera", async ({ page 
   await expect(page.getByTestId("pharosville-minimap")).toHaveCount(0);
   await expectDetailPanelClearOfFullscreenButton(page);
 
+  await waitForSelectedDetail(page, "lighthouse");
+  await page.getByRole("button", { name: "Clear selection" }).click();
+  await waitForSelectedDetail(page, null);
   await clickMapTarget(page, "lighthouse");
   await waitForSelectedDetail(page, "lighthouse");
   await page.getByRole("button", { name: "Clear selection" }).click();

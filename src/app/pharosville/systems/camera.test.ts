@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cameraZoomLabel, clampCameraToMap, followTile, panCamera, zoomIn, zoomOut } from "./camera";
+import { PHAROSVILLE_MAP_HEIGHT, PHAROSVILLE_MAP_WIDTH } from "./world-layout";
 
 describe("camera", () => {
   it("pans by screen-space deltas", () => {
@@ -11,7 +12,7 @@ describe("camera", () => {
   });
 
   it("clamps panning to the authored map bounds", () => {
-    const bounds = { map: { width: 64, height: 64 }, viewport: { x: 1440, y: 1000 } };
+    const bounds = { map: { width: PHAROSVILLE_MAP_WIDTH, height: PHAROSVILLE_MAP_HEIGHT }, viewport: { x: 1440, y: 1000 } };
     const camera = clampCameraToMap({ offsetX: 10_000, offsetY: -10_000, zoom: 1 }, bounds);
 
     expect(panCamera(camera, { x: 10_000, y: -10_000 }, bounds)).toEqual(camera);

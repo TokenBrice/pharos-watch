@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { PHAROSVILLE_MAP_HEIGHT, PHAROSVILLE_MAP_WIDTH } from "./world-layout";
 import { fitCameraToMap, screenToTile, tileToIso, tileToScreen, zoomCameraAt } from "./projection";
 
 describe("projection", () => {
@@ -8,7 +9,7 @@ describe("projection", () => {
   });
 
   it("fits the authored map inside the available viewport", () => {
-    const camera = fitCameraToMap({ width: 1440, height: 1000, map: { width: 64, height: 64 } });
+    const camera = fitCameraToMap({ width: 1440, height: 1000, map: { width: PHAROSVILLE_MAP_WIDTH, height: PHAROSVILLE_MAP_HEIGHT } });
 
     const center = tileToScreen({ x: 32, y: 32 }, camera);
     expect(center.x).toBeGreaterThan(300);

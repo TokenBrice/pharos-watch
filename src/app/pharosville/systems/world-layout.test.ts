@@ -12,6 +12,8 @@ import {
   isLandTileKind,
   isWaterTileKind,
   LIGHTHOUSE_TILE,
+  PHAROSVILLE_MAP_HEIGHT,
+  PHAROSVILLE_MAP_WIDTH,
   nearestAvailableWaterTile,
   nearestWaterTile,
   REGION_TILES,
@@ -23,20 +25,23 @@ describe("buildPharosVilleMap", () => {
   it("creates a sea-first authored map", () => {
     const map = buildPharosVilleMap();
 
-    expect(map.width).toBe(64);
-    expect(map.height).toBe(64);
-    expect(map.tiles).toHaveLength(64 * 64);
-    expect(map.waterRatio).toBeGreaterThanOrEqual(0.82);
-    expect(map.waterRatio).toBeLessThanOrEqual(0.88);
+    expect(map.width).toBe(PHAROSVILLE_MAP_WIDTH);
+    expect(map.height).toBe(PHAROSVILLE_MAP_HEIGHT);
+    expect(map.tiles).toHaveLength(PHAROSVILLE_MAP_WIDTH * PHAROSVILLE_MAP_HEIGHT);
+    expect(map.waterRatio).toBeGreaterThanOrEqual(0.78);
+    expect(map.waterRatio).toBeLessThanOrEqual(0.83);
+    const counts = terrainCounts(map.tiles);
+    expect((counts.get("deep-water") ?? 0) / map.tiles.length).toBeLessThanOrEqual(0.12);
+    expect((counts.get("deep-water") ?? 0) / map.tiles.length).toBeGreaterThanOrEqual(0.08);
     expect(map.tiles.every((tile) => tile.terrain)).toBe(true);
     const centroid = landCentroid(map.tiles);
     expect(Math.abs(centroid.x - CIVIC_CORE_CENTER.x)).toBeLessThan(0.25);
     expect(Math.abs(centroid.y - CIVIC_CORE_CENTER.y)).toBeLessThan(0.25);
     expect([...new Set(map.tiles.map((tile) => tile.terrain))]).toEqual(expect.arrayContaining([
       "alert-water",
+      "brackish-water",
       "harbor-water",
       "warning-water",
-      "fog-water",
       "storm-water",
       "beach",
       "grass",
@@ -84,7 +89,7 @@ describe("buildPharosVilleMap", () => {
     expect(terrainKindAt(REGION_TILES["harbor-mouth-watch"].x, REGION_TILES["harbor-mouth-watch"].y)).toBe("alert-water");
     expect(terrainKindAt(REGION_TILES["outer-rough-water"].x, REGION_TILES["outer-rough-water"].y)).toBe("warning-water");
     expect(terrainKindAt(REGION_TILES["storm-shelf"].x, REGION_TILES["storm-shelf"].y)).toBe("storm-water");
-    expect(terrainKindAt(REGION_TILES["data-fog"].x, REGION_TILES["data-fog"].y)).toBe("fog-water");
+    expect(terrainKindAt(REGION_TILES["data-fog"].x, REGION_TILES["data-fog"].y)).toBe("brackish-water");
   });
 
   it("keeps dock slots on coastline edges with water access", () => {
@@ -172,7 +177,7 @@ function connectedLandTileKeys(start: { x: number; y: number }): Set<string> {
   while (queue.length > 0) {
     const tile = queue.shift();
     if (!tile) continue;
-    if (tile.x < 0 || tile.x >= 64 || tile.y < 0 || tile.y >= 64) continue;
+    if (tile.x < 0 || tile.x >= PHAROSVILLE_MAP_WIDTH || tile.y < 0 || tile.y >= PHAROSVILLE_MAP_HEIGHT) continue;
     if (isWaterTileKind(tileKindAt(tile.x, tile.y))) continue;
     const key = tileKey(tile);
     if (visited.has(key)) continue;
@@ -193,4 +198,12 @@ function isNearConnectedLand(tile: { x: number; y: number }, connected: Readonly
 
 function tileKey(tile: { x: number; y: number }): string {
   return `${tile.x}.${tile.y}`;
+}
+
+function terrainCounts(tiles: Array<{ terrain?: string }>): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const tile of tiles) {
+    counts.set(String(tile.terrain), (counts.get(String(tile.terrain)) ?? 0) + 1);
+  }
+  return counts;
 }
