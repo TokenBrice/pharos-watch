@@ -2,7 +2,6 @@
 import { useMemo } from "react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { useDexLiquidity, usePegSummary, useRedemptionBackstops, useReportCards, useStabilityIndexDetail, useStressSignals } from "@/hooks/api-hooks";
-import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import { useChains } from "@/hooks/use-chains";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -33,7 +32,6 @@ export function PharosVilleDesktopData() {
   const stressQuery = useStressSignals();
   const reportCardsQuery = useReportCards();
   const mintBurnQuery = useMintBurnFlows();
-  const blacklistQuery = useBlacklistSummary();
   const dexLiquidityQuery = useDexLiquidity();
   const redemptionQuery = useRedemptionBackstops();
 
@@ -44,7 +42,6 @@ export function PharosVilleDesktopData() {
     ?? stressQuery.error
     ?? reportCardsQuery.error
     ?? mintBurnQuery.error
-    ?? blacklistQuery.error
     ?? dexLiquidityQuery.error
     ?? redemptionQuery.error;
 
@@ -56,7 +53,6 @@ export function PharosVilleDesktopData() {
       || stressQuery.data
       || reportCardsQuery.data
       || mintBurnQuery.data
-      || blacklistQuery.data
       || dexLiquidityQuery.data
       || redemptionQuery.data,
   );
@@ -67,7 +63,6 @@ export function PharosVilleDesktopData() {
     || stressQuery.isLoading
     || reportCardsQuery.isLoading
     || mintBurnQuery.isLoading
-    || blacklistQuery.isLoading
     || dexLiquidityQuery.isLoading
     || redemptionQuery.isLoading;
   const routeMode = resolveRouteMode({ hasAnyData, hasBlockingError: Boolean(error), isLoading });
@@ -80,7 +75,6 @@ export function PharosVilleDesktopData() {
     stress: stressQuery.data,
     reportCards: reportCardsQuery.data,
     mintBurnFlows: mintBurnQuery.data,
-    blacklistSummary: blacklistQuery.data,
     dexLiquidity: dexLiquidityQuery.data,
     redemptionBackstops: redemptionQuery.data,
     routeMode,
@@ -92,13 +86,10 @@ export function PharosVilleDesktopData() {
       stressStale: isMetaStale(stressQuery.meta),
       reportCardsStale: isMetaStale(reportCardsQuery.meta),
       mintBurnStale: isMetaStale(mintBurnQuery.meta),
-      blacklistStale: isMetaStale(blacklistQuery.meta),
       dexLiquidityStale: isMetaStale(dexLiquidityQuery.meta),
       redemptionBackstopsStale: isMetaStale(redemptionQuery.meta),
     },
   }), [
-    blacklistQuery.data,
-    blacklistQuery.meta,
     chainsQuery.data,
     chainsQuery.meta,
     dexLiquidityQuery.data,
@@ -133,7 +124,6 @@ export function PharosVilleDesktopData() {
           void stressQuery.refetch();
           void reportCardsQuery.refetch();
           void mintBurnQuery.refetch();
-          void blacklistQuery.refetch();
           void dexLiquidityQuery.refetch();
           void redemptionQuery.refetch();
         }}

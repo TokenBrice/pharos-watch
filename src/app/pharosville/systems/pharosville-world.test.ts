@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins";
-import { BLACKLIST_STABLECOINS, DEX_GLOBAL_KEY, type BlacklistSummaryResponse, type DexLiquidityData, type MintBurnFlowsResponse, type RedemptionBackstopsResponse, type ReportCardsResponse } from "@shared/types";
+import { DEX_GLOBAL_KEY, type DexLiquidityData, type MintBurnFlowsResponse, type RedemptionBackstopsResponse, type ReportCardsResponse } from "@shared/types";
 import {
   fixtureChains,
   fixturePegSummary,
@@ -64,9 +64,9 @@ describe("buildPharosVilleWorld", () => {
     expect(world.buildings.every((building) => DOCK_TILES.every((dock) => distance(building.tile, dock) >= 5))).toBe(true);
     expect(world.buildings.every((building) => distance(building.tile, CEMETERY_CENTER) >= 6)).toBe(true);
     expect(minPairDistance(world.buildings.map((building) => building.tile))).toBeGreaterThanOrEqual(7.75);
-    expect(terrainKindAt(0, 0)).toBe("frozen-water");
+    expect(terrainKindAt(0, 0)).toBe("deep-water");
     expect(world.detailIndex["building.mint-burn-foundry"]?.title).toBe("Royal Mint And Burn Foundry");
-    expect(world.detailIndex["area.north-froze-pole"]?.title).toBe("North Froze Pole");
+    expect(world.areas.every((area) => area.id.startsWith("area.dews.") || area.id.startsWith("area.risk-water."))).toBe(true);
     expect(world.visualCues.length).toBeGreaterThan(0);
   });
 
@@ -99,7 +99,6 @@ describe("buildPharosVilleWorld", () => {
       stress: fixtureStress,
       reportCards,
       mintBurnFlows: mintBurnFixture({ score: 44 }),
-      blacklistSummary: blacklistSummaryFixture(),
       dexLiquidity: dexLiquidityFixture({ liquidityScore: 82 }),
       redemptionBackstops: redemptionFixture({ effectiveExitScore: 84 }),
       cemeteryEntries: [],
@@ -111,11 +110,7 @@ describe("buildPharosVilleWorld", () => {
       "mint-burn-foundry": "minting",
       "exit-route-gatehouse": "deep-exit",
     });
-    expect(world.areas.find((area) => area.id === "area.north-froze-pole")).toMatchObject({
-      kind: "area",
-      dataAreaType: "north-froze-pole",
-      status: "recent-freeze",
-    });
+    expect(world.areas.every((area) => area.id.startsWith("area.dews.") || area.id.startsWith("area.risk-water."))).toBe(true);
     expect(world.detailIndex["building.exit-route-gatehouse"]?.facts).toEqual(expect.arrayContaining([
       { label: "Caveat", value: "DEX telemetry and modeled redemption routes are not guarantees of executable exit capacity." },
     ]));
@@ -257,7 +252,7 @@ describe("buildPharosVilleWorld", () => {
     expect(dataFogArea).toMatchObject({ label: "Data Fog", riskZone: "fog", detailId: "area.risk-water.data-fog" });
     expect(ledgerArea).toMatchObject({ label: "Ledger Mooring", riskZone: "ledger", detailId: "area.risk-water.ledger-mooring" });
     expect(dataFogArea?.tile ? terrainKindAt(dataFogArea.tile.x, dataFogArea.tile.y) : null).toBe("brackish-water");
-    expect(ledgerArea?.tile ? terrainKindAt(ledgerArea.tile.x, ledgerArea.tile.y) : null).toBe("calm-water");
+    expect(ledgerArea?.tile ? terrainKindAt(ledgerArea.tile.x, ledgerArea.tile.y) : null).toBe("ledger-water");
     expect(world.detailIndex["area.risk-water.data-fog"]?.facts).toEqual(expect.arrayContaining([
       { label: "Risk water zone", value: "fog" },
       { label: "Risk placement", value: "data-fog" },
@@ -266,12 +261,11 @@ describe("buildPharosVilleWorld", () => {
       { label: "Risk water zone", value: "ledger" },
       { label: "Risk placement", value: "ledger-mooring" },
     ]));
-    expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 43, y: 7 });
-    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 50, y: 3 });
-    expect(world.areas.find((area) => area.id === "area.north-froze-pole")?.tile).toEqual({ x: 0, y: 0 });
-    expect(terrainKindAt(0, 0)).toBe("frozen-water");
-    expect(terrainKindAt(43, 7)).toBe("warning-water");
-    expect(terrainKindAt(50, 3)).toBe("storm-water");
+    expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 38, y: 6 });
+    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 50, y: 4 });
+    expect(world.areas.every((area) => area.id.startsWith("area.dews.") || area.id.startsWith("area.risk-water."))).toBe(true);
+    expect(terrainKindAt(38, 6)).toBe("warning-water");
+    expect(terrainKindAt(50, 4)).toBe("storm-water");
     expect(usdc?.riskPlacement).toBe("harbor-mouth-watch");
     expect(usdc?.riskZone).toBe("alert");
     expect(usdc?.riskWaterLabel).toBe("Alert Channel");
@@ -660,43 +654,6 @@ function mintBurnFixture({ score }: { score: number }): MintBurnFlowsResponse {
     scope: { chainIds: ["ethereum"], label: "Configured issuance-chain events" },
     sync: { lastSuccessfulSyncAt: 1_700_000_000, freshnessStatus: "fresh", warning: null, criticalLaneHealthy: true },
   } as unknown as MintBurnFlowsResponse;
-}
-
-function blacklistSummaryFixture(): BlacklistSummaryResponse {
-  const zeroRecord = Object.fromEntries(BLACKLIST_STABLECOINS.map((symbol) => [symbol, 0]));
-  return {
-    stats: {
-      usdcBlacklisted: 0,
-      usdtBlacklisted: 0,
-      goldBlacklisted: 0,
-      frozenAddresses: 12,
-      destroyedTotal: 0,
-      activeAddressCount: 8,
-      activeFrozenTotal: 15_000_000,
-      activeAmountGapCount: 1,
-      recentCount: 3,
-      recentCount24h: 1,
-      recoverableGapCount: 1,
-      perCoinBlacklistCounts: zeroRecord,
-      perCoinTotalEvents: zeroRecord,
-      perCoinFrozenAddressCount: zeroRecord,
-      perCoinFrozenTotal: { ...zeroRecord, USDC: 15_000_000 },
-      perCoinDestroyedTotal: zeroRecord,
-      perCoinQuarterlyEventTypes: Object.fromEntries(BLACKLIST_STABLECOINS.map((symbol) => [symbol, []])),
-    },
-    chart: [],
-    chains: [{ id: "ethereum", name: "Ethereum" }],
-    totalEvents: 12,
-    methodology: {
-      version: "fixture",
-      versionLabel: "Fixture",
-      currentVersion: "fixture",
-      currentVersionLabel: "Fixture",
-      changelogPath: "/methodology/",
-      asOf: 1_700_000_000,
-      isCurrent: true,
-    },
-  } as unknown as BlacklistSummaryResponse;
 }
 
 function dexLiquidityFixture({ liquidityScore }: { liquidityScore: number }) {

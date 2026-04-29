@@ -12,7 +12,7 @@ The `systems/` directory owns the pure data-to-world layer for `/pharosville/`. 
    - `risk-placement.ts` resolves ship risk placement from peg/DEWS/report-card evidence.
    - `ship-visuals.ts` resolves hull, class, pennant, overlay, and market-cap size tier.
    - `motion.ts` builds deterministic ship routes and frame samples.
-   - `data-buildings.ts` maps non-ship Pharos products to civic buildings and North Froze Pole.
+   - `data-buildings.ts` maps non-ship Pharos products to civic buildings.
    - `detail-model.ts` creates DOM detail models for every selectable entity.
    - `visual-cue-registry.ts` records visual cues, source fields, and DOM equivalents.
 

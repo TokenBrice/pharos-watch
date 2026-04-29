@@ -638,12 +638,12 @@ function drawWaterTerrainTexture(
     drawFogWaterTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
     return;
   }
-  if (texture === "frozen") {
-    drawNorthFrozeWaterTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
-    return;
-  }
   if (texture === "harbor") {
     drawHarborWaterTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
+    return;
+  }
+  if (texture === "ledger") {
+    drawLedgerWaterTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
     return;
   }
   if (texture === "storm") {
@@ -661,7 +661,7 @@ function drawWaterTerrainTexture(
   drawOpenWaterTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
 }
 
-function drawNorthFrozeWaterTexture(
+function drawLedgerWaterTexture(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -671,21 +671,19 @@ function drawNorthFrozeWaterTexture(
   motion: PharosVilleCanvasMotion,
   style: WaterTerrainStyle,
 ) {
-  const frost = motion.reducedMotion ? 0.24 : 0.2 + Math.sin(motion.timeSeconds * 0.9 + tileX * 0.31 + tileY * 0.41) * 0.06;
+  const ledgerPulse = motion.reducedMotion ? 0.18 : 0.15 + Math.sin(motion.timeSeconds * 0.62 + tileX * 0.25 + tileY * 0.37) * 0.04;
   ctx.save();
-  ctx.strokeStyle = withAlpha(style.accent, Math.max(0.16, frost));
-  ctx.lineWidth = Math.max(1, 1.2 * zoom);
+  ctx.strokeStyle = withAlpha(style.accent, Math.max(0.12, ledgerPulse));
+  ctx.lineWidth = Math.max(1, zoom);
   ctx.beginPath();
-  ctx.moveTo(x - 12 * zoom, y - 3 * zoom);
-  ctx.lineTo(x - 3 * zoom, y + 1 * zoom);
-  ctx.lineTo(x + 8 * zoom, y - 2 * zoom);
-  ctx.moveTo(x - 7 * zoom, y + 6 * zoom);
-  ctx.lineTo(x + 3 * zoom, y + 3 * zoom);
-  ctx.lineTo(x + 12 * zoom, y + 7 * zoom);
+  ctx.moveTo(x - 11 * zoom, y - 2 * zoom);
+  ctx.lineTo(x + 10 * zoom, y + 3 * zoom);
+  ctx.moveTo(x - 8 * zoom, y + 5 * zoom);
+  ctx.lineTo(x + 7 * zoom, y + 8 * zoom);
   ctx.stroke();
-  if ((tileX * 3 + tileY * 5) % 4 === 0) {
-    ctx.fillStyle = withAlpha(style.wave, 0.32);
-    ctx.fillRect(Math.round(x - 2 * zoom), Math.round(y), Math.max(1, Math.round(4 * zoom)), Math.max(1, Math.round(2 * zoom)));
+  if ((tileX * 7 + tileY * 5) % 5 === 0) {
+    ctx.fillStyle = withAlpha(style.wave, 0.24);
+    drawDiamond(ctx, x - 1 * zoom, y + 2 * zoom, 8 * zoom, 3 * zoom, ctx.fillStyle);
   }
   ctx.restore();
 }
@@ -2050,7 +2048,7 @@ function drawWaterAreaLabels({ camera, ctx, world }: DrawPharosVilleInput) {
   for (const area of world.areas) {
     const placement = areaLabelPlacementForArea(area);
     const p = tileToScreen(placement.anchorTile, camera);
-    const accent = area.visual?.accent ?? (area.band ? dewsAreaColor(area.band) : "#d8b56a");
+    const accent = area.band ? dewsAreaColor(area.band) : riskWaterAreaColor(area.riskZone);
     drawCartographicWaterLabel({
       accent,
       align: placement.align,
@@ -2071,6 +2069,12 @@ function dewsAreaColor(band: NonNullable<PharosVilleWorld["areas"][number]["band
   if (band === "ALERT") return "#e0b84c";
   if (band === "WATCH") return "#83b98a";
   return "#8fc7bb";
+}
+
+function riskWaterAreaColor(zone: PharosVilleWorld["areas"][number]["riskZone"]) {
+  if (zone === "ledger") return "#d9b974";
+  if (zone === "fog") return "#a9be92";
+  return "#d8b56a";
 }
 
 function drawCartographicWaterLabel(input: {

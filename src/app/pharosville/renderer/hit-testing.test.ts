@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fixtureChains, fixturePegSummary, fixtureReportCards, fixtureStablecoins, fixtureStability, fixtureStress } from "../__fixtures__/pharosville-world";
 import { buildPharosVilleWorld } from "../systems/pharosville-world";
+import { defaultCamera } from "../systems/camera";
 import { fitCameraToMap, tileToScreen } from "../systems/projection";
 import type { PharosVilleAssetManifestEntry } from "../systems/asset-manifest";
 import type { ShipMotionSample } from "../systems/motion";
@@ -21,6 +22,20 @@ const TARGET_CLICK_POINTS = [
   [0.25, 0.75],
   [0.75, 0.75],
 ] as const;
+
+const LIGHTHOUSE_ASSET_ENTRY: PharosVilleAssetManifestEntry = {
+  anchor: [96, 244],
+  category: "landmark",
+  displayScale: 1,
+  footprint: [58, 44],
+  height: 256,
+  hitbox: [12, 8, 168, 238],
+  id: "landmark.lighthouse",
+  layer: "landmarks",
+  loadPriority: "critical",
+  path: "landmarks/lighthouse-alexandria.png",
+  width: 192,
+};
 
 describe("hit-testing", () => {
   const world = buildPharosVilleWorld({
@@ -108,21 +123,8 @@ describe("hit-testing", () => {
     expect(hitTest(targets, point!)?.detailId).toBe(detailId);
   });
 
-  it("selects the North Froze Pole as a northern water area", () => {
-    const area = world.areas.find((entry) => entry.detailId === "area.north-froze-pole");
-    expect(area).toBeDefined();
-    const target = collectHitTargets({ camera, selectedDetailId: area!.detailId, world })
-      .find((entry) => entry.detailId === area!.detailId);
-    expect(target).toBeDefined();
-
-    expect(hitTest(collectHitTargets({ camera, selectedDetailId: area!.detailId, world }), {
-      x: target!.rect.x + target!.rect.width / 2,
-      y: target!.rect.y + target!.rect.height / 2,
-    })?.detailId).toBe(area!.detailId);
-  });
-
   it("aligns area hit targets to shared cartographic label placement", () => {
-    const area = world.areas.find((entry) => entry.detailId === "area.north-froze-pole");
+    const area = world.areas.find((entry) => entry.detailId === "area.risk-water.data-fog");
     expect(area).toBeDefined();
     const placement = areaLabelPlacementForArea(area!);
     const labelPoint = tileToScreen(placement.anchorTile, camera);
@@ -139,7 +141,7 @@ describe("hit-testing", () => {
 
   it("keeps cartographic area labels selectable at their printed size", () => {
     const zoomedOutCamera = { ...camera, zoom: 0.48 };
-    const area = world.areas.find((entry) => entry.detailId === "area.north-froze-pole");
+    const area = world.areas.find((entry) => entry.detailId === "area.risk-water.ledger-mooring");
     expect(area).toBeDefined();
     const placement = areaLabelPlacementForArea(area!);
     const target = collectHitTargets({ camera: zoomedOutCamera, selectedDetailId: area!.detailId, world })
@@ -157,6 +159,31 @@ describe("hit-testing", () => {
     expect(areaTargets.length).toBeGreaterThan(0);
     for (const target of areaTargets) {
       expect(unoccludedTargetPoint(targets, target), `${target.detailId} should have a selectable label point`).not.toBeNull();
+    }
+  });
+
+  it("keeps full area label rectangles clear of the lighthouse asset rectangle", () => {
+    const viewports = [
+      { width: 1280, height: 760 },
+      { width: 1440, height: 1000 },
+      { width: 2560, height: 1440 },
+    ] as const;
+    const assets = {
+      get: (id: string): LoadedPharosVilleAsset | null => id === "landmark.lighthouse"
+        ? { entry: LIGHTHOUSE_ASSET_ENTRY, image: {} as HTMLImageElement }
+        : null,
+    };
+
+    for (const viewport of viewports) {
+      const viewportCamera = defaultCamera({ height: viewport.height, width: viewport.width, map: world.map });
+      const targets = collectHitTargets({ assets, camera: viewportCamera, world });
+      const lighthouse = targets.find((target) => target.detailId === "lighthouse");
+      expect(lighthouse).toBeDefined();
+      const paddedLighthouse = padRect(lighthouse!.rect, 16 * viewportCamera.zoom);
+
+      for (const target of targets.filter((entry) => entry.kind === "area")) {
+        expect(rectsOverlap(target.rect, paddedLighthouse), `${viewport.width}x${viewport.height} ${target.detailId}`).toBe(false);
+      }
     }
   });
 
@@ -303,19 +330,7 @@ describe("hit-testing", () => {
       assets: {
         get: (id) => id === "landmark.lighthouse"
           ? {
-            entry: {
-              anchor: [48, 116],
-              category: "landmark",
-              displayScale: 1,
-              footprint: [24, 20],
-              height: 128,
-              hitbox: [18, 8, 60, 112],
-              id,
-              layer: "landmarks",
-              loadPriority: "critical",
-              path: "landmarks/lighthouse.png",
-              width: 96,
-            },
+            entry: LIGHTHOUSE_ASSET_ENTRY,
             image: {} as HTMLImageElement,
           }
           : null,
@@ -326,10 +341,10 @@ describe("hit-testing", () => {
 
     const target = targets.find((entry) => entry.detailId === lighthouse.detailId);
 
-    expect(target?.rect.x).toBeCloseTo(point.x - 44.4 * camera.zoom);
-    expect(target?.rect.y).toBeCloseTo(point.y - 156.84 * camera.zoom);
-    expect(target?.rect.width).toBeCloseTo(88.8 * camera.zoom);
-    expect(target?.rect.height).toBeCloseTo(165.76 * camera.zoom);
+    expect(target?.rect.x).toBeCloseTo(point.x - 124.32 * camera.zoom);
+    expect(target?.rect.y).toBeCloseTo(point.y - 346.28 * camera.zoom);
+    expect(target?.rect.width).toBeCloseTo(248.64 * camera.zoom);
+    expect(target?.rect.height).toBeCloseTo(352.24 * camera.zoom);
   });
 });
 
@@ -363,4 +378,22 @@ function pointInRect(point: { x: number; y: number }, rect: HitTarget["rect"]) {
     && point.y >= rect.y
     && point.y <= rect.y + rect.height
   );
+}
+
+function rectsOverlap(first: HitTarget["rect"], second: HitTarget["rect"]) {
+  return (
+    first.x < second.x + second.width
+    && first.x + first.width > second.x
+    && first.y < second.y + second.height
+    && first.y + first.height > second.y
+  );
+}
+
+function padRect(rect: HitTarget["rect"], padding: number): HitTarget["rect"] {
+  return {
+    height: rect.height + padding * 2,
+    width: rect.width + padding * 2,
+    x: rect.x - padding,
+    y: rect.y - padding,
+  };
 }

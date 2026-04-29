@@ -8,7 +8,7 @@ This atlas tells agents what to look at when reviewing PharosVille pixels. It co
 
 | Baseline | Source test | Path | Review focus |
 | --- | --- | --- | --- |
-| Desktop shell | `pharosville renders desktop canvas shell` | `tests/visual/pharosville.spec.ts-snapshots/pharosville-desktop-shell-linux.png` | Nonblank sea-first map, water/land balance, northern DEWS sea labels, lighthouse headland, EVM bay, cemetery separation, civic data core, toolbar/detail surfaces, and no asset load errors. |
+| Desktop shell | `pharosville renders desktop canvas shell` | `tests/visual/pharosville.spec.ts-snapshots/pharosville-desktop-shell-linux.png` | Nonblank sea-first map, water/land balance, separated DEWS sea labels, lighthouse headland, EVM bay, cemetery separation, civic data core, toolbar/detail surfaces, and no asset load errors. |
 | Narrow fallback | `pharosville narrow fallback avoids world runtime requests` | `tests/visual/pharosville.spec.ts-snapshots/pharosville-narrow-fallback-linux.png` | DOM fallback copy and links, no canvas, and no world data/asset requests below the desktop gate. |
 
 ## Browser Review Entries
@@ -42,8 +42,8 @@ Historical visual-review images under `agents/screenshots/` and notes in `agents
 Use this checklist when approving screenshot changes:
 
 - The world reads as a maritime analytical map, not a generic game backdrop.
-- The lighthouse, EVM bay, cemetery, civic data core, DEWS water areas, and North Froze Pole are all visually distinguishable.
-- The northern DEWS sea reads as a broad, continuous red-zone corridor: Calm Anchorage is visibly the largest western block, Watch and Alert step rightward, Warning Shoals and Danger Strait sit northward toward North Froze Pole instead of behind the lighthouse, and Data Fog/Ledger Mooring remain readable as separate named risk-water labels.
+- The lighthouse, EVM bay, cemetery, civic data core, DEWS water areas, Data Fog, and Ledger Mooring are all visually distinguishable.
+- The DEWS sea reads as a clear escalation route: Calm Anchorage fills the northwest/western basin, including the open water left of the harbor approach, Watch and Alert step through the northern channel, Warning Shoals and Danger Strait stay in the northern red field clear of the lighthouse footprint, Data Fog reads as a lower-right peripheral degraded-evidence pocket, and Ledger Mooring reads as quiet ledger water below the harbor away from Solana/top-chain harbor traffic.
 - Ships remain readable at default zoom; very large stablecoins are capped rather than overwhelming the map.
 - Dock flags/logos identify chain harbors without becoming large label boards.
 - Risk water escalation is visible but does not make stale/missing evidence or NAV ledger water look like active depeg.

@@ -40,7 +40,7 @@ Historical plans in this directory are context, not live instructions. If they c
   debug expectations are recorded in `agents/pharosville/MOTION_POLICY.md`.
 - Canvas is not the only source of analytical meaning. Any new visual signal needs matching detail-panel or accessibility-ledger text.
 - Ship placement and semantic water zones express peg/DEWS risk or source confidence. Dock visits express positive chain presence and supply share; they must not imply bridge volume, transaction flow, or real-time transfers.
-- Fresh DEWS risk water uses the northern belt from left to right/up: enlarged Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, and Danger Strait. Warning Shoals and Danger Strait sit northward toward North Froze Pole rather than behind the lighthouse. Data Fog and Ledger Mooring are separate non-DEWS risk-water areas with printed labels, detail panels, hit targets, and accessibility-ledger rows.
+- Fresh DEWS risk water uses a separated sea-district model: enlarged Calm Anchorage in protected western water, Watch Breakwater and Alert Channel in the northern channel, and Warning Shoals plus Danger Strait arcing into open water to the right of the lighthouse footprint. Data Fog and Ledger Mooring are separate non-DEWS risk-water areas with printed labels, detail panels, hit targets, and accessibility-ledger rows; Data Fog stays peripheral and Ledger Mooring stays clear of Solana/top-chain harbor traffic.
 - Stale or missing peg evidence maps to data fog or degraded evidence, not storm/depeg risk.
 - Stablecoin supply values from the list payload are already USD-denominated. Use `getCirculatingRaw()` for market-cap visual tiers.
 - Local runtime assets come from `public/pharosville/assets/` and `manifest.json`. Do not reference Pixellab URLs or remote assets at runtime.
@@ -53,7 +53,7 @@ Historical plans in this directory are context, not live instructions. If they c
   `systems/area-labels.ts`; renderer drawing, hit targets, and follow-selected
   behavior must use the same placement metadata.
 - Printed water labels render above entity sprites, so label visibility and label hit targets intentionally win over overlapping ships or tall landmarks.
-- Sea terrain is semantic: harbor water, calm DEWS anchorage water, watch breakwater water, brackish stale-evidence water, alert current, warning shoals, storm strait, frozen water, generic navigable water, and deep outer shelf each have distinct palette/texture handling.
+- Sea terrain is semantic: harbor water, calm DEWS anchorage water, watch breakwater water, brackish stale-evidence water, alert current, warning shoals, storm strait, ledger water, generic navigable water, and deep outer shelf each have distinct palette/texture handling.
 - Ship risk routes expose both `riskWaterLabel` and `riskZone` in details and the accessibility ledger. Docked reduced-motion ships freeze at harbor moorings, while dockless ships freeze at their risk-water patrol position.
 - Dock sprites are rank/preference selected through manifest IDs such as `dock.grand-quay`, `dock.rollup-ferry-slip`, and `dock.bridge-pontoon`.
 - Ship class is derived from governance/backing metadata:

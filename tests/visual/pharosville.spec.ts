@@ -9,7 +9,7 @@ import {
   makePegCoin,
 } from "../../src/app/pharosville/__fixtures__/pharosville-world";
 import { MAX_MAIN_CANVAS_PIXELS, MAX_TOTAL_BACKING_PIXELS } from "../../src/app/pharosville/systems/canvas-budget";
-import { BLACKLIST_STABLECOINS, DEX_GLOBAL_KEY, type PegSummaryResponse, type StressSignalsAllResponse } from "@shared/types";
+import { DEX_GLOBAL_KEY, type PegSummaryResponse, type StressSignalsAllResponse } from "@shared/types";
 
 test.use({ reducedMotion: "reduce" });
 
@@ -84,15 +84,12 @@ const PHAROSVILLE_DESKTOP_DATA_ENDPOINTS = [
   "/stress-signals",
   "/report-cards",
   "/mint-burn-flows",
-  "/blacklist-summary",
   "/dex-liquidity",
   "/redemption-backstops",
 ] as const;
 const PHAROSVILLE_SHARED_SHELL_ENDPOINTS = new Set([
-  "/api/blacklist-summary",
   "/api/peg-summary",
   "/api/stability-index",
-  "/_site-data/blacklist-summary",
   "/_site-data/peg-summary",
   "/_site-data/stability-index",
 ]);
@@ -148,7 +145,6 @@ async function mockPharosVillePayloads(page: Page, payload: {
     { path: "stress-signals", body: payload.stress },
     { path: "report-cards", body: payload.reportCards },
     { path: "mint-burn-flows", body: fixtureMintBurnFlows },
-    { path: "blacklist-summary", body: fixtureBlacklistSummary },
     { path: "dex-liquidity", body: fixtureDexLiquidity },
     { path: "redemption-backstops", body: fixtureRedemptionBackstops },
   ];
@@ -218,37 +214,6 @@ const fixtureMintBurnFlows = {
   windowHours: 24,
   scope: { chainIds: ["ethereum"], label: "Configured issuance-chain events" },
   sync: { lastSuccessfulSyncAt: 1_700_000_000, freshnessStatus: "fresh", warning: null, criticalLaneHealthy: true },
-};
-
-const zeroBlacklistRecord = Object.fromEntries(BLACKLIST_STABLECOINS.map((symbol) => [symbol, 0]));
-
-const fixtureBlacklistSummary = {
-  stats: {
-    usdcBlacklisted: 0,
-    usdtBlacklisted: 0,
-    goldBlacklisted: 0,
-    frozenAddresses: 12,
-    destroyedTotal: 0,
-    activeAddressCount: 8,
-    activeFrozenTotal: 15_000_000,
-    activeAmountGapCount: 1,
-    trackedAddressCount: 8,
-    trackedFrozenTotal: 15_000_000,
-    trackedAmountGapCount: 1,
-    recentCount: 3,
-    recentCount24h: 1,
-    recoverableGapCount: 1,
-    perCoinBlacklistCounts: zeroBlacklistRecord,
-    perCoinTotalEvents: zeroBlacklistRecord,
-    perCoinFrozenAddressCount: zeroBlacklistRecord,
-    perCoinFrozenTotal: { ...zeroBlacklistRecord, USDC: 15_000_000 },
-    perCoinDestroyedTotal: zeroBlacklistRecord,
-    perCoinQuarterlyEventTypes: Object.fromEntries(BLACKLIST_STABLECOINS.map((symbol) => [symbol, []])),
-  },
-  chart: [],
-  chains: [{ id: "ethereum", name: "Ethereum" }],
-  totalEvents: 12,
-  methodology: fixtureMethodology,
 };
 
 const fixtureDexEntry = {
@@ -544,6 +509,7 @@ async function expectBuildingTargetsClickable(page: Page) {
 
 test("pharosville renders desktop canvas shell", async ({ page }) => {
   await mockPharosVilleData(page);
+  const retiredSummaryRequests = collectRetiredSummaryRequests(page);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/pharosville/");
@@ -599,6 +565,7 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
   expect(pixelStats.waterPixels).toBeGreaterThan(pixelStats.landPixels * 2);
   expect(pixelStats.landPixels / pixelStats.backingPixels).toBeLessThan(0.45);
   expect(pixelStats.waterPixels / pixelStats.backingPixels).toBeLessThan(0.86);
+  expect(retiredSummaryRequests).toEqual([]);
   await expectBuildingTargetsClickable(page);
   await expect(page).toHaveScreenshot("pharosville-desktop-shell.png");
 });
@@ -714,7 +681,19 @@ async function denyPharosVilleViewportGatedRequests(page: Page) {
   return deniedRequests;
 }
 
+function collectRetiredSummaryRequests(page: Page): string[] {
+  const retiredPath = ["blacklist", "summary"].join("-");
+  const requests: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.endsWith(`/${retiredPath}`)) requests.push(`${url.pathname}${url.search}`);
+  });
+  return requests;
+}
+
 function isPharosVilleViewportGatedRequest(url: URL) {
+  const retiredPath = ["blacklist", "summary"].join("-");
+  if (url.pathname.endsWith(`/${retiredPath}`)) return true;
   if (
     url.pathname.startsWith("/pharosville/assets/")
     || url.pathname.startsWith("/logos/")

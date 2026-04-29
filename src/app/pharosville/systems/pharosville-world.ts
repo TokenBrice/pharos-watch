@@ -5,7 +5,6 @@ import type {
   StablecoinListResponse,
   StabilityIndexResponse,
   StressSignalsAllResponse,
-  BlacklistSummaryResponse,
   DexLiquidityMap,
   MintBurnFlowsResponse,
   RedemptionBackstopsResponse,
@@ -29,7 +28,7 @@ import {
   detailForArea,
   detailForShip,
 } from "./detail-model";
-import { buildDataBuildings, buildNorthFrozePoleArea } from "./data-buildings";
+import { buildDataBuildings } from "./data-buildings";
 import { buildPharosVilleMap, clampMapTile, graveNodesFromEntries, LIGHTHOUSE_TILE, MAX_TILE_X, MAX_TILE_Y, nearestAvailableWaterTile, nearestWaterTile, REGION_TILES } from "./world-layout";
 import { getRecentChange } from "./recent-change";
 import { resolveShipRiskPlacement } from "./risk-placement";
@@ -65,7 +64,6 @@ export interface PharosVilleInputs {
   stress: StressSignalsAllResponse | null | undefined;
   reportCards: ReportCardsResponse | null | undefined;
   mintBurnFlows?: MintBurnFlowsResponse | null | undefined;
-  blacklistSummary?: BlacklistSummaryResponse | null | undefined;
   dexLiquidity?: DexLiquidityMap | null | undefined;
   redemptionBackstops?: RedemptionBackstopsResponse | null | undefined;
   cemeteryEntries?: readonly CemeteryEntry[];
@@ -129,7 +127,7 @@ function summaryForRiskWaterPlacement(placement: ShipNode["riskPlacement"], band
   const area = riskWaterAreaForPlacement(placement);
   if (band) return `${area.label} uses ${area.waterStyle} for DEWS ${band} placement.`;
   if (placement === "data-fog") return "Data Fog uses brackish stale-evidence water for missing, stale, or low-confidence peg evidence.";
-  if (placement === "ledger-mooring") return "Ledger Mooring uses calm water for NAV ledger assets that do not have a standard peg-summary row.";
+  if (placement === "ledger-mooring") return "Ledger Mooring uses ledger water for NAV ledger assets that do not have a standard peg-summary row.";
   return `${area.label} is a named risk-water area.`;
 }
 
@@ -351,17 +349,12 @@ export function buildPharosVilleWorld(inputs: PharosVilleInputs): PharosVilleWor
   const map = buildPharosVilleMap();
   const lighthouse = buildLighthouse(inputs.stability);
   const docks = buildChainDocks(inputs.chains);
-  const northFrozePole = buildNorthFrozePoleArea(inputs.blacklistSummary, inputs.freshness);
-  const areas = [
-    ...buildAreas(inputs.stress),
-    northFrozePole,
-  ];
+  const areas = buildAreas(inputs.stress);
   const allShips = buildShips(inputs, docks);
   const dockedShips = assignDockVisits(allShips, docks);
   const { visibleShips, clusters } = clusterLongTailShips(dockedShips);
   const graves = graveNodesFromEntries(inputs.cemeteryEntries ?? CEMETERY_ENTRIES);
   const buildings = buildDataBuildings({
-    blacklistSummary: inputs.blacklistSummary,
     dexLiquidity: inputs.dexLiquidity,
     freshness: inputs.freshness,
     mintBurnFlows: inputs.mintBurnFlows,
@@ -386,7 +379,6 @@ export function buildPharosVilleWorld(inputs: PharosVilleInputs): PharosVilleWor
       { id: "legend.docks", label: "Docks", description: "Top chain harbors by stablecoin supply" },
       { id: "legend.ships", label: "Ships", description: "Active stablecoins" },
       { id: "legend.buildings", label: "Data buildings", description: "Main-island thematic buildings for Pharos data products" },
-      { id: "legend.north-froze-pole", label: "North Froze Pole", description: "Frozen-water path for observed blacklist and freeze tracker activity" },
       { id: "legend.cemetery", label: "Cemetery", description: "Dead and frozen assets" },
     ],
   };

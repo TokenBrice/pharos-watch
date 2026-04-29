@@ -9,9 +9,9 @@ The scenery contract is recorded in
 It defines PharosVille as a dark-first maritime observatory island-city: lighthouse
 for PSI, harbors for chain supply, ships for active stablecoins, cemetery for
 dead/frozen lifecycle assets, two inland data buildings for non-ship
-Pharos products along a thin road spine, and North Froze Pole
-as a frozen northern water area for
-observed freeze/blacklist activity. The ClaudeVille transfer boundary is
+Pharos products along a thin road spine, and named risk-water districts for
+DEWS, stale-evidence, and NAV-ledger placement. Freeze/blacklist monitoring is
+not encoded in PharosVille and remains available on `/blacklist/`. The ClaudeVille transfer boundary is
 contracts and validation habits only; fantasy-village scenery, decorative lore
 copy, non-semantic palettes, extra typography systems, and canvas-only data
 truth remain out of scope.
@@ -35,7 +35,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - desktop-gated route, with a short-screen fallback as well as the narrow-screen fallback
 - route shell escapes the global page padding and sizes against the actual post-sidebar content pane, so the desktop canvas uses the full available viewport area whether the sidebar is expanded or collapsed
 - Canvas 2D island-sea map on eligible desktop viewports, with the authored world reduced to `56 x 56` tiles so the old deep-blue outer shelf no longer dominates the canvas
-- authored terrain metadata layered over canonical movement tiles, including harbor water, calm DEWS anchorage water, watch breakwater water, brackish stale-evidence water, alert water, warning shoals water, storm water, frozen water, deep outer-shelf water, beach, grass, rock, cliff, hill, road, and shore variants; deep water is capped to a narrow perimeter shelf rather than a broad unused border
+- authored terrain metadata layered over canonical movement tiles, including harbor water, calm DEWS anchorage water, watch breakwater water, brackish stale-evidence water, alert water, warning shoals water, storm water, ledger water, deep outer-shelf water, beach, grass, rock, cliff, hill, road, and shore variants; deep water is capped to a narrow perimeter shelf rather than a broad unused border
 - named DEWS water-zone labels printed directly on semantic water areas, with
   live band counts retained in details and the accessibility ledger, plus subtle
   dock mast flags using chain logos or short crest marks
@@ -43,28 +43,28 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - a main-island road/plaza spine ties the southwest harbor, central civic data core, and lighthouse approach together without changing any data semantics
 - Ethereum, Base, Arbitrum, and Polygon are arranged in the southwest EVM bay, with Ethereum as the central cove landmark and Base/Arbitrum/Polygon on the surrounding bay sides; BSC, Tron, Solana, Aptos, and other non-core top-chain harbors use distributed outer-coast dock slots; the cemetery sits on the main island to the right of the EVM bay and left of the lighthouse
 - live aggregate Pharos queries mounted only after the desktop gate
-- pure world model for PSI, docks, active ships, clusters, cemetery, two thematic data buildings, northern water areas, details, and visual cues
+- pure world model for PSI, docks, active ships, clusters, cemetery, two thematic data buildings, named risk-water areas, details, and visual cues
 - docks are capped to the top ten chains by stablecoin supply; each dock represents one chain harbor, uses Pixellab harbor sprites with dedicated EVM-bay assets for Ethereum/Base/Arbitrum/Polygon, identifies itself with a small logo flag rather than a large name board, scales from both global share and absolute billion-dollar supply tiers, and lists that chain's highest-supply stablecoins in DOM details
 - active ships use distinct Pixellab base sprites by governance class: CeFi treasury galleons, CeFi-dependent chartered brigantines, and DeFi DAO schooners
 - ship scale uses exaggerated compressed market-cap tiers, not linear supply area, so $1B+ issuers are spottable while USDT and USDC remain capped
 - ship reduced-motion/static placement uses a rendered harbor mooring when the ship has rendered positive-supply chain docks; a separate peg/DEWS risk anchor remains part of the normal-motion route
 - normal-motion ships follow slow deterministic water-only harbor cycles, with seeded detours between chain moorings and their peg/DEWS risk water
-- DEWS-driven risk water areas now use separated sea districts rather than one crowded lane: Calm Anchorage remains the largest protected western water block, Watch Breakwater and Alert Channel step through the northern channel, and Warning Shoals plus Danger Strait arc into open water to the right of the lighthouse sprite footprint; each area has its own terrain texture, printed label, selectable hit target, and live band counts in details and the accessibility ledger
-- fresh ship risk water maps to Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, or Danger Strait; stale/low-confidence evidence uses peripheral Data Fog brackish water and NAV ledger assets use Ledger Mooring calm water in a quiet outer basin away from top-chain harbor traffic. Data Fog and Ledger Mooring are also named selectable water areas with printed labels, detail panels, and accessibility-ledger rows. Normal-motion dockless patrols use current or adjacent sea anchors so every risk zone has meaningful water-only travel
+- DEWS-driven risk water areas now use the northwest and northern sea as a connected escalation field: Calm Anchorage remains the largest protected western water block, Watch Breakwater reclaims the northwest belt, Alert Channel pivots through the north channel, and Warning Shoals plus Danger Strait arc across the upper-right sea outside the lighthouse clearance lane; each area has its own terrain texture, printed label, selectable hit target, and live band counts in details and the accessibility ledger
+- fresh ship risk water maps to Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, or Danger Strait; stale/low-confidence evidence uses bottom-right Data Fog brackish water and NAV ledger assets use Ledger Mooring ledger water below the harbor in a quiet bottom basin. Data Fog and Ledger Mooring are also named selectable water areas with printed labels, detail panels, and accessibility-ledger rows. Normal-motion dockless patrols use current or adjacent same-purpose sea anchors so every risk zone has meaningful water-only travel
 - ship docking cadence comes from `stablecoins.chainCirculating` chain presence, while risk water comes from `pegSummary.coins[]` and `stress.signals[]`; DOM details expose the route source, named risk water area, risk water zone, home dock, chain-presence count, and cadence text
 - active ships draw their logo on the sail when a local logo asset is available
 - long-tail stablecoins beyond the individual ship budget are split into count-capped water-zone cluster markers rather than one large pile; cluster details and the accessibility ledger expose the named risk water area and risk zone
 - two selectable inland data buildings are distributed along the main-island road spine and use Pixellab sprites plus deterministic Canvas overlays:
   - Royal Mint And Burn Foundry = configured issuance-chain mint/burn events from `mintBurnFlows.gauge`, `coins[]`, `hourly[]`, `scope`, and `sync`
   - Exit Route Gatehouse = DEX liquidity telemetry plus modeled redemption backstops from `dexLiquidity[__global__]`, per-coin DEX liquidity, and `redemptionBackstops.coins`
-- North Froze Pole is a northern frozen-water path, not a building sprite; it uses `frozen-water` terrain, a printed water-area label, and observed blacklist/freeze tracker summary from `blacklistSummary.stats`, per-coin frozen totals, chain coverage, and methodology metadata
-- data effects include bounded local glow, smoke, sparks, contained gate gauge/lantern motion, and North Froze Pole ice seams/cold-water texture; reduced motion freezes movement but keeps static status encodings
+- blacklist/freeze tracker activity is intentionally not represented in PharosVille; `/blacklist/` remains the product surface for those details
+- data effects include bounded local glow, smoke, sparks, contained gate gauge/lantern motion, semantic water shimmer, and bottom-zone fog/ledger textures; reduced motion freezes movement but keeps static status encodings
 - the cemetery is rendered as a compact memorial precinct with scattered grave placement, small varied cause-aware tomb marker scale/shape, contextual mausoleum/tree/shrub details, cause-of-death plaques using the shared cemetery legend colors, local cemetery logos on tomb markers, and light atmospheric mist
 - visible RPG-styled toolbar, click-anchored detail panel, blank-map click-to-close behavior, and screen-reader accessibility ledger
 - canvas hit testing for lighthouse, docks, ships, clusters, graves, thematic data buildings, and named water areas
 - mouse/touch drag pan, wheel zoom, toolbar pan/zoom/reset/follow/clear controls, keyboard arrow pan, Escape clear, and fullscreen inspection mode
 - normal-motion canvas loop for the lighthouse great-fire flicker, semantic water textures, decorative time-derived dawn/day/dusk/night sky with sun, crescent moon, stars, constellations, cloud bands, decorative birds/lights/haze, and deterministic ship route sampling, with expensive wake effects capped to selected/top/recent ships
-- printed water-area labels render above entity sprites so the names of Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, Danger Strait, Data Fog, Ledger Mooring, and North Froze Pole remain visible and selectable; Warning Shoals and Danger Strait are positioned outside the lighthouse tower label-occlusion lane, while Ledger Mooring is kept clear of the Solana harbor lane
+- printed water-area labels render above entity sprites so the names of Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, Danger Strait, Data Fog, and Ledger Mooring remain visible and selectable; all named risk-water labels and anchors stay outside the sea west and south of the lighthouse
 - deterministic reduced-motion render with no running animation frame loop
 - route-owned motion debug fields for browser validation, including
   `motionClockSource`, `activeMotionLoopCount`, and capped `motionCueCounts`
@@ -86,13 +86,13 @@ The planned PharosVille visual grammar is:
 - ship sail mark = stablecoin logo, falling back to a short symbol mark
 - ship route distance from shore = peg/depeg risk first, with fresh DEWS escalation mapped left-to-right through Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, and Danger Strait terrain while high-risk areas route around the lighthouse rather than underneath it
 - ship representative position and docking cadence = positive chain supply across the rendered top-ten chain harbors, shown as slow water-only passages rather than real-time transfer flow
-- sea/weather = aggregate DEWS breadth and source confidence, with brackish water for stale/low-confidence evidence and storm/frozen local textures for danger and freeze-tracker areas
+- sea/weather = aggregate DEWS breadth and source confidence, with brackish water for stale/low-confidence evidence, ledger water for NAV-ledger placement, and storm local textures for danger areas
 - cemetery = dead and frozen assets from merged cemetery data, with each tomb marker using its local cemetery logo when available and a cause-of-death plaque keyed to the same color taxonomy as the cemetery legend
-- main-island data buildings and northern water path = non-ship Pharos data products, with the two inland buildings distributed along a thin road spine:
+- main-island data buildings = non-ship Pharos data products, with the two inland buildings distributed along a thin road spine:
   - Royal Mint And Burn Foundry = configured issuance-chain mint/burn flow state (`minting`, `burning`, `balanced`, `quiet`, `stale`, or `unavailable`)
   - Exit Route Gatehouse = combined DEX liquidity and redemption-route backstop state (`deep-exit`, `thin-exit`, `concentrated`, `stale`, or `unavailable`), with detail copy caveating that these are not guarantees of executable exit capacity
-- North Froze Pole = observed freeze/blacklist tracker activity (`recent-freeze`, `large-active-frozen`, `quiet`, `stale`, or `unavailable`) as frozen northern water, not a building
 - brackish fog water = missing, low-confidence, or stale evidence
+- ledger water = NAV ledger assets that do not have standard peg-summary rows
 
 Exact values and placement explanations must be available in DOM panels. The canvas must never be the only source of analytical truth.
 

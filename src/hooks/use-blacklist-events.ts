@@ -15,12 +15,13 @@ import {
   type BlacklistSummaryResponse,
 } from "@shared/types";
 
-export function useBlacklistSummary() {
+export function useBlacklistSummary(options?: { enabled?: boolean }) {
   return useApiQueryWithMeta<BlacklistSummaryResponse>(
     ["blacklist-summary"],
     API_PATHS.blacklistSummary(),
     CRON_BLACKLIST,
     {
+      enabled: options?.enabled,
       retry: 1,
       schema: BlacklistSummaryResponseSchema,
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.blacklistSummary,

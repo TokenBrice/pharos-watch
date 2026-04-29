@@ -216,18 +216,18 @@ including route source, risk water, home dock, chain presence, and docking
 cadence.
 
 The same world model now also emits two selectable inland data buildings along a
-thin road spine, plus one northern frozen-water path for non-ship Pharos
-products: Royal Mint And Burn Foundry for configured mint/burn flow telemetry,
-Exit Route Gatehouse for DEX liquidity plus modeled redemption backstops, and
-North Froze Pole as an ice-textured water route at the map's absolute north edge
-for freeze/blacklist tracker activity. A main-island road spine ties the
-southwest harbor, memorial precinct, civic anchors, and lighthouse approach
-together as visual composition only. The main-island buildings use deferred
-Pixellab sprites, while North Froze Pole is drawn as terrain plus a printed
-water-area label. All expose local deterministic Canvas effects, DOM detail
-facts, and accessibility-ledger parity; reduced motion freezes procedural
-movement while preserving static
-status encodings.
+thin road spine: Royal Mint And Burn Foundry for configured mint/burn flow
+telemetry and Exit Route Gatehouse for DEX liquidity plus modeled redemption
+backstops. Data Fog, Ledger Mooring, and the DEWS sea districts are modeled as
+named risk-water areas with terrain, printed labels, deterministic route
+anchors, detail facts, and accessibility-ledger parity. The PharosVille scene no
+longer encodes freeze/blacklist tracker activity; that product surface remains
+outside the world map. A main-island road spine ties the southwest harbor,
+memorial precinct, civic anchors, and lighthouse approach together as visual
+composition only. The main-island buildings use deferred Pixellab sprites. All
+world elements expose local deterministic Canvas effects, DOM detail facts, and
+accessibility-ledger parity; reduced motion freezes procedural movement while
+preserving static status encodings.
 
 Canvas 2D remains the renderer choice. PixiJS v8 was rejected during the
 2026-04-25 spike because the shader path requires `unsafe-eval`, which Pharos's

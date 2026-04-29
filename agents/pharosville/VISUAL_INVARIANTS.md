@@ -26,10 +26,9 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 - Docks are capped by `MAX_CHAIN_HARBORS`; they represent top-chain stablecoin supply, not all chains.
 - The cemetery remains a compact memorial precinct separated from the EVM bay and lighthouse approach.
 - Two inland data buildings, Royal Mint And Burn Foundry and Exit Route Gatehouse, sit along the main-island road spine with a quiet memorial precinct between the harbor edge and civic anchors.
-- North Froze Pole is a northern frozen-water area, not a building.
-- DEWS sea geography progresses left-to-right as Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, and Danger Strait. Warning Shoals and Danger Strait must stay outside the lighthouse tower label-occlusion lane, while North Froze Pole remains a separate frozen-water area.
-- Calm Anchorage is intentionally the largest DEWS water block and should stay broad enough to reduce calm-ship overlap around the western harbor/shore.
-- Data Fog should remain a peripheral degraded-evidence pocket, and Ledger Mooring should remain a quiet basin clear of Solana/top-chain harbor traffic.
+- DEWS sea geography progresses across the northwest and northern red field as Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, and Danger Strait. Warning Shoals and Danger Strait must stay outside the lighthouse tower label-occlusion lane, and the water west/south of the lighthouse must stay free of named semantic-water areas and full label overlap.
+- Calm Anchorage is intentionally the largest DEWS water block and should fill the open western/southwestern basin to reduce calm-ship overlap around the western harbor/shore.
+- Data Fog should remain a peripheral degraded-evidence pocket in the lower-right brackish sea, and Ledger Mooring should remain a quiet owned basin below the harbor in ledger water. Freeze/blacklist tracker activity remains outside PharosVille and belongs to the `/blacklist/` product surface.
 
 ## Entity Semantics
 
@@ -43,7 +42,6 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 | Long-tail cluster | Count-capped grouped active stablecoins sharing a risk placement, named risk-water area, and risk zone | One aggregated issuer |
 | Cemetery marker | Dead/frozen lifecycle asset with cause-aware visual style | Active market status |
 | Data building | Non-ship Pharos product summary | Methodology text, raw tables, or guarantees |
-| North Froze Pole | Observed freeze/blacklist tracker activity | Complete sanctions or compliance coverage |
 | Fog/data fog | Missing, stale, or low-confidence evidence | Confirmed depeg/stress |
 
 ## Ship And Risk Rules

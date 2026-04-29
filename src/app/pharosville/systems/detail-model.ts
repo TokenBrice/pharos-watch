@@ -160,19 +160,6 @@ export function detailForBuilding(node: BuildingNode): DetailModel {
 }
 
 export function detailForArea(node: AreaNode): DetailModel {
-  if (node.dataAreaType === "north-froze-pole") {
-    return {
-      id: node.detailId,
-      kind: node.kind,
-      title: node.label,
-      summary: node.summary ?? "Northern frozen-water route for observed freeze and blacklist tracker activity.",
-      facts: node.facts ?? [],
-      links: node.links ?? [{ label: "Blacklist tracker", href: "/blacklist/" }],
-      membersHeading: node.membersHeading,
-      members: node.members,
-    };
-  }
-
   return {
     id: node.detailId,
     kind: node.kind,

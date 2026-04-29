@@ -71,7 +71,7 @@ const WATER_TERRAIN_KINDS = new Set<TerrainKind>([
   "warning-water",
   "storm-water",
   "fog-water",
-  "frozen-water",
+  "ledger-water",
 ]);
 
 const ELEVATED_TERRAIN_KINDS = new Set<TerrainKind>(["hill", "rock", "cliff"]);
@@ -114,12 +114,12 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
 
   if (isOutOfBounds(x, y) || island >= 1 || harborWater) {
     if (harborWater) return "harbor-water";
-    if (isNorthFrozePole(x, y)) return "frozen-water";
     if (isDangerStrait(x, y)) return "storm-water";
     if (isWarningShoals(x, y)) return "warning-water";
     if (isAlertChannel(x, y)) return "alert-water";
     if (isWatchBreakwater(x, y)) return "watch-water";
     if (isDataFog(x, y)) return "brackish-water";
+    if (isLedgerMooring(x, y)) return "ledger-water";
     if (isCalmAnchorage(x, y)) return "calm-water";
     if (isDeepSeaShelf(x, y)) return "deep-water";
     return "water";
@@ -175,48 +175,57 @@ function harborApproachValue(x: number, y: number): number {
 }
 
 function isAlertChannel(x: number, y: number): boolean {
-  return ellipseValue(x, y, 33.0, 13.4, 5.8, 4.5) < 1
-    && x >= 27
-    && x <= 39
-    && y >= 8
-    && y <= 20;
+  return ellipseValue(x, y, 25.4, 11.8, 7.9, 4.7) < 1
+    && x >= 20
+    && x <= 33
+    && y >= 7
+    && y <= 16;
 }
 
 function isWarningShoals(x: number, y: number): boolean {
-  return ellipseValue(x, y, 42.2, 7.4, 5.4, 3.7) < 1
-    && x >= 37
-    && x <= 48
-    && y >= 3
-    && y <= 14;
+  return ellipseValue(x, y, 38.6, 6.4, 6.4, 4.3) < 1
+    && x >= 33
+    && x <= 45
+    && y >= 2
+    && y <= 12;
 }
 
 function isDangerStrait(x: number, y: number): boolean {
-  return ellipseValue(x, y, 49.0, 3.2, 5.1, 2.6) < 1
+  return ellipseValue(x, y, 50.0, 4.0, 5.2, 3.2) < 1
     && x >= 44
     && x <= 54
-    && y <= 8;
+    && y <= 9;
 }
 
 function isWatchBreakwater(x: number, y: number): boolean {
-  return ellipseValue(x, y, 25.0, 19.6, 7.0, 5.3) < 1
-    && x >= 18
-    && x <= 32
-    && y >= 13
-    && y <= 28;
+  const northwestBelt = ellipseValue(x, y, 14.4, 16.6, 11.6, 7.3) < 1
+    && x >= 4
+    && x <= 26
+    && y >= 8
+    && y <= 24;
+  const reclaimedNorthwestCorner = ellipseValue(x, y, 6.4, 7.0, 6.8, 4.7) < 1
+    && x <= 14
+    && y <= 13;
+  return northwestBelt || reclaimedNorthwestCorner;
 }
 
 function isCalmAnchorage(x: number, y: number): boolean {
-  return ellipseValue(x, y, 13.6, 31.6, 15.3, 11.4) < 1
-    && x <= 30
-    && y >= 19
-    && y <= 43;
-}
+  const northwestAnchorage = ellipseValue(x, y, 12.4, 32.6, 16.1, 11.2) < 1
+    && x <= 29
+    && y >= 22
+    && y <= 42;
+  const westernBasin = ellipseValue(x, y, 10.8, 40.7, 16.0, 6.4) < 1
+    && x >= 2
+    && x <= 27
+    && y >= 34
+    && y <= 47;
+  const lowerWestPocket = ellipseValue(x, y, 7.5, 43.2, 10.5, 4.8) < 1
+    && x >= 2
+    && x <= 22
+    && y >= 38
+    && y <= 48;
 
-export function isNorthFrozePole(x: number, y: number): boolean {
-  return x >= 0
-    && y >= 0
-    && x + y <= 10
-    && Math.abs(x - y) <= 8;
+  return northwestAnchorage || westernBasin || lowerWestPocket;
 }
 
 function isCemeteryCausewayTile(x: number, y: number): boolean {
@@ -241,10 +250,19 @@ function isDeepSeaShelf(x: number, y: number): boolean {
 }
 
 function isDataFog(x: number, y: number): boolean {
-  return ellipseValue(x, y, 4.4, 14.0, 4.6, 4.0) < 1
-    && x <= 10
-    && y >= 9
-    && y <= 19;
+  return ellipseValue(x, y, 50.0, 49.2, 4.8, 3.4) < 1
+    && x >= 47
+    && x <= 54
+    && y >= 46
+    && y <= 52;
+}
+
+function isLedgerMooring(x: number, y: number): boolean {
+  return ellipseValue(x, y, 43.2, 49.0, 4.6, 3.2) < 1
+    && x >= 39
+    && x <= 47
+    && y >= 47
+    && y <= 51;
 }
 
 function isRoadTile(x: number, y: number): boolean {

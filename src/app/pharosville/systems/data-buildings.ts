@@ -1,6 +1,5 @@
 import {
   DEX_GLOBAL_KEY,
-  type BlacklistSummaryResponse,
   type DexLiquidityData,
   type DexLiquidityMap,
   type MintBurnCoinFlow,
@@ -8,10 +7,9 @@ import {
   type RedemptionBackstopsResponse,
   type ReportCardsResponse,
 } from "@shared/types";
-import type { AreaNode, BuildingNode, BuildingStatus, BuildingType, PharosVilleFreshness } from "./world-types";
+import type { BuildingNode, BuildingStatus, BuildingType, PharosVilleFreshness } from "./world-types";
 
 export interface DataBuildingInputs {
-  blacklistSummary: BlacklistSummaryResponse | null | undefined;
   dexLiquidity: DexLiquidityMap | null | undefined;
   freshness: PharosVilleFreshness;
   mintBurnFlows: MintBurnFlowsResponse | null | undefined;
@@ -34,10 +32,8 @@ const STATUS_LABELS: Record<BuildingStatus, string> = {
   burning: "Burn-heavy",
   concentrated: "Concentrated exits",
   "deep-exit": "Deep exits",
-  "large-active-frozen": "Active freezes",
   minting: "Mint-heavy",
   quiet: "Quiet",
-  "recent-freeze": "Recent freeze activity",
   stale: "Stale",
   "thin-exit": "Thin exits",
   unavailable: "Unavailable",
@@ -73,9 +69,6 @@ export function buildDataBuildings(inputs: DataBuildingInputs): BuildingNode[] {
     buildExitRouteGatehouse(inputs.dexLiquidity, inputs.redemptionBackstops, inputs.reportCards, inputs.freshness),
   ];
 }
-
-const NORTH_FROZE_POLE_TILE = { x: 0, y: 0 } as const;
-const NORTH_FROZE_POLE_ACCENT = "#9ed8ff";
 
 function buildMintBurnFoundry(
   flows: MintBurnFlowsResponse | null | undefined,
@@ -160,78 +153,6 @@ function buildMintBurnFoundry(
       scale: 1,
       secondaryIntensity: clamp01(mintIntensity),
       tertiaryIntensity: clamp01(burnIntensity),
-    },
-  });
-}
-
-export function buildNorthFrozePoleArea(
-  summary: BlacklistSummaryResponse | null | undefined,
-  freshness: PharosVilleFreshness,
-): AreaNode {
-  const sourceFields = ["stats", "stats.perCoinFrozenTotal", "stats.recentCount24h", "chains", "methodology"];
-  if (!summary) {
-    return makeNorthFrozePoleArea({
-      count: null,
-      status: "unavailable",
-      summary: "Observed blacklist and freeze tracker summary is not available yet.",
-      facts: unavailableFacts("Source fields", sourceFields.join(", ")),
-      sourceFields,
-      links: [{ label: "Blacklist tracker", href: "/blacklist/" }],
-      visual: unavailableNorthFrozePoleVisual(),
-    });
-  }
-
-  const stats = summary.stats;
-  let status: BuildingStatus = "quiet";
-  if (freshness.blacklistStale === true) status = "stale";
-  else if (stats.recentCount24h > 0 || stats.recentCount > 0) status = "recent-freeze";
-  else if (stats.activeFrozenTotal > 0 || stats.activeAddressCount > 0) status = "large-active-frozen";
-
-  const frostIntensity = clamp01((Math.log10(stats.activeFrozenTotal + 1) - 4) / 5);
-  const mistIntensity = Math.max(frostIntensity * 0.75, clamp01(Math.log10(stats.activeAddressCount + 1) / 3) * 0.6);
-  const chainIntensity = clamp01(Math.sqrt(stats.recentCount24h) / 4 + Math.sqrt(Math.max(stats.recentCount - stats.recentCount24h, 0)) / 12);
-  const dataFogIntensity = status === "stale"
-    ? 0.75
-    : clamp01((stats.activeAmountGapCount + stats.recoverableGapCount) / 20) * 0.6;
-
-  return makeNorthFrozePoleArea({
-    count: stats.recentCount24h > 0 ? stats.recentCount24h : stats.recentCount || null,
-    status,
-    summary: "Northern frozen-water route for observed freeze, blacklist, unblacklist, and destroy events from tracked contracts.",
-    facts: [
-      { label: "Status", value: STATUS_LABELS[status] },
-      { label: "Active frozen value", value: formatUsd(stats.activeFrozenTotal) },
-      { label: "Active frozen addresses", value: integer.format(stats.activeAddressCount) },
-      { label: "Frozen addresses observed", value: integer.format(stats.frozenAddresses) },
-      { label: "Destroyed total", value: formatUsd(stats.destroyedTotal) },
-      { label: "Recent events", value: integer.format(stats.recentCount) },
-      { label: "Last 24h", value: integer.format(stats.recentCount24h) },
-      { label: "Amount gaps", value: integer.format(stats.activeAmountGapCount) },
-      { label: "Recoverable gaps", value: integer.format(stats.recoverableGapCount) },
-      { label: "Supported chains", value: integer.format(summary.chains.length) },
-      { label: "Total events", value: integer.format(summary.totalEvents) },
-      { label: "Methodology", value: summary.methodology?.currentVersionLabel ?? summary.methodology?.versionLabel ?? "Unavailable" },
-      { label: "Source fields", value: sourceFields.join(", ") },
-    ],
-    sourceFields,
-    links: [{ label: "Blacklist tracker", href: "/blacklist/" }],
-    membersHeading: "Largest active frozen totals",
-    members: Object.entries(stats.perCoinFrozenTotal)
-      .toSorted((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .slice(0, 5)
-      .map(([symbol, frozenUsd]) => ({
-        id: symbol,
-        label: symbol,
-        href: "/blacklist/",
-        value: `${formatUsd(frozenUsd)} frozen`,
-      })),
-    visual: {
-      accent: NORTH_FROZE_POLE_ACCENT,
-      dataFogIntensity,
-      intensity: frostIntensity,
-      scale: 1,
-      secondaryIntensity: chainIntensity,
-      tertiaryIntensity: Math.max(chainIntensity, frostIntensity * 0.55, mistIntensity),
     },
   });
 }
@@ -372,51 +293,9 @@ function makeBuilding(input: {
   };
 }
 
-function makeNorthFrozePoleArea(input: {
-  count: number | null;
-  facts: Array<{ label: string; value: string }>;
-  links: Array<{ label: string; href: string }>;
-  members?: Array<{ id: string; label: string; href: string; value?: string }>;
-  membersHeading?: string;
-  sourceFields: string[];
-  status: BuildingStatus;
-  summary: string;
-  visual: AreaNode["visual"];
-}): AreaNode {
-  return {
-    id: "area.north-froze-pole",
-    kind: "area",
-    label: "North Froze Pole",
-    tile: NORTH_FROZE_POLE_TILE,
-    dataAreaType: "north-froze-pole",
-    count: input.count,
-    status: input.status,
-    statusLabel: STATUS_LABELS[input.status],
-    summary: input.summary,
-    facts: input.facts,
-    sourceFields: input.sourceFields,
-    links: input.links,
-    membersHeading: input.membersHeading,
-    members: input.members,
-    detailId: "area.north-froze-pole",
-    visual: input.visual,
-  };
-}
-
 function unavailableVisual(buildingType: BuildingType): BuildingNode["visual"] {
   return {
     accent: BUILDING_ACCENTS[buildingType],
-    dataFogIntensity: 0.72,
-    intensity: 0.16,
-    scale: 1,
-    secondaryIntensity: 0.08,
-    tertiaryIntensity: 0.08,
-  };
-}
-
-function unavailableNorthFrozePoleVisual(): AreaNode["visual"] {
-  return {
-    accent: NORTH_FROZE_POLE_ACCENT,
     dataFogIntensity: 0.72,
     intensity: 0.16,
     scale: 1,

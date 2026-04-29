@@ -53,8 +53,8 @@ describe("motion", () => {
       },
       {
         zone: "fog",
-        expectedTerrains: ["brackish-water", "calm-water"],
-        minDistance: 8,
+        expectedTerrains: ["brackish-water"],
+        minDistance: 4,
         world: worldForShip({
           chainCirculating: {},
           chains: ["ethereum"],
@@ -62,7 +62,7 @@ describe("motion", () => {
           pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true }),
         }),
       },
-      { zone: "ledger", expectedTerrains: ["calm-water"], minDistance: 8, world: worldForShip({ chainCirculating: {}, chains: ["ethereum"], navToken: true }) },
+      { zone: "ledger", expectedTerrains: ["ledger-water"], minDistance: 4, world: worldForShip({ chainCirculating: {}, chains: ["ethereum"], navToken: true }) },
     ];
 
     for (const entry of cases) {
@@ -232,7 +232,7 @@ describe("motion", () => {
     expect(samples.every((sample) => /water/.test(tileKindForSample(sample.tile)))).toBe(true);
   });
 
-  it("keeps dockless patrol waypoints in the current or adjacent northern risk water", () => {
+  it("keeps dockless patrol waypoints in the current or adjacent risk water districts", () => {
     const cases = [
       { expectedTerrains: ["calm-water"], world: worldForShip({ chainCirculating: {}, chains: ["ethereum"] }) },
       {
@@ -260,7 +260,7 @@ describe("motion", () => {
         }),
       },
       {
-        expectedTerrains: ["brackish-water", "calm-water"],
+        expectedTerrains: ["brackish-water"],
         world: worldForShip({
           chainCirculating: {},
           chains: ["ethereum"],
@@ -268,6 +268,7 @@ describe("motion", () => {
           pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true }),
         }),
       },
+      { expectedTerrains: ["ledger-water"], world: worldForShip({ chainCirculating: {}, chains: ["ethereum"], navToken: true }) },
     ];
 
     for (const entry of cases) {
@@ -276,7 +277,13 @@ describe("motion", () => {
 
       expect(waypoint).toBeDefined();
       expect(entry.expectedTerrains).toContain(terrainKindAt(waypoint?.x ?? -1, waypoint?.y ?? -1));
-      expect(waypoint?.y).toBeLessThanOrEqual(40);
+      if (route.zone === "fog" || route.zone === "ledger") {
+        expect(waypoint?.y).toBeGreaterThanOrEqual(46);
+      } else if (route.zone === "calm") {
+        expect(waypoint?.y).toBeLessThanOrEqual(45);
+      } else {
+        expect(waypoint?.y).toBeLessThanOrEqual(40);
+      }
     }
   });
 
@@ -325,7 +332,7 @@ describe("motion", () => {
 
   it("routes over semantic water terrain only", () => {
     const map = buildPharosVilleMap();
-    const route = buildShipWaterRoute({ from: { x: 34, y: 4 }, to: { x: 30, y: 16 }, map });
+    const route = buildShipWaterRoute({ from: { x: 50, y: 4 }, to: { x: 25, y: 12 }, map });
 
     expect(route.points.length).toBeGreaterThan(1);
     expect(terrainKindInMap(map, route.points[0]!)).toBe("storm-water");

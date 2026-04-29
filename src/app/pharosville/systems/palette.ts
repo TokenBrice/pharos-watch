@@ -59,8 +59,8 @@ export type WaterTextureKind =
   | "calm"
   | "deep"
   | "fog"
-  | "frozen"
   | "harbor"
+  | "ledger"
   | "storm"
   | "watch"
   | "warning"
@@ -110,19 +110,19 @@ export const WATER_TERRAIN_STYLES = {
     texture: "fog",
     wave: "rgba(214, 226, 217, 0.18)",
   },
-  "frozen-water": {
-    accent: "rgba(210, 244, 255, 0.32)",
-    base: "#427d8e",
-    inner: "rgba(181, 229, 246, 0.24)",
-    texture: "frozen",
-    wave: "rgba(219, 248, 255, 0.24)",
-  },
   "harbor-water": {
     accent: "rgba(171, 219, 205, 0.24)",
     base: "#1d6864",
     inner: "rgba(94, 163, 141, 0.3)",
     texture: "harbor",
     wave: "rgba(196, 235, 223, 0.2)",
+  },
+  "ledger-water": {
+    accent: "rgba(217, 185, 116, 0.28)",
+    base: "#31594d",
+    inner: "rgba(96, 131, 116, 0.3)",
+    texture: "ledger",
+    wave: "rgba(230, 213, 166, 0.2)",
   },
   "storm-water": {
     accent: "rgba(224, 236, 226, 0.24)",

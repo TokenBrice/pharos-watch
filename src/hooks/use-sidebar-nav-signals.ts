@@ -16,11 +16,19 @@ import {
   type SidebarNavSignal,
 } from "@/lib/sidebar-signals";
 
+function isPharosVillePath(pathname: string | null) {
+  return pathname === "/pharosville" || pathname?.startsWith("/pharosville/") === true;
+}
+
 export function useSidebarNavSignals() {
   const pathname = usePathname();
+  const browserPathname = typeof window === "undefined" ? pathname : window.location.pathname;
+  const shouldFetchBlacklistSignal = pathname != null
+    && !isPharosVillePath(pathname)
+    && !isPharosVillePath(browserPathname);
   const { data: pegSummary } = usePegSummary();
   const { data: stabilityIndex } = useStabilityIndex();
-  const { data: blacklistSummary } = useBlacklistSummary();
+  const { data: blacklistSummary } = useBlacklistSummary({ enabled: shouldFetchBlacklistSignal });
   const { data: health } = useHealth();
   const { data: dailyDigest } = useDailyDigest();
   const seenDigestGeneratedAt = useMemo(() => {

@@ -2,16 +2,17 @@ import { describe, expect, it } from "vitest";
 import { areaLabelPlacementForArea } from "./area-labels";
 import { tileToIso } from "./projection";
 import { DEWS_AREA_PLACEMENTS, RISK_WATER_AREAS } from "./risk-water-areas";
-import { terrainKindAt } from "./world-layout";
+import { LIGHTHOUSE_TILE, terrainKindAt } from "./world-layout";
 import type { AreaNode, DewsAreaBand, ShipRiskPlacement } from "./world-types";
 
 const WEST_TO_EAST_DEWS_BANDS: DewsAreaBand[] = ["CALM", "WATCH", "ALERT", "WARNING", "DANGER"];
 const NON_DEWS_RISK_PLACEMENTS = ["data-fog", "ledger-mooring"] as const satisfies readonly ShipRiskPlacement[];
 
 describe("areaLabelPlacementForArea", () => {
-  it("keeps rendered DEWS labels ordered left-to-right with warning and danger northward", () => {
+  it("keeps rendered DEWS labels ordered left-to-right around the lighthouse", () => {
     let previousIso: { x: number; y: number } | null = null;
     const isoByBand = new Map<DewsAreaBand, { x: number; y: number }>();
+    const lighthouseIso = tileToIso(LIGHTHOUSE_TILE);
 
     for (const band of WEST_TO_EAST_DEWS_BANDS) {
       const area = dewsAreaNode(band);
@@ -24,22 +25,8 @@ describe("areaLabelPlacementForArea", () => {
       }
       previousIso = iso;
     }
-    expect(isoByBand.get("WARNING")!.y).toBeLessThan(isoByBand.get("ALERT")!.y);
-    expect(isoByBand.get("DANGER")!.y).toBeLessThanOrEqual(isoByBand.get("WARNING")!.y);
-  });
-
-  it("keeps the North Froze Pole rendered label on frozen water", () => {
-    const placement = areaLabelPlacementForArea({
-      id: "area.north-froze-pole",
-      kind: "area",
-      label: "North Froze Pole",
-      tile: { x: 0, y: 0 },
-      dataAreaType: "north-froze-pole",
-      detailId: "area.north-froze-pole",
-    });
-
-    expect(terrainKindAt(placement.semanticTile.x, placement.semanticTile.y)).toBe("frozen-water");
-    expect(terrainKindAt(placement.anchorTile.x, placement.anchorTile.y)).toBe("frozen-water");
+    expect(isoByBand.get("WARNING")!.y).toBeLessThan(lighthouseIso.y);
+    expect(isoByBand.get("DANGER")!.x).toBeGreaterThan(isoByBand.get("WARNING")!.x + 96);
   });
 
   it("keeps non-DEWS risk water labels on their semantic water", () => {
@@ -47,7 +34,7 @@ describe("areaLabelPlacementForArea", () => {
       "breakwater-edge": "watch-water",
       "data-fog": "brackish-water",
       "harbor-mouth-watch": "alert-water",
-      "ledger-mooring": "calm-water",
+      "ledger-mooring": "ledger-water",
       "outer-rough-water": "warning-water",
       "safe-harbor": "calm-water",
       "storm-shelf": "storm-water",

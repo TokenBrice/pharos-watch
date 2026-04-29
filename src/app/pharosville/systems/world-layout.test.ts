@@ -62,6 +62,7 @@ describe("buildPharosVilleMap", () => {
       "brackish-water",
       "calm-water",
       "harbor-water",
+      "ledger-water",
       "watch-water",
       "warning-water",
       "storm-water",
@@ -117,7 +118,32 @@ describe("buildPharosVilleMap", () => {
     expect(terrainKindAt(REGION_TILES["outer-rough-water"].x, REGION_TILES["outer-rough-water"].y)).toBe("warning-water");
     expect(terrainKindAt(REGION_TILES["storm-shelf"].x, REGION_TILES["storm-shelf"].y)).toBe("storm-water");
     expect(terrainKindAt(REGION_TILES["data-fog"].x, REGION_TILES["data-fog"].y)).toBe("brackish-water");
-    expect(terrainKindAt(REGION_TILES["ledger-mooring"].x, REGION_TILES["ledger-mooring"].y)).toBe("calm-water");
+    expect(terrainKindAt(REGION_TILES["ledger-mooring"].x, REGION_TILES["ledger-mooring"].y)).toBe("ledger-water");
+    expect(terrainKindAt(0, 0)).toBe("deep-water");
+  });
+
+  it("extends Calm Anchorage across the open western basin", () => {
+    const westernBasinSamples = [
+      { x: 4, y: 43 },
+      { x: 7, y: 43 },
+      { x: 12, y: 44 },
+      { x: 15, y: 44 },
+      { x: 20, y: 43 },
+    ];
+
+    for (const tile of westernBasinSamples) {
+      expect(terrainKindAt(tile.x, tile.y), `${tile.x}.${tile.y}`).toBe("calm-water");
+    }
+  });
+
+  it("keeps the lighthouse west and south sea lane generic water", () => {
+    for (let x = 30; x <= 45; x += 1) {
+      for (let y = 18; y <= 34; y += 1) {
+        const terrain = terrainKindAt(x, y);
+        if (!isWaterTileKind(terrain)) continue;
+        expect(terrain, `${x}.${y}`).toBe("water");
+      }
+    }
   });
 
   it("keeps dock slots on coastline edges with water access", () => {

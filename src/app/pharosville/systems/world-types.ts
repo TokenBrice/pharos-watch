@@ -14,7 +14,7 @@ export type TerrainKind =
   | "warning-water"
   | "storm-water"
   | "fog-water"
-  | "frozen-water"
+  | "ledger-water"
   | "beach"
   | "grass"
   | "rock"
@@ -209,10 +209,8 @@ export type BuildingStatus =
   | "burning"
   | "concentrated"
   | "deep-exit"
-  | "large-active-frozen"
   | "minting"
   | "quiet"
-  | "recent-freeze"
   | "stale"
   | "thin-exit"
   | "unavailable";
@@ -246,7 +244,6 @@ export interface BuildingNode {
 }
 
 export type WorldEffectCueId =
-  | "cue.area.north-froze-pole"
   | "cue.building.exit-route-gatehouse"
   | "cue.building.mint-burn-foundry"
   | "cue.lighthouse.psi"
@@ -282,19 +279,13 @@ export interface AreaNode {
   tile: { x: number; y: number };
   band?: DewsAreaBand;
   count?: number | null;
-  dataAreaType?: "north-froze-pole";
   detailId: string;
   facts?: Array<{ label: string; value: string }>;
   links?: Array<{ label: string; href: string }>;
-  members?: Array<{ id: string; label: string; href: string; value?: string }>;
-  membersHeading?: string;
   riskPlacement?: ShipRiskPlacement;
   riskZone?: ShipWaterZone;
   sourceFields?: string[];
-  status?: BuildingStatus;
-  statusLabel?: string;
   summary?: string;
-  visual?: DataLandmarkVisual;
 }
 
 export interface DetailModel {
@@ -309,7 +300,6 @@ export interface DetailModel {
 }
 
 export type VisualCueTarget =
-  | { kind: "area"; dataAreaType: NonNullable<AreaNode["dataAreaType"]> }
   | { kind: "area" }
   | { kind: "building"; buildingType: BuildingType }
   | { kind: "dock" }
@@ -347,7 +337,6 @@ export interface PharosVilleFreshness {
   stressStale?: boolean;
   reportCardsStale?: boolean;
   mintBurnStale?: boolean;
-  blacklistStale?: boolean;
   dexLiquidityStale?: boolean;
   redemptionBackstopsStale?: boolean;
 }

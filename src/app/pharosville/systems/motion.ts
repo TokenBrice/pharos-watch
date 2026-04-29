@@ -87,8 +87,8 @@ const OPEN_WATER_PATROL_WAYPOINTS: Record<ShipWaterZone, readonly { x: number; y
   alert: [...SHIP_WATER_ANCHORS["harbor-mouth-watch"], ...SHIP_WATER_ANCHORS["outer-rough-water"], ...SHIP_WATER_ANCHORS["breakwater-edge"]],
   calm: SHIP_WATER_ANCHORS["safe-harbor"],
   danger: [...SHIP_WATER_ANCHORS["storm-shelf"], ...SHIP_WATER_ANCHORS["outer-rough-water"]],
-  fog: [...SHIP_WATER_ANCHORS["data-fog"], ...SHIP_WATER_ANCHORS["safe-harbor"]],
-  ledger: [...SHIP_WATER_ANCHORS["ledger-mooring"], ...SHIP_WATER_ANCHORS["safe-harbor"]],
+  fog: SHIP_WATER_ANCHORS["data-fog"],
+  ledger: SHIP_WATER_ANCHORS["ledger-mooring"],
   warning: [...SHIP_WATER_ANCHORS["outer-rough-water"], ...SHIP_WATER_ANCHORS["storm-shelf"]],
   watch: [...SHIP_WATER_ANCHORS["breakwater-edge"], ...SHIP_WATER_ANCHORS["safe-harbor"]],
 };
@@ -380,13 +380,20 @@ function openWaterPatrolWaypoint(
 ): { x: number; y: number } {
   const waypoints = OPEN_WATER_PATROL_WAYPOINTS[ship.riskZone];
   const offset = stableHash(`${ship.id}.open-water-patrol`) % waypoints.length;
+  let fallback = nearestMapWaterTile(waypoints[offset] ?? riskTile, map);
+  let fallbackDistance = Math.hypot(fallback.x - riskTile.x, fallback.y - riskTile.y);
 
   for (let index = 0; index < waypoints.length; index += 1) {
     const candidate = nearestMapWaterTile(waypoints[(offset + index) % waypoints.length]!, map);
-    if (Math.hypot(candidate.x - riskTile.x, candidate.y - riskTile.y) >= 8) return candidate;
+    const distance = Math.hypot(candidate.x - riskTile.x, candidate.y - riskTile.y);
+    if (distance > fallbackDistance) {
+      fallback = candidate;
+      fallbackDistance = distance;
+    }
+    if (distance >= 8) return candidate;
   }
 
-  return nearestMapWaterTile(waypoints[offset] ?? riskTile, map);
+  return fallback;
 }
 
 function findDetouredWaterPath(from: { x: number; y: number }, to: { x: number; y: number }, map: PharosVilleMap): Array<{ x: number; y: number }> {

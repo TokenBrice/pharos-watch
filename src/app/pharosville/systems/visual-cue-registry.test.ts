@@ -23,7 +23,6 @@ const STRUCTURAL_WORLD_FIELDS = {
 
 function cueKey(cue: VisualCue): string {
   if (cue.target.kind === "building") return `building:${cue.target.buildingType}`;
-  if (cue.target.kind === "area") return `area:${cue.target.dataAreaType}`;
   return cue.target.kind;
 }
 
@@ -40,7 +39,7 @@ describe("buildVisualCueRegistry", () => {
       "cue.ship.scale",
       "cue.ship-cluster",
       "cue.building.mint-burn-foundry",
-      "cue.area.north-froze-pole",
+      "cue.water.semantic-terrain",
       "cue.building.exit-route-gatehouse",
     ]));
     expect(cues.find((cue) => cue.id === "cue.ship.motion")).toMatchObject({
@@ -54,7 +53,7 @@ describe("buildVisualCueRegistry", () => {
     expect(cues.every((cue) => cue.sourceField && cue.domEquivalent && cue.failureState && cue.reducedMotionEquivalent)).toBe(true);
   });
 
-  it("uses explicit typed targets instead of cue-id suffixes for building and North Froze Pole coverage", () => {
+  it("uses explicit typed targets instead of cue-id suffixes for building coverage", () => {
     const cues = buildVisualCueRegistry();
     const buildingTargets = cues
       .map((cue) => cue.target)
@@ -63,16 +62,14 @@ describe("buildVisualCueRegistry", () => {
 
     expect(new Set(buildingTargets)).toEqual(new Set(BUILDING_TYPES));
     expect(buildingTargets).toHaveLength(BUILDING_TYPES.length);
-    expect(cues).toContainEqual(expect.objectContaining({
-      target: { kind: "area", dataAreaType: "north-froze-pole" },
-    }));
+    expect(cues).toContainEqual(expect.objectContaining({ target: { kind: "area" } }));
   });
 
   it("covers world node kinds or records a structural-only exclusion", () => {
     const cues = buildVisualCueRegistry();
     const targetKeys = new Set(cues.map(cueKey));
     const coveredWorldFields = {
-      areas: targetKeys.has("area:north-froze-pole"),
+      areas: targetKeys.has("area"),
       buildings: BUILDING_TYPES.every((buildingType) => targetKeys.has(`building:${buildingType}`)),
       docks: targetKeys.has("dock"),
       graves: targetKeys.has("grave"),

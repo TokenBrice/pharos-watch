@@ -37,8 +37,8 @@ describe("HARBOR_PALETTE", () => {
       "calm-water",
       "deep-water",
       "fog-water",
-      "frozen-water",
       "harbor-water",
+      "ledger-water",
       "storm-water",
       "warning-water",
       "watch-water",
@@ -46,6 +46,7 @@ describe("HARBOR_PALETTE", () => {
     ]);
     expect(waterTerrainStyle("brackish-water")?.texture).toBe("brackish");
     expect(waterTerrainStyle("calm-water")?.texture).toBe("calm");
+    expect(waterTerrainStyle("ledger-water")?.texture).toBe("ledger");
     expect(waterTerrainStyle("watch-water")?.texture).toBe("watch");
     expect(waterTerrainStyle("unknown")).toBeNull();
   });
@@ -59,7 +60,7 @@ describe("HARBOR_PALETTE", () => {
     expect(hexDistance(WATER_TERRAIN_STYLES["calm-water"].base, WATER_TERRAIN_STYLES["harbor-water"].base)).toBeGreaterThan(32);
     expect(hexDistance(WATER_TERRAIN_STYLES["calm-water"].base, WATER_TERRAIN_STYLES["alert-water"].base)).toBeGreaterThan(32);
     expect(WATER_TERRAIN_STYLES["warning-water"].accent).not.toBe(WATER_TERRAIN_STYLES.water.accent);
-    expect(WATER_TERRAIN_STYLES["frozen-water"].base).not.toBe(WATER_TERRAIN_STYLES["fog-water"].base);
+    expect(WATER_TERRAIN_STYLES["ledger-water"].base).not.toBe(WATER_TERRAIN_STYLES["calm-water"].base);
   });
 });
 

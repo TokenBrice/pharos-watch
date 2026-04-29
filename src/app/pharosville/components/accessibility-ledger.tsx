@@ -61,9 +61,7 @@ export function AccessibilityLedger({
         {world.areas.map((area) => (
           <li key={area.id}>
             {area.label}
-            {area.dataAreaType === "north-froze-pole"
-              ? `: ${area.statusLabel ?? "Unavailable"}. ${area.summary ?? ""} Facts: ${area.facts?.map((fact) => `${fact.label} ${fact.value}`).join("; ") ?? "unavailable"}. Source fields ${area.sourceFields?.join(", ") || "unavailable"}.`
-              : area.riskPlacement ? `: ${area.band ? `DEWS ${area.band}, ${area.count ?? 0} stablecoins` : `risk water zone ${area.riskZone ?? "unavailable"}`}, placement ${area.riskPlacement}. ${area.summary ?? ""} Facts: ${area.facts?.map((fact) => `${fact.label} ${fact.value}`).join("; ") ?? "unavailable"}. Source fields ${area.sourceFields?.join(", ") || "unavailable"}.` : "."}
+            {area.riskPlacement ? `: ${area.band ? `DEWS ${area.band}, ${area.count ?? 0} stablecoins` : `risk water zone ${area.riskZone ?? "unavailable"}`}, placement ${area.riskPlacement}. ${area.summary ?? ""} Facts: ${area.facts?.map((fact) => `${fact.label} ${fact.value}`).join("; ") ?? "unavailable"}. Source fields ${area.sourceFields?.join(", ") || "unavailable"}.` : "."}
           </li>
         ))}
       </ol>
@@ -150,7 +148,6 @@ function freshnessEntries(world: PharosVilleWorld) {
     { label: "Stress signals", stale: world.freshness.stressStale === true },
     { label: "Report cards", stale: world.freshness.reportCardsStale === true },
     { label: "Mint/burn flows", stale: world.freshness.mintBurnStale === true },
-    { label: "Blacklist summary", stale: world.freshness.blacklistStale === true },
     { label: "DEX liquidity", stale: world.freshness.dexLiquidityStale === true },
     { label: "Redemption backstops", stale: world.freshness.redemptionBackstopsStale === true },
   ];
