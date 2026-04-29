@@ -46,6 +46,20 @@ describe("resolveShipRiskPlacement", () => {
     expect(result.placement).toBe("storm-shelf");
   });
 
+  it("uses the canonical DEWS calm placement when fresh stress is calm", () => {
+    expect(usdcMeta).toBeDefined();
+    const result = resolveShipRiskPlacement({
+      asset: makeAsset({ id: "usdc-circle", symbol: "USDC" }),
+      meta: usdcMeta!,
+      pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", currentDeviationBps: 0 }),
+      stress: { band: "CALM", score: 12, signals: {}, computedAt: 1, methodologyVersion: "fixture" },
+      freshness: {},
+    });
+
+    expect(result.placement).toBe("safe-harbor");
+    expect(result.evidence.reason).toBe("DEWS stress escalation");
+  });
+
   it("does not move ships based on stale DEWS alone", () => {
     expect(usdcMeta).toBeDefined();
     const result = resolveShipRiskPlacement({

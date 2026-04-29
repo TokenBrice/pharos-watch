@@ -10,6 +10,7 @@ import {
   SHIP_RISK_PLACEMENTS,
   SHIP_SCATTER_RADIUS,
   SHIP_WATER_ANCHORS,
+  dewsAreaPlacementForBand,
   riskWaterAreaForPlacement,
   waterZoneForPlacement,
 } from "./risk-water-areas";
@@ -45,11 +46,13 @@ describe("risk water areas", () => {
       CALM: "Calm Anchorage",
     };
 
+    expect(Object.keys(DEWS_AREA_PLACEMENTS)).toEqual([...DEWS_AREA_BANDS]);
     for (const band of DEWS_AREA_BANDS) {
       const placement = DEWS_AREA_PLACEMENTS[band];
       const area = RISK_WATER_AREAS[placement];
 
       expect(area.band).toBe(band);
+      expect(dewsAreaPlacementForBand(band.toLowerCase())).toBe(placement);
       expect(DEWS_AREA_LABELS[band]).toBe(expectedLabels[band]);
       expect(AREA_LABEL_TILES[band]).toBe(area.labelTile);
       expect(DEWS_AREA_WATER_STYLE[band]).toBe(area.waterStyle);
@@ -62,6 +65,9 @@ describe("risk water areas", () => {
       const area = RISK_WATER_AREAS[placement];
 
       expect(terrainKindAt(area.regionTile.x, area.regionTile.y)).toBe(area.terrain);
+      if (area.validTerrains !== "any-water") {
+        expect(area.validTerrains).toContain(area.terrain);
+      }
       for (const anchor of area.shipAnchors) {
         expect(
           isWaterTileKind(terrainKindAt(anchor.x, anchor.y)),
@@ -71,4 +77,3 @@ describe("risk water areas", () => {
     }
   });
 });
-

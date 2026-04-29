@@ -1,5 +1,6 @@
 import type { PegSummaryCoin, StablecoinData, StablecoinMeta, StressSignalEntry } from "@shared/types";
 import type { PharosVilleFreshness, PlacementEvidence, ShipRiskPlacement } from "./world-types";
+import { dewsAreaPlacementForBand } from "./risk-water-areas";
 
 export interface RiskPlacementInput {
   asset: StablecoinData;
@@ -8,13 +9,6 @@ export interface RiskPlacementInput {
   stress: StressSignalEntry | undefined;
   freshness: PharosVilleFreshness;
 }
-
-const DEWS_PLACEMENT: Record<string, ShipRiskPlacement> = {
-  DANGER: "storm-shelf",
-  WARNING: "outer-rough-water",
-  ALERT: "harbor-mouth-watch",
-  WATCH: "breakwater-edge",
-};
 
 function evidence(reason: string, sourceFields: string[], stale = false): PlacementEvidence {
   return { reason, sourceFields, stale };
@@ -59,7 +53,7 @@ export function resolveShipRiskPlacement(input: RiskPlacementInput): {
   }
 
   if (stress && !freshness.stressStale) {
-    const placement = DEWS_PLACEMENT[stress.band.toUpperCase()];
+    const placement = dewsAreaPlacementForBand(stress.band);
     if (placement) {
       return {
         placement,

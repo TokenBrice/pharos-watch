@@ -9,6 +9,7 @@ export interface RiskWaterAreaDefinition {
   regionTile: TileCoordinate;
   labelTile: TileCoordinate;
   terrain: TerrainKind;
+  validTerrains: readonly TerrainKind[] | "any-water";
   waterStyle: string;
   motionZone: ShipWaterZone;
   shipAnchors: readonly TileCoordinate[];
@@ -49,6 +50,7 @@ export const RISK_WATER_AREAS: Record<ShipRiskPlacement, RiskWaterAreaDefinition
     regionTile: { x: 30, y: 42 },
     labelTile: { x: 30, y: 42 },
     terrain: "harbor-water",
+    validTerrains: "any-water",
     waterStyle: "calm harbor water",
     motionZone: "safe",
     shipAnchors: [
@@ -72,6 +74,7 @@ export const RISK_WATER_AREAS: Record<ShipRiskPlacement, RiskWaterAreaDefinition
     regionTile: { x: 27, y: 44 },
     labelTile: { x: 27, y: 44 },
     terrain: "water",
+    validTerrains: "any-water",
     waterStyle: "breakwater watch water",
     motionZone: "safe",
     shipAnchors: [
@@ -92,6 +95,7 @@ export const RISK_WATER_AREAS: Record<ShipRiskPlacement, RiskWaterAreaDefinition
     regionTile: { x: 40, y: 44 },
     labelTile: { x: 40, y: 44 },
     terrain: "alert-water",
+    validTerrains: ["alert-water"],
     waterStyle: "alert channel current",
     motionZone: "muddy",
     shipAnchors: [
@@ -113,6 +117,7 @@ export const RISK_WATER_AREAS: Record<ShipRiskPlacement, RiskWaterAreaDefinition
     regionTile: { x: 48, y: 45 },
     labelTile: { x: 49, y: 46 },
     terrain: "warning-water",
+    validTerrains: ["warning-water"],
     waterStyle: "warning shoals",
     motionZone: "muddy",
     shipAnchors: [
@@ -134,6 +139,7 @@ export const RISK_WATER_AREAS: Record<ShipRiskPlacement, RiskWaterAreaDefinition
     regionTile: { x: 52, y: 52 },
     labelTile: { x: 55, y: 53 },
     terrain: "storm-water",
+    validTerrains: ["storm-water"],
     waterStyle: "storm strait",
     motionZone: "storm",
     shipAnchors: [
@@ -153,6 +159,7 @@ export const RISK_WATER_AREAS: Record<ShipRiskPlacement, RiskWaterAreaDefinition
     regionTile: { x: 10, y: 16 },
     labelTile: { x: 10, y: 16 },
     terrain: "brackish-water",
+    validTerrains: ["brackish-water", "fog-water"],
     waterStyle: "stale data fog",
     motionZone: "fog",
     shipAnchors: [
@@ -171,6 +178,7 @@ export const RISK_WATER_AREAS: Record<ShipRiskPlacement, RiskWaterAreaDefinition
     regionTile: { x: 34, y: 43 },
     labelTile: { x: 34, y: 43 },
     terrain: "harbor-water",
+    validTerrains: "any-water",
     waterStyle: "NAV ledger mooring",
     motionZone: "ledger",
     shipAnchors: [
@@ -209,7 +217,12 @@ export function riskWaterAreaForPlacement(placement: ShipRiskPlacement): RiskWat
   return RISK_WATER_AREAS[placement];
 }
 
+export function dewsAreaPlacementForBand(band: string | null | undefined): ShipRiskPlacement | null {
+  const normalized = band?.toUpperCase();
+  if (!normalized || !(normalized in DEWS_AREA_PLACEMENTS)) return null;
+  return DEWS_AREA_PLACEMENTS[normalized as DewsAreaBand];
+}
+
 export function waterZoneForPlacement(placement: ShipRiskPlacement): ShipWaterZone {
   return RISK_WATER_AREAS[placement].motionZone;
 }
-

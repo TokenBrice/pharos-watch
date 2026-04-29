@@ -42,6 +42,7 @@ import {
   DEWS_AREA_WATER_STYLE,
   SHIP_SCATTER_RADIUS,
   SHIP_WATER_ANCHORS,
+  riskWaterAreaForPlacement,
   waterZoneForPlacement,
 } from "./risk-water-areas";
 import { resolveShipVisual } from "./ship-visuals";
@@ -309,11 +310,9 @@ function spreadShipRiskAnchorsAcrossWater(ships: ShipNode[]): ShipNode[] {
 
 function isPlacementWaterTile(tile: { x: number; y: number }, placement: ShipNode["riskPlacement"]): boolean {
   const terrain = terrainKindAt(tile.x, tile.y);
-  if (placement === "harbor-mouth-watch") return terrain === "alert-water";
-  if (placement === "outer-rough-water") return terrain === "warning-water";
-  if (placement === "storm-shelf") return terrain === "storm-water";
-    if (placement === "data-fog") return terrain === "fog-water" || terrain === "brackish-water";
-  return isWaterTileKind(tileKindAt(tile.x, tile.y));
+  const validTerrains = riskWaterAreaForPlacement(placement).validTerrains;
+  if (validTerrains === "any-water") return isWaterTileKind(tileKindAt(tile.x, tile.y));
+  return validTerrains.includes(terrain);
 }
 
 function nearestPlacementWaterTile(
