@@ -1,5 +1,6 @@
 import type { GraveNode, PharosVilleMap, PharosVilleTile, ShipRiskPlacement, TerrainKind, TileKind } from "./world-types";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
+import { RISK_WATER_REGION_TILES } from "./risk-water-areas";
 import { stableOffset, stableUnit } from "./stable-random";
 
 export const PHAROSVILLE_MAP_WIDTH = 56;
@@ -10,15 +11,7 @@ export const LIGHTHOUSE_TILE = { x: 44, y: 18 } as const;
 export const CIVIC_CORE_CENTER = { x: 34, y: 30 } as const;
 export const CIVIC_CORE_RADIUS = 7.0;
 
-export const REGION_TILES: Record<ShipRiskPlacement, { x: number; y: number }> = {
-  "safe-harbor": { x: 30, y: 42 },
-  "breakwater-edge": { x: 27, y: 44 },
-  "harbor-mouth-watch": { x: 40, y: 44 },
-  "outer-rough-water": { x: 48, y: 45 },
-  "storm-shelf": { x: 52, y: 52 },
-  "data-fog": { x: 10, y: 16 },
-  "ledger-mooring": { x: 34, y: 43 },
-};
+export const REGION_TILES: Record<ShipRiskPlacement, { x: number; y: number }> = RISK_WATER_REGION_TILES;
 
 export const EVM_BAY_DOCK_TILES = [
   { x: 35, y: 40 },

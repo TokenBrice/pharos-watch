@@ -34,6 +34,16 @@ import { buildDataBuildings, buildNorthFrozePoleArea } from "./data-buildings";
 import { buildPharosVilleMap, clampMapTile, graveNodesFromEntries, isWaterTileKind, LIGHTHOUSE_TILE, MAX_TILE_X, MAX_TILE_Y, nearestAvailableWaterTile, nearestWaterTile, REGION_TILES, terrainKindAt, tileKindAt } from "./world-layout";
 import { getRecentChange } from "./recent-change";
 import { resolveShipRiskPlacement } from "./risk-placement";
+import {
+  AREA_LABEL_TILES,
+  DEWS_AREA_BANDS,
+  DEWS_AREA_LABELS,
+  DEWS_AREA_PLACEMENTS,
+  DEWS_AREA_WATER_STYLE,
+  SHIP_SCATTER_RADIUS,
+  SHIP_WATER_ANCHORS,
+  waterZoneForPlacement,
+} from "./risk-water-areas";
 import { resolveShipVisual } from "./ship-visuals";
 import { stableHash, stableOffset, stableUnit } from "./stable-random";
 import { buildVisualCueRegistry } from "./visual-cue-registry";
@@ -47,116 +57,9 @@ import type {
   ShipChainPresence,
   ShipDockVisit,
   ShipNode,
-  ShipRiskPlacement,
-  ShipWaterZone,
 } from "./world-types";
 
-const SHIP_SCATTER_RADIUS: Record<ShipRiskPlacement, { x: number; y: number }> = {
-  "safe-harbor": { x: 5, y: 4 },
-  "breakwater-edge": { x: 4, y: 3 },
-  "harbor-mouth-watch": { x: 4, y: 3 },
-  "outer-rough-water": { x: 5, y: 5 },
-  "storm-shelf": { x: 5, y: 5 },
-  "data-fog": { x: 5, y: 4 },
-  "ledger-mooring": { x: 4, y: 3 },
-};
-
-export const SHIP_WATER_ANCHORS: Record<ShipRiskPlacement, readonly { x: number; y: number }[]> = {
-  "safe-harbor": [
-    { x: 16, y: 27 },
-    { x: 22, y: 20 },
-    { x: 31, y: 19 },
-    { x: 47, y: 17 },
-    { x: 49, y: 31 },
-    { x: 47, y: 36 },
-    { x: 40, y: 43 },
-    { x: 31, y: 44 },
-    { x: 22, y: 43 },
-    { x: 18, y: 35 },
-  ],
-  "breakwater-edge": [
-    { x: 21, y: 22 },
-    { x: 27, y: 20 },
-    { x: 38, y: 18 },
-    { x: 47, y: 25 },
-    { x: 49, y: 38 },
-    { x: 40, y: 43 },
-    { x: 27, y: 44 },
-  ],
-  "harbor-mouth-watch": [
-    { x: 39, y: 43 },
-    { x: 40, y: 43 },
-    { x: 41, y: 43 },
-    { x: 39, y: 44 },
-    { x: 40, y: 44 },
-    { x: 42, y: 45 },
-    { x: 38, y: 45 },
-    { x: 37, y: 46 },
-  ],
-  "outer-rough-water": [
-    { x: 45, y: 44 },
-    { x: 46, y: 45 },
-    { x: 47, y: 43 },
-    { x: 49, y: 46 },
-    { x: 50, y: 48 },
-    { x: 48, y: 49 },
-    { x: 53, y: 44 },
-    { x: 54, y: 46 },
-  ],
-  "storm-shelf": [
-    { x: 51, y: 52 },
-    { x: 52, y: 53 },
-    { x: 53, y: 53 },
-    { x: 54, y: 49 },
-    { x: 49, y: 54 },
-    { x: 54, y: 54 },
-  ],
-  "data-fog": [
-    { x: 10, y: 16 },
-    { x: 8, y: 24 },
-    { x: 14, y: 20 },
-    { x: 7, y: 12 },
-    { x: 18, y: 18 },
-  ],
-  "ledger-mooring": [
-    { x: 35, y: 43 },
-    { x: 34, y: 43 },
-    { x: 40, y: 43 },
-    { x: 29, y: 44 },
-  ],
-};
-
-const DEWS_AREA_PLACEMENTS: Record<DewsAreaBand, ShipRiskPlacement> = {
-  DANGER: "storm-shelf",
-  WARNING: "outer-rough-water",
-  ALERT: "harbor-mouth-watch",
-  WATCH: "breakwater-edge",
-  CALM: "safe-harbor",
-};
-
-const DEWS_AREA_LABELS: Record<DewsAreaBand, string> = {
-  DANGER: "Danger Strait",
-  WARNING: "Warning Shoals",
-  ALERT: "Alert Channel",
-  WATCH: "Watch Breakwater",
-  CALM: "Calm Anchorage",
-};
-
-const AREA_LABEL_TILES: Record<DewsAreaBand, { x: number; y: number }> = {
-  DANGER: { x: 55, y: 53 },
-  WARNING: { x: 49, y: 46 },
-  ALERT: { x: 40, y: 44 },
-  WATCH: { x: 27, y: 44 },
-  CALM: { x: 30, y: 42 },
-};
-
-const DEWS_AREA_WATER_STYLE: Record<DewsAreaBand, string> = {
-  DANGER: "storm strait",
-  WARNING: "warning shoals",
-  ALERT: "alert channel current",
-  WATCH: "breakwater watch water",
-  CALM: "calm harbor water",
-};
+export { SHIP_WATER_ANCHORS, waterZoneForPlacement } from "./risk-water-areas";
 
 export interface PharosVilleInputs {
   stablecoins: StablecoinListResponse | null | undefined;
@@ -218,7 +121,7 @@ function buildDewsBandCounts(stress: StressSignalsAllResponse | null | undefined
 
 function buildAreas(stress: StressSignalsAllResponse | null | undefined): PharosVilleWorld["areas"] {
   const counts = buildDewsBandCounts(stress);
-  return (Object.keys(DEWS_AREA_PLACEMENTS) as DewsAreaBand[]).map((band) => ({
+  return DEWS_AREA_BANDS.map((band) => ({
     id: `area.dews.${band.toLowerCase()}`,
     kind: "area" as const,
     label: DEWS_AREA_LABELS[band],
@@ -234,14 +137,6 @@ function buildAreas(stress: StressSignalsAllResponse | null | undefined): Pharos
     sourceFields: ["stress.signals[]"],
     summary: `${DEWS_AREA_LABELS[band]} uses ${DEWS_AREA_WATER_STYLE[band]} for DEWS ${band} placement.`,
   }));
-}
-
-export function waterZoneForPlacement(placement: ShipRiskPlacement): ShipWaterZone {
-  if (placement === "safe-harbor" || placement === "breakwater-edge") return "safe";
-  if (placement === "harbor-mouth-watch" || placement === "outer-rough-water") return "muddy";
-  if (placement === "storm-shelf") return "storm";
-  if (placement === "data-fog") return "fog";
-  return "ledger";
 }
 
 function buildShipChainPresence(asset: StablecoinData, renderedDockChainIds: ReadonlySet<string>): ShipChainPresence[] {
