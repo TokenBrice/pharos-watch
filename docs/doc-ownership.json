@@ -42,7 +42,7 @@
     {
       "name": "pharosville-route",
       "sources": ["src/app/pharosville/**", "public/pharosville/assets/**", "scripts/pharosville/**", "tests/visual/pharosville.spec.ts"],
-      "docs": ["docs/pharosville-page.md", "agents/pharosville/CURRENT.md", "agents/pharosville/CHANGE_CHECKLIST.md", "agents/pharosville/ASSET_PIPELINE.md", "agents/pharosville/TESTING.md"],
+      "docs": ["docs/pharosville-page.md", "agents/pharosville/CURRENT.md", "agents/pharosville/CHANGE_CHECKLIST.md", "agents/pharosville/CHANGE_PLAYBOOK.md", "agents/pharosville/VISUAL_INVARIANTS.md", "agents/pharosville/SCENARIO_CATALOG.md", "agents/pharosville/VISUAL_REVIEW_ATLAS.md", "agents/pharosville/KNOWN_PITFALLS.md", "agents/pharosville/ASSET_PIPELINE.md", "agents/pharosville/TESTING.md", "src/app/pharosville/systems/README.md", "src/app/pharosville/renderer/README.md"],
       "notes": ["Update the verified route doc for behavior changes. Update the agent pack for process, asset-pipeline, handoff, or route-specific testing guidance."]
     },
     {

@@ -55,10 +55,17 @@ Historical plans in this directory are context, not live instructions. If they c
 ## Agent Workflow
 
 1. Read `docs/pharosville-page.md`, this file, `CHANGE_CHECKLIST.md`, and `TESTING.md`.
-2. For visual/asset changes, also read `ASSET_PIPELINE.md`.
-3. Run `git status --short` before editing. Preserve existing dirty work and inspect any file you intend to touch.
-4. Keep code changes surgical and route-local unless the user asks for broader behavior.
-5. Update `docs/pharosville-page.md` only when route behavior changes. Update this agent pack when process, ownership, or handoff guidance changes.
+2. Use `CHANGE_PLAYBOOK.md` to classify the task and choose the smallest relevant source/doc/test set.
+3. For visual semantics, read `VISUAL_INVARIANTS.md`; for fixture or browser coverage, read `SCENARIO_CATALOG.md` and `VISUAL_REVIEW_ATLAS.md`.
+4. For visual/asset changes, also read `ASSET_PIPELINE.md`; for repeat-risk checks, read `KNOWN_PITFALLS.md`.
+5. Run `git status --short` before editing. Preserve existing dirty work and inspect any file you intend to touch.
+6. Keep code changes surgical and route-local unless the user asks for broader behavior.
+7. Update `docs/pharosville-page.md` only when route behavior changes. Update this agent pack when process, ownership, or handoff guidance changes.
+
+## Local Code Orientation
+
+- `src/app/pharosville/systems/README.md` explains the pure data-to-world layer and its extension points.
+- `src/app/pharosville/renderer/README.md` explains Canvas drawing, asset loading, hit testing, and renderer validation.
 
 ## Known Historical Drift
 

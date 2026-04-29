@@ -8,6 +8,11 @@ Goal: maintain agent-facing planning, handoff, asset, and validation notes for `
 
 - `CURRENT.md` — current source of truth for PharosVille agent work, live route entrypoints, invariants, and known boundaries.
 - `CHANGE_CHECKLIST.md` — pre-edit and pre-claim checklist for future PharosVille changes.
+- `CHANGE_PLAYBOOK.md` — task-type decision tree from request to files, docs, and focused checks.
+- `VISUAL_INVARIANTS.md` — non-negotiable visual/data contracts for the world representation.
+- `SCENARIO_CATALOG.md` — canonical fixture and test scenarios for semantic and visual validation.
+- `VISUAL_REVIEW_ATLAS.md` — screenshot baselines, browser review entries, and manual pixel checklist.
+- `KNOWN_PITFALLS.md` — repeat-risk issues agents should check before editing or claiming completion.
 - `ASSET_PIPELINE.md` — Pixellab/prototype-to-manifest workflow and asset guardrails.
 - `TESTING.md` — route-specific focused checks, visual checks, and broader validation guidance.
 
