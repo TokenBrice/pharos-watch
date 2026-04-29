@@ -192,7 +192,7 @@ type GraveNodeMarker = PharosVilleWorld["graves"][number]["visual"]["marker"];
 
 const CEMETERY_GLOBAL_SCALE = 0.6;
 const CEMETERY_CONTEXT_SCALE = 0.82 * CEMETERY_GLOBAL_SCALE;
-const CEMETERY_CONTEXT_SOURCE_CENTER = { x: 17.4, y: 43.4 } as const;
+const CEMETERY_CONTEXT_SOURCE_CENTER = { x: 22.15, y: 41.7 } as const;
 
 export interface PharosVilleCanvasMotion {
   plan: PharosVilleMotionPlan;
