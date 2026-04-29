@@ -211,6 +211,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 | `custodyModel` | `onchain` \| `institutional-top` \| `institutional-regulated` \| `institutional-unregulated` \| `institutional-sanctioned` \| `cex` |
 | `governanceQuality` | `immutable-code` \| `dao-governance` \| `multisig` \| `regulated-entity` \| `single-entity` \| `wrapper` |
 | `dependencies[].type` | `wrapper` \| `mechanism` \| `collateral` |
+| `variantKind` | `savings-passthrough` \| `strategy-vault` \| `risk-absorption` \| `bond-maturity` |
 | `yieldConfig.yieldType` | `lending-vault` \| `rebase` \| `fee-sharing` \| `lp-receipt` \| `nav-appreciation` \| `governance-set` \| `lending-opportunity` |
 | `infrastructures[]` | `liquity-v1` \| `liquity-v2` \| `m0` |
 | `launchPhase` | `announced` \| `testnet` \| `auditing` \| `beta` \| `launching-soon` |
@@ -221,7 +222,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 - `flags.governance` is the coarse public taxonomy. `governanceQuality` is the finer report-card override.
 - `canBeBlacklisted` only accepts `true`, `false`, or `"possible"`. Do not invent `"inherited"` in metadata; that is computed later.
 - `pegReferenceId` is for NAV wrappers or derivative assets whose stability should inherit from another tracked base asset.
-- `variantOf` / `variantKind` are only for active wrapped, staked, or bond-maturity children whose primary user expectation is still direct exposure to another tracked stablecoin. They co-require, the parent must be an active non-variant non-`navToken` stablecoin, and the child must keep `flags.navToken === true` plus `pegReferenceId === variantOf`. Supported kinds and their dependency-risk ceilings relative to the parent overall: `savings-passthrough` = `parent - 3`, `risk-absorption` = `parent - 5`, `bond-maturity` = `parent - 8`. Blacklistable/freezable status inherits from the parent automatically — do not author `canBeBlacklisted` on a variant unless the wrapper's own contract exposes a freeze surface beyond the parent's.
+- `variantOf` / `variantKind` are only for active wrapped, staked, strategy-vault, or bond-maturity children whose primary user expectation is still direct exposure to another tracked stablecoin. They co-require, the parent must be an active non-variant non-`navToken` stablecoin, and the child must keep `flags.navToken === true` plus `pegReferenceId === variantOf`. Supported kinds and their dependency-risk ceilings relative to the parent overall: `savings-passthrough` = `parent - 3`, `strategy-vault` = `parent - 5`, `risk-absorption` = `parent - 5`, `bond-maturity` = `parent - 8`. Blacklistable/freezable status inherits from the parent automatically — do not author `canBeBlacklisted` on a variant unless the wrapper's own contract exposes a freeze surface beyond the parent's.
 - `tradedContracts` is for market-traded variants that matter for discovery/liquidity/yield identity but are not the canonical supply contracts.
 - `tags` is optional editorial metadata. Do not use it instead of a first-class field.
 
@@ -424,7 +425,7 @@ Current practice:
 
 ### 5f. Bluechip ratings
 
-If Bluechip covers the asset, update `worker/src/lib/bluechip-slugs.ts`.
+If Bluechip covers the asset, update `shared/lib/bluechip-slugs.ts` (the worker re-exports `BLUECHIP_SLUG_MAP` from there).
 
 Important: the map is `bluechip-slug -> pharos-id`, not the other way around.
 
