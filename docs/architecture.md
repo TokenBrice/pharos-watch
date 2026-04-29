@@ -199,8 +199,10 @@ separate peg/DEWS risk anchor remains the route waypoint. Core EVM chain harbors
 (Ethereum, Base, Arbitrum, Polygon) occupy the southwest EVM bay, with Ethereum
 anchored as the central cove landmark and the L2 docks around its sides. BSC,
 Tron, Solana, Aptos, and other non-core top-chain harbors use distributed
-outer-coast dock slots. The cemetery sits on the main island between the EVM bay
-and the lighthouse rather than on a detached islet. Normal-motion routing
+outer-coast dock slots. Dock identity is shown as a small mast flag using the
+chain logo when available, with full chain names retained in DOM details. The
+cemetery sits on the main island between the EVM bay and the lighthouse rather
+than on a detached islet. Normal-motion routing
 samples slow deterministic water-only harbor cycles with seeded detours between
 chain moorings and risk water using
 `stablecoins.chainCirculating`, `pegSummary.coins[]`, and `stress.signals[]`.
@@ -212,6 +214,16 @@ canvas renderer uses local logos for ship sails and cemetery tomb markers while
 the DOM detail panel remains the accessible source of analytical truth,
 including route source, risk water, home dock, chain presence, and docking
 cadence.
+
+The same world model now also emits five selectable main-island data buildings
+for non-ship Pharos products: Royal Mint And Burn Foundry for configured
+mint/burn flow telemetry, Frost Ward Keep for the observed blacklist/freeze
+tracker, Exit Route Gatehouse for DEX liquidity plus modeled redemption
+backstops, Yield Orchard And Moonwell for yield source context, and Dependency
+Loom / Chainworks for direct report-card dependency graph links. Each building
+uses a deferred Pixellab sprite, local deterministic Canvas effects, DOM detail
+facts, and accessibility-ledger parity; reduced motion freezes procedural
+movement while preserving static status encodings.
 
 Canvas 2D remains the renderer choice. PixiJS v8 was rejected during the
 2026-04-25 spike (see `docs/superpowers/audits/2026-04-25-pixi-v8-csp.md`)

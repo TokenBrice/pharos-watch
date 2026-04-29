@@ -136,7 +136,7 @@ Most Pharos narrative modules are SVG-based. For standard data volumes (≤250 c
 
 Animation is **CSS keyframes**, not JS rAF loops. The React component injects CSS custom properties for values that depend on data (`--psi-pulse-dur`, `--psi-beam-origin-x`, `--nc-beam-angle`). Keyframes stay static. No animation frame loops, no react-spring, no GSAP.
 
-Exception: PharosVille at `/pharosville/` deliberately uses Canvas 2D for a ClaudeVille-style isometric world with tile projection, camera bounds, depth sorting, sprite layers, logo-marked entity overlays, slow deterministic water-only ship route sampling, long-tail ship clustering, culling, and 200+ possible entities. Its compensating requirements are documented in [pharosville-page.md](./pharosville-page.md): pure world model, DOM parity for route/risk/docking facts, reduced-motion deterministic render with no running RAF loop, no canvas runtime below `1280px` wide or `760px` tall, backing-store budget checks, moving-target visual coverage, and no CSP relaxation.
+Exception: PharosVille at `/pharosville/` deliberately uses Canvas 2D for a ClaudeVille-style isometric world with tile projection, camera bounds, depth sorting, sprite layers, logo-marked entity overlays, thematic data-building sprites with local procedural effects, slow deterministic water-only ship route sampling, long-tail ship clustering, culling, and 200+ possible entities. Its compensating requirements are documented in [pharosville-page.md](./pharosville-page.md): pure world model, DOM parity for route/risk/docking/building facts, reduced-motion deterministic render with no running RAF loop, no canvas runtime below `1280px` wide or `760px` tall, backing-store budget checks, moving-target visual coverage, and no CSP relaxation.
 
 ### `prefers-reduced-motion` is a hard requirement
 
@@ -151,7 +151,7 @@ Every animation must be wrapped:
 }
 ```
 
-The scene must remain legible and informative when motion is off. DEWS pauses the sweep, sets glow to static `opacity: 0.15`, and freezes the center pulse. PSI shows a static colored lighthouse. Harbor retains positions but freezes drift. PharosVille ship routes freeze at each ship's representative harbor mooring or risk patrol tile while detail panels and the accessibility ledger still expose risk water, home dock, chain presence, docking cadence, and route source. **The information content never depends on motion playing.**
+The scene must remain legible and informative when motion is off. DEWS pauses the sweep, sets glow to static `opacity: 0.15`, and freezes the center pulse. PSI shows a static colored lighthouse. Harbor retains positions but freezes drift. PharosVille ship routes freeze at each ship's representative harbor mooring or risk patrol tile, and PharosVille building effects freeze smoke, sparks, frost pulses, waterwheel rotation, orchard glints, and dependency thread pulses while preserving static glow/fog/status encodings. Detail panels and the accessibility ledger still expose risk water, home dock, chain presence, docking cadence, route source, building status, source fields, caveats, and exact facts. **The information content never depends on motion playing.**
 
 ---
 
