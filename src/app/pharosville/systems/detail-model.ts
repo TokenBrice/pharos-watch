@@ -93,6 +93,7 @@ export function detailForShip(node: ShipNode): DetailModel {
       { label: "Market cap", value: marketCapLabel(node.marketCapUsd) },
       { label: "Ship class", value: node.visual.classLabel },
       { label: "Size tier", value: node.visual.sizeLabel },
+      { label: "Representative position", value: node.homeDockChainId ? `${chainLabel(node.homeDockChainId)} harbor mooring` : "Risk water patrol" },
       { label: "Risk placement", value: node.riskPlacement },
       { label: "Risk water", value: node.riskZone },
       { label: "Home dock", value: node.homeDockChainId ? chainLabel(node.homeDockChainId) : "No rendered dock" },

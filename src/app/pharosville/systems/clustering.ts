@@ -2,8 +2,9 @@ import type { ShipClusterNode, ShipNode, ShipRiskPlacement } from "./world-types
 import { nearestAvailableWaterTile, REGION_TILES } from "./world-layout";
 
 const MAX_SHIPS_PER_CLUSTER = 36;
+const DEFAULT_INDIVIDUAL_SHIP_BUDGET = 128;
 
-export function clusterLongTailShips(ships: readonly ShipNode[], maxIndividualShips = 80): {
+export function clusterLongTailShips(ships: readonly ShipNode[], maxIndividualShips = DEFAULT_INDIVIDUAL_SHIP_BUDGET): {
   visibleShips: ShipNode[];
   clusters: ShipClusterNode[];
 } {

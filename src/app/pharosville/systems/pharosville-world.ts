@@ -23,13 +23,14 @@ import {
   detailForLighthouse,
   detailForShip,
 } from "./detail-model";
-import { buildPharosVilleMap, graveNodesFromEntries, isWaterTileKind, LIGHTHOUSE_TILE, nearestAvailableWaterTile, nearestWaterTile, REGION_TILES, stableOffset, tileKindAt } from "./world-layout";
+import { buildPharosVilleMap, graveNodesFromEntries, isWaterTileKind, LIGHTHOUSE_TILE, nearestAvailableWaterTile, nearestWaterTile, REGION_TILES, stableOffset, terrainKindAt, tileKindAt } from "./world-layout";
 import { getRecentChange } from "./recent-change";
 import { resolveShipRiskPlacement } from "./risk-placement";
 import { resolveShipVisual } from "./ship-visuals";
 import { buildVisualCueRegistry } from "./visual-cue-registry";
 import type {
   DetailModel,
+  DewsAreaBand,
   DockNode,
   LighthouseNode,
   PharosVilleFreshness,
@@ -74,25 +75,32 @@ const SHIP_WATER_ANCHORS: Record<ShipRiskPlacement, readonly { x: number; y: num
     { x: 26, y: 45 },
   ],
   "harbor-mouth-watch": [
-    { x: 43, y: 21 },
-    { x: 49, y: 24 },
-    { x: 49, y: 31 },
-    { x: 47, y: 36 },
-    { x: 44, y: 43 },
-    { x: 36, y: 45 },
+    { x: 39, y: 42 },
+    { x: 40, y: 43 },
+    { x: 41, y: 43 },
+    { x: 39, y: 44 },
+    { x: 40, y: 45 },
+    { x: 42, y: 46 },
+    { x: 38, y: 46 },
+    { x: 37, y: 47 },
   ],
   "outer-rough-water": [
-    { x: 50, y: 44 },
-    { x: 55, y: 36 },
-    { x: 57, y: 48 },
-    { x: 48, y: 55 },
-    { x: 36, y: 55 },
+    { x: 45, y: 44 },
+    { x: 46, y: 45 },
+    { x: 47, y: 43 },
+    { x: 49, y: 46 },
+    { x: 50, y: 48 },
+    { x: 48, y: 49 },
+    { x: 54, y: 44 },
+    { x: 55, y: 46 },
   ],
   "storm-shelf": [
     { x: 54, y: 52 },
-    { x: 58, y: 44 },
-    { x: 57, y: 57 },
-    { x: 46, y: 56 },
+    { x: 55, y: 53 },
+    { x: 56, y: 53 },
+    { x: 57, y: 49 },
+    { x: 51, y: 55 },
+    { x: 58, y: 55 },
   ],
   "data-fog": [
     { x: 10, y: 16 },
@@ -107,6 +115,30 @@ const SHIP_WATER_ANCHORS: Record<ShipRiskPlacement, readonly { x: number; y: num
     { x: 40, y: 45 },
     { x: 29, y: 46 },
   ],
+};
+
+const DEWS_AREA_PLACEMENTS: Record<DewsAreaBand, ShipRiskPlacement> = {
+  DANGER: "storm-shelf",
+  WARNING: "outer-rough-water",
+  ALERT: "harbor-mouth-watch",
+  WATCH: "breakwater-edge",
+  CALM: "safe-harbor",
+};
+
+const DEWS_AREA_LABELS: Record<DewsAreaBand, string> = {
+  DANGER: "Danger Strait",
+  WARNING: "Warning Shoals",
+  ALERT: "Alert Channel",
+  WATCH: "Watch Breakwater",
+  CALM: "Calm Anchorage",
+};
+
+const AREA_SIGN_TILES: Record<DewsAreaBand, { x: number; y: number }> = {
+  DANGER: { x: 55, y: 53 },
+  WARNING: { x: 49, y: 46 },
+  ALERT: { x: 40, y: 45 },
+  WATCH: { x: 27, y: 46 },
+  CALM: { x: 23, y: 39 },
 };
 
 export interface PharosVilleInputs {
@@ -145,6 +177,34 @@ function activeAssets(stablecoins: StablecoinListResponse | null | undefined): S
   return (stablecoins?.peggedAssets ?? []).filter((asset) => (
     ACTIVE_IDS.has(asset.id) && ACTIVE_META_BY_ID.has(asset.id) && asset.frozen !== true
   ));
+}
+
+function buildDewsBandCounts(stress: StressSignalsAllResponse | null | undefined): Record<DewsAreaBand, number> {
+  const counts: Record<DewsAreaBand, number> = {
+    DANGER: 0,
+    WARNING: 0,
+    ALERT: 0,
+    WATCH: 0,
+    CALM: 0,
+  };
+  for (const entry of Object.values(stress?.signals ?? {})) {
+    const band = entry.band.toUpperCase();
+    if (band in counts) counts[band as DewsAreaBand] += 1;
+  }
+  return counts;
+}
+
+function buildAreas(stress: StressSignalsAllResponse | null | undefined): PharosVilleWorld["areas"] {
+  const counts = buildDewsBandCounts(stress);
+  return (Object.keys(DEWS_AREA_PLACEMENTS) as DewsAreaBand[]).map((band) => ({
+    id: `area.dews.${band.toLowerCase()}`,
+    kind: "area" as const,
+    label: DEWS_AREA_LABELS[band],
+    tile: AREA_SIGN_TILES[band],
+    band,
+    count: counts[band],
+    riskPlacement: DEWS_AREA_PLACEMENTS[band],
+  }));
 }
 
 export function waterZoneForPlacement(placement: ShipRiskPlacement): ShipWaterZone {
@@ -194,9 +254,9 @@ function shipTile(asset: StablecoinData, placement: ShipNode["riskPlacement"]): 
       x: Math.round(clamp(base.x + Math.cos(angle) * radius.x * distance + stableOffset(`${asset.id}.risk.x.${attempt}`, 1) * 0.3, 0, 63)),
       y: Math.round(clamp(base.y + Math.sin(angle) * radius.y * distance + stableOffset(`${asset.id}.risk.y.${attempt}`, 1) * 0.3, 0, 63)),
     };
-    if (isWaterTileKind(tileKindAt(tile.x, tile.y))) return tile;
+    if (isPlacementWaterTile(tile, placement)) return tile;
   }
-  return nearestWaterTile(base, 18);
+  return nearestPlacementWaterTile(base, placement, 18) ?? nearestWaterTile(base, 18);
 }
 
 function buildShips(inputs: PharosVilleInputs, docks: readonly DockNode[]): ShipNode[] {
@@ -220,6 +280,7 @@ function buildShips(inputs: PharosVilleInputs, docks: readonly DockNode[]): Ship
     const dominantChainId = chainPresence[0]?.chainId ?? null;
     const homeDockChainId = chainPresence.find((presence) => presence.hasRenderedDock)?.chainId ?? null;
     const recent = getRecentChange(asset);
+    const riskTile = shipTile(asset, risk.placement);
     return {
       id: asset.id,
       kind: "ship" as const,
@@ -229,7 +290,8 @@ function buildShips(inputs: PharosVilleInputs, docks: readonly DockNode[]): Ship
       meta,
       reportCard,
       logoSrc: logosById[asset.id] ?? null,
-      tile: shipTile(asset, risk.placement),
+      tile: riskTile,
+      riskTile,
       chainPresence,
       dockVisits: [],
       dominantChainId,
@@ -245,7 +307,7 @@ function buildShips(inputs: PharosVilleInputs, docks: readonly DockNode[]): Ship
       detailId: `ship.${asset.id}`,
     };
   });
-  return spreadShipsAcrossWater(ships);
+  return spreadShipRiskAnchorsAcrossWater(ships);
 }
 
 function dockMooringTile(dock: DockNode, index: number, occupied: ReadonlySet<string>): { x: number; y: number } {
@@ -293,23 +355,104 @@ function assignDockVisits(ships: readonly ShipNode[], docks: readonly DockNode[]
           }];
         });
 
+      const normalizedVisits = normalizeDockVisitWeights(visits);
+      const representativeTile = normalizedVisits.find((visit) => visit.chainId === ship.homeDockChainId)?.mooringTile
+        ?? normalizedVisits[0]?.mooringTile
+        ?? ship.tile;
+
       return {
         ...ship,
         dockChainId: ship.homeDockChainId ?? null,
-        dockVisits: normalizeDockVisitWeights(visits),
+        dockVisits: normalizedVisits,
+        tile: representativeTile,
       };
     });
 }
 
-function spreadShipsAcrossWater(ships: ShipNode[]): ShipNode[] {
+function spreadShipRiskAnchorsAcrossWater(ships: ShipNode[]): ShipNode[] {
   const occupied = new Set<string>();
   return ships
     .toSorted((a, b) => b.marketCapUsd - a.marketCapUsd || a.id.localeCompare(b.id))
     .map((ship) => {
-      const tile = nearestAvailableWaterTile(ship.tile, occupied);
-      occupied.add(`${tile.x}.${tile.y}`);
-      return { ...ship, tile };
+      const riskTile = nearestAvailablePlacementWaterTile(ship.riskTile, ship.riskPlacement, occupied, 18)
+        ?? nearestAvailableWaterTile(ship.riskTile, occupied);
+      occupied.add(`${riskTile.x}.${riskTile.y}`);
+      return { ...ship, tile: riskTile, riskTile };
     });
+}
+
+function isPlacementWaterTile(tile: { x: number; y: number }, placement: ShipNode["riskPlacement"]): boolean {
+  const terrain = terrainKindAt(tile.x, tile.y);
+  if (placement === "harbor-mouth-watch") return terrain === "alert-water";
+  if (placement === "outer-rough-water") return terrain === "warning-water";
+  if (placement === "storm-shelf") return terrain === "storm-water";
+  if (placement === "data-fog") return terrain === "fog-water";
+  return isWaterTileKind(tileKindAt(tile.x, tile.y));
+}
+
+function nearestPlacementWaterTile(
+  tile: { x: number; y: number },
+  placement: ShipNode["riskPlacement"],
+  maxRadius = 12,
+): { x: number; y: number } | null {
+  if (isPlacementWaterTile(tile, placement)) return tile;
+
+  let bestTile: { x: number; y: number } | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (let radius = 1; radius <= maxRadius; radius += 1) {
+    for (let dx = -radius; dx <= radius; dx += 1) {
+      for (let dy = -radius; dy <= radius; dy += 1) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+        const candidate = {
+          x: Math.max(0, Math.min(63, tile.x + dx)),
+          y: Math.max(0, Math.min(63, tile.y + dy)),
+        };
+        if (!isPlacementWaterTile(candidate, placement)) continue;
+        const distance = Math.abs(dx) + Math.abs(dy);
+        if (distance < bestDistance) {
+          bestTile = candidate;
+          bestDistance = distance;
+        }
+      }
+    }
+    if (bestTile) return bestTile;
+  }
+
+  return null;
+}
+
+function nearestAvailablePlacementWaterTile(
+  tile: { x: number; y: number },
+  placement: ShipNode["riskPlacement"],
+  occupied: ReadonlySet<string>,
+  maxRadius = 12,
+): { x: number; y: number } | null {
+  const initialKey = `${tile.x}.${tile.y}`;
+  if (isPlacementWaterTile(tile, placement) && !occupied.has(initialKey)) return tile;
+
+  let bestTile: { x: number; y: number } | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (let radius = 1; radius <= maxRadius; radius += 1) {
+    for (let dx = -radius; dx <= radius; dx += 1) {
+      for (let dy = -radius; dy <= radius; dy += 1) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+        const candidate = {
+          x: Math.max(0, Math.min(63, tile.x + dx)),
+          y: Math.max(0, Math.min(63, tile.y + dy)),
+        };
+        if (occupied.has(`${candidate.x}.${candidate.y}`)) continue;
+        if (!isPlacementWaterTile(candidate, placement)) continue;
+        const distance = Math.abs(dx) + Math.abs(dy);
+        if (distance < bestDistance) {
+          bestTile = candidate;
+          bestDistance = distance;
+        }
+      }
+    }
+    if (bestTile) return bestTile;
+  }
+
+  return null;
 }
 
 function buildDetailIndex(world: Omit<PharosVilleWorld, "detailIndex" | "visualCues">): Record<string, DetailModel> {
@@ -341,6 +484,7 @@ export function buildPharosVilleWorld(inputs: PharosVilleInputs): PharosVilleWor
   const map = buildPharosVilleMap();
   const lighthouse = buildLighthouse(inputs.stability);
   const docks = buildChainDocks(inputs.chains);
+  const areas = buildAreas(inputs.stress);
   const allShips = buildShips(inputs, docks);
   const dockedShips = assignDockVisits(allShips, docks);
   const { visibleShips, clusters } = clusterLongTailShips(dockedShips);
@@ -352,6 +496,7 @@ export function buildPharosVilleWorld(inputs: PharosVilleInputs): PharosVilleWor
     map,
     lighthouse,
     docks,
+    areas,
     ships: visibleShips,
     shipClusters: clusters,
     graves,
