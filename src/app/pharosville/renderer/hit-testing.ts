@@ -50,9 +50,9 @@ function assetDrawPoint(input: {
     y += 3 * camera.zoom;
     scale *= 1.48;
   } else if (entity.kind === "dock") {
-    const reach = (26 + entity.size * 6) * camera.zoom;
-    x += entity.tile.x < mapWidth / 2 ? -reach * 0.25 : reach * 0.25;
-    y += 10 * camera.zoom;
+    const draw = dockAssetDrawPoint(entity, camera, mapWidth);
+    x = draw.x;
+    y = draw.y;
     scale *= dockRenderScale(entity.size);
   } else if (entity.kind === "ship") {
     y += 12 * camera.zoom;
@@ -62,6 +62,31 @@ function assetDrawPoint(input: {
     scale *= 0.47 * entity.visual.scale;
   }
   return { scale, x, y };
+}
+
+function dockAssetDrawPoint(
+  dock: Extract<SelectableEntity, { kind: "dock" }>,
+  camera: IsoCamera,
+  mapWidth: number,
+): ScreenPoint {
+  const outward = dockOutwardVector(dock.tile, mapWidth);
+  const reach = 0.72 + dock.size * 0.075;
+  const p = tileToScreen({
+    x: dock.tile.x + outward.x * reach,
+    y: dock.tile.y + outward.y * reach,
+  }, camera);
+  return {
+    x: p.x,
+    y: p.y + 10 * camera.zoom,
+  };
+}
+
+function dockOutwardVector(tile: { x: number; y: number }, mapWidth: number): { x: -1 | 0 | 1; y: -1 | 0 | 1 } {
+  const center = (mapWidth - 1) / 2;
+  const dx = tile.x - center;
+  const dy = tile.y - center;
+  if (Math.abs(dx) >= Math.abs(dy)) return { x: dx < 0 ? -1 : 1, y: 0 };
+  return { x: 0, y: dy < 0 ? -1 : 1 };
 }
 
 function dockRenderScale(size: number): number {

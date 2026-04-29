@@ -56,6 +56,16 @@ export function AccessibilityLedger({
         </div>
       </dl>
 
+      <h3>Named areas</h3>
+      <ol>
+        {world.areas.map((area) => (
+          <li key={area.id}>
+            {area.label}
+            {area.band ? `: DEWS ${area.band}, ${area.count ?? 0} stablecoins, placement ${area.riskPlacement}.` : "."}
+          </li>
+        ))}
+      </ol>
+
       <h3>Docks</h3>
       <ol>
         {world.docks.map((dock) => (
@@ -72,6 +82,7 @@ export function AccessibilityLedger({
         {world.ships.map((ship) => (
           <li key={ship.id}>
             {ship.label} ({ship.symbol}): {compactUsd.format(ship.marketCapUsd)} market cap, placed at{" "}
+            {ship.homeDockChainId ? `${ship.homeDockChainId} harbor mooring` : ship.riskPlacement}; risk anchor{" "}
             {ship.riskPlacement}; route summary: {pluralize(ship.chainPresence.length, "positive chain deployment")},{" "}
             {pluralize(ship.dockVisits.length, "rendered dock stop")}, risk zone {ship.riskZone}; placement evidence{" "}
             {ship.placementEvidence.reason}; source fields {ship.placementEvidence.sourceFields.join(", ") || "unavailable"}.
