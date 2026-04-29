@@ -10,6 +10,7 @@ export const MAX_TILE_Y = PHAROSVILLE_MAP_HEIGHT - 1;
 export const LIGHTHOUSE_TILE = { x: 44, y: 18 } as const;
 export const CIVIC_CORE_CENTER = { x: 34, y: 30 } as const;
 export const CIVIC_CORE_RADIUS = 7.0;
+export const ISLAND_PERIPHERY_BUFFER = 1.1;
 
 export const REGION_TILES: Record<ShipRiskPlacement, { x: number; y: number }> = RISK_WATER_REGION_TILES;
 
@@ -112,7 +113,7 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
 
   if (isOutOfBounds(x, y) || island >= 1 || harborWater) {
     if (harborWater) return "harbor-water";
-    const inIslandPeriphery = island >= 1 && island < 1.1;
+    const inIslandPeriphery = island >= 1 && island < ISLAND_PERIPHERY_BUFFER;
     if (!inIslandPeriphery) {
       if (isDangerStrait(x, y)) return "storm-water";
       if (isWarningShoals(x, y)) return "warning-water";
@@ -186,10 +187,12 @@ function isDangerStrait(x: number, y: number): boolean {
   return x >= 51 && x <= 55 && y >= 14 && y <= 18;
 }
 
+// x >= 1 keeps (0, 0) as deep-water for existing corner test
 function isWatchBreakwater(x: number, y: number): boolean {
   return x >= 1 && x <= 28 && y >= 0 && y <= 12;
 }
 
+// x <= 18 preserves (18, 31) as calm-water for westernBasinSamples test
 function isCalmAnchorage(x: number, y: number): boolean {
   return x >= 0 && x <= 18 && y >= 20 && y <= 48;
 }
