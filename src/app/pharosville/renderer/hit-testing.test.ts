@@ -25,6 +25,7 @@ describe("hit-testing", () => {
 
     expect(targets.some((target) => target.detailId === "lighthouse")).toBe(true);
     expect(targets.some((target) => target.kind === "ship")).toBe(true);
+    expect(targets.some((target) => target.kind === "building")).toBe(true);
   });
 
   it("selects the top-priority target under the pointer", () => {
@@ -35,6 +36,20 @@ describe("hit-testing", () => {
 
     expect(match?.detailId).toBe(ship?.detailId);
   });
+
+  it("selects thematic buildings from their tile target", () => {
+    const building = world.buildings.find((entry) => entry.detailId === "building.mint-burn-foundry");
+    expect(building).toBeDefined();
+    const target = collectHitTargets({ camera, selectedDetailId: building!.detailId, world })
+      .find((entry) => entry.detailId === building!.detailId);
+    expect(target).toBeDefined();
+
+    expect(hitTest(collectHitTargets({ camera, selectedDetailId: building!.detailId, world }), {
+      x: target!.rect.x + target!.rect.width / 2,
+      y: target!.rect.y + target!.rect.height / 2,
+    })?.detailId).toBe(building!.detailId);
+  });
+
 
   it("moves ship target rectangles to sampled motion positions", () => {
     const ship = world.ships[0];

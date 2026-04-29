@@ -21,6 +21,7 @@ describe("buildChainDocks", () => {
     expect(docks[0]?.size).toBeGreaterThanOrEqual(7);
     expect(docks[1]?.size).toBeGreaterThanOrEqual(6);
     expect(docks[0]?.assetId).toBe("dock.grand-quay");
+    expect(docks[0]?.logoSrc).toBeNull();
   });
 
   it("anchors rendered docks on land-adjacent harbor water", () => {
@@ -38,10 +39,10 @@ describe("buildChainDocks", () => {
     const docks = buildChainDocks({
       ...fixtureChains,
       chains: [
-        makeChain({ id: "ethereum", name: "Ethereum", totalUsd: 100 }),
+        makeChain({ id: "ethereum", name: "Ethereum", totalUsd: 100, logoPath: "/chains/ethereum.png" }),
         makeChain({ id: "tron", name: "Tron", totalUsd: 90 }),
         makeChain({ id: "bsc", name: "BSC", totalUsd: 80 }),
-        makeChain({ id: "base", name: "Base", totalUsd: 70 }),
+        makeChain({ id: "base", name: "Base", totalUsd: 70, logoPath: "/chains/base.png" }),
         makeChain({ id: "solana", name: "Solana", totalUsd: 60 }),
         makeChain({ id: "arbitrum", name: "Arbitrum", totalUsd: 50 }),
         makeChain({ id: "polygon", name: "Polygon", totalUsd: 40 }),
@@ -59,6 +60,9 @@ describe("buildChainDocks", () => {
     expect(docks.find((dock) => dock.chainId === "base")?.assetId).toBe("dock.rollup-ferry-slip");
     expect(docks.find((dock) => dock.chainId === "arbitrum")?.assetId).toBe("dock.bridge-pontoon");
     expect(docks.find((dock) => dock.chainId === "polygon")?.assetId).toBe("dock.market-marina");
+    expect(docks.find((dock) => dock.chainId === "ethereum")?.logoSrc).toBe("/chains/ethereum.png");
+    expect(docks.find((dock) => dock.chainId === "base")?.logoSrc).toBe("/chains/base.png");
+    expect(docks.find((dock) => dock.chainId === "tron")?.logoSrc).toBeNull();
     expect(byChain.get("bsc")).toEqual(PREFERRED_DOCK_TILES.bsc);
     expect(byChain.get("tron")).toEqual(PREFERRED_DOCK_TILES.tron);
     expect(byChain.get("solana")).toEqual(PREFERRED_DOCK_TILES.solana);

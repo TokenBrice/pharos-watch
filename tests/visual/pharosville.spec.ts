@@ -9,7 +9,7 @@ import {
   makePegCoin,
 } from "../../src/app/pharosville/__fixtures__/pharosville-world";
 import { MAX_MAIN_CANVAS_PIXELS, MAX_TOTAL_BACKING_PIXELS } from "../../src/app/pharosville/systems/canvas-budget";
-import type { PegSummaryResponse, StressSignalsAllResponse } from "@shared/types";
+import { BLACKLIST_STABLECOINS, DEX_GLOBAL_KEY, type PegSummaryResponse, type StressSignalsAllResponse } from "@shared/types";
 
 test.use({ reducedMotion: "reduce" });
 
@@ -55,6 +55,11 @@ async function mockPharosVillePayloads(page: Page, payload: {
     { path: "peg-summary", body: payload.pegSummary },
     { path: "stress-signals", body: payload.stress },
     { path: "report-cards", body: payload.reportCards },
+    { path: "mint-burn-flows", body: fixtureMintBurnFlows },
+    { path: "blacklist-summary", body: fixtureBlacklistSummary },
+    { path: "dex-liquidity", body: fixtureDexLiquidity },
+    { path: "redemption-backstops", body: fixtureRedemptionBackstops },
+    { path: "yield-rankings", body: fixtureYieldRankings },
   ];
 
   for (const { path, body } of payloads) {
@@ -68,6 +73,245 @@ async function mockPharosVillePayloads(page: Page, payload: {
     }
   }
 }
+
+const fixtureMethodology = {
+  version: "fixture",
+  versionLabel: "Fixture",
+  currentVersion: "fixture",
+  currentVersionLabel: "Fixture",
+  changelogPath: "/methodology/",
+  asOf: 1_700_000_000,
+  isCurrent: true,
+};
+
+const fixtureMintBurnFlows = {
+  gauge: {
+    score: 38,
+    band: "Mint pressure",
+    intensitySemantics: "signed-v2",
+    flightToQuality: false,
+    flightIntensity: 0,
+    trackedCoins: 2,
+    trackedMcapUsd: 11_000_000_000,
+  },
+  coins: [
+    {
+      stablecoinId: "usdc-circle",
+      symbol: "USDC",
+      flowIntensity: 38,
+      pressureShiftScore: 38,
+      pressureShiftState: "improving",
+      netFlowDirection24h: "minting",
+      has24hActivity: true,
+      baselineDailyNetUsd: null,
+      baselineDailyAbsUsd: null,
+      baselineDataDays: null,
+      netFlow24hUsd: 80_000_000,
+      mintVolume24hUsd: 100_000_000,
+      burnVolume24hUsd: 20_000_000,
+      mintCount24h: 3,
+      burnCount24h: 1,
+      netFlow7dUsd: 90_000_000,
+      netFlow30dUsd: 120_000_000,
+      netFlow90dUsd: 120_000_000,
+      largestEvent24h: {
+        direction: "mint",
+        amountUsd: 60_000_000,
+        txHash: "0xfixture",
+        timestamp: 1_700_000_000,
+      },
+    },
+  ],
+  hourly: [{ hourTs: 1_700_000_000, mintVolumeUsd: 100_000_000, burnVolumeUsd: 20_000_000, netFlowUsd: 80_000_000 }],
+  updatedAt: 1_700_000_000,
+  windowHours: 24,
+  scope: { chainIds: ["ethereum"], label: "Configured issuance-chain events" },
+  sync: { lastSuccessfulSyncAt: 1_700_000_000, freshnessStatus: "fresh", warning: null, criticalLaneHealthy: true },
+};
+
+const zeroBlacklistRecord = Object.fromEntries(BLACKLIST_STABLECOINS.map((symbol) => [symbol, 0]));
+
+const fixtureBlacklistSummary = {
+  stats: {
+    usdcBlacklisted: 0,
+    usdtBlacklisted: 0,
+    goldBlacklisted: 0,
+    frozenAddresses: 12,
+    destroyedTotal: 0,
+    activeAddressCount: 8,
+    activeFrozenTotal: 15_000_000,
+    activeAmountGapCount: 1,
+    trackedAddressCount: 8,
+    trackedFrozenTotal: 15_000_000,
+    trackedAmountGapCount: 1,
+    recentCount: 3,
+    recentCount24h: 1,
+    recoverableGapCount: 1,
+    perCoinBlacklistCounts: zeroBlacklistRecord,
+    perCoinTotalEvents: zeroBlacklistRecord,
+    perCoinFrozenAddressCount: zeroBlacklistRecord,
+    perCoinFrozenTotal: { ...zeroBlacklistRecord, USDC: 15_000_000 },
+    perCoinDestroyedTotal: zeroBlacklistRecord,
+    perCoinQuarterlyEventTypes: Object.fromEntries(BLACKLIST_STABLECOINS.map((symbol) => [symbol, []])),
+  },
+  chart: [],
+  chains: [{ id: "ethereum", name: "Ethereum" }],
+  totalEvents: 12,
+  methodology: fixtureMethodology,
+};
+
+const fixtureDexEntry = {
+  totalTvlUsd: 120_000_000,
+  totalVolume24hUsd: 40_000_000,
+  totalVolume7dUsd: 210_000_000,
+  poolCount: 5,
+  pairCount: 4,
+  chainCount: 2,
+  protocolTvl: { curve: 45_000_000, uniswap: 40_000_000, balancer: 35_000_000 },
+  chainTvl: { ethereum: 80_000_000, base: 40_000_000 },
+  topPools: [],
+  liquidityScore: 82,
+  concentrationHhi: 0.2,
+  depthStability: 80,
+  tvlChange24h: 0,
+  tvlChange7d: 0,
+  updatedAt: 1_700_000_000,
+  dexPriceUsd: 1,
+  dexDeviationBps: 0,
+  priceSourceCount: 2,
+  priceSourceTvl: 120_000_000,
+  priceSources: [],
+  effectiveTvlUsd: 100_000_000,
+  avgPoolStress: 10,
+  weightedBalanceRatio: 0.82,
+  organicFraction: 0.92,
+  durabilityScore: 84,
+  coverageClass: "primary",
+  coverageConfidence: 0.9,
+  liquidityEvidenceClass: "measured",
+  hasMeasuredLiquidityEvidence: true,
+  trendworthy: true,
+  sourceMix: {},
+  balanceMeasuredTvlUsd: 100_000_000,
+  organicMeasuredTvlUsd: 92_000_000,
+  scoreComponents: null,
+  lockedLiquidityPct: null,
+  methodologyVersion: "fixture",
+};
+
+const fixtureDexLiquidity = {
+  [DEX_GLOBAL_KEY]: fixtureDexEntry,
+  "usdc-circle": fixtureDexEntry,
+};
+
+const fixtureRedemptionEntry = {
+  stablecoinId: "usdc-circle",
+  score: 84,
+  effectiveExitScore: 84,
+  dexLiquidityScore: 82,
+  accessScore: 90,
+  settlementScore: 90,
+  executionCertaintyScore: 90,
+  capacityScore: 80,
+  outputAssetQualityScore: 90,
+  costScore: 90,
+  routeFamily: "stablecoin-redeem",
+  accessModel: "permissionless-onchain",
+  settlementModel: "immediate",
+  executionModel: "deterministic-onchain",
+  outputAssetType: "stable-single",
+  provider: "Fixture",
+  sourceMode: "static",
+  resolutionState: "resolved",
+  routeStatus: "open",
+  routeStatusSource: "static-config",
+  holderEligibility: "any-holder",
+  capacityConfidence: "live-direct",
+  capacityBasis: "live-direct-telemetry",
+  capacitySemantics: "immediate-bounded",
+  feeConfidence: "fixed",
+  feeModelKind: "fixed-bps",
+  modelConfidence: "high",
+  immediateCapacityUsd: 75_000_000,
+  immediateCapacityRatio: 0.4,
+  feeBps: 0,
+  queueEnabled: false,
+  methodologyVersion: "fixture",
+  updatedAt: 1_700_000_000,
+  docs: null,
+  notes: [],
+  capsApplied: [],
+};
+
+const fixtureRedemptionBackstops = {
+  coins: {
+    "usdc-circle": fixtureRedemptionEntry,
+    "usdt-tether": { ...fixtureRedemptionEntry, stablecoinId: "usdt-tether" },
+    "pyusd-paypal": { ...fixtureRedemptionEntry, stablecoinId: "pyusd-paypal" },
+  },
+  methodology: {
+    ...fixtureMethodology,
+    componentWeights: { access: 1, settlement: 1, executionCertainty: 1, capacity: 1, outputAssetQuality: 1, cost: 1 },
+    effectiveExitModel: { model: "fixture", diversificationFactor: 1 },
+    routeFamilyCaps: { queueRedeem: 1, offchainIssuer: 1 },
+  },
+  updatedAt: 1_700_000_000,
+};
+
+const fixtureYieldRankings = {
+  rankings: ["a", "b", "c", "d"].map((suffix, index) => ({
+    id: `yield-${suffix}`,
+    symbol: `Y${index}`,
+    name: `Yield ${suffix}`,
+    currentApy: 4 + index,
+    apy7d: 4 + index,
+    apy30d: 4 + index,
+    apyBase: 4 + index,
+    apyReward: null,
+    yieldSource: `Source ${suffix}`,
+    yieldSourceUrl: null,
+    yieldType: "lending-vault",
+    dataSource: "fixture",
+    sourceTvlUsd: 1_000_000,
+    pharosYieldScore: 80,
+    safetyScore: 80,
+    safetyGrade: "A",
+    yieldToRisk: 0.05,
+    excessYield: 1,
+    yieldStability: 80,
+    apyVariance30d: 0,
+    apyMin30d: 4,
+    apyMax30d: 6,
+    warningSignals: [],
+    altSources: [],
+    provenance: {
+      sourceKey: `source-${suffix}`,
+      sourceObservedAt: 1_700_000_000,
+      sourceAgeSeconds: 30,
+      confidenceTier: "deterministic",
+      selectionMethod: "confidence-weighted",
+      selectionReason: "fixture",
+      sourceSwitch: false,
+      previousBestSourceKey: null,
+      usedLegacyHistory: false,
+      usedDefaultSafety: false,
+      benchmarkRecordDate: null,
+      benchmarkIsFallback: false,
+      benchmarkFallbackMode: null,
+      anomalies: [],
+    },
+  })),
+  riskFreeRate: 3,
+  scalingFactor: 1,
+  medianApy: 4.5,
+  updatedAt: 1_700_000_000,
+  provenance: {
+    selectionMethod: "confidence-weighted",
+    benchmark: { rate: 3, recordDate: null, fetchedAt: 1_700_000_000, ageSeconds: 30, source: "fixture", isFallback: false, fallbackMode: null, label: "Fixture benchmark" },
+    dlPools: { mode: "dex-cache", updatedAt: 1_700_000_000, ageSeconds: 30, poolCount: 4, fallbackMode: null },
+    safetySnapshot: { kind: "ok", coverageRatio: 1, coveredCount: 4, trackedCount: 4, reason: null },
+  },
+};
 
 async function clickMapTarget(page: Page, kind: string, detailId?: string) {
   return (await clickMapTargetWithPoint(page, kind, detailId)).detailId;

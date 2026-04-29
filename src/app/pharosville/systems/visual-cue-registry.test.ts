@@ -12,6 +12,11 @@ describe("buildVisualCueRegistry", () => {
       "cue.ship.rigging",
       "cue.ship.pennant",
       "cue.ship.scale",
+      "cue.building.mint-burn-foundry",
+      "cue.building.frost-ward-keep",
+      "cue.building.exit-route-gatehouse",
+      "cue.building.yield-orchard",
+      "cue.building.dependency-loom",
     ]));
     expect(cues.find((cue) => cue.id === "cue.ship.motion")).toMatchObject({
       visual: "ship route and docking cadence",

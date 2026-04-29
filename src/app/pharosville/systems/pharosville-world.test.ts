@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins";
+import { BLACKLIST_STABLECOINS, DEX_GLOBAL_KEY, type BlacklistSummaryResponse, type DexLiquidityData, type MintBurnFlowsResponse, type RedemptionBackstopsResponse, type ReportCardsResponse, type YieldRankingsResponse } from "@shared/types";
 import {
   fixtureChains,
   fixturePegSummary,
@@ -11,6 +12,7 @@ import {
   makeAsset,
   makeChain,
   makePegCoin,
+  makeReportCard,
 } from "../__fixtures__/pharosville-world";
 import { buildPharosVilleWorld } from "./pharosville-world";
 import { terrainKindAt, tileKindAt } from "./world-layout";
@@ -45,7 +47,59 @@ describe("buildPharosVilleWorld", () => {
     expect(world.graves).toHaveLength(3);
     expect(world.graves[0]?.logoSrc).toBe("/logos/cemetery/nubits.png");
     expect(world.detailIndex["lighthouse"]).toBeDefined();
+    expect(world.buildings).toHaveLength(5);
+    expect(world.detailIndex["building.mint-burn-foundry"]?.title).toBe("Royal Mint And Burn Foundry");
     expect(world.visualCues.length).toBeGreaterThan(0);
+  });
+
+  it("derives thematic building states from existing Pharos data payloads", () => {
+    const reportCards = {
+      ...fixtureReportCards,
+      cards: [
+        makeReportCard({ id: "usdc-circle", symbol: "USDC" }),
+        makeReportCard({ id: "usdt-tether", symbol: "USDT" }),
+        makeReportCard({ id: "pyusd-paypal", symbol: "PYUSD" }),
+        makeReportCard({ id: "usdp-paxos", symbol: "USDP" }),
+        makeReportCard({ id: "gusd-gemini", symbol: "GUSD" }),
+        makeReportCard({ id: "tusd-trueusd", symbol: "TUSD" }),
+      ],
+      dependencyGraph: {
+        edges: [
+          { from: "usdc-circle", to: "usdt-tether", type: "collateral", weight: 0.4 },
+          { from: "usdc-circle", to: "pyusd-paypal", type: "collateral", weight: 0.3 },
+          { from: "usdc-circle", to: "usdp-paxos", type: "wrapper", weight: 0.2 },
+          { from: "usdc-circle", to: "gusd-gemini", type: "mechanism", weight: 0.1 },
+          { from: "usdc-circle", to: "tusd-trueusd", type: "mechanism", weight: 0.1 },
+        ],
+      },
+    } as unknown as ReportCardsResponse;
+    const world = buildPharosVilleWorld({
+      stablecoins: fixtureStablecoins,
+      chains: fixtureChains,
+      stability: fixtureStability,
+      pegSummary: fixturePegSummary,
+      stress: fixtureStress,
+      reportCards,
+      mintBurnFlows: mintBurnFixture({ score: 44 }),
+      blacklistSummary: blacklistSummaryFixture(),
+      dexLiquidity: dexLiquidityFixture({ liquidityScore: 82 }),
+      redemptionBackstops: redemptionFixture({ effectiveExitScore: 84 }),
+      yieldRankings: yieldRankingsFixture(),
+      cemeteryEntries: [],
+      freshness: {},
+    });
+    const statuses = Object.fromEntries(world.buildings.map((building) => [building.buildingType, building.status]));
+
+    expect(statuses).toMatchObject({
+      "mint-burn-foundry": "minting",
+      "frost-ward-keep": "recent-freeze",
+      "exit-route-gatehouse": "deep-exit",
+      "yield-orchard-moonwell": "broad-coverage",
+      "dependency-loom-chainworks": "high-hub-concentration",
+    });
+    expect(world.detailIndex["building.exit-route-gatehouse"]?.facts).toEqual(expect.arrayContaining([
+      { label: "Caveat", value: "DEX telemetry and modeled redemption routes are not guarantees of executable exit capacity." },
+    ]));
   });
 
   it("spreads safe ships across multiple water approaches", () => {
@@ -481,4 +535,185 @@ function bandSignals(band: "ALERT" | "WATCH" | "CALM", count: number) {
       methodologyVersion: "fixture",
     },
   ]));
+}
+
+function mintBurnFixture({ score }: { score: number }): MintBurnFlowsResponse {
+  return {
+    gauge: {
+      score,
+      band: "Mint pressure",
+      intensitySemantics: "signed-v2",
+      flightToQuality: false,
+      flightIntensity: 0,
+      trackedCoins: 2,
+      trackedMcapUsd: 11_000_000_000,
+    },
+    coins: [
+      {
+        stablecoinId: "usdc-circle",
+        symbol: "USDC",
+        flowIntensity: score,
+        pressureShiftScore: score,
+        pressureShiftState: "steady",
+        netFlowDirection24h: "mint",
+        has24hActivity: true,
+        baselineDailyNetUsd: null,
+        baselineDailyAbsUsd: null,
+        baselineDataDays: null,
+        netFlow24hUsd: 80_000_000,
+        mintVolume24hUsd: 100_000_000,
+        burnVolume24hUsd: 20_000_000,
+        mintCount24h: 3,
+        burnCount24h: 1,
+        netFlow7dUsd: 90_000_000,
+        netFlow30dUsd: 120_000_000,
+        netFlow90dUsd: 120_000_000,
+        largestEvent24h: {
+          direction: "mint",
+          amountUsd: 60_000_000,
+          txHash: "0xfixture",
+          timestamp: 1_700_000_000,
+        },
+      },
+    ],
+    hourly: [{ hourTs: 1_700_000_000, mintVolumeUsd: 100_000_000, burnVolumeUsd: 20_000_000, netFlowUsd: 80_000_000 }],
+    updatedAt: 1_700_000_000,
+    scope: { chainIds: ["ethereum"], label: "Configured issuance-chain events" },
+    sync: { lastSuccessfulSyncAt: 1_700_000_000, freshnessStatus: "fresh", warning: null, criticalLaneHealthy: true },
+  } as unknown as MintBurnFlowsResponse;
+}
+
+function blacklistSummaryFixture(): BlacklistSummaryResponse {
+  const zeroRecord = Object.fromEntries(BLACKLIST_STABLECOINS.map((symbol) => [symbol, 0]));
+  return {
+    stats: {
+      usdcBlacklisted: 0,
+      usdtBlacklisted: 0,
+      goldBlacklisted: 0,
+      frozenAddresses: 12,
+      destroyedTotal: 0,
+      activeAddressCount: 8,
+      activeFrozenTotal: 15_000_000,
+      activeAmountGapCount: 1,
+      recentCount: 3,
+      recentCount24h: 1,
+      recoverableGapCount: 1,
+      perCoinBlacklistCounts: zeroRecord,
+      perCoinTotalEvents: zeroRecord,
+      perCoinFrozenAddressCount: zeroRecord,
+      perCoinFrozenTotal: { ...zeroRecord, USDC: 15_000_000 },
+      perCoinDestroyedTotal: zeroRecord,
+      perCoinQuarterlyEventTypes: Object.fromEntries(BLACKLIST_STABLECOINS.map((symbol) => [symbol, []])),
+    },
+    chart: [],
+    chains: [{ id: "ethereum", name: "Ethereum" }],
+    totalEvents: 12,
+    methodology: {
+      version: "fixture",
+      versionLabel: "Fixture",
+      currentVersion: "fixture",
+      currentVersionLabel: "Fixture",
+      changelogPath: "/methodology/",
+      asOf: 1_700_000_000,
+      isCurrent: true,
+    },
+  } as unknown as BlacklistSummaryResponse;
+}
+
+function dexLiquidityFixture({ liquidityScore }: { liquidityScore: number }) {
+  const data = {
+    totalTvlUsd: 120_000_000,
+    totalVolume24hUsd: 40_000_000,
+    totalVolume7dUsd: 210_000_000,
+    liquidityScore,
+    coverageConfidence: 0.9,
+    concentrationHhi: 0.2,
+    protocolTvl: { curve: 45_000_000, uniswap: 40_000_000, balancer: 35_000_000 },
+    effectiveTvlUsd: 100_000_000,
+  } as unknown as DexLiquidityData;
+  return {
+    [DEX_GLOBAL_KEY]: data,
+    "usdc-circle": data,
+  };
+}
+
+function redemptionFixture({ effectiveExitScore }: { effectiveExitScore: number }): RedemptionBackstopsResponse {
+  const entry = {
+    stablecoinId: "usdc-circle",
+    score: effectiveExitScore,
+    effectiveExitScore,
+    routeFamily: "stablecoin-redeem",
+    accessModel: "permissionless-onchain",
+    settlementModel: "immediate",
+    routeStatus: "open",
+    capacityConfidence: "live-direct",
+    immediateCapacityUsd: 75_000_000,
+  };
+  return {
+    coins: {
+      "usdc-circle": entry,
+      "usdt-tether": { ...entry, stablecoinId: "usdt-tether" },
+      "pyusd-paypal": { ...entry, stablecoinId: "pyusd-paypal" },
+    },
+    methodology: {
+      version: "fixture",
+      versionLabel: "Fixture",
+      currentVersion: "fixture",
+      currentVersionLabel: "Fixture",
+      changelogPath: "/methodology/",
+      asOf: 1_700_000_000,
+      isCurrent: true,
+      componentWeights: { access: 1, settlement: 1, executionCertainty: 1, capacity: 1, outputAssetQuality: 1, cost: 1 },
+      effectiveExitModel: { model: "fixture", diversificationFactor: 1 },
+      routeFamilyCaps: { queueRedeem: 1, offchainIssuer: 1 },
+    },
+    updatedAt: 1_700_000_000,
+  } as unknown as RedemptionBackstopsResponse;
+}
+
+function yieldRankingsFixture(): YieldRankingsResponse {
+  return {
+    rankings: ["a", "b", "c", "d"].map((suffix, index) => ({
+      id: `yield-${suffix}`,
+      symbol: `Y${index}`,
+      name: `Yield ${suffix}`,
+      currentApy: 4 + index,
+      apy7d: 4 + index,
+      apy30d: 4 + index,
+      yieldSource: `Source ${suffix}`,
+      yieldType: "lending",
+      dataSource: "fixture",
+      sourceTvlUsd: 1_000_000,
+      safetyScore: 80,
+      safetyGrade: "A",
+      warningSignals: [],
+      altSources: [],
+      provenance: {
+        sourceKey: `source-${suffix}`,
+        sourceObservedAt: 1_700_000_000,
+        sourceAgeSeconds: 30,
+        confidenceTier: "deterministic",
+        selectionMethod: "confidence-weighted",
+        selectionReason: "fixture",
+        sourceSwitch: false,
+        previousBestSourceKey: null,
+        usedLegacyHistory: false,
+        usedDefaultSafety: false,
+        benchmarkRecordDate: null,
+        benchmarkIsFallback: false,
+        benchmarkFallbackMode: null,
+        anomalies: [],
+      },
+    })),
+    riskFreeRate: 3,
+    scalingFactor: 1,
+    medianApy: 4.5,
+    updatedAt: 1_700_000_000,
+    provenance: {
+      selectionMethod: "confidence-weighted",
+      benchmark: { rate: 3, recordDate: null, fetchedAt: 1_700_000_000, ageSeconds: 30, source: "fixture", isFallback: false, fallbackMode: null, label: "Fixture benchmark" },
+      dlPools: { mode: "dex-cache", updatedAt: 1_700_000_000, ageSeconds: 30, poolCount: 4, fallbackMode: null },
+      safetySnapshot: { kind: "ok", coverageRatio: 1, coveredCount: 4, trackedCount: 4, reason: null },
+    },
+  } as unknown as YieldRankingsResponse;
 }
