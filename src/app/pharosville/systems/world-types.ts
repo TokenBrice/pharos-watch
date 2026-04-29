@@ -6,7 +6,9 @@ export type TileKind = "deep-water" | "water" | "shore" | "land" | "road";
 
 export type TerrainKind =
   | TileKind
+  | "alert-water"
   | "harbor-water"
+  | "warning-water"
   | "storm-water"
   | "fog-water"
   | "beach"
@@ -142,6 +144,7 @@ export interface ShipNode {
   reportCard: ReportCard | null;
   logoSrc: string | null;
   tile: { x: number; y: number };
+  riskTile: { x: number; y: number };
   chainPresence: ShipChainPresence[];
   dockVisits: ShipDockVisit[];
   dominantChainId: string | null;
@@ -202,6 +205,18 @@ export interface LegendItem {
   description: string;
 }
 
+export type DewsAreaBand = "DANGER" | "WARNING" | "ALERT" | "WATCH" | "CALM";
+
+export interface AreaNode {
+  id: string;
+  kind: "area";
+  label: string;
+  tile: { x: number; y: number };
+  band?: DewsAreaBand;
+  count?: number;
+  riskPlacement?: ShipRiskPlacement;
+}
+
 export interface DetailModel {
   id: string;
   title: string;
@@ -238,6 +253,7 @@ export interface PharosVilleWorld {
   map: PharosVilleMap;
   lighthouse: LighthouseNode;
   docks: DockNode[];
+  areas: AreaNode[];
   ships: ShipNode[];
   shipClusters: ShipClusterNode[];
   graves: GraveNode[];

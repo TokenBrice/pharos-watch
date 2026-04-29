@@ -6,26 +6,55 @@ export const PHAROSVILLE_MAP_HEIGHT = 64;
 export const LIGHTHOUSE_TILE = { x: 44, y: 18 } as const;
 
 export const REGION_TILES: Record<ShipRiskPlacement, { x: number; y: number }> = {
-  "safe-harbor": { x: 28, y: 41 },
+  "safe-harbor": { x: 29, y: 44 },
   "breakwater-edge": { x: 25, y: 48 },
-  "harbor-mouth-watch": { x: 36, y: 47 },
-  "outer-rough-water": { x: 50, y: 44 },
-  "storm-shelf": { x: 54, y: 52 },
+  "harbor-mouth-watch": { x: 40, y: 45 },
+  "outer-rough-water": { x: 49, y: 46 },
+  "storm-shelf": { x: 55, y: 53 },
   "data-fog": { x: 10, y: 16 },
   "ledger-mooring": { x: 32, y: 48 },
 };
 
-export const DOCK_TILES = [
-  { x: 20, y: 37 },
+export const EVM_BAY_DOCK_TILES = [
+  { x: 28, y: 40 },
   { x: 23, y: 35 },
-  { x: 35, y: 39 },
-  { x: 36, y: 44 },
+  { x: 22, y: 41 },
+  { x: 35, y: 41 },
+] as const;
+
+export const OUTER_HARBOR_DOCK_TILES = [
+  { x: 47, y: 32 },
+  { x: 31, y: 22 },
+  { x: 20, y: 26 },
+  { x: 41, y: 39 },
+  { x: 48, y: 25 },
+  { x: 18, y: 32 },
   { x: 37, y: 45 },
   { x: 36, y: 46 },
+  { x: 38, y: 42 },
+  { x: 24, y: 47 },
+] as const;
+
+export const PREFERRED_DOCK_TILES: Record<string, { x: number; y: number }> = {
+  ethereum: EVM_BAY_DOCK_TILES[0],
+  base: EVM_BAY_DOCK_TILES[1],
+  arbitrum: EVM_BAY_DOCK_TILES[2],
+  polygon: EVM_BAY_DOCK_TILES[3],
+  bsc: OUTER_HARBOR_DOCK_TILES[0],
+  tron: OUTER_HARBOR_DOCK_TILES[1],
+  solana: OUTER_HARBOR_DOCK_TILES[2],
+  aptos: OUTER_HARBOR_DOCK_TILES[3],
+};
+
+export const EVM_BAY_CHAIN_IDS = new Set(["ethereum", "base", "arbitrum", "polygon"]);
+
+export const DOCK_TILES = [
+  ...EVM_BAY_DOCK_TILES,
+  ...OUTER_HARBOR_DOCK_TILES,
 ];
 
-export const CEMETERY_CENTER = { x: 30.3, y: 27.8 } as const;
-export const CEMETERY_RADIUS = { x: 3.35, y: 2.25 } as const;
+export const CEMETERY_CENTER = { x: 36.4, y: 32.8 } as const;
+export const CEMETERY_RADIUS = { x: 4.0, y: 2.9 } as const;
 
 type GraveMarker = GraveNode["visual"]["marker"];
 
@@ -36,7 +65,9 @@ function ellipseValue(x: number, y: number, cx: number, cy: number, rx: number, 
 const WATER_TERRAIN_KINDS = new Set<TerrainKind>([
   "deep-water",
   "water",
+  "alert-water",
   "harbor-water",
+  "warning-water",
   "storm-water",
   "fog-water",
 ]);
@@ -76,10 +107,14 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
   const nearIslandEdge = island > 0.82;
   const harborWater = island < 1
     && cemetery > 1.18
+    && !isCemeteryCausewayTile(x, y)
     && ((harbor < 0.9 && y > 34 && x < 37) || (approach < 0.94 && y > 42));
 
   if (isOutOfBounds(x, y) || island >= 1 || harborWater) {
     if (harborWater) return "harbor-water";
+    if (isDangerStrait(x, y)) return "storm-water";
+    if (isWarningShoals(x, y)) return "warning-water";
+    if (isAlertChannel(x, y)) return "alert-water";
     if (isStormShelf(x, y)) return "storm-water";
     if (isDataFog(x, y)) return "fog-water";
     if (x < 8 || y < 8 || x > 55 || y > 55) return "deep-water";
@@ -88,6 +123,7 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
 
   if (x === LIGHTHOUSE_TILE.x && y === LIGHTHOUSE_TILE.y) return "hill";
   if (isRoadTile(x, y) && cemetery > 1.08) return "road";
+  if (cemetery < 1) return "grass";
   if ((harbor < 1.23 && y > 33 && x < 38) || (approach < 1.2 && y > 42)) return "beach";
   if (headland < 1.04) {
     if (headland > 0.78 || x > LIGHTHOUSE_TILE.x + 3 || y < LIGHTHOUSE_TILE.y - 2) return "cliff";
@@ -95,7 +131,6 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
     return "hill";
   }
   if (nearIslandEdge) return "shore";
-  if (cemetery < 1) return "grass";
   if (ellipseValue(x, y, 38.2, 27.8, 8.7, 6.5) < 0.52) return "rock";
   return "grass";
 }
@@ -114,6 +149,7 @@ function islandValue(x: number, y: number): number {
     ellipseValue(x, y, 42.8, 21.4, 7.4, 6.2),
     ellipseValue(x, y, 42.8, 28.0, 6.1, 6.7),
     ellipseValue(x, y, 28.0, 42.6, 10.8, 5.6),
+    ellipseValue(x, y, 25.2, 41.0, 9.6, 2.5),
     ellipseValue(x, y, CEMETERY_CENTER.x, CEMETERY_CENTER.y, CEMETERY_RADIUS.x + 1.0, CEMETERY_RADIUS.y + 0.85),
   );
 }
@@ -133,12 +169,38 @@ function harborApproachValue(x: number, y: number): number {
   return ellipseValue(x, y, 30.0, 47.6, 5.8, 7.8);
 }
 
+function isAlertChannel(x: number, y: number): boolean {
+  return ellipseValue(x, y, 40.4, 45.1, 6.8, 3.5) < 1
+    && x >= 36
+    && y >= 40;
+}
+
+function isWarningShoals(x: number, y: number): boolean {
+  return ellipseValue(x, y, 49.4, 46.6, 7.4, 5.4) < 1
+    && x >= 43
+    && y >= 40;
+}
+
+function isDangerStrait(x: number, y: number): boolean {
+  return ellipseValue(x, y, 55.4, 53.3, 7.8, 6.7) < 1
+    && x >= 48
+    && y >= 45;
+}
+
+function isCemeteryCausewayTile(x: number, y: number): boolean {
+  return x >= 17
+    && x <= 35
+    && y >= 39
+    && y <= 44
+    && distanceToSegment(x, y, { x: 18.5, y: 42.6 }, { x: 34.2, y: 39.3 }) <= 1.1;
+}
+
 function isOutOfBounds(x: number, y: number): boolean {
   return x < 0 || y < 0 || x >= PHAROSVILLE_MAP_WIDTH || y >= PHAROSVILLE_MAP_HEIGHT;
 }
 
 function isStormShelf(x: number, y: number): boolean {
-  return ellipseValue(x, y, 53.2, 51.6, 11.0, 9.5) < 1.05;
+  return isDangerStrait(x, y);
 }
 
 function isDataFog(x: number, y: number): boolean {

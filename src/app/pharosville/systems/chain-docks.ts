@@ -1,8 +1,14 @@
 import type { ChainsResponse, ChainSummary } from "@shared/types/chains";
 import type { DockNode, DockStablecoin } from "./world-types";
-import { DOCK_TILES } from "./world-layout";
+import {
+  DOCK_TILES,
+  EVM_BAY_CHAIN_IDS,
+  EVM_BAY_DOCK_TILES,
+  OUTER_HARBOR_DOCK_TILES,
+  PREFERRED_DOCK_TILES,
+} from "./world-layout";
 
-export const MAX_CHAIN_HARBORS = 6;
+export const MAX_CHAIN_HARBORS = 10;
 export const MAX_DOCK_SIZE = 10;
 
 const DOCK_ASSET_IDS = [
@@ -12,7 +18,18 @@ const DOCK_ASSET_IDS = [
   "dock.stone-breakwater",
   "dock.market-marina",
   "dock.relay-pontoon",
+  "dock.rollup-ferry-slip",
+  "dock.vault-quay",
+  "dock.bridge-pontoon",
+  "dock.sentinel-breakwater",
 ] as const;
+
+const PREFERRED_DOCK_ASSET_IDS: Record<string, (typeof DOCK_ASSET_IDS)[number]> = {
+  ethereum: "dock.grand-quay",
+  base: "dock.rollup-ferry-slip",
+  arbitrum: "dock.bridge-pontoon",
+  polygon: "dock.market-marina",
+};
 
 function dockSize(chain: ChainSummary, globalTotalUsd: number): number {
   const shareSize = globalTotalUsd > 0
@@ -54,22 +71,56 @@ function harboredStablecoins(chain: ChainSummary): DockStablecoin[] {
 
 export function buildChainDocks(chains: ChainsResponse | null | undefined): DockNode[] {
   if (!chains?.chains?.length) return [];
+  const occupiedTiles = new Set<string>();
   return chains.chains
     .toSorted((a, b) => b.totalUsd - a.totalUsd)
     .slice(0, MAX_CHAIN_HARBORS)
-    .map((chain, index) => ({
-      id: `dock.${chain.id}`,
-      kind: "dock",
-      label: chain.name,
-      chainId: chain.id,
-      assetId: DOCK_ASSET_IDS[index] ?? "dock.wooden-pier",
-      tile: DOCK_TILES[index],
-      totalUsd: chain.totalUsd,
-      size: dockSize(chain, chains.globalTotalUsd),
-      healthBand: chain.healthBand,
-      stablecoinCount: chain.stablecoinCount,
-      concentration: chain.healthFactors?.concentration ?? null,
-      harboredStablecoins: harboredStablecoins(chain),
-      detailId: `dock.${chain.id}`,
-    }));
+    .map((chain, index) => {
+      const tile = dockTileForChain(chain.id, index, occupiedTiles);
+      return {
+        id: `dock.${chain.id}`,
+        kind: "dock" as const,
+        label: chain.name,
+        chainId: chain.id,
+        assetId: PREFERRED_DOCK_ASSET_IDS[chain.id] ?? DOCK_ASSET_IDS[index] ?? "dock.wooden-pier",
+        tile,
+        totalUsd: chain.totalUsd,
+        size: dockSize(chain, chains.globalTotalUsd),
+        healthBand: chain.healthBand,
+        stablecoinCount: chain.stablecoinCount,
+        concentration: chain.healthFactors?.concentration ?? null,
+        harboredStablecoins: harboredStablecoins(chain),
+        detailId: `dock.${chain.id}`,
+      };
+    });
+}
+
+function dockTileForChain(chainId: string, rankIndex: number, occupiedTiles: Set<string>): { x: number; y: number } {
+  const preferred = PREFERRED_DOCK_TILES[chainId];
+  if (preferred && reserveTile(preferred, occupiedTiles)) return preferred;
+
+  const primaryPool = EVM_BAY_CHAIN_IDS.has(chainId) ? EVM_BAY_DOCK_TILES : OUTER_HARBOR_DOCK_TILES;
+  const pooled = firstOpenTile(primaryPool, occupiedTiles);
+  if (pooled) return pooled;
+
+  const fallback = firstOpenTile(DOCK_TILES, occupiedTiles);
+  if (fallback) return fallback;
+
+  const repeated = DOCK_TILES[rankIndex % DOCK_TILES.length] ?? DOCK_TILES[0];
+  reserveTile(repeated, occupiedTiles);
+  return repeated;
+}
+
+function firstOpenTile(tiles: readonly { x: number; y: number }[], occupiedTiles: Set<string>): { x: number; y: number } | null {
+  for (const tile of tiles) {
+    if (reserveTile(tile, occupiedTiles)) return tile;
+  }
+  return null;
+}
+
+function reserveTile(tile: { x: number; y: number }, occupiedTiles: Set<string>): boolean {
+  const key = `${tile.x}.${tile.y}`;
+  if (occupiedTiles.has(key)) return false;
+  occupiedTiles.add(key);
+  return true;
 }
