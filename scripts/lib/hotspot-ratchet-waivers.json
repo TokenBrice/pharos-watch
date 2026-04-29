@@ -23,10 +23,6 @@
     "disposition": "queued-p4",
     "notes": "Ship motion routing now centralizes deterministic water-path construction, seeded detours, dwell timing, and route sampling for the initial liveliness release. Keep it waived until the next PharosVille systems pass can split pathfinding, scheduling, and sampling without changing behavior."
   },
-  "src/app/pharosville/systems/world-layout.ts": {
-    "disposition": "queued-p4",
-    "notes": "PharosVille world layout intentionally centralizes terrain classification, road/plaza masks, cemetery placement, and water-nearest helpers while the island composition is still actively moving. Split terrain-region predicates and placement helpers in the next PharosVille systems cleanup pass."
-  },
   "src/components/command-palette.tsx": {
     "disposition": "queued-p4",
     "notes": "The command palette still combines indexing, keyboard handling, and rendering in one shell. Keep it waived until the navigation/search UI cleanup lane is scheduled."
