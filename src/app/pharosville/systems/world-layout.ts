@@ -175,39 +175,41 @@ function harborApproachValue(x: number, y: number): number {
 }
 
 function isAlertChannel(x: number, y: number): boolean {
-  return ellipseValue(x, y, 32.0, 13.4, 5.6, 4.4) < 1
-    && x >= 27
-    && x <= 38
-    && y >= 8
-    && y <= 20;
+  return ellipseValue(x, y, 30.0, 16.0, 5.3, 4.2) < 1
+    && x >= 25
+    && x <= 36
+    && y >= 11
+    && y <= 22;
 }
 
 function isWarningShoals(x: number, y: number): boolean {
-  return ellipseValue(x, y, 37.0, 6.6, 5.0, 4.0) < 1
-    && x >= 32
-    && x <= 42
-    && y <= 13;
+  return ellipseValue(x, y, 31.0, 9.0, 4.7, 3.6) < 1
+    && x >= 27
+    && x <= 36
+    && y >= 4
+    && y <= 15;
 }
 
 function isDangerStrait(x: number, y: number): boolean {
-  return ellipseValue(x, y, 41.0, 2.0, 4.4, 2.8) < 1
-    && x >= 36
-    && y <= 8;
+  return ellipseValue(x, y, 34.2, 4.4, 4.3, 2.9) < 1
+    && x >= 30
+    && x <= 39
+    && y <= 10;
 }
 
 function isWatchBreakwater(x: number, y: number): boolean {
-  return ellipseValue(x, y, 25.4, 21.8, 7.0, 5.2) < 1
-    && x >= 19
-    && x <= 33
+  return ellipseValue(x, y, 24.0, 22.0, 6.8, 5.1) < 1
+    && x >= 17
+    && x <= 32
     && y >= 15
-    && y <= 29;
+    && y <= 30;
 }
 
 function isCalmAnchorage(x: number, y: number): boolean {
-  return ellipseValue(x, y, 16.5, 31.0, 11.4, 8.2) < 1
-    && x <= 29
-    && y >= 22
-    && y <= 40;
+  return ellipseValue(x, y, 14.2, 30.8, 16.3, 11.6) < 1
+    && x <= 31
+    && y >= 17
+    && y <= 43;
 }
 
 export function isNorthFrozePole(x: number, y: number): boolean {

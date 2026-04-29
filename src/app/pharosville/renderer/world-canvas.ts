@@ -192,12 +192,12 @@ export function drawPharosVille(input: DrawPharosVilleInput): PharosVilleRenderM
   drawSky(input);
 
   const visibleTileCount = drawTerrain(input);
-  drawWaterAreaLabels(input);
   drawAtmosphere(input);
   drawCemeteryGround(input);
   drawLighthouseHeadland(input);
   drawCemeteryContext(input);
   const entityMetrics = drawEntityPass(input);
+  drawWaterAreaLabels(input);
   drawDecorativeLights(input);
   drawCemeteryMist(input);
   drawBirds(input);

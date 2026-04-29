@@ -23,7 +23,7 @@ describe("motion", () => {
       { zone: "watch", expectedTerrains: ["watch-water", "calm-water"], minDistance: 8, world: worldForShip({ chainCirculating: {}, chains: ["ethereum"], stressBand: "WATCH" }) },
       {
         zone: "alert",
-        expectedTerrains: ["alert-water", "warning-water"],
+        expectedTerrains: ["alert-water", "warning-water", "watch-water"],
         minDistance: 8,
         world: worldForShip({
           chainCirculating: {},
@@ -236,7 +236,7 @@ describe("motion", () => {
     const cases = [
       { expectedTerrains: ["calm-water"], world: worldForShip({ chainCirculating: {}, chains: ["ethereum"] }) },
       {
-        expectedTerrains: ["alert-water", "warning-water"],
+        expectedTerrains: ["alert-water", "warning-water", "watch-water"],
         world: worldForShip({
           chainCirculating: {},
           chains: ["ethereum"],
@@ -276,7 +276,7 @@ describe("motion", () => {
 
       expect(waypoint).toBeDefined();
       expect(entry.expectedTerrains).toContain(terrainKindAt(waypoint?.x ?? -1, waypoint?.y ?? -1));
-      expect(waypoint?.y).toBeLessThanOrEqual(36);
+      expect(waypoint?.y).toBeLessThanOrEqual(40);
     }
   });
 
@@ -325,7 +325,7 @@ describe("motion", () => {
 
   it("routes over semantic water terrain only", () => {
     const map = buildPharosVilleMap();
-    const route = buildShipWaterRoute({ from: { x: 41, y: 0 }, to: { x: 32, y: 12 }, map });
+    const route = buildShipWaterRoute({ from: { x: 34, y: 4 }, to: { x: 30, y: 16 }, map });
 
     expect(route.points.length).toBeGreaterThan(1);
     expect(terrainKindInMap(map, route.points[0]!)).toBe("storm-water");

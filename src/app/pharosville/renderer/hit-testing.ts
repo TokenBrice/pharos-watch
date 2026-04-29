@@ -20,6 +20,7 @@ export interface HitTarget {
 
 function targetPriorityBoost(entity: WorldSelectableEntity, selectedDetailId: string | null, hoveredDetailId: string | null): number {
   let priority = 0;
+  if (entity.kind === "area") priority += 10_000;
   if (entity.detailId === selectedDetailId) priority += 2;
   if (entity.detailId === hoveredDetailId) priority += 1;
   return priority;

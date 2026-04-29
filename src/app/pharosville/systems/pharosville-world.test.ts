@@ -245,6 +245,8 @@ describe("buildPharosVilleWorld", () => {
         .map((area) => [area.band, area.count]),
     );
     const alertArea = world.areas.find((area) => area.band === "ALERT");
+    const dataFogArea = world.areas.find((area) => area.riskPlacement === "data-fog");
+    const ledgerArea = world.areas.find((area) => area.riskPlacement === "ledger-mooring");
     const usdc = world.ships[0];
 
     expect(counts).toMatchObject({
@@ -258,12 +260,24 @@ describe("buildPharosVilleWorld", () => {
     expect(alertArea?.label).toBe("Alert Channel");
     expect(alertArea?.riskPlacement).toBe("harbor-mouth-watch");
     expect(alertArea?.tile ? terrainKindAt(alertArea.tile.x, alertArea.tile.y) : null).toBe("alert-water");
-    expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 37, y: 6 });
-    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 41, y: 0 });
+    expect(dataFogArea).toMatchObject({ label: "Data Fog", riskZone: "fog", detailId: "area.risk-water.data-fog" });
+    expect(ledgerArea).toMatchObject({ label: "Ledger Mooring", riskZone: "ledger", detailId: "area.risk-water.ledger-mooring" });
+    expect(dataFogArea?.tile ? terrainKindAt(dataFogArea.tile.x, dataFogArea.tile.y) : null).toBe("brackish-water");
+    expect(ledgerArea?.tile ? terrainKindAt(ledgerArea.tile.x, ledgerArea.tile.y) : null).toBe("calm-water");
+    expect(world.detailIndex["area.risk-water.data-fog"]?.facts).toEqual(expect.arrayContaining([
+      { label: "Risk water zone", value: "fog" },
+      { label: "Risk placement", value: "data-fog" },
+    ]));
+    expect(world.detailIndex["area.risk-water.ledger-mooring"]?.facts).toEqual(expect.arrayContaining([
+      { label: "Risk water zone", value: "ledger" },
+      { label: "Risk placement", value: "ledger-mooring" },
+    ]));
+    expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 31, y: 9 });
+    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 34, y: 4 });
     expect(world.areas.find((area) => area.id === "area.north-froze-pole")?.tile).toEqual({ x: 0, y: 0 });
     expect(terrainKindAt(0, 0)).toBe("frozen-water");
-    expect(terrainKindAt(37, 6)).toBe("warning-water");
-    expect(terrainKindAt(41, 0)).toBe("storm-water");
+    expect(terrainKindAt(31, 9)).toBe("warning-water");
+    expect(terrainKindAt(34, 4)).toBe("storm-water");
     expect(usdc?.riskPlacement).toBe("harbor-mouth-watch");
     expect(usdc?.riskZone).toBe("alert");
     expect(usdc?.riskWaterLabel).toBe("Alert Channel");

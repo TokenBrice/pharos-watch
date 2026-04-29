@@ -36,12 +36,8 @@ import { getRecentChange } from "./recent-change";
 import { resolveShipRiskPlacement } from "./risk-placement";
 import { isRiskPlacementWaterTile, nearestAvailableRiskPlacementWaterTile, nearestRiskPlacementWaterTile } from "./risk-water-placement";
 import {
-  AREA_LABEL_TILES,
-  DEWS_AREA_BANDS,
-  DEWS_AREA_LABELS,
-  DEWS_AREA_PLACEMENTS,
-  DEWS_AREA_WATER_STYLE,
   SHIP_SCATTER_RADIUS,
+  SHIP_RISK_PLACEMENTS,
   SHIP_WATER_ANCHORS,
   riskWaterAreaForPlacement,
 } from "./risk-water-areas";
@@ -120,24 +116,54 @@ function buildDewsBandCounts(stress: StressSignalsAllResponse | null | undefined
   return counts;
 }
 
+function areaIdForRiskWaterPlacement(placement: ShipNode["riskPlacement"], band: DewsAreaBand | null): string {
+  return band ? `area.dews.${band.toLowerCase()}` : `area.risk-water.${placement}`;
+}
+
+function sourceFieldsForRiskWaterPlacement(placement: ShipNode["riskPlacement"], band: DewsAreaBand | null): string[] {
+  if (band) return ["stress.signals[]"];
+  if (placement === "data-fog") return ["pegSummary.coins[]", "stablecoins.price", "stablecoins.priceConfidence", "freshness"];
+  if (placement === "ledger-mooring") return ["meta.flags.navToken", "pegSummary.coins"];
+  return ["pegSummary.coins[]", "stress.signals[]"];
+}
+
+function summaryForRiskWaterPlacement(placement: ShipNode["riskPlacement"], band: DewsAreaBand | null): string {
+  const area = riskWaterAreaForPlacement(placement);
+  if (band) return `${area.label} uses ${area.waterStyle} for DEWS ${band} placement.`;
+  if (placement === "data-fog") return "Data Fog uses brackish stale-evidence water for missing, stale, or low-confidence peg evidence.";
+  if (placement === "ledger-mooring") return "Ledger Mooring uses calm water for NAV ledger assets that do not have a standard peg-summary row.";
+  return `${area.label} is a named risk-water area.`;
+}
+
 function buildAreas(stress: StressSignalsAllResponse | null | undefined): PharosVilleWorld["areas"] {
   const counts = buildDewsBandCounts(stress);
-  return DEWS_AREA_BANDS.map((band) => ({
-    id: `area.dews.${band.toLowerCase()}`,
-    kind: "area" as const,
-    label: DEWS_AREA_LABELS[band],
-    tile: AREA_LABEL_TILES[band],
-    band,
-    count: counts[band],
-    detailId: `area.dews.${band.toLowerCase()}`,
-    facts: [
-      { label: "Water style", value: DEWS_AREA_WATER_STYLE[band] },
-      { label: "Source", value: "stress.signals[]" },
-    ],
-    riskPlacement: DEWS_AREA_PLACEMENTS[band],
-    sourceFields: ["stress.signals[]"],
-    summary: `${DEWS_AREA_LABELS[band]} uses ${DEWS_AREA_WATER_STYLE[band]} for DEWS ${band} placement.`,
-  }));
+  return SHIP_RISK_PLACEMENTS.map((placement) => {
+    const riskWaterArea = riskWaterAreaForPlacement(placement);
+    const band = riskWaterArea.band;
+    const id = areaIdForRiskWaterPlacement(placement, band);
+    const sourceFields = sourceFieldsForRiskWaterPlacement(placement, band);
+    return {
+      id,
+      kind: "area" as const,
+      label: riskWaterArea.label,
+      tile: riskWaterArea.labelTile,
+      band: band ?? undefined,
+      count: band ? counts[band] : null,
+      detailId: id,
+      facts: [
+        { label: "Water style", value: riskWaterArea.waterStyle },
+        { label: "Source", value: sourceFields.join(", ") },
+      ],
+      links: [{
+        label: placement === "ledger-mooring" ? "Stablecoins" : "DEWS",
+        href: placement === "ledger-mooring" ? "/stablecoins/" : "/depeg/",
+      }],
+      riskPlacement: placement,
+      riskZone: riskWaterArea.motionZone,
+      sourceFields,
+      summary: summaryForRiskWaterPlacement(placement, band),
+    };
+  });
 }
 
 function buildShipChainPresence(asset: StablecoinData, renderedDockChainIds: ReadonlySet<string>): ShipChainPresence[] {

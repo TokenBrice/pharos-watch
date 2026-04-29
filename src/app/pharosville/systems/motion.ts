@@ -84,7 +84,7 @@ const ZONE_DWELL: Record<ShipWaterZone, { dockDwell: number; riskDwell: number; 
 };
 
 const OPEN_WATER_PATROL_WAYPOINTS: Record<ShipWaterZone, readonly { x: number; y: number }[]> = {
-  alert: [...SHIP_WATER_ANCHORS["harbor-mouth-watch"], ...SHIP_WATER_ANCHORS["outer-rough-water"]],
+  alert: [...SHIP_WATER_ANCHORS["harbor-mouth-watch"], ...SHIP_WATER_ANCHORS["outer-rough-water"], ...SHIP_WATER_ANCHORS["breakwater-edge"]],
   calm: SHIP_WATER_ANCHORS["safe-harbor"],
   danger: [...SHIP_WATER_ANCHORS["storm-shelf"], ...SHIP_WATER_ANCHORS["outer-rough-water"]],
   fog: [...SHIP_WATER_ANCHORS["data-fog"], ...SHIP_WATER_ANCHORS["safe-harbor"]],

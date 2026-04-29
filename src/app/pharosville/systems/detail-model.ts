@@ -183,10 +183,11 @@ export function detailForArea(node: AreaNode): DetailModel {
     facts: [
       ...(node.band ? [{ label: "DEWS band", value: node.band }] : []),
       ...(node.count != null ? [{ label: "Stablecoins", value: String(node.count) }] : []),
+      ...(node.riskZone ? [{ label: "Risk water zone", value: node.riskZone }] : []),
       ...(node.riskPlacement ? [{ label: "Risk placement", value: node.riskPlacement }] : []),
       ...(node.facts ?? []),
       ...(node.sourceFields?.length ? [{ label: "Source fields", value: node.sourceFields.join(", ") }] : []),
     ],
-    links: [{ label: "DEWS", href: "/depeg-watch/" }],
+    links: node.links ?? [{ label: "DEWS", href: "/depeg/" }],
   };
 }

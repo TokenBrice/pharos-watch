@@ -64,19 +64,22 @@ describe("risk water areas", () => {
     }
   });
 
-  it("orders DEWS sea zones left-to-right and upward in the northern water block", () => {
+  it("orders DEWS sea zones left-to-right in the northern water block", () => {
     let previousIso: { x: number; y: number } | null = null;
+    const isoByBand = new Map<DewsAreaBand, { x: number; y: number }>();
     for (const band of WEST_TO_EAST_DEWS_BANDS) {
       const area = RISK_WATER_AREAS[DEWS_AREA_PLACEMENTS[band]];
       const iso = tileToIso(area.labelTile);
+      isoByBand.set(band, iso);
 
       expect(area.labelTile.x + area.labelTile.y).toBeLessThanOrEqual(50);
       if (previousIso) {
         expect(iso.x).toBeGreaterThan(previousIso.x);
-        expect(iso.y).toBeLessThan(previousIso.y);
       }
       previousIso = iso;
     }
+    expect(isoByBand.get("WARNING")!.y).toBeLessThan(isoByBand.get("ALERT")!.y);
+    expect(isoByBand.get("DANGER")!.y).toBeLessThanOrEqual(isoByBand.get("WARNING")!.y);
   });
 
   it("keeps every DEWS zone in the same continuous northern sea component", () => {

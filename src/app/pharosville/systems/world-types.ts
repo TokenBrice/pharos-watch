@@ -298,6 +298,7 @@ export interface AreaNode {
   members?: Array<{ id: string; label: string; href: string; value?: string }>;
   membersHeading?: string;
   riskPlacement?: ShipRiskPlacement;
+  riskZone?: ShipWaterZone;
   sourceFields?: string[];
   status?: BuildingStatus;
   statusLabel?: string;

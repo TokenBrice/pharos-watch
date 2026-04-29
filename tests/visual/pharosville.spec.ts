@@ -109,6 +109,15 @@ const BUILDING_DETAIL_LABELS: Record<(typeof BUILDING_DETAIL_IDS)[number], strin
   "building.yield-orchard-moonwell": "Yield Orchard And Moonwell",
   "building.dependency-loom-chainworks": "Dependency Loom / Chainworks",
 };
+const RISK_WATER_AREA_DETAILS = [
+  { detailId: "area.dews.calm", label: "Calm Anchorage", zone: "calm" },
+  { detailId: "area.dews.watch", label: "Watch Breakwater", zone: "watch" },
+  { detailId: "area.dews.alert", label: "Alert Channel", zone: "alert" },
+  { detailId: "area.dews.warning", label: "Warning Shoals", zone: "warning" },
+  { detailId: "area.dews.danger", label: "Danger Strait", zone: "danger" },
+  { detailId: "area.risk-water.data-fog", label: "Data Fog", zone: "fog" },
+  { detailId: "area.risk-water.ledger-mooring", label: "Ledger Mooring", zone: "ledger" },
+] as const;
 const TARGET_CLICK_POINTS = [
   [0.5, 0.5],
   [0.25, 0.25],
@@ -704,6 +713,32 @@ test("pharosville renders a stressed ship in storm-shelf detail", async ({ page 
   await expect(detailPanel).toContainText("danger");
   await expect(detailPanel).toContainText("Evidence");
   await expect(detailPanel).toContainText("pegSummary.coins[].activeDepeg");
+});
+
+test("pharosville exposes all named risk water areas in browser details", async ({ page }) => {
+  await mockPharosVilleData(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/pharosville/");
+  await expectNoAssetLoadErrors(page);
+
+  const ledger = page.getByTestId("pharosville-accessibility-ledger");
+  await page.getByRole("button", { name: "Clear selection" }).click();
+  await waitForSelectedDetail(page, null);
+  for (const area of RISK_WATER_AREA_DETAILS) {
+    await test.step(area.detailId, async () => {
+      await expect(ledger).toContainText(area.label);
+      const clickedDetailId = await clickMapTarget(page, "area", area.detailId);
+      expect(clickedDetailId).toBe(area.detailId);
+      await waitForSelectedDetail(page, area.detailId);
+      const detailPanel = page.getByTestId("pharosville-detail-panel");
+      await expect(detailPanel).toContainText(area.label);
+      await expect(detailPanel).toContainText("Risk water zone");
+      await expect(detailPanel).toContainText(area.zone);
+      await page.getByRole("button", { name: "Clear selection" }).click();
+      await waitForSelectedDetail(page, null);
+    });
+  }
 });
 
 async function denyPharosVilleViewportGatedRequests(page: Page) {
