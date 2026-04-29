@@ -116,6 +116,7 @@ export interface DockNode {
   kind: "dock";
   label: string;
   chainId: string;
+  logoSrc: string | null;
   assetId: string;
   tile: { x: number; y: number };
   totalUsd: number;
@@ -192,6 +193,57 @@ export interface GraveNode {
   detailId: string;
 }
 
+export type BuildingType =
+  | "mint-burn-foundry"
+  | "frost-ward-keep"
+  | "exit-route-gatehouse"
+  | "yield-orchard-moonwell"
+  | "dependency-loom-chainworks";
+
+export type BuildingStatus =
+  | "balanced"
+  | "broad-coverage"
+  | "burning"
+  | "concentrated"
+  | "deep-exit"
+  | "high-hub-concentration"
+  | "high-median-apy"
+  | "large-active-frozen"
+  | "many-direct-dependents"
+  | "minting"
+  | "quiet"
+  | "recent-freeze"
+  | "source-switch"
+  | "stale"
+  | "thin-exit"
+  | "unavailable";
+
+export interface BuildingNode {
+  id: string;
+  kind: "building";
+  buildingType: BuildingType;
+  label: string;
+  assetId: string;
+  tile: { x: number; y: number };
+  status: BuildingStatus;
+  statusLabel: string;
+  summary: string;
+  facts: Array<{ label: string; value: string }>;
+  sourceFields: string[];
+  links: Array<{ label: string; href: string }>;
+  membersHeading?: string;
+  members?: Array<{ id: string; label: string; href: string; value?: string }>;
+  detailId: string;
+  visual: {
+    accent: string;
+    dataFogIntensity: number;
+    intensity: number;
+    scale: number;
+    secondaryIntensity: number;
+    tertiaryIntensity: number;
+  };
+}
+
 export interface WorldEffect {
   id: string;
   kind: "recent-change" | "fog" | "storm";
@@ -244,6 +296,11 @@ export interface PharosVilleFreshness {
   pegSummaryStale?: boolean;
   stressStale?: boolean;
   reportCardsStale?: boolean;
+  mintBurnStale?: boolean;
+  blacklistStale?: boolean;
+  dexLiquidityStale?: boolean;
+  redemptionBackstopsStale?: boolean;
+  yieldStale?: boolean;
 }
 
 export interface PharosVilleWorld {
@@ -257,6 +314,7 @@ export interface PharosVilleWorld {
   ships: ShipNode[];
   shipClusters: ShipClusterNode[];
   graves: GraveNode[];
+  buildings: BuildingNode[];
   effects: WorldEffect[];
   detailIndex: Record<string, DetailModel>;
   legends: LegendItem[];

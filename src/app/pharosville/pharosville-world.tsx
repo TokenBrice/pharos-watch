@@ -96,6 +96,7 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
 
   useEffect(() => {
     const logoSrcs = [
+      ...world.docks.map((dock) => dock.logoSrc),
       ...world.ships.map((ship) => ship.logoSrc),
       ...world.graves.map((grave) => grave.logoSrc),
     ]
@@ -109,7 +110,7 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
     return () => {
       controller.abort();
     };
-  }, [assetManager, world.graves, world.ships]);
+  }, [assetManager, world.docks, world.graves, world.ships]);
 
   useEffect(() => observeReducedMotion(setReducedMotion), []);
 
@@ -440,7 +441,8 @@ type SelectableWorldEntity =
   | PharosVilleWorldModel["docks"][number]
   | PharosVilleWorldModel["ships"][number]
   | PharosVilleWorldModel["shipClusters"][number]
-  | PharosVilleWorldModel["graves"][number];
+  | PharosVilleWorldModel["graves"][number]
+  | PharosVilleWorldModel["buildings"][number];
 
 function findWorldEntity(world: PharosVilleWorldModel, detailId: string | null): SelectableWorldEntity | null {
   if (!detailId) return null;
@@ -450,6 +452,7 @@ function findWorldEntity(world: PharosVilleWorldModel, detailId: string | null):
     ...world.ships,
     ...world.shipClusters,
     ...world.graves,
+    ...world.buildings,
   ].find((entity) => entity.detailId === detailId) ?? null;
 }
 

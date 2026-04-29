@@ -1,5 +1,5 @@
 import { CHAIN_META } from "@shared/lib/chains";
-import type { DetailModel, DockNode, GraveNode, LighthouseNode, ShipClusterNode, ShipNode } from "./world-types";
+import type { BuildingNode, DetailModel, DockNode, GraveNode, LighthouseNode, ShipClusterNode, ShipNode } from "./world-types";
 
 const usd = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0, style: "currency", currency: "USD" });
 const percent = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1, style: "percent" });
@@ -140,5 +140,18 @@ export function detailForGrave(node: GraveNode): DetailModel {
       { label: "Date", value: node.entry.deathDate },
     ],
     links: [{ label: "Cemetery", href: "/cemetery/" }],
+  };
+}
+
+export function detailForBuilding(node: BuildingNode): DetailModel {
+  return {
+    id: node.detailId,
+    kind: node.kind,
+    title: node.label,
+    summary: node.summary,
+    facts: node.facts,
+    links: node.links,
+    membersHeading: node.membersHeading,
+    members: node.members,
   };
 }
