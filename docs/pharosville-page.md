@@ -33,8 +33,9 @@ PharosVille is a desktop-only experience. Mobile and tablet compatibility is exp
 The current implementation includes the desktop PharosVille v0.1 baseline:
 
 - desktop-gated route, with a short-screen fallback as well as the narrow-screen fallback
-- Canvas 2D sea-first island map on eligible desktop viewports, with a reshaped coastal island and roughly 82–88% water by tile count
-- authored terrain metadata layered over canonical movement tiles, including harbor water, alert water, warning shoals water, storm water, fog water, beach, grass, rock, cliff, hill, road, and shore variants
+- route shell escapes the global page padding and sizes against the actual post-sidebar content pane, so the desktop canvas uses the full available viewport area whether the sidebar is expanded or collapsed
+- Canvas 2D island-sea map on eligible desktop viewports, with the authored world reduced to `56 x 56` tiles so the old deep-blue outer shelf no longer dominates the canvas
+- authored terrain metadata layered over canonical movement tiles, including harbor water, brackish stale-evidence water, alert water, warning shoals water, storm water, frozen water, deep outer-shelf water, beach, grass, rock, cliff, hill, road, and shore variants; deep water is capped to a narrow perimeter shelf rather than a broad unused border
 - named DEWS water-zone posts showing live band counts from `stress.signals[]`, plus subtle dock mast flags using chain logos or short crest marks
 - Pharos lighthouse placed on the northeast headland at tile `{ x: 44, y: 18 }`, sitting on elevated terrain with a road/stair connection back toward town
 - a main-island road/plaza spine ties the southwest harbor, central civic data core, and lighthouse approach together without changing any data semantics
@@ -46,7 +47,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - ship scale uses exaggerated compressed market-cap tiers, not linear supply area, so $1B+ issuers are spottable while USDT and USDC remain capped
 - ship reduced-motion/static placement uses a rendered harbor mooring when the ship has rendered positive-supply chain docks; a separate peg/DEWS risk anchor remains part of the normal-motion route
 - normal-motion ships follow slow deterministic water-only harbor cycles, with seeded detours between chain moorings and their peg/DEWS risk water
-- DEWS-driven risk water areas are named as Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, and Danger Strait; ALERT, WARNING, and DANGER use successive terrain bands so the water itself escalates from channel chop to shoals to storm strait, and ships with matching fresh DEWS bands anchor and route through those areas
+- DEWS-driven risk water areas are named as Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, and Danger Strait; ALERT, WARNING, and DANGER use successive terrain bands so the water itself escalates from channel current to treacherous shoals to storm strait, stale/low-confidence evidence uses brackish water, and ships with matching fresh DEWS bands anchor and route through those areas
 - ship docking cadence comes from `stablecoins.chainCirculating` chain presence, while risk water comes from `pegSummary.coins[]` and `stress.signals[]`; DOM details expose the route source, risk water, home dock, chain-presence count, and cadence text
 - active ships draw their logo on the sail when a local logo asset is available
 - long-tail stablecoins beyond the individual ship budget are split into count-capped water-zone cluster markers rather than one large pile
@@ -61,7 +62,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - visible RPG-styled toolbar, click-anchored detail panel, blank-map click-to-close behavior, and screen-reader accessibility ledger
 - canvas hit testing for lighthouse, docks, ships, clusters, graves, thematic data buildings, and named water areas
 - mouse/touch drag pan, wheel zoom, toolbar pan/zoom/reset/follow/clear controls, keyboard arrow pan, Escape clear, and fullscreen inspection mode
-- normal-motion canvas loop for the lighthouse great-fire flicker, water shimmer, decorative time-derived dawn/day/dusk/night sky with sun, crescent moon, stars, constellations, cloud bands, decorative birds/lights/haze, and deterministic ship route sampling, with expensive wake effects capped to selected/top/recent ships
+- normal-motion canvas loop for the lighthouse great-fire flicker, semantic water textures, decorative time-derived dawn/day/dusk/night sky with sun, crescent moon, stars, constellations, cloud bands, decorative birds/lights/haze, and deterministic ship route sampling, with expensive wake effects capped to selected/top/recent ships
 - deterministic reduced-motion render with no running animation frame loop
 - desktop, stressed-ship, short-screen, ultrawide backing-store, interaction, central-core invariants, building-interaction, and motion visual coverage
 - controlled Pixellab asset manifest v2 with critical/deferred sprite loading, separate cache/provenance versions, and reserved frame-animation metadata under `public/pharosville/assets/`
@@ -81,7 +82,7 @@ The planned PharosVille visual grammar is:
 - ship sail mark = stablecoin logo, falling back to a short symbol mark
 - ship route distance from shore = peg/depeg risk first, with DEWS escalation mapped to Alert Channel, Warning Shoals, and Danger Strait terrain
 - ship representative position and docking cadence = positive chain supply across the rendered top-ten chain harbors, shown as slow water-only passages rather than real-time transfer flow
-- sea/weather = aggregate DEWS breadth
+- sea/weather = aggregate DEWS breadth and source confidence, with brackish water for stale/low-confidence evidence and storm/frozen local textures for danger and freeze-tracker areas
 - cemetery = dead and frozen assets from merged cemetery data, with each tomb marker using its local cemetery logo when available and a cause-of-death plaque keyed to the same color taxonomy as the cemetery legend
 - main-island data buildings and northern water path = non-ship Pharos data products, with the four data buildings visually grouped around a central civic data core and road/plaza spine on the main island:
   - Royal Mint And Burn Foundry = configured issuance-chain mint/burn flow state (`minting`, `burning`, `balanced`, `quiet`, `stale`, or `unavailable`)
@@ -89,7 +90,7 @@ The planned PharosVille visual grammar is:
   - Yield Orchard And Moonwell = yield source breadth and benchmark context, avoiding any claim that higher APY is safer
   - Dependency Loom / Chainworks = direct report-card dependency links and hubs only, not transitive or value-at-risk exposure
 - North Froze Pole = observed freeze/blacklist tracker activity (`recent-freeze`, `large-active-frozen`, `quiet`, `stale`, or `unavailable`) as frozen northern water, not a building
-- fog = missing, low-confidence, or stale evidence
+- brackish fog water = missing, low-confidence, or stale evidence
 
 Exact values and placement explanations must be available in DOM panels. The canvas must never be the only source of analytical truth.
 
@@ -118,7 +119,7 @@ Compensating gates:
 
 - desktop canvas shell at `1440 x 1000`
 - nonblank canvas pixels, terrain/water pixel coverage, and backing-store budget
-- sea-first tile ratio, terrain metadata coverage, northeast headland lighthouse placement, and harbor/cemetery separation invariants
+- reduced `56 x 56` map size, deep-water perimeter cap, terrain metadata coverage, northeast headland lighthouse placement, and harbor/cemetery separation invariants
 - stressed ship detail semantics for active depeg and storm-shelf placement
 - `<1280px` fallback
 - short desktop fallback
