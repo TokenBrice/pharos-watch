@@ -26,6 +26,7 @@ export interface PharosVilleAssetLoadResult {
 
 export class PharosVilleAssetManager {
   private assets = new Map<string, LoadedPharosVilleAsset>();
+  private failedLogos = new Set<string>();
   private logos = new Map<string, LoadedPharosVilleLogo>();
   private manifest: PharosVilleAssetManifest | null = null;
 
@@ -80,15 +81,22 @@ export class PharosVilleAssetManager {
   async loadLogo(src: string, signal?: AbortSignal): Promise<LoadedPharosVilleLogo> {
     const cached = this.logos.get(src);
     if (cached) return cached;
-    const image = await loadImage(src, signal);
-    const loaded = { image, src };
-    this.logos.set(src, loaded);
-    return loaded;
+    if (this.failedLogos.has(src)) throw new Error(`Skipped previously failed logo ${src}`);
+    try {
+      const image = await loadImage(src, signal);
+      const loaded = { image, src };
+      this.logos.set(src, loaded);
+      return loaded;
+    } catch (error) {
+      if (!isAbortError(error)) this.failedLogos.add(src);
+      throw error;
+    }
   }
 
   async loadLogos(srcs: Iterable<string>, signal?: AbortSignal): Promise<LoadedPharosVilleLogo[]> {
-    const uniqueSrcs = [...new Set([...srcs].filter((src) => src.startsWith("/")))];
-    return Promise.all(uniqueSrcs.map((src) => this.loadLogo(src, signal)));
+    const uniqueSrcs = [...new Set([...srcs].filter((src) => src.startsWith("/") && !this.failedLogos.has(src)))];
+    const settled = await Promise.allSettled(uniqueSrcs.map((src) => this.loadLogo(src, signal)));
+    return settled.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
   }
 
   private async loadAssetGroup(
@@ -121,8 +129,16 @@ function errorMessage(reason: unknown) {
   return reason instanceof Error ? reason.message : String(reason);
 }
 
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
 function loadImage(src: string, signal?: AbortSignal): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Image load aborted", "AbortError"));
+      return;
+    }
     const image = new Image();
     const cleanup = () => {
       signal?.removeEventListener("abort", abort);

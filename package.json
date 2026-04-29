@@ -51,6 +51,7 @@
     "check:unused-code": "node scripts/check-unused-code.mjs",
     "check:shared-cycles": "node scripts/check-shared-cycles.mjs",
     "check:hotspot-ratchet": "node scripts/check-hotspot-ratchet.mjs",
+    "check:pharosville-colors": "node scripts/check-pharosville-colors.mjs",
     "check:harbor-palette": "node scripts/check-pharosville-colors.mjs",
     "check:redemption-backstops": "tsx scripts/check-redemption-backstops.ts",
     "check:hotspot-ratchet:update-baseline": "node scripts/update-hotspot-ratchet-baseline.mjs",

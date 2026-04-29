@@ -1,4 +1,5 @@
 import { nearestWaterTile } from "./world-layout";
+import { stableHash, stableOffset, stableUnit } from "./stable-random";
 import type { PharosVilleMap, PharosVilleWorld, ShipDockVisit, ShipNode, ShipWaterZone } from "./world-types";
 
 export interface ShipWaterPath {
@@ -241,11 +242,7 @@ export function lighthouseFireFlickerSpeed(band: string | null, score: number | 
 }
 
 export function stableMotionPhase(id: string) {
-  let hash = 0;
-  for (let index = 0; index < id.length; index += 1) {
-    hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
-  }
-  return (hash % 628) / 100;
+  return (stableHash(id) % 628) / 100;
 }
 
 function hasRecentMove(ship: ShipNode) {
@@ -733,22 +730,6 @@ function sameTile(a: { x: number; y: number }, b: { x: number; y: number }) {
 
 function pathKey(from: { x: number; y: number }, to: { x: number; y: number }) {
   return `${from.x}.${from.y}->${to.x}.${to.y}`;
-}
-
-function stableHash(id: string) {
-  let hash = 0;
-  for (let index = 0; index < id.length; index += 1) {
-    hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
-  }
-  return hash;
-}
-
-function stableUnit(id: string) {
-  return stableHash(id) / 0xffffffff;
-}
-
-function stableOffset(id: string, span: number): number {
-  return (stableHash(id) % (span * 2 + 1)) - span;
 }
 
 function smoothstep(value: number) {

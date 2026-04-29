@@ -1,3 +1,5 @@
+> Status: Implemented historical plan. Use `agents/pharosville/CURRENT.md` and `agents/pharosville/TESTING.md` for current agent guidance; use `src/app/pharosville/systems/motion.ts`, renderer hit testing, and the route docs for live behavior.
+
 # PharosVille Ship Liveliness Motion Plan
 
 Created: 2026-04-28

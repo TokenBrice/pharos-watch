@@ -1,5 +1,6 @@
 import type { ShipClusterNode, ShipNode, ShipRiskPlacement } from "./world-types";
 import { nearestAvailableWaterTile, REGION_TILES } from "./world-layout";
+import { stableUnit } from "./stable-random";
 
 const MAX_SHIPS_PER_CLUSTER = 36;
 const DEFAULT_INDIVIDUAL_SHIP_BUDGET = 128;
@@ -71,12 +72,6 @@ function clusterTile(
   }, occupied, 18);
   occupied.add(`${tile.x}.${tile.y}`);
   return tile;
-}
-
-function stableUnit(id: string) {
-  let hash = 0;
-  for (let index = 0; index < id.length; index += 1) hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
-  return hash / 0xffffffff;
 }
 
 function clamp(value: number, min: number, max: number): number {

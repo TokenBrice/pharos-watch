@@ -40,6 +40,12 @@
       "notes": ["New migrations must be backward-compatible with the standard deploy ordering."]
     },
     {
+      "name": "pharosville-route",
+      "sources": ["src/app/pharosville/**", "public/pharosville/assets/**", "scripts/pharosville/**", "tests/visual/pharosville.spec.ts"],
+      "docs": ["docs/pharosville-page.md", "agents/pharosville/CURRENT.md", "agents/pharosville/CHANGE_CHECKLIST.md", "agents/pharosville/ASSET_PIPELINE.md", "agents/pharosville/TESTING.md"],
+      "notes": ["Update the verified route doc for behavior changes. Update the agent pack for process, asset-pipeline, handoff, or route-specific testing guidance."]
+    },
+    {
       "name": "frontend-routes",
       "sources": ["src/app/**", "src/components/**", "src/hooks/**", "src/lib/page-metadata.ts", "src/app/sitemap.ts", "src/app/robots.ts"],
       "docs": ["docs/README.md", "docs/architecture.md", "docs/homepage.md", "docs/start-page.md", "docs/stablecoin-detail-page.md", "docs/chains-page.md", "docs/coverage-page.md", "docs/status-dashboard.md"],

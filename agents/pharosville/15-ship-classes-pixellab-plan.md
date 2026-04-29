@@ -1,3 +1,5 @@
+> Status: Implemented historical plan. Current ship class, size, and runtime asset guidance lives in `agents/pharosville/CURRENT.md`, `agents/pharosville/ASSET_PIPELINE.md`, and `src/app/pharosville/systems/ship-visuals.ts`.
+
 # PharosVille Ship Classes + PixelLab Asset Plan
 
 Date: 2026-04-28

@@ -35,7 +35,13 @@ export function WorldToolbar({
   onZoomIn,
   onZoomOut,
 }: WorldToolbarProps) {
-  const entityCount = 1 + world.areas.length + world.docks.length + world.ships.length + world.shipClusters.length + world.graves.length;
+  const entityCount = 1
+    + world.areas.length
+    + world.buildings.length
+    + world.docks.length
+    + world.ships.length
+    + world.shipClusters.length
+    + world.graves.length;
 
   return (
     <div role="toolbar" aria-labelledby={headingId} data-testid="pharosville-world-toolbar">

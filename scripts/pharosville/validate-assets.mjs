@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, normalize, relative, resolve, sep } from "node:path";
 
 const repoRoot = process.cwd();
@@ -13,6 +14,8 @@ const allowedCategories = new Set(["terrain", "landmark", "dock", "ship", "prop"
 const allowedPriorities = new Set(["critical", "deferred"]);
 const hexColorPattern = /^#[0-9a-f]{6}$/i;
 const assetIdPattern = /^(building|dock|landmark|overlay|prop|ship|terrain)\.[a-z0-9-]+$/;
+const pharosVilleSourceExtensionPattern = /\.(?:ts|tsx)$/;
+const pharosVilleTestFilePattern = /(?:^|\/)(?:__tests__|tests?)\/|\.test\.(?:ts|tsx)$/;
 
 const manifestText = readFileSync(manifestPath, "utf8");
 const manifest = JSON.parse(manifestText);
@@ -223,11 +226,10 @@ function validateReferencedAssetIds(manifestIds) {
 
   add("landmark.lighthouse", "world renderer lighthouse");
   add("prop.tombstone", "world renderer graves");
-  for (const id of assetIdsInSource("renderer/world-canvas.ts")) add(id, "renderer/world-canvas.ts");
-  for (const id of assetIdsInSource("renderer/hit-testing.ts")) add(id, "renderer/hit-testing.ts");
-  for (const id of assetIdsInSource("systems/chain-docks.ts")) add(id, "systems/chain-docks.ts");
-  for (const id of assetIdsInSource("systems/data-buildings.ts")) add(id, "systems/data-buildings.ts");
-  for (const hull of shipHullsInSource("systems/ship-visuals.ts")) add(`ship.${hull}`, "systems/ship-visuals.ts");
+  for (const relativePath of pharosVilleSourceFiles()) {
+    for (const id of assetIdsInSource(relativePath)) add(id, relativePath);
+    for (const hull of shipHullsInSource(relativePath)) add(`ship.${hull}`, relativePath);
+  }
 
   for (const [id, sources] of referencedIds) {
     if (!manifestIds.has(id)) {
@@ -238,11 +240,21 @@ function validateReferencedAssetIds(manifestIds) {
 
 function assetIdsInSource(relativePath) {
   const source = readFileSync(join(pharosVilleSrcRoot, relativePath), "utf8");
-  return [...source.matchAll(/"(building|dock|landmark|overlay|prop|ship|terrain)\.[a-z0-9-]+"/g)]
-    .map((match) => match[0].slice(1, -1));
+  return [...source.matchAll(/(?:["'`])((?:building|dock|landmark|overlay|prop|ship|terrain)\.[a-z0-9-]+)(?:["'`])/g)]
+    .map((match) => match[1]);
 }
 
 function shipHullsInSource(relativePath) {
   const source = readFileSync(join(pharosVilleSrcRoot, relativePath), "utf8");
-  return [...source.matchAll(/hull:\s*"([a-z0-9-]+)"/g)].map((match) => match[1]);
+  return [...source.matchAll(/hull:\s*["'`]([a-z0-9-]+)["'`]/g)].map((match) => match[1]);
+}
+
+function pharosVilleSourceFiles() {
+  return execFileSync("git", ["ls-files", "src/app/pharosville"], { encoding: "utf8" })
+    .split("\n")
+    .filter((file) => file.startsWith("src/app/pharosville/"))
+    .filter((file) => existsSync(file))
+    .filter((file) => pharosVilleSourceExtensionPattern.test(file) && !pharosVilleTestFilePattern.test(file))
+    .map((file) => relative(pharosVilleSrcRoot, resolve(repoRoot, file)).split(sep).join("/"))
+    .sort();
 }

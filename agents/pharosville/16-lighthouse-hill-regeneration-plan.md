@@ -1,3 +1,5 @@
+> Status: Completed asset history. Current runtime asset truth is `public/pharosville/assets/manifest.json`; current agent guidance lives in `agents/pharosville/CURRENT.md` and `agents/pharosville/ASSET_PIPELINE.md`.
+
 # Lighthouse Hill Regeneration Plan
 
 Date: 2026-04-29

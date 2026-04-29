@@ -701,7 +701,6 @@ function isPharosVilleViewportGatedRequest(url: URL) {
   if (
     url.pathname.startsWith("/pharosville/assets/")
     || url.pathname.startsWith("/logos/")
-    || url.pathname.startsWith("/pharosville/sprites/")
   ) {
     return true;
   }

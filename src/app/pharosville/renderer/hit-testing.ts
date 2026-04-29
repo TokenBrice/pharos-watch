@@ -182,12 +182,16 @@ export function collectHitTargets(input: {
 }
 
 export function hitTest(targets: readonly HitTarget[], point: ScreenPoint): HitTarget | null {
-  return targets
-    .filter((target) => (
+  let bestTarget: HitTarget | null = null;
+  for (const target of targets) {
+    const containsPoint = (
       point.x >= target.rect.x
       && point.x <= target.rect.x + target.rect.width
       && point.y >= target.rect.y
       && point.y <= target.rect.y + target.rect.height
-    ))
-    .toSorted((a, b) => b.priority - a.priority)[0] ?? null;
+    );
+    if (!containsPoint) continue;
+    if (!bestTarget || target.priority > bestTarget.priority) bestTarget = target;
+  }
+  return bestTarget;
 }

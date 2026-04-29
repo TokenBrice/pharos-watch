@@ -1,3 +1,5 @@
+> Status: Superseded historical plan. The current agent source of truth is `agents/pharosville/CURRENT.md`; the live implementation is governed by `src/app/pharosville/systems/chain-docks.ts` and may no longer match this plan's top-six dock target.
+
 # Chain Harbor Docks Plan
 
 Created: 2026-04-28

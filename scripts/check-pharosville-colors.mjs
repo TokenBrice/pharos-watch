@@ -11,13 +11,12 @@ import { existsSync } from "node:fs";
 import { readFileSync } from "node:fs";
 
 const trackedFiles = execFileSync("git", ["ls-files", "src/app/pharosville"], { encoding: "utf8" }).split("\n");
-const files = [
-  "src/app/pharosville/page.tsx",
-  "src/app/pharosville/client.tsx",
-  "src/app/pharosville/desktop-only-fallback.tsx",
-  "src/app/pharosville/pharosville-world.tsx",
-  "src/app/pharosville/pharosville.css",
-].filter((file) => existsSync(file) || trackedFiles.includes(file));
+const sourceExtensionPattern = /\.(?:css|ts|tsx)$/;
+const testFilePattern = /(?:^|\/)(?:__tests__|tests?)\/|\.test\.(?:ts|tsx)$/;
+const waiverPattern = /pharosville-color-guard:\s*allow/i;
+const files = trackedFiles
+  .filter((file) => existsSync(file) && sourceExtensionPattern.test(file) && !testFilePattern.test(file))
+  .sort();
 
 const bannedPatterns = [
   { pattern: /checkerboard/i, message: "checkerboard placeholder text is not allowed in production route files" },
@@ -28,7 +27,10 @@ const bannedPatterns = [
 const failures = [];
 
 for (const file of files) {
-  const source = readFileSync(file, "utf8");
+  const source = readFileSync(file, "utf8")
+    .split("\n")
+    .filter((line) => !waiverPattern.test(line))
+    .join("\n");
   for (const { pattern, message } of bannedPatterns) {
     if (pattern.test(source)) failures.push(`${file}: ${message}`);
   }
@@ -39,4 +41,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`PharosVille color check passed for ${files.length} route files.`);
+console.log(`PharosVille color check passed for ${files.length} non-test source files.`);
