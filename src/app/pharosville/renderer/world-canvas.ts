@@ -18,6 +18,7 @@ const TILE_COLORS: Record<string, string> = {
   cliff: "#5a625d",
   "deep-water": "#071225",
   "fog-water": "#24314a",
+  "frozen-water": "#315d72",
   grass: "#617444",
   "harbor-water": "#1f5f68",
   hill: "#76814d",
@@ -501,6 +502,9 @@ function drawWaterTile(
   } else if (value === "storm-water" || value.includes("storm")) {
     drawDiamond(ctx, x, y + 1 * zoom, width * 0.9, height * 0.78, "rgba(6, 12, 22, 0.24)");
     drawDangerStraitTexture(ctx, x, y, zoom, tileX, tileY, motion);
+  } else if (value === "frozen-water") {
+    drawDiamond(ctx, x, y + 1 * zoom, width * 0.9, height * 0.78, "rgba(181, 229, 246, 0.16)");
+    drawNorthFrozeWaterTexture(ctx, x, y, zoom, tileX, tileY, motion);
   } else if (value === "deep-water" || value.includes("deep")) {
     drawDiamond(ctx, x, y + 1 * zoom, width * 0.86, height * 0.76, "rgba(2, 6, 15, 0.24)");
   }
@@ -522,6 +526,34 @@ function drawWaterTile(
     ctx.moveTo(x - 3 * zoom, y + 4 * zoom);
     ctx.lineTo(x + 10 * zoom, y + 7 * zoom);
     ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawNorthFrozeWaterTexture(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  tileX: number,
+  tileY: number,
+  motion: PharosVilleCanvasMotion,
+) {
+  const frost = motion.reducedMotion ? 0.24 : 0.2 + Math.sin(motion.timeSeconds * 0.9 + tileX * 0.31 + tileY * 0.41) * 0.06;
+  ctx.save();
+  ctx.strokeStyle = `rgba(210, 244, 255, ${Math.max(0.14, frost)})`;
+  ctx.lineWidth = Math.max(1, 1.2 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(x - 12 * zoom, y - 3 * zoom);
+  ctx.lineTo(x - 3 * zoom, y + 1 * zoom);
+  ctx.lineTo(x + 8 * zoom, y - 2 * zoom);
+  ctx.moveTo(x - 7 * zoom, y + 6 * zoom);
+  ctx.lineTo(x + 3 * zoom, y + 3 * zoom);
+  ctx.lineTo(x + 12 * zoom, y + 7 * zoom);
+  ctx.stroke();
+  if ((tileX * 3 + tileY * 5) % 4 === 0) {
+    ctx.fillStyle = "rgba(226, 250, 255, 0.3)";
+    ctx.fillRect(Math.round(x - 2 * zoom), Math.round(y), Math.max(1, Math.round(4 * zoom)), Math.max(1, Math.round(2 * zoom)));
   }
   ctx.restore();
 }
@@ -1310,7 +1342,7 @@ function drawThematicBuildings({ assets, camera, ctx, motion, world }: DrawPharo
     const point = tileToScreen(building.tile, camera);
     const drawPoint = { x: point.x, y: point.y + 4 * camera.zoom };
     const asset = assets?.get(building.assetId);
-    const assetScale = camera.zoom * (building.buildingType === "north-froze-pole" ? 0.5 : 0.58) * building.visual.scale;
+    const assetScale = camera.zoom * 0.58 * building.visual.scale;
     drawBuildingStatusGlow(ctx, building, drawPoint, camera.zoom);
     if (asset) {
       drawAsset(ctx, asset, drawPoint.x, drawPoint.y, assetScale);
@@ -1328,20 +1360,11 @@ function drawBuildingStatusGlow(
   zoom: number,
 ) {
   const intensity = Math.max(building.visual.intensity, building.visual.secondaryIntensity, building.visual.tertiaryIntensity);
-  const pole = building.buildingType === "north-froze-pole";
   ctx.save();
   ctx.globalAlpha = 0.16 + intensity * 0.22;
   ctx.fillStyle = hexToRgba(building.visual.accent, 0.7);
   ctx.beginPath();
-  ctx.ellipse(
-    point.x,
-    point.y - (pole ? 7 : 11) * zoom,
-    (pole ? 24 : 46) * zoom,
-    (pole ? 10 : 18) * zoom,
-    -0.04,
-    0,
-    Math.PI * 2,
-  );
+  ctx.ellipse(point.x, point.y - 11 * zoom, 46 * zoom, 18 * zoom, -0.04, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
@@ -1352,10 +1375,6 @@ function drawFallbackDataBuilding(
   point: ScreenPoint,
   zoom: number,
 ) {
-  if (building.buildingType === "north-froze-pole") {
-    drawFallbackNorthFrozePole(ctx, building, point, zoom);
-    return;
-  }
   ctx.save();
   ctx.translate(point.x, point.y);
   ctx.scale(zoom, zoom);
@@ -1373,35 +1392,6 @@ function drawFallbackDataBuilding(
   ctx.restore();
 }
 
-function drawFallbackNorthFrozePole(
-  ctx: CanvasRenderingContext2D,
-  building: PharosVilleWorld["buildings"][number],
-  point: ScreenPoint,
-  zoom: number,
-) {
-  ctx.save();
-  ctx.translate(point.x, point.y);
-  ctx.scale(zoom, zoom);
-  ctx.fillStyle = "rgba(8, 11, 12, 0.3)";
-  ctx.beginPath();
-  ctx.ellipse(0, 2, 19, 7, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#d8f1ff";
-  ctx.beginPath();
-  ctx.ellipse(0, -2, 17, 6, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#92c6df";
-  ctx.fillRect(-2, -57, 4, 54);
-  ctx.fillStyle = building.visual.accent;
-  ctx.fillRect(-6, -63, 12, 7);
-  ctx.fillStyle = "#d8f6ff";
-  ctx.fillRect(-4, -69, 8, 7);
-  ctx.fillStyle = "#46515c";
-  ctx.fillRect(-9, -6, 5, 8);
-  ctx.fillRect(6, -7, 5, 9);
-  ctx.restore();
-}
-
 function drawBuildingProceduralEffects(
   ctx: CanvasRenderingContext2D,
   building: PharosVilleWorld["buildings"][number],
@@ -1412,8 +1402,6 @@ function drawBuildingProceduralEffects(
   const time = motion.reducedMotion ? 0 : motion.timeSeconds;
   if (building.buildingType === "mint-burn-foundry") {
     drawFoundryEffects(ctx, building, point, zoom, time, motion.reducedMotion);
-  } else if (building.buildingType === "north-froze-pole") {
-    drawNorthFrozePoleEffects(ctx, building, point, zoom, time);
   } else if (building.buildingType === "exit-route-gatehouse") {
     drawGatehouseEffects(ctx, building, point, zoom, time, motion.reducedMotion);
   } else if (building.buildingType === "yield-orchard-moonwell") {
@@ -1469,62 +1457,6 @@ function drawFoundryEffects(
     ctx.fillStyle = `rgba(122, 126, 118, ${0.2 * (1 - phase) + 0.06})`;
     ctx.beginPath();
     ctx.ellipse(-28 - phase * 8 + Math.sin(index) * 3, -72 - phase * 29, 6 + phase * 5, 4 + phase * 3, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-function drawNorthFrozePoleEffects(
-  ctx: CanvasRenderingContext2D,
-  building: PharosVilleWorld["buildings"][number],
-  point: ScreenPoint,
-  zoom: number,
-  time: number,
-) {
-  const frost = building.visual.intensity;
-  const chains = building.visual.secondaryIntensity;
-  const lantern = building.visual.tertiaryIntensity;
-  ctx.save();
-  ctx.translate(point.x, point.y);
-  ctx.scale(zoom, zoom);
-
-  for (let index = 0; index < 3; index += 1) {
-    const phase = (time * 0.18 + index * 0.28) % 1;
-    ctx.strokeStyle = `rgba(168, 222, 255, ${(0.25 + frost * 0.35) * (1 - phase * 0.5)})`;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.ellipse(
-      0,
-      -8,
-      (13 + index * 5 + phase * 6) * (0.55 + frost),
-      (5 + index * 2 + phase * 2) * (0.55 + frost),
-      -0.06,
-      0,
-      Math.PI * 2,
-    );
-    ctx.stroke();
-  }
-
-  ctx.strokeStyle = `rgba(205, 231, 245, ${0.28 + chains * 0.52})`;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(-9, -19);
-  ctx.lineTo(-2, -10);
-  ctx.lineTo(8, -17);
-  ctx.stroke();
-
-  ctx.fillStyle = `rgba(132, 213, 255, ${0.24 + lantern * 0.48})`;
-  ctx.beginPath();
-  ctx.ellipse(0, -57, 13 + lantern * 5, 10 + lantern * 4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#caefff";
-  ctx.fillRect(-3, -60, 6, 6);
-
-  for (let index = 0; index < 4; index += 1) {
-    const phase = (time * 0.1 + index * 0.23) % 1;
-    ctx.fillStyle = `rgba(210, 236, 250, ${0.12 + frost * 0.22})`;
-    ctx.beginPath();
-    ctx.ellipse(-18 + index * 12 + phase * 3, -3 - phase * 5, 8, 3, 0, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.restore();
@@ -1702,19 +1634,17 @@ function drawBuildingDataFog(
   time: number,
 ) {
   if (building.visual.dataFogIntensity <= 0) return;
-  const pole = building.buildingType === "north-froze-pole";
-  const count = pole ? 2 : 3;
   ctx.save();
   ctx.globalAlpha = building.visual.dataFogIntensity;
   ctx.fillStyle = "rgba(193, 207, 203, 0.24)";
-  for (let index = 0; index < count; index += 1) {
+  for (let index = 0; index < 3; index += 1) {
     const phase = (time * 0.08 + index * 0.3) % 1;
     ctx.beginPath();
     ctx.ellipse(
-      point.x - (pole ? 16 : 32) * zoom + index * (pole ? 19 : 31) * zoom + phase * (pole ? 6 : 10) * zoom,
-      point.y - (pole ? 8 + index * 4 : 13 + index * 4) * zoom,
-      (pole ? 16 : 30) * zoom,
-      (pole ? 5 : 8) * zoom,
+      point.x - 32 * zoom + index * 31 * zoom + phase * 10 * zoom,
+      point.y - (13 + index * 4) * zoom,
+      30 * zoom,
+      8 * zoom,
       -0.08,
       0,
       Math.PI * 2,
@@ -1818,7 +1748,8 @@ function dockHealthColor(healthBand: PharosVilleWorld["docks"][number]["healthBa
 function drawAreaSigns({ camera, ctx, world }: DrawPharosVilleInput) {
   for (const area of world.areas) {
     const p = tileToScreen(area.tile, camera);
-    drawWaterAreaPost(ctx, p.x, p.y, area.label, area.count ?? null, camera.zoom, area.band ? dewsAreaColor(area.band) : "#d8b56a");
+    const accent = area.visual?.accent ?? (area.band ? dewsAreaColor(area.band) : "#d8b56a");
+    drawWaterAreaPost(ctx, p.x, p.y, area.label, area.count ?? null, camera.zoom, accent);
   }
 }
 

@@ -18,13 +18,14 @@ type SelectableEntity =
   | PharosVilleWorld["docks"][number]
   | PharosVilleWorld["ships"][number]
   | PharosVilleWorld["shipClusters"][number]
+  | PharosVilleWorld["areas"][number]
   | PharosVilleWorld["graves"][number]
   | PharosVilleWorld["buildings"][number];
 
 function targetSize(entity: SelectableEntity): { height: number; width: number; yOffset: number } {
   if (entity.kind === "lighthouse") return { height: 190, width: 96, yOffset: -82 };
   if (entity.kind === "dock") return { height: 38, width: 96, yOffset: 0 };
-  if (entity.kind === "building" && entity.buildingType === "north-froze-pole") return { height: 74, width: 52, yOffset: -30 };
+  if (entity.kind === "area") return { height: 42, width: 90, yOffset: -22 };
   if (entity.kind === "building") return { height: 88, width: 104, yOffset: -34 };
   if (entity.kind === "ship") return { height: 48, width: 56, yOffset: -16 };
   if (entity.kind === "ship-cluster") return { height: 48, width: 48, yOffset: -12 };
@@ -60,7 +61,7 @@ function assetDrawPoint(input: {
     scale *= dockRenderScale(entity.size);
   } else if (entity.kind === "building") {
     y += 4 * camera.zoom;
-    scale *= (entity.buildingType === "north-froze-pole" ? 0.5 : 0.58) * entity.visual.scale;
+    scale *= 0.58 * entity.visual.scale;
   } else if (entity.kind === "ship") {
     y += 12 * camera.zoom;
     scale *= entity.visual.scale * 0.7;
@@ -127,6 +128,7 @@ function targetPriority(entity: SelectableEntity, selectedDetailId: string | nul
   if (entity.kind === "building") priority += 400;
   if (entity.kind === "dock") priority += 350;
   if (entity.kind === "ship-cluster") priority += 300;
+  if (entity.kind === "area") priority += 250;
   priority += entity.tile.x + entity.tile.y;
   return priority;
 }
@@ -144,6 +146,7 @@ export function collectHitTargets(input: {
     ...input.world.docks,
     ...input.world.ships,
     ...input.world.shipClusters,
+    ...input.world.areas,
     ...input.world.graves,
     ...input.world.buildings,
   ];
