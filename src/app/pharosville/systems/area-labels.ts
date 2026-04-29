@@ -61,8 +61,8 @@ const AREA_LABEL_PLACEMENTS_BY_BAND: Partial<Record<DewsAreaBand, AreaLabelPlace
   },
   DANGER: {
     align: "center",
-    dx: -3.2,
-    dy: -2.1,
+    dx: -0.8,
+    dy: 1.9,
     hitboxHeight: 32,
     maxWidth: 116,
     rotation: -0.18,

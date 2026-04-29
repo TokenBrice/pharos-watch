@@ -56,11 +56,13 @@ export function paletteRgba(key: HarborPaletteKey, alpha: number): string {
 export type WaterTextureKind =
   | "alert"
   | "brackish"
+  | "calm"
   | "deep"
   | "fog"
   | "frozen"
   | "harbor"
   | "storm"
+  | "watch"
   | "warning"
   | "water";
 
@@ -86,6 +88,13 @@ export const WATER_TERRAIN_STYLES = {
     inner: "rgba(81, 100, 64, 0.34)",
     texture: "brackish",
     wave: "rgba(169, 190, 146, 0.2)",
+  },
+  "calm-water": {
+    accent: "rgba(181, 231, 214, 0.24)",
+    base: "#1f7a70",
+    inner: "rgba(90, 176, 153, 0.24)",
+    texture: "calm",
+    wave: "rgba(206, 241, 228, 0.18)",
   },
   "deep-water": {
     accent: "rgba(98, 126, 158, 0.1)",
@@ -121,6 +130,13 @@ export const WATER_TERRAIN_STYLES = {
     inner: "rgba(3, 8, 17, 0.34)",
     texture: "storm",
     wave: "rgba(224, 236, 226, 0.22)",
+  },
+  "watch-water": {
+    accent: "rgba(154, 205, 226, 0.26)",
+    base: "#28618f",
+    inner: "rgba(79, 135, 168, 0.28)",
+    texture: "watch",
+    wave: "rgba(186, 225, 236, 0.2)",
   },
   "warning-water": {
     accent: "rgba(219, 177, 104, 0.34)",

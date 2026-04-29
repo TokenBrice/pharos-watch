@@ -50,7 +50,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       id: "cue.water.semantic-terrain",
       target: { kind: "area" },
       primaryChannels: ["color", "shape", "motion"],
-      visual: "printed cartographic water labels over calm harbor water, brackish evidence fog, alert current, warning shoals, storm strait, and frozen-water texture",
+      visual: "printed cartographic water labels over calm DEWS anchorage, watch breakwater chop, brackish evidence fog, alert current, warning shoals, storm strait, and frozen-water texture",
       sourceField: "stress.signals[], pegSummary.coins[], blacklistSummary.stats",
       questionAnswered: "Which named water areas encode calm, stale-evidence, alert, warning, danger, or freeze-tracker conditions?",
       failureState: "generic water texture with DOM area detail still available",

@@ -14,8 +14,11 @@ import {
   riskWaterAreaForPlacement,
   waterZoneForPlacement,
 } from "./risk-water-areas";
-import { isWaterTileKind, terrainKindAt } from "./world-layout";
+import { tileToIso } from "./projection";
+import { PHAROSVILLE_MAP_HEIGHT, PHAROSVILLE_MAP_WIDTH, isWaterTileKind, terrainKindAt, tileKindAt } from "./world-layout";
 import type { DewsAreaBand } from "./world-types";
+
+const WEST_TO_EAST_DEWS_BANDS: DewsAreaBand[] = ["CALM", "WATCH", "ALERT", "WARNING", "DANGER"];
 
 describe("risk water areas", () => {
   it("defines one source of truth for every ship risk placement", () => {
@@ -56,7 +59,33 @@ describe("risk water areas", () => {
       expect(DEWS_AREA_LABELS[band]).toBe(expectedLabels[band]);
       expect(AREA_LABEL_TILES[band]).toBe(area.labelTile);
       expect(DEWS_AREA_WATER_STYLE[band]).toBe(area.waterStyle);
-      expect(isWaterTileKind(terrainKindAt(area.labelTile.x, area.labelTile.y))).toBe(true);
+      expect(terrainKindAt(area.labelTile.x, area.labelTile.y)).toBe(area.terrain);
+    }
+  });
+
+  it("orders DEWS sea zones left-to-right and upward in the northern water block", () => {
+    let previousIso: { x: number; y: number } | null = null;
+    for (const band of WEST_TO_EAST_DEWS_BANDS) {
+      const area = RISK_WATER_AREAS[DEWS_AREA_PLACEMENTS[band]];
+      const iso = tileToIso(area.labelTile);
+
+      expect(area.labelTile.x + area.labelTile.y).toBeLessThanOrEqual(50);
+      if (previousIso) {
+        expect(iso.x).toBeGreaterThan(previousIso.x);
+        expect(iso.y).toBeLessThan(previousIso.y);
+      }
+      previousIso = iso;
+    }
+  });
+
+  it("keeps every DEWS zone in the same continuous northern sea component", () => {
+    const component = connectedWaterTileKeys(RISK_WATER_AREAS[DEWS_AREA_PLACEMENTS.CALM].labelTile);
+
+    for (const band of WEST_TO_EAST_DEWS_BANDS) {
+      const area = RISK_WATER_AREAS[DEWS_AREA_PLACEMENTS[band]];
+
+      expect(component.has(tileKey(area.labelTile))).toBe(true);
+      expect(component.has(tileKey(area.regionTile))).toBe(true);
     }
   });
 
@@ -69,11 +98,47 @@ describe("risk water areas", () => {
         expect(area.validTerrains).toContain(area.terrain);
       }
       for (const anchor of area.shipAnchors) {
-        expect(
-          isWaterTileKind(terrainKindAt(anchor.x, anchor.y)),
-          `${placement} anchor ${anchor.x}.${anchor.y} should remain water`,
-        ).toBe(true);
+        const terrain = terrainKindAt(anchor.x, anchor.y);
+        if (area.validTerrains === "any-water") {
+          expect(
+            isWaterTileKind(terrain),
+            `${placement} anchor ${anchor.x}.${anchor.y} should remain water`,
+          ).toBe(true);
+        } else {
+          expect(
+            area.validTerrains,
+            `${placement} anchor ${anchor.x}.${anchor.y} should stay in ${area.validTerrains.join(", ")}`,
+          ).toContain(terrain);
+        }
       }
     }
   });
 });
+
+function connectedWaterTileKeys(start: { x: number; y: number }): Set<string> {
+  const visited = new Set<string>();
+  const queue = [start];
+
+  while (queue.length > 0) {
+    const tile = queue.shift();
+    if (!tile) continue;
+    if (tile.x < 0 || tile.x >= PHAROSVILLE_MAP_WIDTH || tile.y < 0 || tile.y >= PHAROSVILLE_MAP_HEIGHT) continue;
+    if (!isWaterTileKind(tileKindAt(tile.x, tile.y))) continue;
+    const key = tileKey(tile);
+    if (visited.has(key)) continue;
+
+    visited.add(key);
+    queue.push(
+      { x: tile.x + 1, y: tile.y },
+      { x: tile.x - 1, y: tile.y },
+      { x: tile.x, y: tile.y + 1 },
+      { x: tile.x, y: tile.y - 1 },
+    );
+  }
+
+  return visited;
+}
+
+function tileKey(tile: { x: number; y: number }): string {
+  return `${tile.x}.${tile.y}`;
+}

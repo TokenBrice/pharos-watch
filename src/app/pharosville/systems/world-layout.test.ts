@@ -47,8 +47,12 @@ describe("buildPharosVilleMap", () => {
     expect(boundsCenter.x).toBeCloseTo(CIVIC_CORE_CENTER.x + 0.5, 1);
     expect(boundsCenter.y).toBeCloseTo(CIVIC_CORE_CENTER.y, 1);
     const counts = terrainCounts(map.tiles);
-    expect((counts.get("deep-water") ?? 0) / map.tiles.length).toBeLessThanOrEqual(0.12);
+    expect((counts.get("deep-water") ?? 0) / map.tiles.length).toBeLessThanOrEqual(0.125);
     expect((counts.get("deep-water") ?? 0) / map.tiles.length).toBeGreaterThanOrEqual(0.08);
+    expect(counts.get("calm-water") ?? 0).toBeGreaterThan(counts.get("watch-water") ?? 0);
+    expect(counts.get("watch-water") ?? 0).toBeGreaterThan(counts.get("alert-water") ?? 0);
+    expect(counts.get("alert-water") ?? 0).toBeGreaterThan(counts.get("warning-water") ?? 0);
+    expect(counts.get("warning-water") ?? 0).toBeGreaterThan(counts.get("storm-water") ?? 0);
     expect(map.tiles.every((tile) => tile.terrain)).toBe(true);
     const centroid = landCentroid(map.tiles);
     expect(Math.abs(centroid.x - CIVIC_CORE_CENTER.x)).toBeLessThan(1.25);
@@ -56,7 +60,9 @@ describe("buildPharosVilleMap", () => {
     expect([...new Set(map.tiles.map((tile) => tile.terrain))]).toEqual(expect.arrayContaining([
       "alert-water",
       "brackish-water",
+      "calm-water",
       "harbor-water",
+      "watch-water",
       "warning-water",
       "storm-water",
       "beach",
@@ -103,10 +109,13 @@ describe("buildPharosVilleMap", () => {
 
   it("keeps risk and fog anchors on matching water terrain", () => {
     expect(Object.values(REGION_TILES).every((tile) => isWaterTileKind(tileKindAt(tile.x, tile.y)))).toBe(true);
+    expect(terrainKindAt(REGION_TILES["safe-harbor"].x, REGION_TILES["safe-harbor"].y)).toBe("calm-water");
+    expect(terrainKindAt(REGION_TILES["breakwater-edge"].x, REGION_TILES["breakwater-edge"].y)).toBe("watch-water");
     expect(terrainKindAt(REGION_TILES["harbor-mouth-watch"].x, REGION_TILES["harbor-mouth-watch"].y)).toBe("alert-water");
     expect(terrainKindAt(REGION_TILES["outer-rough-water"].x, REGION_TILES["outer-rough-water"].y)).toBe("warning-water");
     expect(terrainKindAt(REGION_TILES["storm-shelf"].x, REGION_TILES["storm-shelf"].y)).toBe("storm-water");
     expect(terrainKindAt(REGION_TILES["data-fog"].x, REGION_TILES["data-fog"].y)).toBe("brackish-water");
+    expect(terrainKindAt(REGION_TILES["ledger-mooring"].x, REGION_TILES["ledger-mooring"].y)).toBe("calm-water");
   });
 
   it("keeps dock slots on coastline edges with water access", () => {

@@ -166,7 +166,7 @@ describe("motion", () => {
 
   it("routes over semantic water terrain only", () => {
     const map = buildPharosVilleMap();
-    const route = buildShipWaterRoute({ from: { x: 52, y: 52 }, to: { x: 40, y: 44 }, map });
+    const route = buildShipWaterRoute({ from: { x: 42, y: 0 }, to: { x: 32, y: 12 }, map });
 
     expect(route.points.length).toBeGreaterThan(1);
     expect(terrainKindInMap(map, route.points[0]!)).toBe("storm-water");

@@ -128,7 +128,7 @@ describe("buildPharosVilleWorld", () => {
     ]));
   });
 
-  it("spreads safe ships across multiple water approaches", () => {
+  it("spreads safe ships across the northern calm anchorage", () => {
     const ids = Array.from(ACTIVE_IDS).slice(0, 36);
     const world = buildPharosVilleWorld({
       stablecoins: {
@@ -149,12 +149,13 @@ describe("buildPharosVilleWorld", () => {
       cemeteryEntries: [],
       freshness: {},
     });
-    const quadrants = new Set(world.ships.map((ship) => `${ship.riskTile.x < 32 ? "W" : "E"}-${ship.riskTile.y < 32 ? "N" : "S"}`));
-    const northwestCount = world.ships.filter((ship) => ship.riskTile.x < 32 && ship.riskTile.y < 32).length;
+    const xs = world.ships.map((ship) => ship.riskTile.x);
+    const ys = world.ships.map((ship) => ship.riskTile.y);
 
     expect(world.ships.length).toBeGreaterThan(24);
-    expect(quadrants.size).toBeGreaterThanOrEqual(3);
-    expect(northwestCount).toBeLessThan(world.ships.length * 0.55);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThanOrEqual(12);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThanOrEqual(10);
+    expect(world.ships.every((ship) => terrainKindAt(ship.riskTile.x, ship.riskTile.y) === "calm-water")).toBe(true);
   });
 
   it("keeps every authored ship anchor on water after island layout changes", () => {
@@ -256,12 +257,12 @@ describe("buildPharosVilleWorld", () => {
     expect(alertArea?.label).toBe("Alert Channel");
     expect(alertArea?.riskPlacement).toBe("harbor-mouth-watch");
     expect(alertArea?.tile ? terrainKindAt(alertArea.tile.x, alertArea.tile.y) : null).toBe("alert-water");
-    expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 49, y: 46 });
-    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 55, y: 53 });
+    expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 37, y: 6 });
+    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 42, y: 0 });
     expect(world.areas.find((area) => area.id === "area.north-froze-pole")?.tile).toEqual({ x: 0, y: 0 });
     expect(terrainKindAt(0, 0)).toBe("frozen-water");
-    expect(terrainKindAt(49, 46)).toBe("warning-water");
-    expect(terrainKindAt(55, 53)).toBe("storm-water");
+    expect(terrainKindAt(37, 6)).toBe("warning-water");
+    expect(terrainKindAt(42, 0)).toBe("storm-water");
     expect(usdc?.riskPlacement).toBe("harbor-mouth-watch");
     expect(usdc?.riskZone).toBe("muddy");
   });

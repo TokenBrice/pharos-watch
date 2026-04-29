@@ -8,7 +8,9 @@ export type TerrainKind =
   | TileKind
   | "alert-water"
   | "brackish-water"
+  | "calm-water"
   | "harbor-water"
+  | "watch-water"
   | "warning-water"
   | "storm-water"
   | "fog-water"

@@ -65,7 +65,9 @@ const WATER_TERRAIN_KINDS = new Set<TerrainKind>([
   "water",
   "alert-water",
   "brackish-water",
+  "calm-water",
   "harbor-water",
+  "watch-water",
   "warning-water",
   "storm-water",
   "fog-water",
@@ -116,8 +118,9 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
     if (isDangerStrait(x, y)) return "storm-water";
     if (isWarningShoals(x, y)) return "warning-water";
     if (isAlertChannel(x, y)) return "alert-water";
-    if (isStormShelf(x, y)) return "storm-water";
+    if (isWatchBreakwater(x, y)) return "watch-water";
     if (isDataFog(x, y)) return "brackish-water";
+    if (isCalmAnchorage(x, y)) return "calm-water";
     if (isDeepSeaShelf(x, y)) return "deep-water";
     return "water";
   }
@@ -172,21 +175,39 @@ function harborApproachValue(x: number, y: number): number {
 }
 
 function isAlertChannel(x: number, y: number): boolean {
-  return ellipseValue(x, y, 40.4, 45.1, 6.8, 3.5) < 1
-    && x >= 36
-    && y >= 40;
+  return ellipseValue(x, y, 32.0, 13.4, 5.6, 4.4) < 1
+    && x >= 27
+    && x <= 38
+    && y >= 8
+    && y <= 20;
 }
 
 function isWarningShoals(x: number, y: number): boolean {
-  return ellipseValue(x, y, 49.4, 46.6, 7.4, 5.4) < 1
-    && x >= 43
-    && y >= 40;
+  return ellipseValue(x, y, 37.0, 6.6, 5.0, 4.0) < 1
+    && x >= 32
+    && x <= 42
+    && y <= 13;
 }
 
 function isDangerStrait(x: number, y: number): boolean {
-  return ellipseValue(x, y, 52.0, 51.2, 5.4, 4.8) < 1
-    && x >= 47
-    && y >= 44;
+  return ellipseValue(x, y, 41.0, 2.0, 4.4, 2.8) < 1
+    && x >= 36
+    && y <= 8;
+}
+
+function isWatchBreakwater(x: number, y: number): boolean {
+  return ellipseValue(x, y, 25.4, 21.8, 7.0, 5.2) < 1
+    && x >= 19
+    && x <= 33
+    && y >= 15
+    && y <= 29;
+}
+
+function isCalmAnchorage(x: number, y: number): boolean {
+  return ellipseValue(x, y, 16.5, 31.0, 11.4, 8.2) < 1
+    && x <= 29
+    && y >= 22
+    && y <= 40;
 }
 
 export function isNorthFrozePole(x: number, y: number): boolean {
@@ -217,12 +238,11 @@ function isDeepSeaShelf(x: number, y: number): boolean {
   return false;
 }
 
-function isStormShelf(x: number, y: number): boolean {
-  return isDangerStrait(x, y);
-}
-
 function isDataFog(x: number, y: number): boolean {
-  return ellipseValue(x, y, 10.5, 16.4, 10.8, 7.2) < 1;
+  return ellipseValue(x, y, 8.0, 17.6, 5.4, 5.0) < 1
+    && x <= 15
+    && y >= 12
+    && y <= 24;
 }
 
 function isRoadTile(x: number, y: number): boolean {
