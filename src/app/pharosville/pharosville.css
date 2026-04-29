@@ -117,7 +117,7 @@
   --pv-border-dark: #2b170e;
   --pv-ruby: #b6422e;
   position: relative;
-  min-height: calc(100svh - 1.5rem);
+  min-height: calc(100svh - 3px);
   overflow: hidden;
   background: #070609;
   font-family: Georgia, "Times New Roman", serif;
@@ -165,7 +165,7 @@
 .pharosville-canvas {
   display: block;
   width: 100%;
-  height: calc(100svh - 1.5rem);
+  height: calc(100svh - 3px);
   cursor: grab;
   touch-action: none;
 }

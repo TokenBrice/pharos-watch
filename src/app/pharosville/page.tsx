@@ -17,7 +17,7 @@ export const metadata: Metadata = buildPageMetadata({
 
 export default function PharosVillePage() {
   return (
-    <div className="relative left-1/2 w-[100vw] -translate-x-1/2 md:w-[calc(100vw-var(--sidebar-width-expanded))]">
+    <div className="-mx-4 -my-6 md:-my-7 lg:-mx-6">
       <BreadcrumbJsonLd items={[{ name: "Home", url: "/" }, { name: "PharosVille", url: "/pharosville/" }]} />
       <h1 id="pharosville-heading" className="sr-only">PharosVille</h1>
       <SectionErrorBoundary name="PharosVille" supportingText="Refresh the page to retry the PharosVille map.">
