@@ -18,11 +18,13 @@ type SelectableEntity =
   | PharosVilleWorld["docks"][number]
   | PharosVilleWorld["ships"][number]
   | PharosVilleWorld["shipClusters"][number]
-  | PharosVilleWorld["graves"][number];
+  | PharosVilleWorld["graves"][number]
+  | PharosVilleWorld["buildings"][number];
 
 function targetSize(entity: SelectableEntity): { height: number; width: number; yOffset: number } {
   if (entity.kind === "lighthouse") return { height: 190, width: 96, yOffset: -82 };
   if (entity.kind === "dock") return { height: 38, width: 96, yOffset: 0 };
+  if (entity.kind === "building") return { height: 88, width: 104, yOffset: -34 };
   if (entity.kind === "ship") return { height: 48, width: 56, yOffset: -16 };
   if (entity.kind === "ship-cluster") return { height: 48, width: 48, yOffset: -12 };
   return { height: 34 * entity.visual.scale, width: 30 * entity.visual.scale, yOffset: -10 * entity.visual.scale };
@@ -31,6 +33,7 @@ function targetSize(entity: SelectableEntity): { height: number; width: number; 
 function assetIdForEntity(entity: SelectableEntity) {
   if (entity.kind === "lighthouse") return "landmark.lighthouse";
   if (entity.kind === "dock") return entity.assetId;
+  if (entity.kind === "building") return entity.assetId;
   if (entity.kind === "ship") return `ship.${entity.visual.hull}`;
   return null;
 }
@@ -54,6 +57,9 @@ function assetDrawPoint(input: {
     x = draw.x;
     y = draw.y;
     scale *= dockRenderScale(entity.size);
+  } else if (entity.kind === "building") {
+    y += 4 * camera.zoom;
+    scale *= 0.58 * entity.visual.scale;
   } else if (entity.kind === "ship") {
     y += 12 * camera.zoom;
     scale *= entity.visual.scale * 0.7;
@@ -117,6 +123,7 @@ function targetPriority(entity: SelectableEntity, selectedDetailId: string | nul
   if (entity.detailId === hoveredDetailId) priority += 24;
   if (entity.kind === "ship") priority += 500;
   if (entity.kind === "lighthouse") priority += 450;
+  if (entity.kind === "building") priority += 400;
   if (entity.kind === "dock") priority += 350;
   if (entity.kind === "ship-cluster") priority += 300;
   priority += entity.tile.x + entity.tile.y;
@@ -137,6 +144,7 @@ export function collectHitTargets(input: {
     ...input.world.ships,
     ...input.world.shipClusters,
     ...input.world.graves,
+    ...input.world.buildings,
   ];
 
   return entities.map((entity) => {

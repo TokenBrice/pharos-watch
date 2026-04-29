@@ -222,6 +222,7 @@ export function drawPharosVille(input: DrawPharosVilleInput) {
   drawLighthouseHeadland(input);
   drawCemeteryContext(input);
   drawBuildings(input);
+  drawThematicBuildings(input);
   drawDocks(input);
   drawAreaSigns(input);
   drawDecorativeLights(input);
@@ -1299,6 +1300,430 @@ function drawBuildings({ camera, ctx }: DrawPharosVilleInput) {
   }
 }
 
+function drawThematicBuildings({ assets, camera, ctx, motion, world }: DrawPharosVilleInput) {
+  const buildings = [...world.buildings].toSorted((a, b) => (
+    a.tile.x + a.tile.y - (b.tile.x + b.tile.y)
+      || a.tile.y - b.tile.y
+      || a.id.localeCompare(b.id)
+  ));
+  for (const building of buildings) {
+    const point = tileToScreen(building.tile, camera);
+    const drawPoint = { x: point.x, y: point.y + 4 * camera.zoom };
+    const asset = assets?.get(building.assetId);
+    const assetScale = camera.zoom * (building.buildingType === "north-froze-pole" ? 0.5 : 0.58) * building.visual.scale;
+    drawBuildingStatusGlow(ctx, building, drawPoint, camera.zoom);
+    if (asset) {
+      drawAsset(ctx, asset, drawPoint.x, drawPoint.y, assetScale);
+    } else {
+      drawFallbackDataBuilding(ctx, building, drawPoint, camera.zoom);
+    }
+    drawBuildingProceduralEffects(ctx, building, drawPoint, camera.zoom, motion);
+  }
+}
+
+function drawBuildingStatusGlow(
+  ctx: CanvasRenderingContext2D,
+  building: PharosVilleWorld["buildings"][number],
+  point: ScreenPoint,
+  zoom: number,
+) {
+  const intensity = Math.max(building.visual.intensity, building.visual.secondaryIntensity, building.visual.tertiaryIntensity);
+  const pole = building.buildingType === "north-froze-pole";
+  ctx.save();
+  ctx.globalAlpha = 0.16 + intensity * 0.22;
+  ctx.fillStyle = hexToRgba(building.visual.accent, 0.7);
+  ctx.beginPath();
+  ctx.ellipse(
+    point.x,
+    point.y - (pole ? 7 : 11) * zoom,
+    (pole ? 24 : 46) * zoom,
+    (pole ? 10 : 18) * zoom,
+    -0.04,
+    0,
+    Math.PI * 2,
+  );
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawFallbackDataBuilding(
+  ctx: CanvasRenderingContext2D,
+  building: PharosVilleWorld["buildings"][number],
+  point: ScreenPoint,
+  zoom: number,
+) {
+  if (building.buildingType === "north-froze-pole") {
+    drawFallbackNorthFrozePole(ctx, building, point, zoom);
+    return;
+  }
+  ctx.save();
+  ctx.translate(point.x, point.y);
+  ctx.scale(zoom, zoom);
+  ctx.fillStyle = "rgba(8, 11, 12, 0.35)";
+  ctx.beginPath();
+  ctx.ellipse(0, 3, 32, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#d2bf86";
+  roundedRectPath(ctx, -26, -54, 52, 44, 3);
+  ctx.fill();
+  ctx.fillStyle = building.visual.accent;
+  ctx.fillRect(-18, -62, 36, 10);
+  ctx.fillStyle = "#3c2a1d";
+  ctx.fillRect(-7, -21, 14, 21);
+  ctx.restore();
+}
+
+function drawFallbackNorthFrozePole(
+  ctx: CanvasRenderingContext2D,
+  building: PharosVilleWorld["buildings"][number],
+  point: ScreenPoint,
+  zoom: number,
+) {
+  ctx.save();
+  ctx.translate(point.x, point.y);
+  ctx.scale(zoom, zoom);
+  ctx.fillStyle = "rgba(8, 11, 12, 0.3)";
+  ctx.beginPath();
+  ctx.ellipse(0, 2, 19, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#d8f1ff";
+  ctx.beginPath();
+  ctx.ellipse(0, -2, 17, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#92c6df";
+  ctx.fillRect(-2, -57, 4, 54);
+  ctx.fillStyle = building.visual.accent;
+  ctx.fillRect(-6, -63, 12, 7);
+  ctx.fillStyle = "#d8f6ff";
+  ctx.fillRect(-4, -69, 8, 7);
+  ctx.fillStyle = "#46515c";
+  ctx.fillRect(-9, -6, 5, 8);
+  ctx.fillRect(6, -7, 5, 9);
+  ctx.restore();
+}
+
+function drawBuildingProceduralEffects(
+  ctx: CanvasRenderingContext2D,
+  building: PharosVilleWorld["buildings"][number],
+  point: ScreenPoint,
+  zoom: number,
+  motion: PharosVilleCanvasMotion,
+) {
+  const time = motion.reducedMotion ? 0 : motion.timeSeconds;
+  if (building.buildingType === "mint-burn-foundry") {
+    drawFoundryEffects(ctx, building, point, zoom, time, motion.reducedMotion);
+  } else if (building.buildingType === "north-froze-pole") {
+    drawNorthFrozePoleEffects(ctx, building, point, zoom, time);
+  } else if (building.buildingType === "exit-route-gatehouse") {
+    drawGatehouseEffects(ctx, building, point, zoom, time, motion.reducedMotion);
+  } else if (building.buildingType === "yield-orchard-moonwell") {
+    drawYieldOrchardEffects(ctx, building, point, zoom, time, motion.reducedMotion);
+  } else {
+    drawDependencyLoomEffects(ctx, building, point, zoom, time, motion.reducedMotion);
+  }
+  drawBuildingDataFog(ctx, building, point, zoom, time);
+}
+
+function drawFoundryEffects(
+  ctx: CanvasRenderingContext2D,
+  building: PharosVilleWorld["buildings"][number],
+  point: ScreenPoint,
+  zoom: number,
+  time: number,
+  reducedMotion: boolean,
+) {
+  const activity = building.status === "stale" || building.status === "unavailable" ? building.visual.intensity * 0.28 : building.visual.intensity;
+  const mint = building.visual.secondaryIntensity;
+  const burn = building.visual.tertiaryIntensity;
+  ctx.save();
+  ctx.translate(point.x, point.y);
+  ctx.scale(zoom, zoom);
+
+  ctx.fillStyle = `rgba(255, 105, 38, ${0.18 + burn * 0.45})`;
+  ctx.beginPath();
+  ctx.ellipse(21, -43, 17 + burn * 6, 10 + burn * 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = `rgba(255, 202, 85, ${0.16 + mint * 0.34})`;
+  ctx.beginPath();
+  ctx.ellipse(-11, -29, 24 + mint * 8, 8 + mint * 3, -0.15, 0, Math.PI * 2);
+  ctx.fill();
+
+  const thump = reducedMotion ? 0 : Math.max(0, Math.sin(time * (2.5 + activity * 4))) * 3 * activity;
+  ctx.fillStyle = "#51341d";
+  ctx.fillRect(-25, -49 + thump, 20, 5);
+  ctx.fillStyle = "#d8a642";
+  ctx.fillRect(-20, -44 + thump, 10, 11 - thump * 0.6);
+
+  const sparkCount = Math.round(2 + mint * 8);
+  ctx.fillStyle = "#ffe08b";
+  for (let index = 0; index < sparkCount; index += 1) {
+    const phase = reducedMotion ? 0.45 : (time * (0.9 + mint) + index * 0.21) % 1;
+    const x = -5 + index * 4 - phase * 13;
+    const y = -36 - phase * 24 + Math.sin(index * 1.7) * 4;
+    ctx.fillRect(Math.round(x), Math.round(y), 2, 2);
+  }
+
+  const smokeCount = Math.round(2 + activity * 5);
+  for (let index = 0; index < smokeCount; index += 1) {
+    const phase = reducedMotion ? index / Math.max(1, smokeCount) : (time * 0.22 + index * 0.18) % 1;
+    ctx.fillStyle = `rgba(122, 126, 118, ${0.2 * (1 - phase) + 0.06})`;
+    ctx.beginPath();
+    ctx.ellipse(-28 - phase * 8 + Math.sin(index) * 3, -72 - phase * 29, 6 + phase * 5, 4 + phase * 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawNorthFrozePoleEffects(
+  ctx: CanvasRenderingContext2D,
+  building: PharosVilleWorld["buildings"][number],
+  point: ScreenPoint,
+  zoom: number,
+  time: number,
+) {
+  const frost = building.visual.intensity;
+  const chains = building.visual.secondaryIntensity;
+  const lantern = building.visual.tertiaryIntensity;
+  ctx.save();
+  ctx.translate(point.x, point.y);
+  ctx.scale(zoom, zoom);
+
+  for (let index = 0; index < 3; index += 1) {
+    const phase = (time * 0.18 + index * 0.28) % 1;
+    ctx.strokeStyle = `rgba(168, 222, 255, ${(0.25 + frost * 0.35) * (1 - phase * 0.5)})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(
+      0,
+      -8,
+      (13 + index * 5 + phase * 6) * (0.55 + frost),
+      (5 + index * 2 + phase * 2) * (0.55 + frost),
+      -0.06,
+      0,
+      Math.PI * 2,
+    );
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = `rgba(205, 231, 245, ${0.28 + chains * 0.52})`;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-9, -19);
+  ctx.lineTo(-2, -10);
+  ctx.lineTo(8, -17);
+  ctx.stroke();
+
+  ctx.fillStyle = `rgba(132, 213, 255, ${0.24 + lantern * 0.48})`;
+  ctx.beginPath();
+  ctx.ellipse(0, -57, 13 + lantern * 5, 10 + lantern * 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#caefff";
+  ctx.fillRect(-3, -60, 6, 6);
+
+  for (let index = 0; index < 4; index += 1) {
+    const phase = (time * 0.1 + index * 0.23) % 1;
+    ctx.fillStyle = `rgba(210, 236, 250, ${0.12 + frost * 0.22})`;
+    ctx.beginPath();
+    ctx.ellipse(-18 + index * 12 + phase * 3, -3 - phase * 5, 8, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawGatehouseEffects(
+  ctx: CanvasRenderingContext2D,
+  building: PharosVilleWorld["buildings"][number],
+  point: ScreenPoint,
+  zoom: number,
+  time: number,
+  reducedMotion: boolean,
+) {
+  const depth = building.status === "deep-exit" ? 1 : building.status === "thin-exit" ? 0.32 : building.visual.intensity;
+  const wheel = building.status === "stale" || building.status === "unavailable" ? 0.08 : building.visual.secondaryIntensity;
+  const warning = building.status === "concentrated" ? 1 : building.visual.tertiaryIntensity;
+  const angle = reducedMotion ? 0.3 : time * (1 + wheel * 4);
+  ctx.save();
+  ctx.translate(point.x, point.y);
+  ctx.scale(zoom, zoom);
+
+  ctx.fillStyle = `rgba(52, 150, 158, ${0.18 + depth * 0.36})`;
+  ctx.beginPath();
+  ctx.ellipse(0, -16, 42, 13 + depth * 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const opening = building.status === "deep-exit" ? 16 : building.status === "concentrated" ? 8 : building.status === "thin-exit" ? 5 : 1;
+  ctx.strokeStyle = "#4e3824";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(-opening, -43);
+  ctx.lineTo(-24, -20);
+  ctx.moveTo(opening, -43);
+  ctx.lineTo(24, -20);
+  ctx.stroke();
+
+  ctx.save();
+  ctx.translate(-31, -42);
+  ctx.rotate(angle);
+  ctx.strokeStyle = "#6b4a2e";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0, 0, 12, 0, Math.PI * 2);
+  for (let index = 0; index < 6; index += 1) {
+    const spoke = index * Math.PI / 3;
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(spoke) * 12, Math.sin(spoke) * 12);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  const lanternColor = building.status === "concentrated" ? "#f47c56" : building.status === "thin-exit" ? "#e3b95f" : "#8ce4ce";
+  ctx.fillStyle = hexToRgba(lanternColor, 0.24 + warning * 0.28);
+  ctx.beginPath();
+  ctx.arc(31, -52, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = lanternColor;
+  ctx.fillRect(29, -54, 4, 5);
+  ctx.restore();
+}
+
+function drawYieldOrchardEffects(
+  ctx: CanvasRenderingContext2D,
+  building: PharosVilleWorld["buildings"][number],
+  point: ScreenPoint,
+  zoom: number,
+  time: number,
+  reducedMotion: boolean,
+) {
+  const coverage = building.visual.intensity;
+  const sources = building.visual.secondaryIntensity;
+  const warning = building.visual.tertiaryIntensity;
+  const angle = reducedMotion ? 0.4 : time * (0.7 + sources * 2.2);
+  ctx.save();
+  ctx.translate(point.x, point.y);
+  ctx.scale(zoom, zoom);
+
+  ctx.fillStyle = `rgba(107, 209, 157, ${0.18 + coverage * 0.28})`;
+  ctx.beginPath();
+  ctx.arc(16, -39, 18 + coverage * 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#c8f2d3";
+  ctx.fillRect(12, -42, 8, 8);
+
+  ctx.save();
+  ctx.translate(-30, -70);
+  ctx.rotate(angle);
+  ctx.strokeStyle = "#f2e2a4";
+  ctx.lineWidth = 2;
+  for (let index = 0; index < 4; index += 1) {
+    ctx.rotate(Math.PI / 2);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(18, 0);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  const glintCount = Math.round(3 + sources * 7);
+  for (let index = 0; index < glintCount; index += 1) {
+    const phase = reducedMotion ? 0.35 : (time * 0.32 + index * 0.19) % 1;
+    const x = -20 + (index % 5) * 10;
+    const y = -32 - Math.floor(index / 5) * 11;
+    ctx.fillStyle = index % 3 === 0 && warning > 0.25 ? "#e9b45f" : `rgba(245, 229, 122, ${0.2 + phase * 0.45})`;
+    ctx.fillRect(Math.round(x), Math.round(y - phase * 3), 2, 2);
+  }
+
+  ctx.strokeStyle = `rgba(128, 201, 180, ${0.16 + coverage * 0.3})`;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(12, -23);
+  ctx.quadraticCurveTo(0, -12, -28, -17);
+  ctx.moveTo(21, -24);
+  ctx.quadraticCurveTo(37, -13, 44, -25);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawDependencyLoomEffects(
+  ctx: CanvasRenderingContext2D,
+  building: PharosVilleWorld["buildings"][number],
+  point: ScreenPoint,
+  zoom: number,
+  time: number,
+  reducedMotion: boolean,
+) {
+  const edgeActivity = building.visual.intensity;
+  const concentration = building.visual.secondaryIntensity;
+  const dependents = building.visual.tertiaryIntensity;
+  const angle = reducedMotion ? 0.2 : time * (0.45 + edgeActivity * 1.5);
+  ctx.save();
+  ctx.translate(point.x, point.y);
+  ctx.scale(zoom, zoom);
+
+  for (const gear of [{ x: -24, y: -51, r: 12, dir: 1 }, { x: 22, y: -38, r: 10, dir: -1 }]) {
+    ctx.save();
+    ctx.translate(gear.x, gear.y);
+    ctx.rotate(angle * gear.dir);
+    ctx.strokeStyle = `rgba(224, 195, 145, ${0.35 + edgeActivity * 0.38})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, gear.r, 0, Math.PI * 2);
+    for (let index = 0; index < 8; index += 1) {
+      const spoke = index * Math.PI / 4;
+      ctx.moveTo(Math.cos(spoke) * 4, Math.sin(spoke) * 4);
+      ctx.lineTo(Math.cos(spoke) * gear.r, Math.sin(spoke) * gear.r);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  const threadAlpha = 0.2 + Math.max(edgeActivity, concentration, dependents) * 0.42;
+  ctx.strokeStyle = `rgba(194, 160, 255, ${threadAlpha})`;
+  ctx.lineWidth = 1.5;
+  for (let index = 0; index < 5; index += 1) {
+    const offset = index * 7;
+    ctx.beginPath();
+    ctx.moveTo(-35 + offset, -21 - index);
+    ctx.quadraticCurveTo(-6 + offset * 0.25, -54 - concentration * 16, 33 - offset * 0.15, -31 - index * 2);
+    ctx.stroke();
+    const phase = reducedMotion ? 0.5 : (time * (0.22 + edgeActivity * 0.28) + index * 0.17) % 1;
+    ctx.fillStyle = `rgba(231, 220, 255, ${0.24 + dependents * 0.42})`;
+    ctx.beginPath();
+    ctx.arc(-35 + offset + phase * 58, -21 - index - Math.sin(phase * Math.PI) * (18 + concentration * 10), 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawBuildingDataFog(
+  ctx: CanvasRenderingContext2D,
+  building: PharosVilleWorld["buildings"][number],
+  point: ScreenPoint,
+  zoom: number,
+  time: number,
+) {
+  if (building.visual.dataFogIntensity <= 0) return;
+  const pole = building.buildingType === "north-froze-pole";
+  const count = pole ? 2 : 3;
+  ctx.save();
+  ctx.globalAlpha = building.visual.dataFogIntensity;
+  ctx.fillStyle = "rgba(193, 207, 203, 0.24)";
+  for (let index = 0; index < count; index += 1) {
+    const phase = (time * 0.08 + index * 0.3) % 1;
+    ctx.beginPath();
+    ctx.ellipse(
+      point.x - (pole ? 16 : 32) * zoom + index * (pole ? 19 : 31) * zoom + phase * (pole ? 6 : 10) * zoom,
+      point.y - (pole ? 8 + index * 4 : 13 + index * 4) * zoom,
+      (pole ? 16 : 30) * zoom,
+      (pole ? 5 : 8) * zoom,
+      -0.08,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function drawDecorativeLights({ camera, ctx, motion }: DrawPharosVilleInput) {
   const time = motion.reducedMotion ? 0 : motion.timeSeconds;
   for (const light of VILLAGE_LIGHTS) {
@@ -1321,7 +1746,7 @@ function drawLamp(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: num
   ctx.restore();
 }
 
-function drawDocks({ assets, camera, ctx, world }: DrawPharosVilleInput) {
+function drawDocks({ assets, camera, ctx, hoveredTarget, selectedTarget, world }: DrawPharosVilleInput) {
   ctx.strokeStyle = "#6d4c2f";
   ctx.lineWidth = 5;
   for (const dock of world.docks) {
@@ -1344,7 +1769,17 @@ function drawDocks({ assets, camera, ctx, world }: DrawPharosVilleInput) {
       ctx.lineTo(harbor.x, harbor.y);
       ctx.stroke();
     }
-    drawHarborSign(ctx, harbor.x, harbor.y - 12 * camera.zoom, dock.label, camera.zoom, dockHealthColor(dock.healthBand));
+    drawHarborFlag({
+      accent: dockHealthColor(dock.healthBand),
+      ctx,
+      dock,
+      emphasized: hoveredTarget?.detailId === dock.detailId || selectedTarget?.detailId === dock.detailId,
+      logo: assets?.getLogo(dock.logoSrc) ?? null,
+      outward: dockOutwardVector(dock.tile),
+      x: harbor.x,
+      y: harbor.y - 12 * camera.zoom,
+      zoom: camera.zoom,
+    });
   }
 }
 
@@ -1395,55 +1830,186 @@ function dewsAreaColor(band: NonNullable<PharosVilleWorld["areas"][number]["band
   return "#8fc7bb";
 }
 
-function drawHarborSign(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  label: string,
-  zoom: number,
-  accent: string,
-) {
-  const scale = Math.max(0.82, zoom);
-  const title = label;
-  const fontSize = Math.max(8, Math.round(8.4 * scale));
+function drawHarborFlag(input: {
+  accent: string;
+  ctx: CanvasRenderingContext2D;
+  dock: PharosVilleWorld["docks"][number];
+  emphasized: boolean;
+  logo: ReturnType<PharosVilleAssetManager["getLogo"]>;
+  outward: { x: -1 | 0 | 1; y: -1 | 0 | 1 };
+  x: number;
+  y: number;
+  zoom: number;
+}) {
+  const { accent, ctx, dock, emphasized, logo, outward, x, y, zoom } = input;
+  const scale = Math.max(0.72, zoom);
+  const flagScale = scale * 1.65;
+  const side = outward.x === 0 ? (dock.tile.x < 31.5 ? -1 : 1) : -outward.x;
+  const direction = side < 0 ? -1 : 1;
+  const mastX = x + side * (22 + dock.size * 0.55) * scale;
+  const mastBaseY = y - (5 + dock.size * 0.55) * scale;
+  const flagWidth = (20 + (emphasized ? 3 : 0)) * flagScale;
+  const flagHeight = (13 + (emphasized ? 1 : 0)) * flagScale;
+  const mastTopY = mastBaseY - flagHeight - (15 + (emphasized ? 3 : 0)) * scale;
+  const flagY = mastTopY + 2 * scale;
+
   ctx.save();
-  ctx.font = `700 ${fontSize}px ui-sans-serif, system-ui, sans-serif`;
-  const textWidth = ctx.measureText(title).width;
-  const width = Math.min(136 * scale, Math.max(58 * scale, textWidth + 24 * scale));
-  const height = 22 * scale;
-  const top = y - 42 * scale;
-  const left = x - width / 2;
+  ctx.lineJoin = "miter";
 
-  ctx.fillStyle = "rgba(22, 18, 13, 0.46)";
+  ctx.fillStyle = "rgba(7, 10, 13, 0.32)";
   ctx.beginPath();
-  ctx.ellipse(x + 1 * scale, y - 12 * scale, width * 0.38, 6 * scale, 0, 0, Math.PI * 2);
+  ctx.ellipse(mastX + direction * flagWidth * 0.24, mastBaseY + 4 * scale, 9 * flagScale, 2.8 * flagScale, -0.08, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = "#3b291a";
-  ctx.fillRect(Math.round(left + 8 * scale), Math.round(top + height - 2 * scale), Math.max(2, Math.round(3 * scale)), Math.max(9, Math.round(18 * scale)));
-  ctx.fillRect(Math.round(left + width - 11 * scale), Math.round(top + height - 2 * scale), Math.max(2, Math.round(3 * scale)), Math.max(9, Math.round(18 * scale)));
-
-  ctx.fillStyle = "#2a1d14";
-  ctx.fillRect(Math.round(left + 4 * scale), Math.round(top - 4 * scale), Math.round(width - 8 * scale), Math.max(2, Math.round(4 * scale)));
-  drawSignBoard(ctx, left, top, width, height, scale, "#8a6134", "#5c3d24");
-  ctx.fillStyle = "rgba(248, 212, 137, 0.18)";
-  ctx.fillRect(Math.round(left + 5 * scale), Math.round(top + 4 * scale), Math.round(width - 10 * scale), Math.max(1, Math.round(2 * scale)));
-  ctx.strokeStyle = "#2f2117";
-  ctx.lineWidth = Math.max(1, scale);
-  ctx.strokeRect(Math.round(left), Math.round(top), Math.round(width), Math.round(height));
-
-  ctx.fillStyle = accent;
+  ctx.strokeStyle = "#231811";
+  ctx.lineWidth = Math.max(1, 1.15 * scale);
   ctx.beginPath();
-  ctx.arc(left + 9 * scale, top + height / 2, 3.4 * scale, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#2f2117";
+  ctx.moveTo(Math.round(mastX), Math.round(mastBaseY));
+  ctx.lineTo(Math.round(mastX), Math.round(mastTopY - 2 * scale));
   ctx.stroke();
 
-  ctx.fillStyle = "#f7e7ba";
+  ctx.strokeStyle = "#7d603a";
+  ctx.lineWidth = Math.max(1, 0.8 * scale);
+  ctx.beginPath();
+  ctx.moveTo(Math.round(mastX + direction * 0.6 * scale), Math.round(mastBaseY - 1 * scale));
+  ctx.lineTo(Math.round(mastX + direction * 0.6 * scale), Math.round(mastTopY - 2 * scale));
+  ctx.stroke();
+
+  ctx.fillStyle = hexToRgba(accent, emphasized ? 0.94 : 0.78);
+  ctx.beginPath();
+  ctx.moveTo(mastX, flagY);
+  ctx.lineTo(mastX + direction * flagWidth, flagY + 2 * scale);
+  ctx.lineTo(mastX + direction * (flagWidth - 5 * flagScale), flagY + flagHeight * 0.5);
+  ctx.lineTo(mastX + direction * flagWidth, flagY + flagHeight - 2 * scale);
+  ctx.lineTo(mastX, flagY + flagHeight);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#2f2117";
+  ctx.lineWidth = Math.max(1, 0.85 * scale);
+  ctx.stroke();
+
+  drawDockFlagCrest({
+    accent,
+    ctx,
+    logo,
+    mark: dockFlagMark(dock),
+    radius: flagHeight * 0.32,
+    x: mastX + direction * flagWidth * 0.44,
+    y: flagY + flagHeight * 0.52,
+  });
+
+  if (emphasized) {
+    drawDockNameRibbon(ctx, dock.label, mastX + direction * 14 * flagScale, mastTopY - 15 * scale, scale);
+  }
+  ctx.restore();
+}
+
+function drawDockFlagCrest(input: {
+  accent: string;
+  ctx: CanvasRenderingContext2D;
+  logo: ReturnType<PharosVilleAssetManager["getLogo"]>;
+  mark: string;
+  radius: number;
+  x: number;
+  y: number;
+}) {
+  const { accent, ctx, logo, mark, radius, x, y } = input;
+  const safeRadius = Math.max(3, radius);
+  const width = safeRadius * 1.9;
+  const height = safeRadius * 1.72;
+  ctx.save();
+  ctx.translate(Math.round(x), Math.round(y));
+
+  ctx.fillStyle = "rgba(248, 231, 190, 0.72)";
+  ctx.strokeStyle = "rgba(47, 33, 23, 0.62)";
+  ctx.lineWidth = Math.max(1, safeRadius * 0.1);
+  ctx.beginPath();
+  ctx.moveTo(-width * 0.42, -height * 0.42);
+  ctx.lineTo(width * 0.42, -height * 0.42);
+  ctx.quadraticCurveTo(width * 0.5, -height * 0.06, width * 0.32, height * 0.17);
+  ctx.lineTo(0, height * 0.46);
+  ctx.lineTo(-width * 0.32, height * 0.17);
+  ctx.quadraticCurveTo(-width * 0.5, -height * 0.06, -width * 0.42, -height * 0.42);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = hexToRgba(accent, 0.56);
+  ctx.lineWidth = Math.max(1, safeRadius * 0.08);
+  ctx.beginPath();
+  ctx.moveTo(-width * 0.28, -height * 0.25);
+  ctx.quadraticCurveTo(0, -height * 0.32, width * 0.28, -height * 0.25);
+  ctx.stroke();
+
+  if (logo) {
+    ctx.save();
+    roundedRectPath(ctx, -safeRadius * 0.68, -safeRadius * 0.68, safeRadius * 1.36, safeRadius * 1.36, safeRadius * 0.22);
+    ctx.clip();
+    ctx.globalAlpha = 0.92;
+    const size = Math.max(2, Math.round(safeRadius * 1.36));
+    ctx.drawImage(logo.image, -size / 2, -size / 2, size, size);
+    ctx.globalCompositeOperation = "source-atop";
+    ctx.fillStyle = hexToRgba(accent, 0.1);
+    ctx.fillRect(-size / 2, -size / 2, size, size);
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = "rgba(255, 244, 214, 0.22)";
+    ctx.lineWidth = Math.max(1, safeRadius * 0.07);
+    ctx.beginPath();
+    ctx.moveTo(-safeRadius * 0.72, -safeRadius * 0.12);
+    ctx.quadraticCurveTo(0, -safeRadius * 0.25, safeRadius * 0.72, -safeRadius * 0.08);
+    ctx.stroke();
+    ctx.restore();
+  } else {
+    ctx.fillStyle = "#152334";
+    ctx.font = `800 ${Math.max(4, safeRadius * (mark.length > 2 ? 0.72 : 0.96))}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(mark.slice(0, 3).toUpperCase(), 0, 0.35);
+    ctx.textAlign = "start";
+    ctx.textBaseline = "alphabetic";
+  }
+  ctx.restore();
+}
+
+function drawDockNameRibbon(ctx: CanvasRenderingContext2D, label: string, x: number, y: number, scale: number) {
+  const fontSize = Math.max(7, Math.round(7.4 * scale));
+  ctx.save();
+  ctx.font = `700 ${fontSize}px ui-sans-serif, system-ui, sans-serif`;
+  const width = Math.min(82 * scale, Math.max(34 * scale, ctx.measureText(label).width + 11 * scale));
+  const height = 13 * scale;
+  const left = x - width / 2;
+  const top = y - height / 2;
+  ctx.globalAlpha = 0.88;
+  drawSignBoard(ctx, left, top, width, height, scale * 0.82, "#654323", "#2e1e14");
+  ctx.fillStyle = "#f7e5ba";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  drawFittedText(ctx, title, x + 4 * scale, top + height * 0.58, width - 24 * scale, fontSize, 7 * scale, "700");
+  drawFittedText(ctx, label, x, y + 0.7 * scale, width - 7 * scale, fontSize, 5.8 * scale, "700");
   ctx.restore();
+}
+
+function dockFlagMark(dock: PharosVilleWorld["docks"][number]) {
+  const explicit: Record<string, string> = {
+    aptos: "APT",
+    arbitrum: "ARB",
+    avalanche: "AVAX",
+    base: "B",
+    bsc: "BSC",
+    ethereum: "ETH",
+    hyperliquid: "HYPE",
+    polygon: "POL",
+    solana: "SOL",
+    tron: "TRX",
+  };
+  if (explicit[dock.chainId]) return explicit[dock.chainId];
+  const words = dock.label
+    .replace(/[^A-Za-z0-9 ]/g, " ")
+    .split(" ")
+    .filter(Boolean);
+  if (words.length > 1) return words.map((word) => word[0]).join("").slice(0, 3);
+  return (words[0] ?? dock.chainId).slice(0, 3);
 }
 
 function drawWaterAreaPost(
