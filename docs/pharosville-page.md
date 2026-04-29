@@ -22,15 +22,18 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 
 - desktop-gated route, with a short-screen fallback as well as the narrow-screen fallback
 - Canvas 2D sea-first island map on eligible desktop viewports, with a reshaped coastal island and roughly 82–88% water by tile count
-- authored terrain metadata layered over canonical movement tiles, including harbor water, storm water, fog water, beach, grass, rock, cliff, hill, road, and shore variants
+- authored terrain metadata layered over canonical movement tiles, including harbor water, alert water, warning shoals water, storm water, fog water, beach, grass, rock, cliff, hill, road, and shore variants
+- named DEWS water-zone posts showing live band counts from `stress.signals[]`, plus distinct hanging harbor signs attached to actual rendered docks
 - Pharos lighthouse placed on the northeast headland at tile `{ x: 44, y: 18 }`, sitting on elevated terrain with a road/stair connection back toward town
-- docks are arranged around a southwest harbor cove, while the cemetery sits in a compact southwest main-island lowland precinct separated from the lighthouse and dock interaction zones
+- Ethereum, Base, Arbitrum, and Polygon are arranged in the southwest EVM bay, with Ethereum as the central cove landmark and Base/Arbitrum/Polygon on the surrounding bay sides; BSC, Tron, Solana, Aptos, and other non-core top-chain harbors use distributed outer-coast dock slots; the cemetery sits on the main island to the right of the EVM bay and left of the lighthouse
 - live aggregate Pharos queries mounted only after the desktop gate
 - pure world model for PSI, docks, active ships, clusters, cemetery, details, and visual cues
-- docks are capped to the top six chains by stablecoin supply; each dock uses a distinct Pixellab harbor sprite by rank, scales from both global share and absolute billion-dollar supply tiers, and lists that chain's highest-supply stablecoins in DOM details
+- docks are capped to the top ten chains by stablecoin supply; each dock represents one chain harbor, uses Pixellab harbor sprites with dedicated EVM-bay assets for Ethereum/Base/Arbitrum/Polygon, scales from both global share and absolute billion-dollar supply tiers, and lists that chain's highest-supply stablecoins in DOM details
 - active ships use distinct Pixellab base sprites by governance class: CeFi treasury galleons, CeFi-dependent chartered brigantines, and DeFi DAO schooners
 - ship scale uses exaggerated compressed market-cap tiers, not linear supply area, so $1B+ issuers are spottable while USDT and USDC remain capped
-- ship risk placement is the reduced-motion/static anchor; normal-motion ships follow slow deterministic water-only routes, with seeded detours between their peg/DEWS risk water and any rendered positive-supply chain docks
+- ship reduced-motion/static placement uses a rendered harbor mooring when the ship has rendered positive-supply chain docks; a separate peg/DEWS risk anchor remains part of the normal-motion route
+- normal-motion ships follow slow deterministic water-only harbor cycles, with seeded detours between chain moorings and their peg/DEWS risk water
+- DEWS-driven risk water areas are named as Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, and Danger Strait; ALERT, WARNING, and DANGER use successive terrain bands so the water itself escalates from channel chop to shoals to storm strait, and ships with matching fresh DEWS bands anchor and route through those areas
 - ship docking cadence comes from `stablecoins.chainCirculating` chain presence, while risk water comes from `pegSummary.coins[]` and `stress.signals[]`; DOM details expose the route source, risk water, home dock, chain-presence count, and cadence text
 - active ships draw their logo on the sail when a local logo asset is available
 - long-tail stablecoins beyond the individual ship budget are split into count-capped water-zone cluster markers rather than one large pile
@@ -50,14 +53,14 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 The planned PharosVille visual grammar is:
 
 - lighthouse = PSI composite status
-- dock footprint = top-six chain stablecoin supply, with absolute size floors for billion-dollar hubs so Ethereum, Base, Arbitrum-class ports read as major harbors
+- dock footprint = top-ten chain stablecoin supply, with one harbor per chain, fixed EVM-bay slots for Ethereum/Base/Arbitrum/Polygon, distributed outer-coast slots for BSC/Tron/Solana/Aptos-style L1s, and absolute size floors for billion-dollar hubs so Ethereum, Base, Arbitrum-class ports read as major harbors
 - dock harbor detail = highest-supply stablecoins on that chain
-- ships = active stablecoins only, with risk anchors plus rendered-dock route visits for positive chain supply
+- ships = active stablecoins only, with rendered harbor mooring representatives, risk anchors, and rendered-dock route visits for positive chain supply
 - ship base sprite = governance class (`centralized` CeFi, `centralized-dependent` CeFi-Dep, `decentralized` DeFi), with legacy algorithmic backing reserved as a fallback hull
 - ship scale = exaggerated compressed market-cap tier from Micro/Unknown through Flagship, with exact market cap exposed in the detail panel
 - ship sail mark = stablecoin logo, falling back to a short symbol mark
-- ship distance from shore = peg/depeg risk first, with DEWS escalation
-- ship route and docking cadence = positive chain supply across the rendered top-six docks, shown as slow water-only passages rather than real-time transfer flow
+- ship route distance from shore = peg/depeg risk first, with DEWS escalation mapped to Alert Channel, Warning Shoals, and Danger Strait terrain
+- ship representative position and docking cadence = positive chain supply across the rendered top-ten chain harbors, shown as slow water-only passages rather than real-time transfer flow
 - sea/weather = aggregate DEWS breadth
 - cemetery = dead and frozen assets from merged cemetery data, with each tomb marker using its local cemetery logo when available and a cause-of-death plaque keyed to the same color taxonomy as the cemetery legend
 - fog = missing, low-confidence, or stale evidence

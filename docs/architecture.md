@@ -193,16 +193,25 @@ grave nodes with local logo paths, deterministic scatter placement, and varied
 marker scale/shape. Ship base sprites follow the stablecoin governance class
 (CeFi, CeFi-Dep, DeFi), and ship scale uses compressed market-cap tiers rather
 than linear area, with intentionally exaggerated $1B+ tiers so major issuers are
-recognizable landmarks. Ship tile placement is the peg/DEWS risk anchor and the
-reduced-motion representative position; normal-motion routing samples
-slow deterministic water-only paths with seeded detours from that anchor to
-rendered positive-supply chain docks using `stablecoins.chainCirculating`,
-`pegSummary.coins[]`, and `stress.signals[]`. Long-tail ships beyond the
-individual rendering budget are split into count-capped water-zone clusters
-instead of one large marker. The canvas renderer uses local logos for ship sails and
-cemetery tomb markers while the DOM detail panel remains the accessible source
-of analytical truth, including route source, risk water, home dock, chain
-presence, and docking cadence.
+recognizable landmarks. Ship representative tile placement uses a rendered
+chain-harbor mooring when positive chain supply maps to a rendered dock, while a
+separate peg/DEWS risk anchor remains the route waypoint. Core EVM chain harbors
+(Ethereum, Base, Arbitrum, Polygon) occupy the southwest EVM bay, with Ethereum
+anchored as the central cove landmark and the L2 docks around its sides. BSC,
+Tron, Solana, Aptos, and other non-core top-chain harbors use distributed
+outer-coast dock slots. The cemetery sits on the main island between the EVM bay
+and the lighthouse rather than on a detached islet. Normal-motion routing
+samples slow deterministic water-only harbor cycles with seeded detours between
+chain moorings and risk water using
+`stablecoins.chainCirculating`, `pegSummary.coins[]`, and `stress.signals[]`.
+ALERT, WARNING, and DANGER risk anchors sit in successive Alert Channel,
+Warning Shoals, and Danger Strait terrain bands so the water treatment escalates
+with DEWS severity. Long-tail ships beyond the individual rendering budget are
+split into count-capped water-zone clusters instead of one large marker. The
+canvas renderer uses local logos for ship sails and cemetery tomb markers while
+the DOM detail panel remains the accessible source of analytical truth,
+including route source, risk water, home dock, chain presence, and docking
+cadence.
 
 Canvas 2D remains the renderer choice. PixiJS v8 was rejected during the
 2026-04-25 spike (see `docs/superpowers/audits/2026-04-25-pixi-v8-csp.md`)

@@ -151,7 +151,7 @@ Every animation must be wrapped:
 }
 ```
 
-The scene must remain legible and informative when motion is off. DEWS pauses the sweep, sets glow to static `opacity: 0.15`, and freezes the center pulse. PSI shows a static colored lighthouse. Harbor retains positions but freezes drift. PharosVille ship routes freeze at each ship's peg/DEWS risk anchor while detail panels and the accessibility ledger still expose risk water, home dock, chain presence, docking cadence, and route source. **The information content never depends on motion playing.**
+The scene must remain legible and informative when motion is off. DEWS pauses the sweep, sets glow to static `opacity: 0.15`, and freezes the center pulse. PSI shows a static colored lighthouse. Harbor retains positions but freezes drift. PharosVille ship routes freeze at each ship's representative harbor mooring or risk patrol tile while detail panels and the accessibility ledger still expose risk water, home dock, chain presence, docking cadence, and route source. **The information content never depends on motion playing.**
 
 ---
 
