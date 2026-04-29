@@ -61,7 +61,9 @@ export function AccessibilityLedger({
         {world.areas.map((area) => (
           <li key={area.id}>
             {area.label}
-            {area.band ? `: DEWS ${area.band}, ${area.count ?? 0} stablecoins, placement ${area.riskPlacement}.` : "."}
+            {area.dataAreaType === "north-froze-pole"
+              ? `: ${area.statusLabel ?? "Unavailable"}. ${area.summary ?? ""} Facts: ${area.facts?.map((fact) => `${fact.label} ${fact.value}`).join("; ") ?? "unavailable"}. Source fields ${area.sourceFields?.join(", ") || "unavailable"}.`
+              : area.band ? `: DEWS ${area.band}, ${area.count ?? 0} stablecoins, placement ${area.riskPlacement}.` : "."}
           </li>
         ))}
       </ol>
@@ -77,7 +79,7 @@ export function AccessibilityLedger({
         ))}
       </ol>
 
-      <h3>Data landmarks</h3>
+      <h3>Data buildings</h3>
       <ol>
         {world.buildings.map((building) => (
           <li key={building.id}>

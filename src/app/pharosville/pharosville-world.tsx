@@ -441,6 +441,7 @@ type SelectableWorldEntity =
   | PharosVilleWorldModel["docks"][number]
   | PharosVilleWorldModel["ships"][number]
   | PharosVilleWorldModel["shipClusters"][number]
+  | PharosVilleWorldModel["areas"][number]
   | PharosVilleWorldModel["graves"][number]
   | PharosVilleWorldModel["buildings"][number];
 
@@ -451,6 +452,7 @@ function findWorldEntity(world: PharosVilleWorldModel, detailId: string | null):
     ...world.docks,
     ...world.ships,
     ...world.shipClusters,
+    ...world.areas,
     ...world.graves,
     ...world.buildings,
   ].find((entity) => entity.detailId === detailId) ?? null;
