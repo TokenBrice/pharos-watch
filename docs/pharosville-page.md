@@ -27,7 +27,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - Pharos lighthouse placed on the northeast headland at tile `{ x: 44, y: 18 }`, sitting on elevated terrain with a road/stair connection back toward town
 - Ethereum, Base, Arbitrum, and Polygon are arranged in the southwest EVM bay, with Ethereum as the central cove landmark and Base/Arbitrum/Polygon on the surrounding bay sides; BSC, Tron, Solana, Aptos, and other non-core top-chain harbors use distributed outer-coast dock slots; the cemetery sits on the main island to the right of the EVM bay and left of the lighthouse
 - live aggregate Pharos queries mounted only after the desktop gate
-- pure world model for PSI, docks, active ships, clusters, cemetery, thematic data buildings, details, and visual cues
+- pure world model for PSI, docks, active ships, clusters, cemetery, thematic data landmarks, details, and visual cues
 - docks are capped to the top ten chains by stablecoin supply; each dock represents one chain harbor, uses Pixellab harbor sprites with dedicated EVM-bay assets for Ethereum/Base/Arbitrum/Polygon, identifies itself with a small logo flag rather than a large name board, scales from both global share and absolute billion-dollar supply tiers, and lists that chain's highest-supply stablecoins in DOM details
 - active ships use distinct Pixellab base sprites by governance class: CeFi treasury galleons, CeFi-dependent chartered brigantines, and DeFi DAO schooners
 - ship scale uses exaggerated compressed market-cap tiers, not linear supply area, so $1B+ issuers are spottable while USDT and USDC remain capped
@@ -46,7 +46,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - data landmark effects include bounded local glow, smoke, frost, sparks, waterwheel motion, orchard/well glints, and dependency thread pulses; reduced motion freezes movement but keeps static status encodings
 - the cemetery is rendered as a compact memorial precinct with scattered grave placement, small varied cause-aware tomb marker scale/shape, contextual mausoleum/tree/shrub details, cause-of-death plaques using the shared cemetery legend colors, local cemetery logos on tomb markers, and light atmospheric mist
 - visible RPG-styled toolbar, click-anchored detail panel, blank-map click-to-close behavior, and screen-reader accessibility ledger
-- canvas hit testing for lighthouse, docks, ships, clusters, graves, and thematic data buildings
+- canvas hit testing for lighthouse, docks, ships, clusters, graves, and thematic data landmarks
 - mouse/touch drag pan, wheel zoom, toolbar pan/zoom/reset/follow/clear controls, keyboard arrow pan, Escape clear, and fullscreen inspection mode
 - normal-motion canvas loop for the lighthouse great-fire flicker, water shimmer, decorative time-derived dawn/day/dusk/night sky with sun, crescent moon, stars, constellations, cloud bands, decorative birds/lights/haze, and deterministic ship route sampling, with expensive wake effects capped to selected/top/recent ships
 - deterministic reduced-motion render with no running animation frame loop
