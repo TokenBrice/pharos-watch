@@ -59,6 +59,8 @@ describe("clusterLongTailShips", () => {
     const clusterTile = result.clusters[0]?.tile;
     expect(clusterTile).toBeDefined();
     expect(["water", "deep-water"]).toContain(tileKindAt(clusterTile?.x ?? -1, clusterTile?.y ?? -1));
+    expect(result.clusters[0]?.riskWaterLabel).toBe("Calm Anchorage");
+    expect(result.clusters[0]?.riskZone).toBe("calm");
     expect(terrainKindAt(clusterTile?.x ?? -1, clusterTile?.y ?? -1)).toBe("calm-water");
   });
 
@@ -86,8 +88,18 @@ describe("clusterLongTailShips", () => {
     const terrainByPlacement = Object.fromEntries(
       result.clusters.map((cluster) => [cluster.riskPlacement, terrainKindAt(cluster.tile.x, cluster.tile.y)]),
     );
+    const zoneByPlacement = Object.fromEntries(
+      result.clusters.map((cluster) => [cluster.riskPlacement, cluster.riskZone]),
+    );
+    const labelByPlacement = Object.fromEntries(
+      result.clusters.map((cluster) => [cluster.riskPlacement, cluster.riskWaterLabel]),
+    );
 
     expect(terrainByPlacement["storm-shelf"]).toBe("storm-water");
     expect(terrainByPlacement["outer-rough-water"]).toBe("warning-water");
+    expect(zoneByPlacement["storm-shelf"]).toBe("danger");
+    expect(zoneByPlacement["outer-rough-water"]).toBe("warning");
+    expect(labelByPlacement["storm-shelf"]).toBe("Danger Strait");
+    expect(labelByPlacement["outer-rough-water"]).toBe("Warning Shoals");
   });
 });

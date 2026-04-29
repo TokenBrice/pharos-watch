@@ -117,6 +117,7 @@ export function detailForCluster(node: ShipClusterNode): DetailModel {
       { label: "Ships", value: String(node.count) },
       { label: "Total market cap", value: usd.format(node.totalUsd) },
       { label: "Risk water area", value: node.riskWaterLabel },
+      { label: "Risk water zone", value: node.riskZone },
       { label: "Risk placement key", value: node.riskPlacement },
     ],
     links: [{ label: "Stablecoins", href: "/stablecoins/" }],

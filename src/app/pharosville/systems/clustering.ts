@@ -34,6 +34,7 @@ export function clusterLongTailShips(ships: readonly ShipNode[], maxIndividualSh
         label: `${chunk.length} ships`,
         tile: clusterTile(riskPlacement, index, chunks.length, occupied),
         riskPlacement,
+        riskZone: riskWaterArea.motionZone,
         riskWaterLabel: riskWaterArea.label,
         shipIds: chunk.map((ship) => ship.id),
         ships: chunk.map((ship) => ({

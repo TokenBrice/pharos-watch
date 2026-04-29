@@ -33,7 +33,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "Which stablecoins are under peg or DEWS stress?",
       failureState: "data fog",
       domEquivalent: "ship detail placement explanation with named risk water area and zone",
-      reducedMotionEquivalent: "static risk-water placement with route details in DOM",
+      reducedMotionEquivalent: "static harbor mooring when docked, or static risk-water patrol position, with named risk-water facts in DOM",
     },
     {
       id: "cue.ship.motion",
@@ -120,7 +120,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       sourceField: "stablecoins.peggedAssets[], pegSummary.coins[], stress.signals[]",
       questionAnswered: "Where are long-tail stablecoins grouped after the individual ship budget is reached?",
       failureState: "cluster omitted and represented in DOM ledger only",
-      domEquivalent: "long-tail cluster detail panel and accessibility ledger rows",
+      domEquivalent: "long-tail cluster detail panel and accessibility ledger rows with risk-water area and zone",
       reducedMotionEquivalent: "same static cluster marker and member list",
     },
     {

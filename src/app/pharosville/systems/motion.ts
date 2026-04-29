@@ -84,13 +84,13 @@ const ZONE_DWELL: Record<ShipWaterZone, { dockDwell: number; riskDwell: number; 
 };
 
 const OPEN_WATER_PATROL_WAYPOINTS: Record<ShipWaterZone, readonly { x: number; y: number }[]> = {
-  alert: SHIP_WATER_ANCHORS["harbor-mouth-watch"],
+  alert: [...SHIP_WATER_ANCHORS["harbor-mouth-watch"], ...SHIP_WATER_ANCHORS["outer-rough-water"]],
   calm: SHIP_WATER_ANCHORS["safe-harbor"],
-  danger: SHIP_WATER_ANCHORS["storm-shelf"],
-  fog: SHIP_WATER_ANCHORS["data-fog"],
-  ledger: SHIP_WATER_ANCHORS["ledger-mooring"],
-  warning: SHIP_WATER_ANCHORS["outer-rough-water"],
-  watch: SHIP_WATER_ANCHORS["breakwater-edge"],
+  danger: [...SHIP_WATER_ANCHORS["storm-shelf"], ...SHIP_WATER_ANCHORS["outer-rough-water"]],
+  fog: [...SHIP_WATER_ANCHORS["data-fog"], ...SHIP_WATER_ANCHORS["safe-harbor"]],
+  ledger: [...SHIP_WATER_ANCHORS["ledger-mooring"], ...SHIP_WATER_ANCHORS["safe-harbor"]],
+  warning: [...SHIP_WATER_ANCHORS["outer-rough-water"], ...SHIP_WATER_ANCHORS["storm-shelf"]],
+  watch: [...SHIP_WATER_ANCHORS["breakwater-edge"], ...SHIP_WATER_ANCHORS["safe-harbor"]],
 };
 
 export function buildBaseMotionPlan(world: PharosVilleWorld): PharosVilleBaseMotionPlan {

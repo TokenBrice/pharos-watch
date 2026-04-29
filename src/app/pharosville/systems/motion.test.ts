@@ -3,7 +3,7 @@ import { fixtureChains, fixturePegSummary, fixtureReportCards, fixtureStablecoin
 import { buildPharosVilleWorld } from "./pharosville-world";
 import { buildBaseMotionPlan, buildMotionPlan, buildShipWaterRoute, lighthouseFireFlickerSpeed, resolveShipMotionSample, sampleShipWaterPath, stableMotionPhase } from "./motion";
 import { buildPharosVilleMap, isWaterTileKind, terrainKindAt, tileKindAt } from "./world-layout";
-import type { PharosVilleMap, PharosVilleWorld } from "./world-types";
+import type { PharosVilleMap, PharosVilleWorld, ShipWaterZone } from "./world-types";
 
 describe("motion", () => {
   const world = buildPharosVilleWorld({
@@ -15,6 +15,110 @@ describe("motion", () => {
     reportCards: fixtureReportCards,
     cemeteryEntries: [],
     freshness: {},
+  });
+
+  it("keeps dockless patrols meaningful across every risk water zone", () => {
+    const cases: Array<{ expectedTerrains: string[]; minDistance: number; zone: ShipWaterZone; world: PharosVilleWorld }> = [
+      { zone: "calm", expectedTerrains: ["calm-water"], minDistance: 8, world: worldForShip({ chainCirculating: {}, chains: ["ethereum"] }) },
+      { zone: "watch", expectedTerrains: ["watch-water", "calm-water"], minDistance: 8, world: worldForShip({ chainCirculating: {}, chains: ["ethereum"], stressBand: "WATCH" }) },
+      {
+        zone: "alert",
+        expectedTerrains: ["alert-water", "warning-water"],
+        minDistance: 8,
+        world: worldForShip({
+          chainCirculating: {},
+          chains: ["ethereum"],
+          pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", currentDeviationBps: 100 }),
+        }),
+      },
+      {
+        zone: "warning",
+        expectedTerrains: ["warning-water", "storm-water"],
+        minDistance: 8,
+        world: worldForShip({
+          chainCirculating: {},
+          chains: ["ethereum"],
+          pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", currentDeviationBps: 250 }),
+        }),
+      },
+      {
+        zone: "danger",
+        expectedTerrains: ["storm-water", "warning-water"],
+        minDistance: 8,
+        world: worldForShip({
+          chainCirculating: {},
+          chains: ["ethereum"],
+          pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true }),
+        }),
+      },
+      {
+        zone: "fog",
+        expectedTerrains: ["brackish-water", "calm-water"],
+        minDistance: 8,
+        world: worldForShip({
+          chainCirculating: {},
+          chains: ["ethereum"],
+          freshness: { pegSummaryStale: true },
+          pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true }),
+        }),
+      },
+      { zone: "ledger", expectedTerrains: ["calm-water"], minDistance: 8, world: worldForShip({ chainCirculating: {}, chains: ["ethereum"], navToken: true }) },
+    ];
+
+    for (const entry of cases) {
+      const route = onlyRoute(entry.world);
+      const waypoint = route.openWaterPatrol?.waypoint;
+      const ship = entry.world.ships[0]!;
+
+      expect(route.zone).toBe(entry.zone);
+      expect(route.openWaterPatrol).not.toBeNull();
+      expect(waypoint).toBeDefined();
+      expect(entry.expectedTerrains).toContain(terrainKindAt(waypoint?.x ?? -1, waypoint?.y ?? -1));
+      expect(distance(waypoint!, route.riskTile)).toBeGreaterThanOrEqual(entry.minDistance);
+
+      const samples = Array.from({ length: 80 }, (_, index) => resolveShipMotionSample({
+        plan: buildMotionPlan(entry.world, ship.detailId),
+        reducedMotion: false,
+        ship,
+        timeSeconds: route.cycleSeconds * (index / 80) - route.phaseSeconds,
+      }));
+      expect(Math.max(...samples.map((sample) => distance(sample.tile, route.riskTile)))).toBeGreaterThanOrEqual(entry.minDistance - 1);
+    }
+  });
+
+  it("orders DEWS sea dwell, wake, and drift by turbulence", () => {
+    const calm = cycleStats(worldForShip({ chainCirculating: {}, chains: ["ethereum"] }));
+    const watch = cycleStats(worldForShip({ chainCirculating: {}, chains: ["ethereum"], stressBand: "WATCH" }));
+    const alert = cycleStats(worldForShip({
+      chainCirculating: {},
+      chains: ["ethereum"],
+      pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", currentDeviationBps: 100 }),
+    }));
+    const warning = cycleStats(worldForShip({
+      chainCirculating: {},
+      chains: ["ethereum"],
+      pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", currentDeviationBps: 250 }),
+    }));
+    const danger = cycleStats(worldForShip({
+      chainCirculating: {},
+      chains: ["ethereum"],
+      pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true }),
+    }));
+
+    expect(calm.riskDriftSamples).toBeLessThan(watch.riskDriftSamples);
+    expect(watch.riskDriftSamples).toBeLessThan(alert.riskDriftSamples);
+    expect(alert.riskDriftSamples).toBeLessThan(warning.riskDriftSamples);
+    expect(warning.riskDriftSamples).toBeLessThan(danger.riskDriftSamples);
+
+    expect(calm.maxRiskDistance).toBeLessThan(watch.maxRiskDistance);
+    expect(watch.maxRiskDistance).toBeLessThan(alert.maxRiskDistance);
+    expect(alert.maxRiskDistance).toBeLessThan(warning.maxRiskDistance);
+    expect(warning.maxRiskDistance).toBeLessThan(danger.maxRiskDistance);
+
+    expect(calm.maxSailingWake).toBeLessThan(watch.maxSailingWake);
+    expect(watch.maxSailingWake).toBeLessThan(alert.maxSailingWake);
+    expect(alert.maxSailingWake).toBeLessThan(warning.maxSailingWake);
+    expect(warning.maxSailingWake).toBeLessThan(danger.maxSailingWake);
   });
 
   it("animates every visible ship while keeping effect highlights focused", () => {
@@ -128,14 +232,11 @@ describe("motion", () => {
     expect(samples.every((sample) => /water/.test(tileKindForSample(sample.tile)))).toBe(true);
   });
 
-  it("keeps dockless patrol waypoints in the current northern risk water", () => {
+  it("keeps dockless patrol waypoints in the current or adjacent northern risk water", () => {
     const cases = [
+      { expectedTerrains: ["calm-water"], world: worldForShip({ chainCirculating: {}, chains: ["ethereum"] }) },
       {
-        expectedTerrains: ["calm-water", "watch-water"],
-        world: worldForShip({ chainCirculating: {}, chains: ["ethereum"] }),
-      },
-      {
-        expectedTerrains: ["alert-water"],
+        expectedTerrains: ["alert-water", "warning-water"],
         world: worldForShip({
           chainCirculating: {},
           chains: ["ethereum"],
@@ -143,7 +244,7 @@ describe("motion", () => {
         }),
       },
       {
-        expectedTerrains: ["warning-water"],
+        expectedTerrains: ["warning-water", "storm-water"],
         world: worldForShip({
           chainCirculating: {},
           chains: ["ethereum"],
@@ -151,7 +252,7 @@ describe("motion", () => {
         }),
       },
       {
-        expectedTerrains: ["storm-water"],
+        expectedTerrains: ["storm-water", "warning-water"],
         world: worldForShip({
           chainCirculating: {},
           chains: ["ethereum"],
@@ -159,7 +260,7 @@ describe("motion", () => {
         }),
       },
       {
-        expectedTerrains: ["brackish-water"],
+        expectedTerrains: ["brackish-water", "calm-water"],
         world: worldForShip({
           chainCirculating: {},
           chains: ["ethereum"],
@@ -348,14 +449,18 @@ function worldForShip(input: {
   chainCirculating: ReturnType<typeof chainCirculating>;
   chains: string[];
   freshness?: PharosVilleWorld["freshness"];
+  navToken?: boolean;
   pegCoin?: ReturnType<typeof makePegCoin>;
+  stressBand?: "DANGER" | "WARNING" | "ALERT" | "WATCH" | "CALM";
 }): PharosVilleWorld {
+  const assetId = input.navToken ? "susde-ethena" : "usdc-circle";
+  const symbol = input.navToken ? "sUSDe" : "USDC";
   return buildPharosVilleWorld({
     stablecoins: {
       peggedAssets: [
         makeAsset({
-          id: "usdc-circle",
-          symbol: "USDC",
+          id: assetId,
+          symbol,
           chainCirculating: input.chainCirculating,
         }),
       ],
@@ -371,9 +476,22 @@ function worldForShip(input: {
     stability: fixtureStability,
     pegSummary: {
       ...fixturePegSummary,
-      coins: [input.pegCoin ?? makePegCoin({ id: "usdc-circle", symbol: "USDC" })],
+      coins: input.navToken ? [] : [input.pegCoin ?? makePegCoin({ id: assetId, symbol })],
     },
-    stress: fixtureStress,
+    stress: input.stressBand
+      ? {
+        ...fixtureStress,
+        signals: {
+          [assetId]: {
+            score: 20,
+            band: input.stressBand,
+            signals: {},
+            computedAt: 1_700_000_000,
+            methodologyVersion: "fixture",
+          },
+        },
+      }
+      : fixtureStress,
     reportCards: fixtureReportCards,
     cemeteryEntries: [],
     freshness: input.freshness ?? {},
@@ -459,6 +577,31 @@ function stateCountsOverCycle(sampleWorld: PharosVilleWorld): { transitSamples: 
   }
 
   return { transitSamples };
+}
+
+function cycleStats(sampleWorld: PharosVilleWorld): { maxRiskDistance: number; maxSailingWake: number; riskDriftSamples: number } {
+  const ship = sampleWorld.ships[0]!;
+  const plan = buildMotionPlan(sampleWorld, ship.detailId);
+  const route = plan.shipRoutes.get(ship.id)!;
+  let maxRiskDistance = 0;
+  let maxSailingWake = 0;
+  let riskDriftSamples = 0;
+
+  for (let index = 0; index < 240; index += 1) {
+    const sample = resolveShipMotionSample({
+      plan,
+      reducedMotion: false,
+      ship,
+      timeSeconds: route.cycleSeconds * (index / 240) - route.phaseSeconds,
+    });
+    if (sample.state === "risk-drift") {
+      riskDriftSamples += 1;
+      maxRiskDistance = Math.max(maxRiskDistance, distance(sample.tile, route.riskTile));
+    }
+    if (sample.state === "sailing") maxSailingWake = Math.max(maxSailingWake, sample.wakeIntensity);
+  }
+
+  return { maxRiskDistance, maxSailingWake, riskDriftSamples };
 }
 
 function distance(a: { x: number; y: number }, b: { x: number; y: number }) {

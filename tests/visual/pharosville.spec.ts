@@ -1151,6 +1151,7 @@ test.describe("pharosville normal motion", () => {
     await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Route source");
     await expect(page.getByTestId("pharosville-detail-panel")).toContainText("stablecoins.chainCirculating, pegSummary.coins[], stress.signals[]");
     await expect(page.getByTestId("pharosville-accessibility-ledger")).toContainText("route summary:");
+    await expect(page.getByTestId("pharosville-accessibility-ledger")).toContainText("risk water Calm Anchorage");
     await expect(page.getByTestId("pharosville-accessibility-ledger")).toContainText("risk zone");
   });
 });

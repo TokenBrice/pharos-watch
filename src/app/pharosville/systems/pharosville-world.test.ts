@@ -567,6 +567,12 @@ describe("buildPharosVilleWorld", () => {
 
     expect(world.shipClusters.length).toBeGreaterThan(0);
     expect(world.shipClusters.every((cluster) => ["water", "deep-water"].includes(tileKindAt(cluster.tile.x, cluster.tile.y)))).toBe(true);
+    expect(world.shipClusters.every((cluster) => cluster.riskWaterLabel === "Calm Anchorage")).toBe(true);
+    expect(world.shipClusters.every((cluster) => cluster.riskZone === "calm")).toBe(true);
+    expect(world.detailIndex[world.shipClusters[0]!.detailId]?.facts).toEqual(expect.arrayContaining([
+      { label: "Risk water area", value: "Calm Anchorage" },
+      { label: "Risk water zone", value: "calm" },
+    ]));
   });
 });
 

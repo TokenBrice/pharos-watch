@@ -172,6 +172,7 @@ export interface ShipClusterNode {
   label: string;
   tile: { x: number; y: number };
   riskPlacement: ShipRiskPlacement;
+  riskZone: ShipWaterZone;
   riskWaterLabel: string;
   shipIds: string[];
   ships: Array<{
