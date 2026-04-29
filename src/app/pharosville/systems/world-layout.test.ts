@@ -20,6 +20,7 @@ import {
   terrainKindAt,
   tileKindAt,
 } from "./world-layout";
+import type { PharosVilleTile } from "./world-types";
 
 describe("buildPharosVilleMap", () => {
   it("creates a sea-first authored map", () => {
@@ -170,7 +171,7 @@ function nearbyTiles(center: { x: number; y: number }, radius: number): { x: num
   return tiles;
 }
 
-function landCentroid(tiles: Array<{ x: number; y: number; kind: string }>): { x: number; y: number } {
+function landCentroid(tiles: PharosVilleTile[]): { x: number; y: number } {
   const landTiles = tiles.filter((tile) => !isWaterTileKind(tile.kind));
   return {
     x: landTiles.reduce((sum, tile) => sum + tile.x, 0) / landTiles.length,
@@ -178,7 +179,7 @@ function landCentroid(tiles: Array<{ x: number; y: number; kind: string }>): { x
   };
 }
 
-function landBounds(tiles: Array<{ x: number; y: number; kind: string }>) {
+function landBounds(tiles: PharosVilleTile[]) {
   const landTiles = tiles.filter((tile) => !isWaterTileKind(tile.kind));
   const xs = landTiles.map((tile) => tile.x);
   const ys = landTiles.map((tile) => tile.y);
