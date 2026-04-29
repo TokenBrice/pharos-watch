@@ -24,6 +24,7 @@ type SelectableEntity =
 function targetSize(entity: SelectableEntity): { height: number; width: number; yOffset: number } {
   if (entity.kind === "lighthouse") return { height: 190, width: 96, yOffset: -82 };
   if (entity.kind === "dock") return { height: 38, width: 96, yOffset: 0 };
+  if (entity.kind === "building" && entity.buildingType === "north-froze-pole") return { height: 74, width: 52, yOffset: -30 };
   if (entity.kind === "building") return { height: 88, width: 104, yOffset: -34 };
   if (entity.kind === "ship") return { height: 48, width: 56, yOffset: -16 };
   if (entity.kind === "ship-cluster") return { height: 48, width: 48, yOffset: -12 };
@@ -59,7 +60,7 @@ function assetDrawPoint(input: {
     scale *= dockRenderScale(entity.size);
   } else if (entity.kind === "building") {
     y += 4 * camera.zoom;
-    scale *= 0.58 * entity.visual.scale;
+    scale *= (entity.buildingType === "north-froze-pole" ? 0.5 : 0.58) * entity.visual.scale;
   } else if (entity.kind === "ship") {
     y += 12 * camera.zoom;
     scale *= entity.visual.scale * 0.7;
