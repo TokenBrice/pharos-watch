@@ -23,9 +23,9 @@
     "disposition": "queued-p4",
     "notes": "Ship motion routing now centralizes deterministic water-path construction, seeded detours, dwell timing, and route sampling for the initial liveliness release. Keep it waived until the next PharosVille systems pass can split pathfinding, scheduling, and sampling without changing behavior."
   },
-  "src/app/pharosville/systems/data-buildings.ts": {
+  "src/app/pharosville/systems/world-layout.ts": {
     "disposition": "queued-p4",
-    "notes": "PharosVille data buildings now centralize the four main-island product landmarks plus the North Froze Pole area while the world-area model settles. Keep waived for this design tranche; split per-product detail builders and visual-state mappers in the next PharosVille systems cleanup."
+    "notes": "PharosVille world layout intentionally centralizes terrain classification, road/plaza masks, cemetery placement, and water-nearest helpers while the island composition is still actively moving. Split terrain-region predicates and placement helpers in the next PharosVille systems cleanup pass."
   },
   "src/components/command-palette.tsx": {
     "disposition": "queued-p4",
@@ -90,6 +90,10 @@
   "worker/src/lib/dews.ts": {
     "disposition": "queued-p4",
     "notes": "DEWS scoring and contagion policy remain intentionally concentrated while the early-warning surface is still evolving. Split signal derivation, contagion weighting, and aggregate scoring in a dedicated DEWS cleanup pass."
+  },
+  "worker/src/api/mint-burn-flows.ts": {
+    "disposition": "queued-p4",
+    "notes": "Mint/burn flow response shaping remains a large endpoint surface after the pending pricing and flow changes in this push batch. Keep explicitly waived until a dedicated flow API cleanup can separate request parsing, summary shaping, and response projection."
   },
   "src/app/yield/client.tsx": {
     "disposition": "queued-p4",
