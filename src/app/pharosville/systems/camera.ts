@@ -14,10 +14,10 @@ export interface CameraBoundsInput {
 
 function cameraPadding(input?: CameraBoundsInput["padding"]) {
   return {
-    bottom: input?.bottom ?? 24,
-    left: input?.left ?? 24,
-    right: input?.right ?? 24,
-    top: input?.top ?? 56,
+    bottom: input?.bottom ?? 80,
+    left: input?.left ?? 0,
+    right: input?.right ?? 128,
+    top: input?.top ?? 0,
   };
 }
 
@@ -26,7 +26,10 @@ export function defaultCamera(input: {
   map: MapLike;
   width: number;
 }): IsoCamera {
-  return fitCameraToMap(input);
+  return fitCameraToMap({
+    ...input,
+    padding: cameraPadding(),
+  });
 }
 
 export function clampCameraToMap(camera: IsoCamera, input: CameraBoundsInput): IsoCamera {
