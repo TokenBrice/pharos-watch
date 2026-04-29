@@ -9,6 +9,7 @@ import { useFullscreenMode } from "./hooks/use-fullscreen-mode";
 import { PharosVilleAssetManager, type PharosVilleAssetLoadError } from "./renderer/asset-manager";
 import { collectHitTargets, hitTest, type HitTarget } from "./renderer/hit-testing";
 import { drawPharosVille } from "./renderer/world-canvas";
+import { areaLabelPlacementForArea } from "./systems/area-labels";
 import { cameraZoomLabel, clampCameraToMap, defaultCamera, followTile, panCamera, zoomIn, zoomOut } from "./systems/camera";
 import { resolveCanvasBudget } from "./systems/canvas-budget";
 import { buildMotionPlan, resolveShipMotionSample, type ShipMotionSample } from "./systems/motion";
@@ -345,6 +346,8 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
     if (!selectedEntity) return;
     const sampledTile = selectedEntity.kind === "ship"
       ? currentShipMotionSamplesRef.current.get(selectedEntity.id)?.tile ?? selectedEntity.tile
+      : selectedEntity.kind === "area"
+        ? areaLabelPlacementForArea(selectedEntity).anchorTile
       : selectedEntity.tile;
     setCamera((previous) => previous ? followTile({
       camera: previous,

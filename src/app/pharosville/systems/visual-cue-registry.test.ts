@@ -115,4 +115,15 @@ describe("buildVisualCueRegistry", () => {
       expect(cue.primaryChannels).not.toEqual(["color"]);
     }
   });
+
+  it("describes area cues as printed cartographic labels instead of signs or posts", () => {
+    const areaCues = buildVisualCueRegistry().filter((cue) => cue.target.kind === "area");
+
+    expect(areaCues.map((cue) => cue.visual)).toEqual(expect.arrayContaining([
+      expect.stringContaining("printed cartographic"),
+    ]));
+    for (const cue of areaCues) {
+      expect(cue.visual).not.toMatch(/\b(sign|post|board|badge)\b/i);
+    }
+  });
 });

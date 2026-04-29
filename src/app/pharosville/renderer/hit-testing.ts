@@ -2,6 +2,7 @@ import type { IsoCamera, ScreenPoint } from "../systems/projection";
 import { tileToScreen } from "../systems/projection";
 import type { ShipMotionSample } from "../systems/motion";
 import type { PharosVilleWorld } from "../systems/world-types";
+import { areaLabelPlacementForArea } from "../systems/area-labels";
 import type { PharosVilleAssetManager, LoadedPharosVilleAsset } from "./asset-manager";
 
 export interface HitTarget {
@@ -25,7 +26,7 @@ type SelectableEntity =
 function targetSize(entity: SelectableEntity): { height: number; width: number; yOffset: number } {
   if (entity.kind === "lighthouse") return { height: 190, width: 96, yOffset: -82 };
   if (entity.kind === "dock") return { height: 38, width: 96, yOffset: 0 };
-  if (entity.kind === "area") return { height: 42, width: 90, yOffset: -22 };
+  if (entity.kind === "area") return { height: 28, width: 112, yOffset: 0 };
   if (entity.kind === "building") return { height: 88, width: 104, yOffset: -34 };
   if (entity.kind === "ship") return { height: 48, width: 56, yOffset: -16 };
   if (entity.kind === "ship-cluster") return { height: 48, width: 48, yOffset: -12 };
@@ -119,6 +120,26 @@ function assetTargetRect(input: {
   };
 }
 
+function areaLabelTargetRect(area: Extract<SelectableEntity, { kind: "area" }>, camera: IsoCamera): HitTarget["rect"] {
+  const placement = areaLabelPlacementForArea(area);
+  const point = tileToScreen(placement.anchorTile, camera);
+  const labelScale = Math.max(0.72, camera.zoom);
+  const width = Math.max(52, placement.maxWidth * labelScale);
+  const height = Math.max(26, placement.hitboxHeight * labelScale);
+  const x = placement.align === "left"
+    ? point.x
+    : placement.align === "right"
+      ? point.x - width
+      : point.x - width / 2;
+
+  return {
+    height,
+    width,
+    x,
+    y: point.y - height / 2,
+  };
+}
+
 function targetPriority(entity: SelectableEntity, selectedDetailId: string | null, hoveredDetailId: string | null): number {
   let priority = 0;
   if (entity.detailId === selectedDetailId) priority += 32;
@@ -165,7 +186,7 @@ export function collectHitTargets(input: {
       kind: entity.kind,
       label: entity.label,
       priority: targetPriority(entity, input.selectedDetailId ?? null, input.hoveredDetailId ?? null),
-      rect: asset ? assetTargetRect({
+      rect: entity.kind === "area" ? areaLabelTargetRect(entity, input.camera) : asset ? assetTargetRect({
         asset,
         camera: input.camera,
         entity,

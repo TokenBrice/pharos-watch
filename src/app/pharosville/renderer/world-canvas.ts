@@ -1,4 +1,5 @@
 import type { PharosVilleMotionPlan, ShipMotionSample } from "../systems/motion";
+import { areaLabelPlacementForArea } from "../systems/area-labels";
 import { waterTerrainStyle } from "../systems/palette";
 import { tileToScreen, type IsoCamera, type ScreenPoint } from "../systems/projection";
 import {
@@ -65,12 +66,6 @@ const BIRDS = [
   { anchorX: 18.2, anchorY: 2.2, radiusX: 6.2, radiusY: 1.6, scale: 0.62, speed: 0.18, phase: 5.3 },
   { anchorX: 7.2, anchorY: -7.6, radiusX: 5.2, radiusY: 1.5, scale: 0.84, speed: 0.19, phase: 2.2 },
   { anchorX: -9.8, anchorY: -8.2, radiusX: 5.8, radiusY: 1.7, scale: 0.82, speed: 0.17, phase: 4.9 },
-] as const;
-
-const ATMOSPHERE_BANDS = [
-  { alpha: 0.11, rx: 280, ry: 24, tileX: 16, tileY: 13, phase: 0.3 },
-  { alpha: 0.08, rx: 230, ry: 19, tileX: 48, tileY: 11, phase: 2.1 },
-  { alpha: 0.07, rx: 210, ry: 16, tileX: 53, tileY: 39, phase: 4.4 },
 ] as const;
 
 const SKY_MOODS = {
@@ -208,13 +203,13 @@ export function drawPharosVille(input: DrawPharosVilleInput) {
   drawSky(input);
 
   drawTerrain(input);
+  drawWaterAreaLabels(input);
   drawAtmosphere(input);
   drawCemeteryGround(input);
   drawLighthouseHeadland(input);
   drawCemeteryContext(input);
   drawThematicBuildings(input);
   drawDocks(input);
-  drawAreaSigns(input);
   drawDecorativeLights(input);
   drawShips(input);
   drawClusters(input);
@@ -883,7 +878,6 @@ function drawGrassTexture(ctx: CanvasRenderingContext2D, x: number, y: number, z
 }
 
 function drawAtmosphere({ camera, ctx, motion, world }: DrawPharosVilleInput) {
-  const time = motion.reducedMotion ? 0 : motion.timeSeconds;
   const mood = skyState(motion).mood;
   const beacon = tileToScreen(world.lighthouse.tile, camera);
   ctx.save();
@@ -891,18 +885,6 @@ function drawAtmosphere({ camera, ctx, motion, world }: DrawPharosVilleInput) {
   ctx.beginPath();
   ctx.ellipse(beacon.x - 18 * camera.zoom, beacon.y - 92 * camera.zoom, 220 * camera.zoom, 54 * camera.zoom, -0.16, 0, Math.PI * 2);
   ctx.fill();
-
-  for (const band of ATMOSPHERE_BANDS) {
-    const p = tileToScreen({ x: band.tileX, y: band.tileY }, camera);
-    const drift = Math.sin(time * 0.18 + band.phase) * 12 * camera.zoom;
-    ctx.strokeStyle = mood === SKY_MOODS.day
-      ? `rgba(255, 230, 181, ${band.alpha + 0.05})`
-      : `rgba(200, 219, 205, ${band.alpha})`;
-    ctx.lineWidth = Math.max(1, 6.5 * camera.zoom);
-    ctx.beginPath();
-    ctx.ellipse(p.x + drift, p.y - 18 * camera.zoom, band.rx * camera.zoom, band.ry * camera.zoom, -0.1, 0, Math.PI * 2);
-    ctx.stroke();
-  }
   ctx.restore();
 }
 
@@ -1881,11 +1863,22 @@ function dockHealthColor(healthBand: PharosVilleWorld["docks"][number]["healthBa
   return "#9fb0aa";
 }
 
-function drawAreaSigns({ camera, ctx, world }: DrawPharosVilleInput) {
+function drawWaterAreaLabels({ camera, ctx, world }: DrawPharosVilleInput) {
   for (const area of world.areas) {
-    const p = tileToScreen(area.tile, camera);
+    const placement = areaLabelPlacementForArea(area);
+    const p = tileToScreen(placement.anchorTile, camera);
     const accent = area.visual?.accent ?? (area.band ? dewsAreaColor(area.band) : "#d8b56a");
-    drawWaterAreaPost(ctx, p.x, p.y, area.label, area.count ?? null, camera.zoom, accent);
+    drawCartographicWaterLabel({
+      accent,
+      align: placement.align,
+      ctx,
+      label: area.label,
+      maxWidth: placement.maxWidth,
+      rotation: placement.rotation,
+      x: p.x,
+      y: p.y,
+      zoom: camera.zoom,
+    });
   }
 }
 
@@ -1895,6 +1888,51 @@ function dewsAreaColor(band: NonNullable<PharosVilleWorld["areas"][number]["band
   if (band === "ALERT") return "#e0b84c";
   if (band === "WATCH") return "#83b98a";
   return "#8fc7bb";
+}
+
+function drawCartographicWaterLabel(input: {
+  accent: string;
+  align: "center" | "left" | "right";
+  ctx: CanvasRenderingContext2D;
+  label: string;
+  maxWidth: number;
+  rotation: number;
+  x: number;
+  y: number;
+  zoom: number;
+}) {
+  const { accent, align, ctx, label, maxWidth, rotation, x, y, zoom } = input;
+  const scale = Math.max(0.72, zoom);
+  const fontSize = Math.max(8, Math.round(8.6 * scale));
+  const text = label.toUpperCase();
+  const width = maxWidth * scale;
+
+  ctx.save();
+  ctx.translate(Math.round(x), Math.round(y));
+  ctx.rotate(rotation);
+  ctx.font = `700 ${fontSize}px Georgia, "Times New Roman", serif`;
+  ctx.textAlign = align;
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.globalAlpha = 0.88;
+  ctx.strokeStyle = "rgba(5, 10, 17, 0.7)";
+  ctx.lineWidth = Math.max(1.2, 2.2 * scale);
+  ctx.strokeText(text, 0, 0, width);
+  ctx.fillStyle = "rgba(238, 218, 169, 0.78)";
+  ctx.fillText(text, 0, 0, width);
+
+  const metrics = ctx.measureText(text);
+  const measuredWidth = Math.min(width, metrics.width);
+  const lineStart = align === "left" ? 0 : align === "right" ? -measuredWidth : -measuredWidth / 2;
+  const lineEnd = align === "left" ? measuredWidth : align === "right" ? 0 : measuredWidth / 2;
+  ctx.globalAlpha = 0.48;
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = Math.max(1, 0.9 * scale);
+  ctx.beginPath();
+  ctx.moveTo(lineStart, 8.2 * scale);
+  ctx.lineTo(lineEnd, 8.2 * scale);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawHarborFlag(input: {
@@ -2077,71 +2115,6 @@ function dockFlagMark(dock: PharosVilleWorld["docks"][number]) {
     .filter(Boolean);
   if (words.length > 1) return words.map((word) => word[0]).join("").slice(0, 3);
   return (words[0] ?? dock.chainId).slice(0, 3);
-}
-
-function drawWaterAreaPost(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  label: string,
-  count: number | null,
-  zoom: number,
-  accent: string,
-) {
-  const scale = Math.max(0.8, zoom);
-  const fontSize = Math.max(7, Math.round(7.7 * scale));
-  ctx.save();
-  ctx.font = `700 ${fontSize}px ui-sans-serif, system-ui, sans-serif`;
-  const countText = count == null ? "" : String(count);
-  const countWidth = countText ? Math.max(15 * scale, ctx.measureText(countText).width + 8 * scale) : 0;
-  const labelWidth = ctx.measureText(label).width;
-  const width = Math.min(124 * scale, Math.max(54 * scale, labelWidth + countWidth + 20 * scale));
-  const height = 17 * scale;
-  const top = y - 38 * scale;
-  const left = x - width / 2;
-
-  ctx.fillStyle = "rgba(5, 12, 18, 0.36)";
-  ctx.beginPath();
-  ctx.ellipse(x + 1 * scale, y + 2 * scale, width * 0.23, 4 * scale, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = "#2e2118";
-  ctx.fillRect(Math.round(x - 1.3 * scale), Math.round(top + 5 * scale), Math.max(2, Math.round(2.6 * scale)), Math.max(14, Math.round(39 * scale)));
-  ctx.fillStyle = accent;
-  ctx.beginPath();
-  ctx.moveTo(x + 1.5 * scale, top + 2 * scale);
-  ctx.lineTo(x + 14 * scale, top + 7 * scale);
-  ctx.lineTo(x + 1.5 * scale, top + 12 * scale);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#2a1a12";
-  ctx.lineWidth = Math.max(1, scale * 0.9);
-  ctx.stroke();
-
-  drawSignBoard(ctx, left, top + 13 * scale, width, height, scale, "#6d4a2c", "#3f2a1c");
-  ctx.fillStyle = "rgba(234, 207, 137, 0.15)";
-  ctx.fillRect(Math.round(left + 4 * scale), Math.round(top + 17 * scale), Math.round(width - 8 * scale), Math.max(1, Math.round(2 * scale)));
-
-  const textMaxWidth = width - (countText ? countWidth + 18 * scale : 12 * scale);
-  ctx.fillStyle = "#f3deb1";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  drawFittedText(ctx, label, left + 7 * scale, top + 13 * scale + height * 0.58, textMaxWidth, fontSize, 6.5 * scale, "700");
-
-  if (countText) {
-    const badgeX = left + width - countWidth / 2 - 5 * scale;
-    const badgeY = top + 13 * scale + height * 0.55;
-    roundedRectPath(ctx, badgeX - countWidth / 2, badgeY - 6.5 * scale, countWidth, 13 * scale, 3 * scale);
-    ctx.fillStyle = accent;
-    ctx.fill();
-    ctx.strokeStyle = "#2b1c14";
-    ctx.stroke();
-    ctx.fillStyle = "#17120d";
-    ctx.textAlign = "center";
-    drawFittedText(ctx, countText, badgeX, badgeY + 0.3 * scale, countWidth - 4 * scale, fontSize, 6 * scale, "800");
-  }
-
-  ctx.restore();
 }
 
 function drawSignBoard(

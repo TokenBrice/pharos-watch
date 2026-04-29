@@ -167,6 +167,7 @@ Primary files:
 - `src/app/pharosville/renderer/world-canvas.ts`
 - `src/app/pharosville/renderer/hit-testing.ts`
 - `src/app/pharosville/systems/pharosville-world.ts`
+- `src/app/pharosville/systems/visual-cue-registry.ts`
 - `src/app/pharosville/systems/world-types.ts` only if label metadata is needed
 
 Steps:
@@ -175,35 +176,50 @@ Steps:
    `drawWaterAreaPost()` for sea areas.
 2. Keep `AreaNode` as the semantic source. Use existing labels from
    `DEWS_AREA_LABELS` and `buildNorthFrozePoleArea()`.
-3. Add a small route-local label placement table if hardcoded offsets are
-   clearer than expanding the model:
+3. Add shared label placement metadata or a shared helper rather than a
+   renderer-only table. The same placement source must be used by:
+   - `world-canvas.ts` for drawing
+   - `hit-testing.ts` for area targets
+   - `pharosville-world.tsx` follow-selected behavior if labels move away from
+     `AreaNode.tile`
+4. Keep the semantic area tile as the data anchor, but expose a separate
+   visual label anchor when the printed text needs to be offset inward or
+   rotated. Do not let renderer, hitbox, and follow behavior diverge.
+5. The shared placement should support:
    - per `detailId` or `band`
    - optional `{ dx, dy, rotation, align, maxWidth }`
    - use inward offsets for edge labels such as `Danger Strait` and
      `North Froze Pole` to avoid clipping
-4. Render labels directly on water:
+6. Render labels directly on water:
    - font: route-local serif stack such as `Georgia, "Times New Roman", serif`
    - uppercase or title-case small caps; use restrained letter spacing only if
      it remains readable
    - low-opacity parchment/ink fill, subtle dark stroke or shadow
    - slight rotation along the water body's axis
    - no board, post, flag, rounded badge, or UI count pill
-5. Decide canvas count treatment:
+7. Decide canvas count treatment:
    - preferred: omit counts from the printed label and keep counts in the
      detail panel/accessibility ledger
    - acceptable fallback: tiny suffix in muted ink, not a badge
-6. Draw labels after water/terrain textures and before ships/clusters so they
-   feel printed under moving entities.
-7. Update area hitboxes in `hit-testing.ts`:
+8. Move the label draw call earlier in `drawPharosVille()`: labels should render
+   immediately after `drawTerrain()` and before atmosphere, cemetery,
+   lighthouse headland, buildings, docks, decorative lights, ships, clusters,
+   graves, and selection. Replacing `drawAreaSigns()` in place is not enough
+   because the current call happens after buildings and docks.
+9. Update area hitboxes in `hit-testing.ts`:
    - either keep a generous invisible target centered on the label tile
    - or add per-area label hitbox sizes/offsets mirroring the renderer table
-8. Remove `drawWaterAreaPost()` only if it is no longer used. If dock name
+10. Update `visual-cue-registry.ts` and `visual-cue-registry.test.ts` for the
+    new cartographic label language. Remove stale references such as the North
+    Froze Pole "frosted sign" wording if the sign is gone.
+11. Remove `drawWaterAreaPost()` only if it is no longer used. If dock name
    ribbons still need `drawSignBoard()`, keep that helper.
 
 Tests/checks:
 
 - Update `tests/visual/pharosville.spec.ts` if it asserts old sign geometry.
 - Add a hit-testing assertion for area targets if not already covered.
+- Update `visual-cue-registry.test.ts` for the new visual language.
 - Browser review must click at least `Alert Channel`, `Warning Shoals`,
   `Danger Strait`, and `North Froze Pole`.
 
@@ -331,6 +347,7 @@ Steps:
    - `PREFERRED_DOCK_TILES`
    - `REGION_TILES`
    - `SHIP_WATER_ANCHORS`
+   - `OPEN_WATER_PATROL_WAYPOINTS` in `motion.ts`
    - `AREA_SIGN_TILES`, or the new area-label placement table
 5. Keep each dock on land/shore with at least one adjacent water tile.
 6. Keep DEWS area anchors on matching terrain:
@@ -348,6 +365,10 @@ Steps:
    - road connectivity
    - dock water adjacency
    - cemetery separation
+8. Update `tests/visual/pharosville.spec.ts` water-ratio assertions. The
+   current desktop shell test parses the accessibility ledger and enforces
+   `78..83%`; a successful 20% landmass shrink should replace that with the
+   new intentional ratio range rather than preserving the old contract.
 
 Suggested acceptance thresholds:
 
@@ -526,6 +547,8 @@ Focused unit checks:
 npm test -- src/app/pharosville
 npm run check:pharosville-assets
 npm run check:harbor-palette
+npm run lint
+npm run typecheck
 ```
 
 Specific lanes to run during implementation:
@@ -536,6 +559,7 @@ npm test -- src/app/pharosville/systems/pharosville-world.test.ts
 npm test -- src/app/pharosville/systems/chain-docks.test.ts
 npm test -- src/app/pharosville/systems/motion.test.ts
 npm test -- src/app/pharosville/renderer/hit-testing.test.ts
+npm test -- src/app/pharosville/systems/visual-cue-registry.test.ts
 ```
 
 Visual lane:
@@ -576,11 +600,11 @@ npm run test:merge-gate
    labels. This directly addresses two visible issues with low layout risk.
 2. Strengthen sea palette and textures. This makes labels and zones legible
    before the larger island geometry change.
-3. Add composition-aware camera framing. This can improve initial balance even
-   before land shrink lands.
-4. Shrink the island mask and retune docks, roads, cemetery, area anchors, and
+3. Shrink the island mask and retune docks, roads, cemetery, area anchors, and
    region anchors together.
-5. Redistribute buildings and add spacing invariants.
+4. Redistribute buildings and add spacing invariants.
+5. Add composition-aware camera framing after the final land/label interest
+   bounds are stable, so default/reset framing does not need to be redone.
 6. Tune ground/lighthouse integration after the final land mask and building
    positions are stable.
 7. Update tests, docs, screenshots, and run the route-focused validation suite.

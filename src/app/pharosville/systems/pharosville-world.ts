@@ -142,12 +142,12 @@ const DEWS_AREA_LABELS: Record<DewsAreaBand, string> = {
   CALM: "Calm Anchorage",
 };
 
-const AREA_SIGN_TILES: Record<DewsAreaBand, { x: number; y: number }> = {
+const AREA_LABEL_TILES: Record<DewsAreaBand, { x: number; y: number }> = {
   DANGER: { x: 55, y: 53 },
   WARNING: { x: 49, y: 46 },
-  ALERT: { x: 40, y: 45 },
-  WATCH: { x: 27, y: 46 },
-  CALM: { x: 23, y: 39 },
+  ALERT: { x: 40, y: 44 },
+  WATCH: { x: 27, y: 44 },
+  CALM: { x: 30, y: 42 },
 };
 
 const DEWS_AREA_WATER_STYLE: Record<DewsAreaBand, string> = {
@@ -222,7 +222,7 @@ function buildAreas(stress: StressSignalsAllResponse | null | undefined): Pharos
     id: `area.dews.${band.toLowerCase()}`,
     kind: "area" as const,
     label: DEWS_AREA_LABELS[band],
-    tile: AREA_SIGN_TILES[band],
+    tile: AREA_LABEL_TILES[band],
     band,
     count: counts[band],
     detailId: `area.dews.${band.toLowerCase()}`,

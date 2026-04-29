@@ -4,6 +4,7 @@ import { buildPharosVilleWorld } from "../systems/pharosville-world";
 import { fitCameraToMap, tileToScreen } from "../systems/projection";
 import type { PharosVilleAssetManifestEntry } from "../systems/asset-manifest";
 import type { ShipMotionSample } from "../systems/motion";
+import { areaLabelPlacementForArea } from "../systems/area-labels";
 import type { LoadedPharosVilleAsset } from "./asset-manager";
 import { collectHitTargets, hitTest, type HitTarget } from "./hit-testing";
 
@@ -76,6 +77,45 @@ describe("hit-testing", () => {
       x: target!.rect.x + target!.rect.width / 2,
       y: target!.rect.y + target!.rect.height / 2,
     })?.detailId).toBe(area!.detailId);
+  });
+
+  it("aligns area hit targets to shared cartographic label placement", () => {
+    const area = world.areas.find((entry) => entry.detailId === "area.north-froze-pole");
+    expect(area).toBeDefined();
+    const placement = areaLabelPlacementForArea(area!);
+    const labelPoint = tileToScreen(placement.anchorTile, camera);
+    const semanticPoint = tileToScreen(area!.tile, camera);
+    const target = collectHitTargets({ camera, selectedDetailId: area!.detailId, world })
+      .find((entry) => entry.detailId === area!.detailId);
+    expect(target).toBeDefined();
+
+    expect(target!.rect.x + target!.rect.width / 2).toBeCloseTo(labelPoint.x);
+    expect(target!.rect.y + target!.rect.height / 2).toBeCloseTo(labelPoint.y);
+    expect(labelPoint.x).not.toBeCloseTo(semanticPoint.x);
+    expect(labelPoint.y).not.toBeCloseTo(semanticPoint.y);
+  });
+
+  it("keeps cartographic area labels selectable at their printed size", () => {
+    const zoomedOutCamera = { ...camera, zoom: 0.48 };
+    const area = world.areas.find((entry) => entry.detailId === "area.north-froze-pole");
+    expect(area).toBeDefined();
+    const placement = areaLabelPlacementForArea(area!);
+    const target = collectHitTargets({ camera: zoomedOutCamera, selectedDetailId: area!.detailId, world })
+      .find((entry) => entry.detailId === area!.detailId);
+    expect(target).toBeDefined();
+
+    expect(target!.rect.width).toBeCloseTo(Math.max(52, placement.maxWidth * 0.72));
+    expect(target!.rect.height).toBeCloseTo(Math.max(26, placement.hitboxHeight * 0.72));
+  });
+
+  it("keeps every water area label selectable from at least one visible point", () => {
+    const targets = collectHitTargets({ camera, world });
+    const areaTargets = targets.filter((entry) => entry.kind === "area");
+
+    expect(areaTargets.length).toBeGreaterThan(0);
+    for (const target of areaTargets) {
+      expect(unoccludedTargetPoint(targets, target), `${target.detailId} should have a selectable label point`).not.toBeNull();
+    }
   });
 
 
