@@ -74,3 +74,14 @@ Generated three revised Pixellab candidates:
 - `a448923a-dfd4-4113-8168-aa9accd904cb`: strong lower hill, but the path still read too much like a top path and kept water-framing.
 
 Promoted `eb0d494c-ed95-4352-8c3c-9f113bdaad06` and bumped the asset cache version to `2026-04-29-lighthouse-hill-v2`.
+
+Second user review caught a duplicate right-side door. Pixellab inpainting on a small masked crop produced a new standalone crop instead of preserving the original, so the final production PNG uses the `eb0d494c` source with a local pixel cleanup over the duplicate door/landing. The main island-facing door and continuous left stairway are preserved, the right-side opening is replaced with matching grass/rock detail, and the cache version is `2026-04-29-lighthouse-hill-v3`.
+
+Third user review caught two remaining sprite artifacts:
+
+- Stacked marks above the main door did not read as windows.
+- Grass on the right side visually overlapped the lighthouse base.
+
+The production sprite now uses a second local pixel cleanup: the stacked marks are replaced with small round lighthouse windows, the right lower base is rebuilt as plain stone masonry, and the surrounding grass is kept behind the wall with no second doorway. The cache version is `2026-04-29-lighthouse-hill-v4`.
+
+Final takeover pass reverted the overworked `v4` cleanup because it introduced an oversized side slab and blocky right-face repair. The production asset now uses the cleaner `eb0d494c` doorless cleanup (`lighthouse-hill-lower-candidate-eb0d494c-doorless-v4.png`): one island-facing door, no duplicate right-side door, no oversized side windows, and no right-side grass overlap on the lighthouse face. The cache version is `2026-04-29-lighthouse-hill-v5`.
