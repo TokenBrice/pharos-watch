@@ -11,6 +11,19 @@ export interface LoadedPharosVilleLogo {
   src: string;
 }
 
+export interface PharosVilleAssetLoadError {
+  id: string;
+  message: string;
+  path: string;
+  priority: PharosVilleAssetManifestEntry["loadPriority"];
+}
+
+export interface PharosVilleAssetLoadResult {
+  errors: PharosVilleAssetLoadError[];
+  loaded: LoadedPharosVilleAsset[];
+  manifest: PharosVilleAssetManifest;
+}
+
 export class PharosVilleAssetManager {
   private assets = new Map<string, LoadedPharosVilleAsset>();
   private logos = new Map<string, LoadedPharosVilleLogo>();
@@ -29,20 +42,18 @@ export class PharosVilleAssetManager {
     return this.logos.get(src) ?? null;
   }
 
-  async loadCritical(signal?: AbortSignal): Promise<PharosVilleAssetManifest> {
+  async loadCritical(signal?: AbortSignal): Promise<PharosVilleAssetLoadResult> {
     const manifest = await this.loadManifest(signal);
     const critical = manifest.assets.filter((asset) => (
       asset.loadPriority === "critical" || manifest.requiredForFirstRender.includes(asset.id)
     ));
-    await Promise.all(critical.map((asset) => this.loadAsset(asset, manifest, signal)));
-    return manifest;
+    return this.loadAssetGroup(critical, manifest, signal);
   }
 
-  async loadDeferred(signal?: AbortSignal): Promise<PharosVilleAssetManifest> {
+  async loadDeferred(signal?: AbortSignal): Promise<PharosVilleAssetLoadResult> {
     const manifest = await this.loadManifest(signal);
     const deferred = manifest.assets.filter((asset) => asset.loadPriority === "deferred");
-    await Promise.all(deferred.map((asset) => this.loadAsset(asset, manifest, signal)));
-    return manifest;
+    return this.loadAssetGroup(deferred, manifest, signal);
   }
 
   async loadManifest(signal?: AbortSignal): Promise<PharosVilleAssetManifest> {
@@ -79,6 +90,35 @@ export class PharosVilleAssetManager {
     const uniqueSrcs = [...new Set([...srcs].filter((src) => src.startsWith("/")))];
     return Promise.all(uniqueSrcs.map((src) => this.loadLogo(src, signal)));
   }
+
+  private async loadAssetGroup(
+    assets: PharosVilleAssetManifestEntry[],
+    manifest: PharosVilleAssetManifest,
+    signal?: AbortSignal,
+  ): Promise<PharosVilleAssetLoadResult> {
+    const settled = await Promise.allSettled(assets.map((asset) => this.loadAsset(asset, manifest, signal)));
+    const loaded: LoadedPharosVilleAsset[] = [];
+    const errors: PharosVilleAssetLoadError[] = [];
+    settled.forEach((result, index) => {
+      const asset = assets[index];
+      if (!asset) return;
+      if (result.status === "fulfilled") {
+        loaded.push(result.value);
+        return;
+      }
+      errors.push({
+        id: asset.id,
+        message: errorMessage(result.reason),
+        path: asset.path,
+        priority: asset.loadPriority,
+      });
+    });
+    return { errors, loaded, manifest };
+  }
+}
+
+function errorMessage(reason: unknown) {
+  return reason instanceof Error ? reason.message : String(reason);
 }
 
 function loadImage(src: string, signal?: AbortSignal): Promise<HTMLImageElement> {

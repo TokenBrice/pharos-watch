@@ -417,8 +417,8 @@
 
 .pharosville-detail-dock dl {
   display: grid;
-  gap: 8px;
-  margin: 10px 0 0;
+  gap: 7px;
+  margin: 8px 0 0;
 }
 
 .pharosville-detail-dock dl div {
@@ -441,7 +441,11 @@
   color: rgba(247, 223, 172, 0.9);
 }
 
-.pharosville-detail-dock > [data-testid="pharosville-detail-panel"] > p:first-child {
+.pharosville-detail-panel__header {
+  padding-bottom: 10px;
+}
+
+.pharosville-detail-panel__kind {
   margin: 0 0 7px;
   color: #e56a47;
   font-size: 0.72rem;
@@ -450,8 +454,36 @@
   text-transform: uppercase;
 }
 
-.pharosville-detail-dock nav {
-  margin-top: 12px;
+.pharosville-detail-panel__section {
+  border-top: 1px solid rgba(240, 178, 77, 0.26);
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.pharosville-detail-panel__section--route dl div {
+  border-left-color: rgba(128, 214, 206, 0.48);
+}
+
+.pharosville-detail-panel__section--source dl div {
+  border-left-color: rgba(229, 106, 71, 0.42);
+}
+
+.pharosville-detail-panel__section--source dd {
+  color: rgba(247, 223, 172, 0.76);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.pharosville-detail-panel__section--members ol,
+.pharosville-detail-panel__section--links ul {
+  display: grid;
+  gap: 5px;
+  padding-left: 18px;
+}
+
+.pharosville-detail-panel__section--members li::marker,
+.pharosville-detail-panel__section--links li::marker {
+  color: var(--pv-gold);
 }
 
 .pharosville-detail-dock button {

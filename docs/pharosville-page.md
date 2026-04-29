@@ -4,6 +4,17 @@ Contract for `/pharosville/`, the beta PharosVille route.
 
 `/pharosville/` is a data-driven old-school RPG island city for exploring Pharos stablecoin signals.
 
+The scenery contract is recorded in
+[`agents/specs/2026-04-29-pharosville-scenery-brief.md`](../agents/specs/2026-04-29-pharosville-scenery-brief.md).
+It defines PharosVille as a dark-first maritime observatory island-city: lighthouse
+for PSI, harbors for chain supply, ships for active stablecoins, cemetery for
+dead/frozen lifecycle assets, four main-island data buildings for non-ship
+Pharos products, and North Froze Pole as a frozen northern water area for
+observed freeze/blacklist activity. The ClaudeVille transfer boundary is
+contracts and validation habits only; fantasy-village scenery, decorative lore
+copy, non-semantic palettes, extra typography systems, and canvas-only data
+truth remain out of scope.
+
 ## Route Contract
 
 - **Page shell:** `src/app/pharosville/page.tsx`
@@ -79,6 +90,11 @@ The planned PharosVille visual grammar is:
 - fog = missing, low-confidence, or stale evidence
 
 Exact values and placement explanations must be available in DOM panels. The canvas must never be the only source of analytical truth.
+
+Dense inspection concepts stay DOM-only until they have a clear analytical
+mapping: full event/holding/pool/yield/dependency tables, transitive dependency
+or value-at-risk interpretation, executable redemption guarantees, filtering and
+sorting controls, and methodology text beyond short source or caveat labels.
 
 ## Canvas Exception
 

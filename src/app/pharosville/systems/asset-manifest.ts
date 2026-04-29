@@ -4,6 +4,7 @@ export type PharosVilleAssetPriority = "critical" | "deferred";
 export interface PharosVilleAssetManifestEntry {
   anchor: [number, number];
   category: PharosVilleAssetCategory;
+  criticalReason?: string;
   displayScale: number;
   footprint: [number, number];
   height: number;
@@ -11,12 +12,15 @@ export interface PharosVilleAssetManifestEntry {
   id: string;
   layer: string;
   loadPriority: PharosVilleAssetPriority;
+  paletteKeys?: string[];
   path: string;
+  promptKey?: string;
   promptProvenance?: {
     jobId?: string;
     seed?: number;
     styleAnchorVersion: string;
   };
+  semanticRole?: string;
   tool?: string;
   width: number;
 }

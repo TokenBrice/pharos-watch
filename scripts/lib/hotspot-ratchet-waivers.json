@@ -27,6 +27,10 @@
     "disposition": "queued-p4",
     "notes": "Ship motion routing now centralizes deterministic water-path construction, seeded detours, dwell timing, and route sampling for the initial liveliness release. Keep it waived until the next PharosVille systems pass can split pathfinding, scheduling, and sampling without changing behavior."
   },
+  "src/app/pharosville/systems/data-buildings.ts": {
+    "disposition": "queued-p4",
+    "notes": "PharosVille data buildings now centralize the four main-island product landmarks plus the North Froze Pole area while the world-area model settles. Keep waived for this design tranche; split per-product detail builders and visual-state mappers in the next PharosVille systems cleanup."
+  },
   "src/components/command-palette.tsx": {
     "disposition": "queued-p4",
     "notes": "The command palette still combines indexing, keyboard handling, and rendering in one shell. Keep it waived until the navigation/search UI cleanup lane is scheduled."
@@ -42,10 +46,6 @@
   "worker/src/api/audit-depeg-history.ts": {
     "disposition": "queued-p4",
     "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche."
-  },
-  "worker/src/cron/blacklist/amount-recovery.ts": {
-    "disposition": "queued-p4",
-    "notes": "Blacklist amount recovery still mixes provider fanout, pricing fallback, event-shape branching, and batch-write orchestration in one branch-heavy module. Track it for a dedicated blacklist recovery simplification pass rather than folding that work into the current reserve/pricing/status tranche."
   },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
@@ -71,10 +71,6 @@
     "disposition": "deferred",
     "notes": "Classification now intentionally centralizes peg labels, badge styles, chart colors, and filter labels behind a canonical metadata table. Treat the file-line count as a data-table hotspot, not a behavior hotspot; revisit only if classification grows more non-data logic."
   },
-  "src/lib/contagion-layout.ts": {
-    "disposition": "queued-p4",
-    "notes": "The contagion layout engine still combines graph shaping, simulation setup, radius heuristics, and clamp/label rules in one branchy module. Track it for the next dedicated contagion graph simplification pass rather than mixing a layout-engine breakup into the current status/pricing tranche."
-  },
   "worker/src/cron/daily-digest/prompt.ts": {
     "disposition": "queued-p4",
     "notes": "Candidate-led digest prompting intentionally centralizes the editorial contract while the digest rewrite stabilizes. Split prompt policy, rubric text, and safety instructions in a follow-up digest cleanup pass."
@@ -98,10 +94,6 @@
   "worker/src/lib/dews.ts": {
     "disposition": "queued-p4",
     "notes": "DEWS scoring and contagion policy remain intentionally concentrated while the early-warning surface is still evolving. Split signal derivation, contagion weighting, and aggregate scoring in a dedicated DEWS cleanup pass."
-  },
-  "worker/src/cron/reserve-adapters/gho.ts": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after Phase 6 removed completed hotspot waivers. The GHO reserve adapter mixes facilitator discovery, reserve parsing, and scenario-specific classification; keep it waived until the next reserve-adapter simplification pass."
   },
   "src/app/yield/client.tsx": {
     "disposition": "queued-p4",

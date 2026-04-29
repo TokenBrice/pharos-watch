@@ -5,12 +5,14 @@ import { join, normalize, relative, resolve, sep } from "node:path";
 const repoRoot = process.cwd();
 const assetRoot = resolve(repoRoot, "public/pharosville/assets");
 const manifestPath = join(assetRoot, "manifest.json");
+const pharosVilleSrcRoot = resolve(repoRoot, "src/app/pharosville");
 const forbiddenPattern = /(Bearer|PIXELLAB|NEXT_PUBLIC_PIXELLAB|pixellab\.ai|https?:\/\/)/i;
 const placeholderPattern = /(placeholder|checker|debug|sample)/i;
 const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const allowedCategories = new Set(["terrain", "landmark", "dock", "ship", "prop", "overlay"]);
 const allowedPriorities = new Set(["critical", "deferred"]);
 const hexColorPattern = /^#[0-9a-f]{6}$/i;
+const assetIdPattern = /^(building|dock|landmark|overlay|prop|ship|terrain)\.[a-z0-9-]+$/;
 
 const manifestText = readFileSync(manifestPath, "utf8");
 const manifest = JSON.parse(manifestText);
@@ -34,6 +36,7 @@ for (const requiredId of manifest.requiredForFirstRender ?? []) {
 for (const asset of manifest.assets ?? []) {
   validateAsset(asset, ids, referenced);
 }
+validateReferencedAssetIds(ids);
 
 for (const pngPath of listPngs(assetRoot)) {
   const relativePath = relative(assetRoot, pngPath).split(sep).join("/");
@@ -60,6 +63,9 @@ function validateAsset(asset, ids, referenced) {
   const id = typeof asset.id === "string" ? asset.id : "<missing id>";
   if (!asset.id) errors.push("Asset is missing id.");
   if (typeof asset.id !== "string") errors.push("Asset id must be a string.");
+  if (typeof asset.id === "string" && !assetIdPattern.test(asset.id)) {
+    errors.push(`${id} id must be a namespaced asset id.`);
+  }
   if (!allowedCategories.has(asset.category)) errors.push(`${id} category is invalid: ${asset.category}`);
   if (!asset.layer || typeof asset.layer !== "string") errors.push(`${id} layer is required.`);
   if (!allowedPriorities.has(asset.loadPriority)) errors.push(`${id} loadPriority is invalid: ${asset.loadPriority}`);
@@ -136,6 +142,7 @@ function validateAsset(asset, ids, referenced) {
       errors.push(`${id} promptProvenance.jobId must be a string when present.`);
     }
   }
+  validateOptionalMetadata(asset, id);
 }
 
 function listPngs(dir) {
@@ -182,4 +189,60 @@ function validateStyle(style) {
   if (typeof defaults.transparentBackground !== "boolean") {
     errors.push("Manifest style.generationDefaults.transparentBackground must be boolean.");
   }
+}
+
+function validateOptionalMetadata(asset, id) {
+  for (const key of ["promptKey", "semanticRole", "criticalReason"]) {
+    if (asset[key] != null && (typeof asset[key] !== "string" || asset[key].trim() === "")) {
+      errors.push(`${id} ${key} must be a non-empty string when present.`);
+    }
+  }
+  if (asset.criticalReason != null && asset.loadPriority !== "critical" && !(manifest.requiredForFirstRender ?? []).includes(asset.id)) {
+    errors.push(`${id} criticalReason is only valid for critical or first-render assets.`);
+  }
+  if (asset.paletteKeys != null) {
+    if (!Array.isArray(asset.paletteKeys) || asset.paletteKeys.length === 0) {
+      errors.push(`${id} paletteKeys must be a non-empty string array when present.`);
+      return;
+    }
+    for (const paletteKey of asset.paletteKeys) {
+      if (typeof paletteKey !== "string" || paletteKey.trim() === "") {
+        errors.push(`${id} paletteKeys entries must be non-empty strings.`);
+      }
+    }
+  }
+}
+
+function validateReferencedAssetIds(manifestIds) {
+  const referencedIds = new Map();
+  const add = (id, source) => {
+    const sources = referencedIds.get(id) ?? new Set();
+    sources.add(source);
+    referencedIds.set(id, sources);
+  };
+
+  add("landmark.lighthouse", "world renderer lighthouse");
+  add("prop.tombstone", "world renderer graves");
+  for (const id of assetIdsInSource("renderer/world-canvas.ts")) add(id, "renderer/world-canvas.ts");
+  for (const id of assetIdsInSource("renderer/hit-testing.ts")) add(id, "renderer/hit-testing.ts");
+  for (const id of assetIdsInSource("systems/chain-docks.ts")) add(id, "systems/chain-docks.ts");
+  for (const id of assetIdsInSource("systems/data-buildings.ts")) add(id, "systems/data-buildings.ts");
+  for (const hull of shipHullsInSource("systems/ship-visuals.ts")) add(`ship.${hull}`, "systems/ship-visuals.ts");
+
+  for (const [id, sources] of referencedIds) {
+    if (!manifestIds.has(id)) {
+      errors.push(`Manifest is missing referenced asset ${id} from ${[...sources].join(", ")}.`);
+    }
+  }
+}
+
+function assetIdsInSource(relativePath) {
+  const source = readFileSync(join(pharosVilleSrcRoot, relativePath), "utf8");
+  return [...source.matchAll(/"(building|dock|landmark|overlay|prop|ship|terrain)\.[a-z0-9-]+"/g)]
+    .map((match) => match[0].slice(1, -1));
+}
+
+function shipHullsInSource(relativePath) {
+  const source = readFileSync(join(pharosVilleSrcRoot, relativePath), "utf8");
+  return [...source.matchAll(/hull:\s*"([a-z0-9-]+)"/g)].map((match) => match[1]);
 }

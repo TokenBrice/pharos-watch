@@ -6,7 +6,7 @@ import { AccessibilityLedger } from "./components/accessibility-ledger";
 import { DetailPanel } from "./components/detail-panel";
 import { WorldToolbar } from "./components/world-toolbar";
 import { useFullscreenMode } from "./hooks/use-fullscreen-mode";
-import { PharosVilleAssetManager } from "./renderer/asset-manager";
+import { PharosVilleAssetManager, type PharosVilleAssetLoadError } from "./renderer/asset-manager";
 import { collectHitTargets, hitTest, type HitTarget } from "./renderer/hit-testing";
 import { drawPharosVille } from "./renderer/world-canvas";
 import { cameraZoomLabel, clampCameraToMap, defaultCamera, followTile, panCamera, zoomIn, zoomOut } from "./systems/camera";
@@ -38,7 +38,9 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
   const [selectedDetailAnchor, setSelectedDetailAnchor] = useState<DetailAnchor | null>(null);
   const [announcement, setAnnouncement] = useState("PharosVille ready.");
   const [assetLoadTick, setAssetLoadTick] = useState(0);
-  const [assetsLoaded, setAssetsLoaded] = useState(false);
+  const [assetLoadErrors, setAssetLoadErrors] = useState<PharosVilleAssetLoadError[]>([]);
+  const [criticalAssetsLoaded, setCriticalAssetsLoaded] = useState(false);
+  const [deferredAssetsLoaded, setDeferredAssetsLoaded] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(true);
   const shellRef = useRef<HTMLElement | null>(null);
   const { exitFullscreen, fullscreenMode, toggleFullscreen } = useFullscreenMode(shellRef);
@@ -79,17 +81,33 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
 
   useEffect(() => {
     const controller = new AbortController();
+    let active = true;
     assetManager.loadCritical(controller.signal)
-      .then(() => {
+      .then((criticalResult) => {
+        if (!active) return null;
+        setAssetLoadErrors(criticalResult.errors);
+        setCriticalAssetsLoaded(criticalResult.errors.length === 0);
         setAssetLoadTick((tick) => tick + 1);
         return assetManager.loadDeferred(controller.signal);
       })
-      .then(() => {
-        setAssetsLoaded(true);
+      .then((deferredResult) => {
+        if (!active || !deferredResult) return;
+        setAssetLoadErrors((previous) => [...previous, ...deferredResult.errors]);
+        setDeferredAssetsLoaded(deferredResult.errors.length === 0);
         setAssetLoadTick((tick) => tick + 1);
       })
-      .catch(() => setAssetLoadTick((tick) => tick + 1));
+      .catch((error) => {
+        if (!active) return;
+        setAssetLoadErrors([{
+          id: "manifest",
+          message: error instanceof Error ? error.message : String(error),
+          path: "manifest.json",
+          priority: "critical",
+        }]);
+        setAssetLoadTick((tick) => tick + 1);
+      });
     return () => {
+      active = false;
       controller.abort();
     };
   }, [assetManager]);
@@ -231,7 +249,10 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
     debugWindow.__pharosVilleDebug = {
       camera,
       cameraWithinBounds: isCameraWithinBounds(camera, world.map, canvasSize),
-      assetsLoaded,
+      assetLoadErrors,
+      assetsLoaded: criticalAssetsLoaded && deferredAssetsLoaded,
+      criticalAssetsLoaded,
+      deferredAssetsLoaded,
       animationFramePending: animationFramePendingRef.current,
       canvasBudget: canvasBudgetRef.current,
       canvasSize,
@@ -246,7 +267,7 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
     return () => {
       delete debugWindow.__pharosVilleDebug;
     };
-  }, [assetsLoaded, camera, canvasSize, reducedMotion, selectedDetailAnchor, selectedDetailId, world.map]);
+  }, [assetLoadErrors, camera, canvasSize, criticalAssetsLoaded, deferredAssetsLoaded, reducedMotion, selectedDetailAnchor, selectedDetailId, world.map]);
 
   const canvasPoint = useCallback((event: ReactPointerEvent<HTMLCanvasElement> | ReactWheelEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -482,9 +503,12 @@ type CompactShipMotionSample = {
 };
 
 type PharosVilleDebugState = {
+  assetLoadErrors: PharosVilleAssetLoadError[];
   camera: IsoCamera | null;
   cameraWithinBounds: boolean;
   assetsLoaded: boolean;
+  criticalAssetsLoaded: boolean;
+  deferredAssetsLoaded: boolean;
   canvasBudget: ReturnType<typeof resolveCanvasBudget> | null;
   canvasSize: ScreenPoint;
   animationFramePending: boolean;

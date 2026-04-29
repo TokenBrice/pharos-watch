@@ -1,5 +1,33 @@
 import { describe, expect, it } from "vitest";
+import type { BuildingType, PharosVilleWorld, VisualCue, VisualCueChannel } from "./world-types";
 import { buildVisualCueRegistry } from "./visual-cue-registry";
+
+const BUILDING_TYPES = [
+  "mint-burn-foundry",
+  "exit-route-gatehouse",
+  "yield-orchard-moonwell",
+  "dependency-loom-chainworks",
+] as const satisfies readonly BuildingType[];
+
+const ALLOWED_CHANNELS = [
+  "color",
+  "glow",
+  "motion",
+  "opacity",
+  "position",
+  "shape",
+  "size",
+] as const satisfies readonly VisualCueChannel[];
+
+const STRUCTURAL_WORLD_FIELDS = {
+  effects: "WorldEffect entries are bounded annotations on already-cued entities, not standalone analytical targets.",
+} as const satisfies Partial<Record<keyof PharosVilleWorld, string>>;
+
+function cueKey(cue: VisualCue): string {
+  if (cue.target.kind === "building") return `building:${cue.target.buildingType}`;
+  if (cue.target.kind === "area") return `area:${cue.target.dataAreaType}`;
+  return cue.target.kind;
+}
 
 describe("buildVisualCueRegistry", () => {
   it("documents visual cues with source and DOM equivalents", () => {
@@ -12,6 +40,7 @@ describe("buildVisualCueRegistry", () => {
       "cue.ship.rigging",
       "cue.ship.pennant",
       "cue.ship.scale",
+      "cue.ship-cluster",
       "cue.building.mint-burn-foundry",
       "cue.area.north-froze-pole",
       "cue.building.exit-route-gatehouse",
@@ -23,7 +52,67 @@ describe("buildVisualCueRegistry", () => {
       sourceField: "stablecoins.peggedAssets[].chainCirculating, pegSummary.coins[], stress.signals[]",
       failureState: "reduced-motion static harbor mooring or risk patrol / data fog",
       domEquivalent: "ship detail route facts and accessibility ledger",
+      target: { kind: "ship" },
+      primaryChannels: ["motion", "position", "opacity"],
     });
     expect(cues.every((cue) => cue.sourceField && cue.domEquivalent && cue.failureState)).toBe(true);
+  });
+
+  it("uses explicit typed targets instead of cue-id suffixes for building and North Froze Pole coverage", () => {
+    const cues = buildVisualCueRegistry();
+    const buildingTargets = cues
+      .map((cue) => cue.target)
+      .filter((target) => target.kind === "building")
+      .map((target) => target.buildingType);
+
+    expect(new Set(buildingTargets)).toEqual(new Set(BUILDING_TYPES));
+    expect(buildingTargets).toHaveLength(BUILDING_TYPES.length);
+    expect(cues).toContainEqual(expect.objectContaining({
+      target: { kind: "area", dataAreaType: "north-froze-pole" },
+    }));
+  });
+
+  it("covers world node kinds or records a structural-only exclusion", () => {
+    const cues = buildVisualCueRegistry();
+    const targetKeys = new Set(cues.map(cueKey));
+    const coveredWorldFields = {
+      areas: targetKeys.has("area:north-froze-pole"),
+      buildings: BUILDING_TYPES.every((buildingType) => targetKeys.has(`building:${buildingType}`)),
+      docks: targetKeys.has("dock"),
+      graves: targetKeys.has("grave"),
+      lighthouse: targetKeys.has("lighthouse"),
+      shipClusters: targetKeys.has("ship-cluster"),
+      ships: targetKeys.has("ship"),
+    } as const satisfies Partial<Record<keyof PharosVilleWorld, boolean>>;
+
+    expect(coveredWorldFields).toEqual({
+      areas: true,
+      buildings: true,
+      docks: true,
+      graves: true,
+      lighthouse: true,
+      shipClusters: true,
+      ships: true,
+    });
+    expect(STRUCTURAL_WORLD_FIELDS).toEqual({
+      effects: "WorldEffect entries are bounded annotations on already-cued entities, not standalone analytical targets.",
+    });
+  });
+
+  it("requires source, question, failure, DOM parity, target, and non-color-only channels", () => {
+    const cues = buildVisualCueRegistry();
+    const allowed = new Set<VisualCueChannel>(ALLOWED_CHANNELS);
+
+    expect(cues).not.toHaveLength(0);
+    for (const cue of cues) {
+      expect(cue.sourceField.trim()).not.toBe("");
+      expect(cue.questionAnswered.trim()).not.toBe("");
+      expect(cue.failureState.trim()).not.toBe("");
+      expect(cue.domEquivalent.trim()).not.toBe("");
+      expect(cue.target.kind).toBeTruthy();
+      expect(cue.primaryChannels.length).toBeGreaterThan(0);
+      expect(cue.primaryChannels.every((channel) => allowed.has(channel))).toBe(true);
+      expect(cue.primaryChannels).not.toEqual(["color"]);
+    }
   });
 });

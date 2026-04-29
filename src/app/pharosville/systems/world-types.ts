@@ -293,8 +293,28 @@ export interface DetailModel {
   members?: Array<{ id: string; label: string; href: string; value?: string }>;
 }
 
+export type VisualCueTarget =
+  | { kind: "area"; dataAreaType: NonNullable<AreaNode["dataAreaType"]> }
+  | { kind: "building"; buildingType: BuildingType }
+  | { kind: "dock" }
+  | { kind: "grave" }
+  | { kind: "lighthouse" }
+  | { kind: "ship" }
+  | { kind: "ship-cluster" };
+
+export type VisualCueChannel =
+  | "color"
+  | "glow"
+  | "motion"
+  | "opacity"
+  | "position"
+  | "shape"
+  | "size";
+
 export interface VisualCue {
   id: string;
+  target: VisualCueTarget;
+  primaryChannels: VisualCueChannel[];
   visual: string;
   sourceField: string;
   questionAnswered: string;

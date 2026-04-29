@@ -4,6 +4,8 @@ export function buildVisualCueRegistry(): VisualCue[] {
   return [
     {
       id: "cue.lighthouse.psi",
+      target: { kind: "lighthouse" },
+      primaryChannels: ["glow", "color", "opacity"],
       visual: "lighthouse great fire",
       sourceField: "stability.current.band",
       questionAnswered: "What is the overall Pharos Stability Index state?",
@@ -12,6 +14,8 @@ export function buildVisualCueRegistry(): VisualCue[] {
     },
     {
       id: "cue.dock.size",
+      target: { kind: "dock" },
+      primaryChannels: ["size", "shape", "position"],
       visual: "dock footprint and harbor style",
       sourceField: "chains.chains[].totalUsd, chains.chains[].topStablecoins",
       questionAnswered: "Which chains hold the largest stablecoin supply, and which stablecoins dominate each chain?",
@@ -20,6 +24,8 @@ export function buildVisualCueRegistry(): VisualCue[] {
     },
     {
       id: "cue.ship.distance",
+      target: { kind: "ship" },
+      primaryChannels: ["position", "motion", "opacity"],
       visual: "ship placement from harbor to storm shelf",
       sourceField: "pegSummary.coins[], stress.signals[]",
       questionAnswered: "Which stablecoins are under peg or DEWS stress?",
@@ -28,6 +34,8 @@ export function buildVisualCueRegistry(): VisualCue[] {
     },
     {
       id: "cue.ship.motion",
+      target: { kind: "ship" },
+      primaryChannels: ["motion", "position", "opacity"],
       visual: "ship route and docking cadence",
       sourceField: "stablecoins.peggedAssets[].chainCirculating, pegSummary.coins[], stress.signals[]",
       questionAnswered: "Where can this ship dock, how often does it visit, and which risk water anchors its route?",
@@ -36,6 +44,8 @@ export function buildVisualCueRegistry(): VisualCue[] {
     },
     {
       id: "cue.ship.hull",
+      target: { kind: "ship" },
+      primaryChannels: ["shape", "size"],
       visual: "ship class silhouette",
       sourceField: "stablecoinMeta.flags.governance",
       questionAnswered: "Is the stablecoin CeFi, CeFi-dependent, or DeFi?",
@@ -44,6 +54,8 @@ export function buildVisualCueRegistry(): VisualCue[] {
     },
     {
       id: "cue.ship.rigging",
+      target: { kind: "ship" },
+      primaryChannels: ["shape", "position"],
       visual: "ship rigging style",
       sourceField: "stablecoinMeta.flags.governance",
       questionAnswered: "Which governance class controls the base ship model?",
@@ -52,6 +64,8 @@ export function buildVisualCueRegistry(): VisualCue[] {
     },
     {
       id: "cue.ship.pennant",
+      target: { kind: "ship" },
+      primaryChannels: ["shape", "color", "position"],
       visual: "ship sail logo and pennant color",
       sourceField: "data/logos.json, stablecoinMeta.flags.pegCurrency",
       questionAnswered: "Which stablecoin is this, and what is its peg currency?",
@@ -60,6 +74,8 @@ export function buildVisualCueRegistry(): VisualCue[] {
     },
     {
       id: "cue.ship.scale",
+      target: { kind: "ship" },
+      primaryChannels: ["size", "shape"],
       visual: "compressed ship scale tier",
       sourceField: "stablecoins.peggedAssets[].circulating",
       questionAnswered: "Roughly how large is the stablecoin supply without letting outliers dominate the map?",
@@ -68,6 +84,8 @@ export function buildVisualCueRegistry(): VisualCue[] {
     },
     {
       id: "cue.cemetery",
+      target: { kind: "grave" },
+      primaryChannels: ["shape", "size", "color"],
       visual: "cemetery graves",
       sourceField: "CEMETERY_ENTRIES",
       questionAnswered: "Which assets are dead or frozen?",
@@ -75,7 +93,19 @@ export function buildVisualCueRegistry(): VisualCue[] {
       domEquivalent: "cemetery ledger rows",
     },
     {
+      id: "cue.ship-cluster",
+      target: { kind: "ship-cluster" },
+      primaryChannels: ["size", "position", "shape"],
+      visual: "count-capped water-zone cluster marker",
+      sourceField: "stablecoins.peggedAssets[], pegSummary.coins[], stress.signals[]",
+      questionAnswered: "Where are long-tail stablecoins grouped after the individual ship budget is reached?",
+      failureState: "cluster omitted and represented in DOM ledger only",
+      domEquivalent: "long-tail cluster detail panel and accessibility ledger rows",
+    },
+    {
       id: "cue.building.mint-burn-foundry",
+      target: { kind: "building", buildingType: "mint-burn-foundry" },
+      primaryChannels: ["glow", "motion", "opacity"],
       visual: "foundry press, furnace glow, smoke, and sparks",
       sourceField: "mintBurnFlows.gauge, mintBurnFlows.coins[], mintBurnFlows.hourly[], mintBurnFlows.sync",
       questionAnswered: "Are configured issuance-chain events mint-heavy, burn-heavy, balanced, quiet, or stale?",
@@ -84,6 +114,8 @@ export function buildVisualCueRegistry(): VisualCue[] {
     },
     {
       id: "cue.area.north-froze-pole",
+      target: { kind: "area", dataAreaType: "north-froze-pole" },
+      primaryChannels: ["shape", "opacity", "glow"],
       visual: "frozen northern water path, ice seams, cold mist, and frosted sign",
       sourceField: "blacklistSummary.stats, blacklistSummary.stats.perCoinFrozenTotal, blacklistSummary.chains",
       questionAnswered: "How much observed freeze activity is active or recent in the blacklist tracker?",
@@ -92,6 +124,8 @@ export function buildVisualCueRegistry(): VisualCue[] {
     },
     {
       id: "cue.building.exit-route-gatehouse",
+      target: { kind: "building", buildingType: "exit-route-gatehouse" },
+      primaryChannels: ["shape", "motion", "glow"],
       visual: "gate doors, water level, waterwheel, and ferry lantern",
       sourceField: "dexLiquidity[__global__], dexLiquidity[coin], redemptionBackstops.coins",
       questionAnswered: "How deep, open, concentrated, or stale are observed and modeled exit routes?",
@@ -100,6 +134,8 @@ export function buildVisualCueRegistry(): VisualCue[] {
     },
     {
       id: "cue.building.yield-orchard",
+      target: { kind: "building", buildingType: "yield-orchard-moonwell" },
+      primaryChannels: ["glow", "motion", "opacity"],
       visual: "orchard glints, moonwell glow, irrigation sparkles, and windmill motion",
       sourceField: "yieldRankings.rankings[], yieldRankings.provenance",
       questionAnswered: "How broad and fresh is yield source coverage, and is source context switching or warning?",
@@ -108,6 +144,8 @@ export function buildVisualCueRegistry(): VisualCue[] {
     },
     {
       id: "cue.building.dependency-loom",
+      target: { kind: "building", buildingType: "dependency-loom-chainworks" },
+      primaryChannels: ["motion", "shape", "glow"],
       visual: "chainworks gears, thread arcs, and pulse dots",
       sourceField: "reportCards.dependencyGraph.edges[], reportCards.cards[]",
       questionAnswered: "How many direct dependency links and hubs exist in the report-card graph?",
