@@ -43,11 +43,11 @@ phase explicitly records an approved scope change.
 | Phase | Goal | Status | Owner | Files changed | Notes |
 | --- | --- | --- | --- | --- | --- |
 | 0. Baseline and safety | Inspect dirty files, capture baseline stats/screenshot, preserve external edits. | Not started | TBD | TBD | Record water ratio, land bounds/centroid, terrain counts, building distances. |
-| 1. Printed sea labels | Replace sea sign posts with cartographic water labels and aligned hit/follow targets. | Not started | TBD | TBD | Keep counts in detail/a11y unless intentionally retained as muted ink suffix. |
-| 2. Remove sea circles | Remove unanchored atmosphere ovals while preserving semantic/object-attached effects. | Not started | TBD | TBD | Watch reduced-motion static output for leftover rings. |
-| 3. Recenter composition | Add composition-aware default/reset camera framing around authored interest bounds. | Not started | TBD | TBD | Plan recommends doing after land/label bounds stabilize. |
-| 4. Shrink island | Reduce visible landmass by about 20% linear extent and retune anchors/routes. | Not started | TBD | TBD | Target bounds roughly `28..31 x 25..29`; water ratio likely `0.84..0.88`. |
-| 5. Building spacing | Redistribute four data buildings and add spacing/non-overlap invariants. | Not started | TBD | TBD | Validate tile and isometric/sprite spacing, not just land placement. |
+| 1. Printed sea labels | Replace sea sign posts with cartographic water labels and aligned hit/follow targets. | Complete | Phase 1 implementer/reviewer | Shared area-label model; canvas/hit-testing/follow behavior; visual-cue tests/copy; plan update | Commit `1b50ecf88`; printed labels draw after terrain, old sea posts/boards removed, unanchored atmosphere bands removed, label hitbox scale/overlap review fixes incorporated. Full Playwright visual review still pending; final legibility should be reviewed after layout/camera phases settle. |
+| 2. Remove sea circles | Remove unanchored atmosphere ovals while preserving semantic/object-attached effects. | Complete | Phase 1 implementer/reviewer | Canvas atmosphere bands | Completed in commit `1b50ecf88` with old sea-label work; reduced-motion/full visual review remains covered by pending Playwright lane. |
+| 3. Recenter composition | Add composition-aware default/reset camera framing around authored interest bounds. | Complete | Phase 3 camera implementer/reviewer | Camera padding/default/reset/clamp behavior and camera/projection tests | Commit `24246b15e`; default/reset/clamp padding biases the smaller island left/up at desktop sizes while keeping reset and follow clamp-stable. Reviewer found no Critical/Major/Minor findings. |
+| 4. Shrink island | Reduce visible landmass by about 20% linear extent and retune anchors/routes. | Complete | Phase 2 layout implementer/reviewer | World layout, docks/regions/cemetery/cove/patrol routes, tests | Commit `de8455616`; final bounds `x=21..48`, `y=17..43` (`28 x 27`), water ratio target `85..88%`, ship water anchors retuned and covered by exported `SHIP_WATER_ANCHORS` invariant. |
+| 5. Building spacing | Redistribute four data buildings and add spacing/non-overlap invariants. | Complete | Phase 2 layout implementer/reviewer | Data-building placement and tests | Commit `de8455616`; building tiles are `{28,30}`, `{34,24}`, `{40,31}`, `{33,36}` with minimum pair distance `>= 7.75`; reviewer found no remaining Critical/Major/Minor issues after fixes. |
 | 6. Sea-zone readability | Strengthen semantic water palette/textures and zone mark language. | Not started | TBD | TBD | Avoid recreating large translucent circles as regional washes. |
 | 7. Ground/lighthouse integration | Tune land, road, cliff, and headland rendering to read as one terrain system. | Not started | TBD | TBD | Do not enable terrain PNGs without separate visual audit/regeneration approval. |
 | 8. Tests, docs, review | Update focused tests/docs/snapshots and run route validation. | Not started | TBD | TBD | Snapshot updates only after manual review of intentional diffs. |
@@ -59,18 +59,22 @@ Record commands exactly as run, with pass/fail/skip and the reason for skips.
 | Check | Status | Last run by | Notes |
 | --- | --- | --- | --- |
 | `npm test -- src/app/pharosville` | Not run | TBD | Route-focused unit suite. |
-| `npm test -- src/app/pharosville/systems/world-layout.test.ts` | Not run | TBD | Required for island, terrain, dock, cemetery, water-ratio changes. |
-| `npm test -- src/app/pharosville/systems/pharosville-world.test.ts` | Not run | TBD | Required for world entity/anchor changes. |
-| `npm test -- src/app/pharosville/systems/chain-docks.test.ts` | Not run | TBD | Required after dock/shore/anchor changes. |
-| `npm test -- src/app/pharosville/systems/motion.test.ts` | Not run | TBD | Required after water mask or ship-route changes. |
-| `npm test -- src/app/pharosville/renderer/hit-testing.test.ts` | Not run | TBD | Required after labels, building scale, lighthouse, or target geometry changes. |
-| `npm test -- src/app/pharosville/systems/visual-cue-registry.test.ts` | Not run | TBD | Required after visual-language or semantic cue copy changes. |
+| `npm test -- src/app/pharosville/systems/world-layout.test.ts` | Passed | Phase 2 layout implementer/reviewer | Included in combined Phase 2 focused run: 44 tests passed across world-layout, pharosville-world, chain-docks, and motion suites. |
+| `npm test -- src/app/pharosville/systems/pharosville-world.test.ts` | Passed | Phase 2 layout implementer/reviewer | Included in combined Phase 2 focused run: 44 tests passed. |
+| `npm test -- src/app/pharosville/systems/chain-docks.test.ts` | Passed | Phase 2 layout implementer/reviewer | Included in combined Phase 2 focused run: 44 tests passed. |
+| `npm test -- src/app/pharosville/systems/motion.test.ts` | Passed | Phase 2 layout implementer/reviewer | Included in combined Phase 2 focused run: 44 tests passed; ship water anchors were moved off land and covered by invariant. |
+| `npm test -- src/app/pharosville/renderer/hit-testing.test.ts` | Passed | Phase 1 implementer/reviewer | Included in combined Phase 1 focused run: 2 files, 18 tests passed; added zoomed-out label hitbox and unoccluded water-label point coverage. |
+| `npm test -- src/app/pharosville/systems/visual-cue-registry.test.ts` | Passed | Phase 1 implementer/reviewer | Included in combined Phase 1 focused run: 2 files, 18 tests passed; cue copy now describes printed labels instead of signs/posts. |
+| `npm test -- src/app/pharosville/systems/camera.test.ts` | Passed | Phase 3 camera implementer/reviewer | Included in combined Phase 3 focused run with projection tests: 11 tests passed; covers 1440x1000 and 1280x760 authored island mass, bounded zoom clamp stability, and follow-with-map clamp stability. |
+| `npm test -- src/app/pharosville/systems/projection.test.ts` | Passed | Phase 3 camera implementer/reviewer | Included in combined Phase 3 focused run with camera tests: 11 tests passed. |
 | `npm run check:pharosville-assets` | Not run | TBD | Required if manifest/assets/geometry change. |
 | `npm run check:harbor-palette` | Not run | TBD | Required after renderer palette or water style changes. |
-| `npm run lint` | Not run | TBD | Required before final handoff. |
+| `npm run lint` | Partial passed | Phase 1-3 implementer/reviewers | Focused `npx eslint ... --max-warnings=0` passed for Phase 1, Phase 2, and Phase 3 touched files; full lint still not recorded here. |
+| `git diff --cached --check` | Passed | Phase 2 layout implementer/reviewer | Passed before commit `de8455616`. |
+| `git diff --check -- src/app/pharosville/systems/camera.ts src/app/pharosville/systems/camera.test.ts` | Passed | Phase 3 camera implementer/reviewer | Passed before/with Phase 3 commit `24246b15e`. |
 | `npm run typecheck` | Not run | TBD | Required before final handoff if available for this repo state. |
 | `npm run build` | Not run | TBD | Required after route docs/CSS/assets/static output changes. |
-| `npx playwright test tests/visual/pharosville.spec.ts --grep "pharosville"` | Not run | TBD | Required for visual acceptance. |
+| `npx playwright test tests/visual/pharosville.spec.ts --grep "pharosville"` | Pending | TBD | Full Playwright visual review still pending after Phase 1; revisit label legibility after island/layout and camera changes settle. |
 | Snapshot update command | Not run | TBD | Only after reviewed visual diffs. |
 | `npm run test:merge-gate` | Not run | TBD | Required before push of deploy-impacting work. |
 
@@ -78,7 +82,9 @@ Record commands exactly as run, with pass/fail/skip and the reason for skips.
 
 | Commit/branch | Phase(s) covered | Author/owner | Status | Notes |
 | --- | --- | --- | --- | --- |
-| TBD | TBD | TBD | Not recorded | Add hash, branch, or PR link when available. |
+| `1b50ecf88` | Phase 1 | Phase 1 implementer/reviewer | Recorded | `Polish PharosVille sea labels`; includes shared label placement, printed water labels, hit/follow alignment, sign/post removal, atmosphere band removal, cue/test updates, and xhigh review feedback. |
+| `de8455616` | Phase 2 layout rebalance; tracker phases 3-5 partial/complete | Phase 2 layout implementer/reviewer | Recorded | `Rebalance PharosVille island layout`; island shrink/recenter, building distribution, cemetery/cove/dock/region anchor retune, patrol-route retune, and `SHIP_WATER_ANCHORS` invariant. |
+| `24246b15e` | Phase 3 | Phase 3 camera implementer/reviewer | Recorded | `Recenter PharosVille camera framing`; default/reset/clamp camera padding biases smaller island left/up at desktop sizes while preserving reset/follow clamp stability. |
 
 ## Open Risks
 
@@ -97,6 +103,10 @@ Record commands exactly as run, with pass/fail/skip and the reason for skips.
   require intentional snapshot/classifier updates.
 - Lighthouse-ground tuning can overfit the lighthouse and make the rest of the
   island too bright or noisy.
+- Full Playwright visual lane still needs snapshot review/update after the
+  visual texture/palette and ground/lighthouse phases settle.
+- Concurrent motion/debug/doc work exists in the worktree and was not included
+  in commit `de8455616`.
 
 ## Next Steps After Each Major Phase
 
@@ -117,32 +127,44 @@ Record commands exactly as run, with pass/fail/skip and the reason for skips.
 
 - Confirm no detached translucent ovals remain in normal or reduced motion.
 - Record which semantic/object-attached effects were preserved.
-- Recommended next phase: TBD.
+- Status note: unanchored atmosphere bands were removed in `1b50ecf88`.
+- Recommended next phase: verify normal and reduced-motion visual output in the
+  pending Playwright review lane.
 
 ### Phase 3
 
 - Record final default/reset camera helper and interest bounds.
 - Attach or reference before/after desktop screenshots.
-- Recommended next phase: TBD.
+- Status note: camera recentering committed in `24246b15e`; tests cover
+  default authored island mass at `1440 x 1000` and `1280 x 760`, bounded zoom
+  clamp stability, and follow-with-map clamp stability.
+- Recommended next phase: proceed to sea-zone texture/palette readability, then
+  perform Playwright visual review after remaining visual phases settle.
 
 ### Phase 4
 
 - Record final land bounds, land centroid, water ratio, terrain counts, and
   changed anchors/routes.
 - Confirm ship samples remain water-only and docks remain shore/water-adjacent.
-- Recommended next phase: TBD.
+- Status note: layout rebalance committed in `de8455616`; bounds are `28 x 27`
+  at `x=21..48`, `y=17..43`, with target water ratio `85..88%`.
+- Recommended next phase: run Playwright visual review/update after remaining
+  visual and camera work settles.
 
 ### Phase 5
 
 - Record final building tiles and minimum pairwise spacing.
 - Confirm click targets and detail panel behavior still match rendered sprites.
-- Recommended next phase: TBD.
+- Status note: building distribution committed in `de8455616`; tiles are
+  `{28,30}`, `{34,24}`, `{40,31}`, `{33,36}`, with pair distance `>= 7.75`.
+- Recommended next phase: verify rendered sprite spacing in the Playwright
+  visual lane after camera composition is final.
 
 ### Phase 6
 
 - Record final water style/texture changes and any visual-test threshold updates.
 - Confirm each named sea zone is recognizable without opening details.
-- Recommended next phase: TBD.
+- Recommended next phase: implement/review sea-zone texture and palette pass.
 
 ### Phase 7
 
@@ -160,6 +182,61 @@ Record commands exactly as run, with pass/fail/skip and the reason for skips.
 ## Phase Completion Notes
 
 Append future updates here. Keep entries concise and factual.
+
+### Phase 2 Layout Rebalance Completion
+
+- Phase completed: Phase 2 execution slice covering island shrink/recenter and
+  building distribution; maps to tracker phases 3-5.
+- Completed by: Phase 2 layout implementer/reviewer
+- Date: 2026-04-29
+- Files changed: Route layout/building/dock/region/motion code and focused
+  tests, per commit `de8455616`; concurrent motion/debug/doc work remained
+  outside this commit.
+- Scope completed: Island shrank to bounds `x=21..48`, `y=17..43` (`28 x 27`)
+  with water ratio target `85..88%`.
+- Scope completed: Building tiles redistributed to `{28,30}`, `{34,24}`,
+  `{40,31}`, `{33,36}` with minimum pair distance `>= 7.75`.
+- Scope completed: Cemetery, cove, dock, region anchors, patrol routes, and
+  ship water anchors were retuned; `SHIP_WATER_ANCHORS` is exported and covered
+  by an invariant.
+- Reviewer status: Staged diff was rechecked after fixes; no remaining
+  Critical/Major/Minor issues were found.
+- Validation run: `npm test -- src/app/pharosville/systems/world-layout.test.ts src/app/pharosville/systems/pharosville-world.test.ts src/app/pharosville/systems/chain-docks.test.ts src/app/pharosville/systems/motion.test.ts` passed, 44 tests.
+- Validation run: Focused eslint for Phase 2 files passed.
+- Validation run: `git diff --cached --check` passed before commit.
+- Visual screenshots/snapshots: Full Playwright visual lane still pending;
+  review/update after visual and camera phases settle.
+- Commit/PR: `de8455616` (`Rebalance PharosVille island layout`).
+- Residual risks: Final label/building/island composition needs browser visual
+  review after camera and visual phases; concurrent motion/debug/doc work exists
+  in the worktree and was not included in this phase commit.
+- Recommended next phase: Continue with remaining sea-zone readability,
+  camera/visual signoff, and ground/lighthouse integration before snapshot
+  approval.
+
+### Phase 3 Camera Recenter Completion
+
+- Phase completed: Phase 3 camera framing.
+- Completed by: Phase 3 camera implementer/reviewer
+- Date: 2026-04-29
+- Files changed: `src/app/pharosville/systems/camera.ts` and focused
+  camera/projection tests, per commit `24246b15e`.
+- Scope completed: Default/reset/clamp camera padding now biases the smaller
+  island left/up in desktop composition while keeping reset clamp-stable.
+- Scope completed: Tests cover default authored island mass at `1440 x 1000`
+  and `1280 x 760`, bounded zoom clamp stability, and follow-with-map clamp
+  stability.
+- Reviewer status: Rechecked after feedback; no Critical/Major/Minor findings.
+- Validation run: `npm test -- src/app/pharosville/systems/camera.test.ts src/app/pharosville/systems/projection.test.ts` passed, 11 tests.
+- Validation run: Focused eslint for camera files passed.
+- Validation run: `git diff --check -- src/app/pharosville/systems/camera.ts src/app/pharosville/systems/camera.test.ts` passed.
+- Visual screenshots/snapshots: Full Playwright visual lane still pending after
+  texture/palette and ground/lighthouse visual phases.
+- Commit/PR: `24246b15e` (`Recenter PharosVille camera framing`).
+- Residual risks: Browser-level composition and snapshot approval still need
+  Playwright review after remaining visual texture/palette work settles.
+- Recommended next phase: Implement/review sea-zone texture and palette
+  readability.
 
 ### Template
 
