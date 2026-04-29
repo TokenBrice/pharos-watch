@@ -13,7 +13,7 @@ describe("buildVisualCueRegistry", () => {
       "cue.ship.pennant",
       "cue.ship.scale",
       "cue.building.mint-burn-foundry",
-      "cue.building.frost-ward-keep",
+      "cue.landmark.north-froze-pole",
       "cue.building.exit-route-gatehouse",
       "cue.building.yield-orchard",
       "cue.building.dependency-loom",

@@ -528,7 +528,7 @@ export function buildPharosVilleWorld(inputs: PharosVilleInputs): PharosVilleWor
       { id: "legend.psi", label: "Lighthouse", description: "PSI composite status" },
       { id: "legend.docks", label: "Docks", description: "Top chain harbors by stablecoin supply" },
       { id: "legend.ships", label: "Ships", description: "Active stablecoins" },
-      { id: "legend.buildings", label: "Data buildings", description: "Thematic landmarks for Pharos data products" },
+      { id: "legend.buildings", label: "Data landmarks", description: "Thematic landmarks for Pharos data products" },
       { id: "legend.cemetery", label: "Cemetery", description: "Dead and frozen assets" },
     ],
   };

@@ -92,7 +92,7 @@ describe("buildPharosVilleWorld", () => {
 
     expect(statuses).toMatchObject({
       "mint-burn-foundry": "minting",
-      "frost-ward-keep": "recent-freeze",
+      "north-froze-pole": "recent-freeze",
       "exit-route-gatehouse": "deep-exit",
       "yield-orchard-moonwell": "broad-coverage",
       "dependency-loom-chainworks": "high-hub-concentration",
