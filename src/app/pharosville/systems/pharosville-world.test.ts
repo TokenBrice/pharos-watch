@@ -14,13 +14,14 @@ import {
   makePegCoin,
   makeReportCard,
 } from "../__fixtures__/pharosville-world";
-import { buildPharosVilleWorld } from "./pharosville-world";
+import { buildPharosVilleWorld, SHIP_WATER_ANCHORS } from "./pharosville-world";
 import {
   CEMETERY_CENTER,
   CEMETERY_RADIUS,
   CIVIC_CORE_CENTER,
   CIVIC_CORE_RADIUS,
   DOCK_TILES,
+  isWaterTileKind,
   terrainKindAt,
   tileKindAt,
 } from "./world-layout";
@@ -39,8 +40,8 @@ describe("buildPharosVilleWorld", () => {
     });
 
     expect(world.routeMode).toBe("world");
-    expect(world.map.waterRatio).toBeGreaterThanOrEqual(0.78);
-    expect(world.map.waterRatio).toBeLessThanOrEqual(0.83);
+    expect(world.map.waterRatio).toBeGreaterThanOrEqual(0.85);
+    expect(world.map.waterRatio).toBeLessThanOrEqual(0.88);
     expect(world.lighthouse.unavailable).toBe(false);
     expect(world.docks).toHaveLength(2);
     expect(world.ships.map((ship) => ship.id)).toEqual(["usdt-tether", "usdc-circle"]);
@@ -57,15 +58,16 @@ describe("buildPharosVilleWorld", () => {
     expect(world.detailIndex["lighthouse"]).toBeDefined();
     expect(world.buildings).toHaveLength(4);
     expect(Object.fromEntries(world.buildings.map((building) => [building.buildingType, building.tile]))).toEqual({
-      "mint-burn-foundry": { x: 29, y: 30 },
-      "exit-route-gatehouse": { x: 31, y: 34 },
-      "yield-orchard-moonwell": { x: 40, y: 30 },
-      "dependency-loom-chainworks": { x: 34, y: 28 },
+      "mint-burn-foundry": { x: 28, y: 30 },
+      "exit-route-gatehouse": { x: 33, y: 36 },
+      "yield-orchard-moonwell": { x: 40, y: 31 },
+      "dependency-loom-chainworks": { x: 34, y: 24 },
     });
     expect(world.buildings.every((building) => tileKindAt(building.tile.x, building.tile.y) === "land")).toBe(true);
     expect(world.buildings.every((building) => distance(building.tile, CIVIC_CORE_CENTER) <= CIVIC_CORE_RADIUS)).toBe(true);
     expect(world.buildings.every((building) => cemeteryValue(building.tile) > 1.08)).toBe(true);
-    expect(world.buildings.every((building) => DOCK_TILES.every((dock) => distance(building.tile, dock) > 5))).toBe(true);
+    expect(world.buildings.every((building) => DOCK_TILES.every((dock) => distance(building.tile, dock) > 4))).toBe(true);
+    expect(minPairDistance(world.buildings.map((building) => building.tile))).toBeGreaterThanOrEqual(7.75);
     expect(terrainKindAt(0, 0)).toBe("frozen-water");
     expect(world.detailIndex["building.mint-burn-foundry"]?.title).toBe("Royal Mint And Burn Foundry");
     expect(world.detailIndex["area.north-froze-pole"]?.title).toBe("North Froze Pole");
@@ -153,6 +155,17 @@ describe("buildPharosVilleWorld", () => {
     expect(world.ships.length).toBeGreaterThan(24);
     expect(quadrants.size).toBeGreaterThanOrEqual(3);
     expect(northwestCount).toBeLessThan(world.ships.length * 0.55);
+  });
+
+  it("keeps every authored ship anchor on water after island layout changes", () => {
+    for (const [placement, anchors] of Object.entries(SHIP_WATER_ANCHORS)) {
+      for (const anchor of anchors) {
+        expect(
+          isWaterTileKind(terrainKindAt(anchor.x, anchor.y)),
+          `${placement} anchor ${anchor.x}.${anchor.y} should remain water`,
+        ).toBe(true);
+      }
+    }
   });
 
   it("anchors rendered ships at harbor moorings while preserving the risk tile", () => {
@@ -557,6 +570,16 @@ function cemeteryValue(tile: { x: number; y: number }) {
 
 function distance(a: { x: number; y: number }, b: { x: number; y: number }) {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function minPairDistance(tiles: Array<{ x: number; y: number }>) {
+  let minimum = Number.POSITIVE_INFINITY;
+  for (let first = 0; first < tiles.length; first += 1) {
+    for (let second = first + 1; second < tiles.length; second += 1) {
+      minimum = Math.min(minimum, distance(tiles[first]!, tiles[second]!));
+    }
+  }
+  return minimum;
 }
 
 function bandSignals(band: "ALERT" | "WATCH" | "CALM", count: number) {

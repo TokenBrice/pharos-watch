@@ -28,15 +28,30 @@ describe("buildPharosVilleMap", () => {
     expect(map.width).toBe(PHAROSVILLE_MAP_WIDTH);
     expect(map.height).toBe(PHAROSVILLE_MAP_HEIGHT);
     expect(map.tiles).toHaveLength(PHAROSVILLE_MAP_WIDTH * PHAROSVILLE_MAP_HEIGHT);
-    expect(map.waterRatio).toBeGreaterThanOrEqual(0.78);
-    expect(map.waterRatio).toBeLessThanOrEqual(0.83);
+    expect(map.waterRatio).toBeGreaterThanOrEqual(0.85);
+    expect(map.waterRatio).toBeLessThanOrEqual(0.88);
+    const bounds = landBounds(map.tiles);
+    expect(bounds).toEqual({
+      height: 27,
+      maxX: 48,
+      maxY: 43,
+      minX: 21,
+      minY: 17,
+      width: 28,
+    });
+    const boundsCenter = {
+      x: (bounds.minX + bounds.maxX) / 2,
+      y: (bounds.minY + bounds.maxY) / 2,
+    };
+    expect(boundsCenter.x).toBeCloseTo(CIVIC_CORE_CENTER.x + 0.5, 1);
+    expect(boundsCenter.y).toBeCloseTo(CIVIC_CORE_CENTER.y, 1);
     const counts = terrainCounts(map.tiles);
     expect((counts.get("deep-water") ?? 0) / map.tiles.length).toBeLessThanOrEqual(0.12);
     expect((counts.get("deep-water") ?? 0) / map.tiles.length).toBeGreaterThanOrEqual(0.08);
     expect(map.tiles.every((tile) => tile.terrain)).toBe(true);
     const centroid = landCentroid(map.tiles);
-    expect(Math.abs(centroid.x - CIVIC_CORE_CENTER.x)).toBeLessThan(0.25);
-    expect(Math.abs(centroid.y - CIVIC_CORE_CENTER.y)).toBeLessThan(0.25);
+    expect(Math.abs(centroid.x - CIVIC_CORE_CENTER.x)).toBeLessThan(1.25);
+    expect(Math.abs(centroid.y - CIVIC_CORE_CENTER.y)).toBeLessThan(1);
     expect([...new Set(map.tiles.map((tile) => tile.terrain))]).toEqual(expect.arrayContaining([
       "alert-water",
       "brackish-water",
@@ -54,7 +69,7 @@ describe("buildPharosVilleMap", () => {
 
   it("defines a civic core around the island center", () => {
     expect(CIVIC_CORE_CENTER).toEqual({ x: 34, y: 30 });
-    expect(CIVIC_CORE_RADIUS).toBe(6.5);
+    expect(CIVIC_CORE_RADIUS).toBe(7);
     expect(isLandTileKind(tileKindAt(CIVIC_CORE_CENTER.x, CIVIC_CORE_CENTER.y))).toBe(true);
     expect(terrainKindAt(CIVIC_CORE_CENTER.x, CIVIC_CORE_CENTER.y)).toBe("road");
   });
@@ -73,11 +88,12 @@ describe("buildPharosVilleMap", () => {
   });
 
   it("routes the harbor road through the civic plaza without paving the cemetery", () => {
-    expect(terrainKindAt(20, 37)).toBe("road");
-    expect(terrainKindAt(21, 35)).toBe("road");
-    expect(terrainKindAt(29, 32)).toBe("road");
+    expect(terrainKindAt(30, 37)).toBe("road");
+    expect(terrainKindAt(31, 36)).toBe("road");
+    expect(terrainKindAt(33, 34)).toBe("road");
     expect(terrainKindAt(34, 30)).toBe("road");
-    expect(terrainKindAt(38, 27)).toBe("road");
+    expect(terrainKindAt(36, 26)).toBe("road");
+    expect(terrainKindAt(41, 22)).toBe("road");
     expect(terrainKindAt(43, 19)).toBe("road");
     expect(terrainKindAt(31, 31)).toBe("road");
     expect(terrainKindAt(32, 31)).toBe("road");
@@ -120,20 +136,21 @@ describe("buildPharosVilleMap", () => {
     const ys = graves.map((grave) => grave.tile.y);
 
     expect(graves).toHaveLength(CEMETERY_ENTRIES.length);
-    expect(CEMETERY_CENTER).toEqual({ x: 36.4, y: 32.8 });
-    expect(CEMETERY_RADIUS).toEqual({ x: 4.0, y: 2.9 });
-    expect(CEMETERY_CENTER.x).toBeGreaterThan(31);
+    expect(CEMETERY_CENTER).toEqual({ x: 24.8, y: 35.6 });
+    expect(CEMETERY_RADIUS).toEqual({ x: 3.0, y: 2.1 });
+    expect(CEMETERY_CENTER.x).toBeLessThan(CIVIC_CORE_CENTER.x);
+    expect(CEMETERY_CENTER.y).toBeGreaterThan(CIVIC_CORE_CENTER.y);
     expect(CEMETERY_CENTER.x).toBeLessThan(LIGHTHOUSE_TILE.x);
     expect(tileKindAt(Math.round(CEMETERY_CENTER.x), Math.round(CEMETERY_CENTER.y))).toBe("land");
     expect(terrainKindAt(Math.round(CEMETERY_CENTER.x), Math.round(CEMETERY_CENTER.y))).toBe("grass");
-    expect(tileKindAt(17, 43)).toBe("water");
+    expect(tileKindAt(20, 38)).toBe("water");
     expect(graves.every((grave) => tileKindAt(grave.tile.x, grave.tile.y) === "land")).toBe(true);
     expect(mainIsland.has(tileKey({ x: Math.round(CEMETERY_CENTER.x), y: Math.round(CEMETERY_CENTER.y) }))).toBe(true);
     expect(graves.every((grave) => isNearConnectedLand(grave.tile, mainIsland))).toBe(true);
     expect(graves.every((grave) => Math.hypot(grave.tile.x - LIGHTHOUSE_TILE.x, grave.tile.y - LIGHTHOUSE_TILE.y) > 10)).toBe(true);
-    expect(graves.every((grave) => DOCK_TILES.every((dock) => Math.hypot(grave.tile.x - dock.x, grave.tile.y - dock.y) > 4))).toBe(true);
-    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(6.5);
-    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(5);
+    expect(graves.every((grave) => DOCK_TILES.every((dock) => Math.hypot(grave.tile.x - dock.x, grave.tile.y - dock.y) > 3.25))).toBe(true);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(5);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(3.5);
     expect(new Set(graves.map((grave) => grave.visual.marker)).size).toBeGreaterThan(2);
     expect(graves.filter((grave) => grave.entry.causeOfDeath === "regulatory").every((grave) => grave.visual.marker === "cross")).toBe(true);
     expect(graves.filter((grave) => grave.entry.causeOfDeath === "liquidity-drain").some((grave) => grave.visual.marker === "ledger")).toBe(true);
@@ -158,6 +175,24 @@ function landCentroid(tiles: Array<{ x: number; y: number; kind: string }>): { x
   return {
     x: landTiles.reduce((sum, tile) => sum + tile.x, 0) / landTiles.length,
     y: landTiles.reduce((sum, tile) => sum + tile.y, 0) / landTiles.length,
+  };
+}
+
+function landBounds(tiles: Array<{ x: number; y: number; kind: string }>) {
+  const landTiles = tiles.filter((tile) => !isWaterTileKind(tile.kind));
+  const xs = landTiles.map((tile) => tile.x);
+  const ys = landTiles.map((tile) => tile.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  return {
+    height: maxY - minY + 1,
+    maxX,
+    maxY,
+    minX,
+    minY,
+    width: maxX - minX + 1,
   };
 }
 

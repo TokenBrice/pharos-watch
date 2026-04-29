@@ -8,36 +8,36 @@ export const MAX_TILE_X = PHAROSVILLE_MAP_WIDTH - 1;
 export const MAX_TILE_Y = PHAROSVILLE_MAP_HEIGHT - 1;
 export const LIGHTHOUSE_TILE = { x: 44, y: 18 } as const;
 export const CIVIC_CORE_CENTER = { x: 34, y: 30 } as const;
-export const CIVIC_CORE_RADIUS = 6.5;
+export const CIVIC_CORE_RADIUS = 7.0;
 
 export const REGION_TILES: Record<ShipRiskPlacement, { x: number; y: number }> = {
-  "safe-harbor": { x: 29, y: 44 },
-  "breakwater-edge": { x: 25, y: 48 },
-  "harbor-mouth-watch": { x: 40, y: 45 },
+  "safe-harbor": { x: 30, y: 42 },
+  "breakwater-edge": { x: 27, y: 44 },
+  "harbor-mouth-watch": { x: 40, y: 44 },
   "outer-rough-water": { x: 48, y: 45 },
   "storm-shelf": { x: 52, y: 52 },
   "data-fog": { x: 10, y: 16 },
-  "ledger-mooring": { x: 32, y: 48 },
+  "ledger-mooring": { x: 34, y: 43 },
 };
 
 export const EVM_BAY_DOCK_TILES = [
-  { x: 28, y: 40 },
-  { x: 23, y: 35 },
-  { x: 22, y: 41 },
-  { x: 35, y: 41 },
+  { x: 35, y: 40 },
+  { x: 24, y: 42 },
+  { x: 34, y: 42 },
+  { x: 37, y: 40 },
 ] as const;
 
 export const OUTER_HARBOR_DOCK_TILES = [
-  { x: 47, y: 32 },
-  { x: 31, y: 22 },
-  { x: 20, y: 26 },
-  { x: 41, y: 39 },
-  { x: 48, y: 25 },
-  { x: 18, y: 32 },
-  { x: 37, y: 45 },
-  { x: 36, y: 46 },
-  { x: 38, y: 42 },
-  { x: 24, y: 47 },
+  { x: 45, y: 31 },
+  { x: 48, y: 23 },
+  { x: 22, y: 30 },
+  { x: 41, y: 36 },
+  { x: 46, y: 25 },
+  { x: 42, y: 35 },
+  { x: 36, y: 42 },
+  { x: 26, y: 43 },
+  { x: 39, y: 37 },
+  { x: 27, y: 24 },
 ] as const;
 
 export const PREFERRED_DOCK_TILES: Record<string, { x: number; y: number }> = {
@@ -58,8 +58,8 @@ export const DOCK_TILES = [
   ...OUTER_HARBOR_DOCK_TILES,
 ];
 
-export const CEMETERY_CENTER = { x: 36.4, y: 32.8 } as const;
-export const CEMETERY_RADIUS = { x: 4.0, y: 2.9 } as const;
+export const CEMETERY_CENTER = { x: 24.8, y: 35.6 } as const;
+export const CEMETERY_RADIUS = { x: 3.0, y: 2.1 } as const;
 
 type GraveMarker = GraveNode["visual"]["marker"];
 
@@ -154,28 +154,28 @@ function canonicalTileKind(kind: TerrainKind): TileKind {
 
 function islandValue(x: number, y: number): number {
   return Math.min(
-    ellipseValue(x, y, 31.4, 31.7, 14.4, 10.5),
-    ellipseValue(x, y, 42.8, 21.4, 7.4, 6.2),
-    ellipseValue(x, y, 42.8, 28.0, 6.1, 6.7),
-    ellipseValue(x, y, 28.0, 42.6, 10.8, 5.6),
-    ellipseValue(x, y, 25.2, 41.0, 9.6, 2.5),
-    ellipseValue(x, y, CEMETERY_CENTER.x, CEMETERY_CENTER.y, CEMETERY_RADIUS.x + 1.0, CEMETERY_RADIUS.y + 0.85),
+    ellipseValue(x, y, 32.6, 31.0, 11.2, 8.2),
+    ellipseValue(x, y, 42.8, 21.2, 5.9, 5.0),
+    ellipseValue(x, y, 41.8, 27.6, 5.2, 5.3),
+    ellipseValue(x, y, 30.2, 40.6, 7.2, 3.7),
+    ellipseValue(x, y, 27.2, 40.0, 5.6, 2.0),
+    ellipseValue(x, y, CEMETERY_CENTER.x, CEMETERY_CENTER.y, CEMETERY_RADIUS.x + 0.9, CEMETERY_RADIUS.y + 0.65),
   );
 }
 
 function lighthouseHeadlandValue(x: number, y: number): number {
   return Math.min(
-    ellipseValue(x, y, 43.5, 20.2, 6.7, 5.6),
-    ellipseValue(x, y, 45.4, 18.8, 4.2, 3.8),
+    ellipseValue(x, y, 43.4, 20.0, 5.8, 4.9),
+    ellipseValue(x, y, 45.1, 18.7, 3.7, 3.3),
   );
 }
 
 function harborCoveValue(x: number, y: number): number {
-  return ellipseValue(x, y, 27.0, 40.0, 8.0, 5.5);
+  return ellipseValue(x, y, 29.4, 39.8, 5.8, 4.0);
 }
 
 function harborApproachValue(x: number, y: number): number {
-  return ellipseValue(x, y, 30.0, 47.6, 5.8, 7.8);
+  return ellipseValue(x, y, 31.6, 43.8, 4.4, 4.8);
 }
 
 function isAlertChannel(x: number, y: number): boolean {
@@ -204,11 +204,11 @@ export function isNorthFrozePole(x: number, y: number): boolean {
 }
 
 function isCemeteryCausewayTile(x: number, y: number): boolean {
-  return x >= 17
-    && x <= 35
-    && y >= 39
-    && y <= 44
-    && distanceToSegment(x, y, { x: 18.5, y: 42.6 }, { x: 34.2, y: 39.3 }) <= 1.1;
+  return x >= 24
+    && x <= 34
+    && y >= 34
+    && y <= 40
+    && distanceToSegment(x, y, { x: 25.8, y: 36.4 }, { x: 33.4, y: 35.8 }) <= 1.45;
 }
 
 function isOutOfBounds(x: number, y: number): boolean {
@@ -234,12 +234,12 @@ function isDataFog(x: number, y: number): boolean {
 
 function isRoadTile(x: number, y: number): boolean {
   const path = [
-    { x: 19, y: 39 },
-    { x: 21, y: 35 },
-    { x: 29, y: 32 },
+    { x: 25, y: 37 },
+    { x: 29, y: 38 },
+    { x: 33, y: 34 },
     { x: 34, y: 30 },
-    { x: 38, y: 27 },
-    { x: 41, y: 23 },
+    { x: 36, y: 26 },
+    { x: 41, y: 22 },
     { x: 43, y: 19 },
   ];
   return path.some((point, index) => {

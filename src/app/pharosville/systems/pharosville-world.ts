@@ -61,37 +61,37 @@ const SHIP_SCATTER_RADIUS: Record<ShipRiskPlacement, { x: number; y: number }> =
   "ledger-mooring": { x: 4, y: 3 },
 };
 
-const SHIP_WATER_ANCHORS: Record<ShipRiskPlacement, readonly { x: number; y: number }[]> = {
+export const SHIP_WATER_ANCHORS: Record<ShipRiskPlacement, readonly { x: number; y: number }[]> = {
   "safe-harbor": [
     { x: 16, y: 27 },
     { x: 22, y: 20 },
     { x: 31, y: 19 },
-    { x: 43, y: 21 },
+    { x: 47, y: 17 },
     { x: 49, y: 31 },
     { x: 47, y: 36 },
-    { x: 40, y: 45 },
-    { x: 31, y: 45 },
-    { x: 20, y: 45 },
-    { x: 18, y: 36 },
+    { x: 40, y: 43 },
+    { x: 31, y: 44 },
+    { x: 22, y: 43 },
+    { x: 18, y: 35 },
   ],
   "breakwater-edge": [
     { x: 21, y: 22 },
     { x: 27, y: 20 },
-    { x: 39, y: 19 },
-    { x: 46, y: 24 },
+    { x: 38, y: 18 },
+    { x: 47, y: 25 },
     { x: 49, y: 38 },
-    { x: 40, y: 45 },
-    { x: 26, y: 45 },
+    { x: 40, y: 43 },
+    { x: 27, y: 44 },
   ],
   "harbor-mouth-watch": [
-    { x: 39, y: 42 },
+    { x: 39, y: 43 },
     { x: 40, y: 43 },
     { x: 41, y: 43 },
     { x: 39, y: 44 },
-    { x: 40, y: 45 },
-    { x: 42, y: 46 },
-    { x: 38, y: 46 },
-    { x: 37, y: 47 },
+    { x: 40, y: 44 },
+    { x: 42, y: 45 },
+    { x: 38, y: 45 },
+    { x: 37, y: 46 },
   ],
   "outer-rough-water": [
     { x: 45, y: 44 },
@@ -119,10 +119,10 @@ const SHIP_WATER_ANCHORS: Record<ShipRiskPlacement, readonly { x: number; y: num
     { x: 18, y: 18 },
   ],
   "ledger-mooring": [
-    { x: 36, y: 43 },
-    { x: 32, y: 46 },
-    { x: 40, y: 45 },
-    { x: 29, y: 46 },
+    { x: 35, y: 43 },
+    { x: 34, y: 43 },
+    { x: 40, y: 43 },
+    { x: 29, y: 44 },
   ],
 };
 
