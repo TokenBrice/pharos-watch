@@ -477,3 +477,14 @@ Each implementing worker should append a note under this section after completin
 - Scope completed: Cemetery precinct now overrides local harbor-water masking so graves render on visible land instead of submerged/hidden under the harbor overlay.
 - Validation run: None. Needs focused layout/visual validation when authorized.
 - Residual risk: Grave scatter density and exact visual placement still need screenshot review.
+
+### P2 Sky Refinement Follow-up
+
+- Completed by: Main agent
+- Date: 2026-04-29
+- Files changed: `src/app/pharosville/renderer/world-canvas.ts`, `docs/pharosville-page.md`, this handover document.
+- Scope completed: Replaced basic day/night palette switch with decorative time-derived dawn/day/dusk/night sky states.
+- Scope completed: Added visible sun, crescent moon, denser stars, constellation lines, sky cloud bands, and celestial path treatment in the active canvas renderer.
+- Reduced-motion behavior: Static night sky with moon/stars; no continuous sky transition required for reduced-motion information content.
+- Validation run: None. Needs visual review and snapshot regeneration when authorized.
+- Residual risk: New sky pixels may require visual snapshot update and classifier tuning after Playwright review.

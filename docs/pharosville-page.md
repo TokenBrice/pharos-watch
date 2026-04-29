@@ -38,7 +38,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - visible RPG-styled toolbar, click-anchored detail panel, blank-map click-to-close behavior, and screen-reader accessibility ledger
 - canvas hit testing for lighthouse, docks, ships, clusters, and graves
 - mouse/touch drag pan, wheel zoom, toolbar pan/zoom/reset/follow/clear controls, keyboard arrow pan, Escape clear, and fullscreen inspection mode
-- normal-motion canvas loop for the lighthouse great-fire flicker, water shimmer, decorative time-derived day/night sky mood, decorative birds/lights/haze, and deterministic ship route sampling, with expensive wake effects capped to selected/top/recent ships
+- normal-motion canvas loop for the lighthouse great-fire flicker, water shimmer, decorative time-derived dawn/day/dusk/night sky with sun, crescent moon, stars, constellations, cloud bands, decorative birds/lights/haze, and deterministic ship route sampling, with expensive wake effects capped to selected/top/recent ships
 - deterministic reduced-motion render with no running animation frame loop
 - desktop, stressed-ship, short-screen, ultrawide backing-store, interaction, and motion visual coverage
 - controlled Pixellab asset manifest with critical and deferred sprite loading under `public/pharosville/assets/`
