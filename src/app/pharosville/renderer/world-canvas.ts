@@ -620,7 +620,7 @@ function drawGrassTexture(ctx: CanvasRenderingContext2D, x: number, y: number, z
 
 function drawAtmosphere({ camera, ctx, motion, world }: DrawPharosVilleInput) {
   const time = motion.reducedMotion ? 0 : motion.timeSeconds;
-  const mood = skyMood(motion);
+  const mood = skyState(motion).mood;
   const beacon = tileToScreen(world.lighthouse.tile, camera);
   ctx.save();
   ctx.fillStyle = mood.mist;
