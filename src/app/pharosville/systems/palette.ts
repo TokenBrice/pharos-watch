@@ -52,3 +52,92 @@ export function paletteRgba(key: HarborPaletteKey, alpha: number): string {
   const b = n & 0xff;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
+
+export type WaterTextureKind =
+  | "alert"
+  | "brackish"
+  | "deep"
+  | "fog"
+  | "frozen"
+  | "harbor"
+  | "storm"
+  | "warning"
+  | "water";
+
+export interface WaterTerrainStyle {
+  accent: string;
+  base: string;
+  inner: string;
+  wave: string;
+  texture: WaterTextureKind;
+}
+
+export const WATER_TERRAIN_STYLES = {
+  "alert-water": {
+    accent: "rgba(236, 202, 112, 0.22)",
+    base: "#17485f",
+    inner: "rgba(71, 129, 142, 0.32)",
+    texture: "alert",
+    wave: "rgba(236, 221, 162, 0.2)",
+  },
+  "brackish-water": {
+    accent: "rgba(119, 126, 76, 0.24)",
+    base: "#1a3535",
+    inner: "rgba(69, 89, 61, 0.3)",
+    texture: "brackish",
+    wave: "rgba(158, 181, 143, 0.16)",
+  },
+  "deep-water": {
+    accent: "rgba(98, 126, 158, 0.12)",
+    base: "#071225",
+    inner: "rgba(2, 6, 15, 0.24)",
+    texture: "deep",
+    wave: "rgba(120, 159, 186, 0.1)",
+  },
+  "fog-water": {
+    accent: "rgba(197, 208, 206, 0.2)",
+    base: "#24314a",
+    inner: "rgba(197, 208, 206, 0.16)",
+    texture: "fog",
+    wave: "rgba(209, 223, 215, 0.14)",
+  },
+  "frozen-water": {
+    accent: "rgba(210, 244, 255, 0.28)",
+    base: "#315d72",
+    inner: "rgba(181, 229, 246, 0.18)",
+    texture: "frozen",
+    wave: "rgba(219, 248, 255, 0.2)",
+  },
+  "harbor-water": {
+    accent: "rgba(171, 219, 205, 0.2)",
+    base: "#1f5f68",
+    inner: "rgba(88, 153, 139, 0.24)",
+    texture: "harbor",
+    wave: "rgba(196, 235, 223, 0.16)",
+  },
+  "storm-water": {
+    accent: "rgba(224, 236, 226, 0.22)",
+    base: "#0b2236",
+    inner: "rgba(6, 12, 22, 0.28)",
+    texture: "storm",
+    wave: "rgba(224, 236, 226, 0.18)",
+  },
+  "warning-water": {
+    accent: "rgba(219, 177, 104, 0.3)",
+    base: "#1b3448",
+    inner: "rgba(80, 69, 47, 0.26)",
+    texture: "warning",
+    wave: "rgba(226, 217, 177, 0.2)",
+  },
+  water: {
+    accent: "rgba(175, 225, 220, 0.2)",
+    base: "#15375a",
+    inner: "rgba(88, 153, 139, 0.16)",
+    texture: "water",
+    wave: "rgba(186, 231, 225, 0.16)",
+  },
+} as const satisfies Record<string, WaterTerrainStyle>;
+
+export function waterTerrainStyle(kind: string): WaterTerrainStyle | null {
+  return WATER_TERRAIN_STYLES[kind as keyof typeof WATER_TERRAIN_STYLES] ?? null;
+}
