@@ -215,12 +215,12 @@ the DOM detail panel remains the accessible source of analytical truth,
 including route source, risk water, home dock, chain presence, and docking
 cadence.
 
-The same world model now also emits five selectable main-island data buildings
+The same world model now also emits five selectable main-island data landmarks
 for non-ship Pharos products: Royal Mint And Burn Foundry for configured
-mint/burn flow telemetry, Frost Ward Keep for the observed blacklist/freeze
+mint/burn flow telemetry, North Froze Pole for the observed blacklist/freeze
 tracker, Exit Route Gatehouse for DEX liquidity plus modeled redemption
 backstops, Yield Orchard And Moonwell for yield source context, and Dependency
-Loom / Chainworks for direct report-card dependency graph links. Each building
+Loom / Chainworks for direct report-card dependency graph links. Each landmark
 uses a deferred Pixellab sprite, local deterministic Canvas effects, DOM detail
 facts, and accessibility-ledger parity; reduced motion freezes procedural
 movement while preserving static status encodings.
