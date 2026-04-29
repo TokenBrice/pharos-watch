@@ -82,6 +82,7 @@ export function buildChainDocks(chains: ChainsResponse | null | undefined): Dock
         kind: "dock" as const,
         label: chain.name,
         chainId: chain.id,
+        logoSrc: chain.logoPath || null,
         assetId: PREFERRED_DOCK_ASSET_IDS[chain.id] ?? DOCK_ASSET_IDS[index] ?? "dock.wooden-pier",
         tile,
         totalUsd: chain.totalUsd,
