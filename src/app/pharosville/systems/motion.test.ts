@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fixtureChains, fixturePegSummary, fixtureReportCards, fixtureStablecoins, fixtureStability, fixtureStress, makeAsset, makeChain, makePegCoin } from "../__fixtures__/pharosville-world";
 import { buildPharosVilleWorld } from "./pharosville-world";
-import { buildMotionPlan, buildShipWaterRoute, lighthouseFireFlickerSpeed, MAX_ANIMATED_WORLD_ENTITIES, resolveShipMotionSample, sampleShipWaterPath, stableMotionPhase } from "./motion";
+import { buildMotionPlan, buildShipWaterRoute, lighthouseFireFlickerSpeed, resolveShipMotionSample, sampleShipWaterPath, stableMotionPhase } from "./motion";
 import { buildPharosVilleMap, tileKindAt } from "./world-layout";
 import type { PharosVilleMap, PharosVilleWorld } from "./world-types";
 
@@ -17,11 +17,12 @@ describe("motion", () => {
     freshness: {},
   });
 
-  it("keeps animated entity count within the v0.1 budget", () => {
+  it("animates every visible ship while keeping effect highlights focused", () => {
     const plan = buildMotionPlan(world, world.ships[0]?.detailId ?? null);
 
-    expect(plan.animatedShipIds.size).toBeLessThanOrEqual(MAX_ANIMATED_WORLD_ENTITIES);
-    expect(plan.effectShipIds.size).toBeLessThanOrEqual(MAX_ANIMATED_WORLD_ENTITIES);
+    expect(plan.animatedShipIds.size).toBe(world.ships.length);
+    expect(world.ships.every((ship) => plan.animatedShipIds.has(ship.id))).toBe(true);
+    expect(plan.effectShipIds.size).toBeLessThanOrEqual(plan.animatedShipIds.size);
     expect(plan.animatedShipIds.has(world.ships[0]!.id)).toBe(true);
     expect(plan.shipPhases.get(world.ships[0]!.id)).toBe(stableMotionPhase(world.ships[0]!.id));
   });
@@ -36,7 +37,7 @@ describe("motion", () => {
       const repeatedRoute = secondPlan.shipRoutes.get(ship.id);
 
       expect(route).toBeDefined();
-      expect(route?.riskTile).toEqual(ship.tile);
+      expect(route?.riskTile).toEqual(ship.riskTile);
       expect(route?.cycleSeconds).toBe(repeatedRoute?.cycleSeconds);
       expect(route?.phaseSeconds).toBe(repeatedRoute?.phaseSeconds);
       expect(route?.dockStopSchedule).toEqual(repeatedRoute?.dockStopSchedule);
@@ -56,15 +57,15 @@ describe("motion", () => {
     const singleRoute = onlyRoute(singleChainWorld);
     const multiRoute = onlyRoute(multiChainWorld);
 
-    expect(singleRoute.cycleSeconds).toBeGreaterThanOrEqual(130);
-    expect(multiRoute.cycleSeconds).toBeGreaterThanOrEqual(130);
+    expect(singleRoute.cycleSeconds).toBeGreaterThanOrEqual(780);
+    expect(multiRoute.cycleSeconds).toBeGreaterThanOrEqual(780);
     expect(multiRoute.cycleSeconds).toBeLessThan(singleRoute.cycleSeconds);
     expect(singleRoute.dockStopSchedule.slice(0, 1)).toHaveLength(1);
     expect(multiRoute.dockStopSchedule.slice(0, 3)).toHaveLength(3);
     expect(new Set(multiRoute.dockStopSchedule).size).toBeGreaterThan(new Set(singleRoute.dockStopSchedule).size);
   });
 
-  it("returns the static risk tile for reduced-motion samples", () => {
+  it("returns the representative harbor tile for reduced-motion samples", () => {
     const ship = world.ships[0]!;
     const plan = buildMotionPlan(world, ship.detailId);
     const sample = resolveShipMotionSample({ plan, reducedMotion: true, ship, timeSeconds: 120 });
@@ -82,6 +83,35 @@ describe("motion", () => {
     const second = resolveShipMotionSample({ plan, reducedMotion: false, ship, timeSeconds: route.cycleSeconds / 2 });
 
     expect(second.tile).not.toEqual(first.tile);
+  });
+
+  it("keeps routed safe ships in transit for a visible share of the cycle", () => {
+    const sampleWorld = worldForShip({
+      chainCirculating: chainCirculating(["Ethereum", "Tron", "Solana"]),
+      chains: ["ethereum", "tron", "solana"],
+    });
+
+    expect(stateCountsOverCycle(sampleWorld).transitSamples).toBeGreaterThanOrEqual(40);
+  });
+
+  it("routes dockless ships through open-water patrols instead of parking at the risk tile", () => {
+    const sampleWorld = worldForShip({
+      chainCirculating: {},
+      chains: ["ethereum"],
+    });
+    const ship = sampleWorld.ships[0]!;
+    const plan = buildMotionPlan(sampleWorld, ship.detailId);
+    const route = plan.shipRoutes.get(ship.id)!;
+    const samples = Array.from({ length: 80 }, (_, index) => resolveShipMotionSample({
+      plan,
+      reducedMotion: false,
+      ship,
+      timeSeconds: route.cycleSeconds * (index / 80) - route.phaseSeconds,
+    }));
+
+    expect(samples.some((sample) => sample.state === "sailing")).toBe(true);
+    expect(Math.max(...samples.map((sample) => distance(sample.tile, route.riskTile)))).toBeGreaterThan(6);
+    expect(samples.every((sample) => /water/.test(tileKindForSample(sample.tile)))).toBe(true);
   });
 
   it("keeps safe, muddy, and storm route samples on water tiles", () => {
@@ -305,6 +335,25 @@ function riskVsDockDwell(sampleWorld: PharosVilleWorld): { dockSamples: number; 
   }
 
   return { dockSamples, riskSamples };
+}
+
+function stateCountsOverCycle(sampleWorld: PharosVilleWorld): { transitSamples: number } {
+  const ship = sampleWorld.ships[0]!;
+  const plan = buildMotionPlan(sampleWorld, ship.detailId);
+  const route = plan.shipRoutes.get(ship.id)!;
+  let transitSamples = 0;
+
+  for (let index = 0; index < 100; index += 1) {
+    const sample = resolveShipMotionSample({
+      plan,
+      reducedMotion: false,
+      ship,
+      timeSeconds: route.cycleSeconds * (index / 100) - route.phaseSeconds,
+    });
+    if (sample.state === "departing" || sample.state === "arriving") transitSamples += 1;
+  }
+
+  return { transitSamples };
 }
 
 function distance(a: { x: number; y: number }, b: { x: number; y: number }) {

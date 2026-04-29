@@ -134,9 +134,9 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
   await expect(page.getByTestId("pharosville-keyboard-entity-browser")).toHaveCount(0);
   await expect(page.getByTestId("pharosville-minimap")).toHaveCount(0);
   const ledgerText = await page.getByTestId("pharosville-accessibility-ledger").textContent();
-  const waterRatioMatch = ledgerText?.match(/(\d+(?:\.\d+)?)% water/);
-  expect(waterRatioMatch).not.toBeNull();
-  const waterPercent = Number(waterRatioMatch?.[1]);
+  const waterRatioText = ledgerText?.split(" tiles, ")[1]?.split("% water.")[0];
+  expect(waterRatioText).toBeDefined();
+  const waterPercent = Number(waterRatioText);
   expect(waterPercent).toBeGreaterThanOrEqual(82);
   expect(waterPercent).toBeLessThanOrEqual(88);
   await page.waitForFunction(() => {

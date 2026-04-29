@@ -26,7 +26,9 @@ describe("buildPharosVilleMap", () => {
     expect(map.waterRatio).toBeLessThanOrEqual(0.88);
     expect(map.tiles.every((tile) => tile.terrain)).toBe(true);
     expect([...new Set(map.tiles.map((tile) => tile.terrain))]).toEqual(expect.arrayContaining([
+      "alert-water",
       "harbor-water",
+      "warning-water",
       "fog-water",
       "storm-water",
       "beach",
@@ -53,11 +55,13 @@ describe("buildPharosVilleMap", () => {
 
   it("keeps risk and fog anchors on matching water terrain", () => {
     expect(Object.values(REGION_TILES).every((tile) => isWaterTileKind(tileKindAt(tile.x, tile.y)))).toBe(true);
+    expect(terrainKindAt(REGION_TILES["harbor-mouth-watch"].x, REGION_TILES["harbor-mouth-watch"].y)).toBe("alert-water");
+    expect(terrainKindAt(REGION_TILES["outer-rough-water"].x, REGION_TILES["outer-rough-water"].y)).toBe("warning-water");
     expect(terrainKindAt(REGION_TILES["storm-shelf"].x, REGION_TILES["storm-shelf"].y)).toBe("storm-water");
     expect(terrainKindAt(REGION_TILES["data-fog"].x, REGION_TILES["data-fog"].y)).toBe("fog-water");
   });
 
-  it("keeps harbor docks on cove edges with water access", () => {
+  it("keeps dock slots on coastline edges with water access", () => {
     expect(DOCK_TILES.every((tile) => !isWaterTileKind(tileKindAt(tile.x, tile.y)))).toBe(true);
     expect(DOCK_TILES.every((tile) => cardinalNeighbors(tile).some((neighbor) => (
       isWaterTileKind(tileKindAt(neighbor.x, neighbor.y))
@@ -85,13 +89,16 @@ describe("buildPharosVilleMap", () => {
     const ys = graves.map((grave) => grave.tile.y);
 
     expect(graves).toHaveLength(CEMETERY_ENTRIES.length);
-    expect(CEMETERY_CENTER).toEqual({ x: 17.4, y: 43.4 });
+    expect(CEMETERY_CENTER).toEqual({ x: 36.4, y: 32.8 });
+    expect(CEMETERY_CENTER.x).toBeGreaterThan(31);
+    expect(CEMETERY_CENTER.x).toBeLessThan(LIGHTHOUSE_TILE.x);
     expect(tileKindAt(Math.round(CEMETERY_CENTER.x), Math.round(CEMETERY_CENTER.y))).toBe("land");
     expect(terrainKindAt(Math.round(CEMETERY_CENTER.x), Math.round(CEMETERY_CENTER.y))).toBe("grass");
+    expect(tileKindAt(17, 43)).toBe("water");
     expect(graves.every((grave) => tileKindAt(grave.tile.x, grave.tile.y) === "land")).toBe(true);
     expect(mainIsland.has(tileKey({ x: Math.round(CEMETERY_CENTER.x), y: Math.round(CEMETERY_CENTER.y) }))).toBe(true);
     expect(graves.every((grave) => isNearConnectedLand(grave.tile, mainIsland))).toBe(true);
-    expect(graves.every((grave) => Math.hypot(grave.tile.x - LIGHTHOUSE_TILE.x, grave.tile.y - LIGHTHOUSE_TILE.y) > 24)).toBe(true);
+    expect(graves.every((grave) => Math.hypot(grave.tile.x - LIGHTHOUSE_TILE.x, grave.tile.y - LIGHTHOUSE_TILE.y) > 10)).toBe(true);
     expect(graves.every((grave) => DOCK_TILES.every((dock) => Math.hypot(grave.tile.x - dock.x, grave.tile.y - dock.y) > 4))).toBe(true);
     expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(6.5);
     expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(5);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins";
 import {
   fixtureChains,
   fixturePegSummary,
@@ -12,7 +13,7 @@ import {
   makePegCoin,
 } from "../__fixtures__/pharosville-world";
 import { buildPharosVilleWorld } from "./pharosville-world";
-import { tileKindAt } from "./world-layout";
+import { terrainKindAt, tileKindAt } from "./world-layout";
 
 describe("buildPharosVilleWorld", () => {
   it("builds deterministic core entities without React or canvas", () => {
@@ -34,6 +35,7 @@ describe("buildPharosVilleWorld", () => {
     expect(world.docks).toHaveLength(2);
     expect(world.ships.map((ship) => ship.id)).toEqual(["usdt-tether", "usdc-circle"]);
     expect(world.ships.every((ship) => ["water", "deep-water"].includes(tileKindAt(ship.tile.x, ship.tile.y)))).toBe(true);
+    expect(world.ships.every((ship) => ["water", "deep-water"].includes(tileKindAt(ship.riskTile.x, ship.riskTile.y)))).toBe(true);
     expect(new Set(world.ships.map((ship) => `${ship.tile.x}.${ship.tile.y}`)).size).toBe(world.ships.length);
     expect(world.ships.find((ship) => ship.id === "usdt-tether")?.logoSrc).toBe("/logos/1-usdt.svg");
     expect(world.detailIndex["ship.usdt-tether"]?.facts).toEqual(expect.arrayContaining([
@@ -46,7 +48,36 @@ describe("buildPharosVilleWorld", () => {
     expect(world.visualCues.length).toBeGreaterThan(0);
   });
 
-  it("assigns rendered dock visits without overwriting the risk tile", () => {
+  it("spreads safe ships across multiple water approaches", () => {
+    const ids = Array.from(ACTIVE_IDS).slice(0, 36);
+    const world = buildPharosVilleWorld({
+      stablecoins: {
+        peggedAssets: ids.map((id, index) => makeAsset({
+          id,
+          symbol: `S${index}`,
+          circulating: { peggedUSD: 1_000_000_000 - index },
+        })),
+      },
+      chains: fixtureChains,
+      stability: fixtureStability,
+      pegSummary: {
+        ...fixturePegSummary,
+        coins: ids.map((id, index) => makePegCoin({ id, symbol: `S${index}` })),
+      },
+      stress: { ...fixtureStress, signals: {} },
+      reportCards: fixtureReportCards,
+      cemeteryEntries: [],
+      freshness: {},
+    });
+    const quadrants = new Set(world.ships.map((ship) => `${ship.riskTile.x < 32 ? "W" : "E"}-${ship.riskTile.y < 32 ? "N" : "S"}`));
+    const northwestCount = world.ships.filter((ship) => ship.riskTile.x < 32 && ship.riskTile.y < 32).length;
+
+    expect(world.ships.length).toBeGreaterThan(24);
+    expect(quadrants.size).toBeGreaterThanOrEqual(3);
+    expect(northwestCount).toBeLessThan(world.ships.length * 0.55);
+  });
+
+  it("anchors rendered ships at harbor moorings while preserving the risk tile", () => {
     const input = {
       stablecoins: fixtureStablecoins,
       chains: fixtureChains,
@@ -70,12 +101,114 @@ describe("buildPharosVilleWorld", () => {
     expect(usdt?.dominantChainId).toBe("ethereum");
     expect(ethereumVisit).toBeDefined();
     expect(ethereumVisit?.dockId).toBe(ethereumDock?.id);
-    expect(ethereumVisit?.mooringTile).not.toEqual(usdt?.tile);
+    expect(ethereumVisit?.mooringTile).toEqual(usdt?.tile);
+    expect(ethereumVisit?.mooringTile).not.toEqual(usdt?.riskTile);
     expect(ethereumVisit?.mooringTile).toBeDefined();
     expect(["water", "deep-water"]).toContain(tileKindAt(ethereumVisit?.mooringTile.x ?? -1, ethereumVisit?.mooringTile.y ?? -1));
+    expect(["water", "deep-water"]).toContain(tileKindAt(usdt?.riskTile.x ?? -1, usdt?.riskTile.y ?? -1));
     expect(repeatedUsdt?.dockVisits).toEqual(usdt?.dockVisits);
+    expect(repeatedUsdt?.tile).toEqual(usdt?.tile);
+    expect(repeatedUsdt?.riskTile).toEqual(usdt?.riskTile);
     expect(usdt?.riskPlacement).toBe("safe-harbor");
     expect(usdt?.riskZone).toBe("safe");
+  });
+
+  it("names DEWS water areas from live band counts and anchors ships to matching risk water", () => {
+    const stress = {
+      ...fixtureStress,
+      signals: {
+        ...bandSignals("ALERT", 3),
+        ...bandSignals("WATCH", 58),
+        ...bandSignals("CALM", 107),
+        "usdc-circle": {
+          score: 55,
+          band: "ALERT",
+          signals: {},
+          computedAt: 1_700_000_000,
+          methodologyVersion: "fixture",
+        },
+      },
+    };
+    const world = buildPharosVilleWorld({
+      stablecoins: {
+        peggedAssets: [
+          makeAsset({ id: "usdc-circle", symbol: "USDC" }),
+        ],
+      },
+      chains: fixtureChains,
+      stability: fixtureStability,
+      pegSummary: {
+        ...fixturePegSummary,
+        coins: [makePegCoin({ id: "usdc-circle", symbol: "USDC" })],
+      },
+      stress,
+      reportCards: fixtureReportCards,
+      cemeteryEntries: [],
+      freshness: {},
+    });
+    const counts = Object.fromEntries(
+      world.areas
+        .filter((area) => area.band)
+        .map((area) => [area.band, area.count]),
+    );
+    const alertArea = world.areas.find((area) => area.band === "ALERT");
+    const usdc = world.ships[0];
+
+    expect(counts).toMatchObject({
+      DANGER: 0,
+      WARNING: 0,
+      ALERT: 4,
+      WATCH: 58,
+      CALM: 107,
+    });
+    expect(world.areas.find((area) => area.band === "CALM")?.label).toBe("Calm Anchorage");
+    expect(alertArea?.label).toBe("Alert Channel");
+    expect(alertArea?.riskPlacement).toBe("harbor-mouth-watch");
+    expect(alertArea?.tile ? terrainKindAt(alertArea.tile.x, alertArea.tile.y) : null).toBe("alert-water");
+    expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 49, y: 46 });
+    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 55, y: 53 });
+    expect(terrainKindAt(49, 46)).toBe("warning-water");
+    expect(terrainKindAt(55, 53)).toBe("storm-water");
+    expect(usdc?.riskPlacement).toBe("harbor-mouth-watch");
+    expect(usdc?.riskZone).toBe("muddy");
+  });
+
+  it("maps warning and danger DEWS ships to escalating water terrain", () => {
+    const world = buildPharosVilleWorld({
+      stablecoins: fixtureStablecoins,
+      chains: fixtureChains,
+      stability: fixtureStability,
+      pegSummary: fixturePegSummary,
+      stress: {
+        ...fixtureStress,
+        signals: {
+          "usdc-circle": {
+            score: 76,
+            band: "WARNING",
+            signals: {},
+            computedAt: 1_700_000_000,
+            methodologyVersion: "fixture",
+          },
+          "usdt-tether": {
+            score: 94,
+            band: "DANGER",
+            signals: {},
+            computedAt: 1_700_000_000,
+            methodologyVersion: "fixture",
+          },
+        },
+      },
+      reportCards: fixtureReportCards,
+      cemeteryEntries: [],
+      freshness: {},
+    });
+    const usdc = world.ships.find((ship) => ship.id === "usdc-circle");
+    const usdt = world.ships.find((ship) => ship.id === "usdt-tether");
+
+    expect(usdc?.riskPlacement).toBe("outer-rough-water");
+    expect(usdc?.riskTile ? terrainKindAt(usdc.riskTile.x, usdc.riskTile.y) : null).toBe("warning-water");
+    expect(usdt?.riskPlacement).toBe("storm-shelf");
+    expect(usdt?.riskTile ? terrainKindAt(usdt.riskTile.x, usdt.riskTile.y) : null).toBe("storm-water");
   });
 
   it("canonicalizes positive chain presence and normalizes shares", () => {
@@ -268,6 +401,7 @@ describe("buildPharosVilleWorld", () => {
     expect(usdc?.dockChainId).toBeNull();
     expect(usdc?.riskPlacement).toBe("storm-shelf");
     expect(usdc?.riskZone).toBe("storm");
+    expect(usdc?.tile).toEqual(usdc?.riskTile);
     expect(["water", "deep-water"]).toContain(tileKindAt(usdc?.tile.x ?? -1, usdc?.tile.y ?? -1));
   });
 
@@ -305,12 +439,14 @@ describe("buildPharosVilleWorld", () => {
     expect(usdc?.riskPlacement).toBe("storm-shelf");
     expect(usdc?.riskZone).toBe("storm");
     expect(usdc?.dockVisits?.map((visit) => visit.chainId)).toEqual(["ethereum"]);
-    expect(usdc?.dockVisits?.[0]?.mooringTile).not.toEqual(usdc?.tile);
+    expect(usdc?.dockVisits?.[0]?.mooringTile).toEqual(usdc?.tile);
+    expect(usdc?.dockVisits?.[0]?.mooringTile).not.toEqual(usdc?.riskTile);
     expect(["water", "deep-water"]).toContain(tileKindAt(usdc?.dockVisits?.[0]?.mooringTile.x ?? -1, usdc?.dockVisits?.[0]?.mooringTile.y ?? -1));
+    expect(["water", "deep-water"]).toContain(tileKindAt(usdc?.riskTile.x ?? -1, usdc?.riskTile.y ?? -1));
   });
 
   it("keeps long-tail clusters on water tiles", () => {
-    const assets = Array.from({ length: 84 }, (_, index) => makeAsset({
+    const assets = Array.from({ length: 132 }, (_, index) => makeAsset({
       id: index % 2 === 0 ? "usdc-circle" : "usdt-tether",
       symbol: index % 2 === 0 ? "USDC" : "USDT",
       circulating: { peggedUSD: 1_000_000 - index },
@@ -333,3 +469,16 @@ describe("buildPharosVilleWorld", () => {
     expect(world.shipClusters.every((cluster) => ["water", "deep-water"].includes(tileKindAt(cluster.tile.x, cluster.tile.y)))).toBe(true);
   });
 });
+
+function bandSignals(band: "ALERT" | "WATCH" | "CALM", count: number) {
+  return Object.fromEntries(Array.from({ length: count }, (_, index) => [
+    `${band.toLowerCase()}-${index}`,
+    {
+      score: band === "ALERT" ? 55 : band === "WATCH" ? 30 : 5,
+      band,
+      signals: {},
+      computedAt: 1_700_000_000,
+      methodologyVersion: "fixture",
+    },
+  ]));
+}

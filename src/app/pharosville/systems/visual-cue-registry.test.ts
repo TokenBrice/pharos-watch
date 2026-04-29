@@ -16,7 +16,7 @@ describe("buildVisualCueRegistry", () => {
     expect(cues.find((cue) => cue.id === "cue.ship.motion")).toMatchObject({
       visual: "ship route and docking cadence",
       sourceField: "stablecoins.peggedAssets[].chainCirculating, pegSummary.coins[], stress.signals[]",
-      failureState: "reduced-motion static risk position / data fog",
+      failureState: "reduced-motion static harbor mooring or risk patrol / data fog",
       domEquivalent: "ship detail route facts and accessibility ledger",
     });
     expect(cues.every((cue) => cue.sourceField && cue.domEquivalent && cue.failureState)).toBe(true);

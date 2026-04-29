@@ -14,6 +14,7 @@ function makeShip(index: number, marketCapUsd: number): ShipNode {
     reportCard: null,
     logoSrc: null,
     tile: { x: 0, y: 0 },
+    riskTile: { x: 0, y: 0 },
     chainPresence: [],
     dockVisits: [],
     dominantChainId: null,
