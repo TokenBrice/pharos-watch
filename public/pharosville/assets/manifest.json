@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "style": {
-    "assetVersion": "2026-04-29-lighthouse-hill-v2",
+    "assetVersion": "2026-04-29-lighthouse-hill-v5",
     "anchor": "old-school 16-bit maritime isometric RPG pixel art, crisp pixel edges, low top-down view, deep navy and teal sea, pale limestone island city, bronze and gold beacon light, restrained analytics palette, readable silhouettes, no text, no logos, no UI",
     "palette": ["#061721", "#0d5f70", "#d3c89a", "#ffcc62"],
     "generationDefaults": {
@@ -45,7 +45,7 @@
       "promptProvenance": {
         "jobId": "96c4d9ac-c577-4120-a52e-3d6b3038c737",
         "seed": 42801,
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -64,7 +64,7 @@
       "promptProvenance": {
         "jobId": "96c4d9ac-c577-4120-a52e-3d6b3038c737",
         "seed": 42801,
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -83,7 +83,7 @@
       "promptProvenance": {
         "jobId": "96c4d9ac-c577-4120-a52e-3d6b3038c737",
         "seed": 42801,
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -102,7 +102,7 @@
       "promptProvenance": {
         "jobId": "96c4d9ac-c577-4120-a52e-3d6b3038c737",
         "seed": 42801,
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -121,7 +121,7 @@
       "promptProvenance": {
         "jobId": "96c4d9ac-c577-4120-a52e-3d6b3038c737",
         "seed": 42801,
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -140,7 +140,7 @@
       "promptProvenance": {
         "jobId": "96c4d9ac-c577-4120-a52e-3d6b3038c737",
         "seed": 42801,
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -158,7 +158,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "eb0d494c-ed95-4352-8c3c-9f113bdaad06",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -176,7 +176,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "3af5f1a1-f579-43ed-850c-70dfa9051cac",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -194,7 +194,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "e85602f1-dfda-484c-8ff5-5c3c171767d3",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -212,7 +212,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "74433a05-055e-4344-a806-2a3e33bf8c77",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -230,7 +230,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "122723cd-dac2-4480-8fda-0fae619adc04",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -248,7 +248,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "f5f1eb36-5bc4-4c99-bf98-888ef762e587",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -266,7 +266,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "49e0ddbe-c128-472a-ae25-18803fbb8741",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -284,7 +284,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "e4006f7e-e11f-4266-bec7-5d1bdc07d82d",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -302,7 +302,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "58747022-a0e4-4f2c-b727-f917da2ebf30",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -320,7 +320,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "6e828a73-ab42-47e6-a207-f5c5721905dc",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -338,7 +338,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "65a30ce1-c858-4b0e-9111-46b82cf4e126",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -356,7 +356,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "4aed90c0-54f1-4142-b5a7-9987805793ab",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -374,7 +374,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "9caae4d7-9204-4397-b68a-0bde97c717a4",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -392,7 +392,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "73a73c4e-9479-4986-a711-08aa7743eef3",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -410,7 +410,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "ada96486-6995-4f83-99cb-50bfbb80c178",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -428,7 +428,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "2a6b720a-32c7-45da-bfea-a5b3972fbd51",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -446,7 +446,7 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "741bd01a-e7d2-4bb2-880d-d241b55be180",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
     {
@@ -464,7 +464,97 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "16da5c1a-3e9f-4bb9-9439-b98dc3a48afa",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v2"
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
+      }
+    },
+    {
+      "id": "building.mint-burn-foundry",
+      "path": "buildings/mint-burn-foundry.png",
+      "category": "landmark",
+      "layer": "landmarks",
+      "width": 192,
+      "height": 160,
+      "displayScale": 1,
+      "anchor": [96, 148],
+      "footprint": [58, 34],
+      "hitbox": [18, 10, 156, 142],
+      "loadPriority": "deferred",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "fa4abe5c-744f-45f3-b004-75e3c63f485a",
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
+      }
+    },
+    {
+      "id": "building.frost-ward-keep",
+      "path": "buildings/frost-ward-keep.png",
+      "category": "landmark",
+      "layer": "landmarks",
+      "width": 192,
+      "height": 160,
+      "displayScale": 1,
+      "anchor": [96, 148],
+      "footprint": [58, 34],
+      "hitbox": [18, 10, 156, 142],
+      "loadPriority": "deferred",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "983c56de-1058-4798-a714-811cd4bea7d4",
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
+      }
+    },
+    {
+      "id": "building.exit-route-gatehouse",
+      "path": "buildings/exit-route-gatehouse.png",
+      "category": "landmark",
+      "layer": "landmarks",
+      "width": 192,
+      "height": 160,
+      "displayScale": 1,
+      "anchor": [96, 148],
+      "footprint": [58, 34],
+      "hitbox": [18, 10, 156, 142],
+      "loadPriority": "deferred",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "7436a936-9918-4464-9085-2790d3fb6b7b",
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
+      }
+    },
+    {
+      "id": "building.yield-orchard-moonwell",
+      "path": "buildings/yield-orchard-moonwell.png",
+      "category": "landmark",
+      "layer": "landmarks",
+      "width": 192,
+      "height": 160,
+      "displayScale": 1,
+      "anchor": [96, 148],
+      "footprint": [58, 34],
+      "hitbox": [18, 10, 156, 142],
+      "loadPriority": "deferred",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "4f10bb72-ccf1-4ab3-b874-d4d61da0a2f2",
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
+      }
+    },
+    {
+      "id": "building.dependency-loom-chainworks",
+      "path": "buildings/dependency-loom-chainworks.png",
+      "category": "landmark",
+      "layer": "landmarks",
+      "width": 192,
+      "height": 160,
+      "displayScale": 1,
+      "anchor": [96, 148],
+      "footprint": [58, 34],
+      "hitbox": [18, 10, 156, 142],
+      "loadPriority": "deferred",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "f267205c-534f-42d0-ae6a-55fc7fd5a2be",
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     }
   ]
