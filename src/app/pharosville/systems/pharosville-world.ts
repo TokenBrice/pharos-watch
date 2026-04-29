@@ -43,7 +43,7 @@ import {
   DEWS_AREA_WATER_STYLE,
   SHIP_SCATTER_RADIUS,
   SHIP_WATER_ANCHORS,
-  waterZoneForPlacement,
+  riskWaterAreaForPlacement,
 } from "./risk-water-areas";
 import { resolveShipVisual } from "./ship-visuals";
 import { stableHash, stableOffset, stableUnit } from "./stable-random";
@@ -208,6 +208,7 @@ function buildShips(inputs: PharosVilleInputs, docks: readonly DockNode[]): Ship
     const homeDockChainId = chainPresence.find((presence) => presence.hasRenderedDock)?.chainId ?? null;
     const recent = getRecentChange(asset);
     const riskTile = shipTile(asset, risk.placement);
+    const riskWaterArea = riskWaterAreaForPlacement(risk.placement);
     return {
       id: asset.id,
       kind: "ship" as const,
@@ -226,7 +227,8 @@ function buildShips(inputs: PharosVilleInputs, docks: readonly DockNode[]): Ship
       dockChainId: homeDockChainId,
       marketCapUsd: getCirculatingRaw(asset),
       riskPlacement: risk.placement,
-      riskZone: waterZoneForPlacement(risk.placement),
+      riskZone: riskWaterArea.motionZone,
+      riskWaterLabel: riskWaterArea.label,
       placementEvidence: risk.evidence,
       visual: resolveShipVisual(asset, meta, reportCard),
       change24hUsd: recent.change24hUsd,

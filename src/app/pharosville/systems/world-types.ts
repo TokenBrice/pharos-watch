@@ -101,7 +101,7 @@ export interface ShipDockVisit {
   mooringTile: { x: number; y: number };
 }
 
-export type ShipWaterZone = "safe" | "muddy" | "storm" | "fog" | "ledger";
+export type ShipWaterZone = "calm" | "watch" | "alert" | "warning" | "danger" | "fog" | "ledger";
 
 export interface LighthouseNode {
   id: "lighthouse";
@@ -158,6 +158,7 @@ export interface ShipNode {
   marketCapUsd: number;
   riskPlacement: ShipRiskPlacement;
   riskZone: ShipWaterZone;
+  riskWaterLabel: string;
   placementEvidence: PlacementEvidence;
   visual: ShipVisual;
   change24hUsd: number | null;
@@ -171,6 +172,7 @@ export interface ShipClusterNode {
   label: string;
   tile: { x: number; y: number };
   riskPlacement: ShipRiskPlacement;
+  riskWaterLabel: string;
   shipIds: string[];
   ships: Array<{
     id: string;

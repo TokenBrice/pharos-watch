@@ -28,11 +28,11 @@ export function buildVisualCueRegistry(): VisualCue[] {
       id: "cue.ship.distance",
       target: { kind: "ship" },
       primaryChannels: ["position", "motion", "opacity"],
-      visual: "ship placement from harbor to storm shelf",
+      visual: "ship placement from Calm Anchorage through Watch Breakwater, Alert Channel, Warning Shoals, and Danger Strait",
       sourceField: "pegSummary.coins[], stress.signals[]",
       questionAnswered: "Which stablecoins are under peg or DEWS stress?",
       failureState: "data fog",
-      domEquivalent: "ship detail placement explanation",
+      domEquivalent: "ship detail placement explanation with named risk water area and zone",
       reducedMotionEquivalent: "static risk-water placement with route details in DOM",
     },
     {

@@ -77,13 +77,15 @@ describe("motion", () => {
     expect(new Set(multiRoute.dockStopSchedule).size).toBeGreaterThan(new Set(singleRoute.dockStopSchedule).size);
   });
 
-  it("returns the representative harbor tile for reduced-motion samples", () => {
+  it("returns a static harbor mooring for reduced-motion docked samples", () => {
     const ship = world.ships[0]!;
     const plan = buildMotionPlan(world, ship.detailId);
     const sample = resolveShipMotionSample({ plan, reducedMotion: true, ship, timeSeconds: 120 });
 
     expect(sample.tile).toEqual(ship.tile);
-    expect(sample.state).toBe("risk-drift");
+    expect(sample.state).toBe("moored");
+    expect(sample.currentDockId).toBe(ship.dockVisits[0]?.dockId);
+    expect(sample.zone).toBe(ship.riskZone);
     expect(sample.wakeIntensity).toBe(0);
   });
 
@@ -97,7 +99,7 @@ describe("motion", () => {
     expect(second.tile).not.toEqual(first.tile);
   });
 
-  it("keeps routed safe ships in transit for a visible share of the cycle", () => {
+  it("keeps routed calm ships in transit for a visible share of the cycle", () => {
     const sampleWorld = worldForShip({
       chainCirculating: chainCirculating(["Ethereum", "Tron", "Solana"]),
       chains: ["ethereum", "tron", "solana"],
@@ -133,11 +135,19 @@ describe("motion", () => {
         world: worldForShip({ chainCirculating: {}, chains: ["ethereum"] }),
       },
       {
-        expectedTerrains: ["alert-water", "warning-water"],
+        expectedTerrains: ["alert-water"],
         world: worldForShip({
           chainCirculating: {},
           chains: ["ethereum"],
           pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", currentDeviationBps: 100 }),
+        }),
+      },
+      {
+        expectedTerrains: ["warning-water"],
+        world: worldForShip({
+          chainCirculating: {},
+          chains: ["ethereum"],
+          pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", currentDeviationBps: 250 }),
         }),
       },
       {
@@ -169,7 +179,7 @@ describe("motion", () => {
     }
   });
 
-  it("keeps safe, muddy, and storm route samples on water tiles", () => {
+  it("keeps calm, alert, warning, and danger route samples on water tiles", () => {
     const worlds = [
       worldForShip({
         chainCirculating: chainCirculating(["Ethereum", "Tron"]),
@@ -183,6 +193,11 @@ describe("motion", () => {
       worldForShip({
         chainCirculating: chainCirculating(["Ethereum", "Tron"]),
         chains: ["ethereum", "tron"],
+        pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", currentDeviationBps: 250 }),
+      }),
+      worldForShip({
+        chainCirculating: chainCirculating(["Ethereum", "Tron"]),
+        chains: ["ethereum", "tron"],
         pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true }),
       }),
     ];
@@ -192,7 +207,7 @@ describe("motion", () => {
       const plan = buildMotionPlan(sampleWorld, ship.detailId);
       const route = plan.shipRoutes.get(ship.id)!;
 
-      expect(["safe", "muddy", "storm"]).toContain(route.zone);
+      expect(["calm", "alert", "warning", "danger"]).toContain(route.zone);
       for (let index = 0; index < 40; index += 1) {
         const sample = resolveShipMotionSample({
           plan,
@@ -301,8 +316,8 @@ describe("motion", () => {
     }
   });
 
-  it("keeps storm and fog ships near risk water more than docks", () => {
-    const stormWorld = worldForShip({
+  it("keeps danger and fog ships near risk water more than docks", () => {
+    const dangerWorld = worldForShip({
       chainCirculating: chainCirculating(["Ethereum"]),
       chains: ["ethereum"],
       pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true }),
@@ -314,7 +329,7 @@ describe("motion", () => {
       pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true }),
     });
 
-    expect(riskVsDockDwell(stormWorld).riskSamples).toBeGreaterThan(riskVsDockDwell(stormWorld).dockSamples);
+    expect(riskVsDockDwell(dangerWorld).riskSamples).toBeGreaterThan(riskVsDockDwell(dangerWorld).dockSamples);
     expect(riskVsDockDwell(fogWorld).riskSamples).toBeGreaterThan(riskVsDockDwell(fogWorld).dockSamples);
   });
 

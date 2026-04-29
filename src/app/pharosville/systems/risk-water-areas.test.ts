@@ -60,6 +60,7 @@ describe("risk water areas", () => {
       expect(AREA_LABEL_TILES[band]).toBe(area.labelTile);
       expect(DEWS_AREA_WATER_STYLE[band]).toBe(area.waterStyle);
       expect(terrainKindAt(area.labelTile.x, area.labelTile.y)).toBe(area.terrain);
+      expect(area.motionZone).toBe(band.toLowerCase());
     }
   });
 

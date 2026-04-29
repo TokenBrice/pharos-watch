@@ -340,7 +340,7 @@ function motionSample(shipId: string, tile: { x: number; y: number }): ShipMotio
     shipId,
     tile,
     state: "sailing",
-    zone: "safe",
+    zone: "calm",
     currentDockId: null,
     heading: { x: 1, y: 0 },
     wakeIntensity: 0.4,

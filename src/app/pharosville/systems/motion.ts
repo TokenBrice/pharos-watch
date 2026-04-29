@@ -74,25 +74,23 @@ const BAND_FIRE_FLICKER_SPEED: Record<string, number> = {
 };
 
 const ZONE_DWELL: Record<ShipWaterZone, { dockDwell: number; riskDwell: number; transit: number }> = {
+  alert: { riskDwell: 0.38, dockDwell: 0.18, transit: 0.44 },
+  calm: { riskDwell: 0.24, dockDwell: 0.24, transit: 0.52 },
+  danger: { riskDwell: 0.58, dockDwell: 0.06, transit: 0.36 },
   fog: { riskDwell: 0.55, dockDwell: 0.08, transit: 0.37 },
   ledger: { riskDwell: 0.48, dockDwell: 0.1, transit: 0.42 },
-  muddy: { riskDwell: 0.4, dockDwell: 0.18, transit: 0.42 },
-  safe: { riskDwell: 0.24, dockDwell: 0.24, transit: 0.52 },
-  storm: { riskDwell: 0.58, dockDwell: 0.06, transit: 0.36 },
+  warning: { riskDwell: 0.46, dockDwell: 0.12, transit: 0.42 },
+  watch: { riskDwell: 0.3, dockDwell: 0.22, transit: 0.48 },
 };
 
 const OPEN_WATER_PATROL_WAYPOINTS: Record<ShipWaterZone, readonly { x: number; y: number }[]> = {
+  alert: SHIP_WATER_ANCHORS["harbor-mouth-watch"],
+  calm: SHIP_WATER_ANCHORS["safe-harbor"],
+  danger: SHIP_WATER_ANCHORS["storm-shelf"],
   fog: SHIP_WATER_ANCHORS["data-fog"],
   ledger: SHIP_WATER_ANCHORS["ledger-mooring"],
-  muddy: [
-    ...SHIP_WATER_ANCHORS["harbor-mouth-watch"],
-    ...SHIP_WATER_ANCHORS["outer-rough-water"],
-  ],
-  safe: [
-    ...SHIP_WATER_ANCHORS["safe-harbor"],
-    ...SHIP_WATER_ANCHORS["breakwater-edge"],
-  ],
-  storm: SHIP_WATER_ANCHORS["storm-shelf"],
+  warning: SHIP_WATER_ANCHORS["outer-rough-water"],
+  watch: SHIP_WATER_ANCHORS["breakwater-edge"],
 };
 
 export function buildBaseMotionPlan(world: PharosVilleWorld): PharosVilleBaseMotionPlan {
@@ -171,12 +169,13 @@ export function resolveShipMotionSample(input: {
 }): ShipMotionSample {
   const route = input.plan.shipRoutes.get(input.ship.id);
   if (input.reducedMotion || !route) {
+    const reducedStop = route ? primaryDockStop(input.ship, route.dockStops) : null;
     return {
       shipId: input.ship.id,
-      tile: input.ship.tile,
-      state: "risk-drift",
+      tile: reducedStop?.mooringTile ?? input.ship.riskTile,
+      state: reducedStop ? "moored" : "risk-drift",
       zone: input.ship.riskZone,
-      currentDockId: null,
+      currentDockId: reducedStop?.dockId ?? null,
       heading: { x: 0, y: 0 },
       wakeIntensity: 0,
     };
@@ -567,7 +566,7 @@ function transitSample(input: {
     zone: input.route.zone,
     currentDockId: input.dockId,
     heading,
-    wakeIntensity: input.route.zone === "storm" ? 0.7 : input.route.zone === "muddy" ? 0.5 : 0.35,
+    wakeIntensity: transitWakeIntensityForZone(input.route.zone),
   };
 }
 
@@ -576,8 +575,9 @@ function openWaterPatrolSample(route: ShipMotionRoute, timeSeconds: number): Shi
 
   const cyclePosition = timeSeconds + route.phaseSeconds;
   const elapsedSeconds = positiveModulo(cyclePosition, route.cycleSeconds);
-  const riskSeconds = route.cycleSeconds * 0.16;
-  const waypointSeconds = route.cycleSeconds * 0.1;
+  const zoneDwell = ZONE_DWELL[route.zone];
+  const riskSeconds = route.cycleSeconds * zoneDwell.riskDwell;
+  const waypointSeconds = route.cycleSeconds * zoneDwell.dockDwell;
   const transitSecondsEach = (route.cycleSeconds - riskSeconds - waypointSeconds) / 2;
   let cursor = elapsedSeconds;
 
@@ -624,7 +624,7 @@ function openWaterWaypointDriftSample(route: ShipMotionRoute, timeSeconds: numbe
     zone: route.zone,
     currentDockId: null,
     heading: normalizeHeading({ x: -Math.sin(angle), y: Math.cos(angle * 0.85) }),
-    wakeIntensity: route.zone === "storm" ? 0.65 : route.zone === "muddy" ? 0.48 : 0.32,
+    wakeIntensity: patrolWakeIntensityForZone(route.zone),
   };
 }
 
@@ -651,8 +651,10 @@ function mooredSample(
 }
 
 function mooredRadiusForZone(zone: ShipWaterZone): { x: number; y: number } {
-  if (zone === "storm") return { x: 0.22, y: 0.14 };
+  if (zone === "danger") return { x: 0.22, y: 0.14 };
   if (zone === "fog") return { x: 0.2, y: 0.13 };
+  if (zone === "warning") return { x: 0.24, y: 0.16 };
+  if (zone === "alert") return { x: 0.26, y: 0.17 };
   return { x: 0.28, y: 0.18 };
 }
 
@@ -674,10 +676,32 @@ function riskDriftSample(route: ShipMotionRoute, timeSeconds: number, progress: 
 }
 
 function driftRadiusForZone(zone: ShipWaterZone): { x: number; y: number } {
-  if (zone === "storm") return { x: 0.54, y: 0.36 };
+  if (zone === "danger") return { x: 0.54, y: 0.36 };
+  if (zone === "warning") return { x: 0.48, y: 0.32 };
   if (zone === "fog") return { x: 0.5, y: 0.32 };
-  if (zone === "muddy") return { x: 0.44, y: 0.3 };
+  if (zone === "alert") return { x: 0.44, y: 0.3 };
+  if (zone === "watch") return { x: 0.4, y: 0.28 };
   return { x: 0.38, y: 0.26 };
+}
+
+function transitWakeIntensityForZone(zone: ShipWaterZone): number {
+  if (zone === "danger") return 0.72;
+  if (zone === "warning") return 0.58;
+  if (zone === "alert") return 0.5;
+  if (zone === "watch") return 0.42;
+  if (zone === "fog") return 0.28;
+  if (zone === "ledger") return 0.34;
+  return 0.35;
+}
+
+function patrolWakeIntensityForZone(zone: ShipWaterZone): number {
+  if (zone === "danger") return 0.66;
+  if (zone === "warning") return 0.54;
+  if (zone === "alert") return 0.48;
+  if (zone === "watch") return 0.38;
+  if (zone === "fog") return 0.22;
+  if (zone === "ledger") return 0.3;
+  return 0.28;
 }
 
 export function sampleShipWaterPath(path: ShipWaterPath | undefined, progress: number): { point: { x: number; y: number }; heading: { x: number; y: number } } {

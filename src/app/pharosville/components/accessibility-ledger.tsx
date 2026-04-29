@@ -97,7 +97,8 @@ export function AccessibilityLedger({
             {ship.label} ({ship.symbol}): {compactUsd.format(ship.marketCapUsd)} market cap, placed at{" "}
             {ship.homeDockChainId ? `${ship.homeDockChainId} harbor mooring` : ship.riskPlacement}; risk anchor{" "}
             {ship.riskPlacement}; route summary: {pluralize(ship.chainPresence.length, "positive chain deployment")},{" "}
-            {pluralize(ship.dockVisits.length, "rendered dock stop")}, risk zone {ship.riskZone}; placement evidence{" "}
+            {pluralize(ship.dockVisits.length, "rendered dock stop")}, risk water {ship.riskWaterLabel}, risk zone{" "}
+            {ship.riskZone}; placement evidence{" "}
             {ship.placementEvidence.reason}; source fields {ship.placementEvidence.sourceFields.join(", ") || "unavailable"}.
           </li>
         ))}
@@ -108,7 +109,7 @@ export function AccessibilityLedger({
         {world.shipClusters.map((cluster) => (
           <li key={cluster.id}>
             {cluster.label}: {cluster.count} ships, {compactUsd.format(cluster.totalUsd)} total market cap, placed at{" "}
-            {cluster.riskPlacement}. Members:{" "}
+            {cluster.riskWaterLabel} ({cluster.riskPlacement}). Members:{" "}
             {cluster.ships.map((ship) => `${ship.label} (${ship.symbol}) ${compactUsd.format(ship.marketCapUsd)}`).join("; ")}.
           </li>
         ))}

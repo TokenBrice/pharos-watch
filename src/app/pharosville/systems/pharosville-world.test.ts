@@ -202,7 +202,8 @@ describe("buildPharosVilleWorld", () => {
     expect(repeatedUsdt?.tile).toEqual(usdt?.tile);
     expect(repeatedUsdt?.riskTile).toEqual(usdt?.riskTile);
     expect(usdt?.riskPlacement).toBe("safe-harbor");
-    expect(usdt?.riskZone).toBe("safe");
+    expect(usdt?.riskZone).toBe("calm");
+    expect(usdt?.riskWaterLabel).toBe("Calm Anchorage");
   });
 
   it("names DEWS water areas from live band counts and anchors ships to matching risk water", () => {
@@ -264,7 +265,8 @@ describe("buildPharosVilleWorld", () => {
     expect(terrainKindAt(37, 6)).toBe("warning-water");
     expect(terrainKindAt(41, 0)).toBe("storm-water");
     expect(usdc?.riskPlacement).toBe("harbor-mouth-watch");
-    expect(usdc?.riskZone).toBe("muddy");
+    expect(usdc?.riskZone).toBe("alert");
+    expect(usdc?.riskWaterLabel).toBe("Alert Channel");
   });
 
   it("maps warning and danger DEWS ships to escalating water terrain", () => {
@@ -300,8 +302,10 @@ describe("buildPharosVilleWorld", () => {
     const usdt = world.ships.find((ship) => ship.id === "usdt-tether");
 
     expect(usdc?.riskPlacement).toBe("outer-rough-water");
+    expect(usdc?.riskZone).toBe("warning");
     expect(usdc?.riskTile ? terrainKindAt(usdc.riskTile.x, usdc.riskTile.y) : null).toBe("warning-water");
     expect(usdt?.riskPlacement).toBe("storm-shelf");
+    expect(usdt?.riskZone).toBe("danger");
     expect(usdt?.riskTile ? terrainKindAt(usdt.riskTile.x, usdt.riskTile.y) : null).toBe("storm-water");
   });
 
@@ -494,7 +498,8 @@ describe("buildPharosVilleWorld", () => {
     expect(usdc?.homeDockChainId).toBeNull();
     expect(usdc?.dockChainId).toBeNull();
     expect(usdc?.riskPlacement).toBe("storm-shelf");
-    expect(usdc?.riskZone).toBe("storm");
+    expect(usdc?.riskZone).toBe("danger");
+    expect(usdc?.riskWaterLabel).toBe("Danger Strait");
     expect(usdc?.tile).toEqual(usdc?.riskTile);
     expect(["water", "deep-water"]).toContain(tileKindAt(usdc?.tile.x ?? -1, usdc?.tile.y ?? -1));
   });
@@ -531,7 +536,8 @@ describe("buildPharosVilleWorld", () => {
     const usdc = world.ships[0];
 
     expect(usdc?.riskPlacement).toBe("storm-shelf");
-    expect(usdc?.riskZone).toBe("storm");
+    expect(usdc?.riskZone).toBe("danger");
+    expect(usdc?.riskWaterLabel).toBe("Danger Strait");
     expect(usdc?.dockVisits?.map((visit) => visit.chainId)).toEqual(["ethereum"]);
     expect(usdc?.dockVisits?.[0]?.mooringTile).toEqual(usdc?.tile);
     expect(usdc?.dockVisits?.[0]?.mooringTile).not.toEqual(usdc?.riskTile);

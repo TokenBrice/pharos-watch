@@ -52,7 +52,7 @@ export const RISK_WATER_AREAS: Record<ShipRiskPlacement, RiskWaterAreaDefinition
     terrain: "calm-water",
     validTerrains: ["calm-water"],
     waterStyle: "calm dew anchorage",
-    motionZone: "safe",
+    motionZone: "calm",
     shipAnchors: [
       { x: 8, y: 31 },
       { x: 11, y: 27 },
@@ -76,7 +76,7 @@ export const RISK_WATER_AREAS: Record<ShipRiskPlacement, RiskWaterAreaDefinition
     terrain: "watch-water",
     validTerrains: ["watch-water"],
     waterStyle: "breakwater watch water",
-    motionZone: "safe",
+    motionZone: "watch",
     shipAnchors: [
       { x: 21, y: 22 },
       { x: 23, y: 19 },
@@ -97,7 +97,7 @@ export const RISK_WATER_AREAS: Record<ShipRiskPlacement, RiskWaterAreaDefinition
     terrain: "alert-water",
     validTerrains: ["alert-water"],
     waterStyle: "alert channel current",
-    motionZone: "muddy",
+    motionZone: "alert",
     shipAnchors: [
       { x: 29, y: 13 },
       { x: 30, y: 16 },
@@ -118,7 +118,7 @@ export const RISK_WATER_AREAS: Record<ShipRiskPlacement, RiskWaterAreaDefinition
     terrain: "warning-water",
     validTerrains: ["warning-water"],
     waterStyle: "warning shoals",
-    motionZone: "muddy",
+    motionZone: "warning",
     shipAnchors: [
       { x: 34, y: 7 },
       { x: 35, y: 5 },
@@ -138,7 +138,7 @@ export const RISK_WATER_AREAS: Record<ShipRiskPlacement, RiskWaterAreaDefinition
     terrain: "storm-water",
     validTerrains: ["storm-water"],
     waterStyle: "storm strait",
-    motionZone: "storm",
+    motionZone: "danger",
     shipAnchors: [
       { x: 38, y: 2 },
       { x: 40, y: 1 },

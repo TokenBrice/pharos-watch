@@ -1,6 +1,7 @@
 import type { ShipClusterNode, ShipNode, ShipRiskPlacement } from "./world-types";
 import { clampMapTile, nearestAvailableWaterTile, REGION_TILES } from "./world-layout";
 import { nearestAvailableRiskPlacementWaterTile } from "./risk-water-placement";
+import { riskWaterAreaForPlacement } from "./risk-water-areas";
 import { stableUnit } from "./stable-random";
 
 const MAX_SHIPS_PER_CLUSTER = 36;
@@ -26,12 +27,14 @@ export function clusterLongTailShips(ships: readonly ShipNode[], maxIndividualSh
     const chunks = chunkShips(group, MAX_SHIPS_PER_CLUSTER);
     return chunks.map((chunk, index) => {
       const suffix = chunks.length === 1 ? "" : `.${index + 1}`;
+      const riskWaterArea = riskWaterAreaForPlacement(riskPlacement);
       return {
         id: `cluster.${riskPlacement}${suffix}`,
         kind: "ship-cluster" as const,
         label: `${chunk.length} ships`,
         tile: clusterTile(riskPlacement, index, chunks.length, occupied),
         riskPlacement,
+        riskWaterLabel: riskWaterArea.label,
         shipIds: chunk.map((ship) => ship.id),
         ships: chunk.map((ship) => ({
           id: ship.id,

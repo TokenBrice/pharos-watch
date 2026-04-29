@@ -696,10 +696,12 @@ test("pharosville renders a stressed ship in storm-shelf detail", async ({ page 
   const detailPanel = page.getByTestId("pharosville-detail-panel");
   await expect(detailPanel).toContainText("Tether");
   await expect(detailPanel).toContainText("Active depeg event");
-  await expect(detailPanel).toContainText("Risk placement");
+  await expect(detailPanel).toContainText("Risk placement key");
   await expect(detailPanel).toContainText("storm-shelf");
-  await expect(detailPanel).toContainText("Risk water");
-  await expect(detailPanel).toContainText("storm");
+  await expect(detailPanel).toContainText("Risk water area");
+  await expect(detailPanel).toContainText("Danger Strait");
+  await expect(detailPanel).toContainText("Risk water zone");
+  await expect(detailPanel).toContainText("danger");
   await expect(detailPanel).toContainText("Evidence");
   await expect(detailPanel).toContainText("pegSummary.coins[].activeDepeg");
 });
@@ -1142,7 +1144,7 @@ test.describe("pharosville normal motion", () => {
     }, movingDetailId);
     const selectedRuntime = await readRuntimeSnapshot(page);
     expect(selectedRuntime.renderMetrics?.drawableCounts.selection).toBeGreaterThan(0);
-    await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Risk water");
+    await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Risk water area");
     await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Home dock");
     await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Chains present");
     await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Docking cadence");

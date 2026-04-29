@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { clusterLongTailShips } from "./clustering";
+import { riskWaterAreaForPlacement } from "./risk-water-areas";
 import { terrainKindAt, tileKindAt } from "./world-layout";
 import type { ShipNode, ShipRiskPlacement } from "./world-types";
 
 function makeShip(index: number, marketCapUsd: number, riskPlacement: ShipRiskPlacement = "safe-harbor"): ShipNode {
+  const riskWaterArea = riskWaterAreaForPlacement(riskPlacement);
   return {
     id: `asset-${index}`,
     kind: "ship",
@@ -22,7 +24,8 @@ function makeShip(index: number, marketCapUsd: number, riskPlacement: ShipRiskPl
     dockChainId: null,
     marketCapUsd,
     riskPlacement,
-    riskZone: "safe",
+    riskZone: riskWaterArea.motionZone,
+    riskWaterLabel: riskWaterArea.label,
     placementEvidence: { reason: "fixture", sourceFields: [], stale: false },
     visual: {
       hull: "treasury-galleon",
