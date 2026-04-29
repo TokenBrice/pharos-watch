@@ -192,6 +192,7 @@ type GraveNodeMarker = PharosVilleWorld["graves"][number]["visual"]["marker"];
 
 const CEMETERY_GLOBAL_SCALE = 0.6;
 const CEMETERY_CONTEXT_SCALE = 0.82 * CEMETERY_GLOBAL_SCALE;
+const CEMETERY_CONTEXT_SOURCE_CENTER = { x: 17.4, y: 43.4 } as const;
 
 export interface PharosVilleCanvasMotion {
   plan: PharosVilleMotionPlan;
@@ -744,8 +745,8 @@ function cemeteryValue(x: number, y: number) {
 
 function cemeteryContextTile(tile: { x: number; y: number }) {
   return {
-    x: CEMETERY_CENTER.x + (tile.x - CEMETERY_CENTER.x) * CEMETERY_CONTEXT_SCALE,
-    y: CEMETERY_CENTER.y + (tile.y - CEMETERY_CENTER.y) * CEMETERY_CONTEXT_SCALE,
+    x: CEMETERY_CENTER.x + (tile.x - CEMETERY_CONTEXT_SOURCE_CENTER.x) * CEMETERY_CONTEXT_SCALE,
+    y: CEMETERY_CENTER.y + (tile.y - CEMETERY_CONTEXT_SOURCE_CENTER.y) * CEMETERY_CONTEXT_SCALE,
   };
 }
 
