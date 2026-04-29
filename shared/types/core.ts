@@ -23,7 +23,9 @@ export const PEG_CURRENCY_VALUES = [
   "BRL",
   "RUB",
   "JPY",
+  "KRW",
   "IDR",
+  "MYR",
   "SGD",
   "TRY",
   "AUD",
@@ -286,7 +288,9 @@ export type FilterTag =
   | "brl-peg"
   | "rub-peg"
   | "jpy-peg"
+  | "krw-peg"
   | "idr-peg"
+  | "myr-peg"
   | "sgd-peg"
   | "try-peg"
   | "aud-peg"

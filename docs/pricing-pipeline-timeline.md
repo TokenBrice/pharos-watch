@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.0` (2026-02-01 -> 2026-04-17).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.01` (2026-02-01 -> 2026-04-29).
+
+---
+
+## v5.01 - MYR and KRW peg-currency support (Apr 29, 2026)
+
+**Commit:** `unreleased`
+
+- FX cron requests MYR and KRW from Frankfurter and validates them against per-peg bounds
+- Native-peg implied-price lane corroborates MYR / KRW depegs via direct CoinGecko `myr` / `krw` quotes
+- Stablecoin charts reconciliation, price-validation `classifyPegClass`, and FX cadence metadata cover the new pegs so MYRC and KRWQ can be tracked through the existing Frankfurter / `fawazahmed0` / ExchangeRate-API FX lane and the CoinGecko native-peg corroboration lane
 
 ---
 

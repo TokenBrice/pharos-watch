@@ -13,6 +13,8 @@ export const PRIMARY_FX_CURRENCIES = [
   "CNY",
   "PHP",
   "MXN",
+  "MYR",
+  "KRW",
 ] as const;
 
 export const PRIMARY_CURRENCY_TO_PEG: Record<string, string> = {
@@ -30,6 +32,8 @@ export const PRIMARY_CURRENCY_TO_PEG: Record<string, string> = {
   CNY: "peggedCNY",
   PHP: "peggedPHP",
   MXN: "peggedMXN",
+  MYR: "peggedMYR",
+  KRW: "peggedKRW",
 };
 
 export const SECONDARY_FX_CURRENCY_TO_PEG: Record<string, string> = {
@@ -69,6 +73,8 @@ const FX_RATE_BOUNDS: Record<string, [number, number]> = {
   peggedCNH: [0.05, 0.40],
   peggedPHP: [0.01, 0.06],
   peggedMXN: [0.02, 0.15],
+  peggedMYR: [0.18, 0.30],
+  peggedKRW: [0.0005, 0.0010],
   peggedUAH: [0.01, 0.10],
   peggedARS: [0.0001, 0.01],
   peggedSILVER: [5, 500],

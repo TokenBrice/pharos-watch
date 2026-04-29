@@ -1,0 +1,93 @@
+{
+  "id": "myrc-blox",
+  "name": "MYRC",
+  "symbol": "MYRC",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "MYR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Malaysian Ringgit cash deposits held in a ring-fenced bank account at Maybank (Malayan Banking Berhad) under the custody and trustee services of Universal Trustee (Malaysia) Bhd (UTMB)",
+  "pegMechanism": "1:1 mint and redemption against Malaysian Ringgit via Malaysian banking rails (FPX). Eligibility requires Malaysian eKYC (MyKad) and a linked Malaysian bank account; mint authority on each chain is restricted to a Blox-controlled key.",
+  "detailProvider": "coingecko",
+  "geckoId": "blox-myrc",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.blox.my/myrc/transparency"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.blox.my"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://www.blox.my/myrc/transparency"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://cdn.blox.my/misc/MYRC-Whitepaper.pdf"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.blox.my"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/blox_malaysia"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Malaysia"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xbed7d999f1d71ac70c263f64c7c7e009d691be2e",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x3ed03e95dd894235090b3d4a49e0c3239edce59e",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x3ed03e95dd894235090b3d4a49e0c3239edce59e",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "MYR cash deposits at Maybank (UTMB trustee)",
+      "pct": 100,
+      "risk": "low"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Issuer not licensed",
+      "message": "Blox Blockchain Sdn Bhd does not hold a Bank Negara Malaysia or Securities Commission Malaysia license. SC Malaysia disclaimed jurisdiction in 2022; BNM has not yet established a payment-stablecoin framework as of 2026."
+    },
+    {
+      "type": "info",
+      "title": "Small float, single-jurisdiction",
+      "message": "Total circulating supply is approximately MYR 5.3M (~USD 1.3M) and reserves are concentrated in a single Malaysian bank (Maybank) under a single Malaysian trustee."
+    }
+  ]
+}

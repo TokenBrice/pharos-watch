@@ -1073,5 +1073,15 @@
     "title": "Aave Umbrella GHO Staking",
     "text": "Aave Umbrella stkGHO is the slashable GHO staking receipt for Aave's upgraded safety module. It is backed by GHO, but unlike liquid GHO or simple savings GHO, holders accept Umbrella-specific cooldowns, withdrawal windows, and automated slashing if covered GHO deficits occur. That makes it a distinct loss-absorption asset rather than a plain yield venue on the base stablecoin.",
     "updatedAt": "2026-04-21"
+  },
+  "myrc-blox": {
+    "title": "First Malaysian Ringgit stablecoin",
+    "text": "MYRC is a Malaysian Ringgit-pegged stablecoin issued by Blox Blockchain Sdn Bhd, deployed natively on Ethereum, Arbitrum, Base, and Solana. Each token is collateralised 1:1 by MYR cash deposits held at Maybank under the trustee custody of Universal Trustee (Malaysia) Bhd. Mint and redemption flow through Malaysian banking rails (FPX) and require eKYC via MyKad, restricting access to Malaysian residents with linked local bank accounts. Blox publishes monthly third-party attestations on its transparency page, but the issuer holds no license from Bank Negara Malaysia or the Securities Commission Malaysia -- SC Malaysia disclaimed jurisdiction in 2022 and BNM has not yet finalised a stablecoin framework. Circulating supply is small (~MYR 5.3M) and reserves are concentrated in a single bank and trustee in a single jurisdiction.",
+    "updatedAt": "2026-04-29"
+  },
+  "krwq-iq": {
+    "title": "First Korean Won stablecoin, RWA-backed",
+    "text": "KRWQ is the first stablecoin pegged 1:1 to the South Korean won, launched October 2025 by IQ in partnership with Frax. It uses LayerZero's Omnichain Fungible Token (OFT) standard with Ethereum as the canonical mint chain and Base as the primary bridged destination, sharing unified supply across deployments. Reserves are transitioning from initial USDC backing toward a target mix dominated by short-term Korean Treasury Bonds, which are tokenized through Etherfuse's Stablebond framework and held in segregated, bankruptcy-remote custody at Shinhan Securities, alongside USDC and Frax frxUSD. Mint and redemption are KYC-gated to institutional counterparties (exchanges, market makers, OTC desks), and KRWQ is explicitly not marketed to South Korean residents while domestic stablecoin legislation moves through the National Assembly. The issuer commits to independent monthly attestations starting 2025 but has not yet named an auditor or published a report; live reserves are currently a self-reported on-chain dashboard.",
+    "updatedAt": "2026-04-29"
   }
 }

@@ -14,6 +14,8 @@ const TEST_COUNTS: Record<PegCurrency, number> = {
   CHF: 3,
   BRL: 1,
   JPY: 0,
+  KRW: 0,
+  MYR: 0,
   SGD: 0,
   TRY: 0,
   AUD: 0,

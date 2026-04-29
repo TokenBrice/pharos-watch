@@ -183,6 +183,17 @@ export const PEG_METADATA = {
     },
     chart: { label: "Yen", textColor: "text-rose-700 dark:text-rose-400", bgColor: "bg-rose-500", hex: "#f43f5e" },
   },
+  KRW: {
+    label: "the Korean Won",
+    shortLabel: "Korean Won",
+    filterTag: "krw-peg",
+    filterLabel: "KRW",
+    badge: {
+      label: "KRW Peg",
+      cls: "bg-red-600/10 text-red-700 dark:text-red-400 border-red-600/20",
+    },
+    chart: { label: "Won", textColor: "text-red-700 dark:text-red-400", bgColor: "bg-red-600", hex: "#dc2626" },
+  },
   IDR: {
     label: "the Indonesian Rupiah",
     shortLabel: "Indonesian Rupiah",
@@ -193,6 +204,17 @@ export const PEG_METADATA = {
       cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
     },
     chart: { label: "Rupiah", textColor: "text-amber-700 dark:text-amber-400", bgColor: "bg-amber-500", hex: "#f59e0b" },
+  },
+  MYR: {
+    label: "the Malaysian Ringgit",
+    shortLabel: "Malaysian Ringgit",
+    filterTag: "myr-peg",
+    filterLabel: "MYR",
+    badge: {
+      label: "MYR Peg",
+      cls: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
+    },
+    chart: { label: "Ringgit", textColor: "text-sky-700 dark:text-sky-400", bgColor: "bg-sky-500", hex: "#0ea5e9" },
   },
   SGD: {
     label: "the Singapore Dollar",

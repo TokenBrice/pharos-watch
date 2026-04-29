@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.0",
+  currentVersion: "5.01",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.01",
+      title: "MYR and KRW peg-currency support",
+      date: "2026-04-29",
+      effectiveAt: 1777464000,
+      summary:
+        "Added MYR (Malaysian Ringgit) and KRW (Korean Won) to the supported peg-currency set so MYRC and KRWQ can be tracked through the existing Frankfurter / fawazahmed0 / ExchangeRate-API FX lane and the CoinGecko native-peg corroboration lane.",
+      impact: [
+        "FX cron requests MYR and KRW from Frankfurter and validates them against per-peg bounds",
+        "Native-peg implied-price lane corroborates MYR / KRW depegs via direct CoinGecko myr / krw quotes",
+        "Stablecoin charts reconciliation, price-validation classifyPegClass, and FX cadence metadata cover the new pegs",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.0",
       title: "Pricing pipeline comprehensive hardening",

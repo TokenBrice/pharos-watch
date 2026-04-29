@@ -35,6 +35,8 @@ export const PEG_TO_FX: Record<string, string> = {
   CNY: "CNY",
   PHP: "PHP",
   MXN: "MXN",
+  MYR: "MYR",
+  KRW: "KRW",
 };
 
 /** Maps pegCurrency → secondary currency-api code for non-ECB historical FX */

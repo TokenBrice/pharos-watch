@@ -1,0 +1,106 @@
+{
+  "id": "krwq-iq",
+  "name": "KRWQ",
+  "symbol": "KRWQ",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "KRW",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Mixed reserves transitioning from USDC-only toward a target mix dominated by short-term Korean Treasury Bonds. Current composition includes USDC (Circle), Frax frxUSD, and tokenized Korean Treasury Bonds issued via Etherfuse's Stablebond framework and held in segregated, bankruptcy-remote custody at Shinhan Securities.",
+  "pegMechanism": "Centralized issuance against a 100% reserve. Mint and redemption are gated to KYC-verified institutional counterparties (exchanges, market makers, OTC desks). Ethereum is the canonical mint chain; Base and other destinations share unified supply via LayerZero OFT v2. KRWQ is not offered to South Korean residents pending domestic stablecoin legislation under the Korean National Assembly.",
+  "detailProvider": "coingecko",
+  "geckoId": "krwt",
+  "cmcSlug": "korean-won-iq",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://krwq.cash/transparency"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://krwq.cash"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/krwqcash"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://krwq.cash/whitepaper.pdf"
+    },
+    {
+      "label": "Reserves",
+      "url": "https://krwq.cash/transparency"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/KRWQ-cash"
+    }
+  ],
+  "jurisdiction": {
+    "country": "South Korea",
+    "regulator": "Financial Services Commission (FSC)",
+    "license": "Unlicensed; designed for forthcoming Korean stablecoin legislation"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xc00db6b41473d065027f5ed6fada20fde75f142e",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x370923d39f139c64813f173a1bf0b4f9ba36a24f",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "USDC (Circle)",
+      "pct": 50,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true
+    },
+    {
+      "name": "frxUSD (Frax)",
+      "pct": 25,
+      "risk": "low",
+      "coinId": "frxusd-frax",
+      "depType": "collateral"
+    },
+    {
+      "name": "Tokenized Korean Treasury Bonds (Etherfuse Stablebond / Shinhan custody)",
+      "pct": 25,
+      "risk": "low",
+      "depType": "collateral"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Not for South Korean residents",
+      "message": "KRWQ is KYC-gated to institutional counterparties (exchanges, market makers, OTC desks) and is not currently offered to South Korean residents pending domestic stablecoin legislation under the Korean National Assembly."
+    },
+    {
+      "type": "info",
+      "title": "No public audit yet",
+      "message": "Issuer commits to monthly third-party attestations starting 2025 but has not named an auditor or published a report. Proof-of-reserves is currently a self-reported on-chain dashboard."
+    }
+  ],
+  "tags": [
+    "korea",
+    "rwa"
+  ]
+}

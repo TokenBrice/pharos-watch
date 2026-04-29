@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 203 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 205 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -304,3 +304,5 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [MXNB (MXNB)](https://pharos.watch/stablecoin/mxnb-juno/): centralized stablecoin backed by real-world assets pegged to Mexican Peso.
 - [Convertible JPY Token (CJPY)](https://pharos.watch/stablecoin/cjpy-yamato/): decentralized stablecoin collateralized by crypto assets pegged to Japanese Yen.
 - [Buck (BUCK)](https://pharos.watch/stablecoin/buck-buck-assets/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [MYRC (MYRC)](https://pharos.watch/stablecoin/myrc-blox/): centralized stablecoin backed by real-world assets pegged to Malaysian Ringgit.
+- [KRWQ (KRWQ)](https://pharos.watch/stablecoin/krwq-iq/): centralized stablecoin backed by real-world assets pegged to Korean Won.

@@ -53,6 +53,10 @@ function pegTypeFromCurrency(pegCurrency: string): string | null {
       return "peggedPHP";
     case "MXN":
       return "peggedMXN";
+    case "MYR":
+      return "peggedMYR";
+    case "KRW":
+      return "peggedKRW";
     case "UAH":
       return "peggedUAH";
     case "ARS":
