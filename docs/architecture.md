@@ -215,19 +215,18 @@ the DOM detail panel remains the accessible source of analytical truth,
 including route source, risk water, home dock, chain presence, and docking
 cadence.
 
-The same world model now also emits four selectable main-island data buildings
-arranged around a central civic data core, plus one northern frozen-water path
-for non-ship Pharos products: Royal Mint And Burn Foundry for configured
-mint/burn flow telemetry, Exit Route Gatehouse for DEX liquidity plus modeled
-redemption backstops, Yield Orchard And Moonwell for yield source context,
-Dependency Loom / Chainworks for direct report-card dependency graph links, and
+The same world model now also emits two selectable inland data buildings along a
+thin road spine, plus one northern frozen-water path for non-ship Pharos
+products: Royal Mint And Burn Foundry for configured mint/burn flow telemetry,
+Exit Route Gatehouse for DEX liquidity plus modeled redemption backstops, and
 North Froze Pole as an ice-textured water route at the map's absolute north edge
-for freeze/blacklist tracker activity. A main-island road/plaza spine ties the
-southwest harbor, civic core, and lighthouse approach together as visual
-composition only. The main-island buildings use deferred Pixellab sprites, while
-North Froze Pole is drawn as terrain plus a printed water-area label. All expose
-local deterministic Canvas effects, DOM detail facts, and accessibility-ledger
-parity; reduced motion freezes procedural movement while preserving static
+for freeze/blacklist tracker activity. A main-island road spine ties the
+southwest harbor, memorial precinct, civic anchors, and lighthouse approach
+together as visual composition only. The main-island buildings use deferred
+Pixellab sprites, while North Froze Pole is drawn as terrain plus a printed
+water-area label. All expose local deterministic Canvas effects, DOM detail
+facts, and accessibility-ledger parity; reduced motion freezes procedural
+movement while preserving static
 status encodings.
 
 Canvas 2D remains the renderer choice. PixiJS v8 was rejected during the

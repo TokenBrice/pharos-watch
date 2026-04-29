@@ -1,7 +1,7 @@
 "use client";
 import { useMemo } from "react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { useDexLiquidity, usePegSummary, useRedemptionBackstops, useReportCards, useStabilityIndexDetail, useStressSignals, useYieldRankings } from "@/hooks/api-hooks";
+import { useDexLiquidity, usePegSummary, useRedemptionBackstops, useReportCards, useStabilityIndexDetail, useStressSignals } from "@/hooks/api-hooks";
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import { useChains } from "@/hooks/use-chains";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
@@ -36,7 +36,6 @@ export function PharosVilleDesktopData() {
   const blacklistQuery = useBlacklistSummary();
   const dexLiquidityQuery = useDexLiquidity();
   const redemptionQuery = useRedemptionBackstops();
-  const yieldRankingsQuery = useYieldRankings();
 
   const error = stablecoinsQuery.error
     ?? chainsQuery.error
@@ -47,8 +46,7 @@ export function PharosVilleDesktopData() {
     ?? mintBurnQuery.error
     ?? blacklistQuery.error
     ?? dexLiquidityQuery.error
-    ?? redemptionQuery.error
-    ?? yieldRankingsQuery.error;
+    ?? redemptionQuery.error;
 
   const hasAnyData = Boolean(
     stablecoinsQuery.data
@@ -60,8 +58,7 @@ export function PharosVilleDesktopData() {
       || mintBurnQuery.data
       || blacklistQuery.data
       || dexLiquidityQuery.data
-      || redemptionQuery.data
-      || yieldRankingsQuery.data,
+      || redemptionQuery.data,
   );
   const isLoading = stablecoinsQuery.isLoading
     || chainsQuery.isLoading
@@ -72,8 +69,7 @@ export function PharosVilleDesktopData() {
     || mintBurnQuery.isLoading
     || blacklistQuery.isLoading
     || dexLiquidityQuery.isLoading
-    || redemptionQuery.isLoading
-    || yieldRankingsQuery.isLoading;
+    || redemptionQuery.isLoading;
   const routeMode = resolveRouteMode({ hasAnyData, hasBlockingError: Boolean(error), isLoading });
 
   const world = useMemo(() => buildPharosVilleWorld({
@@ -87,7 +83,6 @@ export function PharosVilleDesktopData() {
     blacklistSummary: blacklistQuery.data,
     dexLiquidity: dexLiquidityQuery.data,
     redemptionBackstops: redemptionQuery.data,
-    yieldRankings: yieldRankingsQuery.data,
     routeMode,
     freshness: {
       stablecoinsStale: isMetaStale(stablecoinsQuery.meta),
@@ -100,7 +95,6 @@ export function PharosVilleDesktopData() {
       blacklistStale: isMetaStale(blacklistQuery.meta),
       dexLiquidityStale: isMetaStale(dexLiquidityQuery.meta),
       redemptionBackstopsStale: isMetaStale(redemptionQuery.meta),
-      yieldStale: isMetaStale(yieldRankingsQuery.meta),
     },
   }), [
     blacklistQuery.data,
@@ -124,8 +118,6 @@ export function PharosVilleDesktopData() {
     stabilityQuery.meta,
     stressQuery.data,
     stressQuery.meta,
-    yieldRankingsQuery.data,
-    yieldRankingsQuery.meta,
   ]);
 
   return (
@@ -144,7 +136,6 @@ export function PharosVilleDesktopData() {
           void blacklistQuery.refetch();
           void dexLiquidityQuery.refetch();
           void redemptionQuery.refetch();
-          void yieldRankingsQuery.refetch();
         }}
       />
       <PharosVilleWorld world={world} />

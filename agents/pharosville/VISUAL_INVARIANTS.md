@@ -25,10 +25,11 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 - The southwest EVM bay keeps Ethereum, Base, Arbitrum, and Polygon in preferred dock positions when those chains are rendered.
 - Docks are capped by `MAX_CHAIN_HARBORS`; they represent top-chain stablecoin supply, not all chains.
 - The cemetery remains a compact memorial precinct separated from the EVM bay and lighthouse approach.
-- The central civic data core groups the four main-island data buildings around road/plaza terrain.
+- Two inland data buildings, Royal Mint And Burn Foundry and Exit Route Gatehouse, sit along the main-island road spine with a quiet memorial precinct between the harbor edge and civic anchors.
 - North Froze Pole is a northern frozen-water area, not a building.
-- The northern DEWS sea belt progresses left-to-right/up as Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, and Danger Strait. North Froze Pole remains a separate frozen-water area near the top-right.
+- DEWS sea geography progresses left-to-right as Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, and Danger Strait. Warning Shoals and Danger Strait must stay outside the lighthouse tower label-occlusion lane, while North Froze Pole remains a separate frozen-water area.
 - Calm Anchorage is intentionally the largest DEWS water block and should stay broad enough to reduce calm-ship overlap around the western harbor/shore.
+- Data Fog should remain a peripheral degraded-evidence pocket, and Ledger Mooring should remain a quiet basin clear of Solana/top-chain harbor traffic.
 
 ## Entity Semantics
 
@@ -51,7 +52,7 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 - Ship size is a compressed market-cap tier, not linear area.
 - Active depeg and DANGER evidence outrank calm chain presence for risk placement.
 - Stale or missing peg evidence maps to degraded evidence/data fog, not storm risk.
-- Fresh DEWS bands map to the named northern sea belt: CALM to Calm Anchorage, WATCH to Watch Breakwater, ALERT to Alert Channel, WARNING to Warning Shoals, and DANGER to Danger Strait.
+- Fresh DEWS bands map to the named sea districts: CALM to Calm Anchorage, WATCH to Watch Breakwater, ALERT to Alert Channel, WARNING to Warning Shoals, and DANGER to Danger Strait.
 - Data Fog and Ledger Mooring are named non-DEWS risk-water areas. If ships can reference them, they must also have printed labels, area hit targets, detail facts, and accessibility-ledger rows.
 - Printed water-area labels render above entity sprites and their hit targets win inside the printed label rectangle. This keeps all zone names visible and selectable even near tall landmarks.
 - Reduced-motion representative placement uses deterministic static positions and no RAF loop.

@@ -1,7 +1,7 @@
 import type { GraveNode, PharosVilleMap, PharosVilleTile, ShipRiskPlacement, TerrainKind, TileKind } from "./world-types";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { RISK_WATER_REGION_TILES } from "./risk-water-areas";
-import { stableOffset, stableUnit } from "./stable-random";
+import { stableUnit } from "./stable-random";
 
 export const PHAROSVILLE_MAP_WIDTH = 56;
 export const PHAROSVILLE_MAP_HEIGHT = 56;
@@ -51,8 +51,8 @@ export const DOCK_TILES = [
   ...OUTER_HARBOR_DOCK_TILES,
 ];
 
-export const CEMETERY_CENTER = { x: 24.8, y: 35.6 } as const;
-export const CEMETERY_RADIUS = { x: 3.0, y: 2.1 } as const;
+export const CEMETERY_CENTER = { x: 27.0, y: 34.0 } as const;
+export const CEMETERY_RADIUS = { x: 2.7, y: 1.9 } as const;
 
 type GraveMarker = GraveNode["visual"]["marker"];
 
@@ -175,40 +175,40 @@ function harborApproachValue(x: number, y: number): number {
 }
 
 function isAlertChannel(x: number, y: number): boolean {
-  return ellipseValue(x, y, 30.0, 16.0, 5.3, 4.2) < 1
-    && x >= 25
-    && x <= 36
-    && y >= 11
-    && y <= 22;
+  return ellipseValue(x, y, 33.0, 13.4, 5.8, 4.5) < 1
+    && x >= 27
+    && x <= 39
+    && y >= 8
+    && y <= 20;
 }
 
 function isWarningShoals(x: number, y: number): boolean {
-  return ellipseValue(x, y, 31.0, 9.0, 4.7, 3.6) < 1
-    && x >= 27
-    && x <= 36
-    && y >= 4
-    && y <= 15;
+  return ellipseValue(x, y, 42.2, 7.4, 5.4, 3.7) < 1
+    && x >= 37
+    && x <= 48
+    && y >= 3
+    && y <= 14;
 }
 
 function isDangerStrait(x: number, y: number): boolean {
-  return ellipseValue(x, y, 34.2, 4.4, 4.3, 2.9) < 1
-    && x >= 30
-    && x <= 39
-    && y <= 10;
+  return ellipseValue(x, y, 49.0, 3.2, 5.1, 2.6) < 1
+    && x >= 44
+    && x <= 54
+    && y <= 8;
 }
 
 function isWatchBreakwater(x: number, y: number): boolean {
-  return ellipseValue(x, y, 24.0, 22.0, 6.8, 5.1) < 1
-    && x >= 17
+  return ellipseValue(x, y, 25.0, 19.6, 7.0, 5.3) < 1
+    && x >= 18
     && x <= 32
-    && y >= 15
-    && y <= 30;
+    && y >= 13
+    && y <= 28;
 }
 
 function isCalmAnchorage(x: number, y: number): boolean {
-  return ellipseValue(x, y, 14.2, 30.8, 16.3, 11.6) < 1
-    && x <= 31
-    && y >= 17
+  return ellipseValue(x, y, 13.6, 31.6, 15.3, 11.4) < 1
+    && x <= 30
+    && y >= 19
     && y <= 43;
 }
 
@@ -220,11 +220,11 @@ export function isNorthFrozePole(x: number, y: number): boolean {
 }
 
 function isCemeteryCausewayTile(x: number, y: number): boolean {
-  return x >= 24
-    && x <= 34
-    && y >= 34
-    && y <= 40
-    && distanceToSegment(x, y, { x: 25.8, y: 36.4 }, { x: 33.4, y: 35.8 }) <= 1.45;
+  return x >= 25
+    && x <= 38
+    && y >= 31
+    && y <= 38
+    && distanceToSegment(x, y, { x: 26.3, y: 35.6 }, { x: 37.4, y: 31.6 }) <= 1.15;
 }
 
 function isOutOfBounds(x: number, y: number): boolean {
@@ -241,18 +241,20 @@ function isDeepSeaShelf(x: number, y: number): boolean {
 }
 
 function isDataFog(x: number, y: number): boolean {
-  return ellipseValue(x, y, 8.0, 17.6, 5.4, 5.0) < 1
-    && x <= 15
-    && y >= 12
-    && y <= 24;
+  return ellipseValue(x, y, 4.4, 14.0, 4.6, 4.0) < 1
+    && x <= 10
+    && y >= 9
+    && y <= 19;
 }
 
 function isRoadTile(x: number, y: number): boolean {
+  if (isInlandBuildingAnchorTile(x, y)) return false;
   const path = [
-    { x: 25, y: 37 },
-    { x: 29, y: 38 },
-    { x: 33, y: 34 },
+    { x: 25, y: 38 },
+    { x: 27, y: 35 },
+    { x: 30, y: 28 },
     { x: 34, y: 30 },
+    { x: 38, y: 31 },
     { x: 36, y: 26 },
     { x: 41, y: 22 },
     { x: 43, y: 19 },
@@ -265,8 +267,13 @@ function isRoadTile(x: number, y: number): boolean {
 }
 
 function isCivicPlazaTile(x: number, y: number): boolean {
+  if (isInlandBuildingAnchorTile(x, y)) return false;
   return ellipseValue(x, y, CIVIC_CORE_CENTER.x, CIVIC_CORE_CENTER.y + 1.1, 4.4, 2.6) < 1
     && cemeteryValue(x, y) > 1.08;
+}
+
+function isInlandBuildingAnchorTile(x: number, y: number): boolean {
+  return (x === 30 && y === 28) || (x === 38 && y === 31);
 }
 
 function distanceToSegment(
@@ -417,10 +424,17 @@ function cemeteryScatterTile(
     }
     if (nearest > 0.62 && attempt > 16) return tile;
   }
-  return bestTile ?? {
-    x: CEMETERY_CENTER.x + stableOffset(`${entry.id}.fallback.x`, 5) * 0.45,
-    y: CEMETERY_CENTER.y + stableOffset(`${entry.id}.fallback.y`, 5) * 0.32,
-  };
+  if (bestTile) return bestTile;
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const angle = stableUnit(`${entry.id}.fallback.angle.${attempt}`) * Math.PI * 2;
+    const radius = Math.sqrt(stableUnit(`${entry.id}.fallback.radius.${attempt}`)) * 0.72;
+    const tile = {
+      x: CEMETERY_CENTER.x + Math.cos(angle) * CEMETERY_RADIUS.x * radius,
+      y: CEMETERY_CENTER.y + Math.sin(angle) * CEMETERY_RADIUS.y * radius,
+    };
+    if (tileKindAt(tile.x, tile.y) === "land") return tile;
+  }
+  return { ...CEMETERY_CENTER };
 }
 
 function graveVisual(entry: CemeteryEntry, index: number): GraveNode["visual"] {

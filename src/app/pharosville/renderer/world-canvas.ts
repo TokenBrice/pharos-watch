@@ -1816,14 +1816,17 @@ function drawBuildingProceduralEffects(
   motion: PharosVilleCanvasMotion,
 ) {
   const time = motion.reducedMotion ? 0 : motion.timeSeconds;
-  if (building.buildingType === "mint-burn-foundry") {
-    drawFoundryEffects(ctx, building, point, zoom, time, motion.reducedMotion);
-  } else if (building.buildingType === "exit-route-gatehouse") {
-    drawGatehouseEffects(ctx, building, point, zoom, time, motion.reducedMotion);
-  } else if (building.buildingType === "yield-orchard-moonwell") {
-    drawYieldOrchardEffects(ctx, building, point, zoom, time, motion.reducedMotion);
-  } else {
-    drawDependencyLoomEffects(ctx, building, point, zoom, time, motion.reducedMotion);
+  switch (building.buildingType) {
+    case "mint-burn-foundry":
+      drawFoundryEffects(ctx, building, point, zoom, time, motion.reducedMotion);
+      break;
+    case "exit-route-gatehouse":
+      drawGatehouseEffects(ctx, building, point, zoom, time, motion.reducedMotion);
+      break;
+    default: {
+      const exhaustive: never = building.buildingType;
+      throw new Error(`Unhandled PharosVille building type: ${exhaustive}`);
+    }
   }
   drawBuildingDataFog(ctx, building, point, zoom, time);
 }
@@ -1894,9 +1897,9 @@ function drawGatehouseEffects(
   ctx.translate(point.x, point.y);
   ctx.scale(zoom, zoom);
 
-  ctx.fillStyle = `rgba(52, 150, 158, ${0.18 + depth * 0.36})`;
+  ctx.fillStyle = `rgba(52, 150, 158, ${0.08 + depth * 0.22})`;
   ctx.beginPath();
-  ctx.ellipse(0, -16, 42, 13 + depth * 6, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, -27, 21, 7 + depth * 3, 0, 0, Math.PI * 2);
   ctx.fill();
 
   const opening = building.status === "deep-exit" ? 16 : building.status === "concentrated" ? 8 : building.status === "thin-exit" ? 5 : 1;
@@ -1931,114 +1934,6 @@ function drawGatehouseEffects(
   ctx.fill();
   ctx.fillStyle = lanternColor;
   ctx.fillRect(29, -54, 4, 5);
-  ctx.restore();
-}
-
-function drawYieldOrchardEffects(
-  ctx: CanvasRenderingContext2D,
-  building: PharosVilleWorld["buildings"][number],
-  point: ScreenPoint,
-  zoom: number,
-  time: number,
-  reducedMotion: boolean,
-) {
-  const coverage = building.visual.intensity;
-  const sources = building.visual.secondaryIntensity;
-  const warning = building.visual.tertiaryIntensity;
-  const angle = reducedMotion ? 0.4 : time * (0.7 + sources * 2.2);
-  ctx.save();
-  ctx.translate(point.x, point.y);
-  ctx.scale(zoom, zoom);
-
-  ctx.fillStyle = `rgba(107, 209, 157, ${0.18 + coverage * 0.28})`;
-  ctx.beginPath();
-  ctx.arc(16, -39, 18 + coverage * 7, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#c8f2d3";
-  ctx.fillRect(12, -42, 8, 8);
-
-  ctx.save();
-  ctx.translate(-30, -70);
-  ctx.rotate(angle);
-  ctx.strokeStyle = "#f2e2a4";
-  ctx.lineWidth = 2;
-  for (let index = 0; index < 4; index += 1) {
-    ctx.rotate(Math.PI / 2);
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(18, 0);
-    ctx.stroke();
-  }
-  ctx.restore();
-
-  const glintCount = Math.round(3 + sources * 7);
-  for (let index = 0; index < glintCount; index += 1) {
-    const phase = reducedMotion ? 0.35 : (time * 0.32 + index * 0.19) % 1;
-    const x = -20 + (index % 5) * 10;
-    const y = -32 - Math.floor(index / 5) * 11;
-    ctx.fillStyle = index % 3 === 0 && warning > 0.25 ? "#e9b45f" : `rgba(245, 229, 122, ${0.2 + phase * 0.45})`;
-    ctx.fillRect(Math.round(x), Math.round(y - phase * 3), 2, 2);
-  }
-
-  ctx.strokeStyle = `rgba(128, 201, 180, ${0.16 + coverage * 0.3})`;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(12, -23);
-  ctx.quadraticCurveTo(0, -12, -28, -17);
-  ctx.moveTo(21, -24);
-  ctx.quadraticCurveTo(37, -13, 44, -25);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawDependencyLoomEffects(
-  ctx: CanvasRenderingContext2D,
-  building: PharosVilleWorld["buildings"][number],
-  point: ScreenPoint,
-  zoom: number,
-  time: number,
-  reducedMotion: boolean,
-) {
-  const edgeActivity = building.visual.intensity;
-  const concentration = building.visual.secondaryIntensity;
-  const dependents = building.visual.tertiaryIntensity;
-  const angle = reducedMotion ? 0.2 : time * (0.45 + edgeActivity * 1.5);
-  ctx.save();
-  ctx.translate(point.x, point.y);
-  ctx.scale(zoom, zoom);
-
-  for (const gear of [{ x: -24, y: -51, r: 12, dir: 1 }, { x: 22, y: -38, r: 10, dir: -1 }]) {
-    ctx.save();
-    ctx.translate(gear.x, gear.y);
-    ctx.rotate(angle * gear.dir);
-    ctx.strokeStyle = `rgba(224, 195, 145, ${0.35 + edgeActivity * 0.38})`;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(0, 0, gear.r, 0, Math.PI * 2);
-    for (let index = 0; index < 8; index += 1) {
-      const spoke = index * Math.PI / 4;
-      ctx.moveTo(Math.cos(spoke) * 4, Math.sin(spoke) * 4);
-      ctx.lineTo(Math.cos(spoke) * gear.r, Math.sin(spoke) * gear.r);
-    }
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  const threadAlpha = 0.2 + Math.max(edgeActivity, concentration, dependents) * 0.42;
-  ctx.strokeStyle = `rgba(194, 160, 255, ${threadAlpha})`;
-  ctx.lineWidth = 1.5;
-  for (let index = 0; index < 5; index += 1) {
-    const offset = index * 7;
-    ctx.beginPath();
-    ctx.moveTo(-35 + offset, -21 - index);
-    ctx.quadraticCurveTo(-6 + offset * 0.25, -54 - concentration * 16, 33 - offset * 0.15, -31 - index * 2);
-    ctx.stroke();
-    const phase = reducedMotion ? 0.5 : (time * (0.22 + edgeActivity * 0.28) + index * 0.17) % 1;
-    ctx.fillStyle = `rgba(231, 220, 255, ${0.24 + dependents * 0.42})`;
-    ctx.beginPath();
-    ctx.arc(-35 + offset + phase * 58, -21 - index - Math.sin(phase * Math.PI) * (18 + concentration * 10), 2, 0, Math.PI * 2);
-    ctx.fill();
-  }
   ctx.restore();
 }
 

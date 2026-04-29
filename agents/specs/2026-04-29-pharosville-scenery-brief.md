@@ -27,12 +27,14 @@ PharosVille remains dark-first, precise, semantic, maritime, and analytical. Avo
 | Long-tail active assets | Ship clusters | Budgeted grouping by water zone and total supply | Cluster members and totals |
 | Mint/burn pressure | Royal Mint And Burn Foundry | Issuance-chain activity and stale/unavailable states | Gauge, volumes, scope, sync caveat |
 | Exit liquidity and redemption routes | Exit Route Gatehouse | Exit depth, concentration, route freshness | DEX/backstop facts and non-guarantee caveat |
-| Yield intelligence | Yield Orchard And Moonwell | Source breadth, source switches, benchmark context | Rankings, source context, safety caveat |
-| Dependency risk | Dependency Loom / Chainworks | Direct report-card dependency links and hubs | Direct edges, hubs, no transitive VaR claim |
 | Freeze/blacklist monitoring | North Froze Pole area | Observed freeze activity as frozen northern water | Active totals, recent events, chains, methodology |
 | Dead/frozen lifecycle | Cemetery | Memorialized dead/frozen assets with cause-aware treatment | Cause/date/cemetery detail |
 
-North Froze Pole is a northern frozen-water area, not a building sprite. It should stay visually separate from the main-island data buildings.
+The main island keeps only two inland data-building sprites: Mint/Burn and Exit
+Routes. Yield Intelligence and Dependency Map remain standard Pharos analytical
+surfaces, but they are not represented as PharosVille inland landmarks. North
+Froze Pole is a northern frozen-water area, not a building sprite. It should
+stay visually separate from the main-island data buildings.
 
 ## Actors
 
@@ -52,10 +54,8 @@ North Froze Pole is a northern frozen-water area, not a building sprite. It shou
 | Peg/DEWS stress on coin | Ship risk anchor and route detour | Static representative mooring or risk patrol tile |
 | Recent supply move | Capped wake/effect on selected/top/recent ships | Static wake mark or detail fact only |
 | Mint-heavy/burn-heavy flow | Press/furnace sparks/smoke | Static press/furnace glow |
-| Freeze activity | Ice seams, cold mist, frosted sign | Static frost/mist |
-| Exit depth/concentration | Gate opening, water level, wheel/lantern | Static gate/water level |
-| Yield source breadth/warning | Orchard glints, well/windmill state | Static glints/well tint |
-| Dependency concentration | Loom threads/gears | Static thread arcs |
+| Freeze activity | Ice seams, cold mist, printed cartographic label | Static frost/mist |
+| Exit depth/concentration | Gate opening, contained gauge, guarded lantern | Static gate lantern/gauge |
 | Stale or missing source | Data fog/dimmed landmark | Static fog and explicit DOM stale fact |
 
 ## DOM-Only Until Clearer

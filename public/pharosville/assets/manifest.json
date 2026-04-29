@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "style": {
-    "cacheVersion": "2026-04-29-lighthouse-hill-v5",
+    "cacheVersion": "2026-04-29-core-island-v1",
     "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5",
     "anchor": "old-school 16-bit maritime isometric RPG pixel art, crisp pixel edges, low top-down view, deep navy and teal sea, pale limestone island city, bronze and gold beacon light, restrained analytics palette, readable silhouettes, no text, no logos, no UI",
     "palette": ["#061721", "#0d5f70", "#d3c89a", "#ffcc62"],
@@ -511,7 +511,7 @@
       "paletteKeys": ["bronze beacon", "limestone"],
       "tool": "mcp:create_map_object",
       "promptProvenance": {
-        "jobId": "fa4abe5c-744f-45f3-b004-75e3c63f485a",
+        "jobId": "26f10191-658e-4e3b-ab51-2f24f67018ab",
         "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
@@ -527,45 +527,12 @@
       "footprint": [58, 34],
       "hitbox": [18, 10, 156, 142],
       "loadPriority": "deferred",
+      "promptKey": "building.exit-route-gatehouse",
+      "semanticRole": "exit route and redemption backstop data building",
+      "paletteKeys": ["limestone", "bronze beacon", "teal sea"],
       "tool": "mcp:create_map_object",
       "promptProvenance": {
-        "jobId": "7436a936-9918-4464-9085-2790d3fb6b7b",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
-      }
-    },
-    {
-      "id": "building.yield-orchard-moonwell",
-      "path": "buildings/yield-orchard-moonwell.png",
-      "category": "landmark",
-      "layer": "landmarks",
-      "width": 192,
-      "height": 160,
-      "displayScale": 1,
-      "anchor": [96, 148],
-      "footprint": [58, 34],
-      "hitbox": [18, 10, 156, 142],
-      "loadPriority": "deferred",
-      "tool": "mcp:create_map_object",
-      "promptProvenance": {
-        "jobId": "4f10bb72-ccf1-4ab3-b874-d4d61da0a2f2",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
-      }
-    },
-    {
-      "id": "building.dependency-loom-chainworks",
-      "path": "buildings/dependency-loom-chainworks.png",
-      "category": "landmark",
-      "layer": "landmarks",
-      "width": 192,
-      "height": 160,
-      "displayScale": 1,
-      "anchor": [96, 148],
-      "footprint": [58, 34],
-      "hitbox": [18, 10, 156, 142],
-      "loadPriority": "deferred",
-      "tool": "mcp:create_map_object",
-      "promptProvenance": {
-        "jobId": "f267205c-534f-42d0-ae6a-55fc7fd5a2be",
+        "jobId": "1edcdb61-185a-4add-b264-a7a538d338b4",
         "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     }

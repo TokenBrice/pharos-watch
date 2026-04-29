@@ -153,6 +153,5 @@ function freshnessEntries(world: PharosVilleWorld) {
     { label: "Blacklist summary", stale: world.freshness.blacklistStale === true },
     { label: "DEX liquidity", stale: world.freshness.dexLiquidityStale === true },
     { label: "Redemption backstops", stale: world.freshness.redemptionBackstopsStale === true },
-    { label: "Yield rankings", stale: world.freshness.yieldStale === true },
   ];
 }

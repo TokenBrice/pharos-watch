@@ -151,7 +151,7 @@ Every animation must be wrapped:
 }
 ```
 
-The scene must remain legible and informative when motion is off. DEWS pauses the sweep, sets glow to static `opacity: 0.15`, and freezes the center pulse. PSI shows a static colored lighthouse. Harbor retains positions but freezes drift. PharosVille ship routes freeze at each ship's representative harbor mooring or risk patrol tile, and PharosVille data effects freeze smoke, sparks, waterwheel rotation, orchard glints, dependency thread pulses, and North Froze Pole ice seams while preserving static glow/fog/status encodings. Detail panels and the accessibility ledger still expose named risk-water area, risk-water zone, home dock, chain presence, docking cadence, route source, data-area status, source fields, caveats, and exact facts. **The information content never depends on motion playing.**
+The scene must remain legible and informative when motion is off. DEWS pauses the sweep, sets glow to static `opacity: 0.15`, and freezes the center pulse. PSI shows a static colored lighthouse. Harbor retains positions but freezes drift. PharosVille ship routes freeze at each ship's representative harbor mooring or risk patrol tile, and PharosVille data effects freeze foundry smoke/sparks, gate gauge/lantern motion, and North Froze Pole ice seams while preserving static glow/fog/status encodings. Detail panels and the accessibility ledger still expose named risk-water area, risk-water zone, home dock, chain presence, docking cadence, route source, data-area status, source fields, caveats, and exact facts. **The information content never depends on motion playing.**
 
 ---
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins";
-import { BLACKLIST_STABLECOINS, DEX_GLOBAL_KEY, type BlacklistSummaryResponse, type DexLiquidityData, type MintBurnFlowsResponse, type RedemptionBackstopsResponse, type ReportCardsResponse, type YieldRankingsResponse } from "@shared/types";
+import { BLACKLIST_STABLECOINS, DEX_GLOBAL_KEY, type BlacklistSummaryResponse, type DexLiquidityData, type MintBurnFlowsResponse, type RedemptionBackstopsResponse, type ReportCardsResponse } from "@shared/types";
 import {
   fixtureChains,
   fixturePegSummary,
@@ -18,8 +18,6 @@ import { buildPharosVilleWorld, SHIP_WATER_ANCHORS } from "./pharosville-world";
 import {
   CEMETERY_CENTER,
   CEMETERY_RADIUS,
-  CIVIC_CORE_CENTER,
-  CIVIC_CORE_RADIUS,
   DOCK_TILES,
   isWaterTileKind,
   terrainKindAt,
@@ -56,17 +54,15 @@ describe("buildPharosVilleWorld", () => {
     expect(world.graves).toHaveLength(3);
     expect(world.graves[0]?.logoSrc).toBe("/logos/cemetery/nubits.png");
     expect(world.detailIndex["lighthouse"]).toBeDefined();
-    expect(world.buildings).toHaveLength(4);
+    expect(world.buildings).toHaveLength(2);
     expect(Object.fromEntries(world.buildings.map((building) => [building.buildingType, building.tile]))).toEqual({
-      "mint-burn-foundry": { x: 28, y: 30 },
-      "exit-route-gatehouse": { x: 33, y: 36 },
-      "yield-orchard-moonwell": { x: 40, y: 31 },
-      "dependency-loom-chainworks": { x: 34, y: 24 },
+      "mint-burn-foundry": { x: 30, y: 28 },
+      "exit-route-gatehouse": { x: 38, y: 31 },
     });
     expect(world.buildings.every((building) => tileKindAt(building.tile.x, building.tile.y) === "land")).toBe(true);
-    expect(world.buildings.every((building) => distance(building.tile, CIVIC_CORE_CENTER) <= CIVIC_CORE_RADIUS)).toBe(true);
     expect(world.buildings.every((building) => cemeteryValue(building.tile) > 1.08)).toBe(true);
-    expect(world.buildings.every((building) => DOCK_TILES.every((dock) => distance(building.tile, dock) > 4))).toBe(true);
+    expect(world.buildings.every((building) => DOCK_TILES.every((dock) => distance(building.tile, dock) >= 5))).toBe(true);
+    expect(world.buildings.every((building) => distance(building.tile, CEMETERY_CENTER) >= 6)).toBe(true);
     expect(minPairDistance(world.buildings.map((building) => building.tile))).toBeGreaterThanOrEqual(7.75);
     expect(terrainKindAt(0, 0)).toBe("frozen-water");
     expect(world.detailIndex["building.mint-burn-foundry"]?.title).toBe("Royal Mint And Burn Foundry");
@@ -106,7 +102,6 @@ describe("buildPharosVilleWorld", () => {
       blacklistSummary: blacklistSummaryFixture(),
       dexLiquidity: dexLiquidityFixture({ liquidityScore: 82 }),
       redemptionBackstops: redemptionFixture({ effectiveExitScore: 84 }),
-      yieldRankings: yieldRankingsFixture(),
       cemeteryEntries: [],
       freshness: {},
     });
@@ -115,8 +110,6 @@ describe("buildPharosVilleWorld", () => {
     expect(statuses).toMatchObject({
       "mint-burn-foundry": "minting",
       "exit-route-gatehouse": "deep-exit",
-      "yield-orchard-moonwell": "broad-coverage",
-      "dependency-loom-chainworks": "high-hub-concentration",
     });
     expect(world.areas.find((area) => area.id === "area.north-froze-pole")).toMatchObject({
       kind: "area",
@@ -126,6 +119,7 @@ describe("buildPharosVilleWorld", () => {
     expect(world.detailIndex["building.exit-route-gatehouse"]?.facts).toEqual(expect.arrayContaining([
       { label: "Caveat", value: "DEX telemetry and modeled redemption routes are not guarantees of executable exit capacity." },
     ]));
+    expect(world.detailIndex["building.exit-route-gatehouse"]?.members?.[0]?.label).toContain("USDC");
   });
 
   it("spreads safe ships across the northern calm anchorage", () => {
@@ -272,12 +266,12 @@ describe("buildPharosVilleWorld", () => {
       { label: "Risk water zone", value: "ledger" },
       { label: "Risk placement", value: "ledger-mooring" },
     ]));
-    expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 31, y: 9 });
-    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 34, y: 4 });
+    expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 43, y: 7 });
+    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 50, y: 3 });
     expect(world.areas.find((area) => area.id === "area.north-froze-pole")?.tile).toEqual({ x: 0, y: 0 });
     expect(terrainKindAt(0, 0)).toBe("frozen-water");
-    expect(terrainKindAt(31, 9)).toBe("warning-water");
-    expect(terrainKindAt(34, 4)).toBe("storm-water");
+    expect(terrainKindAt(43, 7)).toBe("warning-water");
+    expect(terrainKindAt(50, 3)).toBe("storm-water");
     expect(usdc?.riskPlacement).toBe("harbor-mouth-watch");
     expect(usdc?.riskZone).toBe("alert");
     expect(usdc?.riskWaterLabel).toBe("Alert Channel");
@@ -754,51 +748,4 @@ function redemptionFixture({ effectiveExitScore }: { effectiveExitScore: number 
     },
     updatedAt: 1_700_000_000,
   } as unknown as RedemptionBackstopsResponse;
-}
-
-function yieldRankingsFixture(): YieldRankingsResponse {
-  return {
-    rankings: ["a", "b", "c", "d"].map((suffix, index) => ({
-      id: `yield-${suffix}`,
-      symbol: `Y${index}`,
-      name: `Yield ${suffix}`,
-      currentApy: 4 + index,
-      apy7d: 4 + index,
-      apy30d: 4 + index,
-      yieldSource: `Source ${suffix}`,
-      yieldType: "lending",
-      dataSource: "fixture",
-      sourceTvlUsd: 1_000_000,
-      safetyScore: 80,
-      safetyGrade: "A",
-      warningSignals: [],
-      altSources: [],
-      provenance: {
-        sourceKey: `source-${suffix}`,
-        sourceObservedAt: 1_700_000_000,
-        sourceAgeSeconds: 30,
-        confidenceTier: "deterministic",
-        selectionMethod: "confidence-weighted",
-        selectionReason: "fixture",
-        sourceSwitch: false,
-        previousBestSourceKey: null,
-        usedLegacyHistory: false,
-        usedDefaultSafety: false,
-        benchmarkRecordDate: null,
-        benchmarkIsFallback: false,
-        benchmarkFallbackMode: null,
-        anomalies: [],
-      },
-    })),
-    riskFreeRate: 3,
-    scalingFactor: 1,
-    medianApy: 4.5,
-    updatedAt: 1_700_000_000,
-    provenance: {
-      selectionMethod: "confidence-weighted",
-      benchmark: { rate: 3, recordDate: null, fetchedAt: 1_700_000_000, ageSeconds: 30, source: "fixture", isFallback: false, fallbackMode: null, label: "Fixture benchmark" },
-      dlPools: { mode: "dex-cache", updatedAt: 1_700_000_000, ageSeconds: 30, poolCount: 4, fallbackMode: null },
-      safetySnapshot: { kind: "ok", coverageRatio: 1, coveredCount: 4, trackedCount: 4, reason: null },
-    },
-  } as unknown as YieldRankingsResponse;
 }

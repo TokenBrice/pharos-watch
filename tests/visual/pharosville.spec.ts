@@ -87,7 +87,6 @@ const PHAROSVILLE_DESKTOP_DATA_ENDPOINTS = [
   "/blacklist-summary",
   "/dex-liquidity",
   "/redemption-backstops",
-  "/yield-rankings",
 ] as const;
 const PHAROSVILLE_SHARED_SHELL_ENDPOINTS = new Set([
   "/api/blacklist-summary",
@@ -100,14 +99,10 @@ const PHAROSVILLE_SHARED_SHELL_ENDPOINTS = new Set([
 const BUILDING_DETAIL_IDS = [
   "building.mint-burn-foundry",
   "building.exit-route-gatehouse",
-  "building.yield-orchard-moonwell",
-  "building.dependency-loom-chainworks",
 ] as const;
 const BUILDING_DETAIL_LABELS: Record<(typeof BUILDING_DETAIL_IDS)[number], string> = {
   "building.mint-burn-foundry": "Royal Mint And Burn Foundry",
   "building.exit-route-gatehouse": "Exit Route Gatehouse",
-  "building.yield-orchard-moonwell": "Yield Orchard And Moonwell",
-  "building.dependency-loom-chainworks": "Dependency Loom / Chainworks",
 };
 const RISK_WATER_AREA_DETAILS = [
   { detailId: "area.dews.calm", label: "Calm Anchorage", zone: "calm" },
@@ -156,7 +151,6 @@ async function mockPharosVillePayloads(page: Page, payload: {
     { path: "blacklist-summary", body: fixtureBlacklistSummary },
     { path: "dex-liquidity", body: fixtureDexLiquidity },
     { path: "redemption-backstops", body: fixtureRedemptionBackstops },
-    { path: "yield-rankings", body: fixtureYieldRankings },
   ];
 
   for (const { path, body } of payloads) {
@@ -355,61 +349,6 @@ const fixtureRedemptionBackstops = {
   updatedAt: 1_700_000_000,
 };
 
-const fixtureYieldRankings = {
-  rankings: ["a", "b", "c", "d"].map((suffix, index) => ({
-    id: `yield-${suffix}`,
-    symbol: `Y${index}`,
-    name: `Yield ${suffix}`,
-    currentApy: 4 + index,
-    apy7d: 4 + index,
-    apy30d: 4 + index,
-    apyBase: 4 + index,
-    apyReward: null,
-    yieldSource: `Source ${suffix}`,
-    yieldSourceUrl: null,
-    yieldType: "lending-vault",
-    dataSource: "fixture",
-    sourceTvlUsd: 1_000_000,
-    pharosYieldScore: 80,
-    safetyScore: 80,
-    safetyGrade: "A",
-    yieldToRisk: 0.05,
-    excessYield: 1,
-    yieldStability: 80,
-    apyVariance30d: 0,
-    apyMin30d: 4,
-    apyMax30d: 6,
-    warningSignals: [],
-    altSources: [],
-    provenance: {
-      sourceKey: `source-${suffix}`,
-      sourceObservedAt: 1_700_000_000,
-      sourceAgeSeconds: 30,
-      confidenceTier: "deterministic",
-      selectionMethod: "confidence-weighted",
-      selectionReason: "fixture",
-      sourceSwitch: false,
-      previousBestSourceKey: null,
-      usedLegacyHistory: false,
-      usedDefaultSafety: false,
-      benchmarkRecordDate: null,
-      benchmarkIsFallback: false,
-      benchmarkFallbackMode: null,
-      anomalies: [],
-    },
-  })),
-  riskFreeRate: 3,
-  scalingFactor: 1,
-  medianApy: 4.5,
-  updatedAt: 1_700_000_000,
-  provenance: {
-    selectionMethod: "confidence-weighted",
-    benchmark: { rate: 3, recordDate: null, fetchedAt: 1_700_000_000, ageSeconds: 30, source: "fixture", isFallback: false, fallbackMode: null, label: "Fixture benchmark" },
-    dlPools: { mode: "dex-cache", updatedAt: 1_700_000_000, ageSeconds: 30, poolCount: 4, fallbackMode: null },
-    safetySnapshot: { kind: "ok", coverageRatio: 1, coveredCount: 4, trackedCount: 4, reason: null },
-  },
-};
-
 async function clickMapTarget(page: Page, kind: string, detailId?: string) {
   return (await clickMapTargetWithPoint(page, kind, detailId)).detailId;
 }
@@ -471,7 +410,7 @@ async function waitForBuildingTargets(page: Page) {
       && debug.deferredAssetsLoaded
       && (debug.assetLoadErrors?.length ?? 0) === 0
       && detailIds.every((detailId) => buildingTargets.some((target) => target.detailId === detailId))
-      && buildingTargets.length >= detailIds.length
+      && buildingTargets.length === detailIds.length
     );
   }, [...BUILDING_DETAIL_IDS]);
 }
@@ -546,6 +485,7 @@ async function expectBuildingTargetsClickable(page: Page) {
 
     const unselectable: string[] = [];
     const blockedOverlaps: string[] = [];
+    const buildingOverlaps: string[] = [];
     for (const building of buildings) {
       const point = unoccludedPoint(building);
       if (!point) unselectable.push(building.detailId);
@@ -556,6 +496,15 @@ async function expectBuildingTargetsClickable(page: Page) {
       ));
       if (guardedOverlaps.length > 0 && !point) {
         blockedOverlaps.push(...guardedOverlaps.map((target) => `${building.detailId} overlaps ${target.kind}:${target.detailId}`));
+      }
+    }
+    for (let index = 0; index < buildings.length; index += 1) {
+      for (let nextIndex = index + 1; nextIndex < buildings.length; nextIndex += 1) {
+        const first = buildings[index];
+        const second = buildings[nextIndex];
+        if (first && second && rectsOverlap(first, second)) {
+          buildingOverlaps.push(`${first.detailId} overlaps ${second.detailId}`);
+        }
       }
     }
 
@@ -569,6 +518,7 @@ async function expectBuildingTargetsClickable(page: Page) {
 
     return {
       blockedOverlaps,
+      buildingOverlaps,
       centerSpread: {
         height: ys.length > 0 ? Math.max(...ys) - Math.min(...ys) : Number.POSITIVE_INFINITY,
         maxHeight: 200 * zoom,
@@ -587,6 +537,7 @@ async function expectBuildingTargetsClickable(page: Page) {
   expect(result.missing).toEqual([]);
   expect(result.unselectable).toEqual([]);
   expect(result.blockedOverlaps).toEqual([]);
+  expect(result.buildingOverlaps).toEqual([]);
   expect(result.centerSpread.width).toBeLessThanOrEqual(result.centerSpread.maxWidth);
   expect(result.centerSpread.height).toBeLessThanOrEqual(result.centerSpread.maxHeight);
 }

@@ -6,10 +6,7 @@ import {
   type MintBurnCoinFlow,
   type MintBurnFlowsResponse,
   type RedemptionBackstopsResponse,
-  type ReportCard,
   type ReportCardsResponse,
-  type YieldRanking,
-  type YieldRankingsResponse,
 } from "@shared/types";
 import type { AreaNode, BuildingNode, BuildingStatus, BuildingType, PharosVilleFreshness } from "./world-types";
 
@@ -20,37 +17,27 @@ export interface DataBuildingInputs {
   mintBurnFlows: MintBurnFlowsResponse | null | undefined;
   redemptionBackstops: RedemptionBackstopsResponse | null | undefined;
   reportCards: ReportCardsResponse | null | undefined;
-  yieldRankings: YieldRankingsResponse | null | undefined;
 }
 
 const BUILDING_TILES: Record<BuildingType, { x: number; y: number }> = {
-  "mint-burn-foundry": { x: 28, y: 30 },
-  "dependency-loom-chainworks": { x: 34, y: 24 },
-  "yield-orchard-moonwell": { x: 40, y: 31 },
-  "exit-route-gatehouse": { x: 33, y: 36 },
+  "mint-burn-foundry": { x: 30, y: 28 },
+  "exit-route-gatehouse": { x: 38, y: 31 },
 };
 
 const BUILDING_LABELS: Record<BuildingType, string> = {
   "mint-burn-foundry": "Royal Mint And Burn Foundry",
   "exit-route-gatehouse": "Exit Route Gatehouse",
-  "yield-orchard-moonwell": "Yield Orchard And Moonwell",
-  "dependency-loom-chainworks": "Dependency Loom / Chainworks",
 };
 
 const STATUS_LABELS: Record<BuildingStatus, string> = {
   balanced: "Balanced",
-  "broad-coverage": "Broad source coverage",
   burning: "Burn-heavy",
   concentrated: "Concentrated exits",
   "deep-exit": "Deep exits",
-  "high-hub-concentration": "High hub concentration",
-  "high-median-apy": "High median APY",
   "large-active-frozen": "Active freezes",
-  "many-direct-dependents": "Many direct dependents",
   minting: "Mint-heavy",
   quiet: "Quiet",
   "recent-freeze": "Recent freeze activity",
-  "source-switch": "Source switching",
   stale: "Stale",
   "thin-exit": "Thin exits",
   unavailable: "Unavailable",
@@ -59,15 +46,11 @@ const STATUS_LABELS: Record<BuildingStatus, string> = {
 const BUILDING_ACCENTS: Record<BuildingType, string> = {
   "mint-burn-foundry": "#f1b84f",
   "exit-route-gatehouse": "#65c7bd",
-  "yield-orchard-moonwell": "#89c96f",
-  "dependency-loom-chainworks": "#c99bff",
 };
 
 const BUILDING_ASSET_IDS: Record<BuildingType, string> = {
   "mint-burn-foundry": "building.mint-burn-foundry",
   "exit-route-gatehouse": "building.exit-route-gatehouse",
-  "yield-orchard-moonwell": "building.yield-orchard-moonwell",
-  "dependency-loom-chainworks": "building.dependency-loom-chainworks",
 };
 
 const compactUsd = new Intl.NumberFormat("en-US", {
@@ -88,8 +71,6 @@ export function buildDataBuildings(inputs: DataBuildingInputs): BuildingNode[] {
   return [
     buildMintBurnFoundry(inputs.mintBurnFlows, inputs.freshness),
     buildExitRouteGatehouse(inputs.dexLiquidity, inputs.redemptionBackstops, inputs.reportCards, inputs.freshness),
-    buildYieldOrchard(inputs.yieldRankings, inputs.freshness),
-    buildDependencyLoom(inputs.reportCards, inputs.freshness),
   ];
 }
 
@@ -360,145 +341,6 @@ function buildExitRouteGatehouse(
   });
 }
 
-function buildYieldOrchard(
-  yieldRankings: YieldRankingsResponse | null | undefined,
-  freshness: PharosVilleFreshness,
-): BuildingNode {
-  const sourceFields = ["rankings[]", "rankings[].provenance", "provenance.benchmark", "provenance.safetySnapshot"];
-  if (!yieldRankings) {
-    return makeBuilding({
-      buildingType: "yield-orchard-moonwell",
-      status: "unavailable",
-      summary: "Yield ranking and source context are not available yet.",
-      facts: unavailableFacts("Source fields", sourceFields.join(", ")),
-      sourceFields,
-      links: [{ label: "Yield intelligence", href: "/yield/" }],
-      visual: unavailableVisual("yield-orchard-moonwell"),
-    });
-  }
-
-  const rankings = yieldRankings.rankings;
-  const sourceKeys = new Set(rankings.map(sourceKeyForYieldRanking));
-  const sourceSwitches = rankings.filter((ranking) => ranking.provenance?.sourceSwitch === true).length;
-  const anomalyCount = sum(rankings.map((ranking) => ranking.provenance?.anomalies.length ?? ranking.warningSignals.length));
-  const safetyCoverage = yieldRankings.provenance?.safetySnapshot.coverageRatio ?? coverageRatio(rankings.map((ranking) => ranking.safetyScore));
-  const medianApy = finiteNumber(yieldRankings.medianApy) ?? median(rankings.map((ranking) => finiteNumber(ranking.currentApy))) ?? 0;
-  const riskFreeRate = finiteNumber(yieldRankings.riskFreeRate) ?? 0;
-  const spread = medianApy - riskFreeRate;
-  const benchmark = yieldRankings.provenance?.benchmark ?? yieldRankings.benchmarks?.USD ?? null;
-
-  let status: BuildingStatus = "quiet";
-  if (freshness.yieldStale === true) status = "stale";
-  else if (sourceSwitches > 0 || anomalyCount > 0) status = "source-switch";
-  else if (sourceKeys.size >= 4 || safetyCoverage >= 0.75) status = "broad-coverage";
-  else if (isHighYieldSpread(spread, medianApy, riskFreeRate)) status = "high-median-apy";
-
-  return makeBuilding({
-    buildingType: "yield-orchard-moonwell",
-    status,
-    summary: "Shows yield ranking source breadth and benchmark context; higher APY is not presented as safer or better.",
-    facts: [
-      { label: "Status", value: STATUS_LABELS[status] },
-      { label: "Ranked opportunities", value: integer.format(rankings.length) },
-      { label: "Represented sources", value: integer.format(sourceKeys.size) },
-      { label: "Median APY", value: formatApy(medianApy) },
-      { label: "Benchmark", value: benchmark?.label ?? "USD default" },
-      { label: "Benchmark rate", value: formatApy(benchmark?.rate ?? riskFreeRate) },
-      { label: "Source switches", value: integer.format(sourceSwitches) },
-      { label: "Warnings/anomalies", value: integer.format(anomalyCount) },
-      { label: "Safety snapshot coverage", value: formatRatio(safetyCoverage) },
-      { label: "Updated", value: formatTimestamp(yieldRankings.updatedAt) },
-      { label: "Source fields", value: sourceFields.join(", ") },
-    ],
-    sourceFields,
-    links: [{ label: "Yield intelligence", href: "/yield/" }],
-    membersHeading: "Top ranked opportunities",
-    members: rankings.slice(0, 5).map((ranking) => ({
-      id: ranking.id,
-      label: `${ranking.symbol} via ${ranking.yieldSource}`,
-      href: `/stablecoin/${ranking.id}/`,
-      value: `${formatApy(ranking.currentApy)} APY, ${ranking.safetyGrade ?? "NR"} safety`,
-    })),
-    visual: {
-      accent: BUILDING_ACCENTS["yield-orchard-moonwell"],
-      dataFogIntensity: status === "stale" ? 0.62 : 0,
-      intensity: clamp01(safetyCoverage),
-      scale: 1,
-      secondaryIntensity: clamp01(sourceKeys.size / 6),
-      tertiaryIntensity: clamp01(sourceSwitches / 8 + anomalyCount / 16),
-    },
-  });
-}
-
-function buildDependencyLoom(
-  reportCards: ReportCardsResponse | null | undefined,
-  freshness: PharosVilleFreshness,
-): BuildingNode {
-  const sourceFields = ["reportCards.cards[]", "reportCards.dependencyGraph.edges[]", "reportCards.methodology"];
-  if (!reportCards) {
-    return makeBuilding({
-      buildingType: "dependency-loom-chainworks",
-      status: "unavailable",
-      summary: "Report-card dependency graph is not available yet.",
-      facts: unavailableFacts("Source fields", sourceFields.join(", ")),
-      sourceFields,
-      links: [{ label: "Dependency map", href: "/dependency-map/" }],
-      visual: unavailableVisual("dependency-loom-chainworks"),
-    });
-  }
-
-  const cardsById = new Map(reportCards.cards.map((card) => [card.id, card]));
-  const liveIds = new Set(reportCards.cards.filter((card) => card.isDefunct !== true).map((card) => card.id));
-  const edges = reportCards.dependencyGraph.edges.filter((edge) => (
-    liveIds.has(edge.to) && (liveIds.has(edge.from) || cardsById.has(edge.from))
-  ));
-  const edgeCount = edges.length;
-  const dependents = new Set(edges.map((edge) => edge.to));
-  const hubs = dependencyHubs(edges, cardsById);
-  const topHub = hubs[0] ?? null;
-  const topHubShare = edgeCount > 0 ? (topHub?.edgeCount ?? 0) / edgeCount : 0;
-  const typeCounts = topCounts(edges.map((edge) => edge.type));
-  let status: BuildingStatus = "quiet";
-  if (freshness.reportCardsStale === true) status = "stale";
-  else if (edgeCount === 0) status = "quiet";
-  else if (topHubShare >= 0.4 && edgeCount >= 5) status = "high-hub-concentration";
-  else if (dependents.size >= 20 || edgeCount >= 30) status = "many-direct-dependents";
-
-  return makeBuilding({
-    buildingType: "dependency-loom-chainworks",
-    status,
-    summary: "Shows direct report-card dependency graph links only; it does not draw transitive or value-at-risk exposure.",
-    facts: [
-      { label: "Status", value: STATUS_LABELS[status] },
-      { label: "Direct links", value: integer.format(edgeCount) },
-      { label: "Dependents", value: integer.format(dependents.size) },
-      { label: "Upstream hubs", value: integer.format(hubs.length) },
-      { label: "Strongest hub", value: topHub ? topHub.label : "Unavailable" },
-      { label: "Hub concentration", value: formatRatio(topHubShare) },
-      { label: "Dependency types", value: typeCounts.map((entry) => `${entry.label} ${entry.count}`).join(", ") || "Unavailable" },
-      { label: "Methodology", value: reportCards.methodology.version },
-      { label: "Source fields", value: sourceFields.join(", ") },
-    ],
-    sourceFields,
-    links: [{ label: "Dependency map", href: "/dependency-map/" }],
-    membersHeading: "Largest direct hubs",
-    members: hubs.slice(0, 5).map((hub) => ({
-      id: hub.id,
-      label: hub.label,
-      href: `/stablecoin/${hub.id}/`,
-      value: `${integer.format(hub.edgeCount)} direct links, weight ${decimal.format(hub.weight)}`,
-    })),
-    visual: {
-      accent: BUILDING_ACCENTS["dependency-loom-chainworks"],
-      dataFogIntensity: status === "stale" ? 0.7 : 0,
-      intensity: clamp01(Math.sqrt(edgeCount) / 7),
-      scale: 1,
-      secondaryIntensity: clamp01(topHubShare),
-      tertiaryIntensity: clamp01(dependents.size / 35),
-    },
-  });
-}
-
 function makeBuilding(input: {
   buildingType: BuildingType;
   facts: Array<{ label: string; value: string }>;
@@ -646,25 +488,6 @@ function weakestExitMembers(
     }));
 }
 
-function dependencyHubs(
-  edges: ReportCardsResponse["dependencyGraph"]["edges"],
-  cardsById: ReadonlyMap<string, ReportCard>,
-) {
-  const hubs = new Map<string, { edgeCount: number; id: string; label: string; weight: number }>();
-  for (const edge of edges) {
-    const hub = hubs.get(edge.from) ?? {
-      edgeCount: 0,
-      id: edge.from,
-      label: cardsById.get(edge.from)?.symbol ?? edge.from,
-      weight: 0,
-    };
-    hub.edgeCount += 1;
-    hub.weight += edge.weight;
-    hubs.set(edge.from, hub);
-  }
-  return [...hubs.values()].toSorted((a, b) => b.edgeCount - a.edgeCount || b.weight - a.weight || a.id.localeCompare(b.id));
-}
-
 function mergeProtocolTvl(globalDex: DexLiquidityData | null, data: readonly DexLiquidityData[]): Record<string, number> {
   if (globalDex && Object.keys(globalDex.protocolTvl).length > 0) return globalDex.protocolTvl;
   const merged: Record<string, number> = {};
@@ -674,21 +497,6 @@ function mergeProtocolTvl(globalDex: DexLiquidityData | null, data: readonly Dex
     }
   }
   return merged;
-}
-
-function sourceKeyForYieldRanking(ranking: YieldRanking): string {
-  return ranking.provenance?.sourceKey
-    ?? `${ranking.dataSource}:${ranking.yieldSource}`;
-}
-
-function isHighYieldSpread(spread: number, medianApy: number, riskFreeRate: number): boolean {
-  if (Math.abs(medianApy) <= 1 && Math.abs(riskFreeRate) <= 1) return spread >= 0.03;
-  return spread >= 1;
-}
-
-function coverageRatio(values: Array<number | null>): number {
-  if (values.length === 0) return 0;
-  return values.filter((value) => value != null).length / values.length;
 }
 
 function topCategory(values: readonly string[]): string | null {
@@ -764,10 +572,6 @@ function formatSignedRatio(value: number | null | undefined): string {
   if (!Number.isFinite(value)) return "Unavailable";
   const prefix = (value as number) > 0 ? "+" : "";
   return `${prefix}${ratioPercent.format(value as number)}`;
-}
-
-function formatApy(value: number | null | undefined): string {
-  return Number.isFinite(value) ? `${decimal.format(value as number)}%` : "Unavailable";
 }
 
 function formatTimestamp(timestamp: number | null | undefined): string {

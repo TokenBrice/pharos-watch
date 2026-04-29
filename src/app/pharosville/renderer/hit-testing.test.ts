@@ -12,8 +12,6 @@ import { collectHitTargets, hitTest, type HitTarget } from "./hit-testing";
 const BUILDING_DETAIL_IDS = [
   "building.mint-burn-foundry",
   "building.exit-route-gatehouse",
-  "building.yield-orchard-moonwell",
-  "building.dependency-loom-chainworks",
 ] as const;
 
 const TARGET_CLICK_POINTS = [

@@ -202,24 +202,17 @@ export interface GraveNode {
 
 export type BuildingType =
   | "mint-burn-foundry"
-  | "exit-route-gatehouse"
-  | "yield-orchard-moonwell"
-  | "dependency-loom-chainworks";
+  | "exit-route-gatehouse";
 
 export type BuildingStatus =
   | "balanced"
-  | "broad-coverage"
   | "burning"
   | "concentrated"
   | "deep-exit"
-  | "high-hub-concentration"
-  | "high-median-apy"
   | "large-active-frozen"
-  | "many-direct-dependents"
   | "minting"
   | "quiet"
   | "recent-freeze"
-  | "source-switch"
   | "stale"
   | "thin-exit"
   | "unavailable";
@@ -254,10 +247,8 @@ export interface BuildingNode {
 
 export type WorldEffectCueId =
   | "cue.area.north-froze-pole"
-  | "cue.building.dependency-loom"
   | "cue.building.exit-route-gatehouse"
   | "cue.building.mint-burn-foundry"
-  | "cue.building.yield-orchard"
   | "cue.lighthouse.psi"
   | "cue.ship.distance"
   | "cue.ship.motion"
@@ -359,7 +350,6 @@ export interface PharosVilleFreshness {
   blacklistStale?: boolean;
   dexLiquidityStale?: boolean;
   redemptionBackstopsStale?: boolean;
-  yieldStale?: boolean;
 }
 
 export interface PharosVilleWorld {

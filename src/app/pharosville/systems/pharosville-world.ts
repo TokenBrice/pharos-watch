@@ -9,7 +9,6 @@ import type {
   DexLiquidityMap,
   MintBurnFlowsResponse,
   RedemptionBackstopsResponse,
-  YieldRankingsResponse,
 } from "@shared/types";
 import type { ChainsResponse } from "@shared/types/chains";
 import { ACTIVE_IDS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
@@ -69,7 +68,6 @@ export interface PharosVilleInputs {
   blacklistSummary?: BlacklistSummaryResponse | null | undefined;
   dexLiquidity?: DexLiquidityMap | null | undefined;
   redemptionBackstops?: RedemptionBackstopsResponse | null | undefined;
-  yieldRankings?: YieldRankingsResponse | null | undefined;
   cemeteryEntries?: readonly CemeteryEntry[];
   freshness: PharosVilleFreshness;
   routeMode?: PharosVilleWorld["routeMode"];
@@ -369,7 +367,6 @@ export function buildPharosVilleWorld(inputs: PharosVilleInputs): PharosVilleWor
     mintBurnFlows: inputs.mintBurnFlows,
     redemptionBackstops: inputs.redemptionBackstops,
     reportCards: inputs.reportCards,
-    yieldRankings: inputs.yieldRankings,
   });
   const baseWorld = {
     generatedAt: Date.now(),

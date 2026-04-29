@@ -5,8 +5,6 @@ import { buildVisualCueRegistry } from "./visual-cue-registry";
 const BUILDING_TYPES = [
   "mint-burn-foundry",
   "exit-route-gatehouse",
-  "yield-orchard-moonwell",
-  "dependency-loom-chainworks",
 ] as const satisfies readonly BuildingType[];
 
 const ALLOWED_CHANNELS = [
@@ -44,8 +42,6 @@ describe("buildVisualCueRegistry", () => {
       "cue.building.mint-burn-foundry",
       "cue.area.north-froze-pole",
       "cue.building.exit-route-gatehouse",
-      "cue.building.yield-orchard",
-      "cue.building.dependency-loom",
     ]));
     expect(cues.find((cue) => cue.id === "cue.ship.motion")).toMatchObject({
       visual: "ship route and docking cadence",
