@@ -88,8 +88,8 @@ const OPEN_WATER_PATROL_WAYPOINTS: Record<ShipWaterZone, readonly { x: number; y
   ],
   muddy: [
     { x: 49, y: 24 },
-    { x: 55, y: 36 },
-    { x: 48, y: 55 },
+    { x: 54, y: 36 },
+    { x: 48, y: 54 },
     { x: 24, y: 45 },
   ],
   safe: [
@@ -101,10 +101,10 @@ const OPEN_WATER_PATROL_WAYPOINTS: Record<ShipWaterZone, readonly { x: number; y
     { x: 20, y: 45 },
   ],
   storm: [
-    { x: 58, y: 44 },
-    { x: 57, y: 57 },
-    { x: 46, y: 56 },
-    { x: 55, y: 36 },
+    { x: 54, y: 44 },
+    { x: 54, y: 54 },
+    { x: 47, y: 54 },
+    { x: 54, y: 36 },
   ],
 };
 

@@ -2,8 +2,10 @@ import type { GraveNode, PharosVilleMap, PharosVilleTile, ShipRiskPlacement, Ter
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { stableOffset, stableUnit } from "./stable-random";
 
-export const PHAROSVILLE_MAP_WIDTH = 64;
-export const PHAROSVILLE_MAP_HEIGHT = 64;
+export const PHAROSVILLE_MAP_WIDTH = 56;
+export const PHAROSVILLE_MAP_HEIGHT = 56;
+export const MAX_TILE_X = PHAROSVILLE_MAP_WIDTH - 1;
+export const MAX_TILE_Y = PHAROSVILLE_MAP_HEIGHT - 1;
 export const LIGHTHOUSE_TILE = { x: 44, y: 18 } as const;
 export const CIVIC_CORE_CENTER = { x: 34, y: 30 } as const;
 export const CIVIC_CORE_RADIUS = 6.5;
@@ -12,8 +14,8 @@ export const REGION_TILES: Record<ShipRiskPlacement, { x: number; y: number }> =
   "safe-harbor": { x: 29, y: 44 },
   "breakwater-edge": { x: 25, y: 48 },
   "harbor-mouth-watch": { x: 40, y: 45 },
-  "outer-rough-water": { x: 49, y: 46 },
-  "storm-shelf": { x: 55, y: 53 },
+  "outer-rough-water": { x: 48, y: 45 },
+  "storm-shelf": { x: 52, y: 52 },
   "data-fog": { x: 10, y: 16 },
   "ledger-mooring": { x: 32, y: 48 },
 };
@@ -69,6 +71,7 @@ const WATER_TERRAIN_KINDS = new Set<TerrainKind>([
   "deep-water",
   "water",
   "alert-water",
+  "brackish-water",
   "harbor-water",
   "warning-water",
   "storm-water",
@@ -121,8 +124,8 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
     if (isWarningShoals(x, y)) return "warning-water";
     if (isAlertChannel(x, y)) return "alert-water";
     if (isStormShelf(x, y)) return "storm-water";
-    if (isDataFog(x, y)) return "fog-water";
-    if (x < 8 || y < 8 || x > 55 || y > 55) return "deep-water";
+    if (isDataFog(x, y)) return "brackish-water";
+    if (isDeepSeaShelf(x, y)) return "deep-water";
     return "water";
   }
 
@@ -188,9 +191,9 @@ function isWarningShoals(x: number, y: number): boolean {
 }
 
 function isDangerStrait(x: number, y: number): boolean {
-  return ellipseValue(x, y, 55.4, 53.3, 7.8, 6.7) < 1
-    && x >= 48
-    && y >= 45;
+  return ellipseValue(x, y, 52.0, 51.2, 5.4, 4.8) < 1
+    && x >= 47
+    && y >= 44;
 }
 
 export function isNorthFrozePole(x: number, y: number): boolean {
@@ -210,6 +213,15 @@ function isCemeteryCausewayTile(x: number, y: number): boolean {
 
 function isOutOfBounds(x: number, y: number): boolean {
   return x < 0 || y < 0 || x >= PHAROSVILLE_MAP_WIDTH || y >= PHAROSVILLE_MAP_HEIGHT;
+}
+
+function isDeepSeaShelf(x: number, y: number): boolean {
+  const edge = Math.min(x, y, MAX_TILE_X - x, MAX_TILE_Y - y);
+  if (edge <= 0) return true;
+  if (edge === 1) {
+    return x < 8 || y < 8 || x > MAX_TILE_X - 8 || y > MAX_TILE_Y - 8;
+  }
+  return false;
 }
 
 function isStormShelf(x: number, y: number): boolean {
@@ -266,8 +278,7 @@ export function nearestWaterTile(tile: { x: number; y: number }, maxRadius = 10)
     for (let dx = -radius; dx <= radius; dx += 1) {
       for (let dy = -radius; dy <= radius; dy += 1) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
-        const x = Math.max(0, Math.min(PHAROSVILLE_MAP_WIDTH - 1, tile.x + dx));
-        const y = Math.max(0, Math.min(PHAROSVILLE_MAP_HEIGHT - 1, tile.y + dy));
+        const { x, y } = clampMapTile({ x: tile.x + dx, y: tile.y + dy });
         const kind = tileKindAt(x, y);
         if (!isWaterTileKind(kind)) continue;
         const distance = Math.abs(dx) + Math.abs(dy);
@@ -298,8 +309,7 @@ export function nearestAvailableWaterTile(
     for (let dx = -radius; dx <= radius; dx += 1) {
       for (let dy = -radius; dy <= radius; dy += 1) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
-        const x = Math.max(0, Math.min(PHAROSVILLE_MAP_WIDTH - 1, tile.x + dx));
-        const y = Math.max(0, Math.min(PHAROSVILLE_MAP_HEIGHT - 1, tile.y + dy));
+        const { x, y } = clampMapTile({ x: tile.x + dx, y: tile.y + dy });
         if (occupied.has(`${x}.${y}`)) continue;
         const kind = tileKindAt(x, y);
         if (!isWaterTileKind(kind)) continue;
@@ -314,6 +324,13 @@ export function nearestAvailableWaterTile(
   }
 
   return nearestWaterTile(tile, maxRadius);
+}
+
+export function clampMapTile(tile: { x: number; y: number }): { x: number; y: number } {
+  return {
+    x: Math.max(0, Math.min(MAX_TILE_X, tile.x)),
+    y: Math.max(0, Math.min(MAX_TILE_Y, tile.y)),
+  };
 }
 
 export function buildPharosVilleMap(): PharosVilleMap {

@@ -1,5 +1,5 @@
 import type { ShipClusterNode, ShipNode, ShipRiskPlacement } from "./world-types";
-import { nearestAvailableWaterTile, REGION_TILES } from "./world-layout";
+import { clampMapTile, nearestAvailableWaterTile, REGION_TILES } from "./world-layout";
 import { stableUnit } from "./stable-random";
 
 const MAX_SHIPS_PER_CLUSTER = 36;
@@ -66,14 +66,10 @@ function clusterTile(
   const angle = stableUnit(`cluster.${riskPlacement}.${index}.angle`) * Math.PI * 2
     + (count > 1 ? (Math.PI * 2 * index) / count : 0);
   const radius = count > 1 ? 4.5 + index * 1.4 : 1.5;
-  const tile = nearestAvailableWaterTile({
-    x: Math.round(clamp(base.x + Math.cos(angle) * radius * 1.35, 0, 63)),
-    y: Math.round(clamp(base.y + Math.sin(angle) * radius * 0.92, 0, 63)),
-  }, occupied, 18);
+  const tile = nearestAvailableWaterTile(clampMapTile({
+    x: Math.round(base.x + Math.cos(angle) * radius * 1.35),
+    y: Math.round(base.y + Math.sin(angle) * radius * 0.92),
+  }), occupied, 18);
   occupied.add(`${tile.x}.${tile.y}`);
   return tile;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }

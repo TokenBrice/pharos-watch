@@ -7,6 +7,7 @@ export type TileKind = "deep-water" | "water" | "shore" | "land" | "road";
 export type TerrainKind =
   | TileKind
   | "alert-water"
+  | "brackish-water"
   | "harbor-water"
   | "warning-water"
   | "storm-water"
@@ -295,6 +296,7 @@ export interface DetailModel {
 
 export type VisualCueTarget =
   | { kind: "area"; dataAreaType: NonNullable<AreaNode["dataAreaType"]> }
+  | { kind: "area" }
   | { kind: "building"; buildingType: BuildingType }
   | { kind: "dock" }
   | { kind: "grave" }

@@ -31,7 +31,7 @@ import {
   detailForShip,
 } from "./detail-model";
 import { buildDataBuildings, buildNorthFrozePoleArea } from "./data-buildings";
-import { buildPharosVilleMap, graveNodesFromEntries, isWaterTileKind, LIGHTHOUSE_TILE, nearestAvailableWaterTile, nearestWaterTile, REGION_TILES, terrainKindAt, tileKindAt } from "./world-layout";
+import { buildPharosVilleMap, clampMapTile, graveNodesFromEntries, isWaterTileKind, LIGHTHOUSE_TILE, MAX_TILE_X, MAX_TILE_Y, nearestAvailableWaterTile, nearestWaterTile, REGION_TILES, terrainKindAt, tileKindAt } from "./world-layout";
 import { getRecentChange } from "./recent-change";
 import { resolveShipRiskPlacement } from "./risk-placement";
 import { resolveShipVisual } from "./ship-visuals";
@@ -100,16 +100,16 @@ const SHIP_WATER_ANCHORS: Record<ShipRiskPlacement, readonly { x: number; y: num
     { x: 49, y: 46 },
     { x: 50, y: 48 },
     { x: 48, y: 49 },
-    { x: 54, y: 44 },
-    { x: 55, y: 46 },
+    { x: 53, y: 44 },
+    { x: 54, y: 46 },
   ],
   "storm-shelf": [
-    { x: 54, y: 52 },
-    { x: 55, y: 53 },
-    { x: 56, y: 53 },
-    { x: 57, y: 49 },
-    { x: 51, y: 55 },
-    { x: 58, y: 55 },
+    { x: 51, y: 52 },
+    { x: 52, y: 53 },
+    { x: 53, y: 53 },
+    { x: 54, y: 49 },
+    { x: 49, y: 54 },
+    { x: 54, y: 54 },
   ],
   "data-fog": [
     { x: 10, y: 16 },
@@ -148,6 +148,14 @@ const AREA_SIGN_TILES: Record<DewsAreaBand, { x: number; y: number }> = {
   ALERT: { x: 40, y: 45 },
   WATCH: { x: 27, y: 46 },
   CALM: { x: 23, y: 39 },
+};
+
+const DEWS_AREA_WATER_STYLE: Record<DewsAreaBand, string> = {
+  DANGER: "storm strait",
+  WARNING: "warning shoals",
+  ALERT: "alert channel current",
+  WATCH: "breakwater watch water",
+  CALM: "calm harbor water",
 };
 
 export interface PharosVilleInputs {
@@ -218,7 +226,13 @@ function buildAreas(stress: StressSignalsAllResponse | null | undefined): Pharos
     band,
     count: counts[band],
     detailId: `area.dews.${band.toLowerCase()}`,
+    facts: [
+      { label: "Water style", value: DEWS_AREA_WATER_STYLE[band] },
+      { label: "Source", value: "stress.signals[]" },
+    ],
     riskPlacement: DEWS_AREA_PLACEMENTS[band],
+    sourceFields: ["stress.signals[]"],
+    summary: `${DEWS_AREA_LABELS[band]} uses ${DEWS_AREA_WATER_STYLE[band]} for DEWS ${band} placement.`,
   }));
 }
 
@@ -266,8 +280,10 @@ function shipTile(asset: StablecoinData, placement: ShipNode["riskPlacement"]): 
     const angle = stableUnit(`${asset.id}.${placement}.angle.${attempt}`) * Math.PI * 2;
     const distance = 0.25 + Math.sqrt(stableUnit(`${asset.id}.${placement}.distance.${attempt}`)) * 0.75;
     const tile = {
-      x: Math.round(clamp(base.x + Math.cos(angle) * radius.x * distance + stableOffset(`${asset.id}.risk.x.${attempt}`, 1) * 0.3, 0, 63)),
-      y: Math.round(clamp(base.y + Math.sin(angle) * radius.y * distance + stableOffset(`${asset.id}.risk.y.${attempt}`, 1) * 0.3, 0, 63)),
+      ...clampMapTile({
+        x: Math.round(base.x + Math.cos(angle) * radius.x * distance + stableOffset(`${asset.id}.risk.x.${attempt}`, 1) * 0.3),
+        y: Math.round(base.y + Math.sin(angle) * radius.y * distance + stableOffset(`${asset.id}.risk.y.${attempt}`, 1) * 0.3),
+      }),
     };
     if (isPlacementWaterTile(tile, placement)) return tile;
   }
@@ -331,15 +347,15 @@ function dockMooringTile(dock: DockNode, index: number, occupied: ReadonlySet<st
   const depth = 2 + Math.floor(index / 7);
   const lane = (index % 7) - 3;
 
-  return nearestAvailableWaterTile({
-    x: Math.max(0, Math.min(63, dock.tile.x + outward.x * depth + fan.x * lane)),
-    y: Math.max(0, Math.min(63, dock.tile.y + outward.y * depth + fan.y * lane)),
-  }, occupied);
+  return nearestAvailableWaterTile(clampMapTile({
+    x: dock.tile.x + outward.x * depth + fan.x * lane,
+    y: dock.tile.y + outward.y * depth + fan.y * lane,
+  }), occupied);
 }
 
 function dockOutwardVector(dock: DockNode): { x: -1 | 0 | 1; y: -1 | 0 | 1 } {
-  const dx = dock.tile.x - 31.5;
-  const dy = dock.tile.y - 31.5;
+  const dx = dock.tile.x - MAX_TILE_X / 2;
+  const dy = dock.tile.y - MAX_TILE_Y / 2;
   if (Math.abs(dx) >= Math.abs(dy)) return { x: dx < 0 ? -1 : 1, y: 0 };
   return { x: 0, y: dy < 0 ? -1 : 1 };
 }
@@ -401,7 +417,7 @@ function isPlacementWaterTile(tile: { x: number; y: number }, placement: ShipNod
   if (placement === "harbor-mouth-watch") return terrain === "alert-water";
   if (placement === "outer-rough-water") return terrain === "warning-water";
   if (placement === "storm-shelf") return terrain === "storm-water";
-  if (placement === "data-fog") return terrain === "fog-water";
+    if (placement === "data-fog") return terrain === "fog-water" || terrain === "brackish-water";
   return isWaterTileKind(tileKindAt(tile.x, tile.y));
 }
 
@@ -419,8 +435,7 @@ function nearestPlacementWaterTile(
       for (let dy = -radius; dy <= radius; dy += 1) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
         const candidate = {
-          x: Math.max(0, Math.min(63, tile.x + dx)),
-          y: Math.max(0, Math.min(63, tile.y + dy)),
+          ...clampMapTile({ x: tile.x + dx, y: tile.y + dy }),
         };
         if (!isPlacementWaterTile(candidate, placement)) continue;
         const distance = Math.abs(dx) + Math.abs(dy);
@@ -452,8 +467,7 @@ function nearestAvailablePlacementWaterTile(
       for (let dy = -radius; dy <= radius; dy += 1) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
         const candidate = {
-          x: Math.max(0, Math.min(63, tile.x + dx)),
-          y: Math.max(0, Math.min(63, tile.y + dy)),
+          ...clampMapTile({ x: tile.x + dx, y: tile.y + dy }),
         };
         if (occupied.has(`${candidate.x}.${candidate.y}`)) continue;
         if (!isPlacementWaterTile(candidate, placement)) continue;
@@ -481,10 +495,6 @@ function buildDetailIndex(world: Omit<PharosVilleWorld, "detailIndex" | "visualC
     ...world.buildings.map(detailForBuilding),
   ];
   return Object.fromEntries(details.map((detail) => [detail.id, detail]));
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
 }
 
 export function buildPharosVilleWorld(inputs: PharosVilleInputs): PharosVilleWorld {
