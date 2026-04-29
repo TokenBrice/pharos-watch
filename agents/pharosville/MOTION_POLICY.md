@@ -38,6 +38,13 @@ renders deterministic static frames and must not keep a RAF loop alive.
 - Every analytical motion cue needs visual-cue registry metadata, DOM/detail or
   accessibility-ledger parity, and a reduced-motion equivalent.
 
+## Ship Risk-Water Motion
+
+- `calm`, `watch`, `alert`, `warning`, and `danger` map to the northern DEWS sea belt from Calm Anchorage through Danger Strait. `fog` maps to Data Fog, and `ledger` maps to Ledger Mooring.
+- Higher DEWS turbulence should increase risk-water dwell, drift radius, and sailing wake intensity in this order: calm < watch < alert < warning < danger.
+- Docked reduced-motion ships freeze at their representative harbor mooring. Dockless reduced-motion ships freeze at their risk-water patrol sample. In both cases, details and the accessibility ledger must expose named risk-water area and risk-water zone.
+- Dockless normal-motion patrols must not collapse to a near-static loop. If a named area is too small for meaningful travel, use current or adjacent northern sea anchors while keeping samples on water tiles.
+
 ## Debug Contract
 
 Development/test builds expose `window.__pharosVilleDebug` fields for browser

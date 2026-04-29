@@ -27,6 +27,8 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 - The cemetery remains a compact memorial precinct separated from the EVM bay and lighthouse approach.
 - The central civic data core groups the four main-island data buildings around road/plaza terrain.
 - North Froze Pole is a northern frozen-water area, not a building.
+- The northern DEWS sea belt progresses left-to-right/up as Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, and Danger Strait. North Froze Pole remains a separate frozen-water area near the top-right.
+- Calm Anchorage is intentionally the largest DEWS water block and should stay broad enough to reduce calm-ship overlap around the western harbor/shore.
 
 ## Entity Semantics
 
@@ -36,8 +38,8 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 | Dock footprint | Chain stablecoin supply and top stablecoins on that chain | Bridge volume, transaction flow, or real-time transfers |
 | Ship | Active stablecoin representative | Full supply distribution as linear pixel area |
 | Ship route/docking cadence | Positive rendered-chain presence and risk-water patrol | Real transfer activity or issuer operations |
-| Ship risk water | Peg/DEWS evidence and placement precedence | Risk from stale or missing evidence alone |
-| Long-tail cluster | Count-capped grouped active stablecoins sharing a risk placement | One aggregated issuer |
+| Ship risk water | Peg/DEWS evidence, named risk-water area, risk zone, and placement precedence | Risk from stale or missing evidence alone |
+| Long-tail cluster | Count-capped grouped active stablecoins sharing a risk placement, named risk-water area, and risk zone | One aggregated issuer |
 | Cemetery marker | Dead/frozen lifecycle asset with cause-aware visual style | Active market status |
 | Data building | Non-ship Pharos product summary | Methodology text, raw tables, or guarantees |
 | North Froze Pole | Observed freeze/blacklist tracker activity | Complete sanctions or compliance coverage |
@@ -49,7 +51,11 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 - Ship size is a compressed market-cap tier, not linear area.
 - Active depeg and DANGER evidence outrank calm chain presence for risk placement.
 - Stale or missing peg evidence maps to degraded evidence/data fog, not storm risk.
+- Fresh DEWS bands map to the named northern sea belt: CALM to Calm Anchorage, WATCH to Watch Breakwater, ALERT to Alert Channel, WARNING to Warning Shoals, and DANGER to Danger Strait.
+- Data Fog and Ledger Mooring are named non-DEWS risk-water areas. If ships can reference them, they must also have printed labels, area hit targets, detail facts, and accessibility-ledger rows.
+- Printed water-area labels render above entity sprites and their hit targets win inside the printed label rectangle. This keeps all zone names visible and selectable even near tall landmarks.
 - Reduced-motion representative placement uses deterministic static positions and no RAF loop.
+- Docked reduced-motion ships freeze at harbor moorings; dockless ships freeze at risk-water patrol samples. Details and the accessibility ledger must still expose the named risk-water area and risk zone.
 - Normal motion samples, hit testing, selected rings, follow-selected behavior, and debug state must use the same motion model.
 - Water routes must stay on water tiles where tests assert that contract.
 

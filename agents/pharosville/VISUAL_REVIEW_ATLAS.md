@@ -8,7 +8,7 @@ This atlas tells agents what to look at when reviewing PharosVille pixels. It co
 
 | Baseline | Source test | Path | Review focus |
 | --- | --- | --- | --- |
-| Desktop shell | `pharosville renders desktop canvas shell` | `tests/visual/pharosville.spec.ts-snapshots/pharosville-desktop-shell-linux.png` | Nonblank sea-first map, water/land balance, lighthouse headland, EVM bay, cemetery separation, civic data core, toolbar/detail surfaces, and no asset load errors. |
+| Desktop shell | `pharosville renders desktop canvas shell` | `tests/visual/pharosville.spec.ts-snapshots/pharosville-desktop-shell-linux.png` | Nonblank sea-first map, water/land balance, northern DEWS sea labels, lighthouse headland, EVM bay, cemetery separation, civic data core, toolbar/detail surfaces, and no asset load errors. |
 | Narrow fallback | `pharosville narrow fallback avoids world runtime requests` | `tests/visual/pharosville.spec.ts-snapshots/pharosville-narrow-fallback-linux.png` | DOM fallback copy and links, no canvas, and no world data/asset requests below the desktop gate. |
 
 ## Browser Review Entries
@@ -24,7 +24,8 @@ Use focused entries while developing:
 | Entry | Command | What to inspect |
 | --- | --- | --- |
 | Desktop canvas shell | `npx playwright test tests/visual/pharosville.spec.ts --grep "desktop canvas shell"` | World framing, building clickability, water/land pixel stats, hidden old auxiliary UI, asset load state. |
-| Stressed ship detail | `npx playwright test tests/visual/pharosville.spec.ts --grep "stressed ship"` | USDT active-depeg fixture selects a ship, shows storm-shelf/storm risk water, and lists evidence fields. |
+| Named risk-water areas | `npx playwright test tests/visual/pharosville.spec.ts --grep "named risk water"` | Calm, Watch, Alert, Warning, Danger, Data Fog, and Ledger Mooring labels all remain visible, win label clicks, and select browser details with matching risk-water zones. |
+| Stressed ship detail | `npx playwright test tests/visual/pharosville.spec.ts --grep "stressed ship"` | USDT active-depeg fixture selects a ship, shows Danger Strait/storm-shelf risk water, risk zone `danger`, and evidence fields. |
 | Narrow fallback | `npx playwright test tests/visual/pharosville.spec.ts --grep "narrow fallback"` | No canvas/runtime requests under `1280px` width. |
 | Short fallback | `npx playwright test tests/visual/pharosville.spec.ts --grep "short desktop"` | No clipped canvas under `760px` height. |
 | Ultrawide canvas | `npx playwright test tests/visual/pharosville.spec.ts --grep "ultrawide"` | DPR/backing-store caps at `2560 x 1440` with device scale factor 3. |
@@ -42,9 +43,10 @@ Use this checklist when approving screenshot changes:
 
 - The world reads as a maritime analytical map, not a generic game backdrop.
 - The lighthouse, EVM bay, cemetery, civic data core, DEWS water areas, and North Froze Pole are all visually distinguishable.
+- The northern DEWS sea reads as a broad, continuous red-zone corridor: Calm Anchorage is visibly the largest western block, Watch and Alert step rightward, Warning Shoals and Danger Strait sit northward toward North Froze Pole instead of behind the lighthouse, and Data Fog/Ledger Mooring remain readable as separate named risk-water labels.
 - Ships remain readable at default zoom; very large stablecoins are capped rather than overwhelming the map.
 - Dock flags/logos identify chain harbors without becoming large label boards.
-- Risk water escalation is visible but does not make stale/missing evidence look like active depeg.
+- Risk water escalation is visible but does not make stale/missing evidence or NAV ledger water look like active depeg.
 - The selected target ring and detail panel refer to the same entity.
 - Hit targets are plausible around the drawn sprite, especially after asset geometry or scale changes.
 - Reduced-motion screenshots stay meaningful without animation.
