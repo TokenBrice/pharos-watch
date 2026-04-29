@@ -3,7 +3,7 @@ import { tileToScreen, type IsoCamera, type ScreenPoint } from "../../systems/pr
 import type { PharosVilleWorld } from "../../systems/world-types";
 import { dockDrawPoint } from "../geometry";
 import type { HitTarget } from "../hit-testing";
-import type { DrawPharosVilleInput, PharosVilleCanvasMotion } from "../world-canvas";
+import type { DrawPharosVilleInput, PharosVilleCanvasMotion } from "../render-types";
 
 export function drawSelection(input: DrawPharosVilleInput): number {
   const { ctx, hoveredTarget, selectedTarget } = input;

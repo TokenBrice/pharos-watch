@@ -1,4 +1,3 @@
-import type { PharosVilleMotionPlan, ShipMotionSample } from "../systems/motion";
 import { areaLabelPlacementForArea } from "../systems/area-labels";
 import { waterTerrainStyle, type WaterTerrainStyle } from "../systems/palette";
 import { tileToScreen, type IsoCamera, type ScreenPoint } from "../systems/projection";
@@ -18,8 +17,8 @@ import {
   type WorldDrawablePass,
 } from "./drawable-pass";
 import { dockOutwardVector, entityAssetId, resolveEntityGeometry, type WorldSelectableEntity } from "./geometry";
-import type { HitTarget } from "./hit-testing";
 import { drawSelection } from "./layers/selection";
+import type { DrawPharosVilleInput, PharosVilleCanvasMotion, PharosVilleRenderMetrics } from "./render-types";
 import { CAUSE_HEX, type CauseOfDeath } from "@shared/lib/cause-of-death";
 
 const TILE_COLORS: Record<string, string> = {
@@ -185,32 +184,7 @@ const CEMETERY_GLOBAL_SCALE = 0.6;
 const CEMETERY_CONTEXT_SCALE = 0.82 * CEMETERY_GLOBAL_SCALE;
 const CEMETERY_CONTEXT_SOURCE_CENTER = { x: 22.15, y: 41.7 } as const;
 
-export interface PharosVilleCanvasMotion {
-  plan: PharosVilleMotionPlan;
-  reducedMotion: boolean;
-  timeSeconds: number;
-}
-
-export interface DrawPharosVilleInput {
-  assets: PharosVilleAssetManager | null;
-  camera: IsoCamera;
-  ctx: CanvasRenderingContext2D;
-  height: number;
-  hoveredTarget: HitTarget | null;
-  motion: PharosVilleCanvasMotion;
-  selectedTarget: HitTarget | null;
-  shipMotionSamples?: ReadonlyMap<string, ShipMotionSample>;
-  targets: readonly HitTarget[];
-  width: number;
-  world: PharosVilleWorld;
-}
-
-export interface PharosVilleRenderMetrics {
-  drawableCounts: Record<WorldDrawablePass, number>;
-  drawableCount: number;
-  movingShipCount: number;
-  visibleTileCount: number;
-}
+export type { DrawPharosVilleInput, PharosVilleCanvasMotion, PharosVilleRenderMetrics } from "./render-types";
 
 export function drawPharosVille(input: DrawPharosVilleInput): PharosVilleRenderMetrics {
   const { ctx } = input;
