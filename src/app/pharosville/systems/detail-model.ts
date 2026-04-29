@@ -174,13 +174,15 @@ export function detailForArea(node: AreaNode): DetailModel {
     id: node.detailId,
     kind: node.kind,
     title: node.label,
-    summary: node.band
+    summary: node.summary ?? (node.band
       ? `${node.label} is a DEWS ${node.band} water area used for ship risk placement.`
-      : `${node.label} is a named water area.`,
+      : `${node.label} is a named water area.`),
     facts: [
       ...(node.band ? [{ label: "DEWS band", value: node.band }] : []),
       ...(node.count != null ? [{ label: "Stablecoins", value: String(node.count) }] : []),
       ...(node.riskPlacement ? [{ label: "Risk placement", value: node.riskPlacement }] : []),
+      ...(node.facts ?? []),
+      ...(node.sourceFields?.length ? [{ label: "Source fields", value: node.sourceFields.join(", ") }] : []),
     ],
     links: [{ label: "DEWS", href: "/depeg-watch/" }],
   };
