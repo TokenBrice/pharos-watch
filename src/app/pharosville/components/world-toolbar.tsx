@@ -48,47 +48,55 @@ export function WorldToolbar({
       <h2 id={headingId} className="sr-only">
         World toolbar
       </h2>
-      <button type="button" onClick={onZoomOut} disabled={!onZoomOut} aria-label="Zoom out" title="Zoom out">
-        <Minus aria-hidden="true" size={16} />
-      </button>
-      <output aria-label="Current zoom">{zoomLabel}</output>
-      <button type="button" onClick={onZoomIn} disabled={!onZoomIn} aria-label="Zoom in" title="Zoom in">
-        <Plus aria-hidden="true" size={16} />
-      </button>
-      <button type="button" onClick={() => onPan?.({ x: 0, y: 32 })} disabled={!onPan} aria-label="Pan north" title="Pan north">
-        <ArrowUp aria-hidden="true" size={16} />
-      </button>
-      <button type="button" onClick={() => onPan?.({ x: -32, y: 0 })} disabled={!onPan} aria-label="Pan east" title="Pan east">
-        <ArrowRight aria-hidden="true" size={16} />
-      </button>
-      <button type="button" onClick={() => onPan?.({ x: 0, y: -32 })} disabled={!onPan} aria-label="Pan south" title="Pan south">
-        <ArrowDown aria-hidden="true" size={16} />
-      </button>
-      <button type="button" onClick={() => onPan?.({ x: 32, y: 0 })} disabled={!onPan} aria-label="Pan west" title="Pan west">
-        <ArrowLeft aria-hidden="true" size={16} />
-      </button>
-      <button type="button" onClick={onResetView} disabled={!onResetView} aria-label="Reset view" title="Reset view">
-        <RotateCcw aria-hidden="true" size={16} />
-      </button>
-      <button type="button" onClick={onFollowSelected} disabled={!onFollowSelected} aria-label="Follow selected" title="Follow selected">
-        <LocateFixed aria-hidden="true" size={16} />
-      </button>
-      <button type="button" onClick={onClearSelection} disabled={!onClearSelection || !selectedDetailId} aria-label="Clear selection" title="Clear selection">
-        <X aria-hidden="true" size={16} />
-      </button>
+      <div className="pharosville-world-toolbar__group" role="group" aria-label="Zoom controls">
+        <button type="button" onClick={onZoomOut} disabled={!onZoomOut} aria-label="Zoom out" title="Zoom out">
+          <Minus aria-hidden="true" size={16} />
+        </button>
+        <output aria-label="Current zoom">{zoomLabel}</output>
+        <button type="button" onClick={onZoomIn} disabled={!onZoomIn} aria-label="Zoom in" title="Zoom in">
+          <Plus aria-hidden="true" size={16} />
+        </button>
+      </div>
+      <div className="pharosville-world-toolbar__group" role="group" aria-label="Pan controls">
+        <button type="button" onClick={() => onPan?.({ x: 0, y: 32 })} disabled={!onPan} aria-label="Pan north" title="Pan north">
+          <ArrowUp aria-hidden="true" size={16} />
+        </button>
+        <button type="button" onClick={() => onPan?.({ x: -32, y: 0 })} disabled={!onPan} aria-label="Pan east" title="Pan east">
+          <ArrowRight aria-hidden="true" size={16} />
+        </button>
+        <button type="button" onClick={() => onPan?.({ x: 0, y: -32 })} disabled={!onPan} aria-label="Pan south" title="Pan south">
+          <ArrowDown aria-hidden="true" size={16} />
+        </button>
+        <button type="button" onClick={() => onPan?.({ x: 32, y: 0 })} disabled={!onPan} aria-label="Pan west" title="Pan west">
+          <ArrowLeft aria-hidden="true" size={16} />
+        </button>
+      </div>
+      <div className="pharosville-world-toolbar__group" role="group" aria-label="Selection controls">
+        <button type="button" onClick={onResetView} disabled={!onResetView} aria-label="Reset view" title="Reset view">
+          <RotateCcw aria-hidden="true" size={16} />
+        </button>
+        <button type="button" onClick={onFollowSelected} disabled={!onFollowSelected} aria-label="Follow selected" title="Follow selected">
+          <LocateFixed aria-hidden="true" size={16} />
+        </button>
+        <button type="button" onClick={onClearSelection} disabled={!onClearSelection || !selectedDetailId} aria-label="Clear selection" title="Clear selection">
+          <X aria-hidden="true" size={16} />
+        </button>
+      </div>
       {onToggleLedger && (
         <button type="button" aria-pressed={ledgerVisible} onClick={onToggleLedger}>
           Ledger
         </button>
       )}
-      <output aria-live="polite" aria-label="Map entity count">
-        {entityCount} entities
-      </output>
-      {selectedDetailId && (
-        <output aria-live="polite" aria-label="Selected detail">
-          {selectedDetailLabel ?? selectedDetailId}
+      <div className="pharosville-world-toolbar__status">
+        <output aria-live="polite" aria-label="Map entity count">
+          {entityCount} entities
         </output>
-      )}
+        {selectedDetailId && (
+          <output aria-live="polite" aria-label="Selected detail">
+            {selectedDetailLabel ?? selectedDetailId}
+          </output>
+        )}
+      </div>
     </div>
   );
 }
