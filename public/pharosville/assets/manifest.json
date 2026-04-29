@@ -1,7 +1,8 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "style": {
-    "assetVersion": "2026-04-29-lighthouse-hill-v5",
+    "cacheVersion": "2026-04-29-lighthouse-hill-v5",
+    "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5",
     "anchor": "old-school 16-bit maritime isometric RPG pixel art, crisp pixel edges, low top-down view, deep navy and teal sea, pale limestone island city, bronze and gold beacon light, restrained analytics palette, readable silhouettes, no text, no logos, no UI",
     "palette": ["#061721", "#0d5f70", "#d3c89a", "#ffcc62"],
     "generationDefaults": {

@@ -4,6 +4,10 @@ Date: 2026-04-29
 Status: final
 Owner: follow-up/handover subagent
 
+## Post-Handoff Execution Update
+
+The manifest-v2 follow-up was selected as the first execution slice after visual triage showed no immediate sprite-regeneration blocker. The runtime manifest now uses schema v2 with separate `style.cacheVersion` and `style.styleAnchorVersion`, while preserving the same static PNG paths, dimensions, anchors, hitboxes, priorities, and load groups.
+
 ## Purpose
 
 Capture deferred PharosVille work that should not be bundled into the civic-core implementation patch, plus coordination and learning notes from the execution swarm.
@@ -35,9 +39,9 @@ The important scope boundary was that this patch was a civic-core composition pa
 - No Worker endpoint, D1 migration, provider, supply override, or methodology change is implied by visual follow-ups.
 - This handoff only edited `/agents/`.
 
-## Baseline Facts
+## Baseline Facts At Handoff Time
 
-- Current production-style PharosVille manifest is schema v1, static PNG only.
+- At handoff time, the production-style PharosVille manifest was schema v1 and static PNG only. This has since been superseded by the manifest-v2 execution slice above.
 - `src/app/pharosville/systems/asset-manifest.ts` accepts categories `terrain`, `landmark`, `dock`, `ship`, `prop`, and `overlay`; there is no `building` category yet.
 - The manifest currently has 28 assets: 14 critical and 14 deferred.
 - The four data-building sprites are deferred `landmark` assets on the `landmarks` layer:
@@ -45,9 +49,9 @@ The important scope boundary was that this patch was a civic-core composition pa
   - `building.exit-route-gatehouse`
   - `building.yield-orchard-moonwell`
   - `building.dependency-loom-chainworks`
-- `scripts/pharosville/validate-assets.mjs` caps v0.1 at 34 assets and requires `promptProvenance.styleAnchorVersion` to match the single global `style.assetVersion`.
-- `PharosVilleAssetManager` loads critical/first-render assets first and deferred assets as a second group. It has no frame timing, sprite-sheet, per-animation, or per-state asset API.
-- Pixellab `animate_object` can generate object animation frames, but PharosVille does not yet have a manifest/runtime contract for those frames.
+- At handoff time, `scripts/pharosville/validate-assets.mjs` capped v0.1 at 34 assets and required `promptProvenance.styleAnchorVersion` to match the single global `style.assetVersion`; manifest v2 now separates cache and style versions.
+- `PharosVilleAssetManager` loads critical/first-render assets first and deferred assets as a second group. It has no frame playback, per-animation, or per-state renderer API.
+- Pixellab `animate_object` can generate object animation frames; manifest v2 now reserves metadata for those frames, but PharosVille does not yet play frame-based animations.
 
 ## Recommended Sequencing
 

@@ -1,7 +1,7 @@
 # PharosVille Follow-Up Execution Plan
 
 Date: 2026-04-29
-Status: active execution plan
+Status: manifest v2 execution completed
 
 ## Assumptions
 
@@ -57,3 +57,10 @@ Follow-up after manifest v2:
 - Run a dock family art-direction pass before regenerating every dock sprite.
 - Use v2 animation metadata for one low-risk building pilot only after static v2 validation is stable.
 - Keep dense inspection/filter UI DOM-first and separate from sprite/manifest changes.
+
+## Execution Notes
+
+- Manifest schema v2 was implemented without changing PNG bytes, asset IDs, static paths, dimensions, anchors, hitboxes, priorities, or load groups.
+- `style.cacheVersion` now controls cache busting.
+- `style.styleAnchorVersion` now controls prompt provenance matching.
+- `asset.animation` is reserved for future frame-based sprite-sheet metadata, but no sprite currently uses frame playback.

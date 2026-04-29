@@ -10,8 +10,10 @@ This is the agent-facing workflow for PharosVille raster assets. Runtime asset t
 - Promote selected PNGs to `public/pharosville/assets/` only after they are chosen for runtime use.
 - Runtime code must reference local manifest asset IDs, not Pixellab URLs, remote URLs, tokens, or prototype paths.
 - Every runtime PNG needs a manifest entry with accurate dimensions, anchor, footprint, hitbox, layer/category, load priority, semantic role when useful, and prompt provenance.
-- Bump `style.assetVersion` whenever promoted asset bytes or manifest geometry change.
-- Keep `promptProvenance.jobId` and `styleAnchorVersion` aligned with the selected asset.
+- Manifest schema v2 separates `style.cacheVersion` from `style.styleAnchorVersion`.
+- Bump `style.cacheVersion` whenever promoted asset bytes, manifest geometry, or animation frame assets change.
+- Keep `promptProvenance.jobId` and `promptProvenance.styleAnchorVersion` aligned with the selected asset's style anchor.
+- Optional frame-based animation metadata belongs in `asset.animation`; keep `path` as the static/reduced-motion source unless a future renderer change says otherwise.
 
 ## Current Runtime Asset Areas
 
@@ -43,7 +45,7 @@ Preferred constraints:
 1. Save candidate PNGs under `agents/pharosville/pixellab-prototypes/`.
 2. Select one candidate and copy only the chosen production asset into `public/pharosville/assets/...`.
 3. Verify actual PNG dimensions before editing the manifest.
-4. Update manifest geometry and provenance.
+4. Update manifest geometry, cache/provenance versions, and optional animation metadata.
 5. Re-check renderer assumptions for anchor, scale, beacon points, sail-logo offsets, and hitboxes.
 6. Run focused asset and visual checks.
 

@@ -64,7 +64,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - normal-motion canvas loop for the lighthouse great-fire flicker, water shimmer, decorative time-derived dawn/day/dusk/night sky with sun, crescent moon, stars, constellations, cloud bands, decorative birds/lights/haze, and deterministic ship route sampling, with expensive wake effects capped to selected/top/recent ships
 - deterministic reduced-motion render with no running animation frame loop
 - desktop, stressed-ship, short-screen, ultrawide backing-store, interaction, central-core invariants, building-interaction, and motion visual coverage
-- controlled Pixellab asset manifest with critical and deferred sprite loading under `public/pharosville/assets/`
+- controlled Pixellab asset manifest v2 with critical/deferred sprite loading, separate cache/provenance versions, and reserved frame-animation metadata under `public/pharosville/assets/`
 - asset validation through `npm run check:pharosville-assets`
 - no production fixture/default market data
 

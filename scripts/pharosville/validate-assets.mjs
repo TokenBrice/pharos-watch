@@ -21,7 +21,9 @@ const manifestText = readFileSync(manifestPath, "utf8");
 const manifest = JSON.parse(manifestText);
 const errors = [];
 
-if (manifest.schemaVersion !== 1) errors.push("Manifest schemaVersion must be 1.");
+if (manifest.schemaVersion !== 1 && manifest.schemaVersion !== 2) {
+  errors.push("Manifest schemaVersion must be 1 or 2.");
+}
 validateStyle(manifest.style);
 if (!Array.isArray(manifest.assets) || manifest.assets.length === 0) errors.push("Manifest assets array is required.");
 if (manifest.assets?.length > 34) errors.push(`Manifest has ${manifest.assets.length} assets; v0.1 core cap is 34.`);
@@ -138,14 +140,15 @@ function validateAsset(asset, ids, referenced) {
     }
   }
   if (asset.promptProvenance) {
-    if (asset.promptProvenance.styleAnchorVersion !== manifest.style?.assetVersion) {
-      errors.push(`${id} promptProvenance.styleAnchorVersion must match style.assetVersion.`);
+    if (asset.promptProvenance.styleAnchorVersion !== manifestStyleAnchorVersion()) {
+      errors.push(`${id} promptProvenance.styleAnchorVersion must match the manifest style anchor version.`);
     }
     if (asset.promptProvenance.jobId && typeof asset.promptProvenance.jobId !== "string") {
       errors.push(`${id} promptProvenance.jobId must be a string when present.`);
     }
   }
   validateOptionalMetadata(asset, id);
+  validateAnimation(asset, id, referenced);
 }
 
 function listPngs(dir) {
@@ -173,7 +176,13 @@ function validateStyle(style) {
     errors.push("Manifest style object is required.");
     return;
   }
-  if (!style.assetVersion || typeof style.assetVersion !== "string") errors.push("Manifest style.assetVersion is required.");
+  if (manifest.schemaVersion === 2) {
+    if (!style.cacheVersion || typeof style.cacheVersion !== "string") errors.push("Manifest style.cacheVersion is required for schema v2.");
+    if (!style.styleAnchorVersion || typeof style.styleAnchorVersion !== "string") errors.push("Manifest style.styleAnchorVersion is required for schema v2.");
+    if (style.assetVersion != null) errors.push("Manifest schema v2 must use style.cacheVersion and style.styleAnchorVersion, not style.assetVersion.");
+  } else {
+    if (!style.assetVersion || typeof style.assetVersion !== "string") errors.push("Manifest style.assetVersion is required for schema v1.");
+  }
   if (!style.anchor || typeof style.anchor !== "string") errors.push("Manifest style.anchor is required.");
   if (!Array.isArray(style.palette) || style.palette.length < 4) errors.push("Manifest style.palette must include at least four colors.");
   for (const color of style.palette ?? []) {
@@ -192,6 +201,10 @@ function validateStyle(style) {
   if (typeof defaults.transparentBackground !== "boolean") {
     errors.push("Manifest style.generationDefaults.transparentBackground must be boolean.");
   }
+}
+
+function manifestStyleAnchorVersion() {
+  return manifest.schemaVersion === 2 ? manifest.style?.styleAnchorVersion : manifest.style?.assetVersion;
 }
 
 function validateOptionalMetadata(asset, id) {
@@ -213,6 +226,103 @@ function validateOptionalMetadata(asset, id) {
         errors.push(`${id} paletteKeys entries must be non-empty strings.`);
       }
     }
+  }
+}
+
+function validateAnimation(asset, id, referenced) {
+  const animation = asset.animation;
+  if (animation == null) return;
+  if (manifest.schemaVersion !== 2) {
+    errors.push(`${id} animation metadata requires manifest schema v2.`);
+    return;
+  }
+  if (typeof animation !== "object" || Array.isArray(animation)) {
+    errors.push(`${id} animation must be an object when present.`);
+    return;
+  }
+  if (!Number.isInteger(animation.frameCount) || animation.frameCount <= 0) {
+    errors.push(`${id} animation.frameCount must be a positive integer.`);
+  }
+  if (typeof animation.loop !== "boolean") errors.push(`${id} animation.loop must be boolean.`);
+  if (!Number.isInteger(animation.reducedMotionFrame) || animation.reducedMotionFrame < 0) {
+    errors.push(`${id} animation.reducedMotionFrame must be a non-negative integer.`);
+  }
+  if (
+    Number.isInteger(animation.frameCount)
+    && Number.isInteger(animation.reducedMotionFrame)
+    && animation.reducedMotionFrame >= animation.frameCount
+  ) {
+    errors.push(`${id} animation.reducedMotionFrame must be less than frameCount.`);
+  }
+  const hasFps = animation.fps != null;
+  const hasDurationMs = animation.durationMs != null;
+  if (hasFps === hasDurationMs) {
+    errors.push(`${id} animation must define exactly one of fps or durationMs.`);
+  }
+  if (hasFps && (!Number.isFinite(animation.fps) || animation.fps <= 0 || animation.fps > 30)) {
+    errors.push(`${id} animation.fps must be a positive number <= 30.`);
+  }
+  if (hasDurationMs && (!Number.isFinite(animation.durationMs) || animation.durationMs <= 0)) {
+    errors.push(`${id} animation.durationMs must be a positive number.`);
+  }
+
+  const frameImage = validateAnimationFrameSource(asset, id, referenced);
+  validateSpriteSheet(asset, id, frameImage);
+}
+
+function validateAnimationFrameSource(asset, id, referenced) {
+  const frameSource = asset.animation?.frameSource;
+  if (!frameSource || typeof frameSource !== "string") {
+    errors.push(`${id} animation.frameSource is required.`);
+    return null;
+  }
+  if (frameSource.includes("..") || normalize(frameSource).startsWith("..")) {
+    errors.push(`${id} animation.frameSource uses traversal: ${frameSource}`);
+    return null;
+  }
+  if (frameSource.startsWith("/") || frameSource.includes("://")) {
+    errors.push(`${id} animation.frameSource must be relative to public/pharosville/assets.`);
+    return null;
+  }
+  if (!frameSource.endsWith(".png")) errors.push(`${id} animation.frameSource must point to a PNG.`);
+  referenced.add(frameSource);
+  const fullPath = join(assetRoot, frameSource);
+  let bytes;
+  try {
+    bytes = readFileSync(fullPath);
+  } catch {
+    errors.push(`${id} animation frameSource file is missing: ${frameSource}`);
+    return null;
+  }
+  if (!bytes.subarray(0, pngSignature.length).equals(pngSignature)) {
+    errors.push(`${id} animation.frameSource is not a PNG file: ${frameSource}`);
+    return null;
+  }
+  return {
+    height: bytes.readUInt32BE(20),
+    width: bytes.readUInt32BE(16),
+  };
+}
+
+function validateSpriteSheet(asset, id, frameImage) {
+  const sheet = asset.animation?.spriteSheet;
+  if (sheet == null) return;
+  if (typeof sheet !== "object" || Array.isArray(sheet)) {
+    errors.push(`${id} animation.spriteSheet must be an object when present.`);
+    return;
+  }
+  for (const key of ["frameWidth", "frameHeight", "columns", "rows"]) {
+    if (!Number.isInteger(sheet[key]) || sheet[key] <= 0) {
+      errors.push(`${id} animation.spriteSheet.${key} must be a positive integer.`);
+    }
+  }
+  if (!Number.isInteger(sheet.columns) || !Number.isInteger(sheet.rows)) return;
+  if (Number.isInteger(asset.animation?.frameCount) && asset.animation.frameCount > sheet.columns * sheet.rows) {
+    errors.push(`${id} animation.frameCount exceeds spriteSheet columns * rows.`);
+  }
+  if (!frameImage || !Number.isInteger(sheet.frameWidth) || !Number.isInteger(sheet.frameHeight)) return;
+  if (frameImage.width < sheet.frameWidth * sheet.columns || frameImage.height < sheet.frameHeight * sheet.rows) {
+    errors.push(`${id} animation.spriteSheet geometry exceeds frameSource dimensions.`);
   }
 }
 

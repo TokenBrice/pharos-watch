@@ -25,7 +25,7 @@ Use this checklist for future `/pharosville/` work. Keep it agent-facing and upd
 - World-model changes should be pure and covered by focused system tests.
 - Renderer changes must keep hit testing, selected rings, follow-selected behavior, and debug samples aligned.
 - Motion changes must keep sampled routes deterministic, water-only where expected, and static under reduced motion.
-- Asset changes must update `public/pharosville/assets/manifest.json`, bump `style.assetVersion`, and pass asset validation.
+- Asset changes must update `public/pharosville/assets/manifest.json`, bump `style.cacheVersion` when bytes/geometry/animation frames change, keep provenance aligned with `style.styleAnchorVersion`, and pass asset validation.
 - Copy or route behavior changes may require `docs/pharosville-page.md`; process-only changes belong in `agents/pharosville/`.
 
 ## Pre-Claim Validation

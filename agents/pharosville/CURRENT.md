@@ -49,7 +49,8 @@ Historical plans in this directory are context, not live instructions. If they c
   - algorithmic backing -> legacy algorithmic junk
   - unknown -> defensive caravel fallback
 - Ship size is a compressed market-cap tier, not linear area.
-- The current lighthouse asset is `landmark.lighthouse` at `public/pharosville/assets/landmarks/lighthouse-alexandria.png`, with manifest asset version `2026-04-29-lighthouse-hill-v5`.
+- The current runtime manifest uses schema v2. `style.cacheVersion` controls image cache busting; `style.styleAnchorVersion` is the provenance/style anchor for generated assets.
+- The current lighthouse asset is `landmark.lighthouse` at `public/pharosville/assets/landmarks/lighthouse-alexandria.png`, with manifest cache/style version `2026-04-29-lighthouse-hill-v5`.
 
 ## Agent Workflow
 
