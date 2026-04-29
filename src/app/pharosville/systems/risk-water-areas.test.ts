@@ -211,7 +211,7 @@ describe("risk water areas", () => {
       { x: 44, y: 14 },
       { x: 49, y: 24 },
       { x: 35, y: 44 },
-      { x: 24, y: 35 },
+      { x: 22, y: 34 },
     ];
     for (const tile of peripherySamples) {
       const terrain = terrainKindAt(tile.x, tile.y);

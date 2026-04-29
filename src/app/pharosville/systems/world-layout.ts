@@ -112,12 +112,15 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
 
   if (isOutOfBounds(x, y) || island >= 1 || harborWater) {
     if (harborWater) return "harbor-water";
-    if (isDangerStrait(x, y)) return "storm-water";
-    if (isWarningShoals(x, y)) return "warning-water";
-    if (isAlertChannel(x, y)) return "alert-water";
-    if (isWatchBreakwater(x, y)) return "watch-water";
-    if (isLedgerMooring(x, y)) return "ledger-water";
-    if (isCalmAnchorage(x, y)) return "calm-water";
+    const inIslandPeriphery = island >= 1 && island < 1.1;
+    if (!inIslandPeriphery) {
+      if (isDangerStrait(x, y)) return "storm-water";
+      if (isWarningShoals(x, y)) return "warning-water";
+      if (isAlertChannel(x, y)) return "alert-water";
+      if (isWatchBreakwater(x, y)) return "watch-water";
+      if (isLedgerMooring(x, y)) return "ledger-water";
+      if (isCalmAnchorage(x, y)) return "calm-water";
+    }
     if (isDeepSeaShelf(x, y)) return "deep-water";
     return "water";
   }
@@ -172,63 +175,23 @@ function harborApproachValue(x: number, y: number): number {
 }
 
 function isAlertChannel(x: number, y: number): boolean {
-  const channel = ellipseValue(x, y, 35.0, 10.2, 7.6, 6.3) < 1
-    && x >= 28
-    && x <= 42
-    && y >= 4
-    && y <= 19;
-  const northEdgeAttachment = y <= 1
-    && x >= 34
-    && x <= 39;
-  return channel || northEdgeAttachment;
+  return x >= 30 && x <= 42 && y >= 0 && y <= 4;
 }
 
 function isWarningShoals(x: number, y: number): boolean {
-  const shoals = ellipseValue(x, y, 47.0, 16.5, 6.3, 7.5) < 1
-    && x >= 41
-    && x <= 53
-    && y >= 9
-    && y <= 25;
-  const eastEdgeAttachment = x >= 54
-    && y >= 8
-    && y <= 11;
-  return shoals || eastEdgeAttachment;
+  return x >= 50 && x <= 55 && y >= 5 && y <= 9;
 }
 
 function isDangerStrait(x: number, y: number): boolean {
-  const strait = ellipseValue(x, y, 53.5, 18.2, 4.7, 6.2) < 1
-    && x >= 50
-    && x <= 55
-    && y >= 12
-    && y <= 25;
-  const eastEdgeAttachment = x >= 54
-    && y >= 14
-    && y <= 24;
-  return strait || eastEdgeAttachment;
+  return x >= 51 && x <= 55 && y >= 14 && y <= 18;
 }
 
 function isWatchBreakwater(x: number, y: number): boolean {
-  const breakwater = ellipseValue(x, y, 23.1, 13.7, 12.2, 8.2) < 1
-    && x >= 11
-    && x <= 35
-    && y >= 5
-    && y <= 23;
-  const northEdgeAttachment = y <= 1
-    && x >= 22
-    && x <= 28;
-  return breakwater || northEdgeAttachment;
+  return x >= 1 && x <= 28 && y >= 0 && y <= 12;
 }
 
 function isCalmAnchorage(x: number, y: number): boolean {
-  const anchorage = ellipseValue(x, y, 9.0, 29.4, 17.2, 11.7) < 1
-    && x >= 0
-    && x <= 25
-    && y >= 18
-    && y <= 41;
-  const westEdgeAttachment = x <= 9
-    && y >= 20
-    && y <= 38;
-  return anchorage || westEdgeAttachment;
+  return x >= 0 && x <= 18 && y >= 20 && y <= 48;
 }
 
 function isCemeteryCausewayTile(x: number, y: number): boolean {
