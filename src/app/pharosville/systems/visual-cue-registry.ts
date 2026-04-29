@@ -11,6 +11,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "What is the overall Pharos Stability Index state?",
       failureState: "unlit/fogged lighthouse",
       domEquivalent: "lighthouse detail panel",
+      reducedMotionEquivalent: "static great-fire color and lighthouse detail PSI rows",
     },
     {
       id: "cue.dock.size",
@@ -21,6 +22,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "Which chains hold the largest stablecoin supply, and which stablecoins dominate each chain?",
       failureState: "dock unavailable state",
       domEquivalent: "dock ledger rows",
+      reducedMotionEquivalent: "static dock footprint and dock ledger rows",
     },
     {
       id: "cue.ship.distance",
@@ -31,6 +33,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "Which stablecoins are under peg or DEWS stress?",
       failureState: "data fog",
       domEquivalent: "ship detail placement explanation",
+      reducedMotionEquivalent: "static risk-water placement with route details in DOM",
     },
     {
       id: "cue.ship.motion",
@@ -41,6 +44,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "Where can this ship dock, how often does it visit, and which risk water anchors its route?",
       failureState: "reduced-motion static harbor mooring or risk patrol / data fog",
       domEquivalent: "ship detail route facts and accessibility ledger",
+      reducedMotionEquivalent: "representative harbor or risk-water position without RAF",
     },
     {
       id: "cue.water.semantic-terrain",
@@ -51,6 +55,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "Which named water areas encode calm, stale-evidence, alert, warning, danger, or freeze-tracker conditions?",
       failureState: "generic water texture with DOM area detail still available",
       domEquivalent: "named area detail panel and accessibility ledger rows",
+      reducedMotionEquivalent: "static semantic water texture and printed labels",
     },
     {
       id: "cue.ship.hull",
@@ -61,6 +66,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "Is the stablecoin CeFi, CeFi-dependent, or DeFi?",
       failureState: "generic hull",
       domEquivalent: "ship detail class row",
+      reducedMotionEquivalent: "same static hull silhouette",
     },
     {
       id: "cue.ship.rigging",
@@ -71,6 +77,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "Which governance class controls the base ship model?",
       failureState: "generic rigging",
       domEquivalent: "ship detail class row",
+      reducedMotionEquivalent: "same static rigging silhouette",
     },
     {
       id: "cue.ship.pennant",
@@ -81,6 +88,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "Which stablecoin is this, and what is its peg currency?",
       failureState: "symbol monogram on slate pennant",
       domEquivalent: "ship detail identity and peg rows",
+      reducedMotionEquivalent: "same static sail logo or monogram",
     },
     {
       id: "cue.ship.scale",
@@ -91,6 +99,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "Roughly how large is the stablecoin supply without letting outliers dominate the map?",
       failureState: "small default scale",
       domEquivalent: "ship detail market-cap and size-tier rows",
+      reducedMotionEquivalent: "same static compressed size tier",
     },
     {
       id: "cue.cemetery",
@@ -101,6 +110,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "Which assets are dead or frozen?",
       failureState: "cemetery unavailable row",
       domEquivalent: "cemetery ledger rows",
+      reducedMotionEquivalent: "same static tomb marker and cause plaque",
     },
     {
       id: "cue.ship-cluster",
@@ -111,6 +121,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "Where are long-tail stablecoins grouped after the individual ship budget is reached?",
       failureState: "cluster omitted and represented in DOM ledger only",
       domEquivalent: "long-tail cluster detail panel and accessibility ledger rows",
+      reducedMotionEquivalent: "same static cluster marker and member list",
     },
     {
       id: "cue.building.mint-burn-foundry",
@@ -121,6 +132,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "Are configured issuance-chain events mint-heavy, burn-heavy, balanced, quiet, or stale?",
       failureState: "dim foundry with data fog",
       domEquivalent: "Royal Mint And Burn Foundry detail facts and accessibility ledger row",
+      reducedMotionEquivalent: "static foundry glow, frozen sparks, and detail facts",
     },
     {
       id: "cue.area.north-froze-pole",
@@ -131,6 +143,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "How much observed freeze activity is active or recent in the blacklist tracker?",
       failureState: "fogged northern water with muted ice texture",
       domEquivalent: "North Froze Pole area detail facts and accessibility ledger row",
+      reducedMotionEquivalent: "static ice seams, cold mist, and area detail facts",
     },
     {
       id: "cue.building.exit-route-gatehouse",
@@ -141,6 +154,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "How deep, open, concentrated, or stale are observed and modeled exit routes?",
       failureState: "closed gray gate with still water",
       domEquivalent: "Exit Route Gatehouse detail facts and accessibility ledger row",
+      reducedMotionEquivalent: "static gate water level, lantern, and detail facts",
     },
     {
       id: "cue.building.yield-orchard",
@@ -151,6 +165,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "How broad and fresh is yield source coverage, and is source context switching or warning?",
       failureState: "dim orchard with static well",
       domEquivalent: "Yield Orchard And Moonwell detail facts and accessibility ledger row",
+      reducedMotionEquivalent: "static orchard glints, well glow, and detail facts",
     },
     {
       id: "cue.building.dependency-loom",
@@ -161,6 +176,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "How many direct dependency links and hubs exist in the report-card graph?",
       failureState: "desaturated loom with no thread pulses",
       domEquivalent: "Dependency Loom / Chainworks detail facts and accessibility ledger row",
+      reducedMotionEquivalent: "static thread arcs, gears, and detail facts",
     },
   ];
 }

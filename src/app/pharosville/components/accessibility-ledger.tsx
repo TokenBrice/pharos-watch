@@ -128,7 +128,7 @@ export function AccessibilityLedger({
         {world.visualCues.map((cue) => (
           <li key={cue.id}>
             {cue.visual}: answers {cue.questionAnswered}; DOM equivalent {cue.domEquivalent}; failure state{" "}
-            {cue.failureState}.
+            {cue.failureState}; reduced motion {cue.reducedMotionEquivalent}.
           </li>
         ))}
       </ol>

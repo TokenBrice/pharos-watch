@@ -4,7 +4,13 @@ The renderer turns a pure `PharosVilleWorld` model into a Canvas 2D scene plus a
 
 ## Files
 
-- `world-canvas.ts` draws sky, terrain, assets, entity effects, labels/signs, motion samples, and selection state.
+- `world-canvas.ts` draws sky, terrain, assets, entity effects, printed labels,
+  motion samples, and selection state.
+- `geometry.ts` owns shared render geometry for sprite draw points, manifest
+  hitboxes, dock harbor offsets, printed area label targets, and follow-selected
+  anchors used by drawing, hit testing, and the route shell.
+- `drawable-pass.ts` owns stable isometric depth ordering helpers for
+  overlap-prone entity groups.
 - `hit-testing.ts` builds selectable rectangles for lighthouse, docks, ships, clusters, graves, buildings, and named areas.
 - `asset-manager.ts` loads the local manifest-backed PNG assets and logo images.
 - `hit-testing.test.ts` protects target ordering, manifest hitboxes, moving ship target rectangles, and building selectability.
@@ -20,6 +26,10 @@ The renderer turns a pure `PharosVilleWorld` model into a Canvas 2D scene plus a
 ## Contracts
 
 - Drawing, hit testing, debug frame state, selected rings, and follow-selected behavior must use the same sampled ship positions.
+- Drawing and hit testing must use `geometry.ts` for overlap-prone entity
+  anchors instead of duplicating dock, sprite, or printed-label math.
+- Overlap-prone groups should use `drawable-pass.ts` sorting before deeper
+  layer extraction.
 - The renderer must remain a consumer of world data. Add new semantics in `systems/` first, then draw them.
 - Reduced motion draws a deterministic static frame and must not require a running RAF loop.
 - Asset IDs must resolve through `public/pharosville/assets/manifest.json`; runtime code must not use prototype paths or remote image URLs.

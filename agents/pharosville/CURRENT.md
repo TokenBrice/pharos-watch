@@ -24,6 +24,7 @@ Historical plans in this directory are context, not live instructions. If they c
 - Deterministic ship routes: `src/app/pharosville/systems/motion.ts`
 - Detail/DOM parity: `src/app/pharosville/systems/detail-model.ts`, `src/app/pharosville/components/accessibility-ledger.tsx`
 - Renderer and hit testing: `src/app/pharosville/renderer/world-canvas.ts`, `src/app/pharosville/renderer/hit-testing.ts`
+- Shared render geometry: `src/app/pharosville/renderer/geometry.ts`
 - Asset manifest/types: `public/pharosville/assets/manifest.json`, `src/app/pharosville/systems/asset-manifest.ts`
 
 ## Current Route Invariants
@@ -32,6 +33,8 @@ Historical plans in this directory are context, not live instructions. If they c
 - PharosVille uses existing frontend hooks and API payloads. Do not add Worker/API sources for visual-only route changes unless the user explicitly asks for a new data contract.
 - The world model should stay pure and deterministic. Canvas drawing, hit testing, selected rings, follow-selected behavior, and debug frame state must sample the same motion model.
 - Reduced-motion users get a deterministic non-animated frame without a running RAF loop.
+- Normal motion uses one route-owned RAF clock. Motion caps, cue priority, and
+  debug expectations are recorded in `agents/pharosville/MOTION_POLICY.md`.
 - Canvas is not the only source of analytical meaning. Any new visual signal needs matching detail-panel or accessibility-ledger text.
 - Ship placement and semantic water zones express peg/DEWS risk or source confidence. Dock visits express positive chain presence and supply share; they must not imply bridge volume, transaction flow, or real-time transfers.
 - Stale or missing peg evidence maps to data fog or degraded evidence, not storm/depeg risk.
@@ -42,6 +45,9 @@ Historical plans in this directory are context, not live instructions. If they c
 
 - Chain harbors are built from top chain supply and capped by `MAX_CHAIN_HARBORS` in `chain-docks.ts`.
 - The authored map is `56 x 56` tiles. Deep outer water is intentionally a narrow perimeter shelf, not a large default border.
+- Named sea areas use printed cartographic water labels backed by
+  `systems/area-labels.ts`; renderer drawing, hit targets, and follow-selected
+  behavior must use the same placement metadata.
 - Sea terrain is semantic: harbor water, brackish stale-evidence water, alert current, warning shoals, storm strait, frozen water, generic navigable water, and deep outer shelf each have distinct palette/texture handling.
 - Dock sprites are rank/preference selected through manifest IDs such as `dock.grand-quay`, `dock.rollup-ferry-slip`, and `dock.bridge-pontoon`.
 - Ship class is derived from governance/backing metadata:

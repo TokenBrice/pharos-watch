@@ -1,9 +1,15 @@
 import type { IsoCamera, ScreenPoint } from "../systems/projection";
-import { tileToScreen } from "../systems/projection";
 import type { ShipMotionSample } from "../systems/motion";
 import type { PharosVilleWorld } from "../systems/world-types";
-import { areaLabelPlacementForArea } from "../systems/area-labels";
-import type { PharosVilleAssetManager, LoadedPharosVilleAsset } from "./asset-manager";
+import type { PharosVilleAssetManager } from "./asset-manager";
+import {
+  areaLabelTargetRect,
+  assetTargetRect,
+  entityAssetId,
+  entityScreenPoint,
+  fallbackTargetRect,
+  type WorldSelectableEntity,
+} from "./geometry";
 
 export interface HitTarget {
   detailId: string;
@@ -14,133 +20,7 @@ export interface HitTarget {
   rect: { height: number; width: number; x: number; y: number };
 }
 
-type SelectableEntity =
-  | PharosVilleWorld["lighthouse"]
-  | PharosVilleWorld["docks"][number]
-  | PharosVilleWorld["ships"][number]
-  | PharosVilleWorld["shipClusters"][number]
-  | PharosVilleWorld["areas"][number]
-  | PharosVilleWorld["graves"][number]
-  | PharosVilleWorld["buildings"][number];
-
-function targetSize(entity: SelectableEntity): { height: number; width: number; yOffset: number } {
-  if (entity.kind === "lighthouse") return { height: 190, width: 96, yOffset: -82 };
-  if (entity.kind === "dock") return { height: 38, width: 96, yOffset: 0 };
-  if (entity.kind === "area") return { height: 28, width: 112, yOffset: 0 };
-  if (entity.kind === "building") return { height: 88, width: 104, yOffset: -34 };
-  if (entity.kind === "ship") return { height: 48, width: 56, yOffset: -16 };
-  if (entity.kind === "ship-cluster") return { height: 48, width: 48, yOffset: -12 };
-  return { height: 34 * entity.visual.scale, width: 30 * entity.visual.scale, yOffset: -10 * entity.visual.scale };
-}
-
-function assetIdForEntity(entity: SelectableEntity) {
-  if (entity.kind === "lighthouse") return "landmark.lighthouse";
-  if (entity.kind === "dock") return entity.assetId;
-  if (entity.kind === "building") return entity.assetId;
-  if (entity.kind === "ship") return `ship.${entity.visual.hull}`;
-  return null;
-}
-
-function assetDrawPoint(input: {
-  asset: LoadedPharosVilleAsset;
-  camera: IsoCamera;
-  entity: SelectableEntity;
-  mapWidth: number;
-  point: ScreenPoint;
-}) {
-  const { asset, camera, entity, mapWidth, point } = input;
-  let x = point.x;
-  let y = point.y;
-  let scale = camera.zoom * asset.entry.displayScale;
-  if (entity.kind === "lighthouse") {
-    y += 3 * camera.zoom;
-    scale *= 1.48;
-  } else if (entity.kind === "dock") {
-    const draw = dockAssetDrawPoint(entity, camera, mapWidth);
-    x = draw.x;
-    y = draw.y;
-    scale *= dockRenderScale(entity.size);
-  } else if (entity.kind === "building") {
-    y += 4 * camera.zoom;
-    scale *= 0.58 * entity.visual.scale;
-  } else if (entity.kind === "ship") {
-    y += 12 * camera.zoom;
-    scale *= entity.visual.scale * 0.7;
-  } else if (entity.kind === "grave") {
-    y += 2 * camera.zoom;
-    scale *= 0.47 * entity.visual.scale;
-  }
-  return { scale, x, y };
-}
-
-function dockAssetDrawPoint(
-  dock: Extract<SelectableEntity, { kind: "dock" }>,
-  camera: IsoCamera,
-  mapWidth: number,
-): ScreenPoint {
-  const outward = dockOutwardVector(dock.tile, mapWidth);
-  const reach = 0.72 + dock.size * 0.075;
-  const p = tileToScreen({
-    x: dock.tile.x + outward.x * reach,
-    y: dock.tile.y + outward.y * reach,
-  }, camera);
-  return {
-    x: p.x,
-    y: p.y + 10 * camera.zoom,
-  };
-}
-
-function dockOutwardVector(tile: { x: number; y: number }, mapWidth: number): { x: -1 | 0 | 1; y: -1 | 0 | 1 } {
-  const center = (mapWidth - 1) / 2;
-  const dx = tile.x - center;
-  const dy = tile.y - center;
-  if (Math.abs(dx) >= Math.abs(dy)) return { x: dx < 0 ? -1 : 1, y: 0 };
-  return { x: 0, y: dy < 0 ? -1 : 1 };
-}
-
-function dockRenderScale(size: number): number {
-  return Math.max(0.43, Math.min(0.79, (0.66 + size * 0.092) * 0.5));
-}
-
-function assetTargetRect(input: {
-  asset: LoadedPharosVilleAsset;
-  camera: IsoCamera;
-  entity: SelectableEntity;
-  mapWidth: number;
-  point: ScreenPoint;
-}): HitTarget["rect"] {
-  const { asset, camera, entity, mapWidth, point } = input;
-  const draw = assetDrawPoint({ asset, camera, entity, mapWidth, point });
-  const [hitX, hitY, hitWidth, hitHeight] = asset.entry.hitbox;
-  return {
-    height: Math.max(24, hitHeight * draw.scale),
-    width: Math.max(24, hitWidth * draw.scale),
-    x: draw.x - asset.entry.anchor[0] * draw.scale + hitX * draw.scale,
-    y: draw.y - asset.entry.anchor[1] * draw.scale + hitY * draw.scale,
-  };
-}
-
-function areaLabelTargetRect(area: Extract<SelectableEntity, { kind: "area" }>, camera: IsoCamera): HitTarget["rect"] {
-  const placement = areaLabelPlacementForArea(area);
-  const point = tileToScreen(placement.anchorTile, camera);
-  const labelScale = Math.max(0.72, camera.zoom);
-  const width = Math.max(52, placement.maxWidth * labelScale);
-  const height = Math.max(26, placement.hitboxHeight * labelScale);
-  const x = placement.align === "left"
-    ? point.x
-    : placement.align === "right"
-      ? point.x - width
-      : point.x - width / 2;
-
-  return {
-    height,
-    width,
-    x,
-    y: point.y - height / 2,
-  };
-}
-
-function targetPriority(entity: SelectableEntity, selectedDetailId: string | null, hoveredDetailId: string | null): number {
+function targetPriority(entity: WorldSelectableEntity, selectedDetailId: string | null, hoveredDetailId: string | null): number {
   let priority = 0;
   if (entity.detailId === selectedDetailId) priority += 32;
   if (entity.detailId === hoveredDetailId) priority += 24;
@@ -162,7 +42,7 @@ export function collectHitTargets(input: {
   shipMotionSamples?: ReadonlyMap<string, ShipMotionSample>;
   world: PharosVilleWorld;
 }): HitTarget[] {
-  const entities: SelectableEntity[] = [
+  const entities: WorldSelectableEntity[] = [
     input.world.lighthouse,
     ...input.world.docks,
     ...input.world.ships,
@@ -173,13 +53,14 @@ export function collectHitTargets(input: {
   ];
 
   return entities.map((entity) => {
-    const tile = entity.kind === "ship"
-      ? input.shipMotionSamples?.get(entity.id)?.tile ?? entity.tile
-      : entity.tile;
-    const point = tileToScreen(tile, input.camera);
-    const assetId = assetIdForEntity(entity);
+    const point = entityScreenPoint({
+      camera: input.camera,
+      entity,
+      mapWidth: input.world.map.width,
+      shipMotionSamples: input.shipMotionSamples,
+    });
+    const assetId = entityAssetId(entity);
     const asset = assetId ? input.assets?.get(assetId) ?? null : null;
-    const size = targetSize(entity);
     return {
       detailId: entity.detailId,
       id: entity.id,
@@ -192,12 +73,7 @@ export function collectHitTargets(input: {
         entity,
         mapWidth: input.world.map.width,
         point,
-      }) : {
-        height: Math.max(24, size.height * input.camera.zoom),
-        width: Math.max(24, size.width * input.camera.zoom),
-        x: point.x - Math.max(24, size.width * input.camera.zoom) / 2,
-        y: point.y + size.yOffset * input.camera.zoom - Math.max(24, size.height * input.camera.zoom) / 2,
-      },
+      }) : fallbackTargetRect(entity, input.camera, point),
     };
   });
 }

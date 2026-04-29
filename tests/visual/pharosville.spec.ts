@@ -35,6 +35,7 @@ type DebugCamera = {
 };
 
 type PharosVilleVisualDebug = {
+  activeMotionLoopCount?: number;
   animationFramePending?: boolean;
   assetLoadErrors?: unknown[];
   assetsLoaded?: boolean;
@@ -43,6 +44,16 @@ type PharosVilleVisualDebug = {
   canvasSize?: { x: number; y: number };
   criticalAssetsLoaded?: boolean;
   deferredAssetsLoaded?: boolean;
+  motionClockSource?: "requestAnimationFrame" | "reduced-motion-static-frame";
+  motionCueCounts?: {
+    ambientBirds: number;
+    animatedShips: number;
+    buildingEffects: number;
+    effectShips: number;
+    harborLights: number;
+    moverShips: number;
+    selectedRelationshipOverlays: number;
+  };
   motionFrameCount?: number;
   reducedMotion?: boolean;
   shipMotionSamples?: DebugShipMotionSample[];
@@ -738,6 +749,54 @@ test("pharosville short desktop fallback avoids clipped map", async ({ page }) =
   expect(deniedRequests).toEqual([]);
 });
 
+test("pharosville desktop gate includes threshold viewport and excludes edge-below viewports", async ({ page }) => {
+  await mockPharosVilleData(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+
+  await page.setViewportSize({ width: 1280, height: 760 });
+  await page.goto("/pharosville/");
+  await expect(page.getByTestId("pharosville-canvas")).toBeVisible();
+  await waitForRuntimeDebug(page, true);
+
+  await page.setViewportSize({ width: 1279, height: 760 });
+  await expect(page.getByText("PharosVille needs a wider harbor.")).toBeVisible();
+  await expect(page.getByTestId("pharosville-canvas")).toHaveCount(0);
+
+  await page.setViewportSize({ width: 1280, height: 759 });
+  await expect(page.getByText("PharosVille needs a wider harbor.")).toBeVisible();
+  await expect(page.getByTestId("pharosville-canvas")).toHaveCount(0);
+});
+
+test("pharosville resizing below desktop gate unmounts world runtime and stops gated requests", async ({ page }) => {
+  await mockPharosVilleData(page);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/pharosville/");
+  await waitForRuntimeDebug(page, false);
+  const beforeResize = await readRuntimeSnapshot(page);
+  expect(beforeResize.activeMotionLoopCount).toBe(1);
+
+  const postResizeGatedRequests: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (isPharosVilleViewportGatedRequest(url)) {
+      postResizeGatedRequests.push(`${url.pathname}${url.search}`);
+    }
+  });
+
+  await page.setViewportSize({ width: 1279, height: 759 });
+  await expect(page.getByText("PharosVille needs a wider harbor.")).toBeVisible();
+  await expect(page.getByTestId("pharosville-canvas")).toHaveCount(0);
+  await page.waitForTimeout(150);
+
+  const debugAfterResize = await page.evaluate(() => {
+    const debug = (window as typeof window & { __pharosVilleDebug?: PharosVilleVisualDebug }).__pharosVilleDebug;
+    return debug ?? null;
+  });
+  expect(debugAfterResize).toBeNull();
+  expect(postResizeGatedRequests).toEqual([]);
+});
+
 test("pharosville ultrawide canvas keeps DPR backing store capped", async ({ baseURL, browser }) => {
   const context = await browser.newContext({
     deviceScaleFactor: 3,
@@ -943,6 +1002,9 @@ test("pharosville reduced motion keeps ship samples static without RAF", async (
   expect(second.motionFrameCount).toBe(0);
   expect(first.animationFramePending).toBe(false);
   expect(second.animationFramePending).toBe(false);
+  expect(first.activeMotionLoopCount).toBe(0);
+  expect(second.activeMotionLoopCount).toBe(0);
+  expect(first.motionClockSource).toBe("reduced-motion-static-frame");
   expect(first.timeSeconds).toBe(0);
   expect(second.timeSeconds).toBe(0);
   expect(first.shipMotionSamples.length).toBeGreaterThan(0);
@@ -958,6 +1020,7 @@ test("pharosville responds to live reduced-motion preference transitions", async
 
   const beforeReduce = await readRuntimeSnapshot(page);
   expect(beforeReduce.reducedMotion).toBe(false);
+  expect(beforeReduce.activeMotionLoopCount).toBe(1);
   expect(beforeReduce.motionFrameCount).toBeGreaterThan(0);
 
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -965,6 +1028,7 @@ test("pharosville responds to live reduced-motion preference transitions", async
   const reduced = await readRuntimeSnapshot(page);
   expect(reduced.reducedMotion).toBe(true);
   expect(reduced.animationFramePending).toBe(false);
+  expect(reduced.activeMotionLoopCount).toBe(0);
   expect(reduced.timeSeconds).toBe(0);
 
   await page.waitForTimeout(250);
@@ -979,6 +1043,7 @@ test("pharosville responds to live reduced-motion preference transitions", async
   const afterRestore = await readRuntimeSnapshot(page);
   expect(afterRestore.reducedMotion).toBe(false);
   expect(afterRestore.animationFramePending).toBe(true);
+  expect(afterRestore.activeMotionLoopCount).toBe(1);
   expect(afterRestore.motionFrameCount).toBeGreaterThan(reducedLater.motionFrameCount);
 });
 
@@ -1031,6 +1096,13 @@ test.describe("pharosville normal motion", () => {
     await waitForRuntimeDebug(page, false);
 
     const movedSample = await waitForMovingShipSample(page);
+    const runtime = await readRuntimeSnapshot(page);
+    expect(runtime.activeMotionLoopCount).toBe(1);
+    expect(runtime.motionClockSource).toBe("requestAnimationFrame");
+    expect(runtime.motionCueCounts?.selectedRelationshipOverlays).toBeLessThanOrEqual(1);
+    expect(runtime.motionCueCounts?.ambientBirds).toBeLessThanOrEqual(9);
+    expect(runtime.motionCueCounts?.harborLights).toBeLessThanOrEqual(3);
+    expect(runtime.motionCueCounts?.effectShips ?? 0).toBeLessThanOrEqual(runtime.motionCueCounts?.animatedShips ?? 0);
     const movingDetailId = `ship.${movedSample.id}`;
     const selection = await clickMapTargetWithPoint(page, "ship", movingDetailId);
     expect(selection.detailId).toBe(movingDetailId);
@@ -1068,7 +1140,10 @@ async function readRuntimeSnapshot(page: Page) {
       __pharosVilleDebug?: PharosVilleVisualDebug;
     }).__pharosVilleDebug;
     return {
+      activeMotionLoopCount: debug?.activeMotionLoopCount ?? -1,
       animationFramePending: debug?.animationFramePending ?? true,
+      motionClockSource: debug?.motionClockSource ?? null,
+      motionCueCounts: debug?.motionCueCounts ?? null,
       motionFrameCount: debug?.motionFrameCount ?? -1,
       reducedMotion: debug?.reducedMotion ?? null,
       shipMotionSamples: debug?.shipMotionSamples ?? [],

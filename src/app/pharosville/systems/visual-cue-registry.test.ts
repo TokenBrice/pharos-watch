@@ -55,7 +55,7 @@ describe("buildVisualCueRegistry", () => {
       target: { kind: "ship" },
       primaryChannels: ["motion", "position", "opacity"],
     });
-    expect(cues.every((cue) => cue.sourceField && cue.domEquivalent && cue.failureState)).toBe(true);
+    expect(cues.every((cue) => cue.sourceField && cue.domEquivalent && cue.failureState && cue.reducedMotionEquivalent)).toBe(true);
   });
 
   it("uses explicit typed targets instead of cue-id suffixes for building and North Froze Pole coverage", () => {
@@ -109,10 +109,20 @@ describe("buildVisualCueRegistry", () => {
       expect(cue.questionAnswered.trim()).not.toBe("");
       expect(cue.failureState.trim()).not.toBe("");
       expect(cue.domEquivalent.trim()).not.toBe("");
+      expect(cue.reducedMotionEquivalent.trim()).not.toBe("");
       expect(cue.target.kind).toBeTruthy();
       expect(cue.primaryChannels.length).toBeGreaterThan(0);
       expect(cue.primaryChannels.every((channel) => allowed.has(channel))).toBe(true);
       expect(cue.primaryChannels).not.toEqual(["color"]);
+    }
+  });
+
+  it("requires motion cues to document reduced-motion equivalents", () => {
+    const motionCues = buildVisualCueRegistry().filter((cue) => cue.primaryChannels.includes("motion"));
+
+    expect(motionCues).not.toHaveLength(0);
+    for (const cue of motionCues) {
+      expect(cue.reducedMotionEquivalent).toMatch(/static|without RAF|frozen|representative/i);
     }
   });
 

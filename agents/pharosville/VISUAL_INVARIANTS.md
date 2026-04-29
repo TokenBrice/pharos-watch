@@ -64,5 +64,12 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 ## Accessibility And Motion
 
 - Reduced motion freezes animation while preserving static status encodings.
+- Normal motion must use the single PharosVille canvas clock; independent
+  analytical CSS animations, intervals, sprite loops, or minimap loops are not
+  allowed.
+- Motion priority is selected/focused entity, active risk or critical PSI,
+  recent data change, building state, then ambient life.
+- Motion caps and debug fields are governed by
+  [`MOTION_POLICY.md`](./MOTION_POLICY.md).
 - Keyboard pan, Escape clear, toolbar controls, click selection, and blank-map click-to-close are part of the interaction contract.
 - The detail panel and accessibility ledger must remain useful without reading canvas pixels.

@@ -7,12 +7,12 @@ import { DetailPanel } from "./components/detail-panel";
 import { WorldToolbar } from "./components/world-toolbar";
 import { useFullscreenMode } from "./hooks/use-fullscreen-mode";
 import { PharosVilleAssetManager, type PharosVilleAssetLoadError } from "./renderer/asset-manager";
+import { entityFollowTile } from "./renderer/geometry";
 import { collectHitTargets, hitTest, type HitTarget } from "./renderer/hit-testing";
 import { drawPharosVille } from "./renderer/world-canvas";
-import { areaLabelPlacementForArea } from "./systems/area-labels";
 import { cameraZoomLabel, clampCameraToMap, defaultCamera, followTile, panCamera, zoomIn, zoomOut } from "./systems/camera";
 import { resolveCanvasBudget } from "./systems/canvas-budget";
-import { buildMotionPlan, resolveShipMotionSample, type ShipMotionSample } from "./systems/motion";
+import { buildBaseMotionPlan, buildMotionPlan, resolveShipMotionSample, type ShipMotionSample } from "./systems/motion";
 import { zoomCameraAt, type IsoCamera, type ScreenPoint } from "./systems/projection";
 import { observeReducedMotion } from "./systems/reduced-motion";
 import type { PharosVilleWorld as PharosVilleWorldModel } from "./systems/world-types";
@@ -45,7 +45,8 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
   const [reducedMotion, setReducedMotion] = useState(true);
   const shellRef = useRef<HTMLElement | null>(null);
   const { exitFullscreen, fullscreenMode, toggleFullscreen } = useFullscreenMode(shellRef);
-  const motionPlan = useMemo(() => buildMotionPlan(world, selectedDetailId), [selectedDetailId, world]);
+  const baseMotionPlan = useMemo(() => buildBaseMotionPlan(world), [world]);
+  const motionPlan = useMemo(() => buildMotionPlan(world, selectedDetailId, baseMotionPlan), [baseMotionPlan, selectedDetailId, world]);
   const selectedEntity = useMemo(() => findWorldEntity(world, selectedDetailId), [selectedDetailId, world]);
   const selectedDetail = selectedDetailId ? world.detailIndex[selectedDetailId] ?? null : null;
 
@@ -231,7 +232,10 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
         animationFramePending: animationFramePendingRef.current,
         frameCount: motionFrameCountRef.current,
         frameState: nextFrameState,
+        motionPlan,
         reducedMotion,
+        selectedDetailId,
+        world,
       });
     };
     drawFrame(performance.now());
@@ -254,9 +258,12 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
       assetsLoaded: criticalAssetsLoaded && deferredAssetsLoaded,
       criticalAssetsLoaded,
       deferredAssetsLoaded,
+      activeMotionLoopCount: reducedMotion || !animationFramePendingRef.current ? 0 : 1,
       animationFramePending: animationFramePendingRef.current,
       canvasBudget: canvasBudgetRef.current,
       canvasSize,
+      motionClockSource: reducedMotion ? "reduced-motion-static-frame" : "requestAnimationFrame",
+      motionCueCounts: motionCueCounts({ motionPlan, selectedDetailId, world }),
       motionFrameCount: motionFrameCountRef.current,
       reducedMotion,
       selectedDetailAnchor,
@@ -268,7 +275,7 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
     return () => {
       delete debugWindow.__pharosVilleDebug;
     };
-  }, [assetLoadErrors, camera, canvasSize, criticalAssetsLoaded, deferredAssetsLoaded, reducedMotion, selectedDetailAnchor, selectedDetailId, world.map]);
+  }, [assetLoadErrors, camera, canvasSize, criticalAssetsLoaded, deferredAssetsLoaded, motionPlan, reducedMotion, selectedDetailAnchor, selectedDetailId, world]);
 
   const canvasPoint = useCallback((event: ReactPointerEvent<HTMLCanvasElement> | ReactWheelEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -344,11 +351,11 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
 
   const handleFollowSelected = useCallback(() => {
     if (!selectedEntity) return;
-    const sampledTile = selectedEntity.kind === "ship"
-      ? currentShipMotionSamplesRef.current.get(selectedEntity.id)?.tile ?? selectedEntity.tile
-      : selectedEntity.kind === "area"
-        ? areaLabelPlacementForArea(selectedEntity).anchorTile
-      : selectedEntity.tile;
+    const sampledTile = entityFollowTile({
+      entity: selectedEntity,
+      mapWidth: world.map.width,
+      shipMotionSamples: currentShipMotionSamplesRef.current,
+    });
     setCamera((previous) => previous ? followTile({
       camera: previous,
       map: world.map,
@@ -506,6 +513,7 @@ type CompactShipMotionSample = {
 };
 
 type PharosVilleDebugState = {
+  activeMotionLoopCount: number;
   assetLoadErrors: PharosVilleAssetLoadError[];
   camera: IsoCamera | null;
   cameraWithinBounds: boolean;
@@ -515,6 +523,8 @@ type PharosVilleDebugState = {
   canvasBudget: ReturnType<typeof resolveCanvasBudget> | null;
   canvasSize: ScreenPoint;
   animationFramePending: boolean;
+  motionClockSource: "requestAnimationFrame" | "reduced-motion-static-frame";
+  motionCueCounts: MotionCueCounts;
   motionFrameCount: number;
   reducedMotion: boolean;
   selectedDetailAnchor: DetailAnchor | null;
@@ -523,6 +533,19 @@ type PharosVilleDebugState = {
   targets: readonly HitTarget[];
   timeSeconds: number;
 };
+
+type MotionCueCounts = {
+  ambientBirds: number;
+  animatedShips: number;
+  buildingEffects: number;
+  effectShips: number;
+  harborLights: number;
+  moverShips: number;
+  selectedRelationshipOverlays: number;
+};
+
+const PHAROSVILLE_AMBIENT_BIRD_CAP = 9;
+const PHAROSVILLE_HARBOR_LIGHT_CAP = 3;
 
 function collectShipMotionSamples(input: {
   motionPlan: ReturnType<typeof buildMotionPlan>;
@@ -560,7 +583,10 @@ function updateDebugFrame(input: {
     targets: readonly HitTarget[];
     timeSeconds: number;
   };
+  motionPlan: ReturnType<typeof buildMotionPlan>;
   reducedMotion: boolean;
+  selectedDetailId: string | null;
+  world: PharosVilleWorldModel;
 }) {
   if (process.env.NODE_ENV === "production" && window.location.hostname !== "localhost") return;
   const debugWindow = window as typeof window & {
@@ -568,11 +594,36 @@ function updateDebugFrame(input: {
   };
   if (!debugWindow.__pharosVilleDebug) return;
   Object.assign(debugWindow.__pharosVilleDebug, {
+    activeMotionLoopCount: input.reducedMotion || !input.animationFramePending ? 0 : 1,
     animationFramePending: input.animationFramePending,
+    motionClockSource: input.reducedMotion ? "reduced-motion-static-frame" : "requestAnimationFrame",
+    motionCueCounts: motionCueCounts({
+      motionPlan: input.motionPlan,
+      selectedDetailId: input.selectedDetailId,
+      world: input.world,
+    }),
     motionFrameCount: input.frameCount,
     reducedMotion: input.reducedMotion,
     shipMotionSamples: compactShipMotionSamples(input.frameState.samples),
     targets: input.frameState.targets,
     timeSeconds: input.frameState.timeSeconds,
   });
+}
+
+function motionCueCounts(input: {
+  motionPlan: ReturnType<typeof buildMotionPlan>;
+  selectedDetailId: string | null;
+  world: PharosVilleWorldModel;
+}): MotionCueCounts {
+  const selectedDetail = input.selectedDetailId ? input.world.detailIndex[input.selectedDetailId] ?? null : null;
+  const selectedRelationshipOverlays = selectedDetail && /ship|dock/i.test(selectedDetail.kind) ? 1 : 0;
+  return {
+    ambientBirds: PHAROSVILLE_AMBIENT_BIRD_CAP,
+    animatedShips: input.motionPlan.animatedShipIds.size,
+    buildingEffects: input.world.buildings.length,
+    effectShips: input.motionPlan.effectShipIds.size,
+    harborLights: PHAROSVILLE_HARBOR_LIGHT_CAP,
+    moverShips: input.motionPlan.moverShipIds.size,
+    selectedRelationshipOverlays,
+  };
 }

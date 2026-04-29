@@ -54,6 +54,15 @@ export interface PharosVilleMotionPlan {
   shipRoutes: ReadonlyMap<string, ShipMotionRoute>;
 }
 
+export interface PharosVilleBaseMotionPlan {
+  animatedShipIds: ReadonlySet<string>;
+  baseEffectShipIds: ReadonlySet<string>;
+  lighthouseFireFlickerPerSecond: number;
+  moverShipIds: ReadonlySet<string>;
+  shipPhases: ReadonlyMap<string, number>;
+  shipRoutes: ReadonlyMap<string, ShipMotionRoute>;
+}
+
 const BAND_FIRE_FLICKER_SPEED: Record<string, number> = {
   critical: 0.18,
   danger: 0.28,
@@ -108,7 +117,7 @@ const OPEN_WATER_PATROL_WAYPOINTS: Record<ShipWaterZone, readonly { x: number; y
   ],
 };
 
-export function buildMotionPlan(world: PharosVilleWorld, selectedDetailId: string | null): PharosVilleMotionPlan {
+export function buildBaseMotionPlan(world: PharosVilleWorld): PharosVilleBaseMotionPlan {
   const topShips = world.ships
     .toSorted((a, b) => b.marketCapUsd - a.marketCapUsd)
     .slice(0, 48);
@@ -116,21 +125,38 @@ export function buildMotionPlan(world: PharosVilleWorld, selectedDetailId: strin
     .filter(hasRecentMove)
     .toSorted((a, b) => Math.abs(b.change24hUsd ?? 0) - Math.abs(a.change24hUsd ?? 0))
     .slice(0, 16);
-  const effectShipIds = new Set<string>();
-  const selectedShip = selectedDetailId
-    ? world.ships.find((ship) => ship.detailId === selectedDetailId)
-    : null;
-  if (selectedShip) effectShipIds.add(selectedShip.id);
-  for (const ship of topShips) effectShipIds.add(ship.id);
-  for (const ship of moverShips) effectShipIds.add(ship.id);
+  const baseEffectShipIds = new Set<string>();
+  for (const ship of topShips) baseEffectShipIds.add(ship.id);
+  for (const ship of moverShips) baseEffectShipIds.add(ship.id);
 
   return {
     animatedShipIds: new Set(world.ships.map((ship) => ship.id)),
-    effectShipIds,
+    baseEffectShipIds,
     lighthouseFireFlickerPerSecond: lighthouseFireFlickerSpeed(world.lighthouse.psiBand, world.lighthouse.score),
     moverShipIds: new Set(moverShips.map((ship) => ship.id)),
     shipPhases: new Map(world.ships.map((ship) => [ship.id, stableMotionPhase(ship.id)])),
     shipRoutes: new Map(world.ships.map((ship) => [ship.id, buildShipMotionRoute(ship, world.map)])),
+  };
+}
+
+export function buildMotionPlan(
+  world: PharosVilleWorld,
+  selectedDetailId: string | null,
+  basePlan: PharosVilleBaseMotionPlan = buildBaseMotionPlan(world),
+): PharosVilleMotionPlan {
+  const effectShipIds = new Set(basePlan.baseEffectShipIds);
+  const selectedShip = selectedDetailId
+    ? world.ships.find((ship) => ship.detailId === selectedDetailId)
+    : null;
+  if (selectedShip) effectShipIds.add(selectedShip.id);
+
+  return {
+    animatedShipIds: basePlan.animatedShipIds,
+    effectShipIds,
+    lighthouseFireFlickerPerSecond: basePlan.lighthouseFireFlickerPerSecond,
+    moverShipIds: basePlan.moverShipIds,
+    shipPhases: basePlan.shipPhases,
+    shipRoutes: basePlan.shipRoutes,
   };
 }
 

@@ -225,7 +225,7 @@ North Froze Pole as an ice-textured water route at the map's absolute north edge
 for freeze/blacklist tracker activity. A main-island road/plaza spine ties the
 southwest harbor, civic core, and lighthouse approach together as visual
 composition only. The main-island buildings use deferred Pixellab sprites, while
-North Froze Pole is drawn as terrain plus a named water-area sign. All expose
+North Froze Pole is drawn as terrain plus a printed water-area label. All expose
 local deterministic Canvas effects, DOM detail facts, and accessibility-ledger
 parity; reduced motion freezes procedural movement while preserving static
 status encodings.

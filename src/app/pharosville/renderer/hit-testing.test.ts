@@ -6,6 +6,7 @@ import type { PharosVilleAssetManifestEntry } from "../systems/asset-manifest";
 import type { ShipMotionSample } from "../systems/motion";
 import { areaLabelPlacementForArea } from "../systems/area-labels";
 import type { LoadedPharosVilleAsset } from "./asset-manager";
+import { dockDrawPoint, dockRenderScale, entityDrawGeometry } from "./geometry";
 import { collectHitTargets, hitTest, type HitTarget } from "./hit-testing";
 
 const BUILDING_DETAIL_IDS = [
@@ -183,6 +184,75 @@ describe("hit-testing", () => {
       y: ship!.rect.y + ship!.rect.height / 2,
     };
     expect(hitTest(targets, point)?.detailId).toBe(ship!.detailId);
+  });
+
+  it("aligns dock hitboxes to shared rendered harbor geometry", () => {
+    const dock = world.docks.find((entry) => entry.detailId === "dock.ethereum");
+    expect(dock).toBeDefined();
+    const entry: PharosVilleAssetManifestEntry = {
+      anchor: [48, 46],
+      category: "dock",
+      displayScale: 1,
+      footprint: [42, 18],
+      height: 64,
+      hitbox: [8, 4, 80, 55],
+      id: dock!.assetId,
+      layer: "docks",
+      loadPriority: "critical",
+      path: "dock.png",
+      width: 96,
+    };
+    const targets = collectHitTargets({
+      assets: { get: (id) => id === dock!.assetId ? { entry, image: {} as HTMLImageElement } : null },
+      camera,
+      world,
+    });
+    const target = targets.find((candidate) => candidate.detailId === dock!.detailId);
+    const drawPoint = dockDrawPoint(dock!, camera, world.map.width);
+    const scale = camera.zoom * dockRenderScale(dock!.size) * entry.displayScale;
+
+    expect(target).toBeDefined();
+    expect(target!.rect.x).toBeCloseTo(drawPoint.x - entry.anchor[0] * scale + entry.hitbox[0] * scale);
+    expect(target!.rect.y).toBeCloseTo(drawPoint.y - entry.anchor[1] * scale + entry.hitbox[1] * scale);
+    expect(target!.rect.width).toBeCloseTo(entry.hitbox[2] * scale);
+    expect(target!.rect.height).toBeCloseTo(entry.hitbox[3] * scale);
+  });
+
+  it("aligns building hitboxes to shared effect and sprite geometry", () => {
+    const building = world.buildings.find((entry) => entry.detailId === "building.mint-burn-foundry");
+    expect(building).toBeDefined();
+    const entry: PharosVilleAssetManifestEntry = {
+      anchor: [56, 92],
+      category: "building",
+      displayScale: 1,
+      footprint: [46, 28],
+      height: 112,
+      hitbox: [12, 18, 88, 84],
+      id: building!.assetId,
+      layer: "buildings",
+      loadPriority: "deferred",
+      path: "building.png",
+      width: 112,
+    };
+    const point = tileToScreen(building!.tile, camera);
+    const geometry = entityDrawGeometry({
+      camera,
+      entity: building!,
+      mapWidth: world.map.width,
+      point,
+    });
+    const scale = geometry.drawScale * entry.displayScale;
+    const targets = collectHitTargets({
+      assets: { get: (id) => id === building!.assetId ? { entry, image: {} as HTMLImageElement } : null },
+      camera,
+      world,
+    });
+    const target = targets.find((candidate) => candidate.detailId === building!.detailId);
+
+    expect(target).toBeDefined();
+    expect(geometry.y).toBeCloseTo(point.y + 4 * camera.zoom);
+    expect(target!.rect.x).toBeCloseTo(geometry.x - entry.anchor[0] * scale + entry.hitbox[0] * scale);
+    expect(target!.rect.y).toBeCloseTo(geometry.y - entry.anchor[1] * scale + entry.hitbox[1] * scale);
   });
 
   it("uses manifest hitboxes when sprite assets are available", () => {

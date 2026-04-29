@@ -1,8 +1,4 @@
 {
-  "worker/src/api/mint-burn-flows.ts": {
-    "disposition": "queued-p4",
-    "notes": "Promoted into the candidate window after the lighthouse rewrite removed cinematic-model.ts and lighthouse-stage.tsx (~1100 LOC combined), shifting the file-lines ranking. The mint-burn-flows endpoint still combines flow aggregation, pagination, and shape projection — defer decomposition until the dedicated worker-API tranche."
-  },
   "src/lib/coverage.ts": {
     "disposition": "deferred",
     "notes": "Coverage aggregation and scenario logic are still evolving with the matrix surface. Defer decomposition until the coverage data model settles."

@@ -322,6 +322,7 @@ export interface VisualCue {
   questionAnswered: string;
   failureState: string;
   domEquivalent: string;
+  reducedMotionEquivalent: string;
 }
 
 export interface PharosVilleFreshness {

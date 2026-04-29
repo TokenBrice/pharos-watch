@@ -36,7 +36,9 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - route shell escapes the global page padding and sizes against the actual post-sidebar content pane, so the desktop canvas uses the full available viewport area whether the sidebar is expanded or collapsed
 - Canvas 2D island-sea map on eligible desktop viewports, with the authored world reduced to `56 x 56` tiles so the old deep-blue outer shelf no longer dominates the canvas
 - authored terrain metadata layered over canonical movement tiles, including harbor water, brackish stale-evidence water, alert water, warning shoals water, storm water, frozen water, deep outer-shelf water, beach, grass, rock, cliff, hill, road, and shore variants; deep water is capped to a narrow perimeter shelf rather than a broad unused border
-- named DEWS water-zone posts showing live band counts from `stress.signals[]`, plus subtle dock mast flags using chain logos or short crest marks
+- named DEWS water-zone labels printed directly on semantic water areas, with
+  live band counts retained in details and the accessibility ledger, plus subtle
+  dock mast flags using chain logos or short crest marks
 - Pharos lighthouse placed on the northeast headland at tile `{ x: 44, y: 18 }`, sitting on elevated terrain with a road/stair connection back toward town
 - a main-island road/plaza spine ties the southwest harbor, central civic data core, and lighthouse approach together without changing any data semantics
 - Ethereum, Base, Arbitrum, and Polygon are arranged in the southwest EVM bay, with Ethereum as the central cove landmark and Base/Arbitrum/Polygon on the surrounding bay sides; BSC, Tron, Solana, Aptos, and other non-core top-chain harbors use distributed outer-coast dock slots; the cemetery sits on the main island to the right of the EVM bay and left of the lighthouse
@@ -56,7 +58,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
   - Exit Route Gatehouse = DEX liquidity telemetry plus modeled redemption backstops from `dexLiquidity[__global__]`, per-coin DEX liquidity, and `redemptionBackstops.coins`
   - Yield Orchard And Moonwell = yield ranking source breadth, benchmark context, source switches, anomalies, and safety snapshot coverage from `yieldRankings`
   - Dependency Loom / Chainworks = direct report-card dependency graph links from `reportCards.dependencyGraph.edges[]`
-- North Froze Pole is a northern frozen-water path, not a building sprite; it uses `frozen-water` terrain, a named water-area sign, and observed blacklist/freeze tracker summary from `blacklistSummary.stats`, per-coin frozen totals, chain coverage, and methodology metadata
+- North Froze Pole is a northern frozen-water path, not a building sprite; it uses `frozen-water` terrain, a printed water-area label, and observed blacklist/freeze tracker summary from `blacklistSummary.stats`, per-coin frozen totals, chain coverage, and methodology metadata
 - data effects include bounded local glow, smoke, sparks, waterwheel motion, orchard/well glints, dependency thread pulses, and North Froze Pole ice seams/cold-water texture; reduced motion freezes movement but keeps static status encodings
 - the cemetery is rendered as a compact memorial precinct with scattered grave placement, small varied cause-aware tomb marker scale/shape, contextual mausoleum/tree/shrub details, cause-of-death plaques using the shared cemetery legend colors, local cemetery logos on tomb markers, and light atmospheric mist
 - visible RPG-styled toolbar, click-anchored detail panel, blank-map click-to-close behavior, and screen-reader accessibility ledger
@@ -64,6 +66,8 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - mouse/touch drag pan, wheel zoom, toolbar pan/zoom/reset/follow/clear controls, keyboard arrow pan, Escape clear, and fullscreen inspection mode
 - normal-motion canvas loop for the lighthouse great-fire flicker, semantic water textures, decorative time-derived dawn/day/dusk/night sky with sun, crescent moon, stars, constellations, cloud bands, decorative birds/lights/haze, and deterministic ship route sampling, with expensive wake effects capped to selected/top/recent ships
 - deterministic reduced-motion render with no running animation frame loop
+- route-owned motion debug fields for browser validation, including
+  `motionClockSource`, `activeMotionLoopCount`, and capped `motionCueCounts`
 - desktop, stressed-ship, short-screen, ultrawide backing-store, interaction, central-core invariants, building-interaction, and motion visual coverage
 - controlled Pixellab asset manifest v2 with critical/deferred sprite loading, separate cache/provenance versions, and reserved frame-animation metadata under `public/pharosville/assets/`
 - asset validation through `npm run check:pharosville-assets`
@@ -112,6 +116,20 @@ Compensating gates:
 - no canvas/runtime work below `1280px`
 - no canvas/runtime work below `760px` viewport height
 - no CSP relaxation
+
+## Motion Budget
+
+PharosVille motion is governed by one route-owned canvas clock. Normal motion
+uses the world RAF loop in `pharosville-world.tsx`; reduced motion renders a
+static deterministic frame and cancels the loop. Analytical motion cues must have
+visual-cue registry metadata, DOM/detail or accessibility-ledger parity, and a
+reduced-motion equivalent.
+
+Priority order is selected/focused entity, active risk or critical PSI, recent
+data change, building state, then ambient life. Relationship overlays are
+selected-only, ship wake/effects are capped to selected/top/recent-mover ships,
+and ambient birds/lights remain fixed-size local sets attached to the lighthouse
+or civic core.
 
 ## Visual Regression
 

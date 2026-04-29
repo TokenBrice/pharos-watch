@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fixtureChains, fixturePegSummary, fixtureReportCards, fixtureStablecoins, fixtureStability, fixtureStress, makeAsset, makeChain, makePegCoin } from "../__fixtures__/pharosville-world";
 import { buildPharosVilleWorld } from "./pharosville-world";
-import { buildMotionPlan, buildShipWaterRoute, lighthouseFireFlickerSpeed, resolveShipMotionSample, sampleShipWaterPath, stableMotionPhase } from "./motion";
+import { buildBaseMotionPlan, buildMotionPlan, buildShipWaterRoute, lighthouseFireFlickerSpeed, resolveShipMotionSample, sampleShipWaterPath, stableMotionPhase } from "./motion";
 import { buildPharosVilleMap, tileKindAt } from "./world-layout";
 import type { PharosVilleMap, PharosVilleWorld } from "./world-types";
 
@@ -43,6 +43,18 @@ describe("motion", () => {
       expect(route?.dockStopSchedule).toEqual(repeatedRoute?.dockStopSchedule);
       expect(route?.dockStops).toEqual(ship.dockVisits);
     }
+  });
+
+  it("reuses base route maps when only selection cue state changes", () => {
+    const basePlan = buildBaseMotionPlan(world);
+    const unselectedPlan = buildMotionPlan(world, null, basePlan);
+    const selectedPlan = buildMotionPlan(world, world.ships[0]?.detailId ?? null, basePlan);
+
+    expect(selectedPlan.shipRoutes).toBe(unselectedPlan.shipRoutes);
+    expect(selectedPlan.shipPhases).toBe(unselectedPlan.shipPhases);
+    expect(selectedPlan.animatedShipIds).toBe(unselectedPlan.animatedShipIds);
+    expect(selectedPlan.moverShipIds).toBe(unselectedPlan.moverShipIds);
+    expect(selectedPlan.effectShipIds.size).toBeGreaterThanOrEqual(unselectedPlan.effectShipIds.size);
   });
 
   it("shortens cycles and increases scheduled dock cadence with chain breadth", () => {
