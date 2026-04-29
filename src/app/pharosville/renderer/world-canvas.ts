@@ -1,6 +1,6 @@
 import type { PharosVilleMotionPlan, ShipMotionSample } from "../systems/motion";
 import { areaLabelPlacementForArea } from "../systems/area-labels";
-import { waterTerrainStyle } from "../systems/palette";
+import { waterTerrainStyle, type WaterTerrainStyle } from "../systems/palette";
 import { tileToScreen, type IsoCamera, type ScreenPoint } from "../systems/projection";
 import {
   CEMETERY_CENTER,
@@ -22,27 +22,29 @@ import type { HitTarget } from "./hit-testing";
 import { CAUSE_HEX, type CauseOfDeath } from "@shared/lib/cause-of-death";
 
 const TILE_COLORS: Record<string, string> = {
-  beach: "#c7a66c",
-  cliff: "#5a625d",
-  grass: "#617444",
-  hill: "#76814d",
-  land: "#b89155",
-  road: "#7a5938",
-  rock: "#6f7369",
-  shore: "#aa8755",
+  beach: "#c8aa72",
+  cliff: "#4d564e",
+  grass: "#6f7d50",
+  hill: "#82905b",
+  land: "#8a744d",
+  road: "#8e6740",
+  rock: "#6b7064",
+  shore: "#b28f5b",
 };
 
 const TERRAIN_TEXTURE = {
-  cliffFace: "rgba(31, 35, 31, 0.54)",
+  beachPebble: "rgba(82, 67, 47, 0.16)",
+  cliffFace: "rgba(31, 35, 31, 0.58)",
   foam: "rgba(224, 238, 220, 0.68)",
-  grassDark: "rgba(43, 78, 43, 0.44)",
-  grassLight: "rgba(168, 177, 103, 0.32)",
+  grassDark: "rgba(38, 70, 42, 0.5)",
+  grassLight: "rgba(178, 187, 113, 0.34)",
+  grassMid: "rgba(100, 125, 76, 0.34)",
+  groundGrain: "rgba(35, 37, 27, 0.2)",
+  mossShadow: "rgba(43, 58, 38, 0.26)",
   roadLight: "rgba(184, 146, 91, 0.32)",
+  roadShadow: "rgba(53, 39, 26, 0.22)",
   rockLight: "rgba(176, 177, 160, 0.24)",
   sandLight: "rgba(237, 204, 137, 0.28)",
-  shallow: "rgba(88, 153, 139, 0.22)",
-  shoal: "rgba(219, 177, 104, 0.24)",
-  waterLine: "rgba(175, 225, 220, 0.28)",
 } as const;
 
 const LIGHTHOUSE_HEADLAND = {
@@ -455,14 +457,20 @@ function terrainColor(kind: TerrainKind) {
   if (waterStyle) return waterStyle.base;
   const directColor = TILE_COLORS[value];
   if (directColor) return directColor;
-  if (value.includes("water")) return value.includes("deep") ? "#071225" : "#15375a";
-  if (value.includes("road") || value.includes("stair")) return "#7a5938";
-  if (value.includes("cliff")) return "#5a625d";
-  if (value.includes("rock")) return "#6f7369";
-  if (value.includes("hill")) return "#76814d";
-  if (value.includes("grass")) return "#617444";
-  if (value.includes("beach")) return "#c7a66c";
-  return "#b89155";
+  if (value.includes("water")) return value.includes("deep") ? "#050d1b" : "#153d63";
+  if (value.includes("road") || value.includes("stair")) return TILE_COLORS.road;
+  if (value.includes("cliff")) return TILE_COLORS.cliff;
+  if (value.includes("rock")) return TILE_COLORS.rock;
+  if (value.includes("hill")) return TILE_COLORS.hill;
+  if (value.includes("grass")) return TILE_COLORS.grass;
+  if (value.includes("beach")) return TILE_COLORS.beach;
+  return TILE_COLORS.land;
+}
+
+function withAlpha(color: string, alpha: number) {
+  return color.startsWith("rgba(")
+    ? color.replace(/,\s*[\d.]+\)$/, `, ${alpha})`)
+    : color;
 }
 
 function drawWaterTile(
@@ -481,21 +489,21 @@ function drawWaterTile(
   const style = waterTerrainStyle(value) ?? waterTerrainStyle("water")!;
   drawDiamond(ctx, x, y, width, height, style.base);
   drawWaterDepthOverlay(ctx, x, y, zoom, width, height, tileX, tileY, style.inner);
-  drawWaterTerrainTexture(ctx, x, y, zoom, style.texture, tileX, tileY, motion);
+  drawWaterTerrainTexture(ctx, x, y, zoom, style, tileX, tileY, motion);
 
   if ((tileX * 13 + tileY * 17) % 5 !== 0) return;
   const wave = motion.reducedMotion
     ? 0.2
     : 0.16 + Math.sin(motion.timeSeconds * 1.25 + tileX * 0.27 + tileY * 0.19) * 0.05;
   ctx.save();
-  ctx.strokeStyle = style.wave.replace(/[\d.]+\)$/, `${Math.max(0.08, wave)})`);
+  ctx.strokeStyle = withAlpha(style.wave, Math.max(0.08, wave));
   ctx.lineWidth = Math.max(1, zoom);
   ctx.beginPath();
   ctx.moveTo(x - 9 * zoom, y - 2 * zoom);
   ctx.lineTo(x + 7 * zoom, y + 2 * zoom);
   ctx.stroke();
   if ((tileX + tileY) % 3 === 0) {
-    ctx.strokeStyle = TERRAIN_TEXTURE.waterLine;
+    ctx.strokeStyle = withAlpha(style.accent, 0.26);
     ctx.beginPath();
     ctx.moveTo(x - 3 * zoom, y + 4 * zoom);
     ctx.lineTo(x + 10 * zoom, y + 7 * zoom);
@@ -532,42 +540,45 @@ function drawWaterTerrainTexture(
   x: number,
   y: number,
   zoom: number,
-  texture: NonNullable<ReturnType<typeof waterTerrainStyle>>["texture"],
+  style: WaterTerrainStyle,
   tileX: number,
   tileY: number,
   motion: PharosVilleCanvasMotion,
 ) {
+  const { texture } = style;
   if (texture === "alert") {
-    drawAlertChannelTexture(ctx, x, y, zoom, tileX, tileY, motion);
+    drawAlertChannelTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
     return;
   }
   if (texture === "brackish") {
-    drawBrackishWaterTexture(ctx, x, y, zoom, tileX, tileY, motion);
+    drawBrackishWaterTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
     return;
   }
   if (texture === "deep") {
-    drawDeepSeaTexture(ctx, x, y, zoom, tileX, tileY, motion);
+    drawDeepSeaTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
     return;
   }
   if (texture === "fog") {
-    drawFogWaterTexture(ctx, x, y, zoom, tileX, tileY, motion);
+    drawFogWaterTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
     return;
   }
   if (texture === "frozen") {
-    drawNorthFrozeWaterTexture(ctx, x, y, zoom, tileX, tileY, motion);
+    drawNorthFrozeWaterTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
     return;
   }
   if (texture === "harbor") {
-    drawHarborWaterTexture(ctx, x, y, zoom, tileX, tileY, motion);
+    drawHarborWaterTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
     return;
   }
   if (texture === "storm") {
-    drawDangerStraitTexture(ctx, x, y, zoom, tileX, tileY, motion);
+    drawDangerStraitTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
     return;
   }
   if (texture === "warning") {
-    drawWarningShoalTexture(ctx, x, y, zoom, tileX, tileY, motion);
+    drawWarningShoalTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
+    return;
   }
+  drawOpenWaterTexture(ctx, x, y, zoom, tileX, tileY, motion, style);
 }
 
 function drawNorthFrozeWaterTexture(
@@ -578,10 +589,11 @@ function drawNorthFrozeWaterTexture(
   tileX: number,
   tileY: number,
   motion: PharosVilleCanvasMotion,
+  style: WaterTerrainStyle,
 ) {
   const frost = motion.reducedMotion ? 0.24 : 0.2 + Math.sin(motion.timeSeconds * 0.9 + tileX * 0.31 + tileY * 0.41) * 0.06;
   ctx.save();
-  ctx.strokeStyle = `rgba(210, 244, 255, ${Math.max(0.14, frost)})`;
+  ctx.strokeStyle = withAlpha(style.accent, Math.max(0.16, frost));
   ctx.lineWidth = Math.max(1, 1.2 * zoom);
   ctx.beginPath();
   ctx.moveTo(x - 12 * zoom, y - 3 * zoom);
@@ -592,7 +604,7 @@ function drawNorthFrozeWaterTexture(
   ctx.lineTo(x + 12 * zoom, y + 7 * zoom);
   ctx.stroke();
   if ((tileX * 3 + tileY * 5) % 4 === 0) {
-    ctx.fillStyle = "rgba(226, 250, 255, 0.3)";
+    ctx.fillStyle = withAlpha(style.wave, 0.32);
     ctx.fillRect(Math.round(x - 2 * zoom), Math.round(y), Math.max(1, Math.round(4 * zoom)), Math.max(1, Math.round(2 * zoom)));
   }
   ctx.restore();
@@ -606,10 +618,11 @@ function drawHarborWaterTexture(
   tileX: number,
   tileY: number,
   motion: PharosVilleCanvasMotion,
+  style: WaterTerrainStyle,
 ) {
   const pulse = motion.reducedMotion ? 0.16 : 0.13 + Math.sin(motion.timeSeconds * 0.85 + tileX * 0.23 + tileY * 0.17) * 0.04;
   ctx.save();
-  ctx.strokeStyle = `rgba(199, 232, 219, ${Math.max(0.08, pulse)})`;
+  ctx.strokeStyle = withAlpha(style.wave, Math.max(0.1, pulse));
   ctx.lineWidth = Math.max(1, zoom);
   ctx.beginPath();
   ctx.moveTo(x - 10 * zoom, y + 2 * zoom);
@@ -620,7 +633,7 @@ function drawHarborWaterTexture(
   }
   ctx.stroke();
   if ((tileX * 7 + tileY * 5) % 6 === 0) {
-    const reflection = "rgba(154, 205, 184, 0.2)";
+    const reflection = withAlpha(style.accent, 0.24);
     ctx.fillStyle = reflection;
     drawDiamond(ctx, x + 2 * zoom, y + 2 * zoom, 8 * zoom, 3 * zoom, reflection);
   }
@@ -635,14 +648,15 @@ function drawBrackishWaterTexture(
   tileX: number,
   tileY: number,
   motion: PharosVilleCanvasMotion,
+  style: WaterTerrainStyle,
 ) {
   const murk = motion.reducedMotion ? 0.18 : 0.16 + Math.sin(motion.timeSeconds * 0.55 + tileX * 0.41) * 0.04;
   ctx.save();
-  ctx.fillStyle = `rgba(80, 91, 57, ${Math.max(0.1, murk)})`;
+  ctx.fillStyle = withAlpha(style.accent, Math.max(0.14, murk));
   if ((tileX * 3 + tileY * 11) % 4 === 0) {
     drawDiamond(ctx, x - 3 * zoom, y + 2 * zoom, 10 * zoom, 4 * zoom, ctx.fillStyle);
   }
-  ctx.strokeStyle = "rgba(146, 164, 126, 0.2)";
+  ctx.strokeStyle = withAlpha(style.wave, 0.24);
   ctx.lineWidth = Math.max(1, zoom);
   ctx.beginPath();
   ctx.moveTo(x - 9 * zoom, y + 5 * zoom);
@@ -664,11 +678,12 @@ function drawDeepSeaTexture(
   tileX: number,
   tileY: number,
   motion: PharosVilleCanvasMotion,
+  style: WaterTerrainStyle,
 ) {
   if ((tileX * 5 + tileY * 7) % 6 !== 0) return;
   const glint = motion.reducedMotion ? 0.08 : 0.06 + Math.sin(motion.timeSeconds * 0.6 + tileX * 0.2 + tileY * 0.31) * 0.025;
   ctx.save();
-  ctx.strokeStyle = `rgba(117, 153, 184, ${Math.max(0.035, glint)})`;
+  ctx.strokeStyle = withAlpha(style.wave, Math.max(0.04, glint));
   ctx.lineWidth = Math.max(1, zoom);
   ctx.beginPath();
   ctx.moveTo(x - 8 * zoom, y);
@@ -685,10 +700,11 @@ function drawFogWaterTexture(
   tileX: number,
   tileY: number,
   motion: PharosVilleCanvasMotion,
+  style: WaterTerrainStyle,
 ) {
   const veil = motion.reducedMotion ? 0.16 : 0.12 + Math.sin(motion.timeSeconds * 0.42 + tileY * 0.33) * 0.04;
   ctx.save();
-  ctx.strokeStyle = `rgba(205, 216, 211, ${Math.max(0.08, veil)})`;
+  ctx.strokeStyle = withAlpha(style.wave, Math.max(0.1, veil));
   ctx.lineWidth = Math.max(1, 1.4 * zoom);
   ctx.beginPath();
   ctx.moveTo(x - 13 * zoom, y - 1 * zoom);
@@ -709,10 +725,11 @@ function drawAlertChannelTexture(
   tileX: number,
   tileY: number,
   motion: PharosVilleCanvasMotion,
+  style: WaterTerrainStyle,
 ) {
   const pulse = motion.reducedMotion ? 0.16 : 0.14 + Math.sin(motion.timeSeconds * 1.1 + tileX * 0.31) * 0.04;
   ctx.save();
-  ctx.strokeStyle = `rgba(236, 202, 112, ${pulse})`;
+  ctx.strokeStyle = withAlpha(style.accent, Math.max(0.16, pulse));
   ctx.lineWidth = Math.max(1, 1.1 * zoom);
   ctx.beginPath();
   ctx.moveTo(x - 10 * zoom, y - 3 * zoom);
@@ -733,10 +750,11 @@ function drawWarningShoalTexture(
   tileX: number,
   tileY: number,
   motion: PharosVilleCanvasMotion,
+  style: WaterTerrainStyle,
 ) {
   const chop = motion.reducedMotion ? 0.2 : 0.18 + Math.sin(motion.timeSeconds * 1.6 + tileY * 0.37) * 0.05;
   ctx.save();
-  ctx.strokeStyle = `rgba(226, 217, 177, ${chop})`;
+  ctx.strokeStyle = withAlpha(style.wave, Math.max(0.16, chop));
   ctx.lineWidth = Math.max(1, 1.2 * zoom);
   ctx.beginPath();
   ctx.moveTo(x - 11 * zoom, y - 2 * zoom);
@@ -746,7 +764,7 @@ function drawWarningShoalTexture(
   ctx.lineTo(x + 11 * zoom, y + 8 * zoom);
   ctx.stroke();
   if ((tileX * 5 + tileY * 7) % 4 === 0) {
-    ctx.fillStyle = TERRAIN_TEXTURE.shoal;
+    ctx.fillStyle = withAlpha(style.accent, 0.3);
     ctx.fillRect(Math.round(x - 2 * zoom), Math.round(y + 1 * zoom), Math.max(1, Math.round(4 * zoom)), Math.max(1, Math.round(2 * zoom)));
   }
   ctx.restore();
@@ -760,10 +778,11 @@ function drawDangerStraitTexture(
   tileX: number,
   tileY: number,
   motion: PharosVilleCanvasMotion,
+  style: WaterTerrainStyle,
 ) {
   const whitecap = motion.reducedMotion ? 0.22 : 0.18 + Math.sin(motion.timeSeconds * 2.1 + tileX * 0.43 + tileY * 0.29) * 0.08;
   ctx.save();
-  ctx.strokeStyle = `rgba(224, 236, 226, ${Math.max(0.12, whitecap)})`;
+  ctx.strokeStyle = withAlpha(style.wave, Math.max(0.14, whitecap));
   ctx.lineWidth = Math.max(1, 1.4 * zoom);
   ctx.beginPath();
   ctx.moveTo(x - 12 * zoom, y - 4 * zoom);
@@ -783,6 +802,33 @@ function drawDangerStraitTexture(
   ctx.restore();
 }
 
+function drawOpenWaterTexture(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  tileX: number,
+  tileY: number,
+  motion: PharosVilleCanvasMotion,
+  style: WaterTerrainStyle,
+) {
+  if ((tileX * 7 + tileY * 13) % 4 !== 0) return;
+  const drift = motion.reducedMotion ? 0.12 : 0.1 + Math.sin(motion.timeSeconds * 0.72 + tileX * 0.17 + tileY * 0.21) * 0.03;
+  ctx.save();
+  ctx.strokeStyle = withAlpha(style.accent, Math.max(0.08, drift));
+  ctx.lineWidth = Math.max(1, 0.9 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(x - 11 * zoom, y + 1 * zoom);
+  ctx.lineTo(x - 2 * zoom, y + 4 * zoom);
+  ctx.lineTo(x + 9 * zoom, y + 1 * zoom);
+  if ((tileX + tileY) % 5 === 0) {
+    ctx.moveTo(x - 5 * zoom, y - 4 * zoom);
+    ctx.lineTo(x + 7 * zoom, y - 1 * zoom);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawLandTile(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -796,6 +842,7 @@ function drawLandTile(
   const width = 32 * zoom;
   const height = 16 * zoom;
   drawDiamond(ctx, x, y, width, height, terrainColor(kind));
+  drawGroundGrain(ctx, x, y, zoom, value, tileX, tileY);
 
   if (isElevatedTileKind(kind)) {
     drawTileLowerFacet(ctx, x, y, width, height, value === "cliff" || value.includes("cliff")
@@ -809,9 +856,54 @@ function drawLandTile(
     drawRoadTexture(ctx, x, y, zoom);
   } else if (value === "rock" || value === "cliff" || value.includes("rock") || value.includes("cliff")) {
     drawRockTexture(ctx, x, y, zoom, tileX, tileY);
-  } else if ((tileX * 19 + tileY * 23) % 6 === 0) {
+  } else if (value === "grass" || value === "hill" || value === "land" || (tileX * 19 + tileY * 23) % 6 === 0) {
     drawGrassTexture(ctx, x, y, zoom, tileX, tileY);
   }
+}
+
+function drawGroundGrain(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  value: string,
+  tileX: number,
+  tileY: number,
+) {
+  if (value === "road" || value.includes("road") || value.includes("stair")) return;
+  if (value === "rock" || value === "cliff" || value.includes("rock") || value.includes("cliff")) return;
+  const offset = ((tileX * 11 + tileY * 5) % 5 - 2) * zoom;
+  ctx.save();
+  if (value === "beach" || value === "shore") {
+    ctx.fillStyle = TERRAIN_TEXTURE.beachPebble;
+    ctx.fillRect(Math.round(x - 4 * zoom + offset), Math.round(y + 1 * zoom), Math.max(1, Math.round(2 * zoom)), Math.max(1, Math.round(2 * zoom)));
+    if ((tileX + tileY) % 3 === 0) {
+      ctx.strokeStyle = TERRAIN_TEXTURE.sandLight;
+      ctx.lineWidth = Math.max(1, 0.8 * zoom);
+      ctx.beginPath();
+      ctx.moveTo(x - 9 * zoom, y - 2 * zoom);
+      ctx.lineTo(x + 7 * zoom, y + 1 * zoom);
+      ctx.stroke();
+    }
+    ctx.restore();
+    return;
+  }
+
+  ctx.strokeStyle = TERRAIN_TEXTURE.mossShadow;
+  ctx.lineWidth = Math.max(1, 0.8 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(x - 9 * zoom + offset, y + 2 * zoom);
+  ctx.lineTo(x - 2 * zoom + offset, y + 5 * zoom);
+  if ((tileX * 3 + tileY * 7) % 2 === 0) {
+    ctx.moveTo(x + 1 * zoom - offset, y - 3 * zoom);
+    ctx.lineTo(x + 8 * zoom - offset, y);
+  }
+  ctx.stroke();
+  if ((tileX * 17 + tileY * 19) % 4 === 0) {
+    ctx.fillStyle = TERRAIN_TEXTURE.groundGrain;
+    drawDiamond(ctx, x + 2 * zoom, y + 2 * zoom, 7 * zoom, 3 * zoom, ctx.fillStyle);
+  }
+  ctx.restore();
 }
 
 function drawTileLowerFacet(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, fill: string) {
@@ -850,6 +942,12 @@ function drawShoreFoam(ctx: CanvasRenderingContext2D, x: number, y: number, zoom
 
 function drawRoadTexture(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: number) {
   ctx.save();
+  ctx.strokeStyle = TERRAIN_TEXTURE.roadShadow;
+  ctx.lineWidth = Math.max(1, 1.8 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(x - 11 * zoom, y + 2 * zoom);
+  ctx.lineTo(x + 9 * zoom, y + 5 * zoom);
+  ctx.stroke();
   ctx.strokeStyle = TERRAIN_TEXTURE.roadLight;
   ctx.lineWidth = Math.max(1, zoom);
   ctx.beginPath();
@@ -877,6 +975,8 @@ function drawGrassTexture(ctx: CanvasRenderingContext2D, x: number, y: number, z
   ctx.save();
   ctx.fillStyle = TERRAIN_TEXTURE.grassDark;
   ctx.fillRect(Math.round(x - 2 * zoom + offset), Math.round(y - 1 * zoom), Math.max(1, Math.round(2 * zoom)), Math.max(1, Math.round(3 * zoom)));
+  ctx.fillStyle = TERRAIN_TEXTURE.grassMid;
+  ctx.fillRect(Math.round(x - 5 * zoom - offset * 0.4), Math.round(y + 2 * zoom), Math.max(1, Math.round(2 * zoom)), Math.max(1, Math.round(2 * zoom)));
   ctx.fillStyle = TERRAIN_TEXTURE.grassLight;
   ctx.fillRect(Math.round(x + 2 * zoom + offset), Math.round(y + 1 * zoom), Math.max(1, Math.round(2 * zoom)), Math.max(1, Math.round(2 * zoom)));
   ctx.restore();

@@ -45,4 +45,38 @@ describe("HARBOR_PALETTE", () => {
     expect(waterTerrainStyle("brackish-water")?.texture).toBe("brackish");
     expect(waterTerrainStyle("unknown")).toBeNull();
   });
+
+  it("keeps water terrain zones visually separable by color and texture", () => {
+    const styles = Object.values(WATER_TERRAIN_STYLES);
+
+    expect(new Set(styles.map((style) => style.texture)).size).toBe(styles.length);
+    expect(minimumHexDistance(styles.map((style) => style.base))).toBeGreaterThan(18);
+    expect(WATER_TERRAIN_STYLES["warning-water"].accent).not.toBe(WATER_TERRAIN_STYLES.water.accent);
+    expect(WATER_TERRAIN_STYLES["frozen-water"].base).not.toBe(WATER_TERRAIN_STYLES["fog-water"].base);
+  });
 });
+
+function minimumHexDistance(colors: string[]) {
+  let minimum = Number.POSITIVE_INFINITY;
+  for (let first = 0; first < colors.length; first += 1) {
+    for (let second = first + 1; second < colors.length; second += 1) {
+      minimum = Math.min(minimum, hexDistance(colors[first]!, colors[second]!));
+    }
+  }
+  return minimum;
+}
+
+function hexDistance(first: string, second: string) {
+  const a = hexChannels(first);
+  const b = hexChannels(second);
+  return Math.hypot(a.r - b.r, a.g - b.g, a.b - b.b);
+}
+
+function hexChannels(hex: string) {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return {
+    b: n & 0xff,
+    g: (n >> 8) & 0xff,
+    r: (n >> 16) & 0xff,
+  };
+}
