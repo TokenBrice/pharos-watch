@@ -48,9 +48,9 @@ phase explicitly records an approved scope change.
 | 3. Recenter composition | Add composition-aware default/reset camera framing around authored interest bounds. | Complete | Phase 3 camera implementer/reviewer | Camera padding/default/reset/clamp behavior and camera/projection tests | Commit `24246b15e`; default/reset/clamp padding biases the smaller island left/up at desktop sizes while keeping reset and follow clamp-stable. Reviewer found no Critical/Major/Minor findings. |
 | 4. Shrink island | Reduce visible landmass by about 20% linear extent and retune anchors/routes. | Complete | Phase 2 layout implementer/reviewer | World layout, docks/regions/cemetery/cove/patrol routes, tests | Commit `de8455616`; final bounds `x=21..48`, `y=17..43` (`28 x 27`), water ratio target `85..88%`, ship water anchors retuned and covered by exported `SHIP_WATER_ANCHORS` invariant. |
 | 5. Building spacing | Redistribute four data buildings and add spacing/non-overlap invariants. | Complete | Phase 2 layout implementer/reviewer | Data-building placement and tests | Commit `de8455616`; building tiles are `{28,30}`, `{34,24}`, `{40,31}`, `{33,36}` with minimum pair distance `>= 7.75`; reviewer found no remaining Critical/Major/Minor issues after fixes. |
-| 6. Sea-zone readability | Strengthen semantic water palette/textures and zone mark language. | Not started | TBD | TBD | Avoid recreating large translucent circles as regional washes. |
-| 7. Ground/lighthouse integration | Tune land, road, cliff, and headland rendering to read as one terrain system. | Not started | TBD | TBD | Do not enable terrain PNGs without separate visual audit/regeneration approval. |
-| 8. Tests, docs, review | Update focused tests/docs/snapshots and run route validation. | Not started | TBD | TBD | Snapshot updates only after manual review of intentional diffs. |
+| 6. Sea-zone readability | Strengthen semantic water palette/textures and zone mark language. | Complete | Phase 4 texture implementer/reviewer | `world-canvas`/palette texture and style work | Commit `8ab1d571d`; stronger water terrain palettes, style-driven texture colors, and open-water strokes. Manual browser screenshot accepted; no dedicated automated pixel assertion for circular overlay absence yet. |
+| 7. Ground/lighthouse integration | Tune land, road, cliff, and headland rendering to read as one terrain system. | Complete | Phase 4 texture implementer/reviewer | Ground grain, grass, road, and lighthouse/headland color integration | Commit `8ab1d571d`; base island ground grain/grass/road colors integrated with lighthouse/headland colors. Manual browser screenshot accepted; no dedicated automated ground-noise density assertion yet. |
+| 8. Tests, docs, review | Update focused tests/docs/snapshots and run route validation. | Pending | TBD | TBD | Next step: final Playwright visual lane and snapshot review/update, plus full closeout validation. |
 
 ## Validation Tracker
 
@@ -63,15 +63,17 @@ Record commands exactly as run, with pass/fail/skip and the reason for skips.
 | `npm test -- src/app/pharosville/systems/pharosville-world.test.ts` | Passed | Phase 2 layout implementer/reviewer | Included in combined Phase 2 focused run: 44 tests passed. |
 | `npm test -- src/app/pharosville/systems/chain-docks.test.ts` | Passed | Phase 2 layout implementer/reviewer | Included in combined Phase 2 focused run: 44 tests passed. |
 | `npm test -- src/app/pharosville/systems/motion.test.ts` | Passed | Phase 2 layout implementer/reviewer | Included in combined Phase 2 focused run: 44 tests passed; ship water anchors were moved off land and covered by invariant. |
-| `npm test -- src/app/pharosville/renderer/hit-testing.test.ts` | Passed | Phase 1 implementer/reviewer | Included in combined Phase 1 focused run: 2 files, 18 tests passed; added zoomed-out label hitbox and unoccluded water-label point coverage. |
+| `npm test -- src/app/pharosville/renderer/hit-testing.test.ts` | Passed | Phase 1 and Phase 4 implementer/reviewers | Phase 1 focused run passed; Phase 4 parent run with palette tests also passed, 23 tests total. |
 | `npm test -- src/app/pharosville/systems/visual-cue-registry.test.ts` | Passed | Phase 1 implementer/reviewer | Included in combined Phase 1 focused run: 2 files, 18 tests passed; cue copy now describes printed labels instead of signs/posts. |
 | `npm test -- src/app/pharosville/systems/camera.test.ts` | Passed | Phase 3 camera implementer/reviewer | Included in combined Phase 3 focused run with projection tests: 11 tests passed; covers 1440x1000 and 1280x760 authored island mass, bounded zoom clamp stability, and follow-with-map clamp stability. |
 | `npm test -- src/app/pharosville/systems/projection.test.ts` | Passed | Phase 3 camera implementer/reviewer | Included in combined Phase 3 focused run with camera tests: 11 tests passed. |
+| `npm test -- src/app/pharosville/systems/palette.test.ts` | Passed | Phase 4 texture implementer/reviewer | Included in parent Phase 4 run with hit-testing tests: 23 tests passed. |
 | `npm run check:pharosville-assets` | Not run | TBD | Required if manifest/assets/geometry change. |
-| `npm run check:harbor-palette` | Not run | TBD | Required after renderer palette or water style changes. |
-| `npm run lint` | Partial passed | Phase 1-3 implementer/reviewers | Focused `npx eslint ... --max-warnings=0` passed for Phase 1, Phase 2, and Phase 3 touched files; full lint still not recorded here. |
+| `npm run check:harbor-palette` | Passed | Phase 4 texture implementer/reviewer | Passed after water/ground palette changes. |
+| `npm run lint` | Partial passed | Phase 1-4 implementer/reviewers | Focused `npx eslint ... --max-warnings=0` passed for Phase 1, Phase 2, Phase 3, and Phase 4 touched files; full lint still not recorded here. |
 | `git diff --cached --check` | Passed | Phase 2 layout implementer/reviewer | Passed before commit `de8455616`. |
 | `git diff --check -- src/app/pharosville/systems/camera.ts src/app/pharosville/systems/camera.test.ts` | Passed | Phase 3 camera implementer/reviewer | Passed before/with Phase 3 commit `24246b15e`. |
+| `git diff --check` for Phase 4 files | Passed | Phase 4 texture implementer/reviewer | Passed for `world-canvas`/palette phase files. |
 | `npm run typecheck` | Not run | TBD | Required before final handoff if available for this repo state. |
 | `npm run build` | Not run | TBD | Required after route docs/CSS/assets/static output changes. |
 | `npx playwright test tests/visual/pharosville.spec.ts --grep "pharosville"` | Pending | TBD | Full Playwright visual review still pending after Phase 1; revisit label legibility after island/layout and camera changes settle. |
@@ -85,6 +87,7 @@ Record commands exactly as run, with pass/fail/skip and the reason for skips.
 | `1b50ecf88` | Phase 1 | Phase 1 implementer/reviewer | Recorded | `Polish PharosVille sea labels`; includes shared label placement, printed water labels, hit/follow alignment, sign/post removal, atmosphere band removal, cue/test updates, and xhigh review feedback. |
 | `de8455616` | Phase 2 layout rebalance; tracker phases 3-5 partial/complete | Phase 2 layout implementer/reviewer | Recorded | `Rebalance PharosVille island layout`; island shrink/recenter, building distribution, cemetery/cove/dock/region anchor retune, patrol-route retune, and `SHIP_WATER_ANCHORS` invariant. |
 | `24246b15e` | Phase 3 | Phase 3 camera implementer/reviewer | Recorded | `Recenter PharosVille camera framing`; default/reset/clamp camera padding biases smaller island left/up at desktop sizes while preserving reset/follow clamp stability. |
+| `8ab1d571d` | Phase 4 texture pass; tracker phases 6-7 | Phase 4 texture implementer/reviewer | Recorded | `Differentiate PharosVille sea and ground textures`; stronger water palettes/textures plus base island ground/lighthouse color integration. |
 
 ## Open Risks
 
@@ -99,12 +102,13 @@ Record commands exactly as run, with pass/fail/skip and the reason for skips.
   semantic effects where they still have detail/a11y parity.
 - Tile-distance checks can pass while rendered sprites still overlap; verify
   rendered hitboxes or Playwright debug targets.
-- Stronger water colors/textures can break existing visual pixel thresholds and
-  require intentional snapshot/classifier updates.
-- Lighthouse-ground tuning can overfit the lighthouse and make the rest of the
-  island too bright or noisy.
+- Stronger water colors/textures may require intentional snapshot/classifier
+  updates in final Playwright review.
 - Full Playwright visual lane still needs snapshot review/update after the
-  visual texture/palette and ground/lighthouse phases settle.
+  texture/palette and ground/lighthouse changes.
+- There is still no dedicated automated pixel assertion for absence of circular
+  water overlays or for ground-noise density; Phase 4 manual browser screenshot
+  review accepted the current output.
 - Concurrent motion/debug/doc work exists in the worktree and was not included
   in commit `de8455616`.
 
@@ -164,20 +168,28 @@ Record commands exactly as run, with pass/fail/skip and the reason for skips.
 
 - Record final water style/texture changes and any visual-test threshold updates.
 - Confirm each named sea zone is recognizable without opening details.
-- Recommended next phase: implement/review sea-zone texture and palette pass.
+- Status note: sea-zone texture/palette pass committed in `8ab1d571d`; manual
+  browser screenshot accepted by reviewer.
+- Recommended next phase: final Playwright visual lane and snapshot
+  review/update.
 
 ### Phase 7
 
 - Record final lighthouse/ground integration choices and whether any asset or
   manifest geometry changed.
 - Confirm lighthouse selection remains aligned with visible sprite/base.
-- Recommended next phase: TBD.
+- Status note: ground grain/grass/road colors were integrated with
+  lighthouse/headland colors in `8ab1d571d`; no asset/manifest change was
+  reported.
+- Recommended next phase: final Playwright visual lane and snapshot
+  review/update.
 
 ### Phase 8
 
 - Record all validation commands, screenshot/snapshot decisions, docs updated,
   remaining risks, and final ship/no-ship decision.
-- Recommended next phase: TBD.
+- Recommended next phase: run final visual regression lane, review/update
+  snapshots intentionally, and then run closeout validation before shipping.
 
 ## Phase Completion Notes
 
@@ -237,6 +249,31 @@ Append future updates here. Keep entries concise and factual.
   Playwright review after remaining visual texture/palette work settles.
 - Recommended next phase: Implement/review sea-zone texture and palette
   readability.
+
+### Phase 4 Sea And Ground Texture Completion
+
+- Phase completed: Phase 4 texture pass covering tracker phases 6-7.
+- Completed by: Phase 4 texture implementer/reviewer
+- Date: 2026-04-29
+- Files changed: `world-canvas`/palette texture and style files, per commit
+  `8ab1d571d`.
+- Scope completed: Stronger water terrain palettes, style-driven water texture
+  colors, and open-water texture strokes.
+- Scope completed: Base island ground grain, grass, and road color integration
+  with lighthouse/headland colors.
+- Reviewer status: No Critical/Major/Minor issues; manual browser screenshot
+  accepted.
+- Validation run: `npm test -- src/app/pharosville/systems/palette.test.ts src/app/pharosville/renderer/hit-testing.test.ts` passed, 23 tests.
+- Validation run: Focused eslint for `world-canvas`/palette files passed.
+- Validation run: `npm run check:harbor-palette` passed.
+- Validation run: `git diff --check` for phase files passed.
+- Visual screenshots/snapshots: Manual browser screenshot accepted; final
+  Playwright visual lane and snapshot review/update remain pending.
+- Commit/PR: `8ab1d571d` (`Differentiate PharosVille sea and ground textures`).
+- Residual risks: No dedicated automated pixel assertion yet for absence of
+  circular water overlays or for ground-noise density.
+- Recommended next phase: Final validation and intentional Playwright snapshot
+  review/update.
 
 ### Template
 
