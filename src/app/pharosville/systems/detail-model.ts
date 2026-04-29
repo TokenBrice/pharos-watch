@@ -1,5 +1,5 @@
 import { CHAIN_META } from "@shared/lib/chains";
-import type { BuildingNode, DetailModel, DockNode, GraveNode, LighthouseNode, ShipClusterNode, ShipNode } from "./world-types";
+import type { AreaNode, BuildingNode, DetailModel, DockNode, GraveNode, LighthouseNode, ShipClusterNode, ShipNode } from "./world-types";
 
 const usd = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0, style: "currency", currency: "USD" });
 const percent = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1, style: "percent" });
@@ -153,5 +153,35 @@ export function detailForBuilding(node: BuildingNode): DetailModel {
     links: node.links,
     membersHeading: node.membersHeading,
     members: node.members,
+  };
+}
+
+export function detailForArea(node: AreaNode): DetailModel {
+  if (node.dataAreaType === "north-froze-pole") {
+    return {
+      id: node.detailId,
+      kind: node.kind,
+      title: node.label,
+      summary: node.summary ?? "Northern frozen-water route for observed freeze and blacklist tracker activity.",
+      facts: node.facts ?? [],
+      links: node.links ?? [{ label: "Blacklist tracker", href: "/blacklist/" }],
+      membersHeading: node.membersHeading,
+      members: node.members,
+    };
+  }
+
+  return {
+    id: node.detailId,
+    kind: node.kind,
+    title: node.label,
+    summary: node.band
+      ? `${node.label} is a DEWS ${node.band} water area used for ship risk placement.`
+      : `${node.label} is a named water area.`,
+    facts: [
+      ...(node.band ? [{ label: "DEWS band", value: node.band }] : []),
+      ...(node.count != null ? [{ label: "Stablecoins", value: String(node.count) }] : []),
+      ...(node.riskPlacement ? [{ label: "Risk placement", value: node.riskPlacement }] : []),
+    ],
+    links: [{ label: "DEWS", href: "/depeg-watch/" }],
   };
 }

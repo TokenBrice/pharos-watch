@@ -70,6 +70,7 @@ const WATER_TERRAIN_KINDS = new Set<TerrainKind>([
   "warning-water",
   "storm-water",
   "fog-water",
+  "frozen-water",
 ]);
 
 const ELEVATED_TERRAIN_KINDS = new Set<TerrainKind>(["hill", "rock", "cliff"]);
@@ -112,6 +113,7 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
 
   if (isOutOfBounds(x, y) || island >= 1 || harborWater) {
     if (harborWater) return "harbor-water";
+    if (isNorthFrozePole(x, y)) return "frozen-water";
     if (isDangerStrait(x, y)) return "storm-water";
     if (isWarningShoals(x, y)) return "warning-water";
     if (isAlertChannel(x, y)) return "alert-water";
@@ -185,6 +187,13 @@ function isDangerStrait(x: number, y: number): boolean {
   return ellipseValue(x, y, 55.4, 53.3, 7.8, 6.7) < 1
     && x >= 48
     && y >= 45;
+}
+
+export function isNorthFrozePole(x: number, y: number): boolean {
+  return x >= 0
+    && y >= 0
+    && x + y <= 10
+    && Math.abs(x - y) <= 8;
 }
 
 function isCemeteryCausewayTile(x: number, y: number): boolean {

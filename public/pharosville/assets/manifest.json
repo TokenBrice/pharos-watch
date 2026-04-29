@@ -486,24 +486,6 @@
       }
     },
     {
-      "id": "landmark.north-froze-pole",
-      "path": "landmarks/north-froze-pole.png",
-      "category": "landmark",
-      "layer": "landmarks",
-      "width": 96,
-      "height": 128,
-      "displayScale": 1,
-      "anchor": [48, 120],
-      "footprint": [18, 14],
-      "hitbox": [26, 6, 44, 116],
-      "loadPriority": "deferred",
-      "tool": "mcp:create_map_object",
-      "promptProvenance": {
-        "jobId": "2c435244-3fa0-4cfa-8c9d-4be74e4b3e6d",
-        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
-      }
-    },
-    {
       "id": "building.exit-route-gatehouse",
       "path": "buildings/exit-route-gatehouse.png",
       "category": "landmark",

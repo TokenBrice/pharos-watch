@@ -27,9 +27,10 @@ import {
   detailForDock,
   detailForGrave,
   detailForLighthouse,
+  detailForArea,
   detailForShip,
 } from "./detail-model";
-import { buildDataBuildings } from "./data-buildings";
+import { buildDataBuildings, buildNorthFrozePoleArea } from "./data-buildings";
 import { buildPharosVilleMap, graveNodesFromEntries, isWaterTileKind, LIGHTHOUSE_TILE, nearestAvailableWaterTile, nearestWaterTile, REGION_TILES, stableOffset, terrainKindAt, tileKindAt } from "./world-layout";
 import { getRecentChange } from "./recent-change";
 import { resolveShipRiskPlacement } from "./risk-placement";
@@ -215,6 +216,7 @@ function buildAreas(stress: StressSignalsAllResponse | null | undefined): Pharos
     tile: AREA_SIGN_TILES[band],
     band,
     count: counts[band],
+    detailId: `area.dews.${band.toLowerCase()}`,
     riskPlacement: DEWS_AREA_PLACEMENTS[band],
   }));
 }
@@ -473,6 +475,7 @@ function buildDetailIndex(world: Omit<PharosVilleWorld, "detailIndex" | "visualC
     ...world.docks.map(detailForDock),
     ...world.ships.map(detailForShip),
     ...world.shipClusters.map(detailForCluster),
+    ...world.areas.map(detailForArea),
     ...world.graves.map(detailForGrave),
     ...world.buildings.map(detailForBuilding),
   ];
@@ -497,7 +500,11 @@ export function buildPharosVilleWorld(inputs: PharosVilleInputs): PharosVilleWor
   const map = buildPharosVilleMap();
   const lighthouse = buildLighthouse(inputs.stability);
   const docks = buildChainDocks(inputs.chains);
-  const areas = buildAreas(inputs.stress);
+  const northFrozePole = buildNorthFrozePoleArea(inputs.blacklistSummary, inputs.freshness);
+  const areas = [
+    ...buildAreas(inputs.stress),
+    northFrozePole,
+  ];
   const allShips = buildShips(inputs, docks);
   const dockedShips = assignDockVisits(allShips, docks);
   const { visibleShips, clusters } = clusterLongTailShips(dockedShips);
@@ -528,7 +535,8 @@ export function buildPharosVilleWorld(inputs: PharosVilleInputs): PharosVilleWor
       { id: "legend.psi", label: "Lighthouse", description: "PSI composite status" },
       { id: "legend.docks", label: "Docks", description: "Top chain harbors by stablecoin supply" },
       { id: "legend.ships", label: "Ships", description: "Active stablecoins" },
-      { id: "legend.buildings", label: "Data landmarks", description: "Thematic landmarks for Pharos data products" },
+      { id: "legend.buildings", label: "Data buildings", description: "Main-island thematic buildings for Pharos data products" },
+      { id: "legend.north-froze-pole", label: "North Froze Pole", description: "Frozen-water path for observed blacklist and freeze tracker activity" },
       { id: "legend.cemetery", label: "Cemetery", description: "Dead and frozen assets" },
     ],
   };

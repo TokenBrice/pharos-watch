@@ -11,7 +11,7 @@ import {
   type YieldRanking,
   type YieldRankingsResponse,
 } from "@shared/types";
-import type { BuildingNode, BuildingStatus, BuildingType, PharosVilleFreshness } from "./world-types";
+import type { AreaNode, BuildingNode, BuildingStatus, BuildingType, PharosVilleFreshness } from "./world-types";
 
 export interface DataBuildingInputs {
   blacklistSummary: BlacklistSummaryResponse | null | undefined;
@@ -25,7 +25,6 @@ export interface DataBuildingInputs {
 
 const BUILDING_TILES: Record<BuildingType, { x: number; y: number }> = {
   "mint-burn-foundry": { x: 22, y: 30 },
-  "north-froze-pole": { x: 37, y: 22 },
   "exit-route-gatehouse": { x: 40, y: 40 },
   "yield-orchard-moonwell": { x: 46, y: 30 },
   "dependency-loom-chainworks": { x: 30, y: 40 },
@@ -33,7 +32,6 @@ const BUILDING_TILES: Record<BuildingType, { x: number; y: number }> = {
 
 const BUILDING_LABELS: Record<BuildingType, string> = {
   "mint-burn-foundry": "Royal Mint And Burn Foundry",
-  "north-froze-pole": "North Froze Pole",
   "exit-route-gatehouse": "Exit Route Gatehouse",
   "yield-orchard-moonwell": "Yield Orchard And Moonwell",
   "dependency-loom-chainworks": "Dependency Loom / Chainworks",
@@ -60,7 +58,6 @@ const STATUS_LABELS: Record<BuildingStatus, string> = {
 
 const BUILDING_ACCENTS: Record<BuildingType, string> = {
   "mint-burn-foundry": "#f1b84f",
-  "north-froze-pole": "#9ed8ff",
   "exit-route-gatehouse": "#65c7bd",
   "yield-orchard-moonwell": "#89c96f",
   "dependency-loom-chainworks": "#c99bff",
@@ -68,7 +65,6 @@ const BUILDING_ACCENTS: Record<BuildingType, string> = {
 
 const BUILDING_ASSET_IDS: Record<BuildingType, string> = {
   "mint-burn-foundry": "building.mint-burn-foundry",
-  "north-froze-pole": "landmark.north-froze-pole",
   "exit-route-gatehouse": "building.exit-route-gatehouse",
   "yield-orchard-moonwell": "building.yield-orchard-moonwell",
   "dependency-loom-chainworks": "building.dependency-loom-chainworks",
@@ -91,12 +87,14 @@ const ratioPercent = new Intl.NumberFormat("en-US", {
 export function buildDataBuildings(inputs: DataBuildingInputs): BuildingNode[] {
   return [
     buildMintBurnFoundry(inputs.mintBurnFlows, inputs.freshness),
-    buildNorthFrozePole(inputs.blacklistSummary, inputs.freshness),
     buildExitRouteGatehouse(inputs.dexLiquidity, inputs.redemptionBackstops, inputs.reportCards, inputs.freshness),
     buildYieldOrchard(inputs.yieldRankings, inputs.freshness),
     buildDependencyLoom(inputs.reportCards, inputs.freshness),
   ];
 }
+
+const NORTH_FROZE_POLE_TILE = { x: 0, y: 0 } as const;
+const NORTH_FROZE_POLE_ACCENT = "#9ed8ff";
 
 function buildMintBurnFoundry(
   flows: MintBurnFlowsResponse | null | undefined,
@@ -185,20 +183,20 @@ function buildMintBurnFoundry(
   });
 }
 
-function buildNorthFrozePole(
+export function buildNorthFrozePoleArea(
   summary: BlacklistSummaryResponse | null | undefined,
   freshness: PharosVilleFreshness,
-): BuildingNode {
+): AreaNode {
   const sourceFields = ["stats", "stats.perCoinFrozenTotal", "stats.recentCount24h", "chains", "methodology"];
   if (!summary) {
-    return makeBuilding({
-      buildingType: "north-froze-pole",
+    return makeNorthFrozePoleArea({
+      count: null,
       status: "unavailable",
       summary: "Observed blacklist and freeze tracker summary is not available yet.",
       facts: unavailableFacts("Source fields", sourceFields.join(", ")),
       sourceFields,
       links: [{ label: "Blacklist tracker", href: "/blacklist/" }],
-      visual: unavailableVisual("north-froze-pole"),
+      visual: unavailableNorthFrozePoleVisual(),
     });
   }
 
@@ -215,10 +213,10 @@ function buildNorthFrozePole(
     ? 0.75
     : clamp01((stats.activeAmountGapCount + stats.recoverableGapCount) / 20) * 0.6;
 
-  return makeBuilding({
-    buildingType: "north-froze-pole",
+  return makeNorthFrozePoleArea({
+    count: stats.recentCount24h > 0 ? stats.recentCount24h : stats.recentCount || null,
     status,
-    summary: "Marks observed freeze, blacklist, unblacklist, and destroy events from tracked contracts.",
+    summary: "Northern frozen-water route for observed freeze, blacklist, unblacklist, and destroy events from tracked contracts.",
     facts: [
       { label: "Status", value: STATUS_LABELS[status] },
       { label: "Active frozen value", value: formatUsd(stats.activeFrozenTotal) },
@@ -247,10 +245,10 @@ function buildNorthFrozePole(
         value: `${formatUsd(frozenUsd)} frozen`,
       })),
     visual: {
-      accent: BUILDING_ACCENTS["north-froze-pole"],
+      accent: NORTH_FROZE_POLE_ACCENT,
       dataFogIntensity,
       intensity: frostIntensity,
-      scale: 0.86,
+      scale: 1,
       secondaryIntensity: chainIntensity,
       tertiaryIntensity: Math.max(chainIntensity, frostIntensity * 0.55, mistIntensity),
     },
@@ -532,12 +530,54 @@ function makeBuilding(input: {
   };
 }
 
+function makeNorthFrozePoleArea(input: {
+  count: number | null;
+  facts: Array<{ label: string; value: string }>;
+  links: Array<{ label: string; href: string }>;
+  members?: Array<{ id: string; label: string; href: string; value?: string }>;
+  membersHeading?: string;
+  sourceFields: string[];
+  status: BuildingStatus;
+  summary: string;
+  visual: AreaNode["visual"];
+}): AreaNode {
+  return {
+    id: "area.north-froze-pole",
+    kind: "area",
+    label: "North Froze Pole",
+    tile: NORTH_FROZE_POLE_TILE,
+    dataAreaType: "north-froze-pole",
+    count: input.count,
+    status: input.status,
+    statusLabel: STATUS_LABELS[input.status],
+    summary: input.summary,
+    facts: input.facts,
+    sourceFields: input.sourceFields,
+    links: input.links,
+    membersHeading: input.membersHeading,
+    members: input.members,
+    detailId: "area.north-froze-pole",
+    visual: input.visual,
+  };
+}
+
 function unavailableVisual(buildingType: BuildingType): BuildingNode["visual"] {
   return {
     accent: BUILDING_ACCENTS[buildingType],
     dataFogIntensity: 0.72,
     intensity: 0.16,
-    scale: buildingType === "north-froze-pole" ? 0.86 : 1,
+    scale: 1,
+    secondaryIntensity: 0.08,
+    tertiaryIntensity: 0.08,
+  };
+}
+
+function unavailableNorthFrozePoleVisual(): AreaNode["visual"] {
+  return {
+    accent: NORTH_FROZE_POLE_ACCENT,
+    dataFogIntensity: 0.72,
+    intensity: 0.16,
+    scale: 1,
     secondaryIntensity: 0.08,
     tertiaryIntensity: 0.08,
   };

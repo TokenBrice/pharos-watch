@@ -11,6 +11,7 @@ export type TerrainKind =
   | "warning-water"
   | "storm-water"
   | "fog-water"
+  | "frozen-water"
   | "beach"
   | "grass"
   | "rock"
@@ -195,7 +196,6 @@ export interface GraveNode {
 
 export type BuildingType =
   | "mint-burn-foundry"
-  | "north-froze-pole"
   | "exit-route-gatehouse"
   | "yield-orchard-moonwell"
   | "dependency-loom-chainworks";
@@ -218,6 +218,15 @@ export type BuildingStatus =
   | "thin-exit"
   | "unavailable";
 
+export interface DataLandmarkVisual {
+  accent: string;
+  dataFogIntensity: number;
+  intensity: number;
+  scale: number;
+  secondaryIntensity: number;
+  tertiaryIntensity: number;
+}
+
 export interface BuildingNode {
   id: string;
   kind: "building";
@@ -234,14 +243,7 @@ export interface BuildingNode {
   membersHeading?: string;
   members?: Array<{ id: string; label: string; href: string; value?: string }>;
   detailId: string;
-  visual: {
-    accent: string;
-    dataFogIntensity: number;
-    intensity: number;
-    scale: number;
-    secondaryIntensity: number;
-    tertiaryIntensity: number;
-  };
+  visual: DataLandmarkVisual;
 }
 
 export interface WorldEffect {
@@ -265,8 +267,19 @@ export interface AreaNode {
   label: string;
   tile: { x: number; y: number };
   band?: DewsAreaBand;
-  count?: number;
+  count?: number | null;
+  dataAreaType?: "north-froze-pole";
+  detailId: string;
+  facts?: Array<{ label: string; value: string }>;
+  links?: Array<{ label: string; href: string }>;
+  members?: Array<{ id: string; label: string; href: string; value?: string }>;
+  membersHeading?: string;
   riskPlacement?: ShipRiskPlacement;
+  sourceFields?: string[];
+  status?: BuildingStatus;
+  statusLabel?: string;
+  summary?: string;
+  visual?: DataLandmarkVisual;
 }
 
 export interface DetailModel {

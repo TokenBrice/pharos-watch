@@ -83,12 +83,12 @@ export function buildVisualCueRegistry(): VisualCue[] {
       domEquivalent: "Royal Mint And Burn Foundry detail facts and accessibility ledger row",
     },
     {
-      id: "cue.landmark.north-froze-pole",
-      visual: "north frost pole, cold mist, lock chain, and blue lantern",
+      id: "cue.area.north-froze-pole",
+      visual: "frozen northern water path, ice seams, cold mist, and frosted sign",
       sourceField: "blacklistSummary.stats, blacklistSummary.stats.perCoinFrozenTotal, blacklistSummary.chains",
       questionAnswered: "How much observed freeze activity is active or recent in the blacklist tracker?",
-      failureState: "fogged pole with muted lantern",
-      domEquivalent: "North Froze Pole detail facts and accessibility ledger row",
+      failureState: "fogged northern water with muted ice texture",
+      domEquivalent: "North Froze Pole area detail facts and accessibility ledger row",
     },
     {
       id: "cue.building.exit-route-gatehouse",
