@@ -9,6 +9,7 @@ import { ScrollToTop } from "@/components/scroll-to-top";
 import { FeedbackButton } from "@/components/feedback-button";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
 import { RegimeBar } from "@/components/regime-bar";
+import { RouteChrome } from "@/components/route-chrome";
 import { PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd } from "@/lib/json-ld";
 import { API_ORIGIN as API_URL, SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { geistMono, geistSans } from "@/lib/fonts";
@@ -102,13 +103,17 @@ export default function RootLayout({
           Skip to main content
         </a>
         <Providers>
-          <RegimeBar />
-          <div className="h-[3px] shrink-0" />
-          <Header />
+          <RouteChrome>
+            <RegimeBar />
+            <div className="h-[3px] shrink-0" />
+            <Header />
+          </RouteChrome>
           <SidebarProvider>
             <div className="flex min-h-screen">
-              <Sidebar />
-              <SidebarSpacer />
+              <RouteChrome>
+                <Sidebar />
+                <SidebarSpacer />
+              </RouteChrome>
               <div className="flex-1 flex flex-col min-w-0">
                 <main
                   id="main-content"
@@ -116,13 +121,17 @@ export default function RootLayout({
                 >
                   {children}
                 </main>
-                <Footer />
+                <RouteChrome>
+                  <Footer />
+                </RouteChrome>
               </div>
             </div>
           </SidebarProvider>
-          <MobileUtilityDock />
-          <ScrollToTop />
-          <FeedbackButton />
+          <RouteChrome>
+            <MobileUtilityDock />
+            <ScrollToTop />
+            <FeedbackButton />
+          </RouteChrome>
         </Providers>
         <script
           type="application/ld+json"

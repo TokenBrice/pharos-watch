@@ -973,6 +973,13 @@
   }
 }
 
+#main-content:has([data-pharosville-route]) {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+  padding: 0;
+}
+
 [data-node-id]:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;

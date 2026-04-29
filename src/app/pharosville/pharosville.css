@@ -1,6 +1,6 @@
 .pharosville-loading {
   display: grid;
-  min-height: calc(100svh - 1.5rem);
+  min-height: 100svh;
   place-items: center;
   background:
     repeating-linear-gradient(0deg, rgba(242, 184, 91, 0.05) 0 2px, transparent 2px 6px),
@@ -25,7 +25,7 @@
 }
 
 .pharosville-narrow {
-  min-height: calc(100svh - 1.5rem);
+  min-height: 100svh;
   padding: 32px 18px;
   background:
     radial-gradient(circle at 50% 18%, rgba(186, 67, 44, 0.22), transparent 34%),
@@ -117,7 +117,7 @@
   --pv-border-dark: #2b170e;
   --pv-ruby: #b6422e;
   position: relative;
-  min-height: calc(100svh - 3px);
+  min-height: 100svh;
   overflow: hidden;
   background: #070609;
   font-family: Georgia, "Times New Roman", serif;
@@ -165,7 +165,7 @@
 .pharosville-canvas {
   display: block;
   width: 100%;
-  height: calc(100svh - 3px);
+  height: 100svh;
   cursor: grab;
   touch-action: none;
 }
@@ -523,9 +523,9 @@
   padding: 7px 11px;
 }
 
-.pharosville-fullscreen-button {
+.pharosville-fullscreen-button,
+.pharosville-home-button {
   position: absolute;
-  top: 30px;
   right: 30px;
   z-index: 6;
   display: inline-grid;
@@ -543,12 +543,22 @@
     0 14px 34px rgba(0, 0, 0, 0.42);
 }
 
-.pharosville-fullscreen-button:hover {
+.pharosville-fullscreen-button {
+  top: 30px;
+}
+
+.pharosville-home-button {
+  bottom: 30px;
+}
+
+.pharosville-fullscreen-button:hover,
+.pharosville-home-button:hover {
   border-color: var(--pv-gold);
   color: var(--pv-gold-bright);
 }
 
-.pharosville-fullscreen-button:focus-visible {
+.pharosville-fullscreen-button:focus-visible,
+.pharosville-home-button:focus-visible {
   outline: 2px solid var(--pv-gold-bright);
   outline-offset: 3px;
 }

@@ -1,7 +1,8 @@
 "use client";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Home, Maximize2, Minimize2 } from "lucide-react";
 import { AccessibilityLedger } from "./components/accessibility-ledger";
 import { DetailPanel } from "./components/detail-panel";
 import { WorldToolbar } from "./components/world-toolbar";
@@ -81,7 +82,7 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
       if (!shell?.contains(target)) return;
       const detailPanel = document.getElementById("pharosville-detail-panel");
       if (detailPanel?.contains(target)) return;
-      if (target instanceof Element && target.closest(".pharosville-overlay, .pharosville-fullscreen-button")) return;
+      if (target instanceof Element && target.closest(".pharosville-overlay, .pharosville-fullscreen-button, .pharosville-home-button")) return;
       clearSelection();
     };
 
@@ -473,6 +474,14 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
       >
         {fullscreenMode ? <Minimize2 aria-hidden="true" size={17} /> : <Maximize2 aria-hidden="true" size={17} />}
       </button>
+      <Link
+        href="/"
+        className="pharosville-home-button"
+        aria-label="Go to Pharos homepage"
+        title="Go to Pharos homepage"
+      >
+        <Home aria-hidden="true" size={17} />
+      </Link>
       <p className="sr-only" aria-live="polite">{announcement}</p>
       <AccessibilityLedger world={world} />
     </main>

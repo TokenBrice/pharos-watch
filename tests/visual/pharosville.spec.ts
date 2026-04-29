@@ -605,6 +605,9 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
   await expect(page.getByTestId("pharosville-map-key")).toHaveCount(0);
   await expect(page.getByTestId("pharosville-keyboard-entity-browser")).toHaveCount(0);
   await expect(page.getByTestId("pharosville-minimap")).toHaveCount(0);
+  await expect(page.locator('aside[aria-label="Main navigation"]')).toHaveCount(0);
+  await expect(page.locator("footer")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Go to Pharos homepage" })).toBeVisible();
   const ledgerText = await page.getByTestId("pharosville-accessibility-ledger").textContent();
   expect(ledgerText).toContain("56 by 56 tiles");
   const waterRatioText = ledgerText?.split(" tiles, ")[1]?.split("% water.")[0];
@@ -885,10 +888,14 @@ test("pharosville ultrawide canvas keeps DPR backing store capped", async ({ bas
         cssHeight: Math.floor(rect.height),
         cssWidth: Math.floor(rect.width),
         heightRatio: canvas.height / Math.max(1, rect.height),
+        availableWidth: Math.floor(
+          window.innerWidth - (document.querySelector("aside")?.getBoundingClientRect().width ?? 0),
+        ),
         widthRatio: canvas.width / Math.max(1, rect.width),
       };
     });
 
+    expect(metrics.cssWidth).toBeGreaterThanOrEqual(metrics.availableWidth - 1);
     expect(metrics.budget?.requestedDpr).toBeGreaterThanOrEqual(3);
     expect(metrics.budget?.effectiveDpr).toBeLessThan(2);
     expect(metrics.budget?.maxMainCanvasPixels).toBe(MAX_MAIN_CANVAS_PIXELS);
