@@ -1,4 +1,5 @@
 import { isWaterTileKind, nearestWaterTile } from "./world-layout";
+import { SHIP_WATER_ANCHORS } from "./risk-water-areas";
 import { stableHash, stableOffset, stableUnit } from "./stable-random";
 import type { PharosVilleMap, PharosVilleTile, PharosVilleWorld, ShipDockVisit, ShipNode, ShipWaterZone } from "./world-types";
 
@@ -81,38 +82,17 @@ const ZONE_DWELL: Record<ShipWaterZone, { dockDwell: number; riskDwell: number; 
 };
 
 const OPEN_WATER_PATROL_WAYPOINTS: Record<ShipWaterZone, readonly { x: number; y: number }[]> = {
-  fog: [
-    { x: 7, y: 12 },
-    { x: 9, y: 28 },
-    { x: 22, y: 18 },
-    { x: 18, y: 45 },
-  ],
-  ledger: [
-    { x: 29, y: 44 },
-    { x: 40, y: 43 },
-    { x: 48, y: 33 },
-    { x: 22, y: 43 },
-  ],
+  fog: SHIP_WATER_ANCHORS["data-fog"],
+  ledger: SHIP_WATER_ANCHORS["ledger-mooring"],
   muddy: [
-    { x: 49, y: 24 },
-    { x: 54, y: 36 },
-    { x: 48, y: 54 },
-    { x: 24, y: 44 },
+    ...SHIP_WATER_ANCHORS["harbor-mouth-watch"],
+    ...SHIP_WATER_ANCHORS["outer-rough-water"],
   ],
   safe: [
-    { x: 16, y: 27 },
-    { x: 31, y: 19 },
-    { x: 49, y: 31 },
-    { x: 47, y: 36 },
-    { x: 40, y: 43 },
-    { x: 22, y: 43 },
+    ...SHIP_WATER_ANCHORS["safe-harbor"],
+    ...SHIP_WATER_ANCHORS["breakwater-edge"],
   ],
-  storm: [
-    { x: 54, y: 44 },
-    { x: 54, y: 54 },
-    { x: 47, y: 54 },
-    { x: 54, y: 36 },
-  ],
+  storm: SHIP_WATER_ANCHORS["storm-shelf"],
 };
 
 export function buildBaseMotionPlan(world: PharosVilleWorld): PharosVilleBaseMotionPlan {

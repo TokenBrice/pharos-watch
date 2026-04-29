@@ -91,8 +91,8 @@ export const WATER_TERRAIN_STYLES = {
   },
   "calm-water": {
     accent: "rgba(181, 231, 214, 0.24)",
-    base: "#1f7a70",
-    inner: "rgba(90, 176, 153, 0.24)",
+    base: "#238c73",
+    inner: "rgba(83, 190, 145, 0.24)",
     texture: "calm",
     wave: "rgba(206, 241, 228, 0.18)",
   },

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { clusterLongTailShips } from "./clustering";
-import { tileKindAt } from "./world-layout";
-import type { ShipNode } from "./world-types";
+import { terrainKindAt, tileKindAt } from "./world-layout";
+import type { ShipNode, ShipRiskPlacement } from "./world-types";
 
-function makeShip(index: number, marketCapUsd: number): ShipNode {
+function makeShip(index: number, marketCapUsd: number, riskPlacement: ShipRiskPlacement = "safe-harbor"): ShipNode {
   return {
     id: `asset-${index}`,
     kind: "ship",
@@ -21,7 +21,7 @@ function makeShip(index: number, marketCapUsd: number): ShipNode {
     homeDockChainId: null,
     dockChainId: null,
     marketCapUsd,
-    riskPlacement: "safe-harbor",
+    riskPlacement,
     riskZone: "safe",
     placementEvidence: { reason: "fixture", sourceFields: [], stale: false },
     visual: {
@@ -56,6 +56,7 @@ describe("clusterLongTailShips", () => {
     const clusterTile = result.clusters[0]?.tile;
     expect(clusterTile).toBeDefined();
     expect(["water", "deep-water"]).toContain(tileKindAt(clusterTile?.x ?? -1, clusterTile?.y ?? -1));
+    expect(terrainKindAt(clusterTile?.x ?? -1, clusterTile?.y ?? -1)).toBe("calm-water");
   });
 
   it("splits large long-tail groups into smaller water clusters", () => {
@@ -67,6 +68,23 @@ describe("clusterLongTailShips", () => {
     expect(Math.max(...result.clusters.map((cluster) => cluster.count))).toBeLessThanOrEqual(36);
     expect(result.clusters.reduce((sum, cluster) => sum + cluster.count, 0)).toBe(109);
     expect(new Set(result.clusters.map((cluster) => `${cluster.tile.x}.${cluster.tile.y}`)).size).toBe(result.clusters.length);
-    expect(result.clusters.every((cluster) => ["water", "deep-water"].includes(tileKindAt(cluster.tile.x, cluster.tile.y)))).toBe(true);
+    expect(result.clusters.every((cluster) => terrainKindAt(cluster.tile.x, cluster.tile.y) === "calm-water")).toBe(true);
+  });
+
+  it("keeps clusters inside their risk placement's semantic water", () => {
+    const ships = [
+      makeShip(1, 500, "storm-shelf"),
+      makeShip(2, 400, "storm-shelf"),
+      makeShip(3, 300, "outer-rough-water"),
+      makeShip(4, 200, "outer-rough-water"),
+    ];
+
+    const result = clusterLongTailShips(ships, 0);
+    const terrainByPlacement = Object.fromEntries(
+      result.clusters.map((cluster) => [cluster.riskPlacement, terrainKindAt(cluster.tile.x, cluster.tile.y)]),
+    );
+
+    expect(terrainByPlacement["storm-shelf"]).toBe("storm-water");
+    expect(terrainByPlacement["outer-rough-water"]).toBe("warning-water");
   });
 });

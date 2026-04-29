@@ -45,8 +45,8 @@ const AREA_LABEL_PLACEMENTS_BY_BAND: Partial<Record<DewsAreaBand, AreaLabelPlace
   },
   ALERT: {
     align: "center",
-    dx: 0.45,
-    dy: -0.75,
+    dx: 0.2,
+    dy: -1.6,
     hitboxHeight: 30,
     maxWidth: 108,
     rotation: 0.08,
@@ -61,8 +61,8 @@ const AREA_LABEL_PLACEMENTS_BY_BAND: Partial<Record<DewsAreaBand, AreaLabelPlace
   },
   DANGER: {
     align: "center",
-    dx: -0.8,
-    dy: 1.9,
+    dx: 0,
+    dy: 0,
     hitboxHeight: 32,
     maxWidth: 116,
     rotation: -0.18,
@@ -72,8 +72,8 @@ const AREA_LABEL_PLACEMENTS_BY_BAND: Partial<Record<DewsAreaBand, AreaLabelPlace
 const AREA_LABEL_PLACEMENTS_BY_DETAIL_ID: Record<string, AreaLabelPlacement> = {
   "area.north-froze-pole": {
     align: "center",
-    dx: 7.8,
-    dy: 6.7,
+    dx: 5,
+    dy: 3,
     hitboxHeight: 32,
     maxWidth: 132,
     rotation: 0.14,

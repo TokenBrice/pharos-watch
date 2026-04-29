@@ -56,6 +56,8 @@ describe("HARBOR_PALETTE", () => {
     expect(new Set(styles.map((style) => style.texture)).size).toBe(styles.length);
     expect(minimumHexDistance(styles.map((style) => style.base))).toBeGreaterThan(18);
     expect(WATER_TERRAIN_STYLES["calm-water"].texture).not.toBe(WATER_TERRAIN_STYLES["watch-water"].texture);
+    expect(hexDistance(WATER_TERRAIN_STYLES["calm-water"].base, WATER_TERRAIN_STYLES["harbor-water"].base)).toBeGreaterThan(32);
+    expect(hexDistance(WATER_TERRAIN_STYLES["calm-water"].base, WATER_TERRAIN_STYLES["alert-water"].base)).toBeGreaterThan(32);
     expect(WATER_TERRAIN_STYLES["warning-water"].accent).not.toBe(WATER_TERRAIN_STYLES.water.accent);
     expect(WATER_TERRAIN_STYLES["frozen-water"].base).not.toBe(WATER_TERRAIN_STYLES["fog-water"].base);
   });

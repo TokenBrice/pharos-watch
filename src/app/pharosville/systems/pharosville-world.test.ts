@@ -258,11 +258,11 @@ describe("buildPharosVilleWorld", () => {
     expect(alertArea?.riskPlacement).toBe("harbor-mouth-watch");
     expect(alertArea?.tile ? terrainKindAt(alertArea.tile.x, alertArea.tile.y) : null).toBe("alert-water");
     expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 37, y: 6 });
-    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 42, y: 0 });
+    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 41, y: 0 });
     expect(world.areas.find((area) => area.id === "area.north-froze-pole")?.tile).toEqual({ x: 0, y: 0 });
     expect(terrainKindAt(0, 0)).toBe("frozen-water");
     expect(terrainKindAt(37, 6)).toBe("warning-water");
-    expect(terrainKindAt(42, 0)).toBe("storm-water");
+    expect(terrainKindAt(41, 0)).toBe("storm-water");
     expect(usdc?.riskPlacement).toBe("harbor-mouth-watch");
     expect(usdc?.riskZone).toBe("muddy");
   });

@@ -31,9 +31,10 @@ import {
   detailForShip,
 } from "./detail-model";
 import { buildDataBuildings, buildNorthFrozePoleArea } from "./data-buildings";
-import { buildPharosVilleMap, clampMapTile, graveNodesFromEntries, isWaterTileKind, LIGHTHOUSE_TILE, MAX_TILE_X, MAX_TILE_Y, nearestAvailableWaterTile, nearestWaterTile, REGION_TILES, terrainKindAt, tileKindAt } from "./world-layout";
+import { buildPharosVilleMap, clampMapTile, graveNodesFromEntries, LIGHTHOUSE_TILE, MAX_TILE_X, MAX_TILE_Y, nearestAvailableWaterTile, nearestWaterTile, REGION_TILES } from "./world-layout";
 import { getRecentChange } from "./recent-change";
 import { resolveShipRiskPlacement } from "./risk-placement";
+import { isRiskPlacementWaterTile, nearestAvailableRiskPlacementWaterTile, nearestRiskPlacementWaterTile } from "./risk-water-placement";
 import {
   AREA_LABEL_TILES,
   DEWS_AREA_BANDS,
@@ -42,7 +43,6 @@ import {
   DEWS_AREA_WATER_STYLE,
   SHIP_SCATTER_RADIUS,
   SHIP_WATER_ANCHORS,
-  riskWaterAreaForPlacement,
   waterZoneForPlacement,
 } from "./risk-water-areas";
 import { resolveShipVisual } from "./ship-visuals";
@@ -181,9 +181,9 @@ function shipTile(asset: StablecoinData, placement: ShipNode["riskPlacement"]): 
         y: Math.round(base.y + Math.sin(angle) * radius.y * distance + stableOffset(`${asset.id}.risk.y.${attempt}`, 1) * 0.3),
       }),
     };
-    if (isPlacementWaterTile(tile, placement)) return tile;
+    if (isRiskPlacementWaterTile(tile, placement)) return tile;
   }
-  return nearestPlacementWaterTile(base, placement, 18) ?? nearestWaterTile(base, 18);
+  return nearestRiskPlacementWaterTile(base, placement, 18) ?? nearestWaterTile(base, 18);
 }
 
 function buildShips(inputs: PharosVilleInputs, docks: readonly DockNode[]): ShipNode[] {
@@ -301,81 +301,11 @@ function spreadShipRiskAnchorsAcrossWater(ships: ShipNode[]): ShipNode[] {
   return ships
     .toSorted((a, b) => b.marketCapUsd - a.marketCapUsd || a.id.localeCompare(b.id))
     .map((ship) => {
-      const riskTile = nearestAvailablePlacementWaterTile(ship.riskTile, ship.riskPlacement, occupied, 18)
+      const riskTile = nearestAvailableRiskPlacementWaterTile(ship.riskTile, ship.riskPlacement, occupied, 18)
         ?? nearestAvailableWaterTile(ship.riskTile, occupied);
       occupied.add(`${riskTile.x}.${riskTile.y}`);
       return { ...ship, tile: riskTile, riskTile };
     });
-}
-
-function isPlacementWaterTile(tile: { x: number; y: number }, placement: ShipNode["riskPlacement"]): boolean {
-  const terrain = terrainKindAt(tile.x, tile.y);
-  const validTerrains = riskWaterAreaForPlacement(placement).validTerrains;
-  if (validTerrains === "any-water") return isWaterTileKind(tileKindAt(tile.x, tile.y));
-  return validTerrains.includes(terrain);
-}
-
-function nearestPlacementWaterTile(
-  tile: { x: number; y: number },
-  placement: ShipNode["riskPlacement"],
-  maxRadius = 12,
-): { x: number; y: number } | null {
-  if (isPlacementWaterTile(tile, placement)) return tile;
-
-  let bestTile: { x: number; y: number } | null = null;
-  let bestDistance = Number.POSITIVE_INFINITY;
-  for (let radius = 1; radius <= maxRadius; radius += 1) {
-    for (let dx = -radius; dx <= radius; dx += 1) {
-      for (let dy = -radius; dy <= radius; dy += 1) {
-        if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
-        const candidate = {
-          ...clampMapTile({ x: tile.x + dx, y: tile.y + dy }),
-        };
-        if (!isPlacementWaterTile(candidate, placement)) continue;
-        const distance = Math.abs(dx) + Math.abs(dy);
-        if (distance < bestDistance) {
-          bestTile = candidate;
-          bestDistance = distance;
-        }
-      }
-    }
-    if (bestTile) return bestTile;
-  }
-
-  return null;
-}
-
-function nearestAvailablePlacementWaterTile(
-  tile: { x: number; y: number },
-  placement: ShipNode["riskPlacement"],
-  occupied: ReadonlySet<string>,
-  maxRadius = 12,
-): { x: number; y: number } | null {
-  const initialKey = `${tile.x}.${tile.y}`;
-  if (isPlacementWaterTile(tile, placement) && !occupied.has(initialKey)) return tile;
-
-  let bestTile: { x: number; y: number } | null = null;
-  let bestDistance = Number.POSITIVE_INFINITY;
-  for (let radius = 1; radius <= maxRadius; radius += 1) {
-    for (let dx = -radius; dx <= radius; dx += 1) {
-      for (let dy = -radius; dy <= radius; dy += 1) {
-        if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
-        const candidate = {
-          ...clampMapTile({ x: tile.x + dx, y: tile.y + dy }),
-        };
-        if (occupied.has(`${candidate.x}.${candidate.y}`)) continue;
-        if (!isPlacementWaterTile(candidate, placement)) continue;
-        const distance = Math.abs(dx) + Math.abs(dy);
-        if (distance < bestDistance) {
-          bestTile = candidate;
-          bestDistance = distance;
-        }
-      }
-    }
-    if (bestTile) return bestTile;
-  }
-
-  return null;
 }
 
 function buildDetailIndex(world: Omit<PharosVilleWorld, "detailIndex" | "visualCues">): Record<string, DetailModel> {

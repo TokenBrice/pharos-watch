@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fixtureChains, fixturePegSummary, fixtureReportCards, fixtureStablecoins, fixtureStability, fixtureStress, makeAsset, makeChain, makePegCoin } from "../__fixtures__/pharosville-world";
 import { buildPharosVilleWorld } from "./pharosville-world";
 import { buildBaseMotionPlan, buildMotionPlan, buildShipWaterRoute, lighthouseFireFlickerSpeed, resolveShipMotionSample, sampleShipWaterPath, stableMotionPhase } from "./motion";
-import { buildPharosVilleMap, isWaterTileKind, tileKindAt } from "./world-layout";
+import { buildPharosVilleMap, isWaterTileKind, terrainKindAt, tileKindAt } from "./world-layout";
 import type { PharosVilleMap, PharosVilleWorld } from "./world-types";
 
 describe("motion", () => {
@@ -126,6 +126,49 @@ describe("motion", () => {
     expect(samples.every((sample) => /water/.test(tileKindForSample(sample.tile)))).toBe(true);
   });
 
+  it("keeps dockless patrol waypoints in the current northern risk water", () => {
+    const cases = [
+      {
+        expectedTerrains: ["calm-water", "watch-water"],
+        world: worldForShip({ chainCirculating: {}, chains: ["ethereum"] }),
+      },
+      {
+        expectedTerrains: ["alert-water", "warning-water"],
+        world: worldForShip({
+          chainCirculating: {},
+          chains: ["ethereum"],
+          pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", currentDeviationBps: 100 }),
+        }),
+      },
+      {
+        expectedTerrains: ["storm-water"],
+        world: worldForShip({
+          chainCirculating: {},
+          chains: ["ethereum"],
+          pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true }),
+        }),
+      },
+      {
+        expectedTerrains: ["brackish-water"],
+        world: worldForShip({
+          chainCirculating: {},
+          chains: ["ethereum"],
+          freshness: { pegSummaryStale: true },
+          pegCoin: makePegCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true }),
+        }),
+      },
+    ];
+
+    for (const entry of cases) {
+      const route = onlyRoute(entry.world);
+      const waypoint = route.openWaterPatrol?.waypoint;
+
+      expect(waypoint).toBeDefined();
+      expect(entry.expectedTerrains).toContain(terrainKindAt(waypoint?.x ?? -1, waypoint?.y ?? -1));
+      expect(waypoint?.y).toBeLessThanOrEqual(36);
+    }
+  });
+
   it("keeps safe, muddy, and storm route samples on water tiles", () => {
     const worlds = [
       worldForShip({
@@ -166,7 +209,7 @@ describe("motion", () => {
 
   it("routes over semantic water terrain only", () => {
     const map = buildPharosVilleMap();
-    const route = buildShipWaterRoute({ from: { x: 42, y: 0 }, to: { x: 32, y: 12 }, map });
+    const route = buildShipWaterRoute({ from: { x: 41, y: 0 }, to: { x: 32, y: 12 }, map });
 
     expect(route.points.length).toBeGreaterThan(1);
     expect(terrainKindInMap(map, route.points[0]!)).toBe("storm-water");

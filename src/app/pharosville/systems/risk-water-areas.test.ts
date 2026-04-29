@@ -15,7 +15,7 @@ import {
   waterZoneForPlacement,
 } from "./risk-water-areas";
 import { tileToIso } from "./projection";
-import { PHAROSVILLE_MAP_HEIGHT, PHAROSVILLE_MAP_WIDTH, isWaterTileKind, terrainKindAt, tileKindAt } from "./world-layout";
+import { PHAROSVILLE_MAP_HEIGHT, PHAROSVILLE_MAP_WIDTH, isWaterTileKind, terrainKindAt } from "./world-layout";
 import type { DewsAreaBand } from "./world-types";
 
 const WEST_TO_EAST_DEWS_BANDS: DewsAreaBand[] = ["CALM", "WATCH", "ALERT", "WARNING", "DANGER"];
@@ -123,7 +123,8 @@ function connectedWaterTileKeys(start: { x: number; y: number }): Set<string> {
     const tile = queue.shift();
     if (!tile) continue;
     if (tile.x < 0 || tile.x >= PHAROSVILLE_MAP_WIDTH || tile.y < 0 || tile.y >= PHAROSVILLE_MAP_HEIGHT) continue;
-    if (!isWaterTileKind(tileKindAt(tile.x, tile.y))) continue;
+    const terrain = terrainKindAt(tile.x, tile.y);
+    if (terrain === "frozen-water" || !isWaterTileKind(terrain)) continue;
     const key = tileKey(tile);
     if (visited.has(key)) continue;
 

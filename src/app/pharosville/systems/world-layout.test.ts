@@ -132,10 +132,10 @@ describe("buildPharosVilleMap", () => {
   });
 
   it("resolves occupied placement anchors to an open nearby water tile", () => {
-    const occupied = new Set(["41.46"]);
-    const tile = nearestAvailableWaterTile({ x: 41, y: 46 }, occupied);
+    const occupied = new Set(["37.6"]);
+    const tile = nearestAvailableWaterTile({ x: 37, y: 6 }, occupied);
 
-    expect(`${tile.x}.${tile.y}`).not.toBe("41.46");
+    expect(`${tile.x}.${tile.y}`).not.toBe("37.6");
     expect(isWaterTileKind(tileKindAt(tile.x, tile.y))).toBe(true);
   });
 
