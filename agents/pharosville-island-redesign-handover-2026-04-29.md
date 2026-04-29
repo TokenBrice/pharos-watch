@@ -61,13 +61,13 @@ Use this checklist as the canonical handover status tracker. Future reviewers sh
 | --- | --- | --- | --- | --- |
 | 1. Palette and renderer structure | Make later visual changes surgical by clarifying active renderer color groups. | Complete | Phase 1 reviewer | Re-check complete; see Phase 1 completion notes. |
 | 2. World-layout reshape | Replace central ellipse with authored island, corner hill, harbor cove, and moved lighthouse. | Complete | Phase 2 blocker re-check reviewer | Visual test hardening blockers cleared for `tests/visual/pharosville.spec.ts`; movement files remain external. |
-| 3. Terrain and water drawing | Replace flat diamonds with terrain-specific land and water rendering. | Not started | TBD | TBD |
-| 4. Lighthouse headland and landmark | Make lighthouse the compositional anchor with hill, cliff, beacon, and correct hit target. | Not started | TBD | TBD |
-| 5. Atmosphere and ambient life | Add restrained birds, fog, lamps, waves, and decorative/encoded atmosphere with parity where needed. | Not started | TBD | TBD |
-| 6. Entity and village detail | Integrate ships, docks, cemetery, village props, wakes, and selection cues with richer terrain. | Not started | TBD | TBD |
+| 3. Terrain and water drawing | Replace flat diamonds with terrain-specific land and water rendering. | Complete | Final redesign reviewer | Implemented in renderer; visual/perf validation still pending. |
+| 4. Lighthouse headland and landmark | Make lighthouse the compositional anchor with hill, cliff, beacon, and correct hit target. | Complete | Final redesign reviewer | Headland/platform/beam implemented; PSI-unavailable beam is gated. |
+| 5. Atmosphere and ambient life | Add restrained birds, fog, lamps, waves, and decorative/encoded atmosphere with parity where needed. | Complete | Final redesign reviewer | Decorative haze, lamps, and birds implemented; no new encoded semantics added. |
+| 6. Entity and village detail | Integrate ships, docks, cemetery, village props, wakes, and selection cues with richer terrain. | Partial | Final redesign reviewer | Village lights and terrain integration are in place; dock hitbox/orientation still needs visual review. |
 | 7. Asset pass, only if needed | Improve or replace sprites without bloating first render or breaking manifest contracts. | Not started | TBD | TBD |
 | 8. Route shell polish | Tune HUD/detail chrome for richer scene without redesigning the route shell. | Not started | TBD | TBD |
-| 9. Tests, snapshots, and docs | Lock down shipped behavior with tests, visual snapshots, docs, and full validation. | Not started | TBD | TBD |
+| 9. Tests, snapshots, and docs | Lock down shipped behavior with tests, visual snapshots, docs, and full validation. | Partial | Final redesign reviewer | Tests/docs were updated for new ratios/classifiers; desktop snapshot update still pending explicit visual run. |
 
 ## What to Verify After Each Phase
 
@@ -159,6 +159,21 @@ Use this checklist as the canonical handover status tracker. Future reviewers sh
 
 Append future phase completion notes here. Keep entries factual and include scope, validation, residual risks, and next recommended phase.
 
+### Final Blocker Re-check Handoff Note
+
+- Completed by: Final reviewer blocker re-check
+- Date: 2026-04-29
+- Status: PharosVille island redesign blocker re-check is satisfied for the committed/working scope reviewed.
+- Scope reviewed: Northeast lighthouse headland implemented at `{ x: 44, y: 18 }`.
+- Scope reviewed: Richer terrain and water rendering implemented.
+- Scope reviewed: Decorative birds, haze, and lamps implemented.
+- Scope reviewed: Water-ratio tests updated.
+- Scope reviewed: Handover notes updated.
+- Scope reviewed: Prior stale `86.3%` and `0.83` assertions replaced with `76%` to `84%` range checks.
+- Validation run: Playwright screenshot regeneration/review was intentionally not run because this workflow did not authorize test or snapshot execution.
+- Residual risks: `pharosville-desktop-shell.png` should be regenerated and visually reviewed in the authorized validation pass before final shipping.
+- Next handoff: Authorized validation owner should regenerate/review the PharosVille desktop shell screenshot before treating the redesign as final-shipping ready.
+
 ### Phase 1 Completion Notes
 
 - Completed by: Phase 1 reviewer re-check
@@ -193,30 +208,36 @@ Append future phase completion notes here. Keep entries factual and include scop
 
 ### Phase 3 Completion Notes
 
-- Completed by: TBD
-- Date: TBD
-- Files changed: TBD
-- Validation run: TBD
-- Residual risks: TBD
-- Next handoff: TBD
+- Completed by: Final redesign reviewer
+- Date: 2026-04-29
+- Files changed: `src/app/pharosville/renderer/world-canvas.ts`, `src/app/pharosville/systems/world-layout.ts`, `src/app/pharosville/systems/world-types.ts`, related layout tests.
+- Scope completed: Renderer now consumes terrain metadata and draws distinct water bands, shoreline foam, beach, grass, rock, cliff, hill, and road terrain.
+- Scope completed: `fog-water`, `storm-water`, and `harbor-water` are visually distinct while canonical movement tiles remain compatible.
+- Validation run: Static review only. No tests, lint, build, or visual snapshots were run.
+- Residual risks: Hot-path renderer performance needs focused canvas-budget/visual validation.
+- Next handoff: Run focused PharosVille visual and canvas-budget checks before snapshot approval.
 
 ### Phase 4 Completion Notes
 
-- Completed by: TBD
-- Date: TBD
-- Files changed: TBD
-- Validation run: TBD
-- Residual risks: TBD
-- Next handoff: TBD
+- Completed by: Final redesign reviewer
+- Date: 2026-04-29
+- Files changed: `src/app/pharosville/renderer/world-canvas.ts`, `src/app/pharosville/systems/world-layout.ts`, `src/app/pharosville/systems/pharosville-world.ts`.
+- Scope completed: Lighthouse anchor moved to `{ x: 44, y: 18 }` and renderer adds a headland platform, cliff base, road/stair detail, and reduced-motion-safe beam.
+- Scope completed: Active gold beam is gated when PSI is unavailable.
+- Validation run: Static review only. No hit-testing or visual interaction run was recorded.
+- Residual risks: Dock/lighthouse visual alignment and hit targets need focused interaction or visual review.
+- Next handoff: Confirm lighthouse click target and screenshot before final release.
 
 ### Phase 5 Completion Notes
 
-- Completed by: TBD
-- Date: TBD
-- Files changed: TBD
-- Validation run: TBD
-- Residual risks: TBD
-- Next handoff: TBD
+- Completed by: Final redesign reviewer
+- Date: 2026-04-29
+- Files changed: `src/app/pharosville/renderer/world-canvas.ts`.
+- Scope completed: Decorative haze bands, warm village lights, and seven ambient birds were added.
+- Scope completed: No new encoded semantics were added for birds/lights; reduced motion uses static timing.
+- Validation run: Static review only. No reduced-motion visual run was recorded.
+- Residual risks: Reduced-motion output and normal-motion atmosphere need visual confirmation.
+- Next handoff: Run reduced-motion and normal-motion PharosVille visual checks when validation is authorized.
 
 ### Phase 6 Completion Notes
 
@@ -247,12 +268,15 @@ Append future phase completion notes here. Keep entries factual and include scop
 
 ### Phase 9 Completion Notes
 
-- Completed by: TBD
-- Date: TBD
-- Files changed: TBD
-- Validation run: TBD
-- Residual risks: TBD
-- Next handoff: TBD
+- Completed by: Final redesign reviewer
+- Date: 2026-04-29
+- Files changed: `tests/visual/pharosville.spec.ts`, `src/app/pharosville/systems/pharosville-world.test.ts`, `docs/pharosville-page.md`, this handover document.
+- Scope completed: Old hard-coded `86.3% water` visual assertion replaced with a range-safe ledger assertion.
+- Scope completed: World test water-ratio bounds aligned to `0.76` through `0.84`.
+- Scope completed: Visual pixel classifiers were broadened and ratio-capped for natural terrain/water bands.
+- Validation run: Static review only. No Playwright snapshot update was run.
+- Residual risks: `pharosville-desktop-shell.png` snapshot is likely stale and needs authorized visual snapshot regeneration/review.
+- Next handoff: Update visual snapshot after an explicit test/snapshot run is approved.
 
 ## Standing Handoff Constraints
 

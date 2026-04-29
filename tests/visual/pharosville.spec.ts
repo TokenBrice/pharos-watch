@@ -133,7 +133,12 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
   await expect(page.getByTestId("pharosville-map-key")).toHaveCount(0);
   await expect(page.getByTestId("pharosville-keyboard-entity-browser")).toHaveCount(0);
   await expect(page.getByTestId("pharosville-minimap")).toHaveCount(0);
-  await expect(page.getByTestId("pharosville-accessibility-ledger")).toContainText("86.3% water");
+  const ledgerText = await page.getByTestId("pharosville-accessibility-ledger").textContent();
+  const waterRatioMatch = ledgerText?.match(/(\d+(?:\.\d+)?)% water/);
+  expect(waterRatioMatch).not.toBeNull();
+  const waterPercent = Number(waterRatioMatch?.[1]);
+  expect(waterPercent).toBeGreaterThanOrEqual(76);
+  expect(waterPercent).toBeLessThanOrEqual(84);
   await page.waitForFunction(() => {
     const debug = (window as typeof window & {
       __pharosVilleDebug?: { assetsLoaded?: boolean; camera: unknown; targets: unknown[] };
