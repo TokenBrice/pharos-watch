@@ -2,12 +2,10 @@ import type { IsoCamera, ScreenPoint } from "../systems/projection";
 import type { ShipMotionSample } from "../systems/motion";
 import type { PharosVilleWorld } from "../systems/world-types";
 import type { PharosVilleAssetManager } from "./asset-manager";
+import { sortWorldDrawables, type WorldDrawable } from "./drawable-pass";
 import {
-  areaLabelTargetRect,
-  assetTargetRect,
   entityAssetId,
-  entityScreenPoint,
-  fallbackTargetRect,
+  resolveEntityGeometry,
   type WorldSelectableEntity,
 } from "./geometry";
 
@@ -20,17 +18,10 @@ export interface HitTarget {
   rect: { height: number; width: number; x: number; y: number };
 }
 
-function targetPriority(entity: WorldSelectableEntity, selectedDetailId: string | null, hoveredDetailId: string | null): number {
+function targetPriorityBoost(entity: WorldSelectableEntity, selectedDetailId: string | null, hoveredDetailId: string | null): number {
   let priority = 0;
-  if (entity.detailId === selectedDetailId) priority += 32;
-  if (entity.detailId === hoveredDetailId) priority += 24;
-  if (entity.kind === "ship") priority += 500;
-  if (entity.kind === "lighthouse") priority += 450;
-  if (entity.kind === "building") priority += 400;
-  if (entity.kind === "dock") priority += 350;
-  if (entity.kind === "ship-cluster") priority += 300;
-  if (entity.kind === "area") priority += 250;
-  priority += entity.tile.x + entity.tile.y;
+  if (entity.detailId === selectedDetailId) priority += 2;
+  if (entity.detailId === hoveredDetailId) priority += 1;
   return priority;
 }
 
@@ -52,28 +43,41 @@ export function collectHitTargets(input: {
     ...input.world.buildings,
   ];
 
-  return entities.map((entity) => {
-    const point = entityScreenPoint({
+  const targetRecords = entities.map((entity) => {
+    const assetId = entityAssetId(entity);
+    const asset = assetId ? input.assets?.get(assetId) ?? null : null;
+    const geometry = resolveEntityGeometry({
+      asset,
       camera: input.camera,
       entity,
       mapWidth: input.world.map.width,
       shipMotionSamples: input.shipMotionSamples,
     });
-    const assetId = entityAssetId(entity);
-    const asset = assetId ? input.assets?.get(assetId) ?? null : null;
+    return { entity, geometry };
+  });
+  const visualPriority = new Map<string, number>();
+  sortWorldDrawables(targetRecords.map(({ entity, geometry }): WorldDrawable => ({
+    depth: geometry.depth,
+    detailId: entity.detailId,
+    draw: () => undefined,
+    entityId: entity.id,
+    kind: entity.kind,
+    pass: "body",
+    screenBounds: geometry.targetRect,
+    tieBreaker: entity.id,
+  }))).forEach((drawable, index) => {
+    if (drawable.entityId) visualPriority.set(drawable.entityId, index);
+  });
+
+  return targetRecords.map(({ entity, geometry }) => {
     return {
       detailId: entity.detailId,
       id: entity.id,
       kind: entity.kind,
       label: entity.label,
-      priority: targetPriority(entity, input.selectedDetailId ?? null, input.hoveredDetailId ?? null),
-      rect: entity.kind === "area" ? areaLabelTargetRect(entity, input.camera) : asset ? assetTargetRect({
-        asset,
-        camera: input.camera,
-        entity,
-        mapWidth: input.world.map.width,
-        point,
-      }) : fallbackTargetRect(entity, input.camera, point),
+      priority: (visualPriority.get(entity.id) ?? 0) * 10
+        + targetPriorityBoost(entity, input.selectedDetailId ?? null, input.hoveredDetailId ?? null),
+      rect: geometry.targetRect,
     };
   });
 }

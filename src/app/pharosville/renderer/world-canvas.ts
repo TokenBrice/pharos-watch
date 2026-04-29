@@ -11,14 +11,15 @@ import {
 } from "../systems/world-layout";
 import type { PharosVilleWorld, TerrainKind } from "../systems/world-types";
 import type { PharosVilleAssetManager } from "./asset-manager";
-import { sortByIsoDepth } from "./drawable-pass";
 import {
-  dockDrawPoint,
-  dockOutwardVector,
-  dockRenderScale,
-  entityDrawGeometry,
-} from "./geometry";
+  drawablePassCounts,
+  sortWorldDrawables,
+  type WorldDrawable,
+  type WorldDrawablePass,
+} from "./drawable-pass";
+import { dockOutwardVector, entityAssetId, resolveEntityGeometry, type WorldSelectableEntity } from "./geometry";
 import type { HitTarget } from "./hit-testing";
+import { drawSelection } from "./layers/selection";
 import { CAUSE_HEX, type CauseOfDeath } from "@shared/lib/cause-of-death";
 
 const TILE_COLORS: Record<string, string> = {
@@ -204,27 +205,109 @@ export interface DrawPharosVilleInput {
   world: PharosVilleWorld;
 }
 
-export function drawPharosVille(input: DrawPharosVilleInput) {
+export interface PharosVilleRenderMetrics {
+  drawableCounts: Record<WorldDrawablePass, number>;
+  drawableCount: number;
+  movingShipCount: number;
+  visibleTileCount: number;
+}
+
+export function drawPharosVille(input: DrawPharosVilleInput): PharosVilleRenderMetrics {
   const { ctx } = input;
   ctx.imageSmoothingEnabled = false;
   drawSky(input);
 
-  drawTerrain(input);
+  const visibleTileCount = drawTerrain(input);
   drawWaterAreaLabels(input);
   drawAtmosphere(input);
   drawCemeteryGround(input);
   drawLighthouseHeadland(input);
   drawCemeteryContext(input);
-  drawThematicBuildings(input);
-  drawDocks(input);
+  const entityMetrics = drawEntityPass(input);
   drawDecorativeLights(input);
-  drawShips(input);
-  drawClusters(input);
-  drawGraves(input);
   drawCemeteryMist(input);
-  drawLighthouse(input);
   drawBirds(input);
-  drawSelection(input);
+  const selectionDrawableCount = drawSelection(input);
+  const drawableCounts = {
+    ...entityMetrics.drawableCounts,
+    selection: selectionDrawableCount,
+  };
+  return {
+    drawableCount: entityMetrics.drawableCount + selectionDrawableCount,
+    drawableCounts,
+    movingShipCount: Array.from(input.shipMotionSamples?.values() ?? [])
+      .filter((sample) => sample.state !== "risk-drift" && sample.state !== "moored").length,
+    visibleTileCount,
+  };
+}
+
+function drawEntityPass(input: DrawPharosVilleInput): Pick<PharosVilleRenderMetrics, "drawableCount" | "drawableCounts"> {
+  const drawables: WorldDrawable[] = [
+    ...input.world.buildings.flatMap((building) => [
+      entityDrawable(input, building, "underlay", () => drawBuildingUnderlay(input, building)),
+      entityDrawable(input, building, "body", () => drawBuildingBody(input, building)),
+      entityDrawable(input, building, "overlay", () => drawBuildingOverlay(input, building)),
+    ]),
+    ...input.world.docks.flatMap((dock) => [
+      entityDrawable(input, dock, "body", () => drawDockBody(input, dock)),
+      entityDrawable(input, dock, "overlay", () => drawDockOverlay(input, dock)),
+    ]),
+    ...input.world.ships.flatMap((ship) => [
+      entityDrawable(input, ship, "underlay", () => drawShipWake(input, ship)),
+      entityDrawable(input, ship, "body", () => drawShipBody(input, ship)),
+      entityDrawable(input, ship, "overlay", () => drawShipOverlay(input, ship)),
+    ]),
+    ...input.world.shipClusters.flatMap((cluster) => [
+      entityDrawable(input, cluster, "body", () => drawClusterBody(input, cluster)),
+      entityDrawable(input, cluster, "overlay", () => drawClusterOverlay(input, cluster)),
+    ]),
+    ...input.world.graves.flatMap((grave) => [
+      entityDrawable(input, grave, "underlay", () => drawGraveUnderlay(input, grave)),
+      entityDrawable(input, grave, "body", () => drawGraveBody(input, grave)),
+      entityDrawable(input, grave, "overlay", () => drawGraveOverlay(input, grave)),
+    ]),
+    entityDrawable(input, input.world.lighthouse, "body", () => drawLighthouseBody(input)),
+    entityDrawable(input, input.world.lighthouse, "overlay", () => drawLighthouseOverlay(input)),
+  ];
+
+  const sorted = sortWorldDrawables(drawables);
+  for (const drawable of sorted) drawable.draw(input.ctx);
+  return {
+    drawableCount: sorted.length,
+    drawableCounts: drawablePassCounts(sorted),
+  };
+}
+
+function entityDrawable(
+  input: DrawPharosVilleInput,
+  entity: WorldSelectableEntity,
+  pass: WorldDrawablePass,
+  draw: () => void,
+): WorldDrawable {
+  const asset = assetForEntity(input, entity);
+  const geometry = resolveEntityGeometry({
+    asset,
+    camera: input.camera,
+    entity,
+    mapWidth: input.world.map.width,
+    shipMotionSamples: input.shipMotionSamples,
+  });
+  return {
+    depth: geometry.depth,
+    detailId: entity.detailId,
+    draw,
+    entityId: entity.id,
+    kind: entity.kind,
+    pass,
+    screenBounds: geometry.selectionRect,
+    tieBreaker: entity.id,
+  };
+}
+
+function assetForEntity(input: DrawPharosVilleInput, entity: WorldSelectableEntity) {
+  if (entity.kind === "dock") return input.assets?.get(entity.assetId) ?? input.assets?.get("dock.wooden-pier") ?? null;
+  const assetId = entityAssetId(entity);
+  return assetId ? input.assets?.get(assetId) ?? null : null;
 }
 
 function drawSky({ camera, ctx, height, motion, width, world }: DrawPharosVilleInput) {
@@ -435,11 +518,13 @@ function drawSkyClouds(
   ctx.restore();
 }
 
-function drawTerrain({ camera, ctx, motion, world }: DrawPharosVilleInput) {
+function drawTerrain({ camera, ctx, height, motion, width, world }: DrawPharosVilleInput) {
+  let visibleTileCount = 0;
   for (const tile of world.map.tiles) {
     const terrain = tile.terrain ?? tile.kind;
     if (!isWaterTileKind(terrain)) continue;
     const p = tileToScreen(tile, camera);
+    if (isTileInViewport(p, camera.zoom, width, height)) visibleTileCount += 1;
     drawWaterTile(ctx, p.x, p.y, camera.zoom, terrain, tile.x, tile.y, motion);
   }
 
@@ -447,8 +532,21 @@ function drawTerrain({ camera, ctx, motion, world }: DrawPharosVilleInput) {
     const terrain = tile.terrain ?? tile.kind;
     if (isWaterTileKind(terrain)) continue;
     const p = tileToScreen(tile, camera);
+    if (isTileInViewport(p, camera.zoom, width, height)) visibleTileCount += 1;
     drawLandTile(ctx, p.x, p.y, camera.zoom, terrain, tile.x, tile.y);
   }
+  return visibleTileCount;
+}
+
+function isTileInViewport(point: ScreenPoint, zoom: number, width: number, height: number) {
+  const marginX = 36 * zoom;
+  const marginY = 22 * zoom;
+  return (
+    point.x >= -marginX
+    && point.x <= width + marginX
+    && point.y >= -marginY
+    && point.y <= height + marginY
+  );
 }
 
 function terrainColor(kind: TerrainKind) {
@@ -1393,26 +1491,28 @@ function drawStoneLantern(ctx: CanvasRenderingContext2D, point: ScreenPoint, zoo
   ctx.restore();
 }
 
-function drawLighthouse({ assets, camera, ctx, motion, world }: DrawPharosVilleInput) {
+function lighthouseRenderState({ assets, camera, world }: DrawPharosVilleInput) {
   const center = tileToScreen(world.lighthouse.tile, camera);
   const lighthouseAsset = assets?.get("landmark.lighthouse");
-  const assetGeometry = lighthouseAsset
-    ? entityDrawGeometry({
-      camera,
-      entity: world.lighthouse,
-      mapWidth: world.map.width,
-      point: center,
-    })
-    : null;
-  const assetCenter = assetGeometry ? { x: assetGeometry.x, y: assetGeometry.y } : { x: center.x, y: center.y + 3 * camera.zoom };
-  const epicZoom = assetGeometry?.drawScale ?? camera.zoom * 1.48;
+  const geometry = resolveEntityGeometry({
+    asset: lighthouseAsset,
+    camera,
+    entity: world.lighthouse,
+    mapWidth: world.map.width,
+  });
+  const assetCenter = geometry.drawPoint;
+  const epicZoom = geometry.drawScale;
   const firePoint = lighthouseAsset
     ? lighthouseBeaconPoint(lighthouseAsset, assetCenter, epicZoom)
     : { x: center.x, y: center.y - 148 * camera.zoom };
+  return { assetCenter, center, epicZoom, firePoint, lighthouseAsset };
+}
+
+function drawLighthouseBody(input: DrawPharosVilleInput) {
+  const { camera, ctx, world } = input;
+  const { assetCenter, center, epicZoom, lighthouseAsset } = lighthouseRenderState(input);
   if (lighthouseAsset) {
     drawAsset(ctx, lighthouseAsset, assetCenter.x, assetCenter.y, epicZoom);
-    if (!world.lighthouse.unavailable) drawLighthouseBeam(ctx, firePoint, camera.zoom * 1.35, motion);
-    drawLighthouseFire(ctx, firePoint, camera.zoom * 1.32, world.lighthouse.color, motion);
     return;
   }
 
@@ -1466,6 +1566,11 @@ function drawLighthouse({ assets, camera, ctx, motion, world }: DrawPharosVilleI
   ctx.arc(0, -150, 16, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
+}
+
+function drawLighthouseOverlay(input: DrawPharosVilleInput) {
+  const { camera, ctx, motion, world } = input;
+  const { firePoint } = lighthouseRenderState(input);
   if (!world.lighthouse.unavailable) drawLighthouseBeam(ctx, firePoint, camera.zoom * 1.35, motion);
   drawLighthouseFire(ctx, firePoint, camera.zoom * 1.32, world.lighthouse.color, motion);
 }
@@ -1592,27 +1697,38 @@ function drawPixelFlame(ctx: CanvasRenderingContext2D, points: Array<[number, nu
   ctx.fill();
 }
 
-function drawThematicBuildings({ assets, camera, ctx, motion, world }: DrawPharosVilleInput) {
-  const buildings = sortByIsoDepth(world.buildings, (building) => building.tile, (building) => building.id);
-  for (const building of buildings) {
-    const point = tileToScreen(building.tile, camera);
-    const asset = assets?.get(building.assetId);
-    const geometry = entityDrawGeometry({
-      camera,
-      entity: building,
-      mapWidth: world.map.width,
-      point,
-    });
-    const drawPoint = { x: geometry.x, y: geometry.y };
-    const assetScale = geometry.drawScale;
-    drawBuildingStatusGlow(ctx, building, drawPoint, camera.zoom);
-    if (asset) {
-      drawAsset(ctx, asset, drawPoint.x, drawPoint.y, assetScale);
-    } else {
-      drawFallbackDataBuilding(ctx, building, drawPoint, camera.zoom);
-    }
-    drawBuildingProceduralEffects(ctx, building, drawPoint, camera.zoom, motion);
+function buildingRenderState({ assets, camera, world }: DrawPharosVilleInput, building: PharosVilleWorld["buildings"][number]) {
+  const asset = assets?.get(building.assetId);
+  const geometry = resolveEntityGeometry({
+    asset,
+    camera,
+    entity: building,
+    mapWidth: world.map.width,
+  });
+  const drawPoint = geometry.drawPoint;
+  return { asset, drawPoint, geometry };
+}
+
+function drawBuildingUnderlay(input: DrawPharosVilleInput, building: PharosVilleWorld["buildings"][number]) {
+  const { camera, ctx } = input;
+  const { drawPoint } = buildingRenderState(input, building);
+  drawBuildingStatusGlow(ctx, building, drawPoint, camera.zoom);
+}
+
+function drawBuildingBody(input: DrawPharosVilleInput, building: PharosVilleWorld["buildings"][number]) {
+  const { camera, ctx } = input;
+  const { asset, drawPoint, geometry } = buildingRenderState(input, building);
+  if (asset) {
+    drawAsset(ctx, asset, drawPoint.x, drawPoint.y, geometry.drawScale);
+  } else {
+    drawFallbackDataBuilding(ctx, building, drawPoint, camera.zoom);
   }
+}
+
+function drawBuildingOverlay(input: DrawPharosVilleInput, building: PharosVilleWorld["buildings"][number]) {
+  const { camera, ctx, motion } = input;
+  const { drawPoint } = buildingRenderState(input, building);
+  drawBuildingProceduralEffects(ctx, building, drawPoint, camera.zoom, motion);
 }
 
 function drawBuildingStatusGlow(
@@ -1938,42 +2054,55 @@ function drawLamp(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: num
   ctx.restore();
 }
 
-function drawDocks({ assets, camera, ctx, hoveredTarget, selectedTarget, world }: DrawPharosVilleInput) {
-  ctx.strokeStyle = "#6d4c2f";
-  ctx.lineWidth = 5;
-  for (const dock of sortByIsoDepth(world.docks, (entry) => entry.tile, (entry) => entry.id)) {
-    const p = tileToScreen(dock.tile, camera);
-    const harbor = dockDrawPoint(dock, camera, world.map.width);
-    const dockAsset = assets?.get(dock.assetId) ?? assets?.get("dock.wooden-pier");
-    const dockScale = dockRenderScale(dock.size);
-    if (dockAsset) {
-      drawAsset(
-        ctx,
-        dockAsset,
-        harbor.x,
-        harbor.y,
-        camera.zoom * dockScale,
-      );
-    } else {
-      ctx.lineWidth = (3 + dock.size) * camera.zoom;
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y);
-      ctx.lineTo(harbor.x, harbor.y);
-      ctx.stroke();
-    }
-    drawHarborFlag({
-      accent: dockHealthColor(dock.healthBand),
+function dockRenderState({ assets, camera, world }: DrawPharosVilleInput, dock: PharosVilleWorld["docks"][number]) {
+  const dockAsset = assets?.get(dock.assetId) ?? assets?.get("dock.wooden-pier");
+  const geometry = resolveEntityGeometry({
+    asset: dockAsset,
+    camera,
+    entity: dock,
+    mapWidth: world.map.width,
+  });
+  const harbor = geometry.drawPoint;
+  return { dockAsset, geometry, harbor };
+}
+
+function drawDockBody(input: DrawPharosVilleInput, dock: PharosVilleWorld["docks"][number]) {
+  const { camera, ctx } = input;
+  const p = tileToScreen(dock.tile, camera);
+  const { dockAsset, geometry, harbor } = dockRenderState(input, dock);
+  if (dockAsset) {
+    drawAsset(
       ctx,
-      dock,
-      emphasized: hoveredTarget?.detailId === dock.detailId || selectedTarget?.detailId === dock.detailId,
-      logo: assets?.getLogo(dock.logoSrc) ?? null,
-      mapWidth: world.map.width,
-      outward: dockOutwardVector(dock.tile, world.map.width),
-      x: harbor.x,
-      y: harbor.y - 12 * camera.zoom,
-      zoom: camera.zoom,
-    });
+      dockAsset,
+      harbor.x,
+      harbor.y,
+      geometry.drawScale,
+    );
+  } else {
+    ctx.strokeStyle = "#6d4c2f";
+    ctx.lineWidth = (3 + dock.size) * camera.zoom;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(harbor.x, harbor.y);
+    ctx.stroke();
   }
+}
+
+function drawDockOverlay(input: DrawPharosVilleInput, dock: PharosVilleWorld["docks"][number]) {
+  const { assets, camera, ctx, hoveredTarget, selectedTarget, world } = input;
+  const { harbor } = dockRenderState(input, dock);
+  drawHarborFlag({
+    accent: dockHealthColor(dock.healthBand),
+    ctx,
+    dock,
+    emphasized: hoveredTarget?.detailId === dock.detailId || selectedTarget?.detailId === dock.detailId,
+    logo: assets?.getLogo(dock.logoSrc) ?? null,
+    mapWidth: world.map.width,
+    outward: dockOutwardVector(dock.tile, world.map.width),
+    x: harbor.x,
+    y: harbor.y - 12 * camera.zoom,
+    zoom: camera.zoom,
+  });
 }
 
 function dockHealthColor(healthBand: PharosVilleWorld["docks"][number]["healthBand"]) {
@@ -2276,112 +2405,193 @@ function drawFittedText(
   ctx.fillText(text, x, y, maxWidth);
 }
 
-function drawShips({ assets, camera, ctx, motion, selectedTarget, shipMotionSamples, world }: DrawPharosVilleInput) {
-  const ships = sortByIsoDepth(
-    world.ships,
-    (ship) => shipMotionSamples?.get(ship.id)?.tile ?? ship.tile,
-    (ship) => ship.id,
-  );
-  for (const ship of ships) {
-    const sample = shipMotionSamples?.get(ship.id) ?? null;
-    const p = tileToScreen(sample?.tile ?? ship.tile, camera);
-    const phase = motion.plan.shipPhases.get(ship.id) ?? 0;
-    const animated = !motion.reducedMotion && motion.plan.animatedShipIds.has(ship.id);
-    const bob = animated ? Math.round(Math.sin(motion.timeSeconds * 0.7 + phase) * 2 * camera.zoom) : 0;
-    const drawsWake = !motion.reducedMotion
-      && (
-        motion.plan.effectShipIds.has(ship.id)
-        || selectedTarget?.id === ship.id
-        || motion.plan.moverShipIds.has(ship.id)
-      );
-    if (drawsWake) {
-      const changeIntensity = Math.min(1, Math.abs(ship.change24hPct ?? 0) * 18 + 0.2);
-      const sampleIntensity = sample?.wakeIntensity ?? 0;
-      const intensity = Math.max(sampleIntensity, motion.plan.moverShipIds.has(ship.id) ? changeIntensity : 0.18);
-      drawWake(ctx, p.x, p.y + 8 * camera.zoom + bob, camera.zoom, intensity, sample?.heading ?? { x: -1, y: 0 });
-    }
+function shipRenderState(input: DrawPharosVilleInput, ship: PharosVilleWorld["ships"][number]) {
+  const { assets, camera, motion, selectedTarget, shipMotionSamples, world } = input;
+  const sample = shipMotionSamples?.get(ship.id) ?? null;
+  const shipAsset = assets?.get(`ship.${ship.visual.hull}`);
+  const geometry = resolveEntityGeometry({
+    asset: shipAsset,
+    camera,
+    entity: ship,
+    mapWidth: world.map.width,
+    shipMotionSamples,
+  });
+  const p = geometry.screenPoint;
+  const phase = motion.plan.shipPhases.get(ship.id) ?? 0;
+  const animated = !motion.reducedMotion && motion.plan.animatedShipIds.has(ship.id);
+  const bob = animated ? Math.round(Math.sin(motion.timeSeconds * 0.7 + phase) * 2 * camera.zoom) : 0;
+  const selected = selectedTarget?.id === ship.id;
+  return { bob, geometry, p, sample, selected, shipAsset };
+}
 
-    const shipAsset = assets?.get(`ship.${ship.visual.hull}`);
-    if (shipAsset) {
-      const assetScale = camera.zoom * ship.visual.scale * 0.7;
-      const drawY = p.y + 12 * camera.zoom + bob;
-      drawAsset(ctx, shipAsset, p.x, drawY, assetScale);
-      drawSailLogo({
-        ctx,
-        logo: assets?.getLogo(ship.logoSrc) ?? null,
-        mark: ship.symbol,
-        radius: 5.5 * assetScale,
-        x: p.x + 9 * assetScale,
-        y: drawY - 29 * assetScale,
-      });
-    } else {
-      const proceduralScale = camera.zoom * ship.visual.scale;
-      const drawY = p.y - 4 * camera.zoom + bob;
-      drawShip(
-        ctx,
-        p.x,
-        drawY,
-        ship.visual.scale,
-        PENNANTS[ship.visual.pennant] ?? PENNANTS.slate,
-        SHIP_COLORS[ship.visual.hull],
-        camera.zoom,
-      );
-      drawSailLogo({
-        ctx,
-        logo: assets?.getLogo(ship.logoSrc) ?? null,
-        mark: ship.symbol,
-        radius: 4.2 * proceduralScale,
-        x: p.x + 7 * proceduralScale,
-        y: drawY - 10 * proceduralScale,
-      });
-    }
+function drawShipWake(input: DrawPharosVilleInput, ship: PharosVilleWorld["ships"][number]) {
+  const { camera, ctx, motion } = input;
+  const { bob, p, sample, selected } = shipRenderState(input, ship);
+  const drawsWake = !motion.reducedMotion
+    && (
+      motion.plan.effectShipIds.has(ship.id)
+      || selected
+      || motion.plan.moverShipIds.has(ship.id)
+    );
+  if (drawsWake) {
+    const changeIntensity = Math.min(1, Math.abs(ship.change24hPct ?? 0) * 18 + 0.2);
+    const sampleIntensity = sample?.wakeIntensity ?? 0;
+    const intensity = Math.max(sampleIntensity, motion.plan.moverShipIds.has(ship.id) ? changeIntensity : 0.18);
+    drawWake(ctx, p.x, p.y + 8 * camera.zoom + bob, camera.zoom, intensity, sample?.heading ?? { x: -1, y: 0 });
   }
 }
 
-function drawClusters({ camera, ctx, world }: DrawPharosVilleInput) {
-  for (const cluster of sortByIsoDepth(world.shipClusters, (entry) => entry.tile, (entry) => entry.id)) {
-    const p = tileToScreen(cluster.tile, camera);
-    const radius = Math.min(18, 7 + Math.sqrt(cluster.count) * 2) * camera.zoom;
-    ctx.fillStyle = "rgba(255, 204, 98, 0.85)";
-    ctx.beginPath();
-    ctx.arc(p.x, p.y - 4, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#061721";
-    ctx.font = `700 ${Math.max(10, 10 * camera.zoom)}px ui-sans-serif, system-ui, sans-serif`;
-    ctx.textAlign = "center";
-    ctx.fillText(String(cluster.count), p.x, p.y);
-    ctx.textAlign = "start";
-  }
-}
-
-function drawGraves({ assets, camera, ctx, hoveredTarget, selectedTarget, world }: DrawPharosVilleInput) {
-  for (const grave of sortByIsoDepth(world.graves, (entry) => entry.tile, (entry) => entry.id)) {
-    const p = tileToScreen(grave.tile, camera);
-    const causeColor = GRAVE_CAUSE_COLORS[grave.entry.causeOfDeath] ?? GRAVE_CAUSE_COLORS.abandoned;
-    const emphasized = hoveredTarget?.id === grave.id || selectedTarget?.id === grave.id;
-    const graveZoom = camera.zoom * grave.visual.scale;
-    drawGraveShadow(ctx, p.x, p.y + 2 * camera.zoom, graveZoom, causeColor, emphasized);
-    drawProceduralGrave(
+function drawShipBody(input: DrawPharosVilleInput, ship: PharosVilleWorld["ships"][number]) {
+  const { camera, ctx } = input;
+  const { bob, geometry, p, shipAsset } = shipRenderState(input, ship);
+  if (shipAsset) {
+    const drawY = geometry.drawPoint.y + bob;
+    drawAsset(ctx, shipAsset, geometry.drawPoint.x, drawY, geometry.drawScale);
+  } else {
+    const drawY = p.y - 4 * camera.zoom + bob;
+    drawShip(
       ctx,
       p.x,
-      p.y,
+      drawY,
+      ship.visual.scale,
+      PENNANTS[ship.visual.pennant] ?? PENNANTS.slate,
+      SHIP_COLORS[ship.visual.hull],
       camera.zoom,
-      causeColor,
-      grave.visual.marker,
-      grave.visual.scale,
-      grave.entry.causeOfDeath,
     );
-    drawGraveLogo({
+  }
+}
+
+function drawShipOverlay(input: DrawPharosVilleInput, ship: PharosVilleWorld["ships"][number]) {
+  const { assets, camera, ctx } = input;
+  const { bob, geometry, p, selected, shipAsset } = shipRenderState(input, ship);
+  if (shipAsset) {
+    const drawY = geometry.drawPoint.y + bob;
+    if (selected) drawSelectedShipOutline(ctx, geometry.drawPoint.x, drawY, geometry.drawScale);
+    drawSailLogo({
       ctx,
-      causeColor,
-      emphasized,
-      logo: assets?.getLogo(grave.logoSrc) ?? null,
-      mark: grave.label,
-      radius: Math.max(1.1, 2.55 * camera.zoom * Math.sqrt(grave.visual.scale)),
-      x: p.x,
-      y: p.y - (8.1 * grave.visual.scale + markerLogoOffset(grave.visual.marker)) * camera.zoom,
+      logo: assets?.getLogo(ship.logoSrc) ?? null,
+      mark: ship.symbol,
+      radius: 5.5 * geometry.drawScale,
+      x: geometry.drawPoint.x + 9 * geometry.drawScale,
+      y: drawY - 29 * geometry.drawScale,
+    });
+  } else {
+    const proceduralScale = camera.zoom * ship.visual.scale;
+    const drawY = p.y - 4 * camera.zoom + bob;
+    if (selected) drawSelectedShipOutline(ctx, p.x, drawY, proceduralScale * 0.7);
+    drawSailLogo({
+      ctx,
+      logo: assets?.getLogo(ship.logoSrc) ?? null,
+      mark: ship.symbol,
+      radius: 4.2 * proceduralScale,
+      x: p.x + 7 * proceduralScale,
+      y: drawY - 10 * proceduralScale,
     });
   }
+}
+
+function drawSelectedShipOutline(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.save();
+  ctx.strokeStyle = "rgba(255, 229, 160, 0.92)";
+  ctx.lineWidth = Math.max(1, 2 * scale);
+  ctx.beginPath();
+  ctx.ellipse(x, y - 18 * scale, 34 * scale, 23 * scale, -0.08, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function clusterRenderState({ camera, world }: DrawPharosVilleInput, cluster: PharosVilleWorld["shipClusters"][number]) {
+  const geometry = resolveEntityGeometry({
+    camera,
+    entity: cluster,
+    mapWidth: world.map.width,
+  });
+  const p = geometry.screenPoint;
+  const radius = Math.min(18, 7 + Math.sqrt(cluster.count) * 2) * camera.zoom;
+  return { p, radius };
+}
+
+function drawClusterBody(input: DrawPharosVilleInput, cluster: PharosVilleWorld["shipClusters"][number]) {
+  const { camera, ctx } = input;
+  const { p, radius } = clusterRenderState(input, cluster);
+  ctx.save();
+  ctx.fillStyle = "rgba(255, 204, 98, 0.86)";
+  ctx.strokeStyle = "rgba(42, 29, 11, 0.9)";
+  ctx.lineWidth = Math.max(1, 1.4 * camera.zoom);
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y - radius - 4 * camera.zoom);
+  ctx.lineTo(p.x + radius * 0.9, p.y - 2 * camera.zoom);
+  ctx.lineTo(p.x + radius * 0.46, p.y + radius * 0.72);
+  ctx.lineTo(p.x - radius * 0.46, p.y + radius * 0.72);
+  ctx.lineTo(p.x - radius * 0.9, p.y - 2 * camera.zoom);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawClusterOverlay(input: DrawPharosVilleInput, cluster: PharosVilleWorld["shipClusters"][number]) {
+  const { camera, ctx } = input;
+  const { p, radius } = clusterRenderState(input, cluster);
+  ctx.save();
+  ctx.fillStyle = "#061721";
+  ctx.font = `700 ${Math.max(10, 10 * camera.zoom)}px ui-sans-serif, system-ui, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(String(cluster.count), p.x, p.y + radius * 0.05);
+  ctx.textAlign = "start";
+  ctx.textBaseline = "alphabetic";
+  ctx.restore();
+}
+
+function graveRenderState(input: DrawPharosVilleInput, grave: PharosVilleWorld["graves"][number]) {
+  const { camera, hoveredTarget, selectedTarget, world } = input;
+  const geometry = resolveEntityGeometry({
+    camera,
+    entity: grave,
+    mapWidth: world.map.width,
+  });
+  const p = geometry.screenPoint;
+  const causeColor = GRAVE_CAUSE_COLORS[grave.entry.causeOfDeath] ?? GRAVE_CAUSE_COLORS.abandoned;
+  const emphasized = hoveredTarget?.id === grave.id || selectedTarget?.id === grave.id;
+  const graveZoom = camera.zoom * grave.visual.scale;
+  return { causeColor, emphasized, geometry, graveZoom, p };
+}
+
+function drawGraveUnderlay(input: DrawPharosVilleInput, grave: PharosVilleWorld["graves"][number]) {
+  const { ctx } = input;
+  const { causeColor, emphasized, geometry, graveZoom } = graveRenderState(input, grave);
+  drawGraveShadow(ctx, geometry.drawPoint.x, geometry.drawPoint.y, graveZoom, causeColor, emphasized);
+}
+
+function drawGraveBody(input: DrawPharosVilleInput, grave: PharosVilleWorld["graves"][number]) {
+  const { camera, ctx } = input;
+  const { causeColor, p } = graveRenderState(input, grave);
+  drawProceduralGrave(
+    ctx,
+    p.x,
+    p.y,
+    camera.zoom,
+    causeColor,
+    grave.visual.marker,
+    grave.visual.scale,
+    grave.entry.causeOfDeath,
+  );
+}
+
+function drawGraveOverlay(input: DrawPharosVilleInput, grave: PharosVilleWorld["graves"][number]) {
+  const { assets, camera, ctx } = input;
+  const { causeColor, emphasized, p } = graveRenderState(input, grave);
+  drawGraveLogo({
+    ctx,
+    causeColor,
+    emphasized,
+    logo: assets?.getLogo(grave.logoSrc) ?? null,
+    mark: grave.label,
+    radius: Math.max(1.1, 2.55 * camera.zoom * Math.sqrt(grave.visual.scale)),
+    x: p.x,
+    y: p.y - (8.1 * grave.visual.scale + markerLogoOffset(grave.visual.marker)) * camera.zoom,
+  });
 }
 
 function drawGraveShadow(
@@ -2853,132 +3063,6 @@ function drawBird(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: num
   ctx.restore();
 }
 
-function drawSelection(input: DrawPharosVilleInput) {
-  const { ctx, hoveredTarget, selectedTarget } = input;
-  if (selectedTarget) drawSelectedRelationships(input, selectedTarget);
-  if (hoveredTarget) drawSelectionRing(ctx, hoveredTarget, "rgba(128, 214, 206, 0.85)");
-  if (selectedTarget) drawSelectionRing(ctx, selectedTarget, "rgba(255, 204, 98, 0.95)");
-}
-
-function drawSelectedRelationships(input: DrawPharosVilleInput, target: HitTarget) {
-  if (target.kind === "ship") {
-    const ship = input.world.ships.find((candidate) => candidate.id === target.id);
-    if (ship) drawSelectedShipRelationships(input, ship);
-  } else if (target.kind === "dock") {
-    const dock = input.world.docks.find((candidate) => candidate.id === target.id);
-    if (dock) drawSelectedDockRelationships(input, dock);
-  }
-}
-
-function drawSelectedShipRelationships(
-  { camera, ctx, motion, shipMotionSamples, world }: DrawPharosVilleInput,
-  ship: PharosVilleWorld["ships"][number],
-) {
-  const sample = shipMotionSamples?.get(ship.id) ?? null;
-  const currentPoint = tileToScreen(sample?.tile ?? ship.tile, camera);
-  const riskPoint = tileToScreen(ship.riskTile, camera);
-  const homeDock = ship.homeDockChainId
-    ? world.docks.find((dock) => dock.chainId === ship.homeDockChainId) ?? null
-    : null;
-  const homePoint = homeDock ? dockDrawPoint(homeDock, camera, world.map.width) : null;
-  const pulse = relationshipPulse(motion);
-
-  ctx.save();
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.setLineDash([7 * camera.zoom, 6 * camera.zoom]);
-  if (homePoint) {
-    drawRelationshipLine(ctx, currentPoint, homePoint, camera.zoom, "rgba(255, 224, 160, 0.42)");
-  }
-  drawRelationshipLine(ctx, currentPoint, riskPoint, camera.zoom, "rgba(229, 106, 71, 0.36)");
-  ctx.setLineDash([]);
-
-  if (homePoint) {
-    drawRelationshipMarker(ctx, homePoint.x, homePoint.y - 9 * camera.zoom, camera.zoom, "home", "#ffe0a0", pulse);
-  }
-  drawRelationshipMarker(ctx, riskPoint.x, riskPoint.y - 2 * camera.zoom, camera.zoom, "risk", "#e56a47", pulse);
-  drawRelationshipMarker(ctx, currentPoint.x, currentPoint.y + 8 * camera.zoom, camera.zoom, "current", "#80d6ce", pulse);
-  ctx.restore();
-}
-
-function drawSelectedDockRelationships(
-  { camera, ctx, motion, shipMotionSamples, world }: DrawPharosVilleInput,
-  dock: PharosVilleWorld["docks"][number],
-) {
-  const visibleShips = world.ships
-    .filter((ship) => ship.chainPresence.some((presence) => presence.chainId === dock.chainId && presence.hasRenderedDock))
-    .toSorted((a, b) => b.marketCapUsd - a.marketCapUsd)
-    .slice(0, 10);
-  if (visibleShips.length === 0) return;
-
-  const dockPoint = dockDrawPoint(dock, camera, world.map.width);
-  const pulse = relationshipPulse(motion);
-  ctx.save();
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.setLineDash([4 * camera.zoom, 7 * camera.zoom]);
-  for (const ship of visibleShips) {
-    const shipPoint = tileToScreen(shipMotionSamples?.get(ship.id)?.tile ?? ship.tile, camera);
-    drawRelationshipLine(ctx, dockPoint, shipPoint, camera.zoom, "rgba(128, 214, 206, 0.28)");
-    drawRelationshipMarker(ctx, shipPoint.x, shipPoint.y + 8 * camera.zoom, camera.zoom * 0.78, "ship", "#80d6ce", pulse);
-  }
-  ctx.setLineDash([]);
-  drawRelationshipMarker(ctx, dockPoint.x, dockPoint.y - 9 * camera.zoom, camera.zoom, "home", "#ffe0a0", pulse);
-  ctx.restore();
-}
-
-function relationshipPulse(motion: PharosVilleCanvasMotion) {
-  if (motion.reducedMotion) return 1;
-  return 0.84 + Math.sin(motion.timeSeconds * 2.2) * 0.16;
-}
-
-function drawRelationshipLine(
-  ctx: CanvasRenderingContext2D,
-  from: ScreenPoint,
-  to: ScreenPoint,
-  zoom: number,
-  color: string,
-) {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = Math.max(1, 1.45 * zoom);
-  ctx.beginPath();
-  ctx.moveTo(from.x, from.y);
-  ctx.lineTo(to.x, to.y);
-  ctx.stroke();
-}
-
-function drawRelationshipMarker(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  zoom: number,
-  kind: "current" | "home" | "risk" | "ship",
-  color: string,
-  pulse: number,
-) {
-  const radius = (kind === "ship" ? 5 : kind === "current" ? 7 : 8) * zoom;
-  ctx.save();
-  ctx.globalAlpha = 0.55;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = Math.max(1, 1.5 * zoom);
-  ctx.beginPath();
-  ctx.arc(x, y, radius * pulse, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.globalAlpha = 0.92;
-  ctx.fillStyle = color;
-  if (kind === "risk") {
-    drawDiamond(ctx, x, y, radius * 1.3, radius * 1.3, color);
-  } else if (kind === "home") {
-    ctx.fillRect(Math.round(x - radius * 0.55), Math.round(y - radius * 0.55), Math.round(radius * 1.1), Math.round(radius * 1.1));
-  } else {
-    ctx.beginPath();
-    ctx.arc(x, y, radius * 0.44, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
 function drawDiamond(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, fill: string) {
   ctx.beginPath();
   ctx.moveTo(x, y - height / 2);
@@ -3055,12 +3139,6 @@ function drawSailLogo(input: {
     ctx.textBaseline = "alphabetic";
   }
   ctx.restore();
-}
-
-function drawSelectionRing(ctx: CanvasRenderingContext2D, target: HitTarget, color: string) {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(target.rect.x, target.rect.y, target.rect.width, target.rect.height);
 }
 
 function drawAsset(

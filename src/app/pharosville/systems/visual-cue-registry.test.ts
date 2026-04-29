@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BuildingType, PharosVilleWorld, VisualCue, VisualCueChannel } from "./world-types";
+import type { BuildingType, PharosVilleWorld, VisualCue, VisualCueChannel, WorldEffect } from "./world-types";
 import { buildVisualCueRegistry } from "./visual-cue-registry";
 
 const BUILDING_TYPES = [
@@ -20,7 +20,7 @@ const ALLOWED_CHANNELS = [
 ] as const satisfies readonly VisualCueChannel[];
 
 const STRUCTURAL_WORLD_FIELDS = {
-  effects: "WorldEffect entries are bounded annotations on already-cued entities, not standalone analytical targets.",
+  effects: "WorldEffect entries must declare analytical cue metadata or explicit non-data ambient purpose.",
 } as const satisfies Partial<Record<keyof PharosVilleWorld, string>>;
 
 function cueKey(cue: VisualCue): string {
@@ -95,7 +95,7 @@ describe("buildVisualCueRegistry", () => {
       ships: true,
     });
     expect(STRUCTURAL_WORLD_FIELDS).toEqual({
-      effects: "WorldEffect entries are bounded annotations on already-cued entities, not standalone analytical targets.",
+      effects: "WorldEffect entries must declare analytical cue metadata or explicit non-data ambient purpose.",
     });
   });
 
@@ -136,4 +136,70 @@ describe("buildVisualCueRegistry", () => {
       expect(cue.visual).not.toMatch(/\b(sign|post|board|badge)\b/i);
     }
   });
+
+  it("enforces analytical effect cue metadata and explicit ambient non-data markings", () => {
+    const cues = buildVisualCueRegistry();
+    const validEffects: WorldEffect[] = [
+      {
+        cueId: "cue.ship.motion",
+        entityId: "ship.usdc-circle",
+        id: "effect.route",
+        intensity: 0.6,
+        kind: "recent-change",
+        purpose: "analytical",
+        reducedMotionEquivalent: "static selected route line and detail facts",
+      },
+      {
+        entityId: "lighthouse",
+        id: "effect.birds",
+        intensity: 0.2,
+        kind: "fog",
+        nonData: true,
+        purpose: "ambient",
+        reducedMotionEquivalent: "ambient birds hidden or static without analytical meaning",
+      },
+    ];
+    const invalidEffects: WorldEffect[] = [
+      {
+        entityId: "ship.usdc-circle",
+        id: "effect.missing-cue",
+        intensity: 0.6,
+        kind: "recent-change",
+        purpose: "analytical",
+        reducedMotionEquivalent: "static detail facts",
+      },
+      {
+        entityId: "lighthouse",
+        id: "effect.ambient-not-marked",
+        intensity: 0.2,
+        kind: "fog",
+        purpose: "ambient",
+        reducedMotionEquivalent: "static ambient detail",
+      },
+    ];
+
+    expect(effectCueParityFailures(validEffects, cues)).toEqual([]);
+    expect(effectCueParityFailures(invalidEffects, cues)).toEqual([
+      "effect.missing-cue missing analytical cueId",
+      "effect.ambient-not-marked ambient effect missing nonData=true",
+    ]);
+  });
 });
+
+function effectCueParityFailures(effects: readonly WorldEffect[], cues: readonly VisualCue[]): string[] {
+  const cueIds = new Set(cues.map((cue) => cue.id));
+  const failures: string[] = [];
+  for (const effect of effects) {
+    if (!effect.reducedMotionEquivalent.trim()) failures.push(`${effect.id} missing reduced-motion equivalent`);
+    if (effect.purpose === "ambient") {
+      if (effect.nonData !== true) failures.push(`${effect.id} ambient effect missing nonData=true`);
+      continue;
+    }
+    if (!effect.cueId) {
+      failures.push(`${effect.id} missing analytical cueId`);
+      continue;
+    }
+    if (!cueIds.has(effect.cueId)) failures.push(`${effect.id} references unknown cueId`);
+  }
+  return failures;
+}

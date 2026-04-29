@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fixtureChains, fixturePegSummary, fixtureReportCards, fixtureStablecoins, fixtureStability, fixtureStress, makeAsset, makeChain, makePegCoin } from "../__fixtures__/pharosville-world";
 import { buildPharosVilleWorld } from "./pharosville-world";
 import { buildBaseMotionPlan, buildMotionPlan, buildShipWaterRoute, lighthouseFireFlickerSpeed, resolveShipMotionSample, sampleShipWaterPath, stableMotionPhase } from "./motion";
-import { buildPharosVilleMap, tileKindAt } from "./world-layout";
+import { buildPharosVilleMap, isWaterTileKind, tileKindAt } from "./world-layout";
 import type { PharosVilleMap, PharosVilleWorld } from "./world-types";
 
 describe("motion", () => {
@@ -164,15 +164,34 @@ describe("motion", () => {
     }
   });
 
-  it("routes over water and deep-water tiles only", () => {
+  it("routes over semantic water terrain only", () => {
     const map = buildPharosVilleMap();
-    const route = buildShipWaterRoute({ from: { x: 32, y: 36 }, to: { x: 18, y: 31 }, map });
+    const route = buildShipWaterRoute({ from: { x: 52, y: 52 }, to: { x: 40, y: 44 }, map });
 
     expect(route.points.length).toBeGreaterThan(1);
+    expect(terrainKindInMap(map, route.points[0]!)).toBe("storm-water");
     for (const point of route.points) {
       expect(inMapBounds(map, point)).toBe(true);
-      expect(tileKindForSample(point)).toMatch(/water/);
+      expect(isWaterTileKind(terrainKindInMap(map, point) ?? "land"), `${point.x}.${point.y}`).toBe(true);
     }
+  });
+
+  it("uses semantic terrain when canonical tile kind is not water", () => {
+    const map: PharosVilleMap = {
+      height: 1,
+      width: 3,
+      waterRatio: 1,
+      tiles: [
+        { kind: "land", terrain: "storm-water", x: 0, y: 0 },
+        { kind: "land", terrain: "warning-water", x: 1, y: 0 },
+        { kind: "land", terrain: "harbor-water", x: 2, y: 0 },
+      ],
+    };
+    const route = buildShipWaterRoute({ from: { x: 0, y: 0 }, to: { x: 2, y: 0 }, map });
+
+    expect(route.points).toEqual([{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }]);
+    expect(route.points.every((point) => tileKindInMap(map, point) === "land")).toBe(true);
+    expect(route.points.every((point) => isWaterTileKind(terrainKindInMap(map, point) ?? "land"))).toBe(true);
   });
 
   it("uses deterministic water-only detours for longer crossings", () => {
@@ -328,6 +347,13 @@ function tileKindInMap(map: PharosVilleMap, tile: { x: number; y: number }) {
   const x = Math.round(tile.x);
   const y = Math.round(tile.y);
   return map.tiles[y * map.width + x]?.kind;
+}
+
+function terrainKindInMap(map: PharosVilleMap, tile: { x: number; y: number }) {
+  const x = Math.round(tile.x);
+  const y = Math.round(tile.y);
+  const tileEntry = map.tiles[y * map.width + x];
+  return tileEntry?.terrain ?? tileEntry?.kind;
 }
 
 function inMapBounds(map: PharosVilleMap, tile: { x: number; y: number }) {

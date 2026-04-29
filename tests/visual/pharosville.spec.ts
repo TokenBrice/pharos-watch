@@ -34,6 +34,19 @@ type DebugCamera = {
   zoom: number;
 };
 
+type DebugRenderMetrics = {
+  drawableCount: number;
+  drawableCounts: {
+    body: number;
+    overlay: number;
+    selection: number;
+    underlay: number;
+  };
+  drawDurationMs: number;
+  movingShipCount: number;
+  visibleTileCount: number;
+};
+
 type PharosVilleVisualDebug = {
   activeMotionLoopCount?: number;
   animationFramePending?: boolean;
@@ -56,6 +69,7 @@ type PharosVilleVisualDebug = {
   };
   motionFrameCount?: number;
   reducedMotion?: boolean;
+  renderMetrics?: DebugRenderMetrics;
   shipMotionSamples?: DebugShipMotionSample[];
   targets?: DebugTarget[];
   timeSeconds?: number;
@@ -1009,6 +1023,13 @@ test("pharosville reduced motion keeps ship samples static without RAF", async (
   expect(second.timeSeconds).toBe(0);
   expect(first.shipMotionSamples.length).toBeGreaterThan(0);
   expect(second.shipMotionSamples).toEqual(first.shipMotionSamples);
+  expect(first.renderMetrics?.drawableCount).toBeGreaterThan(0);
+  expect(first.renderMetrics?.visibleTileCount).toBeGreaterThan(0);
+  expect(first.renderMetrics?.movingShipCount).toBe(0);
+  expect(second.renderMetrics?.drawableCount).toBe(first.renderMetrics?.drawableCount);
+  expect(second.renderMetrics?.drawableCounts).toEqual(first.renderMetrics?.drawableCounts);
+  expect(second.renderMetrics?.movingShipCount).toBe(0);
+  expect(second.renderMetrics?.visibleTileCount).toBe(first.renderMetrics?.visibleTileCount);
 });
 
 test("pharosville responds to live reduced-motion preference transitions", async ({ page }) => {
@@ -1103,10 +1124,24 @@ test.describe("pharosville normal motion", () => {
     expect(runtime.motionCueCounts?.ambientBirds).toBeLessThanOrEqual(9);
     expect(runtime.motionCueCounts?.harborLights).toBeLessThanOrEqual(3);
     expect(runtime.motionCueCounts?.effectShips ?? 0).toBeLessThanOrEqual(runtime.motionCueCounts?.animatedShips ?? 0);
+    expect(runtime.renderMetrics?.drawableCount).toBeGreaterThan(0);
+    expect(runtime.renderMetrics?.drawableCounts.body).toBeGreaterThan(0);
+    expect(runtime.renderMetrics?.drawDurationMs).toBeGreaterThanOrEqual(0);
+    expect(runtime.renderMetrics?.movingShipCount).toBeGreaterThan(0);
+    expect(runtime.renderMetrics?.visibleTileCount).toBeGreaterThan(0);
     const movingDetailId = `ship.${movedSample.id}`;
     const selection = await clickMapTargetWithPoint(page, "ship", movingDetailId);
     expect(selection.detailId).toBe(movingDetailId);
     await waitForSelectedDetail(page, movingDetailId);
+    await page.clock.fastForward(1_000);
+    await page.waitForFunction((detailId) => {
+      const debug = (window as typeof window & {
+        __pharosVilleDebug?: PharosVilleVisualDebug;
+      }).__pharosVilleDebug;
+      return debug?.selectedDetailId === detailId && (debug.renderMetrics?.drawableCounts.selection ?? 0) > 0;
+    }, movingDetailId);
+    const selectedRuntime = await readRuntimeSnapshot(page);
+    expect(selectedRuntime.renderMetrics?.drawableCounts.selection).toBeGreaterThan(0);
     await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Risk water");
     await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Home dock");
     await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Chains present");
@@ -1146,6 +1181,7 @@ async function readRuntimeSnapshot(page: Page) {
       motionCueCounts: debug?.motionCueCounts ?? null,
       motionFrameCount: debug?.motionFrameCount ?? -1,
       reducedMotion: debug?.reducedMotion ?? null,
+      renderMetrics: debug?.renderMetrics ?? null,
       shipMotionSamples: debug?.shipMotionSamples ?? [],
       timeSeconds: debug?.timeSeconds ?? -1,
     };

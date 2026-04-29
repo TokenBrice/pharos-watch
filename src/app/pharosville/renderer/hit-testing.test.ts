@@ -55,6 +55,49 @@ describe("hit-testing", () => {
     expect(match?.detailId).toBe(ship?.detailId);
   });
 
+  it("uses drawable depth when overlapping moving bodies compete", () => {
+    const backShip = {
+      ...world.ships[0]!,
+      detailId: "ship.depth-back",
+      id: "depth-back",
+      label: "Depth Back",
+      tile: { x: 20, y: 20 },
+    };
+    const frontShip = {
+      ...world.ships[1]!,
+      detailId: "ship.depth-front",
+      id: "depth-front",
+      label: "Depth Front",
+      tile: { x: 20.18, y: 20.18 },
+    };
+    const targets = collectHitTargets({
+      camera,
+      hoveredDetailId: backShip.detailId,
+      selectedDetailId: backShip.detailId,
+      world: {
+        ...world,
+        areas: [],
+        buildings: [],
+        docks: [],
+        graves: [],
+        shipClusters: [],
+        ships: [backShip, frontShip],
+      },
+    });
+    const backTarget = targets.find((target) => target.detailId === backShip.detailId);
+    const frontTarget = targets.find((target) => target.detailId === frontShip.detailId);
+    expect(backTarget).toBeDefined();
+    expect(frontTarget).toBeDefined();
+    expect(frontTarget!.priority).toBeGreaterThan(backTarget!.priority);
+
+    const point = {
+      x: frontTarget!.rect.x + frontTarget!.rect.width / 2,
+      y: frontTarget!.rect.y + frontTarget!.rect.height / 2,
+    };
+    expect(pointInRect(point, backTarget!.rect)).toBe(true);
+    expect(hitTest(targets, point)?.detailId).toBe(frontShip.detailId);
+  });
+
   it.each(BUILDING_DETAIL_IDS)("selects thematic building %s from an unoccluded target point", (detailId) => {
     const building = world.buildings.find((entry) => entry.detailId === detailId);
     expect(building).toBeDefined();
@@ -313,4 +356,13 @@ function unoccludedTargetPoint(targets: readonly HitTarget[], target: HitTarget)
     if (hitTest(targets, point)?.detailId === target.detailId) return point;
   }
   return null;
+}
+
+function pointInRect(point: { x: number; y: number }, rect: HitTarget["rect"]) {
+  return (
+    point.x >= rect.x
+    && point.x <= rect.x + rect.width
+    && point.y >= rect.y
+    && point.y <= rect.y + rect.height
+  );
 }

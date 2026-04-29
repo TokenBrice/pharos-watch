@@ -1,6 +1,6 @@
-import { nearestWaterTile } from "./world-layout";
+import { isWaterTileKind, nearestWaterTile } from "./world-layout";
 import { stableHash, stableOffset, stableUnit } from "./stable-random";
-import type { PharosVilleMap, PharosVilleWorld, ShipDockVisit, ShipNode, ShipWaterZone } from "./world-types";
+import type { PharosVilleMap, PharosVilleTile, PharosVilleWorld, ShipDockVisit, ShipNode, ShipWaterZone } from "./world-types";
 
 export interface ShipWaterPath {
   from: { x: number; y: number };
@@ -71,8 +71,6 @@ const BAND_FIRE_FLICKER_SPEED: Record<string, number> = {
   stable: 0.48,
   warning: 0.32,
 };
-
-const WATER_KINDS = new Set(["water", "deep-water"]);
 
 const ZONE_DWELL: Record<ShipWaterZone, { dockDwell: number; riskDwell: number; transit: number }> = {
   fog: { riskDwell: 0.55, dockDwell: 0.08, transit: 0.37 },
@@ -529,7 +527,7 @@ function nearestMapWaterTile(tile: { x: number; y: number }, map: PharosVilleMap
   let bestTile: { x: number; y: number } | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
   for (const candidate of map.tiles) {
-    if (!WATER_KINDS.has(candidate.kind)) continue;
+    if (!isMotionWaterTile(candidate)) continue;
     const distance = Math.abs(candidate.x - rounded.x) + Math.abs(candidate.y - rounded.y);
     if (distance < bestDistance) {
       bestDistance = distance;
@@ -542,13 +540,13 @@ function nearestMapWaterTile(tile: { x: number; y: number }, map: PharosVilleMap
 function fallbackWaterWaypoint(from: { x: number; y: number }, to: { x: number; y: number }, map: PharosVilleMap): { x: number; y: number } {
   const seed = stableHash(`${from.x}.${from.y}->${to.x}.${to.y}`);
   const edgeTiles = map.tiles
-    .filter((tile) => WATER_KINDS.has(tile.kind) && (tile.x === 0 || tile.y === 0 || tile.x === map.width - 1 || tile.y === map.height - 1))
+    .filter((tile) => isMotionWaterTile(tile) && (tile.x === 0 || tile.y === 0 || tile.x === map.width - 1 || tile.y === map.height - 1))
     .sort((a, b) => {
       const aScore = Math.abs(a.x - from.x) + Math.abs(a.y - from.y) + Math.abs(a.x - to.x) + Math.abs(a.y - to.y);
       const bScore = Math.abs(b.x - from.x) + Math.abs(b.y - from.y) + Math.abs(b.x - to.x) + Math.abs(b.y - to.y);
       return aScore - bScore || ((a.x * 131 + a.y + seed) % 17) - ((b.x * 131 + b.y + seed) % 17);
     });
-  const waypoint = edgeTiles[0] ?? map.tiles.find((tile) => WATER_KINDS.has(tile.kind));
+  const waypoint = edgeTiles[0] ?? map.tiles.find((tile) => isMotionWaterTile(tile));
   return waypoint ? { x: waypoint.x, y: waypoint.y } : from;
 }
 
@@ -731,11 +729,19 @@ export function sampleShipWaterPath(path: ShipWaterPath | undefined, progress: n
   };
 }
 
+export function shipWaterPathKey(from: { x: number; y: number }, to: { x: number; y: number }) {
+  return pathKey(from, to);
+}
+
 function isWaterTile(x: number, y: number, map: PharosVilleMap): boolean {
   const index = tileIndex(x, y, map);
   if (index < 0) return false;
-  const kind = map.tiles[index]?.kind;
-  return !!kind && WATER_KINDS.has(kind);
+  const tile = map.tiles[index];
+  return !!tile && isMotionWaterTile(tile);
+}
+
+function isMotionWaterTile(tile: Pick<PharosVilleTile, "kind" | "terrain">): boolean {
+  return isWaterTileKind(tile.terrain ?? tile.kind);
 }
 
 function tileIndex(x: number, y: number, map: PharosVilleMap): number {

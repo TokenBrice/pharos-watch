@@ -247,11 +247,28 @@ export interface BuildingNode {
   visual: DataLandmarkVisual;
 }
 
+export type WorldEffectCueId =
+  | "cue.area.north-froze-pole"
+  | "cue.building.dependency-loom"
+  | "cue.building.exit-route-gatehouse"
+  | "cue.building.mint-burn-foundry"
+  | "cue.building.yield-orchard"
+  | "cue.lighthouse.psi"
+  | "cue.ship.distance"
+  | "cue.ship.motion"
+  | "cue.water.semantic-terrain";
+
+export type WorldEffectPurpose = "ambient" | "analytical";
+
 export interface WorldEffect {
+  cueId?: WorldEffectCueId;
   id: string;
   kind: "recent-change" | "fog" | "storm";
   entityId: string;
   intensity: number;
+  nonData?: boolean;
+  purpose: WorldEffectPurpose;
+  reducedMotionEquivalent: string;
 }
 
 export interface LegendItem {

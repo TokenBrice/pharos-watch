@@ -3,6 +3,7 @@ import type { ShipMotionSample } from "../systems/motion";
 import { tileToScreen, type IsoCamera, type ScreenPoint } from "../systems/projection";
 import type { PharosVilleWorld } from "../systems/world-types";
 import type { LoadedPharosVilleAsset } from "./asset-manager";
+import { drawableDepth } from "./drawable-pass";
 
 export interface ScreenRect {
   height: number;
@@ -33,6 +34,19 @@ export interface EntityDrawGeometry {
   y: number;
 }
 
+export interface ResolvedEntityGeometry {
+  assetScale: number | null;
+  depth: number;
+  depthTile: { x: number; y: number };
+  drawPoint: ScreenPoint;
+  drawScale: number;
+  followTile: { x: number; y: number };
+  screenPoint: ScreenPoint;
+  selectionRect: ScreenRect;
+  semanticTile: { x: number; y: number };
+  targetRect: ScreenRect;
+}
+
 export function entityAssetId(entity: WorldSelectableEntity) {
   if (entity.kind === "lighthouse") return "landmark.lighthouse";
   if (entity.kind === "dock") return entity.assetId;
@@ -55,6 +69,56 @@ export function entityScreenPoint(input: {
   return tileToScreen(tile, input.camera);
 }
 
+export function resolveEntityGeometry(input: {
+  asset?: LoadedPharosVilleAsset | null;
+  camera: IsoCamera;
+  entity: WorldSelectableEntity;
+  mapWidth: number;
+  shipMotionSamples?: ReadonlyMap<string, ShipMotionSample>;
+}): ResolvedEntityGeometry {
+  const followTileValue = entityFollowTile({
+    entity: input.entity,
+    mapWidth: input.mapWidth,
+    shipMotionSamples: input.shipMotionSamples,
+  });
+  const screenPoint = tileToScreen(followTileValue, input.camera);
+  const draw = entityDrawGeometry({
+    camera: input.camera,
+    entity: input.entity,
+    mapWidth: input.mapWidth,
+    point: screenPoint,
+  });
+  const targetRect = input.entity.kind === "area"
+    ? areaLabelTargetRect(input.entity, input.camera)
+    : input.asset
+      ? assetTargetRect({
+        asset: input.asset,
+        camera: input.camera,
+        entity: input.entity,
+        mapWidth: input.mapWidth,
+        point: screenPoint,
+      })
+      : fallbackTargetRect(input.entity, input.camera, screenPoint);
+  const depthTile = entityDepthTile({
+    entity: input.entity,
+    mapWidth: input.mapWidth,
+    shipMotionSamples: input.shipMotionSamples,
+  });
+
+  return {
+    assetScale: input.asset ? draw.drawScale * input.asset.entry.displayScale : null,
+    depth: drawableDepth(depthTile),
+    depthTile,
+    drawPoint: { x: draw.x, y: draw.y },
+    drawScale: draw.drawScale,
+    followTile: followTileValue,
+    screenPoint,
+    selectionRect: targetRect,
+    semanticTile: input.entity.tile,
+    targetRect,
+  };
+}
+
 export function entityFollowTile(input: {
   entity: WorldSelectableEntity;
   mapWidth?: number;
@@ -63,6 +127,17 @@ export function entityFollowTile(input: {
   if (input.entity.kind === "ship") return input.shipMotionSamples?.get(input.entity.id)?.tile ?? input.entity.tile;
   if (input.entity.kind === "area") return areaLabelPlacementForArea(input.entity).anchorTile;
   if (input.entity.kind === "dock" && input.mapWidth) return dockDrawTile(input.entity, input.mapWidth);
+  return input.entity.tile;
+}
+
+export function entityDepthTile(input: {
+  entity: WorldSelectableEntity;
+  mapWidth?: number;
+  shipMotionSamples?: ReadonlyMap<string, ShipMotionSample>;
+}) {
+  if (input.entity.kind === "ship") return input.shipMotionSamples?.get(input.entity.id)?.tile ?? input.entity.tile;
+  if (input.entity.kind === "dock" && input.mapWidth) return dockDrawTile(input.entity, input.mapWidth);
+  if (input.entity.kind === "area") return areaLabelPlacementForArea(input.entity).semanticTile;
   return input.entity.tile;
 }
 

@@ -9,7 +9,8 @@ import { useFullscreenMode } from "./hooks/use-fullscreen-mode";
 import { PharosVilleAssetManager, type PharosVilleAssetLoadError } from "./renderer/asset-manager";
 import { entityFollowTile } from "./renderer/geometry";
 import { collectHitTargets, hitTest, type HitTarget } from "./renderer/hit-testing";
-import { drawPharosVille } from "./renderer/world-canvas";
+import { selectionDrawableCount } from "./renderer/layers/selection";
+import { drawPharosVille, type PharosVilleRenderMetrics } from "./renderer/world-canvas";
 import { cameraZoomLabel, clampCameraToMap, defaultCamera, followTile, panCamera, zoomIn, zoomOut } from "./systems/camera";
 import { resolveCanvasBudget } from "./systems/canvas-budget";
 import { buildBaseMotionPlan, buildMotionPlan, resolveShipMotionSample, type ShipMotionSample } from "./systems/motion";
@@ -25,6 +26,13 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
   const canvasBudgetRef = useRef<ReturnType<typeof resolveCanvasBudget> | null>(null);
   const motionStartTimeRef = useRef<number | null>(null);
   const motionFrameCountRef = useRef(0);
+  const lastRenderMetricsRef = useRef<PharosVilleRenderMetrics & { drawDurationMs: number }>({
+    drawableCount: 0,
+    drawableCounts: { underlay: 0, body: 0, overlay: 0, selection: 0 },
+    drawDurationMs: 0,
+    movingShipCount: 0,
+    visibleTileCount: 0,
+  });
   const currentShipMotionSamplesRef = useRef<ReadonlyMap<string, ShipMotionSample>>(new Map());
   const currentHitTargetsRef = useRef<readonly HitTarget[]>([]);
   const frameStateRef = useRef<{
@@ -206,7 +214,8 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
       const nextHoveredTarget = targets.find((target) => target.detailId === hoveredDetailId) ?? null;
       const nextSelectedTarget = targets.find((target) => target.detailId === selectedDetailId) ?? null;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawPharosVille({
+      const drawStartedAt = performance.now();
+      const renderMetrics = drawPharosVille({
         camera,
         ctx,
         height: canvasSize.y,
@@ -223,6 +232,10 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
         world,
         assets: assetManager,
       });
+      lastRenderMetricsRef.current = {
+        ...renderMetrics,
+        drawDurationMs: performance.now() - drawStartedAt,
+      };
       if (!reducedMotion) {
         motionFrameCountRef.current += 1;
         animationFramePendingRef.current = true;
@@ -234,6 +247,7 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
         frameState: nextFrameState,
         motionPlan,
         reducedMotion,
+        renderMetrics: lastRenderMetricsRef.current,
         selectedDetailId,
         world,
       });
@@ -251,6 +265,12 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
       __pharosVilleDebug?: PharosVilleDebugState;
     };
     const frameState = frameStateRef.current;
+    const renderMetrics = renderMetricsWithCurrentSelection({
+      hoveredDetailId,
+      metrics: lastRenderMetricsRef.current,
+      selectedDetailId,
+      targets: frameState.targets,
+    });
     debugWindow.__pharosVilleDebug = {
       camera,
       cameraWithinBounds: isCameraWithinBounds(camera, world.map, canvasSize),
@@ -265,6 +285,7 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
       motionClockSource: reducedMotion ? "reduced-motion-static-frame" : "requestAnimationFrame",
       motionCueCounts: motionCueCounts({ motionPlan, selectedDetailId, world }),
       motionFrameCount: motionFrameCountRef.current,
+      renderMetrics,
       reducedMotion,
       selectedDetailAnchor,
       selectedDetailId,
@@ -275,7 +296,7 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
     return () => {
       delete debugWindow.__pharosVilleDebug;
     };
-  }, [assetLoadErrors, camera, canvasSize, criticalAssetsLoaded, deferredAssetsLoaded, motionPlan, reducedMotion, selectedDetailAnchor, selectedDetailId, world]);
+  }, [assetLoadErrors, camera, canvasSize, criticalAssetsLoaded, deferredAssetsLoaded, hoveredDetailId, motionPlan, reducedMotion, selectedDetailAnchor, selectedDetailId, world]);
 
   const canvasPoint = useCallback((event: ReactPointerEvent<HTMLCanvasElement> | ReactWheelEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -526,6 +547,7 @@ type PharosVilleDebugState = {
   motionClockSource: "requestAnimationFrame" | "reduced-motion-static-frame";
   motionCueCounts: MotionCueCounts;
   motionFrameCount: number;
+  renderMetrics: PharosVilleRenderMetrics & { drawDurationMs: number };
   reducedMotion: boolean;
   selectedDetailAnchor: DetailAnchor | null;
   selectedDetailId: string | null;
@@ -575,6 +597,26 @@ function compactShipMotionSamples(samples: ReadonlyMap<string, ShipMotionSample>
   }));
 }
 
+function renderMetricsWithCurrentSelection(input: {
+  hoveredDetailId: string | null;
+  metrics: PharosVilleRenderMetrics & { drawDurationMs: number };
+  selectedDetailId: string | null;
+  targets: readonly HitTarget[];
+}): PharosVilleRenderMetrics & { drawDurationMs: number } {
+  const selectedTarget = input.targets.find((target) => target.detailId === input.selectedDetailId) ?? null;
+  const hoveredTarget = input.targets.find((target) => target.detailId === input.hoveredDetailId) ?? null;
+  const selectionCount = selectionDrawableCount({ hoveredTarget, selectedTarget });
+  if (selectionCount === input.metrics.drawableCounts.selection) return input.metrics;
+  return {
+    ...input.metrics,
+    drawableCount: input.metrics.drawableCount - input.metrics.drawableCounts.selection + selectionCount,
+    drawableCounts: {
+      ...input.metrics.drawableCounts,
+      selection: selectionCount,
+    },
+  };
+}
+
 function updateDebugFrame(input: {
   animationFramePending: boolean;
   frameCount: number;
@@ -585,6 +627,7 @@ function updateDebugFrame(input: {
   };
   motionPlan: ReturnType<typeof buildMotionPlan>;
   reducedMotion: boolean;
+  renderMetrics: PharosVilleRenderMetrics & { drawDurationMs: number };
   selectedDetailId: string | null;
   world: PharosVilleWorldModel;
 }) {
@@ -603,6 +646,7 @@ function updateDebugFrame(input: {
       world: input.world,
     }),
     motionFrameCount: input.frameCount,
+    renderMetrics: input.renderMetrics,
     reducedMotion: input.reducedMotion,
     shipMotionSamples: compactShipMotionSamples(input.frameState.samples),
     targets: input.frameState.targets,
