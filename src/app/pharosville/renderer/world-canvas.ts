@@ -1,4 +1,5 @@
 import type { PharosVilleMotionPlan, ShipMotionSample } from "../systems/motion";
+import { waterTerrainStyle } from "../systems/palette";
 import { tileToScreen, type IsoCamera, type ScreenPoint } from "../systems/projection";
 import {
   CEMETERY_CENTER,
@@ -6,6 +7,8 @@ import {
   isElevatedTileKind,
   isShoreTileKind,
   isWaterTileKind,
+  MAX_TILE_X,
+  MAX_TILE_Y,
 } from "../systems/world-layout";
 import type { PharosVilleWorld, TerrainKind } from "../systems/world-types";
 import type { PharosVilleAssetManager } from "./asset-manager";
@@ -13,22 +16,14 @@ import type { HitTarget } from "./hit-testing";
 import { CAUSE_HEX, type CauseOfDeath } from "@shared/lib/cause-of-death";
 
 const TILE_COLORS: Record<string, string> = {
-  "alert-water": "#17485f",
   beach: "#c7a66c",
   cliff: "#5a625d",
-  "deep-water": "#071225",
-  "fog-water": "#24314a",
-  "frozen-water": "#315d72",
   grass: "#617444",
-  "harbor-water": "#1f5f68",
   hill: "#76814d",
   land: "#b89155",
   road: "#7a5938",
   rock: "#6f7369",
   shore: "#aa8755",
-  "storm-water": "#0b2236",
-  "warning-water": "#1b3448",
-  water: "#15375a",
 };
 
 const TERRAIN_TEXTURE = {
@@ -456,6 +451,8 @@ function drawTerrain({ camera, ctx, motion, world }: DrawPharosVilleInput) {
 
 function terrainColor(kind: TerrainKind) {
   const value = String(kind);
+  const waterStyle = waterTerrainStyle(value);
+  if (waterStyle) return waterStyle.base;
   const directColor = TILE_COLORS[value];
   if (directColor) return directColor;
   if (value.includes("water")) return value.includes("deep") ? "#071225" : "#15375a";
@@ -481,34 +478,17 @@ function drawWaterTile(
   const value = String(kind);
   const width = 32 * zoom;
   const height = 16 * zoom;
-  drawDiamond(ctx, x, y, width, height, terrainColor(kind));
-
-  if (value === "harbor-water" || value.includes("harbor")) {
-    drawDiamond(ctx, x, y + 1 * zoom, width * 0.82, height * 0.72, TERRAIN_TEXTURE.shallow);
-  } else if (value === "alert-water") {
-    drawDiamond(ctx, x, y + 1 * zoom, width * 0.88, height * 0.76, "rgba(71, 129, 142, 0.28)");
-    drawAlertChannelTexture(ctx, x, y, zoom, tileX, tileY, motion);
-  } else if (value === "warning-water") {
-    drawDiamond(ctx, x, y + 1 * zoom, width * 0.9, height * 0.78, "rgba(24, 34, 46, 0.24)");
-    drawWarningShoalTexture(ctx, x, y, zoom, tileX, tileY, motion);
-  } else if (value === "fog-water" || value.includes("fog")) {
-    drawDiamond(ctx, x, y + 1 * zoom, width * 0.9, height * 0.78, "rgba(197, 208, 206, 0.16)");
-  } else if (value === "storm-water" || value.includes("storm")) {
-    drawDiamond(ctx, x, y + 1 * zoom, width * 0.9, height * 0.78, "rgba(6, 12, 22, 0.24)");
-    drawDangerStraitTexture(ctx, x, y, zoom, tileX, tileY, motion);
-  } else if (value === "frozen-water") {
-    drawDiamond(ctx, x, y + 1 * zoom, width * 0.9, height * 0.78, "rgba(181, 229, 246, 0.16)");
-    drawNorthFrozeWaterTexture(ctx, x, y, zoom, tileX, tileY, motion);
-  } else if (value === "deep-water" || value.includes("deep")) {
-    drawDiamond(ctx, x, y + 1 * zoom, width * 0.86, height * 0.76, "rgba(2, 6, 15, 0.24)");
-  }
+  const style = waterTerrainStyle(value) ?? waterTerrainStyle("water")!;
+  drawDiamond(ctx, x, y, width, height, style.base);
+  drawWaterDepthOverlay(ctx, x, y, zoom, width, height, tileX, tileY, style.inner);
+  drawWaterTerrainTexture(ctx, x, y, zoom, style.texture, tileX, tileY, motion);
 
   if ((tileX * 13 + tileY * 17) % 5 !== 0) return;
   const wave = motion.reducedMotion
     ? 0.2
     : 0.16 + Math.sin(motion.timeSeconds * 1.25 + tileX * 0.27 + tileY * 0.19) * 0.05;
   ctx.save();
-  ctx.strokeStyle = `rgba(186, 231, 225, ${Math.max(0.08, wave)})`;
+  ctx.strokeStyle = style.wave.replace(/[\d.]+\)$/, `${Math.max(0.08, wave)})`);
   ctx.lineWidth = Math.max(1, zoom);
   ctx.beginPath();
   ctx.moveTo(x - 9 * zoom, y - 2 * zoom);
@@ -522,6 +502,72 @@ function drawWaterTile(
     ctx.stroke();
   }
   ctx.restore();
+}
+
+function drawWaterDepthOverlay(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  width: number,
+  height: number,
+  tileX: number,
+  tileY: number,
+  fill: string,
+) {
+  drawDiamond(ctx, x, y + 1 * zoom, width * 0.88, height * 0.76, fill);
+  const shimmer = ((tileX * 11 + tileY * 7) % 9 - 4) / 4;
+  if (shimmer === 0) return;
+  ctx.save();
+  const overlayFill = shimmer > 0
+    ? `rgba(218, 236, 224, ${0.018 * shimmer})`
+    : `rgba(1, 8, 18, ${-0.018 * shimmer})`;
+  ctx.fillStyle = overlayFill;
+  drawDiamond(ctx, x, y, width * 0.98, height * 0.9, overlayFill);
+  ctx.restore();
+}
+
+function drawWaterTerrainTexture(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  texture: NonNullable<ReturnType<typeof waterTerrainStyle>>["texture"],
+  tileX: number,
+  tileY: number,
+  motion: PharosVilleCanvasMotion,
+) {
+  if (texture === "alert") {
+    drawAlertChannelTexture(ctx, x, y, zoom, tileX, tileY, motion);
+    return;
+  }
+  if (texture === "brackish") {
+    drawBrackishWaterTexture(ctx, x, y, zoom, tileX, tileY, motion);
+    return;
+  }
+  if (texture === "deep") {
+    drawDeepSeaTexture(ctx, x, y, zoom, tileX, tileY, motion);
+    return;
+  }
+  if (texture === "fog") {
+    drawFogWaterTexture(ctx, x, y, zoom, tileX, tileY, motion);
+    return;
+  }
+  if (texture === "frozen") {
+    drawNorthFrozeWaterTexture(ctx, x, y, zoom, tileX, tileY, motion);
+    return;
+  }
+  if (texture === "harbor") {
+    drawHarborWaterTexture(ctx, x, y, zoom, tileX, tileY, motion);
+    return;
+  }
+  if (texture === "storm") {
+    drawDangerStraitTexture(ctx, x, y, zoom, tileX, tileY, motion);
+    return;
+  }
+  if (texture === "warning") {
+    drawWarningShoalTexture(ctx, x, y, zoom, tileX, tileY, motion);
+  }
 }
 
 function drawNorthFrozeWaterTexture(
@@ -549,6 +595,109 @@ function drawNorthFrozeWaterTexture(
     ctx.fillStyle = "rgba(226, 250, 255, 0.3)";
     ctx.fillRect(Math.round(x - 2 * zoom), Math.round(y), Math.max(1, Math.round(4 * zoom)), Math.max(1, Math.round(2 * zoom)));
   }
+  ctx.restore();
+}
+
+function drawHarborWaterTexture(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  tileX: number,
+  tileY: number,
+  motion: PharosVilleCanvasMotion,
+) {
+  const pulse = motion.reducedMotion ? 0.16 : 0.13 + Math.sin(motion.timeSeconds * 0.85 + tileX * 0.23 + tileY * 0.17) * 0.04;
+  ctx.save();
+  ctx.strokeStyle = `rgba(199, 232, 219, ${Math.max(0.08, pulse)})`;
+  ctx.lineWidth = Math.max(1, zoom);
+  ctx.beginPath();
+  ctx.moveTo(x - 10 * zoom, y + 2 * zoom);
+  ctx.lineTo(x + 8 * zoom, y + 5 * zoom);
+  if ((tileX + tileY) % 3 === 0) {
+    ctx.moveTo(x - 5 * zoom, y - 2 * zoom);
+    ctx.lineTo(x + 5 * zoom, y + 1 * zoom);
+  }
+  ctx.stroke();
+  if ((tileX * 7 + tileY * 5) % 6 === 0) {
+    const reflection = "rgba(154, 205, 184, 0.2)";
+    ctx.fillStyle = reflection;
+    drawDiamond(ctx, x + 2 * zoom, y + 2 * zoom, 8 * zoom, 3 * zoom, reflection);
+  }
+  ctx.restore();
+}
+
+function drawBrackishWaterTexture(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  tileX: number,
+  tileY: number,
+  motion: PharosVilleCanvasMotion,
+) {
+  const murk = motion.reducedMotion ? 0.18 : 0.16 + Math.sin(motion.timeSeconds * 0.55 + tileX * 0.41) * 0.04;
+  ctx.save();
+  ctx.fillStyle = `rgba(80, 91, 57, ${Math.max(0.1, murk)})`;
+  if ((tileX * 3 + tileY * 11) % 4 === 0) {
+    drawDiamond(ctx, x - 3 * zoom, y + 2 * zoom, 10 * zoom, 4 * zoom, ctx.fillStyle);
+  }
+  ctx.strokeStyle = "rgba(146, 164, 126, 0.2)";
+  ctx.lineWidth = Math.max(1, zoom);
+  ctx.beginPath();
+  ctx.moveTo(x - 9 * zoom, y + 5 * zoom);
+  ctx.lineTo(x - 3 * zoom, y + 1 * zoom);
+  ctx.lineTo(x + 4 * zoom, y + 5 * zoom);
+  if ((tileX + tileY) % 2 === 0) {
+    ctx.moveTo(x + 7 * zoom, y - 2 * zoom);
+    ctx.lineTo(x + 11 * zoom, y + 1 * zoom);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawDeepSeaTexture(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  tileX: number,
+  tileY: number,
+  motion: PharosVilleCanvasMotion,
+) {
+  if ((tileX * 5 + tileY * 7) % 6 !== 0) return;
+  const glint = motion.reducedMotion ? 0.08 : 0.06 + Math.sin(motion.timeSeconds * 0.6 + tileX * 0.2 + tileY * 0.31) * 0.025;
+  ctx.save();
+  ctx.strokeStyle = `rgba(117, 153, 184, ${Math.max(0.035, glint)})`;
+  ctx.lineWidth = Math.max(1, zoom);
+  ctx.beginPath();
+  ctx.moveTo(x - 8 * zoom, y);
+  ctx.lineTo(x + 6 * zoom, y + 3 * zoom);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawFogWaterTexture(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  tileX: number,
+  tileY: number,
+  motion: PharosVilleCanvasMotion,
+) {
+  const veil = motion.reducedMotion ? 0.16 : 0.12 + Math.sin(motion.timeSeconds * 0.42 + tileY * 0.33) * 0.04;
+  ctx.save();
+  ctx.strokeStyle = `rgba(205, 216, 211, ${Math.max(0.08, veil)})`;
+  ctx.lineWidth = Math.max(1, 1.4 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(x - 13 * zoom, y - 1 * zoom);
+  ctx.lineTo(x + 12 * zoom, y + 3 * zoom);
+  if ((tileX * 5 + tileY * 3) % 5 === 0) {
+    ctx.moveTo(x - 7 * zoom, y + 6 * zoom);
+    ctx.lineTo(x + 8 * zoom, y + 8 * zoom);
+  }
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -1714,8 +1863,8 @@ function dockDrawPoint(dock: PharosVilleWorld["docks"][number], camera: IsoCamer
 }
 
 function dockOutwardVector(tile: { x: number; y: number }): { x: -1 | 0 | 1; y: -1 | 0 | 1 } {
-  const dx = tile.x - 31.5;
-  const dy = tile.y - 31.5;
+  const dx = tile.x - MAX_TILE_X / 2;
+  const dy = tile.y - MAX_TILE_Y / 2;
   if (Math.abs(dx) >= Math.abs(dy)) return { x: dx < 0 ? -1 : 1, y: 0 };
   return { x: 0, y: dy < 0 ? -1 : 1 };
 }
@@ -1762,7 +1911,7 @@ function drawHarborFlag(input: {
   const { accent, ctx, dock, emphasized, logo, outward, x, y, zoom } = input;
   const scale = Math.max(0.72, zoom);
   const flagScale = scale * 1.65;
-  const side = outward.x === 0 ? (dock.tile.x < 31.5 ? -1 : 1) : -outward.x;
+  const side = outward.x === 0 ? (dock.tile.x < MAX_TILE_X / 2 ? -1 : 1) : -outward.x;
   const direction = side < 0 ? -1 : 1;
   const mastX = x + side * (22 + dock.size * 0.55) * scale;
   const mastBaseY = y - (5 + dock.size * 0.55) * scale;
