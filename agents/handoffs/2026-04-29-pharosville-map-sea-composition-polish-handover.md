@@ -50,7 +50,7 @@ phase explicitly records an approved scope change.
 | 5. Building spacing | Redistribute four data buildings and add spacing/non-overlap invariants. | Complete | Phase 2 layout implementer/reviewer | Data-building placement and tests | Commit `de8455616`; building tiles are `{28,30}`, `{34,24}`, `{40,31}`, `{33,36}` with minimum pair distance `>= 7.75`; reviewer found no remaining Critical/Major/Minor issues after fixes. |
 | 6. Sea-zone readability | Strengthen semantic water palette/textures and zone mark language. | Complete | Phase 4 texture implementer/reviewer | `world-canvas`/palette texture and style work | Commit `8ab1d571d`; stronger water terrain palettes, style-driven texture colors, and open-water strokes. Manual browser screenshot accepted; no dedicated automated pixel assertion for circular overlay absence yet. |
 | 7. Ground/lighthouse integration | Tune land, road, cliff, and headland rendering to read as one terrain system. | Complete | Phase 4 texture implementer/reviewer | Ground grain, grass, road, and lighthouse/headland color integration | Commit `8ab1d571d`; base island ground grain/grass/road colors integrated with lighthouse/headland colors. Manual browser screenshot accepted; no dedicated automated ground-noise density assertion yet. |
-| 8. Tests, docs, review | Update focused tests/docs/snapshots and run route validation. | Pending | TBD | TBD | Next step: final Playwright visual lane and snapshot review/update, plus full closeout validation. |
+| 8. Tests, docs, review | Update focused tests/docs/snapshots and run route validation. | Complete | Final implementer/reviewers | Desktop visual snapshot and handover closeout | Desktop snapshot reviewed/updated after intentional composition/terrain changes; PharosVille route tests, Playwright lane, lint, typecheck, build, asset guard, and palette guard passed. |
 
 ## Validation Tracker
 
@@ -58,7 +58,7 @@ Record commands exactly as run, with pass/fail/skip and the reason for skips.
 
 | Check | Status | Last run by | Notes |
 | --- | --- | --- | --- |
-| `npm test -- src/app/pharosville` | Not run | TBD | Route-focused unit suite. |
+| `npm test -- src/app/pharosville` | Passed | Final implementer | Passed after phase commits: 19 files, 120 tests. |
 | `npm test -- src/app/pharosville/systems/world-layout.test.ts` | Passed | Phase 2 layout implementer/reviewer | Included in combined Phase 2 focused run: 44 tests passed across world-layout, pharosville-world, chain-docks, and motion suites. |
 | `npm test -- src/app/pharosville/systems/pharosville-world.test.ts` | Passed | Phase 2 layout implementer/reviewer | Included in combined Phase 2 focused run: 44 tests passed. |
 | `npm test -- src/app/pharosville/systems/chain-docks.test.ts` | Passed | Phase 2 layout implementer/reviewer | Included in combined Phase 2 focused run: 44 tests passed. |
@@ -68,16 +68,16 @@ Record commands exactly as run, with pass/fail/skip and the reason for skips.
 | `npm test -- src/app/pharosville/systems/camera.test.ts` | Passed | Phase 3 camera implementer/reviewer | Included in combined Phase 3 focused run with projection tests: 11 tests passed; covers 1440x1000 and 1280x760 authored island mass, bounded zoom clamp stability, and follow-with-map clamp stability. |
 | `npm test -- src/app/pharosville/systems/projection.test.ts` | Passed | Phase 3 camera implementer/reviewer | Included in combined Phase 3 focused run with camera tests: 11 tests passed. |
 | `npm test -- src/app/pharosville/systems/palette.test.ts` | Passed | Phase 4 texture implementer/reviewer | Included in parent Phase 4 run with hit-testing tests: 23 tests passed. |
-| `npm run check:pharosville-assets` | Not run | TBD | Required if manifest/assets/geometry change. |
+| `npm run check:pharosville-assets` | Passed | Final implementer | Passed after phase commits: 28 assets validated. |
 | `npm run check:harbor-palette` | Passed | Phase 4 texture implementer/reviewer | Passed after water/ground palette changes. |
-| `npm run lint` | Partial passed | Phase 1-4 implementer/reviewers | Focused `npx eslint ... --max-warnings=0` passed for Phase 1, Phase 2, Phase 3, and Phase 4 touched files; full lint still not recorded here. |
+| `npm run lint` | Passed | Final implementer | Full lint passed after phase commits; focused eslint also passed during phases. |
 | `git diff --cached --check` | Passed | Phase 2 layout implementer/reviewer | Passed before commit `de8455616`. |
 | `git diff --check -- src/app/pharosville/systems/camera.ts src/app/pharosville/systems/camera.test.ts` | Passed | Phase 3 camera implementer/reviewer | Passed before/with Phase 3 commit `24246b15e`. |
 | `git diff --check` for Phase 4 files | Passed | Phase 4 texture implementer/reviewer | Passed for `world-canvas`/palette phase files. |
-| `npm run typecheck` | Not run | TBD | Required before final handoff if available for this repo state. |
-| `npm run build` | Not run | TBD | Required after route docs/CSS/assets/static output changes. |
-| `npx playwright test tests/visual/pharosville.spec.ts --grep "pharosville"` | Pending | TBD | Full Playwright visual review still pending after Phase 1; revisit label legibility after island/layout and camera changes settle. |
-| Snapshot update command | Not run | TBD | Only after reviewed visual diffs. |
+| `npm run typecheck` | Passed | Final implementer | `tsc --noEmit -p tsconfig.typecheck.json` passed after phase commits. |
+| `npm run build` | Passed | Final implementer | Static Next build passed after phase commits. |
+| `npx playwright test tests/visual/pharosville.spec.ts --grep "pharosville"` | Passed | Final implementer | Passed after intentional desktop snapshot update: 11 tests. |
+| Snapshot update command | Passed | Final implementer | `npx playwright test tests/visual/pharosville.spec.ts --grep "pharosville renders desktop canvas shell" --update-snapshots`; actual screenshot reviewed before update. |
 | `npm run test:merge-gate` | Not run | TBD | Required before push of deploy-impacting work. |
 
 ## Commit Tracker
@@ -104,13 +104,15 @@ Record commands exactly as run, with pass/fail/skip and the reason for skips.
   rendered hitboxes or Playwright debug targets.
 - Stronger water colors/textures may require intentional snapshot/classifier
   updates in final Playwright review.
-- Full Playwright visual lane still needs snapshot review/update after the
-  texture/palette and ground/lighthouse changes.
+- Full Playwright visual lane passed after the intentional desktop snapshot
+  update.
 - There is still no dedicated automated pixel assertion for absence of circular
   water overlays or for ground-noise density; Phase 4 manual browser screenshot
   review accepted the current output.
 - Concurrent motion/debug/doc work exists in the worktree and was not included
   in commit `de8455616`.
+- Concurrent uncommitted renderer helper work may still exist outside this
+  handover scope; it was left untouched.
 
 ## Next Steps After Each Major Phase
 
@@ -188,8 +190,11 @@ Record commands exactly as run, with pass/fail/skip and the reason for skips.
 
 - Record all validation commands, screenshot/snapshot decisions, docs updated,
   remaining risks, and final ship/no-ship decision.
-- Recommended next phase: run final visual regression lane, review/update
-  snapshots intentionally, and then run closeout validation before shipping.
+- Status note: final route validation and Playwright visual regression passed;
+  desktop shell snapshot was reviewed and intentionally updated after the
+  composition/terrain changes.
+- Recommended next phase: run/record merge-gate before push and coordinate any
+  remaining concurrent renderer-helper work separately.
 
 ## Phase Completion Notes
 
@@ -274,6 +279,39 @@ Append future updates here. Keep entries concise and factual.
   circular water overlays or for ground-noise density.
 - Recommended next phase: Final validation and intentional Playwright snapshot
   review/update.
+
+### Phase 8 Final Validation And Snapshot Completion
+
+- Phase completed: Phase 8 final validation and snapshot review.
+- Completed by: Final implementer
+- Date: 2026-04-29
+- Files changed: Desktop visual snapshot and this handover document.
+- Scope completed: Reviewed the new desktop screenshot after intentional map
+  composition, sea-zone, and ground-texture changes; updated only
+  `pharosville-desktop-shell-linux.png`.
+- Scope completed: Confirmed final browser lane after snapshot update.
+- Deviations from source plan: No additional app docs were changed in this
+  closeout because existing route docs already reflect printed labels, `56 x
+  56` map, water terrain bands, and motion/debug contracts.
+- Validation run: `npm test -- src/app/pharosville` passed, 19 files and 120
+  tests.
+- Validation run: `npm run check:pharosville-assets` passed, 28 assets.
+- Validation run: `npm run check:harbor-palette` passed.
+- Validation run: `npm run typecheck` passed.
+- Validation run: `npm run lint` passed.
+- Validation run: `npm run build` passed.
+- Validation run: `npx playwright test tests/visual/pharosville.spec.ts --grep "pharosville renders desktop canvas shell" --update-snapshots` passed and updated the desktop shell snapshot.
+- Validation run: `npx playwright test tests/visual/pharosville.spec.ts --grep "pharosville"` passed, 11 tests.
+- Visual screenshots/snapshots: Desktop shell snapshot intentionally updated
+  after manual review. The actual output shows a smaller, better centered island
+  with printed sea-zone names, stronger water-zone differentiation, and no
+  detached water overlay circles.
+- Commit/PR: Final closeout commit will include this handover update and the
+  reviewed desktop snapshot.
+- Residual risks: No dedicated automated pixel assertion yet for absence of
+  circular water overlays or for ground-noise density.
+- Recommended next phase: Run/record merge-gate before push; review any
+  concurrent renderer-helper changes in their own scope before merging.
 
 ### Template
 
