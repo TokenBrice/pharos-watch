@@ -195,7 +195,7 @@ export interface GraveNode {
 
 export type BuildingType =
   | "mint-burn-foundry"
-  | "frost-ward-keep"
+  | "north-froze-pole"
   | "exit-route-gatehouse"
   | "yield-orchard-moonwell"
   | "dependency-loom-chainworks";

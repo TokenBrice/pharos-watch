@@ -77,7 +77,7 @@ export function AccessibilityLedger({
         ))}
       </ol>
 
-      <h3>Data buildings</h3>
+      <h3>Data landmarks</h3>
       <ol>
         {world.buildings.map((building) => (
           <li key={building.id}>
