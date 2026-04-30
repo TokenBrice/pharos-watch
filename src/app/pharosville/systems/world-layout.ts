@@ -193,9 +193,11 @@ function isDangerStrait(x: number, y: number): boolean {
   return x >= 50 && x <= 55 && y >= 15 && y <= 24;
 }
 
-// x >= 1 keeps (0, 0) as deep-water for existing corner test
+// Extends to the upper-left diamond edge (x=0) and to ALERT's left boundary (x=29).
+// The (0, 0) corner stays deep-water decoration.
 function isWatchBreakwater(x: number, y: number): boolean {
-  return x >= 1 && x <= 28 && y >= 0 && y <= 13;
+  if (x === 0 && y === 0) return false;
+  return x >= 0 && x <= 29 && y >= 0 && y <= 13;
 }
 
 // Wraps the lower-left of the diamond from upper-left mid-band to bottom-left.
