@@ -54,7 +54,7 @@ const AREA_LABEL_PLACEMENTS_BY_BAND: Partial<Record<DewsAreaBand, AreaLabelPlace
   WARNING: {
     align: "center",
     dx: 0,
-    dy: 2,
+    dy: 1,
     hitboxHeight: 28,
     maxWidth: 110,
     rotation: -0.06,

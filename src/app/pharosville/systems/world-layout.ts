@@ -7,7 +7,7 @@ export const PHAROSVILLE_MAP_WIDTH = 56;
 export const PHAROSVILLE_MAP_HEIGHT = 56;
 export const MAX_TILE_X = PHAROSVILLE_MAP_WIDTH - 1;
 export const MAX_TILE_Y = PHAROSVILLE_MAP_HEIGHT - 1;
-export const LIGHTHOUSE_TILE = { x: 44, y: 18 } as const;
+export const LIGHTHOUSE_TILE = { x: 38, y: 22 } as const;
 export const CIVIC_CORE_CENTER = { x: 34, y: 30 } as const;
 export const CIVIC_CORE_RADIUS = 7.0;
 export const ISLAND_PERIPHERY_BUFFER = 1.1;
@@ -18,20 +18,20 @@ export const EVM_BAY_DOCK_TILES = [
   { x: 35, y: 40 },
   { x: 24, y: 42 },
   { x: 34, y: 42 },
-  { x: 37, y: 40 },
+  { x: 39, y: 40 },
 ] as const;
 
 export const OUTER_HARBOR_DOCK_TILES = [
-  { x: 45, y: 31 },
+  { x: 49, y: 30 },
   { x: 48, y: 23 },
-  { x: 22, y: 30 },
-  { x: 41, y: 36 },
-  { x: 46, y: 25 },
-  { x: 42, y: 35 },
-  { x: 36, y: 42 },
+  { x: 21, y: 25 },
+  { x: 38, y: 42 },
+  { x: 47, y: 25 },
+  { x: 46, y: 35 },
+  { x: 36, y: 43 },
   { x: 26, y: 43 },
-  { x: 39, y: 37 },
-  { x: 27, y: 24 },
+  { x: 20, y: 38 },
+  { x: 47, y: 34 },
 ] as const;
 
 export const PREFERRED_DOCK_TILES: Record<string, { x: number; y: number }> = {
@@ -127,8 +127,6 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
   }
 
   if (x === LIGHTHOUSE_TILE.x && y === LIGHTHOUSE_TILE.y) return "hill";
-  if (isRoadTile(x, y) && cemetery > 1.08) return "road";
-  if (isCivicPlazaTile(x, y)) return "road";
   if (cemetery < 1) return "grass";
   if ((harbor < 1.23 && y > 33 && x < 38) || (approach < 1.2 && y > 42)) return "beach";
   if (headland < 1.04) {
@@ -151,19 +149,21 @@ function canonicalTileKind(kind: TerrainKind): TileKind {
 
 function islandValue(x: number, y: number): number {
   return Math.min(
-    ellipseValue(x, y, 32.6, 31.0, 11.2, 8.2),
-    ellipseValue(x, y, 42.8, 21.2, 5.9, 5.0),
-    ellipseValue(x, y, 41.8, 27.6, 5.2, 5.3),
-    ellipseValue(x, y, 30.2, 40.6, 7.2, 3.7),
-    ellipseValue(x, y, 27.2, 40.0, 5.6, 2.0),
-    ellipseValue(x, y, CEMETERY_CENTER.x, CEMETERY_CENTER.y, CEMETERY_RADIUS.x + 0.9, CEMETERY_RADIUS.y + 0.65),
+    ellipseValue(x, y, 32.4, 31.2, 15.0, 10.4),
+    ellipseValue(x, y, 40.6, 22.3, 7.7, 6.1),
+    ellipseValue(x, y, 42.0, 28.6, 7.1, 6.4),
+    ellipseValue(x, y, 30.2, 40.5, 8.4, 4.6),
+    ellipseValue(x, y, 25.6, 38.0, 6.5, 3.3),
+    ellipseValue(x, y, 21.6, 32.6, 3.6, 2.8),
+    ellipseValue(x, y, 47.8, 32.2, 3.3, 2.8),
+    ellipseValue(x, y, CEMETERY_CENTER.x, CEMETERY_CENTER.y, CEMETERY_RADIUS.x + 1.2, CEMETERY_RADIUS.y + 0.95),
   );
 }
 
 function lighthouseHeadlandValue(x: number, y: number): number {
   return Math.min(
-    ellipseValue(x, y, 43.4, 20.0, 5.8, 4.9),
-    ellipseValue(x, y, 45.1, 18.7, 3.7, 3.3),
+    ellipseValue(x, y, 40.6, 22.1, 7.2, 5.6),
+    ellipseValue(x, y, 39.4, 21.2, 4.4, 3.9),
   );
 }
 
@@ -176,33 +176,44 @@ function harborApproachValue(x: number, y: number): number {
 }
 
 function isAlertChannel(x: number, y: number): boolean {
-  return x >= 30 && x <= 47 && y >= 0 && y <= 11;
+  const topCurrent = x >= 29 && x <= 48 && y >= 0 && y <= 10 && y <= 12 - Math.abs(x - 39) * 0.22;
+  const channelMouth = ellipseValue(x, y, 42.0, 7.7, 9.3, 4.7) < 1.05;
+  return topCurrent || channelMouth;
 }
 
 function isWarningShoals(x: number, y: number): boolean {
-  return x >= 48 && x <= 55 && y >= 0 && y <= 14;
+  const reefShelf = ellipseValue(x, y, 53.2, 7.8, 6.7, 8.2) < 1.08 && x >= 47;
+  const edgeShoals = x >= 51 && x <= 55 && y >= 0 && y <= 15;
+  return reefShelf || edgeShoals;
 }
 
 // Visual buffer around the lighthouse sprite — taller than its tile-space ellipse,
 // so we exclude this rectangle from zone-water rendering to give the lighthouse breathing room.
 function isLighthouseVisualClearance(x: number, y: number): boolean {
-  return x >= 41 && x <= 47 && y >= 12 && y <= 17;
+  return x >= 35 && x <= 41 && y >= 16 && y <= 22;
 }
 
 function isDangerStrait(x: number, y: number): boolean {
-  return x >= 50 && x <= 55 && y >= 15 && y <= 24;
+  const stormBasin = ellipseValue(x, y, 54.0, 19.5, 5.5, 5.9) < 1.1 && x >= 49 && y >= 15;
+  const edgeStrait = x >= 52 && x <= 55 && y >= 15 && y <= 25;
+  return stormBasin || edgeStrait;
 }
 
 // Extends to the upper-left diamond edge (x=0) and to ALERT's left boundary (x=29).
 // The (0, 0) corner stays deep-water decoration.
 function isWatchBreakwater(x: number, y: number): boolean {
   if (x === 0 && y === 0) return false;
-  return x >= 0 && x <= 29 && y >= 0 && y <= 13;
+  const northBasin = ellipseValue(x, y, 14.4, 6.4, 18.2, 8.6) < 1.08 && y <= 15;
+  const topEdge = x >= 0 && x <= 31 && y >= 0 && y <= 10 && y <= 11 - x * 0.04;
+  return northBasin || topEdge;
 }
 
 // Wraps the lower-left of the diamond from upper-left mid-band to bottom-left.
 function isCalmAnchorage(x: number, y: number): boolean {
-  return x >= 0 && x <= 22 && y >= 14 && y <= 54;
+  const westBasin = ellipseValue(x, y, 7.6, 34.4, 18.4, 22.5) < 1.1;
+  const lowerReach = ellipseValue(x, y, 15.0, 49.0, 13.0, 9.6) < 1.05;
+  const westEdge = x >= 0 && x <= 7 && y >= 14 && y <= 55;
+  return westEdge || westBasin || lowerReach;
 }
 
 function isCemeteryCausewayTile(x: number, y: number): boolean {
@@ -237,35 +248,6 @@ function isLedgerMooring(x: number, y: number): boolean {
     && y >= 51
     && y <= MAX_TILE_Y;
   return mooring || southEdgeAttachment;
-}
-
-function isRoadTile(x: number, y: number): boolean {
-  if (isInlandBuildingAnchorTile(x, y)) return false;
-  const path = [
-    { x: 25, y: 38 },
-    { x: 27, y: 35 },
-    { x: 30, y: 28 },
-    { x: 34, y: 30 },
-    { x: 38, y: 31 },
-    { x: 36, y: 26 },
-    { x: 41, y: 22 },
-    { x: 43, y: 19 },
-  ];
-  return path.some((point, index) => {
-    const next = path[index + 1];
-    if (!next) return false;
-    return distanceToSegment(x, y, point, next) <= 0.62;
-  });
-}
-
-function isCivicPlazaTile(x: number, y: number): boolean {
-  if (isInlandBuildingAnchorTile(x, y)) return false;
-  return ellipseValue(x, y, CIVIC_CORE_CENTER.x, CIVIC_CORE_CENTER.y + 1.1, 4.4, 2.6) < 1
-    && cemeteryValue(x, y) > 1.08;
-}
-
-function isInlandBuildingAnchorTile(x: number, y: number): boolean {
-  return (x === 30 && y === 28) || (x === 38 && y === 31);
 }
 
 function distanceToSegment(

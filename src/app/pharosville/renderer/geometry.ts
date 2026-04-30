@@ -48,7 +48,6 @@ export interface ResolvedEntityGeometry {
 }
 
 export function entityAssetId(entity: WorldSelectableEntity) {
-  if (entity.kind === "lighthouse") return "landmark.lighthouse";
   if (entity.kind === "dock") return entity.assetId;
   if (entity.kind === "building") return entity.assetId;
   if (entity.kind === "ship") return `ship.${entity.visual.hull}`;
@@ -152,8 +151,8 @@ export function entityDrawGeometry(input: {
   let y = point.y;
   let drawScale = camera.zoom;
   if (entity.kind === "lighthouse") {
-    y += 3 * camera.zoom;
-    drawScale *= 1.48;
+    y += 18 * camera.zoom;
+    drawScale *= 1.04;
   } else if (entity.kind === "dock") {
     const draw = dockDrawPoint(entity, camera, mapWidth);
     x = draw.x;
@@ -161,7 +160,7 @@ export function entityDrawGeometry(input: {
     drawScale *= dockRenderScale(entity.size);
   } else if (entity.kind === "building") {
     y += 4 * camera.zoom;
-    drawScale *= 0.58 * entity.visual.scale;
+    drawScale *= 0.6 * entity.visual.scale;
   } else if (entity.kind === "ship") {
     y += 12 * camera.zoom;
     drawScale *= entity.visual.scale * 0.7;
@@ -274,7 +273,7 @@ export function dockRenderScale(size: number): number {
 }
 
 function targetSize(entity: WorldSelectableEntity): { height: number; width: number; yOffset: number } {
-  if (entity.kind === "lighthouse") return { height: 190, width: 96, yOffset: -82 };
+  if (entity.kind === "lighthouse") return { height: 224, width: 160, yOffset: -94 };
   if (entity.kind === "dock") return { height: 38, width: 96, yOffset: 0 };
   if (entity.kind === "area") return { height: 28, width: 112, yOffset: 0 };
   if (entity.kind === "building") return { height: 88, width: 104, yOffset: -34 };

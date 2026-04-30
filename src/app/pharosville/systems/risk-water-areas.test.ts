@@ -225,9 +225,9 @@ describe("risk water areas", () => {
 
   it("clears the immediate periphery around the lighthouse sprite", () => {
     const lighthouseClearanceSamples = [
-      { x: 44, y: 14 },
-      { x: 45, y: 13 },
-      { x: 47, y: 16 },
+      { x: 36, y: 20 },
+      { x: 38, y: 17 },
+      { x: 41, y: 21 },
     ];
     for (const tile of lighthouseClearanceSamples) {
       const terrain = terrainKindAt(tile.x, tile.y);
@@ -249,7 +249,7 @@ describe("risk water areas", () => {
     expect(counts["alert-water"]).toBeGreaterThan(counts["warning-water"] ?? 0);
     expect(counts["alert-water"]).toBeGreaterThan(counts["storm-water"] ?? 0);
     expect(counts["warning-water"] ?? 0).toBeGreaterThanOrEqual(30);
-    expect(counts["warning-water"] ?? 0).toBeLessThanOrEqual(120);
+    expect(counts["warning-water"] ?? 0).toBeLessThanOrEqual(125);
     expect(counts["storm-water"] ?? 0).toBeGreaterThanOrEqual(30);
     expect(counts["storm-water"] ?? 0).toBeLessThanOrEqual(80);
   });

@@ -163,7 +163,7 @@ describe("hit-testing", () => {
     }
   });
 
-  it("keeps full area label rectangles clear of the lighthouse asset rectangle", () => {
+  it("keeps full area label rectangles clear of the compact lighthouse rectangle", () => {
     const viewports = [
       { width: 1280, height: 760 },
       { width: 1440, height: 1000 },
@@ -324,7 +324,7 @@ describe("hit-testing", () => {
     expect(target!.rect.y).toBeCloseTo(geometry.y - entry.anchor[1] * scale + entry.hitbox[1] * scale);
   });
 
-  it("uses manifest hitboxes when sprite assets are available", () => {
+  it("uses a compact tile-native lighthouse hitbox even when the generated sprite is available", () => {
     const lighthouse = world.lighthouse;
     const point = tileToScreen(lighthouse.tile, camera);
     const targets = collectHitTargets({
@@ -342,10 +342,10 @@ describe("hit-testing", () => {
 
     const target = targets.find((entry) => entry.detailId === lighthouse.detailId);
 
-    expect(target?.rect.x).toBeCloseTo(point.x - 135.9232 * camera.zoom);
-    expect(target?.rect.y).toBeCloseTo(point.y - 344.0896 * camera.zoom);
-    expect(target?.rect.width).toBeCloseTo(271.8464 * camera.zoom);
-    expect(target?.rect.height).toBeCloseTo(334.9536 * camera.zoom);
+    expect(target?.rect.x).toBeCloseTo(point.x - 80 * camera.zoom);
+    expect(target?.rect.y).toBeCloseTo(point.y - 206 * camera.zoom);
+    expect(target?.rect.width).toBeCloseTo(160 * camera.zoom);
+    expect(target?.rect.height).toBeCloseTo(224 * camera.zoom);
   });
 });
 

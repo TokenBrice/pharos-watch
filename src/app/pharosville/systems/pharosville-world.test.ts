@@ -38,7 +38,7 @@ describe("buildPharosVilleWorld", () => {
     });
 
     expect(world.routeMode).toBe("world");
-    expect(world.map.waterRatio).toBeGreaterThanOrEqual(0.85);
+    expect(world.map.waterRatio).toBeGreaterThanOrEqual(0.81);
     expect(world.map.waterRatio).toBeLessThanOrEqual(0.88);
     expect(world.lighthouse.unavailable).toBe(false);
     expect(world.docks).toHaveLength(2);

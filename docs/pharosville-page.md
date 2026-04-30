@@ -9,7 +9,7 @@ The scenery contract is recorded in
 It defines PharosVille as a dark-first maritime observatory island-city: lighthouse
 for PSI, harbors for chain supply, ships for active stablecoins, cemetery for
 dead/frozen lifecycle assets, two inland data buildings for non-ship
-Pharos products along a thin road spine, and named risk-water districts for
+Pharos products along a thin civic spine, and named risk-water districts for
 DEWS, stale-evidence, and NAV-ledger placement. Freeze/blacklist monitoring is
 not encoded in PharosVille and remains available on `/blacklist/`. The ClaudeVille transfer boundary is
 contracts and validation habits only; fantasy-village scenery, decorative lore
@@ -35,12 +35,12 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - desktop-gated route, with a short-screen fallback as well as the narrow-screen fallback
 - route shell escapes the global page padding and sizes against the actual post-sidebar content pane, so the desktop canvas uses the full available viewport area whether the sidebar is expanded or collapsed
 - Canvas 2D island-sea map on eligible desktop viewports, with the authored world reduced to `56 x 56` tiles so the old deep-blue outer shelf no longer dominates the canvas
-- authored terrain metadata layered over canonical movement tiles, including harbor water, calm DEWS anchorage water, watch breakwater water, alert water, warning shoals water, storm water, ledger water, deep outer-shelf water, beach, grass, rock, cliff, hill, road, and shore variants; deep water is capped to a narrow perimeter shelf rather than a broad unused border
+- authored terrain metadata layered over canonical movement tiles, including harbor water, calm DEWS anchorage water, watch breakwater water, alert water, warning shoals water, storm water, ledger water, deep outer-shelf water, beach, grass, rock, cliff, hill, and shore variants; deep water is capped to a narrow perimeter shelf rather than a broad unused border
 - named DEWS water-zone labels printed directly on semantic water areas, with
   live band counts retained in details and the accessibility ledger, plus subtle
   dock mast flags using chain logos or short crest marks
-- Pharos lighthouse placed on the northeast headland at tile `{ x: 44, y: 18 }`, sitting on elevated terrain with a road/stair connection back toward town
-- a main-island road/plaza spine ties the southwest harbor, central civic data core, and lighthouse approach together without changing any data semantics
+- Pharos lighthouse placed on the west side of the northeast headland at tile `{ x: 38, y: 22 }`, sitting on elevated terrain clear of the Tron harbor footprint
+- only the tower portion of the generated lighthouse asset is composited onto the tile-native headland, so no embedded island base or road/causeway is drawn
 - Ethereum, Base, Arbitrum, and Polygon are arranged in the southwest EVM bay, with Ethereum as the central cove landmark and Base/Arbitrum/Polygon on the surrounding bay sides; BSC, Tron, Solana, Aptos, and other non-core top-chain harbors use distributed outer-coast dock slots; the cemetery sits on the main island to the right of the EVM bay and left of the lighthouse
 - live aggregate Pharos queries mounted only after the desktop gate
 - pure world model for PSI, docks, active ships, clusters, cemetery, two thematic data buildings, named risk-water areas, details, and visual cues
@@ -54,9 +54,10 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - ship docking cadence comes from `stablecoins.chainCirculating` chain presence, while risk water comes from `pegSummary.coins[]` and `stress.signals[]`; DOM details expose the route source, named risk water area, risk water zone, home dock, chain-presence count, and cadence text
 - active ships draw their logo on the sail when a local logo asset is available
 - long-tail stablecoins beyond the individual ship budget are split into count-capped water-zone cluster markers rather than one large pile; cluster details and the accessibility ledger expose the named risk water area and risk zone
-- two selectable inland data buildings are distributed along the main-island road spine and use Pixellab sprites plus deterministic Canvas overlays:
+- two selectable inland data buildings are distributed along the main-island civic spine and use Pixellab sprites plus deterministic Canvas overlays:
   - Royal Mint And Burn Foundry = configured issuance-chain mint/burn events from `mintBurnFlows.gauge`, `coins[]`, `hourly[]`, `scope`, and `sync`
   - Exit Route Gatehouse = DEX liquidity telemetry plus modeled redemption backstops from `dexLiquidity[__global__]`, per-coin DEX liquidity, and `redemptionBackstops.coins`
+- the two inland data buildings render on larger civic plinths, and dock sprites sit on quay pads, so supporting landmarks share the lighthouse's heavier island-city footprint while preserving the same entity IDs, hit targets, and DOM detail truth
 - blacklist/freeze tracker activity is intentionally not represented in PharosVille; `/blacklist/` remains the product surface for those details
 - data effects include bounded local glow, smoke, sparks, contained gate gauge/lantern motion, semantic water shimmer, and stale-data/ledger overlays; reduced motion freezes movement but keeps static status encodings
 - the cemetery is rendered as a compact memorial precinct with scattered grave placement, small varied cause-aware tomb marker scale/shape, contextual mausoleum/tree/shrub details, cause-of-death plaques using the shared cemetery legend colors, local cemetery logos on tomb markers, and light atmospheric mist
@@ -91,8 +92,8 @@ sized roughly proportionally to the ships it must host:
 
 The three escalation zones (ALERT + WARNING + DANGER) cover the entire
 eastern corner of the diamond with no generic-water gaps. A two-tile
-periphery around all island lobes and a lighthouse visual-clearance box
-(x:41..47, y:12..17) remain generic water so zones don't crowd the island
+periphery around all island lobes and water tiles inside a lighthouse
+visual-clearance box (x:35..41, y:16..22) remain generic water so zones don't crowd the island
 or the lighthouse sprite.
 
 **Ledger Mooring** is non-DEWS and sits at the south edge for NAV-ledger
@@ -113,7 +114,7 @@ The planned PharosVille visual grammar is:
 - ship representative position and docking cadence = positive chain supply across the rendered top-ten chain harbors, shown as slow water-only passages rather than real-time transfer flow
 - sea/weather = aggregate DEWS breadth, with evidence caveats for stale/low-confidence placement inputs, ledger water for NAV-ledger placement, and storm local textures for danger areas
 - cemetery = dead and frozen assets from merged cemetery data, with each tomb marker using its local cemetery logo when available and a cause-of-death plaque keyed to the same color taxonomy as the cemetery legend
-- main-island data buildings = non-ship Pharos data products, with the two inland buildings distributed along a thin road spine:
+- main-island data buildings = non-ship Pharos data products, with the two inland buildings distributed along a thin civic spine:
   - Royal Mint And Burn Foundry = configured issuance-chain mint/burn flow state (`minting`, `burning`, `balanced`, `quiet`, `stale`, or `unavailable`)
   - Exit Route Gatehouse = combined DEX liquidity and redemption-route backstop state (`deep-exit`, `thin-exit`, `concentrated`, `stale`, or `unavailable`), with detail copy caveating that these are not guarantees of executable exit capacity
 - evidence caveat = missing, low-confidence, or stale evidence, exposed in ship details and the accessibility ledger

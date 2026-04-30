@@ -217,17 +217,18 @@ including route source, risk water, home dock, chain presence, and docking
 cadence.
 
 The same world model now also emits two selectable inland data buildings along a
-thin road spine: Royal Mint And Burn Foundry for configured mint/burn flow
+thin civic spine: Royal Mint And Burn Foundry for configured mint/burn flow
 telemetry and Exit Route Gatehouse for DEX liquidity plus modeled redemption
 backstops. Ledger Mooring and the five DEWS sea districts are modeled as named
 risk-water areas with terrain, printed labels, deterministic route anchors,
 detail facts, and accessibility-ledger parity; stale or low-confidence placement
 inputs are exposed as evidence caveats instead of a separate sea zone. The
 PharosVille scene no longer encodes freeze/blacklist tracker activity; that
-product surface remains outside the world map. A main-island road spine ties the
-southwest harbor,
-memorial precinct, civic anchors, and lighthouse approach together as visual
-composition only. The main-island buildings use deferred Pixellab sprites. All
+product surface remains outside the world map. A main-island civic spine ties
+the southwest harbor, memorial precinct, and civic anchors together as visual
+composition only; the PSI lighthouse now sits west on the northeast headland
+without a rendered road or causeway into the harbor. The main-island buildings use deferred
+Pixellab sprites. All
 world elements expose local deterministic Canvas effects, DOM detail facts, and
 accessibility-ledger parity; reduced motion freezes procedural movement while
 preserving static status encodings.

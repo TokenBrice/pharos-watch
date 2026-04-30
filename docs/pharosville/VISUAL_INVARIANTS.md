@@ -20,12 +20,12 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 
 ## Geography
 
-- The current map acceptance target is a sea-first isometric island with roughly 82-88% water by tile count. Treat that as the current route contract, but update this file and tests if an intentional layout plan changes the target.
+- The current map acceptance target is a sea-first isometric island with roughly 81-88% water by tile count. Treat that as the current route contract, but update this file and tests if an intentional layout plan changes the target.
 - The lighthouse stays on the northeast headland at `LIGHTHOUSE_TILE`.
 - The southwest EVM bay keeps Ethereum, Base, Arbitrum, and Polygon in preferred dock positions when those chains are rendered.
 - Docks are capped by `MAX_CHAIN_HARBORS`; they represent top-chain stablecoin supply, not all chains.
 - The cemetery remains a compact memorial precinct separated from the EVM bay and lighthouse approach.
-- Two inland data buildings, Royal Mint And Burn Foundry and Exit Route Gatehouse, sit along the main-island road spine with a quiet memorial precinct between the harbor edge and civic anchors.
+- Two inland data buildings, Royal Mint And Burn Foundry and Exit Route Gatehouse, sit along the main-island civic spine with a quiet memorial precinct between the harbor edge and civic anchors.
 - DEWS zone edge anchoring (each zone has a primary map edge):
   - CALM ANCHORAGE → x=0 (left tile edge), large lower-left basin
   - WATCH BREAKWATER → y=0 (top tile edge), spans x=0..29 with corner (0,0) excluded
@@ -34,7 +34,7 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
   - DANGER STRAIT → x=55 (right tile edge), spans y=15..24, touches WARNING
 - Eastern corner (around tile 55,0) is fully covered by ALERT/WARNING/DANGER
 - Two-tile island periphery (islandValue 1.0–1.10) is reserved as generic water
-- Lighthouse visual clearance (x:41..47, y:12..17) is generic water (lighthouse sprite breathing room)
+- Water tiles inside lighthouse visual clearance (x:35..41, y:16..22) stay generic water (lighthouse sprite breathing room)
 - Tile (0,0) stays deep-water as decoration
 - Ledger Mooring should remain a quiet owned basin below the harbor in ledger water. Freeze/blacklist tracker activity remains outside PharosVille and belongs to the `/blacklist/` product surface.
 

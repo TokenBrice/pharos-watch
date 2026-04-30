@@ -29,23 +29,23 @@ describe("buildPharosVilleMap", () => {
     expect(map.width).toBe(PHAROSVILLE_MAP_WIDTH);
     expect(map.height).toBe(PHAROSVILLE_MAP_HEIGHT);
     expect(map.tiles).toHaveLength(PHAROSVILLE_MAP_WIDTH * PHAROSVILLE_MAP_HEIGHT);
-    expect(map.waterRatio).toBeGreaterThanOrEqual(0.85);
+    expect(map.waterRatio).toBeGreaterThanOrEqual(0.81);
     expect(map.waterRatio).toBeLessThanOrEqual(0.88);
     const bounds = landBounds(map.tiles);
     expect(bounds).toEqual({
-      height: 27,
-      maxX: 48,
-      maxY: 43,
-      minX: 22,
+      height: 28,
+      maxX: 51,
+      maxY: 44,
+      minX: 18,
       minY: 17,
-      width: 27,
+      width: 34,
     });
     const boundsCenter = {
       x: (bounds.minX + bounds.maxX) / 2,
       y: (bounds.minY + bounds.maxY) / 2,
     };
-    expect(boundsCenter.x).toBeCloseTo(CIVIC_CORE_CENTER.x + 1, 1);
-    expect(boundsCenter.y).toBeCloseTo(CIVIC_CORE_CENTER.y, 1);
+    expect(boundsCenter.x).toBeCloseTo(CIVIC_CORE_CENTER.x + 0.5, 1);
+    expect(boundsCenter.y).toBeCloseTo(CIVIC_CORE_CENTER.y + 0.5, 1);
     const counts = terrainCounts(map.tiles);
     expect((counts.get("deep-water") ?? 0) / map.tiles.length).toBeLessThanOrEqual(0.125);
     // 0.030 floor accommodates WATCH expanding to x=0..29, converting ~27 more deep-water tiles to watch-water
@@ -71,22 +71,21 @@ describe("buildPharosVilleMap", () => {
       "rock",
       "cliff",
       "hill",
-      "road",
     ]));
+    expect([...new Set(map.tiles.map((tile) => tile.terrain))]).not.toContain("road");
   });
 
   it("defines a civic core around the island center", () => {
     expect(CIVIC_CORE_CENTER).toEqual({ x: 34, y: 30 });
     expect(CIVIC_CORE_RADIUS).toBe(7);
     expect(isLandTileKind(tileKindAt(CIVIC_CORE_CENTER.x, CIVIC_CORE_CENTER.y))).toBe(true);
-    expect(terrainKindAt(CIVIC_CORE_CENTER.x, CIVIC_CORE_CENTER.y)).toBe("road");
+    expect(terrainKindAt(CIVIC_CORE_CENTER.x, CIVIC_CORE_CENTER.y)).toBe("rock");
   });
 
-  it("places the lighthouse on an elevated northeast headland with a road and water-facing cliff", () => {
-    expect(LIGHTHOUSE_TILE).toEqual({ x: 44, y: 18 });
+  it("places the lighthouse on an elevated northeast headland clear of outer harbors", () => {
+    expect(LIGHTHOUSE_TILE).toEqual({ x: 38, y: 22 });
     expect(LIGHTHOUSE_TILE.x < 28 || LIGHTHOUSE_TILE.x > 36 || LIGHTHOUSE_TILE.y < 26 || LIGHTHOUSE_TILE.y > 36).toBe(true);
     expect(isElevatedTileKind(terrainKindAt(LIGHTHOUSE_TILE.x, LIGHTHOUSE_TILE.y))).toBe(true);
-    expect(terrainKindAt(43, 19)).toBe("road");
 
     const hasWaterFacingCliff = nearbyTiles(LIGHTHOUSE_TILE, 5).some((tile) => (
       terrainKindAt(tile.x, tile.y) === "cliff"
@@ -95,16 +94,16 @@ describe("buildPharosVilleMap", () => {
     expect(hasWaterFacingCliff).toBe(true);
   });
 
-  it("routes the harbor road through the civic plaza without paving the cemetery", () => {
+  it("keeps the civic core natural without road terrain", () => {
     expect(terrainKindAt(27, 35)).toBe("grass");
-    expect(terrainKindAt(29, 31)).toBe("road");
-    expect(terrainKindAt(31, 29)).toBe("road");
-    expect(terrainKindAt(34, 30)).toBe("road");
-    expect(terrainKindAt(37, 30)).toBe("road");
-    expect(terrainKindAt(37, 32)).toBe("road");
-    expect(terrainKindAt(36, 26)).toBe("road");
-    expect(terrainKindAt(41, 22)).toBe("road");
-    expect(terrainKindAt(43, 19)).toBe("road");
+    expect(terrainKindAt(29, 31)).toBe("grass");
+    expect(terrainKindAt(31, 29)).toBe("grass");
+    expect(terrainKindAt(34, 30)).toBe("rock");
+    expect(terrainKindAt(37, 30)).toBe("rock");
+    expect(terrainKindAt(37, 32)).toBe("rock");
+    expect(terrainKindAt(36, 26)).toBe("cliff");
+    expect(terrainKindAt(41, 22)).toBe("hill");
+    expect(terrainKindAt(43, 19)).toBe("cliff");
     expect(terrainKindAt(30, 28)).toBe("grass");
     expect(terrainKindAt(38, 31)).toBe("rock");
     expect(terrainKindAt(Math.round(CEMETERY_CENTER.x), Math.round(CEMETERY_CENTER.y))).toBe("grass");
@@ -127,7 +126,7 @@ describe("buildPharosVilleMap", () => {
       { x: 4, y: 31 },
       { x: 8, y: 29 },
       { x: 13, y: 33 },
-      { x: 18, y: 31 },
+      { x: 16, y: 31 },
     ];
 
     for (const tile of westernBasinSamples) {
@@ -180,7 +179,7 @@ describe("buildPharosVilleMap", () => {
     expect(CEMETERY_CENTER.x).toBeLessThan(LIGHTHOUSE_TILE.x);
     expect(tileKindAt(Math.round(CEMETERY_CENTER.x), Math.round(CEMETERY_CENTER.y))).toBe("land");
     expect(terrainKindAt(Math.round(CEMETERY_CENTER.x), Math.round(CEMETERY_CENTER.y))).toBe("grass");
-    expect(tileKindAt(20, 38)).toBe("water");
+    expect(tileKindAt(19, 38)).toBe("water");
     expect(graves.every((grave) => tileKindAt(grave.tile.x, grave.tile.y) === "land")).toBe(true);
     expect(mainIsland.has(tileKey({ x: Math.round(CEMETERY_CENTER.x), y: Math.round(CEMETERY_CENTER.y) }))).toBe(true);
     expect(graves.every((grave) => isNearConnectedLand(grave.tile, mainIsland))).toBe(true);

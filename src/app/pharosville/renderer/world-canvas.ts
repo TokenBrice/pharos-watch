@@ -1,6 +1,6 @@
 import { areaLabelPlacementForArea } from "../systems/area-labels";
 import { DEWS_AREA_LABEL_COLORS, waterTerrainStyle, type WaterTerrainStyle } from "../systems/palette";
-import { tileToScreen, type IsoCamera, type ScreenPoint } from "../systems/projection";
+import { TILE_HEIGHT, TILE_WIDTH, tileToScreen, type IsoCamera, type ScreenPoint } from "../systems/projection";
 import {
   CEMETERY_CENTER,
   CEMETERY_RADIUS,
@@ -11,6 +11,7 @@ import {
 import type { PharosVilleWorld, TerrainKind } from "../systems/world-types";
 import type { PharosVilleAssetManager } from "./asset-manager";
 import {
+  drawableDepth,
   drawablePassCounts,
   sortWorldDrawables,
   type WorldDrawable,
@@ -47,32 +48,66 @@ const TERRAIN_TEXTURE = {
   sandLight: "rgba(237, 204, 137, 0.28)",
 } as const;
 
+const TERRAIN_ASSET_BY_KIND: Partial<Record<TerrainKind, string>> = {
+  "alert-water": "terrain.harbor-water",
+  "calm-water": "terrain.harbor-water",
+  "deep-water": "terrain.deep-water",
+  "harbor-water": "terrain.harbor-water",
+  "ledger-water": "terrain.harbor-water",
+  "storm-water": "terrain.storm-water",
+  "warning-water": "terrain.storm-water",
+  "watch-water": "terrain.harbor-water",
+  beach: "terrain.shore",
+  cliff: "terrain.shore",
+  grass: "terrain.land",
+  hill: "terrain.land",
+  land: "terrain.land",
+  road: "terrain.road",
+  rock: "terrain.land",
+  shore: "terrain.shore",
+  water: "terrain.harbor-water",
+};
+
+const TERRAIN_ASSET_SCALE = 0.5;
+
 const LIGHTHOUSE_HEADLAND = {
   cliff: "#2e4052",
   grass: "#4f8a52",
   halo: "rgba(255, 200, 87, 0.2)",
   moss: "#6f9958",
-  road: "#ad8050",
   shadow: "rgba(10, 12, 12, 0.42)",
   stone: "#9f9278",
 } as const;
 
+const LIGHTHOUSE_SPRITE_CROP = {
+  anchorX: 38,
+  anchorY: 206,
+  beaconX: 38,
+  beaconY: 50,
+  bottomOffsetY: 4,
+  scale: 1.04,
+  sourceHeight: 206,
+  sourceWidth: 64,
+  sourceX: 122,
+  sourceY: 0,
+} as const;
+
 const VILLAGE_LIGHTS = [
-  { x: 42.4, y: 20.6, size: 0.62 },
-  { x: 44.8, y: 21.4, size: 0.58 },
-  { x: 45.7, y: 19.4, size: 0.48 },
-  { x: 41.6, y: 23.3, size: 0.46 },
+  { x: 36.4, y: 24.6, size: 0.62 },
+  { x: 38.8, y: 25.4, size: 0.58 },
+  { x: 39.7, y: 23.4, size: 0.48 },
+  { x: 35.6, y: 27.3, size: 0.46 },
   { x: 30.1, y: 31.8, size: 0.54 },
   { x: 33.2, y: 30.1, size: 0.5 },
   { x: 37.2, y: 29.5, size: 0.52 },
 ] as const;
 
 const LIGHTHOUSE_SURF = [
-  { x: 39.8, y: 23.1, length: 36, phase: 0.1, tilt: -0.12 },
-  { x: 42.7, y: 24.9, length: 42, phase: 1.7, tilt: 0.02 },
-  { x: 46.5, y: 23.6, length: 34, phase: 2.6, tilt: 0.16 },
-  { x: 48.5, y: 20.2, length: 30, phase: 3.4, tilt: -0.22 },
-  { x: 47.2, y: 15.7, length: 26, phase: 4.1, tilt: 0.1 },
+  { x: 33.8, y: 27.1, length: 36, phase: 0.1, tilt: -0.12 },
+  { x: 36.7, y: 28.9, length: 42, phase: 1.7, tilt: 0.02 },
+  { x: 40.5, y: 27.6, length: 34, phase: 2.6, tilt: 0.16 },
+  { x: 42.5, y: 24.2, length: 30, phase: 3.4, tilt: -0.22 },
+  { x: 41.2, y: 19.7, length: 26, phase: 4.1, tilt: 0.1 },
 ] as const;
 
 const LIGHTHOUSE_REFLECTIONS = [
@@ -91,6 +126,59 @@ const BIRDS = [
   { anchorX: 18.2, anchorY: 2.2, radiusX: 6.2, radiusY: 1.6, scale: 0.62, speed: 0.18, phase: 5.3 },
   { anchorX: 7.2, anchorY: -7.6, radiusX: 5.2, radiusY: 1.5, scale: 0.84, speed: 0.19, phase: 2.2 },
   { anchorX: -9.8, anchorY: -8.2, radiusX: 5.8, radiusY: 1.7, scale: 0.82, speed: 0.17, phase: 4.9 },
+] as const;
+
+type SceneryPropKind =
+  | "barrel"
+  | "beacon"
+  | "bollards"
+  | "buoy"
+  | "crate-stack"
+  | "harbor-lamp"
+  | "palm"
+  | "reef"
+  | "rock"
+  | "sea-wall"
+  | "signal-post"
+  | "skiff"
+  | "tent";
+
+interface SceneryProp {
+  id: string;
+  kind: SceneryPropKind;
+  scale?: number;
+  tile: { x: number; y: number };
+}
+
+const SCENERY_PROPS: readonly SceneryProp[] = [
+  { id: "evm-crates-1", kind: "crate-stack", tile: { x: 32.8, y: 39.3 }, scale: 1.02 },
+  { id: "evm-crates-2", kind: "barrel", tile: { x: 36.7, y: 39.3 }, scale: 0.94 },
+  { id: "evm-lamp-1", kind: "harbor-lamp", tile: { x: 31.7, y: 41.1 }, scale: 0.95 },
+  { id: "evm-lamp-2", kind: "harbor-lamp", tile: { x: 38.6, y: 39.2 }, scale: 0.88 },
+  { id: "evm-bollards", kind: "bollards", tile: { x: 34.4, y: 41.4 }, scale: 1 },
+  { id: "evm-skiff", kind: "skiff", tile: { x: 30.2, y: 43.9 }, scale: 0.92 },
+  { id: "west-palm-1", kind: "palm", tile: { x: 20.5, y: 31.8 }, scale: 0.9 },
+  { id: "west-palm-2", kind: "palm", tile: { x: 20.4, y: 35.6 }, scale: 0.78 },
+  { id: "west-buoy-1", kind: "buoy", tile: { x: 15.1, y: 30.4 }, scale: 0.86 },
+  { id: "west-buoy-2", kind: "buoy", tile: { x: 13.3, y: 38.6 }, scale: 0.76 },
+  { id: "watch-reef-1", kind: "reef", tile: { x: 8.5, y: 9.3 }, scale: 0.84 },
+  { id: "watch-reef-2", kind: "reef", tile: { x: 21.4, y: 11.0 }, scale: 0.72 },
+  { id: "alert-beacon", kind: "beacon", tile: { x: 39.8, y: 11.8 }, scale: 0.92 },
+  { id: "warning-reef-1", kind: "reef", tile: { x: 51.7, y: 9.0 }, scale: 0.84 },
+  { id: "warning-reef-2", kind: "rock", tile: { x: 50.2, y: 13.7 }, scale: 0.72 },
+  { id: "danger-buoy-1", kind: "buoy", tile: { x: 51.4, y: 20.9 }, scale: 0.84 },
+  { id: "danger-buoy-2", kind: "signal-post", tile: { x: 54.2, y: 23.0 }, scale: 0.86 },
+  { id: "east-lamp", kind: "harbor-lamp", tile: { x: 48.4, y: 30.5 }, scale: 0.88 },
+  { id: "east-crates", kind: "crate-stack", tile: { x: 47.4, y: 33.5 }, scale: 0.82 },
+  { id: "east-seawall", kind: "sea-wall", tile: { x: 49.2, y: 32.5 }, scale: 1.0 },
+  { id: "ledger-buoy", kind: "buoy", tile: { x: 40.5, y: 48.1 }, scale: 0.78 },
+  { id: "ledger-skiff", kind: "skiff", tile: { x: 45.6, y: 50.6 }, scale: 0.82 },
+  { id: "civic-tent", kind: "tent", tile: { x: 31.2, y: 29.6 }, scale: 0.9 },
+  { id: "civic-bollards", kind: "bollards", tile: { x: 36.0, y: 30.6 }, scale: 0.9 },
+  { id: "cemetery-lamp", kind: "harbor-lamp", tile: { x: 24.8, y: 35.8 }, scale: 0.74 },
+  { id: "cemetery-rock", kind: "rock", tile: { x: 29.4, y: 36.9 }, scale: 0.68 },
+  { id: "lighthouse-wall", kind: "sea-wall", tile: { x: 43.6, y: 24.7 }, scale: 0.88 },
+  { id: "lighthouse-lamp", kind: "harbor-lamp", tile: { x: 38.6, y: 24.0 }, scale: 0.82 },
 ] as const;
 
 const SKY_MOODS = {
@@ -185,6 +273,14 @@ const SHIP_COLORS = {
   "algo-junk": "#774734",
 };
 
+const SHIP_SAIL_MARKS: Record<PharosVilleWorld["ships"][number]["visual"]["hull"], { height: number; width: number; x: number; y: number }> = {
+  "algo-junk": { height: 11, width: 13, x: 8, y: -28 },
+  "chartered-brigantine": { height: 11, width: 13, x: 9, y: -29 },
+  "crypto-caravel": { height: 10, width: 12, x: 8, y: -26 },
+  "dao-schooner": { height: 10, width: 12, x: 8, y: -27 },
+  "treasury-galleon": { height: 12, width: 14, x: 10, y: -31 },
+};
+
 const PENNANTS: Record<string, string> = {
   emerald: "#d7f0df",
   blue: "#d7e6f7",
@@ -211,13 +307,13 @@ export function drawPharosVille(input: DrawPharosVilleInput): PharosVilleRenderM
 
   const visibleTileCount = drawTerrain(input);
   drawAtmosphere(input);
+  drawHarborDistrictGround(input);
   if (!input.world.lighthouse.unavailable) drawLighthouseSeaGlow(input);
   drawLighthouseSurf(input);
   drawCemeteryGround(input);
   drawLighthouseHeadland(input);
   drawCemeteryContext(input);
   const entityMetrics = drawEntityPass(input);
-  drawLighthouseCausewayOverlay(input);
   drawWaterAreaLabels(input);
   drawDecorativeLights(input);
   drawCemeteryMist(input);
@@ -238,6 +334,7 @@ export function drawPharosVille(input: DrawPharosVilleInput): PharosVilleRenderM
 
 function drawEntityPass(input: DrawPharosVilleInput): Pick<PharosVilleRenderMetrics, "drawableCount" | "drawableCounts"> {
   const drawables: WorldDrawable[] = [
+    ...SCENERY_PROPS.map((prop) => sceneryDrawable(input, prop)),
     ...input.world.buildings.flatMap((building) => [
       entityDrawable(input, building, "underlay", () => drawBuildingUnderlay(input, building)),
       entityDrawable(input, building, "body", () => drawBuildingBody(input, building)),
@@ -270,6 +367,25 @@ function drawEntityPass(input: DrawPharosVilleInput): Pick<PharosVilleRenderMetr
   return {
     drawableCount: sorted.length,
     drawableCounts: drawablePassCounts(sorted),
+  };
+}
+
+function sceneryDrawable(input: DrawPharosVilleInput, prop: SceneryProp): WorldDrawable {
+  const p = tileToScreen(prop.tile, input.camera);
+  const size = 26 * (prop.scale ?? 1) * input.camera.zoom;
+  return {
+    depth: drawableDepth(prop.tile),
+    draw: () => drawSceneryProp(input, prop),
+    entityId: prop.id,
+    kind: "scenery",
+    pass: "body",
+    screenBounds: {
+      height: size,
+      width: size,
+      x: p.x - size / 2,
+      y: p.y - size / 2,
+    },
+    tieBreaker: prop.id,
   };
 }
 
@@ -513,24 +629,31 @@ function drawSkyClouds(
   ctx.restore();
 }
 
-function drawTerrain({ camera, ctx, height, motion, width, world }: DrawPharosVilleInput) {
+function drawTerrain({ assets, camera, ctx, height, motion, width, world }: DrawPharosVilleInput) {
   let visibleTileCount = 0;
   for (const tile of world.map.tiles) {
     const terrain = tile.terrain ?? tile.kind;
     if (!isWaterTileKind(terrain)) continue;
     const p = tileToScreen(tile, camera);
-    if (isTileInViewport(p, camera.zoom, width, height)) visibleTileCount += 1;
-    drawWaterTile(ctx, p.x, p.y, camera.zoom, terrain, tile.x, tile.y, motion);
+    if (!isTileInViewport(p, camera.zoom, width, height)) continue;
+    visibleTileCount += 1;
+    drawWaterTile(ctx, p.x, p.y, camera.zoom, terrain, tile.x, tile.y, motion, terrainAssetFor(assets, terrain));
   }
 
   for (const tile of world.map.tiles) {
     const terrain = tile.terrain ?? tile.kind;
     if (isWaterTileKind(terrain)) continue;
     const p = tileToScreen(tile, camera);
-    if (isTileInViewport(p, camera.zoom, width, height)) visibleTileCount += 1;
-    drawLandTile(ctx, p.x, p.y, camera.zoom, terrain, tile.x, tile.y);
+    if (!isTileInViewport(p, camera.zoom, width, height)) continue;
+    visibleTileCount += 1;
+    drawLandTile(ctx, p.x, p.y, camera.zoom, terrain, tile.x, tile.y, terrainAssetFor(assets, terrain));
   }
   return visibleTileCount;
+}
+
+function terrainAssetFor(assets: PharosVilleAssetManager | null, terrain: TerrainKind) {
+  const assetId = TERRAIN_ASSET_BY_KIND[terrain] ?? null;
+  return assetId ? assets?.get(assetId) ?? null : null;
 }
 
 function isTileInViewport(point: ScreenPoint, zoom: number, width: number, height: number) {
@@ -561,9 +684,9 @@ function terrainColor(kind: TerrainKind) {
 }
 
 function withAlpha(color: string, alpha: number) {
-  return color.startsWith("rgba(")
-    ? color.replace(/,\s*[\d.]+\)$/, `, ${alpha})`)
-    : color;
+  if (color.startsWith("rgba(")) return color.replace(/,\s*[\d.]+\)$/, `, ${alpha})`);
+  if (color.startsWith("#")) return hexToRgba(color, alpha);
+  return color;
 }
 
 function drawWaterTile(
@@ -575,12 +698,18 @@ function drawWaterTile(
   tileX: number,
   tileY: number,
   motion: PharosVilleCanvasMotion,
+  asset: NonNullable<ReturnType<PharosVilleAssetManager["get"]>> | null,
 ) {
   const value = String(kind);
   const width = 32 * zoom;
   const height = 16 * zoom;
   const style = waterTerrainStyle(value) ?? waterTerrainStyle("water")!;
-  drawDiamond(ctx, x, y, width, height, style.base);
+  if (asset) {
+    drawTerrainAsset(ctx, asset, x, y, zoom);
+    drawDiamond(ctx, x, y, width, height, withAlpha(style.base, 0.34));
+  } else {
+    drawDiamond(ctx, x, y, width, height, style.base);
+  }
   drawWaterDepthOverlay(ctx, x, y, zoom, width, height, tileX, tileY, style.inner);
   drawWaterTerrainTexture(ctx, x, y, zoom, style, tileX, tileY, motion);
 
@@ -929,11 +1058,17 @@ function drawLandTile(
   kind: TerrainKind,
   tileX: number,
   tileY: number,
+  asset: NonNullable<ReturnType<PharosVilleAssetManager["get"]>> | null,
 ) {
   const value = String(kind);
   const width = 32 * zoom;
   const height = 16 * zoom;
-  drawDiamond(ctx, x, y, width, height, terrainColor(kind));
+  if (asset) {
+    drawTerrainAsset(ctx, asset, x, y, zoom);
+    drawDiamond(ctx, x, y, width, height, withAlpha(terrainColor(kind), value === "road" ? 0.36 : 0.24));
+  } else {
+    drawDiamond(ctx, x, y, width, height, terrainColor(kind));
+  }
   drawGroundGrain(ctx, x, y, zoom, value, tileX, tileY);
 
   if (isElevatedTileKind(kind)) {
@@ -951,6 +1086,17 @@ function drawLandTile(
   } else if (value === "grass" || value === "hill" || value === "land" || (tileX * 19 + tileY * 23) % 6 === 0) {
     drawGrassTexture(ctx, x, y, zoom, tileX, tileY);
   }
+}
+
+function drawTerrainAsset(
+  ctx: CanvasRenderingContext2D,
+  asset: NonNullable<ReturnType<PharosVilleAssetManager["get"]>>,
+  x: number,
+  y: number,
+  zoom: number,
+) {
+  const scale = zoom * TERRAIN_ASSET_SCALE;
+  drawAsset(ctx, asset, x, y + TILE_HEIGHT * zoom * 0.46, scale);
 }
 
 function drawGroundGrain(
@@ -1085,6 +1231,77 @@ function drawAtmosphere({ camera, ctx, motion, world }: DrawPharosVilleInput) {
   ctx.restore();
 }
 
+function drawHarborDistrictGround({ camera, ctx }: DrawPharosVilleInput) {
+  ctx.save();
+  drawDistrictPad(ctx, camera, { x: 31.9, y: 40.7 }, 156, 58, "rgba(78, 70, 56, 0.54)", "rgba(218, 191, 128, 0.34)");
+  drawDistrictPad(ctx, camera, { x: 47.8, y: 31.6 }, 88, 36, "rgba(66, 62, 53, 0.48)", "rgba(204, 177, 116, 0.3)");
+  drawDistrictPad(ctx, camera, { x: 42.8, y: 49.4 }, 72, 26, "rgba(49, 67, 59, 0.38)", "rgba(217, 185, 116, 0.26)");
+
+  drawSeawallRun(ctx, camera, [
+    { x: 24.2, y: 42.2 },
+    { x: 29.4, y: 43.1 },
+    { x: 35.2, y: 42.0 },
+    { x: 39.0, y: 40.3 },
+  ]);
+  drawSeawallRun(ctx, camera, [
+    { x: 47.0, y: 34.9 },
+    { x: 49.2, y: 32.0 },
+    { x: 48.4, y: 29.4 },
+  ]);
+  drawSeawallRun(ctx, camera, [
+    { x: 40.2, y: 48.3 },
+    { x: 43.0, y: 49.7 },
+    { x: 46.0, y: 49.2 },
+  ]);
+  ctx.restore();
+}
+
+function drawDistrictPad(
+  ctx: CanvasRenderingContext2D,
+  camera: IsoCamera,
+  tile: { x: number; y: number },
+  width: number,
+  height: number,
+  fill: string,
+  top: string,
+) {
+  const p = tileToScreen(tile, camera);
+  const zoom = camera.zoom;
+  drawDiamond(ctx, p.x, p.y + 10 * zoom, width * zoom, height * zoom, "rgba(5, 7, 9, 0.26)");
+  drawDiamond(ctx, p.x, p.y + 6 * zoom, width * zoom * 0.92, height * zoom * 0.82, fill);
+  drawDiamond(ctx, p.x, p.y + 1 * zoom, width * zoom * 0.76, height * zoom * 0.5, top);
+}
+
+function drawSeawallRun(ctx: CanvasRenderingContext2D, camera: IsoCamera, tiles: readonly { x: number; y: number }[]) {
+  const points = tiles.map((tile) => tileToScreen(tile, camera));
+  const [firstPoint, ...rest] = points;
+  if (!firstPoint) return;
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "rgba(7, 9, 12, 0.42)";
+  ctx.lineWidth = Math.max(3, 6 * camera.zoom);
+  ctx.beginPath();
+  ctx.moveTo(firstPoint.x, firstPoint.y + 4 * camera.zoom);
+  for (const point of rest) ctx.lineTo(point.x, point.y + 4 * camera.zoom);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(176, 153, 104, 0.76)";
+  ctx.lineWidth = Math.max(2, 3.6 * camera.zoom);
+  ctx.beginPath();
+  ctx.moveTo(firstPoint.x, firstPoint.y);
+  for (const point of rest) ctx.lineTo(point.x, point.y);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(239, 221, 169, 0.42)";
+  ctx.lineWidth = Math.max(1, 1.2 * camera.zoom);
+  ctx.beginPath();
+  ctx.moveTo(firstPoint.x - 3 * camera.zoom, firstPoint.y - 2 * camera.zoom);
+  for (const point of rest) ctx.lineTo(point.x - 3 * camera.zoom, point.y - 2 * camera.zoom);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawLighthouseSeaGlow({ camera, ctx, motion, world }: DrawPharosVilleInput) {
   const beacon = tileToScreen(world.lighthouse.tile, camera);
   const time = motion.reducedMotion ? 0 : motion.timeSeconds;
@@ -1142,133 +1359,23 @@ function drawLighthouseSurf({ camera, ctx, motion }: DrawPharosVilleInput) {
   ctx.restore();
 }
 
-function drawLighthouseCausewayOverlay({ assets, camera, ctx, world }: DrawPharosVilleInput) {
-  if (!assets?.get("landmark.lighthouse")) return;
-  const zoom = camera.zoom;
-  const path = [
-    tileToScreen({ x: world.lighthouse.tile.x - 5.0, y: world.lighthouse.tile.y + 8.4 }, camera),
-    tileToScreen({ x: world.lighthouse.tile.x - 3.5, y: world.lighthouse.tile.y + 6.4 }, camera),
-    tileToScreen({ x: world.lighthouse.tile.x - 2.3, y: world.lighthouse.tile.y + 4.6 }, camera),
-    tileToScreen({ x: world.lighthouse.tile.x - 1.1, y: world.lighthouse.tile.y + 2.8 }, camera),
-  ];
-
-  ctx.save();
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  drawPolyline(ctx, path, "rgba(7, 9, 12, 0.46)", Math.max(4, 11 * zoom));
-  drawPolyline(ctx, path, "rgba(65, 50, 34, 0.7)", Math.max(3, 8 * zoom));
-  drawPolyline(ctx, path, "#cda86c", Math.max(2, 5.6 * zoom));
-  drawPolyline(ctx, path, "rgba(240, 228, 190, 0.78)", Math.max(1, 2.2 * zoom));
-
-  const stepCount = 12;
-  for (let index = 0; index < stepCount; index += 1) {
-    const sample = pointAlongPolyline(path, (index + 0.45) / stepCount);
-    const shade = index % 2 === 0 ? "rgba(244, 233, 197, 0.9)" : "rgba(166, 131, 82, 0.86)";
-    ctx.strokeStyle = shade;
-    ctx.lineWidth = Math.max(1, 1.35 * zoom);
-    ctx.beginPath();
-    ctx.moveTo(sample.x - 7.5 * zoom, sample.y + 2.4 * zoom);
-    ctx.lineTo(sample.x + 7.5 * zoom, sample.y - 2.4 * zoom);
-    ctx.stroke();
-  }
-
-  const landing = path[path.length - 1];
-  if (landing) {
-    drawDiamond(ctx, landing.x + 7 * zoom, landing.y - 2 * zoom, 42 * zoom, 16 * zoom, "rgba(224, 202, 148, 0.58)");
-    drawDiamond(ctx, landing.x + 8 * zoom, landing.y - 5 * zoom, 34 * zoom, 12 * zoom, "rgba(246, 232, 184, 0.68)");
-  }
-  ctx.restore();
-}
-
-function drawPolyline(
-  ctx: CanvasRenderingContext2D,
-  points: readonly ScreenPoint[],
-  strokeStyle: string,
-  lineWidth: number,
-) {
-  const [firstPoint, ...rest] = points;
-  if (!firstPoint) return;
-  ctx.strokeStyle = strokeStyle;
-  ctx.lineWidth = lineWidth;
-  ctx.beginPath();
-  ctx.moveTo(firstPoint.x, firstPoint.y);
-  for (const point of rest) ctx.lineTo(point.x, point.y);
-  ctx.stroke();
-}
-
-function pointAlongPolyline(points: readonly ScreenPoint[], progress: number): ScreenPoint {
-  if (points.length === 0) return { x: 0, y: 0 };
-  if (points.length === 1) return points[0]!;
-  const segments = points.slice(1).map((point, index) => {
-    const previous = points[index]!;
-    return {
-      from: previous,
-      length: Math.hypot(point.x - previous.x, point.y - previous.y),
-      to: point,
-    };
-  });
-  const total = segments.reduce((sum, segment) => sum + segment.length, 0);
-  let remaining = Math.max(0, Math.min(1, progress)) * total;
-  for (const segment of segments) {
-    if (remaining > segment.length) {
-      remaining -= segment.length;
-      continue;
-    }
-    const ratio = segment.length > 0 ? remaining / segment.length : 0;
-    return {
-      x: segment.from.x + (segment.to.x - segment.from.x) * ratio,
-      y: segment.from.y + (segment.to.y - segment.from.y) * ratio,
-    };
-  }
-  return points[points.length - 1]!;
-}
-
-function drawLighthouseHeadland({ assets, camera, ctx, world }: DrawPharosVilleInput) {
+function drawLighthouseHeadland({ camera, ctx, world }: DrawPharosVilleInput) {
   const center = tileToScreen(world.lighthouse.tile, camera);
   const terrain = lighthouseTerrain(world);
   const crownColor = isElevatedTileKind(terrain) ? LIGHTHOUSE_HEADLAND.moss : LIGHTHOUSE_HEADLAND.grass;
   const zoom = camera.zoom;
   ctx.save();
 
-  if (assets?.get("landmark.lighthouse")) {
-    drawDiamond(ctx, center.x, center.y + 22 * zoom, 98 * zoom, 38 * zoom, LIGHTHOUSE_HEADLAND.shadow);
-    drawDiamond(ctx, center.x - 1 * zoom, center.y + 13 * zoom, 80 * zoom, 30 * zoom, LIGHTHOUSE_HEADLAND.cliff);
-    drawTileLowerFacet(ctx, center.x - 1 * zoom, center.y + 13 * zoom, 80 * zoom, 30 * zoom, "rgba(25, 29, 27, 0.5)");
-    drawDiamond(ctx, center.x + 2 * zoom, center.y + 2 * zoom, 58 * zoom, 23 * zoom, crownColor);
-
-    ctx.strokeStyle = LIGHTHOUSE_HEADLAND.road;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.lineWidth = Math.max(2, 3.4 * zoom);
-    ctx.beginPath();
-    ctx.moveTo(center.x - 2 * zoom, center.y + 6 * zoom);
-    ctx.lineTo(center.x - 27 * zoom, center.y + 23 * zoom);
-    ctx.lineTo(center.x - 55 * zoom, center.y + 27 * zoom);
-    ctx.lineTo(center.x - 73 * zoom, center.y + 23 * zoom);
-    ctx.stroke();
-
-    ctx.strokeStyle = "rgba(223, 198, 132, 0.24)";
-    ctx.lineWidth = Math.max(1, 1.1 * zoom);
-    ctx.beginPath();
-    ctx.moveTo(center.x - 28 * zoom, center.y + 18 * zoom);
-    ctx.lineTo(center.x - 36 * zoom, center.y + 27 * zoom);
-    ctx.moveTo(center.x - 47 * zoom, center.y + 31 * zoom);
-    ctx.lineTo(center.x + 28 * zoom, center.y + 29 * zoom);
-    ctx.stroke();
-    ctx.restore();
-    return;
-  }
-
   ctx.fillStyle = LIGHTHOUSE_HEADLAND.halo;
   ctx.beginPath();
-  ctx.ellipse(center.x, center.y + 14 * zoom, 118 * zoom, 42 * zoom, -0.08, 0, Math.PI * 2);
+  ctx.ellipse(center.x - 4 * zoom, center.y + 16 * zoom, 128 * zoom, 46 * zoom, -0.08, 0, Math.PI * 2);
   ctx.fill();
 
-  drawDiamond(ctx, center.x, center.y + 30 * zoom, 154 * zoom, 72 * zoom, LIGHTHOUSE_HEADLAND.shadow);
-  drawDiamond(ctx, center.x - 2 * zoom, center.y + 20 * zoom, 136 * zoom, 62 * zoom, LIGHTHOUSE_HEADLAND.cliff);
-  drawTileLowerFacet(ctx, center.x - 2 * zoom, center.y + 20 * zoom, 136 * zoom, 62 * zoom, "rgba(25, 29, 27, 0.64)");
-  drawDiamond(ctx, center.x + 2 * zoom, center.y + 7 * zoom, 110 * zoom, 50 * zoom, crownColor);
-  drawDiamond(ctx, center.x + 4 * zoom, center.y - 8 * zoom, 72 * zoom, 33 * zoom, LIGHTHOUSE_HEADLAND.stone);
+  drawDiamond(ctx, center.x - 4 * zoom, center.y + 34 * zoom, 178 * zoom, 82 * zoom, LIGHTHOUSE_HEADLAND.shadow);
+  drawDiamond(ctx, center.x - 4 * zoom, center.y + 23 * zoom, 158 * zoom, 72 * zoom, LIGHTHOUSE_HEADLAND.cliff);
+  drawTileLowerFacet(ctx, center.x - 4 * zoom, center.y + 23 * zoom, 158 * zoom, 72 * zoom, "rgba(25, 29, 27, 0.64)");
+  drawDiamond(ctx, center.x - 5 * zoom, center.y + 8 * zoom, 132 * zoom, 58 * zoom, crownColor);
+  drawDiamond(ctx, center.x, center.y - 6 * zoom, 86 * zoom, 36 * zoom, LIGHTHOUSE_HEADLAND.stone);
 
   for (const accent of HEADLAND_TERRAIN_ACCENTS) {
     const accentPoint = tileToScreen({
@@ -1283,29 +1390,6 @@ function drawLighthouseHeadland({ assets, camera, ctx, world }: DrawPharosVilleI
     drawDiamond(ctx, accentPoint.x, accentPoint.y + 8 * zoom, 34 * zoom * accent.size, 15 * zoom * accent.size, accentFill);
   }
 
-  ctx.strokeStyle = LIGHTHOUSE_HEADLAND.road;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.lineWidth = Math.max(3, 5.2 * zoom);
-  ctx.beginPath();
-  ctx.moveTo(center.x + 2 * zoom, center.y - 2 * zoom);
-  ctx.lineTo(center.x - 24 * zoom, center.y + 22 * zoom);
-  ctx.lineTo(center.x - 54 * zoom, center.y + 29 * zoom);
-  ctx.lineTo(center.x - 72 * zoom, center.y + 25 * zoom);
-  ctx.stroke();
-
-  ctx.strokeStyle = "rgba(223, 198, 132, 0.3)";
-  ctx.lineWidth = Math.max(1, 1.4 * zoom);
-  ctx.beginPath();
-  ctx.moveTo(center.x - 42 * zoom, center.y + 23 * zoom);
-  ctx.lineTo(center.x - 51 * zoom, center.y + 32 * zoom);
-  ctx.moveTo(center.x - 23 * zoom, center.y + 13 * zoom);
-  ctx.lineTo(center.x - 33 * zoom, center.y + 22 * zoom);
-  ctx.moveTo(center.x + 18 * zoom, center.y + 5 * zoom);
-  ctx.lineTo(center.x + 48 * zoom, center.y + 18 * zoom);
-  ctx.moveTo(center.x - 48 * zoom, center.y + 43 * zoom);
-  ctx.lineTo(center.x + 43 * zoom, center.y + 39 * zoom);
-  ctx.stroke();
   ctx.restore();
 }
 
@@ -1626,25 +1710,25 @@ function drawStoneLantern(ctx: CanvasRenderingContext2D, point: ScreenPoint, zoo
 function lighthouseRenderState({ assets, camera, world }: DrawPharosVilleInput) {
   const center = tileToScreen(world.lighthouse.tile, camera);
   const lighthouseAsset = assets?.get("landmark.lighthouse");
-  const geometry = resolveEntityGeometry({
-    asset: lighthouseAsset,
-    camera,
-    entity: world.lighthouse,
-    mapWidth: world.map.width,
-  });
-  const assetCenter = geometry.drawPoint;
-  const epicZoom = geometry.drawScale;
+  const spriteScale = camera.zoom * LIGHTHOUSE_SPRITE_CROP.scale;
+  const spriteAnchor = {
+    x: center.x,
+    y: center.y + LIGHTHOUSE_SPRITE_CROP.bottomOffsetY * camera.zoom,
+  };
   const firePoint = lighthouseAsset
-    ? lighthouseBeaconPoint(lighthouseAsset, assetCenter, epicZoom)
+    ? {
+      x: spriteAnchor.x + (LIGHTHOUSE_SPRITE_CROP.beaconX - LIGHTHOUSE_SPRITE_CROP.anchorX) * spriteScale,
+      y: spriteAnchor.y + (LIGHTHOUSE_SPRITE_CROP.beaconY - LIGHTHOUSE_SPRITE_CROP.anchorY) * spriteScale,
+    }
     : { x: center.x, y: center.y - 148 * camera.zoom };
-  return { assetCenter, center, epicZoom, firePoint, lighthouseAsset };
+  return { center, firePoint, lighthouseAsset, spriteAnchor, spriteScale };
 }
 
 function drawLighthouseBody(input: DrawPharosVilleInput) {
   const { camera, ctx, world } = input;
-  const { assetCenter, center, epicZoom, lighthouseAsset } = lighthouseRenderState(input);
+  const { center, lighthouseAsset, spriteAnchor, spriteScale } = lighthouseRenderState(input);
   if (lighthouseAsset) {
-    drawAsset(ctx, lighthouseAsset, assetCenter.x, assetCenter.y, epicZoom);
+    drawLighthouseAssetCrop(ctx, lighthouseAsset, spriteAnchor.x, spriteAnchor.y, spriteScale);
     return;
   }
 
@@ -1700,25 +1784,32 @@ function drawLighthouseBody(input: DrawPharosVilleInput) {
   ctx.restore();
 }
 
+function drawLighthouseAssetCrop(
+  ctx: CanvasRenderingContext2D,
+  asset: NonNullable<ReturnType<PharosVilleAssetManager["get"]>>,
+  anchorX: number,
+  anchorY: number,
+  scale: number,
+) {
+  ctx.drawImage(
+    asset.image,
+    LIGHTHOUSE_SPRITE_CROP.sourceX,
+    LIGHTHOUSE_SPRITE_CROP.sourceY,
+    LIGHTHOUSE_SPRITE_CROP.sourceWidth,
+    LIGHTHOUSE_SPRITE_CROP.sourceHeight,
+    Math.round(anchorX - LIGHTHOUSE_SPRITE_CROP.anchorX * scale),
+    Math.round(anchorY - LIGHTHOUSE_SPRITE_CROP.anchorY * scale),
+    Math.round(LIGHTHOUSE_SPRITE_CROP.sourceWidth * scale),
+    Math.round(LIGHTHOUSE_SPRITE_CROP.sourceHeight * scale),
+  );
+}
+
 function drawLighthouseOverlay(input: DrawPharosVilleInput) {
   const { camera, ctx, motion, world } = input;
   const { firePoint, lighthouseAsset } = lighthouseRenderState(input);
   if (!world.lighthouse.unavailable) drawLighthouseBeam(ctx, firePoint, camera.zoom * 1.35, motion);
   if (lighthouseAsset) return;
   drawLighthouseFire(ctx, firePoint, camera.zoom * 1.32, world.lighthouse.color, motion);
-}
-
-function lighthouseBeaconPoint(
-  asset: NonNullable<ReturnType<PharosVilleAssetManager["get"]>>,
-  center: ScreenPoint,
-  zoom: number,
-): ScreenPoint {
-  const scale = asset.entry.displayScale * zoom;
-  const [beaconX, beaconY] = asset.entry.beacon ?? [asset.entry.width / 2, 30];
-  return {
-    x: center.x + (beaconX - asset.entry.anchor[0]) * scale,
-    y: center.y + (beaconY - asset.entry.anchor[1]) * scale,
-  };
 }
 
 function drawLighthouseFire(
@@ -1846,6 +1937,7 @@ function buildingRenderState({ assets, camera, world }: DrawPharosVilleInput, bu
 function drawBuildingUnderlay(input: DrawPharosVilleInput, building: PharosVilleWorld["buildings"][number]) {
   const { camera, ctx } = input;
   const { drawPoint } = buildingRenderState(input, building);
+  drawBuildingPlinth(ctx, building, drawPoint, camera.zoom);
   drawBuildingStatusGlow(ctx, building, drawPoint, camera.zoom);
 }
 
@@ -1878,6 +1970,32 @@ function drawBuildingStatusGlow(
   ctx.beginPath();
   ctx.ellipse(point.x, point.y - 11 * zoom, 46 * zoom, 18 * zoom, -0.04, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
+}
+
+function drawBuildingPlinth(
+  ctx: CanvasRenderingContext2D,
+  building: PharosVilleWorld["buildings"][number],
+  point: ScreenPoint,
+  zoom: number,
+) {
+  const large = building.buildingType === "exit-route-gatehouse";
+  const width = (large ? 98 : 88) * zoom;
+  const height = (large ? 38 : 34) * zoom;
+  const accent = hexToRgba(building.visual.accent, 0.36);
+  ctx.save();
+  drawDiamond(ctx, point.x, point.y + 9 * zoom, width * 1.1, height * 1.1, "rgba(8, 11, 11, 0.34)");
+  drawDiamond(ctx, point.x, point.y + 4 * zoom, width, height, "rgba(73, 75, 65, 0.88)");
+  drawTileLowerFacet(ctx, point.x, point.y + 4 * zoom, width, height, "rgba(31, 37, 40, 0.6)");
+  drawDiamond(ctx, point.x, point.y - 1 * zoom, width * 0.82, height * 0.64, "rgba(203, 184, 132, 0.72)");
+  drawDiamond(ctx, point.x, point.y - 3 * zoom, width * 0.52, height * 0.34, accent);
+
+  ctx.strokeStyle = "rgba(245, 228, 178, 0.42)";
+  ctx.lineWidth = Math.max(1, 1.2 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(point.x - width * 0.34, point.y - height * 0.05);
+  ctx.lineTo(point.x + width * 0.28, point.y + height * 0.08);
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -2099,6 +2217,7 @@ function drawDockBody(input: DrawPharosVilleInput, dock: PharosVilleWorld["docks
   const { camera, ctx } = input;
   const p = tileToScreen(dock.tile, camera);
   const { dockAsset, geometry, harbor } = dockRenderState(input, dock);
+  drawDockQuayUnderlay(ctx, dock, harbor, camera.zoom);
   if (dockAsset) {
     drawAsset(
       ctx,
@@ -2115,6 +2234,30 @@ function drawDockBody(input: DrawPharosVilleInput, dock: PharosVilleWorld["docks
     ctx.lineTo(harbor.x, harbor.y);
     ctx.stroke();
   }
+}
+
+function drawDockQuayUnderlay(
+  ctx: CanvasRenderingContext2D,
+  dock: PharosVilleWorld["docks"][number],
+  point: ScreenPoint,
+  zoom: number,
+) {
+  const size = Math.max(0, dock.size);
+  const width = (58 + size * 0.75) * zoom;
+  const height = (22 + size * 0.18) * zoom;
+  ctx.save();
+  drawDiamond(ctx, point.x, point.y + 9 * zoom, width * 1.14, height * 1.12, "rgba(5, 8, 10, 0.36)");
+  drawDiamond(ctx, point.x, point.y + 5 * zoom, width, height, "rgba(83, 75, 58, 0.72)");
+  drawDiamond(ctx, point.x, point.y + 1 * zoom, width * 0.78, height * 0.62, "rgba(211, 184, 126, 0.5)");
+  ctx.strokeStyle = "rgba(232, 243, 233, 0.34)";
+  ctx.lineWidth = Math.max(1, 1.2 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(point.x - width * 0.42, point.y + height * 0.1);
+  ctx.lineTo(point.x - width * 0.08, point.y + height * 0.34);
+  ctx.moveTo(point.x + width * 0.14, point.y + height * 0.34);
+  ctx.lineTo(point.x + width * 0.42, point.y + height * 0.1);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawDockOverlay(input: DrawPharosVilleInput, dock: PharosVilleWorld["docks"][number]) {
@@ -2194,6 +2337,23 @@ function drawCartographicWaterLabel(input: {
   ctx.textAlign = align;
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
+  const plaqueWidth = Math.min(width, ctx.measureText(text).width + 16 * scale);
+  const plaqueX = align === "left" ? -3 * scale : align === "right" ? -plaqueWidth + 3 * scale : -plaqueWidth / 2;
+  ctx.globalAlpha = 0.46;
+  drawSignBoard(ctx, plaqueX, -8.4 * scale, plaqueWidth, 16.8 * scale, scale * 0.72, "rgba(74, 50, 27, 0.5)", "rgba(15, 10, 7, 0.76)");
+  ctx.fillStyle = accent;
+  ctx.beginPath();
+  ctx.moveTo(plaqueX - 4 * scale, 0);
+  ctx.lineTo(plaqueX - 10 * scale, -4 * scale);
+  ctx.lineTo(plaqueX - 8 * scale, 4 * scale);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(plaqueX + plaqueWidth + 4 * scale, 0);
+  ctx.lineTo(plaqueX + plaqueWidth + 10 * scale, -4 * scale);
+  ctx.lineTo(plaqueX + plaqueWidth + 8 * scale, 4 * scale);
+  ctx.closePath();
+  ctx.fill();
   ctx.globalAlpha = 0.88;
   ctx.strokeStyle = "rgba(5, 10, 17, 0.7)";
   ctx.lineWidth = Math.max(1.2, 2.2 * scale);
@@ -2398,6 +2558,202 @@ function dockFlagMark(dock: PharosVilleWorld["docks"][number]) {
   return (words[0] ?? dock.chainId).slice(0, 3);
 }
 
+function drawSceneryProp(input: DrawPharosVilleInput, prop: SceneryProp) {
+  const { camera, ctx, motion } = input;
+  const p = tileToScreen(prop.tile, camera);
+  const scale = camera.zoom * (prop.scale ?? 1);
+  const time = motion.reducedMotion ? 0 : motion.timeSeconds;
+  ctx.save();
+  if (prop.kind === "buoy") {
+    const bob = Math.sin(time * 0.9 + prop.tile.x) * 1.2 * scale;
+    drawBuoy(ctx, p.x, p.y + bob, scale);
+  } else if (prop.kind === "harbor-lamp") {
+    drawLamp(ctx, p.x, p.y, scale, time * 0.9 + prop.tile.y);
+  } else if (prop.kind === "crate-stack") {
+    drawCrateStack(ctx, p.x, p.y, scale);
+  } else if (prop.kind === "barrel") {
+    drawBarrels(ctx, p.x, p.y, scale);
+  } else if (prop.kind === "bollards") {
+    drawBollards(ctx, p.x, p.y, scale);
+  } else if (prop.kind === "palm") {
+    drawPalm(ctx, p.x, p.y, scale);
+  } else if (prop.kind === "reef") {
+    drawReef(ctx, p.x, p.y, scale);
+  } else if (prop.kind === "rock") {
+    drawHarborRock(ctx, p.x, p.y, scale);
+  } else if (prop.kind === "sea-wall") {
+    drawSeaWallPiece(ctx, p.x, p.y, scale);
+  } else if (prop.kind === "signal-post" || prop.kind === "beacon") {
+    drawSignalPost(ctx, p.x, p.y, scale, prop.kind === "beacon");
+  } else if (prop.kind === "skiff") {
+    drawMiniSkiff(ctx, p.x, p.y, scale);
+  } else if (prop.kind === "tent") {
+    drawMarketTent(ctx, p.x, p.y, scale);
+  }
+  ctx.restore();
+}
+
+function drawBuoy(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.fillStyle = "rgba(7, 10, 12, 0.26)";
+  ctx.beginPath();
+  ctx.ellipse(x, y + 5 * scale, 8 * scale, 2.6 * scale, -0.08, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#d9b974";
+  ctx.fillRect(Math.round(x - 2.5 * scale), Math.round(y - 8 * scale), Math.max(1, Math.round(5 * scale)), Math.max(1, Math.round(13 * scale)));
+  ctx.fillStyle = "#b95437";
+  ctx.fillRect(Math.round(x - 3 * scale), Math.round(y - 4 * scale), Math.max(1, Math.round(6 * scale)), Math.max(1, Math.round(4 * scale)));
+  ctx.strokeStyle = "#2f2117";
+  ctx.lineWidth = Math.max(1, scale);
+  ctx.strokeRect(Math.round(x - 2.5 * scale), Math.round(y - 8 * scale), Math.max(1, Math.round(5 * scale)), Math.max(1, Math.round(13 * scale)));
+}
+
+function drawCrateStack(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  const crates = [[-8, -4, "#6f4a2c"], [0, -6, "#8a6840"], [-2, -14, "#6d4c2f"]] as const;
+  ctx.fillStyle = "rgba(7, 10, 12, 0.26)";
+  drawDiamond(ctx, x, y + 4 * scale, 25 * scale, 9 * scale, ctx.fillStyle);
+  for (const [dx, dy, fill] of crates) {
+    ctx.fillStyle = fill;
+    ctx.fillRect(Math.round(x + dx * scale), Math.round(y + dy * scale), Math.max(1, Math.round(10 * scale)), Math.max(1, Math.round(8 * scale)));
+    ctx.strokeStyle = "#2d1b10";
+    ctx.lineWidth = Math.max(1, 0.8 * scale);
+    ctx.strokeRect(Math.round(x + dx * scale), Math.round(y + dy * scale), Math.max(1, Math.round(10 * scale)), Math.max(1, Math.round(8 * scale)));
+  }
+}
+
+function drawBarrels(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  for (const [dx, dy] of [[-5, 0], [2, -2], [6, 2]] as const) {
+    ctx.fillStyle = "#745133";
+    ctx.beginPath();
+    ctx.ellipse(x + dx * scale, y + dy * scale, 4 * scale, 6 * scale, -0.08, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#2d1b10";
+    ctx.lineWidth = Math.max(1, 0.8 * scale);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(230, 198, 130, 0.38)";
+    ctx.beginPath();
+    ctx.moveTo(x + (dx - 3) * scale, y + dy * scale);
+    ctx.lineTo(x + (dx + 3) * scale, y + dy * scale);
+    ctx.stroke();
+  }
+}
+
+function drawBollards(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  for (const offset of [-12, -4, 4, 12]) {
+    ctx.fillStyle = "#231811";
+    ctx.fillRect(Math.round(x + offset * scale), Math.round(y - 8 * scale), Math.max(1, Math.round(3 * scale)), Math.max(1, Math.round(10 * scale)));
+    ctx.fillStyle = "#d49a3e";
+    ctx.fillRect(Math.round(x + offset * scale), Math.round(y - 9 * scale), Math.max(1, Math.round(3 * scale)), Math.max(1, Math.round(2 * scale)));
+  }
+  ctx.strokeStyle = "rgba(69, 45, 25, 0.86)";
+  ctx.lineWidth = Math.max(1, scale);
+  ctx.beginPath();
+  ctx.moveTo(x - 10 * scale, y - 4 * scale);
+  ctx.lineTo(x + 14 * scale, y - 3 * scale);
+  ctx.stroke();
+}
+
+function drawPalm(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.strokeStyle = "#4f331f";
+  ctx.lineWidth = Math.max(2, 3 * scale);
+  ctx.beginPath();
+  ctx.moveTo(x, y + 3 * scale);
+  ctx.lineTo(x + 4 * scale, y - 25 * scale);
+  ctx.stroke();
+  ctx.strokeStyle = "#2f7e48";
+  ctx.lineWidth = Math.max(2, 3.2 * scale);
+  for (const angle of [-0.9, -0.45, 0.05, 0.5, 0.95]) {
+    ctx.beginPath();
+    ctx.moveTo(x + 4 * scale, y - 25 * scale);
+    ctx.lineTo(x + 4 * scale + Math.cos(angle) * 15 * scale, y - 25 * scale + Math.sin(angle) * 9 * scale);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "rgba(7, 10, 12, 0.24)";
+  drawDiamond(ctx, x + 1 * scale, y + 4 * scale, 18 * scale, 7 * scale, ctx.fillStyle);
+}
+
+function drawReef(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.fillStyle = "rgba(232, 243, 233, 0.52)";
+  for (const [dx, dy, w] of [[-7, -1, 11], [4, 2, 13], [0, -5, 8]] as const) {
+    ctx.beginPath();
+    ctx.ellipse(x + dx * scale, y + dy * scale, w * scale, 2.6 * scale, -0.18, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawHarborRock(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.fillStyle = "#526776";
+  drawDiamond(ctx, x, y, 17 * scale, 8 * scale, ctx.fillStyle);
+  ctx.fillStyle = "rgba(19, 26, 34, 0.48)";
+  drawDiamond(ctx, x + 3 * scale, y + 3 * scale, 15 * scale, 6 * scale, ctx.fillStyle);
+}
+
+function drawSeaWallPiece(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.fillStyle = "rgba(28, 31, 29, 0.62)";
+  drawDiamond(ctx, x, y + 5 * scale, TILE_WIDTH * 1.2 * scale, TILE_HEIGHT * 0.72 * scale, ctx.fillStyle);
+  ctx.fillStyle = "rgba(159, 146, 120, 0.78)";
+  drawDiamond(ctx, x, y, TILE_WIDTH * scale, TILE_HEIGHT * 0.58 * scale, ctx.fillStyle);
+}
+
+function drawSignalPost(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, lit: boolean) {
+  ctx.strokeStyle = "#2f2117";
+  ctx.lineWidth = Math.max(1, 1.5 * scale);
+  ctx.beginPath();
+  ctx.moveTo(x, y + 3 * scale);
+  ctx.lineTo(x, y - 22 * scale);
+  ctx.stroke();
+  ctx.fillStyle = lit ? "#f7d68a" : "#d49a3e";
+  ctx.fillRect(Math.round(x - 3 * scale), Math.round(y - 23 * scale), Math.max(1, Math.round(6 * scale)), Math.max(1, Math.round(6 * scale)));
+  if (lit) {
+    ctx.fillStyle = "rgba(247, 214, 138, 0.24)";
+    ctx.beginPath();
+    ctx.ellipse(x, y - 20 * scale, 11 * scale, 5 * scale, -0.08, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawMiniSkiff(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.fillStyle = "rgba(7, 10, 12, 0.24)";
+  drawDiamond(ctx, x, y + 6 * scale, 26 * scale, 8 * scale, ctx.fillStyle);
+  ctx.fillStyle = "#5b3423";
+  ctx.beginPath();
+  ctx.moveTo(x - 12 * scale, y);
+  ctx.lineTo(x + 12 * scale, y);
+  ctx.lineTo(x + 6 * scale, y + 7 * scale);
+  ctx.lineTo(x - 7 * scale, y + 7 * scale);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#25170f";
+  ctx.lineWidth = Math.max(1, scale);
+  ctx.stroke();
+  ctx.fillStyle = "#efe5c6";
+  ctx.beginPath();
+  ctx.moveTo(x, y - 17 * scale);
+  ctx.lineTo(x, y - 2 * scale);
+  ctx.lineTo(x + 10 * scale, y - 5 * scale);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawMarketTent(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.fillStyle = "rgba(7, 10, 12, 0.28)";
+  drawDiamond(ctx, x, y + 7 * scale, 34 * scale, 13 * scale, ctx.fillStyle);
+  ctx.fillStyle = "#b95437";
+  ctx.beginPath();
+  ctx.moveTo(x - 16 * scale, y);
+  ctx.lineTo(x, y - 16 * scale);
+  ctx.lineTo(x + 16 * scale, y);
+  ctx.lineTo(x + 10 * scale, y + 8 * scale);
+  ctx.lineTo(x - 11 * scale, y + 8 * scale);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#2f2117";
+  ctx.lineWidth = Math.max(1, scale);
+  ctx.stroke();
+  ctx.fillStyle = "#f0ead2";
+  ctx.fillRect(Math.round(x - 8 * scale), Math.round(y - 2 * scale), Math.max(1, Math.round(5 * scale)), Math.max(1, Math.round(8 * scale)));
+  ctx.fillRect(Math.round(x + 3 * scale), Math.round(y - 2 * scale), Math.max(1, Math.round(5 * scale)), Math.max(1, Math.round(8 * scale)));
+}
+
 function drawSignBoard(
   ctx: CanvasRenderingContext2D,
   left: number,
@@ -2456,7 +2812,8 @@ function shipRenderState(input: DrawPharosVilleInput, ship: PharosVilleWorld["sh
 
 function drawShipWake(input: DrawPharosVilleInput, ship: PharosVilleWorld["ships"][number]) {
   const { camera, ctx, motion } = input;
-  const { bob, p, sample, selected } = shipRenderState(input, ship);
+  const { bob, geometry, p, sample, selected } = shipRenderState(input, ship);
+  drawShipContactShadow(ctx, geometry.drawPoint.x, geometry.drawPoint.y + bob, geometry.drawScale);
   const drawsWake = !motion.reducedMotion
     && (
       motion.plan.effectShipIds.has(ship.id)
@@ -2469,6 +2826,21 @@ function drawShipWake(input: DrawPharosVilleInput, ship: PharosVilleWorld["ships
     const intensity = Math.max(sampleIntensity, motion.plan.moverShipIds.has(ship.id) ? changeIntensity : 0.18);
     drawWake(ctx, p.x, p.y + 8 * camera.zoom + bob, camera.zoom, intensity, sample?.heading ?? { x: -1, y: 0 });
   }
+}
+
+function drawShipContactShadow(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.save();
+  ctx.fillStyle = "rgba(4, 8, 10, 0.28)";
+  ctx.beginPath();
+  ctx.ellipse(x, y - 2 * scale, 30 * scale, 8.5 * scale, -0.08, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(169, 224, 213, 0.16)";
+  ctx.lineWidth = Math.max(1, 1.1 * scale);
+  ctx.beginPath();
+  ctx.moveTo(x - 25 * scale, y + 2 * scale);
+  ctx.lineTo(x + 20 * scale, y + 3.5 * scale);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawShipBody(input: DrawPharosVilleInput, ship: PharosVilleWorld["ships"][number]) {
@@ -2497,14 +2869,17 @@ function drawShipOverlay(input: DrawPharosVilleInput, ship: PharosVilleWorld["sh
   if (shipAsset) {
     const drawY = geometry.drawPoint.y + bob;
     if (selected) drawSelectedShipOutline(ctx, geometry.drawPoint.x, drawY, geometry.drawScale);
+    const mark = SHIP_SAIL_MARKS[ship.visual.hull];
     drawSailLogo({
       ctx,
       logo: assets?.getLogo(ship.logoSrc) ?? null,
       mark: ship.symbol,
-      radius: 5.5 * geometry.drawScale,
-      x: geometry.drawPoint.x + 9 * geometry.drawScale,
-      y: drawY - 29 * geometry.drawScale,
+      height: mark.height * geometry.drawScale,
+      width: mark.width * geometry.drawScale,
+      x: geometry.drawPoint.x + mark.x * geometry.drawScale,
+      y: drawY + mark.y * geometry.drawScale,
     });
+    drawShipSignalOverlay(ctx, ship.visual.overlay, geometry.drawPoint.x - 17 * geometry.drawScale, drawY - 36 * geometry.drawScale, geometry.drawScale);
   } else {
     const proceduralScale = camera.zoom * ship.visual.scale;
     const drawY = p.y - 4 * camera.zoom + bob;
@@ -2513,10 +2888,12 @@ function drawShipOverlay(input: DrawPharosVilleInput, ship: PharosVilleWorld["sh
       ctx,
       logo: assets?.getLogo(ship.logoSrc) ?? null,
       mark: ship.symbol,
-      radius: 4.2 * proceduralScale,
+      height: 8 * proceduralScale,
+      width: 10 * proceduralScale,
       x: p.x + 7 * proceduralScale,
       y: drawY - 10 * proceduralScale,
     });
+    drawShipSignalOverlay(ctx, ship.visual.overlay, p.x - 10 * proceduralScale, drawY - 20 * proceduralScale, proceduralScale);
   }
 }
 
@@ -2545,18 +2922,18 @@ function drawClusterBody(input: DrawPharosVilleInput, cluster: PharosVilleWorld[
   const { camera, ctx } = input;
   const { p, radius } = clusterRenderState(input, cluster);
   ctx.save();
-  ctx.fillStyle = "rgba(255, 204, 98, 0.86)";
-  ctx.strokeStyle = "rgba(42, 29, 11, 0.9)";
-  ctx.lineWidth = Math.max(1, 1.4 * camera.zoom);
+  ctx.fillStyle = "rgba(7, 10, 12, 0.26)";
   ctx.beginPath();
-  ctx.moveTo(p.x, p.y - radius - 4 * camera.zoom);
-  ctx.lineTo(p.x + radius * 0.9, p.y - 2 * camera.zoom);
-  ctx.lineTo(p.x + radius * 0.46, p.y + radius * 0.72);
-  ctx.lineTo(p.x - radius * 0.46, p.y + radius * 0.72);
-  ctx.lineTo(p.x - radius * 0.9, p.y - 2 * camera.zoom);
-  ctx.closePath();
+  ctx.ellipse(p.x, p.y + 8 * camera.zoom, radius * 1.45, radius * 0.46, -0.08, 0, Math.PI * 2);
   ctx.fill();
-  ctx.stroke();
+
+  const boats = Math.min(6, Math.max(3, Math.ceil(Math.sqrt(cluster.count))));
+  for (let index = 0; index < boats; index += 1) {
+    const angle = (Math.PI * 2 * index) / boats - 0.45;
+    const boatX = p.x + Math.cos(angle) * radius * 0.58;
+    const boatY = p.y + Math.sin(angle) * radius * 0.28;
+    drawClusterBoat(ctx, boatX, boatY, camera.zoom * (0.55 + (index % 2) * 0.08), index);
+  }
   ctx.restore();
 }
 
@@ -2564,14 +2941,46 @@ function drawClusterOverlay(input: DrawPharosVilleInput, cluster: PharosVilleWor
   const { camera, ctx } = input;
   const { p, radius } = clusterRenderState(input, cluster);
   ctx.save();
+  const scale = Math.max(0.78, camera.zoom);
+  const mastX = p.x + radius * 0.72;
+  const mastY = p.y - radius * 0.42;
+  ctx.strokeStyle = "#2f2117";
+  ctx.lineWidth = Math.max(1, 1.2 * scale);
+  ctx.beginPath();
+  ctx.moveTo(mastX, mastY + 15 * scale);
+  ctx.lineTo(mastX, mastY - 12 * scale);
+  ctx.stroke();
+  drawSignBoard(ctx, mastX + 7 * scale, mastY - 15 * scale, 25 * scale, 15 * scale, scale * 0.8, "#d9b974", "#2e1e14");
   ctx.fillStyle = "#061721";
-  ctx.font = `700 ${Math.max(10, 10 * camera.zoom)}px ui-sans-serif, system-ui, sans-serif`;
+  ctx.font = `800 ${Math.max(8, 8.5 * scale)}px ui-sans-serif, system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(String(cluster.count), p.x, p.y + radius * 0.05);
+  ctx.fillText(String(cluster.count), mastX + 19.5 * scale, mastY - 7.5 * scale, 20 * scale);
   ctx.textAlign = "start";
   ctx.textBaseline = "alphabetic";
   ctx.restore();
+}
+
+function drawClusterBoat(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, index: number) {
+  ctx.fillStyle = index % 2 === 0 ? "#6d3d26" : "#3b5361";
+  ctx.beginPath();
+  ctx.moveTo(x - 10 * scale, y + 2 * scale);
+  ctx.lineTo(x + 10 * scale, y + 1 * scale);
+  ctx.lineTo(x + 5 * scale, y + 7 * scale);
+  ctx.lineTo(x - 6 * scale, y + 7 * scale);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#24170f";
+  ctx.lineWidth = Math.max(1, 0.9 * scale);
+  ctx.stroke();
+  ctx.fillStyle = index % 3 === 0 ? "#f0ead2" : "#e3d4ae";
+  ctx.beginPath();
+  ctx.moveTo(x, y - 16 * scale);
+  ctx.lineTo(x, y);
+  ctx.lineTo(x + (index % 2 === 0 ? 8 : -8) * scale, y - 4 * scale);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
 }
 
 function graveRenderState(input: DrawPharosVilleInput, grave: PharosVilleWorld["graves"][number]) {
@@ -2595,8 +3004,14 @@ function drawGraveUnderlay(input: DrawPharosVilleInput, grave: PharosVilleWorld[
 }
 
 function drawGraveBody(input: DrawPharosVilleInput, grave: PharosVilleWorld["graves"][number]) {
-  const { camera, ctx } = input;
-  const { causeColor, p } = graveRenderState(input, grave);
+  const { assets, camera, ctx } = input;
+  const { causeColor, geometry, p } = graveRenderState(input, grave);
+  const tombstoneAsset = assets?.get("prop.tombstone") ?? null;
+  if (tombstoneAsset && (grave.visual.marker === "headstone" || grave.visual.marker === "tablet")) {
+    drawAsset(ctx, tombstoneAsset, geometry.drawPoint.x, geometry.drawPoint.y + 1.5 * camera.zoom, camera.zoom * grave.visual.scale * 0.86);
+    drawGraveCauseChip(ctx, geometry.drawPoint.x, geometry.drawPoint.y - 9 * camera.zoom * grave.visual.scale, causeColor, camera.zoom * grave.visual.scale);
+    return;
+  }
   drawProceduralGrave(
     ctx,
     p.x,
@@ -2607,6 +3022,17 @@ function drawGraveBody(input: DrawPharosVilleInput, grave: PharosVilleWorld["gra
     grave.visual.scale,
     grave.entry.causeOfDeath,
   );
+}
+
+function drawGraveCauseChip(ctx: CanvasRenderingContext2D, x: number, y: number, causeColor: string, scale: number) {
+  ctx.save();
+  ctx.fillStyle = hexToRgba(causeColor, 0.84);
+  ctx.strokeStyle = "rgba(15, 17, 17, 0.65)";
+  ctx.lineWidth = Math.max(0.7, 0.8 * scale);
+  roundedRectPath(ctx, x - 3.6 * scale, y - 2 * scale, 7.2 * scale, 4 * scale, 1.4 * scale);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawGraveOverlay(input: DrawPharosVilleInput, grave: PharosVilleWorld["graves"][number]) {
@@ -3133,40 +3559,79 @@ function drawShip(ctx: CanvasRenderingContext2D, x: number, y: number, scale: nu
 
 function drawSailLogo(input: {
   ctx: CanvasRenderingContext2D;
+  height: number;
   logo: ReturnType<PharosVilleAssetManager["getLogo"]>;
   mark: string;
-  radius: number;
+  width: number;
   x: number;
   y: number;
 }) {
-  const { ctx, logo, mark, radius, x, y } = input;
-  const safeRadius = Math.max(2.5, radius);
+  const { ctx, height, logo, mark, width, x, y } = input;
+  const safeWidth = Math.max(5, width);
+  const safeHeight = Math.max(5, height);
   ctx.save();
   ctx.translate(Math.round(x), Math.round(y));
-  ctx.fillStyle = "rgba(247, 244, 218, 0.92)";
-  ctx.strokeStyle = "#2b1c12";
-  ctx.lineWidth = Math.max(1, safeRadius * 0.18);
+  ctx.fillStyle = "rgba(247, 244, 218, 0.84)";
+  ctx.strokeStyle = "rgba(43, 28, 18, 0.72)";
+  ctx.lineWidth = Math.max(1, safeWidth * 0.08);
   ctx.beginPath();
-  ctx.arc(0, 0, safeRadius, 0, Math.PI * 2);
+  ctx.moveTo(-safeWidth * 0.42, -safeHeight * 0.48);
+  ctx.lineTo(safeWidth * 0.42, -safeHeight * 0.36);
+  ctx.lineTo(safeWidth * 0.36, safeHeight * 0.34);
+  ctx.lineTo(-safeWidth * 0.36, safeHeight * 0.48);
+  ctx.closePath();
   ctx.fill();
   ctx.stroke();
 
   if (logo) {
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(0, 0, Math.max(1, safeRadius - 1), 0, Math.PI * 2);
+    roundedRectPath(ctx, -safeWidth * 0.32, -safeHeight * 0.34, safeWidth * 0.64, safeHeight * 0.68, Math.max(1, safeWidth * 0.1));
     ctx.clip();
-    const size = Math.round((safeRadius - 1) * 2);
+    const size = Math.round(Math.min(safeWidth, safeHeight) * 0.78);
     ctx.drawImage(logo.image, -size / 2, -size / 2, size, size);
     ctx.restore();
   } else {
     ctx.fillStyle = "#102333";
-    ctx.font = `700 ${Math.max(5, safeRadius * 1.15)}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.font = `800 ${Math.max(5, Math.min(safeHeight * 0.72, safeWidth * 0.48))}px ui-sans-serif, system-ui, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(mark.slice(0, 2).toUpperCase(), 0, 0.4);
+    ctx.fillText(mark.slice(0, 2).toUpperCase(), 0, 0.4, safeWidth * 0.66);
     ctx.textAlign = "start";
     ctx.textBaseline = "alphabetic";
+  }
+  ctx.restore();
+}
+
+function drawShipSignalOverlay(
+  ctx: CanvasRenderingContext2D,
+  overlay: PharosVilleWorld["ships"][number]["visual"]["overlay"],
+  x: number,
+  y: number,
+  scale: number,
+) {
+  if (overlay === "none") return;
+  const color = overlay === "nav" ? "#d9b974" : overlay === "yield" ? "#78b689" : "#9fb0aa";
+  ctx.save();
+  ctx.strokeStyle = "#2f2117";
+  ctx.lineWidth = Math.max(1, 1 * scale);
+  ctx.beginPath();
+  ctx.moveTo(x, y + 10 * scale);
+  ctx.lineTo(x, y - 8 * scale);
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x, y - 8 * scale);
+  ctx.lineTo(x + 10 * scale, y - 5 * scale);
+  ctx.lineTo(x + 7 * scale, y);
+  ctx.lineTo(x, y - 1 * scale);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  if (overlay === "nav") {
+    ctx.fillStyle = "rgba(255, 241, 191, 0.48)";
+    ctx.beginPath();
+    ctx.ellipse(x + 5 * scale, y - 3 * scale, 6 * scale, 2.4 * scale, -0.08, 0, Math.PI * 2);
+    ctx.fill();
   }
   ctx.restore();
 }

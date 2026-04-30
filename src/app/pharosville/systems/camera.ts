@@ -26,9 +26,18 @@ export function defaultCamera(input: {
   map: MapLike;
   width: number;
 }): IsoCamera {
-  return fitCameraToMap({
+  const fitted = fitCameraToMap({
     ...input,
     padding: cameraPadding(),
+  });
+  const tightened = zoomCameraAt(
+    fitted,
+    { x: input.width * 0.54, y: input.height * 0.5 },
+    fitted.zoom * 1.13,
+  );
+  return clampCameraToMap(tightened, {
+    map: input.map,
+    viewport: { x: input.width, y: input.height },
   });
 }
 
