@@ -48,7 +48,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - ship scale uses exaggerated compressed market-cap tiers, not linear supply area, so $1B+ issuers are spottable while USDT and USDC remain capped
 - ship reduced-motion/static placement uses each ship's risk-water idle tile, or Ledger Mooring for NAV ledger assets; rendered dock moorings remain active route stops rather than the static representative position
 - normal-motion ships follow slow deterministic water-only harbor cycles, with seeded detours between chain moorings and their peg/DEWS risk water
-- DEWS-driven risk water areas follow the diagrammed sea-zone field: Calm Anchorage owns the large left-edge vertical basin, Watch Breakwater owns the wide top-edge band, Ledger Mooring owns the bottom-edge basin, and Alert Channel / Warning Shoals / Danger Strait form overlapping lower-right rings; each area has its own terrain texture, printed label, selectable hit target, and live band counts in details and the accessibility ledger
+- DEWS-driven risk water areas follow the diagrammed sea-zone field: Calm Anchorage owns the large left-edge vertical basin, Watch Breakwater owns the wide top-edge band, Ledger Mooring owns the bottom-edge basin, and Alert Channel / Warning Shoals / Danger Strait form overlapping rings snapped to the eastern angled shelf; each area has its own terrain texture, printed label, selectable hit target, and live band counts in details and the accessibility ledger
 - fresh ship risk water maps to Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, or Danger Strait; stale/low-confidence evidence stays as an evidence caveat on Calm Anchorage fallback placement, and NAV ledger assets use Ledger Mooring ledger water below the harbor in a quiet bottom basin. Normal-motion dockless patrols use current or adjacent same-purpose sea anchors so every risk zone has meaningful water-only travel
 - ship docking cadence comes from `stablecoins.chainCirculating` chain presence, while risk water comes from `pegSummary.coins[]` and `stress.signals[]`; DOM details expose the route source, named risk water area, risk water zone, home dock, chain-presence count, and cadence text
 - active ships draw painted sail marks or pennants when a local logo asset is available; secondary `ShipVisual.overlay` cues render as tiny lanterns, pennants, or signal flags rather than circular badges
@@ -73,17 +73,17 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 ## DEWS sea zones
 
 Five DEWS zones encircle the island, with CALM/WATCH snapped to map edges and
-the higher-risk bands drawn as overlapping lower-right rings sized roughly
+the higher-risk bands drawn as overlapping eastern-corner rings sized roughly
 proportionally to the ships they must host:
 
 - **Calm Anchorage** — large left-edge vertical anchorage basin.
 - **Watch Breakwater** — wide top-edge breakwater band.
-- **Alert Channel** — outer lower-right channel ring.
-- **Warning Shoals** — middle lower-right shoal ring.
-- **Danger Strait** — inner/right lower-right storm ring.
+- **Alert Channel** — outer eastern channel ring.
+- **Warning Shoals** — middle eastern shoal ring, bridged into Danger Strait.
+- **Danger Strait** — inner/right storm strait snapped to the angled east edge.
 
-The three escalation zones (ALERT + WARNING + DANGER) cover the lower-right
-basin with overlapping rings rather than hard rectangles. A two-tile periphery
+The three escalation zones (ALERT + WARNING + DANGER) cover the eastern corner
+with overlapping rings rather than hard rectangles. A two-tile periphery
 around all island lobes and water tiles inside a lighthouse visual-clearance box
 (x:14..24, y:23..32) remain generic water so zones don't crowd the island or the
 lighthouse sprite.
@@ -102,7 +102,7 @@ The planned PharosVille visual grammar is:
 - ship base sprite = governance class (`centralized` CeFi, `centralized-dependent` CeFi-Dep, `decentralized` DeFi), with legacy algorithmic backing reserved as a fallback hull
 - ship scale = exaggerated compressed market-cap tier from Micro/Unknown through Flagship, with exact market cap exposed in the detail panel
 - ship sail mark = stablecoin logo, falling back to a short symbol mark
-- ship route distance from shore = peg/depeg risk first, with fresh DEWS escalation mapped from left/top calm/watch water into the lower-right Alert Channel, Warning Shoals, and Danger Strait terrain while high-risk areas route around the island rather than underneath the lighthouse
+- ship route distance from shore = peg/depeg risk first, with fresh DEWS escalation mapped from left/top calm/watch water into the eastern Alert Channel, Warning Shoals, and Danger Strait terrain while high-risk areas route around the island rather than underneath the lighthouse
 - ship representative position and docking cadence = positive chain supply across the rendered chain harbors, shown as slow water-only passages rather than real-time transfer flow
 - sea/weather = aggregate DEWS breadth, with evidence caveats for stale/low-confidence placement inputs, ledger water for NAV-ledger placement, and storm local textures for danger areas
 - cemetery = dead and frozen assets from merged cemetery data, with each tomb marker using the local memorial marker sprite for its cause-aware shape, a stone-mounted local cemetery logo on selected or major memorials when available, and a cause-of-death plaque keyed to the same color taxonomy as the cemetery legend

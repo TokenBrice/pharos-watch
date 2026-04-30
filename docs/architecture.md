@@ -208,9 +208,10 @@ samples slow deterministic water-only harbor cycles with seeded detours between
 chain moorings and risk water using
 `stablecoins.chainCirculating`, `pegSummary.coins[]`, and `stress.signals[]`.
 ALERT, WARNING, and DANGER risk anchors sit in successive Alert Channel,
-Warning Shoals, and Danger Strait terrain bands so the water treatment escalates
-with DEWS severity. Long-tail ships beyond the individual rendering budget are
-split into count-capped water-zone clusters instead of one large marker. The
+Warning Shoals, and Danger Strait terrain bands snapped to the eastern angled
+shelf so the water treatment escalates with DEWS severity. Long-tail ships
+beyond the individual rendering budget are split into count-capped water-zone
+clusters instead of one large marker. The
 canvas renderer uses local logos for ship sails and cemetery tomb markers while
 the DOM detail panel remains the accessible source of analytical truth,
 including route source, risk water, home dock, chain presence, and docking

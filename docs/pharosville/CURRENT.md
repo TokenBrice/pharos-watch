@@ -49,14 +49,15 @@ Edge-anchored compound masks (current iteration as of 2026-04-30):
 | Zone | Primary edge | Bounds | Approx tiles |
 |------|--------------|--------|-------------:|
 | CALM | x=0 | large left-edge vertical anchorage basin | ~549 |
-| WATCH | y=0 | wide top-edge breakwater band | ~548 |
-| ALERT | lower-right basin | outer lower-right ring | ~117 |
-| WARNING | lower-right basin | middle lower-right ring | ~99 |
-| DANGER | lower-right basin | inner/right lower-right storm ring | ~90 |
+| WATCH | y=0 | wide top-edge breakwater band | ~408 |
+| ALERT | x=55/eastern corner | outer eastern ring | ~142 |
+| WARNING | x=55/eastern corner | middle eastern ring bridged into Danger Strait | ~114 |
+| DANGER | x=55/eastern corner | inner/right storm strait on the angled shelf | ~74 |
 
-Lower-right basin is covered by overlapping ALERT+WARNING+DANGER water. Two-tile
-island periphery and lighthouse visual-clearance box (x:14..24, y:23..32) are
-generic water.
+The eastern corner is covered by overlapping ALERT+WARNING+DANGER water, with
+Warning Shoals touching the Danger Strait shelf rather than leaving a generic
+water gap. Two-tile island periphery and lighthouse visual-clearance box
+(x:14..24, y:23..32) are generic water.
 - Stale or missing peg evidence maps to Calm Anchorage with an evidence caveat unless a fresher risk signal exists; it must not create a separate sea zone or masquerade as storm/depeg risk.
 - Stablecoin supply values from the list payload are already USD-denominated. Use `getCirculatingRaw()` for market-cap visual tiers.
 - Local runtime assets come from `public/pharosville/assets/` and `manifest.json`. Do not reference Pixellab URLs or remote assets at runtime.

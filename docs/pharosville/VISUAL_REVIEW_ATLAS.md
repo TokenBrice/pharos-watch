@@ -50,7 +50,7 @@ Use this checklist when approving screenshot changes:
 
 - The world reads as a maritime analytical map, not a generic game backdrop.
 - The lighthouse, EVM bay, cemetery, civic spine, DEWS water areas, and Ledger Mooring are all visually distinguishable.
-- The DEWS sea reads as a clear escalation route matching the current compound masks: Calm Anchorage fills the large left-edge vertical basin, Watch Breakwater owns the wide top-edge band, Alert Channel, Warning Shoals, and Danger Strait occupy overlapping lower-right rings, and Ledger Mooring reads as quiet ledger water along the bottom edge away from top-chain harbor traffic.
+- The DEWS sea reads as a clear escalation route matching the current compound masks: Calm Anchorage fills the large left-edge vertical basin, Watch Breakwater owns the wide top-edge band, Alert Channel, Warning Shoals, and Danger Strait occupy overlapping eastern-corner rings with Danger snapped to the angled shelf, and Ledger Mooring reads as quiet ledger water along the bottom edge away from top-chain harbor traffic.
 - The default composition stays around 78-82% water while still showing enough coast, piers, islets, and districts to feel authored rather than empty.
 - Terrain sprites add texture, but semantic overlay colors still make calm/watch/alert/warning/danger/ledger water distinguishable.
 - Ships remain readable at default zoom; very large stablecoins are capped rather than overwhelming the map.

@@ -93,7 +93,7 @@ export const RISK_WATER_AREAS: Record<ShipRiskPlacement, RiskWaterAreaDefinition
     labelTile: { x: 49, y: 22 },
     terrain: "alert-water",
     validTerrains: ["alert-water"],
-    waterStyle: "lower-right alert channel",
+    waterStyle: "eastern alert channel",
     motionZone: "alert",
     shipAnchors: [
       { x: 49, y: 22 },
@@ -114,7 +114,7 @@ export const RISK_WATER_AREAS: Record<ShipRiskPlacement, RiskWaterAreaDefinition
     labelTile: { x: 50, y: 17 },
     terrain: "warning-water",
     validTerrains: ["warning-water"],
-    waterStyle: "lower-right warning shoals",
+    waterStyle: "eastern warning shoals",
     motionZone: "warning",
     shipAnchors: [
       { x: 55, y: 1 },
@@ -135,7 +135,7 @@ export const RISK_WATER_AREAS: Record<ShipRiskPlacement, RiskWaterAreaDefinition
     labelTile: { x: 54, y: 8 },
     terrain: "storm-water",
     validTerrains: ["storm-water"],
-    waterStyle: "lower-right danger strait",
+    waterStyle: "eastern angled danger strait",
     motionZone: "danger",
     shipAnchors: [
       { x: 55, y: 8 },
