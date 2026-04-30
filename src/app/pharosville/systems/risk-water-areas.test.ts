@@ -125,7 +125,7 @@ describe("risk water areas", () => {
     const expectedSamples = [
       { band: "CALM", tile: { x: 8, y: 32 }, terrain: "calm-water" },
       { band: "WATCH", tile: { x: 12, y: 6 }, terrain: "watch-water" },
-      { band: "ALERT", tile: { x: 46, y: 8 }, terrain: "alert-water" },
+      { band: "ALERT", tile: { x: 45, y: 7 }, terrain: "alert-water" },
       { band: "WARNING", tile: { x: 53, y: 7 }, terrain: "warning-water" },
       { band: "DANGER", tile: { x: 53, y: 19 }, terrain: "storm-water" },
     ] as const;
@@ -220,6 +220,19 @@ describe("risk water areas", () => {
       const terrain = terrainKindAt(tile.x, tile.y);
       const isZoneTerrain = ["calm-water", "watch-water", "alert-water", "warning-water", "storm-water"].includes(terrain);
       expect(isZoneTerrain, `${tile.x}.${tile.y} should be generic water, got ${terrain}`).toBe(false);
+    }
+  });
+
+  it("clears the immediate periphery around the lighthouse sprite", () => {
+    const lighthouseClearanceSamples = [
+      { x: 44, y: 14 },
+      { x: 45, y: 13 },
+      { x: 47, y: 16 },
+    ];
+    for (const tile of lighthouseClearanceSamples) {
+      const terrain = terrainKindAt(tile.x, tile.y);
+      const isZoneTerrain = ["calm-water", "watch-water", "alert-water", "warning-water", "storm-water"].includes(terrain);
+      expect(isZoneTerrain, `${tile.x}.${tile.y} should be generic water (lighthouse clearance), got ${terrain}`).toBe(false);
     }
   });
 
