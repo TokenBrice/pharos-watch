@@ -26,8 +26,16 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 - Docks are capped by `MAX_CHAIN_HARBORS`; they represent top-chain stablecoin supply, not all chains.
 - The cemetery remains a compact memorial precinct separated from the EVM bay and lighthouse approach.
 - Two inland data buildings, Royal Mint And Burn Foundry and Exit Route Gatehouse, sit along the main-island road spine with a quiet memorial precinct between the harbor edge and civic anchors.
-- DEWS sea geography follows the current placement diagram: Calm Anchorage owns the large west-edge basin, Watch Breakwater sits above the island in the northwest/top-left water, Alert Channel occupies the top-center channel, Warning Shoals wraps the lighthouse-side northeast water, and Danger Strait attaches to the far east edge. Warning Shoals and Danger Strait must keep label hit targets clear of the lighthouse tower rectangle.
-- Calm Anchorage is intentionally the largest DEWS water block and should fill the open western basin to reduce calm-ship overlap around the western harbor/shore.
+- DEWS zone edge anchoring (each zone has a primary map edge):
+  - CALM ANCHORAGE → x=0 (left tile edge), large lower-left basin
+  - WATCH BREAKWATER → y=0 (top tile edge), spans x=0..29 with corner (0,0) excluded
+  - ALERT CHANNEL → y=0 (top tile edge), spans x=30..47, connects to WATCH
+  - WARNING SHOALS → x=55 (right tile edge), spans y=0..14
+  - DANGER STRAIT → x=55 (right tile edge), spans y=15..24, touches WARNING
+- Eastern corner (around tile 55,0) is fully covered by ALERT/WARNING/DANGER
+- Two-tile island periphery (islandValue 1.0–1.10) is reserved as generic water
+- Lighthouse visual clearance (x:41..47, y:12..17) is generic water (lighthouse sprite breathing room)
+- Tile (0,0) stays deep-water as decoration
 - Ledger Mooring should remain a quiet owned basin below the harbor in ledger water. Freeze/blacklist tracker activity remains outside PharosVille and belongs to the `/blacklist/` product surface.
 
 ## Entity Semantics

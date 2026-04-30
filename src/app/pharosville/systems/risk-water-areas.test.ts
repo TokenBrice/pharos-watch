@@ -72,22 +72,24 @@ describe("risk water areas", () => {
     }
   });
 
-  it("orders DEWS sea zones left-to-right while routing severe zones around the lighthouse", () => {
-    let previousIso: { x: number; y: number } | null = null;
-    const isoByBand = new Map<DewsAreaBand, { x: number; y: number }>();
+  it("orders DEWS sea zones around the lighthouse with WARNING far-right and DANGER below it", () => {
     const lighthouseIso = tileToIso(LIGHTHOUSE_TILE);
+    const isoByBand = new Map<DewsAreaBand, { x: number; y: number }>();
     for (const band of WEST_TO_EAST_DEWS_BANDS) {
       const area = RISK_WATER_AREAS[DEWS_AREA_PLACEMENTS[band]];
-      const iso = tileToIso(area.labelTile);
-      isoByBand.set(band, iso);
-
-      if (previousIso) {
-        expect(iso.x).toBeGreaterThan(previousIso.x);
-      }
-      previousIso = iso;
+      isoByBand.set(band, tileToIso(area.labelTile));
     }
-    expect(isoByBand.get("WARNING")!.x).toBeGreaterThanOrEqual(lighthouseIso.x + 96);
-    expect(isoByBand.get("DANGER")!.x).toBeGreaterThan(isoByBand.get("WARNING")!.x + 96);
+    const calm = isoByBand.get("CALM")!;
+    const watch = isoByBand.get("WATCH")!;
+    const alert = isoByBand.get("ALERT")!;
+    const warning = isoByBand.get("WARNING")!;
+    const danger = isoByBand.get("DANGER")!;
+
+    expect(watch.x).toBeGreaterThan(calm.x);
+    expect(alert.x).toBeGreaterThan(watch.x);
+    expect(warning.x).toBeGreaterThanOrEqual(lighthouseIso.x + 96);
+    expect(danger.y).toBeGreaterThan(warning.y + 32);
+    expect(warning.x).toBeGreaterThanOrEqual(danger.x);
   });
 
   it("keeps Ledger Mooring as the only bottom sea exception zone", () => {
@@ -121,11 +123,11 @@ describe("risk water areas", () => {
 
   it("matches the authored DEWS placement diagram", () => {
     const expectedSamples = [
-      { band: "CALM", tile: { x: 8, y: 29 }, terrain: "calm-water" },
-      { band: "WATCH", tile: { x: 23, y: 14 }, terrain: "watch-water" },
-      { band: "ALERT", tile: { x: 35, y: 10 }, terrain: "alert-water" },
-      { band: "WARNING", tile: { x: 47, y: 16 }, terrain: "warning-water" },
-      { band: "DANGER", tile: { x: 54, y: 18 }, terrain: "storm-water" },
+      { band: "CALM", tile: { x: 8, y: 32 }, terrain: "calm-water" },
+      { band: "WATCH", tile: { x: 14, y: 6 }, terrain: "watch-water" },
+      { band: "ALERT", tile: { x: 45, y: 7 }, terrain: "alert-water" },
+      { band: "WARNING", tile: { x: 53, y: 7 }, terrain: "warning-water" },
+      { band: "DANGER", tile: { x: 53, y: 19 }, terrain: "storm-water" },
     ] as const;
 
     for (const sample of expectedSamples) {
@@ -134,11 +136,14 @@ describe("risk water areas", () => {
       expect(terrainKindAt(sample.tile.x, sample.tile.y)).toBe(sample.terrain);
     }
 
-    expect(terrainKindAt(0, 28)).toBe("calm-water");
-    expect(terrainKindAt(24, 0)).toBe("watch-water");
-    expect(terrainKindAt(35, 0)).toBe("alert-water");
-    expect(terrainKindAt(54, 10)).toBe("warning-water");
-    expect(terrainKindAt(55, 14)).toBe("storm-water");
+    expect(terrainKindAt(0, 32)).toBe("calm-water");
+    expect(terrainKindAt(14, 0)).toBe("watch-water");
+    expect(terrainKindAt(36, 0)).toBe("alert-water");
+    expect(terrainKindAt(55, 7)).toBe("warning-water");
+    expect(terrainKindAt(55, 16)).toBe("storm-water");
+    expect(terrainKindAt(55, 0)).toBe("warning-water");
+    expect(terrainKindAt(55, 14)).toBe("warning-water");
+    expect(terrainKindAt(55, 15)).toBe("storm-water");
     expect(RISK_WATER_AREAS["ledger-mooring"].regionTile.y).toBeGreaterThan(45);
   });
 
@@ -177,6 +182,76 @@ describe("risk water areas", () => {
         }
       }
     }
+  });
+
+  it("anchors each DEWS zone to exactly one map edge", () => {
+    const expectedEdge: Record<DewsAreaBand, "x0" | "x55" | "y0" | "y55"> = {
+      CALM: "x0",
+      WATCH: "y0",
+      ALERT: "y0",
+      WARNING: "x55",
+      DANGER: "x55",
+    };
+    const MAX = PHAROSVILLE_MAP_WIDTH - 1;
+
+    for (const band of DEWS_AREA_BANDS) {
+      const area = RISK_WATER_AREAS[DEWS_AREA_PLACEMENTS[band]];
+      const edge = expectedEdge[band];
+      const onEdge = (tile: { x: number; y: number }): boolean => {
+        if (edge === "x0") return tile.x === 0;
+        if (edge === "x55") return tile.x === MAX;
+        if (edge === "y0") return tile.y === 0;
+        return tile.y === MAX;
+      };
+      const hasEdgeTile = area.shipAnchors.some(onEdge);
+      expect(hasEdgeTile, `${band} should have at least one anchor on its primary edge ${edge}`).toBe(true);
+    }
+  });
+
+  it("keeps the direct island periphery out of every zone", () => {
+    const peripherySamples = [
+      { x: 21, y: 30 },
+      { x: 29, y: 23 },
+      { x: 49, y: 24 },
+      { x: 35, y: 44 },
+      { x: 22, y: 34 },
+    ];
+    for (const tile of peripherySamples) {
+      const terrain = terrainKindAt(tile.x, tile.y);
+      const isZoneTerrain = ["calm-water", "watch-water", "alert-water", "warning-water", "storm-water"].includes(terrain);
+      expect(isZoneTerrain, `${tile.x}.${tile.y} should be generic water, got ${terrain}`).toBe(false);
+    }
+  });
+
+  it("clears the immediate periphery around the lighthouse sprite", () => {
+    const lighthouseClearanceSamples = [
+      { x: 44, y: 14 },
+      { x: 45, y: 13 },
+      { x: 47, y: 16 },
+    ];
+    for (const tile of lighthouseClearanceSamples) {
+      const terrain = terrainKindAt(tile.x, tile.y);
+      const isZoneTerrain = ["calm-water", "watch-water", "alert-water", "warning-water", "storm-water"].includes(terrain);
+      expect(isZoneTerrain, `${tile.x}.${tile.y} should be generic water (lighthouse clearance), got ${terrain}`).toBe(false);
+    }
+  });
+
+  it("sizes each zone proportionally to ship count", () => {
+    const counts: Record<string, number> = {};
+    for (let y = 0; y < PHAROSVILLE_MAP_HEIGHT; y += 1) {
+      for (let x = 0; x < PHAROSVILLE_MAP_WIDTH; x += 1) {
+        const t = terrainKindAt(x, y);
+        counts[t] = (counts[t] ?? 0) + 1;
+      }
+    }
+    expect(counts["calm-water"]).toBeGreaterThan(counts["watch-water"]);
+    expect(counts["watch-water"]).toBeGreaterThan(counts["alert-water"]);
+    expect(counts["alert-water"]).toBeGreaterThan(counts["warning-water"] ?? 0);
+    expect(counts["alert-water"]).toBeGreaterThan(counts["storm-water"] ?? 0);
+    expect(counts["warning-water"] ?? 0).toBeGreaterThanOrEqual(30);
+    expect(counts["warning-water"] ?? 0).toBeLessThanOrEqual(120);
+    expect(counts["storm-water"] ?? 0).toBeGreaterThanOrEqual(30);
+    expect(counts["storm-water"] ?? 0).toBeLessThanOrEqual(80);
   });
 });
 

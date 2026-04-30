@@ -10,6 +10,7 @@ export const MAX_TILE_Y = PHAROSVILLE_MAP_HEIGHT - 1;
 export const LIGHTHOUSE_TILE = { x: 44, y: 18 } as const;
 export const CIVIC_CORE_CENTER = { x: 34, y: 30 } as const;
 export const CIVIC_CORE_RADIUS = 7.0;
+export const ISLAND_PERIPHERY_BUFFER = 1.1;
 
 export const REGION_TILES: Record<ShipRiskPlacement, { x: number; y: number }> = RISK_WATER_REGION_TILES;
 
@@ -112,12 +113,15 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
 
   if (isOutOfBounds(x, y) || island >= 1 || harborWater) {
     if (harborWater) return "harbor-water";
-    if (isDangerStrait(x, y)) return "storm-water";
-    if (isWarningShoals(x, y)) return "warning-water";
-    if (isAlertChannel(x, y)) return "alert-water";
-    if (isWatchBreakwater(x, y)) return "watch-water";
-    if (isLedgerMooring(x, y)) return "ledger-water";
-    if (isCalmAnchorage(x, y)) return "calm-water";
+    const inIslandPeriphery = island >= 1 && island < ISLAND_PERIPHERY_BUFFER;
+    if (!inIslandPeriphery && !isLighthouseVisualClearance(x, y)) {
+      if (isDangerStrait(x, y)) return "storm-water";
+      if (isWarningShoals(x, y)) return "warning-water";
+      if (isAlertChannel(x, y)) return "alert-water";
+      if (isWatchBreakwater(x, y)) return "watch-water";
+      if (isLedgerMooring(x, y)) return "ledger-water";
+      if (isCalmAnchorage(x, y)) return "calm-water";
+    }
     if (isDeepSeaShelf(x, y)) return "deep-water";
     return "water";
   }
@@ -172,63 +176,33 @@ function harborApproachValue(x: number, y: number): number {
 }
 
 function isAlertChannel(x: number, y: number): boolean {
-  const channel = ellipseValue(x, y, 35.0, 10.2, 7.6, 6.3) < 1
-    && x >= 28
-    && x <= 42
-    && y >= 4
-    && y <= 19;
-  const northEdgeAttachment = y <= 1
-    && x >= 34
-    && x <= 39;
-  return channel || northEdgeAttachment;
+  return x >= 30 && x <= 47 && y >= 0 && y <= 11;
 }
 
 function isWarningShoals(x: number, y: number): boolean {
-  const shoals = ellipseValue(x, y, 47.0, 16.5, 6.3, 7.5) < 1
-    && x >= 41
-    && x <= 53
-    && y >= 9
-    && y <= 25;
-  const eastEdgeAttachment = x >= 54
-    && y >= 8
-    && y <= 11;
-  return shoals || eastEdgeAttachment;
+  return x >= 48 && x <= 55 && y >= 0 && y <= 14;
+}
+
+// Visual buffer around the lighthouse sprite — taller than its tile-space ellipse,
+// so we exclude this rectangle from zone-water rendering to give the lighthouse breathing room.
+function isLighthouseVisualClearance(x: number, y: number): boolean {
+  return x >= 41 && x <= 47 && y >= 12 && y <= 17;
 }
 
 function isDangerStrait(x: number, y: number): boolean {
-  const strait = ellipseValue(x, y, 53.5, 18.2, 4.7, 6.2) < 1
-    && x >= 50
-    && x <= 55
-    && y >= 12
-    && y <= 25;
-  const eastEdgeAttachment = x >= 54
-    && y >= 14
-    && y <= 24;
-  return strait || eastEdgeAttachment;
+  return x >= 50 && x <= 55 && y >= 15 && y <= 24;
 }
 
+// Extends to the upper-left diamond edge (x=0) and to ALERT's left boundary (x=29).
+// The (0, 0) corner stays deep-water decoration.
 function isWatchBreakwater(x: number, y: number): boolean {
-  const breakwater = ellipseValue(x, y, 23.1, 13.7, 12.2, 8.2) < 1
-    && x >= 11
-    && x <= 35
-    && y >= 5
-    && y <= 23;
-  const northEdgeAttachment = y <= 1
-    && x >= 22
-    && x <= 28;
-  return breakwater || northEdgeAttachment;
+  if (x === 0 && y === 0) return false;
+  return x >= 0 && x <= 29 && y >= 0 && y <= 13;
 }
 
+// Wraps the lower-left of the diamond from upper-left mid-band to bottom-left.
 function isCalmAnchorage(x: number, y: number): boolean {
-  const anchorage = ellipseValue(x, y, 9.0, 29.4, 17.2, 11.7) < 1
-    && x >= 0
-    && x <= 25
-    && y >= 18
-    && y <= 41;
-  const westEdgeAttachment = x <= 9
-    && y >= 20
-    && y <= 38;
-  return anchorage || westEdgeAttachment;
+  return x >= 0 && x <= 22 && y >= 14 && y <= 54;
 }
 
 function isCemeteryCausewayTile(x: number, y: number): boolean {
