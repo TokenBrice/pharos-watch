@@ -3,9 +3,10 @@
   min-height: 100svh;
   place-items: center;
   background:
-    repeating-linear-gradient(0deg, rgba(242, 184, 91, 0.05) 0 2px, transparent 2px 6px),
-    linear-gradient(180deg, #1b120c, #070609);
-  color: #f6d58a;
+    repeating-linear-gradient(0deg, rgba(236, 196, 116, 0.045) 0 2px, transparent 2px 7px),
+    radial-gradient(circle at 50% 12%, rgba(104, 180, 172, 0.2), transparent 34%),
+    linear-gradient(180deg, #102526, #061015 72%);
+  color: #f6e3b7;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 0.92rem;
   font-weight: 700;
@@ -28,10 +29,11 @@
   min-height: 100svh;
   padding: 32px 18px;
   background:
-    radial-gradient(circle at 50% 18%, rgba(186, 67, 44, 0.22), transparent 34%),
-    repeating-linear-gradient(90deg, rgba(246, 213, 138, 0.045) 0 1px, transparent 1px 12px),
-    linear-gradient(180deg, #23140d, #09070a 72%);
-  color: #f7dfac;
+    radial-gradient(circle at 50% 16%, rgba(213, 165, 78, 0.2), transparent 34%),
+    radial-gradient(circle at 16% 76%, rgba(104, 180, 172, 0.16), transparent 28%),
+    repeating-linear-gradient(90deg, rgba(246, 226, 182, 0.04) 0 1px, transparent 1px 12px),
+    linear-gradient(180deg, #102526, #061015 72%);
+  color: #f4e5c4;
   font-family: Georgia, "Times New Roman", serif;
 }
 
@@ -47,19 +49,33 @@
   position: absolute;
   inset: min(18svh, 120px) -18px -24px;
   z-index: -1;
-  border: 4px solid #6c4521;
+  border: 4px solid #83633c;
   background:
-    linear-gradient(135deg, rgba(255, 226, 155, 0.12), transparent 38%),
-    #21150f;
+    linear-gradient(135deg, rgba(255, 226, 155, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(20, 46, 48, 0.96), rgba(8, 19, 24, 0.98));
   box-shadow:
-    0 0 0 1px #e0b861,
-    inset 0 0 0 1px rgba(17, 9, 6, 0.82),
-    0 28px 80px rgba(0, 0, 0, 0.42);
+    0 0 0 1px #d6a85b,
+    inset 0 0 0 1px rgba(4, 11, 14, 0.82),
+    inset 0 20px 42px rgba(100, 178, 170, 0.08),
+    0 28px 80px rgba(3, 8, 10, 0.48);
+}
+
+.pharosville-narrow__beacon {
+  width: 44px;
+  height: 44px;
+  margin-bottom: 18px;
+  border: 3px solid #d6a85b;
+  background:
+    linear-gradient(90deg, transparent 42%, rgba(246, 226, 182, 0.34) 42% 58%, transparent 58%),
+    linear-gradient(180deg, rgba(246, 226, 182, 0.18), rgba(9, 24, 30, 0.92));
+  box-shadow:
+    0 0 0 1px rgba(246, 226, 182, 0.22),
+    0 12px 32px rgba(214, 168, 91, 0.18);
 }
 
 .pharosville-narrow__kicker {
   margin: 0 0 10px;
-  color: #f0b24d;
+  color: #d6a85b;
   font-size: 0.75rem;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -69,17 +85,17 @@
 .pharosville-narrow h2 {
   margin: 0;
   max-width: 12ch;
-  color: #fff0bd;
+  color: #fff0c7;
   font-size: clamp(2.5rem, 10vw, 4.9rem);
   font-weight: 900;
   line-height: 0.95;
-  text-shadow: 0 3px 0 #3c1f13, 0 10px 24px rgba(0, 0, 0, 0.42);
+  text-shadow: 0 3px 0 #102526, 0 10px 24px rgba(3, 8, 10, 0.48);
 }
 
 .pharosville-narrow p {
   margin: 20px 0 0;
   max-width: 52ch;
-  color: rgba(247, 223, 172, 0.86);
+  color: rgba(244, 229, 196, 0.86);
   font-size: 1rem;
   line-height: 1.65;
 }
@@ -93,33 +109,46 @@
 
 .pharosville-narrow__links a {
   min-height: 44px;
-  border: 2px solid #8d5c2f;
+  border: 2px solid #83633c;
   border-radius: 0;
   padding: 10px 14px;
   background:
-    linear-gradient(180deg, #3a2415, #1a100b);
-  color: #fff0bd;
+    linear-gradient(180deg, #173235, #09181e);
+  color: #fff0c7;
   font-size: 0.9rem;
   font-weight: 900;
   text-decoration: none;
-  box-shadow: inset 0 0 0 1px rgba(255, 222, 145, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(246, 226, 182, 0.2);
+}
+
+.pharosville-narrow__links a:hover {
+  border-color: #d6a85b;
+  color: #fff7df;
+}
+
+.pharosville-narrow__links a:focus-visible {
+  outline: 2px solid #ffe4a8;
+  outline-offset: 3px;
 }
 
 .pharosville-shell {
-  --pv-ink: #120b08;
-  --pv-panel: rgba(32, 20, 13, 0.94);
-  --pv-panel-dark: rgba(15, 10, 8, 0.96);
-  --pv-gold: #f0b24d;
-  --pv-gold-bright: #ffe0a0;
-  --pv-parchment: #f7dfac;
-  --pv-muted: rgba(247, 223, 172, 0.76);
-  --pv-border: #7e5129;
-  --pv-border-dark: #2b170e;
-  --pv-ruby: #b6422e;
+  --pv-ink: #07110f;
+  --pv-panel: rgba(18, 43, 44, 0.94);
+  --pv-panel-dark: rgba(7, 18, 23, 0.96);
+  --pv-gold: #d6a85b;
+  --pv-gold-bright: #ffe4a8;
+  --pv-parchment: #f4e5c4;
+  --pv-muted: rgba(244, 229, 196, 0.76);
+  --pv-border: #89683d;
+  --pv-border-dark: #203633;
+  --pv-ruby: #d06442;
+  --pv-teal: #79c8bd;
+  --pv-copper: #b66f3f;
+  --pv-shadow: rgba(3, 8, 10, 0.44);
   position: relative;
   min-height: 100svh;
   overflow: hidden;
-  background: #070609;
+  background: #061015;
   font-family: Georgia, "Times New Roman", serif;
   image-rendering: pixelated;
 }
@@ -138,14 +167,14 @@
   border: 4px solid var(--pv-border-dark);
   outline: 2px solid var(--pv-border);
   box-shadow:
-    inset 0 0 0 2px rgba(255, 224, 160, 0.24),
-    inset 0 0 80px rgba(0, 0, 0, 0.32);
+    inset 0 0 0 2px rgba(255, 228, 168, 0.22),
+    inset 0 0 80px rgba(3, 8, 10, 0.34);
 }
 
 .pharosville-shell::after {
   background:
-    repeating-linear-gradient(0deg, rgba(255, 224, 160, 0.035) 0 1px, transparent 1px 4px),
-    radial-gradient(circle at 50% 52%, transparent 0 44%, rgba(0, 0, 0, 0.36) 100%);
+    repeating-linear-gradient(0deg, rgba(255, 228, 168, 0.03) 0 1px, transparent 1px 4px),
+    radial-gradient(circle at 50% 52%, transparent 0 44%, rgba(3, 8, 10, 0.36) 100%);
   mix-blend-mode: soft-light;
 }
 
@@ -202,9 +231,9 @@
   top: 26px;
   left: 24px;
   display: grid;
-  width: min(360px, calc(100% - 492px));
+  width: min(420px, calc(100% - 560px));
   max-height: calc(100% - 72px);
-  gap: 8px;
+  gap: 10px;
   overflow: auto;
   padding: 2px;
   pointer-events: none;
@@ -245,13 +274,14 @@
   border: 4px solid var(--pv-border);
   border-radius: 0;
   background:
-    linear-gradient(135deg, rgba(255, 226, 155, 0.12), transparent 36%),
+    linear-gradient(135deg, rgba(255, 228, 168, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(121, 200, 189, 0.1), transparent 28%),
     linear-gradient(180deg, var(--pv-panel), var(--pv-panel-dark));
   box-shadow:
-    0 0 0 1px #e0b861,
-    inset 0 0 0 1px rgba(18, 11, 8, 0.9),
-    inset 0 -16px 0 rgba(0, 0, 0, 0.13),
-    0 18px 42px rgba(0, 0, 0, 0.42);
+    0 0 0 1px rgba(214, 168, 91, 0.86),
+    inset 0 0 0 1px rgba(4, 11, 14, 0.9),
+    inset 0 -16px 0 rgba(3, 8, 10, 0.18),
+    0 18px 42px var(--pv-shadow);
   clip-path: polygon(
     0 8px,
     8px 8px,
@@ -269,7 +299,7 @@
 }
 
 .pharosville-detail-dock > [data-testid="pharosville-detail-panel"] {
-  padding: 14px;
+  padding: 16px;
 }
 
 .pharosville-detail-dock > [data-testid="pharosville-detail-panel"] {
@@ -309,11 +339,11 @@
   font-size: 0.86rem;
   font-weight: 900;
   letter-spacing: 0.04em;
-  text-shadow: 0 2px 0 #3a1f13;
+  text-shadow: 0 2px 0 #07110f;
 }
 
 .pharosville-detail-dock h2 {
-  font-size: 1.18rem;
+  font-size: 1.2rem;
   line-height: 1.1;
 }
 
@@ -338,46 +368,56 @@
 
 .pharosville-hud a,
 .pharosville-detail-dock a {
-  color: #ffe0a0;
+  color: var(--pv-gold-bright);
   font-weight: 900;
   text-decoration: none;
 }
 
 .pharosville-hud a:hover,
 .pharosville-detail-dock a:hover {
-  color: #ffefc7;
+  color: #fff0c7;
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
 }
 
-.pharosville-hud > [data-testid="pharosville-world-toolbar"] {
+.pharosville-world-toolbar {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 7px;
   flex-wrap: wrap;
   border-width: 2px;
-  padding: 5px;
+  padding: 7px;
   background:
-    linear-gradient(135deg, rgba(255, 226, 155, 0.08), transparent 34%),
-    linear-gradient(180deg, rgba(32, 20, 13, 0.78), rgba(15, 10, 8, 0.82));
+    linear-gradient(135deg, rgba(255, 228, 168, 0.09), transparent 34%),
+    linear-gradient(90deg, rgba(121, 200, 189, 0.1), transparent 42%),
+    linear-gradient(180deg, rgba(18, 43, 44, 0.82), rgba(7, 18, 23, 0.88));
   box-shadow:
-    0 0 0 1px rgba(224, 184, 97, 0.74),
-    inset 0 0 0 1px rgba(18, 11, 8, 0.82),
-    0 12px 28px rgba(0, 0, 0, 0.34);
+    0 0 0 1px rgba(214, 168, 91, 0.72),
+    inset 0 0 0 1px rgba(4, 11, 14, 0.82),
+    0 12px 28px rgba(3, 8, 10, 0.36);
+}
+
+.pharosville-world-toolbar::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  pointer-events: none;
+  border: 1px solid rgba(255, 228, 168, 0.12);
 }
 
 .pharosville-world-toolbar__group,
 .pharosville-world-toolbar__status {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 
 .pharosville-world-toolbar__group + .pharosville-world-toolbar__group,
 .pharosville-world-toolbar__status {
-  border-left: 1px solid rgba(240, 178, 77, 0.22);
-  padding-left: 5px;
+  border-left: 1px solid rgba(214, 168, 91, 0.26);
+  padding-left: 7px;
 }
 
 .pharosville-world-toolbar__status {
@@ -394,16 +434,19 @@
   border: 2px solid var(--pv-border);
   border-radius: 0;
   background:
-    linear-gradient(180deg, #3a2415, #1a100b);
+    linear-gradient(180deg, #173235, #09181e);
   color: var(--pv-parchment);
+  cursor: pointer;
   font: inherit;
   font-weight: 900;
-  box-shadow: inset 0 0 0 1px rgba(255, 224, 160, 0.14);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 228, 168, 0.14),
+    inset 0 -8px 0 rgba(3, 8, 10, 0.18);
 }
 
 .pharosville-hud > [data-testid="pharosville-world-toolbar"] button {
-  min-width: 28px;
-  min-height: 28px;
+  min-width: 34px;
+  min-height: 34px;
   border-width: 1px;
 }
 
@@ -430,12 +473,12 @@
 }
 
 .pharosville-hud > [data-testid="pharosville-world-toolbar"] output {
-  min-height: 28px;
-  border: 1px solid #4d2d19;
+  min-height: 34px;
+  border: 1px solid rgba(121, 200, 189, 0.28);
   border-radius: 0;
-  padding: 4px 6px;
-  background: rgba(12, 8, 7, 0.78);
-  color: rgba(247, 223, 172, 0.88);
+  padding: 7px 8px;
+  background: rgba(5, 16, 20, 0.78);
+  color: rgba(244, 229, 196, 0.9);
   font-size: 0.72rem;
   font-weight: 900;
 }
@@ -456,12 +499,12 @@
 .pharosville-detail-dock dl div {
   display: grid;
   gap: 2px;
-  border-left: 2px solid rgba(240, 178, 77, 0.38);
+  border-left: 2px solid rgba(214, 168, 91, 0.48);
   padding-left: 8px;
 }
 
 .pharosville-detail-dock dt {
-  color: #f0b24d;
+  color: var(--pv-gold);
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.04em;
@@ -470,16 +513,28 @@
 
 .pharosville-detail-dock dd {
   margin: 0;
-  color: rgba(247, 223, 172, 0.9);
+  color: rgba(244, 229, 196, 0.92);
 }
 
 .pharosville-detail-panel__header {
-  padding-bottom: 10px;
+  position: relative;
+  padding-bottom: 12px;
+}
+
+.pharosville-detail-panel__header::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background:
+    linear-gradient(90deg, var(--pv-gold), rgba(121, 200, 189, 0.58), transparent);
 }
 
 .pharosville-detail-panel__kind {
   margin: 0 0 7px;
-  color: #e56a47;
+  color: #e17c55;
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -487,21 +542,21 @@
 }
 
 .pharosville-detail-panel__section {
-  border-top: 1px solid rgba(240, 178, 77, 0.26);
+  border-top: 1px solid rgba(214, 168, 91, 0.26);
   padding-top: 10px;
   margin-top: 10px;
 }
 
 .pharosville-detail-panel__section--route dl div {
-  border-left-color: rgba(128, 214, 206, 0.48);
+  border-left-color: rgba(121, 200, 189, 0.6);
 }
 
 .pharosville-detail-panel__section--source dl div {
-  border-left-color: rgba(229, 106, 71, 0.42);
+  border-left-color: rgba(208, 100, 66, 0.5);
 }
 
 .pharosville-detail-panel__section--source dd {
-  color: rgba(247, 223, 172, 0.76);
+  color: rgba(244, 229, 196, 0.78);
   font-size: 0.76rem;
   line-height: 1.45;
 }
@@ -520,7 +575,7 @@
 
 .pharosville-detail-dock button {
   margin-top: 12px;
-  padding: 7px 11px;
+  padding: 8px 12px;
 }
 
 .pharosville-fullscreen-button,
@@ -529,18 +584,20 @@
   right: 30px;
   z-index: 6;
   display: inline-grid;
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   place-items: center;
-  border: 4px solid var(--pv-border);
+  border: 3px solid var(--pv-border);
   border-radius: 0;
   background:
-    linear-gradient(180deg, rgba(58, 36, 21, 0.96), rgba(20, 12, 8, 0.96));
+    linear-gradient(135deg, rgba(255, 228, 168, 0.1), transparent 34%),
+    linear-gradient(180deg, rgba(23, 50, 53, 0.96), rgba(9, 24, 30, 0.96));
   color: var(--pv-parchment);
   box-shadow:
-    0 0 0 1px #e0b861,
-    inset 0 0 0 1px rgba(18, 11, 8, 0.9),
-    0 14px 34px rgba(0, 0, 0, 0.42);
+    0 0 0 1px rgba(214, 168, 91, 0.82),
+    inset 0 0 0 1px rgba(4, 11, 14, 0.9),
+    inset 0 -10px 0 rgba(3, 8, 10, 0.18),
+    0 14px 34px rgba(3, 8, 10, 0.42);
 }
 
 .pharosville-fullscreen-button {
@@ -555,6 +612,7 @@
 .pharosville-home-button:hover {
   border-color: var(--pv-gold);
   color: var(--pv-gold-bright);
+  transform: translateY(-1px);
 }
 
 .pharosville-fullscreen-button:focus-visible,

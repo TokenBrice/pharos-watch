@@ -20,6 +20,7 @@ import {
 } from "./drawable-pass";
 import { dockDrawPoint, dockOutwardVector, entityAssetId, resolveEntityGeometry, type WorldSelectableEntity } from "./geometry";
 import { drawSelection } from "./layers/selection";
+import { drawCoastalWaterDetails } from "./layers/shoreline";
 import type { DrawPharosVilleInput, PharosVilleCanvasMotion, PharosVilleRenderMetrics } from "./render-types";
 import { CAUSE_HEX, type CauseOfDeath } from "@shared/lib/cause-of-death";
 
@@ -98,23 +99,33 @@ const VILLAGE_LIGHTS = [
   { x: 18.4, y: 27.9, size: 0.58 },
   { x: 19.8, y: 29.0, size: 0.48 },
   { x: 20.8, y: 30.8, size: 0.44 },
+  { x: 24.6, y: 23.4, size: 0.42 },
+  { x: 28.8, y: 22.3, size: 0.46 },
   { x: 30.1, y: 31.8, size: 0.54 },
   { x: 33.2, y: 30.1, size: 0.5 },
+  { x: 35.4, y: 42.5, size: 0.48 },
   { x: 37.2, y: 29.5, size: 0.52 },
+  { x: 41.1, y: 28.9, size: 0.5 },
+  { x: 44.2, y: 33.7, size: 0.52 },
 ] as const;
 
 const LIGHTHOUSE_SURF = [
+  { x: 14.7, y: 27.8, length: 20, phase: 5.1, tilt: 0.12 },
   { x: 15.6, y: 28.8, length: 26, phase: 0.1, tilt: -0.14 },
   { x: 16.7, y: 31.8, length: 34, phase: 1.7, tilt: 0.02 },
+  { x: 17.8, y: 33.0, length: 29, phase: 4.8, tilt: 0.18 },
   { x: 19.8, y: 33.1, length: 38, phase: 2.6, tilt: 0.16 },
   { x: 22.4, y: 31.8, length: 30, phase: 3.4, tilt: -0.12 },
   { x: 21.1, y: 25.4, length: 24, phase: 4.1, tilt: 0.1 },
+  { x: 23.0, y: 27.0, length: 22, phase: 5.7, tilt: -0.18 },
 ] as const;
 
 const LIGHTHOUSE_REFLECTIONS = [
   { alpha: 0.2, length: 54, offsetX: -6, offsetY: 72, phase: 0.2 },
   { alpha: 0.16, length: 42, offsetX: 12, offsetY: 91, phase: 1.6 },
   { alpha: 0.13, length: 31, offsetX: -22, offsetY: 108, phase: 2.8 },
+  { alpha: 0.11, length: 26, offsetX: 28, offsetY: 119, phase: 3.5 },
+  { alpha: 0.1, length: 34, offsetX: -36, offsetY: 134, phase: 4.4 },
 ] as const;
 
 const BIRDS = [
@@ -135,13 +146,21 @@ type SceneryPropKind =
   | "bollards"
   | "buoy"
   | "crate-stack"
+  | "cypress"
+  | "grass-tuft"
   | "harbor-lamp"
+  | "mooring-posts"
+  | "net-rack"
   | "palm"
+  | "reed-bed"
   | "reef"
   | "rock"
+  | "rope-coil"
   | "sea-wall"
   | "signal-post"
-  | "skiff";
+  | "skiff"
+  | "stone-steps"
+  | "timber-pile";
 
 interface SceneryProp {
   id: string;
@@ -153,26 +172,53 @@ interface SceneryProp {
 const SCENERY_PROPS: readonly SceneryProp[] = [
   { id: "north-buoy", kind: "buoy", tile: { x: 31.2, y: 16.8 }, scale: 0.78 },
   { id: "north-signal", kind: "signal-post", tile: { x: 36.8, y: 18.7 }, scale: 0.72 },
+  { id: "north-net-rack", kind: "net-rack", tile: { x: 28.3, y: 22.1 }, scale: 0.7 },
+  { id: "north-rope", kind: "rope-coil", tile: { x: 33.1, y: 21.7 }, scale: 0.62 },
+  { id: "north-timber", kind: "timber-pile", tile: { x: 38.8, y: 21.9 }, scale: 0.68 },
+  { id: "north-grass", kind: "grass-tuft", tile: { x: 24.2, y: 24.1 }, scale: 0.74 },
   { id: "watch-reef-1", kind: "reef", tile: { x: 4.5, y: 23.6 }, scale: 0.84 },
   { id: "watch-reef-2", kind: "reef", tile: { x: 10.4, y: 40.6 }, scale: 0.74 },
   { id: "watch-buoy", kind: "buoy", tile: { x: 13.8, y: 31.8 }, scale: 0.76 },
+  { id: "watch-reeds", kind: "reed-bed", tile: { x: 14.7, y: 28.8 }, scale: 0.64 },
+  { id: "watch-rocks", kind: "rock", tile: { x: 12.2, y: 35.6 }, scale: 0.62 },
   { id: "west-lamp", kind: "harbor-lamp", tile: { x: 18.7, y: 31.5 }, scale: 0.78 },
   { id: "west-seawall", kind: "sea-wall", tile: { x: 18.5, y: 34.4 }, scale: 0.82 },
+  { id: "west-mooring", kind: "mooring-posts", tile: { x: 17.2, y: 33.2 }, scale: 0.78 },
+  { id: "west-barrels", kind: "barrel", tile: { x: 20.1, y: 35.3 }, scale: 0.64 },
+  { id: "west-steps", kind: "stone-steps", tile: { x: 19.1, y: 30.0 }, scale: 0.7 },
   { id: "south-skiff", kind: "skiff", tile: { x: 31.4, y: 45.7 }, scale: 0.82 },
   { id: "south-bollards", kind: "bollards", tile: { x: 35.6, y: 42.4 }, scale: 0.82 },
+  { id: "south-rope", kind: "rope-coil", tile: { x: 27.9, y: 42.3 }, scale: 0.68 },
+  { id: "south-net", kind: "net-rack", tile: { x: 30.6, y: 43.4 }, scale: 0.66 },
+  { id: "south-reeds", kind: "reed-bed", tile: { x: 24.7, y: 43.3 }, scale: 0.68 },
+  { id: "south-cypress", kind: "cypress", tile: { x: 38.7, y: 39.7 }, scale: 0.58 },
   { id: "east-lamp", kind: "harbor-lamp", tile: { x: 45.8, y: 31.6 }, scale: 0.88 },
   { id: "east-crates", kind: "crate-stack", tile: { x: 44.6, y: 34.8 }, scale: 0.82 },
   { id: "east-seawall", kind: "sea-wall", tile: { x: 45.7, y: 33.2 }, scale: 0.92 },
+  { id: "east-mooring", kind: "mooring-posts", tile: { x: 43.6, y: 29.4 }, scale: 0.82 },
+  { id: "east-steps", kind: "stone-steps", tile: { x: 41.8, y: 36.2 }, scale: 0.7 },
+  { id: "east-rope", kind: "rope-coil", tile: { x: 39.3, y: 38.4 }, scale: 0.58 },
+  { id: "east-net", kind: "net-rack", tile: { x: 46.1, y: 29.1 }, scale: 0.58 },
   { id: "alert-beacon", kind: "beacon", tile: { x: 39.8, y: 50.4 }, scale: 0.9 },
+  { id: "alert-reeds", kind: "reed-bed", tile: { x: 36.4, y: 49.2 }, scale: 0.6 },
   { id: "warning-reef-1", kind: "reef", tile: { x: 48.4, y: 48.4 }, scale: 0.82 },
   { id: "warning-reef-2", kind: "rock", tile: { x: 50.2, y: 50.2 }, scale: 0.68 },
+  { id: "warning-buoy", kind: "buoy", tile: { x: 47.2, y: 45.7 }, scale: 0.72 },
   { id: "danger-buoy-1", kind: "buoy", tile: { x: 54.0, y: 38.6 }, scale: 0.84 },
   { id: "danger-buoy-2", kind: "signal-post", tile: { x: 55.0, y: 44.0 }, scale: 0.82 },
+  { id: "danger-reef", kind: "reef", tile: { x: 52.5, y: 47.2 }, scale: 0.72 },
   { id: "civic-bollards", kind: "bollards", tile: { x: 31.2, y: 31.5 }, scale: 0.86 },
+  { id: "civic-crates", kind: "crate-stack", tile: { x: 29.2, y: 30.0 }, scale: 0.62 },
+  { id: "civic-rope", kind: "rope-coil", tile: { x: 33.9, y: 32.6 }, scale: 0.62 },
+  { id: "civic-lamp-east", kind: "harbor-lamp", tile: { x: 36.0, y: 32.8 }, scale: 0.66 },
   { id: "cemetery-lamp", kind: "harbor-lamp", tile: { x: 8.4, y: 47.0 }, scale: 0.72 },
   { id: "cemetery-rock", kind: "rock", tile: { x: 12.2, y: 51.4 }, scale: 0.66 },
+  { id: "cemetery-cypress", kind: "cypress", tile: { x: 10.4, y: 47.8 }, scale: 0.52 },
+  { id: "cemetery-reeds", kind: "reed-bed", tile: { x: 6.2, y: 48.2 }, scale: 0.52 },
   { id: "lighthouse-wall", kind: "sea-wall", tile: { x: 20.6, y: 30.1 }, scale: 0.74 },
   { id: "lighthouse-lamp", kind: "harbor-lamp", tile: { x: 17.2, y: 29.0 }, scale: 0.7 },
+  { id: "lighthouse-grass", kind: "grass-tuft", tile: { x: 16.7, y: 27.0 }, scale: 0.72 },
+  { id: "lighthouse-cypress", kind: "cypress", tile: { x: 20.8, y: 27.2 }, scale: 0.56 },
 ] as const;
 
 const SKY_MOODS = {
@@ -360,6 +406,7 @@ export function drawPharosVille(input: DrawPharosVilleInput): PharosVilleRenderM
   drawSky(input);
 
   const visibleTileCount = drawTerrain(input);
+  drawCoastalWaterDetails(input);
   drawAtmosphere(input);
   drawCentralIslandModel(input);
   drawHarborDistrictGround(input);
@@ -883,6 +930,20 @@ function drawLedgerWaterTexture(
 ) {
   const ledgerPulse = motion.reducedMotion ? 0.18 : 0.15 + Math.sin(motion.timeSeconds * 0.62 + tileX * 0.25 + tileY * 0.37) * 0.04;
   ctx.save();
+  if ((tileX + tileY) % 2 === 0) {
+    drawMooringRule(ctx, x, y, zoom, -10, -2, 9, 3, style.accent, 0.16);
+    drawMooringRule(ctx, x, y, zoom, -8, 5, 7, 8, style.wave, 0.18);
+  }
+  if ((tileX * 5 + tileY * 11) % 6 === 0) {
+    ctx.strokeStyle = withAlpha(style.accent, 0.24);
+    ctx.lineWidth = Math.max(1, 0.75 * zoom);
+    ctx.strokeRect(
+      Math.round(x - 4 * zoom),
+      Math.round(y - 1 * zoom),
+      Math.max(2, Math.round(8 * zoom)),
+      Math.max(1, Math.round(4 * zoom)),
+    );
+  }
   ctx.strokeStyle = withAlpha(style.accent, Math.max(0.12, ledgerPulse));
   ctx.lineWidth = Math.max(1, zoom);
   ctx.beginPath();
@@ -894,6 +955,9 @@ function drawLedgerWaterTexture(
   if ((tileX * 7 + tileY * 5) % 5 === 0) {
     ctx.fillStyle = withAlpha(style.wave, 0.24);
     drawDiamond(ctx, x - 1 * zoom, y + 2 * zoom, 8 * zoom, 3 * zoom, ctx.fillStyle);
+  }
+  if ((tileX * 3 + tileY) % 7 === 0) {
+    drawDepthSounding(ctx, x + 6 * zoom, y + 1 * zoom, zoom, style.accent, 0.22);
   }
   ctx.restore();
 }
@@ -943,13 +1007,16 @@ function drawCalmWaterTexture(
   ctx.strokeStyle = withAlpha(style.wave, Math.max(0.08, hush));
   ctx.lineWidth = Math.max(1, 0.85 * zoom);
   ctx.beginPath();
-  ctx.moveTo(x - 10 * zoom, y + 3 * zoom);
-  ctx.lineTo(x + 10 * zoom, y + 3 * zoom);
+  ctx.moveTo(x - 12 * zoom, y + 3 * zoom);
+  ctx.quadraticCurveTo(x - 2 * zoom, y + 1.5 * zoom, x + 11 * zoom, y + 3 * zoom);
   if ((tileX * 11 + tileY * 5) % 5 === 0) {
     ctx.moveTo(x - 5 * zoom, y - 1 * zoom);
-    ctx.lineTo(x + 6 * zoom, y - 1 * zoom);
+    ctx.quadraticCurveTo(x, y - 2 * zoom, x + 6 * zoom, y - 1 * zoom);
   }
   ctx.stroke();
+  if ((tileX * 7 + tileY * 3) % 8 === 0) {
+    drawDepthSounding(ctx, x - 5 * zoom, y + 1 * zoom, zoom, style.accent, 0.18);
+  }
   if ((tileX + tileY) % 6 === 0) {
     const reflection = withAlpha(style.accent, 0.2);
     ctx.fillStyle = reflection;
@@ -992,6 +1059,17 @@ function drawAlertChannelTexture(
 ) {
   const pulse = motion.reducedMotion ? 0.16 : 0.14 + Math.sin(motion.timeSeconds * 1.1 + tileX * 0.31) * 0.04;
   ctx.save();
+  const drift = motion.reducedMotion ? 0 : Math.sin(motion.timeSeconds * 0.7 + tileY * 0.23) * 1.5 * zoom;
+  ctx.strokeStyle = withAlpha(style.wave, Math.max(0.12, pulse - 0.03));
+  ctx.lineWidth = Math.max(1, 0.9 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(x - 12 * zoom + drift, y + 4 * zoom);
+  ctx.quadraticCurveTo(x - 4 * zoom + drift, y - 3 * zoom, x + 10 * zoom + drift, y);
+  if ((tileX + tileY) % 3 === 0) {
+    ctx.moveTo(x - 8 * zoom - drift, y + 8 * zoom);
+    ctx.quadraticCurveTo(x - 2 * zoom - drift, y + 3 * zoom, x + 8 * zoom - drift, y + 6 * zoom);
+  }
+  ctx.stroke();
   ctx.strokeStyle = withAlpha(style.accent, Math.max(0.16, pulse));
   ctx.lineWidth = Math.max(1, 1.1 * zoom);
   ctx.beginPath();
@@ -1002,6 +1080,9 @@ function drawAlertChannelTexture(
     ctx.lineTo(x + 8 * zoom, y + 8 * zoom);
   }
   ctx.stroke();
+  if ((tileX * 13 + tileY * 5) % 7 === 0) {
+    drawCurrentWakeMark(ctx, x, y, zoom, style.accent, 0.28);
+  }
   ctx.restore();
 }
 
@@ -1017,6 +1098,16 @@ function drawWatchWaterTexture(
 ) {
   const crosswind = motion.reducedMotion ? 0.16 : 0.14 + Math.sin(motion.timeSeconds * 0.95 + tileY * 0.29) * 0.04;
   ctx.save();
+  if ((tileX * 7 + tileY * 2) % 4 !== 1) {
+    ctx.strokeStyle = withAlpha(style.accent, 0.16);
+    ctx.lineWidth = Math.max(1, 0.8 * zoom);
+    ctx.setLineDash([2.8 * zoom, 3.4 * zoom]);
+    ctx.beginPath();
+    ctx.moveTo(x - 13 * zoom, y - 1 * zoom);
+    ctx.lineTo(x + 11 * zoom, y + 5 * zoom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
   ctx.strokeStyle = withAlpha(style.wave, Math.max(0.12, crosswind));
   ctx.lineWidth = Math.max(1, zoom);
   ctx.beginPath();
@@ -1028,6 +1119,9 @@ function drawWatchWaterTexture(
     ctx.lineTo(x + 9 * zoom, y + 5 * zoom);
   }
   ctx.stroke();
+  if ((tileX + tileY * 5) % 7 === 0) {
+    drawBreakwaterFoam(ctx, x, y, zoom, style.wave, 0.22);
+  }
   ctx.restore();
 }
 
@@ -1043,6 +1137,18 @@ function drawWarningShoalTexture(
 ) {
   const chop = motion.reducedMotion ? 0.2 : 0.18 + Math.sin(motion.timeSeconds * 1.6 + tileY * 0.37) * 0.05;
   ctx.save();
+  if ((tileX + tileY) % 2 === 0) {
+    const shoalFill = withAlpha(style.accent, 0.22);
+    drawDiamond(ctx, x + 1 * zoom, y + 1 * zoom, 18 * zoom, 7 * zoom, shoalFill);
+    ctx.strokeStyle = withAlpha(style.wave, 0.18);
+    ctx.lineWidth = Math.max(1, 0.75 * zoom);
+    ctx.beginPath();
+    ctx.moveTo(x - 7 * zoom, y + 1 * zoom);
+    ctx.lineTo(x + 7 * zoom, y + 4 * zoom);
+    ctx.moveTo(x - 3 * zoom, y - 2 * zoom);
+    ctx.lineTo(x + 10 * zoom, y + 1 * zoom);
+    ctx.stroke();
+  }
   ctx.strokeStyle = withAlpha(style.wave, Math.max(0.16, chop));
   ctx.lineWidth = Math.max(1, 1.2 * zoom);
   ctx.beginPath();
@@ -1055,6 +1161,9 @@ function drawWarningShoalTexture(
   if ((tileX * 5 + tileY * 7) % 4 === 0) {
     ctx.fillStyle = withAlpha(style.accent, 0.3);
     ctx.fillRect(Math.round(x - 2 * zoom), Math.round(y + 1 * zoom), Math.max(1, Math.round(4 * zoom)), Math.max(1, Math.round(2 * zoom)));
+  }
+  if ((tileX * 11 + tileY * 13) % 9 === 0) {
+    drawDepthSounding(ctx, x + 7 * zoom, y + 3 * zoom, zoom, style.wave, 0.26);
   }
   ctx.restore();
 }
@@ -1071,6 +1180,14 @@ function drawDangerStraitTexture(
 ) {
   const whitecap = motion.reducedMotion ? 0.22 : 0.18 + Math.sin(motion.timeSeconds * 2.1 + tileX * 0.43 + tileY * 0.29) * 0.08;
   ctx.save();
+  if ((tileX * 3 + tileY * 5) % 4 !== 2) {
+    ctx.strokeStyle = "rgba(7, 12, 21, 0.34)";
+    ctx.lineWidth = Math.max(1, 1.25 * zoom);
+    ctx.beginPath();
+    ctx.moveTo(x - 13 * zoom, y + 6 * zoom);
+    ctx.lineTo(x + 12 * zoom, y - 5 * zoom);
+    ctx.stroke();
+  }
   ctx.strokeStyle = withAlpha(style.wave, Math.max(0.14, whitecap));
   ctx.lineWidth = Math.max(1, 1.4 * zoom);
   ctx.beginPath();
@@ -1082,11 +1199,21 @@ function drawDangerStraitTexture(
   ctx.lineTo(x + 13 * zoom, y + 3 * zoom);
   ctx.stroke();
   if ((tileX + tileY) % 3 === 0) {
-    ctx.strokeStyle = "rgba(7, 12, 21, 0.34)";
+    ctx.strokeStyle = withAlpha(style.accent, 0.22);
+    ctx.lineWidth = Math.max(1, 0.85 * zoom);
     ctx.beginPath();
-    ctx.moveTo(x - 13 * zoom, y + 6 * zoom);
-    ctx.lineTo(x + 12 * zoom, y - 5 * zoom);
+    ctx.moveTo(x - 8 * zoom, y + 1 * zoom);
+    ctx.lineTo(x - 3 * zoom, y - 3 * zoom);
+    ctx.lineTo(x + 2 * zoom, y + 1 * zoom);
+    ctx.moveTo(x + 4 * zoom, y + 6 * zoom);
+    ctx.lineTo(x + 9 * zoom, y + 2 * zoom);
+    ctx.lineTo(x + 13 * zoom, y + 5 * zoom);
     ctx.stroke();
+  }
+  if ((tileX * 7 + tileY * 11) % 8 === 0) {
+    ctx.fillStyle = withAlpha(style.wave, 0.18);
+    ctx.fillRect(Math.round(x - 1 * zoom), Math.round(y - 5 * zoom), Math.max(1, Math.round(2 * zoom)), Math.max(1, Math.round(2 * zoom)));
+    ctx.fillRect(Math.round(x + 5 * zoom), Math.round(y + 3 * zoom), Math.max(1, Math.round(2 * zoom)), Math.max(1, Math.round(2 * zoom)));
   }
   ctx.restore();
 }
@@ -1114,6 +1241,92 @@ function drawOpenWaterTexture(
     ctx.moveTo(x - 5 * zoom, y - 4 * zoom);
     ctx.lineTo(x + 7 * zoom, y - 1 * zoom);
   }
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawMooringRule(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  color: string,
+  alpha: number,
+) {
+  ctx.strokeStyle = withAlpha(color, alpha);
+  ctx.lineWidth = Math.max(1, 0.75 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(x + fromX * zoom, y + fromY * zoom);
+  ctx.lineTo(x + toX * zoom, y + toY * zoom);
+  ctx.stroke();
+}
+
+function drawDepthSounding(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  color: string,
+  alpha: number,
+) {
+  ctx.save();
+  ctx.strokeStyle = withAlpha(color, alpha);
+  ctx.fillStyle = withAlpha(color, alpha * 0.82);
+  ctx.lineWidth = Math.max(1, 0.65 * zoom);
+  ctx.beginPath();
+  ctx.arc(x, y, Math.max(1.4, 2.2 * zoom), 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillRect(
+    Math.round(x - 0.8 * zoom),
+    Math.round(y - 0.8 * zoom),
+    Math.max(1, Math.round(1.6 * zoom)),
+    Math.max(1, Math.round(1.6 * zoom)),
+  );
+  ctx.restore();
+}
+
+function drawCurrentWakeMark(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  color: string,
+  alpha: number,
+) {
+  ctx.save();
+  ctx.strokeStyle = withAlpha(color, alpha);
+  ctx.lineWidth = Math.max(1, 0.8 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(x + 2 * zoom, y - 5 * zoom);
+  ctx.lineTo(x + 8 * zoom, y - 1 * zoom);
+  ctx.lineTo(x + 2 * zoom, y + 3 * zoom);
+  ctx.moveTo(x - 5 * zoom, y - 2 * zoom);
+  ctx.lineTo(x + 1 * zoom, y + 2 * zoom);
+  ctx.lineTo(x - 5 * zoom, y + 6 * zoom);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawBreakwaterFoam(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  color: string,
+  alpha: number,
+) {
+  ctx.save();
+  ctx.strokeStyle = withAlpha(color, alpha);
+  ctx.lineWidth = Math.max(1, 0.9 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(x - 12 * zoom, y + 5 * zoom);
+  ctx.quadraticCurveTo(x - 8 * zoom, y + 1 * zoom, x - 4 * zoom, y + 5 * zoom);
+  ctx.quadraticCurveTo(x, y + 9 * zoom, x + 4 * zoom, y + 5 * zoom);
+  ctx.quadraticCurveTo(x + 8 * zoom, y + 1 * zoom, x + 12 * zoom, y + 5 * zoom);
   ctx.stroke();
   ctx.restore();
 }
@@ -1453,6 +1666,7 @@ function drawDistrictPad(
   drawDiamond(ctx, p.x, p.y + 10 * zoom, width * zoom, height * zoom, "rgba(5, 7, 9, 0.26)");
   drawDiamond(ctx, p.x, p.y + 6 * zoom, width * zoom * 0.92, height * zoom * 0.82, fill);
   drawDiamond(ctx, p.x, p.y + 1 * zoom, width * zoom * 0.76, height * zoom * 0.5, top);
+  drawDistrictPaving(ctx, p.x, p.y + 1 * zoom, width * zoom * 0.76, height * zoom * 0.5, zoom);
 }
 
 function drawSeawallRun(ctx: CanvasRenderingContext2D, camera: IsoCamera, tiles: readonly { x: number; y: number }[]) {
@@ -1482,6 +1696,53 @@ function drawSeawallRun(ctx: CanvasRenderingContext2D, camera: IsoCamera, tiles:
   ctx.moveTo(firstPoint.x - 3 * camera.zoom, firstPoint.y - 2 * camera.zoom);
   for (const point of rest) ctx.lineTo(point.x - 3 * camera.zoom, point.y - 2 * camera.zoom);
   ctx.stroke();
+
+  for (const [index, point] of points.entries()) {
+    if (index % 2 !== 0 && index !== points.length - 1) continue;
+    drawDiamond(
+      ctx,
+      point.x,
+      point.y - 1.2 * camera.zoom,
+      10 * camera.zoom,
+      4.2 * camera.zoom,
+      "rgba(218, 197, 145, 0.38)",
+    );
+  }
+  ctx.restore();
+}
+
+function drawDistrictPaving(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  zoom: number,
+) {
+  ctx.save();
+  ctx.strokeStyle = "rgba(55, 39, 25, 0.24)";
+  ctx.lineWidth = Math.max(1, 0.8 * zoom);
+  for (const ratio of [-0.28, -0.08, 0.12, 0.31]) {
+    const span = width * (0.43 - Math.abs(ratio) * 0.46);
+    ctx.beginPath();
+    ctx.moveTo(x - span, y + ratio * height);
+    ctx.lineTo(x + span, y + ratio * height + 2 * zoom);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = "rgba(235, 213, 160, 0.18)";
+  for (const ratio of [-0.2, 0.04, 0.26]) {
+    const span = width * (0.28 - Math.abs(ratio) * 0.26);
+    ctx.beginPath();
+    ctx.moveTo(x - span, y + ratio * height - 2 * zoom);
+    ctx.lineTo(x - span * 0.2, y + ratio * height + 1 * zoom);
+    ctx.moveTo(x + span * 0.22, y + ratio * height - 1 * zoom);
+    ctx.lineTo(x + span, y + ratio * height + 2 * zoom);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = "rgba(247, 214, 138, 0.08)";
+  drawDiamond(ctx, x, y - 1 * zoom, width * 0.46, height * 0.28, ctx.fillStyle);
   ctx.restore();
 }
 
@@ -2159,6 +2420,17 @@ function drawDecorativeLights({ camera, ctx, motion }: DrawPharosVilleInput) {
 function drawLamp(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: number, phase: number) {
   const glow = 0.22 + Math.sin(phase * 1.6) * 0.04;
   ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const halo = ctx.createRadialGradient(x, y - 9 * zoom, 1 * zoom, x, y - 9 * zoom, 22 * zoom);
+  halo.addColorStop(0, `rgba(247, 214, 138, ${glow * 0.9})`);
+  halo.addColorStop(0.46, `rgba(212, 154, 62, ${glow * 0.28})`);
+  halo.addColorStop(1, "rgba(212, 154, 62, 0)");
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.ellipse(x, y - 8 * zoom, 22 * zoom, 12 * zoom, -0.08, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.globalCompositeOperation = "source-over";
   ctx.fillStyle = `rgba(255, 197, 95, ${glow})`;
   ctx.beginPath();
   ctx.ellipse(x, y - 7 * zoom, 12 * zoom, 7 * zoom, 0, 0, Math.PI * 2);
@@ -2167,6 +2439,12 @@ function drawLamp(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: num
   ctx.fillRect(Math.round(x - zoom), Math.round(y - 12 * zoom), Math.max(1, Math.round(2 * zoom)), Math.max(4, Math.round(12 * zoom)));
   ctx.fillStyle = "#f5c766";
   ctx.fillRect(Math.round(x - 2 * zoom), Math.round(y - 14 * zoom), Math.max(2, Math.round(4 * zoom)), Math.max(2, Math.round(3 * zoom)));
+  ctx.strokeStyle = `rgba(247, 214, 138, ${glow * 0.58})`;
+  ctx.lineWidth = Math.max(1, 0.85 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(x - 8 * zoom, y + 2 * zoom);
+  ctx.lineTo(x + 9 * zoom, y + 4 * zoom);
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -2218,6 +2496,16 @@ function drawDockQuayUnderlay(
   drawDiamond(ctx, point.x, point.y + 9 * zoom, width * 1.14, height * 1.12, "rgba(5, 8, 10, 0.36)");
   drawDiamond(ctx, point.x, point.y + 5 * zoom, width, height, "rgba(83, 75, 58, 0.72)");
   drawDiamond(ctx, point.x, point.y + 1 * zoom, width * 0.78, height * 0.62, "rgba(211, 184, 126, 0.5)");
+  ctx.strokeStyle = "rgba(57, 38, 23, 0.32)";
+  ctx.lineWidth = Math.max(1, 0.9 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(point.x - width * 0.31, point.y + height * 0.02);
+  ctx.lineTo(point.x + width * 0.31, point.y + height * 0.12);
+  ctx.moveTo(point.x - width * 0.18, point.y - height * 0.09);
+  ctx.lineTo(point.x + width * 0.2, point.y - height * 0.02);
+  ctx.stroke();
+  ctx.fillStyle = "rgba(247, 214, 138, 0.09)";
+  drawDiamond(ctx, point.x + width * 0.04, point.y - height * 0.04, width * 0.34, height * 0.22, ctx.fillStyle);
   ctx.strokeStyle = "rgba(232, 243, 233, 0.34)";
   ctx.lineWidth = Math.max(1, 1.2 * zoom);
   ctx.beginPath();
@@ -2563,18 +2851,34 @@ function drawSceneryProp(input: DrawPharosVilleInput, prop: SceneryProp) {
     drawBarrels(ctx, p.x, p.y, scale);
   } else if (prop.kind === "bollards") {
     drawBollards(ctx, p.x, p.y, scale);
+  } else if (prop.kind === "cypress") {
+    drawCypress(ctx, p.x, p.y, scale);
+  } else if (prop.kind === "grass-tuft") {
+    drawCoastalGrass(ctx, p.x, p.y, scale);
+  } else if (prop.kind === "mooring-posts") {
+    drawMooringPosts(ctx, p.x, p.y, scale);
+  } else if (prop.kind === "net-rack") {
+    drawNetRack(ctx, p.x, p.y, scale);
   } else if (prop.kind === "palm") {
     drawPalm(ctx, p.x, p.y, scale);
+  } else if (prop.kind === "reed-bed") {
+    drawReedBed(ctx, p.x, p.y, scale);
   } else if (prop.kind === "reef") {
     drawReef(ctx, p.x, p.y, scale);
   } else if (prop.kind === "rock") {
     drawHarborRock(ctx, p.x, p.y, scale);
+  } else if (prop.kind === "rope-coil") {
+    drawRopeCoil(ctx, p.x, p.y, scale);
   } else if (prop.kind === "sea-wall") {
     drawSeaWallPiece(ctx, p.x, p.y, scale);
   } else if (prop.kind === "signal-post" || prop.kind === "beacon") {
     drawSignalPost(ctx, p.x, p.y, scale, prop.kind === "beacon");
   } else if (prop.kind === "skiff") {
     drawMiniSkiff(ctx, p.x, p.y, scale);
+  } else if (prop.kind === "stone-steps") {
+    drawStoneSteps(ctx, p.x, p.y, scale);
+  } else if (prop.kind === "timber-pile") {
+    drawTimberPile(ctx, p.x, p.y, scale);
   }
   ctx.restore();
 }
@@ -2638,6 +2942,98 @@ function drawBollards(ctx: CanvasRenderingContext2D, x: number, y: number, scale
   ctx.stroke();
 }
 
+function drawCypress(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.fillStyle = "rgba(7, 10, 12, 0.26)";
+  drawDiamond(ctx, x + 1 * scale, y + 4 * scale, 18 * scale, 7 * scale, ctx.fillStyle);
+  ctx.fillStyle = "#5b3a24";
+  ctx.fillRect(Math.round(x - 1.5 * scale), Math.round(y - 22 * scale), Math.max(1, Math.round(3 * scale)), Math.max(1, Math.round(24 * scale)));
+  ctx.fillStyle = "#243f2d";
+  ctx.beginPath();
+  ctx.moveTo(x, y - 38 * scale);
+  ctx.quadraticCurveTo(x - 11 * scale, y - 24 * scale, x - 6 * scale, y - 9 * scale);
+  ctx.lineTo(x + 7 * scale, y - 8 * scale);
+  ctx.quadraticCurveTo(x + 10 * scale, y - 25 * scale, x, y - 38 * scale);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "rgba(135, 159, 98, 0.34)";
+  ctx.beginPath();
+  ctx.moveTo(x - 1 * scale, y - 33 * scale);
+  ctx.quadraticCurveTo(x - 6 * scale, y - 22 * scale, x - 3 * scale, y - 13 * scale);
+  ctx.lineTo(x + 1 * scale, y - 14 * scale);
+  ctx.quadraticCurveTo(x + 3 * scale, y - 25 * scale, x - 1 * scale, y - 33 * scale);
+  ctx.fill();
+}
+
+function drawCoastalGrass(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.save();
+  ctx.strokeStyle = "#314f37";
+  ctx.lineWidth = Math.max(1, 1.2 * scale);
+  for (const [dx, height, lean] of [[-7, 13, -3], [-3, 17, 1], [1, 14, 4], [5, 11, 2], [8, 15, -2]] as const) {
+    ctx.beginPath();
+    ctx.moveTo(x + dx * scale, y + 4 * scale);
+    ctx.quadraticCurveTo(x + (dx + lean * 0.4) * scale, y - height * 0.45 * scale, x + (dx + lean) * scale, y - height * scale);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(176, 196, 121, 0.42)";
+  ctx.beginPath();
+  ctx.moveTo(x - 6 * scale, y - 2 * scale);
+  ctx.lineTo(x + 5 * scale, y + 2 * scale);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawMooringPosts(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.save();
+  ctx.fillStyle = "rgba(7, 10, 12, 0.24)";
+  drawDiamond(ctx, x, y + 5 * scale, 30 * scale, 9 * scale, ctx.fillStyle);
+  for (const offset of [-10, 0, 10]) {
+    ctx.fillStyle = "#2f2117";
+    ctx.fillRect(Math.round(x + offset * scale - 1.5 * scale), Math.round(y - 15 * scale), Math.max(1, Math.round(3 * scale)), Math.max(1, Math.round(18 * scale)));
+    ctx.fillStyle = "#8a6840";
+    ctx.fillRect(Math.round(x + offset * scale - 2 * scale), Math.round(y - 16 * scale), Math.max(1, Math.round(4 * scale)), Math.max(1, Math.round(3 * scale)));
+  }
+  ctx.strokeStyle = "rgba(116, 81, 51, 0.9)";
+  ctx.lineWidth = Math.max(1, 1.2 * scale);
+  ctx.beginPath();
+  ctx.moveTo(x - 10 * scale, y - 9 * scale);
+  ctx.quadraticCurveTo(x, y - 4 * scale, x + 10 * scale, y - 9 * scale);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawNetRack(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.save();
+  ctx.fillStyle = "rgba(7, 10, 12, 0.22)";
+  drawDiamond(ctx, x, y + 5 * scale, 28 * scale, 8 * scale, ctx.fillStyle);
+  ctx.strokeStyle = "#2f2117";
+  ctx.lineWidth = Math.max(1, 1.4 * scale);
+  ctx.beginPath();
+  ctx.moveTo(x - 10 * scale, y + 2 * scale);
+  ctx.lineTo(x - 10 * scale, y - 24 * scale);
+  ctx.moveTo(x + 10 * scale, y + 2 * scale);
+  ctx.lineTo(x + 10 * scale, y - 22 * scale);
+  ctx.moveTo(x - 12 * scale, y - 17 * scale);
+  ctx.lineTo(x + 12 * scale, y - 15 * scale);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(184, 165, 124, 0.62)";
+  ctx.lineWidth = Math.max(1, 0.8 * scale);
+  for (let index = 0; index < 4; index += 1) {
+    const offset = -8 + index * 5;
+    ctx.beginPath();
+    ctx.moveTo(x + offset * scale, y - 16.5 * scale);
+    ctx.lineTo(x + (offset - 2) * scale, y - 5 * scale);
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.moveTo(x - 9 * scale, y - 11 * scale);
+  ctx.lineTo(x + 9 * scale, y - 9 * scale);
+  ctx.moveTo(x - 8 * scale, y - 6 * scale);
+  ctx.lineTo(x + 8 * scale, y - 4 * scale);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawPalm(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
   ctx.strokeStyle = "#4f331f";
   ctx.lineWidth = Math.max(2, 3 * scale);
@@ -2657,6 +3053,27 @@ function drawPalm(ctx: CanvasRenderingContext2D, x: number, y: number, scale: nu
   drawDiamond(ctx, x + 1 * scale, y + 4 * scale, 18 * scale, 7 * scale, ctx.fillStyle);
 }
 
+function drawReedBed(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.save();
+  ctx.strokeStyle = "#314f37";
+  ctx.lineWidth = Math.max(1, 1.05 * scale);
+  for (const [dx, height, lean] of [[-9, 16, -2], [-5, 20, 1], [-1, 14, 2], [4, 18, -1], [8, 13, 3]] as const) {
+    ctx.beginPath();
+    ctx.moveTo(x + dx * scale, y + 5 * scale);
+    ctx.quadraticCurveTo(x + (dx + lean * 0.5) * scale, y - height * 0.5 * scale, x + (dx + lean) * scale, y - height * scale);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "rgba(223, 185, 90, 0.72)";
+  ctx.fillRect(Math.round(x - 6 * scale), Math.round(y - 15 * scale), Math.max(1, Math.round(2 * scale)), Math.max(1, Math.round(4 * scale)));
+  ctx.fillRect(Math.round(x + 5 * scale), Math.round(y - 12 * scale), Math.max(1, Math.round(2 * scale)), Math.max(1, Math.round(4 * scale)));
+  ctx.strokeStyle = "rgba(186, 231, 225, 0.26)";
+  ctx.beginPath();
+  ctx.moveTo(x - 12 * scale, y + 5 * scale);
+  ctx.lineTo(x + 11 * scale, y + 7 * scale);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawReef(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
   ctx.fillStyle = "rgba(232, 243, 233, 0.52)";
   for (const [dx, dy, w] of [[-7, -1, 11], [4, 2, 13], [0, -5, 8]] as const) {
@@ -2671,6 +3088,25 @@ function drawHarborRock(ctx: CanvasRenderingContext2D, x: number, y: number, sca
   drawDiamond(ctx, x, y, 17 * scale, 8 * scale, ctx.fillStyle);
   ctx.fillStyle = "rgba(19, 26, 34, 0.48)";
   drawDiamond(ctx, x + 3 * scale, y + 3 * scale, 15 * scale, 6 * scale, ctx.fillStyle);
+}
+
+function drawRopeCoil(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.save();
+  ctx.fillStyle = "rgba(7, 10, 12, 0.22)";
+  drawDiamond(ctx, x, y + 4 * scale, 20 * scale, 7 * scale, ctx.fillStyle);
+  ctx.strokeStyle = "#b58a4a";
+  ctx.lineWidth = Math.max(1, 1.15 * scale);
+  for (const radius of [8, 5.6, 3.2]) {
+    ctx.beginPath();
+    ctx.ellipse(x, y - 2 * scale, radius * scale, radius * 0.48 * scale, -0.08, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "#5e3d23";
+  ctx.beginPath();
+  ctx.moveTo(x + 6 * scale, y + 1 * scale);
+  ctx.lineTo(x + 13 * scale, y + 3 * scale);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawSeaWallPiece(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
@@ -2718,6 +3154,46 @@ function drawMiniSkiff(ctx: CanvasRenderingContext2D, x: number, y: number, scal
   ctx.lineTo(x + 10 * scale, y - 5 * scale);
   ctx.closePath();
   ctx.fill();
+}
+
+function drawStoneSteps(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.save();
+  ctx.fillStyle = "rgba(7, 10, 12, 0.24)";
+  drawDiamond(ctx, x + 1 * scale, y + 6 * scale, 28 * scale, 9 * scale, ctx.fillStyle);
+  const stones = [
+    { dx: -6, dy: -4, w: 20 },
+    { dx: -2, dy: 1, w: 24 },
+    { dx: 2, dy: 6, w: 28 },
+  ] as const;
+  for (const stone of stones) {
+    ctx.fillStyle = "#9f9278";
+    drawDiamond(ctx, x + stone.dx * scale, y + stone.dy * scale, stone.w * scale, 5.6 * scale, ctx.fillStyle);
+    ctx.strokeStyle = "rgba(35, 28, 20, 0.48)";
+    ctx.lineWidth = Math.max(1, 0.7 * scale);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawTimberPile(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.save();
+  ctx.fillStyle = "rgba(7, 10, 12, 0.24)";
+  drawDiamond(ctx, x, y + 5 * scale, 28 * scale, 8 * scale, ctx.fillStyle);
+  for (const [dx, dy, length] of [[-7, -4, 20], [-2, 0, 24], [4, -8, 18]] as const) {
+    ctx.strokeStyle = "#6a4a2e";
+    ctx.lineWidth = Math.max(2, 3.2 * scale);
+    ctx.beginPath();
+    ctx.moveTo(x + dx * scale, y + dy * scale);
+    ctx.lineTo(x + (dx + length) * scale, y + (dy + 2) * scale);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(230, 198, 130, 0.36)";
+    ctx.lineWidth = Math.max(1, 0.8 * scale);
+    ctx.beginPath();
+    ctx.moveTo(x + (dx + 1) * scale, y + (dy - 1) * scale);
+    ctx.lineTo(x + (dx + length - 2) * scale, y + (dy + 1) * scale);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function drawSignBoard(

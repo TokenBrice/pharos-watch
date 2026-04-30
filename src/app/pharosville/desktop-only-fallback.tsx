@@ -12,6 +12,7 @@ export function DesktopOnlyFallback() {
   return (
     <section className="pharosville-narrow" aria-labelledby="pharosville-narrow-title">
       <div className="pharosville-narrow__inner">
+        <div className="pharosville-narrow__beacon" aria-hidden="true" />
         <p className="pharosville-narrow__kicker">Desktop map</p>
         <h2 id="pharosville-narrow-title">PharosVille needs a wider harbor.</h2>
         <p>

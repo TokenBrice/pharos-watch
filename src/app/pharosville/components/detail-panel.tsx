@@ -24,7 +24,13 @@ export function DetailPanel({
   const factGroups = groupFacts(detail.facts);
 
   return (
-    <aside id={panelId} aria-labelledby={headingId} aria-live="polite" data-testid="pharosville-detail-panel">
+    <aside
+      id={panelId}
+      className="pharosville-detail-panel"
+      aria-labelledby={headingId}
+      aria-live="polite"
+      data-testid="pharosville-detail-panel"
+    >
       <header className="pharosville-detail-panel__header">
         <p className="pharosville-detail-panel__kind">{detail.kind}</p>
         <h2 id={headingId}>{detail.title}</h2>
@@ -77,7 +83,7 @@ export function DetailPanel({
       )}
 
       {onClose && (
-        <button type="button" onClick={onClose}>
+        <button className="pharosville-detail-panel__close" type="button" onClick={onClose}>
           Close details
         </button>
       )}

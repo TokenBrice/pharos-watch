@@ -414,6 +414,9 @@ test("pharosville renders a stressed ship in storm-shelf detail", async ({ page 
   await page.goto("/pharosville/");
   await expectNoAssetLoadErrors(page);
 
+  await page.getByRole("button", { name: "Clear selection" }).click();
+  await waitForSelectedDetail(page, null);
+
   const clickedDetailId = await clickMapTarget(page, "ship", "ship.usdt-tether");
   expect(clickedDetailId).toBe("ship.usdt-tether");
   await waitForSelectedDetail(page, "ship.usdt-tether");

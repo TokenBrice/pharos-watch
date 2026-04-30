@@ -43,7 +43,12 @@ export function WorldToolbar({
     + world.graves.length;
 
   return (
-    <div role="toolbar" aria-labelledby={headingId} data-testid="pharosville-world-toolbar">
+    <div
+      className="pharosville-world-toolbar"
+      role="toolbar"
+      aria-labelledby={headingId}
+      data-testid="pharosville-world-toolbar"
+    >
       <h2 id={headingId} className="sr-only">
         World toolbar
       </h2>
@@ -82,7 +87,12 @@ export function WorldToolbar({
         </button>
       </div>
       {onToggleLedger && (
-        <button type="button" aria-pressed={ledgerVisible} onClick={onToggleLedger}>
+        <button
+          className="pharosville-world-toolbar__ledger-button"
+          type="button"
+          aria-pressed={ledgerVisible}
+          onClick={onToggleLedger}
+        >
           Ledger
         </button>
       )}
