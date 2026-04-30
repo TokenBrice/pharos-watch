@@ -1,6 +1,6 @@
 # PharosVille Change Playbook
 
-Last updated: 2026-04-29
+Last updated: 2026-04-30
 
 Use this playbook to choose the smallest safe path for `/pharosville/` work. The verified product contract remains `docs/pharosville-page.md`; this file is for maintenance execution.
 
@@ -11,8 +11,8 @@ Start by classifying the change:
 | Change type | Read first | Likely source files | Required follow-up |
 | --- | --- | --- | --- |
 | Route shell, desktop gate, metadata, loading, or error state | `docs/pharosville-page.md`, `CURRENT.md`, `TESTING.md` | `src/app/pharosville/page.tsx`, `client.tsx`, `desktop-only-fallback.tsx`, `pharosville-desktop-data.tsx`, `pharosville-world.tsx` | Update `docs/pharosville-page.md` for behavior changes. Run route visual checks and build/SEO for static-export changes. |
-| World-model mapping or data semantics | `VISUAL_INVARIANTS.md`, `SCENARIO_CATALOG.md`, `src/app/pharosville/systems/README.md` | `systems/pharosville-world.ts`, `detail-model.ts`, `data-buildings.ts`, `chain-docks.ts`, `risk-placement.ts`, `ship-visuals.ts`, `world-types.ts` | Keep DOM detail parity. Add or update focused system tests. Update `docs/pharosville-page.md` if visual meaning changes. |
-| Layout, geography, or selectable placement | `VISUAL_INVARIANTS.md`, `VISUAL_REVIEW_ATLAS.md`, `src/app/pharosville/systems/README.md` | `systems/world-layout.ts`, `chain-docks.ts`, `data-buildings.ts`, `pharosville-world.ts`, `renderer/hit-testing.ts` | Check target overlap, water/land ratios, desktop shell screenshot, and interaction tests. |
+| World-model mapping or data semantics | `VISUAL_INVARIANTS.md`, `SCENARIO_CATALOG.md`, `src/app/pharosville/systems/README.md` | `systems/pharosville-world.ts`, `detail-model.ts`, `chain-docks.ts`, `risk-placement.ts`, `ship-visuals.ts`, `world-types.ts` | Keep DOM detail parity. Add or update focused system tests. Update `docs/pharosville-page.md` if visual meaning changes. |
+| Layout, geography, or selectable placement | `VISUAL_INVARIANTS.md`, `VISUAL_REVIEW_ATLAS.md`, `src/app/pharosville/systems/README.md` | `systems/world-layout.ts`, `chain-docks.ts`, `pharosville-world.ts`, `renderer/hit-testing.ts` | Check target overlap, water/land ratios, desktop shell screenshot, absence of retired building targets, and interaction tests. |
 | Canvas drawing or animation | `src/app/pharosville/renderer/README.md`, `VISUAL_INVARIANTS.md`, `TESTING.md` | `renderer/world-canvas.ts`, `renderer/hit-testing.ts`, `pharosville-world.tsx`, `systems/motion.ts`, `systems/canvas-budget.ts` | Keep reduced motion deterministic, hit targets aligned, and backing pixels capped. Run Playwright visual checks. |
 | Asset addition or replacement | `ASSET_PIPELINE.md`, `VISUAL_REVIEW_ATLAS.md`, `src/app/pharosville/renderer/README.md` | `public/pharosville/assets/**`, `public/pharosville/assets/manifest.json`, `systems/asset-manifest.ts`, renderer draw/hitbox logic if geometry changes | Bump manifest cache/style provenance fields per `ASSET_PIPELINE.md`, validate PNG dimensions and manifest references, run asset/color checks and visual tests. |
 | Fixture, scenario, or visual test update | `SCENARIO_CATALOG.md`, `VISUAL_REVIEW_ATLAS.md`, `TESTING.md` | `src/app/pharosville/__fixtures__/pharosville-world.ts`, `tests/visual/pharosville.spec.ts`, focused `*.test.ts` files | Keep scenarios realistic and fixture-only. Do not introduce production fallback data. |

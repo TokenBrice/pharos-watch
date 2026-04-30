@@ -1,6 +1,6 @@
 # PharosVille Visual Invariants
 
-Last updated: 2026-04-29
+Last updated: 2026-04-30
 
 These are the non-negotiable visual/data contracts for the PharosVille world. A change that violates one of these is a product behavior change and needs explicit intent plus matching tests and docs.
 
@@ -20,19 +20,19 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 
 ## Geography
 
-- The current map acceptance target is a sea-first isometric island with roughly 81-88% water by tile count. Treat that as the current route contract, but update this file and tests if an intentional layout plan changes the target.
+- The current map acceptance target is a sea-first isometric island with roughly 78-82% water by tile count. Treat that as the current route contract, but update this file and tests if an intentional layout plan changes the target.
 - The lighthouse stays on the northeast headland at `LIGHTHOUSE_TILE`.
 - The southwest EVM bay keeps Ethereum, Base, Arbitrum, and Polygon in preferred dock positions when those chains are rendered.
 - Docks are capped by `MAX_CHAIN_HARBORS`; they represent top-chain stablecoin supply, not all chains.
 - The cemetery remains a compact memorial precinct separated from the EVM bay and lighthouse approach.
-- Two inland data buildings, Royal Mint And Burn Foundry and Exit Route Gatehouse, sit along the main-island civic spine with a quiet memorial precinct between the harbor edge and civic anchors.
-- DEWS zone edge anchoring (each zone has a primary map edge):
-  - CALM ANCHORAGE → x=0 (left tile edge), large lower-left basin
-  - WATCH BREAKWATER → y=0 (top tile edge), spans x=0..29 with corner (0,0) excluded
-  - ALERT CHANNEL → y=0 (top tile edge), spans x=30..47, connects to WATCH
-  - WARNING SHOALS → x=55 (right tile edge), spans y=0..14
-  - DANGER STRAIT → x=55 (right tile edge), spans y=15..24, touches WARNING
-- Eastern corner (around tile 55,0) is fully covered by ALERT/WARNING/DANGER
+- The inland civic spine does not host Pharos data buildings. Mint/burn flows, DEX liquidity, and redemption-route backstops stay on their dedicated analytical surfaces outside PharosVille.
+- DEWS zone edge anchoring (each zone has a primary map edge) uses compound/coast-aware masks rather than rectangles:
+  - CALM ANCHORAGE → x=0 (left tile edge), large lower-left basin plus south reach
+  - WATCH BREAKWATER → y=0 (top tile edge), northwest/top basin with corner (0,0) excluded
+  - ALERT CHANNEL → y=0 (top tile edge), top-center current connected to WATCH
+  - WARNING SHOALS → x=55 (right tile edge), northeast reef shelf
+  - DANGER STRAIT → x=55 (right tile edge), right-edge storm basin below WARNING
+- Eastern corner (around tile 55,0) is covered by ALERT/WARNING/DANGER compound water
 - Two-tile island periphery (islandValue 1.0–1.10) is reserved as generic water
 - Water tiles inside lighthouse visual clearance (x:35..41, y:16..22) stay generic water (lighthouse sprite breathing room)
 - Tile (0,0) stays deep-water as decoration
@@ -49,7 +49,6 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 | Ship risk water | Peg/DEWS evidence, named risk-water area, risk zone, and placement precedence | Risk from stale or missing evidence alone |
 | Long-tail cluster | Count-capped grouped active stablecoins sharing a risk placement, named risk-water area, and risk zone | One aggregated issuer |
 | Cemetery marker | Dead/frozen lifecycle asset with cause-aware visual style | Active market status |
-| Data building | Non-ship Pharos product summary | Methodology text, raw tables, or guarantees |
 | Evidence caveat | Missing, stale, or low-confidence evidence | Confirmed depeg/stress |
 
 ## Ship And Risk Rules
@@ -81,7 +80,7 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
   analytical CSS animations, intervals, sprite loops, or minimap loops are not
   allowed.
 - Motion priority is selected/focused entity, active risk or critical PSI,
-  recent data change, building state, then ambient life.
+  recent data change, then ambient life.
 - Motion caps and debug fields are governed by
   [`MOTION_POLICY.md`](./MOTION_POLICY.md).
 - Keyboard pan, Escape clear, toolbar controls, click selection, and blank-map click-to-close are part of the interaction contract.

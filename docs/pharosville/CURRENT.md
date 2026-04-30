@@ -1,6 +1,6 @@
 # Current PharosVille Agent Source Of Truth
 
-Last updated: 2026-04-29
+Last updated: 2026-04-30
 
 Use this file before changing `/pharosville/`. It summarizes the current implementation shape for maintainers; the verified product contract remains `docs/pharosville-page.md`.
 
@@ -40,22 +40,22 @@ Historical plans in this directory are context, not live instructions. If they c
   debug expectations are recorded in `docs/pharosville/MOTION_POLICY.md`.
 - Canvas is not the only source of analytical meaning. Any new visual signal needs matching detail-panel or accessibility-ledger text.
 - Ship placement and semantic water zones express peg/DEWS risk or source confidence. Dock visits express positive chain presence and supply share; they must not imply bridge volume, transaction flow, or real-time transfers.
-- Fresh DEWS risk water uses edge-anchored rectangular bands. Ledger Mooring remains the only non-DEWS named risk-water area and stays clear of Solana/top-chain harbor traffic.
+- Fresh DEWS risk water uses edge-anchored compound/coast-aware masks. Ledger Mooring remains the only non-DEWS named risk-water area and stays clear of Solana/top-chain harbor traffic.
 
 ### DEWS zone geometry
 
-Edge-anchored rectangular bands (final iteration as of 2026-04-30):
+Edge-anchored compound masks (current iteration as of 2026-04-30):
 
 | Zone | Primary edge | Bounds | Approx tiles |
 |------|--------------|--------|-------------:|
-| CALM | x=0 | x∈[0,22], y∈[14,54] | ~810 |
-| WATCH | y=0 | x∈[0,29], y∈[0,13], excluding (0,0) | ~419 |
-| ALERT | y=0 | x∈[30,47], y∈[0,11] | ~216 |
-| WARNING | x=55 | x∈[48,55], y∈[0,14] | ~120 |
-| DANGER | x=55 | x∈[50,55], y∈[15,24] | ~60 |
+| CALM | x=0 | west basin plus lower-left reach, roughly x∈[0,22], y∈[14,55] | ~915 |
+| WATCH | y=0 | northwest/top basin, roughly x∈[0,31], y∈[0,15], excluding (0,0) | ~436 |
+| ALERT | y=0 | top-center current, roughly x∈[29,48], y∈[0,12] | ~224 |
+| WARNING | x=55 | northeast reef shelf, roughly x∈[47,55], y∈[0,15] | ~122 |
+| DANGER | x=55 | right-edge storm basin, roughly x∈[49,55], y∈[15,25] | ~68 |
 
-Eastern corner fully covered by ALERT+WARNING+DANGER. Two-tile island
-periphery and lighthouse visual-clearance box (x:41..47, y:12..17) are
+Eastern corner is covered by ALERT+WARNING+DANGER compound water. Two-tile
+island periphery and lighthouse visual-clearance box (x:35..41, y:16..22) are
 generic water.
 - Stale or missing peg evidence maps to Calm Anchorage with an evidence caveat unless a fresher risk signal exists; it must not create a separate sea zone or masquerade as storm/depeg risk.
 - Stablecoin supply values from the list payload are already USD-denominated. Use `getCirculatingRaw()` for market-cap visual tiers.
@@ -65,11 +65,12 @@ generic water.
 
 - Chain harbors are built from top chain supply and capped by `MAX_CHAIN_HARBORS` in `chain-docks.ts`.
 - The authored map is `56 x 56` tiles. Deep outer water is intentionally a narrow perimeter shelf, not a large default border.
+- The current composition target is 78-82% water by tile count with a tighter default camera and more coast/district density.
 - Named sea areas use printed cartographic water labels backed by
   `systems/area-labels.ts`; renderer drawing, hit targets, and follow-selected
   behavior must use the same placement metadata.
 - Printed water labels render above entity sprites, so label visibility and label hit targets intentionally win over overlapping ships or tall landmarks.
-- Sea terrain is semantic: harbor water, calm DEWS anchorage water, watch breakwater water, alert current, warning shoals, storm strait, ledger water, generic navigable water, and deep outer shelf each have distinct palette/texture handling.
+- Sea terrain is semantic: harbor water, calm DEWS anchorage water, watch breakwater water, alert current, warning shoals, storm strait, ledger water, generic navigable water, and deep outer shelf each have distinct palette/texture handling. Manifest terrain sprites draw first; renderer overlays preserve analytical color semantics while adding shoals, foam, current streaks, storm chop, ledger glow, and reef/buoy context.
 - Ship risk routes expose both `riskWaterLabel` and `riskZone` in details and the accessibility ledger. Reduced-motion ships freeze at their current risk-water idle tile, or Ledger Mooring for NAV ledger assets; harbor moorings are route stops, not the static representative position.
 - Dock sprites are rank/preference selected through manifest IDs such as `dock.grand-quay`, `dock.rollup-ferry-slip`, and `dock.bridge-pontoon`.
 - Ship class is derived from governance/backing metadata:
@@ -80,7 +81,9 @@ generic water.
   - unknown -> defensive caravel fallback
 - Ship size is a compressed market-cap tier, not linear area.
 - The current runtime manifest uses schema v2. `style.cacheVersion` controls image cache busting; `style.styleAnchorVersion` is the provenance/style anchor for generated assets.
-- The current lighthouse asset is `landmark.lighthouse` at `public/pharosville/assets/landmarks/lighthouse-alexandria.png`, with manifest cache version `2026-04-30-fantasy-lighthouse-v1` and style anchor `2026-04-29-lighthouse-hill-v5`.
+- The current lighthouse asset is `landmark.lighthouse` at `public/pharosville/assets/landmarks/lighthouse-alexandria.png`, with manifest cache version `2026-04-30-pharosville-ship-cemetery-overhaul-v1` and style anchor `2026-04-29-lighthouse-hill-v5`.
+- Current ship sprites share the lighthouse style anchor, use 104 x 80 transparent PNGs, keep logo-safe sail/pennant zones, and treat overlays as small lanterns/pennants/signals rather than badges.
+- Current cemetery props share the same style anchor and use a local memorial sprite set under `public/pharosville/assets/props/`: `memorial-terrace`, `memorial-headstone`, `ledger-slab`, `reliquary-marker`, and `regulatory-obelisk`.
 
 ## Agent Workflow
 

@@ -216,22 +216,20 @@ the DOM detail panel remains the accessible source of analytical truth,
 including route source, risk water, home dock, chain presence, and docking
 cadence.
 
-The same world model now also emits two selectable inland data buildings along a
-thin civic spine: Royal Mint And Burn Foundry for configured mint/burn flow
-telemetry and Exit Route Gatehouse for DEX liquidity plus modeled redemption
-backstops. Ledger Mooring and the five DEWS sea districts are modeled as named
+Ledger Mooring and the five DEWS sea districts are modeled as named
 risk-water areas with terrain, printed labels, deterministic route anchors,
 detail facts, and accessibility-ledger parity; stale or low-confidence placement
 inputs are exposed as evidence caveats instead of a separate sea zone. The
 PharosVille scene no longer encodes freeze/blacklist tracker activity; that
-product surface remains outside the world map. A main-island civic spine ties
-the southwest harbor, memorial precinct, and civic anchors together as visual
-composition only; the PSI lighthouse now sits west on the northeast headland
-without a rendered road or causeway into the harbor. The main-island buildings use deferred
-Pixellab sprites. All
-world elements expose local deterministic Canvas effects, DOM detail facts, and
-accessibility-ledger parity; reduced motion freezes procedural movement while
-preserving static status encodings.
+product surface remains outside the world map. Mint/burn flow, DEX liquidity,
+and modeled redemption backstops also remain on their dedicated analytical
+surfaces rather than PharosVille canvas landmarks. A main-island civic spine
+ties the southwest harbor and memorial precinct together as visual composition
+only; the PSI lighthouse now sits west on the northeast headland without a
+rendered road or causeway into the harbor. All world elements expose local
+deterministic Canvas effects, DOM detail facts, and accessibility-ledger parity;
+reduced motion freezes procedural movement while preserving static status
+encodings.
 
 Canvas 2D remains the renderer choice. PixiJS v8 was rejected during the
 2026-04-25 spike because the shader path requires `unsafe-eval`, which Pharos's
@@ -242,7 +240,7 @@ the reduced-motion desktop canvas shell, stressed ship semantics, narrow and
 short fallback/no-runtime contracts, visible toolbar/detail surfaces,
 click-anchored detail placement, blank-map click-to-close behavior,
 interaction/camera behavior, ultrawide backing-store caps, civic-core placement
-invariants, building click/selection interactions, reduced-motion static ship
+invariants, absence of retired building targets, reduced-motion static ship
 samples with no RAF, normal-motion moving ship samples, moving ship hit targets,
 and DOM route-fact parity.
 

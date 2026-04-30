@@ -1,6 +1,6 @@
 # PharosVille Asset Pipeline
 
-Last updated: 2026-04-29
+Last updated: 2026-04-30
 
 This is the agent-facing workflow for PharosVille raster assets. Runtime asset truth is `public/pharosville/assets/manifest.json`.
 
@@ -21,7 +21,7 @@ This is the agent-facing workflow for PharosVille raster assets. Runtime asset t
 - Landmark: `public/pharosville/assets/landmarks/lighthouse-alexandria.png` as `landmark.lighthouse`
 - Chain docks: `public/pharosville/assets/docks/`
 - Ships: `public/pharosville/assets/ships/`
-- Props: `public/pharosville/assets/props/`
+- Props: `public/pharosville/assets/props/`, including the cemetery memorial terrace and marker sprite set
 - Manifest: `public/pharosville/assets/manifest.json`
 
 ## Pixellab Guidance
@@ -31,6 +31,35 @@ Use transparent PNG map-object generation for standalone sprites and tile genera
 ```text
 old-school 16-bit maritime isometric RPG pixel art, crisp pixel edges, low top-down view, deep navy and teal sea, pale limestone island city, bronze and gold beacon light, restrained analytics palette, readable silhouettes, no text, no logos, no UI
 ```
+
+## Sprite Bible
+
+Treat `landmark.lighthouse` as the live style anchor. New or regenerated sprites
+should look like they belong beside that lighthouse rather than beside a generic
+fantasy town:
+
+- **Camera:** low top-down isometric, matching the existing tile projection.
+- **Light:** warm key from the upper-left, cool teal bounce from water on lower
+  edges, dark contact shadow under every sprite.
+- **Outline:** single dark outline with selective internal dark pixels; no soft
+  antialiased edges.
+- **Materials:** weathered limestone, oxidized bronze, dark timber, cream sail
+  cloth, teal harbor water, pale foam, restrained red/blue roof accents.
+- **Scale:** readable silhouettes at default `/pharosville/` zoom before detail
+  is visible.
+- **Ships:** each hull needs a clear sail or pennant area for runtime logo marks;
+  do not bake logos, token badges, text, counts, UI panels, or chain names into
+  the PNG.
+- **Docks/landmarks:** include built-in mass, posts, stairs, rope/crate clutter,
+  lanterns, and waterline contact so they read as districts rather than floating
+  stickers.
+- **Cemetery props:** use pale maritime limestone, bronze/enamel plaque details,
+  restrained grass seams, and teal water-bounce edges. Avoid purple graveyard
+  styling, spooky silhouettes, or floating badge-like token marks.
+- **Terrain:** tile art can carry texture and material quality, but analytical
+  water-zone color stays renderer-controlled so DEWS semantics remain legible.
+- **Reduced motion:** the static `path` image must be complete on its own even
+  when optional animation frame metadata is present.
 
 Preferred constraints:
 

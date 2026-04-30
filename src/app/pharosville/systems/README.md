@@ -12,7 +12,6 @@ The `systems/` directory owns the pure data-to-world layer for `/pharosville/`. 
    - `risk-placement.ts` resolves ship risk placement from peg/DEWS/report-card evidence.
    - `ship-visuals.ts` resolves hull, class, pennant, overlay, and market-cap size tier.
    - `motion.ts` builds deterministic ship routes and frame samples.
-   - `data-buildings.ts` maps non-ship Pharos products to civic buildings.
    - `detail-model.ts` creates DOM detail models for every selectable entity.
    - `visual-cue-registry.ts` records visual cues, source fields, and DOM equivalents.
 
@@ -28,7 +27,6 @@ The `systems/` directory owns the pure data-to-world layer for `/pharosville/`. 
 
 | Goal | Start here | Notes |
 | --- | --- | --- |
-| Add or change a data building | `data-buildings.ts`, `detail-model.ts`, `visual-cue-registry.ts`, `world-types.ts` | Keep caveats and source fields in DOM details. |
 | Change map geography | `world-layout.ts`, `world-layout.test.ts` | Preserve sea-first ratio, lighthouse, EVM bay, cemetery, civic core, and risk-water anchors unless intentionally changing them. |
 | Change dock semantics | `chain-docks.ts`, `pharosville-world.ts` | Docks mean top-chain stablecoin supply, not transfers. |
 | Change ship class or size | `ship-visuals.ts`, `classification-to-boat.ts` | Size is compressed market-cap tiering. |
