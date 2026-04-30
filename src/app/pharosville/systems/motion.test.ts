@@ -264,7 +264,7 @@ describe("motion", () => {
       } else if (route.zone === "watch") {
         expect(waypoint?.x).toBeLessThanOrEqual(12);
       } else {
-        expect(waypoint?.x).toBeGreaterThanOrEqual(45);
+        expect(waypoint?.x).toBeGreaterThanOrEqual(38);
       }
     }
   });
@@ -314,7 +314,7 @@ describe("motion", () => {
 
   it("routes over semantic water terrain only", () => {
     const map = buildPharosVilleMap();
-    const route = buildShipWaterRoute({ from: { x: 55, y: 10 }, to: { x: 35, y: 10 }, map });
+    const route = buildShipWaterRoute({ from: { x: 55, y: 0 }, to: { x: 35, y: 10 }, map });
 
     expect(route.points.length).toBeGreaterThan(1);
     expect(terrainKindInMap(map, route.points[0]!)).toBe("storm-water");

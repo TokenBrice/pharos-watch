@@ -186,29 +186,21 @@ function lighthouseMountainValue(x: number, y: number): number {
 }
 
 function isAlertChannel(x: number, y: number): boolean {
-  const value = lowerRightRiskValue(x, y);
-  const outerRing = value >= 0.85 && value < 2.05 && x >= 36 && y <= 36;
-  const easternCornerLip = x >= 48 && y <= 0;
-  return outerRing || easternCornerLip;
+  const value = eastCornerRiskValue(x, y);
+  return value >= 0.66 && value < 1.63;
 }
 
 function isWarningShoals(x: number, y: number): boolean {
-  const value = lowerRightRiskValue(x, y);
-  const middleRing = value >= 0.24 && value < 0.85 && x >= 45 && y >= 1 && y <= 30;
-  const innerNotchBridge = value < 0.24 && x >= 47 && x < 51 && y >= 8 && y <= 15;
-  const lowerEdgeBridge = value < 1.35 && x >= 51 && x <= 53 && y >= 16 && y <= 22;
-  return middleRing || innerNotchBridge || lowerEdgeBridge;
+  const value = eastCornerRiskValue(x, y);
+  return value >= 0.26 && value < 0.66;
 }
 
 function isDangerStrait(x: number, y: number): boolean {
-  const core = lowerRightRiskValue(x, y) < 0.24 && x >= 51 && y <= 20;
-  const edgeGate = x >= 55 && y >= 2 && y <= 23;
-  const angledShelf = x >= 54 && y >= 14 && y <= 21;
-  return core || edgeGate || angledShelf;
+  return eastCornerRiskValue(x, y) < 0.26;
 }
 
-function lowerRightRiskValue(x: number, y: number): number {
-  return ellipseValue(x, y, 55.0, 7.0, 16.0, 12.0);
+function eastCornerRiskValue(x: number, y: number): number {
+  return ellipseValue(x, y, 55.0, 0.0, 14.0, 14.0);
 }
 
 // Visual buffer around the lighthouse sprite on the generated island mountain:
@@ -226,7 +218,8 @@ function isWatchBreakwater(x: number, y: number): boolean {
 function isCalmAnchorage(x: number, y: number): boolean {
   const leftEdge = x <= 15 && y >= 10 && y <= 49;
   const leftBasin = ellipseValue(x, y, 8.2, 31.0, 15.0, 20.5) < 1.08 && x <= 22 && y >= 10;
-  return leftEdge || leftBasin;
+  const southBay = x >= 16 && x <= 43 && y >= 45;
+  return leftEdge || leftBasin || southBay;
 }
 
 function isOutOfBounds(x: number, y: number): boolean {
@@ -280,9 +273,7 @@ function isDeepSeaShelf(x: number, y: number): boolean {
 }
 
 function isLedgerMooring(x: number, y: number): boolean {
-  const bottomBand = x >= 18 && x <= 43 && y >= 50;
-  const basin = ellipseValue(x, y, 30.5, 50.0, 14.5, 5.8) < 1.08 && y >= 45;
-  return bottomBand || basin;
+  return ellipseValue(x, y, 55.0, 55.0, 14.0, 14.0) < 1.0;
 }
 
 export function nearestWaterTile(tile: { x: number; y: number }, maxRadius = 10): { x: number; y: number } {

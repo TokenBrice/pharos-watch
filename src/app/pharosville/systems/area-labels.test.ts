@@ -25,6 +25,9 @@ describe("areaLabelPlacementForArea", () => {
     expect(isoByBand.get("ALERT")!.x).toBeGreaterThan(lighthouseIso.x + 500);
     expect(isoByBand.get("WARNING")!.x).toBeGreaterThan(lighthouseIso.x + 500);
     expect(isoByBand.get("DANGER")!.x).toBeGreaterThan(lighthouseIso.x + 500);
+    // Concentric east-corner rings: outer rings sit south-west of the corner
+    // in iso projection, so DANGER (anchored to the corner) has the highest
+    // iso.x and lowest iso.y, ALERT the inverse.
     expect(isoByBand.get("ALERT")!.x).toBeLessThan(isoByBand.get("WARNING")!.x);
     expect(isoByBand.get("WARNING")!.x).toBeLessThan(isoByBand.get("DANGER")!.x);
     expect(isoByBand.get("DANGER")!.y).toBeLessThan(isoByBand.get("WARNING")!.y);

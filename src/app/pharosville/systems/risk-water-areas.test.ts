@@ -84,14 +84,34 @@ describe("risk water areas", () => {
     const warning = isoByBand.get("WARNING")!;
     const danger = isoByBand.get("DANGER")!;
 
+    // CALM lives left of every eastern DEWS band; WATCH lives at the top.
     expect(calm.x).toBeLessThan(alert.x);
+    expect(calm.x).toBeLessThan(warning.x);
+    expect(calm.x).toBeLessThan(danger.x);
     expect(watch.y).toBeLessThan(calm.y);
     expect(watch.y).toBeLessThan(alert.y);
-    expect(warning.x).toBeGreaterThan(alert.x);
-    expect(danger.x).toBeGreaterThan(warning.x);
+    expect(watch.y).toBeLessThan(warning.y);
+    expect(watch.y).toBeLessThan(danger.y);
+
+    // The eastern DEWS cluster sits well east of the lighthouse approach.
     expect(alert.x).toBeGreaterThan(lighthouseIso.x + 500);
-    expect(warning.x).toBeGreaterThan(alert.x);
-    expect(danger.x).toBeGreaterThan(warning.x);
+    expect(warning.x).toBeGreaterThan(lighthouseIso.x + 500);
+    expect(danger.x).toBeGreaterThan(lighthouseIso.x + 500);
+
+    // Concentric east-corner rings: tile distance to (55, 0) increases
+    // DANGER → WARNING → ALERT, anchored at the eastern tip of the iso diamond.
+    const eastCorner = { x: 55, y: 0 };
+    const tileDist = (band: DewsAreaBand): number => {
+      const tile = RISK_WATER_AREAS[DEWS_AREA_PLACEMENTS[band]].labelTile;
+      return Math.hypot(tile.x - eastCorner.x, tile.y - eastCorner.y);
+    };
+    expect(tileDist("DANGER")).toBeLessThan(tileDist("WARNING"));
+    expect(tileDist("WARNING")).toBeLessThan(tileDist("ALERT"));
+
+    // In iso projection, deeper rings recede south-westward from the corner:
+    // DANGER has the highest iso.x and lowest iso.y; ALERT the inverse.
+    expect(alert.x).toBeLessThan(warning.x);
+    expect(warning.x).toBeLessThan(danger.x);
     expect(danger.y).toBeLessThan(warning.y);
     expect(warning.y).toBeLessThan(alert.y);
   });
@@ -99,14 +119,15 @@ describe("risk water areas", () => {
   it("keeps Ledger Mooring as the only bottom sea exception zone", () => {
     const ledger = RISK_WATER_AREAS["ledger-mooring"];
 
-    expect(ledger.regionTile).toEqual({ x: 29, y: 52 });
-    expect(ledger.labelTile).toEqual({ x: 29, y: 52 });
+    expect(ledger.regionTile).toEqual({ x: 47, y: 52 });
+    expect(ledger.labelTile).toEqual({ x: 47, y: 52 });
     expect(ledger.terrain).toBe("ledger-water");
     expect(ledger.validTerrains).toEqual(["ledger-water"]);
     expect(minDistance([ledger.regionTile, ...ledger.shipAnchors], DOCK_TILES)).toBeGreaterThanOrEqual(5);
-    expect(ledger.shipAnchors.some((anchor) => anchor.y === PHAROSVILLE_MAP_HEIGHT - 1)).toBe(true);
-    // Bottom-edge reach without occupying the lower-right danger basin.
-    expect(ledger.shipAnchors.every((anchor) => anchor.x < 44)).toBe(true);
+    // Snapped to the south corner of the iso diamond.
+    expect(ledger.shipAnchors.some(
+      (anchor) => anchor.x === PHAROSVILLE_MAP_WIDTH - 1 && anchor.y === PHAROSVILLE_MAP_HEIGHT - 1,
+    )).toBe(true);
   });
 
   it("keeps named risk water out of the lighthouse mountain clearance lane", () => {
@@ -131,9 +152,9 @@ describe("risk water areas", () => {
     const expectedSamples = [
       { band: "CALM", tile: { x: 6, y: 30 }, terrain: "calm-water" },
       { band: "WATCH", tile: { x: 28, y: 5 }, terrain: "watch-water" },
-      { band: "ALERT", tile: { x: 49, y: 22 }, terrain: "alert-water" },
-      { band: "WARNING", tile: { x: 48, y: 14 }, terrain: "warning-water" },
-      { band: "DANGER", tile: { x: 54, y: 8 }, terrain: "storm-water" },
+      { band: "ALERT", tile: { x: 47, y: 14 }, terrain: "alert-water" },
+      { band: "WARNING", tile: { x: 50, y: 8 }, terrain: "warning-water" },
+      { band: "DANGER", tile: { x: 54, y: 1 }, terrain: "storm-water" },
     ] as const;
 
     for (const sample of expectedSamples) {
@@ -143,15 +164,19 @@ describe("risk water areas", () => {
     }
 
     // CALM occupies the left edge, WATCH owns the top breakwater,
-    // and ALERT/WARNING/DANGER snap to the eastern corner.
+    // and ALERT/WARNING/DANGER form concentric rings anchored at the
+    // east corner (55, 0) — DANGER snapped tightly to the corner, with
+    // WARNING and ALERT extending progressively west.
     expect(terrainKindAt(0, 27)).toBe("calm-water");
     expect(terrainKindAt(14, 42)).toBe("calm-water");
     expect(terrainKindAt(14, 0)).toBe("watch-water");
     expect(terrainKindAt(34, 0)).toBe("watch-water");
-    expect(terrainKindAt(55, 0)).toBe("alert-water");
-    expect(terrainKindAt(50, 17)).toBe("warning-water");
-    expect(terrainKindAt(55, 10)).toBe("storm-water");
-    expect(terrainKindAt(54, 8)).toBe("storm-water");
+    expect(terrainKindAt(55, 0)).toBe("storm-water");
+    expect(terrainKindAt(54, 0)).toBe("storm-water");
+    expect(terrainKindAt(55, 8)).toBe("warning-water");
+    expect(terrainKindAt(45, 0)).toBe("warning-water");
+    expect(terrainKindAt(40, 0)).toBe("alert-water");
+    expect(terrainKindAt(47, 14)).toBe("alert-water");
     expect(RISK_WATER_AREAS["ledger-mooring"].regionTile.y).toBeGreaterThan(45);
   });
 
