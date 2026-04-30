@@ -112,7 +112,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
     expect(body.resolutionCounts.resolved).toBe(1);
     expect(body.sample[0]).toMatchObject({
       resolution: "resolved",
-      configKey: "avalanche-0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+      configKey: ["avalanche", "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e"].join("-"),
     });
   });
 
@@ -132,7 +132,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
           amount_attempt_count: 0,
           amount_last_attempted_at: null,
           contract_address: "0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9",
-          config_key: "bsc-0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9",
+          config_key: ["bsc", "0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9"].join("-"),
         }],
       },
     ], { requireMatch: true });
