@@ -23,6 +23,10 @@
     "disposition": "queued-p4",
     "notes": "Ship motion routing now centralizes deterministic water-path construction, seeded detours, dwell timing, and route sampling for the initial liveliness release. Keep it waived until the next PharosVille systems pass can split pathfinding, scheduling, and sampling without changing behavior."
   },
+  "src/app/pharosville/systems/world-layout.ts": {
+    "disposition": "queued-p4",
+    "notes": "Concentrates the island-shape ellipses, six DEWS terrain predicates, periphery exclusion, lighthouse visual clearance, and grave-scatter helpers behind one terrainKindAt entrypoint. Branch count is inherently high because each predicate is a small geometric rectangle plus a periphery short-circuit. Keep it waived; revisit if a future zone redesign warrants extracting predicate registration into a table-driven module."
+  },
   "src/components/command-palette.tsx": {
     "disposition": "queued-p4",
     "notes": "The command palette still combines indexing, keyboard handling, and rendering in one shell. Keep it waived until the navigation/search UI cleanup lane is scheduled."
