@@ -1,6 +1,11 @@
 import { test, expect, type Page } from "@playwright/test";
 import {
   fixtureChains,
+  denseFixtureChains,
+  denseFixturePegSummary,
+  denseFixtureReportCards,
+  denseFixtureStablecoins,
+  denseFixtureStress,
   fixturePegSummary,
   fixtureReportCards,
   fixtureStability,
@@ -9,7 +14,8 @@ import {
   makePegCoin,
 } from "../../src/app/pharosville/__fixtures__/pharosville-world";
 import { MAX_MAIN_CANVAS_PIXELS, MAX_TOTAL_BACKING_PIXELS } from "../../src/app/pharosville/systems/canvas-budget";
-import { DEX_GLOBAL_KEY, type PegSummaryResponse, type StressSignalsAllResponse } from "@shared/types";
+import { tileToScreen } from "../../src/app/pharosville/systems/projection";
+import type { PegSummaryResponse, StressSignalsAllResponse } from "@shared/types";
 
 test.use({ reducedMotion: "reduce" });
 
@@ -61,7 +67,6 @@ type PharosVilleVisualDebug = {
   motionCueCounts?: {
     ambientBirds: number;
     animatedShips: number;
-    buildingEffects: number;
     effectShips: number;
     harborLights: number;
     moverShips: number;
@@ -83,9 +88,6 @@ const PHAROSVILLE_DESKTOP_DATA_ENDPOINTS = [
   "/peg-summary",
   "/stress-signals",
   "/report-cards",
-  "/mint-burn-flows",
-  "/dex-liquidity",
-  "/redemption-backstops",
 ] as const;
 const PHAROSVILLE_SHARED_SHELL_ENDPOINTS = new Set([
   "/api/peg-summary",
@@ -93,14 +95,6 @@ const PHAROSVILLE_SHARED_SHELL_ENDPOINTS = new Set([
   "/_site-data/peg-summary",
   "/_site-data/stability-index",
 ]);
-const BUILDING_DETAIL_IDS = [
-  "building.mint-burn-foundry",
-  "building.exit-route-gatehouse",
-] as const;
-const BUILDING_DETAIL_LABELS: Record<(typeof BUILDING_DETAIL_IDS)[number], string> = {
-  "building.mint-burn-foundry": "Royal Mint And Burn Foundry",
-  "building.exit-route-gatehouse": "Exit Route Gatehouse",
-};
 const RISK_WATER_AREA_DETAILS = [
   { detailId: "area.dews.calm", label: "Calm Anchorage", zone: "calm" },
   { detailId: "area.dews.watch", label: "Watch Breakwater", zone: "watch" },
@@ -109,14 +103,6 @@ const RISK_WATER_AREA_DETAILS = [
   { detailId: "area.dews.danger", label: "Danger Strait", zone: "danger" },
   { detailId: "area.risk-water.ledger-mooring", label: "Ledger Mooring", zone: "ledger" },
 ] as const;
-const TARGET_CLICK_POINTS = [
-  [0.5, 0.5],
-  [0.25, 0.25],
-  [0.75, 0.25],
-  [0.25, 0.75],
-  [0.75, 0.75],
-] as const;
-
 async function mockPharosVilleData(page: Page) {
   await mockPharosVillePayloads(page, {
     stablecoins: fixtureStablecoins,
@@ -125,6 +111,25 @@ async function mockPharosVilleData(page: Page) {
     pegSummary: fixturePegSummary,
     stress: fixtureStress,
     reportCards: fixtureReportCards,
+  });
+}
+
+async function mockDensePharosVilleData(page: Page) {
+  await mockPharosVillePayloads(page, {
+    stablecoins: denseFixtureStablecoins,
+    chains: denseFixtureChains,
+    stability: {
+      ...fixtureStability,
+      current: {
+        ...fixtureStability.current,
+        band: "ELEVATED",
+        components: { breadth: 26, severity: 54, trend: 12 },
+        score: 72,
+      },
+    },
+    pegSummary: denseFixturePegSummary,
+    stress: denseFixtureStress,
+    reportCards: denseFixtureReportCards,
   });
 }
 
@@ -143,9 +148,6 @@ async function mockPharosVillePayloads(page: Page, payload: {
     { path: "peg-summary", body: payload.pegSummary },
     { path: "stress-signals", body: payload.stress },
     { path: "report-cards", body: payload.reportCards },
-    { path: "mint-burn-flows", body: fixtureMintBurnFlows },
-    { path: "dex-liquidity", body: fixtureDexLiquidity },
-    { path: "redemption-backstops", body: fixtureRedemptionBackstops },
   ];
 
   for (const { path, body } of payloads) {
@@ -159,159 +161,6 @@ async function mockPharosVillePayloads(page: Page, payload: {
     }
   }
 }
-
-const fixtureMethodology = {
-  version: "fixture",
-  versionLabel: "Fixture",
-  currentVersion: "fixture",
-  currentVersionLabel: "Fixture",
-  changelogPath: "/methodology/",
-  asOf: 1_700_000_000,
-  isCurrent: true,
-};
-
-const fixtureMintBurnFlows = {
-  gauge: {
-    score: 38,
-    band: "Mint pressure",
-    intensitySemantics: "signed-v2",
-    flightToQuality: false,
-    flightIntensity: 0,
-    trackedCoins: 2,
-    trackedMcapUsd: 11_000_000_000,
-  },
-  coins: [
-    {
-      stablecoinId: "usdc-circle",
-      symbol: "USDC",
-      flowIntensity: 38,
-      pressureShiftScore: 38,
-      pressureShiftState: "improving",
-      netFlowDirection24h: "minting",
-      has24hActivity: true,
-      baselineDailyNetUsd: null,
-      baselineDailyAbsUsd: null,
-      baselineDataDays: null,
-      netFlow24hUsd: 80_000_000,
-      mintVolume24hUsd: 100_000_000,
-      burnVolume24hUsd: 20_000_000,
-      mintCount24h: 3,
-      burnCount24h: 1,
-      netFlow7dUsd: 90_000_000,
-      netFlow30dUsd: 120_000_000,
-      netFlow90dUsd: 120_000_000,
-      largestEvent24h: {
-        direction: "mint",
-        amountUsd: 60_000_000,
-        txHash: "0xfixture",
-        timestamp: 1_700_000_000,
-      },
-    },
-  ],
-  hourly: [{ hourTs: 1_700_000_000, mintVolumeUsd: 100_000_000, burnVolumeUsd: 20_000_000, netFlowUsd: 80_000_000 }],
-  updatedAt: 1_700_000_000,
-  windowHours: 24,
-  scope: { chainIds: ["ethereum"], label: "Configured issuance-chain events" },
-  sync: { lastSuccessfulSyncAt: 1_700_000_000, freshnessStatus: "fresh", warning: null, criticalLaneHealthy: true },
-};
-
-const fixtureDexEntry = {
-  totalTvlUsd: 120_000_000,
-  totalVolume24hUsd: 40_000_000,
-  totalVolume7dUsd: 210_000_000,
-  poolCount: 5,
-  pairCount: 4,
-  chainCount: 2,
-  protocolTvl: { curve: 45_000_000, uniswap: 40_000_000, balancer: 35_000_000 },
-  chainTvl: { ethereum: 80_000_000, base: 40_000_000 },
-  topPools: [],
-  liquidityScore: 82,
-  concentrationHhi: 0.2,
-  depthStability: 80,
-  tvlChange24h: 0,
-  tvlChange7d: 0,
-  updatedAt: 1_700_000_000,
-  dexPriceUsd: 1,
-  dexDeviationBps: 0,
-  priceSourceCount: 2,
-  priceSourceTvl: 120_000_000,
-  priceSources: [],
-  effectiveTvlUsd: 100_000_000,
-  avgPoolStress: 10,
-  weightedBalanceRatio: 0.82,
-  organicFraction: 0.92,
-  durabilityScore: 84,
-  coverageClass: "primary",
-  coverageConfidence: 0.9,
-  liquidityEvidenceClass: "measured",
-  hasMeasuredLiquidityEvidence: true,
-  trendworthy: true,
-  sourceMix: {},
-  balanceMeasuredTvlUsd: 100_000_000,
-  organicMeasuredTvlUsd: 92_000_000,
-  scoreComponents: null,
-  lockedLiquidityPct: null,
-  methodologyVersion: "fixture",
-};
-
-const fixtureDexLiquidity = {
-  [DEX_GLOBAL_KEY]: fixtureDexEntry,
-  "usdc-circle": fixtureDexEntry,
-};
-
-const fixtureRedemptionEntry = {
-  stablecoinId: "usdc-circle",
-  score: 84,
-  effectiveExitScore: 84,
-  dexLiquidityScore: 82,
-  accessScore: 90,
-  settlementScore: 90,
-  executionCertaintyScore: 90,
-  capacityScore: 80,
-  outputAssetQualityScore: 90,
-  costScore: 90,
-  routeFamily: "stablecoin-redeem",
-  accessModel: "permissionless-onchain",
-  settlementModel: "immediate",
-  executionModel: "deterministic-onchain",
-  outputAssetType: "stable-single",
-  provider: "Fixture",
-  sourceMode: "static",
-  resolutionState: "resolved",
-  routeStatus: "open",
-  routeStatusSource: "static-config",
-  holderEligibility: "any-holder",
-  capacityConfidence: "live-direct",
-  capacityBasis: "live-direct-telemetry",
-  capacitySemantics: "immediate-bounded",
-  feeConfidence: "fixed",
-  feeModelKind: "fixed-bps",
-  modelConfidence: "high",
-  immediateCapacityUsd: 75_000_000,
-  immediateCapacityRatio: 0.4,
-  feeBps: 0,
-  queueEnabled: false,
-  methodologyVersion: "fixture",
-  updatedAt: 1_700_000_000,
-  docs: null,
-  notes: [],
-  capsApplied: [],
-};
-
-const fixtureRedemptionBackstops = {
-  coins: {
-    "usdc-circle": fixtureRedemptionEntry,
-    "usdt-tether": { ...fixtureRedemptionEntry, stablecoinId: "usdt-tether" },
-    "pyusd-paypal": { ...fixtureRedemptionEntry, stablecoinId: "pyusd-paypal" },
-  },
-  methodology: {
-    ...fixtureMethodology,
-    componentWeights: { access: 1, settlement: 1, executionCertainty: 1, capacity: 1, outputAssetQuality: 1, cost: 1 },
-    effectiveExitModel: { model: "fixture", diversificationFactor: 1 },
-    routeFamilyCaps: { queueRedeem: 1, offchainIssuer: 1 },
-  },
-  updatedAt: 1_700_000_000,
-};
 
 async function clickMapTarget(page: Page, kind: string, detailId?: string) {
   return (await clickMapTargetWithPoint(page, kind, detailId)).detailId;
@@ -363,22 +212,6 @@ async function clickMapTargetWithPoint(page: Page, kind: string, detailId?: stri
   return { detailId: value.detailId, point: value.point };
 }
 
-async function waitForBuildingTargets(page: Page) {
-  await page.waitForFunction((detailIds) => {
-    const debug = (window as typeof window & {
-      __pharosVilleDebug?: PharosVilleVisualDebug;
-    }).__pharosVilleDebug;
-    const buildingTargets = debug?.targets?.filter((target) => target.kind === "building") ?? [];
-    return Boolean(
-      debug?.criticalAssetsLoaded
-      && debug.deferredAssetsLoaded
-      && (debug.assetLoadErrors?.length ?? 0) === 0
-      && detailIds.every((detailId) => buildingTargets.some((target) => target.detailId === detailId))
-      && buildingTargets.length === detailIds.length
-    );
-  }, [...BUILDING_DETAIL_IDS]);
-}
-
 async function expectNoAssetLoadErrors(page: Page) {
   const statusHandle = await page.waitForFunction(() => {
     const debug = (window as typeof window & {
@@ -401,109 +234,17 @@ async function expectNoAssetLoadErrors(page: Page) {
   expect(status.deferredAssetsLoaded).toBe(true);
 }
 
-async function expectBuildingTargetsClickable(page: Page) {
-  const result = await page.evaluate(({ clickPoints, detailIds, guardKinds }) => {
+async function expectNoBuildingTargets(page: Page) {
+  const buildingTargets = await page.evaluate(() => {
     const debug = (window as typeof window & {
       __pharosVilleDebug?: PharosVilleVisualDebug;
     }).__pharosVilleDebug;
-    const targets = debug?.targets ?? [];
-    const buildings = detailIds
-      .map((detailId) => targets.find((target) => target.kind === "building" && target.detailId === detailId) ?? null)
-      .filter((target): target is DebugTarget => target !== null);
-    const missing = detailIds.filter((detailId) => !buildings.some((target) => target.detailId === detailId));
-
-    function containsPoint(target: DebugTarget, point: { x: number; y: number }) {
-      return (
-        point.x >= target.rect.x
-        && point.x <= target.rect.x + target.rect.width
-        && point.y >= target.rect.y
-        && point.y <= target.rect.y + target.rect.height
-      );
-    }
-
-    function rectsOverlap(first: DebugTarget, second: DebugTarget) {
-      return (
-        first.rect.x < second.rect.x + second.rect.width
-        && first.rect.x + first.rect.width > second.rect.x
-        && first.rect.y < second.rect.y + second.rect.height
-        && first.rect.y + first.rect.height > second.rect.y
-      );
-    }
-
-    function topTargetAt(point: { x: number; y: number }) {
-      return targets
-        .filter((target) => containsPoint(target, point))
-        .toSorted((first, second) => second.priority - first.priority)[0] ?? null;
-    }
-
-    function unoccludedPoint(target: DebugTarget) {
-      for (const [x, y] of clickPoints) {
-        const point = {
-          x: target.rect.x + target.rect.width * x,
-          y: target.rect.y + target.rect.height * y,
-        };
-        if (topTargetAt(point)?.detailId === target.detailId) return point;
-      }
-      return null;
-    }
-
-    const unselectable: string[] = [];
-    const blockedOverlaps: string[] = [];
-    const buildingOverlaps: string[] = [];
-    for (const building of buildings) {
-      const point = unoccludedPoint(building);
-      if (!point) unselectable.push(building.detailId);
-      const guardedOverlaps = targets.filter((target) => (
-        target.detailId !== building.detailId
-        && guardKinds.includes(target.kind)
-        && rectsOverlap(building, target)
-      ));
-      if (guardedOverlaps.length > 0 && !point) {
-        blockedOverlaps.push(...guardedOverlaps.map((target) => `${building.detailId} overlaps ${target.kind}:${target.detailId}`));
-      }
-    }
-    for (let index = 0; index < buildings.length; index += 1) {
-      for (let nextIndex = index + 1; nextIndex < buildings.length; nextIndex += 1) {
-        const first = buildings[index];
-        const second = buildings[nextIndex];
-        if (first && second && rectsOverlap(first, second)) {
-          buildingOverlaps.push(`${first.detailId} overlaps ${second.detailId}`);
-        }
-      }
-    }
-
-    const centers = buildings.map((target) => ({
-      x: target.rect.x + target.rect.width / 2,
-      y: target.rect.y + target.rect.height / 2,
-    }));
-    const xs = centers.map((point) => point.x);
-    const ys = centers.map((point) => point.y);
-    const zoom = debug?.camera?.zoom ?? 1;
-
-    return {
-      blockedOverlaps,
-      buildingOverlaps,
-      centerSpread: {
-        height: ys.length > 0 ? Math.max(...ys) - Math.min(...ys) : Number.POSITIVE_INFINITY,
-        maxHeight: 200 * zoom,
-        maxWidth: 340 * zoom,
-        width: xs.length > 0 ? Math.max(...xs) - Math.min(...xs) : Number.POSITIVE_INFINITY,
-      },
-      missing,
-      unselectable,
-    };
-  }, {
-    clickPoints: TARGET_CLICK_POINTS.map(([x, y]) => [x, y] as [number, number]),
-    detailIds: [...BUILDING_DETAIL_IDS],
-    guardKinds: ["dock", "area", "grave"],
+    return (debug?.targets ?? [])
+      .filter((target) => target.kind === "building" || target.detailId.startsWith("building."))
+      .map((target) => target.detailId);
   });
 
-  expect(result.missing).toEqual([]);
-  expect(result.unselectable).toEqual([]);
-  expect(result.blockedOverlaps).toEqual([]);
-  expect(result.buildingOverlaps).toEqual([]);
-  expect(result.centerSpread.width).toBeLessThanOrEqual(result.centerSpread.maxWidth);
-  expect(result.centerSpread.height).toBeLessThanOrEqual(result.centerSpread.maxHeight);
+  expect(buildingTargets).toEqual([]);
 }
 
 test("pharosville renders desktop canvas shell", async ({ page }) => {
@@ -529,16 +270,16 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
   const waterRatioText = ledgerText?.split(" tiles, ")[1]?.split("% water.")[0];
   expect(waterRatioText).toBeDefined();
   const waterPercent = Number(waterRatioText);
-  expect(waterPercent).toBeGreaterThanOrEqual(81);
-  expect(waterPercent).toBeLessThanOrEqual(88);
+  expect(waterPercent).toBeGreaterThanOrEqual(78);
+  expect(waterPercent).toBeLessThanOrEqual(82);
   await page.waitForFunction(() => {
     const debug = (window as typeof window & {
       __pharosVilleDebug?: PharosVilleVisualDebug;
     }).__pharosVilleDebug;
     return Boolean(debug?.criticalAssetsLoaded && debug.camera && (debug.targets?.length ?? 0) > 0);
   });
-  await waitForBuildingTargets(page);
   await expectNoAssetLoadErrors(page);
+  await expectNoBuildingTargets(page);
 
   const box = await canvas.boundingBox();
   expect(box?.width).toBeGreaterThan(1000);
@@ -565,8 +306,62 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
   expect(pixelStats.landPixels / pixelStats.backingPixels).toBeLessThan(0.45);
   expect(pixelStats.waterPixels / pixelStats.backingPixels).toBeLessThan(0.86);
   expect(retiredSummaryRequests).toEqual([]);
-  await expectBuildingTargetsClickable(page);
   await expect(page).toHaveScreenshot("pharosville-desktop-shell.png");
+});
+
+test("pharosville dense visual fixture preserves districts, flotillas, and render budget", async ({ page }) => {
+  await mockDensePharosVilleData(page);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/pharosville/");
+  await waitForRuntimeDebug(page, false);
+  await expectNoAssetLoadErrors(page);
+
+  const debug = await readVisualDebug(page);
+  const targets = debug.targets ?? [];
+  expect(targets.filter((target) => target.kind === "dock")).toHaveLength(10);
+  expect(targets.filter((target) => target.kind === "ship")).toHaveLength(128);
+  expect(targets.filter((target) => target.kind === "ship-cluster").length).toBeGreaterThan(0);
+  expect(targets.filter((target) => target.kind === "grave").length).toBeGreaterThan(10);
+
+  await expectDrawDurationP95Within(page, 90, 24);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await waitForRuntimeDebug(page, true);
+  await clickBlankMap(page);
+  await page.mouse.move(8, 8);
+  await waitForSelectedDetail(page, null);
+  await page.waitForTimeout(250);
+  const stillDebug = await readVisualDebug(page);
+  const stillTargets = stillDebug.targets ?? [];
+  const viewport = page.viewportSize();
+  expect(viewport).not.toBeNull();
+  const viewportSize = viewport!;
+  await expect(page).toHaveScreenshot("pharosville-dense-lighthouse.png", {
+    clip: clipForTargets(stillTargets, (target) => target.detailId === "lighthouse", viewportSize, 92, { height: 280, width: 260 }),
+  });
+  await expect(page).toHaveScreenshot("pharosville-dense-evm-bay.png", {
+    clip: clipForTargets(stillTargets, (target) => (
+      target.kind === "dock" && ["dock.ethereum", "dock.base", "dock.arbitrum", "dock.polygon"].includes(target.detailId)
+    ), viewportSize, 88, { height: 300, width: 380 }),
+  });
+  await expect(page).toHaveScreenshot("pharosville-dense-ship-flotillas.png", {
+    clip: clipForTargets(stillTargets, (target) => target.kind === "ship-cluster" || target.detailId === "area.dews.watch", viewportSize, 96, { height: 280, width: 420 }),
+  });
+  await expect(page).toHaveScreenshot("pharosville-dense-cemetery.png", {
+    clip: clipForTargets(stillTargets, (target) => target.kind === "grave", viewportSize, 80, { height: 260, width: 360 }),
+  });
+  expect(stillDebug.camera).not.toBeNull();
+  await expect(page).toHaveScreenshot("pharosville-dense-civic-core.png", {
+    clip: clipAroundPoint(tileToScreen({ x: 34, y: 30 }, stillDebug.camera!), viewportSize, { height: 300, width: 420 }),
+  });
+  await expect(page).toHaveScreenshot("pharosville-dense-risk-water.png", {
+    clip: clipForTargets(stillTargets, (target) => (
+      target.detailId === "area.dews.warning"
+      || target.detailId === "area.dews.danger"
+      || target.detailId === "area.dews.alert"
+    ), viewportSize, 104, { height: 320, width: 460 }),
+  });
 });
 
 test("pharosville renders a stressed ship in storm-shelf detail", async ({ page }) => {
@@ -875,17 +670,7 @@ test("pharosville canvas interactions update details and camera", async ({ page 
   await waitForSelectedDetail(page, null);
   await expect(page.getByTestId("pharosville-detail-panel")).toHaveCount(0);
 
-  await waitForBuildingTargets(page);
-  await expectBuildingTargetsClickable(page);
-  for (const detailId of BUILDING_DETAIL_IDS) {
-    const selection = await clickMapTargetWithPoint(page, "building", detailId);
-    expect(selection.detailId).toBe(detailId);
-    await waitForSelectedDetail(page, detailId);
-    await expect(page.getByTestId("pharosville-detail-panel")).toBeVisible();
-    await expect(page.getByTestId("pharosville-detail-panel")).toContainText(BUILDING_DETAIL_LABELS[detailId]);
-    await page.getByRole("button", { name: "Clear selection" }).click();
-    await waitForSelectedDetail(page, null);
-  }
+  await expectNoBuildingTargets(page);
 
   await page.getByTestId("pharosville-world").focus();
   await page.keyboard.press("Escape");
@@ -1078,6 +863,75 @@ async function expectDetailPanelClearOfFullscreenButton(page: Page) {
   expect(detailBox!.y).toBeGreaterThanOrEqual(fullscreenBox!.y + fullscreenBox!.height + 8);
 }
 
+async function readVisualDebug(page: Page): Promise<PharosVilleVisualDebug> {
+  return page.evaluate(() => {
+    const debug = (window as typeof window & {
+      __pharosVilleDebug?: PharosVilleVisualDebug;
+    }).__pharosVilleDebug;
+    return debug ?? {};
+  });
+}
+
+async function expectDrawDurationP95Within(page: Page, budgetMs: number, samples: number) {
+  const durations: number[] = [];
+  for (let index = 0; index < samples; index += 1) {
+    await page.waitForTimeout(50);
+    const runtime = await readRuntimeSnapshot(page);
+    const duration = runtime.renderMetrics?.drawDurationMs;
+    if (typeof duration === "number" && Number.isFinite(duration)) durations.push(duration);
+  }
+
+  expect(durations.length).toBeGreaterThanOrEqual(Math.min(8, samples));
+  const sorted = durations.toSorted((first, second) => first - second);
+  const p95 = sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)] ?? Number.POSITIVE_INFINITY;
+  expect(p95).toBeLessThanOrEqual(budgetMs);
+  return p95;
+}
+
+function clipForTargets(
+  targets: readonly DebugTarget[],
+  select: (target: DebugTarget) => boolean,
+  viewport: { height: number; width: number },
+  padding: number,
+  minimum: { height: number; width: number },
+) {
+  const selected = targets.filter(select);
+  expect(selected.length).toBeGreaterThan(0);
+
+  const minX = Math.min(...selected.map((target) => target.rect.x));
+  const minY = Math.min(...selected.map((target) => target.rect.y));
+  const maxX = Math.max(...selected.map((target) => target.rect.x + target.rect.width));
+  const maxY = Math.max(...selected.map((target) => target.rect.y + target.rect.height));
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+  const width = Math.min(viewport.width, Math.max(minimum.width, maxX - minX + padding * 2));
+  const height = Math.min(viewport.height, Math.max(minimum.height, maxY - minY + padding * 2));
+  const x = Math.max(0, Math.min(viewport.width - width, centerX - width / 2));
+  const y = Math.max(0, Math.min(viewport.height - height, centerY - height / 2));
+
+  return {
+    height: Math.round(height),
+    width: Math.round(width),
+    x: Math.round(x),
+    y: Math.round(y),
+  };
+}
+
+function clipAroundPoint(
+  point: { x: number; y: number },
+  viewport: { height: number; width: number },
+  size: { height: number; width: number },
+) {
+  const width = Math.min(viewport.width, size.width);
+  const height = Math.min(viewport.height, size.height);
+  return {
+    height: Math.round(height),
+    width: Math.round(width),
+    x: Math.round(Math.max(0, Math.min(viewport.width - width, point.x - width / 2))),
+    y: Math.round(Math.max(0, Math.min(viewport.height - height, point.y - height / 2))),
+  };
+}
+
 test.describe("pharosville normal motion", () => {
   test.use({ reducedMotion: "no-preference" });
 
@@ -1099,7 +953,7 @@ test.describe("pharosville normal motion", () => {
     expect(runtime.motionCueCounts?.effectShips ?? 0).toBeLessThanOrEqual(runtime.motionCueCounts?.animatedShips ?? 0);
     expect(runtime.renderMetrics?.drawableCount).toBeGreaterThan(0);
     expect(runtime.renderMetrics?.drawableCounts.body).toBeGreaterThan(0);
-    expect(runtime.renderMetrics?.drawDurationMs).toBeGreaterThanOrEqual(0);
+    expect(runtime.renderMetrics?.drawDurationMs ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(90);
     expect(runtime.renderMetrics?.movingShipCount).toBeGreaterThan(0);
     expect(runtime.renderMetrics?.visibleTileCount).toBeGreaterThan(0);
     const movingDetailId = `ship.${movedSample.id}`;

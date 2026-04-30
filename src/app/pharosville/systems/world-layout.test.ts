@@ -29,8 +29,8 @@ describe("buildPharosVilleMap", () => {
     expect(map.width).toBe(PHAROSVILLE_MAP_WIDTH);
     expect(map.height).toBe(PHAROSVILLE_MAP_HEIGHT);
     expect(map.tiles).toHaveLength(PHAROSVILLE_MAP_WIDTH * PHAROSVILLE_MAP_HEIGHT);
-    expect(map.waterRatio).toBeGreaterThanOrEqual(0.81);
-    expect(map.waterRatio).toBeLessThanOrEqual(0.88);
+    expect(map.waterRatio).toBeGreaterThanOrEqual(0.78);
+    expect(map.waterRatio).toBeLessThanOrEqual(0.82);
     const bounds = landBounds(map.tiles);
     expect(bounds).toEqual({
       height: 28,

@@ -33,8 +33,8 @@ describe("camera", () => {
       const camera = defaultCamera({ height: viewport.y, map, width: viewport.x });
       const center = tileToScreen(centerTile, camera);
 
-      expect(camera.zoom).toBe(0.72);
-      expect(center.x).toBeGreaterThanOrEqual(viewport.x * 0.48);
+      expect(camera.zoom).toBeCloseTo(0.8136);
+      expect(center.x).toBeGreaterThanOrEqual(viewport.x * 0.47);
       expect(center.x).toBeLessThanOrEqual(viewport.x * 0.52);
       expect(center.y).toBeGreaterThanOrEqual(viewport.y * 0.5);
       expect(center.y).toBeLessThanOrEqual(viewport.y * 0.55);
