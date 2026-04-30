@@ -37,7 +37,6 @@ export function WorldToolbar({
 }: WorldToolbarProps) {
   const entityCount = 1
     + world.areas.length
-    + world.buildings.length
     + world.docks.length
     + world.ships.length
     + world.shipClusters.length

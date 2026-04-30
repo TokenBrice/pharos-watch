@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { BuildingType, PharosVilleWorld, VisualCue, VisualCueChannel, WorldEffect } from "./world-types";
+import type { PharosVilleWorld, VisualCue, VisualCueChannel, WorldEffect } from "./world-types";
 import { buildVisualCueRegistry } from "./visual-cue-registry";
-
-const BUILDING_TYPES = [
-  "mint-burn-foundry",
-  "exit-route-gatehouse",
-] as const satisfies readonly BuildingType[];
 
 const ALLOWED_CHANNELS = [
   "color",
@@ -22,7 +17,6 @@ const STRUCTURAL_WORLD_FIELDS = {
 } as const satisfies Partial<Record<keyof PharosVilleWorld, string>>;
 
 function cueKey(cue: VisualCue): string {
-  if (cue.target.kind === "building") return `building:${cue.target.buildingType}`;
   return cue.target.kind;
 }
 
@@ -38,9 +32,7 @@ describe("buildVisualCueRegistry", () => {
       "cue.ship.pennant",
       "cue.ship.scale",
       "cue.ship-cluster",
-      "cue.building.mint-burn-foundry",
       "cue.water.semantic-terrain",
-      "cue.building.exit-route-gatehouse",
     ]));
     expect(cues.find((cue) => cue.id === "cue.ship.motion")).toMatchObject({
       visual: "ship route and docking cadence",
@@ -53,15 +45,9 @@ describe("buildVisualCueRegistry", () => {
     expect(cues.every((cue) => cue.sourceField && cue.domEquivalent && cue.failureState && cue.reducedMotionEquivalent)).toBe(true);
   });
 
-  it("uses explicit typed targets instead of cue-id suffixes for building coverage", () => {
+  it("does not expose removed data-building cue targets", () => {
     const cues = buildVisualCueRegistry();
-    const buildingTargets = cues
-      .map((cue) => cue.target)
-      .filter((target) => target.kind === "building")
-      .map((target) => target.buildingType);
-
-    expect(new Set(buildingTargets)).toEqual(new Set(BUILDING_TYPES));
-    expect(buildingTargets).toHaveLength(BUILDING_TYPES.length);
+    expect(cues.map((cue) => cue.id).filter((id) => id.startsWith("cue.building."))).toEqual([]);
     expect(cues).toContainEqual(expect.objectContaining({ target: { kind: "area" } }));
   });
 
@@ -70,7 +56,6 @@ describe("buildVisualCueRegistry", () => {
     const targetKeys = new Set(cues.map(cueKey));
     const coveredWorldFields = {
       areas: targetKeys.has("area"),
-      buildings: BUILDING_TYPES.every((buildingType) => targetKeys.has(`building:${buildingType}`)),
       docks: targetKeys.has("dock"),
       graves: targetKeys.has("grave"),
       lighthouse: targetKeys.has("lighthouse"),
@@ -80,7 +65,6 @@ describe("buildVisualCueRegistry", () => {
 
     expect(coveredWorldFields).toEqual({
       areas: true,
-      buildings: true,
       docks: true,
       graves: true,
       lighthouse: true,

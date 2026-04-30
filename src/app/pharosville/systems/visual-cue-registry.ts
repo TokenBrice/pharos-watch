@@ -123,27 +123,5 @@ export function buildVisualCueRegistry(): VisualCue[] {
       domEquivalent: "long-tail cluster detail panel and accessibility ledger rows with risk-water area and zone",
       reducedMotionEquivalent: "same static cluster marker and member list",
     },
-    {
-      id: "cue.building.mint-burn-foundry",
-      target: { kind: "building", buildingType: "mint-burn-foundry" },
-      primaryChannels: ["glow", "motion", "opacity"],
-      visual: "foundry press, furnace glow, smoke, and sparks",
-      sourceField: "mintBurnFlows.gauge, mintBurnFlows.coins[], mintBurnFlows.hourly[], mintBurnFlows.sync",
-      questionAnswered: "Are configured issuance-chain events mint-heavy, burn-heavy, balanced, quiet, or stale?",
-      failureState: "dim foundry with stale-data detail row",
-      domEquivalent: "Royal Mint And Burn Foundry detail facts and accessibility ledger row",
-      reducedMotionEquivalent: "static foundry glow, frozen sparks, and detail facts",
-    },
-    {
-      id: "cue.building.exit-route-gatehouse",
-      target: { kind: "building", buildingType: "exit-route-gatehouse" },
-      primaryChannels: ["shape", "motion", "glow"],
-      visual: "gate doors, contained gauge wheel, and guarded arch lantern",
-      sourceField: "dexLiquidity[__global__], dexLiquidity[coin], redemptionBackstops.coins",
-      questionAnswered: "How deep, open, concentrated, or stale are observed and modeled exit routes?",
-      failureState: "closed gray gate with dim arch",
-      domEquivalent: "Exit Route Gatehouse detail facts and accessibility ledger row",
-      reducedMotionEquivalent: "static gate lantern, contained gauge, and detail facts",
-    },
   ];
 }

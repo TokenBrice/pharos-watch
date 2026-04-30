@@ -503,8 +503,7 @@ type SelectableWorldEntity =
   | PharosVilleWorldModel["ships"][number]
   | PharosVilleWorldModel["shipClusters"][number]
   | PharosVilleWorldModel["areas"][number]
-  | PharosVilleWorldModel["graves"][number]
-  | PharosVilleWorldModel["buildings"][number];
+  | PharosVilleWorldModel["graves"][number];
 
 function findWorldEntity(world: PharosVilleWorldModel, detailId: string | null): SelectableWorldEntity | null {
   if (!detailId) return null;
@@ -515,7 +514,6 @@ function findWorldEntity(world: PharosVilleWorldModel, detailId: string | null):
     ...world.shipClusters,
     ...world.areas,
     ...world.graves,
-    ...world.buildings,
   ].find((entity) => entity.detailId === detailId) ?? null;
 }
 
@@ -568,7 +566,6 @@ type PharosVilleDebugState = {
 type MotionCueCounts = {
   ambientBirds: number;
   animatedShips: number;
-  buildingEffects: number;
   effectShips: number;
   harborLights: number;
   moverShips: number;
@@ -673,7 +670,6 @@ function motionCueCounts(input: {
   return {
     ambientBirds: PHAROSVILLE_AMBIENT_BIRD_CAP,
     animatedShips: input.motionPlan.animatedShipIds.size,
-    buildingEffects: input.world.buildings.length,
     effectShips: input.motionPlan.effectShipIds.size,
     harborLights: PHAROSVILLE_HARBOR_LIGHT_CAP,
     moverShips: input.motionPlan.moverShipIds.size,

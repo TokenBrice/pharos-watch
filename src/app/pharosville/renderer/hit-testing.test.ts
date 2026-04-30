@@ -7,13 +7,8 @@ import type { PharosVilleAssetManifestEntry } from "../systems/asset-manifest";
 import type { ShipMotionSample } from "../systems/motion";
 import { areaLabelPlacementForArea } from "../systems/area-labels";
 import type { LoadedPharosVilleAsset } from "./asset-manager";
-import { dockDrawPoint, dockRenderScale, entityDrawGeometry } from "./geometry";
+import { dockDrawPoint, dockRenderScale } from "./geometry";
 import { collectHitTargets, hitTest, type HitTarget } from "./hit-testing";
-
-const BUILDING_DETAIL_IDS = [
-  "building.mint-burn-foundry",
-  "building.exit-route-gatehouse",
-] as const;
 
 const TARGET_CLICK_POINTS = [
   [0.5, 0.5],
@@ -56,8 +51,9 @@ describe("hit-testing", () => {
 
     expect(targets.some((target) => target.detailId === "lighthouse")).toBe(true);
     expect(targets.some((target) => target.kind === "ship")).toBe(true);
-    expect(targets.some((target) => target.kind === "building")).toBe(true);
+    expect(targets.some((target) => target.kind === "building")).toBe(false);
     expect(targets.some((target) => target.kind === "area")).toBe(true);
+    expect(targets.some((target) => target.detailId.startsWith("building."))).toBe(false);
   });
 
   it("selects the top-priority target under the pointer", () => {
@@ -91,7 +87,6 @@ describe("hit-testing", () => {
       world: {
         ...world,
         areas: [],
-        buildings: [],
         docks: [],
         graves: [],
         shipClusters: [],
@@ -110,18 +105,6 @@ describe("hit-testing", () => {
     };
     expect(pointInRect(point, backTarget!.rect)).toBe(true);
     expect(hitTest(targets, point)?.detailId).toBe(frontShip.detailId);
-  });
-
-  it.each(BUILDING_DETAIL_IDS)("selects thematic building %s from an unoccluded target point", (detailId) => {
-    const building = world.buildings.find((entry) => entry.detailId === detailId);
-    expect(building).toBeDefined();
-    const targets = collectHitTargets({ camera, world });
-    const target = targets.find((entry) => entry.detailId === detailId);
-    expect(target).toBeDefined();
-
-    const point = unoccludedTargetPoint(targets, target!);
-    expect(point, `${detailId} should have an unoccluded center or quadrant click point`).not.toBeNull();
-    expect(hitTest(targets, point!)?.detailId).toBe(detailId);
   });
 
   it("aligns area hit targets to shared cartographic label placement", () => {
@@ -285,43 +268,6 @@ describe("hit-testing", () => {
     expect(target!.rect.y).toBeCloseTo(drawPoint.y - entry.anchor[1] * scale + entry.hitbox[1] * scale);
     expect(target!.rect.width).toBeCloseTo(entry.hitbox[2] * scale);
     expect(target!.rect.height).toBeCloseTo(entry.hitbox[3] * scale);
-  });
-
-  it("aligns building hitboxes to shared effect and sprite geometry", () => {
-    const building = world.buildings.find((entry) => entry.detailId === "building.mint-burn-foundry");
-    expect(building).toBeDefined();
-    const entry: PharosVilleAssetManifestEntry = {
-      anchor: [56, 92],
-      category: "building",
-      displayScale: 1,
-      footprint: [46, 28],
-      height: 112,
-      hitbox: [12, 18, 88, 84],
-      id: building!.assetId,
-      layer: "buildings",
-      loadPriority: "deferred",
-      path: "building.png",
-      width: 112,
-    };
-    const point = tileToScreen(building!.tile, camera);
-    const geometry = entityDrawGeometry({
-      camera,
-      entity: building!,
-      mapWidth: world.map.width,
-      point,
-    });
-    const scale = geometry.drawScale * entry.displayScale;
-    const targets = collectHitTargets({
-      assets: { get: (id) => id === building!.assetId ? { entry, image: {} as HTMLImageElement } : null },
-      camera,
-      world,
-    });
-    const target = targets.find((candidate) => candidate.detailId === building!.detailId);
-
-    expect(target).toBeDefined();
-    expect(geometry.y).toBeCloseTo(point.y + 4 * camera.zoom);
-    expect(target!.rect.x).toBeCloseTo(geometry.x - entry.anchor[0] * scale + entry.hitbox[0] * scale);
-    expect(target!.rect.y).toBeCloseTo(geometry.y - entry.anchor[1] * scale + entry.hitbox[1] * scale);
   });
 
   it("uses a compact tile-native lighthouse hitbox even when the generated sprite is available", () => {

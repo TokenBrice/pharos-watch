@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins";
-import { DEX_GLOBAL_KEY, type DexLiquidityData, type MintBurnFlowsResponse, type RedemptionBackstopsResponse, type ReportCardsResponse } from "@shared/types";
+import type { ReportCardsResponse } from "@shared/types";
 import {
   fixtureChains,
   fixturePegSummary,
@@ -16,9 +16,6 @@ import {
 } from "../__fixtures__/pharosville-world";
 import { buildPharosVilleWorld, SHIP_WATER_ANCHORS } from "./pharosville-world";
 import {
-  CEMETERY_CENTER,
-  CEMETERY_RADIUS,
-  DOCK_TILES,
   isWaterTileKind,
   terrainKindAt,
   tileKindAt,
@@ -38,8 +35,8 @@ describe("buildPharosVilleWorld", () => {
     });
 
     expect(world.routeMode).toBe("world");
-    expect(world.map.waterRatio).toBeGreaterThanOrEqual(0.81);
-    expect(world.map.waterRatio).toBeLessThanOrEqual(0.88);
+    expect(world.map.waterRatio).toBeGreaterThanOrEqual(0.78);
+    expect(world.map.waterRatio).toBeLessThanOrEqual(0.82);
     expect(world.lighthouse.unavailable).toBe(false);
     expect(world.docks).toHaveLength(2);
     expect(world.ships.map((ship) => ship.id)).toEqual(["usdt-tether", "usdc-circle"]);
@@ -54,23 +51,13 @@ describe("buildPharosVilleWorld", () => {
     expect(world.graves).toHaveLength(3);
     expect(world.graves[0]?.logoSrc).toBe("/logos/cemetery/nubits.png");
     expect(world.detailIndex["lighthouse"]).toBeDefined();
-    expect(world.buildings).toHaveLength(2);
-    expect(Object.fromEntries(world.buildings.map((building) => [building.buildingType, building.tile]))).toEqual({
-      "mint-burn-foundry": { x: 30, y: 28 },
-      "exit-route-gatehouse": { x: 38, y: 31 },
-    });
-    expect(world.buildings.every((building) => tileKindAt(building.tile.x, building.tile.y) === "land")).toBe(true);
-    expect(world.buildings.every((building) => cemeteryValue(building.tile) > 1.08)).toBe(true);
-    expect(world.buildings.every((building) => DOCK_TILES.every((dock) => distance(building.tile, dock) >= 5))).toBe(true);
-    expect(world.buildings.every((building) => distance(building.tile, CEMETERY_CENTER) >= 6)).toBe(true);
-    expect(minPairDistance(world.buildings.map((building) => building.tile))).toBeGreaterThanOrEqual(7.75);
     expect(terrainKindAt(0, 0)).toBe("deep-water");
-    expect(world.detailIndex["building.mint-burn-foundry"]?.title).toBe("Royal Mint And Burn Foundry");
+    expect(Object.keys(world.detailIndex).some((detailId) => detailId.startsWith("building."))).toBe(false);
     expect(world.areas.every((area) => area.id.startsWith("area.dews.") || area.id.startsWith("area.risk-water."))).toBe(true);
     expect(world.visualCues.length).toBeGreaterThan(0);
   });
 
-  it("derives thematic building states from existing Pharos data payloads", () => {
+  it("omits removed data-building entities from the world model", () => {
     const reportCards = {
       ...fixtureReportCards,
       cards: [
@@ -98,23 +85,13 @@ describe("buildPharosVilleWorld", () => {
       pegSummary: fixturePegSummary,
       stress: fixtureStress,
       reportCards,
-      mintBurnFlows: mintBurnFixture({ score: 44 }),
-      dexLiquidity: dexLiquidityFixture({ liquidityScore: 82 }),
-      redemptionBackstops: redemptionFixture({ effectiveExitScore: 84 }),
       cemeteryEntries: [],
       freshness: {},
     });
-    const statuses = Object.fromEntries(world.buildings.map((building) => [building.buildingType, building.status]));
 
-    expect(statuses).toMatchObject({
-      "mint-burn-foundry": "minting",
-      "exit-route-gatehouse": "deep-exit",
-    });
     expect(world.areas.every((area) => area.id.startsWith("area.dews.") || area.id.startsWith("area.risk-water."))).toBe(true);
-    expect(world.detailIndex["building.exit-route-gatehouse"]?.facts).toEqual(expect.arrayContaining([
-      { label: "Caveat", value: "DEX telemetry and modeled redemption routes are not guarantees of executable exit capacity." },
-    ]));
-    expect(world.detailIndex["building.exit-route-gatehouse"]?.members?.[0]?.label).toContain("USDC");
+    expect(world.legends.map((legend) => legend.id)).not.toContain("legend.buildings");
+    expect(world.visualCues.map((cue) => cue.id).filter((id) => id.startsWith("cue.building."))).toEqual([]);
   });
 
   it("spreads safe ships across the western calm anchorage", () => {
@@ -575,25 +552,6 @@ describe("buildPharosVilleWorld", () => {
   });
 });
 
-function cemeteryValue(tile: { x: number; y: number }) {
-  return ((tile.x - CEMETERY_CENTER.x) / CEMETERY_RADIUS.x) ** 2
-    + ((tile.y - CEMETERY_CENTER.y) / CEMETERY_RADIUS.y) ** 2;
-}
-
-function distance(a: { x: number; y: number }, b: { x: number; y: number }) {
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
-function minPairDistance(tiles: Array<{ x: number; y: number }>) {
-  let minimum = Number.POSITIVE_INFINITY;
-  for (let first = 0; first < tiles.length; first += 1) {
-    for (let second = first + 1; second < tiles.length; second += 1) {
-      minimum = Math.min(minimum, distance(tiles[first]!, tiles[second]!));
-    }
-  }
-  return minimum;
-}
-
 function bandSignals(band: "ALERT" | "WATCH" | "CALM", count: number) {
   return Object.fromEntries(Array.from({ length: count }, (_, index) => [
     `${band.toLowerCase()}-${index}`,
@@ -605,101 +563,4 @@ function bandSignals(band: "ALERT" | "WATCH" | "CALM", count: number) {
       methodologyVersion: "fixture",
     },
   ]));
-}
-
-function mintBurnFixture({ score }: { score: number }): MintBurnFlowsResponse {
-  return {
-    gauge: {
-      score,
-      band: "Mint pressure",
-      intensitySemantics: "signed-v2",
-      flightToQuality: false,
-      flightIntensity: 0,
-      trackedCoins: 2,
-      trackedMcapUsd: 11_000_000_000,
-    },
-    coins: [
-      {
-        stablecoinId: "usdc-circle",
-        symbol: "USDC",
-        flowIntensity: score,
-        pressureShiftScore: score,
-        pressureShiftState: "steady",
-        netFlowDirection24h: "mint",
-        has24hActivity: true,
-        baselineDailyNetUsd: null,
-        baselineDailyAbsUsd: null,
-        baselineDataDays: null,
-        netFlow24hUsd: 80_000_000,
-        mintVolume24hUsd: 100_000_000,
-        burnVolume24hUsd: 20_000_000,
-        mintCount24h: 3,
-        burnCount24h: 1,
-        netFlow7dUsd: 90_000_000,
-        netFlow30dUsd: 120_000_000,
-        netFlow90dUsd: 120_000_000,
-        largestEvent24h: {
-          direction: "mint",
-          amountUsd: 60_000_000,
-          txHash: "0xfixture",
-          timestamp: 1_700_000_000,
-        },
-      },
-    ],
-    hourly: [{ hourTs: 1_700_000_000, mintVolumeUsd: 100_000_000, burnVolumeUsd: 20_000_000, netFlowUsd: 80_000_000 }],
-    updatedAt: 1_700_000_000,
-    scope: { chainIds: ["ethereum"], label: "Configured issuance-chain events" },
-    sync: { lastSuccessfulSyncAt: 1_700_000_000, freshnessStatus: "fresh", warning: null, criticalLaneHealthy: true },
-  } as unknown as MintBurnFlowsResponse;
-}
-
-function dexLiquidityFixture({ liquidityScore }: { liquidityScore: number }) {
-  const data = {
-    totalTvlUsd: 120_000_000,
-    totalVolume24hUsd: 40_000_000,
-    totalVolume7dUsd: 210_000_000,
-    liquidityScore,
-    coverageConfidence: 0.9,
-    concentrationHhi: 0.2,
-    protocolTvl: { curve: 45_000_000, uniswap: 40_000_000, balancer: 35_000_000 },
-    effectiveTvlUsd: 100_000_000,
-  } as unknown as DexLiquidityData;
-  return {
-    [DEX_GLOBAL_KEY]: data,
-    "usdc-circle": data,
-  };
-}
-
-function redemptionFixture({ effectiveExitScore }: { effectiveExitScore: number }): RedemptionBackstopsResponse {
-  const entry = {
-    stablecoinId: "usdc-circle",
-    score: effectiveExitScore,
-    effectiveExitScore,
-    routeFamily: "stablecoin-redeem",
-    accessModel: "permissionless-onchain",
-    settlementModel: "immediate",
-    routeStatus: "open",
-    capacityConfidence: "live-direct",
-    immediateCapacityUsd: 75_000_000,
-  };
-  return {
-    coins: {
-      "usdc-circle": entry,
-      "usdt-tether": { ...entry, stablecoinId: "usdt-tether" },
-      "pyusd-paypal": { ...entry, stablecoinId: "pyusd-paypal" },
-    },
-    methodology: {
-      version: "fixture",
-      versionLabel: "Fixture",
-      currentVersion: "fixture",
-      currentVersionLabel: "Fixture",
-      changelogPath: "/methodology/",
-      asOf: 1_700_000_000,
-      isCurrent: true,
-      componentWeights: { access: 1, settlement: 1, executionCertainty: 1, capacity: 1, outputAssetQuality: 1, cost: 1 },
-      effectiveExitModel: { model: "fixture", diversificationFactor: 1 },
-      routeFamilyCaps: { queueRedeem: 1, offchainIssuer: 1 },
-    },
-    updatedAt: 1_700_000_000,
-  } as unknown as RedemptionBackstopsResponse;
 }

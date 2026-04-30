@@ -1,9 +1,8 @@
 "use client";
 import { useMemo } from "react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { useDexLiquidity, usePegSummary, useRedemptionBackstops, useReportCards, useStabilityIndexDetail, useStressSignals } from "@/hooks/api-hooks";
+import { usePegSummary, useReportCards, useStabilityIndexDetail, useStressSignals } from "@/hooks/api-hooks";
 import { useChains } from "@/hooks/use-chains";
-import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import type { ApiMeta } from "@/lib/api";
 import { buildPharosVilleWorld } from "./systems/pharosville-world";
@@ -31,19 +30,13 @@ export function PharosVilleDesktopData() {
   const pegSummaryQuery = usePegSummary();
   const stressQuery = useStressSignals();
   const reportCardsQuery = useReportCards();
-  const mintBurnQuery = useMintBurnFlows();
-  const dexLiquidityQuery = useDexLiquidity();
-  const redemptionQuery = useRedemptionBackstops();
 
   const error = stablecoinsQuery.error
     ?? chainsQuery.error
     ?? stabilityQuery.error
     ?? pegSummaryQuery.error
     ?? stressQuery.error
-    ?? reportCardsQuery.error
-    ?? mintBurnQuery.error
-    ?? dexLiquidityQuery.error
-    ?? redemptionQuery.error;
+    ?? reportCardsQuery.error;
 
   const hasAnyData = Boolean(
     stablecoinsQuery.data
@@ -51,20 +44,14 @@ export function PharosVilleDesktopData() {
       || stabilityQuery.data
       || pegSummaryQuery.data
       || stressQuery.data
-      || reportCardsQuery.data
-      || mintBurnQuery.data
-      || dexLiquidityQuery.data
-      || redemptionQuery.data,
+      || reportCardsQuery.data,
   );
   const isLoading = stablecoinsQuery.isLoading
     || chainsQuery.isLoading
     || stabilityQuery.isLoading
     || pegSummaryQuery.isLoading
     || stressQuery.isLoading
-    || reportCardsQuery.isLoading
-    || mintBurnQuery.isLoading
-    || dexLiquidityQuery.isLoading
-    || redemptionQuery.isLoading;
+    || reportCardsQuery.isLoading;
   const routeMode = resolveRouteMode({ hasAnyData, hasBlockingError: Boolean(error), isLoading });
 
   const world = useMemo(() => buildPharosVilleWorld({
@@ -74,9 +61,6 @@ export function PharosVilleDesktopData() {
     pegSummary: pegSummaryQuery.data,
     stress: stressQuery.data,
     reportCards: reportCardsQuery.data,
-    mintBurnFlows: mintBurnQuery.data,
-    dexLiquidity: dexLiquidityQuery.data,
-    redemptionBackstops: redemptionQuery.data,
     routeMode,
     freshness: {
       stablecoinsStale: isMetaStale(stablecoinsQuery.meta),
@@ -85,21 +69,12 @@ export function PharosVilleDesktopData() {
       pegSummaryStale: isMetaStale(pegSummaryQuery.meta),
       stressStale: isMetaStale(stressQuery.meta),
       reportCardsStale: isMetaStale(reportCardsQuery.meta),
-      mintBurnStale: isMetaStale(mintBurnQuery.meta),
-      dexLiquidityStale: isMetaStale(dexLiquidityQuery.meta),
-      redemptionBackstopsStale: isMetaStale(redemptionQuery.meta),
     },
   }), [
     chainsQuery.data,
     chainsQuery.meta,
-    dexLiquidityQuery.data,
-    dexLiquidityQuery.meta,
-    mintBurnQuery.data,
-    mintBurnQuery.meta,
     pegSummaryQuery.data,
     pegSummaryQuery.meta,
-    redemptionQuery.data,
-    redemptionQuery.meta,
     reportCardsQuery.data,
     reportCardsQuery.meta,
     routeMode,
@@ -123,9 +98,6 @@ export function PharosVilleDesktopData() {
           void pegSummaryQuery.refetch();
           void stressQuery.refetch();
           void reportCardsQuery.refetch();
-          void mintBurnQuery.refetch();
-          void dexLiquidityQuery.refetch();
-          void redemptionQuery.refetch();
         }}
       />
       <PharosVilleWorld world={world} />

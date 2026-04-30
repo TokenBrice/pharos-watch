@@ -5,9 +5,6 @@ import type {
   StablecoinListResponse,
   StabilityIndexResponse,
   StressSignalsAllResponse,
-  DexLiquidityMap,
-  MintBurnFlowsResponse,
-  RedemptionBackstopsResponse,
 } from "@shared/types";
 import type { ChainsResponse } from "@shared/types/chains";
 import { ACTIVE_IDS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
@@ -21,14 +18,12 @@ import { buildChainDocks } from "./chain-docks";
 import { clusterLongTailShips } from "./clustering";
 import {
   detailForCluster,
-  detailForBuilding,
   detailForDock,
   detailForGrave,
   detailForLighthouse,
   detailForArea,
   detailForShip,
 } from "./detail-model";
-import { buildDataBuildings } from "./data-buildings";
 import { buildPharosVilleMap, clampMapTile, graveNodesFromEntries, LIGHTHOUSE_TILE, MAX_TILE_X, MAX_TILE_Y, nearestAvailableWaterTile, nearestWaterTile, REGION_TILES } from "./world-layout";
 import { getRecentChange } from "./recent-change";
 import { resolveShipRiskPlacement } from "./risk-placement";
@@ -63,9 +58,6 @@ export interface PharosVilleInputs {
   pegSummary: PegSummaryResponse | null | undefined;
   stress: StressSignalsAllResponse | null | undefined;
   reportCards: ReportCardsResponse | null | undefined;
-  mintBurnFlows?: MintBurnFlowsResponse | null | undefined;
-  dexLiquidity?: DexLiquidityMap | null | undefined;
-  redemptionBackstops?: RedemptionBackstopsResponse | null | undefined;
   cemeteryEntries?: readonly CemeteryEntry[];
   freshness: PharosVilleFreshness;
   routeMode?: PharosVilleWorld["routeMode"];
@@ -334,7 +326,6 @@ function buildDetailIndex(world: Omit<PharosVilleWorld, "detailIndex" | "visualC
     ...world.shipClusters.map(detailForCluster),
     ...world.areas.map(detailForArea),
     ...world.graves.map(detailForGrave),
-    ...world.buildings.map(detailForBuilding),
   ];
   return Object.fromEntries(details.map((detail) => [detail.id, detail]));
 }
@@ -348,13 +339,6 @@ export function buildPharosVilleWorld(inputs: PharosVilleInputs): PharosVilleWor
   const dockedShips = assignDockVisits(allShips, docks);
   const { visibleShips, clusters } = clusterLongTailShips(dockedShips);
   const graves = graveNodesFromEntries(inputs.cemeteryEntries ?? CEMETERY_ENTRIES);
-  const buildings = buildDataBuildings({
-    dexLiquidity: inputs.dexLiquidity,
-    freshness: inputs.freshness,
-    mintBurnFlows: inputs.mintBurnFlows,
-    redemptionBackstops: inputs.redemptionBackstops,
-    reportCards: inputs.reportCards,
-  });
   const baseWorld = {
     generatedAt: Date.now(),
     routeMode: inputs.routeMode ?? "world",
@@ -366,13 +350,11 @@ export function buildPharosVilleWorld(inputs: PharosVilleInputs): PharosVilleWor
     ships: visibleShips,
     shipClusters: clusters,
     graves,
-    buildings,
     effects: [],
     legends: [
       { id: "legend.psi", label: "Lighthouse", description: "PSI composite status" },
       { id: "legend.docks", label: "Docks", description: "Top chain harbors by stablecoin supply" },
       { id: "legend.ships", label: "Ships", description: "Active stablecoins" },
-      { id: "legend.buildings", label: "Data buildings", description: "Main-island thematic buildings for Pharos data products" },
       { id: "legend.cemetery", label: "Cemetery", description: "Dead and frozen assets" },
     ],
   };

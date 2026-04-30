@@ -18,8 +18,7 @@ export type WorldSelectableEntity =
   | PharosVilleWorld["ships"][number]
   | PharosVilleWorld["shipClusters"][number]
   | PharosVilleWorld["areas"][number]
-  | PharosVilleWorld["graves"][number]
-  | PharosVilleWorld["buildings"][number];
+  | PharosVilleWorld["graves"][number];
 
 export interface EntityAssetGeometry {
   drawScale: number;
@@ -49,7 +48,6 @@ export interface ResolvedEntityGeometry {
 
 export function entityAssetId(entity: WorldSelectableEntity) {
   if (entity.kind === "dock") return entity.assetId;
-  if (entity.kind === "building") return entity.assetId;
   if (entity.kind === "ship") return `ship.${entity.visual.hull}`;
   return null;
 }
@@ -158,9 +156,6 @@ export function entityDrawGeometry(input: {
     x = draw.x;
     y = draw.y;
     drawScale *= dockRenderScale(entity.size);
-  } else if (entity.kind === "building") {
-    y += 4 * camera.zoom;
-    drawScale *= 0.6 * entity.visual.scale;
   } else if (entity.kind === "ship") {
     y += 12 * camera.zoom;
     drawScale *= entity.visual.scale * 0.7;
@@ -276,7 +271,6 @@ function targetSize(entity: WorldSelectableEntity): { height: number; width: num
   if (entity.kind === "lighthouse") return { height: 224, width: 160, yOffset: -94 };
   if (entity.kind === "dock") return { height: 38, width: 96, yOffset: 0 };
   if (entity.kind === "area") return { height: 28, width: 112, yOffset: 0 };
-  if (entity.kind === "building") return { height: 88, width: 104, yOffset: -34 };
   if (entity.kind === "ship") return { height: 48, width: 56, yOffset: -16 };
   if (entity.kind === "ship-cluster") return { height: 48, width: 48, yOffset: -12 };
   return { height: 34 * entity.visual.scale, width: 30 * entity.visual.scale, yOffset: -10 * entity.visual.scale };

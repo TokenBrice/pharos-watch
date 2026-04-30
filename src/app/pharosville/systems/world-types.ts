@@ -197,52 +197,7 @@ export interface GraveNode {
   detailId: string;
 }
 
-export type BuildingType =
-  | "mint-burn-foundry"
-  | "exit-route-gatehouse";
-
-export type BuildingStatus =
-  | "balanced"
-  | "burning"
-  | "concentrated"
-  | "deep-exit"
-  | "minting"
-  | "quiet"
-  | "stale"
-  | "thin-exit"
-  | "unavailable";
-
-export interface DataLandmarkVisual {
-  accent: string;
-  intensity: number;
-  scale: number;
-  secondaryIntensity: number;
-  staleHazeIntensity: number;
-  tertiaryIntensity: number;
-}
-
-export interface BuildingNode {
-  id: string;
-  kind: "building";
-  buildingType: BuildingType;
-  label: string;
-  assetId: string;
-  tile: { x: number; y: number };
-  status: BuildingStatus;
-  statusLabel: string;
-  summary: string;
-  facts: Array<{ label: string; value: string }>;
-  sourceFields: string[];
-  links: Array<{ label: string; href: string }>;
-  membersHeading?: string;
-  members?: Array<{ id: string; label: string; href: string; value?: string }>;
-  detailId: string;
-  visual: DataLandmarkVisual;
-}
-
 export type WorldEffectCueId =
-  | "cue.building.exit-route-gatehouse"
-  | "cue.building.mint-burn-foundry"
   | "cue.lighthouse.psi"
   | "cue.ship.distance"
   | "cue.ship.motion"
@@ -298,7 +253,6 @@ export interface DetailModel {
 
 export type VisualCueTarget =
   | { kind: "area" }
-  | { kind: "building"; buildingType: BuildingType }
   | { kind: "dock" }
   | { kind: "grave" }
   | { kind: "lighthouse" }
@@ -333,9 +287,6 @@ export interface PharosVilleFreshness {
   pegSummaryStale?: boolean;
   stressStale?: boolean;
   reportCardsStale?: boolean;
-  mintBurnStale?: boolean;
-  dexLiquidityStale?: boolean;
-  redemptionBackstopsStale?: boolean;
 }
 
 export interface PharosVilleWorld {
@@ -349,7 +300,6 @@ export interface PharosVilleWorld {
   ships: ShipNode[];
   shipClusters: ShipClusterNode[];
   graves: GraveNode[];
-  buildings: BuildingNode[];
   effects: WorldEffect[];
   detailIndex: Record<string, DetailModel>;
   legends: LegendItem[];

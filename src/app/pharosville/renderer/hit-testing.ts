@@ -41,7 +41,6 @@ export function collectHitTargets(input: {
     ...input.world.shipClusters,
     ...input.world.areas,
     ...input.world.graves,
-    ...input.world.buildings,
   ];
 
   const targetRecords = entities.map((entity) => {

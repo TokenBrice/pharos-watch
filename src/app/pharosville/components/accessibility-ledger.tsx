@@ -77,17 +77,6 @@ export function AccessibilityLedger({
         ))}
       </ol>
 
-      <h3>Data buildings</h3>
-      <ol>
-        {world.buildings.map((building) => (
-          <li key={building.id}>
-            {building.label}: {building.statusLabel}. {building.summary} Facts:{" "}
-            {building.facts.map((fact) => `${fact.label} ${fact.value}`).join("; ")}. Source fields{" "}
-            {building.sourceFields.join(", ") || "unavailable"}.
-          </li>
-        ))}
-      </ol>
-
       <h3>Ships</h3>
       <ol>
         {world.ships.map((ship) => (
@@ -147,8 +136,5 @@ function freshnessEntries(world: PharosVilleWorld) {
     { label: "Peg summary", stale: world.freshness.pegSummaryStale === true },
     { label: "Stress signals", stale: world.freshness.stressStale === true },
     { label: "Report cards", stale: world.freshness.reportCardsStale === true },
-    { label: "Mint/burn flows", stale: world.freshness.mintBurnStale === true },
-    { label: "DEX liquidity", stale: world.freshness.dexLiquidityStale === true },
-    { label: "Redemption backstops", stale: world.freshness.redemptionBackstopsStale === true },
   ];
 }
