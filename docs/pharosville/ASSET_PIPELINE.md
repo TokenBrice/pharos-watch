@@ -10,6 +10,8 @@ This is the agent-facing workflow for PharosVille raster assets. Runtime asset t
 - Promote selected PNGs to `public/pharosville/assets/` only after they are chosen for runtime use.
 - Runtime code must reference local manifest asset IDs, not Pixellab URLs, remote URLs, tokens, or prototype paths.
 - Every runtime PNG needs a manifest entry with accurate dimensions, anchor, footprint, hitbox, layer/category, load priority, semantic role when useful, and prompt provenance.
+- Load priority is part of the runtime budget: use `critical` only for assets needed to make the initial desktop canvas frame coherent, and `deferred` for supplemental scenery or alternate sprites that can arrive after the core scene.
+- The current v0.1 manifest budget is 34 runtime assets. The live manifest has 31 entries: 21 critical/first-render assets and 10 deferred assets.
 - Manifest schema v2 separates `style.cacheVersion` from `style.styleAnchorVersion`.
 - Bump `style.cacheVersion` whenever promoted asset bytes, manifest geometry, or animation frame assets change.
 - Keep `promptProvenance.jobId` and `promptProvenance.styleAnchorVersion` aligned with the selected asset's style anchor.
@@ -69,6 +71,8 @@ Preferred constraints:
 - Readable silhouette at route zoom.
 - No embedded text, logos, UI, or photorealistic details.
 - restrained palette that works with the existing sea/island colors.
+- No ClaudeVille-specific lore, fantasy-village props, agent characters,
+  decorative signs, or copy baked into the sprite.
 
 ## Promotion Checklist
 
@@ -103,3 +107,4 @@ Use `npm run build` and `npm run seo:check` when the change affects the static r
 - Sail-logo offsets no longer fit a replacement ship sprite.
 - A prototype or remote URL leaks into runtime paths.
 - Too many critical assets slow first render; keep first-render priority narrow.
+- Deferred scenery promoted into the critical set without an initial-frame reason.

@@ -48,8 +48,9 @@ Historical visual-review images and handoff notes from the old planning archive 
 
 Use this checklist when approving screenshot changes:
 
-- The world reads as a maritime analytical map, not a generic game backdrop.
+- The world reads as a dark-first maritime analytical observatory, not a generic game backdrop, ClaudeVille clone, fantasy village, or lore illustration.
 - The lighthouse, EVM bay, cemetery, civic spine, DEWS water areas, and Ledger Mooring are all visually distinguishable.
+- The revamp quality comes from authored material detail, local lighting, shoreline/harbor texture, sprite density, draw ordering, and UI polish; it must not rely on decorative copy or unexplained scenery.
 - The DEWS sea reads as a clear escalation route matching the current compound masks: Calm Anchorage fills the large left-edge vertical basin, Watch Breakwater owns the wide top-edge band, Alert Channel, Warning Shoals, and Danger Strait occupy overlapping eastern-corner rings with Danger snapped to the angled shelf, and Ledger Mooring reads as quiet ledger water along the bottom edge away from top-chain harbor traffic.
 - The default composition stays around 78-82% water while still showing enough coast, piers, islets, and districts to feel authored rather than empty.
 - Terrain sprites add texture, but semantic overlay colors still make calm/watch/alert/warning/danger/ledger water distinguishable.
@@ -57,9 +58,10 @@ Use this checklist when approving screenshot changes:
 - Dock flags/logos identify chain harbors without becoming large label boards.
 - Risk water escalation is visible but does not make stale/missing evidence or NAV ledger water look like active depeg.
 - The selected target ring and detail panel refer to the same entity.
+- Printed labels, toolbar chrome, detail placement, and fullscreen/home controls remain readable and restrained; UI polish supports inspection rather than adding onboarding or narrative copy.
 - Hit targets are plausible around the drawn sprite, especially after asset geometry or scale changes.
 - Reduced-motion screenshots stay meaningful without animation.
-- No asset fallback, missing image box, or debug color appears in normal screenshots.
+- No asset fallback, missing image box, debug color, remote/prototype asset, or oversized first-render sprite set appears in normal screenshots.
 
 ## When To Update Baselines
 

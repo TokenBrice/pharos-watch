@@ -37,6 +37,9 @@ renders deterministic static frames and must not keep a RAF loop alive.
   encode analytical state outside the main motion clock.
 - Every analytical motion cue needs visual-cue registry metadata, DOM/detail or
   accessibility-ledger parity, and a reduced-motion equivalent.
+- Ambient motion is allowed only as bounded maritime atmosphere attached to
+  existing world areas. It must not introduce lore, decorative game objectives,
+  or new data semantics.
 
 ## Ship Risk-Water Motion
 

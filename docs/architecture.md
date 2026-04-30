@@ -186,7 +186,10 @@ The page uses a Server Component shell for metadata and JSON-LD, then a Client
 Component viewport gate. Screens below `1280px` wide or `760px` tall render a
 DOM desktop-only fallback and must not mount world queries, canvas runtime,
 manifest fetches, or sprite decoding. Eligible desktop viewports mount the
-browser-only PharosVille world.
+browser-only PharosVille world. Runtime visual assets are local manifest-backed
+PNGs under `public/pharosville/assets/`; the current v0.1 manifest has 31
+entries, with 21 critical/first-render assets and 10 deferred assets under a
+validator-enforced 34-asset cap.
 
 The world model maps active stablecoins to ships and merged cemetery entries to
 grave nodes with local logo paths, deterministic scatter placement, and varied
@@ -231,6 +234,12 @@ rendered road or causeway into the harbor. All world elements expose local
 deterministic Canvas effects, DOM detail facts, and accessibility-ledger parity;
 reduced motion freezes procedural movement while preserving static status
 encodings.
+
+PharosVille's visual revamp target is a dark-first maritime observatory diorama.
+ClaudeVille remains a reference for Canvas layering, sprite-manifest discipline,
+bounded motion, and review workflow only; ClaudeVille lore, fantasy-village
+objects, decorative copy, and unrelated data semantics are outside the route
+contract.
 
 Canvas 2D remains the renderer choice. PixiJS v8 was rejected during the
 2026-04-25 spike because the shader path requires `unsafe-eval`, which Pharos's

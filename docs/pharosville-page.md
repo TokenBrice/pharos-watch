@@ -13,9 +13,11 @@ stale-evidence, and NAV-ledger placement. Mint/burn flow and exit-route
 telemetry are not encoded in PharosVille and remain available on their
 dedicated product surfaces. Freeze/blacklist monitoring is
 not encoded in PharosVille and remains available on `/blacklist/`. The ClaudeVille transfer boundary is
-contracts and validation habits only; fantasy-village scenery, decorative lore
-copy, non-semantic palettes, extra typography systems, and canvas-only data
-truth remain out of scope.
+contracts and validation habits only: authored Canvas 2D layering,
+sprite-manifest rigor, local asset loading, bounded motion, and screenshot
+review discipline. Fantasy-village scenery, decorative lore copy,
+non-semantic palettes, extra typography systems, ClaudeVille-specific entities,
+and canvas-only data truth remain out of scope.
 
 ## Route Contract
 
@@ -35,6 +37,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 
 - desktop-gated route, with a short-screen fallback as well as the narrow-screen fallback
 - route shell escapes the global page padding and sizes against the actual post-sidebar content pane, so the desktop canvas uses the full available viewport area whether the sidebar is expanded or collapsed
+- executed visual revamp target: a dense dark-first maritime observatory diorama, using local pixel-art terrain, harbor, ship, lighthouse, and memorial sprites to make the existing Pharos stablecoin signals more legible without adding new analytical meanings
 - Canvas 2D island-sea map on eligible desktop viewports, with the authored world reduced to `56 x 56` tiles and a tighter default camera so the first view reads as roughly 78-82% water rather than a mostly empty sea shelf
 - authored terrain metadata layered over canonical movement tiles, including harbor water, calm DEWS anchorage water, watch breakwater water, alert water, warning shoals water, storm water, ledger water, deep outer-shelf water, beach, grass, rock, cliff, hill, and shore variants; manifest terrain sprites render first and semantic overlays add shoals, foam, current streaks, storm chop, ledger glow, and reef/buoy cues without changing analytical color meaning
 - named DEWS water-zone labels attach to cartographic plaques, buoys, reefs, or breakwater markers on semantic water areas, with live band counts retained in details and the accessibility ledger, plus subtle dock mast flags using chain logos or short crest marks
@@ -66,7 +69,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - route-owned motion debug fields for browser validation, including
   `motionClockSource`, `activeMotionLoopCount`, and capped `motionCueCounts`
 - desktop, dense-atlas, stressed-ship, short-screen, ultrawide backing-store, interaction, central-core invariants, and motion visual coverage, including a p95 draw-duration budget for dense normal-motion rendering
-- controlled Pixellab asset manifest v2 with critical/deferred sprite loading, separate cache/provenance versions, and reserved frame-animation metadata under `public/pharosville/assets/`
+- controlled Pixellab asset manifest v2 under `public/pharosville/assets/`, currently 31 local runtime assets with 21 critical/first-render entries and 10 deferred entries, separate cache/provenance versions, reserved frame-animation metadata, and a validator-enforced v0.1 core cap of 34 assets
 - asset validation through `npm run check:pharosville-assets`
 - no production fixture/default market data
 

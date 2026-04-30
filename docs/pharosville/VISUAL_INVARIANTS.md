@@ -10,6 +10,7 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 - The fallback must avoid world API queries, `/_site-data` world queries, asset manifest fetches, canvas setup, and sprite/logo decode work.
 - The route uses existing Pharos frontend hooks and API payloads. Visual-only work must not add Worker/API contracts unless explicitly requested.
 - No production fixture/default market data is allowed.
+- The visual target is a Pharos maritime observatory diorama, not a ClaudeVille clone. Do not import ClaudeVille lore, fantasy-village scenery, agent mechanics, decorative copy, or unrelated entities into the route.
 
 ## Data Truth
 
@@ -68,6 +69,8 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 ## Renderer Rules
 
 - Local runtime art comes from `public/pharosville/assets/manifest.json`; no Pixellab URLs or prototype paths at runtime.
+- Manifest assets must stay local PNGs with `critical` or `deferred` load priority, accurate dimensions, anchors, footprints, hitboxes, category/layer metadata, and prompt provenance when generated.
+- The current v0.1 manifest budget is 34 total runtime assets; first-render/critical membership should stay narrow and justified by visible initial-frame need.
 - Hit boxes must track rendered geometry, not just tile centers.
 - Asset geometry changes require manifest updates and hit-testing/visual validation.
 - Canvas backing store must remain bounded by the canvas budget.

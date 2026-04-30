@@ -8,6 +8,13 @@ Use this file before changing `/pharosville/`. It summarizes the current impleme
 
 PharosVille is an implemented desktop-only route at `/pharosville/`. It is an old-school maritime isometric analytics surface backed by existing Pharos APIs, local PNG sprites, a pure world model, a Canvas 2D renderer, and DOM-accessible details.
 
+The current visual revamp target is a dense dark-first maritime observatory
+diorama: richer local sprites, textured sea/coast/harbor materials, warm
+lighthouse and harbor lighting, readable in-world plaques, and polished
+route-local chrome. It is not a ClaudeVille port; ClaudeVille contributed the
+quality bar and validation habits, not its lore, fantasy-village objects,
+agent mechanics, copy voice, or data semantics.
+
 Historical plans in this directory are context, not live instructions. If they conflict with this file, follow this file and the verified docs.
 
 ## Runtime Entry Points
@@ -61,6 +68,7 @@ water gap. Two-tile island periphery and lighthouse visual-clearance box
 - Stale or missing peg evidence maps to Calm Anchorage with an evidence caveat unless a fresher risk signal exists; it must not create a separate sea zone or masquerade as storm/depeg risk.
 - Stablecoin supply values from the list payload are already USD-denominated. Use `getCirculatingRaw()` for market-cap visual tiers.
 - Local runtime assets come from `public/pharosville/assets/` and `manifest.json`. Do not reference Pixellab URLs or remote assets at runtime.
+- The current manifest has 31 runtime assets: 21 critical/first-render entries and 10 deferred entries. `npm run check:pharosville-assets` enforces the local PNG contract and the v0.1 core cap of 34 manifest assets.
 
 ## Current Visual Model
 
@@ -84,6 +92,7 @@ water gap. Two-tile island periphery and lighthouse visual-clearance box
   - unknown -> defensive caravel fallback
 - Ship size is a compressed market-cap tier, not linear area.
 - The current runtime manifest uses schema v2. `style.cacheVersion` controls image cache busting; `style.styleAnchorVersion` is the provenance/style anchor for generated assets.
+- Asset loading is intentionally staged: the route loads the manifest and critical/first-render sprites before the initial canvas frame, then loads deferred sprite families after the core scene can render. Do not move visual-only sprites into the critical set without checking first-render need and the manifest cap.
 - The current lighthouse asset is `landmark.lighthouse` at `public/pharosville/assets/landmarks/lighthouse-alexandria.png`, with manifest cache version `2026-04-30-pharosville-island-harbor-recompose-v1` and style anchor `2026-04-29-lighthouse-hill-v5`.
 - Current ship sprites share the lighthouse style anchor, use 104 x 80 transparent PNGs, keep logo-safe sail/pennant zones, and treat overlays as small lanterns/pennants/signals rather than badges.
 - Current cemetery props share the same style anchor and use a local memorial sprite set under `public/pharosville/assets/props/`: `memorial-terrace`, `memorial-headstone`, `ledger-slab`, `reliquary-marker`, and `regulatory-obelisk`.
