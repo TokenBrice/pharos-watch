@@ -18,7 +18,7 @@ The blacklist ingestion pipeline has unresolved gaps in recent blocks. Missing a
 
 - **Backfill active balances:** Admin page → Recommended actions or All actions → `Backfill Blacklist Balances` (`POST /api/backfill-blacklist-current-balances`, prefer `?dryRun=true` first) when `blacklist_current_balances` is missing or stale. This now also re-applies the Tron freeze-ledger mirror so matching Tron event rows can resolve immediately after balance backfill.
 - **Debug sync state:** Admin page → Recommended actions or Control section → `Debug sync state` (`GET /api/admin/debug-sync-state`) to inspect chain cursors before moving pointers.
-- **Remediate amount gaps:** Admin page → Recommended actions or All actions → `Remediate Blacklist Gaps` (`POST /api/remediate-blacklist-amount-gaps`); run dry-run first when using direct query/body parameters.
+- **Remediate amount gaps:** Admin page → Recommended actions or All actions → `Remediate Blacklist Gaps` (`POST /api/remediate-blacklist-amount-gaps`); run dry-run first when using direct query/body parameters. The default pass targets recoverable amount gaps even when contract/config provenance is already present; set `onlyMissingProvenance=true` only for legacy provenance repair.
 - **Reset sync pointer:** Admin page → Recommended actions only when the `sync-blacklist` cron itself is unhealthy, or All actions → `reset-blacklist-sync` after debug-sync-state confirms a stuck pointer. Reverts block pointers backward (EVM: 50,000 blocks; Tron: 604,800,000 ms) to re-process. Idempotent, but not the first response for generic amount gaps.
 - **Per-chain investigation:** the sync cron (`sync-blacklist`) logs per-chain outcomes in `cron_runs.metadata`. Inspect recent runs in the admin page's Crons section.
 

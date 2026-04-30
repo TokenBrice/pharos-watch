@@ -709,6 +709,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   {
     key: "status-probe-history",
     path: API_PATHS.statusProbeHistory(),
+    probePath: API_PATHS.statusProbeHistory({ path: API_PATHS.health() }),
     methods: ["GET"],
     adminRequired: true,
     mutatingAdmin: false,

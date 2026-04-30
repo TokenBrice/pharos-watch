@@ -79,7 +79,7 @@ export async function handleRemediateBlacklistAmountGaps(
   const dryRun = parseBooleanInput(body.dryRun ?? url.searchParams.get("dryRun"), true);
   const onlyMissingProvenance = parseBooleanInput(
     body.onlyMissingProvenance ?? url.searchParams.get("onlyMissingProvenance"),
-    true,
+    false,
   );
 
   const numericParams = parseQueryParams(url.searchParams, {

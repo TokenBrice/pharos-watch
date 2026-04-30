@@ -116,6 +116,85 @@ describe("handleRemediateBlacklistAmountGaps", () => {
     });
   });
 
+  it("includes recoverable amount gaps with existing provenance by default", async () => {
+    const db = mockD1([
+      {
+        match: "FROM blacklist_events",
+        rows: [{
+          id: "gap-1",
+          stablecoin: "XUSD",
+          chain_id: "bsc",
+          event_type: "blacklist",
+          address: "0xabc",
+          block_number: 55_583_873,
+          timestamp: 1_753_685_880,
+          amount_status: "recoverable_pending",
+          amount_attempt_count: 0,
+          amount_last_attempted_at: null,
+          contract_address: "0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9",
+          config_key: "bsc-0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9",
+        }],
+      },
+    ], { requireMatch: true });
+
+    const request = makeApiRequest("/api/remediate-blacklist-amount-gaps", {
+      method: "POST",
+      adminKey: "secret-key",
+    });
+
+    const response = await handleRemediateBlacklistAmountGaps(
+      db,
+      makeApiUrl("/api/remediate-blacklist-amount-gaps"),
+      true,
+      request,
+      testChainRpcs,
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      filters: { onlyMissingProvenance: boolean };
+      candidateCount: number;
+      resolutionCounts: Record<string, number>;
+    };
+    expect(body.filters.onlyMissingProvenance).toBe(false);
+    expect(body.candidateCount).toBe(1);
+    expect(body.resolutionCounts.resolved).toBe(1);
+    const selectCall = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events"));
+    expect(selectCall?.sql).not.toContain("contract_address IS NULL OR config_key IS NULL");
+  });
+
+  it("keeps provenance-only filtering when explicitly requested", async () => {
+    const db = mockD1([
+      {
+        match: "FROM blacklist_events",
+        rows: [],
+      },
+    ], { requireMatch: true });
+
+    const request = makeApiRequest("/api/remediate-blacklist-amount-gaps?onlyMissingProvenance=true", {
+      method: "POST",
+      adminKey: "secret-key",
+    });
+
+    const response = await handleRemediateBlacklistAmountGaps(
+      db,
+      makeApiUrl("/api/remediate-blacklist-amount-gaps?onlyMissingProvenance=true"),
+      true,
+      request,
+      testChainRpcs,
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      filters: { onlyMissingProvenance: boolean };
+      candidateCount: number;
+    };
+    expect(body.filters.onlyMissingProvenance).toBe(true);
+    expect(body.candidateCount).toBe(0);
+    const selectCall = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events"));
+    expect(selectCall?.sql).toContain("contract_address IS NULL OR config_key IS NULL");
+  });
+
   it("updates rows to resolved when historical balance recovery returns zero", async () => {
     vi.mocked(fetchEvmTokenBalance).mockResolvedValue(0);
 
