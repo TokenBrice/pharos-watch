@@ -73,6 +73,31 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - asset validation through `npm run check:pharosville-assets`
 - no production fixture/default market data
 
+## DEWS sea zones
+
+Five DEWS zones encircle the island, each anchored to a single map edge and
+sized roughly proportionally to the ships it must host:
+
+- **Calm Anchorage** (~97 ships) — large left-side basin spanning roughly
+  (0, 14) to (22, 54).
+- **Watch Breakwater** (~66 ships) — broad band along the top edge spanning
+  roughly (0, 0) to (29, 13). Connects to ALERT at x=29/30.
+- **Alert Channel** (~7 ships when fresh) — top-edge band right of WATCH,
+  roughly (30, 0) to (47, 11). Connects to WARNING at x=47/48.
+- **Warning Shoals** (rare) — right-edge zone above the lighthouse, roughly
+  (48, 0) to (55, 14).
+- **Danger Strait** (rare) — right-edge zone below WARNING, roughly
+  (50, 15) to (55, 24).
+
+The three escalation zones (ALERT + WARNING + DANGER) cover the entire
+eastern corner of the diamond with no generic-water gaps. A two-tile
+periphery around all island lobes and a lighthouse visual-clearance box
+(x:41..47, y:12..17) remain generic water so zones don't crowd the island
+or the lighthouse sprite.
+
+**Ledger Mooring** is non-DEWS and sits at the south edge for NAV-ledger
+ships.
+
 ## Data Mapping Target
 
 The planned PharosVille visual grammar is:

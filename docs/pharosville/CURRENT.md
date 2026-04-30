@@ -40,7 +40,23 @@ Historical plans in this directory are context, not live instructions. If they c
   debug expectations are recorded in `docs/pharosville/MOTION_POLICY.md`.
 - Canvas is not the only source of analytical meaning. Any new visual signal needs matching detail-panel or accessibility-ledger text.
 - Ship placement and semantic water zones express peg/DEWS risk or source confidence. Dock visits express positive chain presence and supply share; they must not imply bridge volume, transaction flow, or real-time transfers.
-- Fresh DEWS risk water uses the diagrammed separated sea-district model: Calm Anchorage owns the large west-edge basin, Watch Breakwater sits above the island in the northwest/top-left water, Alert Channel occupies the top-center channel, Warning Shoals wraps the lighthouse-side northeast water, and Danger Strait attaches to the far east edge. Ledger Mooring remains the only non-DEWS named risk-water area and stays clear of Solana/top-chain harbor traffic.
+- Fresh DEWS risk water uses edge-anchored rectangular bands. Ledger Mooring remains the only non-DEWS named risk-water area and stays clear of Solana/top-chain harbor traffic.
+
+### DEWS zone geometry
+
+Edge-anchored rectangular bands (final iteration as of 2026-04-30):
+
+| Zone | Primary edge | Bounds | Approx tiles |
+|------|--------------|--------|-------------:|
+| CALM | x=0 | x∈[0,22], y∈[14,54] | ~810 |
+| WATCH | y=0 | x∈[0,29], y∈[0,13], excluding (0,0) | ~419 |
+| ALERT | y=0 | x∈[30,47], y∈[0,11] | ~216 |
+| WARNING | x=55 | x∈[48,55], y∈[0,14] | ~120 |
+| DANGER | x=55 | x∈[50,55], y∈[15,24] | ~60 |
+
+Eastern corner fully covered by ALERT+WARNING+DANGER. Two-tile island
+periphery and lighthouse visual-clearance box (x:41..47, y:12..17) are
+generic water.
 - Stale or missing peg evidence maps to Calm Anchorage with an evidence caveat unless a fresher risk signal exists; it must not create a separate sea zone or masquerade as storm/depeg risk.
 - Stablecoin supply values from the list payload are already USD-denominated. Use `getCirculatingRaw()` for market-cap visual tiers.
 - Local runtime assets come from `public/pharosville/assets/` and `manifest.json`. Do not reference Pixellab URLs or remote assets at runtime.
