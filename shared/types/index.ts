@@ -1,3 +1,4 @@
+export * from "./api-meta";
 export * from "./live-reserves";
 export * from "./core";
 export * from "./digest";
@@ -12,3 +13,4 @@ export * from "./chains";
 export * from "./request-source";
 export * from "./api-keys";
 export * from "./editorial";
+export * from "./pharosville";

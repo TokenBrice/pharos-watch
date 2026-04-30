@@ -48,7 +48,7 @@ const StablecoinDataRawSchema = z.object({
   frozenAt: z.string().optional(),
 });
 
-const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
+export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
   id: asset.id,
   name: asset.name,
   symbol: asset.symbol,
@@ -360,7 +360,7 @@ export type DepegEventsResponse = z.infer<typeof DepegEventsResponseSchema>;
 
 export type DepegDewsMethodology = MethodologyEnvelope;
 
-const PegSummaryCoinSchema = z.object({
+export const PegSummaryCoinSchema = z.object({
   id: z.string(),
   symbol: z.string(),
   name: z.string(),
@@ -401,7 +401,7 @@ const PegSummaryCoinSchema = z.object({
 });
 export type PegSummaryCoin = z.infer<typeof PegSummaryCoinSchema>;
 
-const PegSummaryStatsSchema = z.object({
+export const PegSummaryStatsSchema = z.object({
   activeDepegCount: z.number(),
   medianDeviationBps: z.number(),
   worstCurrent: z.object({ id: z.string(), symbol: z.string(), bps: z.number() }).nullable(),
@@ -597,7 +597,7 @@ const AmplifiersSchema = z.object({
   contagion: z.number(),
 });
 
-const StressSignalEntrySchema = z.object({
+export const StressSignalEntrySchema = z.object({
   score: z.number(),
   band: z.string(),
   signals: z.record(z.string(), SignalDetailSchema),

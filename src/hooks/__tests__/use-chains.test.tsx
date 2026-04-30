@@ -15,6 +15,7 @@ vi.mock("../use-stablecoins", () => ({
   useStablecoins: useStablecoinsMock,
 }));
 
+import { ChainsResponseSchema } from "@shared/types/chains";
 import { useChainStablecoins, useChains } from "../use-chains";
 
 describe("useChains", () => {
@@ -33,6 +34,7 @@ describe("useChains", () => {
       "/api/chains",
       15 * 60 * 1000,
       expect.objectContaining({
+        schema: ChainsResponseSchema,
         metaMaxAgeSec: 1800,
       }),
     );

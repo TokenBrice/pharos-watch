@@ -1,14 +1,17 @@
-import { z, type ZodType } from "zod";
+import type { ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { toSiteDataPath } from "@shared/lib/site-data-routes";
 import { classifyFreshnessRatio } from "@shared/lib/status-thresholds";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { isSiteDataUiHostname, resolvePublicApiBase } from "@shared/lib/runtime-origins";
+import { ApiMetaSchema, type ApiMeta } from "@shared/types/api-meta";
 import {
   StablecoinReservesResponseSchema,
   type StablecoinReservesResponse,
 } from "@shared/types";
+
+export type { ApiMeta } from "@shared/types/api-meta";
 
 export type ApiContractMode = "strict" | "warn";
 export const DEFAULT_API_REQUEST_TIMEOUT_MS = 10_000;
@@ -178,36 +181,6 @@ async function buildFetchError(path: string, res: Response): Promise<ApiFetchErr
   }
   return new ApiFetchError(path, res.status, bodyText);
 }
-
-// --- Data freshness metadata ---
-
-export interface ApiMeta {
-  updatedAt: number;
-  ageSeconds: number;
-  status: "fresh" | "degraded" | "stale";
-  warning?: string | null;
-  dependencies?: Record<string, {
-    updatedAt?: number | null;
-    ageSeconds?: number | null;
-    status: "fresh" | "degraded" | "stale" | "unavailable";
-    reason?: string | null;
-  }> | null;
-}
-
-const ApiDependencyMetaSchema = z.object({
-  updatedAt: z.number().nullable().optional(),
-  ageSeconds: z.number().nullable().optional(),
-  status: z.enum(["fresh", "degraded", "stale", "unavailable"]),
-  reason: z.string().nullish(),
-});
-
-const ApiMetaSchema = z.object({
-  updatedAt: z.number(),
-  ageSeconds: z.number(),
-  status: z.enum(["fresh", "degraded", "stale"]),
-  warning: z.string().nullish(),
-  dependencies: z.record(z.string(), ApiDependencyMetaSchema).nullish(),
-});
 
 function resolveContractMode(
   schema: ZodType<unknown> | undefined,

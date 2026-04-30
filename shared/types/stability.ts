@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { MethodologyEnvelopeSchema } from "./core";
 
-const StabilityIndexComponentsSchema = z.object({
+export const StabilityIndexComponentsSchema = z.object({
   severity: z.number(),
   breadth: z.number(),
   stressBreadth: z.number().optional(),
   trend: z.number(),
 });
 
-const StabilityContributorSchema = z.object({
+export const StabilityContributorSchema = z.object({
   id: z.string(),
   symbol: z.string(),
   bps: z.number(),
@@ -17,14 +17,14 @@ const StabilityContributorSchema = z.object({
   factor: z.number(),
 });
 
-const StabilityIndexInputDegradationSchema = z.object({
+export const StabilityIndexInputDegradationSchema = z.object({
   dewsUnavailable: z.boolean(),
   dewsFailureReason: z.string().nullable(),
   depegEventsUnavailable: z.boolean(),
   depegEventsFailureReason: z.string().nullable(),
 });
 
-const StabilityIndexCurrentSchema = z.object({
+export const StabilityIndexCurrentSchema = z.object({
   score: z.number(),
   band: z.string(),
   avg24h: z.number().optional(),
@@ -37,7 +37,7 @@ const StabilityIndexCurrentSchema = z.object({
   methodologyVersion: z.string(),
 });
 
-const StabilityIndexHistoryPointSchema = z.object({
+export const StabilityIndexHistoryPointSchema = z.object({
   date: z.number(),
   score: z.number(),
   band: z.string(),
