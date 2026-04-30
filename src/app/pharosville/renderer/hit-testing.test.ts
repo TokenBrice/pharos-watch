@@ -24,17 +24,18 @@ const TARGET_CLICK_POINTS = [
 ] as const;
 
 const LIGHTHOUSE_ASSET_ENTRY: PharosVilleAssetManifestEntry = {
-  anchor: [96, 244],
+  anchor: [160, 306],
+  beacon: [160, 50],
   category: "landmark",
-  displayScale: 1,
-  footprint: [58, 44],
-  height: 256,
-  hitbox: [12, 8, 168, 238],
+  displayScale: 0.82,
+  footprint: [88, 62],
+  height: 320,
+  hitbox: [48, 20, 224, 276],
   id: "landmark.lighthouse",
   layer: "landmarks",
   loadPriority: "critical",
   path: "landmarks/lighthouse-alexandria.png",
-  width: 192,
+  width: 320,
 };
 
 describe("hit-testing", () => {
@@ -341,10 +342,10 @@ describe("hit-testing", () => {
 
     const target = targets.find((entry) => entry.detailId === lighthouse.detailId);
 
-    expect(target?.rect.x).toBeCloseTo(point.x - 124.32 * camera.zoom);
-    expect(target?.rect.y).toBeCloseTo(point.y - 346.28 * camera.zoom);
-    expect(target?.rect.width).toBeCloseTo(248.64 * camera.zoom);
-    expect(target?.rect.height).toBeCloseTo(352.24 * camera.zoom);
+    expect(target?.rect.x).toBeCloseTo(point.x - 135.9232 * camera.zoom);
+    expect(target?.rect.y).toBeCloseTo(point.y - 344.0896 * camera.zoom);
+    expect(target?.rect.width).toBeCloseTo(271.8464 * camera.zoom);
+    expect(target?.rect.height).toBeCloseTo(334.9536 * camera.zoom);
   });
 });
 

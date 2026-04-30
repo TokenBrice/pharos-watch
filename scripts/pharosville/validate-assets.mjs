@@ -227,6 +227,18 @@ function validateOptionalMetadata(asset, id) {
       }
     }
   }
+  if (asset.beacon != null) {
+    if (!Array.isArray(asset.beacon) || asset.beacon.length !== 2) {
+      errors.push(`${id} beacon must be [x,y] when present.`);
+      return;
+    }
+    if (asset.beacon.some((value) => !Number.isFinite(value))) {
+      errors.push(`${id} beacon values must be numbers.`);
+    }
+    if (asset.beacon[0] < 0 || asset.beacon[1] < 0 || asset.beacon[0] > asset.width || asset.beacon[1] > asset.height) {
+      errors.push(`${id} beacon is outside image bounds.`);
+    }
+  }
 }
 
 function validateAnimation(asset, id, referenced) {

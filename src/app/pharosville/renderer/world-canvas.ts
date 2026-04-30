@@ -1554,9 +1554,10 @@ function lighthouseBeaconPoint(
   zoom: number,
 ): ScreenPoint {
   const scale = asset.entry.displayScale * zoom;
+  const [beaconX, beaconY] = asset.entry.beacon ?? [asset.entry.width / 2, 30];
   return {
-    x: center.x + (asset.entry.width / 2 - asset.entry.anchor[0]) * scale,
-    y: center.y - (asset.entry.anchor[1] - 30) * scale,
+    x: center.x + (beaconX - asset.entry.anchor[0]) * scale,
+    y: center.y + (beaconY - asset.entry.anchor[1]) * scale,
   };
 }
 

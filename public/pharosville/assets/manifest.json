@@ -1,10 +1,10 @@
 {
   "schemaVersion": 2,
   "style": {
-    "cacheVersion": "2026-04-29-core-island-v1",
+    "cacheVersion": "2026-04-30-fantasy-lighthouse-v1",
     "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5",
-    "anchor": "old-school 16-bit maritime isometric RPG pixel art, crisp pixel edges, low top-down view, deep navy and teal sea, pale limestone island city, bronze and gold beacon light, restrained analytics palette, readable silhouettes, no text, no logos, no UI",
-    "palette": ["#061721", "#0d5f70", "#d3c89a", "#ffcc62"],
+    "anchor": "old-school 16-bit maritime isometric RPG pixel art, crisp pixel edges, low top-down view, deep navy and teal sea, pale limestone and terracotta island city, bronze and gold beacon light, restrained analytics palette, readable silhouettes, no text, no logos, no UI",
+    "palette": ["#061721", "#0d5f70", "#15858c", "#f0ead2", "#b95437", "#ffcc62"],
     "generationDefaults": {
       "view": "low top-down",
       "outline": "single color outline",
@@ -152,20 +152,21 @@
       "path": "landmarks/lighthouse-alexandria.png",
       "category": "landmark",
       "layer": "landmarks",
-      "width": 192,
-      "height": 256,
-      "displayScale": 1,
-      "anchor": [96, 244],
-      "footprint": [58, 44],
-      "hitbox": [12, 8, 168, 238],
+      "width": 320,
+      "height": 320,
+      "displayScale": 0.82,
+      "anchor": [160, 306],
+      "beacon": [160, 50],
+      "footprint": [88, 62],
+      "hitbox": [48, 20, 224, 276],
       "loadPriority": "critical",
       "criticalReason": "Primary PSI landmark and initial selected detail.",
       "promptKey": "landmark.lighthouse",
       "semanticRole": "PSI beacon landmark",
-      "paletteKeys": ["bronze beacon", "limestone", "deep navy"],
+      "paletteKeys": ["bronze beacon", "limestone", "terracotta", "deep navy"],
       "tool": "mcp:create_map_object",
       "promptProvenance": {
-        "jobId": "eb0d494c-ed95-4352-8c3c-9f113bdaad06",
+        "jobId": "5cbb8783-1bed-4d7d-bc6b-7cff28ec84fb",
         "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },

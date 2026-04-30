@@ -20,6 +20,7 @@ export interface PharosVilleAssetAnimation {
 export interface PharosVilleAssetManifestEntry {
   animation?: PharosVilleAssetAnimation;
   anchor: [number, number];
+  beacon?: [number, number];
   category: PharosVilleAssetCategory;
   criticalReason?: string;
   displayScale: number;
