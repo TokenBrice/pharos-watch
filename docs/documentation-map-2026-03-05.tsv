@@ -11,4 +11,3 @@ shared/data/stablecoins/PROVENANCE_NOTES.md	md	Stablecoin registry provenance no
 docs/runbooks/	dir	Operator runbooks	current	Canonical operator runbooks live under `docs/runbooks/`.
 docs/process/	dir	Process docs	current	Recurring agent and maintainer procedures.
 docs/trackers/	dir	Long-lived trackers	current	Open execution trackers and deferred follow-ups that are still actionable.
-docs/pharosville/	dir	Route maintenance docs	current	PharosVille-specific implementation, asset, visual, and testing guidance.

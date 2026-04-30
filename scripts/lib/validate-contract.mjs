@@ -17,8 +17,6 @@ export const VALIDATE_PREBUILD_COMMANDS = [
   "npm run check:llms-txt",
   "npm run check:migrations",
   "npm run check:openapi",
-  "npm run check:pharosville-assets",
-  "npm run check:pharosville-colors",
   "npm run check:postman",
   "npm run check:redemption-backstops",
   "npm run check:shared-cycles",

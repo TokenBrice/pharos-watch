@@ -114,13 +114,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "methodology",
   },
   {
-    source: "pharosville-page.md",
-    slug: "pharosville-page",
-    title: "PharosVille Page",
-    summary: "The PharosVille route, desktop gate, canvas exception, and data-to-world contract.",
-    group: "system",
-  },
-  {
     source: "mint-burn-flows.md",
     slug: "mint-burn-flows",
     title: "Mint Burn Flows",

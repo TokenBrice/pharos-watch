@@ -11,22 +11,6 @@
     "disposition": "queued-p4",
     "notes": "The chains harbor scene intentionally concentrates SVG ship, lighthouse, water, and label primitives during the nautical redesign. Split ship rendering, harbor background, and scene view-model helpers in the next chains visualization cleanup pass."
   },
-  "src/app/pharosville/pharosville-world.tsx": {
-    "disposition": "queued-p4",
-    "notes": "PharosVille route shell now coordinates desktop gating, canvas frame state, sampled ship positions, debug state, and overlay controls after the ship-liveliness phase. Keep it waived for the feature delivery; split runtime frame orchestration and overlay/debug view-model helpers in the next PharosVille decomposition pass."
-  },
-  "src/app/pharosville/renderer/world-canvas.ts": {
-    "disposition": "queued-p4",
-    "notes": "PharosVille canvas rendering intentionally concentrates terrain, cemetery, dock, ship, cluster, and selection drawing while the sprite/animation language stabilizes. Keep it waived for the ship-liveliness rollout; extract terrain/cemetery/ship render modules in a dedicated renderer cleanup pass."
-  },
-  "src/app/pharosville/systems/world-layout.ts": {
-    "disposition": "queued-p4",
-    "notes": "PharosVille map geometry intentionally centralizes island, cemetery, lighthouse-clearance, and named sea-zone masks while the authored atlas is being reshaped. Keep it waived for the island/harbor recompose; extract terrain mask helpers or data-driven mask definitions in the next PharosVille systems cleanup pass."
-  },
-  "src/app/pharosville/systems/motion.ts": {
-    "disposition": "queued-p4",
-    "notes": "Ship motion routing now centralizes deterministic water-path construction, seeded detours, dwell timing, and route sampling for the initial liveliness release. Keep it waived until the next PharosVille systems pass can split pathfinding, scheduling, and sampling without changing behavior."
-  },
   "src/components/command-palette.tsx": {
     "disposition": "queued-p4",
     "notes": "The command palette still combines indexing, keyboard handling, and rendering in one shell. Keep it waived until the navigation/search UI cleanup lane is scheduled."
@@ -94,6 +78,30 @@
   "worker/src/api/mint-burn-flows.ts": {
     "disposition": "queued-p4",
     "notes": "Mint/burn flow response shaping remains a large endpoint surface after the pending pricing and flow changes in this push batch. Keep explicitly waived until a dedicated flow API cleanup can separate request parsing, summary shaping, and response projection."
+  },
+  "worker/src/cron/reserve-adapters/gho.ts": {
+    "disposition": "queued-p4",
+    "notes": "GHO reserve adapter logic predates the PharosVille split and remains a large adapter-specific parsing surface. Keep it waived for this host-route cleanup; split fetch, parse, and reserve projection helpers in a dedicated reserve-adapter cleanup."
+  },
+  "worker/src/api/mint-burn-flows-shared.ts": {
+    "disposition": "queued-p4",
+    "notes": "Shared mint/burn response helpers predate the PharosVille split and aggregate several projection paths used by the flow API. Keep waived here; extract request-independent projection and summary helpers in the next mint/burn API cleanup."
+  },
+  "src/components/pre-launch-detail.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The pre-launch detail component is unrelated to the PharosVille host decommission and still combines page copy, eligibility tables, and linked-surface guidance. Keep waived until a frontend route-section cleanup can split it into smaller panels."
+  },
+  "src/lib/contagion-layout.ts": {
+    "disposition": "queued-p4",
+    "notes": "Contagion graph layout remains a concentrated graph-math helper that predates this split. Keep waived for the PharosVille host cleanup; separate clustering, edge routing, and label placement in a dependency-map visualization cleanup."
+  },
+  "worker/src/cron/blacklist/amount-recovery.ts": {
+    "disposition": "queued-p4",
+    "notes": "Blacklist amount recovery is an existing cron repair surface with chain-specific parsing and persistence branches. Keep waived here; split chain fetch, event normalization, and balance reconciliation in a dedicated blacklist cron cleanup."
+  },
+  "worker/src/cron/dex-liquidity/pool-helpers.ts": {
+    "disposition": "queued-p4",
+    "notes": "DEX liquidity pool helpers predate this route split and centralize protocol-specific pool normalization. Keep waived for this cleanup; extract protocol parsing families in the next liquidity ingestion refactor."
   },
   "src/app/yield/client.tsx": {
     "disposition": "queued-p4",

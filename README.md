@@ -152,7 +152,6 @@ src/                              Frontend (Next.js static export)
 │   ├── liquidity/                DEX liquidity scores and pool breakdown
 │   ├── methodology/              Detailed methodology + changelog routes
 │   ├── portfolio/                Portfolio stress testing & upstream exposure
-│   ├── pharosville/              Beta isometric stablecoin world
 │   ├── privacy/                  Privacy policy
 │   ├── safety-scores/            Stablecoin safety grade cards with radar charts
 │   ├── start/                    First-time-user orientation route

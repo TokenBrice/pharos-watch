@@ -1,3 +1,11 @@
+/pharosville/assets/* https://pharosville.pharos.watch/pharosville/assets/:splat 302
+/pharosville/* https://pharosville.pharos.watch/ 302
+/pharosville/ https://pharosville.pharos.watch/ 302
+/pharosville https://pharosville.pharos.watch/ 302
+/lighthouse/* https://pharosville.pharos.watch/ 302
+/lighthouse/ https://pharosville.pharos.watch/ 302
+/lighthouse https://pharosville.pharos.watch/ 302
+
 /report-cards/* /safety-scores/:splat 301
 /report-cards /safety-scores 301
 /risk-lab/* /safety-scores/:splat 301
