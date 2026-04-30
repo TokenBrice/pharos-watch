@@ -118,5 +118,37 @@
       ],
       "price": 0.15898911684805064
     }
+  },
+  {
+    "id": "buck-buck-assets",
+    "capturedAt": "2026-04-30T16:21:44Z",
+    "peggedAssetRow": {
+      "id": "buck-buck-assets",
+      "name": "Buck",
+      "symbol": "BUCK",
+      "geckoId": "buck-2",
+      "pegType": "peggedUSD",
+      "pegMechanism": "rwa-backed",
+      "price": null,
+      "priceSource": "missing",
+      "priceConfidence": null,
+      "priceUpdatedAt": null,
+      "priceObservedAt": null,
+      "priceObservedAtMode": null,
+      "priceSyncedAt": null,
+      "consensusSources": [],
+      "agreeSources": [],
+      "supplySource": "coingecko-fallback",
+      "circulating": {
+        "peggedUSD": 4601.009169430773
+      },
+      "circulatingPrevDay": {},
+      "circulatingPrevWeek": {},
+      "circulatingPrevMonth": {},
+      "chainCirculating": {},
+      "chains": [
+        "Ethereum"
+      ]
+    }
   }
 ]

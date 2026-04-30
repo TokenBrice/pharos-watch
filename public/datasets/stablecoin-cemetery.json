@@ -9,7 +9,7 @@
   "sourceDataPath": "shared/data/dead-stablecoins.json",
   "sourceChecksum": "sha256:490b87d9b7aef29b71b116be626c9637e69d22563cd799e480f48394a8e65882",
   "recordsOrderedBy": "deathDate descending, then peakMcapUsd descending, then symbol ascending",
-  "rowCount": 89,
+  "rowCount": 90,
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
@@ -36,6 +36,32 @@
     "pharosUrl": "Canonical Pharos URL: the frozen detail page when archived data is available, otherwise the cemetery anchor."
   },
   "rows": [
+    {
+      "id": "buck-buck-assets",
+      "name": "Buck",
+      "symbol": "BUCK",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/buck.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-04",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 2751010,
+      "epitaph": "The savings coin closed the vault",
+      "obituary": "By April 2026, Buck's public site had become a shutdown notice saying the project was closed and funds were returned to token holders, while the former transparency page no longer served a reserve disclosure. Pharos freezes BUCK as a discontinued archive rather than an active yield-bearing stablecoin: the last live cache showed only about $4.6K of residual supply, no reliable price, and no working issuer reserve feed. The failure mode was an orderly wind-down rather than an oracle or collateral break, but live monitoring no longer has an active issuer disclosure surface to follow.",
+      "sourceUrl": "https://www.buck.io/",
+      "sourceLabel": "Buck shutdown notice",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xdb13997f4d83ef343845d0baeb27d1173df8c224",
+          "decimals": 18
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/buck-buck-assets/"
+    },
     {
       "id": "usr-resolv",
       "name": "Resolv USD",

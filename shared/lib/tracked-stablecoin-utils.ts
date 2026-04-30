@@ -6,7 +6,7 @@ import {
 } from "./stablecoins";
 
 export const YIELD_BEARING_STABLECOINS = TRACKED_STABLECOINS.filter(
-  (stablecoin) => stablecoin.flags.yieldBearing,
+  (stablecoin) => stablecoin.flags.yieldBearing && stablecoin.status !== "frozen",
 );
 
 export const ACTIVE_YIELD_BEARING_STABLECOINS = ACTIVE_STABLECOINS.filter(
