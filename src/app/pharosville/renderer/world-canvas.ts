@@ -22,23 +22,23 @@ import type { DrawPharosVilleInput, PharosVilleCanvasMotion, PharosVilleRenderMe
 import { CAUSE_HEX, type CauseOfDeath } from "@shared/lib/cause-of-death";
 
 const TILE_COLORS: Record<string, string> = {
-  beach: "#c8aa72",
-  cliff: "#4d564e",
-  grass: "#6f7d50",
-  hill: "#82905b",
-  land: "#8a744d",
-  road: "#8e6740",
-  rock: "#6b7064",
-  shore: "#b28f5b",
+  beach: "#d5b873",
+  cliff: "#2e4052",
+  grass: "#4f8a52",
+  hill: "#6f9958",
+  land: "#6d8450",
+  road: "#ad8050",
+  rock: "#526776",
+  shore: "#caa467",
 };
 
 const TERRAIN_TEXTURE = {
   beachPebble: "rgba(82, 67, 47, 0.16)",
-  cliffFace: "rgba(31, 35, 31, 0.58)",
-  foam: "rgba(224, 238, 220, 0.68)",
-  grassDark: "rgba(38, 70, 42, 0.5)",
-  grassLight: "rgba(178, 187, 113, 0.34)",
-  grassMid: "rgba(100, 125, 76, 0.34)",
+  cliffFace: "rgba(19, 26, 34, 0.62)",
+  foam: "rgba(232, 243, 233, 0.76)",
+  grassDark: "rgba(28, 76, 49, 0.52)",
+  grassLight: "rgba(172, 211, 132, 0.34)",
+  grassMid: "rgba(78, 138, 82, 0.36)",
   groundGrain: "rgba(35, 37, 27, 0.2)",
   mossShadow: "rgba(43, 58, 38, 0.26)",
   roadLight: "rgba(184, 146, 91, 0.32)",
@@ -48,19 +48,37 @@ const TERRAIN_TEXTURE = {
 } as const;
 
 const LIGHTHOUSE_HEADLAND = {
-  cliff: "#4d564e",
-  grass: "#6f7d50",
-  halo: "rgba(222, 196, 119, 0.16)",
-  moss: "#82905b",
-  road: "#8e6740",
+  cliff: "#2e4052",
+  grass: "#4f8a52",
+  halo: "rgba(255, 200, 87, 0.2)",
+  moss: "#6f9958",
+  road: "#ad8050",
   shadow: "rgba(10, 12, 12, 0.42)",
-  stone: "#7b7d70",
+  stone: "#9f9278",
 } as const;
 
 const VILLAGE_LIGHTS = [
+  { x: 42.4, y: 20.6, size: 0.62 },
+  { x: 44.8, y: 21.4, size: 0.58 },
+  { x: 45.7, y: 19.4, size: 0.48 },
+  { x: 41.6, y: 23.3, size: 0.46 },
   { x: 30.1, y: 31.8, size: 0.54 },
   { x: 33.2, y: 30.1, size: 0.5 },
   { x: 37.2, y: 29.5, size: 0.52 },
+] as const;
+
+const LIGHTHOUSE_SURF = [
+  { x: 39.8, y: 23.1, length: 36, phase: 0.1, tilt: -0.12 },
+  { x: 42.7, y: 24.9, length: 42, phase: 1.7, tilt: 0.02 },
+  { x: 46.5, y: 23.6, length: 34, phase: 2.6, tilt: 0.16 },
+  { x: 48.5, y: 20.2, length: 30, phase: 3.4, tilt: -0.22 },
+  { x: 47.2, y: 15.7, length: 26, phase: 4.1, tilt: 0.1 },
+] as const;
+
+const LIGHTHOUSE_REFLECTIONS = [
+  { alpha: 0.2, length: 54, offsetX: -6, offsetY: 72, phase: 0.2 },
+  { alpha: 0.16, length: 42, offsetX: 12, offsetY: 91, phase: 1.6 },
+  { alpha: 0.13, length: 31, offsetX: -22, offsetY: 108, phase: 2.8 },
 ] as const;
 
 const BIRDS = [
@@ -77,38 +95,38 @@ const BIRDS = [
 
 const SKY_MOODS = {
   dawn: {
-    horizon: "#c9824e",
-    lower: "#10182a",
-    mist: "rgba(255, 213, 158, 0.2)",
+    horizon: "#d07d55",
+    lower: "#0d2035",
+    mist: "rgba(255, 211, 154, 0.22)",
     moonAlpha: 0.12,
     starAlpha: 0.16,
     sunAlpha: 0.54,
-    top: "#253d5a",
-    waterVeil: "rgba(62, 86, 108, 0.14)",
+    top: "#223b57",
+    waterVeil: "rgba(42, 97, 112, 0.16)",
   },
   day: {
     horizon: "#d9ad67",
-    lower: "#173654",
-    mist: "rgba(255, 225, 164, 0.2)",
+    lower: "#123a53",
+    mist: "rgba(255, 225, 164, 0.18)",
     moonAlpha: 0,
     starAlpha: 0,
     sunAlpha: 0.8,
     top: "#496f8b",
-    waterVeil: "rgba(52, 101, 121, 0.16)",
+    waterVeil: "rgba(43, 128, 132, 0.14)",
   },
   dusk: {
-    horizon: "#b86f4d",
-    lower: "#101425",
-    mist: "rgba(246, 177, 126, 0.18)",
+    horizon: "#d36e56",
+    lower: "#0b1222",
+    mist: "rgba(246, 177, 126, 0.22)",
     moonAlpha: 0.34,
     starAlpha: 0.28,
     sunAlpha: 0.34,
-    top: "#1b2d4f",
-    waterVeil: "rgba(32, 55, 83, 0.18)",
+    top: "#151a32",
+    waterVeil: "rgba(16, 86, 99, 0.2)",
   },
   night: {
-    horizon: "#14294a",
-    lower: "#070910",
+    horizon: "#183154",
+    lower: "#050812",
     mist: "rgba(200, 219, 205, 0.12)",
     moonAlpha: 0.74,
     starAlpha: 0.58,
@@ -193,10 +211,13 @@ export function drawPharosVille(input: DrawPharosVilleInput): PharosVilleRenderM
 
   const visibleTileCount = drawTerrain(input);
   drawAtmosphere(input);
+  if (!input.world.lighthouse.unavailable) drawLighthouseSeaGlow(input);
+  drawLighthouseSurf(input);
   drawCemeteryGround(input);
   drawLighthouseHeadland(input);
   drawCemeteryContext(input);
   const entityMetrics = drawEntityPass(input);
+  drawLighthouseCausewayOverlay(input);
   drawWaterAreaLabels(input);
   drawDecorativeLights(input);
   drawCemeteryMist(input);
@@ -327,7 +348,7 @@ function drawSky({ camera, ctx, height, motion, width, world }: DrawPharosVilleI
 
 function skyState(motion: PharosVilleCanvasMotion) {
   const progress = motion.reducedMotion
-    ? 0.82
+    ? 0.58
     : ((motion.timeSeconds * 0.006) % 1 + 1) % 1;
   const mood = progress < 0.18
     ? SKY_MOODS.dawn
@@ -1064,6 +1085,144 @@ function drawAtmosphere({ camera, ctx, motion, world }: DrawPharosVilleInput) {
   ctx.restore();
 }
 
+function drawLighthouseSeaGlow({ camera, ctx, motion, world }: DrawPharosVilleInput) {
+  const beacon = tileToScreen(world.lighthouse.tile, camera);
+  const time = motion.reducedMotion ? 0 : motion.timeSeconds;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for (const reflection of LIGHTHOUSE_REFLECTIONS) {
+    const pulse = motion.reducedMotion ? 0 : Math.sin(time * 0.8 + reflection.phase) * 0.035;
+    const x = beacon.x + reflection.offsetX * camera.zoom;
+    const y = beacon.y + reflection.offsetY * camera.zoom;
+    const gradient = ctx.createLinearGradient(
+      x - reflection.length * camera.zoom * 0.48,
+      y - 5 * camera.zoom,
+      x + reflection.length * camera.zoom * 0.48,
+      y + 5 * camera.zoom,
+    );
+    gradient.addColorStop(0, "rgba(255, 200, 87, 0)");
+    gradient.addColorStop(0.48, `rgba(255, 200, 87, ${Math.max(0.08, reflection.alpha + pulse)})`);
+    gradient.addColorStop(1, "rgba(255, 200, 87, 0)");
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = Math.max(1, 2.4 * camera.zoom);
+    ctx.beginPath();
+    ctx.moveTo(x - reflection.length * camera.zoom * 0.45, y);
+    ctx.lineTo(x + reflection.length * camera.zoom * 0.45, y + 4 * camera.zoom);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawLighthouseSurf({ camera, ctx, motion }: DrawPharosVilleInput) {
+  const time = motion.reducedMotion ? 0 : motion.timeSeconds;
+  ctx.save();
+  ctx.lineCap = "round";
+  for (const surf of LIGHTHOUSE_SURF) {
+    const p = tileToScreen(surf, camera);
+    const wash = motion.reducedMotion ? 0.66 : 0.58 + Math.sin(time * 1.4 + surf.phase) * 0.12;
+    ctx.strokeStyle = `rgba(232, 243, 233, ${wash})`;
+    ctx.lineWidth = Math.max(1, 1.8 * camera.zoom);
+    ctx.beginPath();
+    ctx.moveTo(p.x - surf.length * camera.zoom * 0.5, p.y);
+    ctx.quadraticCurveTo(
+      p.x,
+      p.y + surf.tilt * surf.length * camera.zoom,
+      p.x + surf.length * camera.zoom * 0.5,
+      p.y + 4 * camera.zoom,
+    );
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(130, 216, 204, 0.26)";
+    ctx.lineWidth = Math.max(1, 0.9 * camera.zoom);
+    ctx.beginPath();
+    ctx.moveTo(p.x - surf.length * camera.zoom * 0.35, p.y + 5 * camera.zoom);
+    ctx.lineTo(p.x + surf.length * camera.zoom * 0.32, p.y + 8 * camera.zoom);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawLighthouseCausewayOverlay({ assets, camera, ctx, world }: DrawPharosVilleInput) {
+  if (!assets?.get("landmark.lighthouse")) return;
+  const zoom = camera.zoom;
+  const path = [
+    tileToScreen({ x: world.lighthouse.tile.x - 5.0, y: world.lighthouse.tile.y + 8.4 }, camera),
+    tileToScreen({ x: world.lighthouse.tile.x - 3.5, y: world.lighthouse.tile.y + 6.4 }, camera),
+    tileToScreen({ x: world.lighthouse.tile.x - 2.3, y: world.lighthouse.tile.y + 4.6 }, camera),
+    tileToScreen({ x: world.lighthouse.tile.x - 1.1, y: world.lighthouse.tile.y + 2.8 }, camera),
+  ];
+
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  drawPolyline(ctx, path, "rgba(7, 9, 12, 0.46)", Math.max(4, 11 * zoom));
+  drawPolyline(ctx, path, "rgba(65, 50, 34, 0.7)", Math.max(3, 8 * zoom));
+  drawPolyline(ctx, path, "#cda86c", Math.max(2, 5.6 * zoom));
+  drawPolyline(ctx, path, "rgba(240, 228, 190, 0.78)", Math.max(1, 2.2 * zoom));
+
+  const stepCount = 12;
+  for (let index = 0; index < stepCount; index += 1) {
+    const sample = pointAlongPolyline(path, (index + 0.45) / stepCount);
+    const shade = index % 2 === 0 ? "rgba(244, 233, 197, 0.9)" : "rgba(166, 131, 82, 0.86)";
+    ctx.strokeStyle = shade;
+    ctx.lineWidth = Math.max(1, 1.35 * zoom);
+    ctx.beginPath();
+    ctx.moveTo(sample.x - 7.5 * zoom, sample.y + 2.4 * zoom);
+    ctx.lineTo(sample.x + 7.5 * zoom, sample.y - 2.4 * zoom);
+    ctx.stroke();
+  }
+
+  const landing = path[path.length - 1];
+  if (landing) {
+    drawDiamond(ctx, landing.x + 7 * zoom, landing.y - 2 * zoom, 42 * zoom, 16 * zoom, "rgba(224, 202, 148, 0.58)");
+    drawDiamond(ctx, landing.x + 8 * zoom, landing.y - 5 * zoom, 34 * zoom, 12 * zoom, "rgba(246, 232, 184, 0.68)");
+  }
+  ctx.restore();
+}
+
+function drawPolyline(
+  ctx: CanvasRenderingContext2D,
+  points: readonly ScreenPoint[],
+  strokeStyle: string,
+  lineWidth: number,
+) {
+  const [firstPoint, ...rest] = points;
+  if (!firstPoint) return;
+  ctx.strokeStyle = strokeStyle;
+  ctx.lineWidth = lineWidth;
+  ctx.beginPath();
+  ctx.moveTo(firstPoint.x, firstPoint.y);
+  for (const point of rest) ctx.lineTo(point.x, point.y);
+  ctx.stroke();
+}
+
+function pointAlongPolyline(points: readonly ScreenPoint[], progress: number): ScreenPoint {
+  if (points.length === 0) return { x: 0, y: 0 };
+  if (points.length === 1) return points[0]!;
+  const segments = points.slice(1).map((point, index) => {
+    const previous = points[index]!;
+    return {
+      from: previous,
+      length: Math.hypot(point.x - previous.x, point.y - previous.y),
+      to: point,
+    };
+  });
+  const total = segments.reduce((sum, segment) => sum + segment.length, 0);
+  let remaining = Math.max(0, Math.min(1, progress)) * total;
+  for (const segment of segments) {
+    if (remaining > segment.length) {
+      remaining -= segment.length;
+      continue;
+    }
+    const ratio = segment.length > 0 ? remaining / segment.length : 0;
+    return {
+      x: segment.from.x + (segment.to.x - segment.from.x) * ratio,
+      y: segment.from.y + (segment.to.y - segment.from.y) * ratio,
+    };
+  }
+  return points[points.length - 1]!;
+}
+
 function drawLighthouseHeadland({ assets, camera, ctx, world }: DrawPharosVilleInput) {
   const center = tileToScreen(world.lighthouse.tile, camera);
   const terrain = lighthouseTerrain(world);
@@ -1543,8 +1702,9 @@ function drawLighthouseBody(input: DrawPharosVilleInput) {
 
 function drawLighthouseOverlay(input: DrawPharosVilleInput) {
   const { camera, ctx, motion, world } = input;
-  const { firePoint } = lighthouseRenderState(input);
+  const { firePoint, lighthouseAsset } = lighthouseRenderState(input);
   if (!world.lighthouse.unavailable) drawLighthouseBeam(ctx, firePoint, camera.zoom * 1.35, motion);
+  if (lighthouseAsset) return;
   drawLighthouseFire(ctx, firePoint, camera.zoom * 1.32, world.lighthouse.color, motion);
 }
 

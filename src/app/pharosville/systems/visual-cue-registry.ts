@@ -5,13 +5,13 @@ export function buildVisualCueRegistry(): VisualCue[] {
     {
       id: "cue.lighthouse.psi",
       target: { kind: "lighthouse" },
-      primaryChannels: ["glow", "color", "opacity"],
-      visual: "lighthouse great fire",
+      primaryChannels: ["glow", "opacity"],
+      visual: "lighthouse beacon and beam state",
       sourceField: "stability.current.band",
       questionAnswered: "What is the overall Pharos Stability Index state?",
       failureState: "unlit/fogged lighthouse",
       domEquivalent: "lighthouse detail panel",
-      reducedMotionEquivalent: "static great-fire color and lighthouse detail PSI rows",
+      reducedMotionEquivalent: "static beacon state and lighthouse detail PSI rows",
     },
     {
       id: "cue.dock.size",

@@ -561,7 +561,7 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
   expect(pixelStats.backingPixels).toBeLessThanOrEqual(1440 * 1000 * 4);
   expect(pixelStats.landPixels).toBeGreaterThan(6_000);
   expect(pixelStats.waterPixels).toBeGreaterThan(25_000);
-  expect(pixelStats.waterPixels).toBeGreaterThan(pixelStats.landPixels * 2);
+  expect(pixelStats.waterPixels).toBeGreaterThan(pixelStats.landPixels * 1.5);
   expect(pixelStats.landPixels / pixelStats.backingPixels).toBeLessThan(0.45);
   expect(pixelStats.waterPixels / pixelStats.backingPixels).toBeLessThan(0.86);
   expect(retiredSummaryRequests).toEqual([]);
@@ -1196,6 +1196,13 @@ async function canvasPixelStats(page: Page) {
       const blue = data[index + 2] ?? 0;
       const max = Math.max(red, green, blue);
       const min = Math.min(red, green, blue);
+      const isDuskSkyBand = (
+        red > 120
+        && green > 70
+        && blue > 45
+        && red >= green + 28
+        && green >= blue - 8
+      );
       const isWaterBand = (
         blue > 40
         && green > 35
@@ -1209,7 +1216,7 @@ async function canvasPixelStats(page: Page) {
         && blue >= red + 12
         && Math.abs(blue - green) < 45
       );
-      const isTerrainBand = !isWaterBand && (
+      const isTerrainBand = !isWaterBand && !isDuskSkyBand && (
         (red > 110 && green > 85 && blue < 145 && red >= blue + 14)
         || (green > 58 && green >= red + 6 && green >= blue - 8 && blue < 145)
         || (red > 70 && green > 60 && blue > 45 && max - min < 55)

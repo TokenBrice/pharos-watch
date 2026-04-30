@@ -63,7 +63,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - visible RPG-styled toolbar, click-anchored detail panel, blank-map click-to-close behavior, and screen-reader accessibility ledger
 - canvas hit testing for lighthouse, docks, ships, clusters, graves, thematic data buildings, and named water areas
 - mouse/touch drag pan, wheel zoom, toolbar pan/zoom/reset/follow/clear controls, keyboard arrow pan, Escape clear, and fullscreen inspection mode
-- normal-motion canvas loop for the lighthouse great-fire flicker, semantic water textures, decorative time-derived dawn/day/dusk/night sky with sun, crescent moon, stars, constellations, cloud bands, decorative birds/lights/haze, and deterministic ship route sampling, with expensive wake effects capped to selected/top/recent ships
+- normal-motion canvas loop for the lighthouse beam shimmer, semantic water textures, decorative time-derived dawn/day/dusk/night sky with sun, crescent moon, stars, constellations, cloud bands, decorative birds/lights/haze, and deterministic ship route sampling, with expensive wake effects capped to selected/top/recent ships
 - printed water-area labels render above entity sprites so the names of Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, Danger Strait, and Ledger Mooring remain visible and selectable; label hit targets stay clear of the lighthouse asset rectangle
 - deterministic reduced-motion render with no running animation frame loop
 - route-owned motion debug fields for browser validation, including

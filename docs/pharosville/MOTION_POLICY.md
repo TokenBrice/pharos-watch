@@ -10,7 +10,7 @@ renders deterministic static frames and must not keep a RAF loop alive.
 
 - Static: terrain, printed water labels, cemetery markers, dormant buildings,
   dock footprints, cluster markers, and detail chrome.
-- Slow: lighthouse fire/beam, semantic water shimmer, fog, selected
+- Slow: lighthouse beam shimmer, semantic water shimmer, fog, selected
   relationship pulse, harbor lamps, and lighthouse-attached birds.
 - Medium: ship movement along sampled water routes and bounded building
   activity effects.
