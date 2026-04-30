@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { findCanonicalChainData, type RawChainCirculating } from "@shared/lib/chain-circulating";
-import type { ChainsResponse } from "@shared/types/chains";
+import { ChainsResponseSchema, type ChainsResponse } from "@shared/types/chains";
 import { useApiQueryWithMeta } from "./use-api-query";
 import { useStablecoins } from "./use-stablecoins";
 import { CRON_15MIN } from "@/lib/cron-intervals";
@@ -16,7 +16,10 @@ export function useChains() {
     ["chains"],
     API_PATHS.chains(),
     CRON_15MIN,
-    { metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.chains },
+    {
+      schema: ChainsResponseSchema,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.chains,
+    },
   );
 }
 
