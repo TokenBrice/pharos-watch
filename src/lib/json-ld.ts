@@ -35,7 +35,7 @@ export const PHAROS_ORG_NODE = {
   description: PHAROS_SITE_DESCRIPTION,
   sameAs: [
     "https://x.com/PharosWatch",
-    "https://github.com/TokenBrice/stablecoin-dashboard",
+    "https://github.com/TokenBrice/pharos-watch",
     "https://t.me/pharoswatch",
     "https://t.me/PharosWatchBot",
     "https://t.me/pharoswatchers",

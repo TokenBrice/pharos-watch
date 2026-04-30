@@ -41,7 +41,7 @@ export function Footer() {
               </svg>
             </a>
             <a
-              href="https://github.com/TokenBrice/stablecoin-dashboard"
+              href="https://github.com/TokenBrice/pharos-watch"
               target="_blank"
               rel="noopener noreferrer"
               className="pharos-focus-ring rounded-full border border-transparent p-1.5 hover:border-border/60 hover:bg-muted/40 hover:text-foreground"
