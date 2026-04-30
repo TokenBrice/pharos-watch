@@ -140,8 +140,7 @@ type SceneryPropKind =
   | "rock"
   | "sea-wall"
   | "signal-post"
-  | "skiff"
-  | "tent";
+  | "skiff";
 
 interface SceneryProp {
   id: string;
@@ -173,7 +172,6 @@ const SCENERY_PROPS: readonly SceneryProp[] = [
   { id: "east-seawall", kind: "sea-wall", tile: { x: 49.2, y: 32.5 }, scale: 1.0 },
   { id: "ledger-buoy", kind: "buoy", tile: { x: 40.5, y: 48.1 }, scale: 0.78 },
   { id: "ledger-skiff", kind: "skiff", tile: { x: 45.6, y: 50.6 }, scale: 0.82 },
-  { id: "civic-tent", kind: "tent", tile: { x: 31.2, y: 29.6 }, scale: 0.9 },
   { id: "civic-bollards", kind: "bollards", tile: { x: 36.0, y: 30.6 }, scale: 0.9 },
   { id: "cemetery-lamp", kind: "harbor-lamp", tile: { x: 24.8, y: 35.8 }, scale: 0.74 },
   { id: "cemetery-rock", kind: "rock", tile: { x: 29.4, y: 36.9 }, scale: 0.68 },
@@ -294,9 +292,47 @@ const GRAVE_CAUSE_COLORS: Record<CauseOfDeath, string> = CAUSE_HEX;
 
 type GraveNodeMarker = PharosVilleWorld["graves"][number]["visual"]["marker"];
 
+const GRAVE_ASSET_IDS: Record<GraveNodeMarker, string> = {
+  cross: "prop.regulatory-obelisk",
+  headstone: "prop.memorial-headstone",
+  ledger: "prop.ledger-slab",
+  reliquary: "prop.reliquary-marker",
+  tablet: "prop.ledger-slab",
+};
+
+const GRAVE_ASSET_SCALE: Record<GraveNodeMarker, number> = {
+  cross: 0.6,
+  headstone: 0.64,
+  ledger: 0.7,
+  reliquary: 0.58,
+  tablet: 0.68,
+};
+
+const GRAVE_LOGO_OFFSET: Record<GraveNodeMarker, number> = {
+  cross: 13.2,
+  headstone: 8.6,
+  ledger: 5.7,
+  reliquary: 10.4,
+  tablet: 6.2,
+};
+
 const CEMETERY_GLOBAL_SCALE = 0.6;
 const CEMETERY_CONTEXT_SCALE = 0.82 * CEMETERY_GLOBAL_SCALE;
 const CEMETERY_CONTEXT_SOURCE_CENTER = { x: 22.15, y: 41.7 } as const;
+
+const CEMETERY_SURFACE = {
+  grass: "rgba(90, 126, 72, 0.72)",
+  grassEdge: "rgba(64, 96, 63, 0.56)",
+  limestone: "rgba(198, 183, 142, 0.58)",
+  limestoneCore: "rgba(220, 202, 154, 0.44)",
+  limestoneEdge: "rgba(111, 93, 67, 0.7)",
+  path: "rgba(151, 122, 79, 0.74)",
+  pathLight: "rgba(232, 200, 136, 0.42)",
+  post: "#3a2a1d",
+  postCap: "#d2aa61",
+  quayDark: "rgba(24, 38, 39, 0.74)",
+  quayFoam: "rgba(194, 231, 222, 0.42)",
+} as const;
 
 export type { DrawPharosVilleInput, PharosVilleCanvasMotion, PharosVilleRenderMetrics } from "./render-types";
 
@@ -335,11 +371,6 @@ export function drawPharosVille(input: DrawPharosVilleInput): PharosVilleRenderM
 function drawEntityPass(input: DrawPharosVilleInput): Pick<PharosVilleRenderMetrics, "drawableCount" | "drawableCounts"> {
   const drawables: WorldDrawable[] = [
     ...SCENERY_PROPS.map((prop) => sceneryDrawable(input, prop)),
-    ...input.world.buildings.flatMap((building) => [
-      entityDrawable(input, building, "underlay", () => drawBuildingUnderlay(input, building)),
-      entityDrawable(input, building, "body", () => drawBuildingBody(input, building)),
-      entityDrawable(input, building, "overlay", () => drawBuildingOverlay(input, building)),
-    ]),
     ...input.world.docks.flatMap((dock) => [
       entityDrawable(input, dock, "body", () => drawDockBody(input, dock)),
       entityDrawable(input, dock, "overlay", () => drawDockOverlay(input, dock)),
@@ -1400,7 +1431,7 @@ function lighthouseTerrain(world: PharosVilleWorld): TerrainKind {
   return tile?.terrain ?? tile?.kind ?? "hill";
 }
 
-function drawCemeteryGround({ camera, ctx, world }: DrawPharosVilleInput) {
+function drawCemeteryGround({ assets, camera, ctx, world }: DrawPharosVilleInput) {
   ctx.save();
   for (const tile of world.map.tiles) {
     if (tile.kind !== "land" && tile.kind !== "shore") continue;
@@ -1408,14 +1439,25 @@ function drawCemeteryGround({ camera, ctx, world }: DrawPharosVilleInput) {
     if (value > 1.08) continue;
     const p = tileToScreen(tile, camera);
     const edge = value > 0.78;
+    const inner = value < 0.52;
     drawDiamond(
       ctx,
       p.x,
       p.y,
       32 * camera.zoom,
       16 * camera.zoom,
-      edge ? "rgba(58, 73, 52, 0.54)" : "rgba(39, 60, 44, 0.76)",
+      edge ? CEMETERY_SURFACE.grassEdge : CEMETERY_SURFACE.grass,
     );
+    if (!edge) {
+      drawDiamond(
+        ctx,
+        p.x,
+        p.y + 1 * camera.zoom,
+        26 * camera.zoom,
+        12 * camera.zoom,
+        inner ? CEMETERY_SURFACE.limestoneCore : CEMETERY_SURFACE.limestone,
+      );
+    }
     if ((tile.x * 17 + tile.y * 29) % 7 === 0) {
       drawCemeteryTuft(
         ctx,
@@ -1426,7 +1468,19 @@ function drawCemeteryGround({ camera, ctx, world }: DrawPharosVilleInput) {
     }
   }
 
+  drawCemeteryQuayEdge(ctx, camera);
   drawCemeteryPath(ctx, camera);
+  const terraceAsset = assets?.get("prop.memorial-terrace") ?? null;
+  if (terraceAsset) {
+    const terracePoint = tileToScreen(CEMETERY_CENTER, camera);
+    drawAsset(
+      ctx,
+      terraceAsset,
+      terracePoint.x,
+      terracePoint.y + 7 * camera.zoom * CEMETERY_GLOBAL_SCALE,
+      camera.zoom * 0.92,
+    );
+  }
   drawCemeteryFence(ctx, camera);
   ctx.restore();
 }
@@ -1455,20 +1509,40 @@ function drawCemeteryPath(ctx: CanvasRenderingContext2D, camera: IsoCamera) {
     { x: 22.15, y: 44.65 },
     { x: 21.7, y: 47.7 },
   ]);
-  drawIsoStroke(ctx, camera, northPath, "rgba(86, 75, 58, 0.84)", 10 * CEMETERY_GLOBAL_SCALE);
+  drawIsoStroke(ctx, camera, northPath, CEMETERY_SURFACE.path, 10 * CEMETERY_GLOBAL_SCALE);
   drawIsoStroke(ctx, camera, cemeteryContextTiles([
     { x: 14.55, y: 41.7 },
     { x: 17.65, y: 41.32 },
     { x: 21.75, y: 41.78 },
     { x: 25.85, y: 41.35 },
     { x: 29.7, y: 41.85 },
-  ]), "rgba(86, 75, 58, 0.7)", 6.5 * CEMETERY_GLOBAL_SCALE);
+  ]), CEMETERY_SURFACE.limestoneEdge, 6.5 * CEMETERY_GLOBAL_SCALE);
   drawIsoStroke(ctx, camera, cemeteryContextTiles([
     { x: 16.7, y: 38.95 },
     { x: 18.4, y: 39.6 },
     { x: 19.85, y: 40.65 },
-  ]), "rgba(86, 75, 58, 0.66)", 5.8 * CEMETERY_GLOBAL_SCALE);
-  drawIsoStroke(ctx, camera, northPath, "rgba(176, 149, 99, 0.42)", 2.5 * CEMETERY_GLOBAL_SCALE);
+  ]), CEMETERY_SURFACE.limestoneEdge, 5.8 * CEMETERY_GLOBAL_SCALE);
+  drawIsoStroke(ctx, camera, northPath, CEMETERY_SURFACE.pathLight, 2.5 * CEMETERY_GLOBAL_SCALE);
+}
+
+function drawCemeteryQuayEdge(ctx: CanvasRenderingContext2D, camera: IsoCamera) {
+  const lowerEdge = cemeteryContextTiles([
+    { x: 14.35, y: 44.0 },
+    { x: 17.75, y: 47.9 },
+    { x: 22.2, y: 48.8 },
+    { x: 27.3, y: 46.85 },
+    { x: 30.6, y: 42.95 },
+  ]);
+  const upperEdge = cemeteryContextTiles([
+    { x: 14.1, y: 40.05 },
+    { x: 16.8, y: 36.25 },
+    { x: 21.1, y: 34.95 },
+    { x: 26.2, y: 35.9 },
+    { x: 30.45, y: 40.08 },
+  ]);
+  drawIsoStroke(ctx, camera, lowerEdge, CEMETERY_SURFACE.quayDark, 7 * CEMETERY_GLOBAL_SCALE);
+  drawIsoStroke(ctx, camera, upperEdge, CEMETERY_SURFACE.limestoneEdge, 4.5 * CEMETERY_GLOBAL_SCALE);
+  drawIsoStroke(ctx, camera, lowerEdge, CEMETERY_SURFACE.quayFoam, 1.6 * CEMETERY_GLOBAL_SCALE);
 }
 
 function drawCemeteryFence(ctx: CanvasRenderingContext2D, camera: IsoCamera) {
@@ -1490,17 +1564,17 @@ function drawCemeteryFence(ctx: CanvasRenderingContext2D, camera: IsoCamera) {
   ] as const;
 
   for (const rail of rails) {
-    drawIsoStroke(ctx, camera, rail, "rgba(26, 28, 24, 0.72)", 3 * CEMETERY_GLOBAL_SCALE);
+    drawIsoStroke(ctx, camera, rail, "rgba(63, 53, 38, 0.74)", 3 * CEMETERY_GLOBAL_SCALE);
     for (const tile of rail) {
       const p = tileToScreen(tile, camera);
-      ctx.fillStyle = "#171a16";
+      ctx.fillStyle = CEMETERY_SURFACE.post;
       ctx.fillRect(
         Math.round(p.x - 1 * camera.zoom * CEMETERY_GLOBAL_SCALE),
         Math.round(p.y - 7 * camera.zoom * CEMETERY_GLOBAL_SCALE),
         Math.max(1, Math.round(2 * camera.zoom * CEMETERY_GLOBAL_SCALE)),
         Math.max(3, Math.round(9 * camera.zoom * CEMETERY_GLOBAL_SCALE)),
       );
-      ctx.fillStyle = "#556148";
+      ctx.fillStyle = CEMETERY_SURFACE.postCap;
       ctx.fillRect(
         Math.round(p.x - 1 * camera.zoom * CEMETERY_GLOBAL_SCALE),
         Math.round(p.y - 8 * camera.zoom * CEMETERY_GLOBAL_SCALE),
@@ -1538,9 +1612,9 @@ function drawIsoStroke(
 }
 
 function drawCemeteryTuft(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: number) {
-  ctx.fillStyle = "rgba(57, 104, 63, 0.7)";
+  ctx.fillStyle = "rgba(78, 126, 68, 0.58)";
   ctx.fillRect(Math.round(x - 2 * zoom), Math.round(y), Math.max(1, Math.round(2 * zoom)), Math.max(1, Math.round(4 * zoom)));
-  ctx.fillStyle = "rgba(34, 73, 45, 0.82)";
+  ctx.fillStyle = "rgba(45, 88, 56, 0.64)";
   ctx.fillRect(Math.round(x + 1 * zoom), Math.round(y + 1 * zoom), Math.max(1, Math.round(2 * zoom)), Math.max(1, Math.round(3 * zoom)));
 }
 
@@ -1576,11 +1650,11 @@ function drawCemeteryShrubs(ctx: CanvasRenderingContext2D, camera: IsoCamera) {
 
 function drawShrub(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: number) {
   ctx.save();
-  ctx.fillStyle = "#253f2d";
+  ctx.fillStyle = "#314f37";
   ctx.beginPath();
   ctx.ellipse(x, y + 2 * zoom, 9 * zoom, 4 * zoom, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "#4f7c45";
+  ctx.fillStyle = "#6f8f58";
   for (let index = 0; index < 3; index += 1) {
     ctx.beginPath();
     ctx.arc(x + (index - 1) * 5 * zoom, y - index * zoom, (4 + index) * zoom, 0, Math.PI * 2);
@@ -1597,22 +1671,22 @@ function drawMausoleum(ctx: CanvasRenderingContext2D, point: ScreenPoint, zoom: 
   ctx.beginPath();
   ctx.ellipse(0, 7, 28, 9, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "#465362";
+  ctx.fillStyle = "#6f6f64";
   ctx.fillRect(-18, -32, 36, 28);
-  ctx.fillStyle = "#6f8090";
+  ctx.fillStyle = "#b7aa88";
   ctx.fillRect(-14, -29, 28, 23);
-  ctx.fillStyle = "#2b3440";
+  ctx.fillStyle = "#4e4030";
   ctx.fillRect(-7, -18, 14, 14);
-  ctx.fillStyle = "#95a3aa";
+  ctx.fillStyle = "#d3bf86";
   ctx.fillRect(-21, -5, 42, 6);
-  ctx.fillStyle = "#34424f";
+  ctx.fillStyle = "#7b5a3f";
   ctx.beginPath();
   ctx.moveTo(-21, -32);
   ctx.lineTo(0, -48);
   ctx.lineTo(21, -32);
   ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = "#9aa8af";
+  ctx.fillStyle = "#d9c58c";
   ctx.fillRect(-2, -57, 4, 12);
   ctx.fillRect(-7, -53, 14, 4);
   ctx.restore();
@@ -1627,13 +1701,13 @@ function drawMemorialShrine(ctx: CanvasRenderingContext2D, point: ScreenPoint, z
   ctx.ellipse(0, 8, 30, 8, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = "#4b565a";
+  ctx.fillStyle = "#6c6554";
   ctx.fillRect(-20, -1, 40, 7);
-  ctx.fillStyle = "#89958d";
+  ctx.fillStyle = "#d4c089";
   ctx.fillRect(-16, -7, 32, 7);
-  ctx.fillStyle = "#5d6866";
+  ctx.fillStyle = "#8e836a";
   ctx.fillRect(-14, -27, 28, 22);
-  ctx.fillStyle = "#77847d";
+  ctx.fillStyle = "#c7b78f";
   ctx.beginPath();
   ctx.moveTo(-11, -6);
   ctx.lineTo(-11, -20);
@@ -1642,14 +1716,14 @@ function drawMemorialShrine(ctx: CanvasRenderingContext2D, point: ScreenPoint, z
   ctx.lineTo(11, -6);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#20282a";
+  ctx.strokeStyle = "#3b3023";
   ctx.lineWidth = 1.1;
   ctx.stroke();
 
-  ctx.fillStyle = "#465257";
+  ctx.fillStyle = "#71664f";
   ctx.fillRect(-16, -26, 5, 21);
   ctx.fillRect(11, -26, 5, 21);
-  ctx.fillStyle = "#9ba69d";
+  ctx.fillStyle = "#eee0a8";
   ctx.fillRect(-8, -15, 16, 2);
   ctx.fillRect(-7, -11, 14, 2);
   ctx.fillStyle = "#d6aa5d";
@@ -1665,7 +1739,7 @@ function drawCemeteryTree(ctx: CanvasRenderingContext2D, point: ScreenPoint, zoo
   ctx.beginPath();
   ctx.ellipse(2, 6, 18, 6, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "#513522";
+  ctx.strokeStyle = "#5b3a24";
   ctx.lineWidth = 4;
   ctx.beginPath();
   ctx.moveTo(0, 6);
@@ -1679,7 +1753,7 @@ function drawCemeteryTree(ctx: CanvasRenderingContext2D, point: ScreenPoint, zoo
     ctx.stroke();
   }
   if (!bare) {
-    ctx.fillStyle = "#5e874c";
+    ctx.fillStyle = "#78915b";
     ctx.beginPath();
     ctx.arc(-5, -35, 12, 0, Math.PI * 2);
     ctx.arc(7, -32, 13, 0, Math.PI * 2);
@@ -1697,10 +1771,10 @@ function drawStoneLantern(ctx: CanvasRenderingContext2D, point: ScreenPoint, zoo
   ctx.beginPath();
   ctx.ellipse(0, 5, 8, 3, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "#6d7473";
+  ctx.fillStyle = "#91846b";
   ctx.fillRect(-2, -12, 4, 15);
   ctx.fillRect(-7, 1, 14, 4);
-  ctx.fillStyle = "#8a9492";
+  ctx.fillStyle = "#c9b88a";
   ctx.fillRect(-6, -18, 12, 6);
   ctx.fillStyle = "#d4b663";
   ctx.fillRect(-3, -17, 6, 3);
@@ -1920,263 +1994,6 @@ function drawPixelFlame(ctx: CanvasRenderingContext2D, points: Array<[number, nu
   });
   ctx.closePath();
   ctx.fill();
-}
-
-function buildingRenderState({ assets, camera, world }: DrawPharosVilleInput, building: PharosVilleWorld["buildings"][number]) {
-  const asset = assets?.get(building.assetId);
-  const geometry = resolveEntityGeometry({
-    asset,
-    camera,
-    entity: building,
-    mapWidth: world.map.width,
-  });
-  const drawPoint = geometry.drawPoint;
-  return { asset, drawPoint, geometry };
-}
-
-function drawBuildingUnderlay(input: DrawPharosVilleInput, building: PharosVilleWorld["buildings"][number]) {
-  const { camera, ctx } = input;
-  const { drawPoint } = buildingRenderState(input, building);
-  drawBuildingPlinth(ctx, building, drawPoint, camera.zoom);
-  drawBuildingStatusGlow(ctx, building, drawPoint, camera.zoom);
-}
-
-function drawBuildingBody(input: DrawPharosVilleInput, building: PharosVilleWorld["buildings"][number]) {
-  const { camera, ctx } = input;
-  const { asset, drawPoint, geometry } = buildingRenderState(input, building);
-  if (asset) {
-    drawAsset(ctx, asset, drawPoint.x, drawPoint.y, geometry.drawScale);
-  } else {
-    drawFallbackDataBuilding(ctx, building, drawPoint, camera.zoom);
-  }
-}
-
-function drawBuildingOverlay(input: DrawPharosVilleInput, building: PharosVilleWorld["buildings"][number]) {
-  const { camera, ctx, motion } = input;
-  const { drawPoint } = buildingRenderState(input, building);
-  drawBuildingProceduralEffects(ctx, building, drawPoint, camera.zoom, motion);
-}
-
-function drawBuildingStatusGlow(
-  ctx: CanvasRenderingContext2D,
-  building: PharosVilleWorld["buildings"][number],
-  point: ScreenPoint,
-  zoom: number,
-) {
-  const intensity = Math.max(building.visual.intensity, building.visual.secondaryIntensity, building.visual.tertiaryIntensity);
-  ctx.save();
-  ctx.globalAlpha = 0.16 + intensity * 0.22;
-  ctx.fillStyle = hexToRgba(building.visual.accent, 0.7);
-  ctx.beginPath();
-  ctx.ellipse(point.x, point.y - 11 * zoom, 46 * zoom, 18 * zoom, -0.04, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawBuildingPlinth(
-  ctx: CanvasRenderingContext2D,
-  building: PharosVilleWorld["buildings"][number],
-  point: ScreenPoint,
-  zoom: number,
-) {
-  const large = building.buildingType === "exit-route-gatehouse";
-  const width = (large ? 98 : 88) * zoom;
-  const height = (large ? 38 : 34) * zoom;
-  const accent = hexToRgba(building.visual.accent, 0.36);
-  ctx.save();
-  drawDiamond(ctx, point.x, point.y + 9 * zoom, width * 1.1, height * 1.1, "rgba(8, 11, 11, 0.34)");
-  drawDiamond(ctx, point.x, point.y + 4 * zoom, width, height, "rgba(73, 75, 65, 0.88)");
-  drawTileLowerFacet(ctx, point.x, point.y + 4 * zoom, width, height, "rgba(31, 37, 40, 0.6)");
-  drawDiamond(ctx, point.x, point.y - 1 * zoom, width * 0.82, height * 0.64, "rgba(203, 184, 132, 0.72)");
-  drawDiamond(ctx, point.x, point.y - 3 * zoom, width * 0.52, height * 0.34, accent);
-
-  ctx.strokeStyle = "rgba(245, 228, 178, 0.42)";
-  ctx.lineWidth = Math.max(1, 1.2 * zoom);
-  ctx.beginPath();
-  ctx.moveTo(point.x - width * 0.34, point.y - height * 0.05);
-  ctx.lineTo(point.x + width * 0.28, point.y + height * 0.08);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawFallbackDataBuilding(
-  ctx: CanvasRenderingContext2D,
-  building: PharosVilleWorld["buildings"][number],
-  point: ScreenPoint,
-  zoom: number,
-) {
-  ctx.save();
-  ctx.translate(point.x, point.y);
-  ctx.scale(zoom, zoom);
-  ctx.fillStyle = "rgba(8, 11, 12, 0.35)";
-  ctx.beginPath();
-  ctx.ellipse(0, 3, 32, 10, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#d2bf86";
-  roundedRectPath(ctx, -26, -54, 52, 44, 3);
-  ctx.fill();
-  ctx.fillStyle = building.visual.accent;
-  ctx.fillRect(-18, -62, 36, 10);
-  ctx.fillStyle = "#3c2a1d";
-  ctx.fillRect(-7, -21, 14, 21);
-  ctx.restore();
-}
-
-function drawBuildingProceduralEffects(
-  ctx: CanvasRenderingContext2D,
-  building: PharosVilleWorld["buildings"][number],
-  point: ScreenPoint,
-  zoom: number,
-  motion: PharosVilleCanvasMotion,
-) {
-  const time = motion.reducedMotion ? 0 : motion.timeSeconds;
-  switch (building.buildingType) {
-    case "mint-burn-foundry":
-      drawFoundryEffects(ctx, building, point, zoom, time, motion.reducedMotion);
-      break;
-    case "exit-route-gatehouse":
-      drawGatehouseEffects(ctx, building, point, zoom, time, motion.reducedMotion);
-      break;
-    default: {
-      const exhaustive: never = building.buildingType;
-      throw new Error(`Unhandled PharosVille building type: ${exhaustive}`);
-    }
-  }
-  drawBuildingStaleHaze(ctx, building, point, zoom, time);
-}
-
-function drawFoundryEffects(
-  ctx: CanvasRenderingContext2D,
-  building: PharosVilleWorld["buildings"][number],
-  point: ScreenPoint,
-  zoom: number,
-  time: number,
-  reducedMotion: boolean,
-) {
-  const activity = building.status === "stale" || building.status === "unavailable" ? building.visual.intensity * 0.28 : building.visual.intensity;
-  const mint = building.visual.secondaryIntensity;
-  const burn = building.visual.tertiaryIntensity;
-  ctx.save();
-  ctx.translate(point.x, point.y);
-  ctx.scale(zoom, zoom);
-
-  ctx.fillStyle = `rgba(255, 105, 38, ${0.18 + burn * 0.45})`;
-  ctx.beginPath();
-  ctx.ellipse(21, -43, 17 + burn * 6, 10 + burn * 3, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = `rgba(255, 202, 85, ${0.16 + mint * 0.34})`;
-  ctx.beginPath();
-  ctx.ellipse(-11, -29, 24 + mint * 8, 8 + mint * 3, -0.15, 0, Math.PI * 2);
-  ctx.fill();
-
-  const thump = reducedMotion ? 0 : Math.max(0, Math.sin(time * (2.5 + activity * 4))) * 3 * activity;
-  ctx.fillStyle = "#51341d";
-  ctx.fillRect(-25, -49 + thump, 20, 5);
-  ctx.fillStyle = "#d8a642";
-  ctx.fillRect(-20, -44 + thump, 10, 11 - thump * 0.6);
-
-  const sparkCount = Math.round(2 + mint * 8);
-  ctx.fillStyle = "#ffe08b";
-  for (let index = 0; index < sparkCount; index += 1) {
-    const phase = reducedMotion ? 0.45 : (time * (0.9 + mint) + index * 0.21) % 1;
-    const x = -5 + index * 4 - phase * 13;
-    const y = -36 - phase * 24 + Math.sin(index * 1.7) * 4;
-    ctx.fillRect(Math.round(x), Math.round(y), 2, 2);
-  }
-
-  const smokeCount = Math.round(2 + activity * 5);
-  for (let index = 0; index < smokeCount; index += 1) {
-    const phase = reducedMotion ? index / Math.max(1, smokeCount) : (time * 0.22 + index * 0.18) % 1;
-    ctx.fillStyle = `rgba(122, 126, 118, ${0.2 * (1 - phase) + 0.06})`;
-    ctx.beginPath();
-    ctx.ellipse(-28 - phase * 8 + Math.sin(index) * 3, -72 - phase * 29, 6 + phase * 5, 4 + phase * 3, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-function drawGatehouseEffects(
-  ctx: CanvasRenderingContext2D,
-  building: PharosVilleWorld["buildings"][number],
-  point: ScreenPoint,
-  zoom: number,
-  time: number,
-  reducedMotion: boolean,
-) {
-  const depth = building.status === "deep-exit" ? 1 : building.status === "thin-exit" ? 0.32 : building.visual.intensity;
-  const wheel = building.status === "stale" || building.status === "unavailable" ? 0.08 : building.visual.secondaryIntensity;
-  const warning = building.status === "concentrated" ? 1 : building.visual.tertiaryIntensity;
-  const angle = reducedMotion ? 0.3 : time * (1 + wheel * 4);
-  ctx.save();
-  ctx.translate(point.x, point.y);
-  ctx.scale(zoom, zoom);
-
-  ctx.fillStyle = `rgba(52, 150, 158, ${0.08 + depth * 0.22})`;
-  ctx.beginPath();
-  ctx.ellipse(0, -27, 21, 7 + depth * 3, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  const opening = building.status === "deep-exit" ? 16 : building.status === "concentrated" ? 8 : building.status === "thin-exit" ? 5 : 1;
-  ctx.strokeStyle = "#4e3824";
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(-opening, -43);
-  ctx.lineTo(-24, -20);
-  ctx.moveTo(opening, -43);
-  ctx.lineTo(24, -20);
-  ctx.stroke();
-
-  ctx.save();
-  ctx.translate(-31, -42);
-  ctx.rotate(angle);
-  ctx.strokeStyle = "#6b4a2e";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(0, 0, 12, 0, Math.PI * 2);
-  for (let index = 0; index < 6; index += 1) {
-    const spoke = index * Math.PI / 3;
-    ctx.moveTo(0, 0);
-    ctx.lineTo(Math.cos(spoke) * 12, Math.sin(spoke) * 12);
-  }
-  ctx.stroke();
-  ctx.restore();
-
-  const lanternColor = building.status === "concentrated" ? "#f47c56" : building.status === "thin-exit" ? "#e3b95f" : "#8ce4ce";
-  ctx.fillStyle = hexToRgba(lanternColor, 0.24 + warning * 0.28);
-  ctx.beginPath();
-  ctx.arc(31, -52, 12, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = lanternColor;
-  ctx.fillRect(29, -54, 4, 5);
-  ctx.restore();
-}
-
-function drawBuildingStaleHaze(
-  ctx: CanvasRenderingContext2D,
-  building: PharosVilleWorld["buildings"][number],
-  point: ScreenPoint,
-  zoom: number,
-  time: number,
-) {
-  if (building.visual.staleHazeIntensity <= 0) return;
-  ctx.save();
-  ctx.globalAlpha = building.visual.staleHazeIntensity;
-  ctx.fillStyle = "rgba(193, 207, 203, 0.24)";
-  for (let index = 0; index < 3; index += 1) {
-    const phase = (time * 0.08 + index * 0.3) % 1;
-    ctx.beginPath();
-    ctx.ellipse(
-      point.x - 32 * zoom + index * 31 * zoom + phase * 10 * zoom,
-      point.y - (13 + index * 4) * zoom,
-      30 * zoom,
-      8 * zoom,
-      -0.08,
-      0,
-      Math.PI * 2,
-    );
-    ctx.fill();
-  }
-  ctx.restore();
 }
 
 function drawDecorativeLights({ camera, ctx, motion }: DrawPharosVilleInput) {
@@ -2587,8 +2404,6 @@ function drawSceneryProp(input: DrawPharosVilleInput, prop: SceneryProp) {
     drawSignalPost(ctx, p.x, p.y, scale, prop.kind === "beacon");
   } else if (prop.kind === "skiff") {
     drawMiniSkiff(ctx, p.x, p.y, scale);
-  } else if (prop.kind === "tent") {
-    drawMarketTent(ctx, p.x, p.y, scale);
   }
   ctx.restore();
 }
@@ -2732,26 +2547,6 @@ function drawMiniSkiff(ctx: CanvasRenderingContext2D, x: number, y: number, scal
   ctx.lineTo(x + 10 * scale, y - 5 * scale);
   ctx.closePath();
   ctx.fill();
-}
-
-function drawMarketTent(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
-  ctx.fillStyle = "rgba(7, 10, 12, 0.28)";
-  drawDiamond(ctx, x, y + 7 * scale, 34 * scale, 13 * scale, ctx.fillStyle);
-  ctx.fillStyle = "#b95437";
-  ctx.beginPath();
-  ctx.moveTo(x - 16 * scale, y);
-  ctx.lineTo(x, y - 16 * scale);
-  ctx.lineTo(x + 16 * scale, y);
-  ctx.lineTo(x + 10 * scale, y + 8 * scale);
-  ctx.lineTo(x - 11 * scale, y + 8 * scale);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#2f2117";
-  ctx.lineWidth = Math.max(1, scale);
-  ctx.stroke();
-  ctx.fillStyle = "#f0ead2";
-  ctx.fillRect(Math.round(x - 8 * scale), Math.round(y - 2 * scale), Math.max(1, Math.round(5 * scale)), Math.max(1, Math.round(8 * scale)));
-  ctx.fillRect(Math.round(x + 3 * scale), Math.round(y - 2 * scale), Math.max(1, Math.round(5 * scale)), Math.max(1, Math.round(8 * scale)));
 }
 
 function drawSignBoard(
@@ -3005,11 +2800,26 @@ function drawGraveUnderlay(input: DrawPharosVilleInput, grave: PharosVilleWorld[
 
 function drawGraveBody(input: DrawPharosVilleInput, grave: PharosVilleWorld["graves"][number]) {
   const { assets, camera, ctx } = input;
-  const { causeColor, geometry, p } = graveRenderState(input, grave);
-  const tombstoneAsset = assets?.get("prop.tombstone") ?? null;
-  if (tombstoneAsset && (grave.visual.marker === "headstone" || grave.visual.marker === "tablet")) {
-    drawAsset(ctx, tombstoneAsset, geometry.drawPoint.x, geometry.drawPoint.y + 1.5 * camera.zoom, camera.zoom * grave.visual.scale * 0.86);
-    drawGraveCauseChip(ctx, geometry.drawPoint.x, geometry.drawPoint.y - 9 * camera.zoom * grave.visual.scale, causeColor, camera.zoom * grave.visual.scale);
+  const { causeColor, emphasized, geometry, p } = graveRenderState(input, grave);
+  const graveAsset = assets?.get(GRAVE_ASSET_IDS[grave.visual.marker]) ?? null;
+  if (graveAsset) {
+    ctx.save();
+    ctx.globalAlpha = emphasized || grave.visual.scale >= 0.41 ? 1 : 0.84;
+    drawAsset(
+      ctx,
+      graveAsset,
+      geometry.drawPoint.x,
+      geometry.drawPoint.y + graveAssetYOffset(grave.visual.marker, camera.zoom),
+      camera.zoom * grave.visual.scale * GRAVE_ASSET_SCALE[grave.visual.marker],
+    );
+    ctx.restore();
+    drawGraveCauseChip(
+      ctx,
+      geometry.drawPoint.x,
+      geometry.drawPoint.y - (GRAVE_LOGO_OFFSET[grave.visual.marker] + 3.4) * camera.zoom * grave.visual.scale,
+      causeColor,
+      camera.zoom * grave.visual.scale,
+    );
     return;
   }
   drawProceduralGrave(
@@ -3024,12 +2834,18 @@ function drawGraveBody(input: DrawPharosVilleInput, grave: PharosVilleWorld["gra
   );
 }
 
+function graveAssetYOffset(marker: GraveNodeMarker, zoom: number) {
+  if (marker === "ledger" || marker === "tablet") return 3.2 * zoom;
+  if (marker === "reliquary") return 1.2 * zoom;
+  return 1.8 * zoom;
+}
+
 function drawGraveCauseChip(ctx: CanvasRenderingContext2D, x: number, y: number, causeColor: string, scale: number) {
   ctx.save();
-  ctx.fillStyle = hexToRgba(causeColor, 0.84);
-  ctx.strokeStyle = "rgba(15, 17, 17, 0.65)";
+  ctx.fillStyle = hexToRgba(causeColor, 0.68);
+  ctx.strokeStyle = "rgba(52, 42, 28, 0.58)";
   ctx.lineWidth = Math.max(0.7, 0.8 * scale);
-  roundedRectPath(ctx, x - 3.6 * scale, y - 2 * scale, 7.2 * scale, 4 * scale, 1.4 * scale);
+  roundedRectPath(ctx, x - 2.9 * scale, y - 1.6 * scale, 5.8 * scale, 3.2 * scale, 1.1 * scale);
   ctx.fill();
   ctx.stroke();
   ctx.restore();
@@ -3037,16 +2853,19 @@ function drawGraveCauseChip(ctx: CanvasRenderingContext2D, x: number, y: number,
 
 function drawGraveOverlay(input: DrawPharosVilleInput, grave: PharosVilleWorld["graves"][number]) {
   const { assets, camera, ctx } = input;
-  const { causeColor, emphasized, p } = graveRenderState(input, grave);
+  const { causeColor, emphasized, geometry } = graveRenderState(input, grave);
+  const major = grave.visual.scale >= 0.41;
+  if (!emphasized && !major) return;
   drawGraveLogo({
     ctx,
     causeColor,
     emphasized,
+    major,
     logo: assets?.getLogo(grave.logoSrc) ?? null,
     mark: grave.label,
-    radius: Math.max(1.1, 2.55 * camera.zoom * Math.sqrt(grave.visual.scale)),
-    x: p.x,
-    y: p.y - (8.1 * grave.visual.scale + markerLogoOffset(grave.visual.marker)) * camera.zoom,
+    radius: Math.max(1, 2.05 * camera.zoom * Math.sqrt(grave.visual.scale)),
+    x: geometry.drawPoint.x,
+    y: geometry.drawPoint.y - GRAVE_LOGO_OFFSET[grave.visual.marker] * camera.zoom * grave.visual.scale,
   });
 }
 
@@ -3064,14 +2883,6 @@ function drawGraveShadow(
   ctx.ellipse(x, y + 5 * zoom, 12 * zoom, 5 * zoom, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
-}
-
-function markerLogoOffset(marker: GraveNodeMarker) {
-  if (marker === "cross") return 2.4;
-  if (marker === "tablet") return 1.1;
-  if (marker === "reliquary") return 1.7;
-  if (marker === "ledger") return -0.8;
-  return -0.2;
 }
 
 const GRAVE_STONE = {
@@ -3404,49 +3215,67 @@ function drawGraveLogo(input: {
   ctx: CanvasRenderingContext2D;
   emphasized: boolean;
   logo: ReturnType<PharosVilleAssetManager["getLogo"]>;
+  major: boolean;
   mark: string;
   radius: number;
   x: number;
   y: number;
 }) {
-  const { causeColor, ctx, emphasized, logo, mark, radius, x, y } = input;
+  const { causeColor, ctx, emphasized, logo, major, mark, radius, x, y } = input;
   const safeRadius = Math.max(2, radius);
+  const plaqueWidth = safeRadius * 2.1;
+  const plaqueHeight = safeRadius * 1.55;
+  const plaqueAlpha = emphasized ? 0.95 : major ? 0.76 : 0.54;
   ctx.save();
   ctx.translate(Math.round(x), Math.round(y));
   if (emphasized) {
-    ctx.fillStyle = `${causeColor}55`;
+    ctx.fillStyle = hexToRgba(causeColor, 0.22);
     ctx.beginPath();
-    ctx.arc(0, 0, safeRadius + 2, 0, Math.PI * 2);
+    ctx.ellipse(0, 1.2 * safeRadius, safeRadius * 2.2, safeRadius * 0.72, 0, 0, Math.PI * 2);
     ctx.fill();
   }
-  ctx.fillStyle = "#e9dfcb";
-  ctx.strokeStyle = "#17131a";
-  ctx.lineWidth = Math.max(0.75, safeRadius * 0.2);
-  ctx.beginPath();
-  ctx.arc(0, 0, safeRadius, 0, Math.PI * 2);
+  roundedRectPath(ctx, -plaqueWidth / 2, -plaqueHeight / 2, plaqueWidth, plaqueHeight, Math.max(1, safeRadius * 0.28));
+  ctx.fillStyle = `rgba(226, 208, 166, ${plaqueAlpha})`;
   ctx.fill();
+  ctx.strokeStyle = "rgba(47, 35, 24, 0.7)";
+  ctx.lineWidth = Math.max(0.65, safeRadius * 0.13);
   ctx.stroke();
 
-  ctx.strokeStyle = causeColor;
-  ctx.lineWidth = Math.max(0.65, safeRadius * 0.14);
-  ctx.beginPath();
-  ctx.arc(0, 0, Math.max(1, safeRadius - 0.75), 0, Math.PI * 2);
-  ctx.stroke();
+  if (emphasized || major) {
+    ctx.strokeStyle = hexToRgba(causeColor, emphasized ? 0.78 : 0.48);
+    ctx.lineWidth = Math.max(0.55, safeRadius * 0.1);
+    roundedRectPath(
+      ctx,
+      -plaqueWidth / 2 + safeRadius * 0.16,
+      -plaqueHeight / 2 + safeRadius * 0.16,
+      plaqueWidth - safeRadius * 0.32,
+      plaqueHeight - safeRadius * 0.32,
+      Math.max(1, safeRadius * 0.22),
+    );
+    ctx.stroke();
+  }
 
   if (logo) {
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(0, 0, Math.max(1, safeRadius - 1.1), 0, Math.PI * 2);
+    roundedRectPath(
+      ctx,
+      -plaqueWidth * 0.34,
+      -plaqueHeight * 0.36,
+      plaqueWidth * 0.68,
+      plaqueHeight * 0.72,
+      Math.max(1, safeRadius * 0.2),
+    );
     ctx.clip();
-    const size = Math.round(Math.max(2, (safeRadius - 1.1) * 2));
+    ctx.globalAlpha = emphasized ? 0.95 : major ? 0.82 : 0.68;
+    const size = Math.round(Math.max(2, Math.min(plaqueWidth * 0.68, plaqueHeight * 0.72)));
     ctx.drawImage(logo.image, -size / 2, -size / 2, size, size);
     ctx.restore();
   } else {
-    ctx.fillStyle = "#17212b";
-    ctx.font = `700 ${Math.max(4, safeRadius * 0.95)}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.fillStyle = `rgba(23, 33, 43, ${emphasized ? 0.88 : 0.62})`;
+    ctx.font = `700 ${Math.max(4, safeRadius * 0.74)}px ui-sans-serif, system-ui, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(mark.slice(0, 2).toUpperCase(), 0, 0.35);
+    ctx.fillText(mark.slice(0, 2).toUpperCase(), 0, 0.3, plaqueWidth * 0.64);
     ctx.textAlign = "start";
     ctx.textBaseline = "alphabetic";
   }

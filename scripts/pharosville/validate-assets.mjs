@@ -347,7 +347,11 @@ function validateReferencedAssetIds(manifestIds) {
   };
 
   add("landmark.lighthouse", "world renderer lighthouse");
-  add("prop.tombstone", "world renderer graves");
+  add("prop.memorial-terrace", "world renderer cemetery");
+  add("prop.memorial-headstone", "world renderer graves");
+  add("prop.ledger-slab", "world renderer graves");
+  add("prop.reliquary-marker", "world renderer graves");
+  add("prop.regulatory-obelisk", "world renderer graves");
   for (const relativePath of pharosVilleSourceFiles()) {
     for (const id of assetIdsInSource(relativePath)) add(id, relativePath);
     for (const hull of shipHullsInSource(relativePath)) add(`ship.${hull}`, relativePath);

@@ -13,7 +13,7 @@ The renderer turns a pure `PharosVilleWorld` model into a Canvas 2D scene plus a
   anchors used by drawing, hit testing, and the route shell.
 - `drawable-pass.ts` owns stable isometric depth ordering and pass helpers for
   overlap-prone entity groups.
-- `hit-testing.ts` builds selectable rectangles for lighthouse, docks, ships, clusters, graves, buildings, and named areas.
+- `hit-testing.ts` builds selectable rectangles for lighthouse, docks, ships, clusters, graves, and named areas.
 - `asset-manager.ts` loads the local manifest-backed PNG assets and logo images.
 - `hit-testing.test.ts` protects target ordering, manifest hitboxes, moving ship target rectangles, and building selectability.
 
