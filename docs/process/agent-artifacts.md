@@ -14,7 +14,7 @@ Historical plans, one-off audits, exploratory research, screenshots, and handoff
 | --- | --- |
 | Repeatable process guidance | `docs/process/` |
 | Long-lived execution tracker | `docs/trackers/` |
-| Route-specific maintenance guidance | Route doc or a subdirectory such as `docs/pharosville/` |
+| Route-specific maintenance guidance | Route doc or a dedicated subdirectory under `docs/` |
 | Operator remediation procedure | `docs/runbooks/` |
 | Product, API, pipeline, or methodology behavior | Existing feature/methodology doc plus timeline when applicable |
 | Generated code-discovery map | `docs/agent-code-map.md` |

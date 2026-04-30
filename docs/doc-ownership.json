@@ -40,12 +40,6 @@
       "notes": ["New migrations must be backward-compatible with the standard deploy ordering."]
     },
     {
-      "name": "pharosville-route",
-      "sources": ["src/app/pharosville/**", "public/pharosville/assets/**", "scripts/pharosville/**", "tests/visual/pharosville.spec.ts"],
-      "docs": ["docs/pharosville-page.md", "docs/pharosville/CURRENT.md", "docs/pharosville/CHANGE_CHECKLIST.md", "docs/pharosville/CHANGE_PLAYBOOK.md", "docs/pharosville/VISUAL_INVARIANTS.md", "docs/pharosville/SCENARIO_CATALOG.md", "docs/pharosville/VISUAL_REVIEW_ATLAS.md", "docs/pharosville/KNOWN_PITFALLS.md", "docs/pharosville/ASSET_PIPELINE.md", "docs/pharosville/TESTING.md", "src/app/pharosville/systems/README.md", "src/app/pharosville/renderer/README.md"],
-      "notes": ["Update the verified route doc for behavior changes. Update the PharosVille maintenance pack for process, asset-pipeline, handoff, or route-specific testing guidance."]
-    },
-    {
       "name": "frontend-routes",
       "sources": ["src/app/**", "src/components/**", "src/hooks/**", "src/lib/page-metadata.ts", "src/app/sitemap.ts", "src/app/robots.ts"],
       "docs": ["docs/README.md", "docs/architecture.md", "docs/homepage.md", "docs/start-page.md", "docs/stablecoin-detail-page.md", "docs/chains-page.md", "docs/coverage-page.md", "docs/status-dashboard.md"],

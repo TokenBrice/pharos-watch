@@ -33,8 +33,6 @@ npm run check:llms-txt # Verify generated `/llms.txt` is current
 npm run check:openapi # Verify generated public OpenAPI artifact is current
 npm run check:postman # Verify generated public Postman collection/environment artifacts are current
 npm run check:world-map # Verify generated static world map SVG is current
-npm run check:pharosville-assets # Verify PharosVille manifest-backed PNG assets are local, dimensioned, capped, and non-orphaned
-npm run check:harbor-palette # Verify PharosVille route colors stay inside the maintained harbor palette
 npm run check:sql-safety # Static analysis of D1 SQL patterns for safety issues
 npm run check:stablecoin-data # Validate stablecoin JSON data files against schema
 npm run check:redemption-backstops # Validate redemption backstop configs for completeness
@@ -57,21 +55,6 @@ npm run test:smoke-ui -- --url https://pharos.watch --mode live # Browser-level 
 Markdown variants for `/methodology/`, `/changelog/`, and stablecoin detail pages have checked-in fixture snapshots under `scripts/__tests__/fixtures/markdown/`. When an intentional visible copy or renderer change updates those outputs, run `npm run build` or `npx tsx scripts/generate-markdown-exports.ts`, copy the matching `out/**/index.md` file over its fixture, and commit the fixture in the same change as the JSX or renderer edit.
 
 When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` also verifies that the homepage artifact includes the expected GA script tag and `gtag('config', ...)` initialization before it runs the browser checks. The config init may live in the root static RSC payload (`/index.txt`) on newer Next.js static exports rather than directly in `index.html`.
-
-## PharosVille Route Checks
-
-For `/pharosville/` work, start with [pharosville/TESTING.md](./pharosville/TESTING.md) and use the route-focused checks before broadening to the full repo gate.
-
-Common focused commands:
-
-```bash
-npm test -- src/app/pharosville
-npm run check:pharosville-assets
-npm run check:harbor-palette
-npx playwright test tests/visual/pharosville.spec.ts --grep "pharosville"
-```
-
-Run the Playwright route suite when canvas drawing, viewport gating, reduced motion, hit testing, detail positioning, screenshots, or route shell behavior changes. Add `npm run build` and `npm run seo:check` when the static export, metadata, route shell, CSS, or production assets are affected.
 
 ## CI Pipeline
 

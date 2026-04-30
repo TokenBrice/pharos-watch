@@ -150,7 +150,6 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`
   - `/portfolio/`
-  - `/pharosville/` while PharosVille is in beta
 - Tracked-variant browse ownership stays on the homepage query state (`/?variant=...`). The repo does not ship a dedicated `/stablecoins/variants/*` family.
 - Private operator routes marked `noindex,nofollow`:
   - `/admin/`
@@ -176,83 +175,18 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
 - `src/app/sitemap.ts` owns sitemap output for indexable routes. `/compare/`, `/portfolio/`, and `/admin/` are omitted; `/compare/[slug]/` static comparison pages are included. `/funding/` uses the latest of route edit time and checked-in funding data timestamps for `lastModified`. `LAST_EDITED` dates are auto-generated from git history during prebuild (`scripts/generate-sitemap-dates.ts`) and written to a generated JSON file (gitignored). Public docs use `scripts/generate-docs-metadata.ts` for git-derived first/last modified dates.
 - `src/app/robots.ts` publishes an allow-all crawl policy, explicit AI crawler allow groups, disallows for operator surfaces (`/admin`, `/admin/`, `/api/admin`, `/api/admin/`), and the sitemap location.
 
-### PharosVille (/pharosville)
+### Standalone PharosVille
 
-`/pharosville/` is the beta PharosVille route. It owns the PharosVille canonical
-path and renders the Canvas 2D island-city experience. `/lighthouse/` is retained
-only as a noindex legacy redirect to this route.
+PharosVille now lives in the separate `TokenBrice/pharosville` repository and
+is deployed through its own Cloudflare Pages project at
+`https://pharosville.pharos.watch/`. The Pharos.watch host keeps only temporary
+redirects from `/pharosville/` and `/lighthouse/` plus the shared API contract
+schemas that the standalone app validates against.
 
-The page uses a Server Component shell for metadata and JSON-LD, then a Client
-Component viewport gate. Screens below `1280px` wide or `760px` tall render a
-DOM desktop-only fallback and must not mount world queries, canvas runtime,
-manifest fetches, or sprite decoding. Eligible desktop viewports mount the
-browser-only PharosVille world. Runtime visual assets are local manifest-backed
-PNGs under `public/pharosville/assets/`; the current v0.1 manifest has 32
-entries, with 22 critical/first-render assets and 10 deferred assets under a
-validator-enforced 34-asset cap.
-
-The world model maps active stablecoins to ships and merged cemetery entries to
-grave nodes with local logo paths, deterministic scatter placement, and varied
-marker scale/shape. Ship base sprites follow the stablecoin governance class
-(CeFi, CeFi-Dep, DeFi), and ship scale uses compressed market-cap tiers rather
-than linear area, with intentionally exaggerated $1B+ tiers so major issuers are
-recognizable landmarks. Ship representative tile placement uses the current
-peg/DEWS risk-water idle tile, or Ledger Mooring for NAV ledger assets, while
-rendered chain-harbor moorings remain active route stops when positive chain
-supply maps to a rendered dock. Ethereum anchors the east cove with a selectable
-four-gate harbor hub drawn visually behind ship traffic, while Base, Arbitrum,
-Optimism, Polygon, and Mantle use reserved L2 extension slips around the eastern
-and southern coves when those chains are present. BSC, Tron, Solana, Aptos, and
-other non-core high-supply chain harbors use distributed outer-coast dock slots.
-Dock identity is shown as a small mast flag using the chain logo when available,
-with full chain names retained in DOM details. The cemetery sits on a detached
-bottom-left memorial islet. Normal-motion routing
-samples slow deterministic water-only harbor cycles with seeded detours between
-chain moorings and risk water using
-`stablecoins.chainCirculating`, `pegSummary.coins[]`, and `stress.signals[]`.
-ALERT, WARNING, and DANGER risk anchors sit in successive Alert Channel,
-Warning Shoals, and Danger Strait terrain bands snapped to the eastern angled
-shelf so the water treatment escalates with DEWS severity. Long-tail ships
-beyond the individual rendering budget are split into count-capped water-zone
-clusters instead of one large marker. The
-canvas renderer uses local logos for ship sails and cemetery tomb markers while
-the DOM detail panel remains the accessible source of analytical truth,
-including route source, risk water, home dock, chain presence, and docking
-cadence.
-
-Ledger Mooring and the five DEWS sea districts are modeled as named
-risk-water areas with terrain, printed labels, deterministic route anchors,
-detail facts, and accessibility-ledger parity; stale or low-confidence placement
-inputs are exposed as evidence caveats instead of a separate sea zone. The
-PharosVille scene no longer encodes freeze/blacklist tracker activity; that
-product surface remains outside the world map. Mint/burn flow, DEX liquidity,
-and modeled redemption backstops also remain on their dedicated analytical
-surfaces rather than PharosVille canvas landmarks. A generated central-island
-model ties the harbor ring together as visual composition only; the PSI
-lighthouse now sits on the island mountain at tile `{ x: 18, y: 28 }` without a
-rendered road or causeway into the harbor. All world elements expose local
-deterministic Canvas effects, DOM detail facts, and accessibility-ledger parity;
-reduced motion freezes procedural movement while preserving static status
-encodings.
-
-PharosVille's visual revamp target is a dark-first maritime observatory diorama.
-ClaudeVille remains a reference for Canvas layering, sprite-manifest discipline,
-bounded motion, and review workflow only; ClaudeVille lore, fantasy-village
-objects, decorative copy, and unrelated data semantics are outside the route
-contract.
-
-Canvas 2D remains the renderer choice. PixiJS v8 was rejected during the
-2026-04-25 spike because the shader path requires `unsafe-eval`, which Pharos's
-CSP disallows.
-
-Visual coverage lives in `tests/visual/pharosville.spec.ts` and currently checks
-the reduced-motion desktop canvas shell, stressed ship semantics, narrow and
-short fallback/no-runtime contracts, visible toolbar/detail surfaces,
-click-anchored detail placement, blank-map click-to-close behavior,
-interaction/camera behavior, ultrawide backing-store caps, civic-core placement
-invariants, absence of retired building targets, reduced-motion static ship
-samples with no RAF, normal-motion moving ship samples, moving ship hit targets,
-and DOM route-fact parity.
+The standalone app reads Pharos data through its own same-origin Pages Function
+proxy. That proxy owns the PharosVille API key server-side and calls only the
+allowlisted public read endpoints on `https://api.pharos.watch`, so the host
+Worker does not need a CORS allowlist change for the split.
 
 ---
 

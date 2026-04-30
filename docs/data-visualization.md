@@ -136,19 +136,6 @@ Most Pharos narrative modules are SVG-based. For standard data volumes (≤250 c
 
 Animation is **CSS keyframes**, not JS rAF loops. The React component injects CSS custom properties for values that depend on data (`--psi-pulse-dur`, `--psi-beam-origin-x`, `--nc-beam-angle`). Keyframes stay static. No animation frame loops, no react-spring, no GSAP.
 
-Exception: PharosVille at `/pharosville/` deliberately uses Canvas 2D for a
-dense maritime isometric world with tile projection, camera bounds, depth
-sorting, local sprite layers, logo-marked entity overlays, semantic water
-textures, slow deterministic water-only ship route sampling, long-tail ship
-clustering, culling, and 200+ possible entities. Its compensating requirements
-are documented in [pharosville-page.md](./pharosville-page.md): pure world
-model, DOM parity for route/risk/docking facts, reduced-motion deterministic
-render with no running RAF loop, no canvas runtime below `1280px` wide or
-`760px` tall, backing-store budget checks, moving-target visual coverage, local
-manifest-backed assets, and no CSP relaxation. ClaudeVille is a quality and
-process reference for sprite rigor and Canvas layering, not a source of lore,
-copy, fantasy-village scenery, or data semantics.
-
 ### `prefers-reduced-motion` is a hard requirement
 
 Every animation must be wrapped:
@@ -165,14 +152,9 @@ Every animation must be wrapped:
 The scene must remain legible and informative when motion is off. DEWS pauses
 the sweep, sets glow to static `opacity: 0.15`, and freezes the center pulse.
 PSI shows a static colored lighthouse. Harbor retains positions but freezes
-drift. PharosVille ship routes freeze at each ship's risk-water idle tile, or
-Ledger Mooring for NAV ledger assets, and PharosVille local effects freeze
-semantic water shimmer, harbor lamps, lighthouse atmosphere, wakes, and
-stale-data/ledger overlays while preserving static status encodings. Detail
-panels and the accessibility ledger still expose named risk-water area,
-risk-water zone, home dock, chain presence, docking cadence, route source,
-source fields, caveats, and exact facts. **The information content never
-depends on motion playing.**
+drift. Static labels, legends, and detail panels must preserve the same facts
+available during animated states. **The information content never depends on
+motion playing.**
 
 ---
 

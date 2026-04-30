@@ -21,7 +21,7 @@ const DEFAULT_OVERFLOW_SETTLE_SAMPLES = 4;
 const DEFAULT_OVERFLOW_SAMPLE_INTERVAL_MS = 350;
 const DEFAULT_STYLE_READY_TIMEOUT_MS = 4000;
 const DEFAULT_OVERFLOW_RETRY_EXTRA_WAIT_MS = 2000;
-const DEFAULT_LIVE_CANARY_ROUTES = ["/yield/", "/alt-pegs/", "/pharosville/"];
+const DEFAULT_LIVE_CANARY_ROUTES = ["/yield/", "/alt-pegs/", "/stability-index/"];
 const OVERFLOW_ROUTE_DEFAULTS = [
   "/",
   "/alt-pegs/",
@@ -29,7 +29,6 @@ const OVERFLOW_ROUTE_DEFAULTS = [
   "/flows/",
   "/yield/",
   "/liquidity/",
-  "/pharosville/",
   "/depeg/",
   "/blacklist/",
   "/stability-index/",

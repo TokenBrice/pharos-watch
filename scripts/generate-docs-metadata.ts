@@ -6,9 +6,7 @@ import { PUBLIC_DOCS } from "../shared/lib/public-docs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT = join(__dirname, "../src/generated/docs-metadata.json");
-const HISTORY_FALLBACKS: Record<string, string> = {
-  "docs/pharosville-page.md": "docs/lighthouse-page.md",
-};
+const HISTORY_FALLBACKS: Record<string, string> = {};
 
 interface DocMetadata {
   dateModified: string;
