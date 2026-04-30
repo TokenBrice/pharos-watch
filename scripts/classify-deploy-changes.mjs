@@ -5,19 +5,47 @@ import { pathToFileURL } from "node:url";
 import {
   hasDeployImpact,
   hasPagesDeployImpact,
+  hasWorkerPackagePromotionImpact,
   hasWorkerDeployImpact,
+  hasWorkerPromotionImpact,
   normalizeRepoPath,
 } from "./lib/deploy-impact.mjs";
 
 const ZERO_SHA = /^0+$/;
 
-export { hasDeployImpact, hasPagesDeployImpact, hasWorkerDeployImpact };
+export {
+  hasDeployImpact,
+  hasPagesDeployImpact,
+  hasWorkerDeployImpact,
+  hasWorkerPackagePromotionImpact,
+  hasWorkerPromotionImpact,
+};
 
 export function normalizeChangedFiles(rawOutput) {
   return rawOutput
     .split(/\r?\n/g)
     .map((line) => normalizeRepoPath(line.trim()))
     .filter(Boolean);
+}
+
+function hasRootPackageDiff(files) {
+  return files.includes("package.json") || files.includes("package-lock.json");
+}
+
+function hasWorkerPackagePromotionDiff({ baseSha, changedFiles, execFile, headSha }) {
+  if (!hasRootPackageDiff(changedFiles)) {
+    return false;
+  }
+  try {
+    const raw = execFile(
+      "git",
+      ["diff", "--unified=0", `${baseSha}...${headSha}`, "--", "package.json", "package-lock.json"],
+      { encoding: "utf8" },
+    );
+    return hasWorkerPackagePromotionImpact(raw);
+  } catch {
+    return true;
+  }
 }
 
 export function classifyDeployChanges({
@@ -33,6 +61,7 @@ export function classifyDeployChanges({
       pagesChanged: true,
       reason: `Non-push event (${eventName ?? "unknown"}) runs the full deploy workflow`,
       workerChanged: true,
+      workerPromotionRequired: true,
     };
   }
 
@@ -43,6 +72,7 @@ export function classifyDeployChanges({
       pagesChanged: true,
       reason: "Missing push diff base/head; falling back to full deploy path",
       workerChanged: true,
+      workerPromotionRequired: true,
     };
   }
 
@@ -57,11 +87,14 @@ export function classifyDeployChanges({
       pagesChanged: true,
       reason: `Failed to diff ${baseSha}...${headSha}; falling back to full deploy path`,
       workerChanged: true,
+      workerPromotionRequired: true,
     };
   }
 
   const pagesChanged = hasPagesDeployImpact(changedFiles);
   const workerChanged = hasWorkerDeployImpact(changedFiles);
+  const workerPromotionRequired = hasWorkerPromotionImpact(changedFiles)
+    || hasWorkerPackagePromotionDiff({ baseSha, changedFiles, execFile, headSha });
   return {
     changedFiles,
     deployRequired: hasDeployImpact(changedFiles),
@@ -70,6 +103,7 @@ export function classifyDeployChanges({
       ? `Detected ${changedFiles.length} changed file(s) in push range`
       : "No changed files detected in push range",
     workerChanged,
+    workerPromotionRequired,
   };
 }
 
@@ -81,6 +115,7 @@ export function emitGithubOutputs(classification) {
   writeGithubOutputLine("deploy_required", classification.deployRequired ? "true" : "false");
   writeGithubOutputLine("pages_changed", classification.pagesChanged ? "true" : "false");
   writeGithubOutputLine("worker_changed", classification.workerChanged ? "true" : "false");
+  writeGithubOutputLine("worker_promotion_required", classification.workerPromotionRequired ? "true" : "false");
 }
 
 function runCli(env = process.env) {
@@ -98,6 +133,7 @@ function runCli(env = process.env) {
   }
   console.error(`[deploy-changes] pages_changed=${classification.pagesChanged}`);
   console.error(`[deploy-changes] worker_changed=${classification.workerChanged}`);
+  console.error(`[deploy-changes] worker_promotion_required=${classification.workerPromotionRequired}`);
   console.error(`[deploy-changes] deploy_required=${classification.deployRequired}`);
 
   emitGithubOutputs(classification);

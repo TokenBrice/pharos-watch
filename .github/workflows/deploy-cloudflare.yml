@@ -18,6 +18,7 @@ jobs:
       deploy_required: ${{ steps.classify.outputs.deploy_required }}
       pages_changed: ${{ steps.classify.outputs.pages_changed }}
       worker_changed: ${{ steps.classify.outputs.worker_changed }}
+      worker_promotion_required: ${{ steps.classify.outputs.worker_promotion_required }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -49,7 +50,7 @@ jobs:
     needs:
       - detect-changes
       - validate
-    if: ${{ needs.detect-changes.outputs.worker_changed == 'true' }}
+    if: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' }}
     runs-on: ubuntu-latest
     outputs:
       previous_version_id: ${{ steps.current-deployment.outputs.previous_version_id }}
@@ -113,7 +114,7 @@ jobs:
     needs:
       - upload-worker-version
       - detect-changes
-    if: ${{ needs.detect-changes.outputs.worker_changed == 'true' && needs.upload-worker-version.result == 'success' }}
+    if: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.upload-worker-version.result == 'success' }}
     runs-on: ubuntu-latest
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -137,7 +138,7 @@ jobs:
     needs:
       - deploy-worker
       - detect-changes
-    if: ${{ needs.detect-changes.outputs.worker_changed == 'true' && needs.deploy-worker.result == 'success' }}
+    if: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.deploy-worker.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -151,6 +152,9 @@ jobs:
           SMOKE_API_BASE: ${{ vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
           SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
           SMOKE_API_REQUIRE_KEY: "true"
+          SMOKE_API_RETRY_COUNT: "3"
+          SMOKE_API_RETRY_DELAY_MS: "5000"
+          SMOKE_API_TIMEOUT_MS: "15000"
 
   rollback-worker:
     needs:
@@ -161,7 +165,7 @@ jobs:
     if: >-
       ${{
         always()
-        && needs.detect-changes.outputs.worker_changed == 'true'
+        && needs.detect-changes.outputs.worker_promotion_required == 'true'
         && needs.deploy-worker.result == 'success'
         && needs.smoke-api.result == 'failure'
         && needs.upload-worker-version.outputs.previous_version_id != ''
@@ -194,13 +198,13 @@ jobs:
         && needs.validate.result == 'success'
         && needs.detect-changes.outputs.pages_changed == 'true'
         && (
-          needs.detect-changes.outputs.worker_changed != 'true'
+          needs.detect-changes.outputs.worker_promotion_required != 'true'
           || needs.upload-worker-version.result == 'success'
         )
       }}
     uses: ./.github/workflows/pages-prepare.yml
     with:
-      api_base_url: ${{ needs.detect-changes.outputs.worker_changed == 'true' && needs.upload-worker-version.outputs.preview_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+      api_base_url: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.upload-worker-version.outputs.preview_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
     secrets: inherit
 
   pages-publish:
@@ -215,7 +219,7 @@ jobs:
         && needs.detect-changes.outputs.pages_changed == 'true'
         && needs.pages-prepare.result == 'success'
         && (
-          needs.detect-changes.outputs.worker_changed != 'true'
+          needs.detect-changes.outputs.worker_promotion_required != 'true'
           || needs.smoke-api.result == 'success'
         )
       }}
@@ -226,7 +230,7 @@ jobs:
     needs:
       - detect-changes
       - smoke-api
-    if: ${{ needs.detect-changes.outputs.worker_changed == 'true' && needs.detect-changes.outputs.pages_changed != 'true' && needs.smoke-api.result == 'success' }}
+    if: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.detect-changes.outputs.pages_changed != 'true' && needs.smoke-api.result == 'success' }}
     runs-on: ubuntu-latest
     env:
       SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
@@ -248,7 +252,7 @@ jobs:
         always()
         && needs.detect-changes.result == 'success'
         && needs.detect-changes.outputs.pages_changed != 'true'
-        && needs.detect-changes.outputs.worker_changed == 'true'
+        && needs.detect-changes.outputs.worker_promotion_required == 'true'
         && needs.smoke-api.result == 'success'
       }}
     runs-on: ubuntu-latest
@@ -275,7 +279,7 @@ jobs:
         always()
         && needs.detect-changes.result == 'success'
         && needs.detect-changes.outputs.pages_changed != 'true'
-        && needs.detect-changes.outputs.worker_changed == 'true'
+        && needs.detect-changes.outputs.worker_promotion_required == 'true'
         && needs.smoke-api.result == 'success'
       }}
     runs-on: ubuntu-latest

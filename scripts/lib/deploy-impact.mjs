@@ -7,6 +7,67 @@ const WORKER_CHANGE_PREFIXES = [
   "worker/",
 ];
 
+const WORKER_PROMOTION_EXACT_PATHS = new Set([
+  "worker/package.json",
+  "worker/tsconfig.json",
+  "worker/wrangler.toml",
+]);
+
+const WORKER_PROMOTION_PREFIXES = [
+  "worker/assets/",
+  "worker/migrations/",
+  "worker/src/",
+];
+
+const WORKER_ROOT_RUNTIME_PACKAGES = new Set([
+  "@adraffy/ens-normalize",
+  "@cf-wasm/resvg",
+  "@noble/ciphers",
+  "@noble/curves",
+  "@noble/hashes",
+  "@resvg/resvg-wasm",
+  "@resvg/resvg-wasm-legacy",
+  "@scure/base",
+  "@scure/bip32",
+  "@scure/bip39",
+  "@shuding/opentype.js",
+  "abitype",
+  "base64-js",
+  "camelize",
+  "color-name",
+  "css-background-parser",
+  "css-box-shadow",
+  "css-color-keywords",
+  "css-gradient-parser",
+  "css-to-react-native",
+  "emoji-regex-xs",
+  "escape-html",
+  "eventemitter3",
+  "fflate",
+  "hex-rgb",
+  "isows",
+  "linebreak",
+  "ox",
+  "pako",
+  "parse-css-color",
+  "postcss-value-parser",
+  "react",
+  "satori",
+  "string.prototype.codepointat",
+  "tiny-inflate",
+  "unicode-trie",
+  "viem",
+  "ws",
+  "yoga-layout",
+  "zod",
+]);
+
+const WORKER_PROMOTION_SHARED_EXCLUDED_PATHS = new Set([
+  "shared/lib/pharosville-api-contract.ts",
+  "shared/lib/public-docs.ts",
+  "shared/types/pharosville.ts",
+]);
+
 const PAGES_CHANGE_PREFIXES = [
   "data/",
   "functions/",
@@ -92,6 +153,78 @@ const PAGES_CHANGE_EXACT_PATHS = new Set([
   "tsconfig.json",
 ]);
 
+function isTestPath(file) {
+  return /(^|\/)__tests__\/.*\.(test|spec)\.[cm]?[jt]sx?$/.test(file)
+    || /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
+}
+
+function isWorkerPromotionSharedPath(file) {
+  return file.startsWith("shared/")
+    && !WORKER_PROMOTION_SHARED_EXCLUDED_PATHS.has(file)
+    && !isTestPath(file);
+}
+
+function isWorkerPromotionPath(file) {
+  if (isTestPath(file)) {
+    return false;
+  }
+  return WORKER_PROMOTION_EXACT_PATHS.has(file)
+    || WORKER_PROMOTION_PREFIXES.some((prefix) => file.startsWith(prefix))
+    || isWorkerPromotionSharedPath(file);
+}
+
+function parseQuotedJsonKey(line) {
+  if (!line.startsWith("\"")) {
+    return null;
+  }
+  const closingQuoteIndex = line.indexOf("\"", 1);
+  if (closingQuoteIndex === -1) {
+    return null;
+  }
+  return {
+    key: line.slice(1, closingQuoteIndex),
+    rest: line.slice(closingQuoteIndex + 1).trimStart(),
+  };
+}
+
+function normalizeLockPackageName(packagePath) {
+  if (packagePath.startsWith("@")) {
+    const [scope, name] = packagePath.split("/");
+    return scope && name ? `${scope}/${name}` : packagePath;
+  }
+  return packagePath.split("/")[0] ?? packagePath;
+}
+
+export function extractPackageNamesFromDiff(diffText) {
+  const names = new Set();
+  for (const rawLine of diffText.split(/\r?\n/g)) {
+    if (
+      (!rawLine.startsWith("+") && !rawLine.startsWith("-"))
+      || rawLine.startsWith("+++")
+      || rawLine.startsWith("---")
+    ) {
+      continue;
+    }
+    const line = rawLine.slice(1).trim();
+    const parsed = parseQuotedJsonKey(line);
+    if (!parsed) {
+      continue;
+    }
+    if (parsed.key.startsWith("node_modules/")) {
+      names.add(normalizeLockPackageName(parsed.key.slice("node_modules/".length)));
+      continue;
+    }
+    if (parsed.rest.startsWith(":")) {
+      names.add(parsed.key);
+    }
+  }
+  return [...names];
+}
+
+export function hasWorkerPackagePromotionImpact(diffText) {
+  return extractPackageNamesFromDiff(diffText).some((name) => WORKER_ROOT_RUNTIME_PACKAGES.has(name));
+}
+
 export function hasWorkerDeployImpact(files) {
   return files.some((file) =>
     FULL_DEPLOY_INFRA_PATHS.has(file)
@@ -100,6 +233,10 @@ export function hasWorkerDeployImpact(files) {
     || FULL_DEPLOY_INFRA_PREFIXES.some((prefix) => file.startsWith(prefix))
     || WORKER_CHANGE_PREFIXES.some((prefix) => file.startsWith(prefix)),
   );
+}
+
+export function hasWorkerPromotionImpact(files) {
+  return files.some((file) => isWorkerPromotionPath(file));
 }
 
 export function hasPagesDeployImpact(files) {

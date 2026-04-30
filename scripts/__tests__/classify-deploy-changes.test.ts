@@ -4,7 +4,9 @@ import {
   classifyDeployChanges,
   hasDeployImpact,
   hasPagesDeployImpact,
+  hasWorkerPackagePromotionImpact,
   hasWorkerDeployImpact,
+  hasWorkerPromotionImpact,
   normalizeChangedFiles,
 } from "../classify-deploy-changes.mjs";
 
@@ -56,6 +58,57 @@ describe("hasPagesDeployImpact", () => {
   });
 });
 
+describe("hasWorkerPromotionImpact", () => {
+  it("returns true only for Worker runtime, Worker config, D1 migrations, and shared runtime changes", () => {
+    expect(hasWorkerPromotionImpact(["worker/src/api/health.ts"])).toBe(true);
+    expect(hasWorkerPromotionImpact(["worker/wrangler.toml"])).toBe(true);
+    expect(hasWorkerPromotionImpact(["worker/migrations/0107_example.sql"])).toBe(true);
+    expect(hasWorkerPromotionImpact(["shared/data/stablecoins/usd-major.json"])).toBe(true);
+    expect(hasWorkerPromotionImpact(["shared/lib/classification.ts"])).toBe(true);
+  });
+
+  it("returns false for validation, root package, tests, and known Pages-only shared changes", () => {
+    expect(hasWorkerPromotionImpact(["package.json", "package-lock.json"])).toBe(false);
+    expect(hasWorkerPromotionImpact(["scripts/lib/validate-contract.mjs"])).toBe(false);
+    expect(hasWorkerPromotionImpact(["scripts/smoke-ui.mjs"])).toBe(false);
+    expect(hasWorkerPromotionImpact(["worker/src/api/__tests__/health.test.ts"])).toBe(false);
+    expect(hasWorkerPromotionImpact(["shared/lib/public-docs.ts"])).toBe(false);
+    expect(hasWorkerPromotionImpact(["shared/lib/__tests__/public-docs.test.ts"])).toBe(false);
+    expect(hasWorkerPromotionImpact(["shared/lib/pharosville-api-contract.ts"])).toBe(false);
+    expect(hasWorkerPromotionImpact(["shared/types/pharosville.ts"])).toBe(false);
+  });
+});
+
+describe("hasWorkerPackagePromotionImpact", () => {
+  it("returns false for frontend-only root package changes", () => {
+    expect(
+      hasWorkerPackagePromotionImpact(`
+diff --git a/package.json b/package.json
+-    "gsap": "3.15.0",
+diff --git a/package-lock.json b/package-lock.json
+-    "node_modules/gsap": {
+`),
+    ).toBe(false);
+  });
+
+  it("returns true for root package changes that can affect the Worker bundle", () => {
+    expect(
+      hasWorkerPackagePromotionImpact(`
+diff --git a/package.json b/package.json
+-    "zod": "^4.3.5",
++    "zod": "^4.3.6",
+`),
+    ).toBe(true);
+    expect(
+      hasWorkerPackagePromotionImpact(`
+diff --git a/package-lock.json b/package-lock.json
+-    "node_modules/@noble/hashes": {
++    "node_modules/@noble/hashes": {
+`),
+    ).toBe(true);
+  });
+});
+
 describe("hasDeployImpact", () => {
   it("returns false when the diff does not touch deploy surfaces", () => {
     expect(hasDeployImpact(["docs/testing.md", "docs/process/example.md"])).toBe(false);
@@ -87,6 +140,7 @@ describe("hasDeployImpact", () => {
     for (const file of deploySupportFiles) {
       expect(hasDeployImpact([file]), file).toBe(true);
       expect(hasWorkerDeployImpact([file]), file).toBe(true);
+      expect(hasWorkerPromotionImpact([file]), file).toBe(false);
       expect(hasPagesDeployImpact([file]), file).toBe(true);
     }
   });
@@ -97,6 +151,7 @@ describe("hasDeployImpact", () => {
     expect(hasDeployImpact([file])).toBe(true);
     expect(hasPagesDeployImpact([file])).toBe(true);
     expect(hasWorkerDeployImpact([file])).toBe(false);
+    expect(hasWorkerPromotionImpact([file])).toBe(false);
   });
 });
 
@@ -105,6 +160,7 @@ describe("classifyDeployChanges", () => {
     const result = classifyDeployChanges({ eventName: "workflow_dispatch" });
     expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(true);
+    expect(result.workerPromotionRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
   });
 
@@ -116,6 +172,7 @@ describe("classifyDeployChanges", () => {
     });
     expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(true);
+    expect(result.workerPromotionRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
   });
 
@@ -131,6 +188,7 @@ describe("classifyDeployChanges", () => {
 
     expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(false);
+    expect(result.workerPromotionRequired).toBe(false);
     expect(result.pagesChanged).toBe(true);
     expect(result.changedFiles).toEqual(["src/app/page.tsx", "docs/testing.md"]);
   });
@@ -147,6 +205,7 @@ describe("classifyDeployChanges", () => {
 
     expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(true);
+    expect(result.workerPromotionRequired).toBe(true);
     expect(result.pagesChanged).toBe(false);
     expect(result.changedFiles).toEqual(["worker/src/api/health.ts", "docs/testing.md"]);
   });
@@ -163,8 +222,68 @@ describe("classifyDeployChanges", () => {
 
     expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(true);
+    expect(result.workerPromotionRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
     expect(result.changedFiles).toEqual(["src/app/page.tsx", "shared/lib/classification.ts"]);
+  });
+
+  it("keeps broad validation enabled while skipping Worker promotion for Pages and tooling cleanup diffs", () => {
+    const execFile = (_cmd: string, args: string[]) => {
+      if (args.includes("--unified=0")) {
+        return `
+diff --git a/package.json b/package.json
+-    "gsap": "3.15.0",
+diff --git a/package-lock.json b/package-lock.json
+-    "node_modules/gsap": {
+`;
+      }
+      return [
+        "package.json",
+        "package-lock.json",
+        "public/_redirects",
+        "scripts/lib/validate-contract.mjs",
+        "scripts/smoke-ui.mjs",
+        "shared/lib/public-docs.ts",
+        "src/app/pharosville/page.tsx",
+      ].join("\n");
+    };
+
+    const result = classifyDeployChanges({
+      baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
+      eventName: "push",
+      execFile,
+      headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
+    });
+
+    expect(result.deployRequired).toBe(true);
+    expect(result.workerChanged).toBe(true);
+    expect(result.workerPromotionRequired).toBe(false);
+    expect(result.pagesChanged).toBe(true);
+  });
+
+  it("promotes the Worker for root package changes that can affect its bundle", () => {
+    const execFile = (_cmd: string, args: string[]) => {
+      if (args.includes("--unified=0")) {
+        return `
+diff --git a/package.json b/package.json
+-    "zod": "^4.3.5",
++    "zod": "^4.3.6",
+`;
+      }
+      return "package.json\npackage-lock.json\n";
+    };
+
+    const result = classifyDeployChanges({
+      baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
+      eventName: "push",
+      execFile,
+      headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
+    });
+
+    expect(result.deployRequired).toBe(true);
+    expect(result.workerChanged).toBe(true);
+    expect(result.workerPromotionRequired).toBe(true);
+    expect(result.pagesChanged).toBe(true);
   });
 
   it("treats pages workflow-only changes as Pages-impacting", () => {
@@ -179,6 +298,7 @@ describe("classifyDeployChanges", () => {
 
     expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(false);
+    expect(result.workerPromotionRequired).toBe(false);
     expect(result.pagesChanged).toBe(true);
     expect(result.changedFiles).toEqual([".github/workflows/pages-prepare.yml"]);
   });
@@ -195,6 +315,7 @@ describe("classifyDeployChanges", () => {
 
     expect(result.deployRequired).toBe(false);
     expect(result.workerChanged).toBe(false);
+    expect(result.workerPromotionRequired).toBe(false);
     expect(result.pagesChanged).toBe(false);
     expect(result.changedFiles).toEqual(["docs/testing.md", "docs/process/notes.md"]);
   });
