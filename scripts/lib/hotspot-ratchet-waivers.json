@@ -19,6 +19,10 @@
     "disposition": "queued-p4",
     "notes": "PharosVille canvas rendering intentionally concentrates terrain, cemetery, dock, ship, cluster, and selection drawing while the sprite/animation language stabilizes. Keep it waived for the ship-liveliness rollout; extract terrain/cemetery/ship render modules in a dedicated renderer cleanup pass."
   },
+  "src/app/pharosville/systems/world-layout.ts": {
+    "disposition": "queued-p4",
+    "notes": "PharosVille map geometry intentionally centralizes island, cemetery, lighthouse-clearance, and named sea-zone masks while the authored atlas is being reshaped. Keep it waived for the island/harbor recompose; extract terrain mask helpers or data-driven mask definitions in the next PharosVille systems cleanup pass."
+  },
   "src/app/pharosville/systems/motion.ts": {
     "disposition": "queued-p4",
     "notes": "Ship motion routing now centralizes deterministic water-path construction, seeded detours, dwell timing, and route sampling for the initial liveliness release. Keep it waived until the next PharosVille systems pass can split pathfinding, scheduling, and sampling without changing behavior."
