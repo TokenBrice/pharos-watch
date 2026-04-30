@@ -48,14 +48,14 @@ Edge-anchored compound masks (current iteration as of 2026-04-30):
 
 | Zone | Primary edge | Bounds | Approx tiles |
 |------|--------------|--------|-------------:|
-| CALM | x=0 | west basin plus lower-left reach, roughly x∈[0,22], y∈[14,55] | ~915 |
-| WATCH | y=0 | northwest/top basin, roughly x∈[0,31], y∈[0,15], excluding (0,0) | ~436 |
-| ALERT | y=0 | top-center current, roughly x∈[29,48], y∈[0,12] | ~224 |
-| WARNING | x=55 | northeast reef shelf, roughly x∈[47,55], y∈[0,15] | ~122 |
-| DANGER | x=55 | right-edge storm basin, roughly x∈[49,55], y∈[15,25] | ~68 |
+| CALM | x=0 | large left-edge vertical anchorage basin | ~549 |
+| WATCH | y=0 | wide top-edge breakwater band | ~548 |
+| ALERT | lower-right basin | outer lower-right ring | ~117 |
+| WARNING | lower-right basin | middle lower-right ring | ~99 |
+| DANGER | lower-right basin | inner/right lower-right storm ring | ~90 |
 
-Eastern corner is covered by ALERT+WARNING+DANGER compound water. Two-tile
-island periphery and lighthouse visual-clearance box (x:35..41, y:16..22) are
+Lower-right basin is covered by overlapping ALERT+WARNING+DANGER water. Two-tile
+island periphery and lighthouse visual-clearance box (x:14..24, y:23..32) are
 generic water.
 - Stale or missing peg evidence maps to Calm Anchorage with an evidence caveat unless a fresher risk signal exists; it must not create a separate sea zone or masquerade as storm/depeg risk.
 - Stablecoin supply values from the list payload are already USD-denominated. Use `getCirculatingRaw()` for market-cap visual tiers.
@@ -72,7 +72,9 @@ generic water.
 - Printed water labels render above entity sprites, so label visibility and label hit targets intentionally win over overlapping ships or tall landmarks.
 - Sea terrain is semantic: harbor water, calm DEWS anchorage water, watch breakwater water, alert current, warning shoals, storm strait, ledger water, generic navigable water, and deep outer shelf each have distinct palette/texture handling. Manifest terrain sprites draw first; renderer overlays preserve analytical color semantics while adding shoals, foam, current streaks, storm chop, ledger glow, and reef/buoy context.
 - Ship risk routes expose both `riskWaterLabel` and `riskZone` in details and the accessibility ledger. Reduced-motion ships freeze at their current risk-water idle tile, or Ledger Mooring for NAV ledger assets; harbor moorings are route stops, not the static representative position.
-- Dock sprites are rank/preference selected through manifest IDs such as `dock.grand-quay`, `dock.rollup-ferry-slip`, and `dock.bridge-pontoon`.
+- Dock sprites are rank/preference selected through manifest IDs such as `dock.harbor-ring-quay`, `dock.compact-harbor-pier`, `dock.rollup-ferry-slip`, and `dock.bridge-pontoon`.
+- Dock selection reserves the Ethereum/L2 harbor cluster (`ethereum`, `base`, `arbitrum`, `optimism`, `polygon`, `mantle`) when those chains are present, then fills the remaining ten-dock cap by chain stablecoin supply.
+- The Ethereum/L2 cove prints `ETHEREUM HARBOR` and `L2 BAY` plaque signs using the same canvas label treatment as named DEWS water areas.
 - Ship class is derived from governance/backing metadata:
   - centralized -> treasury galleon
   - centralized-dependent -> chartered brigantine
@@ -81,7 +83,7 @@ generic water.
   - unknown -> defensive caravel fallback
 - Ship size is a compressed market-cap tier, not linear area.
 - The current runtime manifest uses schema v2. `style.cacheVersion` controls image cache busting; `style.styleAnchorVersion` is the provenance/style anchor for generated assets.
-- The current lighthouse asset is `landmark.lighthouse` at `public/pharosville/assets/landmarks/lighthouse-alexandria.png`, with manifest cache version `2026-04-30-pharosville-ship-cemetery-overhaul-v1` and style anchor `2026-04-29-lighthouse-hill-v5`.
+- The current lighthouse asset is `landmark.lighthouse` at `public/pharosville/assets/landmarks/lighthouse-alexandria.png`, with manifest cache version `2026-04-30-pharosville-island-harbor-recompose-v1` and style anchor `2026-04-29-lighthouse-hill-v5`.
 - Current ship sprites share the lighthouse style anchor, use 104 x 80 transparent PNGs, keep logo-safe sail/pennant zones, and treat overlays as small lanterns/pennants/signals rather than badges.
 - Current cemetery props share the same style anchor and use a local memorial sprite set under `public/pharosville/assets/props/`: `memorial-terrace`, `memorial-headstone`, `ledger-slab`, `reliquary-marker`, and `regulatory-obelisk`.
 

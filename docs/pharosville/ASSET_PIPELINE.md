@@ -18,6 +18,7 @@ This is the agent-facing workflow for PharosVille raster assets. Runtime asset t
 ## Current Runtime Asset Areas
 
 - Terrain tiles: `public/pharosville/assets/terrain/`
+- Terrain overlays: `public/pharosville/assets/overlays/`, including `overlay.central-island`
 - Landmark: `public/pharosville/assets/landmarks/lighthouse-alexandria.png` as `landmark.lighthouse`
 - Chain docks: `public/pharosville/assets/docks/`
 - Ships: `public/pharosville/assets/ships/`

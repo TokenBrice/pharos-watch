@@ -38,17 +38,17 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - Canvas 2D island-sea map on eligible desktop viewports, with the authored world reduced to `56 x 56` tiles and a tighter default camera so the first view reads as roughly 78-82% water rather than a mostly empty sea shelf
 - authored terrain metadata layered over canonical movement tiles, including harbor water, calm DEWS anchorage water, watch breakwater water, alert water, warning shoals water, storm water, ledger water, deep outer-shelf water, beach, grass, rock, cliff, hill, and shore variants; manifest terrain sprites render first and semantic overlays add shoals, foam, current streaks, storm chop, ledger glow, and reef/buoy cues without changing analytical color meaning
 - named DEWS water-zone labels attach to cartographic plaques, buoys, reefs, or breakwater markers on semantic water areas, with live band counts retained in details and the accessibility ledger, plus subtle dock mast flags using chain logos or short crest marks
-- Pharos lighthouse placed on the west side of the northeast headland at tile `{ x: 38, y: 22 }`, sitting on elevated terrain clear of the Tron harbor footprint
-- only the tower portion of the generated lighthouse asset is composited onto the tile-native headland, so no embedded island base or road/causeway is drawn
-- Ethereum, Base, Arbitrum, and Polygon are arranged in the southwest EVM bay, with Ethereum as the central cove landmark and Base/Arbitrum/Polygon on the surrounding bay sides; BSC, Tron, Solana, Aptos, and other non-core top-chain harbors use distributed outer-coast dock slots; quay pads, seawalls, posts, crates, lamps, buoys, ropes, skiffs, tents, and harbor clutter make the ports read as EVM bay, east commercial harbor, and south ledger basin districts; the cemetery sits on the main island to the right of the EVM bay and left of the lighthouse
+- Pharos lighthouse placed on the generated island mountain at tile `{ x: 18, y: 28 }`, sitting on elevated terrain inside the central island silhouette
+- only the tower portion of the generated lighthouse asset is composited onto the island mountain platform, so no embedded island base or road/causeway is drawn
+- Ethereum anchors the eastern cove, while Base, Arbitrum, Optimism, Polygon, and Mantle use reserved L2 extension slips around the eastern and southern coves when present; BSC, Tron, Solana, Aptos, and other non-core high-supply chain harbors use distributed outer-coast dock slots; generated harbor-ring quay sprites, compact piers, rollup causeways, quay pads, seawalls, posts, crates, lamps, buoys, ropes, skiffs, tents, and harbor clutter make the ports read as a continuous harbor ring; the cemetery sits on a separate bottom-left memorial islet
 - live aggregate Pharos queries mounted only after the desktop gate
 - pure world model for PSI, docks, active ships, clusters, cemetery, named risk-water areas, details, and visual cues
-- docks are capped to the top ten chains by stablecoin supply; each dock represents one chain harbor, uses Pixellab harbor sprites with dedicated EVM-bay assets for Ethereum/Base/Arbitrum/Polygon, identifies itself with a small logo flag rather than a large name board, scales from both global share and absolute billion-dollar supply tiers, and lists that chain's highest-supply stablecoins in DOM details
+- docks are capped to ten chain harbors, reserving the Ethereum/L2 harbor cluster first when those chains are present and then filling remaining slots by stablecoin supply; each dock represents one chain harbor, uses Pixellab harbor sprites with dedicated EVM-bay assets for Ethereum/Base/Arbitrum/Optimism/Polygon/Mantle, identifies itself with a small logo flag rather than a large name board, scales from both global share and absolute billion-dollar supply tiers, and lists that chain's highest-supply stablecoins in DOM details
 - active ships use distinct Pixellab base sprites by governance class: CeFi treasury galleons, CeFi-dependent chartered brigantines, and DeFi DAO schooners, with legacy algorithmic junk and caravel fallback sprites reserved for defensive/unclassified cases
 - ship scale uses exaggerated compressed market-cap tiers, not linear supply area, so $1B+ issuers are spottable while USDT and USDC remain capped
 - ship reduced-motion/static placement uses each ship's risk-water idle tile, or Ledger Mooring for NAV ledger assets; rendered dock moorings remain active route stops rather than the static representative position
 - normal-motion ships follow slow deterministic water-only harbor cycles, with seeded detours between chain moorings and their peg/DEWS risk water
-- DEWS-driven risk water areas follow the diagrammed sea-zone field: Calm Anchorage owns the large west-edge basin, Watch Breakwater sits above the island in the northwest/top-left water, Alert Channel occupies the top-center channel, Warning Shoals wraps the lighthouse-side northeast water, and Danger Strait attaches to the far east edge; each area has its own terrain texture, printed label, selectable hit target, and live band counts in details and the accessibility ledger
+- DEWS-driven risk water areas follow the diagrammed sea-zone field: Calm Anchorage owns the large left-edge vertical basin, Watch Breakwater owns the wide top-edge band, Ledger Mooring owns the bottom-edge basin, and Alert Channel / Warning Shoals / Danger Strait form overlapping lower-right rings; each area has its own terrain texture, printed label, selectable hit target, and live band counts in details and the accessibility ledger
 - fresh ship risk water maps to Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, or Danger Strait; stale/low-confidence evidence stays as an evidence caveat on Calm Anchorage fallback placement, and NAV ledger assets use Ledger Mooring ledger water below the harbor in a quiet bottom basin. Normal-motion dockless patrols use current or adjacent same-purpose sea anchors so every risk zone has meaningful water-only travel
 - ship docking cadence comes from `stablecoins.chainCirculating` chain presence, while risk water comes from `pegSummary.coins[]` and `stress.signals[]`; DOM details expose the route source, named risk water area, risk water zone, home dock, chain-presence count, and cadence text
 - active ships draw painted sail marks or pennants when a local logo asset is available; secondary `ShipVisual.overlay` cues render as tiny lanterns, pennants, or signal flags rather than circular badges
@@ -72,26 +72,21 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 
 ## DEWS sea zones
 
-Five DEWS zones encircle the island, each anchored to a primary map edge and
-drawn with compound coast-aware masks sized roughly proportionally to the ships
-it must host:
+Five DEWS zones encircle the island, with CALM/WATCH snapped to map edges and
+the higher-risk bands drawn as overlapping lower-right rings sized roughly
+proportionally to the ships they must host:
 
-- **Calm Anchorage** (~97 ships) — large left-side basin and lower-left reach
-  spanning roughly (0, 14) to (22, 54).
-- **Watch Breakwater** (~66 ships) — northwest/top basin spanning roughly
-  (0, 0) to (31, 15), with tile (0,0) left as deep-water decoration.
-- **Alert Channel** (~7 ships when fresh) — top-center current right of WATCH,
-  roughly (29, 0) to (48, 12). Connects visually to WATCH and the east shelf.
-- **Warning Shoals** (rare) — right-edge reef shelf above the lighthouse,
-  roughly (47, 0) to (55, 15).
-- **Danger Strait** (rare) — right-edge storm basin below WARNING, roughly
-  (49, 15) to (55, 25).
+- **Calm Anchorage** — large left-edge vertical anchorage basin.
+- **Watch Breakwater** — wide top-edge breakwater band.
+- **Alert Channel** — outer lower-right channel ring.
+- **Warning Shoals** — middle lower-right shoal ring.
+- **Danger Strait** — inner/right lower-right storm ring.
 
-The three escalation zones (ALERT + WARNING + DANGER) cover the eastern
-corner of the diamond with organic seams rather than hard rectangles. A
-two-tile periphery around all island lobes and water tiles inside a lighthouse
-visual-clearance box (x:35..41, y:16..22) remain generic water so zones don't
-crowd the island or the lighthouse sprite.
+The three escalation zones (ALERT + WARNING + DANGER) cover the lower-right
+basin with overlapping rings rather than hard rectangles. A two-tile periphery
+around all island lobes and water tiles inside a lighthouse visual-clearance box
+(x:14..24, y:23..32) remain generic water so zones don't crowd the island or the
+lighthouse sprite.
 
 **Ledger Mooring** is non-DEWS and sits at the south edge for NAV-ledger
 ships.
@@ -101,14 +96,14 @@ ships.
 The planned PharosVille visual grammar is:
 
 - lighthouse = PSI composite status
-- dock footprint = top-ten chain stablecoin supply, with one harbor per chain, fixed EVM-bay slots for Ethereum/Base/Arbitrum/Polygon, distributed outer-coast slots for BSC/Tron/Solana/Aptos-style L1s, and absolute size floors for billion-dollar hubs so Ethereum, Base, Arbitrum-class ports read as major harbors
+- dock footprint = reserved Ethereum/L2 harbor cluster plus remaining high-supply chain harbors, with one harbor per chain, preferred cove slots for Ethereum/Base/Arbitrum/Optimism/Polygon/Mantle, distributed outer-coast slots for BSC/Tron/Solana/Aptos-style L1s, and absolute size floors for billion-dollar hubs so Ethereum, Base, Arbitrum-class ports read as major harbors
 - dock harbor detail = highest-supply stablecoins on that chain, with the canvas flag using the chain logo or a fallback crest mark
 - ships = active stablecoins only, with risk-water representatives, Ledger Mooring representatives where applicable, and rendered-dock route visits for positive chain supply
 - ship base sprite = governance class (`centralized` CeFi, `centralized-dependent` CeFi-Dep, `decentralized` DeFi), with legacy algorithmic backing reserved as a fallback hull
 - ship scale = exaggerated compressed market-cap tier from Micro/Unknown through Flagship, with exact market cap exposed in the detail panel
 - ship sail mark = stablecoin logo, falling back to a short symbol mark
-- ship route distance from shore = peg/depeg risk first, with fresh DEWS escalation mapped left-to-right through Calm Anchorage, Watch Breakwater, Alert Channel, Warning Shoals, and Danger Strait terrain while high-risk areas route around the lighthouse rather than underneath it
-- ship representative position and docking cadence = positive chain supply across the rendered top-ten chain harbors, shown as slow water-only passages rather than real-time transfer flow
+- ship route distance from shore = peg/depeg risk first, with fresh DEWS escalation mapped from left/top calm/watch water into the lower-right Alert Channel, Warning Shoals, and Danger Strait terrain while high-risk areas route around the island rather than underneath the lighthouse
+- ship representative position and docking cadence = positive chain supply across the rendered chain harbors, shown as slow water-only passages rather than real-time transfer flow
 - sea/weather = aggregate DEWS breadth, with evidence caveats for stale/low-confidence placement inputs, ledger water for NAV-ledger placement, and storm local textures for danger areas
 - cemetery = dead and frozen assets from merged cemetery data, with each tomb marker using the local memorial marker sprite for its cause-aware shape, a stone-mounted local cemetery logo on selected or major memorials when available, and a cause-of-death plaque keyed to the same color taxonomy as the cemetery legend
 - mint/burn flows, DEX liquidity, and redemption-route backstops = dedicated analytical pages outside PharosVille, not canvas landmarks
@@ -156,7 +151,7 @@ or civic core.
 
 - desktop canvas shell at `1440 x 1000`
 - nonblank canvas pixels, terrain/water pixel coverage, and backing-store budget
-- reduced `56 x 56` map size, 78-82% water ratio, deep-water perimeter cap, terrain metadata coverage, northeast headland lighthouse placement, and harbor/cemetery separation invariants
+- reduced `56 x 56` map size, 78-82% water ratio, deep-water perimeter cap, terrain metadata coverage, generated mountain lighthouse placement, and harbor/cemetery separation invariants
 - dense atlas fixture with 10 docks, 128 visible ships, long-tail flotilla clusters, cemetery/civic/risk-water crops, and normal-motion draw-duration p95 budget
 - stressed ship detail semantics for active depeg, Danger Strait/storm-shelf placement, named risk water, and evidence fields
 - `<1280px` fallback

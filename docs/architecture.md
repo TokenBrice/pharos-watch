@@ -196,14 +196,14 @@ than linear area, with intentionally exaggerated $1B+ tiers so major issuers are
 recognizable landmarks. Ship representative tile placement uses the current
 peg/DEWS risk-water idle tile, or Ledger Mooring for NAV ledger assets, while
 rendered chain-harbor moorings remain active route stops when positive chain
-supply maps to a rendered dock. Core EVM chain harbors
-(Ethereum, Base, Arbitrum, Polygon) occupy the southwest EVM bay, with Ethereum
-anchored as the central cove landmark and the L2 docks around its sides. BSC,
-Tron, Solana, Aptos, and other non-core top-chain harbors use distributed
-outer-coast dock slots. Dock identity is shown as a small mast flag using the
-chain logo when available, with full chain names retained in DOM details. The
-cemetery sits on the main island between the EVM bay and the lighthouse rather
-than on a detached islet. Normal-motion routing
+supply maps to a rendered dock. Ethereum anchors the east cove, while Base,
+Arbitrum, Optimism, Polygon, and Mantle use reserved L2 extension slips around
+the eastern and southern coves when those chains are present. BSC, Tron, Solana,
+Aptos, and other non-core high-supply chain harbors use distributed outer-coast
+dock slots.
+Dock identity is shown as a small mast flag using the chain logo when available,
+with full chain names retained in DOM details. The cemetery sits on a detached
+bottom-left memorial islet. Normal-motion routing
 samples slow deterministic water-only harbor cycles with seeded detours between
 chain moorings and risk water using
 `stablecoins.chainCirculating`, `pegSummary.coins[]`, and `stress.signals[]`.
@@ -223,9 +223,9 @@ inputs are exposed as evidence caveats instead of a separate sea zone. The
 PharosVille scene no longer encodes freeze/blacklist tracker activity; that
 product surface remains outside the world map. Mint/burn flow, DEX liquidity,
 and modeled redemption backstops also remain on their dedicated analytical
-surfaces rather than PharosVille canvas landmarks. A main-island civic spine
-ties the southwest harbor and memorial precinct together as visual composition
-only; the PSI lighthouse now sits west on the northeast headland without a
+surfaces rather than PharosVille canvas landmarks. A generated central-island
+model ties the harbor ring together as visual composition only; the PSI
+lighthouse now sits on the island mountain at tile `{ x: 18, y: 28 }` without a
 rendered road or causeway into the harbor. All world elements expose local
 deterministic Canvas effects, DOM detail facts, and accessibility-ledger parity;
 reduced motion freezes procedural movement while preserving static status

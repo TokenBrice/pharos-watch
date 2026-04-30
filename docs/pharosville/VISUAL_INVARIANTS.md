@@ -21,21 +21,21 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 ## Geography
 
 - The current map acceptance target is a sea-first isometric island with roughly 78-82% water by tile count. Treat that as the current route contract, but update this file and tests if an intentional layout plan changes the target.
-- The lighthouse stays on the northeast headland at `LIGHTHOUSE_TILE`.
-- The southwest EVM bay keeps Ethereum, Base, Arbitrum, and Polygon in preferred dock positions when those chains are rendered.
-- Docks are capped by `MAX_CHAIN_HARBORS`; they represent top-chain stablecoin supply, not all chains.
+- The lighthouse stays on the generated central-island mountain at `LIGHTHOUSE_TILE`.
+- The eastern and southern coves keep Ethereum, Base, Arbitrum, Optimism, Polygon, and Mantle in preferred dock positions when those chains are rendered.
+- Docks are capped by `MAX_CHAIN_HARBORS`; they reserve the Ethereum/L2 harbor cluster when present, then fill remaining slots by chain stablecoin supply.
+- The Ethereum/L2 cove keeps `ETHEREUM HARBOR` and `L2 BAY` plaque signs readable without replacing named DEWS water-area labels.
 - The cemetery remains a compact memorial precinct separated from the EVM bay and lighthouse approach.
 - The inland civic spine does not host Pharos data buildings. Mint/burn flows, DEX liquidity, and redemption-route backstops stay on their dedicated analytical surfaces outside PharosVille.
-- DEWS zone edge anchoring (each zone has a primary map edge) uses compound/coast-aware masks rather than rectangles:
-  - CALM ANCHORAGE → x=0 (left tile edge), large lower-left basin plus south reach
-  - WATCH BREAKWATER → y=0 (top tile edge), northwest/top basin with corner (0,0) excluded
-  - ALERT CHANNEL → y=0 (top tile edge), top-center current connected to WATCH
-  - WARNING SHOALS → x=55 (right tile edge), northeast reef shelf
-  - DANGER STRAIT → x=55 (right tile edge), right-edge storm basin below WARNING
-- Eastern corner (around tile 55,0) is covered by ALERT/WARNING/DANGER compound water
+- DEWS zone edge anchoring uses compound/coast-aware masks rather than rectangles:
+  - CALM ANCHORAGE → x=0 large left-edge vertical basin
+  - WATCH BREAKWATER → y=0 wide top-edge band
+  - ALERT CHANNEL → lower-right outer ring, not hard-snapped to an edge
+  - WARNING SHOALS → lower-right middle ring, not hard-snapped to an edge
+  - DANGER STRAIT → lower-right inner/right storm ring
+- Lower-right basin is covered by overlapping ALERT/WARNING/DANGER water
 - Two-tile island periphery (islandValue 1.0–1.10) is reserved as generic water
-- Water tiles inside lighthouse visual clearance (x:35..41, y:16..22) stay generic water (lighthouse sprite breathing room)
-- Tile (0,0) stays deep-water as decoration
+- Water tiles inside lighthouse visual clearance (x:14..24, y:23..32) stay generic water (lighthouse sprite breathing room)
 - Ledger Mooring should remain a quiet owned basin below the harbor in ledger water. Freeze/blacklist tracker activity remains outside PharosVille and belongs to the `/blacklist/` product surface.
 
 ## Entity Semantics
