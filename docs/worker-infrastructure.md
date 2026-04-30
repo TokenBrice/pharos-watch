@@ -878,6 +878,8 @@ Scheduled execution is now wired in two layers:
 
 This means duplicate trigger deliveries for the same slot are skipped before shared-slot fan-out can reorder downstream jobs, while individual jobs inside the accepted slot still use their existing per-job leases.
 
+When a later invocation claims a slot, `runScheduledSlotWithFence(...)` first expires stale `cron_slot_executions` rows for the same `slot_key` whose heartbeat has not advanced within the slot stale window. Those rows are marked `finished` / `error` with metadata explaining that a later invocation expired the stale heartbeat, so platform-killed scheduled events do not remain operationally `running` forever.
+
 ### Block Tracking (Blacklist)
 
 | Function                             | Description                                     |

@@ -154,6 +154,29 @@ async function claimScheduledSlotExecution(
   staleAfterSec: number,
 ): Promise<"claimed" | "duplicate" | "running"> {
   const nowSec = Math.floor(Date.now() / 1000);
+  const staleBefore = nowSec - staleAfterSec;
+  await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `UPDATE cron_slot_executions
+         SET state = 'finished',
+             result_status = 'error',
+             finished_at = ?,
+             updated_at = ?,
+             metadata = ?
+         WHERE slot_key = ?
+           AND state = 'running'
+           AND updated_at < ?`,
+      )
+      .bind(
+        nowSec,
+        nowSec,
+        JSON.stringify({ error: "scheduled slot heartbeat stale; marked expired by later invocation" }),
+        slotKey,
+        staleBefore,
+      )
+      .run(),
+  );
   const inserted = await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -179,7 +202,6 @@ async function claimScheduledSlotExecution(
     return "claimed";
   }
 
-  const staleBefore = nowSec - staleAfterSec;
   if (existing.updated_at < staleBefore) {
     const takeover = await runWithOverloadRetry(() =>
       db

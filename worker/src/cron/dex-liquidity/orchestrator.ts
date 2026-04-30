@@ -40,7 +40,7 @@ import {
   isDexLiquidityDegraded,
 } from "./orchestrator-metadata";
 
-const DEX_LIQUIDITY_PERSISTENCE_BLOCKING_FAILURES = new Set(["defillama-protocols"]);
+const DEX_LIQUIDITY_PERSISTENCE_BLOCKING_FAILURES = new Set(["defillama-yields", "defillama-protocols"]);
 
 export function filterPrimaryPoolsPreferDirectApi(
   pools: LlamaPool[],
@@ -422,18 +422,23 @@ async function scoreDexLiquidityPoolState(
     criticalSourceFailures: sourceState.criticalSourceFailures,
   });
 
-  if (analysis.previousCoverage >= 10 && analysis.currentCoverage < analysis.minExpectedCoverage) {
+  const hasCriticalSourceFailure = sourceState.criticalSourceFailures.length > 0;
+  if (
+    !hasCriticalSourceFailure &&
+    analysis.previousCoverage >= 10 &&
+    analysis.currentCoverage < analysis.minExpectedCoverage
+  ) {
     throw new Error(
       `[dex-liquidity] coverage guard tripped: current=${analysis.currentCoverage}, previous=${analysis.previousCoverage}, minExpected=${analysis.minExpectedCoverage}`,
     );
   }
-  if (analysis.hardValueGuard) {
+  if (!hasCriticalSourceFailure && analysis.hardValueGuard) {
     throw new Error(
       `[dex-liquidity] value coverage guard tripped: currentGlobalTvl=${Math.round(analysis.currentGlobalTvl)}, ` +
         `previousGlobalTvl=${Math.round(analysis.previousGlobalTvl ?? 0)}, minExpectedGlobalTvl=${Math.round(analysis.minExpectedGlobalTvl ?? 0)}`,
     );
   }
-  if (analysis.hardMajorCoverageGuard) {
+  if (!hasCriticalSourceFailure && analysis.hardMajorCoverageGuard) {
     throw new Error(
       `[dex-liquidity] major coverage guard tripped: currentTop10CoveredTvl=${Math.round(analysis.currentTop10CoveredTvl)}, ` +
         `previousTop10CoveredTvl=${Math.round(analysis.previousTop10CoveredTvl)}`,

@@ -238,6 +238,80 @@ describe("syncDexLiquidity", () => {
     expect(persistScores).not.toHaveBeenCalled();
   });
 
+  it("degrades and skips persistence instead of tripping hard value guard when DL yields is unavailable", async () => {
+    vi.mocked(fetchDataSources).mockResolvedValueOnce({
+      pools: [],
+      dexProjects: new Set<string>(["curve"]),
+      protocolTvlCaps: new Map<string, number>(),
+      curveResponses: [new Response("{}", { status: 200 })],
+      graphApiKey: "graph-key",
+      dlYieldsAvailable: false,
+      dlProtocolsAvailable: true,
+    });
+    vi.mocked(computeStablecoinScores).mockResolvedValueOnce({
+      scores: new Map([["usdt-tether", { coverageClass: "primary", tvl: 2_000_000_000 }]]),
+      globalAgg: { totalTvl: 2_000_000_000 },
+      retainedPoolsByStablecoin: new Map(),
+      tvlStabilityMap: new Map(),
+      diagnostics: {
+        protocolCapReductions: { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 },
+      },
+    } as Awaited<ReturnType<typeof computeStablecoinScores>>);
+    const guardDb = {
+      prepare(sql: string) {
+        if (sql.includes("COUNT(*) as cnt FROM dex_liquidity")) {
+          return { first: async () => ({ cnt: 165 }) };
+        }
+        if (sql.includes("SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'")) {
+          return { first: async () => ({ total_tvl_usd: 6_000_000_000, updated_at: 1_777_556_412 }) };
+        }
+        if (sql.includes("GROUP BY coverage_class")) {
+          return { all: async () => ({ results: [] }) };
+        }
+        if (sql.includes("ORDER BY total_tvl_usd DESC")) {
+          return { all: async () => ({ results: [{ stablecoin_id: "usdt-tether", total_tvl_usd: 4_000_000_000 }] }) };
+        }
+        if (sql.includes("FROM cron_runs")) {
+          return { all: async () => ({ results: [] }) };
+        }
+        if (sql.includes("WHERE stablecoin_id IN")) {
+          return { bind: () => ({ all: async () => ({ results: [] }) }) };
+        }
+        return {
+          bind: () => ({
+            all: async () => ({ results: [] }),
+            first: async () => ({ cnt: 0 }),
+            run: async () => ({ success: true, meta: {} }),
+          }),
+          all: async () => ({ results: [] }),
+          first: async () => ({ cnt: 0 }),
+          run: async () => ({ success: true, meta: {} }),
+        };
+      },
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const result = await syncDexLiquidity(guardDb, "graph-key");
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      failedSources?: string[];
+      rowsWritten?: number;
+      persistence?: { skipped?: boolean; skippedReason?: string | null };
+      sourceCoverage?: { currentGlobalTvl?: number; nearValueGuard?: boolean };
+    };
+    expect(metadata.failedSources).toContain("defillama-yields");
+    expect(metadata.rowsWritten).toBe(0);
+    expect(metadata.persistence?.skipped).toBe(true);
+    expect(metadata.persistence?.skippedReason).toBe("defillama-yields-unavailable");
+    expect(metadata.sourceCoverage?.currentGlobalTvl).toBe(2_000_000_000);
+    expect(metadata.sourceCoverage?.nearValueGuard).toBe(true);
+    expect(persistScores).not.toHaveBeenCalled();
+    expect(computeDexPrices).not.toHaveBeenCalled();
+  });
+
   it("returns ok when required source families succeed", async () => {
     const result = await syncDexLiquidity(db, "graph-key");
 

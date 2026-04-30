@@ -138,6 +138,35 @@ function makeLeaseDb(seed?: { leases?: LeaseRow[]; slots?: SlotExecutionRow[] })
             return { success: true, meta: { changes: 1 } };
           }
 
+          if (sql.includes("UPDATE cron_slot_executions") && sql.includes("result_status = 'error'")) {
+            const [finishedAt, updatedAt, metadata, slotKey, staleBefore] = args as [
+              number,
+              number,
+              string,
+              string,
+              number,
+            ];
+            let changes = 0;
+            for (const [key, existing] of slots) {
+              if (
+                existing.slot_key === slotKey &&
+                existing.state === "running" &&
+                existing.updated_at < staleBefore
+              ) {
+                slots.set(key, {
+                  ...existing,
+                  state: "finished",
+                  result_status: "error",
+                  finished_at: finishedAt,
+                  updated_at: updatedAt,
+                  metadata,
+                });
+                changes++;
+              }
+            }
+            return { success: true, meta: { changes } };
+          }
+
           if (sql.includes("UPDATE cron_slot_executions") && sql.includes("SET execution_owner = ?")) {
             const [owner, startedAt, updatedAt, slotKey, slotStartedAt, staleBefore] = args as [
               string,
@@ -528,5 +557,43 @@ describe("runScheduledSlotWithFence", () => {
     );
 
     expect(result.status).toBe("skipped_running");
+  });
+
+  it("marks stale running slots for the same schedule as expired before claiming a new slot", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const staleSlotStartedAt = now - 3600;
+    const currentSlotStartedAt = now;
+    const db = makeLeaseDb({
+      slots: [{
+        slot_key: "halfHourlyOffset",
+        slot_started_at: staleSlotStartedAt,
+        state: "running",
+        result_status: null,
+        execution_owner: "owner-a",
+        started_at: staleSlotStartedAt,
+        finished_at: null,
+        updated_at: now - 1800,
+        metadata: null,
+      }],
+    });
+    const fn = vi.fn(async () => undefined);
+
+    const result = await runScheduledSlotWithFence(
+      db,
+      "halfHourlyOffset",
+      fn,
+      { slotStartedAt: currentSlotStartedAt, owner: "owner-b", staleAfterSec: 1200 },
+    );
+
+    expect(result.status).toBe("ok");
+    expect(fn).toHaveBeenCalledTimes(1);
+
+    const staleRetry = await runScheduledSlotWithFence(
+      db,
+      "halfHourlyOffset",
+      async () => undefined,
+      { slotStartedAt: staleSlotStartedAt, owner: "owner-c", staleAfterSec: 1200 },
+    );
+    expect(staleRetry.status).toBe("skipped_duplicate");
   });
 });
