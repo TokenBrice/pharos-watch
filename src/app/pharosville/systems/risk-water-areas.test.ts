@@ -125,9 +125,9 @@ describe("risk water areas", () => {
     const expectedSamples = [
       { band: "CALM", tile: { x: 8, y: 32 }, terrain: "calm-water" },
       { band: "WATCH", tile: { x: 12, y: 6 }, terrain: "watch-water" },
-      { band: "ALERT", tile: { x: 36, y: 2 }, terrain: "alert-water" },
-      { band: "WARNING", tile: { x: 52, y: 7 }, terrain: "warning-water" },
-      { band: "DANGER", tile: { x: 53, y: 17 }, terrain: "storm-water" },
+      { band: "ALERT", tile: { x: 46, y: 8 }, terrain: "alert-water" },
+      { band: "WARNING", tile: { x: 53, y: 7 }, terrain: "warning-water" },
+      { band: "DANGER", tile: { x: 53, y: 19 }, terrain: "storm-water" },
     ] as const;
 
     for (const sample of expectedSamples) {
@@ -141,6 +141,9 @@ describe("risk water areas", () => {
     expect(terrainKindAt(36, 0)).toBe("alert-water");
     expect(terrainKindAt(55, 7)).toBe("warning-water");
     expect(terrainKindAt(55, 16)).toBe("storm-water");
+    expect(terrainKindAt(55, 0)).toBe("warning-water");
+    expect(terrainKindAt(55, 14)).toBe("warning-water");
+    expect(terrainKindAt(55, 15)).toBe("storm-water");
     expect(RISK_WATER_AREAS["ledger-mooring"].regionTile.y).toBeGreaterThan(45);
   });
 
@@ -208,7 +211,7 @@ describe("risk water areas", () => {
   it("keeps the direct island periphery out of every zone", () => {
     const peripherySamples = [
       { x: 21, y: 30 },
-      { x: 44, y: 14 },
+      { x: 29, y: 23 },
       { x: 49, y: 24 },
       { x: 35, y: 44 },
       { x: 22, y: 34 },
@@ -233,7 +236,7 @@ describe("risk water areas", () => {
     expect(counts["alert-water"]).toBeGreaterThan(counts["warning-water"] ?? 0);
     expect(counts["alert-water"]).toBeGreaterThan(counts["storm-water"] ?? 0);
     expect(counts["warning-water"] ?? 0).toBeGreaterThanOrEqual(30);
-    expect(counts["warning-water"] ?? 0).toBeLessThanOrEqual(80);
+    expect(counts["warning-water"] ?? 0).toBeLessThanOrEqual(120);
     expect(counts["storm-water"] ?? 0).toBeGreaterThanOrEqual(30);
     expect(counts["storm-water"] ?? 0).toBeLessThanOrEqual(80);
   });

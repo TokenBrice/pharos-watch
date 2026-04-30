@@ -176,15 +176,15 @@ function harborApproachValue(x: number, y: number): number {
 }
 
 function isAlertChannel(x: number, y: number): boolean {
-  return x >= 30 && x <= 42 && y >= 0 && y <= 4;
+  return x >= 30 && x <= 49 && y >= 0 && y <= 14;
 }
 
 function isWarningShoals(x: number, y: number): boolean {
-  return x >= 50 && x <= 55 && y >= 3 && y <= 11;
+  return x >= 50 && x <= 55 && y >= 0 && y <= 14;
 }
 
 function isDangerStrait(x: number, y: number): boolean {
-  return x >= 50 && x <= 55 && y >= 12 && y <= 19;
+  return x >= 50 && x <= 55 && y >= 15 && y <= 24;
 }
 
 // x >= 1 keeps (0, 0) as deep-water for existing corner test

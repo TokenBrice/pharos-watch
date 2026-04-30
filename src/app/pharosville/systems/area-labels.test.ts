@@ -5,7 +5,7 @@ import { DEWS_AREA_PLACEMENTS, RISK_WATER_AREAS } from "./risk-water-areas";
 import { LIGHTHOUSE_TILE, terrainKindAt } from "./world-layout";
 import type { AreaNode, DewsAreaBand, ShipRiskPlacement, TerrainKind } from "./world-types";
 
-const WEST_TO_EAST_DEWS_BANDS: DewsAreaBand[] = ["CALM", "WATCH", "ALERT", "DANGER", "WARNING"];
+const WEST_TO_EAST_DEWS_BANDS: DewsAreaBand[] = ["CALM", "WATCH", "DANGER", "ALERT", "WARNING"];
 const NON_DEWS_RISK_PLACEMENTS = ["ledger-mooring"] as const satisfies readonly ShipRiskPlacement[];
 
 describe("areaLabelPlacementForArea", () => {
