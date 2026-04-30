@@ -124,7 +124,7 @@ describe("risk water areas", () => {
   it("matches the authored DEWS placement diagram", () => {
     const expectedSamples = [
       { band: "CALM", tile: { x: 8, y: 32 }, terrain: "calm-water" },
-      { band: "WATCH", tile: { x: 10, y: 7 }, terrain: "watch-water" },
+      { band: "WATCH", tile: { x: 12, y: 6 }, terrain: "watch-water" },
       { band: "ALERT", tile: { x: 36, y: 2 }, terrain: "alert-water" },
       { band: "WARNING", tile: { x: 52, y: 7 }, terrain: "warning-water" },
       { band: "DANGER", tile: { x: 53, y: 17 }, terrain: "storm-water" },

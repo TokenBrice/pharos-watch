@@ -48,7 +48,8 @@ describe("buildPharosVilleMap", () => {
     expect(boundsCenter.y).toBeCloseTo(CIVIC_CORE_CENTER.y, 1);
     const counts = terrainCounts(map.tiles);
     expect((counts.get("deep-water") ?? 0) / map.tiles.length).toBeLessThanOrEqual(0.125);
-    expect((counts.get("deep-water") ?? 0) / map.tiles.length).toBeGreaterThanOrEqual(0.08);
+    // 0.055 floor accommodates expanded CALM zone reaching down x=0 column and absorbing deep-water shelf tiles
+    expect((counts.get("deep-water") ?? 0) / map.tiles.length).toBeGreaterThanOrEqual(0.055);
     expect(counts.get("calm-water") ?? 0).toBeGreaterThan(counts.get("watch-water") ?? 0);
     expect(counts.get("watch-water") ?? 0).toBeGreaterThan(counts.get("alert-water") ?? 0);
     expect(counts.get("alert-water") ?? 0).toBeGreaterThan(counts.get("warning-water") ?? 0);

@@ -188,16 +188,13 @@ function isDangerStrait(x: number, y: number): boolean {
 }
 
 // x >= 1 keeps (0, 0) as deep-water for existing corner test
-// south extension starts at x=8 to avoid consuming edge deep-water tiles (x<8, edge=1)
 function isWatchBreakwater(x: number, y: number): boolean {
-  if (x >= 1 && x <= 20 && y >= 0 && y <= 12) return true;
-  if (x >= 8 && x <= 20 && y >= 13 && y <= 15) return true;
-  return false;
+  return x >= 1 && x <= 28 && y >= 0 && y <= 13;
 }
 
-// x <= 18 preserves (18, 31) as calm-water for westernBasinSamples test
+// Wraps the lower-left of the diamond from upper-left mid-band to bottom-left.
 function isCalmAnchorage(x: number, y: number): boolean {
-  return x >= 0 && x <= 18 && y >= 20 && y <= 48;
+  return x >= 0 && x <= 22 && y >= 14 && y <= 54;
 }
 
 function isCemeteryCausewayTile(x: number, y: number): boolean {
