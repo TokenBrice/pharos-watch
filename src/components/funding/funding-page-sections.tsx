@@ -15,7 +15,7 @@ import { groupCostsByCategory } from "@shared/lib/funding/helpers";
 const PHAROS_FUNDING_WALLET_DISPLAY = "0x5d698362EDb8AEa1C2b2483096BDeE3265D860DB";
 const PHAROS_FUNDING_ENS = "pharos-watch.eth";
 const GIVETH_URL = "https://giveth.io/project/pharos-watch:-transparent-stablecoins-analytics";
-const GITHUB_URL = "https://github.com/TokenBrice/stablecoin-dashboard";
+const GITHUB_URL = "https://github.com/TokenBrice/pharos-watch";
 const TWITTER_URL = "https://x.com/PharosWatch";
 const TELEGRAM_GROUP_URL = "https://t.me/pharoswatchers";
 const SUPPORTED_CHAINS: FundingChain[] = ["ethereum", "base", "optimism", "arbitrum", "polygon", "gnosis"];

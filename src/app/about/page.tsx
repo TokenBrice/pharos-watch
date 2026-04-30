@@ -490,7 +490,7 @@ export default function AboutPage() {
           </p>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
-              <a href="https://github.com/TokenBrice/stablecoin-dashboard" target="_blank" rel="noopener noreferrer">
+              <a href="https://github.com/TokenBrice/pharos-watch" target="_blank" rel="noopener noreferrer">
                 <GitBranch className="h-4 w-4" />
                 View on GitHub
                 <ExternalLink className="h-4 w-4" />

@@ -64,7 +64,7 @@ export default function ChangelogPage() {
           </Link>{" "}
           for real-time alerts, or browse the{" "}
           <a
-            href="https://github.com/TokenBrice/stablecoin-dashboard/commits/main/"
+            href="https://github.com/TokenBrice/pharos-watch/commits/main/"
             target="_blank"
             rel="noopener noreferrer"
             className="underline underline-offset-4 hover:text-foreground"

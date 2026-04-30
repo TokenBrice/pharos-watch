@@ -162,7 +162,7 @@ export function ChangelogEntryCard({
           {commits.slice(0, COMMIT_PREVIEW_COUNT).map((c) => (
             <li key={c.hash}>
               <a
-                href={`https://github.com/TokenBrice/stablecoin-dashboard/commit/${c.hash}`}
+                href={`https://github.com/TokenBrice/pharos-watch/commit/${c.hash}`}
                 className="text-foreground/60 hover:text-foreground transition-colors"
                 target="_blank"
                 rel="noopener noreferrer"

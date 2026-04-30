@@ -77,7 +77,7 @@ function render() {
       },
       license: {
         name: "MIT",
-        url: "https://github.com/TokenBrice/stablecoin-dashboard/blob/main/LICENSE",
+        url: "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE",
       },
     },
     externalDocs: {
