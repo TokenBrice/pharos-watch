@@ -25,6 +25,7 @@ These are the non-negotiable visual/data contracts for the PharosVille world. A 
 - The lighthouse stays on the generated central-island mountain at `LIGHTHOUSE_TILE`.
 - The eastern and southern coves keep Ethereum, Base, Arbitrum, Optimism, Polygon, and Mantle in preferred dock positions when those chains are rendered.
 - Docks are capped by `MAX_CHAIN_HARBORS`; they reserve the Ethereum/L2 harbor cluster when present, then fill remaining slots by chain stablecoin supply.
+- Ethereum's harbor may be selected as a dock, but its four-gate hub body must read as backgrounded water infrastructure with ships rendering over it.
 - The Ethereum/L2 cove keeps `ETHEREUM HARBOR` and `L2 BAY` plaque signs readable without replacing named DEWS water-area labels.
 - The cemetery remains a compact memorial precinct separated from the EVM bay and lighthouse approach.
 - The inland civic spine does not host Pharos data buildings. Mint/burn flows, DEX liquidity, and redemption-route backstops stay on their dedicated analytical surfaces outside PharosVille.

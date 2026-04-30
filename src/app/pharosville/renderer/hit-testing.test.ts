@@ -238,6 +238,71 @@ describe("hit-testing", () => {
     expect(hitTest(targets, point)?.detailId).toBe(ship!.detailId);
   });
 
+  it("keeps ships above the backgrounded Ethereum harbor hub hitbox", () => {
+    const usdt = world.ships.find((entry) => entry.detailId === "ship.usdt-tether");
+    const ethereumDock = world.docks.find((entry) => entry.detailId === "dock.ethereum");
+    expect(usdt).toBeDefined();
+    expect(ethereumDock).toBeDefined();
+
+    const assets = {
+      get: (id: string): LoadedPharosVilleAsset | null => {
+        if (id === "dock.ethereum-harbor-hub") {
+          return {
+            entry: {
+              anchor: [168, 186],
+              category: "dock",
+              displayScale: 1,
+              footprint: [168, 72],
+              height: 240,
+              hitbox: [24, 18, 288, 176],
+              id,
+              layer: "docks",
+              loadPriority: "critical",
+              path: "docks/ethereum-harbor-hub.png",
+              width: 336,
+            },
+            image: {} as HTMLImageElement,
+          };
+        }
+        if (!id.startsWith("ship.")) return null;
+        return {
+          entry: {
+            anchor: [40, 50],
+            category: "ship",
+            displayScale: 1,
+            footprint: [20, 12],
+            height: 64,
+            hitbox: [8, 8, 64, 48],
+            id,
+            layer: "ships",
+            loadPriority: "critical",
+            path: `${id}.png`,
+            width: 80,
+          },
+          image: {} as HTMLImageElement,
+        };
+      },
+    };
+    const targets = collectHitTargets({
+      assets,
+      camera,
+      selectedDetailId: ethereumDock!.detailId,
+      shipMotionSamples: new Map([[usdt!.id, motionSample(usdt!.id, ethereumDock!.tile)]]),
+      world,
+    });
+    const ship = targets.find((target) => target.detailId === usdt!.detailId);
+    const dock = targets.find((target) => target.detailId === ethereumDock!.detailId);
+    expect(ship).toBeDefined();
+    expect(dock).toBeDefined();
+
+    const point = {
+      x: ship!.rect.x + ship!.rect.width / 2,
+      y: ship!.rect.y + ship!.rect.height / 2,
+    };
+    expect(pointInRect(point, dock!.rect)).toBe(true);
+    expect(hitTest(targets, point)?.detailId).toBe(ship!.detailId);
+  });
+
   it("aligns dock hitboxes to shared rendered harbor geometry", () => {
     const dock = world.docks.find((entry) => entry.detailId === "dock.ethereum");
     expect(dock).toBeDefined();

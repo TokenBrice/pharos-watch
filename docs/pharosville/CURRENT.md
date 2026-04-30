@@ -68,7 +68,7 @@ water gap. Two-tile island periphery and lighthouse visual-clearance box
 - Stale or missing peg evidence maps to Calm Anchorage with an evidence caveat unless a fresher risk signal exists; it must not create a separate sea zone or masquerade as storm/depeg risk.
 - Stablecoin supply values from the list payload are already USD-denominated. Use `getCirculatingRaw()` for market-cap visual tiers.
 - Local runtime assets come from `public/pharosville/assets/` and `manifest.json`. Do not reference Pixellab URLs or remote assets at runtime.
-- The current manifest has 31 runtime assets: 21 critical/first-render entries and 10 deferred entries. `npm run check:pharosville-assets` enforces the local PNG contract and the v0.1 core cap of 34 manifest assets.
+- The current manifest has 32 runtime assets: 22 critical/first-render entries and 10 deferred entries. `npm run check:pharosville-assets` enforces the local PNG contract and the v0.1 core cap of 34 manifest assets.
 
 ## Current Visual Model
 
@@ -81,7 +81,7 @@ water gap. Two-tile island periphery and lighthouse visual-clearance box
 - Printed water labels render above entity sprites, so label visibility and label hit targets intentionally win over overlapping ships or tall landmarks.
 - Sea terrain is semantic: harbor water, calm DEWS anchorage water, watch breakwater water, alert current, warning shoals, storm strait, ledger water, generic navigable water, and deep outer shelf each have distinct palette/texture handling. Manifest terrain sprites draw first; renderer overlays preserve analytical color semantics while adding shoals, foam, current streaks, storm chop, ledger glow, and reef/buoy context.
 - Ship risk routes expose both `riskWaterLabel` and `riskZone` in details and the accessibility ledger. Reduced-motion ships freeze at their current risk-water idle tile, or Ledger Mooring for NAV ledger assets; harbor moorings are route stops, not the static representative position.
-- Dock sprites are rank/preference selected through manifest IDs such as `dock.harbor-ring-quay`, `dock.compact-harbor-pier`, `dock.rollup-ferry-slip`, and `dock.bridge-pontoon`.
+- Dock sprites are rank/preference selected through manifest IDs such as `dock.ethereum-harbor-hub`, `dock.harbor-ring-quay`, `dock.compact-harbor-pier`, `dock.rollup-ferry-slip`, and `dock.bridge-pontoon`; Ethereum's hub remains selectable while its dock body is drawn behind ships so harbor traffic sails over it.
 - Dock selection reserves the Ethereum/L2 harbor cluster (`ethereum`, `base`, `arbitrum`, `optimism`, `polygon`, `mantle`) when those chains are present, then fills the remaining ten-dock cap by chain stablecoin supply.
 - The Ethereum/L2 cove prints `ETHEREUM HARBOR` and `L2 BAY` plaque signs using the same canvas label treatment as named DEWS water areas.
 - Ship class is derived from governance/backing metadata:

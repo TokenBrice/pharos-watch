@@ -26,6 +26,13 @@ function targetPriorityBoost(entity: WorldSelectableEntity, selectedDetailId: st
   return priority;
 }
 
+function visualPriorityForHitTarget(entity: WorldSelectableEntity, priority: number): number {
+  // Ethereum's hub body is drawn before the sorted entity pass so ships sail over it.
+  // Keep the dock selectable, but do not let its large hub hitbox outrank ships.
+  if (entity.kind === "dock" && entity.chainId === "ethereum") return -1;
+  return priority;
+}
+
 export function collectHitTargets(input: {
   assets?: Pick<PharosVilleAssetManager, "get"> | null;
   camera: IsoCamera;
@@ -75,7 +82,7 @@ export function collectHitTargets(input: {
       id: entity.id,
       kind: entity.kind,
       label: entity.label,
-      priority: (visualPriority.get(entity.id) ?? 0) * 10
+      priority: visualPriorityForHitTarget(entity, visualPriority.get(entity.id) ?? 0) * 10
         + targetPriorityBoost(entity, input.selectedDetailId ?? null, input.hoveredDetailId ?? null),
       rect: geometry.targetRect,
     };

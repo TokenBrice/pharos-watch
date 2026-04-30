@@ -20,7 +20,7 @@ describe("buildChainDocks", () => {
     expect(docks[0]?.size).toBeGreaterThan(docks[1]?.size ?? 0);
     expect(docks[0]?.size).toBeGreaterThanOrEqual(7);
     expect(docks[1]?.size).toBeGreaterThanOrEqual(6);
-    expect(docks[0]?.assetId).toBe("dock.harbor-ring-quay");
+    expect(docks[0]?.assetId).toBe("dock.ethereum-harbor-hub");
     expect(docks[0]?.logoSrc).toBeNull();
   });
 
@@ -60,7 +60,7 @@ describe("buildChainDocks", () => {
     expect(byChain.get("optimism")).toEqual(PREFERRED_DOCK_TILES.optimism);
     expect(byChain.get("polygon")).toEqual(PREFERRED_DOCK_TILES.polygon);
     expect(byChain.get("mantle")).toEqual(PREFERRED_DOCK_TILES.mantle);
-    expect(docks.find((dock) => dock.chainId === "ethereum")?.assetId).toBe("dock.harbor-ring-quay");
+    expect(docks.find((dock) => dock.chainId === "ethereum")?.assetId).toBe("dock.ethereum-harbor-hub");
     expect(docks.find((dock) => dock.chainId === "base")?.assetId).toBe("dock.rollup-ferry-slip");
     expect(docks.find((dock) => dock.chainId === "arbitrum")?.assetId).toBe("dock.bridge-pontoon");
     expect(docks.find((dock) => dock.chainId === "optimism")?.assetId).toBe("dock.relay-pontoon");

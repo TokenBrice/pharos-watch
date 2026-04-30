@@ -25,10 +25,11 @@ const DOCK_ASSET_IDS = [
   "dock.vault-quay",
   "dock.bridge-pontoon",
   "dock.sentinel-breakwater",
+  "dock.ethereum-harbor-hub",
 ] as const;
 
 const PREFERRED_DOCK_ASSET_IDS: Record<string, (typeof DOCK_ASSET_IDS)[number]> = {
-  ethereum: "dock.harbor-ring-quay",
+  ethereum: "dock.ethereum-harbor-hub",
   base: "dock.rollup-ferry-slip",
   arbitrum: "dock.bridge-pontoon",
   optimism: "dock.relay-pontoon",

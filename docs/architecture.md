@@ -187,8 +187,8 @@ Component viewport gate. Screens below `1280px` wide or `760px` tall render a
 DOM desktop-only fallback and must not mount world queries, canvas runtime,
 manifest fetches, or sprite decoding. Eligible desktop viewports mount the
 browser-only PharosVille world. Runtime visual assets are local manifest-backed
-PNGs under `public/pharosville/assets/`; the current v0.1 manifest has 31
-entries, with 21 critical/first-render assets and 10 deferred assets under a
+PNGs under `public/pharosville/assets/`; the current v0.1 manifest has 32
+entries, with 22 critical/first-render assets and 10 deferred assets under a
 validator-enforced 34-asset cap.
 
 The world model maps active stablecoins to ships and merged cemetery entries to
@@ -199,11 +199,11 @@ than linear area, with intentionally exaggerated $1B+ tiers so major issuers are
 recognizable landmarks. Ship representative tile placement uses the current
 peg/DEWS risk-water idle tile, or Ledger Mooring for NAV ledger assets, while
 rendered chain-harbor moorings remain active route stops when positive chain
-supply maps to a rendered dock. Ethereum anchors the east cove, while Base,
-Arbitrum, Optimism, Polygon, and Mantle use reserved L2 extension slips around
-the eastern and southern coves when those chains are present. BSC, Tron, Solana,
-Aptos, and other non-core high-supply chain harbors use distributed outer-coast
-dock slots.
+supply maps to a rendered dock. Ethereum anchors the east cove with a selectable
+four-gate harbor hub drawn visually behind ship traffic, while Base, Arbitrum,
+Optimism, Polygon, and Mantle use reserved L2 extension slips around the eastern
+and southern coves when those chains are present. BSC, Tron, Solana, Aptos, and
+other non-core high-supply chain harbors use distributed outer-coast dock slots.
 Dock identity is shown as a small mast flag using the chain logo when available,
 with full chain names retained in DOM details. The cemetery sits on a detached
 bottom-left memorial islet. Normal-motion routing

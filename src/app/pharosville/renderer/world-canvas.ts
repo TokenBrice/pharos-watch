@@ -410,6 +410,7 @@ export function drawPharosVille(input: DrawPharosVilleInput): PharosVilleRenderM
   drawAtmosphere(input);
   drawCentralIslandModel(input);
   drawHarborDistrictGround(input);
+  drawBackgroundedHarborDocks(input);
   drawEthereumHarborExtensions(input);
   if (!input.world.lighthouse.unavailable) drawLighthouseSeaGlow(input);
   drawLighthouseSurf(input);
@@ -452,11 +453,21 @@ function drawCentralIslandModel({ assets, camera, ctx }: DrawPharosVilleInput) {
   ctx.restore();
 }
 
+function drawBackgroundedHarborDocks(input: DrawPharosVilleInput) {
+  for (const dock of input.world.docks) {
+    if (isBackgroundedHarborDock(dock)) drawDockBody(input, dock);
+  }
+}
+
+function isBackgroundedHarborDock(dock: PharosVilleWorld["docks"][number]) {
+  return dock.chainId === "ethereum";
+}
+
 function drawEntityPass(input: DrawPharosVilleInput): Pick<PharosVilleRenderMetrics, "drawableCount" | "drawableCounts"> {
   const drawables: WorldDrawable[] = [
     ...SCENERY_PROPS.map((prop) => sceneryDrawable(input, prop)),
     ...input.world.docks.flatMap((dock) => [
-      entityDrawable(input, dock, "body", () => drawDockBody(input, dock)),
+      ...(isBackgroundedHarborDock(dock) ? [] : [entityDrawable(input, dock, "body", () => drawDockBody(input, dock))]),
       entityDrawable(input, dock, "overlay", () => drawDockOverlay(input, dock)),
     ]),
     ...input.world.ships.flatMap((ship) => [

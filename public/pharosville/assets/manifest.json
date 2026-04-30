@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "style": {
-    "cacheVersion": "2026-04-30-pharosville-island-harbor-recompose-v1",
+    "cacheVersion": "2026-04-30-pharosville-ethereum-harbor-hub-rotated-v2",
     "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5",
     "anchor": "old-school 16-bit maritime isometric RPG pixel art, crisp pixel edges, low top-down view, deep navy and teal sea, pale limestone and terracotta island city, bronze and gold beacon light, restrained analytics palette, readable silhouettes, no text, no logos, no UI",
     "palette": ["#061721", "#0d5f70", "#15858c", "#f0ead2", "#b95437", "#ffcc62"],
@@ -17,6 +17,7 @@
     "landmark.lighthouse",
     "overlay.central-island",
     "dock.harbor-ring-quay",
+    "dock.ethereum-harbor-hub",
     "dock.compact-harbor-pier",
     "dock.grand-quay",
     "dock.container-wharf",
@@ -240,6 +241,28 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "d4eda13d-bea3-4273-95bb-895c77369f9d",
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
+      }
+    },
+    {
+      "id": "dock.ethereum-harbor-hub",
+      "path": "docks/ethereum-harbor-hub.png",
+      "category": "dock",
+      "layer": "docks",
+      "width": 336,
+      "height": 240,
+      "displayScale": 1,
+      "anchor": [168, 186],
+      "footprint": [168, 72],
+      "hitbox": [24, 18, 288, 176],
+      "loadPriority": "critical",
+      "criticalReason": "Selectable Ethereum harbor-hub sprite drawn behind ships so traffic sails over the ring.",
+      "promptKey": "dock.ethereum-harbor-hub",
+      "semanticRole": "selectable backgrounded Ethereum harbor hub",
+      "paletteKeys": ["limestone", "teal sea", "bronze beacon"],
+      "tool": "mcp:create_map_object+imagemagick",
+      "promptProvenance": {
+        "jobId": "8f6ca5d8-bdb7-4ec2-a2d6-91f529cb3799",
         "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },
