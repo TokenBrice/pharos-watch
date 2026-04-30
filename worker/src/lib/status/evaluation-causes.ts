@@ -24,7 +24,7 @@ function formatRatio(value: number): string {
  * would 404 at `https://ops.pharos.watch/...`. The blob URL survives branch
  * renames as long as `main` is the default.
  */
-const RUNBOOK_BASE = "https://github.com/TokenBrice/stablecoin-dashboard/blob/main/docs/runbooks";
+const RUNBOOK_BASE = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks";
 
 export const RUNBOOK_BY_CODE: Record<string, string> = {
   db_unhealthy: `${RUNBOOK_BASE}/db-connectivity.md`,

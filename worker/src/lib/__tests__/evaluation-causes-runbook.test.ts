@@ -10,7 +10,7 @@ describe("StatusCause.runbookUrl", () => {
       severity: "critical",
       message: "DB unhealthy",
     };
-    expect(withRunbook(cause).runbookUrl).toBe("https://github.com/TokenBrice/stablecoin-dashboard/blob/main/docs/runbooks/db-connectivity.md");
+    expect(withRunbook(cause).runbookUrl).toBe("https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/db-connectivity.md");
   });
 
   it("omits runbookUrl for codes without a documented runbook", () => {
@@ -35,7 +35,7 @@ describe("StatusCause.runbookUrl", () => {
     };
     const withUrl = withRunbook(cause);
     expect(withUrl).toMatchObject(cause);
-    expect(withUrl.runbookUrl).toBe("https://github.com/TokenBrice/stablecoin-dashboard/blob/main/docs/runbooks/stablecoins-cache.md");
+    expect(withUrl.runbookUrl).toBe("https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/stablecoins-cache.md");
   });
 
   it("covers all codes listed in RUNBOOK_BY_CODE with valid documented URLs", () => {

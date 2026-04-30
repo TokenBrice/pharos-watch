@@ -42,4 +42,4 @@ export interface PreparedFeedbackSubmission {
 }
 
 export const GITHUB_OWNER = "TokenBrice";
-export const GITHUB_REPO = "stablecoin-dashboard";
+export const GITHUB_REPO = "pharos-watch";

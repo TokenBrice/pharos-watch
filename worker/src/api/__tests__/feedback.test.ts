@@ -204,8 +204,7 @@ describe("handleFeedback", () => {
     // Verify GitHub API was called
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(String(url)).toContain("api.github.com");
-    expect(String(url)).toContain("/issues");
+    expect(String(url)).toBe("https://api.github.com/repos/TokenBrice/pharos-watch/issues");
     expect(init?.method).toBe("POST");
     expect(response.bodyUsed).toBe(true);
   });
@@ -352,7 +351,7 @@ describe("handleFeedback", () => {
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(String(url)).toContain("/issues");
+    expect(String(url)).toBe("https://api.github.com/repos/TokenBrice/pharos-watch/issues");
     expect(init?.method).toBe("POST");
     const payload = JSON.parse(String(init?.body)) as { labels: string[] };
     expect(payload.labels).toEqual(["feature-request"]);
