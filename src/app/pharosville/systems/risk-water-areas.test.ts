@@ -124,10 +124,10 @@ describe("risk water areas", () => {
   it("matches the authored DEWS placement diagram", () => {
     const expectedSamples = [
       { band: "CALM", tile: { x: 8, y: 32 }, terrain: "calm-water" },
-      { band: "WATCH", tile: { x: 12, y: 6 }, terrain: "watch-water" },
+      { band: "WATCH", tile: { x: 10, y: 7 }, terrain: "watch-water" },
       { band: "ALERT", tile: { x: 36, y: 2 }, terrain: "alert-water" },
       { band: "WARNING", tile: { x: 52, y: 7 }, terrain: "warning-water" },
-      { band: "DANGER", tile: { x: 53, y: 16 }, terrain: "storm-water" },
+      { band: "DANGER", tile: { x: 53, y: 17 }, terrain: "storm-water" },
     ] as const;
 
     for (const sample of expectedSamples) {
@@ -232,10 +232,10 @@ describe("risk water areas", () => {
     expect(counts["watch-water"]).toBeGreaterThan(counts["alert-water"]);
     expect(counts["alert-water"]).toBeGreaterThan(counts["warning-water"] ?? 0);
     expect(counts["alert-water"]).toBeGreaterThan(counts["storm-water"] ?? 0);
-    expect(counts["warning-water"] ?? 0).toBeGreaterThanOrEqual(15);
-    expect(counts["warning-water"] ?? 0).toBeLessThanOrEqual(45);
-    expect(counts["storm-water"] ?? 0).toBeGreaterThanOrEqual(15);
-    expect(counts["storm-water"] ?? 0).toBeLessThanOrEqual(45);
+    expect(counts["warning-water"] ?? 0).toBeGreaterThanOrEqual(30);
+    expect(counts["warning-water"] ?? 0).toBeLessThanOrEqual(80);
+    expect(counts["storm-water"] ?? 0).toBeGreaterThanOrEqual(30);
+    expect(counts["storm-water"] ?? 0).toBeLessThanOrEqual(80);
   });
 });
 

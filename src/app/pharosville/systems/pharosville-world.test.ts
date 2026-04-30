@@ -258,7 +258,7 @@ describe("buildPharosVilleWorld", () => {
       { label: "Risk placement", value: "ledger-mooring" },
     ]));
     expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 52, y: 5 });
-    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 53, y: 14 });
+    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 53, y: 15 });
     expect(world.areas.every((area) => area.id.startsWith("area.dews.") || area.id.startsWith("area.risk-water."))).toBe(true);
     expect(terrainKindAt(52, 5)).toBe("warning-water");
     expect(terrainKindAt(53, 14)).toBe("storm-water");

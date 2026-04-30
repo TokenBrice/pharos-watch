@@ -180,16 +180,19 @@ function isAlertChannel(x: number, y: number): boolean {
 }
 
 function isWarningShoals(x: number, y: number): boolean {
-  return x >= 50 && x <= 55 && y >= 5 && y <= 9;
+  return x >= 50 && x <= 55 && y >= 3 && y <= 11;
 }
 
 function isDangerStrait(x: number, y: number): boolean {
-  return x >= 51 && x <= 55 && y >= 14 && y <= 18;
+  return x >= 50 && x <= 55 && y >= 12 && y <= 19;
 }
 
 // x >= 1 keeps (0, 0) as deep-water for existing corner test
+// south extension starts at x=8 to avoid consuming edge deep-water tiles (x<8, edge=1)
 function isWatchBreakwater(x: number, y: number): boolean {
-  return x >= 1 && x <= 28 && y >= 0 && y <= 12;
+  if (x >= 1 && x <= 20 && y >= 0 && y <= 12) return true;
+  if (x >= 8 && x <= 20 && y >= 13 && y <= 15) return true;
+  return false;
 }
 
 // x <= 18 preserves (18, 31) as calm-water for westernBasinSamples test
