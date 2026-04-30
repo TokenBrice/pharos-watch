@@ -80,6 +80,7 @@ describe("api endpoint registry", () => {
       "/api/status-history",
       "/api/status-history?limit=10",
       "/api/status-probe-history",
+      "/api/status-probe-history?path=%2Fapi%2Fhealth",
       "/api/stress-signals",
       "/api/supply-history",
       "/api/supply-history?stablecoin=usdt-tether",
@@ -140,7 +141,7 @@ describe("api endpoint registry", () => {
       "/api/status-history?limit=10",
       "/api/debug-sync-state",
       "/api/discovery-candidates",
-      "/api/status-probe-history",
+      "/api/status-probe-history?path=%2Fapi%2Fhealth",
     ]);
 
     expect(getProbePaths("manual")).toEqual([

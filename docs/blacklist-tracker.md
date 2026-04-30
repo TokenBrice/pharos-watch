@@ -846,7 +846,7 @@ Supported inputs:
 - `stablecoin`
 - `limit`
 - `dryRun`
-- `onlyMissingProvenance`
+- `onlyMissingProvenance` (default `false`; set `true` to restrict remediation to legacy rows missing contract/config provenance)
 - `maxAttempts`
 
 All blacklist admin endpoints are routed in `worker/src/routes/registry.ts` and executed via `worker/src/handlers/http.ts`.

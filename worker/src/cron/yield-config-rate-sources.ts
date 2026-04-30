@@ -127,7 +127,6 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
 export const PRICE_DERIVED_FALLBACK_IDS = new Set([
   "usdb-blast",
   "usda-avalon",
-  "buck-buck-assets",
 ]);
 
 export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [

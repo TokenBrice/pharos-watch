@@ -3229,7 +3229,7 @@ Admin-only bounded remediation endpoint for recoverable blacklist rows.
 - `stablecoin?: BlacklistStablecoin` from the shared `BLACKLIST_STABLECOINS` set
 - `limit?: number` default `25`, max `200`
 - `dryRun?: boolean` default `true`
-- `onlyMissingProvenance?: boolean` default `true`
+- `onlyMissingProvenance?: boolean` default `false`; set `true` to restrict the pass to legacy rows missing contract/config provenance
 - `maxAttempts?: number` default `25`
 
 **Dry-run response**

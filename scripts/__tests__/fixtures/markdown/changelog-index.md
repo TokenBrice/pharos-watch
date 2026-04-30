@@ -6,6 +6,13 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-04-27 to 2026-05-03
+
+BUCK moves to the cemetery while admin stress signals stop flagging stale probe and remediation paths.
+
+- **BUCK frozen**: BUCK is archived as a frozen cemetery entry after the project shutdown notice replaced live issuer disclosures; active mint/burn, yield, reserve, and redemption hooks no longer monitor it.
+- **Admin stress cleanup**: Operator probes now call status-probe-history with a valid target path, blacklist gap remediation backfills stale amount rows by default, and the dead BUCK live-reserve breaker is removed.
+
 ## 2026-04-20 to 2026-04-26
 
 Harbor and canal metaphors redraw /chains and /liquidity, public /api/* goes keyed-only, and tracked coverage hits 215.

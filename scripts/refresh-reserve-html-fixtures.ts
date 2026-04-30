@@ -64,11 +64,6 @@ const FIXTURES: readonly HtmlFixtureSpec[] = [
     fixture: "sgforge-coinvertible-eur.html",
   },
   {
-    name: "Buck (buck-buck-assets) transparency",
-    url: "https://buck.io/transparency",
-    fixture: "buck-io.html",
-  },
-  {
     name: "USDH (usdh-native-markets) reserves",
     url: "https://usdh.com/reserves",
     fixture: "usdh-native-markets.html",

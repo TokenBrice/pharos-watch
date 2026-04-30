@@ -57,6 +57,22 @@ describe("collectEndpointProbes", () => {
     expect(result[0]).toEqual(expect.objectContaining({ path: adminPath, status: 200 }));
   });
 
+  it("preserves admin probe query strings when using the same-origin proxy", async () => {
+    const cancel = vi.fn().mockResolvedValue(undefined);
+    const adminPath = "/api/status-probe-history?path=%2Fapi%2Fhealth";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: { cancel },
+    } as unknown as Response);
+
+    const result = await collectEndpointProbes([adminPath]);
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/admin/status-probe-history?path=%2Fapi%2Fhealth");
+    expect(result[0]).toEqual(expect.objectContaining({ path: adminPath, status: 200 }));
+  });
+
   it("classifies freshness Warning headers on 200 responses as data-health signals", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response("{}", {

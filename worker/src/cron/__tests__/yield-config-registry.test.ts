@@ -31,7 +31,7 @@ function hasRuntimeYieldStrategy(stablecoinId: string, navToken: boolean) {
 
 describe("yield config registry", () => {
   const activeYieldCoins = TRACKED_STABLECOINS.filter(
-    (coin) => coin.flags.yieldBearing && coin.status !== "pre-launch",
+    (coin) => coin.flags.yieldBearing && coin.status !== "pre-launch" && coin.status !== "frozen",
   );
 
   it("gives every active yield-bearing coin a runtime strategy", () => {
@@ -72,7 +72,7 @@ describe("yield config registry", () => {
     const manifestIds = new Set(YIELD_ADAPTER_MANIFEST.map((entry) => entry.stablecoinId));
     const yieldBearingIds = new Set(
       TRACKED_STABLECOINS
-        .filter((coin) => coin.flags.yieldBearing)
+        .filter((coin) => coin.flags.yieldBearing && coin.status !== "frozen")
         .map((coin) => coin.id),
     );
 

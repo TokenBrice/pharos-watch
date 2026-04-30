@@ -343,24 +343,6 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       "The 50% ratio is a reviewed heuristic placeholder pending a published primary-market liquidity bound for Nerona's M wrapper",
     ],
   },
-  "buck-buck-assets": {
-    ...queueRedeemBase,
-    accessModel: "whitelisted-onchain",
-    settlementModel: "same-day",
-    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
-    costModel: documentedVariableFee(
-      "Buck Assets documents 1:1 USDC mint and redemption via the LiquidityWindow smart contract for AML-verified participants; public docs reviewed do not publish a fixed redemption fee",
-    ),
-    reviewedAt: "2026-04-16",
-    docs: [
-      sourceRef("Buck Assets", "https://buck.assets/", ["route", "capacity"]),
-      sourceRef("Buck Assets documentation", "https://docs.buck.assets/", ["route", "access"]),
-    ],
-    notes: [
-      "LiquidityWindow contract gates primary mint/redeem to AML-verified primary-market participants; monthly yield is distributed as additional BUCK tokens via rebase",
-      "The 10% ratio is a reviewed heuristic placeholder pending a published LiquidityWindow buffer figure",
-    ],
-  },
   "usdh-hermetica": {
     ...queueRedeemBase,
     accessModel: "whitelisted-onchain",
