@@ -17,24 +17,30 @@ export const ISLAND_PERIPHERY_TILE_DISTANCE = 5;
 
 export const REGION_TILES: Record<ShipRiskPlacement, { x: number; y: number }> = RISK_WATER_REGION_TILES;
 
+// EVM bay sits along the staircase's principal harbors: Ethereum on the
+// right column, Base on the bridge step, Arbitrum on the green step,
+// Polygon on the east face of the right column.
 export const EVM_BAY_DOCK_TILES = [
-  { x: 35, y: 38 },
-  { x: 36, y: 38 },
-  { x: 37, y: 38 },
-  { x: 40, y: 36 },
+  { x: 40, y: 32 },
+  { x: 34, y: 31 },
+  { x: 27, y: 34 },
+  { x: 43, y: 28 },
 ] as const;
 
+// Outer harbors line the rest of the staircase: yellow / purple / orange
+// harbors on the left column (east + west faces) and accent berths on the
+// right column.
 export const OUTER_HARBOR_DOCK_TILES = [
-  { x: 47, y: 26 },
-  { x: 44, y: 18 },
-  { x: 24, y: 36 },
-  { x: 38, y: 37 },
-  { x: 46, y: 24 },
-  { x: 51, y: 32 },
-  { x: 22, y: 32 },
-  { x: 28, y: 25 },
-  { x: 32, y: 24 },
-  { x: 48, y: 28 },
+  { x: 25, y: 35 },
+  { x: 25, y: 41 },
+  { x: 24, y: 47 },
+  { x: 39, y: 16 },
+  { x: 43, y: 24 },
+  { x: 33, y: 25 },
+  { x: 27, y: 28 },
+  { x: 19, y: 35 },
+  { x: 19, y: 41 },
+  { x: 20, y: 47 },
 ] as const;
 
 export const PREFERRED_DOCK_TILES: Record<string, { x: number; y: number }> = {
@@ -107,17 +113,11 @@ export function tileKindAt(x: number, y: number): TileKind {
 
 export function terrainKindAt(x: number, y: number): TerrainKind {
   const island = islandValue(x, y);
-  const harbor = harborCoveValue(x, y);
-  const approach = harborApproachValue(x, y);
   const headland = lighthouseHeadlandValue(x, y);
   const cemetery = cemeteryValue(x, y);
   const nearIslandEdge = island > 0.82;
-  const harborWater = island < 1
-    && cemetery > 1.18
-    && ((harbor < 0.9 && y > 34 && x < 37) || (approach < 0.94 && y > 42));
 
-  if (isOutOfBounds(x, y) || island >= 1 || harborWater) {
-    if (harborWater) return "harbor-water";
+  if (isOutOfBounds(x, y) || island >= 1) {
     const inIslandPeriphery = isWithinIslandPeriphery(x, y);
     if (!inIslandPeriphery && !isLighthouseVisualClearance(x, y)) {
       if (isDangerStrait(x, y)) return "storm-water";
@@ -133,7 +133,6 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
 
   if (x === LIGHTHOUSE_TILE.x && y === LIGHTHOUSE_TILE.y) return "hill";
   if (cemetery < 1) return "grass";
-  if ((harbor < 1.23 && y > 33 && x < 38) || (approach < 1.2 && y > 42)) return "beach";
   if (headland < 1.04) {
     if (headland > 0.78 || x > LIGHTHOUSE_TILE.x + 3 || y < LIGHTHOUSE_TILE.y - 2) return "cliff";
     if (headland > 0.48) return "rock";
@@ -154,15 +153,14 @@ function canonicalTileKind(kind: TerrainKind): TileKind {
 
 function islandValue(x: number, y: number): number {
   return Math.min(
-    // Main island — shrunk ~50% from the prior 15.0 × 10.4 footprint after the
-    // cemetery and southern bulges were carved off.
-    ellipseValue(x, y, 32.4, 31.2, 11.0, 7.5),
-    // Lighthouse-N headland (keeps the lighthouse on connected high ground).
-    ellipseValue(x, y, 40.6, 22.3, 6.4, 5.4),
-    // East bulge connects the headland down to the main mass.
-    ellipseValue(x, y, 42.0, 28.6, 6.4, 5.4),
-    // Detached east-coast islet.
-    ellipseValue(x, y, 47.8, 32.2, 3.3, 2.8),
+    // Right column — Lighthouse on top + Ethereum harbor below (vertical bar).
+    ellipseValue(x, y, 39.5, 24, 4.5, 9),
+    // Bridge harbor — short step connecting right column to the green step.
+    ellipseValue(x, y, 33, 28, 4, 3.5),
+    // Green harbor — diagonal step linking the bridge to the left column.
+    ellipseValue(x, y, 27, 31, 4, 3.5),
+    // Left column — three stacked harbors (yellow / purple / orange).
+    ellipseValue(x, y, 22, 40, 4, 9),
     // Detached cemetery islet in the calm-anchorage area.
     ellipseValue(x, y, CEMETERY_CENTER.x, CEMETERY_CENTER.y, CEMETERY_ISLAND_RADIUS.x, CEMETERY_ISLAND_RADIUS.y),
   );
@@ -173,14 +171,6 @@ function lighthouseHeadlandValue(x: number, y: number): number {
     ellipseValue(x, y, 40.6, 22.1, 7.2, 5.6),
     ellipseValue(x, y, 39.4, 21.2, 4.4, 3.9),
   );
-}
-
-function harborCoveValue(x: number, y: number): number {
-  return ellipseValue(x, y, 29.4, 39.8, 5.8, 4.0);
-}
-
-function harborApproachValue(x: number, y: number): number {
-  return ellipseValue(x, y, 31.6, 43.8, 4.4, 4.8);
 }
 
 // East-corner anchor (55, 0) — DANGER/WARNING/ALERT are concentric arcs around it.
@@ -224,10 +214,12 @@ function isWatchBreakwater(x: number, y: number): boolean {
   return northBasin || topEdge;
 }
 
-// Wraps the lower-left of the diamond from upper-left mid-band to bottom-left.
+// Wraps the lower-left of the diamond from upper-left mid-band to bottom-left,
+// then sweeps east across the south-middle open water freed up by the
+// staircase island's hollowed center.
 function isCalmAnchorage(x: number, y: number): boolean {
   const westBasin = ellipseValue(x, y, 7.6, 34.4, 18.4, 22.5) < 1.1;
-  const lowerReach = ellipseValue(x, y, 15.0, 49.0, 13.0, 9.6) < 1.05;
+  const lowerReach = ellipseValue(x, y, 18.0, 48.0, 18.0, 11.0) < 1.05;
   const westEdge = x >= 0 && x <= 7 && y >= 14 && y <= 55;
   return westEdge || westBasin || lowerReach;
 }
@@ -240,13 +232,7 @@ function isOutOfBounds(x: number, y: number): boolean {
 // land mask can be precomputed without recursion.
 function isLandTileRaw(x: number, y: number): boolean {
   if (isOutOfBounds(x, y)) return false;
-  if (islandValue(x, y) >= 1) return false;
-  const cemetery = cemeteryValue(x, y);
-  if (cemetery <= 1.18) return true;
-  const harbor = harborCoveValue(x, y);
-  const approach = harborApproachValue(x, y);
-  const harborWater = (harbor < 0.9 && y > 34 && x < 37) || (approach < 0.94 && y > 42);
-  return !harborWater;
+  return islandValue(x, y) < 1;
 }
 
 let cachedLandMask: Uint8Array | null = null;

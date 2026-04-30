@@ -218,12 +218,14 @@ describe("risk water areas", () => {
   });
 
   it("keeps the direct island periphery out of every zone", () => {
+    // Tiles within ~5 cheb of staircase land segments — should fall back to
+    // generic water rather than any DEWS zone.
     const peripherySamples = [
-      { x: 21, y: 30 },
-      { x: 29, y: 23 },
-      { x: 49, y: 24 },
-      { x: 35, y: 44 },
-      { x: 22, y: 34 },
+      { x: 32, y: 27 }, // adjacent to bridge step
+      { x: 27, y: 35 }, // south of green step
+      { x: 17, y: 40 }, // west of left column
+      { x: 27, y: 41 }, // east of left column mid-section
+      { x: 35, y: 18 }, // west of right column
     ];
     for (const tile of peripherySamples) {
       const terrain = terrainKindAt(tile.x, tile.y);

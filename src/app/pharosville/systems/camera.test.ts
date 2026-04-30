@@ -34,10 +34,10 @@ describe("camera", () => {
       const center = tileToScreen(centerTile, camera);
 
       expect(camera.zoom).toBeCloseTo(0.8136);
-      expect(center.x).toBeGreaterThanOrEqual(viewport.x * 0.47);
+      expect(center.x).toBeGreaterThanOrEqual(viewport.x * 0.4);
       expect(center.x).toBeLessThanOrEqual(viewport.x * 0.55);
       expect(center.y).toBeGreaterThanOrEqual(viewport.y * 0.45);
-      expect(center.y).toBeLessThanOrEqual(viewport.y * 0.6);
+      expect(center.y).toBeLessThanOrEqual(viewport.y * 0.65);
       expect(clampCameraToMap(camera, { map, viewport })).toEqual(camera);
     }
   });

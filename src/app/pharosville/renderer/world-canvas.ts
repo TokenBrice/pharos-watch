@@ -150,12 +150,6 @@ interface SceneryProp {
 }
 
 const SCENERY_PROPS: readonly SceneryProp[] = [
-  { id: "evm-crates-1", kind: "crate-stack", tile: { x: 32.8, y: 39.3 }, scale: 1.02 },
-  { id: "evm-crates-2", kind: "barrel", tile: { x: 36.7, y: 39.3 }, scale: 0.94 },
-  { id: "evm-lamp-1", kind: "harbor-lamp", tile: { x: 31.7, y: 41.1 }, scale: 0.95 },
-  { id: "evm-lamp-2", kind: "harbor-lamp", tile: { x: 38.6, y: 39.2 }, scale: 0.88 },
-  { id: "evm-bollards", kind: "bollards", tile: { x: 34.4, y: 41.4 }, scale: 1 },
-  { id: "evm-skiff", kind: "skiff", tile: { x: 30.2, y: 43.9 }, scale: 0.92 },
   { id: "west-palm-1", kind: "palm", tile: { x: 20.5, y: 31.8 }, scale: 0.9 },
   { id: "west-palm-2", kind: "palm", tile: { x: 20.4, y: 35.6 }, scale: 0.78 },
   { id: "west-buoy-1", kind: "buoy", tile: { x: 15.1, y: 30.4 }, scale: 0.86 },
@@ -170,8 +164,6 @@ const SCENERY_PROPS: readonly SceneryProp[] = [
   { id: "east-lamp", kind: "harbor-lamp", tile: { x: 48.4, y: 30.5 }, scale: 0.88 },
   { id: "east-crates", kind: "crate-stack", tile: { x: 47.4, y: 33.5 }, scale: 0.82 },
   { id: "east-seawall", kind: "sea-wall", tile: { x: 49.2, y: 32.5 }, scale: 1.0 },
-  { id: "ledger-buoy", kind: "buoy", tile: { x: 40.5, y: 48.1 }, scale: 0.78 },
-  { id: "ledger-skiff", kind: "skiff", tile: { x: 45.6, y: 50.6 }, scale: 0.82 },
   { id: "civic-bollards", kind: "bollards", tile: { x: 36.0, y: 30.6 }, scale: 0.9 },
   { id: "cemetery-lamp", kind: "harbor-lamp", tile: { x: 24.8, y: 35.8 }, scale: 0.74 },
   { id: "cemetery-rock", kind: "rock", tile: { x: 29.4, y: 36.9 }, scale: 0.68 },
@@ -1264,25 +1256,12 @@ function drawAtmosphere({ camera, ctx, motion, world }: DrawPharosVilleInput) {
 
 function drawHarborDistrictGround({ camera, ctx }: DrawPharosVilleInput) {
   ctx.save();
-  drawDistrictPad(ctx, camera, { x: 31.9, y: 40.7 }, 156, 58, "rgba(78, 70, 56, 0.54)", "rgba(218, 191, 128, 0.34)");
   drawDistrictPad(ctx, camera, { x: 47.8, y: 31.6 }, 88, 36, "rgba(66, 62, 53, 0.48)", "rgba(204, 177, 116, 0.3)");
-  drawDistrictPad(ctx, camera, { x: 42.8, y: 49.4 }, 72, 26, "rgba(49, 67, 59, 0.38)", "rgba(217, 185, 116, 0.26)");
 
-  drawSeawallRun(ctx, camera, [
-    { x: 24.2, y: 42.2 },
-    { x: 29.4, y: 43.1 },
-    { x: 35.2, y: 42.0 },
-    { x: 39.0, y: 40.3 },
-  ]);
   drawSeawallRun(ctx, camera, [
     { x: 47.0, y: 34.9 },
     { x: 49.2, y: 32.0 },
     { x: 48.4, y: 29.4 },
-  ]);
-  drawSeawallRun(ctx, camera, [
-    { x: 40.2, y: 48.3 },
-    { x: 43.0, y: 49.7 },
-    { x: 46.0, y: 49.2 },
   ]);
   ctx.restore();
 }
