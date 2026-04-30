@@ -20,7 +20,7 @@ describe("buildChainDocks", () => {
     expect(docks[0]?.size).toBeGreaterThan(docks[1]?.size ?? 0);
     expect(docks[0]?.size).toBeGreaterThanOrEqual(7);
     expect(docks[1]?.size).toBeGreaterThanOrEqual(6);
-    expect(docks[0]?.assetId).toBe("dock.grand-quay");
+    expect(docks[0]?.assetId).toBe("dock.harbor-ring-quay");
     expect(docks[0]?.logoSrc).toBeNull();
   });
 
@@ -35,7 +35,7 @@ describe("buildChainDocks", () => {
     )))).toBe(true);
   });
 
-  it("keeps core EVM chain harbors in the EVM bay and distributes alt L1s outside it", () => {
+  it("keeps the Ethereum and L2 extension harbors in the EVM bay and distributes alt L1s outside it", () => {
     const docks = buildChainDocks({
       ...fixtureChains,
       chains: [
@@ -47,19 +47,25 @@ describe("buildChainDocks", () => {
         makeChain({ id: "arbitrum", name: "Arbitrum", totalUsd: 50 }),
         makeChain({ id: "polygon", name: "Polygon", totalUsd: 40 }),
         makeChain({ id: "aptos", name: "Aptos", totalUsd: 30 }),
+        makeChain({ id: "optimism", name: "Optimism", totalUsd: 20 }),
+        makeChain({ id: "mantle", name: "Mantle", totalUsd: 10 }),
       ],
-      globalTotalUsd: 520,
+      globalTotalUsd: 550,
     });
     const byChain = new Map(docks.map((dock) => [dock.chainId, dock.tile]));
 
     expect(byChain.get("ethereum")).toEqual(PREFERRED_DOCK_TILES.ethereum);
     expect(byChain.get("base")).toEqual(PREFERRED_DOCK_TILES.base);
     expect(byChain.get("arbitrum")).toEqual(PREFERRED_DOCK_TILES.arbitrum);
+    expect(byChain.get("optimism")).toEqual(PREFERRED_DOCK_TILES.optimism);
     expect(byChain.get("polygon")).toEqual(PREFERRED_DOCK_TILES.polygon);
-    expect(docks.find((dock) => dock.chainId === "ethereum")?.assetId).toBe("dock.grand-quay");
+    expect(byChain.get("mantle")).toEqual(PREFERRED_DOCK_TILES.mantle);
+    expect(docks.find((dock) => dock.chainId === "ethereum")?.assetId).toBe("dock.harbor-ring-quay");
     expect(docks.find((dock) => dock.chainId === "base")?.assetId).toBe("dock.rollup-ferry-slip");
     expect(docks.find((dock) => dock.chainId === "arbitrum")?.assetId).toBe("dock.bridge-pontoon");
+    expect(docks.find((dock) => dock.chainId === "optimism")?.assetId).toBe("dock.relay-pontoon");
     expect(docks.find((dock) => dock.chainId === "polygon")?.assetId).toBe("dock.market-marina");
+    expect(docks.find((dock) => dock.chainId === "mantle")?.assetId).toBe("dock.vault-quay");
     expect(docks.find((dock) => dock.chainId === "ethereum")?.logoSrc).toBe("/chains/ethereum.png");
     expect(docks.find((dock) => dock.chainId === "base")?.logoSrc).toBe("/chains/base.png");
     expect(docks.find((dock) => dock.chainId === "tron")?.logoSrc).toBeNull();
@@ -68,7 +74,7 @@ describe("buildChainDocks", () => {
     expect(byChain.get("solana")).toEqual(PREFERRED_DOCK_TILES.solana);
     expect(byChain.get("aptos")).toEqual(PREFERRED_DOCK_TILES.aptos);
 
-    for (const chainId of ["ethereum", "base", "arbitrum", "polygon"]) {
+    for (const chainId of ["ethereum", "base", "arbitrum", "optimism", "polygon", "mantle"]) {
       expect(EVM_BAY_DOCK_TILES).toContainEqual(byChain.get(chainId));
     }
     for (const chainId of ["bsc", "tron", "solana", "aptos"]) {
@@ -76,6 +82,47 @@ describe("buildChainDocks", () => {
       expect(OUTER_HARBOR_DOCK_TILES).toContainEqual(byChain.get(chainId));
     }
     expect(new Set(docks.map((dock) => `${dock.tile.x}.${dock.tile.y}`)).size).toBe(docks.length);
+  });
+
+  it("reserves key Ethereum L2 extension slips before lower-ranked outer harbors", () => {
+    const docks = buildChainDocks({
+      ...fixtureChains,
+      chains: [
+        makeChain({ id: "ethereum", totalUsd: 100 }),
+        makeChain({ id: "tron", totalUsd: 90 }),
+        makeChain({ id: "bsc", totalUsd: 80 }),
+        makeChain({ id: "solana", totalUsd: 70 }),
+        makeChain({ id: "hyperliquid", totalUsd: 60 }),
+        makeChain({ id: "base", totalUsd: 50 }),
+        makeChain({ id: "arbitrum", totalUsd: 40 }),
+        makeChain({ id: "polygon", totalUsd: 30 }),
+        makeChain({ id: "aptos", totalUsd: 20 }),
+        makeChain({ id: "avalanche", totalUsd: 19 }),
+        makeChain({ id: "xlayer", totalUsd: 18 }),
+        makeChain({ id: "mantle", totalUsd: 5 }),
+        makeChain({ id: "optimism", totalUsd: 4 }),
+      ],
+      globalTotalUsd: 586,
+    });
+
+    expect(docks).toHaveLength(10);
+    expect(docks.map((dock) => dock.chainId)).toEqual([
+      "ethereum",
+      "tron",
+      "bsc",
+      "solana",
+      "hyperliquid",
+      "base",
+      "arbitrum",
+      "polygon",
+      "mantle",
+      "optimism",
+    ]);
+    expect(docks.map((dock) => dock.chainId)).not.toContain("aptos");
+    expect(docks.map((dock) => dock.chainId)).not.toContain("avalanche");
+    expect(docks.map((dock) => dock.chainId)).not.toContain("xlayer");
+    expect(docks.find((dock) => dock.chainId === "optimism")?.tile).toEqual(PREFERRED_DOCK_TILES.optimism);
+    expect(docks.find((dock) => dock.chainId === "mantle")?.tile).toEqual(PREFERRED_DOCK_TILES.mantle);
   });
 
   it("keeps billion-dollar hubs large even when their global share is modest", () => {
@@ -127,6 +174,8 @@ describe("buildChainDocks", () => {
     ]);
     expect(docks.map((dock) => dock.tile)).toEqual(OUTER_HARBOR_DOCK_TILES.slice(0, 10));
     expect(docks.map((dock) => dock.assetId)).toEqual([
+      "dock.harbor-ring-quay",
+      "dock.compact-harbor-pier",
       "dock.grand-quay",
       "dock.container-wharf",
       "dock.twin-slip",
@@ -135,8 +184,6 @@ describe("buildChainDocks", () => {
       "dock.relay-pontoon",
       "dock.rollup-ferry-slip",
       "dock.vault-quay",
-      "dock.bridge-pontoon",
-      "dock.sentinel-breakwater",
     ]);
     expect(docks[0]?.harboredStablecoins.map((coin) => coin.symbol)).toEqual(["A0", "B0"]);
   });

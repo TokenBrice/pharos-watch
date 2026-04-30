@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "style": {
-    "cacheVersion": "2026-04-30-pharosville-ship-cemetery-overhaul-v1",
+    "cacheVersion": "2026-04-30-pharosville-island-harbor-recompose-v1",
     "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5",
     "anchor": "old-school 16-bit maritime isometric RPG pixel art, crisp pixel edges, low top-down view, deep navy and teal sea, pale limestone and terracotta island city, bronze and gold beacon light, restrained analytics palette, readable silhouettes, no text, no logos, no UI",
     "palette": ["#061721", "#0d5f70", "#15858c", "#f0ead2", "#b95437", "#ffcc62"],
@@ -15,6 +15,9 @@
   },
   "requiredForFirstRender": [
     "landmark.lighthouse",
+    "overlay.central-island",
+    "dock.harbor-ring-quay",
+    "dock.compact-harbor-pier",
     "dock.grand-quay",
     "dock.container-wharf",
     "dock.twin-slip",
@@ -175,6 +178,28 @@
       }
     },
     {
+      "id": "overlay.central-island",
+      "path": "overlays/central-island.png",
+      "category": "overlay",
+      "layer": "terrain",
+      "width": 400,
+      "height": 320,
+      "displayScale": 1,
+      "anchor": [200, 280],
+      "footprint": [260, 130],
+      "hitbox": [44, 54, 312, 250],
+      "loadPriority": "critical",
+      "criticalReason": "Generated island model overlay that unifies the central harbor-ring landmass.",
+      "promptKey": "overlay.central-island",
+      "semanticRole": "central island harbor-ring model",
+      "paletteKeys": ["limestone", "teal sea", "grass", "weathered wood"],
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "414ecb12-6d07-4379-bf83-e23e270cf0b5",
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
+      }
+    },
+    {
       "id": "dock.wooden-pier",
       "path": "docks/wooden-pier.png",
       "category": "dock",
@@ -193,6 +218,50 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "3af5f1a1-f579-43ed-850c-70dfa9051cac",
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
+      }
+    },
+    {
+      "id": "dock.harbor-ring-quay",
+      "path": "docks/harbor-ring-quay.png",
+      "category": "dock",
+      "layer": "docks",
+      "width": 224,
+      "height": 160,
+      "displayScale": 1,
+      "anchor": [112, 124],
+      "footprint": [112, 48],
+      "hitbox": [10, 16, 204, 124],
+      "loadPriority": "critical",
+      "criticalReason": "Primary generated harbor cove sprite for large island-ring chain harbors.",
+      "promptKey": "dock.harbor-ring-quay",
+      "semanticRole": "large island-ring harbor quay",
+      "paletteKeys": ["limestone", "teal sea", "bronze beacon"],
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "d4eda13d-bea3-4273-95bb-895c77369f9d",
+        "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
+      }
+    },
+    {
+      "id": "dock.compact-harbor-pier",
+      "path": "docks/compact-harbor-pier.png",
+      "category": "dock",
+      "layer": "docks",
+      "width": 168,
+      "height": 120,
+      "displayScale": 1,
+      "anchor": [84, 96],
+      "footprint": [76, 34],
+      "hitbox": [10, 16, 148, 88],
+      "loadPriority": "critical",
+      "criticalReason": "Generated compact harbor pier for distributed chain harbors.",
+      "promptKey": "dock.compact-harbor-pier",
+      "semanticRole": "compact island-ring harbor pier",
+      "paletteKeys": ["weathered wood", "teal sea", "bronze beacon"],
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "2b7b2115-4d3f-4483-8de6-f12188d4a466",
         "styleAnchorVersion": "2026-04-29-lighthouse-hill-v5"
       }
     },

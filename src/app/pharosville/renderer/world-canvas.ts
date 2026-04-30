@@ -4,6 +4,7 @@ import { TILE_HEIGHT, TILE_WIDTH, tileToScreen, type IsoCamera, type ScreenPoint
 import {
   CEMETERY_CENTER,
   CEMETERY_RADIUS,
+  ETHEREUM_L2_DOCK_CHAIN_IDS,
   isElevatedTileKind,
   isShoreTileKind,
   isWaterTileKind,
@@ -17,7 +18,7 @@ import {
   type WorldDrawable,
   type WorldDrawablePass,
 } from "./drawable-pass";
-import { dockOutwardVector, entityAssetId, resolveEntityGeometry, type WorldSelectableEntity } from "./geometry";
+import { dockDrawPoint, dockOutwardVector, entityAssetId, resolveEntityGeometry, type WorldSelectableEntity } from "./geometry";
 import { drawSelection } from "./layers/selection";
 import type { DrawPharosVilleInput, PharosVilleCanvasMotion, PharosVilleRenderMetrics } from "./render-types";
 import { CAUSE_HEX, type CauseOfDeath } from "@shared/lib/cause-of-death";
@@ -93,21 +94,21 @@ const LIGHTHOUSE_SPRITE_CROP = {
 } as const;
 
 const VILLAGE_LIGHTS = [
-  { x: 36.4, y: 24.6, size: 0.62 },
-  { x: 38.8, y: 25.4, size: 0.58 },
-  { x: 39.7, y: 23.4, size: 0.48 },
-  { x: 35.6, y: 27.3, size: 0.46 },
+  { x: 16.7, y: 29.4, size: 0.52 },
+  { x: 18.4, y: 27.9, size: 0.58 },
+  { x: 19.8, y: 29.0, size: 0.48 },
+  { x: 20.8, y: 30.8, size: 0.44 },
   { x: 30.1, y: 31.8, size: 0.54 },
   { x: 33.2, y: 30.1, size: 0.5 },
   { x: 37.2, y: 29.5, size: 0.52 },
 ] as const;
 
 const LIGHTHOUSE_SURF = [
-  { x: 33.8, y: 27.1, length: 36, phase: 0.1, tilt: -0.12 },
-  { x: 36.7, y: 28.9, length: 42, phase: 1.7, tilt: 0.02 },
-  { x: 40.5, y: 27.6, length: 34, phase: 2.6, tilt: 0.16 },
-  { x: 42.5, y: 24.2, length: 30, phase: 3.4, tilt: -0.22 },
-  { x: 41.2, y: 19.7, length: 26, phase: 4.1, tilt: 0.1 },
+  { x: 15.6, y: 28.8, length: 26, phase: 0.1, tilt: -0.14 },
+  { x: 16.7, y: 31.8, length: 34, phase: 1.7, tilt: 0.02 },
+  { x: 19.8, y: 33.1, length: 38, phase: 2.6, tilt: 0.16 },
+  { x: 22.4, y: 31.8, length: 30, phase: 3.4, tilt: -0.12 },
+  { x: 21.1, y: 25.4, length: 24, phase: 4.1, tilt: 0.1 },
 ] as const;
 
 const LIGHTHOUSE_REFLECTIONS = [
@@ -150,25 +151,28 @@ interface SceneryProp {
 }
 
 const SCENERY_PROPS: readonly SceneryProp[] = [
-  { id: "west-palm-1", kind: "palm", tile: { x: 20.5, y: 31.8 }, scale: 0.9 },
-  { id: "west-palm-2", kind: "palm", tile: { x: 20.4, y: 35.6 }, scale: 0.78 },
-  { id: "west-buoy-1", kind: "buoy", tile: { x: 15.1, y: 30.4 }, scale: 0.86 },
-  { id: "west-buoy-2", kind: "buoy", tile: { x: 13.3, y: 38.6 }, scale: 0.76 },
-  { id: "watch-reef-1", kind: "reef", tile: { x: 8.5, y: 9.3 }, scale: 0.84 },
-  { id: "watch-reef-2", kind: "reef", tile: { x: 21.4, y: 11.0 }, scale: 0.72 },
-  { id: "alert-beacon", kind: "beacon", tile: { x: 39.8, y: 11.8 }, scale: 0.92 },
-  { id: "warning-reef-1", kind: "reef", tile: { x: 51.7, y: 9.0 }, scale: 0.84 },
-  { id: "warning-reef-2", kind: "rock", tile: { x: 50.2, y: 13.7 }, scale: 0.72 },
-  { id: "danger-buoy-1", kind: "buoy", tile: { x: 51.4, y: 20.9 }, scale: 0.84 },
-  { id: "danger-buoy-2", kind: "signal-post", tile: { x: 54.2, y: 23.0 }, scale: 0.86 },
-  { id: "east-lamp", kind: "harbor-lamp", tile: { x: 48.4, y: 30.5 }, scale: 0.88 },
-  { id: "east-crates", kind: "crate-stack", tile: { x: 47.4, y: 33.5 }, scale: 0.82 },
-  { id: "east-seawall", kind: "sea-wall", tile: { x: 49.2, y: 32.5 }, scale: 1.0 },
-  { id: "civic-bollards", kind: "bollards", tile: { x: 36.0, y: 30.6 }, scale: 0.9 },
-  { id: "cemetery-lamp", kind: "harbor-lamp", tile: { x: 24.8, y: 35.8 }, scale: 0.74 },
-  { id: "cemetery-rock", kind: "rock", tile: { x: 29.4, y: 36.9 }, scale: 0.68 },
-  { id: "lighthouse-wall", kind: "sea-wall", tile: { x: 43.6, y: 24.7 }, scale: 0.88 },
-  { id: "lighthouse-lamp", kind: "harbor-lamp", tile: { x: 38.6, y: 24.0 }, scale: 0.82 },
+  { id: "north-buoy", kind: "buoy", tile: { x: 31.2, y: 16.8 }, scale: 0.78 },
+  { id: "north-signal", kind: "signal-post", tile: { x: 36.8, y: 18.7 }, scale: 0.72 },
+  { id: "watch-reef-1", kind: "reef", tile: { x: 4.5, y: 23.6 }, scale: 0.84 },
+  { id: "watch-reef-2", kind: "reef", tile: { x: 10.4, y: 40.6 }, scale: 0.74 },
+  { id: "watch-buoy", kind: "buoy", tile: { x: 13.8, y: 31.8 }, scale: 0.76 },
+  { id: "west-lamp", kind: "harbor-lamp", tile: { x: 18.7, y: 31.5 }, scale: 0.78 },
+  { id: "west-seawall", kind: "sea-wall", tile: { x: 18.5, y: 34.4 }, scale: 0.82 },
+  { id: "south-skiff", kind: "skiff", tile: { x: 31.4, y: 45.7 }, scale: 0.82 },
+  { id: "south-bollards", kind: "bollards", tile: { x: 35.6, y: 42.4 }, scale: 0.82 },
+  { id: "east-lamp", kind: "harbor-lamp", tile: { x: 45.8, y: 31.6 }, scale: 0.88 },
+  { id: "east-crates", kind: "crate-stack", tile: { x: 44.6, y: 34.8 }, scale: 0.82 },
+  { id: "east-seawall", kind: "sea-wall", tile: { x: 45.7, y: 33.2 }, scale: 0.92 },
+  { id: "alert-beacon", kind: "beacon", tile: { x: 39.8, y: 50.4 }, scale: 0.9 },
+  { id: "warning-reef-1", kind: "reef", tile: { x: 48.4, y: 48.4 }, scale: 0.82 },
+  { id: "warning-reef-2", kind: "rock", tile: { x: 50.2, y: 50.2 }, scale: 0.68 },
+  { id: "danger-buoy-1", kind: "buoy", tile: { x: 54.0, y: 38.6 }, scale: 0.84 },
+  { id: "danger-buoy-2", kind: "signal-post", tile: { x: 55.0, y: 44.0 }, scale: 0.82 },
+  { id: "civic-bollards", kind: "bollards", tile: { x: 31.2, y: 31.5 }, scale: 0.86 },
+  { id: "cemetery-lamp", kind: "harbor-lamp", tile: { x: 8.4, y: 47.0 }, scale: 0.72 },
+  { id: "cemetery-rock", kind: "rock", tile: { x: 12.2, y: 51.4 }, scale: 0.66 },
+  { id: "lighthouse-wall", kind: "sea-wall", tile: { x: 20.6, y: 30.1 }, scale: 0.74 },
+  { id: "lighthouse-lamp", kind: "harbor-lamp", tile: { x: 17.2, y: 29.0 }, scale: 0.7 },
 ] as const;
 
 const SKY_MOODS = {
@@ -312,6 +316,25 @@ const CEMETERY_GLOBAL_SCALE = 0.6;
 const CEMETERY_CONTEXT_SCALE = 0.82 * CEMETERY_GLOBAL_SCALE;
 const CEMETERY_CONTEXT_SOURCE_CENTER = { x: 22.15, y: 41.7 } as const;
 
+const ETHEREUM_HARBOR_SIGNS = [
+  {
+    accent: "#d9b974",
+    chainIds: ["ethereum"],
+    label: "Ethereum Harbor",
+    maxWidth: 136,
+    rotation: -0.035,
+    tile: { x: 41.4, y: 28.6 },
+  },
+  {
+    accent: "#88ccc1",
+    chainIds: ETHEREUM_L2_DOCK_CHAIN_IDS,
+    label: "L2 Bay",
+    maxWidth: 76,
+    rotation: 0.035,
+    tile: { x: 35.9, y: 34.8 },
+  },
+] as const;
+
 const CEMETERY_SURFACE = {
   grass: "rgba(90, 126, 72, 0.72)",
   grassEdge: "rgba(64, 96, 63, 0.56)",
@@ -326,6 +349,9 @@ const CEMETERY_SURFACE = {
   quayFoam: "rgba(194, 231, 222, 0.42)",
 } as const;
 
+const CENTRAL_ISLAND_MODEL_TILE = { x: 31.5, y: 41.3 } as const;
+const CENTRAL_ISLAND_MODEL_SCALE = 1.45;
+
 export type { DrawPharosVilleInput, PharosVilleCanvasMotion, PharosVilleRenderMetrics } from "./render-types";
 
 export function drawPharosVille(input: DrawPharosVilleInput): PharosVilleRenderMetrics {
@@ -335,7 +361,9 @@ export function drawPharosVille(input: DrawPharosVilleInput): PharosVilleRenderM
 
   const visibleTileCount = drawTerrain(input);
   drawAtmosphere(input);
+  drawCentralIslandModel(input);
   drawHarborDistrictGround(input);
+  drawEthereumHarborExtensions(input);
   if (!input.world.lighthouse.unavailable) drawLighthouseSeaGlow(input);
   drawLighthouseSurf(input);
   drawCemeteryGround(input);
@@ -343,6 +371,7 @@ export function drawPharosVille(input: DrawPharosVilleInput): PharosVilleRenderM
   drawCemeteryContext(input);
   const entityMetrics = drawEntityPass(input);
   drawWaterAreaLabels(input);
+  drawEthereumHarborSigns(input);
   drawDecorativeLights(input);
   drawCemeteryMist(input);
   drawBirds(input);
@@ -358,6 +387,22 @@ export function drawPharosVille(input: DrawPharosVilleInput): PharosVilleRenderM
       .filter((sample) => sample.state !== "idle" && sample.state !== "risk-drift" && sample.state !== "moored").length,
     visibleTileCount,
   };
+}
+
+function drawCentralIslandModel({ assets, camera, ctx }: DrawPharosVilleInput) {
+  const islandAsset = assets?.get("overlay.central-island") ?? null;
+  if (!islandAsset) return;
+  const point = tileToScreen(CENTRAL_ISLAND_MODEL_TILE, camera);
+  ctx.save();
+  ctx.globalAlpha = 0.88;
+  drawAsset(
+    ctx,
+    islandAsset,
+    point.x,
+    point.y + 10 * camera.zoom,
+    camera.zoom * CENTRAL_ISLAND_MODEL_SCALE,
+  );
+  ctx.restore();
 }
 
 function drawEntityPass(input: DrawPharosVilleInput): Pick<PharosVilleRenderMetrics, "drawableCount" | "drawableCounts"> {
@@ -1256,13 +1301,141 @@ function drawAtmosphere({ camera, ctx, motion, world }: DrawPharosVilleInput) {
 
 function drawHarborDistrictGround({ camera, ctx }: DrawPharosVilleInput) {
   ctx.save();
-  drawDistrictPad(ctx, camera, { x: 47.8, y: 31.6 }, 88, 36, "rgba(66, 62, 53, 0.48)", "rgba(204, 177, 116, 0.3)");
+  drawDistrictPad(ctx, camera, { x: 31.2, y: 22.6 }, 118, 38, "rgba(66, 62, 53, 0.38)", "rgba(204, 177, 116, 0.24)");
+  drawDistrictPad(ctx, camera, { x: 20.4, y: 33.5 }, 92, 44, "rgba(66, 62, 53, 0.42)", "rgba(204, 177, 116, 0.26)");
+  drawDistrictPad(ctx, camera, { x: 33.0, y: 41.6 }, 128, 42, "rgba(66, 62, 53, 0.46)", "rgba(204, 177, 116, 0.28)");
+  drawDistrictPad(ctx, camera, { x: 44.6, y: 31.8 }, 98, 42, "rgba(66, 62, 53, 0.5)", "rgba(204, 177, 116, 0.3)");
 
   drawSeawallRun(ctx, camera, [
-    { x: 47.0, y: 34.9 },
-    { x: 49.2, y: 32.0 },
-    { x: 48.4, y: 29.4 },
+    { x: 23.0, y: 24.3 },
+    { x: 29.4, y: 20.1 },
+    { x: 36.3, y: 20.0 },
+    { x: 43.0, y: 25.5 },
   ]);
+  drawSeawallRun(ctx, camera, [
+    { x: 45.0, y: 30.0 },
+    { x: 44.5, y: 35.2 },
+    { x: 39.2, y: 41.0 },
+    { x: 31.5, y: 44.4 },
+  ]);
+  drawSeawallRun(ctx, camera, [
+    { x: 28.5, y: 44.0 },
+    { x: 22.0, y: 38.8 },
+    { x: 18.5, y: 33.4 },
+    { x: 20.0, y: 27.3 },
+  ]);
+  ctx.restore();
+}
+
+function drawEthereumHarborExtensions({ camera, ctx, motion, world }: DrawPharosVilleInput) {
+  const ethereumDock = world.docks.find((dock) => dock.chainId === "ethereum") ?? null;
+  if (!ethereumDock) return;
+
+  const extensionDocks = ETHEREUM_L2_DOCK_CHAIN_IDS
+    .map((chainId) => world.docks.find((dock) => dock.chainId === chainId) ?? null)
+    .filter((dock): dock is PharosVilleWorld["docks"][number] => dock != null);
+  if (extensionDocks.length === 0) return;
+
+  const time = motion.reducedMotion ? 0 : motion.timeSeconds;
+  const anchor = dockDrawPoint(ethereumDock, camera, world.map.width);
+  ctx.save();
+  drawDistrictPad(ctx, camera, { x: 41.8, y: 34.8 }, 118, 36, "rgba(54, 49, 44, 0.38)", "rgba(204, 177, 116, 0.2)");
+  for (const [index, dock] of extensionDocks.entries()) {
+    const point = dockDrawPoint(dock, camera, world.map.width);
+    drawRollupExtensionCauseway(ctx, anchor, point, camera.zoom, index, extensionDocks.length, time);
+    drawRollupExtensionSlip(ctx, point, camera.zoom, dock.size, index, time);
+  }
+  drawRollupHubMark(ctx, anchor, camera.zoom, extensionDocks.length, time);
+  ctx.restore();
+}
+
+function drawRollupExtensionCauseway(
+  ctx: CanvasRenderingContext2D,
+  from: ScreenPoint,
+  to: ScreenPoint,
+  zoom: number,
+  index: number,
+  total: number,
+  time: number,
+) {
+  const side = index - (total - 1) / 2;
+  const bend = Math.max(-26, Math.min(26, side * 9)) * zoom;
+  const midX = (from.x + to.x) / 2 + bend;
+  const midY = (from.y + to.y) / 2 - (12 + Math.abs(side) * 2.5) * zoom;
+  const pulse = 0.22 + Math.sin(time * 0.85 + index * 0.7) * 0.04;
+
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "rgba(5, 8, 10, 0.34)";
+  ctx.lineWidth = Math.max(2.2, 5.2 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y + 1.5 * zoom);
+  ctx.quadraticCurveTo(midX, midY + 3 * zoom, to.x, to.y + 1.5 * zoom);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(176, 153, 104, 0.72)";
+  ctx.lineWidth = Math.max(1.4, 2.6 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y - 1 * zoom);
+  ctx.quadraticCurveTo(midX, midY, to.x, to.y - 1 * zoom);
+  ctx.stroke();
+
+  ctx.strokeStyle = `rgba(128, 214, 206, ${pulse})`;
+  ctx.lineWidth = Math.max(1, 1.1 * zoom);
+  ctx.setLineDash([4 * zoom, 5 * zoom]);
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y - 3 * zoom);
+  ctx.quadraticCurveTo(midX, midY - 2 * zoom, to.x, to.y - 3 * zoom);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawRollupExtensionSlip(
+  ctx: CanvasRenderingContext2D,
+  point: ScreenPoint,
+  zoom: number,
+  dockSize: number,
+  index: number,
+  time: number,
+) {
+  const scale = Math.max(0.72, zoom);
+  const width = (34 + dockSize * 0.8) * scale;
+  const height = (12 + dockSize * 0.28) * scale;
+  const shimmer = 0.2 + Math.sin(time * 0.72 + index) * 0.035;
+  ctx.save();
+  drawDiamond(ctx, point.x, point.y + 12 * scale, width * 1.35, height * 1.45, "rgba(5, 8, 10, 0.26)");
+  drawDiamond(ctx, point.x, point.y + 9 * scale, width, height, "rgba(73, 67, 55, 0.54)");
+  drawDiamond(ctx, point.x, point.y + 6 * scale, width * 0.68, height * 0.58, "rgba(211, 184, 126, 0.28)");
+  ctx.strokeStyle = `rgba(128, 214, 206, ${shimmer})`;
+  ctx.lineWidth = Math.max(1, 0.9 * scale);
+  ctx.beginPath();
+  ctx.moveTo(point.x - width * 0.3, point.y + 8 * scale);
+  ctx.lineTo(point.x - width * 0.04, point.y + 10.5 * scale);
+  ctx.moveTo(point.x + width * 0.08, point.y + 10.5 * scale);
+  ctx.lineTo(point.x + width * 0.32, point.y + 8 * scale);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawRollupHubMark(
+  ctx: CanvasRenderingContext2D,
+  point: ScreenPoint,
+  zoom: number,
+  extensionCount: number,
+  time: number,
+) {
+  const scale = Math.max(0.72, zoom);
+  const pulse = 0.24 + Math.sin(time * 0.64) * 0.035;
+  ctx.save();
+  ctx.globalAlpha = extensionCount > 0 ? 1 : 0.5;
+  ctx.strokeStyle = `rgba(128, 214, 206, ${pulse})`;
+  ctx.lineWidth = Math.max(1, 1.2 * scale);
+  ctx.beginPath();
+  ctx.ellipse(point.x, point.y + 4 * scale, 26 * scale, 8 * scale, -0.08, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255, 224, 160, 0.24)";
+  drawDiamond(ctx, point.x, point.y + 4 * scale, 14 * scale, 6 * scale, ctx.fillStyle);
   ctx.restore();
 }
 
@@ -1378,14 +1551,14 @@ function drawLighthouseHeadland({ camera, ctx, world }: DrawPharosVilleInput) {
 
   ctx.fillStyle = LIGHTHOUSE_HEADLAND.halo;
   ctx.beginPath();
-  ctx.ellipse(center.x - 4 * zoom, center.y + 16 * zoom, 128 * zoom, 46 * zoom, -0.08, 0, Math.PI * 2);
+  ctx.ellipse(center.x - 2 * zoom, center.y + 10 * zoom, 70 * zoom, 24 * zoom, -0.08, 0, Math.PI * 2);
   ctx.fill();
 
-  drawDiamond(ctx, center.x - 4 * zoom, center.y + 34 * zoom, 178 * zoom, 82 * zoom, LIGHTHOUSE_HEADLAND.shadow);
-  drawDiamond(ctx, center.x - 4 * zoom, center.y + 23 * zoom, 158 * zoom, 72 * zoom, LIGHTHOUSE_HEADLAND.cliff);
-  drawTileLowerFacet(ctx, center.x - 4 * zoom, center.y + 23 * zoom, 158 * zoom, 72 * zoom, "rgba(25, 29, 27, 0.64)");
-  drawDiamond(ctx, center.x - 5 * zoom, center.y + 8 * zoom, 132 * zoom, 58 * zoom, crownColor);
-  drawDiamond(ctx, center.x, center.y - 6 * zoom, 86 * zoom, 36 * zoom, LIGHTHOUSE_HEADLAND.stone);
+  drawDiamond(ctx, center.x - 2 * zoom, center.y + 19 * zoom, 88 * zoom, 38 * zoom, LIGHTHOUSE_HEADLAND.shadow);
+  drawDiamond(ctx, center.x - 2 * zoom, center.y + 11 * zoom, 74 * zoom, 30 * zoom, LIGHTHOUSE_HEADLAND.cliff);
+  drawTileLowerFacet(ctx, center.x - 2 * zoom, center.y + 11 * zoom, 74 * zoom, 30 * zoom, "rgba(25, 29, 27, 0.54)");
+  drawDiamond(ctx, center.x - 1 * zoom, center.y + 1 * zoom, 58 * zoom, 22 * zoom, crownColor);
+  drawDiamond(ctx, center.x, center.y - 5 * zoom, 42 * zoom, 16 * zoom, LIGHTHOUSE_HEADLAND.stone);
 
   for (const accent of HEADLAND_TERRAIN_ACCENTS) {
     const accentPoint = tileToScreen({
@@ -2093,6 +2266,25 @@ function drawWaterAreaLabels({ camera, ctx, world }: DrawPharosVilleInput) {
       label: area.label,
       maxWidth: placement.maxWidth,
       rotation: placement.rotation,
+      x: p.x,
+      y: p.y,
+      zoom: camera.zoom,
+    });
+  }
+}
+
+function drawEthereumHarborSigns({ camera, ctx, world }: DrawPharosVilleInput) {
+  const renderedChainIds = new Set(world.docks.map((dock) => dock.chainId));
+  for (const sign of ETHEREUM_HARBOR_SIGNS) {
+    if (!sign.chainIds.some((chainId) => renderedChainIds.has(chainId))) continue;
+    const p = tileToScreen(sign.tile, camera);
+    drawCartographicWaterLabel({
+      accent: sign.accent,
+      align: "center",
+      ctx,
+      label: sign.label,
+      maxWidth: sign.maxWidth,
+      rotation: sign.rotation,
       x: p.x,
       y: p.y,
       zoom: camera.zoom,

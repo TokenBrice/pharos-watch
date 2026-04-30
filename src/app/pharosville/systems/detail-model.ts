@@ -1,5 +1,6 @@
 import { CHAIN_META } from "@shared/lib/chains";
 import type { AreaNode, DetailModel, DockNode, GraveNode, LighthouseNode, ShipClusterNode, ShipNode } from "./world-types";
+import { ETHEREUM_L2_DOCK_CHAIN_IDS } from "./world-layout";
 
 const usd = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0, style: "currency", currency: "USD" });
 const percent = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1, style: "percent" });
@@ -14,6 +15,14 @@ function pluralize(count: number, singular: string, plural: string = `${singular
 
 function chainLabel(chainId: string): string {
   return CHAIN_META[chainId]?.name ?? chainId;
+}
+
+const ETHEREUM_L2_DOCK_CHAIN_ID_SET = new Set<string>(ETHEREUM_L2_DOCK_CHAIN_IDS);
+
+function dockHarborGroupLabel(node: DockNode): string {
+  if (node.chainId === "ethereum") return "Ethereum anchor harbor";
+  if (ETHEREUM_L2_DOCK_CHAIN_ID_SET.has(node.chainId)) return "Ethereum L2 extension";
+  return "Outer chain harbor";
 }
 
 function chainsPresentLabel(node: ShipNode): string {
@@ -68,17 +77,19 @@ export function detailForLighthouse(node: LighthouseNode): DetailModel {
 
 export function detailForDock(node: DockNode): DetailModel {
   const topSymbols = node.harboredStablecoins.map((coin) => coin.symbol).join(", ");
+  const harborGroup = dockHarborGroupLabel(node);
   return {
     id: node.detailId,
     kind: node.kind,
     title: node.label,
     summary: topSymbols
-      ? `Harbor for ${topSymbols}; footprint is based on chain stablecoin supply.`
-      : "Dock footprint is based on chain stablecoin supply.",
+      ? `${harborGroup} for ${topSymbols}; footprint is based on chain stablecoin supply.`
+      : `${harborGroup}; footprint is based on chain stablecoin supply.`,
     facts: [
       { label: "Stablecoin supply", value: usd.format(node.totalUsd) },
       { label: "Stablecoin count", value: String(node.stablecoinCount) },
       { label: "Health", value: node.healthBand ?? "Unavailable" },
+      { label: "Harbor group", value: harborGroup },
       { label: "Harbor style", value: node.assetId.replace("dock.", "").replaceAll("-", " ") },
     ],
     links: [{ label: "Chain", href: `/chains/${node.chainId}/` }],

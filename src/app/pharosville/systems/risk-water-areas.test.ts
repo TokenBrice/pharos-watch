@@ -23,10 +23,9 @@ import {
   isWaterTileKind,
   terrainKindAt,
 } from "./world-layout";
-import type { DewsAreaBand } from "./world-types";
+import type { DewsAreaBand, ShipRiskPlacement } from "./world-types";
 
-const WEST_TO_EAST_DEWS_BANDS: DewsAreaBand[] = ["CALM", "WATCH", "ALERT", "WARNING", "DANGER"];
-const LIGHTHOUSE_CLEARANCE = { minX: 30, maxX: 45, minY: 26, maxY: 34 } as const;
+const LIGHTHOUSE_CLEARANCE = { minX: 14, maxX: 24, minY: 23, maxY: 32 } as const;
 
 describe("risk water areas", () => {
   it("defines one source of truth for every ship risk placement", () => {
@@ -72,10 +71,10 @@ describe("risk water areas", () => {
     }
   });
 
-  it("arranges DEWS sea zones with concentric DANGER/WARNING/ALERT centered on the east corner", () => {
+  it("arranges DEWS sea zones around the authored island composition", () => {
     const lighthouseIso = tileToIso(LIGHTHOUSE_TILE);
     const isoByBand = new Map<DewsAreaBand, { x: number; y: number }>();
-    for (const band of WEST_TO_EAST_DEWS_BANDS) {
+    for (const band of DEWS_AREA_BANDS) {
       const area = RISK_WATER_AREAS[DEWS_AREA_PLACEMENTS[band]];
       isoByBand.set(band, tileToIso(area.labelTile));
     }
@@ -85,27 +84,32 @@ describe("risk water areas", () => {
     const warning = isoByBand.get("WARNING")!;
     const danger = isoByBand.get("DANGER")!;
 
-    expect(watch.x).toBeGreaterThan(calm.x);
-    expect(alert.x).toBeGreaterThan(watch.x);
+    expect(calm.x).toBeLessThan(alert.x);
+    expect(watch.y).toBeLessThan(calm.y);
+    expect(watch.y).toBeLessThan(alert.y);
     expect(warning.x).toBeGreaterThan(alert.x);
     expect(danger.x).toBeGreaterThan(warning.x);
-    expect(warning.x).toBeGreaterThanOrEqual(lighthouseIso.x + 96);
+    expect(alert.x).toBeGreaterThan(lighthouseIso.x + 500);
+    expect(warning.x).toBeGreaterThan(alert.x);
+    expect(danger.x).toBeGreaterThan(warning.x);
+    expect(danger.y).toBeLessThan(warning.y);
+    expect(warning.y).toBeLessThan(alert.y);
   });
 
   it("keeps Ledger Mooring as the only bottom sea exception zone", () => {
     const ledger = RISK_WATER_AREAS["ledger-mooring"];
 
-    expect(ledger.regionTile).toEqual({ x: 47, y: 50 });
-    expect(ledger.labelTile).toEqual({ x: 47, y: 50 });
+    expect(ledger.regionTile).toEqual({ x: 29, y: 52 });
+    expect(ledger.labelTile).toEqual({ x: 29, y: 52 });
     expect(ledger.terrain).toBe("ledger-water");
     expect(ledger.validTerrains).toEqual(["ledger-water"]);
     expect(minDistance([ledger.regionTile, ...ledger.shipAnchors], DOCK_TILES)).toBeGreaterThanOrEqual(5);
     expect(ledger.shipAnchors.some((anchor) => anchor.y === PHAROSVILLE_MAP_HEIGHT - 1)).toBe(true);
-    // South-corner reach: at least one anchor sits in the diamond's south-east apex region.
-    expect(ledger.shipAnchors.some((anchor) => anchor.x + anchor.y >= 105)).toBe(true);
+    // Bottom-edge reach without occupying the lower-right danger basin.
+    expect(ledger.shipAnchors.every((anchor) => anchor.x < 44)).toBe(true);
   });
 
-  it("keeps named risk water out of the lighthouse west/south clearance lane", () => {
+  it("keeps named risk water out of the lighthouse mountain clearance lane", () => {
     for (const area of Object.values(RISK_WATER_AREAS)) {
       for (const tile of [area.regionTile, area.labelTile, ...area.shipAnchors]) {
         expect(isInLighthouseClearance(tile), `${area.placement} ${tile.x}.${tile.y}`).toBe(false);
@@ -125,11 +129,11 @@ describe("risk water areas", () => {
 
   it("matches the authored DEWS placement diagram", () => {
     const expectedSamples = [
-      { band: "CALM", tile: { x: 8, y: 32 }, terrain: "calm-water" },
-      { band: "WATCH", tile: { x: 14, y: 6 }, terrain: "watch-water" },
-      { band: "ALERT", tile: { x: 43, y: 8 }, terrain: "alert-water" },
-      { band: "WARNING", tile: { x: 48, y: 4 }, terrain: "warning-water" },
-      { band: "DANGER", tile: { x: 53, y: 3 }, terrain: "storm-water" },
+      { band: "CALM", tile: { x: 6, y: 30 }, terrain: "calm-water" },
+      { band: "WATCH", tile: { x: 28, y: 5 }, terrain: "watch-water" },
+      { band: "ALERT", tile: { x: 49, y: 22 }, terrain: "alert-water" },
+      { band: "WARNING", tile: { x: 48, y: 14 }, terrain: "warning-water" },
+      { band: "DANGER", tile: { x: 54, y: 8 }, terrain: "storm-water" },
     ] as const;
 
     for (const sample of expectedSamples) {
@@ -138,33 +142,40 @@ describe("risk water areas", () => {
       expect(terrainKindAt(sample.tile.x, sample.tile.y)).toBe(sample.terrain);
     }
 
-    // CALM / WATCH retain west / north placement.
-    expect(terrainKindAt(0, 32)).toBe("calm-water");
+    // CALM occupies the left edge, WATCH owns the top breakwater,
+    // and ALERT/WARNING/DANGER snap to the eastern corner.
+    expect(terrainKindAt(0, 27)).toBe("calm-water");
+    expect(terrainKindAt(14, 42)).toBe("calm-water");
     expect(terrainKindAt(14, 0)).toBe("watch-water");
-    // Concentric arcs at the east corner (55, 0): DANGER innermost, WARNING ring, ALERT outer ring.
-    expect(terrainKindAt(55, 0)).toBe("storm-water");
-    expect(terrainKindAt(55, 5)).toBe("storm-water");
-    expect(terrainKindAt(55, 7)).toBe("warning-water");
-    expect(terrainKindAt(55, 10)).toBe("warning-water");
-    expect(terrainKindAt(55, 14)).toBe("alert-water");
-    expect(terrainKindAt(55, 17)).toBe("alert-water");
-    // Beyond ALERT outer arc on the east edge falls to deep-water decoration.
-    expect(terrainKindAt(55, 20)).toBe("deep-water");
-    // North edge transitions WATCH → ALERT once inside the outer arc.
-    expect(terrainKindAt(36, 0)).toBe("watch-water");
-    expect(terrainKindAt(40, 0)).toBe("alert-water");
+    expect(terrainKindAt(34, 0)).toBe("watch-water");
+    expect(terrainKindAt(55, 0)).toBe("alert-water");
+    expect(terrainKindAt(50, 17)).toBe("warning-water");
+    expect(terrainKindAt(55, 10)).toBe("storm-water");
+    expect(terrainKindAt(54, 8)).toBe("storm-water");
     expect(RISK_WATER_AREAS["ledger-mooring"].regionTile.y).toBeGreaterThan(45);
   });
 
-  it("keeps every named sea zone attached to the map edge and in the same water component", () => {
+  it("keeps every named sea zone in the same water component with edge-snapped ship anchors where required", () => {
     const component = connectedWaterTileKeys(RISK_WATER_AREAS[DEWS_AREA_PLACEMENTS.CALM].labelTile);
+    const edgeSnappedPlacements = new Set<ShipRiskPlacement>([
+      "safe-harbor",
+      "breakwater-edge",
+      "harbor-mouth-watch",
+      "outer-rough-water",
+      "storm-shelf",
+      "ledger-mooring",
+    ]);
 
     for (const area of Object.values(RISK_WATER_AREAS)) {
       const authoredTiles = [area.regionTile, area.labelTile, ...area.shipAnchors];
 
       expect(component.has(tileKey(area.labelTile))).toBe(true);
       expect(component.has(tileKey(area.regionTile))).toBe(true);
-      expect(authoredTiles.some((tile) => isEdgeAdjacent(tile)), area.placement).toBe(true);
+      if (edgeSnappedPlacements.has(area.placement)) {
+        expect(authoredTiles.some((tile) => isExactEdgeTile(tile)), area.placement).toBe(true);
+      } else {
+        expect(authoredTiles.every((tile) => !isExactEdgeTile(tile)), area.placement).toBe(true);
+      }
     }
   });
 
@@ -193,11 +204,11 @@ describe("risk water areas", () => {
     }
   });
 
-  it("anchors each DEWS zone to exactly one map edge", () => {
-    const expectedEdge: Record<DewsAreaBand, "x0" | "x55" | "y0" | "y55"> = {
+  it("anchors edge-snapped DEWS zones to their authored map edges", () => {
+    const expectedEdge: Partial<Record<DewsAreaBand, "x0" | "x55" | "y0" | "y55">> = {
       CALM: "x0",
       WATCH: "y0",
-      ALERT: "y0",
+      ALERT: "x55",
       WARNING: "x55",
       DANGER: "x55",
     };
@@ -206,6 +217,10 @@ describe("risk water areas", () => {
     for (const band of DEWS_AREA_BANDS) {
       const area = RISK_WATER_AREAS[DEWS_AREA_PLACEMENTS[band]];
       const edge = expectedEdge[band];
+      if (!edge) {
+        expect([area.regionTile, area.labelTile, ...area.shipAnchors].every((tile) => !isExactEdgeTile(tile)), band).toBe(true);
+        continue;
+      }
       const onEdge = (tile: { x: number; y: number }): boolean => {
         if (edge === "x0") return tile.x === 0;
         if (edge === "x55") return tile.x === MAX;
@@ -218,8 +233,8 @@ describe("risk water areas", () => {
   });
 
   it("keeps the direct island periphery out of every zone", () => {
-    // Tiles within ~5 cheb of staircase land segments — should fall back to
-    // generic water rather than any DEWS zone.
+    // Tiles inside the generated island periphery should be land or generic
+    // water, not DEWS-colored zone water.
     const peripherySamples = [
       { x: 32, y: 27 }, // adjacent to bridge step
       { x: 27, y: 35 }, // south of green step
@@ -236,9 +251,10 @@ describe("risk water areas", () => {
 
   it("clears the immediate periphery around the lighthouse sprite", () => {
     const lighthouseClearanceSamples = [
-      { x: 36, y: 20 },
-      { x: 38, y: 17 },
-      { x: 41, y: 21 },
+      { x: 14, y: 24 },
+      { x: 14, y: 30 },
+      { x: 16, y: 32 },
+      { x: 13, y: 31 },
     ];
     for (const tile of lighthouseClearanceSamples) {
       const terrain = terrainKindAt(tile.x, tile.y);
@@ -262,7 +278,7 @@ describe("risk water areas", () => {
     expect(counts["warning-water"] ?? 0).toBeGreaterThanOrEqual(30);
     expect(counts["warning-water"] ?? 0).toBeLessThanOrEqual(125);
     expect(counts["storm-water"] ?? 0).toBeGreaterThanOrEqual(30);
-    expect(counts["storm-water"] ?? 0).toBeLessThanOrEqual(80);
+    expect(counts["storm-water"] ?? 0).toBeLessThanOrEqual(100);
   });
 });
 
@@ -298,11 +314,11 @@ function isInLighthouseClearance(tile: { x: number; y: number }): boolean {
     && tile.y <= LIGHTHOUSE_CLEARANCE.maxY;
 }
 
-function isEdgeAdjacent(tile: { x: number; y: number }): boolean {
-  return tile.x <= 1
-    || tile.y <= 1
-    || tile.x >= PHAROSVILLE_MAP_WIDTH - 2
-    || tile.y >= PHAROSVILLE_MAP_HEIGHT - 2;
+function isExactEdgeTile(tile: { x: number; y: number }): boolean {
+  return tile.x === 0
+    || tile.y === 0
+    || tile.x === PHAROSVILLE_MAP_WIDTH - 1
+    || tile.y === PHAROSVILLE_MAP_HEIGHT - 1;
 }
 
 function tileKey(tile: { x: number; y: number }): string {

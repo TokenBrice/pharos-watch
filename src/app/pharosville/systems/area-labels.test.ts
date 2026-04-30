@@ -5,30 +5,30 @@ import { DEWS_AREA_PLACEMENTS, RISK_WATER_AREAS } from "./risk-water-areas";
 import { LIGHTHOUSE_TILE, terrainKindAt } from "./world-layout";
 import type { AreaNode, DewsAreaBand, ShipRiskPlacement, TerrainKind } from "./world-types";
 
-const WEST_TO_EAST_DEWS_BANDS: DewsAreaBand[] = ["CALM", "WATCH", "ALERT", "WARNING", "DANGER"];
 const NON_DEWS_RISK_PLACEMENTS = ["ledger-mooring"] as const satisfies readonly ShipRiskPlacement[];
 
 describe("areaLabelPlacementForArea", () => {
-  it("keeps rendered DEWS labels ordered left-to-right around the lighthouse", () => {
-    let previousIso: { x: number; y: number } | null = null;
+  it("keeps rendered DEWS labels in the authored map zones around the lighthouse", () => {
     const isoByBand = new Map<DewsAreaBand, { x: number; y: number }>();
     const lighthouseIso = tileToIso(LIGHTHOUSE_TILE);
 
-    for (const band of WEST_TO_EAST_DEWS_BANDS) {
+    for (const band of ["CALM", "WATCH", "ALERT", "WARNING", "DANGER"] as const satisfies readonly DewsAreaBand[]) {
       const area = dewsAreaNode(band);
       const anchor = areaLabelPlacementForArea(area).anchorTile;
       const iso = tileToIso(anchor);
       isoByBand.set(band, iso);
-
-      if (previousIso) {
-        expect(iso.x).toBeGreaterThan(previousIso.x);
-      }
-      previousIso = iso;
     }
-    // Concentric layout: ALERT outer ring sits north-east of the lighthouse, with
-    // WARNING and DANGER pulled progressively toward the east corner.
-    expect(isoByBand.get("ALERT")!.y).toBeLessThan(lighthouseIso.y);
-    expect(isoByBand.get("DANGER")!.x).toBeGreaterThan(isoByBand.get("WARNING")!.x);
+
+    expect(isoByBand.get("CALM")!.x).toBeLessThan(isoByBand.get("ALERT")!.x);
+    expect(isoByBand.get("WATCH")!.y).toBeLessThan(isoByBand.get("CALM")!.y);
+    expect(isoByBand.get("WATCH")!.y).toBeLessThan(isoByBand.get("ALERT")!.y);
+    expect(isoByBand.get("ALERT")!.x).toBeGreaterThan(lighthouseIso.x + 500);
+    expect(isoByBand.get("WARNING")!.x).toBeGreaterThan(lighthouseIso.x + 500);
+    expect(isoByBand.get("DANGER")!.x).toBeGreaterThan(lighthouseIso.x + 500);
+    expect(isoByBand.get("ALERT")!.x).toBeLessThan(isoByBand.get("WARNING")!.x);
+    expect(isoByBand.get("WARNING")!.x).toBeLessThan(isoByBand.get("DANGER")!.x);
+    expect(isoByBand.get("DANGER")!.y).toBeLessThan(isoByBand.get("WARNING")!.y);
+    expect(isoByBand.get("WARNING")!.y).toBeLessThan(isoByBand.get("ALERT")!.y);
   });
 
   it("keeps non-DEWS risk water labels on their semantic water", () => {

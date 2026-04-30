@@ -35,8 +35,8 @@ describe("buildPharosVilleWorld", () => {
     });
 
     expect(world.routeMode).toBe("world");
-    expect(world.map.waterRatio).toBeGreaterThanOrEqual(0.84);
-    expect(world.map.waterRatio).toBeLessThanOrEqual(0.92);
+    expect(world.map.waterRatio).toBeGreaterThanOrEqual(0.78);
+    expect(world.map.waterRatio).toBeLessThanOrEqual(0.82);
     expect(world.lighthouse.unavailable).toBe(false);
     expect(world.docks).toHaveLength(2);
     expect(world.ships.map((ship) => ship.id)).toEqual(["usdt-tether", "usdc-circle"]);
@@ -51,7 +51,7 @@ describe("buildPharosVilleWorld", () => {
     expect(world.graves).toHaveLength(3);
     expect(world.graves[0]?.logoSrc).toBe("/logos/cemetery/nubits.png");
     expect(world.detailIndex["lighthouse"]).toBeDefined();
-    expect(terrainKindAt(0, 0)).toBe("deep-water");
+    expect(terrainKindAt(0, 55)).toBe("deep-water");
     expect(Object.keys(world.detailIndex).some((detailId) => detailId.startsWith("building."))).toBe(false);
     expect(world.areas.every((area) => area.id.startsWith("area.dews.") || area.id.startsWith("area.risk-water."))).toBe(true);
     expect(world.visualCues.length).toBeGreaterThan(0);
@@ -234,11 +234,11 @@ describe("buildPharosVilleWorld", () => {
       { label: "Risk water zone", value: "ledger" },
       { label: "Risk placement", value: "ledger-mooring" },
     ]));
-    expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 48, y: 4 });
-    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 53, y: 3 });
+    expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 50, y: 17 });
+    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 54, y: 8 });
     expect(world.areas.every((area) => area.id.startsWith("area.dews.") || area.id.startsWith("area.risk-water."))).toBe(true);
-    expect(terrainKindAt(46, 4)).toBe("warning-water");
-    expect(terrainKindAt(54, 2)).toBe("storm-water");
+    expect(terrainKindAt(48, 14)).toBe("warning-water");
+    expect(terrainKindAt(55, 12)).toBe("storm-water");
     expect(usdc?.riskPlacement).toBe("harbor-mouth-watch");
     expect(usdc?.riskZone).toBe("alert");
     expect(usdc?.riskWaterLabel).toBe("Alert Channel");

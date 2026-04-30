@@ -1,4 +1,4 @@
-import { isWaterTileKind, nearestWaterTile } from "./world-layout";
+import { MAX_TILE_X, MAX_TILE_Y, isWaterTileKind, nearestWaterTile } from "./world-layout";
 import { SHIP_WATER_ANCHORS } from "./risk-water-areas";
 import { stableHash, stableOffset, stableUnit } from "./stable-random";
 import type { PharosVilleMap, PharosVilleTile, PharosVilleWorld, ShipDockVisit, ShipNode, ShipWaterZone } from "./world-types";
@@ -665,17 +665,25 @@ function mooredRadiusForZone(zone: ShipWaterZone): { x: number; y: number } {
 function riskDriftSample(route: ShipMotionRoute, timeSeconds: number, progress: number): ShipMotionSample {
   const angle = timeSeconds * 0.017 + route.routeSeed * 0.0001 + progress * Math.PI * 2;
   const radius = driftRadiusForZone(route.zone);
+  const tile = clampMotionTile({
+    x: route.riskTile.x + Math.cos(angle) * radius.x,
+    y: route.riskTile.y + Math.sin(angle * 0.8) * radius.y,
+  });
   return {
     shipId: route.shipId,
-    tile: {
-      x: route.riskTile.x + Math.cos(angle) * radius.x,
-      y: route.riskTile.y + Math.sin(angle * 0.8) * radius.y,
-    },
+    tile,
     state: "risk-drift",
     zone: route.zone,
     currentDockId: null,
     heading: normalizeHeading({ x: -Math.sin(angle), y: Math.cos(angle * 0.8) }),
     wakeIntensity: 0.08,
+  };
+}
+
+function clampMotionTile(tile: { x: number; y: number }): { x: number; y: number } {
+  return {
+    x: Math.max(0, Math.min(MAX_TILE_X, tile.x)),
+    y: Math.max(0, Math.min(MAX_TILE_Y, tile.y)),
   };
 }
 

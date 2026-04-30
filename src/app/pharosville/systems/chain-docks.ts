@@ -4,6 +4,7 @@ import {
   DOCK_TILES,
   EVM_BAY_CHAIN_IDS,
   EVM_BAY_DOCK_TILES,
+  ETHEREUM_HARBOR_PRIORITY_CHAIN_IDS,
   OUTER_HARBOR_DOCK_TILES,
   PREFERRED_DOCK_TILES,
 } from "./world-layout";
@@ -12,6 +13,8 @@ export const MAX_CHAIN_HARBORS = 10;
 export const MAX_DOCK_SIZE = 10;
 
 const DOCK_ASSET_IDS = [
+  "dock.harbor-ring-quay",
+  "dock.compact-harbor-pier",
   "dock.grand-quay",
   "dock.container-wharf",
   "dock.twin-slip",
@@ -25,10 +28,17 @@ const DOCK_ASSET_IDS = [
 ] as const;
 
 const PREFERRED_DOCK_ASSET_IDS: Record<string, (typeof DOCK_ASSET_IDS)[number]> = {
-  ethereum: "dock.grand-quay",
+  ethereum: "dock.harbor-ring-quay",
   base: "dock.rollup-ferry-slip",
   arbitrum: "dock.bridge-pontoon",
+  optimism: "dock.relay-pontoon",
   polygon: "dock.market-marina",
+  mantle: "dock.vault-quay",
+  linea: "dock.sentinel-breakwater",
+  scroll: "dock.bridge-pontoon",
+  zksync: "dock.sentinel-breakwater",
+  bsc: "dock.compact-harbor-pier",
+  solana: "dock.compact-harbor-pier",
 };
 
 function dockSize(chain: ChainSummary, globalTotalUsd: number): number {
@@ -72,9 +82,7 @@ function harboredStablecoins(chain: ChainSummary): DockStablecoin[] {
 export function buildChainDocks(chains: ChainsResponse | null | undefined): DockNode[] {
   if (!chains?.chains?.length) return [];
   const occupiedTiles = new Set<string>();
-  return chains.chains
-    .toSorted((a, b) => b.totalUsd - a.totalUsd)
-    .slice(0, MAX_CHAIN_HARBORS)
+  return selectChainHarbors(chains.chains)
     .map((chain, index) => {
       const tile = dockTileForChain(chain.id, index, occupiedTiles);
       return {
@@ -94,6 +102,25 @@ export function buildChainDocks(chains: ChainsResponse | null | undefined): Dock
         detailId: `dock.${chain.id}`,
       };
     });
+}
+
+function selectChainHarbors(chains: readonly ChainSummary[]): ChainSummary[] {
+  const byId = new Map(chains.map((chain) => [chain.id, chain]));
+  const selected = new Map<string, ChainSummary>();
+
+  for (const chainId of ETHEREUM_HARBOR_PRIORITY_CHAIN_IDS) {
+    const chain = byId.get(chainId);
+    if (chain && chain.totalUsd > 0) selected.set(chain.id, chain);
+  }
+
+  for (const chain of chains.toSorted((a, b) => b.totalUsd - a.totalUsd)) {
+    if (selected.size >= MAX_CHAIN_HARBORS) break;
+    selected.set(chain.id, chain);
+  }
+
+  return [...selected.values()]
+    .toSorted((a, b) => b.totalUsd - a.totalUsd || a.id.localeCompare(b.id))
+    .slice(0, MAX_CHAIN_HARBORS);
 }
 
 function dockTileForChain(chainId: string, rankIndex: number, occupiedTiles: Set<string>): { x: number; y: number } {
