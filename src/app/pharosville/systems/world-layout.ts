@@ -18,23 +18,23 @@ export const ISLAND_PERIPHERY_TILE_DISTANCE = 5;
 export const REGION_TILES: Record<ShipRiskPlacement, { x: number; y: number }> = RISK_WATER_REGION_TILES;
 
 export const EVM_BAY_DOCK_TILES = [
-  { x: 35, y: 40 },
-  { x: 24, y: 42 },
-  { x: 34, y: 42 },
-  { x: 39, y: 40 },
+  { x: 35, y: 38 },
+  { x: 36, y: 38 },
+  { x: 37, y: 38 },
+  { x: 40, y: 36 },
 ] as const;
 
 export const OUTER_HARBOR_DOCK_TILES = [
-  { x: 49, y: 30 },
-  { x: 48, y: 23 },
-  { x: 21, y: 25 },
-  { x: 38, y: 42 },
-  { x: 47, y: 25 },
-  { x: 46, y: 35 },
-  { x: 36, y: 43 },
-  { x: 26, y: 43 },
-  { x: 20, y: 38 },
-  { x: 47, y: 34 },
+  { x: 47, y: 26 },
+  { x: 44, y: 18 },
+  { x: 24, y: 36 },
+  { x: 38, y: 37 },
+  { x: 46, y: 24 },
+  { x: 51, y: 32 },
+  { x: 22, y: 32 },
+  { x: 28, y: 25 },
+  { x: 32, y: 24 },
+  { x: 48, y: 28 },
 ] as const;
 
 export const PREFERRED_DOCK_TILES: Record<string, { x: number; y: number }> = {
@@ -55,8 +55,11 @@ export const DOCK_TILES = [
   ...OUTER_HARBOR_DOCK_TILES,
 ];
 
-export const CEMETERY_CENTER = { x: 27.0, y: 34.0 } as const;
+// Cemetery now sits on its own small island tucked into the diamond's absolute
+// west apex, inside the calm-anchorage area and separated from the main island.
+export const CEMETERY_CENTER = { x: 4.0, y: 51.0 } as const;
 export const CEMETERY_RADIUS = { x: 2.7, y: 1.9 } as const;
+const CEMETERY_ISLAND_RADIUS = { x: 4.0, y: 3.2 } as const;
 
 type GraveMarker = GraveNode["visual"]["marker"];
 
@@ -111,7 +114,6 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
   const nearIslandEdge = island > 0.82;
   const harborWater = island < 1
     && cemetery > 1.18
-    && !isCemeteryCausewayTile(x, y)
     && ((harbor < 0.9 && y > 34 && x < 37) || (approach < 0.94 && y > 42));
 
   if (isOutOfBounds(x, y) || island >= 1 || harborWater) {
@@ -152,14 +154,17 @@ function canonicalTileKind(kind: TerrainKind): TileKind {
 
 function islandValue(x: number, y: number): number {
   return Math.min(
-    ellipseValue(x, y, 32.4, 31.2, 15.0, 10.4),
-    ellipseValue(x, y, 40.6, 22.3, 7.7, 6.1),
-    ellipseValue(x, y, 42.0, 28.6, 7.1, 6.4),
-    ellipseValue(x, y, 30.2, 40.5, 8.4, 4.6),
-    ellipseValue(x, y, 25.6, 38.0, 6.5, 3.3),
-    ellipseValue(x, y, 21.6, 32.6, 3.6, 2.8),
+    // Main island — shrunk ~50% from the prior 15.0 × 10.4 footprint after the
+    // cemetery and southern bulges were carved off.
+    ellipseValue(x, y, 32.4, 31.2, 11.0, 7.5),
+    // Lighthouse-N headland (keeps the lighthouse on connected high ground).
+    ellipseValue(x, y, 40.6, 22.3, 6.4, 5.4),
+    // East bulge connects the headland down to the main mass.
+    ellipseValue(x, y, 42.0, 28.6, 6.4, 5.4),
+    // Detached east-coast islet.
     ellipseValue(x, y, 47.8, 32.2, 3.3, 2.8),
-    ellipseValue(x, y, CEMETERY_CENTER.x, CEMETERY_CENTER.y, CEMETERY_RADIUS.x + 1.2, CEMETERY_RADIUS.y + 0.95),
+    // Detached cemetery islet in the calm-anchorage area.
+    ellipseValue(x, y, CEMETERY_CENTER.x, CEMETERY_CENTER.y, CEMETERY_ISLAND_RADIUS.x, CEMETERY_ISLAND_RADIUS.y),
   );
 }
 
@@ -227,14 +232,6 @@ function isCalmAnchorage(x: number, y: number): boolean {
   return westEdge || westBasin || lowerReach;
 }
 
-function isCemeteryCausewayTile(x: number, y: number): boolean {
-  return x >= 25
-    && x <= 38
-    && y >= 31
-    && y <= 38
-    && distanceToSegment(x, y, { x: 26.3, y: 35.6 }, { x: 37.4, y: 31.6 }) <= 1.15;
-}
-
 function isOutOfBounds(x: number, y: number): boolean {
   return x < 0 || y < 0 || x >= PHAROSVILLE_MAP_WIDTH || y >= PHAROSVILLE_MAP_HEIGHT;
 }
@@ -246,7 +243,6 @@ function isLandTileRaw(x: number, y: number): boolean {
   if (islandValue(x, y) >= 1) return false;
   const cemetery = cemeteryValue(x, y);
   if (cemetery <= 1.18) return true;
-  if (isCemeteryCausewayTile(x, y)) return true;
   const harbor = harborCoveValue(x, y);
   const approach = harborApproachValue(x, y);
   const harborWater = (harbor < 0.9 && y > 34 && x < 37) || (approach < 0.94 && y > 42);
@@ -310,20 +306,6 @@ function isLedgerMooring(x: number, y: number): boolean {
     && y >= 51
     && y <= MAX_TILE_Y;
   return mooring || southWedge || southEdgeAttachment;
-}
-
-function distanceToSegment(
-  x: number,
-  y: number,
-  start: { x: number; y: number },
-  end: { x: number; y: number },
-): number {
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const lengthSquared = dx * dx + dy * dy;
-  if (lengthSquared === 0) return Math.hypot(x - start.x, y - start.y);
-  const t = clamp(((x - start.x) * dx + (y - start.y) * dy) / lengthSquared, 0, 1);
-  return Math.hypot(x - (start.x + dx * t), y - (start.y + dy * t));
 }
 
 export function nearestWaterTile(tile: { x: number; y: number }, maxRadius = 10): { x: number; y: number } {

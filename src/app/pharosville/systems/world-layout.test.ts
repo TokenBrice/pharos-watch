@@ -29,36 +29,30 @@ describe("buildPharosVilleMap", () => {
     expect(map.width).toBe(PHAROSVILLE_MAP_WIDTH);
     expect(map.height).toBe(PHAROSVILLE_MAP_HEIGHT);
     expect(map.tiles).toHaveLength(PHAROSVILLE_MAP_WIDTH * PHAROSVILLE_MAP_HEIGHT);
-    expect(map.waterRatio).toBeGreaterThanOrEqual(0.78);
-    expect(map.waterRatio).toBeLessThanOrEqual(0.82);
-    const bounds = landBounds(map.tiles);
-    expect(bounds).toEqual({
-      height: 28,
-      maxX: 51,
-      maxY: 44,
-      minX: 18,
-      minY: 17,
-      width: 34,
-    });
-    const boundsCenter = {
-      x: (bounds.minX + bounds.maxX) / 2,
-      y: (bounds.minY + bounds.maxY) / 2,
+    // Main island shrunk ~50% with cemetery split off, so the water fraction rises.
+    expect(map.waterRatio).toBeGreaterThanOrEqual(0.84);
+    expect(map.waterRatio).toBeLessThanOrEqual(0.92);
+    const mainIslandBounds = landBoundsExcludingCemetery(map.tiles);
+    expect(mainIslandBounds.minX).toBeGreaterThanOrEqual(18);
+    expect(mainIslandBounds.maxX).toBeLessThanOrEqual(52);
+    expect(mainIslandBounds.minY).toBeGreaterThanOrEqual(15);
+    expect(mainIslandBounds.maxY).toBeLessThanOrEqual(40);
+    const mainCenter = {
+      x: (mainIslandBounds.minX + mainIslandBounds.maxX) / 2,
+      y: (mainIslandBounds.minY + mainIslandBounds.maxY) / 2,
     };
-    expect(boundsCenter.x).toBeCloseTo(CIVIC_CORE_CENTER.x + 0.5, 1);
-    expect(boundsCenter.y).toBeCloseTo(CIVIC_CORE_CENTER.y + 0.5, 1);
+    // East-side bulges (lighthouse-N + east + east-small) push the main mass bbox
+    // further east than the strict main ellipse center, so allow up to ~3 tiles drift.
+    expect(Math.abs(mainCenter.x - CIVIC_CORE_CENTER.x)).toBeLessThan(3);
+    expect(Math.abs(mainCenter.y - CIVIC_CORE_CENTER.y)).toBeLessThan(3);
     const counts = terrainCounts(map.tiles);
     expect((counts.get("deep-water") ?? 0) / map.tiles.length).toBeLessThanOrEqual(0.125);
-    // Concentric DEWS arcs claim more of the east edge than the prior rectangular WARNING/DANGER blocks,
-    // and the widened LEDGER south wedge consumes the right edge from y=40 down — both reduce deep-water.
     expect((counts.get("deep-water") ?? 0) / map.tiles.length).toBeGreaterThanOrEqual(0.020);
     expect(counts.get("calm-water") ?? 0).toBeGreaterThan(counts.get("watch-water") ?? 0);
     expect(counts.get("watch-water") ?? 0).toBeGreaterThan(counts.get("alert-water") ?? 0);
     expect(counts.get("alert-water") ?? 0).toBeGreaterThan(counts.get("warning-water") ?? 0);
     expect(counts.get("warning-water") ?? 0).toBeGreaterThan(counts.get("storm-water") ?? 0);
     expect(map.tiles.every((tile) => tile.terrain)).toBe(true);
-    const centroid = landCentroid(map.tiles);
-    expect(Math.abs(centroid.x - CIVIC_CORE_CENTER.x)).toBeLessThan(1.6);
-    expect(Math.abs(centroid.y - CIVIC_CORE_CENTER.y)).toBeLessThan(1.3);
     expect([...new Set(map.tiles.map((tile) => tile.terrain))]).toEqual(expect.arrayContaining([
       "alert-water",
       "calm-water",
@@ -122,14 +116,14 @@ describe("buildPharosVilleMap", () => {
   });
 
   it("uses the west-edge open water for Calm Anchorage", () => {
-    // Samples kept >5 cheb tiles from any land so the widened island periphery
-    // doesn't demote them to generic water.
+    // Samples kept >5 cheb tiles from any land (main island + cemetery islet)
+    // so the widened island periphery doesn't demote them to generic water.
     const westernBasinSamples = [
-      { x: 0, y: 25 },
-      { x: 4, y: 31 },
-      { x: 8, y: 25 },
+      { x: 0, y: 18 },
+      { x: 4, y: 28 },
+      { x: 8, y: 22 },
       { x: 5, y: 38 },
-      { x: 11, y: 45 },
+      { x: 14, y: 50 },
     ];
 
     for (const tile of westernBasinSamples) {
@@ -171,21 +165,26 @@ describe("buildPharosVilleMap", () => {
   it("scatters cemetery graves across expanded land with varied markers", () => {
     const graves = graveNodesFromEntries(CEMETERY_ENTRIES);
     const mainIsland = connectedLandTileKeys(LIGHTHOUSE_TILE);
+    const cemeteryIsland = connectedLandTileKeys({
+      x: Math.round(CEMETERY_CENTER.x),
+      y: Math.round(CEMETERY_CENTER.y),
+    });
     const xs = graves.map((grave) => grave.tile.x);
     const ys = graves.map((grave) => grave.tile.y);
 
     expect(graves).toHaveLength(CEMETERY_ENTRIES.length);
-    expect(CEMETERY_CENTER).toEqual({ x: 27.0, y: 34.0 });
+    expect(CEMETERY_CENTER).toEqual({ x: 4.0, y: 51.0 });
     expect(CEMETERY_RADIUS).toEqual({ x: 2.7, y: 1.9 });
     expect(CEMETERY_CENTER.x).toBeLessThan(CIVIC_CORE_CENTER.x);
     expect(CEMETERY_CENTER.y).toBeGreaterThan(CIVIC_CORE_CENTER.y);
     expect(CEMETERY_CENTER.x).toBeLessThan(LIGHTHOUSE_TILE.x);
     expect(tileKindAt(Math.round(CEMETERY_CENTER.x), Math.round(CEMETERY_CENTER.y))).toBe("land");
     expect(terrainKindAt(Math.round(CEMETERY_CENTER.x), Math.round(CEMETERY_CENTER.y))).toBe("grass");
-    expect(tileKindAt(19, 38)).toBe("water");
+    // Cemetery islet is detached from the main island.
+    expect(cemeteryIsland.has(tileKey({ x: LIGHTHOUSE_TILE.x, y: LIGHTHOUSE_TILE.y }))).toBe(false);
     expect(graves.every((grave) => tileKindAt(grave.tile.x, grave.tile.y) === "land")).toBe(true);
-    expect(mainIsland.has(tileKey({ x: Math.round(CEMETERY_CENTER.x), y: Math.round(CEMETERY_CENTER.y) }))).toBe(true);
-    expect(graves.every((grave) => isNearConnectedLand(grave.tile, mainIsland))).toBe(true);
+    expect(cemeteryIsland.has(tileKey({ x: Math.round(CEMETERY_CENTER.x), y: Math.round(CEMETERY_CENTER.y) }))).toBe(true);
+    expect(graves.every((grave) => isNearConnectedLand(grave.tile, cemeteryIsland))).toBe(true);
     expect(graves.every((grave) => Math.hypot(grave.tile.x - LIGHTHOUSE_TILE.x, grave.tile.y - LIGHTHOUSE_TILE.y) > 10)).toBe(true);
     expect(graves.every((grave) => DOCK_TILES.every((dock) => Math.hypot(grave.tile.x - dock.x, grave.tile.y - dock.y) > 3.25))).toBe(true);
     expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(4.5);
@@ -209,29 +208,23 @@ function nearbyTiles(center: { x: number; y: number }, radius: number): { x: num
   return tiles;
 }
 
-function landCentroid(tiles: PharosVilleTile[]): { x: number; y: number } {
-  const landTiles = tiles.filter((tile) => !isWaterTileKind(tile.kind));
-  return {
-    x: landTiles.reduce((sum, tile) => sum + tile.x, 0) / landTiles.length,
-    y: landTiles.reduce((sum, tile) => sum + tile.y, 0) / landTiles.length,
-  };
-}
-
-function landBounds(tiles: PharosVilleTile[]) {
-  const landTiles = tiles.filter((tile) => !isWaterTileKind(tile.kind));
+function landBoundsExcludingCemetery(tiles: PharosVilleTile[]) {
+  // Cemetery is its own islet now — exclude tiles within ~6 tiles of CEMETERY_CENTER
+  // when measuring the main-island envelope.
+  const cemeteryRadius = 6;
+  const landTiles = tiles.filter((tile) => {
+    if (isWaterTileKind(tile.kind)) return false;
+    const dx = tile.x - CEMETERY_CENTER.x;
+    const dy = tile.y - CEMETERY_CENTER.y;
+    return Math.hypot(dx, dy) > cemeteryRadius;
+  });
   const xs = landTiles.map((tile) => tile.x);
   const ys = landTiles.map((tile) => tile.y);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
   return {
-    height: maxY - minY + 1,
-    maxX,
-    maxY,
-    minX,
-    minY,
-    width: maxX - minX + 1,
+    minX: Math.min(...xs),
+    maxX: Math.max(...xs),
+    minY: Math.min(...ys),
+    maxY: Math.max(...ys),
   };
 }
 

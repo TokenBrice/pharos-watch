@@ -55,10 +55,10 @@ export const RISK_WATER_AREAS: Record<ShipRiskPlacement, RiskWaterAreaDefinition
     shipAnchors: [
       { x: 0, y: 16 },
       { x: 0, y: 30 },
-      { x: 0, y: 44 },
+      { x: 0, y: 38 },
       { x: 5, y: 24 },
-      { x: 13, y: 47 },
-      { x: 15, y: 50 },
+      { x: 15, y: 38 },
+      { x: 18, y: 48 },
     ],
     scatterRadius: { x: 10, y: 18 },
   },
