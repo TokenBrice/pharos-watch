@@ -10,7 +10,10 @@ export const MAX_TILE_Y = PHAROSVILLE_MAP_HEIGHT - 1;
 export const LIGHTHOUSE_TILE = { x: 38, y: 22 } as const;
 export const CIVIC_CORE_CENTER = { x: 34, y: 30 } as const;
 export const CIVIC_CORE_RADIUS = 7.0;
-export const ISLAND_PERIPHERY_BUFFER = 1.1;
+// Chebyshev tile distance: any sea tile within this many tiles of land is rendered
+// as generic "water" (no DEWS zone), giving the island a 3–6 tile non-attributed
+// halo before zone water begins.
+export const ISLAND_PERIPHERY_TILE_DISTANCE = 5;
 
 export const REGION_TILES: Record<ShipRiskPlacement, { x: number; y: number }> = RISK_WATER_REGION_TILES;
 
@@ -113,7 +116,7 @@ export function terrainKindAt(x: number, y: number): TerrainKind {
 
   if (isOutOfBounds(x, y) || island >= 1 || harborWater) {
     if (harborWater) return "harbor-water";
-    const inIslandPeriphery = island >= 1 && island < ISLAND_PERIPHERY_BUFFER;
+    const inIslandPeriphery = isWithinIslandPeriphery(x, y);
     if (!inIslandPeriphery && !isLighthouseVisualClearance(x, y)) {
       if (isDangerStrait(x, y)) return "storm-water";
       if (isWarningShoals(x, y)) return "warning-water";
@@ -175,16 +178,28 @@ function harborApproachValue(x: number, y: number): number {
   return ellipseValue(x, y, 31.6, 43.8, 4.4, 4.8);
 }
 
+// East-corner anchor (55, 0) — DANGER/WARNING/ALERT are concentric arcs around it.
+const RISK_ARC_CENTER = { x: 55, y: 0 } as const;
+const DANGER_ARC_RADIUS = 7;
+const WARNING_ARC_RADIUS = 11;
+const ALERT_ARC_RADIUS = 17.5;
+
+function riskArcDistance(x: number, y: number): number {
+  return Math.hypot(RISK_ARC_CENTER.x - x, RISK_ARC_CENTER.y - y);
+}
+
 function isAlertChannel(x: number, y: number): boolean {
-  const topCurrent = x >= 29 && x <= 48 && y >= 0 && y <= 10 && y <= 12 - Math.abs(x - 39) * 0.22;
-  const channelMouth = ellipseValue(x, y, 42.0, 7.7, 9.3, 4.7) < 1.05;
-  return topCurrent || channelMouth;
+  const d = riskArcDistance(x, y);
+  return d >= WARNING_ARC_RADIUS && d < ALERT_ARC_RADIUS;
 }
 
 function isWarningShoals(x: number, y: number): boolean {
-  const reefShelf = ellipseValue(x, y, 53.2, 7.8, 6.7, 8.2) < 1.08 && x >= 47;
-  const edgeShoals = x >= 51 && x <= 55 && y >= 0 && y <= 15;
-  return reefShelf || edgeShoals;
+  const d = riskArcDistance(x, y);
+  return d >= DANGER_ARC_RADIUS && d < WARNING_ARC_RADIUS;
+}
+
+function isDangerStrait(x: number, y: number): boolean {
+  return riskArcDistance(x, y) < DANGER_ARC_RADIUS;
 }
 
 // Visual buffer around the lighthouse sprite — taller than its tile-space ellipse,
@@ -193,18 +208,14 @@ function isLighthouseVisualClearance(x: number, y: number): boolean {
   return x >= 35 && x <= 41 && y >= 16 && y <= 22;
 }
 
-function isDangerStrait(x: number, y: number): boolean {
-  const stormBasin = ellipseValue(x, y, 54.0, 19.5, 5.5, 5.9) < 1.1 && x >= 49 && y >= 15;
-  const edgeStrait = x >= 52 && x <= 55 && y >= 15 && y <= 25;
-  return stormBasin || edgeStrait;
-}
-
-// Extends to the upper-left diamond edge (x=0) and to ALERT's left boundary (x=29).
-// The (0, 0) corner stays deep-water decoration.
+// Spans the y=0 north edge from the upper-left corner up to the ALERT outer arc
+// boundary, plus a north basin extending into the map. The (0, 0) corner stays
+// deep-water decoration.
 function isWatchBreakwater(x: number, y: number): boolean {
   if (x === 0 && y === 0) return false;
-  const northBasin = ellipseValue(x, y, 14.4, 6.4, 18.2, 8.6) < 1.08 && y <= 15;
-  const topEdge = x >= 0 && x <= 31 && y >= 0 && y <= 10 && y <= 11 - x * 0.04;
+  if (riskArcDistance(x, y) < ALERT_ARC_RADIUS) return false;
+  const northBasin = ellipseValue(x, y, 16.4, 6.4, 22.0, 8.6) < 1.08 && y <= 15;
+  const topEdge = x >= 0 && x <= 38 && y >= 0 && y <= 11;
   return northBasin || topEdge;
 }
 
@@ -228,6 +239,50 @@ function isOutOfBounds(x: number, y: number): boolean {
   return x < 0 || y < 0 || x >= PHAROSVILLE_MAP_WIDTH || y >= PHAROSVILLE_MAP_HEIGHT;
 }
 
+// Computes whether (x, y) is land WITHOUT consulting the periphery rule, so the
+// land mask can be precomputed without recursion.
+function isLandTileRaw(x: number, y: number): boolean {
+  if (isOutOfBounds(x, y)) return false;
+  if (islandValue(x, y) >= 1) return false;
+  const cemetery = cemeteryValue(x, y);
+  if (cemetery <= 1.18) return true;
+  if (isCemeteryCausewayTile(x, y)) return true;
+  const harbor = harborCoveValue(x, y);
+  const approach = harborApproachValue(x, y);
+  const harborWater = (harbor < 0.9 && y > 34 && x < 37) || (approach < 0.94 && y > 42);
+  return !harborWater;
+}
+
+let cachedLandMask: Uint8Array | null = null;
+
+function getLandMask(): Uint8Array {
+  if (cachedLandMask) return cachedLandMask;
+  const mask = new Uint8Array(PHAROSVILLE_MAP_WIDTH * PHAROSVILLE_MAP_HEIGHT);
+  for (let y = 0; y < PHAROSVILLE_MAP_HEIGHT; y += 1) {
+    for (let x = 0; x < PHAROSVILLE_MAP_WIDTH; x += 1) {
+      if (isLandTileRaw(x, y)) mask[y * PHAROSVILLE_MAP_WIDTH + x] = 1;
+    }
+  }
+  cachedLandMask = mask;
+  return mask;
+}
+
+function isWithinIslandPeriphery(x: number, y: number): boolean {
+  if (isOutOfBounds(x, y)) return false;
+  const r = ISLAND_PERIPHERY_TILE_DISTANCE;
+  const mask = getLandMask();
+  const minX = Math.max(0, Math.floor(x) - r);
+  const maxX = Math.min(PHAROSVILLE_MAP_WIDTH - 1, Math.ceil(x) + r);
+  const minY = Math.max(0, Math.floor(y) - r);
+  const maxY = Math.min(PHAROSVILLE_MAP_HEIGHT - 1, Math.ceil(y) + r);
+  for (let ny = minY; ny <= maxY; ny += 1) {
+    for (let nx = minX; nx <= maxX; nx += 1) {
+      if (mask[ny * PHAROSVILLE_MAP_WIDTH + nx]) return true;
+    }
+  }
+  return false;
+}
+
 function isDeepSeaShelf(x: number, y: number): boolean {
   const edge = Math.min(x, y, MAX_TILE_X - x, MAX_TILE_Y - y);
   if (edge <= 0) return true;
@@ -238,16 +293,23 @@ function isDeepSeaShelf(x: number, y: number): boolean {
 }
 
 function isLedgerMooring(x: number, y: number): boolean {
+  // Extends from the original south-mooring ellipse all the way to the diamond's
+  // south apex (55, 55) so the bottom corner reads as Ledger Mooring water.
   const mooring = ellipseValue(x, y, 43.2, 49.0, 4.6, 3.2) < 1
     && x >= 39
     && x <= 47
     && y >= 47
     && y <= 51;
+  const southWedge = x + y >= 92
+    && x >= 40
+    && y >= 40
+    && x <= MAX_TILE_X
+    && y <= MAX_TILE_Y;
   const southEdgeAttachment = x >= 41
-    && x <= 45
+    && x <= MAX_TILE_X
     && y >= 51
     && y <= MAX_TILE_Y;
-  return mooring || southEdgeAttachment;
+  return mooring || southWedge || southEdgeAttachment;
 }
 
 function distanceToSegment(

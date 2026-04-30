@@ -5,7 +5,7 @@ import { DEWS_AREA_PLACEMENTS, RISK_WATER_AREAS } from "./risk-water-areas";
 import { LIGHTHOUSE_TILE, terrainKindAt } from "./world-layout";
 import type { AreaNode, DewsAreaBand, ShipRiskPlacement, TerrainKind } from "./world-types";
 
-const WEST_TO_EAST_DEWS_BANDS: DewsAreaBand[] = ["CALM", "WATCH", "DANGER", "ALERT", "WARNING"];
+const WEST_TO_EAST_DEWS_BANDS: DewsAreaBand[] = ["CALM", "WATCH", "ALERT", "WARNING", "DANGER"];
 const NON_DEWS_RISK_PLACEMENTS = ["ledger-mooring"] as const satisfies readonly ShipRiskPlacement[];
 
 describe("areaLabelPlacementForArea", () => {
@@ -25,8 +25,10 @@ describe("areaLabelPlacementForArea", () => {
       }
       previousIso = iso;
     }
-    expect(isoByBand.get("WARNING")!.y).toBeLessThan(lighthouseIso.y);
-    expect(isoByBand.get("WARNING")!.x).toBeGreaterThan(isoByBand.get("DANGER")!.x + 16);
+    // Concentric layout: ALERT outer ring sits north-east of the lighthouse, with
+    // WARNING and DANGER pulled progressively toward the east corner.
+    expect(isoByBand.get("ALERT")!.y).toBeLessThan(lighthouseIso.y);
+    expect(isoByBand.get("DANGER")!.x).toBeGreaterThan(isoByBand.get("WARNING")!.x);
   });
 
   it("keeps non-DEWS risk water labels on their semantic water", () => {

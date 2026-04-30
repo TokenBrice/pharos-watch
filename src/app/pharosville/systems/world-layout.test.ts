@@ -48,8 +48,9 @@ describe("buildPharosVilleMap", () => {
     expect(boundsCenter.y).toBeCloseTo(CIVIC_CORE_CENTER.y + 0.5, 1);
     const counts = terrainCounts(map.tiles);
     expect((counts.get("deep-water") ?? 0) / map.tiles.length).toBeLessThanOrEqual(0.125);
-    // 0.030 floor accommodates WATCH expanding to x=0..29, converting ~27 more deep-water tiles to watch-water
-    expect((counts.get("deep-water") ?? 0) / map.tiles.length).toBeGreaterThanOrEqual(0.030);
+    // Concentric DEWS arcs claim more of the east edge than the prior rectangular WARNING/DANGER blocks,
+    // and the widened LEDGER south wedge consumes the right edge from y=40 down — both reduce deep-water.
+    expect((counts.get("deep-water") ?? 0) / map.tiles.length).toBeGreaterThanOrEqual(0.020);
     expect(counts.get("calm-water") ?? 0).toBeGreaterThan(counts.get("watch-water") ?? 0);
     expect(counts.get("watch-water") ?? 0).toBeGreaterThan(counts.get("alert-water") ?? 0);
     expect(counts.get("alert-water") ?? 0).toBeGreaterThan(counts.get("warning-water") ?? 0);
@@ -121,12 +122,14 @@ describe("buildPharosVilleMap", () => {
   });
 
   it("uses the west-edge open water for Calm Anchorage", () => {
+    // Samples kept >5 cheb tiles from any land so the widened island periphery
+    // doesn't demote them to generic water.
     const westernBasinSamples = [
       { x: 0, y: 25 },
       { x: 4, y: 31 },
-      { x: 8, y: 29 },
-      { x: 13, y: 33 },
-      { x: 16, y: 31 },
+      { x: 8, y: 25 },
+      { x: 5, y: 38 },
+      { x: 11, y: 45 },
     ];
 
     for (const tile of westernBasinSamples) {

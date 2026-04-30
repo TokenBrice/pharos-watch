@@ -234,11 +234,11 @@ describe("buildPharosVilleWorld", () => {
       { label: "Risk water zone", value: "ledger" },
       { label: "Risk placement", value: "ledger-mooring" },
     ]));
-    expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 53, y: 5 });
-    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 53, y: 17 });
+    expect(world.areas.find((area) => area.band === "WARNING")?.tile).toEqual({ x: 48, y: 4 });
+    expect(world.areas.find((area) => area.band === "DANGER")?.tile).toEqual({ x: 53, y: 3 });
     expect(world.areas.every((area) => area.id.startsWith("area.dews.") || area.id.startsWith("area.risk-water."))).toBe(true);
-    expect(terrainKindAt(52, 5)).toBe("warning-water");
-    expect(terrainKindAt(53, 15)).toBe("storm-water");
+    expect(terrainKindAt(46, 4)).toBe("warning-water");
+    expect(terrainKindAt(54, 2)).toBe("storm-water");
     expect(usdc?.riskPlacement).toBe("harbor-mouth-watch");
     expect(usdc?.riskZone).toBe("alert");
     expect(usdc?.riskWaterLabel).toBe("Alert Channel");
