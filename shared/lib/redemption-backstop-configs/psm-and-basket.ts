@@ -102,6 +102,21 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "The reviewed 16% bound matches the tracked USDT PSM reserve share and does not claim the full collateralized USDD system is instantly redeemable through the PSM",
     ],
   },
+  "pmusd-precious-metals": {
+    ...psmSwapBase,
+    capacityModel: { kind: "supply-ratio", ratio: 0.001, confidence: "heuristic", basis: "psm-balance-share" },
+    costModel: fixedFee(25, "RAAC PSM docs specify a 25 bps swap fee for pmUSD → sUSDS exits"),
+    reviewedAt: "2026-05-02",
+    docs: [
+      sourceRef("RAAC PSM overview", "https://docs.raac.io/psm-vault/", ["route", "fees"]),
+      sourceRef("RAAC PSM parameters", "https://docs.raac.io/parameters-psm/", ["route", "capacity", "fees"]),
+    ],
+    notes: [
+      "PSM is one-directional: pmUSD → sUSDS swaps only; swaps pause automatically when sUSDS reserves fall below 20% of total PSM assets",
+      "PSM was recently deployed; on-chain sUSDS balance at review (~$47K) is a small fraction of total supply — 0.1% ratio is a heuristic that will understate capacity as TVL grows",
+      "Output is sUSDS (Sky savings wrapper), instantly redeemable 1:1 to USDS at no fee, adding one unwrap step before reaching a stable base asset",
+    ],
+  },
   "dola-inverse-finance": {
     ...psmSwapBase,
     capacityModel: { kind: "supply-ratio", ratio: 0.08, confidence: "documented-bound" },
