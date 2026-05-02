@@ -9950,7 +9950,7 @@
       "navToken": false
     },
     "collateral": "TokenBlender (TB) base token held on-chain in RAAC's RWf(x) Treasury; TB is minted against I-ON Digital's ION.au token held in the TokenBlender contract, and ION.au represents a gold-backed digital security and in-situ gold claim",
-    "pegMechanism": "RWf(x), an f(x) protocol fork, mints pmUSD as the fToken against TB / ION.au-linked collateral; xPM absorbs collateral-price volatility while pmUSD is configured for stable fNAV; minting and system operations are manager-only through authorized silo multisigs",
+    "pegMechanism": "RWf(x), an f(x) protocol fork, mints pmUSD as the fToken against TB / ION.au-linked collateral; xPM absorbs collateral-price volatility while pmUSD is configured for stable fNAV; minting and system operations are manager-only through authorized silo multisigs. PSM (Peg Stability Module) is the primary peg defense tool: arbitrageurs swap pmUSD → sUSDS at $1 face value when pmUSD trades at a discount on-chain; swaps are one-directional and pause if the sUSDS reserve falls below 20% of PSM assets",
     "geckoId": "precious-metals-usd",
     "proofOfReserves": {
       "type": "real-time",
@@ -9976,6 +9976,13 @@
         "chain": "ethereum",
         "address": "0xc0c17dd08263c16f6b64e772fb9b723bf1344ddf",
         "decimals": 18
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "susds-sky",
+        "weight": 0.5,
+        "type": "mechanism"
       }
     ],
     "custodyModel": "institutional-unregulated",

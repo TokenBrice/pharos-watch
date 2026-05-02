@@ -585,9 +585,9 @@
     "updatedAt": "2026-03-23"
   },
   "pmusd-precious-metals": {
-    "title": "Commodity Peg, Dollar Problem",
-    "text": "RAAC's pmUSD demonstrates why backing a dollar-pegged stablecoin with gold is an exercise in structural contradiction: 419 depeg events -- more than one per day of its existence -- and a D safety grade at 44 tell the story of a mechanism that must continuously absorb gold price movements to maintain a USD peg. Trading at $0.993 with DEWS in the Watch band at 26, the coin has shed 9% of supply month-over-month to $99M while the no-backstop designation means Pharos models no credible exit route at par. The transparency infrastructure is genuinely impressive -- real-time Chainlink Proof of Reserves and Instruxi attestations on 100% ION.au tokenized gold -- but transparency about a structurally challenged mechanism doesn't fix the mechanism. Gold is a fine store of value; it is a terrible peg anchor for a dollar stablecoin.",
-    "updatedAt": "2026-04-13"
+    "title": "Gold Bars, Sky Strings",
+    "text": "pmUSD's structural design now runs on two incompatible logics: supply is backed by gold via RAAC's RWf(x) fork and ION.au tokenized claims, but peg defense relies on a Peg Stability Module that holds sUSDS -- Sky Protocol's yield-bearing savings wrapper -- as its reserve asset. Arbitrageurs swap discounted pmUSD for sUSDS at a $1 internal valuation when the market price dips, but the flow is one-directional and automatically halts when sUSDS reserves fall below 20% of PSM assets, meaning the peg backstop has a backstop condition. That architecture ties pmUSD's dollar recovery mechanism to Sky Protocol's stability -- a meaningful external dependency for a coin that was previously modeled as self-backed in scoring. The D grade still reflects F scores in both resilience and decentralization, with over 450 depeg events accumulated since launch as gold's dollar-independent price movements create a structurally recurring gap to close. Real-time Chainlink Proof of Reserves and Instruxi attestations document the gold backing with genuine rigor; the question was never whether the gold is there, but whether a Sky-Protocol-dependent PSM is the right lever to close the gap between what gold is worth and what a dollar costs.",
+    "updatedAt": "2026-05-02"
   },
   "jupusd-jupiter": {
     "title": "Three Layers to Treasuries",
