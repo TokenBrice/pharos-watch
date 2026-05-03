@@ -1,5 +1,5 @@
 {
-  "last_updated_at": 1777060544,
+  "last_updated_at": 1777807717,
   "donations": [
     {
       "chain": "ethereum",
@@ -84,6 +84,150 @@
       "amount_decimal": 0.1,
       "usd_at_receipt": 233.08,
       "price_note": "coingecko-historical-2026-04-24"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x9e5f9c2b5e33229ef70c6d44e2f85226a4cf87b115bb008c198a578a9c878139",
+      "block_timestamp": 1777112591,
+      "from_address": "0xf18a9fd132f2a6242a5bb3b9f68a9da595f0c06b",
+      "display": "0xf18a9f...c06b",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 0.01,
+      "usd_at_receipt": 23.16,
+      "price_note": "coingecko-historical-2026-04-25"
+    },
+    {
+      "chain": "base",
+      "tx_hash": "0x2072331eddc70e3286f5a5d6584798d0883134d082d3bbd2201f4daf227113a0",
+      "block_timestamp": 1777128535,
+      "from_address": "0x11443ad12aef3663a8cd767e6f9508fc799c4b18",
+      "display": "paulx.eth",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 10,
+      "usd_at_receipt": 10,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "optimism",
+      "tx_hash": "0xf404b7f23319b67ab947fe90bb86f99a185f1fddc7cb079c09113e9cbe9ef9ff",
+      "block_timestamp": 1777184735,
+      "from_address": "0xc6ef30e0bec5945e0133352cffcf0a7e2b14e6fc",
+      "display": "bkaya.eth",
+      "kind": "community",
+      "asset_symbol": "GIV",
+      "amount_decimal": 65,
+      "usd_at_receipt": 0.06,
+      "price_note": "manual-user-quote-2026-04-26"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x4ceb466a77be1a1589b69941ba646e29213ffd1f9ce2a46d3e01b23603934ac5",
+      "block_timestamp": 1777189799,
+      "from_address": "0x40c7f5de0232d09f59baa72d6609b405451dc8b9",
+      "display": "0x40c7f5...c8b9",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 0.005,
+      "usd_at_receipt": 11.6,
+      "price_note": "coingecko-historical-2026-04-26"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xcc2611c74b25c2697cc803c96a149c681d6766412aa1a8469c6a1ae6c1d0d075",
+      "block_timestamp": 1777192715,
+      "from_address": "0x97b2cb568e0880b99cd16efc6edff5272aa02676",
+      "display": "0x97b2cb...2676",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 0.05,
+      "usd_at_receipt": 115.96,
+      "price_note": "coingecko-historical-2026-04-26"
+    },
+    {
+      "chain": "base",
+      "tx_hash": "0x456a6e4a09d92fa10d2929b6837ae4feef4486821021fd7f0ab6f666d1a43b70",
+      "block_timestamp": 1777296995,
+      "from_address": "0x77b66c6f4c26056c0fe2604c45c465b13739e3da",
+      "display": "0x77b66c...e3da",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 5,
+      "usd_at_receipt": 5,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x28b97a0e8ccd4c839baf023fc0f9de1d7b7403b1d7d9ddb3d3a42afd8499550a",
+      "block_timestamp": 1777319123,
+      "from_address": "0x97b2cb568e0880b99cd16efc6edff5272aa02676",
+      "display": "0x97b2cb...2676",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 0.003,
+      "usd_at_receipt": 7.11,
+      "price_note": "coingecko-historical-2026-04-27"
+    },
+    {
+      "chain": "base",
+      "tx_hash": "0x9b8efa0ad132c5821569ce7b07b3d03e736caf2b98dbdcb0eb166d3ae4d858da",
+      "block_timestamp": 1777350403,
+      "from_address": "0x22ea53df18bb302716f9af3fbd0436eccf61a12f",
+      "display": "0x22ea53...a12f",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 5.5,
+      "usd_at_receipt": 5.5,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xe6393657ef83ace4cfa3707b09612c6f1b24061c967b099c3cf6f803b0e38618",
+      "block_timestamp": 1777367315,
+      "from_address": "0xd7465f5be5c5401496d2de8df999bcb6c2a47367",
+      "display": "0xd7465f...7367",
+      "kind": "community",
+      "asset_symbol": "FINN",
+      "amount_decimal": 5,
+      "usd_at_receipt": 0,
+      "price_note": "manual-token-not-priced"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x3fe7841e3881658d09ef794d1cfd3f6ce1b3ddb898f9e801dc1b374f7db4e584",
+      "block_timestamp": 1777369055,
+      "from_address": "0xfe1552da65facaac5b50b73ceda4c993e16d4694",
+      "display": "0xfe1552...4694",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 5,
+      "usd_at_receipt": 5,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "optimism",
+      "tx_hash": "0x95f559c1e4f2877fac58e0c10e1e88f15cd8fbdfb0b7a59822be7c79000ca7a9",
+      "block_timestamp": 1777467651,
+      "from_address": "0x38f80f8f76b1c44b2beefb63bb561f570fb6ddb6",
+      "display": "freshelle.eth",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 1.1,
+      "usd_at_receipt": 1.1,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "base",
+      "tx_hash": "0xc1d833b958b2cb93f77b3710834d739e74a3ce3fdacdfffd170458d3d2dd695f",
+      "block_timestamp": 1777741601,
+      "from_address": "0x19886aed98ac7a313649e06475b1beb9292520b6",
+      "display": "bravala.eth",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 1.24,
+      "usd_at_receipt": 1.24,
+      "price_note": "stablecoin-1-to-1"
     }
   ]
 }
