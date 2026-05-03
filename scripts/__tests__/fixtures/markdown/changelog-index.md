@@ -8,10 +8,15 @@ description: "Weekly release notes for Pharos."
 
 ## 2026-04-27 to 2026-05-03
 
-BUCK moves to the cemetery while admin stress signals stop flagging stale probe and remediation paths.
+PharosVille v1 ships, frozen lifecycle lands with USR + BUCK archived, and a 10-phase audit remediation closes.
 
-- **BUCK frozen**: BUCK is archived as a frozen cemetery entry after the project shutdown notice replaced live issuer disclosures; active mint/burn, yield, reserve, and redemption hooks no longer monitor it.
-- **Admin stress cleanup**: Operator probes now call status-probe-history with a valid target path, blacklist gap remediation backfills stale amount rows by default, and the dead BUCK live-reserve breaker is removed.
+- **Pharosville v1**: Pharosville v1 launch: a pixel-art harbor where the Pharos data comes to life, with chains as harbors, stablecoins as ships, and DEWS alert tiers as sea zones.
+- **Frozen lifecycle**: USR (Resolv) and BUCK become the first frozen archives. Frozen banner + chart footers, command-palette/compare/cemetery surfaces, OG/sitemap retention, cron writes excluded, PSI excludes frozen.
+- **Audit remediation: 10 phases**: Phases 2-10 close: refactor splits (env contracts, contagion graph, dex discovery, taxonomy, fallback, depeg), shell-safe git refs, validated D1 usage payloads, KYC blacklist hardening, Node 24 baseline.
+- **Per-coin catalog migration**: Stablecoin metadata moves from monolithic JSON shells to per-coin files with a generated aggregate; loaders, docs, lifecycle references, and tests follow.
+- **Coverage and redemption modeling**: MYRC and KRWQ join coverage (MYR + KRW peg support); pmUSD gets a redemption backstop via sUSDS PSM; catalog refreshes after the crvUSD GHO PegKeeper update.
+- **Mint/burn cleanup + DEX resilience**: Legacy mint/burn sync fallback removed, D1 rows-read cut, homepage events count chip restored via O(1) sqlite_sequence read; DEX liquidity degrades cleanly on source outages.
+- **Funding page polish**: Funding KPI card now shows <1% donor share and prior-month coverage; 12 new donations from this week's funding-update sweep.
 
 ## 2026-04-20 to 2026-04-26
 
