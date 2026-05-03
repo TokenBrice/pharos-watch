@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -360,6 +360,54 @@ export function StartHerePage() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* ── Sister tool: PharosVille ─────────────────────────────────── */}
+      <section aria-labelledby="start-pharosville-title" className="space-y-4">
+        <div className="max-w-3xl space-y-2">
+          <p className="pharos-kicker text-[oklch(0.42_0.10_60)] dark:text-[oklch(0.82_0.13_84)]">Immersive data visualization</p>
+          <h2 id="start-pharosville-title" className="text-2xl font-semibold tracking-tight text-foreground">
+            See it visually on PharosVille.
+          </h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            A pixel-art harbor view of the same data. Every coin sails as a ship, and DEWS zones become anchorages,
+            breakwaters, and warning shoals — useful when you want to feel the market shape rather than read it.
+          </p>
+        </div>
+
+        <a
+          href="https://pharosville.pharos.watch/"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Explore PharosVille (opens in new tab)"
+          className="pharos-focus-ring group grid overflow-hidden rounded-[1.4rem] border border-[color:oklch(0.55_0.11_82)] bg-[linear-gradient(135deg,oklch(0.94_0.07_88)_0%,oklch(0.88_0.13_82)_55%,oklch(0.80_0.16_78)_100%)] text-[oklch(0.18_0.04_60)] shadow-[0_12px_28px_oklch(0.20_0.04_50_/_0.18)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-[color:oklch(0.42_0.09_70)] hover:shadow-[0_18px_44px_oklch(0.20_0.04_50_/_0.28)] dark:border-[color:oklch(0.50_0.10_84)] dark:bg-[linear-gradient(135deg,oklch(0.34_0.08_62)_0%,oklch(0.26_0.06_50)_55%,oklch(0.20_0.04_42)_100%)] dark:text-[oklch(0.92_0.05_88)] md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]"
+        >
+          <div className="relative aspect-[16/9] w-full overflow-hidden bg-[oklch(0.18_0.02_248)] md:aspect-auto md:h-full">
+            <img
+              src="/pharosville-teaser.webp"
+              alt="PharosVille pixel-art harbor with stablecoins as ships in DEWS zones"
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+            />
+          </div>
+          <div className="flex flex-col justify-between gap-4 p-5 sm:p-6">
+            <div className="space-y-3">
+              <p className="pharos-kicker text-[oklch(0.42_0.10_60)] dark:text-[oklch(0.82_0.13_84)]">PharosVille</p>
+              <h3 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                The stablecoin universe as a working harbor
+              </h3>
+              <p className="text-sm leading-relaxed text-[oklch(0.30_0.05_50)] dark:text-[oklch(0.85_0.05_84)]">
+                Calm Anchorage, Ledger Mooring, Watch Breakwater, Alert Channel, Warning Shoals — the DEWS zones you
+                read in tables, drawn as a place. Best on desktop.
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1.5 text-sm font-semibold">
+              Explore PharosVille
+              <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </span>
+          </div>
+        </a>
       </section>
 
       {/* ── Closing CTA ──────────────────────────────────────────────── */}

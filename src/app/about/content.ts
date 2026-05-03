@@ -13,6 +13,7 @@ import {
   Network,
   Newspaper,
   Rocket,
+  Ship,
   ShieldAlert,
   ShieldCheck,
   Skull,
@@ -183,6 +184,18 @@ export const COMPUTED_FEATURES: readonly AboutFeatureItem[] = [
       "Yield opportunities scored against stablecoin safety, benchmark context, source freshness, and APY consistency.",
     icon: TrendingUp,
     href: "/yield/",
+  },
+];
+
+export const COMPANION_FEATURES: readonly AboutFeatureItem[] = [
+  {
+    title: "PharosVille",
+    description:
+      "A pixel-art harbor view of the same data. Every coin sails as a ship; DEWS zones become anchorages, breakwaters, and warning shoals — the classification you read in tables, drawn as a place. Best on desktop.",
+    icon: Ship,
+    href: "https://pharosville.pharos.watch/",
+    external: true,
+    linkLabel: "Explore PharosVille",
   },
 ];
 

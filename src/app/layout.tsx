@@ -145,6 +145,7 @@ export default function RootLayout({
                 url: SITE_URL,
                 description: siteDescription,
                 inLanguage: "en",
+                relatedLink: ["https://pharosville.pharos.watch/"],
               },
               {
                 "@context": "https://schema.org",

@@ -1,7 +1,14 @@
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { CATEGORY_LINKS } from "@/lib/constants";
 
-const FOOTER_PRIMARY_LINKS = [
+interface FooterLink {
+  href: string;
+  label: string;
+  external?: boolean;
+}
+
+const FOOTER_PRIMARY_LINKS: readonly FooterLink[] = [
   { href: "/", label: "Dashboard" },
   { href: "/start/", label: "Start Here" },
   { href: "/stablecoins/", label: "Stablecoins" },
@@ -14,7 +21,8 @@ const FOOTER_PRIMARY_LINKS = [
   { href: "/funding/", label: "Funding" },
   { href: "/about/api/", label: "API" },
   { href: "/about/", label: "About" },
-] as const;
+  { href: "https://pharosville.pharos.watch/", label: "PharosVille", external: true },
+];
 
 export function Footer() {
   return (
@@ -66,15 +74,28 @@ export function Footer() {
         </div>
 
         <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-6 gap-y-2">
-          {FOOTER_PRIMARY_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="pharos-focus-ring text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline hover:underline-offset-4"
-            >
-              {link.label}
-            </Link>
-          ))}
+          {FOOTER_PRIMARY_LINKS.map((link) =>
+            link.external ? (
+              <a
+                key={link.href}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pharos-focus-ring inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline hover:underline-offset-4"
+              >
+                {link.label}
+                <ArrowUpRight className="h-3 w-3 text-muted-foreground/70" aria-hidden="true" />
+              </a>
+            ) : (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="pharos-focus-ring text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline hover:underline-offset-4"
+              >
+                {link.label}
+              </Link>
+            ),
+          )}
         </nav>
 
         <details className="sm:hidden">

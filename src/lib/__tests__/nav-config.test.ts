@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { NAV_GROUPS, PRIMARY_NAV_ITEMS } from "@/lib/nav-config";
+import { COMPANION_NAV_ITEMS, NAV_GROUPS, NAV_ITEMS, PRIMARY_NAV_ITEMS } from "@/lib/nav-config";
 
 describe("nav-config", () => {
   it("promotes dashboard and Pharos core features to the primary nav block in the intended order", () => {
@@ -66,5 +66,16 @@ describe("nav-config", () => {
       "/about/api",
       "/changelog",
     ]);
+  });
+
+  it("exposes PharosVille as an external companion entry, not a primary or group route", () => {
+    expect(COMPANION_NAV_ITEMS).toHaveLength(1);
+    const ville = COMPANION_NAV_ITEMS[0];
+    expect(ville.label).toBe("PharosVille");
+    expect(ville.external).toBe(true);
+    expect(ville.href.startsWith("https://")).toBe(true);
+    expect(PRIMARY_NAV_ITEMS.some((item) => item.label === "PharosVille")).toBe(false);
+    expect(NAV_GROUPS.flatMap((g) => g.items).some((item) => item.label === "PharosVille")).toBe(false);
+    expect(NAV_ITEMS.some((item) => item.label === "PharosVille")).toBe(true);
   });
 });

@@ -12,6 +12,7 @@ import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildFaqJsonLd } from "@/lib/faq";
 import {
+  COMPANION_FEATURES,
   COMPUTED_FEATURES,
   DATA_PIPELINE_STEPS,
   DATA_SOURCE_GROUPS,
@@ -395,6 +396,14 @@ export default function AboutPage() {
               </Button>
             </div>
           }
+        />
+
+        <AboutFeatureSection
+          eyebrow="Immersive data visualization"
+          title="Companion Experiences"
+          intro="Sibling surfaces hosted at separate origins. They consume the same Pharos data through the public API but run on their own, so they can experiment with presentation without crowding the dashboard."
+          items={COMPANION_FEATURES}
+          tone="brand"
         />
 
         <AboutSection

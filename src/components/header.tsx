@@ -12,9 +12,9 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { NAV_GROUPS, BOTTOM_NAV_ITEMS, PRIMARY_NAV_ITEMS } from "@/lib/nav-config";
+import { NAV_GROUPS, BOTTOM_NAV_ITEMS, COMPANION_NAV_ITEMS, PRIMARY_NAV_ITEMS } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
-import { Menu, Search, X, ChevronRight } from "lucide-react";
+import { ExternalLink, Menu, Search, X, ChevronRight } from "lucide-react";
 import { openCommandPalette } from "@/lib/command-palette";
 import { isRouteActive } from "@/lib/navigation";
 import { useNavCollapse } from "@/hooks/use-nav-collapse";
@@ -22,24 +22,50 @@ import { useStartHereNavVisibility } from "@/hooks/use-start-here-nav-visibility
 
 function MobileNavLink({ item, active, onNavigate }: { item: NavItem; active: boolean; onNavigate: () => void }) {
   const Icon = item.icon;
+  const className = `pharos-focus-ring flex items-start gap-3 rounded-lg border px-3 py-3 transition-[background-color,border-color,color,box-shadow] duration-200 ${
+    active
+      ? "border-border/70 bg-muted/60 font-medium text-foreground shadow-sm"
+      : "border-transparent text-muted-foreground hover:border-border/55 hover:bg-muted/45 hover:text-foreground"
+  }`;
+
+  const body = (
+    <>
+      <Icon className="h-4 w-4 shrink-0 mt-0.5" />
+      <div className="min-w-0 flex-1">
+        <div className="text-sm flex items-center gap-1.5">
+          {item.label}
+          {item.external && <ExternalLink className="h-3 w-3 text-muted-foreground/70" aria-hidden="true" />}
+        </div>
+        {item.description && (
+          <div className="text-xs text-muted-foreground/60 mt-0.5">{item.description}</div>
+        )}
+      </div>
+    </>
+  );
+
+  if (item.external) {
+    return (
+      <a
+        href={item.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onNavigate}
+        aria-label={`${item.label} (opens in new tab)`}
+        className={className}
+      >
+        {body}
+      </a>
+    );
+  }
+
   return (
     <Link
       href={item.href}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
-      className={`pharos-focus-ring flex items-start gap-3 rounded-lg border px-3 py-3 transition-[background-color,border-color,color,box-shadow] duration-200 ${
-        active
-          ? "border-border/70 bg-muted/60 font-medium text-foreground shadow-sm"
-          : "border-transparent text-muted-foreground hover:border-border/55 hover:bg-muted/45 hover:text-foreground"
-      }`}
+      className={className}
     >
-      <Icon className="h-4 w-4 shrink-0 mt-0.5" />
-      <div className="min-w-0">
-        <div className="text-sm">{item.label}</div>
-        {item.description && (
-          <div className="text-xs text-muted-foreground/60 mt-0.5">{item.description}</div>
-        )}
-      </div>
+      {body}
     </Link>
   );
 }
@@ -144,6 +170,18 @@ export function Header() {
                 >
                   {visibleBottomNavItems.map((item) => (
                     <MobileNavLink key={item.href} item={item} active={isRouteActive(pathname, item.href)} onNavigate={() => setOpen(false)} />
+                  ))}
+                </div>
+              ) : null}
+
+              {COMPANION_NAV_ITEMS.length > 0 ? (
+                <div
+                  className="mt-4 pl-[14px] animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards]"
+                  style={{ animationDelay: `${(PRIMARY_NAV_ITEMS.length + NAV_GROUPS.length + 1) * 50}ms`, animationDuration: "200ms" }}
+                >
+                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/65">Companion</p>
+                  {COMPANION_NAV_ITEMS.map((item) => (
+                    <MobileNavLink key={item.href} item={item} active={false} onNavigate={() => setOpen(false)} />
                   ))}
                 </div>
               ) : null}

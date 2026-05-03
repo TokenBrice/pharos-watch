@@ -3,7 +3,7 @@ import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
 import { HomepageClient } from "@/components/homepage-client";
-import { HomepageStartHereCallout } from "@/components/homepage-sections";
+import { HomepageStartHereCallout, HomepageVilleTeaser } from "@/components/homepage-sections";
 import { KpiBar } from "@/components/kpi-bar";
 import { SiteHeader } from "@/components/site-header";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -67,6 +67,7 @@ export default function HomePage() {
               url: SITE_URL,
               mainEntity: { "@id": `${SITE_URL}/#homepage-itemlist` },
               isPartOf: { "@id": `${SITE_URL}#website` },
+              relatedLink: ["https://pharosville.pharos.watch/"],
             },
             {
               "@context": "https://schema.org",
@@ -85,6 +86,9 @@ export default function HomePage() {
         <div className="flex flex-col gap-5">
           <div className="empty:hidden">
             <HomepageStartHereCallout />
+          </div>
+          <div className="empty:hidden">
+            <HomepageVilleTeaser />
           </div>
           <div>
             <KpiBar />

@@ -23,6 +23,7 @@ import {
   ScrollText,
   Heart,
   Globe,
+  Ship,
   createLucideIcon,
 } from "lucide-react";
 
@@ -40,6 +41,7 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   description?: string;
+  external?: boolean;
 }
 
 export interface NavGroup {
@@ -116,9 +118,21 @@ export const BOTTOM_NAV_ITEMS: NavItem[] = [
   { href: "/start", label: "Start Here", icon: Compass, description: "Shortest route into the product for new or returning users" },
 ];
 
+/** Sibling/companion experiences hosted at separate origins */
+export const COMPANION_NAV_ITEMS: NavItem[] = [
+  {
+    href: "https://pharosville.pharos.watch/",
+    label: "PharosVille",
+    icon: Ship,
+    description: "The stablecoin universe as a working harbor — DEWS zones at a glance",
+    external: true,
+  },
+];
+
 /** Flat list for use in header and command palette */
 export const NAV_ITEMS: NavItem[] = [
   ...PRIMARY_NAV_ITEMS,
   ...NAV_GROUPS.flatMap((g) => g.items),
   ...BOTTOM_NAV_ITEMS,
+  ...COMPANION_NAV_ITEMS,
 ];

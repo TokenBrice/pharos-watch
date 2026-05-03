@@ -4,8 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PharosLogo } from "@/components/pharos-logo";
-import { ChevronsLeft, ChevronsRight, ChevronRight, Moon, Search, Sun } from "lucide-react";
-import { NAV_GROUPS, BOTTOM_NAV_ITEMS, PRIMARY_NAV_ITEMS } from "@/lib/nav-config";
+import { ChevronsLeft, ChevronsRight, ChevronRight, ExternalLink, Moon, Search, Sun } from "lucide-react";
+import { NAV_GROUPS, BOTTOM_NAV_ITEMS, COMPANION_NAV_ITEMS, PRIMARY_NAV_ITEMS } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { useNavCollapse } from "@/hooks/use-nav-collapse";
 import { useSidebarNavSignals } from "@/hooks/use-sidebar-nav-signals";
@@ -137,8 +137,46 @@ function SidebarNavItem({
 }) {
   const Icon = item.icon;
   const accentBg = signal?.accentClass;
-  const title = expanded ? undefined : signal ? `${item.label} — ${signal.title}` : item.label;
-  const ariaLabel = signal ? `${item.label} — ${signal.title}` : item.label;
+  const externalSuffix = item.external ? " (opens in new tab)" : "";
+  const title = expanded ? undefined : signal ? `${item.label} — ${signal.title}${externalSuffix}` : `${item.label}${externalSuffix}`;
+  const ariaLabel = signal ? `${item.label} — ${signal.title}${externalSuffix}` : `${item.label}${externalSuffix}`;
+  const className = `pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] transition-[background-color,border-color,color,box-shadow] duration-200 ${
+    expanded ? "mx-2 px-3 py-2.5" : "mx-auto px-0 py-2 justify-center w-10"
+  } ${
+    accentBg
+      ? `${accentBg} ${isActive ? "border-l-frost-blue text-foreground shadow-sm" : "border-l-transparent text-foreground/80 hover:text-foreground"}`
+      : isActive
+        ? "border-l-frost-blue bg-muted/60 text-foreground shadow-sm"
+        : "border-l-transparent text-muted-foreground hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground"
+  }`;
+
+  if (item.external) {
+    // PharosVille-flavoured hint: warm parchment/brass tint that sets
+    // companion experiences apart from the dashboard's analytical chrome.
+    const externalClassName = `pharos-focus-ring relative flex items-center gap-3 rounded-md border-l-[3px] border-l-[color:oklch(0.62_0.13_84)] bg-[linear-gradient(180deg,oklch(0.94_0.07_88_/_0.18),oklch(0.86_0.13_78_/_0.06))] text-[oklch(0.32_0.07_60)] transition-[background-color,border-color,color,box-shadow] duration-200 hover:bg-[linear-gradient(180deg,oklch(0.94_0.07_88_/_0.32),oklch(0.86_0.13_78_/_0.12))] hover:border-l-[color:oklch(0.78_0.16_84)] dark:text-[oklch(0.92_0.05_84)] dark:bg-[linear-gradient(180deg,oklch(0.32_0.06_60_/_0.55),oklch(0.22_0.04_50_/_0.4))] dark:hover:bg-[linear-gradient(180deg,oklch(0.36_0.07_60_/_0.7),oklch(0.24_0.05_50_/_0.55))] ${
+      expanded ? "mx-2 px-3 py-2.5" : "mx-auto px-0 py-2 justify-center w-10"
+    }`;
+
+    return (
+      <a
+        href={item.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={title}
+        aria-label={ariaLabel}
+        className={externalClassName}
+      >
+        <Icon className="h-4 w-4 shrink-0 text-[oklch(0.55_0.13_84)] dark:text-[oklch(0.82_0.16_84)]" />
+        {expanded && <span className="min-w-0 text-sm truncate font-medium">{item.label}</span>}
+        {expanded && (
+          <ExternalLink
+            className="ml-auto h-3 w-3 shrink-0 text-[oklch(0.55_0.13_84_/_0.7)] dark:text-[oklch(0.82_0.16_84_/_0.7)]"
+            aria-hidden="true"
+          />
+        )}
+      </a>
+    );
+  }
 
   return (
     <Link
@@ -146,15 +184,7 @@ function SidebarNavItem({
       title={title}
       aria-label={ariaLabel}
       aria-current={isActive ? "page" : undefined}
-      className={`pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] transition-[background-color,border-color,color,box-shadow] duration-200 ${
-        expanded ? "mx-2 px-3 py-2.5" : "mx-auto px-0 py-2 justify-center w-10"
-      } ${
-        accentBg
-          ? `${accentBg} ${isActive ? "border-l-frost-blue text-foreground shadow-sm" : "border-l-transparent text-foreground/80 hover:text-foreground"}`
-          : isActive
-            ? "border-l-frost-blue bg-muted/60 text-foreground shadow-sm"
-            : "border-l-transparent text-muted-foreground hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground"
-      }`}
+      className={className}
     >
       <Icon className="h-4 w-4 shrink-0" />
       {expanded && <span className="min-w-0 text-sm truncate">{item.label}</span>}
@@ -330,6 +360,20 @@ export function Sidebar() {
             navSignals={navSignals}
           />
         ))}
+
+        {/* Companion experiences — sit just above the utility separator,
+            with a subtle parchment/brass tint to nod at PharosVille's
+            isometric chrome without breaking the dashboard's aesthetic. */}
+        <div className="space-y-0.5 pt-1">
+          {COMPANION_NAV_ITEMS.map((item) => (
+            <SidebarNavItem
+              key={item.href}
+              item={item}
+              expanded={expanded}
+              isActive={false}
+            />
+          ))}
+        </div>
       </nav>
 
       {/* Bottom section */}

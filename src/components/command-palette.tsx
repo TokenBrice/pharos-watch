@@ -219,6 +219,11 @@ export function CommandPalette() {
             section: "Pages",
             icon: <Icon className="h-4 w-4" />,
             onSelect: () => {
+              if (page.external) {
+                window.open(page.href, "_blank", "noopener,noreferrer");
+                closePalette();
+                return;
+              }
               addToHistory(page.href, "page", page.label, page.description, page.href);
               router.push(page.href);
               closePalette();
