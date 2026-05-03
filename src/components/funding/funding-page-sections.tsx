@@ -9,8 +9,8 @@ import { formatAddress } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/lib/chains";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { CostLineItem, Donation, FundingChain } from "@shared/lib/funding/types";
-import type { DonationSummary } from "@shared/lib/funding/helpers";
-import { groupCostsByCategory } from "@shared/lib/funding/helpers";
+import type { DonationSummary, MonthlyCommunityCoverage } from "@shared/lib/funding/helpers";
+import { formatCoveragePct, groupCostsByCategory } from "@shared/lib/funding/helpers";
 
 const PHAROS_FUNDING_WALLET_DISPLAY = "0x5d698362EDb8AEa1C2b2483096BDeE3265D860DB";
 const PHAROS_FUNDING_ENS = "pharos-watch.eth";
@@ -80,24 +80,25 @@ function toneKicker(tone: Tone): string {
 export interface FundingKpiRowProps {
   summary: DonationSummary;
   monthlyTargetUsd: number;
+  monthlyHistory?: MonthlyCommunityCoverage[];
 }
 
-export function FundingKpiRow({ summary, monthlyTargetUsd }: FundingKpiRowProps) {
+export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }: FundingKpiRowProps) {
   const rawCoveragePct = monthlyTargetUsd > 0 ? (summary.currentMonthCommunityUsd / monthlyTargetUsd) * 100 : 0;
-  const coveragePct = Math.round(rawCoveragePct);
   const progressPct = Math.max(0, Math.min(100, rawCoveragePct));
   const ariaCoveragePct = Math.round(progressPct);
+  const coveragePctLabel = formatCoveragePct(summary.currentMonthCommunityUsd, monthlyTargetUsd);
   const ariaCoverageText =
     summary.lifetimeCommunityUsd === 0
       ? "Tracking begins; no community donations recorded yet"
-      : `${coveragePct}% covered this month`;
+      : `${coveragePctLabel} covered this month`;
   const remainingUsd = Math.max(0, monthlyTargetUsd - summary.currentMonthCommunityUsd);
 
   const thisMonth =
     summary.lifetimeCommunityUsd === 0
       ? { primary: "Tracking begins", secondary: "first community donations will appear here" }
       : {
-          primary: `${coveragePct}%`,
+          primary: coveragePctLabel,
           secondary: `${USD_COMPACT.format(summary.currentMonthCommunityUsd)} of ${USD_COMPACT.format(monthlyTargetUsd)} covered`,
         };
 
@@ -169,6 +170,28 @@ export function FundingKpiRow({ summary, monthlyTargetUsd }: FundingKpiRowProps)
             <span>{remainingUsd > 0 ? `${USD_COMPACT.format(remainingUsd)} still open` : "Monthly costs covered"}</span>
           </div>
         </div>
+
+        {monthlyHistory.length > 0 ? (
+          <div className="space-y-1.5">
+            <p className="pharos-kicker text-muted-foreground">Previous months</p>
+            <ul className="flex flex-wrap gap-1.5">
+              {monthlyHistory.map((m) => (
+                <li
+                  key={m.monthKey}
+                  className="flex items-baseline gap-2 rounded-full border border-border/40 bg-background/40 px-2.5 py-1 text-xs"
+                >
+                  <span className="text-muted-foreground">{m.label}</span>
+                  <span className="font-mono font-semibold tabular-nums text-foreground">
+                    {formatCoveragePct(m.communityUsd, monthlyTargetUsd)}
+                  </span>
+                  <span className="font-mono tabular-nums text-muted-foreground">
+                    {USD_COMPACT.format(m.communityUsd)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         <p className="text-sm leading-relaxed text-muted-foreground">
           Donations keep Pharos freely accessible to all, so stablecoin users, analysts, and builders can check

@@ -44,6 +44,43 @@ describe("FundingKpiRow", () => {
     expect(screen.getByText(/Donations keep Pharos freely accessible/)).toBeTruthy();
   });
 
+  it("renders <1% when monthly coverage is positive but rounds to zero", () => {
+    render(
+      <FundingKpiRow
+        summary={{
+          currentMonthCommunityUsd: 1.24,
+          currentMonthFounderUsd: 0,
+          lifetimeCommunityUsd: 100,
+          lifetimeFounderUsd: 0,
+          lifetimeCommunityDonorCount: 1,
+        }}
+        monthlyTargetUsd={1709}
+      />,
+    );
+    expect(screen.getByText("<1%")).toBeTruthy();
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toContain("<1%");
+  });
+
+  it("renders previous-month coverage chips when monthlyHistory is provided", () => {
+    render(
+      <FundingKpiRow
+        summary={{
+          currentMonthCommunityUsd: 1,
+          currentMonthFounderUsd: 0,
+          lifetimeCommunityUsd: 691,
+          lifetimeFounderUsd: 0,
+          lifetimeCommunityDonorCount: 18,
+        }}
+        monthlyTargetUsd={1709}
+        monthlyHistory={[{ monthKey: "2026-04", label: "Apr 2026", communityUsd: 690 }]}
+      />,
+    );
+    expect(screen.getByText("Previous months")).toBeTruthy();
+    expect(screen.getByText("Apr 2026")).toBeTruthy();
+    // 690 / 1709 ≈ 40.4% → "40%"
+    expect(screen.getByText("40%")).toBeTruthy();
+  });
+
   it("shows cold-start copy when lifetime community is zero", () => {
     render(
       <FundingKpiRow

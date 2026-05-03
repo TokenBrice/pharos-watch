@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   computeCostsTotal,
+  computeMonthlyHistory,
+  formatCoveragePct,
   groupCostsByCategory,
   summarizeDonations,
   monthKey,
@@ -86,5 +88,61 @@ describe("summarizeDonations", () => {
     expect(s.lifetimeCommunityDonorCount).toBe(0);
     expect(s.currentMonthCommunityUsd).toBe(0);
     expect(s.currentMonthFounderUsd).toBe(0);
+  });
+});
+
+describe("formatCoveragePct", () => {
+  it("rounds normal values to whole percent", () => {
+    expect(formatCoveragePct(300, 1540)).toBe("19%");
+  });
+
+  it("returns 0% when there is no coverage at all", () => {
+    expect(formatCoveragePct(0, 1540)).toBe("0%");
+  });
+
+  it("returns <1% when raw is positive but rounds to zero", () => {
+    expect(formatCoveragePct(1.24, 1709)).toBe("<1%");
+  });
+
+  it("returns em dash when target is non-positive", () => {
+    expect(formatCoveragePct(100, 0)).toBe("—");
+  });
+});
+
+describe("computeMonthlyHistory", () => {
+  const may = Date.UTC(2026, 4, 3) / 1000;
+  const apr = Date.UTC(2026, 3, 15) / 1000;
+  const mar = Date.UTC(2026, 2, 15) / 1000;
+
+  it("aggregates community totals per month, excluding the current month and founders", () => {
+    const rows: Donation[] = [
+      D(may, "community", 5, "0xa"),
+      D(apr, "community", 100, "0xa"),
+      D(apr, "community", 50, "0xb"),
+      D(apr, "founder", 999, "0xf"),
+      D(mar, "community", 25, "0xc"),
+    ];
+    const history = computeMonthlyHistory(rows, may);
+    expect(history).toEqual([
+      { monthKey: "2026-04", label: "Apr 2026", communityUsd: 150 },
+      { monthKey: "2026-03", label: "Mar 2026", communityUsd: 25 },
+    ]);
+  });
+
+  it("returns empty when there is no prior-month data", () => {
+    const rows: Donation[] = [D(may, "community", 5, "0xa")];
+    expect(computeMonthlyHistory(rows, may)).toEqual([]);
+  });
+
+  it("caps history at maxMonths", () => {
+    const rows: Donation[] = [];
+    for (let i = 0; i < 14; i++) {
+      const ts = Date.UTC(2025, i, 15) / 1000;
+      rows.push(D(ts, "community", 10, "0xa"));
+    }
+    const history = computeMonthlyHistory(rows, Date.UTC(2026, 4, 1) / 1000, 6);
+    expect(history).toHaveLength(6);
+    expect(history[0]?.monthKey).toBe("2026-02");
+    expect(history[5]?.monthKey).toBe("2025-09");
   });
 });

@@ -27,6 +27,52 @@ export function monthKey(timestampSec: number): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+/** Coverage percent label that surfaces small-but-positive amounts as "<1%". */
+export function formatCoveragePct(communityUsd: number, targetUsd: number): string {
+  if (targetUsd <= 0) return "—";
+  const raw = (communityUsd / targetUsd) * 100;
+  const rounded = Math.round(raw);
+  if (raw > 0 && rounded === 0) return "<1%";
+  return `${rounded}%`;
+}
+
+export interface MonthlyCommunityCoverage {
+  monthKey: string;
+  label: string;
+  communityUsd: number;
+}
+
+/**
+ * Per-month community totals for months strictly before `nowSec`'s month.
+ * Months with no community donations are omitted. Sorted most-recent first.
+ */
+export function computeMonthlyHistory(
+  donations: readonly Donation[],
+  nowSec: number,
+  maxMonths = 12,
+): MonthlyCommunityCoverage[] {
+  const currentMonth = monthKey(nowSec);
+  const totals = new Map<string, number>();
+  for (const d of donations) {
+    if (d.kind === "founder") continue;
+    const key = monthKey(d.block_timestamp);
+    if (key === currentMonth) continue;
+    totals.set(key, (totals.get(key) ?? 0) + d.usd_at_receipt);
+  }
+  return [...totals.entries()]
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .slice(0, maxMonths)
+    .map(([key, communityUsd]) => {
+      const [y, m] = key.split("-").map(Number);
+      const label = new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      });
+      return { monthKey: key, label, communityUsd };
+    });
+}
+
 export interface DonationSummary {
   currentMonthCommunityUsd: number;
   currentMonthFounderUsd: number;

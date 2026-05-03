@@ -8,7 +8,7 @@ import {
   FundingFaq,
 } from "@/components/funding/funding-page-sections";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { computeCostsTotal, summarizeDonations } from "@shared/lib/funding/helpers";
+import { computeCostsTotal, computeMonthlyHistory, summarizeDonations } from "@shared/lib/funding/helpers";
 import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
 import type { CostsFile, DonationsFile } from "@shared/lib/funding/types";
@@ -28,6 +28,7 @@ export default function FundingPage() {
   const costs = costsData as CostsFile;
   const donations = donationsData as DonationsFile;
   const summary = summarizeDonations(donations.donations, BUILD_TIMESTAMP_SEC);
+  const monthlyHistory = computeMonthlyHistory(donations.donations, BUILD_TIMESTAMP_SEC);
   const monthlyTargetUsd = computeCostsTotal(costs.items);
 
   return (
@@ -40,7 +41,11 @@ export default function FundingPage() {
       ]}
     >
       <div className="space-y-8">
-        <FundingKpiRow summary={summary} monthlyTargetUsd={monthlyTargetUsd} />
+        <FundingKpiRow
+          summary={summary}
+          monthlyTargetUsd={monthlyTargetUsd}
+          monthlyHistory={monthlyHistory}
+        />
         <div className="grid gap-4 lg:grid-cols-2">
           <CostBreakdown
             items={costs.items}
