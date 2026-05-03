@@ -1,15 +1,27 @@
 # Pharos — Stablecoin Analytics Dashboard
 
-Public-facing analytics dashboard tracking 218 stablecoins in repo metadata: 204 active assets on public data surfaces, 12 pre-launch entries, 2 frozen archives (preserved historical records only), plus 2 shadow assets used only for PSI history. Pure information site — no wallet connectivity, no user accounts.
+Public-facing analytics dashboard tracking 218 stablecoins in repo metadata (last synced 2026-05-03): 204 active assets on public data surfaces, 12 pre-launch entries, 2 frozen archives (preserved historical records only), plus 2 shadow assets used only for PSI history. Pure information site — no wallet connectivity, no user accounts.
 
 **Live at [pharos.watch](https://pharos.watch)**
+
+## Contents
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Data Sources](#data-sources)
+- [Getting Started](#getting-started)
+- [Project Structure](#project-structure)
+- [Documentation](#documentation)
+- [Infrastructure](#infrastructure)
+- [Data Reliability](#data-reliability)
+- [Deployment](#deployment)
+- [License](#license)
 
 ## Features
 
 - **Three-tier classification** — stablecoins categorized as CeFi, CeFi-Dependent, or DeFi based on actual dependency on centralized infrastructure, not marketing claims
 - **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, KRW, IDR, SGD, TRY, AUD, ZAR, CAD, CNH, PHP, MXN, MYR, gold, silver, and CPI-linked stablecoins with cross-currency FX-adjusted totals
 - **Peg Tracker** — 15-minute peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
-- **Freeze & Blacklist Tracker** — 6-hourly on-chain tracking of 35 stablecoins (USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, and others) freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, Gnosis, and Tron with BigInt-precision amounts
+- **Freeze & Blacklist Tracker** — 6-hourly on-chain tracking of 35 stablecoins (full list in `docs/blacklist-tracker.md`; examples: USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, …) freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, Gnosis, and Tron with BigInt-precision amounts
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, and pair diversity
 - **DEX Price Cross-Validation** — implied prices from Curve, Uniswap V3, Aerodrome and Velodrome Slipstream, Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, and DexScreener pools used to suppress false depeg alerts
 - **Coverage Matrix** — per-feature coverage breadth across tracked coins and tracked market cap
