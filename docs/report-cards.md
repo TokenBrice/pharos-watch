@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-The stablecoin registry currently contains 217 tracked metadata entries. Report-card snapshots score the 204 active tracked assets plus the 88 cemetery assets; pre-launch and frozen-archive tracked entries are emitted as stub `F` cards (defunct; pre-launch remain outside the snapshot until they launch).
+The stablecoin registry currently contains 218 tracked metadata entries. Report-card snapshots score the 204 active tracked assets plus the 88 cemetery assets; pre-launch and frozen-archive tracked entries are emitted as stub `F` cards (defunct; pre-launch remain outside the snapshot until they launch).
 
 ## Overall Grade (v7.14)
 

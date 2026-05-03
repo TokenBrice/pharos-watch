@@ -42,6 +42,13 @@
       "description": "Polaris advances the CDP model with pETH collateral, autonomous interest rate mechanisms, and a multi-stablecoin factory framework.",
       "image": "/featured/polaris-mints-anything.png",
       "source": "Polaris Finance Blog"
+    },
+    {
+      "type": "blog",
+      "url": "https://polarisfinance.io/blog/path-to-the-north-star/",
+      "title": "The Path to the North Star",
+      "description": "TokenBrice traces Polaris's origins from Robert Lauko's bonding-curve research to today's three-pillar mission: counterparty-free yield, ETH-correlated alternatives, and restoring DeFi credibility against a backdrop where only $184.79M of the $338.9B stablecoin supply is non-freezable.",
+      "source": "Polaris Finance Blog"
     }
   ],
   "milestones": [
@@ -64,6 +71,13 @@
       "type": "testnet",
       "title": "Private testnet live (shared infrastructure with pUSD)",
       "sourceUrl": "https://x.com/polarisfinance_/status/2029136552564056238"
+    },
+    {
+      "date": "2026-04-27",
+      "type": "milestone",
+      "title": "TokenBrice publishes 'The Path to the North Star' founder narrative",
+      "description": "Long-form post outlining Polaris's three-pillar mission and the multi-stablecoin factory vision that includes pGOLD; mainnet timeline still uncommitted.",
+      "sourceUrl": "https://polarisfinance.io/blog/path-to-the-north-star/"
     }
   ]
 }

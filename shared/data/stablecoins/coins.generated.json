@@ -5710,7 +5710,7 @@
     "announcedDate": "2025-06",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
-    "launchPhaseDetail": "Platform live; INDX cash settlement launched Feb 2026; StoneCastle acquired; Roughrider pilot approved by ND IC; bank onboarding continues",
+    "launchPhaseDetail": "Platform live; INDX cash settlement launched Feb 2026; StoneCastle acquired; Roughrider pilot approved by ND IC March 25 with Fiserv contract finalization underway; pilots referenced with Bank of North Dakota, Huntington and others (cross-border, digital escrow, interbank money movement); next visibility: Q1 2026 earnings May 5 and Investor Day May 14",
     "featuredContent": [
       {
         "type": "article",
@@ -7546,6 +7546,69 @@
         "risk": "very-low"
       }
     }
+  },
+  {
+    "id": "jpysc-sbi-startale",
+    "detailProvider": "defillama",
+    "name": "JPYSC",
+    "symbol": "JPYSC",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "JPY",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://startale.com/en"
+      },
+      {
+        "label": "Announcement",
+        "url": "https://startale.com/en/blog/jpysc"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/StartaleGroup"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Japan",
+      "regulator": "Financial Services Agency (FSA)"
+    },
+    "custodyModel": "institutional-regulated",
+    "status": "pre-launch",
+    "announcedDate": "2026-02",
+    "expectedLaunchDate": "2026-Q2",
+    "launchPhase": "announced",
+    "launchPhaseDetail": "Brand and logo unveiled Feb 27, 2026; first trust bank-backed JPY stablecoin under Japan's Type III electronic payment instrument framework; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; up to 50% of reserves can be allocated to government bonds under Japan's trust-based stablecoin rules; Q2 2026 launch pending regulatory approval; deployment chain not publicly confirmed",
+    "featuredContent": [
+      {
+        "type": "blog",
+        "url": "https://startale.com/en/blog/jpysc",
+        "title": "Startale Group and SBI Holdings Introduce JPYSC, the First Trust Bank-Backed JPY Stablecoin",
+        "description": "JPYSC is a Type III electronic payment instrument issued by Shinsei Trust & Banking, jointly developed with SBI Holdings, distributed via SBI VC Trade, and built for institutional cross-border and treasury payments.",
+        "source": "Startale Group"
+      },
+      {
+        "type": "article",
+        "url": "https://www.theblock.co/post/391386/sbi-holdings-startale-jpysc",
+        "title": "SBI Holdings unveils trust bank-backed JPY stablecoin with Q2 launch target",
+        "description": "JPYSC will be Japan's first trust bank-issued yen stablecoin, distinguishing it from JPYC's prepaid payment instrument classification. Trust-based issuers may allocate up to 50% of reserves to government bonds.",
+        "source": "The Block"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2026-02-27",
+        "type": "announcement",
+        "title": "Startale Group and SBI Holdings unveil JPYSC, first trust bank-backed JPY stablecoin",
+        "description": "Brand and logo announced; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; Q2 2026 launch target under Japan's Type III electronic payment instrument framework.",
+        "sourceUrl": "https://startale.com/en/blog/jpysc"
+      }
+    ]
   },
   {
     "id": "jupusd-jupiter",
@@ -9830,6 +9893,13 @@
         "description": "Polaris advances the CDP model with pETH collateral, autonomous interest rate mechanisms, and a multi-stablecoin factory framework.",
         "image": "/featured/polaris-mints-anything.png",
         "source": "Polaris Finance Blog"
+      },
+      {
+        "type": "blog",
+        "url": "https://polarisfinance.io/blog/path-to-the-north-star/",
+        "title": "The Path to the North Star",
+        "description": "TokenBrice traces Polaris's origins from Robert Lauko's bonding-curve research to today's three-pillar mission: counterparty-free yield, ETH-correlated alternatives, and restoring DeFi credibility against a backdrop where only $184.79M of the $338.9B stablecoin supply is non-freezable.",
+        "source": "Polaris Finance Blog"
       }
     ],
     "milestones": [
@@ -9852,6 +9922,13 @@
         "type": "testnet",
         "title": "Private testnet live (shared infrastructure with pUSD)",
         "sourceUrl": "https://x.com/polarisfinance_/status/2029136552564056238"
+      },
+      {
+        "date": "2026-04-27",
+        "type": "milestone",
+        "title": "TokenBrice publishes 'The Path to the North Star' founder narrative",
+        "description": "Long-form post outlining Polaris's three-pillar mission and the multi-stablecoin factory vision that includes pGOLD; mainnet timeline still uncommitted.",
+        "sourceUrl": "https://polarisfinance.io/blog/path-to-the-north-star/"
       }
     ]
   },
@@ -10201,6 +10278,13 @@
         "description": "Polaris replaces emission-based incentives with an autonomous protocol-revenue distribution mechanism that flows to participants based on their asset holdings — no governance-driven allocation, no bribery.",
         "image": "/featured/polaris-flows-cover.png",
         "source": "Polaris Finance Blog"
+      },
+      {
+        "type": "blog",
+        "url": "https://polarisfinance.io/blog/path-to-the-north-star/",
+        "title": "The Path to the North Star",
+        "description": "TokenBrice traces Polaris's origins from Robert Lauko's bonding-curve research to today's three-pillar mission: counterparty-free yield, ETH-correlated alternatives, and restoring DeFi credibility against a backdrop where only $184.79M of the $338.9B stablecoin supply is non-freezable.",
+        "source": "Polaris Finance Blog"
       }
     ],
     "milestones": [
@@ -10216,6 +10300,13 @@
         "type": "testnet",
         "title": "Private testnet goes live",
         "sourceUrl": "https://x.com/polarisfinance_/status/2029136552564056238"
+      },
+      {
+        "date": "2026-04-27",
+        "type": "milestone",
+        "title": "TokenBrice publishes 'The Path to the North Star' founder narrative",
+        "description": "Long-form post outlining Polaris's three-pillar mission (counterparty-free yield, ETH-correlated yield alternatives, restoring DeFi credibility) and tracing the protocol's lineage to Robert Lauko's bonding-curve research; mainnet timeline still uncommitted.",
+        "sourceUrl": "https://polarisfinance.io/blog/path-to-the-north-star/"
       }
     ]
   },
@@ -16439,9 +16530,9 @@
     "custodyModel": "institutional-regulated",
     "status": "pre-launch",
     "announcedDate": "2025-10",
-    "expectedLaunchDate": "2026-Q2",
-    "launchPhase": "beta",
-    "launchPhaseDetail": "Crossmint wallet partnership live; CEO presented at Digital Asset Summit NYC (Mar 2026); U.S. Bank confirmed as reserve custodian via Anchorage Digital; Rain/Visa prepaid card partnership for inflation zones; CoinGecko preview listing (zero supply); token not yet deployed on Solana",
+    "expectedLaunchDate": "2026-05",
+    "launchPhase": "launching-soon",
+    "launchPhaseDetail": "May 2026 launch confirmed by CEO McGranahan on Q1 earnings call (Apr 24); Digital Asset Network (DAN) live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian; USD Stable Card planned for later 2026; CoinGecko preview listing remains zero-supply pending mainnet",
     "featuredContent": [
       {
         "type": "tweet",
@@ -16492,6 +16583,26 @@
         "title": "CEO speaks at Digital Asset Summit NYC; U.S. Bank confirmed as reserve custodian",
         "description": "McGranahan outlines float-revenue model, community bank onboarding vision, and dollar-denominated holdings for inflationary regions; confirms U.S. Bank as custodian via Anchorage Digital.",
         "sourceUrl": "https://www.americanbanker.com/payments/news/western-union-has-big-plans-for-stablecoins"
+      },
+      {
+        "date": "2026-04-24",
+        "type": "milestone",
+        "title": "CEO confirms May 2026 USDPT launch on Q1 earnings call",
+        "description": "McGranahan tells analysts USDPT is in final stages and launching in May as an alternative to SWIFT interbank settlement, not initially consumer-facing; consumer-facing USD Stable Card planned for later in 2026.",
+        "sourceUrl": "https://www.coindesk.com/business/2026/04/27/western-union-eyeing-stablecoin-launch-to-settle-global-transactions-without-swift-ceo-says"
+      },
+      {
+        "date": "2026-04-28",
+        "type": "milestone",
+        "title": "Digital Asset Network (DAN) goes live with first partner",
+        "description": "First DAN partner activates the week of Apr 27, giving crypto wallets access to Western Union's 360,000+ payout locations across 200+ countries via single API; seven additional DAN partners expected before end of 2026.",
+        "sourceUrl": "https://www.coindesk.com/business/2026/04/27/western-union-eyeing-stablecoin-launch-to-settle-global-transactions-without-swift-ceo-says"
+      }
+    ],
+    "dateHistory": [
+      {
+        "date": "2026-Q2",
+        "setOn": "2026-05-03"
       }
     ]
   },
@@ -18027,7 +18138,7 @@
     "announcedDate": "2026-03",
     "expectedLaunchDate": "2026-Q2",
     "launchPhase": "beta",
-    "launchPhaseDetail": "Four audits completed (Sherlock, Egis, Pashov x2 through Dec 2025); beta testing underway; mainnet launch pending",
+    "launchPhaseDetail": "Five audits referenced in docs (Sherlock, Egis, Pashov x2 through Dec 2025, plus Zerocool AI audit); beta testing underway; site still shows 'SOON' placeholders for APY/supply; mainnet launch pending with no firm date",
     "featuredContent": [
       {
         "type": "tweet",

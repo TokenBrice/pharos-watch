@@ -1,0 +1,63 @@
+{
+  "id": "jpysc-sbi-startale",
+  "name": "JPYSC",
+  "symbol": "JPYSC",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "JPY",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://startale.com/en"
+    },
+    {
+      "label": "Announcement",
+      "url": "https://startale.com/en/blog/jpysc"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/StartaleGroup"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Japan",
+    "regulator": "Financial Services Agency (FSA)"
+  },
+  "custodyModel": "institutional-regulated",
+  "status": "pre-launch",
+  "announcedDate": "2026-02",
+  "expectedLaunchDate": "2026-Q2",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Brand and logo unveiled Feb 27, 2026; first trust bank-backed JPY stablecoin under Japan's Type III electronic payment instrument framework; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; up to 50% of reserves can be allocated to government bonds under Japan's trust-based stablecoin rules; Q2 2026 launch pending regulatory approval; deployment chain not publicly confirmed",
+  "featuredContent": [
+    {
+      "type": "blog",
+      "url": "https://startale.com/en/blog/jpysc",
+      "title": "Startale Group and SBI Holdings Introduce JPYSC, the First Trust Bank-Backed JPY Stablecoin",
+      "description": "JPYSC is a Type III electronic payment instrument issued by Shinsei Trust & Banking, jointly developed with SBI Holdings, distributed via SBI VC Trade, and built for institutional cross-border and treasury payments.",
+      "source": "Startale Group"
+    },
+    {
+      "type": "article",
+      "url": "https://www.theblock.co/post/391386/sbi-holdings-startale-jpysc",
+      "title": "SBI Holdings unveils trust bank-backed JPY stablecoin with Q2 launch target",
+      "description": "JPYSC will be Japan's first trust bank-issued yen stablecoin, distinguishing it from JPYC's prepaid payment instrument classification. Trust-based issuers may allocate up to 50% of reserves to government bonds.",
+      "source": "The Block"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-02-27",
+      "type": "announcement",
+      "title": "Startale Group and SBI Holdings unveil JPYSC, first trust bank-backed JPY stablecoin",
+      "description": "Brand and logo announced; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; Q2 2026 launch target under Japan's Type III electronic payment instrument framework.",
+      "sourceUrl": "https://startale.com/en/blog/jpysc"
+    }
+  ]
+}

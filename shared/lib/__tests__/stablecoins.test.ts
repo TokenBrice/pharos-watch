@@ -56,8 +56,8 @@ describe("tracked stablecoin metadata", () => {
     expect(nonUsd).toHaveLength(0);
     expect(commodity).toHaveLength(0);
     expect(preLaunch).toHaveLength(0);
-    expect(perCoinGenerated).toHaveLength(217);
-    expect(canonicalOrder).toHaveLength(217);
+    expect(perCoinGenerated).toHaveLength(218);
+    expect(canonicalOrder).toHaveLength(218);
     expect(
       usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
     ).toBe(canonicalOrder.length);
@@ -84,12 +84,12 @@ describe("tracked stablecoin metadata", () => {
     const preLaunchCoins = perCoinGenerated.filter((coin) => coin.status === "pre-launch");
 
     expect(legacyShellCoins).toEqual([]);
-    expect(preLaunchCoins).toHaveLength(11);
+    expect(preLaunchCoins).toHaveLength(12);
     expect(preLaunchCoins.every((coin) => coin.status === "pre-launch")).toBe(true);
   });
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
-    expect(TRACKED_STABLECOINS).toHaveLength(217);
+    expect(TRACKED_STABLECOINS).toHaveLength(218);
     expect(ACTIVE_STABLECOINS).toHaveLength(204);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "usdpt-western-union",
@@ -103,6 +103,7 @@ describe("tracked stablecoin metadata", () => {
       "bd-basedollar",
       "trusd-tori",
       "rgbp-revolut",
+      "jpysc-sbi-startale",
     ]);
   });
 

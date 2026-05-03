@@ -48,6 +48,13 @@
       "description": "Polaris replaces emission-based incentives with an autonomous protocol-revenue distribution mechanism that flows to participants based on their asset holdings — no governance-driven allocation, no bribery.",
       "image": "/featured/polaris-flows-cover.png",
       "source": "Polaris Finance Blog"
+    },
+    {
+      "type": "blog",
+      "url": "https://polarisfinance.io/blog/path-to-the-north-star/",
+      "title": "The Path to the North Star",
+      "description": "TokenBrice traces Polaris's origins from Robert Lauko's bonding-curve research to today's three-pillar mission: counterparty-free yield, ETH-correlated alternatives, and restoring DeFi credibility against a backdrop where only $184.79M of the $338.9B stablecoin supply is non-freezable.",
+      "source": "Polaris Finance Blog"
     }
   ],
   "milestones": [
@@ -63,6 +70,13 @@
       "type": "testnet",
       "title": "Private testnet goes live",
       "sourceUrl": "https://x.com/polarisfinance_/status/2029136552564056238"
+    },
+    {
+      "date": "2026-04-27",
+      "type": "milestone",
+      "title": "TokenBrice publishes 'The Path to the North Star' founder narrative",
+      "description": "Long-form post outlining Polaris's three-pillar mission (counterparty-free yield, ETH-correlated yield alternatives, restoring DeFi credibility) and tracing the protocol's lineage to Robert Lauko's bonding-curve research; mainnet timeline still uncommitted.",
+      "sourceUrl": "https://polarisfinance.io/blog/path-to-the-north-star/"
     }
   ]
 }

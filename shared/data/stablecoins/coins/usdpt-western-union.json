@@ -27,9 +27,12 @@
   "geckoId": "usdpt-western-union",
   "status": "pre-launch",
   "announcedDate": "2025-10",
-  "expectedLaunchDate": "2026-Q2",
-  "launchPhase": "beta",
-  "launchPhaseDetail": "Crossmint wallet partnership live; CEO presented at Digital Asset Summit NYC (Mar 2026); U.S. Bank confirmed as reserve custodian via Anchorage Digital; Rain/Visa prepaid card partnership for inflation zones; CoinGecko preview listing (zero supply); token not yet deployed on Solana",
+  "expectedLaunchDate": "2026-05",
+  "dateHistory": [
+    { "date": "2026-Q2", "setOn": "2026-05-03" }
+  ],
+  "launchPhase": "launching-soon",
+  "launchPhaseDetail": "May 2026 launch confirmed by CEO McGranahan on Q1 earnings call (Apr 24); Digital Asset Network (DAN) live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian; USD Stable Card planned for later 2026; CoinGecko preview listing remains zero-supply pending mainnet",
   "featuredContent": [
     {
       "type": "tweet",
@@ -81,6 +84,20 @@
       "title": "CEO speaks at Digital Asset Summit NYC; U.S. Bank confirmed as reserve custodian",
       "description": "McGranahan outlines float-revenue model, community bank onboarding vision, and dollar-denominated holdings for inflationary regions; confirms U.S. Bank as custodian via Anchorage Digital.",
       "sourceUrl": "https://www.americanbanker.com/payments/news/western-union-has-big-plans-for-stablecoins"
+    },
+    {
+      "date": "2026-04-24",
+      "type": "milestone",
+      "title": "CEO confirms May 2026 USDPT launch on Q1 earnings call",
+      "description": "McGranahan tells analysts USDPT is in final stages and launching in May as an alternative to SWIFT interbank settlement, not initially consumer-facing; consumer-facing USD Stable Card planned for later in 2026.",
+      "sourceUrl": "https://www.coindesk.com/business/2026/04/27/western-union-eyeing-stablecoin-launch-to-settle-global-transactions-without-swift-ceo-says"
+    },
+    {
+      "date": "2026-04-28",
+      "type": "milestone",
+      "title": "Digital Asset Network (DAN) goes live with first partner",
+      "description": "First DAN partner activates the week of Apr 27, giving crypto wallets access to Western Union's 360,000+ payout locations across 200+ countries via single API; seven additional DAN partners expected before end of 2026.",
+      "sourceUrl": "https://www.coindesk.com/business/2026/04/27/western-union-eyeing-stablecoin-launch-to-settle-global-transactions-without-swift-ceo-says"
     }
   ]
 }

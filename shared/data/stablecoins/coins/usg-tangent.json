@@ -29,7 +29,7 @@
   "announcedDate": "2026-03",
   "expectedLaunchDate": "2026-Q2",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Four audits completed (Sherlock, Egis, Pashov x2 through Dec 2025); beta testing underway; mainnet launch pending",
+  "launchPhaseDetail": "Five audits referenced in docs (Sherlock, Egis, Pashov x2 through Dec 2025, plus Zerocool AI audit); beta testing underway; site still shows 'SOON' placeholders for APY/supply; mainnet launch pending with no firm date",
   "featuredContent": [
     {
       "type": "tweet",
