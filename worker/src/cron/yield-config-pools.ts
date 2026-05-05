@@ -77,4 +77,6 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "usn-noon": "a18a761b-49cd-416d-8342-839cac722094",
   // Cap stcUSD - cap native staking, Ethereum, $90M+ TVL, ~5.9% APY
   "stcusd-cap": "bf6ca887-e357-49ec-8031-0d1a6141c455",
+  // HedgeCore sUSD - HedgeCore routes USDC collateral through Venus on BSC
+  "susd-hedgecore": "89eba1e5-1b1b-47b6-958b-38138a04c244",
 };
