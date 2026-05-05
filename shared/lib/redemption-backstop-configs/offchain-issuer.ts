@@ -68,6 +68,7 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "idrt-rupiah-token",
       "jpyc-jpyc",
       "cadc-cad-coin",
+      "cadd-cad-digital",
       "tgbp-tokenised",
       "veur-vnx",
       "vchf-vnx",

@@ -1,0 +1,83 @@
+{
+  "id": "cadd-cad-digital",
+  "name": "CAD Digital",
+  "symbol": "CADD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "CAD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Canadian dollar reserves held 1:1 in trust for token holders by Tetra Trust",
+  "pegMechanism": "Direct 1:1 mint and redemption of CADD for CAD through CAD Digital's regulated issuance framework",
+  "llamaId": "387",
+  "detailProvider": "defillama",
+  "geckoId": "cad-digital",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://tetradg.com/cadd-reserve-attestations/",
+    "provider": "Baker Tilly (monthly reserve attestations)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://tetradg.com/cadd-stablecoin/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/TetraDigitalGrp"
+    },
+    {
+      "label": "Docs",
+      "url": "https://tetradg.com/supported-blockchains/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Canada",
+    "regulator": "Alberta Treasury Board and Finance",
+    "license": "Loan and Trust Corporations Act (Alberta)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x16f93ebc5320c89efc8701577efe49d14a276a06",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x16f93ebc5320c89efc8701577efe49d14a276a06",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Canadian dollar trust reserves",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "cadd-cad-digital",
+    "display": {
+      "url": "https://tetradg.com/cadd-reserve-attestations/",
+      "label": "CAD Digital Reserve Attestations"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "CAD trust reserves",
+      "risk": "very-low"
+    }
+  }
+}
