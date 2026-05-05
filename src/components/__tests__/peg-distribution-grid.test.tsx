@@ -50,7 +50,7 @@ describe("PegBrowseStrip", () => {
     expect(screen.getByRole("link", { name: "US Dollar (154)" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Euro (13)" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Swiss Franc (3)" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Fiat Except USD (19)" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Fiat Except USD (19)" }).getAttribute("href")).toBe("/?peg=fiat-non-usd-peg#filter-bar");
     expect(screen.queryByRole("link", { name: "British Pound (2)" })).toBeNull();
   });
 
