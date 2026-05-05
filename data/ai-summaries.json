@@ -1104,11 +1104,6 @@
     "text": "KGST is a Kyrgyz som stablecoin tracked by CoinGecko on BNB Chain. It is presented as a fully backed 1:1 KGS token, giving Pharos a direct Central Asian local-currency peg, but public reserve and redemption materials remain limited compared with established regulated fiat issuers. KGST also depends on secondary FX feeds for USD normalization because CoinGecko does not currently expose a native KGS quote.",
     "updatedAt": "2026-05-05"
   },
-  "eura-angle": {
-    "title": "Angle's Surviving Euro Primitive",
-    "text": "EURA is Angle Protocol's euro stablecoin, now tracked through both DefiLlama and CoinGecko. Unlike a bank-deposit euro token, EURA is a crypto-backed protocol asset supported by Angle collateral, oracle infrastructure, and an insurance-fund design. That gives it broader on-chain composability and multichain coverage, but its redemption quality depends on protocol collateral health and available conversion routes rather than a simple off-chain issuer promise.",
-    "updatedAt": "2026-05-05"
-  },
   "audx-aussie-dollar-token": {
     "title": "AUD Liquidity With Sparse Footing",
     "text": "AUDX is an Australian dollar stablecoin issued by Tau Pty Ltd, trading as AUDX Token, and tracked by CoinGecko across Ethereum, Polygon, and Conflux. The issuer describes AUSTRAC registration and 1:1 AUD reserves held with regulated financial institutions. Market depth is still small, so Pharos treats the reserve story as useful but less battle-tested than older AUD rails with longer public operating histories.",
