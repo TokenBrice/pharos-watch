@@ -1,0 +1,69 @@
+{
+  "id": "pusd-polymarket",
+  "name": "Polymarket USD",
+  "symbol": "PUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDC and bridged USDC.e backing on Polygon used for Polymarket prediction-market account balances",
+  "pegMechanism": "Minted when users deposit supported USDC into Polymarket rails and redeemable back to USDC through the Polymarket application flow",
+  "detailProvider": "coingecko",
+  "geckoId": "polymarket-usd",
+  "protocolSlug": "polymarket",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://polymarket.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Polymarket"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.polymarket.com/concepts/pusd"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "polygon",
+      "address": "0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb",
+      "decimals": 6
+    }
+  ],
+  "chainTier": "stage1-l2",
+  "deploymentModel": "single-chain",
+  "canBeBlacklisted": "possible",
+  "reserves": [
+    {
+      "name": "USDC / USDC.e on Polygon",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "pusd-polymarket",
+    "display": {
+      "url": "https://docs.polymarket.com/concepts/pusd",
+      "label": "Polymarket PUSD docs"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "polygon",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

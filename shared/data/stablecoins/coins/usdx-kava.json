@@ -1,0 +1,49 @@
+{
+  "id": "usdx-kava",
+  "llamaId": "42",
+  "detailProvider": "defillama",
+  "name": "USDX",
+  "symbol": "USDX",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Kava CDP collateral and protocol liquidity backing the legacy USDX debt token",
+  "pegMechanism": "Kava Mint overcollateralized debt positions issue USDX against crypto collateral, with liquidations and protocol parameters intended to defend the peg",
+  "geckoId": "usdx",
+  "cmcSlug": "usdx-kava",
+  "protocolSlug": "kava-mint",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.kava.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/KAVA_CHAIN"
+    },
+    {
+      "label": "Docs",
+      "url": "https://help.app.kava.io/article/15-what-is-kava-mint"
+    }
+  ],
+  "chainTier": "established-alt-l1",
+  "reserves": [
+    {
+      "name": "Kava CDP collateral and protocol liquidity",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Legacy depeg risk",
+      "message": "USDX has a long-lived discount to its dollar peg; Pharos tracks the active provider entry separately from the historical cemetery incident."
+    }
+  ]
+}

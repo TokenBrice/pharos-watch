@@ -1,0 +1,87 @@
+{
+  "id": "jpyc-jpyc-v1",
+  "name": "JPY Coin v1",
+  "symbol": "JPYC",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "JPY",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Japanese-yen reserve assets held for the legacy prepaid-payment JPYC v1 token series",
+  "pegMechanism": "Legacy prepaid-payment JPYC token series redeemable through JPYC processes before migration to the newer funds-transfer-token contracts",
+  "detailProvider": "coingecko",
+  "geckoId": "jpyc",
+  "protocolSlug": "jpyc",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://jpyc.co.jp/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/jpyc_official"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/jpycoin"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Japan",
+    "regulator": "FSA"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x2370f9d504c7a6e775bf6e14b3f12846b594cd53",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0x417602f4fbdd471a431ae29fb5fe0a681964c11b",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-regulated",
+  "canBeBlacklisted": "possible",
+  "reserves": [
+    {
+      "name": "JPY reserve assets for legacy JPYC v1",
+      "pct": 100,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "jpyc-jpyc-v1",
+    "display": {
+      "url": "https://jpyc.co.jp/",
+      "label": "JPYC"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Legacy token series",
+      "message": "JPYC v1 is tracked separately from the current JPYC funds-transfer-token deployment."
+    }
+  ]
+}

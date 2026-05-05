@@ -1123,5 +1123,160 @@
     "title": "ARS Peg With Split Signals",
     "text": "WARS is an Argentine peso stablecoin tracked by DefiLlama across Ethereum, Base, World Chain, BNB Chain, Polygon, and Gnosis, with CoinGecko also listing the token below the current $1M market-cap threshold. That split makes it eligible through DefiLlama coverage but still a higher-uncertainty addition: the same contract address appears across the EVM deployments, while reserve and redemption confidence remain weaker than major fiat issuers.",
     "updatedAt": "2026-05-05"
+  },
+  "bfusd-binance": {
+    "title": "The Binance Balance Dollar",
+    "text": "BFUSD is an off-chain Binance account asset rather than a normal transferable stablecoin. Its stability depends on Binance-managed collateral, hedging, and reserve-fund controls, so Pharos treats the reserve profile as CEX-custodied and high risk despite the dollar target. Binance markets reward features around the product, but Pharos does not mark it as runtime yield-bearing without a public APY source the yield pipeline can verify. The main practical backstop is the user account redemption flow inside Binance, which is documented but not independently measurable as public liquidity.",
+    "updatedAt": "2026-05-05"
+  },
+  "pusd-polymarket": {
+    "title": "The Prediction-Market Wrapper",
+    "text": "Polymarket USD is the dollar balance token used around Polymarket deposits and withdrawals on Polygon. Its collateral story is simple: the token is intended to map to USDC and USDC.e in Polymarket rails, so reserve risk is mostly wrapper, bridge, and app-access risk rather than a new asset mix. Pharos enables curated reserve validation against the Polygon contract and keeps the redemption path documented through Polymarket docs. The token should be read as an application dollar, not an independent issuer reserve.",
+    "updatedAt": "2026-05-05"
+  },
+  "rusd-royal-dollar": {
+    "title": "The Royal Reserve Claim",
+    "text": "Royal Dollar presents itself as a fiat-backed dollar issued by the Royal/R Coins ecosystem across Ethereum, BSC, and Tron. Public material supports the existence of issuer-managed reserves, but the composition and redemption mechanics are not transparent enough to model as a high-quality fiat backstop. Pharos classifies the collateral as RWA-backed while assigning a high reserve-risk slice until stronger attestation data exists. The live reserve sync is limited to validating that tracked on-chain supply is present and then displaying the curated reserve view.",
+    "updatedAt": "2026-05-05"
+  },
+  "usdr-ring": {
+    "title": "The Ring Protocol Dollar",
+    "text": "Ring USD is a crypto-backed synthetic dollar from Ring Protocol. Its public footprint is small, so the dashboard models the reserve stack conservatively as protocol collateral and liquidity positions rather than a granular attested basket. The Ethereum supply is eligible for curated reserve validation, but redemption quality still depends on Ring-specific mechanics and protocol liquidity. That makes USDR a long-tail collateralized dollar with meaningful smart-contract and governance dependency.",
+    "updatedAt": "2026-05-05"
+  },
+  "uusd-anything-labs": {
+    "title": "The BSC Unity Dollar",
+    "text": "Unity USD is a BSC dollar token from the UUSD/Anything Labs ecosystem. The collateral and peg design are presented as protocol managed, but public reserve detail is limited, so Pharos uses a single high-risk reserve slice rather than implying precision. The BSC contract is tracked for supply and curated reserve validation. Until clearer reserve proofs are available, UUSD should be treated as a small, governance-dependent crypto-backed stablecoin.",
+    "updatedAt": "2026-05-05"
+  },
+  "jusd-jusd-stable-token": {
+    "title": "The Small Multichain Dollar",
+    "text": "JUSD is a long-tail dollar token with BSC and Polygon contracts and issuer/protocol documentation. Pharos models its reserves as protocol-managed crypto collateral because public materials do not provide a reviewed, granular collateral breakdown. The BSC deployment is used for curated validation, while Polygon is kept for discovery. Its main risk is not the stated dollar target, but the limited transparency around reserve composition and live redemption depth.",
+    "updatedAt": "2026-05-05"
+  },
+  "usda-alpha-partner": {
+    "title": "The Alpha Partner Dollar",
+    "text": "Alpha Partner USDA is a BSC-issued dollar token with protocol-managed reserves and liquidity controls. The available docs support adding it to the catalog, but they do not support a detailed collateral split or an independent redemption score. Pharos therefore treats USDA as crypto-backed and high risk, with curated validation only checking the tracked on-chain token supply. It belongs in the long-tail cohort where metadata coverage matters but confidence remains limited.",
+    "updatedAt": "2026-05-05"
+  },
+  "xdai-gnosis": {
+    "title": "The Native Gnosis Dollar",
+    "text": "xDAI is the native gas token of Gnosis Chain and is economically tied to DAI bridged into the network. Unlike a normal ERC-20 stablecoin, its canonical supply is native-chain accounting, so Pharos lists the WXDAI wrapper as a traded contract rather than using it as the supply contract. The reserve view is a DAI bridge dependency, making peg quality depend on Maker/Sky DAI and Gnosis bridge infrastructure. It is more infrastructure dollar than issuer token.",
+    "updatedAt": "2026-05-05"
+  },
+  "usdx-kava": {
+    "title": "The Legacy Kava Debt Dollar",
+    "text": "Kava USDX is the older Kava Mint debt token backed by crypto collateral and protocol liquidation mechanics. The asset remains visible in DefiLlama provider data, but its market price has spent extended periods below the dollar target, so Pharos flags it as a legacy depeg-risk entry. There is no supported canonical token contract to attach for reserve sync. Its tracking value is mostly historical and analytical: it shows how a live provider entry can coexist with a prior depeg narrative.",
+    "updatedAt": "2026-05-05"
+  },
+  "xtusd-xt": {
+    "title": "The XT Exchange Dollar",
+    "text": "XTUSD is an exchange-issued dollar token associated with XT.com. The provider footprint is enough to admit it through CoinGecko, but its main chain is outside the configured Pharos chain set and public reserve detail is thin. Pharos treats the reserves as issuer-managed CEX assets with very high transparency risk. That keeps the token visible without overstating its redemption or reserve quality.",
+    "updatedAt": "2026-05-05"
+  },
+  "hbd-hive": {
+    "title": "The Hive Conversion Dollar",
+    "text": "Hive Backed Dollar is a protocol-native dollar claim inside the Hive ecosystem. It targets $1 through HIVE conversion rules and witness-set savings parameters, not through cash or Treasury custody. That makes the collateral base reflexive to the value and governance of Hive itself, especially under haircut conditions. Pharos classifies HBD as crypto-backed and decentralized while flagging that the redemption backstop is protocol conversion capacity, not liquid off-chain reserves.",
+    "updatedAt": "2026-05-05"
+  },
+  "jpyc-jpyc-v1": {
+    "title": "The Legacy JPYC Series",
+    "text": "JPY Coin v1 is the older JPYC token series, separate from the current JPYC deployment already tracked by Pharos. It is backed by yen-denominated reserve obligations and legacy redemption processes rather than the newer funds-transfer-token contracts. The Ethereum, Polygon, and Gnosis deployments are retained for discovery and reserve validation. Its main reason to track separately is migration clarity, because the old and current JPYC contracts are not interchangeable.",
+    "updatedAt": "2026-05-05"
+  },
+  "nxusd-nereus": {
+    "title": "The Nereus CDP Dollar",
+    "text": "NXUSD is a crypto-backed debt token minted through Nereus Finance on Avalanche. The reserve stack is modeled as overcollateralized lending positions, which makes the peg dependent on collateral volatility, liquidations, and protocol governance. Pharos uses the Avalanche contract for curated reserve validation, but does not infer a liquid par redemption path from that alone. NXUSD fits the small CDP stablecoin pattern: transparent enough to track, risky enough to score conservatively.",
+    "updatedAt": "2026-05-05"
+  },
+  "wemix-dollar-wemix": {
+    "title": "The WEMIX Ecosystem Dollar",
+    "text": "WEMIX Dollar is a dollar token native to the WEMIX ecosystem. It is admitted through CoinGecko, but its primary chain is not part of the current Pharos contract universe, so the catalog stores no contract and no live reserve sync. The reserve view is therefore issuer and ecosystem managed, with a high-risk classification until more granular proofs are available. It should be treated as an ecosystem unit rather than a broadly composable stablecoin.",
+    "updatedAt": "2026-05-05"
+  },
+  "suiusde-sui": {
+    "title": "The Sui USDe Proxy",
+    "text": "SuiUSDe is a Sui-based dollar asset linked to Ethena USDe exposure. Pharos models the reserve dependency through USDe rather than pretending the Sui token has an independent collateral stack. That means the major risks are Ethena collateral quality, Sui deployment mechanics, and bridge or representation assumptions. It is tracked through DefiLlama and the Sui contract, but current reserve sync adapters do not probe Sui supply.",
+    "updatedAt": "2026-05-05"
+  },
+  "vcred-vcred": {
+    "title": "The Hemi Credit Dollar",
+    "text": "vCRED is a Hemi-based credit stable asset with limited public reserve granularity. Pharos adds the Hemi contract and treats the backing as protocol credit and crypto collateral rather than a verified fiat reserve. The curated reserve sync can validate supply on the configured EVM chain, but it cannot validate the off-chain or strategy quality behind the collateral. The result is a tracked but high-risk long-tail dollar.",
+    "updatedAt": "2026-05-05"
+  },
+  "mai-qidao": {
+    "title": "The Multichain QiDao Dollar",
+    "text": "MAI is the long-running QiDao overcollateralized stablecoin, minted against crypto vaults across multiple EVM deployments. Its resilience depends on collateral quality, bridge exposure, liquidations, and QiDao governance rather than an issuer balance sheet. Pharos tracks the major supported deployments and uses Polygon for curated reserve validation. The entry also preserves the MIMATIC provider identity while presenting the more familiar MAI name.",
+    "updatedAt": "2026-05-05"
+  },
+  "spusd-soulpeg": {
+    "title": "The SoulPeg Dollar",
+    "text": "SoulPeg USD is a BSC dollar token with protocol-managed collateral and liquidity. Public docs support the basic peg and contract metadata but do not expose enough reserve detail for a granular basket. Pharos therefore uses a high-risk curated reserve slice and validates the BSC supply path. Until redemption and reserve data become more transparent, spUSD remains a small protocol-dependent dollar rather than a high-confidence stablecoin.",
+    "updatedAt": "2026-05-05"
+  },
+  "inalpha-nest": {
+    "title": "The Nest Vault Share",
+    "text": "Nest Alpha Vault LP is included because providers classify it as a dollar-referenced asset, but its behavior is closer to a NAV share than a par stablecoin. The token can appreciate or drift with vault strategy performance, so Pharos marks it yield-bearing and NAV-style. Reserve validation checks the on-chain token, while the reserve slice remains the Nest Alpha strategy book. This is useful coverage, but it should not be compared directly with cash-backed dollars.",
+    "updatedAt": "2026-05-05"
+  },
+  "eusd-telcoin": {
+    "title": "The Telcoin Bank Dollar",
+    "text": "Telcoin eUSD is a bank-issued dollar token from Telcoin Digital Asset Bank. Its regulatory posture is stronger than most long-tail additions, but public reserve telemetry is still limited, so Pharos uses a conservative single reserve slice until more detailed reporting is available. The token has Ethereum, Base, Polygon, and Solana deployments, with Ethereum used for curated validation. The redemption model is issuer-gated through banking rails rather than permissionless on-chain liquidity.",
+    "updatedAt": "2026-05-05"
+  },
+  "money-defi-money": {
+    "title": "The defi.money Stablecoin",
+    "text": "MONEY is a crypto-backed stablecoin from defi.money on Arbitrum and Optimism. The reserve model is mostly USDC plus protocol strategy and liquidity exposure, which creates both stablecoin dependency and strategy risk. Pharos tracks both deployments and validates curated reserves through Arbitrum. The entry is intentionally conservative because public reserve composition is not yet as detailed as the larger collateralized stablecoins.",
+    "updatedAt": "2026-05-05"
+  },
+  "fusd-freedom-dollar": {
+    "title": "The Zano Privacy Dollar",
+    "text": "Freedom Dollar is a Zano ecosystem dollar asset admitted through CoinGecko. Its privacy-chain context and unsupported chain mean Pharos cannot attach a contract or run reserve sync today. The reserve model is therefore a high-risk single slice based on ecosystem collateral and documented peg intent. That makes FUSD visible in the dashboard while keeping confidence appropriately low.",
+    "updatedAt": "2026-05-05"
+  },
+  "iusd-indigo-protocol": {
+    "title": "The Cardano Synthetic Dollar",
+    "text": "Indigo iUSD is a Cardano synthetic dollar minted against overcollateralized positions in Indigo Protocol. Its risk profile is a classic crypto-CDP profile: collateral volatility, liquidation execution, oracle quality, and governance all matter. Pharos stores the Cardano asset identifier and DefiLlama provider ID, but current live reserve adapters do not probe Cardano supply. The reserve view stays curated until a Cardano-capable live path exists.",
+    "updatedAt": "2026-05-05"
+  },
+  "cdp-enosys": {
+    "title": "The Enosys Flare CDP",
+    "text": "Enosys Loans CDP is a Flare-based collateralized debt stable asset. The collateral is modeled as overcollateralized crypto positions inside Enosys Loans, with liquidations and repayments serving as the peg machinery. Pharos tracks the Flare contract and enables curated reserve validation on the EVM-compatible chain. The asset remains high risk because collateral granularity and live redemption depth are limited.",
+    "updatedAt": "2026-05-05"
+  },
+  "luausd-lumi-finance": {
+    "title": "The Lumi Floor-Dollar",
+    "text": "Lumi Finance LUAUSD is not a conventional 1:1 redeemable dollar. It is a dollar-referenced synthetic tied to LUA floor-price and protocol-owned liquidity mechanics, so Pharos marks it as NAV-style and high risk. The Arbitrum contract enables curated validation, but the reserve slice is intentionally broad because public proof is weak. This entry is included for provider coverage, with a warning that the stability claim is nonstandard.",
+    "updatedAt": "2026-05-05"
+  },
+  "susd-solayer": {
+    "title": "The Solana T-Bill Rebase",
+    "text": "Solayer sUSD is a Solana Token-2022 interest-bearing dollar backed by T-bill exposure through Solayer workflows. The balance-growth mechanics make it yield-bearing rather than a static par token, and the primary risks are RWA custody, issuer workflow access, and Solana token semantics. Pharos uses the Solana mint for curated reserve validation and a 100% T-bill reserve slice. A dedicated transparency API would improve the entry, but the current process is enough for tracked coverage.",
+    "updatedAt": "2026-05-05"
+  },
+  "usx-dforce": {
+    "title": "The Discounted dForce Dollar",
+    "text": "dForce USD is an older multichain stablecoin with both stablecoin and overcollateralized protocol routes. It remains active in DefiLlama, but current provider prices show a severe discount to the dollar target, so Pharos flags the depeg risk directly. The Ethereum contract is used for curated reserve validation, while the reserve slice stays broad because public collateral composition is not granular enough. USX is tracked, but not treated as a healthy par-dollar backstop.",
+    "updatedAt": "2026-05-05"
+  },
+  "home-homecoin": {
+    "title": "The Property-Lien Dollar",
+    "text": "HomeCoin is backed by U.S. home loan liens and property-backed receivables rather than cash, T-bills, or crypto collateral. That makes the asset interesting but illiquid: a foreclosure right is not the same thing as immediate redemption liquidity. Pharos tracks the Ethereum contract, self-reported collateral source, and DefiLlama provider entry while assigning high reserve risk. The real-estate lending model is documented in metadata, but the HOME token is not marked as runtime yield-bearing until a holder-level yield source is verified.",
+    "updatedAt": "2026-05-05"
+  },
+  "cdxusd-cod3x": {
+    "title": "The Facilitator-Minted Dollar",
+    "text": "Cod3x USD is a Base stablecoin minted by protocol Facilitators under configured limits and strategies. The model can be powerful, but it also concentrates risk in facilitator permissions, collateral management, and strategy transparency. Pharos adds the Base contract and uses a single high-risk reserve slice until the backing is more granular. Its redemption backstop is documented at the mechanism level, not scored as a liquid public route.",
+    "updatedAt": "2026-05-05"
+  },
+  "susd-hedgecore": {
+    "title": "The Soul-Bound USDC Yield Token",
+    "text": "HedgeCore Staked USD Coin is built around USDC deposits routed into Venus yield strategies on BSC. The product has yield mechanics, but Pharos does not publish it as a runtime yield-bearing asset until a reliable APY source is wired. The token is operationally restricted: docs describe soul-bound behavior and operator-controlled early redemption paths. Pharos tracks the BSC contract, marks the USDC/Venus dependency, and enables curated reserve validation while keeping the exit path conservative.",
+    "updatedAt": "2026-05-05"
+  },
+  "usd3-reserve-protocol": {
+    "title": "The Reserve Basket Dollar",
+    "text": "Web 3 Dollar is a Reserve Protocol DTF backed by a basket of yield-bearing stablecoin strategies: Savings USDS, Aave USDC, wrapped Compound USDCv3, and Steakhouse USDC. The mechanism is more transparent than many small stablecoins because the Reserve app and API expose the basket, but redemption still depends on RToken/DTF throttles and basket mechanics. Pharos stores the Reserve proof URL, tracks Ethereum and Base contracts, and enables curated reserve validation. The main risks are strategy exposure, governance, and the fact that the token is a NAV-style basket rather than a simple bank dollar.",
+    "updatedAt": "2026-05-05"
   }
 }

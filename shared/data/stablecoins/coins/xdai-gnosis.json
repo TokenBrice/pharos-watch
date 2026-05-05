@@ -1,0 +1,56 @@
+{
+  "id": "xdai-gnosis",
+  "name": "xDAI",
+  "symbol": "xDAI",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "DAI locked or bridged through Gnosis Chain bridge infrastructure, with wrapped WXDAI used for ERC-20 integrations",
+  "pegMechanism": "Native gas token on Gnosis Chain backed by bridged DAI; users can bridge between DAI and xDAI through official Gnosis bridge routes",
+  "detailProvider": "coingecko",
+  "geckoId": "xdai",
+  "protocolSlug": "gnosis-chain",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.gnosischain.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/gnosischain"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.gnosischain.com/about/tokens/"
+    }
+  ],
+  "tradedContracts": [
+    {
+      "chain": "gnosis",
+      "address": "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "established-alt-l1",
+  "reserves": [
+    {
+      "name": "DAI backing through Gnosis bridge infrastructure",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "dai-makerdao",
+      "depType": "collateral"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Native gas-token supply",
+      "message": "xDAI is native to Gnosis Chain; the configured contract is listed as a traded wrapper rather than a canonical supply contract."
+    }
+  ]
+}

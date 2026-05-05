@@ -1,6 +1,14 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.43` (2026-03-01 -> 2026-04-22).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.44` (2026-03-01 -> 2026-05-05).
+
+---
+
+## v7.44 - Solayer sUSD Treasury fallback coverage (May 5, 2026)
+
+- Solayer `sUSD` now publishes through the rate-derived Treasury fallback lane instead of entering the yield manifest without a runtime strategy
+- Newly added reward-bearing account assets or restricted strategy products without reliable APY telemetry remain outside runtime yield coverage until a source can be validated
+- The yield-bearing registry invariant continues to require every active yield-bearing asset to have an explicit runtime strategy
 
 ---
 

@@ -365,6 +365,7 @@ describe("enrichMissingPrices", () => {
       {
         id: "jpyc-jpyc", name: "JPYC", symbol: "JPYC", price: 0,
         address: "ethereum:0xjpyc",
+        cmcSlug: "jpyc",
         pegType: "peggedJPY", circulating: {},
       },
     ];
@@ -463,9 +464,9 @@ describe("enrichMissingPrices", () => {
 
     const assets: PeggedAsset[] = [
       {
-        id: "jpyc-jpyc",
-        name: "JPYC",
-        symbol: "JPYC",
+        id: "cjpy-yamato",
+        name: "CJPY",
+        symbol: "CJPY",
         price: 0,
         pegType: "peggedJPY",
         circulating: {},
@@ -478,7 +479,7 @@ describe("enrichMissingPrices", () => {
         body: {
           pairs: [
             {
-              baseToken: { symbol: "JPYC" },
+              baseToken: { symbol: "CJPY" },
               quoteToken: { symbol: "USDT" },
               priceUsd: "0.0005",
               liquidity: { usd: 100_000 },
@@ -602,7 +603,7 @@ describe("enrichMissingPrices", () => {
       {
         id: "search-usd",
         name: "Search USD",
-        symbol: "SUSD",
+        symbol: "MNEE",
         price: 0,
         pegType: "peggedUSD",
         circulating: { total: 90 },
@@ -626,7 +627,7 @@ describe("enrichMissingPrices", () => {
           },
         ]), { status: 200 });
       }
-      if (url.includes("dexscreener.com/latest/dex/search?q=SUSD")) {
+      if (url.includes("dexscreener.com/latest/dex/search?q=MNEE")) {
         return new Response("upstream error", { status: 500 });
       }
       return new Response("Not found", { status: 404 });
@@ -667,7 +668,7 @@ describe("enrichMissingPrices", () => {
       {
         id: "search-usd",
         name: "Search USD",
-        symbol: "SUSD",
+        symbol: "MNEE",
         price: 0,
         pegType: "peggedUSD",
         circulating: { total: 90 },
@@ -822,17 +823,17 @@ describe("enrichMissingPrices", () => {
       { id: "bean-1", name: "Bean 1", symbol: "BEAN", price: 0, pegType: "peggedUSD", circulating: { total: 90 } },
       { id: "usdn-1", name: "USDN 1", symbol: "USDN", price: 0, pegType: "peggedUSD", circulating: { total: 80 }, chains: ["Ethereum"] },
       { id: "tor-1", name: "TOR 1", symbol: "TOR", price: 0, pegType: "peggedUSD", circulating: { total: 70 } },
-      { id: "usdr-1", name: "USDR 1", symbol: "USDR", price: 0, pegType: "peggedUSD", circulating: { total: 60 }, chains: ["Polygon"] },
+      { id: "usdr-1", name: "USDR 1", symbol: "CTUSD", price: 0, pegType: "peggedUSD", circulating: { total: 60 }, chains: ["Ethereum"] },
       { id: "pinto-1", name: "Pinto 1", symbol: "PINTO", price: 0, pegType: "peggedUSD", circulating: { total: 50 } },
       { id: "usbd-1", name: "USBD 1", symbol: "USBD", price: 0, pegType: "peggedUSD", circulating: { total: 40 }, chains: ["Ethereum"] },
-      { id: "usdx-1", name: "USDX 1", symbol: "USDX", price: 0, pegType: "peggedUSD", circulating: { total: 30 }, chains: ["Ethereum"] },
+      { id: "usdx-1", name: "USDX 1", symbol: "MNEE", price: 0, pegType: "peggedUSD", circulating: { total: 30 }, chains: ["Ethereum"] },
       { id: "husd-1", name: "HUSD 1", symbol: "HUSD", price: 0, pegType: "peggedUSD", circulating: { total: 20 } },
-      { id: "usx-1", name: "USX 1", symbol: "USX", price: 0, pegType: "peggedUSD", circulating: { total: 10 }, chains: ["Ethereum"] },
+      { id: "usx-1", name: "USX 1", symbol: "CASH", price: 0, pegType: "peggedUSD", circulating: { total: 10 }, chains: ["Ethereum"] },
       { id: "chfau-1", name: "CHFAU 1", symbol: "CHFAU", price: 0, pegType: "peggedCHF", circulating: { total: 9 }, chains: ["Ethereum"] },
     ];
 
     const fetchSpy = vi.fn(async (url: string) => {
-      if (url.includes("q=USDN") || url.includes("q=USDR") || url.includes("q=USBD") || url.includes("q=USDX") || url.includes("q=USX")) {
+      if (url.includes("q=USDN") || url.includes("q=CTUSD") || url.includes("q=USBD") || url.includes("q=MNEE") || url.includes("q=CASH")) {
         return new Response("upstream error", { status: 500 });
       }
       if (url.includes("q=CHFAU")) {

@@ -1,0 +1,77 @@
+{
+  "id": "money-defi-money",
+  "name": "defi.money",
+  "symbol": "MONEY",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDC-backed defi.money collateral and strategy assets on Arbitrum and Optimism",
+  "pegMechanism": "Stablecoin minted against accepted collateral with protocol-managed risk parameters and liquidity routes",
+  "detailProvider": "coingecko",
+  "geckoId": "defi-money",
+  "protocolSlug": "defi-money",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://defi.money/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/defidotmoney"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.defi.money/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "arbitrum",
+      "address": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "reserves": [
+    {
+      "name": "USDC collateral",
+      "pct": 70,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true
+    },
+    {
+      "name": "Protocol strategy and liquidity positions",
+      "pct": 30,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "money-defi-money",
+    "display": {
+      "url": "https://docs.defi.money/",
+      "label": "defi.money docs"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "arbitrum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

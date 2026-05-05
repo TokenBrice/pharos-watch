@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "7.43",
+  currentVersion: "7.44",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "7.44",
+    title: "Solayer sUSD Treasury fallback coverage",
+    date: "2026-05-05",
+    effectiveAt: 1777939200,
+    summary:
+      "Solayer sUSD is covered through the rate-derived Treasury fallback lane, while newly added reward-bearing account or restricted strategy assets stay out of runtime yield until a reliable APY source is wired.",
+    impact: [
+      "`susd-solayer` now has an explicit rate-derived T-bill fallback strategy in the yield manifest",
+      "Reward-bearing account products and restricted strategy tokens without reliable public APY telemetry are not marked as runtime yield-bearing, so they do not publish misleading zero-strategy yield rows",
+      "The active yield-bearing invariant still requires every marked asset to have a runtime strategy before it can enter live yield rankings",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "7.43",
     title: "Tracked savings wrappers own their native APY history",

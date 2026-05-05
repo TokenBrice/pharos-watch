@@ -1,0 +1,80 @@
+{
+  "id": "inalpha-nest",
+  "name": "Nest Alpha Vault LP",
+  "symbol": "inALPHA",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "collateral": "Nest Alpha Vault strategy assets and LP positions backing the NAV-style dollar reference token",
+  "pegMechanism": "Vault LP token whose value targets a dollar base but can appreciate or drift with strategy NAV rather than functioning as a hard 1:1 redeemable stablecoin",
+  "detailProvider": "coingecko",
+  "geckoId": "nest-alpha-vault-lp",
+  "protocolSlug": "nest-credit",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.nest.credit/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/NestCredit"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.nest.credit/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x64ab176c545bb85eca75d53c3ffcb361deafb855",
+      "decimals": 6
+    },
+    {
+      "chain": "plume",
+      "address": "0x64ab176c545bb85eca75d53c3ffcb361deafb855",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "reserves": [
+    {
+      "name": "Nest Alpha Vault strategy assets",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "inalpha-nest",
+    "display": {
+      "url": "https://docs.nest.credit/",
+      "label": "Nest Credit docs"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Nest Alpha Vault NAV",
+    "yieldType": "nav-appreciation"
+  },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "NAV-style dollar asset",
+      "message": "inALPHA is tracked because it references a dollar base, but the token behaves like a vault share rather than a pure par stablecoin."
+    }
+  ]
+}

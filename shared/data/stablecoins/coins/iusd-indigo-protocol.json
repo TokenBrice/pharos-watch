@@ -1,0 +1,49 @@
+{
+  "id": "iusd-indigo-protocol",
+  "llamaId": "88",
+  "detailProvider": "defillama",
+  "name": "Indigo iUSD",
+  "symbol": "iUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cardano collateralized debt positions in Indigo Protocol vaults",
+  "pegMechanism": "Synthetic dollar minted against overcollateralized Cardano assets, with liquidations and stability mechanisms governed by Indigo Protocol",
+  "geckoId": "iusd",
+  "protocolSlug": "indigo-protocol",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://indigoprotocol.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Indigo_protocol"
+    },
+    {
+      "label": "Docs",
+      "url": "https://indigo-labs.gitbook.io/indigo-protocol/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "cardano",
+      "address": "f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b6988069555344",
+      "decimals": 6
+    }
+  ],
+  "chainTier": "mature-alt-l1",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "Indigo overcollateralized Cardano vaults",
+      "pct": 100,
+      "risk": "high"
+    }
+  ]
+}

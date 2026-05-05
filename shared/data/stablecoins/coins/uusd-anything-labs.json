@@ -1,0 +1,65 @@
+{
+  "id": "uusd-anything-labs",
+  "name": "Unity USD",
+  "symbol": "UUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "BSC stablecoin and crypto collateral managed by the UUSD protocol",
+  "pegMechanism": "Protocol-issued dollar token using managed collateral and liquidity incentives to hold the USD peg",
+  "detailProvider": "coingecko",
+  "geckoId": "unity-usd",
+  "protocolSlug": "uusd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://uusd.ai/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/UUSDai"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/uusdai/uusd"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "bsc",
+      "address": "0x61a10e8556bed032ea176330e7f17d6a12a10000",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "established-alt-l1",
+  "deploymentModel": "single-chain",
+  "reserves": [
+    {
+      "name": "Protocol-managed stablecoin and crypto collateral",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "uusd-anything-labs",
+    "display": {
+      "url": "https://github.com/uusdai/uusd",
+      "label": "UUSD repository"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "bsc",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

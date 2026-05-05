@@ -1,0 +1,48 @@
+{
+  "id": "hbd-hive",
+  "name": "Hive Backed Dollar",
+  "symbol": "HBD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Hive protocol value and conversion rules between HBD and HIVE, including haircut logic when HBD debt exceeds protocol thresholds",
+  "pegMechanism": "Protocol-level conversion mechanism targets one U.S. dollar of HIVE per HBD, with witness-set interest and haircut rules under stress",
+  "detailProvider": "coingecko",
+  "geckoId": "hive_dollar",
+  "protocolSlug": "hive",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://hive.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/hiveblocks"
+    },
+    {
+      "label": "Docs",
+      "url": "https://developers.hive.io/"
+    }
+  ],
+  "chainTier": "established-alt-l1",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "Hive protocol conversion capacity",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Protocol haircut mechanism",
+      "message": "HBD redemptions depend on Hive protocol conversion rules and can be haircut when system debt is above configured thresholds."
+    }
+  ]
+}

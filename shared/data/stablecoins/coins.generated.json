@@ -1335,6 +1335,54 @@
     ]
   },
   {
+    "id": "bfusd-binance",
+    "detailProvider": "coingecko",
+    "name": "BFUSD",
+    "symbol": "BFUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Binance-managed collateral pool and reserve fund, with hedged crypto positions and issuer-controlled risk buffers supporting the account balance product",
+    "pegMechanism": "Binance account asset designed to hold a $1 reference value; eligible Binance users can subscribe and redeem within Binance rather than through an on-chain token contract",
+    "geckoId": "bfusd",
+    "cmcSlug": "bfusd",
+    "protocolSlug": "binance",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.binance.com/en/bfusd"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/binance"
+      },
+      {
+        "label": "Docs",
+        "url": "https://bin.bnbstatic.com/static/cms/cg08ou2ak0tn7mcplvfg/file/c1dd5e9f6a6191ca85b3cd256bd831884372530e3b4204b9006bf273650c6f5b.pdf"
+      }
+    ],
+    "custodyModel": "cex",
+    "reserves": [
+      {
+        "name": "Binance collateral pool and reserve fund",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Off-chain account asset",
+        "message": "BFUSD is modeled from third-party market data and Binance documentation; no on-chain supply contract is configured."
+      }
+    ]
+  },
+  {
     "id": "bold-liquity",
     "llamaId": "269",
     "detailProvider": "defillama",
@@ -2523,6 +2571,136 @@
       "inputs": {
         "primary": {
           "kind": "onchain-solana"
+        }
+      }
+    }
+  },
+  {
+    "id": "cdp-enosys",
+    "detailProvider": "coingecko",
+    "name": "Enosys Loans CDP",
+    "symbol": "CDP",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Flare ecosystem collateral deposited into Enosys Loans CDP positions",
+    "pegMechanism": "Overcollateralized CDP stable asset minted against Enosys Loans collateral and managed through liquidations and repayment rules",
+    "geckoId": "enosys-loans-cdp",
+    "protocolSlug": "enosys-loans",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://enosys.global/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/enosys_global"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.enosys.global/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "flare",
+        "address": "0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "reserves": [
+      {
+        "name": "Enosys Loans overcollateralized crypto positions",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "cdp-enosys",
+      "display": {
+        "url": "https://docs.enosys.global/",
+        "label": "Enosys docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "flare",
+          "rpcMode": "public-rpc"
+        }
+      }
+    }
+  },
+  {
+    "id": "cdxusd-cod3x",
+    "detailProvider": "coingecko",
+    "name": "Cod3x USD",
+    "symbol": "cdxUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Facilitator-managed crypto and stablecoin collateral under Cod3x protocol limits and strategies",
+    "pegMechanism": "Cod3x Facilitators can mint and burn cdxUSD under protocol-defined limits; supply is expected to remain sufficiently collateralized by strategy assets",
+    "geckoId": "cod3x-usd",
+    "protocolSlug": "cod3x",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.cod3x.org/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Cod3xOrg"
+      },
+      {
+        "label": "Docs",
+        "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "base",
+        "address": "0xc0d3700000987c99b3c9009069e4f8413fd22330",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "stage1-l2",
+    "deploymentModel": "single-chain",
+    "reserves": [
+      {
+        "name": "Facilitator-managed crypto and stablecoin collateral",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "cdxusd-cod3x",
+      "display": {
+        "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/",
+        "label": "Cod3x overview"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "base",
+          "rpcMode": "public-rpc"
         }
       }
     }
@@ -5709,6 +5887,93 @@
     }
   },
   {
+    "id": "eusd-telcoin",
+    "detailProvider": "coingecko",
+    "name": "eUSD",
+    "symbol": "eUSD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Cash and high-quality liquid dollar reserves managed by Telcoin Digital Asset Bank for the eUSD issued token",
+    "pegMechanism": "Bank-issued dollar token with KYC-gated mint and redemption through Telcoin banking rails",
+    "geckoId": "eusd-2",
+    "cmcSlug": "eusd-telcoindab",
+    "protocolSlug": "telcoin-bank",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://bank.telco.in/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/telcoin"
+      },
+      {
+        "label": "Docs",
+        "url": "https://bank.telco.in/terms-of-use"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "Nebraska Department of Banking and Finance",
+      "license": "Digital Asset Depository Institution"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x14913815bcfde78baead2111f463d038ac9c2949",
+        "decimals": 6
+      },
+      {
+        "chain": "base",
+        "address": "0x14913815bcfde78baead2111f463d038ac9c2949",
+        "decimals": 6
+      },
+      {
+        "chain": "polygon",
+        "address": "0x14913815bcfde78baead2111f463d038ac9c2949",
+        "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Cash and high-quality dollar reserve assets",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "eusd-telcoin",
+      "display": {
+        "url": "https://bank.telco.in/",
+        "label": "Telcoin Digital Asset Bank"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    }
+  },
+  {
     "id": "fdusd-first-digital",
     "llamaId": "119",
     "detailProvider": "defillama",
@@ -6614,6 +6879,48 @@
     }
   },
   {
+    "id": "fusd-freedom-dollar",
+    "detailProvider": "coingecko",
+    "name": "Freedom Dollar",
+    "symbol": "FUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Privacy-chain stable asset collateral and reserve mechanisms on Zano; public reserve details are limited",
+    "pegMechanism": "Freedom Dollar targets $1 inside the Zano ecosystem through private-chain issuance and redemption mechanics",
+    "geckoId": "freedom-dollar",
+    "protocolSlug": "freedom-dollar",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://freedomdollar.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/freedomdollar"
+      }
+    ],
+    "reserves": [
+      {
+        "name": "Zano ecosystem collateral and reserve mechanisms",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Unsupported private chain",
+        "message": "FUSD primarily circulates on Zano, which is not a configured Pharos chain, so no contract is stored."
+      }
+    ]
+  },
+  {
     "id": "fxusd-f-x-protocol",
     "llamaId": "168",
     "detailProvider": "defillama",
@@ -7164,6 +7471,54 @@
     }
   },
   {
+    "id": "hbd-hive",
+    "detailProvider": "coingecko",
+    "name": "Hive Backed Dollar",
+    "symbol": "HBD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Hive protocol value and conversion rules between HBD and HIVE, including haircut logic when HBD debt exceeds protocol thresholds",
+    "pegMechanism": "Protocol-level conversion mechanism targets one U.S. dollar of HIVE per HBD, with witness-set interest and haircut rules under stress",
+    "geckoId": "hive_dollar",
+    "protocolSlug": "hive",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://hive.io/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/hiveblocks"
+      },
+      {
+        "label": "Docs",
+        "url": "https://developers.hive.io/"
+      }
+    ],
+    "chainTier": "established-alt-l1",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "Hive protocol conversion capacity",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Protocol haircut mechanism",
+        "message": "HBD redemptions depend on Hive protocol conversion rules and can be haircut when system debt is above configured thresholds."
+      }
+    ]
+  },
+  {
     "id": "hollar-hydrated",
     "llamaId": "312",
     "detailProvider": "defillama",
@@ -7238,6 +7593,83 @@
         "name": "GIGADOT / GIGAETH",
         "pct": 5,
         "risk": "very-high"
+      }
+    ]
+  },
+  {
+    "id": "home-homecoin",
+    "llamaId": "60",
+    "detailProvider": "defillama",
+    "name": "HomeCoin",
+    "symbol": "HOME",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "U.S. home-loan liens and property-backed receivables originated through the HomeCoin/Bacon lending process",
+    "pegMechanism": "Users fund property-backed loans with stablecoins; loans are secured by recorded liens and nonpayment can lead to foreclosure or sale proceeds",
+    "protocolSlug": "homecoin",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.homecoin.finance/",
+      "provider": "HomeCoin"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.homecoin.finance/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/homecoinfinance"
+      },
+      {
+        "label": "Docs",
+        "url": "https://wiki.defillama.com/wiki/HomeCoin"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xb8919522331c59f5c16bdfaa6a121a6e03a91f62",
+        "decimals": 6
+      }
+    ],
+    "chainTier": "ethereum",
+    "custodyModel": "institutional-unregulated",
+    "reserves": [
+      {
+        "name": "U.S. home loan liens / property-backed receivables",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "home-homecoin",
+      "display": {
+        "url": "https://www.homecoin.finance/",
+        "label": "HomeCoin"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Illiquid RWA collateral",
+        "message": "HomeCoin collateral is property-backed receivables, so the fallback is not comparable to liquid fiat or Treasury redemption capacity."
       }
     ]
   },
@@ -7613,6 +8045,86 @@
     ]
   },
   {
+    "id": "inalpha-nest",
+    "detailProvider": "coingecko",
+    "name": "Nest Alpha Vault LP",
+    "symbol": "inALPHA",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "collateral": "Nest Alpha Vault strategy assets and LP positions backing the NAV-style dollar reference token",
+    "pegMechanism": "Vault LP token whose value targets a dollar base but can appreciate or drift with strategy NAV rather than functioning as a hard 1:1 redeemable stablecoin",
+    "geckoId": "nest-alpha-vault-lp",
+    "protocolSlug": "nest-credit",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.nest.credit/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/NestCredit"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.nest.credit/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x64ab176c545bb85eca75d53c3ffcb361deafb855",
+        "decimals": 6
+      },
+      {
+        "chain": "plume",
+        "address": "0x64ab176c545bb85eca75d53c3ffcb361deafb855",
+        "decimals": 6
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "reserves": [
+      {
+        "name": "Nest Alpha Vault strategy assets",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "inalpha-nest",
+      "display": {
+        "url": "https://docs.nest.credit/",
+        "label": "Nest Credit docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "NAV-style dollar asset",
+        "message": "inALPHA is tracked because it references a dollar base, but the token behaves like a vault share rather than a pure par stablecoin."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Nest Alpha Vault NAV",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "isc-international-stable-currency",
     "llamaId": "186",
     "detailProvider": "defillama",
@@ -7677,6 +8189,55 @@
         "name": "Cash reserves",
         "pct": 20,
         "risk": "very-low"
+      }
+    ]
+  },
+  {
+    "id": "iusd-indigo-protocol",
+    "llamaId": "88",
+    "detailProvider": "defillama",
+    "name": "Indigo iUSD",
+    "symbol": "iUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Cardano collateralized debt positions in Indigo Protocol vaults",
+    "pegMechanism": "Synthetic dollar minted against overcollateralized Cardano assets, with liquidations and stability mechanisms governed by Indigo Protocol",
+    "geckoId": "iusd",
+    "protocolSlug": "indigo-protocol",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://indigoprotocol.io/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Indigo_protocol"
+      },
+      {
+        "label": "Docs",
+        "url": "https://indigo-labs.gitbook.io/indigo-protocol/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "cardano",
+        "address": "f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b6988069555344",
+        "decimals": 6
+      }
+    ],
+    "chainTier": "mature-alt-l1",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "Indigo overcollateralized Cardano vaults",
+        "pct": 100,
+        "risk": "high"
       }
     ]
   },
@@ -7815,6 +8376,93 @@
       "yieldSource": "infiniFi savings (siUSD)",
       "yieldType": "lending-vault"
     }
+  },
+  {
+    "id": "jpyc-jpyc-v1",
+    "detailProvider": "coingecko",
+    "name": "JPY Coin v1",
+    "symbol": "JPYC",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "JPY",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Japanese-yen reserve assets held for the legacy prepaid-payment JPYC v1 token series",
+    "pegMechanism": "Legacy prepaid-payment JPYC token series redeemable through JPYC processes before migration to the newer funds-transfer-token contracts",
+    "geckoId": "jpyc",
+    "protocolSlug": "jpyc",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://jpyc.co.jp/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/jpyc_official"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/jpycoin"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Japan",
+      "regulator": "FSA"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x2370f9d504c7a6e775bf6e14b3f12846b594cd53",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c",
+        "decimals": 18
+      },
+      {
+        "chain": "gnosis",
+        "address": "0x417602f4fbdd471a431ae29fb5fe0a681964c11b",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-regulated",
+    "reserves": [
+      {
+        "name": "JPY reserve assets for legacy JPYC v1",
+        "pct": 100,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "jpyc-jpyc-v1",
+      "display": {
+        "url": "https://jpyc.co.jp/",
+        "label": "JPYC"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Legacy token series",
+        "message": "JPYC v1 is tracked separately from the current JPYC funds-transfer-token deployment."
+      }
+    ]
   },
   {
     "id": "jpyc-jpyc",
@@ -8031,6 +8679,75 @@
       "params": {
         "snapshotsUrl": "https://api.jupusd.money/api/snapshots",
         "oracleUrl": "https://api.jupusd.money/api/oracle"
+      }
+    }
+  },
+  {
+    "id": "jusd-jusd-stable-token",
+    "detailProvider": "coingecko",
+    "name": "JUSD",
+    "symbol": "JUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Crypto collateral and protocol-managed reserve liquidity described in JUSD materials",
+    "pegMechanism": "Dollar stable token with issuer/protocol-managed collateral and redemption processes documented by JUSD",
+    "geckoId": "jusd",
+    "protocolSlug": "jusd",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://jusd.app/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/JusdOfficial"
+      },
+      {
+        "label": "Docs",
+        "url": "https://jusd.app/whitepaper.pdf"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "bsc",
+        "address": "0xbf3950db0522a7f5caa107d4cbbbd84de9e047e2",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0x0ba8a6ce46d369d779299dedade864318097b703",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "reserves": [
+      {
+        "name": "Protocol-managed crypto collateral and reserves",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "jusd-jusd-stable-token",
+      "display": {
+        "url": "https://jusd.app/whitepaper.pdf",
+        "label": "JUSD whitepaper"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "bsc",
+          "rpcMode": "public-rpc"
+        }
       }
     }
   },
@@ -8554,6 +9271,79 @@
     }
   },
   {
+    "id": "luausd-lumi-finance",
+    "detailProvider": "coingecko",
+    "name": "Lumi Finance LUAUSD",
+    "symbol": "LUAUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "collateral": "LUA staking, floor-price mechanics, and protocol-owned liquidity described by Lumi Finance materials",
+    "pegMechanism": "Synthetic dollar reference token tied to Lumi Finance LUA mechanics; it is not a hard 1:1 redeemable fiat stablecoin",
+    "geckoId": "lumi-finance-luausd",
+    "cmcSlug": "lumi-finance-luausd",
+    "protocolSlug": "lumi-finance",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://lumi.finance/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Lumi_finance"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "arbitrum",
+        "address": "0x1dd6b5f9281c6b4f043c02a83a46c2772024636c",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "stage1-l2",
+    "deploymentModel": "single-chain",
+    "reserves": [
+      {
+        "name": "LUA floor-price collateral and protocol-owned liquidity",
+        "pct": 100,
+        "risk": "very-high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "luausd-lumi-finance",
+      "display": {
+        "url": "https://lumi.finance/",
+        "label": "Lumi Finance"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "arbitrum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Nonstandard stable reference",
+        "message": "LUAUSD is included because providers classify it as a dollar asset, but its mechanics are closer to a floor-price synthetic than a hard 1:1 redemption token."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Lumi Finance LUAUSD NAV mechanics",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "lusd-liquity",
     "llamaId": "8",
     "detailProvider": "defillama",
@@ -8757,6 +9547,112 @@
         "primary": {
           "kind": "http-json",
           "url": "https://protocol-api.m0.org/graphql"
+        }
+      }
+    }
+  },
+  {
+    "id": "mai-qidao",
+    "detailProvider": "coingecko",
+    "name": "MAI",
+    "symbol": "MAI",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Overcollateralized crypto vault collateral across QiDao markets, including bridged and wrapped assets",
+    "pegMechanism": "Borrowers mint MAI against overcollateralized vault positions and repay or liquidate through QiDao market rules",
+    "geckoId": "mimatic",
+    "cmcSlug": "mai",
+    "protocolSlug": "qidao",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.mai.finance/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/QiDaoProtocol"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.mai.finance/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "polygon",
+        "address": "0xa3fa99a148fa48d14ed51d610c367c61876997f1",
+        "decimals": 18
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8d6cebd76f18e1558d4db88138e2defb3909fad6",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x3f56e0c36d275367b8c502090edf38289b3dea0d",
+        "decimals": 18
+      },
+      {
+        "chain": "optimism",
+        "address": "0xdfa46478f9e5ea86d57387849598dbfb2e964b02",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0xbf1aea8670d2528e08334083616dd9c5f3b087ae",
+        "decimals": 18
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x5c49b268c9841aff1cc3b0a418ff5c3442ee3f3b",
+        "decimals": 18
+      },
+      {
+        "chain": "gnosis",
+        "address": "0x3f56e0c36d275367b8c502090edf38289b3dea0d",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x3f56e0c36d275367b8c502090edf38289b3dea0d",
+        "decimals": 18
+      },
+      {
+        "chain": "linea",
+        "address": "0xf3b001d64c656e30a62fbaaca003b1336b4ce12a",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "governanceQuality": "multisig",
+    "reserves": [
+      {
+        "name": "QiDao overcollateralized crypto vaults",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "mai-qidao",
+      "display": {
+        "url": "https://docs.mai.finance/",
+        "label": "QiDao docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "polygon",
+          "rpcMode": "public-rpc"
         }
       }
     }
@@ -9088,6 +9984,83 @@
       "params": {
         "label": "U.S. Treasury bills & USD cash",
         "risk": "very-low"
+      }
+    }
+  },
+  {
+    "id": "money-defi-money",
+    "detailProvider": "coingecko",
+    "name": "defi.money",
+    "symbol": "MONEY",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "USDC-backed defi.money collateral and strategy assets on Arbitrum and Optimism",
+    "pegMechanism": "Stablecoin minted against accepted collateral with protocol-managed risk parameters and liquidity routes",
+    "geckoId": "defi-money",
+    "protocolSlug": "defi-money",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://defi.money/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/defidotmoney"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.defi.money/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "arbitrum",
+        "address": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
+        "decimals": 18
+      },
+      {
+        "chain": "optimism",
+        "address": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "reserves": [
+      {
+        "name": "USDC collateral",
+        "pct": 70,
+        "risk": "low",
+        "coinId": "usdc-circle",
+        "depType": "collateral",
+        "blacklistable": true
+      },
+      {
+        "name": "Protocol strategy and liquidity positions",
+        "pct": 30,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "money-defi-money",
+      "display": {
+        "url": "https://docs.defi.money/",
+        "label": "defi.money docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "arbitrum",
+          "rpcMode": "public-rpc"
+        }
       }
     }
   },
@@ -9912,6 +10885,72 @@
     }
   },
   {
+    "id": "nxusd-nereus",
+    "llamaId": "103",
+    "detailProvider": "defillama",
+    "name": "NXUSD",
+    "symbol": "NXUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Overcollateralized Nereus Finance lending positions, primarily Avalanche ecosystem crypto collateral",
+    "pegMechanism": "Borrowed stablecoin minted against overcollateralized deposits in Nereus markets and repaid or liquidated through protocol rules",
+    "geckoId": "nxusd",
+    "protocolSlug": "nereus-finance",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://nereus.finance/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/NereusFinance"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.nereus.finance/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "avalanche",
+        "address": "0xf14f4ce569cb3679e99d5059909e23b07bd2f387",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "reserves": [
+      {
+        "name": "Nereus overcollateralized crypto positions",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "nxusd-nereus",
+      "display": {
+        "url": "https://docs.nereus.finance/",
+        "label": "Nereus docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "avalanche",
+          "rpcMode": "public-rpc"
+        }
+      }
+    }
+  },
+  {
     "id": "ousd-origin-protocol",
     "llamaId": "23",
     "detailProvider": "defillama",
@@ -10729,6 +11768,75 @@
     ]
   },
   {
+    "id": "pusd-polymarket",
+    "detailProvider": "coingecko",
+    "name": "Polymarket USD",
+    "symbol": "PUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "USDC and bridged USDC.e backing on Polygon used for Polymarket prediction-market account balances",
+    "pegMechanism": "Minted when users deposit supported USDC into Polymarket rails and redeemable back to USDC through the Polymarket application flow",
+    "geckoId": "polymarket-usd",
+    "protocolSlug": "polymarket",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://polymarket.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Polymarket"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.polymarket.com/concepts/pusd"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "polygon",
+        "address": "0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "chainTier": "stage1-l2",
+    "deploymentModel": "single-chain",
+    "reserves": [
+      {
+        "name": "USDC / USDC.e on Polygon",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "usdc-circle",
+        "depType": "collateral",
+        "blacklistable": true
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "pusd-polymarket",
+      "display": {
+        "url": "https://docs.polymarket.com/concepts/pusd",
+        "label": "Polymarket PUSD docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "polygon",
+          "rpcMode": "public-rpc"
+        }
+      }
+    }
+  },
+  {
     "id": "pyusd-paypal",
     "llamaId": "120",
     "detailProvider": "defillama",
@@ -11356,6 +12464,82 @@
         "sourceUrl": "https://www.kvrr.com/2026/03/26/north-dakota-moves-forward-with-stablecoin-as-local-banks-express-interest-in-pilot-project/"
       }
     ]
+  },
+  {
+    "id": "rusd-royal-dollar",
+    "detailProvider": "coingecko",
+    "name": "Royal Dollar",
+    "symbol": "RUSD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Issuer-managed fiat reserve assets and short-term liquid instruments disclosed by Royal/R Coins materials",
+    "pegMechanism": "Centralized 1:1 dollar token with issuer-managed mint and redemption processes for approved users",
+    "geckoId": "royal-dollar",
+    "protocolSlug": "rcoins",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.rcoins.digital/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/rcoins_official"
+      },
+      {
+        "label": "Docs",
+        "url": "https://book.royalcc.world/books/RUSD_Whitepaper/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x44bb433d29fe966992a9c812da7f252c9c53f285",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x44bb433d29fe966992a9c812da7f252c9c53f285",
+        "decimals": 18
+      },
+      {
+        "chain": "tron",
+        "address": "TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-unregulated",
+    "reserves": [
+      {
+        "name": "Issuer-managed cash and liquid reserve assets",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "rusd-royal-dollar",
+      "display": {
+        "url": "https://book.royalcc.world/books/RUSD_Whitepaper/",
+        "label": "RUSD whitepaper"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    }
   },
   {
     "id": "rwausdi-multipli",
@@ -12197,6 +13381,71 @@
     ]
   },
   {
+    "id": "spusd-soulpeg",
+    "detailProvider": "coingecko",
+    "name": "SoulPeg USD",
+    "symbol": "spUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "SoulPeg protocol collateral and stablecoin liquidity on BSC",
+    "pegMechanism": "Protocol-issued dollar asset using collateral reserves and mint/redeem controls described by SoulPeg",
+    "geckoId": "soulpeg-usd",
+    "protocolSlug": "soulpeg",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.soulpeg.io/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/SoulPegOfficial"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.soulpeg.io/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "bsc",
+        "address": "0x40ff3dea2eec93a7b71879874dc4407918da77a6",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "reserves": [
+      {
+        "name": "SoulPeg protocol collateral and stablecoin liquidity",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "spusd-soulpeg",
+      "display": {
+        "url": "https://docs.soulpeg.io/",
+        "label": "SoulPeg docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "bsc",
+          "rpcMode": "public-rpc"
+        }
+      }
+    }
+  },
+  {
     "id": "stcusd-cap",
     "detailProvider": "coingecko",
     "name": "Staked Cap USD",
@@ -12457,6 +13706,198 @@
     "yieldConfig": {
       "yieldSource": "Sky stUSDS Rate",
       "yieldType": "lending-vault"
+    }
+  },
+  {
+    "id": "suiusde-sui",
+    "llamaId": "376",
+    "detailProvider": "defillama",
+    "name": "SuiUSDe",
+    "symbol": "suiUSDe",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "pegReferenceId": "usde-ethena",
+    "collateral": "Ethena USDe exposure bridged or represented on Sui",
+    "pegMechanism": "Sui deployment of a USDe-denominated dollar asset; peg quality inherits from Ethena USDe and the Sui deployment path",
+    "geckoId": "esui-dollar",
+    "protocolSlug": "sui",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://sui.io/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/SuiNetwork"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "sui",
+        "address": "0x41d587e5336f1c86cad50d38a7136db99333bb9bda91cea4ba69115defeb1402::sui_usde::SUI_USDE",
+        "decimals": 6
+      }
+    ],
+    "chainTier": "mature-alt-l1",
+    "deploymentModel": "third-party-bridge",
+    "reserves": [
+      {
+        "name": "USDe-linked backing on Sui",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "usde-ethena",
+        "depType": "collateral"
+      }
+    ]
+  },
+  {
+    "id": "susd-hedgecore",
+    "detailProvider": "coingecko",
+    "name": "Staked USD Coin",
+    "symbol": "SUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "USDC deposited into HedgeCore and routed through Venus Protocol yield strategies on BSC",
+    "pegMechanism": "Users deposit USDC to mint soul-bound sUSD, with yield distributed through HedgeCore mechanisms and liquidity exposed through hUSDC",
+    "geckoId": "staked-usd-coin",
+    "protocolSlug": "hedgecore",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://hedgecore.io/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/hedgecore_io"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.hedgecore.io/docs/protocol/yield-generation"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "bsc",
+        "address": "0xbe1922750760c4cae69edb6fe79a22ae9b62a23d",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "reserves": [
+      {
+        "name": "USDC / Venus Protocol lending strategy",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "collateral",
+        "blacklistable": true
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "susd-hedgecore",
+      "display": {
+        "url": "https://docs.hedgecore.io/docs/protocol/yield-generation",
+        "label": "HedgeCore docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "bsc",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Restricted transfer and redemption path",
+        "message": "HedgeCore docs describe sUSD as soul-bound, and early redemption is operator-controlled rather than a general liquid backstop."
+      }
+    ]
+  },
+  {
+    "id": "susd-solayer",
+    "llamaId": "216",
+    "detailProvider": "defillama",
+    "name": "Solayer USD",
+    "symbol": "sUSD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "U.S. Treasury bill exposure and RWA partner products backing a Solana Token-2022 interest-bearing stablecoin",
+    "pegMechanism": "Users mint through Solayer workflows and balances grow through Token-2022 interest extension mechanics backed by T-bill yield",
+    "geckoId": "solayer-usd",
+    "protocolSlug": "solayer-usd",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://solayer.org/platform/susd"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/solayer_labs"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.solayer.org/assets/susd/yield-bearing-stablecoin/what-is-susd"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "solana",
+        "address": "susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X",
+        "decimals": 6
+      }
+    ],
+    "chainTier": "mature-alt-l1",
+    "custodyModel": "institutional-unregulated",
+    "reserves": [
+      {
+        "name": "U.S. Treasury bill basket / RWA partner product",
+        "pct": 100,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "susd-solayer",
+      "display": {
+        "url": "https://docs.solayer.org/assets/susd/yield-bearing-stablecoin/what-is-susd",
+        "label": "Solayer sUSD docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-solana"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Solayer sUSD T-bill yield",
+      "yieldType": "rebase"
     }
   },
   {
@@ -14206,6 +15647,180 @@
       "params": {
         "rpcUrl": "https://ethereum-rpc.publicnode.com",
         "fallbackRpcUrl": "https://eth.llamarpc.com"
+      }
+    }
+  },
+  {
+    "id": "usd3-reserve-protocol",
+    "llamaId": "178",
+    "detailProvider": "defillama",
+    "name": "Web 3 Dollar",
+    "symbol": "USD3",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "collateral": "Reserve Protocol DTF basket made up of Savings USDS, Aave USDC, wrapped Compound USDCv3, and Steakhouse USDC strategy exposure",
+    "pegMechanism": "Reserve RToken/DTF whose holders can redeem into the backing basket subject to Reserve protocol throttles and basket mechanics; RSR stakers govern and absorb losses",
+    "geckoId": "web-3-dollar",
+    "protocolSlug": "reserve-protocol",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://api.reserve.org/discover/dtfs",
+      "provider": "Reserve Protocol"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://reserve.org/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/USD_3"
+      },
+      {
+        "label": "Docs",
+        "url": "https://reserve.org/protocol/"
+      },
+      {
+        "label": "Transparency",
+        "url": "https://api.reserve.org/discover/dtfs"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x0d86883faf4ffd7aeb116390af37746f45b6f378",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0xefb97aaf77993922ac4be4da8fbc9a2425322677",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "Savings USDS",
+        "pct": 25,
+        "risk": "low",
+        "coinId": "susds-sky",
+        "depType": "collateral"
+      },
+      {
+        "name": "Static Aave Ethereum USDC",
+        "pct": 25,
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "collateral",
+        "blacklistable": true
+      },
+      {
+        "name": "Wrapped Compound USDCv3",
+        "pct": 25,
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "collateral",
+        "blacklistable": true
+      },
+      {
+        "name": "Steakhouse USDC strategy",
+        "pct": 25,
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "collateral",
+        "blacklistable": true
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "usd3-reserve-protocol",
+      "display": {
+        "url": "https://app.reserve.org/ethereum/token/0x0d86883faf4ffd7aeb116390af37746f45b6f378/overview",
+        "label": "Reserve app"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Reserve Protocol collateral yield",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "usda-alpha-partner",
+    "detailProvider": "coingecko",
+    "name": "Alpha Partner USDA",
+    "symbol": "USDA",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Alpha Partners protocol collateral and managed liquidity reserves on BSC",
+    "pegMechanism": "Protocol-managed dollar token using collateral reserves and incentive mechanisms to support the peg",
+    "geckoId": "usda-3",
+    "protocolSlug": "alpha-partners",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://alphapartner.vip/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/APalphalabs"
+      },
+      {
+        "label": "Docs",
+        "url": "https://ap-organization-1.gitbook.io/alpha-partners"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "bsc",
+        "address": "0x17eafd08994305d8ace37efb82f1523177ec70ee",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "single-chain",
+    "reserves": [
+      {
+        "name": "Protocol-managed collateral and liquidity reserves",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "usda-alpha-partner",
+      "display": {
+        "url": "https://ap-organization-1.gitbook.io/alpha-partners",
+        "label": "Alpha Partners docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "bsc",
+          "rpcMode": "public-rpc"
+        }
       }
     }
   },
@@ -17345,6 +18960,71 @@
     }
   },
   {
+    "id": "usdr-ring",
+    "detailProvider": "coingecko",
+    "name": "Ring USD",
+    "symbol": "USDR",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Ring protocol crypto collateral and strategy assets managed through the protocol reserve system",
+    "pegMechanism": "Crypto-collateralized synthetic dollar with protocol-controlled mint, redeem, and liquidity-management routes",
+    "geckoId": "ring-usd",
+    "protocolSlug": "ring-protocol",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://ring.exchange/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/ProtocolRing"
+      },
+      {
+        "label": "Docs",
+        "url": "https://ringprotocol.gitbook.io/ring-protocol/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x4ea40dcee961675683e0a2e1721bd49cb9bca913",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "reserves": [
+      {
+        "name": "Ring protocol crypto collateral and liquidity positions",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "usdr-ring",
+      "display": {
+        "url": "https://ringprotocol.gitbook.io/ring-protocol/",
+        "label": "Ring Protocol docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    }
+  },
+  {
     "id": "usdr-stablr",
     "llamaId": "240",
     "detailProvider": "defillama",
@@ -18354,6 +20034,55 @@
         "risk": "very-low"
       }
     }
+  },
+  {
+    "id": "usdx-kava",
+    "llamaId": "42",
+    "detailProvider": "defillama",
+    "name": "USDX",
+    "symbol": "USDX",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Kava CDP collateral and protocol liquidity backing the legacy USDX debt token",
+    "pegMechanism": "Kava Mint overcollateralized debt positions issue USDX against crypto collateral, with liquidations and protocol parameters intended to defend the peg",
+    "geckoId": "usdx",
+    "cmcSlug": "usdx-kava",
+    "protocolSlug": "kava-mint",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.kava.io/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/KAVA_CHAIN"
+      },
+      {
+        "label": "Docs",
+        "url": "https://help.app.kava.io/article/15-what-is-kava-mint"
+      }
+    ],
+    "chainTier": "established-alt-l1",
+    "reserves": [
+      {
+        "name": "Kava CDP collateral and protocol liquidity",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Legacy depeg risk",
+        "message": "USDX has a long-lived discount to its dollar peg; Pharos tracks the active provider entry separately from the historical cemetery incident."
+      }
+    ]
   },
   {
     "id": "usdy-ondo-finance",
@@ -19375,6 +21104,109 @@
     }
   },
   {
+    "id": "usx-dforce",
+    "llamaId": "44",
+    "detailProvider": "defillama",
+    "name": "dForce USD",
+    "symbol": "USX",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "dForce/Unitus stablecoin reserves and overcollateralized crypto positions; docs describe USDT, USDC, DAI and protocol collateral routes",
+    "pegMechanism": "USX is minted and redeemed through dForce/Unitus stablecoin and lending routes, with sUSX as a separate yield-bearing wrapper",
+    "geckoId": "token-dforce-usd",
+    "cmcSlug": "dforce-usd",
+    "protocolSlug": "dforce-lending",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://dforce.network/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/dForcenet"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.dforce.network/ecosystem/usx-stablecoin"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x0a5e677a6a24b2f1a2bf4f3bffc443231d2fdec8",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0xb5102cee1528ce2c760893034a4603663495fd72",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x641441c631e2f909700d2f41fd87f0aa6a6b4edb",
+        "decimals": 18
+      },
+      {
+        "chain": "optimism",
+        "address": "0xbfd291da8a403daaf7e5e9dc1ec0aceacd4848b9",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0xc142171b138db17a1b7cb999c44526094a4dae05",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0xcf66eb3d546f0415b368d98a95eaf56ded7aa752",
+        "decimals": 18
+      },
+      {
+        "chain": "kava",
+        "address": "0xdb0e1e86b01c4ad25241b1843e407efc4d615248",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "reserves": [
+      {
+        "name": "dForce stablecoin and crypto collateral pool",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "usx-dforce",
+      "display": {
+        "url": "https://docs.dforce.network/ecosystem/usx-stablecoin",
+        "label": "dForce USX docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Active depeg risk",
+        "message": "Recent provider data shows USX materially below $1; the configured reserve view is a collateral classification, not live redemption assurance."
+      }
+    ]
+  },
+  {
     "id": "usx-solstice",
     "llamaId": "310",
     "detailProvider": "defillama",
@@ -19644,6 +21476,71 @@
     }
   },
   {
+    "id": "uusd-anything-labs",
+    "detailProvider": "coingecko",
+    "name": "Unity USD",
+    "symbol": "UUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "BSC stablecoin and crypto collateral managed by the UUSD protocol",
+    "pegMechanism": "Protocol-issued dollar token using managed collateral and liquidity incentives to hold the USD peg",
+    "geckoId": "unity-usd",
+    "protocolSlug": "uusd",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://uusd.ai/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/UUSDai"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/uusdai/uusd"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "bsc",
+        "address": "0x61a10e8556bed032ea176330e7f17d6a12a10000",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "reserves": [
+      {
+        "name": "Protocol-managed stablecoin and crypto collateral",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "uusd-anything-labs",
+      "display": {
+        "url": "https://github.com/uusdai/uusd",
+        "label": "UUSD repository"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "bsc",
+          "rpcMode": "public-rpc"
+        }
+      }
+    }
+  },
+  {
     "id": "uusd-youves",
     "llamaId": "75",
     "detailProvider": "defillama",
@@ -19797,6 +21694,67 @@
       "params": {
         "label": "CHF cash & equivalents",
         "risk": "very-low"
+      }
+    }
+  },
+  {
+    "id": "vcred-vcred",
+    "detailProvider": "coingecko",
+    "name": "vCred",
+    "symbol": "vCRED",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Hemi-based credit and crypto collateral backing vCRED",
+    "pegMechanism": "Credit-token stable asset with protocol-managed collateral and redemption/liquidity controls on Hemi",
+    "geckoId": "vcred",
+    "protocolSlug": "vcred",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://vcred.xyz/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/vCred_xyz"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "hemi",
+        "address": "0x71881974e96152643c74a8e0214b877cfb2a0aa1",
+        "decimals": 6
+      }
+    ],
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
+    "reserves": [
+      {
+        "name": "Hemi credit and crypto collateral",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "vcred-vcred",
+      "display": {
+        "url": "https://vcred.xyz/",
+        "label": "vCRED"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "hemi",
+          "rpcMode": "public-rpc"
+        }
       }
     }
   },
@@ -20103,6 +22061,52 @@
         "risk": "high"
       }
     }
+  },
+  {
+    "id": "wemix-dollar-wemix",
+    "detailProvider": "coingecko",
+    "name": "WEMIX Dollar",
+    "symbol": "WEMIX$",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "WEMIX ecosystem reserve assets and issuer-managed liquidity on WEMIX chain",
+    "pegMechanism": "WEMIX ecosystem dollar token with issuer-controlled reserve and liquidity management",
+    "geckoId": "wemix-dollar",
+    "protocolSlug": "wemix",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.wemix.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/WemixNetwork"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.wemix.com/"
+      }
+    ],
+    "reserves": [
+      {
+        "name": "WEMIX ecosystem reserve assets",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Unsupported issuance chain",
+        "message": "WEMIX Dollar primarily circulates on WEMIX chain, which is not a configured Pharos chain, so no contract is stored."
+      }
+    ]
   },
   {
     "id": "wm-m0",
@@ -20651,6 +22655,62 @@
     }
   },
   {
+    "id": "xdai-gnosis",
+    "detailProvider": "coingecko",
+    "name": "xDAI",
+    "symbol": "xDAI",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "DAI locked or bridged through Gnosis Chain bridge infrastructure, with wrapped WXDAI used for ERC-20 integrations",
+    "pegMechanism": "Native gas token on Gnosis Chain backed by bridged DAI; users can bridge between DAI and xDAI through official Gnosis bridge routes",
+    "geckoId": "xdai",
+    "protocolSlug": "gnosis-chain",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.gnosischain.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/gnosischain"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.gnosischain.com/about/tokens/"
+      }
+    ],
+    "tradedContracts": [
+      {
+        "chain": "gnosis",
+        "address": "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "established-alt-l1",
+    "reserves": [
+      {
+        "name": "DAI backing through Gnosis bridge infrastructure",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "dai-makerdao",
+        "depType": "collateral"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Native gas-token supply",
+        "message": "xDAI is native to Gnosis Chain; the configured contract is listed as a traded wrapper rather than a canonical supply contract."
+      }
+    ]
+  },
+  {
     "id": "xo-exodus",
     "detailProvider": "coingecko",
     "name": "XO Cash",
@@ -20838,6 +22898,49 @@
         "risk": "very-low"
       }
     }
+  },
+  {
+    "id": "xtusd-xt",
+    "detailProvider": "coingecko",
+    "name": "XTUSD",
+    "symbol": "XTUSD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "XT.com issuer-managed dollar reserves; public collateral detail is limited",
+    "pegMechanism": "Centralized exchange-issued dollar token with issuance and redemption handled through XT.com account infrastructure",
+    "geckoId": "xtusd",
+    "protocolSlug": "xt-com",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.xt.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/XTexchange"
+      }
+    ],
+    "custodyModel": "cex",
+    "reserves": [
+      {
+        "name": "XT.com issuer-managed reserve assets",
+        "pct": 100,
+        "risk": "very-high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Unsupported issuance chain",
+        "message": "XTUSD primarily circulates on XSC, which is not a configured Pharos chain, so no contract is stored."
+      }
+    ]
   },
   {
     "id": "xusd-straitsx",

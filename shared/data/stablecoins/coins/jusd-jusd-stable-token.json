@@ -1,0 +1,69 @@
+{
+  "id": "jusd-jusd-stable-token",
+  "name": "JUSD",
+  "symbol": "JUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Crypto collateral and protocol-managed reserve liquidity described in JUSD materials",
+  "pegMechanism": "Dollar stable token with issuer/protocol-managed collateral and redemption processes documented by JUSD",
+  "detailProvider": "coingecko",
+  "geckoId": "jusd",
+  "protocolSlug": "jusd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://jusd.app/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/JusdOfficial"
+    },
+    {
+      "label": "Docs",
+      "url": "https://jusd.app/whitepaper.pdf"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "bsc",
+      "address": "0xbf3950db0522a7f5caa107d4cbbbd84de9e047e2",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x0ba8a6ce46d369d779299dedade864318097b703",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "reserves": [
+    {
+      "name": "Protocol-managed crypto collateral and reserves",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "jusd-jusd-stable-token",
+    "display": {
+      "url": "https://jusd.app/whitepaper.pdf",
+      "label": "JUSD whitepaper"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "bsc",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

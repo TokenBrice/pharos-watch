@@ -1,0 +1,43 @@
+{
+  "id": "xtusd-xt",
+  "name": "XTUSD",
+  "symbol": "XTUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "XT.com issuer-managed dollar reserves; public collateral detail is limited",
+  "pegMechanism": "Centralized exchange-issued dollar token with issuance and redemption handled through XT.com account infrastructure",
+  "detailProvider": "coingecko",
+  "geckoId": "xtusd",
+  "protocolSlug": "xt-com",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.xt.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/XTexchange"
+    }
+  ],
+  "custodyModel": "cex",
+  "reserves": [
+    {
+      "name": "XT.com issuer-managed reserve assets",
+      "pct": 100,
+      "risk": "very-high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Unsupported issuance chain",
+      "message": "XTUSD primarily circulates on XSC, which is not a configured Pharos chain, so no contract is stored."
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "id": "home-homecoin",
+  "llamaId": "60",
+  "detailProvider": "defillama",
+  "name": "HomeCoin",
+  "symbol": "HOME",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "U.S. home-loan liens and property-backed receivables originated through the HomeCoin/Bacon lending process",
+  "pegMechanism": "Users fund property-backed loans with stablecoins; loans are secured by recorded liens and nonpayment can lead to foreclosure or sale proceeds",
+  "protocolSlug": "homecoin",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.homecoin.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/homecoinfinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://wiki.defillama.com/wiki/HomeCoin"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xb8919522331c59f5c16bdfaa6a121a6e03a91f62",
+      "decimals": 6
+    }
+  ],
+  "chainTier": "ethereum",
+  "custodyModel": "institutional-unregulated",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.homecoin.finance/",
+    "provider": "HomeCoin"
+  },
+  "reserves": [
+    {
+      "name": "U.S. home loan liens / property-backed receivables",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "home-homecoin",
+    "display": {
+      "url": "https://www.homecoin.finance/",
+      "label": "HomeCoin"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Illiquid RWA collateral",
+      "message": "HomeCoin collateral is property-backed receivables, so the fallback is not comparable to liquid fiat or Treasury redemption capacity."
+    }
+  ]
+}

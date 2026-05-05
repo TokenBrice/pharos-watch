@@ -1,0 +1,46 @@
+{
+  "id": "wemix-dollar-wemix",
+  "name": "WEMIX Dollar",
+  "symbol": "WEMIX$",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "WEMIX ecosystem reserve assets and issuer-managed liquidity on WEMIX chain",
+  "pegMechanism": "WEMIX ecosystem dollar token with issuer-controlled reserve and liquidity management",
+  "detailProvider": "coingecko",
+  "geckoId": "wemix-dollar",
+  "protocolSlug": "wemix",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.wemix.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/WemixNetwork"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.wemix.com/"
+    }
+  ],
+  "reserves": [
+    {
+      "name": "WEMIX ecosystem reserve assets",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Unsupported issuance chain",
+      "message": "WEMIX Dollar primarily circulates on WEMIX chain, which is not a configured Pharos chain, so no contract is stored."
+    }
+  ]
+}

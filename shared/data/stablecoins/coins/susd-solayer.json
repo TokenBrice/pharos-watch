@@ -1,0 +1,68 @@
+{
+  "id": "susd-solayer",
+  "llamaId": "216",
+  "detailProvider": "defillama",
+  "name": "Solayer USD",
+  "symbol": "sUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "U.S. Treasury bill exposure and RWA partner products backing a Solana Token-2022 interest-bearing stablecoin",
+  "pegMechanism": "Users mint through Solayer workflows and balances grow through Token-2022 interest extension mechanics backed by T-bill yield",
+  "geckoId": "solayer-usd",
+  "protocolSlug": "solayer-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://solayer.org/platform/susd"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/solayer_labs"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.solayer.org/assets/susd/yield-bearing-stablecoin/what-is-susd"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X",
+      "decimals": 6
+    }
+  ],
+  "chainTier": "mature-alt-l1",
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "U.S. Treasury bill basket / RWA partner product",
+      "pct": 100,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "susd-solayer",
+    "display": {
+      "url": "https://docs.solayer.org/assets/susd/yield-bearing-stablecoin/what-is-susd",
+      "label": "Solayer sUSD docs"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-solana"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Solayer sUSD T-bill yield",
+    "yieldType": "rebase"
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "id": "rusd-royal-dollar",
+  "name": "Royal Dollar",
+  "symbol": "RUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Issuer-managed fiat reserve assets and short-term liquid instruments disclosed by Royal/R Coins materials",
+  "pegMechanism": "Centralized 1:1 dollar token with issuer-managed mint and redemption processes for approved users",
+  "detailProvider": "coingecko",
+  "geckoId": "royal-dollar",
+  "protocolSlug": "rcoins",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.rcoins.digital/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/rcoins_official"
+    },
+    {
+      "label": "Docs",
+      "url": "https://book.royalcc.world/books/RUSD_Whitepaper/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x44bb433d29fe966992a9c812da7f252c9c53f285",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x44bb433d29fe966992a9c812da7f252c9c53f285",
+      "decimals": 18
+    },
+    {
+      "chain": "tron",
+      "address": "TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-unregulated",
+  "canBeBlacklisted": "possible",
+  "reserves": [
+    {
+      "name": "Issuer-managed cash and liquid reserve assets",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "rusd-royal-dollar",
+    "display": {
+      "url": "https://book.royalcc.world/books/RUSD_Whitepaper/",
+      "label": "RUSD whitepaper"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}
