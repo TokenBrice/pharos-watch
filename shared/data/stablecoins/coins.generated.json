@@ -7611,6 +7611,7 @@
         "decimals": 6
       }
     ],
+    "canBeBlacklisted": "possible",
     "chainTier": "ethereum",
     "custodyModel": "institutional-unregulated",
     "reserves": [

@@ -1,5 +1,35 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV716Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.16")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        Six disputed <code className="text-xs bg-muted px-1 py-0.5 rounded">Freezable: No</code> classifications were
+        rechecked against native protocol controls and verified contract surfaces.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          HomeCoin now resolves as <code className="text-xs bg-muted px-1 py-0.5 rounded">Possible</code> because the
+          holder-facing HOME token is a transparent upgradeable proxy with an active proxy-admin upgrade surface.
+        </li>
+        <li>
+          HBD, vCRED, Freedom Dollar, LUAUSD, and NXUSD remain{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">No</code> after review found no freeze, blacklist,
+          pause, denylist, arbitrary burn, or upgrade control on the holder-facing asset surface.
+        </li>
+        <li>
+          Owner mint authority and user or allowance burn functions stay classified as supply controls, not freeze
+          controls, unless paired with transfer gates, arbitrary burns, blacklist controls, or mutable holder-control
+          surfaces.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV715Entry() {
   return (
     <VersionCard

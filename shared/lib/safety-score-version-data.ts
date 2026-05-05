@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.15",
+  currentVersion: "7.16",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.16",
+      title: "Follow-up freezability classification audit",
+      date: "2026-05-06",
+      effectiveAt: 1778040000,
+      summary:
+        "A follow-up review of six disputed `Freezable: No` classifications moves HomeCoin to `Possible` and leaves the other reviewed assets unchanged.",
+      impact: [
+        "HomeCoin now resolves as `Freezable: Possible` because the holder-facing HOME token is a transparent upgradeable proxy with an active proxy-admin upgrade surface",
+        "HBD, vCRED, Freedom Dollar, LUAUSD, and NXUSD remain `Freezable: No` after reviewing their native protocol or verified contract surfaces for freeze, blacklist, pause, denylist, arbitrary burn, or upgrade controls",
+        "Owner mint authority and user/allowance burn functions remain supply-control signals, not freeze signals, unless the contract also exposes holder-facing transfer gates, arbitrary burns, blacklist controls, or mutable holder-control surfaces",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.15",
       title: "Direct freezability metadata audit",

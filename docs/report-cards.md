@@ -4,7 +4,7 @@ Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Compu
 
 The stablecoin registry currently contains 255 tracked metadata entries. Report-card snapshots score the 240 active tracked assets plus the 88 cemetery assets; pre-launch and frozen-archive tracked entries are emitted as stub `F` cards (defunct; pre-launch remain outside the snapshot until they launch).
 
-## Overall Grade (v7.15)
+## Overall Grade (v7.16)
 
 Four-step computation:
 
@@ -15,7 +15,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.15 records a direct freezability metadata audit of the resolved `Freezable: No` cohort. Confirmed token-level freeze, denylist, blacklist, pause, or arbitrary role-burn controls now move those assets into `Yes` or `Possible`; the remaining `No` cohort keeps the v7.13 `Possible` / `Upstream` split and all tracked-variant wrapper ceilings unchanged.
+Current-version note: v7.16 adds a follow-up review of six disputed `Freezable: No` classifications. HomeCoin now resolves as `Possible` because the holder-facing HOME token is a transparent upgradeable proxy with an active proxy-admin upgrade surface. HBD, vCRED, Freedom Dollar, LUAUSD, and NXUSD remain `No` after reviewing their native protocol or verified contract surfaces for freeze, blacklist, pause, denylist, arbitrary burn, or upgrade controls. Owner mint authority and user/allowance burn functions remain supply-control signals, not freeze signals, unless the contract also exposes holder-facing transfer gates, arbitrary burns, blacklist controls, or mutable holder-control surfaces.
 
 ## Dimensions
 

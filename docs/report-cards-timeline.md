@@ -1,6 +1,13 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.15 (2026-02-25 → 2026-05-05). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.16 (2026-02-25 → 2026-05-06). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.16 — Follow-up freezability classification audit (2026-05-06)
+
+- Reviewed six disputed resolved `Freezable: No` classifications: HBD, vCRED, Freedom Dollar, LUAUSD, HomeCoin, and NXUSD
+- HomeCoin now resolves as `Freezable: Possible` because the holder-facing HOME token is a transparent upgradeable proxy with an active proxy-admin upgrade surface
+- HBD, vCRED, Freedom Dollar, LUAUSD, and NXUSD remain `Freezable: No` after reviewing their native protocol or verified contract surfaces for freeze, blacklist, pause, denylist, arbitrary burn, or upgrade controls
+- Owner mint authority and user/allowance burn functions remain supply-control signals, not freeze signals, unless the contract also exposes holder-facing transfer gates, arbitrary burns, blacklist controls, or mutable holder-control surfaces
 
 ## v7.15 — Direct freezability metadata audit (2026-05-05)
 

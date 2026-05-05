@@ -28,6 +28,17 @@ describe("report-card blacklist authority", () => {
     expect(resolved.get("cdp-enosys")).toBe("possible");
   });
 
+  it("pins the follow-up audit for disputed unfreezable classifications", () => {
+    const resolved = resolveBlacklistStatuses(TRACKED_STABLECOINS);
+
+    expect(resolved.get("home-homecoin")).toBe("possible");
+    expect(resolved.get("hbd-hive")).toBe(false);
+    expect(resolved.get("vcred-vcred")).toBe(false);
+    expect(resolved.get("fusd-freedom-dollar")).toBe(false);
+    expect(resolved.get("luausd-lumi-finance")).toBe(false);
+    expect(resolved.get("nxusd-nereus")).toBe(false);
+  });
+
   it("keeps blacklist resolution stable across full-registry ordering changes", () => {
     const canonical = resolveBlacklistStatuses(TRACKED_STABLECOINS);
     const reversed = resolveBlacklistStatuses([...TRACKED_STABLECOINS].reverse());
