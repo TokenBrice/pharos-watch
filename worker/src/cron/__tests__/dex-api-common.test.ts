@@ -5,6 +5,7 @@ import {
   DIRECT_API_POOL_MIN_TVL_USD,
   DIRECT_API_PRICE_MIN_TVL_USD,
   hydrateDirectApiPoolMetadata,
+  normalizeDexApiPoolsForMerge,
   type DexApiPool,
 } from "../../lib/dex-api-common";
 import { buildChainAddressToId, buildSymbolToChainScopedIds } from "./dex-liquidity-fixtures";
@@ -548,6 +549,55 @@ describe("extractPriceObservations", () => {
     };
     const result = extractPriceObservations([pool], new Map(), symbolToIds);
     expect(result.size).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// normalizeDexApiPoolsForMerge
+// ---------------------------------------------------------------------------
+describe("normalizeDexApiPoolsForMerge", () => {
+  it("drops pools with invalid USD TVL units", () => {
+    const result = normalizeDexApiPoolsForMerge([
+      { ...MOCK_POOL, tvlUsd: Number.POSITIVE_INFINITY },
+      { ...MOCK_POOL, poolAddress: "0xpool-valid" },
+    ]);
+
+    expect(result.skippedInvalidUnitCount).toBe(1);
+    expect(result.pools.map((pool) => pool.poolAddress)).toEqual(["0xpool-valid"]);
+  });
+
+  it("normalizes optional numeric fields without dropping otherwise usable pools", () => {
+    const result = normalizeDexApiPoolsForMerge([
+      {
+        ...MOCK_POOL,
+        price: -1,
+        volume24hUsd: -10,
+        feeRate: Number.NaN,
+        balances: [250_000, -1],
+        tokenVolumes24h: [1_000, Number.NaN],
+        tokens: [
+          { ...MOCK_POOL.tokens[0]!, priceUsd: -1, weight: Number.NaN },
+          { ...MOCK_POOL.tokens[1]!, priceUsd: 1, weight: 0.5 },
+        ],
+      },
+    ]);
+
+    expect(result.skippedInvalidUnitCount).toBe(0);
+    expect(result.pools[0]).toMatchObject({
+      price: null,
+      volume24hUsd: 0,
+      feeRate: null,
+      balances: null,
+      tokenVolumes24h: null,
+    });
+    expect(result.pools[0]!.tokens[0]).toMatchObject({
+      priceUsd: null,
+      weight: null,
+    });
+    expect(result.pools[0]!.tokens[1]).toMatchObject({
+      priceUsd: 1,
+      weight: 0.5,
+    });
   });
 });
 

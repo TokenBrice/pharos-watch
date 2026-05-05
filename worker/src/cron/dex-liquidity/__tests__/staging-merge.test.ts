@@ -133,6 +133,7 @@ describe("mergeStagedPools", () => {
     expect(result.skippedCount).toBe(0);
     expect(result.skippedByExactIdentityCount).toBe(0);
     expect(result.skippedByUniqueDerivedIdentityCount).toBe(0);
+    expect(result.skipDimensions).toEqual([]);
   });
 
   it("does not modify metrics when staging table is empty", async () => {
@@ -184,6 +185,15 @@ describe("mergeStagedPools", () => {
     expect(result.skippedByExactIdentityCount).toBe(1);
     expect(result.skippedByUniqueDerivedIdentityCount).toBe(0);
     expect(result.mergedCount).toBe(0);
+    expect(result.skipDimensions).toEqual([
+      {
+        reason: "duplicate_exact_identity",
+        protocol: "pancakeswap-v3",
+        chain: "ethereum",
+        count: 1,
+        conflict: "exact",
+      },
+    ]);
   });
 
   it("skips staged pools whose token-pair fingerprint is already known", async () => {
@@ -223,6 +233,15 @@ describe("mergeStagedPools", () => {
     expect(result.skippedByExactIdentityCount).toBe(0);
     expect(result.skippedByUniqueDerivedIdentityCount).toBe(1);
     expect(result.mergedCount).toBe(0);
+    expect(result.skipDimensions).toEqual([
+      {
+        reason: "duplicate_unique_derived_identity",
+        protocol: "pancakeswap",
+        chain: "ethereum",
+        count: 1,
+        conflict: "derived_unique",
+      },
+    ]);
   });
 
   it("skips one staged exact-pool-id pool that uniquely matches an identity-poor DL row", async () => {
@@ -274,6 +293,15 @@ describe("mergeStagedPools", () => {
     expect(result.mergedCount).toBe(0);
     expect(metrics.size).toBe(0);
     expect(result.priceObservations.get("bold-liquity")).toHaveLength(1);
+    expect(result.skipDimensions).toEqual([
+      {
+        reason: "duplicate_optional_wildcard_identity",
+        protocol: "uniswap-v4",
+        chain: "ethereum",
+        count: 1,
+        conflict: "derived_optional_wildcard",
+      },
+    ]);
   });
 
   it("keeps staged exact-pool-id same-pair pools when the incoming wildcard bucket is ambiguous", async () => {
@@ -360,6 +388,7 @@ describe("mergeStagedPools", () => {
     expect(result.skippedCount).toBe(0);
     expect(result.skippedByExactIdentityCount).toBe(0);
     expect(result.skippedByUniqueDerivedIdentityCount).toBe(0);
+    expect(result.skipDimensions).toEqual([]);
     expect(warnSpy).toHaveBeenCalledOnce();
   });
 
@@ -452,6 +481,14 @@ describe("mergeStagedPools", () => {
     expect(result.skippedByAuthoritativeProtocolCount).toBe(1);
     expect(metrics.size).toBe(0);
     expect(result.priceObservations.get("usdai-usd-ai")).toBeUndefined();
+    expect(result.skipDimensions).toEqual([
+      {
+        reason: "authoritative_confirmation_missing",
+        protocol: "balancer",
+        chain: "plasma",
+        count: 1,
+      },
+    ]);
   });
 
   it("fails open for staged pools when authoritative confirmation is unavailable", async () => {

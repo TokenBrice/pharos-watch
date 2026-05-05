@@ -26,6 +26,7 @@ import {
   mergeDexPriceObservationMap,
   runDirectApiFetchPhase,
   runFallbackCrawlerPhase,
+  type DirectApiIntegrationResult,
 } from "./orchestrator-phases";
 import {
   buildPoolIdentity,
@@ -190,6 +191,8 @@ interface DexLiquidityPoolState {
   stagedSkippedByUniqueDerivedIdentityCount: number;
   stagedSkippedByOptionalWildcardIdentityCount: number;
   stagedSkippedByAuthoritativeProtocolCount: number;
+  stagedSkipDimensions: Awaited<ReturnType<typeof mergeStagedPools>>["skipDimensions"];
+  directApiIntegration: DirectApiIntegrationResult;
 }
 
 interface DexLiquidityScoreState {
@@ -214,6 +217,27 @@ function getPersistenceSkipReason(criticalSourceFailures: string[]): string | nu
     }
   }
   return null;
+}
+
+function logDirectApiSourceSummary(
+  integration: DirectApiIntegrationResult,
+  circuitEvents: DexLiquidityDirectApiPhase["circuitEvents"],
+): void {
+  if (
+    Object.keys(integration.acceptedByProtocolChain).length === 0 &&
+    Object.keys(integration.excludedByReason).length === 0 &&
+    circuitEvents.length === 0
+  ) {
+    return;
+  }
+
+  console.log(
+    `[dex-liquidity] direct-api source summary ${JSON.stringify({
+      acceptedByProtocolChain: integration.acceptedByProtocolChain,
+      excludedByReason: integration.excludedByReason,
+      circuitEvents,
+    })}`,
+  );
 }
 
 async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise<DexLiquiditySourceState> {
@@ -338,7 +362,7 @@ async function buildDexLiquidityPoolState(
     sourceState.subgraphEnrichment.uniV3SymbolFees,
     sourceState.subgraphEnrichment.aerodromeIsStable,
   );
-  integrateDirectApiLiquidityPhase({
+  const directApiIntegration = integrateDirectApiLiquidityPhase({
     directApiPools: sourceState.directApiPools,
     knownPoolIndex,
     contractMetaByChainAddress: sourceState.lookups.contractMetaByChainAddress,
@@ -350,6 +374,7 @@ async function buildDexLiquidityPoolState(
     validationReferences: sourceState.validationReferences,
     stablecoinPriceById: sourceState.stablecoinPriceById,
   });
+  logDirectApiSourceSummary(directApiIntegration, sourceState.directApiPhase.circuitEvents);
 
   const staged = await mergeStagedPools(
     ctx.db,
@@ -382,6 +407,8 @@ async function buildDexLiquidityPoolState(
     stagedSkippedByUniqueDerivedIdentityCount: staged.skippedByUniqueDerivedIdentityCount,
     stagedSkippedByOptionalWildcardIdentityCount: staged.skippedByOptionalWildcardIdentityCount,
     stagedSkippedByAuthoritativeProtocolCount: staged.skippedByAuthoritativeProtocolCount,
+    stagedSkipDimensions: staged.skipDimensions,
+    directApiIntegration,
   };
 }
 
@@ -551,6 +578,12 @@ function buildDexLiquidityCronResult(
         stagedPoolsSkippedByUniqueDerivedIdentity: poolState.stagedSkippedByUniqueDerivedIdentityCount,
         stagedPoolsSkippedByOptionalWildcardIdentity: poolState.stagedSkippedByOptionalWildcardIdentityCount,
         stagedPoolsSkippedByAuthoritativeProtocol: poolState.stagedSkippedByAuthoritativeProtocolCount,
+        stagedPoolSkipDimensions: poolState.stagedSkipDimensions,
+        directApiSourceSummary: {
+          acceptedByProtocolChain: poolState.directApiIntegration.acceptedByProtocolChain,
+          excludedByReason: poolState.directApiIntegration.excludedByReason,
+          circuitEvents: sourceState.directApiPhase.circuitEvents,
+        },
         sourceCoverage: scoreState.analysis.sourceCoverage,
         challengerPublication: persistenceState.challengerPublication,
         failedSources: sourceState.failedSources,

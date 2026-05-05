@@ -8,6 +8,17 @@ import {
 } from "../pool-identity";
 
 describe("pool identity dedup", () => {
+  it("canonicalizes exact pool ids that already include a chain prefix", () => {
+    const identity = buildPoolIdentity({
+      chain: "ethereum",
+      protocol: "balancer",
+      poolAddressOrId: "ethereum:0xabc0000000000000000000000000000000000000",
+      tokenAddresses: [],
+    });
+
+    expect(identity.exactPoolKey).toBe("ethereum:0xabc0000000000000000000000000000000000000");
+  });
+
   it("can dedupe an identity-poor Uniswap v4 DL row against one staged exact-pool-id row", () => {
     const known = createKnownPoolIdentityIndex();
     registerKnownPoolIdentity(

@@ -38,6 +38,14 @@ function isUniswapV4PoolId(poolId: string, protocol?: string | null): boolean {
   return normalizeProtocol(protocol ?? "") === "uniswap-v4" && /^0x[a-f0-9]{64}$/i.test(poolId);
 }
 
+function canonicalizeExactPoolId(poolId: string, chain: string): string {
+  const trimmed = poolId.trim();
+  const chainPrefix = `${chain.toLowerCase()}:`;
+  return trimmed.toLowerCase().startsWith(chainPrefix)
+    ? trimmed.slice(chainPrefix.length)
+    : trimmed;
+}
+
 export function isTrustworthyExactPoolId(poolId: string | null | undefined, protocol?: string | null): boolean {
   if (!poolId) return false;
   const trimmed = poolId.trim();
@@ -108,7 +116,9 @@ export function buildPoolIdentity(input: {
   isStableHint?: boolean;
 }): PoolIdentity {
   const chain = input.chain.toLowerCase();
-  const exactPoolId = input.poolAddressOrId?.trim() ?? "";
+  const exactPoolId = input.poolAddressOrId
+    ? canonicalizeExactPoolId(input.poolAddressOrId, chain)
+    : "";
   const exactPoolKey = isTrustworthyExactPoolId(exactPoolId, input.protocol)
     ? `${chain}:${exactPoolId.toLowerCase()}`
     : null;

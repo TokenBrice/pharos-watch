@@ -44,6 +44,23 @@ interface StagedPoolRow {
   refreshed_at: number;
 }
 
+export type StagedPoolSkipReason =
+  | "malformed_identity"
+  | "stale_confidence_zero"
+  | "authoritative_confirmation_missing"
+  | "duplicate_exact_identity"
+  | "duplicate_unique_derived_identity"
+  | "duplicate_optional_wildcard_identity";
+
+export interface StagedPoolSkipDimension {
+  reason: StagedPoolSkipReason;
+  protocol: string;
+  chain: string;
+  count: number;
+  threshold?: number;
+  conflict?: string;
+}
+
 function toBoolean(value: number | boolean | null): boolean | null {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value !== 0;
@@ -169,6 +186,30 @@ function requiresAuthoritativeProtocolConfirmation(
   return enforcedChains?.has(chain.toLowerCase()) ?? false;
 }
 
+function incrementSkipDimension(
+  dimensions: Map<string, StagedPoolSkipDimension>,
+  reason: StagedPoolSkipReason,
+  input: Pick<StagedPool, "protocol" | "chain"> | Pick<StagedPoolRow, "protocol" | "chain"> | null,
+  details?: { threshold?: number; conflict?: string },
+): void {
+  const protocol = (input?.protocol || "unknown").toLowerCase();
+  const chain = (input?.chain || "unknown").toLowerCase();
+  const key = JSON.stringify({ reason, protocol, chain, threshold: details?.threshold, conflict: details?.conflict });
+  const existing = dimensions.get(key);
+  if (existing) {
+    existing.count++;
+    return;
+  }
+  dimensions.set(key, {
+    reason,
+    protocol,
+    chain,
+    count: 1,
+    ...(details?.threshold != null ? { threshold: details.threshold } : {}),
+    ...(details?.conflict ? { conflict: details.conflict } : {}),
+  });
+}
+
 /**
  * Read staged pools from dex_pool_staging (refreshed within 24h),
  * convert to pool entries with confidence decay and defaults,
@@ -191,6 +232,7 @@ export async function mergeStagedPools(
   skippedByUniqueDerivedIdentityCount: number;
   skippedByOptionalWildcardIdentityCount: number;
   skippedByAuthoritativeProtocolCount: number;
+  skipDimensions: StagedPoolSkipDimension[];
   priceObservations: Map<string, DexPriceObs[]>;
 }> {
   let rows: StagedPoolRow[];
@@ -215,6 +257,7 @@ export async function mergeStagedPools(
       skippedByUniqueDerivedIdentityCount: 0,
       skippedByOptionalWildcardIdentityCount: 0,
       skippedByAuthoritativeProtocolCount: 0,
+      skipDimensions: [],
       priceObservations: new Map(),
     };
   }
@@ -227,43 +270,55 @@ export async function mergeStagedPools(
   let uniqueDerivedIdentitySkipped = 0;
   let optionalWildcardIdentitySkipped = 0;
   let authoritativeProtocolSkipped = 0;
+  const skipDimensions = new Map<string, StagedPoolSkipDimension>();
 
-  const stagedEntries = rows
-    .map((row) => {
-      const stagedPool = toStagedPool(row);
-      if (!stagedPool.poolId || !stagedPool.stablecoinId) return null;
+  const stagedEntries: Array<{
+    stagedPool: StagedPool;
+    dexId: string;
+    poolType: string;
+    qualityMultiplier: number;
+    orderbookMetadata: CgTickerOrderbookMetadata | null;
+    identity: ReturnType<typeof buildPoolIdentity>;
+  }> = [];
 
-      const profile = resolveStagedPoolProfile(stagedPool);
-      const orderbookMetadata = stagedPool.source === "cg_tickers"
-        ? readCgTickerOrderbookMetadata(stagedPool.rawJson)
-        : null;
-      // For orderbook pools, preserve the full poolId so that
-      // isTrustworthyExactPoolId recognises the "orderbook:" prefix and
-      // registers a usable exact key for downstream dedup.
-      const poolAddressOrId = stagedPool.chain === "orderbook"
-        ? stagedPool.poolId
-        : stagedPool.poolId.includes(":")
-          ? stagedPool.poolId.split(":").slice(1).join(":")
-          : stagedPool.poolId;
-      const identity = buildPoolIdentity({
-        chain: stagedPool.chain,
-        protocol: profile.dexId,
-        poolAddressOrId,
-        tokenAddresses: [stagedPool.baseToken ?? "", stagedPool.quoteToken ?? ""],
-        poolType: profile.poolType,
-        feeTierBps: stagedPool.feeTier,
-        isStable: stagedPool.isStable,
-      });
-      return {
-        stagedPool,
-        dexId: profile.dexId,
-        poolType: profile.poolType,
-        qualityMultiplier: profile.qualityMultiplier,
-        orderbookMetadata,
-        identity,
-      };
-    })
-    .filter((entry): entry is NonNullable<typeof entry> => entry != null);
+  for (const row of rows) {
+    const stagedPool = toStagedPool(row);
+    if (!stagedPool.poolId || !stagedPool.stablecoinId) {
+      skippedCount++;
+      incrementSkipDimension(skipDimensions, "malformed_identity", row);
+      continue;
+    }
+
+    const profile = resolveStagedPoolProfile(stagedPool);
+    const orderbookMetadata = stagedPool.source === "cg_tickers"
+      ? readCgTickerOrderbookMetadata(stagedPool.rawJson)
+      : null;
+    // For orderbook pools, preserve the full poolId so that
+    // isTrustworthyExactPoolId recognises the "orderbook:" prefix and
+    // registers a usable exact key for downstream dedup.
+    const poolAddressOrId = stagedPool.chain === "orderbook"
+      ? stagedPool.poolId
+      : stagedPool.poolId.includes(":")
+        ? stagedPool.poolId.split(":").slice(1).join(":")
+        : stagedPool.poolId;
+    const identity = buildPoolIdentity({
+      chain: stagedPool.chain,
+      protocol: profile.dexId,
+      poolAddressOrId,
+      tokenAddresses: [stagedPool.baseToken ?? "", stagedPool.quoteToken ?? ""],
+      poolType: profile.poolType,
+      feeTierBps: stagedPool.feeTier,
+      isStable: stagedPool.isStable,
+    });
+    stagedEntries.push({
+      stagedPool,
+      dexId: profile.dexId,
+      poolType: profile.poolType,
+      qualityMultiplier: profile.qualityMultiplier,
+      orderbookMetadata,
+      identity,
+    });
+  }
   const stagedIdentityCounts = countPoolIdentityKeys(stagedEntries.map((entry) => entry.identity));
 
   for (const entry of stagedEntries) {
@@ -273,7 +328,11 @@ export async function mergeStagedPools(
     // Compute confidence and adjusted TVL early — needed for price observation gate
     const ageHours = (nowSec - stagedPool.refreshedAt) / 3600;
     const confidence = stagedPoolConfidence(ageHours);
-    if (confidence === 0) continue;
+    if (confidence === 0) {
+      skippedCount++;
+      incrementSkipDimension(skipDimensions, "stale_confidence_zero", stagedPool, { threshold: 24 });
+      continue;
+    }
 
     const adjustedTvl = (stagedPool.tvlUsd ?? 0) * confidence;
 
@@ -282,6 +341,7 @@ export async function mergeStagedPools(
       if (!identity.exactPoolKey || !confirmedExactKeys?.has(identity.exactPoolKey)) {
         skippedCount++;
         authoritativeProtocolSkipped++;
+        incrementSkipDimension(skipDimensions, "authoritative_confirmation_missing", stagedPool);
         continue;
       }
     }
@@ -327,6 +387,16 @@ export async function mergeStagedPools(
       if (dedupReason === "exact") exactIdentitySkipped++;
       if (dedupReason === "derived_unique") uniqueDerivedIdentitySkipped++;
       if (dedupReason === "derived_optional_wildcard") optionalWildcardIdentitySkipped++;
+      incrementSkipDimension(
+        skipDimensions,
+        dedupReason === "exact"
+          ? "duplicate_exact_identity"
+          : dedupReason === "derived_unique"
+            ? "duplicate_unique_derived_identity"
+            : "duplicate_optional_wildcard_identity",
+        stagedPool,
+        { conflict: dedupReason },
+      );
       continue;
     }
     registerKnownPoolIdentity(knownPoolIndex, identity);
@@ -427,6 +497,9 @@ export async function mergeStagedPools(
       `[dex-liquidity] Skipped ${authoritativeProtocolSkipped} staged pools missing authoritative protocol confirmation`,
     );
   }
+  if (skipDimensions.size > 0) {
+    console.log(`[dex-liquidity] staged skip dimensions ${JSON.stringify([...skipDimensions.values()])}`);
+  }
 
   let mergedCount = 0;
   for (const pools of cgPoolMap.values()) mergedCount += pools.length;
@@ -442,6 +515,7 @@ export async function mergeStagedPools(
     skippedByUniqueDerivedIdentityCount: uniqueDerivedIdentitySkipped,
     skippedByOptionalWildcardIdentityCount: optionalWildcardIdentitySkipped,
     skippedByAuthoritativeProtocolCount: authoritativeProtocolSkipped,
+    skipDimensions: [...skipDimensions.values()],
     priceObservations: stagedPriceObs,
   };
 }

@@ -7,6 +7,10 @@ import {
 import { sleepWithSignal } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
+import {
+  DIRECT_API_DEFAULT_MAX_PAGES,
+  buildDirectApiRequestSignal,
+} from "./direct-api-policy";
 
 const ORCA_API = "https://api.orca.so/v2/solana/pools";
 const ORCA_RATE_LIMIT_RETRIES = 3;
@@ -42,8 +46,10 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
   let degraded = false;
   let url: string | null = `${ORCA_API}?sortBy=tvl&sortDirection=desc&minTvl=${DIRECT_API_POOL_MIN_TVL_USD}&size=200`;
   const seenCursors = new Set<string>();
+  let page = 0;
 
   while (url) {
+    page++;
     let res: Response | null = null;
     let pageError: string | null = null;
 
@@ -51,7 +57,7 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
       try {
         res = await fetch(url, {
           headers: { "User-Agent": USER_AGENT },
-          signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
+          signal: buildDirectApiRequestSignal(signal),
         });
       } catch (err) {
         pageError = err instanceof Error ? err.message : String(err);
@@ -128,7 +134,10 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
       });
     }
 
-    if (!pageHasEligiblePool) break;
+    if (!pageHasEligiblePool) {
+      degraded = true;
+      errors.push(`page ${page} had no eligible pools despite minTvl filter`);
+    }
 
     // Cursor-based pagination
     const nextCursor = json.meta?.cursor?.next ?? json.meta?.next ?? null;
@@ -138,6 +147,11 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
       break;
     }
     if (nextCursor) seenCursors.add(nextCursor);
+    if (nextCursor && page >= DIRECT_API_DEFAULT_MAX_PAGES) {
+      degraded = true;
+      errors.push(`pagination cap reached at page ${page}; resumeFromCursor=${nextCursor}`);
+      break;
+    }
     url = nextCursor ? `${ORCA_API}?next=${encodeURIComponent(nextCursor)}&size=200` : null;
   }
 

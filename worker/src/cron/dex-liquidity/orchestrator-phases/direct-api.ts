@@ -1,13 +1,20 @@
 import type { PriceValidationReferences } from "../../../lib/price-validation";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
-import { shouldAttemptFetch, recordOutcomeSafe } from "../../../lib/circuit-breaker";
 import {
+  getCircuitRecord,
+  shouldAttemptFetch,
+  recordOutcomeSafe,
+  type CircuitState,
+} from "../../../lib/circuit-breaker";
+import {
+  DIRECT_API_POOL_MIN_TVL_USD,
   convertToGtNewPools,
   extractPriceObservations,
   hydrateDirectApiPoolMetadata,
   isEligibleDirectApiPool,
   makeDexApiFetchResult,
+  normalizeDexApiPoolsForMerge,
   type DexApiFetchResult,
   type DexApiPool,
 } from "../../../lib/dex-api-common";
@@ -29,6 +36,7 @@ import {
 } from "../pool-identity";
 import type { DexPriceObs, LiquidityMetrics, SymbolLookups } from "../types";
 import { mergeDexPriceObservationMap } from "./price-obs";
+import { DIRECT_API_FETCH_PHASE_CONCURRENCY } from "../direct-api-policy";
 
 export interface DirectApiFetcher {
   name: string;
@@ -48,6 +56,14 @@ export interface DirectApiFetchPhaseResult {
   }>;
   failedSources: string[];
   fallbackSignals: string[];
+  circuitEvents: DirectApiCircuitEvent[];
+}
+
+export interface DirectApiCircuitEvent {
+  circuitKey: string;
+  from: CircuitState;
+  to: CircuitState;
+  at: number | null;
 }
 
 export interface DirectApiIntegrationResult {
@@ -55,6 +71,11 @@ export interface DirectApiIntegrationResult {
   directApiDedupSkippedByDerivedIdentity: number;
   directApiDedupSkippedByOptionalWildcardIdentity: number;
   directApiSkippedUntracked: number;
+  directApiSkippedInvalidUnits: number;
+  directApiSkippedBelowTvlThreshold: number;
+  directApiSkippedAboveTvlSanityCap: number;
+  acceptedByProtocolChain: Record<string, number>;
+  excludedByReason: Record<string, number>;
 }
 
 export function buildDexDirectApiFetchers(params: {
@@ -162,32 +183,42 @@ export async function runDirectApiFetchPhase(
   fetchers: DirectApiFetcher[],
   signal?: AbortSignal,
 ): Promise<DirectApiFetchPhaseResult> {
-  const results: DirectApiFetchPhaseResult["results"] = [];
-  const failedSources: string[] = [];
-  const fallbackSignals: string[] = [];
-
-  for (const { name, circuitKey, normalizedProtocol, supportedChains, fn } of fetchers) {
+  const entries = await runBounded(fetchers, DIRECT_API_FETCH_PHASE_CONCURRENCY, async ({
+    name,
+    circuitKey,
+    normalizedProtocol,
+    supportedChains,
+    fn,
+  }) => {
+    const failedSources: string[] = [];
+    const fallbackSignals: string[] = [];
+    const circuitEvents: DirectApiCircuitEvent[] = [];
     if (!(await shouldAttemptFetch(db, circuitKey))) {
       console.log(`[dex-liquidity] ${name} API circuit open, skipping`);
       failedSources.push(circuitKey);
       fallbackSignals.push(`${circuitKey}-circuit-open`);
-      results.push({
-        name,
-        circuitKey,
-        normalizedProtocol,
-        supportedChains,
-        result: makeDexApiFetchResult([], {
-          ok: false,
-          degraded: true,
-          errors: ["circuit open"],
-        }),
-      });
-      continue;
+      return {
+        failedSources,
+        fallbackSignals,
+        circuitEvents,
+        entry: {
+          name,
+          circuitKey,
+          normalizedProtocol,
+          supportedChains,
+          result: makeDexApiFetchResult([], {
+            ok: false,
+            degraded: true,
+            errors: ["circuit open"],
+          }),
+        },
+      };
     }
 
     try {
       const result = await fn(signal);
-      await recordOutcomeSafe(db, circuitKey, result.ok);
+      const event = await recordDirectApiOutcome(db, circuitKey, result.ok);
+      if (event) circuitEvents.push(event);
       if (!result.ok || result.degraded) {
         failedSources.push(circuitKey);
       }
@@ -196,28 +227,87 @@ export async function runDirectApiFetchPhase(
       } else if (result.degraded) {
         fallbackSignals.push(`${circuitKey}-partial`);
       }
-      results.push({ name, circuitKey, normalizedProtocol, supportedChains, result });
+      return {
+        failedSources,
+        fallbackSignals,
+        circuitEvents,
+        entry: { name, circuitKey, normalizedProtocol, supportedChains, result },
+      };
     } catch (err) {
       if (signal?.aborted) throw err;
       console.warn(`[dex-liquidity] ${name} API failed (non-fatal):`, err);
-      await recordOutcomeSafe(db, circuitKey, false);
+      const event = await recordDirectApiOutcome(db, circuitKey, false);
+      if (event) circuitEvents.push(event);
       failedSources.push(circuitKey);
       fallbackSignals.push(`${circuitKey}-exception`);
-      results.push({
-        name,
-        circuitKey,
-        normalizedProtocol,
-        supportedChains,
-        result: makeDexApiFetchResult([], {
-          ok: false,
-          degraded: true,
-          errors: [err instanceof Error ? err.message : String(err)],
-        }),
-      });
+      return {
+        failedSources,
+        fallbackSignals,
+        circuitEvents,
+        entry: {
+          name,
+          circuitKey,
+          normalizedProtocol,
+          supportedChains,
+          result: makeDexApiFetchResult([], {
+            ok: false,
+            degraded: true,
+            errors: [err instanceof Error ? err.message : String(err)],
+          }),
+        },
+      };
     }
-  }
+  });
 
-  return { results, failedSources, fallbackSignals };
+  return {
+    results: entries.map((entry) => entry.entry),
+    failedSources: entries.flatMap((entry) => entry.failedSources),
+    fallbackSignals: entries.flatMap((entry) => entry.fallbackSignals),
+    circuitEvents: entries.flatMap((entry) => entry.circuitEvents),
+  };
+}
+
+async function runBounded<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.max(1, Math.min(concurrency, items.length));
+
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex++;
+      results[currentIndex] = await worker(items[currentIndex]!);
+    }
+  }));
+
+  return results;
+}
+
+async function recordDirectApiOutcome(
+  db: D1Database,
+  circuitKey: string,
+  success: boolean,
+): Promise<DirectApiCircuitEvent | null> {
+  try {
+    const before = await getCircuitRecord(db, circuitKey);
+    await recordOutcomeSafe(db, circuitKey, success);
+    const after = await getCircuitRecord(db, circuitKey);
+    if (before.state === after.state) return null;
+    return {
+      circuitKey,
+      from: before.state,
+      to: after.state,
+      at: after.state === "closed" ? after.lastSuccessAt : after.openedAt ?? after.lastFailureAt,
+    };
+  } catch (err) {
+    console.warn(`[dex-liquidity] Failed to record ${circuitKey} circuit telemetry:`, err);
+    await recordOutcomeSafe(db, circuitKey, success);
+    return null;
+  }
 }
 
 export function integrateDirectApiLiquidityPhase(params: {
@@ -236,6 +326,15 @@ export function integrateDirectApiLiquidityPhase(params: {
   let directApiDedupSkippedByDerivedIdentity = 0;
   let directApiDedupSkippedByOptionalWildcardIdentity = 0;
   let directApiSkippedUntracked = 0;
+  let directApiSkippedBelowTvlThreshold = 0;
+  let directApiSkippedAboveTvlSanityCap = 0;
+  const acceptedByProtocolChain: Record<string, number> = {};
+  const excludedByReason: Record<string, number> = {};
+  const normalized = normalizeDexApiPoolsForMerge(params.directApiPools);
+  const directApiPools = normalized.pools;
+  if (normalized.skippedInvalidUnitCount > 0) {
+    incrementReason(excludedByReason, "invalid_units", normalized.skippedInvalidUnitCount);
+  }
 
   if (params.directApiPools.length === 0) {
     return {
@@ -243,11 +342,16 @@ export function integrateDirectApiLiquidityPhase(params: {
       directApiDedupSkippedByDerivedIdentity,
       directApiDedupSkippedByOptionalWildcardIdentity,
       directApiSkippedUntracked,
+      directApiSkippedInvalidUnits: normalized.skippedInvalidUnitCount,
+      directApiSkippedBelowTvlThreshold,
+      directApiSkippedAboveTvlSanityCap,
+      acceptedByProtocolChain,
+      excludedByReason,
     };
   }
 
   console.log(`[dex-liquidity] Fetched ${params.directApiPools.length} direct API pools total`);
-  const trackedDirectApiPools = params.directApiPools.filter((pool) =>
+  const trackedDirectApiPools = directApiPools.filter((pool) =>
     pool.tokens.some(
       (token) =>
         resolveStablecoinIdForDexApiToken(
@@ -258,7 +362,10 @@ export function integrateDirectApiLiquidityPhase(params: {
         ) != null,
     ),
   );
-  directApiSkippedUntracked = params.directApiPools.length - trackedDirectApiPools.length;
+  directApiSkippedUntracked = directApiPools.length - trackedDirectApiPools.length;
+  if (directApiSkippedUntracked > 0) {
+    incrementReason(excludedByReason, "untracked_token", directApiSkippedUntracked);
+  }
   if (directApiSkippedUntracked > 0) {
     console.log(
       `[dex-liquidity] Retained ${trackedDirectApiPools.length} direct API pools with tracked tokens ` +
@@ -269,7 +376,18 @@ export function integrateDirectApiLiquidityPhase(params: {
   hydrateDirectApiPoolMetadata(trackedDirectApiPools, params.contractMetaByChainAddress);
 
   const allDirectApiIdentities = trackedDirectApiPools.map(buildDirectApiPoolIdentity);
-  const eligibleDirectApiPools = trackedDirectApiPools.filter((pool) => isEligibleDirectApiPool(pool));
+  const eligibleDirectApiPools = trackedDirectApiPools.filter((pool) => {
+    const eligible = isEligibleDirectApiPool(pool);
+    if (eligible) return true;
+    if (pool.tvlUsd < DIRECT_API_POOL_MIN_TVL_USD) {
+      directApiSkippedBelowTvlThreshold++;
+      incrementReason(excludedByReason, "below_tvl_threshold");
+    } else {
+      directApiSkippedAboveTvlSanityCap++;
+      incrementReason(excludedByReason, "above_tvl_sanity_cap");
+    }
+    return false;
+  });
   const eligibleDirectApiIdentities = eligibleDirectApiPools.map(buildDirectApiPoolIdentity);
   const directApiIdentityCounts = countPoolIdentityKeys(eligibleDirectApiIdentities);
 
@@ -290,19 +408,24 @@ export function integrateDirectApiLiquidityPhase(params: {
     );
     if (dedupReason === "exact") {
       directApiDedupSkippedByAddress++;
+      incrementReason(excludedByReason, "duplicate_exact_identity");
       continue;
     }
     if (dedupReason === "derived_unique") {
       directApiDedupSkippedByDerivedIdentity++;
+      incrementReason(excludedByReason, "duplicate_unique_derived_identity");
       continue;
     }
     if (dedupReason === "derived_optional_wildcard") {
       directApiDedupSkippedByOptionalWildcardIdentity++;
+      incrementReason(excludedByReason, "duplicate_optional_wildcard_identity");
       continue;
     }
 
     registerKnownPoolIdentity(params.knownPoolIndex, identity);
     retainedDirectApiPools.push(pool);
+    const key = `${pool.source}:${pool.chain}`;
+    acceptedByProtocolChain[key] = (acceptedByProtocolChain[key] ?? 0) + 1;
   }
 
   // Staged discovery sources can return the same physical pool with wildly
@@ -362,5 +485,14 @@ export function integrateDirectApiLiquidityPhase(params: {
     directApiDedupSkippedByDerivedIdentity,
     directApiDedupSkippedByOptionalWildcardIdentity,
     directApiSkippedUntracked,
+    directApiSkippedInvalidUnits: normalized.skippedInvalidUnitCount,
+    directApiSkippedBelowTvlThreshold,
+    directApiSkippedAboveTvlSanityCap,
+    acceptedByProtocolChain,
+    excludedByReason,
   };
+}
+
+function incrementReason(record: Record<string, number>, reason: string, count = 1): void {
+  record[reason] = (record[reason] ?? 0) + count;
 }

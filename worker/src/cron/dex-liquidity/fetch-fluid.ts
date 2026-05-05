@@ -8,6 +8,7 @@ import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 
 const FLUID_API_BASE = "https://api.fluid.instadapp.io/v2";
 const FLUID_RESOLVER_CALL_GAS = "0x0F4240";
@@ -87,21 +88,21 @@ async function enrichFluidPool(
       resolver,
       encodeFluidAddressCall(FLUID_GET_COLLATERAL_RESERVES_SELECTOR, pool.poolAddress),
       "latest",
-      { signal, gas: FLUID_RESOLVER_CALL_GAS, timeoutMs: 15_000, chainRpcs },
+      { signal, gas: FLUID_RESOLVER_CALL_GAS, timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS, chainRpcs },
     ),
     fetchEvmCallHexAtBlock(
       chain,
       resolver,
       encodeFluidAddressCall(FLUID_GET_DEBT_RESERVES_SELECTOR, pool.poolAddress),
       "latest",
-      { signal, gas: FLUID_RESOLVER_CALL_GAS, timeoutMs: 15_000, chainRpcs },
+      { signal, gas: FLUID_RESOLVER_CALL_GAS, timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS, chainRpcs },
     ),
     fetchEvmCallHexAtBlock(
       chain,
       resolver,
       encodeFluidAddressCall(FLUID_GET_POOL_FEE_SELECTOR, pool.poolAddress),
       "latest",
-      { signal, gas: FLUID_RESOLVER_CALL_GAS, timeoutMs: 15_000, chainRpcs },
+      { signal, gas: FLUID_RESOLVER_CALL_GAS, timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS, chainRpcs },
     ),
   ]);
 
@@ -158,7 +159,7 @@ export async function fetchFluidPools(
           signal,
         },
         2,
-        { timeoutMs: 15_000 },
+        { timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS },
       );
       if (!res) {
         throw new Error(`${chain} request failed after retries`);

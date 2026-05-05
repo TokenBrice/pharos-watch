@@ -8,6 +8,7 @@ import {
   isEligibleDirectApiPool,
   isPreferredDirectApiPool,
   makeDexApiFetchResult,
+  normalizeDexApiPoolsForMerge,
 } from "./dex-api-pool-shaping";
 
 export type { DexApiFetchResult, DexApiPool, DexApiPoolToken } from "./dex-api-types";
@@ -21,4 +22,5 @@ export {
   isEligibleDirectApiPool,
   isPreferredDirectApiPool,
   makeDexApiFetchResult,
+  normalizeDexApiPoolsForMerge,
 };

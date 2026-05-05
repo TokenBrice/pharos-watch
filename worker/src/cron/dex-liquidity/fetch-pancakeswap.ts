@@ -3,12 +3,16 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { USER_AGENT } from "../../lib/constants";
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
 import { classifyClPoolType } from "./direct-source-helpers";
+import {
+  DIRECT_API_REQUEST_TIMEOUT_MS,
+  buildDirectApiRequestSignal,
+} from "./direct-api-policy";
 
 const PAGE_SIZE = 250;
 const MAX_PAGES = 8;
 // `poolHourDatas(first: 1000)` can safely cover 40 pools over 24 hourly buckets (40 * 24 = 960 rows max).
 const HOUR_DATA_BATCH_SIZE = 40;
-const SUBGRAPH_TIMEOUT_MS = 15_000;
+const SUBGRAPH_TIMEOUT_MS = DIRECT_API_REQUEST_TIMEOUT_MS;
 
 // Keep Pancake coverage on the subgraphs that stay within the worker cron budget reliably.
 const PANCAKESWAP_V3_SUBGRAPHS: Record<string, { chain: string; subgraphId: string }> = {
@@ -97,7 +101,7 @@ async function fetchSubgraphJson<T>(subgraphUrl: string, query: string, signal?:
     method: "POST",
     headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
     body: JSON.stringify({ query }),
-    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(SUBGRAPH_TIMEOUT_MS)]) : AbortSignal.timeout(SUBGRAPH_TIMEOUT_MS),
+    signal: buildDirectApiRequestSignal(signal, SUBGRAPH_TIMEOUT_MS),
   });
   if (!res?.ok) throw new Error(`returned ${res?.status ?? "unknown"}`);
 
@@ -222,6 +226,10 @@ export async function fetchPancakeSwapPools(
         }
 
         if (pagePools.length < PAGE_SIZE) break;
+        if (page === MAX_PAGES - 1) {
+          errors.push(`${chain}: pagination cap reached at page ${page + 1}; resumeFromSkip=${MAX_PAGES * PAGE_SIZE}`);
+          break;
+        }
       }
       if (chainPoolCount > 0) {
         successfulChains++;

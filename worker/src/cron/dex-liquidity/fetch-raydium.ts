@@ -7,8 +7,13 @@ import {
 import { USER_AGENT } from "../../lib/constants";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { isDexApiRecord, readDexApiJson } from "./direct-api-json";
+import {
+  DIRECT_API_DEFAULT_MAX_PAGES,
+  buildDirectApiRequestSignal,
+} from "./direct-api-policy";
 
 const RAYDIUM_API = "https://api-v3.raydium.io/pools/info/list";
+const PAGE_SIZE = 1000;
 
 interface RaydiumPool {
   type: string;
@@ -54,15 +59,15 @@ async function fetchPoolType(
   const results: DexApiPool[] = [];
   const errors: string[] = [];
   let successfulPages = 0;
-  let page = 1;
+  let consecutiveFullPagesWithoutEligiblePools = 0;
 
-  while (true) {
-    const url = `${RAYDIUM_API}?poolType=${poolType}&poolSortField=liquidity&sortType=desc&pageSize=1000&page=${page}`;
+  for (let page = 1; page <= DIRECT_API_DEFAULT_MAX_PAGES; page++) {
+    const url = `${RAYDIUM_API}?poolType=${poolType}&poolSortField=liquidity&sortType=desc&pageSize=${PAGE_SIZE}&page=${page}`;
     let res: Response;
     try {
       res = await fetch(url, {
         headers: { "User-Agent": USER_AGENT },
-        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
+        signal: buildDirectApiRequestSignal(signal),
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -97,7 +102,7 @@ async function fetchPoolType(
     successfulPages++;
     if (pools.length === 0) break;
 
-    let belowThreshold = false;
+    let pageHasEligiblePool = false;
     let malformedRows = 0;
     for (const rawPool of pools) {
       if (!isRaydiumPool(rawPool)) {
@@ -107,9 +112,9 @@ async function fetchPoolType(
 
       const pool = rawPool;
       if (!Number.isFinite(pool.tvl) || pool.tvl < DIRECT_API_POOL_MIN_TVL_USD) {
-        belowThreshold = true;
-        break;
+        continue;
       }
+      pageHasEligiblePool = true;
 
       const isConcentrated = poolType === "concentrated";
       results.push({
@@ -134,8 +139,23 @@ async function fetchPoolType(
       errors.push(`${poolType} page ${page} skipped ${malformedRows} malformed pool rows`);
     }
 
-    if (belowThreshold || pools.length < 1000) break;
-    page++;
+    if (pools.length < PAGE_SIZE) break;
+    if (!pageHasEligiblePool) {
+      consecutiveFullPagesWithoutEligiblePools++;
+      if (consecutiveFullPagesWithoutEligiblePools >= 2) {
+        console.log(
+          `[fetch-raydium] ${poolType} stopped after ${consecutiveFullPagesWithoutEligiblePools} ` +
+            `full page(s) below TVL threshold; resumeFromPage=${page + 1}`,
+        );
+        break;
+      }
+    } else {
+      consecutiveFullPagesWithoutEligiblePools = 0;
+    }
+    if (page === DIRECT_API_DEFAULT_MAX_PAGES) {
+      errors.push(`${poolType} pagination cap reached at page ${page}; resumeFromPage=${page + 1}`);
+      break;
+    }
   }
 
   for (const error of errors) {

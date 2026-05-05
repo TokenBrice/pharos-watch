@@ -2,6 +2,10 @@ import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "
 import { USER_AGENT } from "../../lib/constants";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { isDexApiRecord, readDexApiJson } from "./direct-api-json";
+import {
+  DIRECT_API_DEFAULT_MAX_PAGES,
+  buildDirectApiRequestSignal,
+} from "./direct-api-policy";
 
 const BALANCER_API = "https://api-v3.balancer.fi/";
 
@@ -124,32 +128,32 @@ function extractBalancerPoolAddress(pool: Pick<BalancerPool, "id" | "address">):
 export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
   const results: DexApiPool[] = [];
   const errors: string[] = [];
-  let skip = 0;
   const pageSize = 1000;
   let successfulPages = 0;
 
-  while (true) {
+  for (let page = 1; page <= DIRECT_API_DEFAULT_MAX_PAGES; page++) {
+    const skip = (page - 1) * pageSize;
     let res: Response;
     try {
       res = await fetch(BALANCER_API, {
         method: "POST",
         headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
         body: JSON.stringify({ query: QUERY, variables: { first: pageSize, skip } }),
-        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
+        signal: buildDirectApiRequestSignal(signal),
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      errors.push(`request failed on page ${skip / pageSize + 1}: ${message}`);
+      errors.push(`request failed on page ${page}: ${message}`);
       break;
     }
 
     if (!res.ok) {
-      errors.push(`API returned ${res.status} on page ${skip / pageSize + 1}`);
+      errors.push(`API returned ${res.status} on page ${page}`);
       await cancelResponseBodyQuietly(res);
       break;
     }
 
-    const parsed = await readDexApiJson<BalancerResponse>(res, `page ${skip / pageSize + 1}`);
+    const parsed = await readDexApiJson<BalancerResponse>(res, `page ${page}`);
     if (!parsed.ok) {
       errors.push(parsed.error);
       break;
@@ -159,13 +163,13 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
     const graphqlErrors = formatGraphqlErrors(json.errors);
     if (graphqlErrors.length > 0) {
       errors.push(
-        `GraphQL errors on page ${skip / pageSize + 1}: ${graphqlErrors.join("; ")}`,
+        `GraphQL errors on page ${page}: ${graphqlErrors.join("; ")}`,
       );
       break;
     }
     const pools = json.data?.poolGetPools;
     if (!Array.isArray(pools)) {
-      errors.push(`Malformed response on page ${skip / pageSize + 1}`);
+      errors.push(`Malformed response on page ${page}`);
       break;
     }
 
@@ -230,11 +234,14 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
       });
     }
     if (malformedRows > 0) {
-      errors.push(`page ${skip / pageSize + 1} skipped ${malformedRows} malformed pool rows`);
+      errors.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
     }
 
     if (pools.length < pageSize) break;
-    skip += pageSize;
+    if (page === DIRECT_API_DEFAULT_MAX_PAGES) {
+      errors.push(`pagination cap reached at page ${page}; resumeFromSkip=${skip + pageSize}`);
+      break;
+    }
   }
 
   if (results.length > 0) {

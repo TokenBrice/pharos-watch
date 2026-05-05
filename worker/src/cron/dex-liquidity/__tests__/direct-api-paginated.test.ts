@@ -119,6 +119,9 @@ describe("runPaginatedDirectApiFetch", () => {
 
     expect(result.successfulPages).toBe(3);
     expect(result.rows).toHaveLength(6);
+    expect(result.completed).toBe(false);
+    expect(result.nextPage).toBe(4);
+    expect(result.errors).toEqual(["test pagination cap reached at page 3; resumeFromPage=4"]);
     expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 

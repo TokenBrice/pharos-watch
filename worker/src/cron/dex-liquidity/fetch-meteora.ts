@@ -7,6 +7,10 @@ import {
 import { USER_AGENT } from "../../lib/constants";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { isDexApiRecord, readDexApiJson } from "./direct-api-json";
+import {
+  DIRECT_API_DEFAULT_MAX_PAGES,
+  buildDirectApiRequestSignal,
+} from "./direct-api-policy";
 
 const METEORA_API = "https://dlmm.datapi.meteora.ag/pools";
 const PAGE_SIZE = 500;
@@ -59,15 +63,14 @@ function isMeteoraPool(value: unknown): value is MeteoraPool {
 export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
   const pools: DexApiPool[] = [];
   const errors: string[] = [];
-  let page = 1;
   let successfulPages = 0;
 
-  while (true) {
+  for (let page = 1; page <= DIRECT_API_DEFAULT_MAX_PAGES; page++) {
     let res: Response;
     try {
       res = await fetch(`${METEORA_API}?page=${page}&limit=${PAGE_SIZE}`, {
         headers: { "User-Agent": USER_AGENT },
-        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
+        signal: buildDirectApiRequestSignal(signal),
       });
     } catch (error) {
       errors.push(`page ${page} request failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -96,7 +99,6 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
     successfulPages++;
     if (rows.length === 0) break;
 
-    let pageHasEligiblePool = false;
     let malformedRows = 0;
     for (const rawRow of rows) {
       if (!isMeteoraPool(rawRow)) {
@@ -108,7 +110,6 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
       const tvlUsd = row.tvl ?? null;
       if (!Number.isFinite(tvlUsd) || tvlUsd == null || tvlUsd < DIRECT_API_POOL_MIN_TVL_USD) continue;
       if (row.is_blacklisted) continue;
-      pageHasEligiblePool = true;
 
       const volume24hUsd = row.volume?.["24h"];
       const baseFeePct = row.pool_config?.base_fee_pct;
@@ -120,7 +121,8 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
       const reserve0 = row.token_x_amount;
       const reserve1 = row.token_y_amount;
       // Meteora DLMM is concentrated liquidity — the bin reserve ratio is NOT the spot price.
-      // Use current_price exclusively; leave balances[] for downstream balance-ratio consumers.
+      // `current_price`, token `price`, `tvl`, and `volume["24h"]` are already normalized USD
+      // fields from the Meteora API; leave balances[] in native token units for balance consumers.
       const spotPrice =
         row.current_price != null && Number.isFinite(row.current_price) && row.current_price > 0
           ? row.current_price
@@ -156,8 +158,11 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
       errors.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
     }
 
-    if (!pageHasEligiblePool || rows.length < PAGE_SIZE) break;
-    page++;
+    if (rows.length < PAGE_SIZE) break;
+    if (page === DIRECT_API_DEFAULT_MAX_PAGES) {
+      errors.push(`pagination cap reached at page ${page}; resumeFromPage=${page + 1}`);
+      break;
+    }
   }
 
   if (pools.length > 0) {

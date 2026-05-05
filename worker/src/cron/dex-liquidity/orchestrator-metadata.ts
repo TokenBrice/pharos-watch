@@ -30,6 +30,19 @@ export function buildDexLiquidityCronMetadata(params: {
   stagedPoolsSkippedByUniqueDerivedIdentity: number;
   stagedPoolsSkippedByOptionalWildcardIdentity: number;
   stagedPoolsSkippedByAuthoritativeProtocol: number;
+  stagedPoolSkipDimensions: Array<{
+    reason: string;
+    protocol: string;
+    chain: string;
+    count: number;
+    threshold?: number;
+    conflict?: string;
+  }>;
+  directApiSourceSummary: {
+    acceptedByProtocolChain: Record<string, number>;
+    excludedByReason: Record<string, number>;
+    circuitEvents: Array<{ circuitKey: string; from: string; to: string; at: number | null }>;
+  };
   sourceCoverage: DexLiquidityPostScoreAnalysis["sourceCoverage"];
   challengerPublication: {
     publishedStablecoins: number;
@@ -51,6 +64,8 @@ export function buildDexLiquidityCronMetadata(params: {
     stagedPoolsSkippedByUniqueDerivedIdentity: params.stagedPoolsSkippedByUniqueDerivedIdentity,
     stagedPoolsSkippedByOptionalWildcardIdentity: params.stagedPoolsSkippedByOptionalWildcardIdentity,
     stagedPoolsSkippedByAuthoritativeProtocol: params.stagedPoolsSkippedByAuthoritativeProtocol,
+    stagedPoolSkipDimensions: params.stagedPoolSkipDimensions,
+    directApiSourceSummary: params.directApiSourceSummary,
     sourceCoverage: {
       ...params.sourceCoverage,
       challengerSnapshotsPublished: params.challengerPublication.publishedStablecoins,
