@@ -69,7 +69,6 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "idrt-rupiah-token",
       "jpyc-jpyc",
       "cadc-cad-coin",
-      "cadd-cad-digital",
       "tgbp-tokenised",
       "veur-vnx",
       "vchf-vnx",
@@ -100,6 +99,23 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "wars-argentine-peso",
     ],
     issuerBase,
+  ),
+  ...expandIds(
+    [
+      "audx-aussie-dollar-token",
+      "brl1-brl1",
+      "cngn-compliant-naira",
+      "kgst-kyrgyz-som",
+      "reur-royal-euro",
+      "wars-argentine-peso",
+      "eusd-telcoin",
+      "jpyc-jpyc-v1",
+      "rusd-royal-dollar",
+    ],
+    {
+      ...issuerBase,
+      ...documentedBoundSupplyFull(REVIEWED_NON_USD_BATCH_AT),
+    },
   ),
   ...expandIds(
     ["usyc-hashnote", "ustb-superstate", "a7a5-old-vector", "gusd-gate"],
@@ -1147,11 +1163,13 @@ applyTrackedReviewedDocs(OFFCHAIN_ISSUER_BACKSTOP_CONFIGS, [
 ], REVIEWED_REMEDIATION_AT);
 
 applyTrackedReviewedDocs(OFFCHAIN_ISSUER_BACKSTOP_CONFIGS, [
-  "cadd-cad-digital",
   "audx-aussie-dollar-token",
   "brl1-brl1",
   "cngn-compliant-naira",
   "kgst-kyrgyz-som",
   "reur-royal-euro",
   "wars-argentine-peso",
+  "eusd-telcoin",
+  "jpyc-jpyc-v1",
+  "rusd-royal-dollar",
 ], REVIEWED_NON_USD_BATCH_AT);
