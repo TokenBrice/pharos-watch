@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.14",
+  currentVersion: "7.15",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.15",
+      title: "Direct freezability metadata audit",
+      date: "2026-05-05",
+      effectiveAt: 1777953600,
+      summary:
+        "The resolved `Freezable: No` cohort was reviewed against token-level freeze, denylist, blacklist, pause, and role-burn controls, moving confirmed direct-control assets out of the unfreezable bucket.",
+      impact: [
+        "JupUSD, eSui Dollar, MAI, JUSD, Alpha Partner USDA, Ring USDR, DOC, USDRIF, and Nest inALPHA now resolve as direct `Freezable: Yes` when their holder-facing token or vault exposes freeze, denylist, blacklist, or arbitrary role-burn controls",
+        "sBOLD and Enosys CDP now resolve as `Freezable: Possible` because the audited contracts expose direct vault pause or mutable branch-control surfaces rather than a current address-level blacklist",
+        "The remaining resolved `No` cohort was left unchanged where no direct holder-facing freeze, blacklist, pause, denylist, or arbitrary burn surface was confirmed",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.14",
       title: "Live reserve dependencies align with scoring",

@@ -36,6 +36,7 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "chainTier": "ethereum",
   "deploymentModel": "single-chain",
   "reserves": [

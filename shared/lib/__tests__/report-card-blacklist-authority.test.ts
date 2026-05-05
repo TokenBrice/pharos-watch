@@ -12,6 +12,22 @@ function deterministicShuffle<T>(values: readonly T[]): T[] {
 }
 
 describe("report-card blacklist authority", () => {
+  it("pins direct freeze and blacklist corrections from the unfreezable audit", () => {
+    const resolved = resolveBlacklistStatuses(TRACKED_STABLECOINS);
+
+    expect(resolved.get("jupusd-jupiter")).toBe(true);
+    expect(resolved.get("mai-qidao")).toBe(true);
+    expect(resolved.get("suiusde-sui")).toBe(true);
+    expect(resolved.get("jusd-jusd-stable-token")).toBe(true);
+    expect(resolved.get("usda-alpha-partner")).toBe(true);
+    expect(resolved.get("doc-money-on-chain")).toBe(true);
+    expect(resolved.get("usdrif-rif")).toBe(true);
+    expect(resolved.get("usdr-ring")).toBe(true);
+    expect(resolved.get("inalpha-nest")).toBe(true);
+    expect(resolved.get("sbold-k3-capital")).toBe("possible");
+    expect(resolved.get("cdp-enosys")).toBe("possible");
+  });
+
   it("keeps blacklist resolution stable across full-registry ordering changes", () => {
     const canonical = resolveBlacklistStatuses(TRACKED_STABLECOINS);
     const reversed = resolveBlacklistStatuses([...TRACKED_STABLECOINS].reverse());

@@ -42,6 +42,7 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": "possible",
   "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",

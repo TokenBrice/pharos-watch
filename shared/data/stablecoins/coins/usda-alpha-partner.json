@@ -36,6 +36,7 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "deploymentModel": "single-chain",
   "reserves": [
     {

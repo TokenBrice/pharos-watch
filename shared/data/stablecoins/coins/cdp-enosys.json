@@ -36,6 +36,7 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": "possible",
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
   "reserves": [

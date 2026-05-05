@@ -2580,6 +2580,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "possible",
     "chainTier": "established-alt-l1",
     "deploymentModel": "single-chain",
     "reserves": [
@@ -4209,6 +4210,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": true,
     "chainTier": "mature-alt-l1",
     "deploymentModel": "third-party-bridge",
     "reserves": [
@@ -8057,6 +8059,7 @@
         "decimals": 6
       }
     ],
+    "canBeBlacklisted": true,
     "deploymentModel": "native-multichain",
     "reserves": [
       {
@@ -8615,6 +8618,7 @@
         "decimals": 6
       }
     ],
+    "canBeBlacklisted": true,
     "chainTier": "mature-alt-l1",
     "custodyModel": "institutional-regulated",
     "reserves": [
@@ -8695,6 +8699,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": true,
     "deploymentModel": "native-multichain",
     "reserves": [
       {
@@ -9607,6 +9612,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": true,
     "deploymentModel": "native-multichain",
     "governanceQuality": "multisig",
     "reserves": [
@@ -12976,6 +12982,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "possible",
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
@@ -13734,6 +13741,7 @@
         "type": "mechanism"
       }
     ],
+    "canBeBlacklisted": true,
     "chainTier": "mature-alt-l1",
     "deploymentModel": "single-chain",
     "reserves": [
@@ -15824,6 +15832,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": true,
     "deploymentModel": "single-chain",
     "reserves": [
       {
@@ -19023,6 +19032,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": true,
     "chainTier": "ethereum",
     "deploymentModel": "single-chain",
     "reserves": [
@@ -19169,6 +19179,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": true,
     "chainTier": "mature-alt-l1",
     "collateralQuality": "exotic",
     "reserves": [

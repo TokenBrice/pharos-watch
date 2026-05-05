@@ -1,6 +1,13 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.14 (2026-02-25 → 2026-04-24). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.15 (2026-02-25 → 2026-05-05). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.15 — Direct freezability metadata audit (2026-05-05)
+
+- Reviewed every active stablecoin in the resolved `Freezable: No` cohort against holder-facing token/vault freeze, denylist, blacklist, pause, and arbitrary role-burn controls
+- JupUSD, eSui Dollar, MAI, JUSD, Alpha Partner USDA, Ring USDR, DOC, USDRIF, and Nest inALPHA now resolve as direct `Freezable: Yes`
+- sBOLD and Enosys CDP now resolve as `Freezable: Possible` because the audited contracts expose direct vault pause or mutable branch-control surfaces rather than a current address-level blacklist
+- The remaining resolved `No` cohort stays unchanged where no direct holder-facing freeze, blacklist, pause, denylist, or arbitrary burn surface was confirmed
 
 ## v7.14 — Live reserve dependencies align with scoring (2026-04-24)
 

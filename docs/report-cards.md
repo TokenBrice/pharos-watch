@@ -4,7 +4,7 @@ Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Compu
 
 The stablecoin registry currently contains 255 tracked metadata entries. Report-card snapshots score the 240 active tracked assets plus the 88 cemetery assets; pre-launch and frozen-archive tracked entries are emitted as stub `F` cards (defunct; pre-launch remain outside the snapshot until they launch).
 
-## Overall Grade (v7.14)
+## Overall Grade (v7.15)
 
 Four-step computation:
 
@@ -15,7 +15,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.14 aligns score-grade live reserve dependency links with the rest of the report-card snapshot. When a fresh, clean, independent live reserve snapshot qualifies for collateral-quality scoring and its slices carry tracked `coinId` / `depType` links, those links now drive Dependency Risk, `rawInputs.dependencies`, topological ordering, and the public dependency graph. Unmapped live reserve share remains implicit self-backed or non-stablecoin exposure. The v7.13 `Possible` / `Upstream` blacklist split and all tracked-variant wrapper ceilings carry forward unchanged.
+Current-version note: v7.15 records a direct freezability metadata audit of the resolved `Freezable: No` cohort. Confirmed token-level freeze, denylist, blacklist, pause, or arbitrary role-burn controls now move those assets into `Yes` or `Possible`; the remaining `No` cohort keeps the v7.13 `Possible` / `Upstream` split and all tracked-variant wrapper ceilings unchanged.
 
 ## Dimensions
 

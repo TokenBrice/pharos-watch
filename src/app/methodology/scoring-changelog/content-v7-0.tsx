@@ -1,5 +1,36 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV715Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.15")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        The resolved <code className="text-xs bg-muted px-1 py-0.5 rounded">Freezable: No</code> cohort was reviewed
+        against token-level freeze, denylist, blacklist, pause, and arbitrary role-burn controls.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          JupUSD, eSui Dollar, MAI, JUSD, Alpha Partner USDA, Ring USDR, DOC, USDRIF, and Nest inALPHA now resolve as
+          direct <code className="text-xs bg-muted px-1 py-0.5 rounded">Freezable: Yes</code> where audited token or
+          vault contracts expose holder-facing controls.
+        </li>
+        <li>
+          sBOLD and Enosys CDP now resolve as <code className="text-xs bg-muted px-1 py-0.5 rounded">Possible</code>{" "}
+          because their audited contracts expose pause or mutable branch-control surfaces rather than a confirmed
+          current address-level blacklist.
+        </li>
+        <li>
+          The remaining resolved <code className="text-xs bg-muted px-1 py-0.5 rounded">No</code> cohort stays
+          unchanged where no direct holder-facing freeze, blacklist, pause, denylist, or arbitrary burn surface was
+          confirmed.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV714Entry() {
   return (
     <VersionCard
