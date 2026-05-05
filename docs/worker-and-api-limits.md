@@ -23,6 +23,8 @@ It intentionally does **not** treat vendor pricing-plan quotas as source of trut
 - `worker/src/handlers/http/gates.ts`
 - `worker/src/cron/sync-blacklist.ts`
 - `worker/src/cron/sync-mint-burn.ts`
+- `worker/src/cron/sync-live-reserves.ts`
+- `worker/src/cron/sync-live-reserves-config.ts`
 - `worker/src/cron/dex-discovery/orchestrator.ts`
 - `worker/src/cron/sync-stablecoins/enrich-prices.ts`
 - `worker/src/cron/sync-fx-rates.ts`
@@ -76,7 +78,8 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 | -------------------------------------- | ------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | DEX discovery overall deadline         | `12 minutes`        | `worker/src/cron/dex-discovery/orchestrator.ts`                   | Shared deadline for the discovery pass before persistence/cleanup tail work |
 | DEX discovery per-coin budget          | `25 seconds`        | `worker/src/cron/dex-discovery/orchestrator.ts`                   | Prevents one slow coin from consuming the whole staging lane |
-| Live reserve sync overall deadline     | `12 minutes`        | `worker/src/lib/cron-lease.ts`                                    | Explicit wrapper budget for the serialized reserve loop before the rest of the 4-hourly slot; budget exhaustion now records deferred tail state and resumes from that cursor on the next run |
+| Live reserve sync outer deadline       | `12 minutes`        | `worker/src/lib/cron-lease.ts`                                    | Explicit wrapper budget for the serialized reserve loop before the rest of the 4-hourly slot |
+| Live reserve sync internal run budget  | `11 minutes`        | `worker/src/cron/sync-live-reserves-config.ts`                    | Default cursoring budget; if the remaining budget drops below one adapter attempt, the untouched tail is marked deferred and resumed from cursor on the next run |
 | Live reserve adapter I/O peak          | `2` outbound operations per adapter attempt | `worker/src/cron/reserve-adapters/concurrency.ts`, `shared/lib/cron-jobs.ts` | Coin loop is serialized, but individual adapters can fan out internally; shared fetch/RPC helpers enforce the per-attempt limiter |
 | Yield publication overall deadline     | `10 minutes`        | `worker/src/lib/cron-lease.ts`                                    | Dedicated hourly `sync-yield-data` timeout after moving off the half-hourly lane |
 | Yield supplemental overall deadline    | `12 minutes`        | `worker/src/lib/cron-lease.ts`                                    | Dedicated 4-hour `sync-yield-supplemental` timeout for optional protocol families |
@@ -131,11 +134,13 @@ Cron persistence helpers retry transient D1 queue pressure through `runWithOverl
 | Jupiter price fallback              | `5_000 ms`                   | `worker/src/cron/sync-stablecoins/enrich-prices-jupiter-pass.ts` |
 | DexScreener price fallback requests | up to `5_000 ms` per request | `worker/src/cron/sync-stablecoins/enrich-prices-dexscreener-pass.ts` |
 | Ops admin status proxy reads       | `20_000 ms` for `/api/status` and `/api/status-history` | `functions/api/admin/[[path]].ts` |
-| Live reserve adapter attempt        | `20_000 ms`                  | `worker/src/cron/sync-live-reserves.ts`                    |
-| Live reserve D1 finalize timeout    | `30_000 ms`                  | `worker/src/cron/sync-live-reserves-core.ts`               |
+| Live reserve adapter attempt        | `20_000 ms`                  | `worker/src/cron/sync-live-reserves-config.ts`             |
+| Live reserve D1 finalize timeout    | `30_000 ms`                  | `worker/src/cron/sync-live-reserves-config.ts`             |
 | Blacklist explorer / RPC reads      | `15_000 ms`                  | `worker/src/lib/fetch-retry.ts` (default timeout)          |
 | Daily digest LLM call (outer)       | `12 * 60_000 ms`             | `worker/src/lib/constants.ts`                              |
 | Daily digest per-attempt fetch      | `11 * 60_000 ms`             | `worker/src/cron/digest/platform.ts` (`DIGEST_FETCH_PER_ATTEMPT_TIMEOUT_MS`) |
+
+Live reserve timeout values are resolved through `LiveReserveSyncBudgetConfig`. Production uses the checked-in defaults above; tests and operational wrappers can inject smaller or larger positive finite values to validate deferred-tail and D1-finalize behavior without changing cron code.
 
 ---
 

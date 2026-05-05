@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
 - **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 194 live-enabled stablecoins across 44 registered adapters; 42 adapter keys are currently configured by `shared/data/stablecoins/*.json`
+- **Current coverage:** 194 live-enabled stablecoins across 45 registered adapters; 43 adapter keys are currently configured by `shared/data/stablecoins/*.json`
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -62,7 +62,7 @@ The shared registry in `shared/lib/live-reserve-adapters-definitions.ts` defines
 
 - The cron tries `inputs.primary` first.
 - If the adapter throws, the orchestrator retries the same adapter against each fallback by temporarily swapping that fallback into `inputs.primary`.
-- If every fallback fails, the original primary error is surfaced and the normal breaker/error path runs.
+- If every fallback fails, the attempt history records the primary and fallback failure chain, and the cron-run metadata includes per-coin `attemptFailureSummaries` for automated triage.
 
 USDD currently uses this path: the cron retries `latest-collateral` on Ethereum if the Tron source fails, and the adapter now derives the matching `collateral-history` URL from whichever chain endpoint is active so fallback freshness stays chain-consistent.
 
@@ -180,7 +180,7 @@ Cron result statuses:
 
 Per-coin warnings still matter operationally, but they affect `reserve_sync_state.last_status` for that coin (`degraded`) and the cron metadata warning list, not the run-level `CronResult.status`.
 
-The cron loop is sequential. This is deliberate: reserve adapters can hit multiple heterogeneous sources, and the isolated 4-hourly trigger keeps connection pressure predictable. Each adapter attempt also receives a per-attempt I/O limiter with a peak of 2 outbound HTTP/RPC operations, so internally parallel adapters such as GHO, Cap, Anzen, and crvUSD cannot consume the whole six-connection trigger pool. The leased wrapper gives `sync-live-reserves` a 12-minute outer wall-clock budget; the sync loop keeps an internal 11-minute budget for cursoring so it can mark untouched tail coins before the lease expires. The cron reports `setup`, `syncing`, and `finalizing` progress stages so `/status` can show which coin is currently in flight. When the internal budget is exhausted, the cron records `reserve_sync_state.last_status = "skipped"` with `metadata.failureCategory = "run-budget-exhausted"` for the untouched tail and persists a lightweight cursor in `cache.key = 'live-reserves:run-cursor'`, so the next run resumes from the first deferred coin instead of always restarting from the top of the configured list. Within a run, fetched results are only reused when the adapter registry marks the adapter as `source-invariant` (currently `m0`, `mento`, and `sky-makercore`); coin-aware adapters such as `frax` never share cached results across coins. At the end of each run, the cron also removes stale operational artifacts for coins that are no longer live-enabled: orphaned `reserve_sync_state` rows and stale `cache.key = 'circuit:live-reserves:*'` entries are deleted so `/status` and `/api/health` stop surfacing removed reserve sources as active incidents after coverage changes.
+The cron loop is sequential. This is deliberate: reserve adapters can hit multiple heterogeneous sources, and the isolated 4-hourly trigger keeps connection pressure predictable. Each adapter attempt also receives a per-attempt I/O limiter with a peak of 2 outbound HTTP/RPC operations, so internally parallel adapters such as GHO, Cap, Anzen, and crvUSD cannot consume the whole six-connection trigger pool. The leased wrapper gives `sync-live-reserves` a 12-minute outer wall-clock budget; the sync loop defaults to an internal 11-minute budget for cursoring, 20-second adapter attempts, and a 30-second D1 finalize timeout, all resolved through `LiveReserveSyncBudgetConfig` so tests and operational wrappers can exercise safe edge values without editing cron logic. The cron reports `setup`, `syncing`, and `finalizing` progress stages so `/status` can show which coin is currently in flight. When the internal budget is exhausted, the cron records `reserve_sync_state.last_status = "skipped"` with `metadata.failureCategory = "run-budget-exhausted"` for the untouched tail and persists a lightweight cursor in `cache.key = 'live-reserves:run-cursor'`, so the next run resumes from the first deferred coin instead of always restarting from the top of the configured list. Cron metadata sets `runBudgetTruncated`, `deferredCoins`, `nextCursorStablecoinId`, and the resolved budget values; `/api/status`, `/api/status-history`, and the admin status dashboard surface those fields so operators can see the deferred tail at a glance. Within a run, fetched results are only reused when the adapter registry marks the adapter as `source-invariant` (currently `m0`, `mento`, and `sky-makercore`); coin-aware adapters such as `frax` never share cached results across coins. At the end of each run, the cron also removes stale operational artifacts for coins that are no longer live-enabled: orphaned `reserve_sync_state` rows and stale `cache.key = 'circuit:live-reserves:*'` entries are deleted so `/status` and `/api/health` stop surfacing removed reserve sources as active incidents after coverage changes.
 
 ---
 
@@ -254,6 +254,10 @@ Freshness and consistency rules now live across the `worker/src/lib/live-reserve
 - `weakProbeFresh`
 - `persistentlyStaleIndependentCoins` (independent feeds older than the persistent-staleness window that can escalate status beyond normal short-lived lag)
 - `writeTimeoutUncertain`
+- `deferredCoins`
+- `runBudgetTruncated`
+- `deferredAt`
+- `nextCursorStablecoinId`
 - `lastSuccessAt`
 - `oldestFreshAgeSec`
 
@@ -261,6 +265,7 @@ Freshness and consistency rules now live across the `worker/src/lib/live-reserve
 `corruptCoins` counts rows where a matching latest-success snapshot exists in D1 but fails strict integrity validation, so the system fails closed to fallback presentation instead of serving truncated or malformed live data.
 When a coin has both an old latest-success snapshot and a newer failing attempt state, the overview now prioritizes the active `error` / `degraded` attempt classification over generic `stale` labeling so status surfaces better reflect live incidents.
 `writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path, meaning the worker could not prove whether the attempted write became authoritative.
+`runBudgetTruncated`, `deferredCoins`, `deferredAt`, and `nextCursorStablecoinId` mirror the latest deferred-tail cursor so status surfaces can distinguish ordinary stale coverage from a run that intentionally stopped before the queue tail.
 
 ---
 
@@ -338,6 +343,10 @@ The optional `sync` object exposes the last operational state:
 | `lastSuccessAt`   | Latest success timestamp, when present                                                                                              |
 | `warnings[]`      | Warning messages surfaced by the latest attempt and, when relevant, storage-integrity warnings injected by the fail-closed resolver |
 | `lastError`       | Most recent adapter error message (truncated to 200 chars), when present                                                            |
+| `failureCategory` | Machine-readable failure class from attempt metadata, when present                                                                  |
+| `uncertainWrite`  | `true` when the latest attempt hit the D1 write-timeout / finalize-rejection path and authoritative state could not be proven       |
+
+Uncertain write attempts are intentionally exposed as `sync.uncertainWrite = true` instead of being collapsed into generic stale/error narration. The API may still serve the last consistent snapshot or fallback presentation, but operators can tell that the latest attempted write is ambiguous until a clean follow-up run resolves it.
 
 ### Edge Cache Implications for Monitoring
 
@@ -371,7 +380,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `circle-transparency`      | `http-html`                 | `attestation-mix`                    | 2                |
 | `collateral-positions-api` | `http-json`                 | `collateral-mix`                     | 2                |
 | `crvusd`                   | `http-json`                 | `collateral-mix`                     | 1                |
-| `curated-validated`        | `onchain-evm` / `onchain-solana` | `attestation-mix` / `collateral-mix` / `single-asset` | 34 |
+| `curated-validated`        | `onchain-evm` / `onchain-solana` | `attestation-mix` / `collateral-mix` / `single-asset` | 55 |
 | `dola-inverse`             | `http-json`                 | `collateral-mix`                     | 1                |
 | `erc4626-single-asset`     | `onchain-evm`               | `single-asset`                       | 16               |
 | `ethena`                   | `http-json`                 | `collateral-mix`                     | 1                |
@@ -390,10 +399,11 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `mento`                    | `http-json`                 | `collateral-mix`                     | 2                |
 | `openeden-usdo`            | `http-json`                 | `collateral-mix`                     | 1                |
 | `re-metrics`               | `http-html`                 | `collateral-mix`                     | 1                |
+| `reserve-protocol-dtf`     | `http-json`                 | `collateral-mix`                     | 1                |
 | `reservoir`                | `http-json`                 | `protocol-reserve`                   | 1                |
 | `river-protocol-info`      | `http-json`                 | `protocol-reserve`                   | 1                |
 | `sgforge-coinvertible`     | `http-html`                 | `attestation-mix`                    | 1                |
-| `single-asset`             | `http-json` / `onchain-evm` | `single-asset`                       | 42               |
+| `single-asset`             | `http-json` / `onchain-evm` | `single-asset`                       | 48               |
 | `sky-makercore`            | `http-json`                 | `collateral-mix`                     | 2                |
 | `solstice-attestation`     | `http-json`                 | `protocol-reserve`                   | 1                |
 | `superstate-liquidity`     | `onchain-evm` + `http-json` | `single-asset`                       | 1                |
@@ -402,6 +412,22 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `usd1-bundle-oracle`       | `onchain-evm`               | `single-asset`                       | 1                |
 | `usdd-data-platform`       | `http-json`                 | `collateral-mix`                     | 1                |
 | `usdh-native-markets`      | `http-html`                 | `attestation-mix`                    | 1                |
+
+Adapter key intent is tracked in `shared/lib/live-reserve-adapter-provenance.ts` and covered by the registry tests. Every registered key has one of these statuses:
+
+| Status    | Meaning                                                                 |
+| --------- | ----------------------------------------------------------------------- |
+| `active`  | Bound by at least one active stablecoin `liveReservesConfig`            |
+| `staged`  | Implemented for an approved upcoming binding, but not active yet        |
+| `retired` | Kept only for historical compatibility while no new binding should use it |
+| `parked`  | Retained intentionally while no active coin currently binds it          |
+
+Current unbound registered adapters are explicit:
+
+| Adapter                  | Status   | Rationale                                                                                                       |
+| ------------------------ | -------- | --------------------------------------------------------------------------------------------------------------- |
+| `buck-io-transparency`   | `parked` | BUCK.fi transparency implementation is retained, but no tracked active coin currently binds it.                 |
+| `tether`                 | `parked` | Tether issuer summary adapter is retained, while current Tether assets use curated-validated or single-asset probes. |
 
 `collateral-positions-api` can now optionally attach direct redemption-capacity telemetry alongside the collateral mix when a reviewed bridge-backed stable exit exists. `zchf-frankencoin` uses this path to publish the current VCHF StablecoinBridge inventory as `immediateRedeemableUsd` for redemption-backstop modeling without changing the reserve-slice composition itself.
 

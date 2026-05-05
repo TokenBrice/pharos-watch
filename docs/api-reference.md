@@ -561,9 +561,10 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 | `displayBadge` | `object?`        | User-facing reserve badge semantics for authoritative live snapshots (`live`, `curated-validated`, or `proof`)                  |
 | `metadata`     | `object?`        | Adapter snapshot metadata for authoritative live snapshots. This can include feed-specific context such as `yieldBasisCollateralPct` for `crvusd`; adapter-specific metadata and nested `details` remain passthrough |
 | `provenance`   | `object?`        | Evidence-quality envelope for authoritative live snapshots (`evidenceClass`, `sourceModel`, optional `freshnessMode`, `scoringEligible`) |
-| `sync`         | `object?`        | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`, `lastError`). Present only when live-enabled |
+| `sync`         | `object?`        | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`, `lastError`, optional `failureCategory`, optional `uncertainWrite`). Present only when live-enabled |
 
 `sync.warnings` can include both adapter-emitted warnings from the latest attempt and storage-integrity warnings when a stored live snapshot is rejected and the endpoint fails closed to a fallback presentation.
+`sync.failureCategory` is copied from `reserve_sync_state.metadata.failureCategory` when available. `sync.uncertainWrite=true` means the latest attempt hit the D1 write-timeout / finalize-rejection path, so the endpoint may be serving the last consistent snapshot or fallback while the attempted write remains ambiguous until the next clean run.
 
 `displayUrl` and `evidenceUrls` are intentionally different:
 
@@ -2669,6 +2670,10 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "staticValidatedFresh": 4,
     "weakProbeFresh": 1,
     "writeTimeoutUncertain": 0,
+    "deferredCoins": 0,
+    "runBudgetTruncated": false,
+    "deferredAt": null,
+    "nextCursorStablecoinId": null,
     "lastSuccessAt": 1771855800,
     "oldestFreshAgeSec": 3100,
     "status": "healthy",
@@ -2801,6 +2806,8 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `reserveComposition.freshCoverageRatio` is `freshCoins / configuredCoins`. `reserveComposition.authoritativeFreshCoverageRatio` counts only stronger evidence cohorts (`independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`) over `configuredCoins`.
 
+`reserveComposition.runBudgetTruncated`, `deferredCoins`, `deferredAt`, and `nextCursorStablecoinId` expose the latest live-reserve deferred-tail cursor when the internal sync budget stopped the run before the queue tail. `writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path.
+
 `crons[*].healthy` reflects availability impact. Fresh cron runs with `status="degraded"` are warning-only and counted in `summary.degradedCrons`, but they do not mark availability unhealthy on their own.
 
 `availabilityStatus` also inherits the shared public-health floor used by `/api/health`: cache-impact status, the critical mint/burn lane's public warning/staleness contract, and 3+ public-impact open circuit groups can degrade availability even when cron freshness alone is still green. Dynamic per-coin `live-reserves:*` breakers remain visible in `circuits`, but they do not change `availabilityStatus` on their own.
@@ -2857,7 +2864,7 @@ Machine-readable status timeline endpoint for tooling and incident analysis.
 
 `limit` is clamped into `1..200` by the shared query parser.
 
-**Response shape:** `StatusHistoryResponse` (defined in `shared/types/index.ts`)
+**Response shape:** `StatusHistoryResponse` (defined in `shared/types/index.ts`). The response includes the current `reserveComposition` summary when it can be computed, or `null` if the reserve overview diagnostic query fails.
 
 ### `GET /api/request-source-stats`
 
