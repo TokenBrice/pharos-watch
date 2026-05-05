@@ -52,6 +52,10 @@ function buildSyncView(
     ...(overrides.extraWarnings ?? []),
   ];
   const lastError = overrides.lastErrorOverride ?? syncState?.lastError ?? null;
+  const failureCategory = typeof syncState?.metadata.failureCategory === "string"
+    ? syncState.metadata.failureCategory
+    : undefined;
+  const uncertainWrite = syncState?.metadata.uncertainWrite === true;
   return {
     enabled: overrides.enabled,
     status: overrides.statusOverride ?? syncState?.lastStatus ?? overrides.defaultStatus,
@@ -61,6 +65,8 @@ function buildSyncView(
     ...(syncState?.lastSuccessAt != null ? { lastSuccessAt: syncState.lastSuccessAt } : {}),
     ...(warningMessages.length > 0 ? { warnings: warningMessages } : {}),
     ...(lastError ? { lastError: lastError.slice(0, 200) } : {}),
+    ...(failureCategory ? { failureCategory } : {}),
+    ...(uncertainWrite ? { uncertainWrite: true } : {}),
   };
 }
 

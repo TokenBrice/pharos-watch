@@ -156,6 +156,47 @@ describe("handleStablecoinReserves", () => {
     expect(body.sync?.lastError).toBe("HTTP 503 for https://api.example.com");
   });
 
+  it("surfaces uncertain write metadata distinctly in the API response", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: null,
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          adapter_key: "infinifi",
+          breaker_key: "live-reserves:infinifi",
+          last_attempted_at: now,
+          last_success_at: null,
+          last_status: "error",
+          warning_count: 0,
+          warnings: null,
+          last_error: "D1 write timeout for iusd-infinifi",
+          metadata: JSON.stringify({
+            uncertainWrite: true,
+            failureCategory: "storage-write",
+            reason: "storage-write-timeout",
+          }),
+        },
+      },
+    ]);
+
+    const res = await handleStablecoinReserves(db, "iusd-infinifi");
+    expect(res.status).toBe(200);
+    const body = StablecoinReservesResponseSchema.parse(await res.json());
+    expect(body.sync).toMatchObject({
+      status: "error",
+      uncertainWrite: true,
+      failureCategory: "storage-write",
+      lastError: "D1 write timeout for iusd-infinifi",
+    });
+  });
+
   it("routes live-stale mode to the intermediate cache-control tier", async () => {
     // Composition fetched_at + sync.last_success_at both well beyond the
     // 2-day freshness window (LIVE_RESERVE_FRESHNESS_SEC) so resolveReserveResult

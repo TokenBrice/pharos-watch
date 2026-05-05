@@ -271,6 +271,9 @@ function summarizeLiveReserves(metadata: Record<string, unknown>): string[] {
   const skipped = readNumber(metadata.skipped);
   const total = readNumber(metadata.total);
   const warningCount = readNumber(metadata.warningCount);
+  const runBudgetTruncated = readBoolean(metadata.runBudgetTruncated);
+  const deferredCoins = readNumber(metadata.deferredCoins);
+  const nextCursorStablecoinId = readString(metadata.nextCursorStablecoinId);
   const coinsWithWarnings = readArray(metadata.coinsWithWarnings)?.length ?? 0;
   const breakerKeys = formatStringList(metadata.breakerKeys);
 
@@ -280,6 +283,9 @@ function summarizeLiveReserves(metadata: Record<string, unknown>): string[] {
       : null,
     warningCount != null && warningCount > 0
       ? `warnings ${warningCount}${coinsWithWarnings > 0 ? ` across ${coinsWithWarnings} coin(s)` : ""}`
+      : null,
+    runBudgetTruncated
+      ? `run budget truncated; deferred ${deferredCoins ?? 0}${nextCursorStablecoinId ? `, resumes at ${nextCursorStablecoinId}` : ""}`
       : null,
     breakerKeys ? `breaker keys ${breakerKeys}` : null,
   ].filter((line): line is string => line != null);

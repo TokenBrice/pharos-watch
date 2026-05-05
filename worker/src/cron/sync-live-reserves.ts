@@ -15,6 +15,7 @@ import {
   buildReserveAdapterAttemptChainError,
   breakerKeyForConfig,
   CONFIGURED_COINS,
+  type ReserveAttemptFailureSummary,
   type ConfiguredCoin,
   type LiveReserveConfig,
 } from "./sync-live-reserves-shared";
@@ -25,8 +26,10 @@ import {
   recordDeferredTail,
   rotateConfiguredCoins,
 } from "./sync-live-reserves-run-state";
-const ADAPTER_TIMEOUT_MS = 20_000;
-const SYNC_RUN_BUDGET_MS = 11 * 60 * 1000;
+import {
+  resolveLiveReserveSyncBudgetConfig,
+  type LiveReserveSyncBudgetConfig,
+} from "./sync-live-reserves-config";
 
 interface ReserveCoinQueueResult {
   synced: number;
@@ -39,6 +42,11 @@ interface ReserveCoinQueueResult {
   breakerOutcomes: Map<string, boolean>;
   deferredCoins: number;
   nextCursorStablecoinId: string | null;
+  attemptFailureSummaries: Array<{
+    stablecoinId: string;
+    adapter: string;
+    attempts: ReserveAttemptFailureSummary[];
+  }>;
 }
 
 function createAbortableAttemptSignal(
@@ -93,9 +101,10 @@ async function runAdapterAttempt(
   config: LiveReserveConfig,
   adapter: ReserveAdapterDefinition,
   signal: AbortSignal,
+  adapterTimeoutMs: number,
   adapterCtx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const { signal: attemptSignal, cleanup } = createAbortableAttemptSignal(signal, ADAPTER_TIMEOUT_MS);
+  const { signal: attemptSignal, cleanup } = createAbortableAttemptSignal(signal, adapterTimeoutMs);
   try {
     return await adapter.fetch(coin, config, attemptSignal, Object.assign({}, adapterCtx, { ioLimiter: createAdapterIoLimiter(RESERVE_ADAPTER_MAX_PARALLEL_IO) }));
   } finally {
@@ -106,6 +115,7 @@ async function runAdapterAttempt(
 function createReserveAdapterRunner(args: {
   signal: AbortSignal;
   adapterCtx: AdapterContext;
+  adapterTimeoutMs: number;
 }): (
   coin: ConfiguredCoin,
   config: LiveReserveConfig,
@@ -120,7 +130,7 @@ function createReserveAdapterRunner(args: {
   ): Promise<AdapterResult> => {
     const cacheKey = buildSharedSourceCacheKey(config, adapter);
     if (!cacheKey) {
-      return runAdapterAttempt(coin, config, adapter, args.signal, args.adapterCtx);
+      return runAdapterAttempt(coin, config, adapter, args.signal, args.adapterTimeoutMs, args.adapterCtx);
     }
 
     const cached = sharedSourceResults.get(cacheKey);
@@ -129,7 +139,7 @@ function createReserveAdapterRunner(args: {
     // Retain the promise (including rejections) for the remainder of the run
     // so every coin sharing this source sees a single fetch outcome. The
     // circuit breaker handles cross-run retry suppression.
-    const resultPromise = runAdapterAttempt(coin, config, adapter, args.signal, args.adapterCtx);
+    const resultPromise = runAdapterAttempt(coin, config, adapter, args.signal, args.adapterTimeoutMs, args.adapterCtx);
     sharedSourceResults.set(cacheKey, resultPromise);
     return resultPromise;
   };
@@ -150,7 +160,14 @@ function createReserveAdapterRunner(args: {
       for (const fb of config.inputs.fallbacks ?? []) {
         try {
           const fbConfig = { ...config, inputs: { ...config.inputs, primary: fb } };
-          const fallbackResult = await runAdapterAttempt(coin, fbConfig, adapter, args.signal, args.adapterCtx);
+          const fallbackResult = await runAdapterAttempt(
+            coin,
+            fbConfig,
+            adapter,
+            args.signal,
+            args.adapterTimeoutMs,
+            args.adapterCtx,
+          );
           const primaryMessage = primaryError instanceof Error
             ? primaryError.message
             : String(primaryError);
@@ -188,6 +205,7 @@ async function runReserveCoinQueue(args: {
     adapter: ReserveAdapterDefinition,
   ) => Promise<AdapterResult>;
   syncStates: Map<string, ReserveSyncStateRecord>;
+  budgetConfig: LiveReserveSyncBudgetConfig;
   reportProgress?: CronProgressReporter;
 }): Promise<ReserveCoinQueueResult> {
   let synced = 0;
@@ -198,6 +216,7 @@ async function runReserveCoinQueue(args: {
   const warningMessages: string[] = [];
   const coinsWithErrors: string[] = [];
   const coinsWithWarnings: string[] = [];
+  const attemptFailureSummaries: ReserveCoinQueueResult["attemptFailureSummaries"] = [];
   const breakerKeys = new Set<string>();
   const breakerOutcomes = new Map<string, boolean>();
   const breakerCanFetch = new Map<string, boolean>();
@@ -205,8 +224,8 @@ async function runReserveCoinQueue(args: {
 
   for (const [index, coin] of args.orderedCoins.entries()) {
     if (args.signal?.aborted) throw args.signal.reason ?? new Error("sync-live-reserves aborted");
-    const budgetRemaining = SYNC_RUN_BUDGET_MS - (Date.now() - args.runStartedMs);
-    if (budgetRemaining < ADAPTER_TIMEOUT_MS) {
+    const budgetRemaining = args.budgetConfig.runBudgetMs - (Date.now() - args.runStartedMs);
+    if (budgetRemaining < args.budgetConfig.adapterTimeoutMs) {
       console.warn(
         `[sync-live-reserves] Run budget exhausted at coin ${index}/${total}, deferring remaining`,
       );
@@ -247,6 +266,7 @@ async function runReserveCoinQueue(args: {
       runAdapter: args.runAdapter,
       breakerCanFetch,
       previousState: args.syncStates.get(coin.id) ?? null,
+      d1FinalizeTimeoutMs: args.budgetConfig.d1FinalizeTimeoutMs,
     });
 
     if (result.status === "synced") {
@@ -256,6 +276,13 @@ async function runReserveCoinQueue(args: {
     } else {
       failed++;
       coinsWithErrors.push(coin.id);
+      if (result.attemptFailureSummaries) {
+        attemptFailureSummaries.push({
+          stablecoinId: coin.id,
+          adapter: config.adapter,
+          attempts: result.attemptFailureSummaries,
+        });
+      }
     }
 
     if (result.hasWarnings) {
@@ -282,6 +309,7 @@ async function runReserveCoinQueue(args: {
     breakerOutcomes,
     deferredCoins,
     nextCursorStablecoinId,
+    attemptFailureSummaries,
   };
 }
 
@@ -300,6 +328,8 @@ async function finalizeReserveSyncRun(args: {
   breakerOutcomes: ReadonlyMap<string, boolean>;
   deferredCoins: number;
   nextCursorStablecoinId: string | null;
+  attemptFailureSummaries: ReserveCoinQueueResult["attemptFailureSummaries"];
+  budgetConfig: LiveReserveSyncBudgetConfig;
 }): Promise<CronResult> {
   await reportLiveReserveProgress(args.reportProgress, {
     stage: "finalizing",
@@ -356,10 +386,15 @@ async function finalizeReserveSyncRun(args: {
       skipped: args.skipped,
       total: args.total,
       warningCount: args.warningMessages.length,
+      runBudgetTruncated: args.deferredCoins > 0,
       deferredCoins: args.deferredCoins,
       nextCursorStablecoinId: args.nextCursorStablecoinId,
+      budgetMs: args.budgetConfig.runBudgetMs,
+      adapterTimeoutMs: args.budgetConfig.adapterTimeoutMs,
+      d1FinalizeTimeoutMs: args.budgetConfig.d1FinalizeTimeoutMs,
       ...(args.coinsWithWarnings.length > 0 ? { coinsWithWarnings: args.coinsWithWarnings } : {}),
       ...(args.coinsWithErrors.length > 0 ? { coinsWithErrors: args.coinsWithErrors } : {}),
+      ...(args.attemptFailureSummaries.length > 0 ? { attemptFailureSummaries: args.attemptFailureSummaries } : {}),
       ...(args.warningMessages.length > 0 ? { warnings: args.warningMessages } : {}),
       ...(historyPrune ? { historyPrune } : {}),
       breakerKeys: Array.from(args.breakerKeys),
@@ -372,9 +407,11 @@ export async function syncLiveReserves(
   signal: AbortSignal,
   adapterCtx?: AdapterContext,
   reportProgress?: CronProgressReporter,
+  budgetOverrides?: Partial<LiveReserveSyncBudgetConfig>,
 ): Promise<CronResult> {
   const runStartedAt = Math.floor(Date.now() / 1000);
   const runStartedMs = Date.now();
+  const budgetConfig = resolveLiveReserveSyncBudgetConfig(budgetOverrides);
   const cursorState = await loadLiveReserveCursorState(db);
   const orderedCoins = rotateConfiguredCoins(CONFIGURED_COINS, cursorState?.nextStablecoinId ?? null);
   const syncStates = await loadReserveSyncStateMap(db, CONFIGURED_COINS.map((coin) => coin.id));
@@ -400,6 +437,7 @@ export async function syncLiveReserves(
   const runAdapter = createReserveAdapterRunner({
     signal,
     adapterCtx: effectiveAdapterCtx,
+    adapterTimeoutMs: budgetConfig.adapterTimeoutMs,
   });
   const queueResult = await runReserveCoinQueue({
     db,
@@ -408,6 +446,7 @@ export async function syncLiveReserves(
     runStartedMs,
     runAdapter,
     syncStates,
+    budgetConfig,
     reportProgress,
   });
 
@@ -416,6 +455,7 @@ export async function syncLiveReserves(
     total,
     runStartedAt,
     reportProgress,
+    budgetConfig,
     ...queueResult,
   });
 }

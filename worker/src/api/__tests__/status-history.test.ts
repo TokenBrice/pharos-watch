@@ -74,6 +74,7 @@ describe("handleStatusHistory", () => {
       probe: { status: string; sampleCount: number };
       discrepancy: { hasDivergence: boolean };
       transitions: Array<{ id: number; transitionType: string }>;
+      reserveComposition: { deferredCoins: number; runBudgetTruncated: boolean } | null;
     };
 
     expect(body.state?.currentStatus).toBe("healthy");
@@ -81,6 +82,10 @@ describe("handleStatusHistory", () => {
     expect(body.probe.sampleCount).toBe(10);
     expect(body.discrepancy.hasDivergence).toBe(false);
     expect(body.transitions[0]?.transitionType).toBe("recover");
+    expect(body.reserveComposition).toMatchObject({
+      deferredCoins: 0,
+      runBudgetTruncated: false,
+    });
   });
 
   it("applies from/to transition filters when provided", async () => {

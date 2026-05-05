@@ -8,6 +8,9 @@ import {
 } from "../lib/status-reliability";
 import type { StatusHistoryResponse } from "@shared/types/status";
 import { runAdminRoute } from "../lib/route-wrappers";
+import { computeReserveCompositionOverview } from "../lib/live-reserves-store";
+import { emptyReserveComposition } from "../lib/status/derived-data";
+import { deriveReserveCompositionStatus } from "../lib/status/evaluation-state";
 
 function parseTimeParam(value: string | null): number | null {
   if (!value) return null;
@@ -49,15 +52,35 @@ export function handleStatusHistory(
       if (parsed instanceof Response) return parsed;
       const { limit } = parsed;
 
-      const [{ state, staleness }, probe, streak, transitions] = await Promise.all([
+      const [{ state, staleness }, probe, streak, transitions, reserveOverviewResult] = await Promise.all([
         getStatusStateSnapshot(db, now),
         getLatestStatusProbe(db),
         getDiscrepancyStreak(db),
         listRecentStatusTransitions(db, limit, { from, to }),
+        computeReserveCompositionOverview(db, now)
+          .then((overview) => ({ ok: true as const, overview }))
+          .catch((error) => {
+            console.warn("[status-history] Reserve composition overview unavailable:", error);
+            return { ok: false as const };
+          }),
       ]);
 
       const overall = state?.currentStatus ?? "healthy";
       const discrepancy = buildDiscrepancy(overall, probe, now, streak);
+      const reserveComposition = reserveOverviewResult.ok
+        ? (() => {
+            const reserveAssessment = deriveReserveCompositionStatus({
+              ...emptyReserveComposition(),
+              ...reserveOverviewResult.overview,
+            });
+            return {
+              ...reserveOverviewResult.overview,
+              status: reserveAssessment.status,
+              freshCoverageRatio: reserveAssessment.freshCoverageRatio,
+              authoritativeFreshCoverageRatio: reserveAssessment.authoritativeFreshCoverageRatio,
+            };
+          })()
+        : null;
 
       const body: StatusHistoryResponse = {
         timestamp: now,
@@ -66,6 +89,7 @@ export function handleStatusHistory(
         probe,
         discrepancy,
         transitions,
+        reserveComposition,
       };
 
       return jsonResponse(body, { noStore: true });

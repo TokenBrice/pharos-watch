@@ -20,6 +20,8 @@ function makeReserveComposition(
     weakProbeFresh: 2,
     writeTimeoutUncertain: 0,
     deferredCoins: 0,
+    runBudgetTruncated: false,
+    deferredAt: null,
     nextCursorStablecoinId: null,
     persistentlyStaleIndependentCoins: [],
     lastSuccessAt: 1_700_000_000,

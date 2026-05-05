@@ -125,6 +125,8 @@ export interface ReserveCompositionOverview {
   weakProbeFresh: number;
   writeTimeoutUncertain: number;
   deferredCoins: number;
+  runBudgetTruncated: boolean;
+  deferredAt: number | null;
   nextCursorStablecoinId: string | null;
   /**
    * Coins whose adapter is classified as `independent` but whose latest source
