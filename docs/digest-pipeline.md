@@ -22,7 +22,7 @@ Each digest has four fields produced by the LLM:
 | `title` | 2–6 word punchy headline | — |
 | `text` | Tweet-sized distillation of the day's key take | ≤270 chars combined with title |
 | `extended` | 3–4 short paragraphs of editorial analysis | 150–280 words target |
-| `meta` | Editorial choice metadata for variety enforcement | `{ lead, tone, coins }` |
+| `meta` | Editorial choice metadata for variety enforcement and audit | `{ leadSignalId, lead, tone, coins, usedCandidateIds, suppressedCandidateIds }` |
 
 ---
 
@@ -58,12 +58,22 @@ The cron assembles a `DigestInputData` object from the collector set below befor
 | Cross-day trends | `daily_digest` (archived input_data) | 7-day trajectories for PSI score/band, total mcap, and Bank Run Gauge; requires >=3 days of history |
 | Data quality | collector status + window metadata | Degraded collectors, cache age, PSI source time, mint/burn and blacklist windows |
 | Recent digests | last 7 non-weekly rows from `daily_digest` | Passed to LLM to enforce daily variety |
+| Digest intelligence | current `DigestInputData` + latest archived `input_data` | Deterministic risk tape, what changed since yesterday, prior next-trigger outcomes, next triggers, calm-day frame, and editorial audit |
 
 `DigestInputData` is defined in `shared/types/digest.ts` (re-exported via `shared/types/index.ts`) and imported by the digest cron, digest snapshot API, and frontend snapshot hook.
 
 Four additional optional fields were added to `DigestInputData` in the v2 refinement: `mintBurnFlows`, `dewsStress`, `historicalContext`, and `gradeTransitions`. All are populated only when their source data exists — the LLM writes from what's available.
 
 A further enrichment pass added four more optional fields: `psiContributors`, `yieldAnomalies`, `liquidityShifts`, and `crossDayTrends`. All are populated only when their source data exists.
+
+The digest intelligence pass runs after editorial candidates are built and before the LLM prompt is assembled. It adds:
+
+- `riskTape`: compact reader-facing state for PSI, active depegs, Bank Run Gauge, DEWS, and the largest supply mover.
+- `changeSummary`: deterministic "what changed since yesterday" buckets (`newSignals`, `worsenedSignals`, `improvedSignals`, `resolvedSignals`, `repeatedSignals`) derived from the previous archived input.
+- `forwardLookOutcomes`: evaluation of yesterday's `nextTriggers` against today's input (`hit`, `missed`, `pending`).
+- `nextTriggers`: structured threshold checks the next digest can evaluate, such as depeg bps, supply velocity, DEWS band, Bank Run Gauge, or PSI thresholds.
+- `calmNarrativeFrame`: a fallback editorial frame for calm regimes so quiet days can explain what changed, what did not happen, and what would make the next day less calm.
+- `editorialAudit`: added after the LLM response is parsed; stores top/usable/suppressed/momentum candidate ids, required lead ids, declared `leadSignalId`, used candidate ids, and quality issue codes.
 
 Safety score computation is shared with the yield cron via `worker/src/lib/safety-scores.ts` (`computeSafetyScoresSnapshot()`), so grade lookups use one canonical scoring path.
 
@@ -81,8 +91,11 @@ The digest's Flight-to-Quality collector now uses `buildFlightToQualityClassific
 - **Priority rule:** lead from the highest-impact unsuppressed editorial candidate. Raw evidence sections are supporting material, not the lead-selection source.
 - **Critical depeg override:** active depegs at or above 2,500 bps on at least $50M mcap, or 5,000 bps on at least $10M mcap, bypass stale/chronic suppression and create a hard lead-validation requirement. If Opus declares another `leadSignalId`, the quality gate retries and then blocks external delivery if unresolved.
 - **Momentum candidates:** a separate in-prompt block surfaces candidates with `novelty ∈ {new, accelerating, reversal}` so the model has explicit forward-watch material upstream of the regex-based forward-look validator.
+- **Deterministic next triggers:** the prompt receives `nextTriggers` with concrete thresholds. The model should use one for the required forward-look line instead of writing vague "watch this" closers.
+- **Change/outcome context:** the prompt receives `changeSummary` plus `forwardLookOutcomes`, allowing the digest to say what changed since yesterday and whether prior forward-look checks hit, missed, or remain pending.
 - **Opening rule:** the first sentence of the extended field must surface a fact from the lead candidate (coin/number), not a templated PSI verb. Opening-fingerprint validator blocks PSI-verb openings that repeat within the last 3 digests.
 - **Forward-look mandate:** every digest must contain at least one anticipatory line (if/when/next-trigger/watch-for); a soft validator rejects retrospective-only digests.
+- **Calm-day storytelling:** in CALM regimes without a critical lead, the prompt uses `calmNarrativeFrame` to frame documented quiet, supply rotation, issuer concentration, liquidity divergence, chronic risk boundaries, or explicit non-events without manufacturing menace.
 - **Spice budget:** the prompt allows one sharp sentence per digest (named analogy, historical parallel, concrete-stakes observation, or ironic contrast); over-reach is discouraged by the forbidden-tic list.
 - **Artifact policy:** candidates can be marked high-risk or suppressed for chronic small depegs, zero-value blacklist bursts, thin-liquidity artifacts, very high APY anomalies, or other weak evidence. The prompt explicitly tells Opus not to dramatize these.
 - **Regime classification:** a `classifyRegime()` function labels each day as CRISIS, TENSION, WATCHFUL, or CALM based on PSI band, impact-weighted active depeg pressure, gauge score, FTQ status, and ALERT+ mcap rather than raw coin counts alone.
@@ -128,7 +141,7 @@ CREATE TABLE daily_digest (
 CREATE INDEX idx_daily_digest_generated_at ON daily_digest(generated_at);
 ```
 
-The full `input_data` JSON is stored verbatim so detail pages can reconstruct the contextual snapshot for any historical date without re-fetching live data. When one of the early collectors fails, `input_data.degradedSources` records the failed collector keys (`active-depegs-query`, `blacklist-activity-query`, `supply-velocity-query`, etc.).
+The full `input_data` JSON is stored verbatim so detail pages can reconstruct the contextual snapshot for any historical date without re-fetching live data. It includes the deterministic intelligence fields listed above when generated by the current pipeline. When one of the early collectors fails, `input_data.degradedSources` records the failed collector keys (`active-depegs-query`, `blacklist-activity-query`, `supply-velocity-query`, etc.).
 
 The `digest_meta` column stores structured metadata about editorial choices (lead signal, tone, featured coins) for variety enforcement across consecutive digests. Older rows with `NULL` `digest_meta` fall back to raw text comparison.
 
@@ -140,8 +153,8 @@ Read endpoints are public, but they do not all share the same cache profile: `GE
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/daily-digest` | Latest digest only, with a compact `riskSignal` when active depeg context exists |
-| `GET /api/digest-archive` | All digests, newest first (up to 365), including compact PSI/mcap/risk summaries parsed from stored input data |
+| `GET /api/daily-digest` | Latest digest only, with compact `riskSignal`, `riskTape`, change/outcome summaries, and structured next triggers when stored input data has them |
+| `GET /api/digest-archive` | All digests, newest first (up to 365), including compact PSI/mcap/risk summaries plus stored `riskTape`, `nextTriggers`, and forward-look outcomes parsed from input data |
 | `GET /api/digest-snapshot?date=YYYY-MM-DD` | Input data + depeg/blacklist context for a daily digest date — used by SSG detail pages; cached as archive data (`s-maxage=86400, max-age=3600`) |
 | `GET /api/digest-snapshot?date=YYYY-MM-DD-weekly` | Input data for a weekly recap slug; the handler strips `-weekly` for date parsing and returns the weekly snapshot when that digest row exists |
 | `POST /api/trigger-digest` *(admin)* | **Deferred**: writes a `digest:force-run-request` flag into the D1 `cache` table and returns 202. A dedicated `*/5 * * * *` polling cron (`digestTriggerPoll`) runs the digest under scheduled-event wall-clock (up to 15 min) and persists outcome to `digest:last-trigger-result`. Expected latency: ≤ 5 min. Requires Access service-token headers on `ops-api.pharos.watch`. See [`worker-and-api-limits.md`](./worker-and-api-limits.md#manual-trigger-runtime-model) for the rationale. |
@@ -292,7 +305,7 @@ Posted to Telegram only (no Twitter for weekly recaps). Title is prefixed with "
 The latest digest is presented in a broadsheet newspaper style:
 - **Masthead:** compact uppercase lockup with the full date; the homepage preview uses a slightly sharper mono masthead treatment than the archive broadsheet
 - **Headline:** the homepage preview uses `Newsreader` at a larger newspaper-style display scale, while the full `/digest/` broadsheet keeps the original serif headline treatment
-- **Risk badge:** when `/api/daily-digest` exposes an active depeg `riskSignal`, the broadsheet renders a compact depeg badge near the headline so a truncated first paragraph cannot hide the risk state
+- **Risk badge + tape:** when `/api/daily-digest` exposes an active depeg `riskSignal`, the broadsheet renders a compact depeg badge near the headline so a truncated first paragraph cannot hide the risk state. New rows also render the `riskTape` chips and a compact next-trigger line in preview mode.
 - **Body:** Extended text paragraphs in italic Courier-style monospace (`EDITORIAL_BODY_STYLE`). On the homepage and `/digest/` archive preview, only the first editorial paragraph is shown as a teaser; the paragraph is preserved whole and never character-clamped mid-sentence. Digest detail pages show the full editorial body.
 - **Homepage preview split:** desktop uses an asymmetric two-column layout with a hairline `Executive Summary` label and headline block on the left, then the lead paragraph plus CTA rail on the right
 
@@ -325,7 +338,7 @@ The archive route also emits server-rendered digest links for crawlability plus 
 
 Daily detail pages use slugs like `/digest/2026-03-24/`. Weekly recap pages use `/digest/2026-03-24-weekly/`; the archive client builds those slugs from `digestType === "weekly"` and the snapshot API accepts the matching `?date=YYYY-MM-DD-weekly` query. The snapshot API filters target rows by requested type, so daily and weekly rows generated on the same UTC date cannot shadow each other.
 
-Each detail page shows the short summary intro (`text`) followed by every extended editorial paragraph plus up to 10 data-dependent contextual cards (Market Snapshot, Stability Index, Supply Mover, Active Depegs, Blacklist Activity, Safety Scores, Yield Anomalies, DEX Liquidity Shifts, Supply Velocity, Resolved Depegs). The Active Depegs card uses `/api/digest-snapshot` depeg episodes active on that date, ordered by absolute deviation, with stored `input_data.topDepegs` only as fallback. If snapshot context fails or has no usable input data, the page renders a small unavailable-state card instead of silently dropping the section. Includes JSON-LD Article structured data and prev/next navigation.
+Each detail page shows the short summary intro (`text`) followed by every extended editorial paragraph plus a deterministic intelligence panel and up to 10 data-dependent contextual cards (Market Snapshot, Stability Index, Supply Mover, Active Depegs, Blacklist Activity, Safety Scores, Yield Anomalies, DEX Liquidity Shifts, Supply Velocity, Resolved Depegs). The intelligence panel renders `riskTape`, yesterday's trigger outcomes, "what changed", and next triggers when present in stored `input_data`. The Active Depegs card uses `/api/digest-snapshot` depeg episodes active on that date, ordered by absolute deviation, with stored `input_data.topDepegs` only as fallback. If snapshot context fails or has no usable input data, the page renders a small unavailable-state card instead of silently dropping the section. Includes JSON-LD Article structured data and prev/next navigation.
 
 ---
 
@@ -379,6 +392,7 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Telegram delivery i
 | `worker/src/api/daily-digest.ts` | `GET /api/daily-digest` handler |
 | `worker/src/api/digest-archive.ts` | `GET /api/digest-archive` handler |
 | `worker/src/api/digest-risk-summary.ts` | Shared API helper for extracting compact archive/latest digest risk signals from stored input JSON |
+| `worker/src/api/digest-intelligence-summary.ts` | Shared API helper for extracting stored digest intelligence fields from input JSON |
 | `worker/src/api/digest-snapshot.ts` | `GET /api/digest-snapshot` handler |
 | `worker/src/handlers/scheduled.ts` | Thin cron-expression dispatcher for scheduled slots |
 | `worker/src/handlers/scheduled/daily-0805.ts` | Daily 08:05 slot runner: `sync-bluechip`, `daily-digest` -> `weekly-recap`, and `discovery-scan` |
@@ -387,6 +401,7 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Telegram delivery i
 | `worker/src/lib/env.ts` | `Env` interface used by fetch/scheduled handlers |
 | `worker/migrations/0000_baseline.sql` | Baseline `daily_digest` schema, including the historical title/extended/meta additions |
 | `src/components/daily-digest.tsx` | Broadsheet component (shared: homepage + archive page) |
+| `src/components/digest-intelligence.tsx` | Risk tape, change/outcome, and next-trigger panel shared by latest digest and archive snapshots |
 | `src/components/digest-archive-client.tsx` | Archive page: broadsheet + wire table with month picker |
 | `src/components/digest-snapshot.tsx` | Date-specific data cards (up to 10 categories) |
 | `src/app/digest/page.tsx` | Archive page route shell (static export) |

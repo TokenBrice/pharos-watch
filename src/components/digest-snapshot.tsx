@@ -1,6 +1,7 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { DigestIntelligencePanel } from "@/components/digest-intelligence";
 import { useDigestSnapshot } from "@/hooks/api-hooks";
 import { formatCurrency, formatAddress, formatPercentChange, formatScore } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, PSI_BORDER_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
@@ -156,6 +157,13 @@ export function DigestSnapshot({ date }: { date: string }) {
       <p className="pharos-kicker">
         The data behind this digest
       </p>
+
+      <DigestIntelligencePanel
+        changeSummary={inputData.changeSummary}
+        nextTriggers={inputData.nextTriggers}
+        forwardLookOutcomes={inputData.forwardLookOutcomes}
+        riskTape={inputData.riskTape}
+      />
 
       <div className="grid gap-3 sm:grid-cols-2">
         {/* 1. Market Snapshot — always shown */}

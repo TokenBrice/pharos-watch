@@ -4,20 +4,14 @@ import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { SECONDS } from "../lib/time-constants";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { getCache, setCache } from "../lib/db-cache";
-import {
-  prepareTelegramDigestAppendices,
-  type PreparedTelegramDigestAppendices,
-} from "../lib/telegram-digest-appendices";
+import { prepareTelegramDigestAppendices, type PreparedTelegramDigestAppendices } from "../lib/telegram-digest-appendices";
 import { buildDailyDigestInput } from "./daily-digest/input";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";
-import {
-  insertDigestRecord,
-  requestDigestCopy,
-  runDigestChannelDelivery,
-} from "./digest/platform";
+import { insertDigestRecord, requestDigestCopy, runDigestChannelDelivery } from "./digest/platform";
 import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildCriticalDailyLeadRequirements } from "./daily-digest/critical-lead-requirements";
+import { attachDigestEditorialAudit } from "./daily-digest/digest-intelligence";
 
 export { classifyRegime } from "./daily-digest/prompt";
 
@@ -74,6 +68,7 @@ export async function generateDailyDigest(
     };
   }
   const userPromptContent = buildUserPrompt(inputData, recentMeta);
+  const leadRequirements = buildCriticalDailyLeadRequirements(inputData);
 
   logDailyDigestLlmCall({
     activeDepegCount: llmSignals.activeDepegCount,
@@ -100,20 +95,21 @@ export async function generateDailyDigest(
         title: entry.title,
         rawText: entry.rawText,
       })),
-      leadRequirements: buildCriticalDailyLeadRequirements(inputData),
+      leadRequirements,
     },
   });
   if (digestCopy.kind === "circuit-open") {
     throw new Error("Anthropic circuit open — skipping LLM call");
   }
 
+  const storedInputData = attachDigestEditorialAudit({ inputData, digestMeta: digestCopy.digestMeta, qualityIssues: digestCopy.qualityIssues, leadRequirements });
   const now = Math.floor(Date.now() / 1000);
   await insertDigestRecord({
     db,
     generatedAt: now,
     digestText: digestCopy.digestText,
     digestTitle: digestCopy.digestTitle || null,
-    inputData,
+    inputData: storedInputData,
     digestExtended: digestCopy.digestExtended || null,
     digestMeta: digestCopy.digestMeta,
   });

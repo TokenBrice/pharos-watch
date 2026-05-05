@@ -1193,7 +1193,23 @@ Latest AI-generated market summary, produced daily at 08:05 UTC via the Claude A
     "severity": "critical",
     "activeCount": 7,
     "date": null
-  }
+  },
+  "riskTape": [
+    { "id": "risk-tape:depegs", "label": "Depegs", "value": "PMUSD 5284bps", "tone": "critical" }
+  ],
+  "nextTriggers": [
+    {
+      "id": "trigger:depeg:pmusd",
+      "label": "PMUSD depeg widening",
+      "metric": "depeg-bps",
+      "comparator": "abs-gte",
+      "thresholdLabel": "5500 bps off peg",
+      "thresholdValue": 5500,
+      "symbol": "PMUSD",
+      "rationale": "A wider deviation raises severity.",
+      "detail": "If PMUSD reaches 5500 bps off peg, severity rises."
+    }
+  ]
 }
 ```
 
@@ -1207,6 +1223,10 @@ If no digest exists yet, the endpoint returns only `{ "digest": null }`.
 | `generatedAt`    | `number`         | Unix seconds when this digest was generated (present only when `digest` is non-null) |
 | `editionNumber`  | `number \| null` | Sequential daily digest number (present only when `digest` is non-null)              |
 | `riskSignal`     | `DigestRiskSignal \| null` | Compact active-depeg risk summary parsed from stored digest input data      |
+| `changeSummary`  | `DigestChangeSummary \| null` | Deterministic "what changed since yesterday" summary parsed from stored digest input data |
+| `nextTriggers`   | `DigestNextTrigger[] \| null` | Structured forward-looking threshold checks for tomorrow's digest |
+| `forwardLookOutcomes` | `DigestForwardLookOutcome[] \| null` | Evaluation of the previous digest's next triggers against the latest input |
+| `riskTape`       | `DigestRiskTapeItem[] \| null` | Compact reader-facing risk state chips parsed from stored digest input data |
 
 ---
 
@@ -1238,6 +1258,22 @@ Newest-first archive of up to 365 daily and weekly digests.
         "activeCount": 7,
         "date": "2026-05-05"
       },
+      "riskTape": [
+        { "id": "risk-tape:depegs", "label": "Depegs", "value": "PMUSD 5284bps", "tone": "critical" }
+      ],
+      "nextTriggers": [
+        {
+          "id": "trigger:depeg:pmusd",
+          "label": "PMUSD depeg widening",
+          "metric": "depeg-bps",
+          "comparator": "abs-gte",
+          "thresholdLabel": "5500 bps off peg",
+          "thresholdValue": 5500,
+          "symbol": "PMUSD",
+          "rationale": "A wider deviation raises severity.",
+          "detail": "If PMUSD reaches 5500 bps off peg, severity rises."
+        }
+      ],
       "digestType": "daily",
       "editionNumber": 214
     }
@@ -1257,6 +1293,9 @@ Each element uses `digestText` (note: differs from the singular `/api/daily-dige
 | `psiBand`        | `string \| null` | PSI condition band parsed from archived digest input data   |
 | `totalMcapUsd`   | `number \| null` | Ecosystem market cap parsed from archived digest input data |
 | `riskSignal`     | `DigestRiskSignal \| null` | Compact active-depeg risk summary parsed from archived digest input data |
+| `nextTriggers`   | `DigestNextTrigger[] \| null` | Structured forward-looking threshold checks parsed from archived digest input data |
+| `forwardLookOutcomes` | `DigestForwardLookOutcome[] \| null` | Evaluation of the previous digest's next triggers parsed from archived digest input data |
+| `riskTape`       | `DigestRiskTapeItem[] \| null` | Compact risk-state chips parsed from archived digest input data |
 | `digestType`     | `"daily" \| "weekly"` | Digest cadence for this archived entry                 |
 | `editionNumber`  | `number`         | Sequential edition number within that digest cadence        |
 
@@ -1271,6 +1310,21 @@ Each element uses `digestText` (note: differs from the singular `/api/daily-dige
 | `severity`    | `"critical" \| "watch"` | `"critical"` at ≥2,500 bps and ≥$50M mcap, or ≥5,000 bps and ≥$10M mcap          |
 | `activeCount` | `number`               | Active depeg count from the stored digest input, when available                     |
 | `date`        | `string \| null`       | Daily input date for weekly archive entries; `null` for latest daily responses      |
+
+**Digest intelligence fields**
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `DigestRiskTapeItem.id` | `string` | Stable identifier for the displayed tape item |
+| `DigestRiskTapeItem.label` | `string` | Short label such as `PSI`, `Depegs`, `Gauge`, `DEWS`, or `Supply` |
+| `DigestRiskTapeItem.value` | `string` | Already formatted compact value for display |
+| `DigestRiskTapeItem.tone` | `"critical" \| "warning" \| "neutral" \| "positive"` | Presentation severity |
+| `DigestRiskTapeItem.detail` | `string` | Optional supporting detail |
+| `DigestNextTrigger.metric` | `"depeg-bps" \| "supply-1d-usd" \| "supply-7d-usd" \| "bank-run-gauge" \| "dews-band" \| "psi-score"` | Metric that the next daily input can evaluate |
+| `DigestNextTrigger.comparator` | `"abs-gte" \| "gte" \| "lte" \| "band-gte"` | Comparison operator for `thresholdValue` |
+| `DigestNextTrigger.thresholdLabel` | `string` | Display string for the threshold |
+| `DigestForwardLookOutcome.status` | `"hit" \| "missed" \| "pending"` | Whether the prior trigger fired, failed, or still needs more data |
+| `DigestChangeSummary.*Signals` | `array` | Buckets of signal changes, each with `id`, `label`, `kind`, `symbols`, and `detail` |
 
 ---
 
@@ -1301,7 +1355,7 @@ Contextual data snapshot for a specific digest date — includes the digest's in
 | Field             | Type             | Description                                                         |
 | ----------------- | ---------------- | ------------------------------------------------------------------- |
 | `date`            | `string`         | The requested date                                                  |
-| `inputData`       | `object \| null` | Digest input data (mcap, depegs, supply changes, PSI) for this date |
+| `inputData`       | `object \| null` | Digest input data (mcap, depegs, supply changes, PSI, digest intelligence fields) for this date |
 | `prevInputData`   | `object \| null` | Previous day's input data for delta computation                     |
 | `depegEvents`     | `array`          | Up to 20 depeg events active on that date, ordered by severity      |
 | `blacklistEvents` | `array`          | Up to 50 blacklist events on that date                              |

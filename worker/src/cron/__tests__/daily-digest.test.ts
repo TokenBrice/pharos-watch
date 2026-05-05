@@ -160,6 +160,7 @@ import {
   collectSupplyVelocity,
   type CollectorContext,
 } from "../daily-digest/collectors";
+import { buildDigestIntelligence } from "../daily-digest/digest-intelligence";
 import type { DigestInputData } from "@shared/types/digest";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
@@ -439,11 +440,20 @@ describe("generateDailyDigest", () => {
       activeDepegCount: number;
       topDepegs: Array<{ symbol: string; bps: number }>;
       editorialCandidates?: unknown[];
+      riskTape?: unknown[];
+      nextTriggers?: unknown[];
+      calmNarrativeFrame?: { label: string };
+      editorialAudit?: { leadCandidateId?: string | null; usedCandidateIds?: string[] };
     };
     expect(storedInput.totalMcapUsd).toBe(160_000_000);
     expect(storedInput.activeDepegCount).toBe(1);
     expect(storedInput.topDepegs[0]).toMatchObject({ symbol: "USDT", bps: 150, mcapUsd: 100_000_000 });
     expect(storedInput.editorialCandidates?.length).toBeGreaterThan(0);
+    expect(storedInput.riskTape?.length).toBeGreaterThan(0);
+    expect(storedInput.nextTriggers?.length).toBeGreaterThan(0);
+    expect(storedInput.calmNarrativeFrame?.label).toBeTruthy();
+    expect(storedInput.editorialAudit?.leadCandidateId).toBe("depeg:usdt-tether:active");
+    expect(storedInput.editorialAudit?.usedCandidateIds).toEqual(["depeg:usdt-tether:active"]);
 
     expect(postDigestTweet).toHaveBeenCalledTimes(1);
     expect(postDigestToTelegram).toHaveBeenCalledTimes(1);
@@ -478,6 +488,9 @@ describe("generateDailyDigest", () => {
     expect(anthropicBody.stream).toBe(true);
     expect(anthropicBody.messages[0].content).toContain("Data quality notes:");
     expect(anthropicBody.messages[0].content).toContain("Editorial Candidates");
+    expect(anthropicBody.messages[0].content).toContain("Risk Tape");
+    expect(anthropicBody.messages[0].content).toContain("Deterministic Next Triggers");
+    expect(anthropicBody.messages[0].content).toContain("Calm Narrative Frame");
 
     const systemPrompt = anthropicBody.system;
     expect(systemPrompt).toContain("Do NOT reuse any of the following house-style tics");
@@ -487,6 +500,7 @@ describe("generateDailyDigest", () => {
     expect(systemPrompt).toContain("EXEMPLAR");
     expect(systemPrompt).toContain("Momentum Candidate");
     expect(systemPrompt).toContain("total-mcap ATH");
+    expect(systemPrompt).toContain("CALM-DAY STORYTELLING");
 
     const userPrompt = anthropicBody.messages[0].content;
     expect(userPrompt).not.toContain("Distribution: median");
@@ -1219,6 +1233,78 @@ describe("momentum candidates surface", () => {
       messages: { content: string }[];
     };
     expect(body.messages[0].content).toContain("Momentum Candidates");
+  });
+});
+
+describe("digest intelligence enrichment", () => {
+  const current: DigestInputData = {
+    totalMcapUsd: 160_000_000,
+    mcap7dDelta: 3_000_000,
+    activeDepegCount: 1,
+    topDepegs: [{ stablecoinId: "usdt-tether", symbol: "USDT", bps: -175, direction: "below", mcapUsd: 100_000_000 }],
+    biggestSupplyChange: { id: "usdc-circle", symbol: "USDC", name: "USD Coin", changeUsd: 40_000_000, currentMcap: 60_000_000 },
+    stabilityIndex: { score: 88, band: "STEADY", components: { severity: 4, breadth: 2, trend: -1 } },
+    yesterdayIndex: { score: 90, band: "BEDROCK" },
+    supplyVelocity: [{ coin: "USDC", change1d: 12_000_000, change7d: 40_000_000, signal: "accelerating" }],
+    editorialCandidates: [
+      {
+        id: "depeg:usdt-tether:active",
+        kind: "depeg",
+        title: "USDT active 175 bps below peg",
+        symbols: ["USDT"],
+        impactScore: 17.5,
+        novelty: "worsening",
+        confidence: "high",
+        artifactRisk: "low",
+        headlineFacts: ["175 bps below peg", "$100M market cap"],
+        whyItMatters: "Active peg stress is reader-relevant.",
+      },
+      {
+        id: "supply:usdc:accelerating",
+        kind: "supply",
+        title: "USDC supply accelerating",
+        symbols: ["USDC"],
+        impactScore: 12,
+        novelty: "accelerating",
+        confidence: "high",
+        artifactRisk: "low",
+        headlineFacts: ["+$12M in 1d"],
+        whyItMatters: "Supply velocity shows allocation.",
+      },
+    ],
+  };
+
+  it("builds risk tape, next triggers, changes, and prior-trigger outcomes", () => {
+    const previous: DigestInputData = {
+      ...current,
+      dataQuality: { generatedAt: 1_772_668_800, stablecoinsCacheUpdatedAt: null, stablecoinsCacheAgeSec: null, windows: current.dataQuality?.windows ?? {
+        blacklistActivity: { label: "x", start: 0, end: 0 },
+        mintBurnFlows: { label: "x", start: 0, end: 0 },
+        supplyVelocity: { label: "x", dates: [] },
+        psi: { label: "x", sampleAt: null, dailySnapshotAt: null },
+      } },
+      topDepegs: [{ stablecoinId: "usdt-tether", symbol: "USDT", bps: -100, direction: "below", mcapUsd: 100_000_000 }],
+      stabilityIndex: { score: 91, band: "BEDROCK", components: { severity: 2, breadth: 1, trend: 0 } },
+      nextTriggers: [{
+        id: "trigger:depeg:usdt",
+        label: "USDT depeg widening",
+        metric: "depeg-bps",
+        comparator: "abs-gte",
+        thresholdValue: 125,
+        thresholdLabel: "125 bps off peg",
+        symbol: "USDT",
+        rationale: "A wider deviation raises severity.",
+        detail: "If USDT reaches 125 bps off peg, severity rises.",
+      }],
+    };
+
+    const intelligence = buildDigestIntelligence(current, previous);
+
+    expect(intelligence.riskTape?.some((item) => item.id === "risk-tape:depegs")).toBe(true);
+    expect(intelligence.nextTriggers?.[0]).toMatchObject({ metric: "depeg-bps", symbol: "USDT" });
+    expect(intelligence.changeSummary?.worsenedSignals[0]).toMatchObject({ label: "USDT depeg widened" });
+    expect(intelligence.forwardLookOutcomes?.[0]).toMatchObject({ status: "hit", triggerId: "trigger:depeg:usdt" });
+    expect(intelligence.calmNarrativeFrame?.label).toBe("Supply rotation");
   });
 });
 

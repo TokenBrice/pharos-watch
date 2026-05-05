@@ -5,10 +5,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDailyDigest } from "@/hooks/api-hooks";
 import { getDigestBodyParagraphs, EDITORIAL_BODY_STYLE } from "@/lib/digest";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { DigestIntelligencePanel } from "@/components/digest-intelligence";
 import { digestDisplay } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
-import type { DigestRiskSignal } from "@shared/types";
+import type {
+  DigestChangeSummary,
+  DigestForwardLookOutcome,
+  DigestNextTrigger,
+  DigestRiskSignal,
+  DigestRiskTapeItem,
+} from "@shared/types";
 
 function formatMasthead(ts: number): string {
   return new Date(ts * 1000).toLocaleDateString("en-US", {
@@ -51,6 +58,10 @@ interface DigestFullDisplayProps {
   ctaHref?: string;
   ctaLabel?: string;
   riskSignal?: DigestRiskSignal | null;
+  changeSummary?: DigestChangeSummary | null;
+  nextTriggers?: DigestNextTrigger[] | null;
+  forwardLookOutcomes?: DigestForwardLookOutcome[] | null;
+  riskTape?: DigestRiskTapeItem[] | null;
 }
 
 function parseDigestParagraph(paragraph: string): { headerText: string | null; bodyText: string } {
@@ -90,7 +101,19 @@ function DigestParagraphList({ paragraphs, getParagraphClassName }: DigestParagr
   );
 }
 
-export function DigestFullDisplay({ label, dateString, title, paragraphs, ctaHref, ctaLabel, riskSignal }: DigestFullDisplayProps) {
+export function DigestFullDisplay({
+  label,
+  dateString,
+  title,
+  paragraphs,
+  ctaHref,
+  ctaLabel,
+  riskSignal,
+  changeSummary,
+  nextTriggers,
+  forwardLookOutcomes,
+  riskTape,
+}: DigestFullDisplayProps) {
   return (
     <div className="animate-in fade-in duration-300 mx-auto max-w-[68ch]">
       <div className="border-t border-b border-border py-3 text-left">
@@ -105,6 +128,12 @@ export function DigestFullDisplay({ label, dateString, title, paragraphs, ctaHre
           {title}
         </h2>
         <DigestRiskSignalPill signal={riskSignal} />
+        <DigestIntelligencePanel
+          changeSummary={changeSummary}
+          nextTriggers={nextTriggers}
+          forwardLookOutcomes={forwardLookOutcomes}
+          riskTape={riskTape}
+        />
 
         <DigestParagraphList
           paragraphs={paragraphs}
@@ -191,6 +220,10 @@ export function DailyDigest({ variant = "full", detailHref }: DailyDigestProps) 
         title={data?.digestTitle || "Signal & Noise"}
         paragraphs={visibleParagraphs}
         riskSignal={data?.riskSignal}
+        changeSummary={data?.changeSummary}
+        nextTriggers={data?.nextTriggers}
+        forwardLookOutcomes={data?.forwardLookOutcomes}
+        riskTape={data?.riskTape}
       />
     );
   }
@@ -259,6 +292,11 @@ export function DailyDigest({ variant = "full", detailHref }: DailyDigestProps) 
               {title}
             </h2>
             <DigestRiskSignalPill signal={data?.riskSignal} />
+            <DigestIntelligencePanel
+              compact
+              nextTriggers={data?.nextTriggers}
+              riskTape={data?.riskTape}
+            />
             {bodyBlock}
           </div>
         ) : (
@@ -278,6 +316,11 @@ export function DailyDigest({ variant = "full", detailHref }: DailyDigestProps) 
                 {title}
               </h2>
               <DigestRiskSignalPill signal={data?.riskSignal} />
+              <DigestIntelligencePanel
+                compact
+                nextTriggers={data?.nextTriggers}
+                riskTape={data?.riskTape}
+              />
             </div>
             {bodyBlock}
           </div>

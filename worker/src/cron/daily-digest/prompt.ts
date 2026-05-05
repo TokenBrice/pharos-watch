@@ -37,9 +37,15 @@ export const SYSTEM_PROMPT = [
   "- CALM: 3 paragraphs. Find the story in the stillness. Say the market is calm when it is. Do not manufacture menace.",
   "Tone defaults are suggestions. Override when the data calls for a different register.",
   "",
+  "CALM-DAY STORYTELLING.",
+  "When the regime is CALM and no critical lead exists, use the Calm Narrative Frame to make the quiet day legible.",
+  "Acceptable calm frames: documented quiet, supply rotation, issuer concentration, liquidity divergence, chronic risk boundary, or explicit non-event.",
+  "A calm digest should explain what did not happen, what still changed, and what would make tomorrow less calm.",
+  "",
   "FORWARD-LOOK MANDATE.",
   "Every digest must contain at least one forward-look line in the extended field or text hook.",
   "Acceptable forms: 'If X crosses/fails/holds next Y, it signals Z', 'Watch for W next session', 'Next trigger: Q', 'Will decide whether R'.",
+  "Use the Deterministic Next Triggers block when available; it exists to prevent vague closers.",
   "Ground it in a Momentum Candidate when possible. Retrospectives without an anticipatory line are rejected.",
   "",
   "SPICE BUDGET.",
@@ -193,6 +199,53 @@ function pushMomentumLines(lines: string[], data: DigestInputData): void {
   }
 }
 
+function pushDigestIntelligenceLines(lines: string[], data: DigestInputData): void {
+  if (data.riskTape && data.riskTape.length > 0) {
+    lines.push("", "Risk Tape (compact reader-facing state):");
+    for (const item of data.riskTape) {
+      lines.push(`  ${item.label}: ${item.value} | tone=${item.tone}${item.detail ? ` | ${item.detail}` : ""}`);
+    }
+  }
+
+  const change = data.changeSummary;
+  if (change) {
+    lines.push("", `What changed since yesterday${change.previousDate ? ` (${change.previousDate})` : ""}:`);
+    if (change.newSignals.length > 0) {
+      lines.push(`  New: ${change.newSignals.map((item) => `${item.label} (${item.detail})`).join("; ")}`);
+    }
+    if (change.worsenedSignals.length > 0) {
+      lines.push(`  Worsened: ${change.worsenedSignals.map((item) => `${item.label} (${item.detail})`).join("; ")}`);
+    }
+    if (change.improvedSignals.length > 0) {
+      lines.push(`  Improved: ${change.improvedSignals.map((item) => `${item.label} (${item.detail})`).join("; ")}`);
+    }
+    if (change.resolvedSignals.length > 0) {
+      lines.push(`  Cleared: ${change.resolvedSignals.map((item) => `${item.label} (${item.detail})`).join("; ")}`);
+    }
+    if (change.repeatedSignals.length > 0) {
+      lines.push(`  Still present: ${change.repeatedSignals.map((item) => item.label).join("; ")}`);
+    }
+  }
+
+  if (data.forwardLookOutcomes && data.forwardLookOutcomes.length > 0) {
+    lines.push("", "Yesterday's forward-look outcomes:");
+    for (const outcome of data.forwardLookOutcomes) {
+      lines.push(`  ${outcome.status.toUpperCase()}: ${outcome.label} | ${outcome.detail}`);
+    }
+  }
+
+  if (data.nextTriggers && data.nextTriggers.length > 0) {
+    lines.push("", "Deterministic Next Triggers (use one for the required forward-look line):");
+    for (const trigger of data.nextTriggers) {
+      lines.push(`  ${trigger.id} | ${trigger.label} | ${trigger.thresholdLabel} | ${trigger.detail}`);
+    }
+  }
+
+  if (data.calmNarrativeFrame) {
+    lines.push("", `Calm Narrative Frame: ${data.calmNarrativeFrame.label} | ${data.calmNarrativeFrame.detail}`);
+  }
+}
+
 export function buildUserPrompt(
   data: DigestInputData,
   recentMeta: { meta: DigestMeta | null; rawText: string | null; title: string | null }[] = [],
@@ -205,6 +258,7 @@ export function buildUserPrompt(
   pushDataQualityLines(lines, data);
   pushEditorialCandidateLines(lines, data);
   pushMomentumLines(lines, data);
+  pushDigestIntelligenceLines(lines, data);
 
   lines.push(
     "",

@@ -1,6 +1,7 @@
 import { withErrorHandler, addFreshnessHeaders, jsonResponse, safeJsonParse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { selectDigestRiskSignal } from "./digest-risk-summary";
+import { selectDigestIntelligence } from "./digest-intelligence-summary";
 
 const DAILY_FILTER = "digest_meta IS NULL OR json_extract(digest_meta, '$.type') IS NULL OR json_extract(digest_meta, '$.type') != 'weekly'";
 
@@ -21,6 +22,8 @@ export const handleDailyDigest = withErrorHandler("daily-digest", async (db: D1D
   }
 
   const editionNumber = (countResult.results?.[0] as { cnt: number } | undefined)?.cnt ?? null;
+  const inputData = safeJsonParse(row.input_data, null);
+  const intelligence = selectDigestIntelligence(inputData);
 
   return jsonResponse({
     digest: row.digest_text,
@@ -28,7 +31,8 @@ export const handleDailyDigest = withErrorHandler("daily-digest", async (db: D1D
     digestExtended: row.digest_extended ?? null,
     generatedAt: row.generated_at,
     editionNumber,
-    riskSignal: selectDigestRiskSignal(safeJsonParse(row.input_data, null)),
+    riskSignal: selectDigestRiskSignal(inputData),
+    ...intelligence,
   }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.standard,
   }, row.generated_at, 7200));

@@ -30,6 +30,7 @@ import {
 } from "./runtime-helpers";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
 import { buildEditorialCandidates } from "./editorial-candidates";
+import { buildDigestIntelligence, parseStoredDigestInput } from "./digest-intelligence";
 
 function consumeCollectorResult<T>(result: CollectorResult<T>, degradedReasons: string[]): T {
   if (result.degradedReason) {
@@ -55,13 +56,20 @@ export interface DailyDigestInputBuildResult {
 export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigestInputBuildResult> {
   const recentRows = await db
     .prepare(
-      `SELECT digest_title, digest_text, digest_extended, digest_meta
+      `SELECT digest_title, digest_text, digest_extended, digest_meta, input_data
        FROM daily_digest
        WHERE ${NON_WEEKLY_DIGEST_SQL_FILTER}
        ORDER BY generated_at DESC LIMIT 7`,
     )
-    .all<{ digest_title: string | null; digest_text: string; digest_extended: string | null; digest_meta: string | null }>();
+    .all<{
+      digest_title: string | null;
+      digest_text: string;
+      digest_extended: string | null;
+      digest_meta: string | null;
+      input_data: string | null;
+    }>();
   const recentMeta = buildRecentDigestMeta(recentRows.results ?? []);
+  const previousInputData = parseStoredDigestInput(recentRows.results?.[0]?.input_data ?? null);
   const degradedReasons: string[] = [];
 
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
@@ -258,6 +266,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       crossDayTrends,
     };
   inputData.editorialCandidates = buildEditorialCandidates(inputData);
+  Object.assign(inputData, buildDigestIntelligence(inputData, previousInputData));
 
   return {
     inputData,
