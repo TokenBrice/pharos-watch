@@ -18,7 +18,12 @@ import {
 import { isSuccessfulOutcome } from "../../lib/fetcher-result";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../../lib/redstone";
-import { loadDexPriceRows, loadDexPriceSources } from "../../lib/depeg-helpers";
+import {
+  createDexPriceSourceLoadTelemetry,
+  loadDexPriceRows,
+  loadDexPriceSources,
+  type DexPriceSourceLoadTelemetry,
+} from "../../lib/depeg-helpers";
 import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../lib/curve-onchain";
 import { CURVE_POOL_CONFIGS } from "../../lib/curve-pool-configs";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -40,6 +45,7 @@ export interface PrimaryPricePlan {
   nowSec: number;
   dexRows: PrimaryDexRows;
   dexPriceSources: PrimaryDexPriceSources;
+  dexPriceSourceTelemetry: DexPriceSourceLoadTelemetry;
   geckoIds: string[];
   pythFeedIds: Map<string, string>;
   coinbaseSymbols: string[];
@@ -106,8 +112,9 @@ export async function buildPrimaryPricePlan(
 ): Promise<PrimaryPricePlan> {
   const metaById = new Map(ACTIVE_STABLECOINS.map((meta) => [meta.id, meta]));
   const nowSec = Math.floor(Date.now() / 1000);
+  const dexPriceSourceTelemetry = createDexPriceSourceLoadTelemetry();
   const dexRows = await loadDexPriceRows(db);
-  const dexPriceSources = await loadDexPriceSources(db);
+  const dexPriceSources = await loadDexPriceSources(db, undefined, dexPriceSourceTelemetry);
 
   const coinbaseKnownSet = new Set(COINBASE_KNOWN_SYMBOLS);
   const krakenKnownSet = new Set(KRAKEN_KNOWN_SYMBOLS);
@@ -138,6 +145,7 @@ export async function buildPrimaryPricePlan(
       nowSec,
       dexRows,
       dexPriceSources,
+      dexPriceSourceTelemetry,
       geckoIds: [],
       pythFeedIds: new Map(),
       coinbaseSymbols: [],
@@ -224,6 +232,7 @@ export async function buildPrimaryPricePlan(
     nowSec,
     dexRows,
     dexPriceSources,
+    dexPriceSourceTelemetry,
     geckoIds,
     pythFeedIds,
     coinbaseSymbols,

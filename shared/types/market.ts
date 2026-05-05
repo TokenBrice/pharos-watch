@@ -10,6 +10,11 @@ import {
 } from "./core";
 
 const PegBucketsSchema = z.record(z.string(), z.number());
+const PriceSourceConfidenceProfileSchema = z.object({
+  activeDexLanes: z.number().int().min(0),
+  freshestDexLaneAgeSec: z.number().int().min(0).nullable(),
+  aggregateLaneOnly: z.boolean(),
+});
 const ChainCirculatingSchema = z.record(
   z.string(),
   z.object({
@@ -37,6 +42,7 @@ const StablecoinDataRawSchema = z.object({
   priceSyncedAt: z.number().nullable().optional(),
   consensusSources: z.array(z.string()).optional(),
   agreeSources: z.array(z.string()).optional(),
+  priceSourceConfidenceProfile: PriceSourceConfidenceProfileSchema.nullable().optional(),
   supplySource: z.string().optional(),
   circulating: PegBucketsSchema,
   circulatingPrevDay: PegBucketsSchema.nullish(),
@@ -64,6 +70,9 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   priceSyncedAt: asset.priceSyncedAt ?? null,
   consensusSources: asset.consensusSources ?? [],
   agreeSources: asset.agreeSources ?? [],
+  ...(asset.priceSourceConfidenceProfile != null
+    ? { priceSourceConfidenceProfile: asset.priceSourceConfidenceProfile }
+    : {}),
   supplySource: asset.supplySource,
   circulating: asset.circulating,
   circulatingPrevDay: asset.circulatingPrevDay ?? {},

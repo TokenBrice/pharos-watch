@@ -1,4 +1,4 @@
-import type { PriceObservedAtMode } from "@shared/types/core";
+import type { PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import type { SourcePrice } from "./price-consensus";
@@ -37,6 +37,27 @@ interface DexAggregateQuote {
   source_total_tvl: number;
 }
 
+export type PrimaryDexCandidateExclusionReason =
+  | "missing_registry_mapping"
+  | "invalid_price"
+  | "below_tvl_threshold"
+  | "lacked_corroboration";
+
+export interface PrimaryDexCandidateTelemetry {
+  stablecoinId: string;
+  symbol: string;
+  protocol: string;
+  sourceKey: string;
+  chain: string;
+  price: number | null;
+  tvl: number | null;
+  updatedAt: number | null;
+  status: "accepted" | "excluded";
+  reason?: PrimaryDexCandidateExclusionReason;
+  thresholdTvlUsd?: number;
+  divergenceThresholdBps?: number;
+}
+
 export interface DlListQuote {
   price: number;
   observedAt: number | null;
@@ -71,6 +92,8 @@ export interface PrimaryCollectedQuotes {
 export interface PrimarySourceBuildResult {
   sources: SourcePrice[];
   hasPromotedDexProtocolSource: boolean;
+  dexCandidateTelemetry: PrimaryDexCandidateTelemetry[];
+  priceSourceConfidenceProfile: PriceSourceConfidenceProfile | null;
 }
 
 function buildSourcePrice(input: {
@@ -115,10 +138,43 @@ function pricesAgreeWithinBps(left: number, right: number, thresholdBps: number)
   return (Math.abs(left - right) / mid) * 10_000 <= thresholdBps;
 }
 
+const DEX_PROTOCOL_SOURCE_MIN_TVL_USD = 50_000;
+
+function isDexSourceKey(source: string): boolean {
+  return source === "dex-promoted" || source.endsWith("-dex");
+}
+
+function buildPriceSourceConfidenceProfile(
+  sources: SourcePrice[],
+  nowSec: number | undefined,
+): PriceSourceConfidenceProfile | null {
+  const dexSources = sources.filter((source) => isDexSourceKey(source.source));
+  if (dexSources.length === 0) return null;
+
+  const protocolLaneSources = dexSources.filter((source) => source.source.endsWith("-dex"));
+  const observedAges = nowSec == null
+    ? []
+    : dexSources
+        .map((source) => source.observedAt)
+        .filter((observedAt): observedAt is number => (
+          typeof observedAt === "number" &&
+          Number.isFinite(observedAt) &&
+          observedAt > 0 &&
+          observedAt <= nowSec
+        ))
+        .map((observedAt) => nowSec - observedAt);
+
+  return {
+    activeDexLanes: protocolLaneSources.length,
+    freshestDexLaneAgeSec: observedAges.length > 0 ? Math.min(...observedAges) : null,
+    aggregateLaneOnly: dexSources.length === 1 && dexSources[0]?.source === "dex-promoted",
+  };
+}
+
 export function buildPrimarySourceCandidates(
   asset: PrimaryPriceAssetLike,
   collected: PrimaryCollectedQuotes,
-  options?: { divergenceThresholdBps?: number },
+  options?: { divergenceThresholdBps?: number; nowSec?: number },
 ): PrimarySourceBuildResult {
   const divergenceThresholdBps = options?.divergenceThresholdBps ?? DIVERGENCE_THRESHOLD_BPS;
   const sources: SourcePrice[] = [];
@@ -208,22 +264,61 @@ export function buildPrimarySourceCandidates(
     }
   }
 
-  const promotedDexProtocolSources = (collected.protocolSources ?? [])
-    .map((protocolSource) => {
-      const sourceKey = `${protocolSource.protocol}-dex`;
-      if (!getPricingSourceRegistryEntry(sourceKey)) return null;
-      return buildSourcePrice({
-        source: sourceKey,
-        price: protocolSource.price,
-        observedAt: protocolSource.updatedAt,
-        metadata: { tvl: protocolSource.tvl, chain: protocolSource.chain },
+  const dexCandidateTelemetry: PrimaryDexCandidateTelemetry[] = [];
+  const promotedDexProtocolSources: SourcePrice[] = [];
+  for (const protocolSource of collected.protocolSources ?? []) {
+    const sourceKey = `${protocolSource.protocol}-dex`;
+    const telemetryBase = {
+      stablecoinId: asset.id,
+      symbol: asset.symbol,
+      protocol: protocolSource.protocol,
+      sourceKey,
+      chain: protocolSource.chain,
+      price: Number.isFinite(protocolSource.price) ? protocolSource.price : null,
+      tvl: Number.isFinite(protocolSource.tvl) ? protocolSource.tvl : null,
+      updatedAt: Number.isFinite(protocolSource.updatedAt) ? protocolSource.updatedAt : null,
+    } satisfies Omit<PrimaryDexCandidateTelemetry, "status" | "reason">;
+
+    if (!getPricingSourceRegistryEntry(sourceKey)) {
+      dexCandidateTelemetry.push({
+        ...telemetryBase,
+        status: "excluded",
+        reason: "missing_registry_mapping",
       });
-    })
-    .filter((source): source is SourcePrice => (
-      source != null &&
-      typeof source.metadata?.tvl === "number" &&
-      Number(source.metadata.tvl) >= 50_000
-    ));
+      continue;
+    }
+
+    const source = buildSourcePrice({
+      source: sourceKey,
+      price: protocolSource.price,
+      observedAt: protocolSource.updatedAt,
+      metadata: { tvl: protocolSource.tvl, chain: protocolSource.chain },
+    });
+    if (!source) {
+      dexCandidateTelemetry.push({
+        ...telemetryBase,
+        status: "excluded",
+        reason: "invalid_price",
+      });
+      continue;
+    }
+
+    if (
+      typeof source.metadata?.tvl !== "number" ||
+      !Number.isFinite(source.metadata.tvl) ||
+      Number(source.metadata.tvl) < DEX_PROTOCOL_SOURCE_MIN_TVL_USD
+    ) {
+      dexCandidateTelemetry.push({
+        ...telemetryBase,
+        status: "excluded",
+        reason: "below_tvl_threshold",
+        thresholdTvlUsd: DEX_PROTOCOL_SOURCE_MIN_TVL_USD,
+      });
+      continue;
+    }
+
+    promotedDexProtocolSources.push(source);
+  }
 
   const hasPromotedDexProtocolSource = promotedDexProtocolSources.length > 0;
   const hardTrustTiers = new Set(["hard_market", "hard_oracle", "hard_protocol"]);
@@ -243,6 +338,39 @@ export function buildPrimarySourceCandidates(
 
   if (hasPromotedDexProtocolSource && hasDexCorroboration) {
     sources.push(...promotedDexProtocolSources);
+    for (const source of promotedDexProtocolSources) {
+      const sourceProtocol = source.source.replace(/-dex$/, "");
+      const matchingInput = (collected.protocolSources ?? []).find((entry) => entry.protocol === sourceProtocol);
+      dexCandidateTelemetry.push({
+        stablecoinId: asset.id,
+        symbol: asset.symbol,
+        protocol: sourceProtocol,
+        sourceKey: source.source,
+        chain: typeof source.metadata?.chain === "string" ? source.metadata.chain : matchingInput?.chain ?? "unknown",
+        price: source.price,
+        tvl: typeof source.metadata?.tvl === "number" ? source.metadata.tvl : matchingInput?.tvl ?? null,
+        updatedAt: source.observedAt ?? matchingInput?.updatedAt ?? null,
+        status: "accepted",
+      });
+    }
+  } else if (hasPromotedDexProtocolSource) {
+    for (const source of promotedDexProtocolSources) {
+      const sourceProtocol = source.source.replace(/-dex$/, "");
+      const matchingInput = (collected.protocolSources ?? []).find((entry) => entry.protocol === sourceProtocol);
+      dexCandidateTelemetry.push({
+        stablecoinId: asset.id,
+        symbol: asset.symbol,
+        protocol: sourceProtocol,
+        sourceKey: source.source,
+        chain: typeof source.metadata?.chain === "string" ? source.metadata.chain : matchingInput?.chain ?? "unknown",
+        price: source.price,
+        tvl: typeof source.metadata?.tvl === "number" ? source.metadata.tvl : matchingInput?.tvl ?? null,
+        updatedAt: source.observedAt ?? matchingInput?.updatedAt ?? null,
+        status: "excluded",
+        reason: "lacked_corroboration",
+        divergenceThresholdBps,
+      });
+    }
   }
 
   if (collected.dexAggregateQuote && !hasPromotedDexProtocolSource) {
@@ -263,5 +391,7 @@ export function buildPrimarySourceCandidates(
   return {
     sources,
     hasPromotedDexProtocolSource,
+    dexCandidateTelemetry,
+    priceSourceConfidenceProfile: buildPriceSourceConfidenceProfile(sources, options?.nowSec),
   };
 }

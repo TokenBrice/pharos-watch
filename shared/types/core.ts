@@ -338,6 +338,12 @@ export const PriceConfidenceSchema = z.enum(["high", "single-source", "low", "fa
 export const PriceObservedAtModeSchema = z.enum(["upstream", "local_fetch", "unknown"]);
 export const DepegPrimaryTrustSchema = z.enum(["authoritative", "confirm_required", "unusable"]);
 
+export interface PriceSourceConfidenceProfile {
+  activeDexLanes: number;
+  freshestDexLaneAgeSec: number | null;
+  aggregateLaneOnly: boolean;
+}
+
 export interface PegAssetBase {
   id: string;
   symbol: string;
@@ -350,6 +356,7 @@ export interface PegAssetBase {
   priceSyncedAt?: number | null;
   consensusSources?: string[];
   agreeSources?: string[];
+  priceSourceConfidenceProfile?: PriceSourceConfidenceProfile | null;
   pegType?: string;
   circulating?: Record<string, number>;
 }

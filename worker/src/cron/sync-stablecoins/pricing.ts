@@ -37,6 +37,7 @@ export interface AcceptedPriceCandidate {
   agreeSources?: string[];
   syncedAt?: number | null;
   selectedSource?: string | null;
+  sourceConfidenceProfile?: PeggedAsset["priceSourceConfidenceProfile"];
 }
 
 export function applyAcceptedPriceCandidate(input: AcceptedPriceCandidate): void {
@@ -51,6 +52,7 @@ export function applyAcceptedPriceCandidate(input: AcceptedPriceCandidate): void
     input.agreeSources,
     input.syncedAt,
     input.selectedSource,
+    input.sourceConfidenceProfile,
   );
 }
 
@@ -105,6 +107,7 @@ function stampExistingSingleSource(asset: PeggedAsset, syncStartSec: number): vo
     [source],
     syncStartSec,
     asset.priceSelectedSource ?? source,
+    null,
   );
 }
 
@@ -152,6 +155,7 @@ function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null
     agreeSources: candidate.agreeSources,
     syncedAt: syncStartSec,
     selectedSource: candidate.selectedSource ?? candidate.source,
+    sourceConfidenceProfile: candidate.priceSourceConfidenceProfile ?? null,
   });
   return null;
 }
@@ -440,6 +444,7 @@ export function applyProtocolPriceOverrides(input: {
       agreeSources: [override.source],
       syncedAt: syncStartSec,
       selectedSource: override.source,
+      sourceConfidenceProfile: null,
     });
     appliedCount++;
   }

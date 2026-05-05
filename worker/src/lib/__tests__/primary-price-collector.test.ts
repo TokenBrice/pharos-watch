@@ -40,7 +40,7 @@ describe("buildPrimarySourceCandidates", () => {
       ],
     });
 
-    const { sources, hasPromotedDexProtocolSource } = buildPrimarySourceCandidates(
+    const { sources, hasPromotedDexProtocolSource, dexCandidateTelemetry } = buildPrimarySourceCandidates(
       { id: "dusd-test", symbol: "DUSD" },
       collected,
     );
@@ -48,6 +48,14 @@ describe("buildPrimarySourceCandidates", () => {
     expect(hasPromotedDexProtocolSource).toBe(true);
     expect(sources.some((s) => s.source.endsWith("-dex"))).toBe(false);
     expect(sources.map((s) => s.source)).toEqual(["coingecko"]);
+    expect(dexCandidateTelemetry).toMatchObject([
+      {
+        stablecoinId: "dusd-test",
+        sourceKey: "balancer-dex",
+        status: "excluded",
+        reason: "lacked_corroboration",
+      },
+    ]);
   });
 
   it("accepts a single promoted DEX protocol when a hard CEX source agrees", () => {
@@ -65,13 +73,98 @@ describe("buildPrimarySourceCandidates", () => {
       ],
     });
 
-    const { sources, hasPromotedDexProtocolSource } = buildPrimarySourceCandidates(
+    const {
+      sources,
+      hasPromotedDexProtocolSource,
+      dexCandidateTelemetry,
+      priceSourceConfidenceProfile,
+    } = buildPrimarySourceCandidates(
       { id: "dusd-test", symbol: "DUSD" },
       collected,
+      { nowSec: 1_700_000_030 },
     );
 
     expect(hasPromotedDexProtocolSource).toBe(true);
     expect(sources.some((s) => s.source === "balancer-dex")).toBe(true);
+    expect(dexCandidateTelemetry).toMatchObject([
+      {
+        stablecoinId: "dusd-test",
+        sourceKey: "balancer-dex",
+        status: "accepted",
+      },
+    ]);
+    expect(priceSourceConfidenceProfile).toEqual({
+      activeDexLanes: 1,
+      freshestDexLaneAgeSec: 30,
+      aggregateLaneOnly: false,
+    });
+  });
+
+  it("records explicit exclusion reasons for unmapped and below-threshold DEX protocol candidates", () => {
+    const collected = makeCollected({
+      protocolSources: [
+        {
+          protocol: "unknown-protocol",
+          price: 1.0,
+          tvl: 500_000,
+          updatedAt: 1_700_000_000,
+          chain: "ethereum",
+        },
+        {
+          protocol: "balancer",
+          price: 1.0,
+          tvl: 49_999,
+          updatedAt: 1_700_000_000,
+          chain: "ethereum",
+        },
+      ],
+    });
+
+    const { sources, dexCandidateTelemetry, priceSourceConfidenceProfile } = buildPrimarySourceCandidates(
+      { id: "dusd-test", symbol: "DUSD" },
+      collected,
+      { nowSec: 1_700_000_030 },
+    );
+
+    expect(sources).toEqual([]);
+    expect(priceSourceConfidenceProfile).toBeNull();
+    expect(dexCandidateTelemetry).toMatchObject([
+      {
+        sourceKey: "unknown-protocol-dex",
+        status: "excluded",
+        reason: "missing_registry_mapping",
+      },
+      {
+        sourceKey: "balancer-dex",
+        status: "excluded",
+        reason: "below_tvl_threshold",
+        thresholdTvlUsd: 50_000,
+      },
+    ]);
+  });
+
+  it("profiles aggregate-only DEX promotion without counting it as an active protocol lane", () => {
+    const collected = makeCollected({
+      dexAggregateQuote: {
+        dex_price_usd: 1.0,
+        updated_at: 1_700_000_000,
+        source_pool_count: 3,
+        source_total_tvl: 250_000,
+      },
+    });
+
+    const { sources, priceSourceConfidenceProfile } = buildPrimarySourceCandidates(
+      { id: "dusd-test", symbol: "DUSD" },
+      collected,
+      { nowSec: 1_700_000_100 },
+    );
+
+    expect(sources.map((source) => source.source)).toEqual(["dex-promoted"]);
+    expect(priceSourceConfidenceProfile).toEqual({
+      activeDexLanes: 0,
+      freshestDexLaneAgeSec: 100,
+      aggregateLaneOnly: true,
+    });
   });
 
   it("stamps Bitstamp source with observedAtMode=\"upstream\" when upstream observed-at is supplied", () => {

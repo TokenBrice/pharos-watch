@@ -5,8 +5,10 @@ import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants
 import {
   buildPrimarySourceCandidates,
   type DlListQuote,
+  type PrimaryDexCandidateTelemetry,
   type PrimaryCollectedQuotes,
 } from "../../lib/primary-price-collector";
+import type { DexPriceSourceLoadTelemetry } from "../../lib/depeg-helpers";
 import type { ValidationContextResolver } from "./pricing";
 import type {
   PrimaryConsensusQuoteMaps,
@@ -27,7 +29,10 @@ export function buildPrimaryConsensusResults(params: {
   results: Map<string, PrimaryPriceResult>;
   stats: PriceValidationStats;
   validationContexts?: ValidationContextResolver;
+  dexPriceSourceTelemetry?: DexPriceSourceLoadTelemetry;
 }): void {
+  logDexPriceSourceLoadTelemetry(params.dexPriceSourceTelemetry);
+
   for (const asset of params.candidates) {
     const geckoId = isUsableGeckoId(asset.geckoId) ? asset.geckoId : null;
     const cgPrice = geckoId ? (params.quoteMaps.cgPrices.get(geckoId) ?? null) : null;
@@ -66,9 +71,17 @@ export function buildPrimaryConsensusResults(params: {
       })(),
     };
 
-    const { sources, hasPromotedDexProtocolSource } = buildPrimarySourceCandidates(asset, collectedQuotes, {
+    const {
+      sources,
+      hasPromotedDexProtocolSource,
+      dexCandidateTelemetry,
+      priceSourceConfidenceProfile,
+    } = buildPrimarySourceCandidates(asset, collectedQuotes, {
       divergenceThresholdBps: DIVERGENCE_THRESHOLD_BPS,
+      nowSec: params.nowSec,
     });
+
+    logDexCandidateTelemetry(dexCandidateTelemetry);
 
     if (hasPromotedDexProtocolSource && !sources.some((source) => source.source.endsWith("-dex"))) {
       console.log(
@@ -107,6 +120,7 @@ export function buildPrimaryConsensusResults(params: {
       observedAtMode: consensus.observedAtMode,
       observedAtBySource: consensus.observedAtBySource,
       observedAtModeBySource: consensus.observedAtModeBySource,
+      priceSourceConfidenceProfile,
     });
 
     if (consensus.confidence === "high") {
@@ -132,5 +146,51 @@ export function buildPrimaryConsensusResults(params: {
         );
       }
     }
+  }
+}
+
+export function logDexPriceSourceLoadTelemetry(telemetry: DexPriceSourceLoadTelemetry | undefined): void {
+  if (!telemetry) return;
+  for (const row of telemetry.staleRows) {
+    console.log(
+      `[primary-prices] dex-source-filter ${JSON.stringify({
+        stablecoinId: row.stablecoinId,
+        reason: "stale_source_age",
+        updatedAt: row.updatedAt,
+        ageSec: row.ageSec,
+        maxAgeSec: row.maxAgeSec,
+      })}`,
+    );
+  }
+  for (const row of telemetry.malformedRows) {
+    console.log(
+      `[primary-prices] dex-source-filter ${JSON.stringify({
+        stablecoinId: row.stablecoinId,
+        reason: "malformed_price_sources_json",
+        decodeReason: row.reason,
+        updatedAt: row.updatedAt,
+      })}`,
+    );
+  }
+}
+
+function logDexCandidateTelemetry(telemetry: PrimaryDexCandidateTelemetry[]): void {
+  for (const candidate of telemetry) {
+    if (candidate.status !== "excluded") continue;
+    console.log(
+      `[primary-prices] dex-candidate-filter ${JSON.stringify({
+        stablecoinId: candidate.stablecoinId,
+        symbol: candidate.symbol,
+        protocol: candidate.protocol,
+        sourceKey: candidate.sourceKey,
+        chain: candidate.chain,
+        price: candidate.price,
+        tvl: candidate.tvl,
+        updatedAt: candidate.updatedAt,
+        reason: candidate.reason,
+        thresholdTvlUsd: candidate.thresholdTvlUsd,
+        divergenceThresholdBps: candidate.divergenceThresholdBps,
+      })}`,
+    );
   }
 }

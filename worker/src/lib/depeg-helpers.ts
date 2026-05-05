@@ -91,6 +91,27 @@ export interface DexPoolSource {
 
 type DexJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
 
+export interface DexPriceSourceLoadTelemetry {
+  staleRows: Array<{
+    stablecoinId: string;
+    updatedAt: number;
+    ageSec: number;
+    maxAgeSec: number;
+  }>;
+  malformedRows: Array<{
+    stablecoinId: string;
+    updatedAt: number;
+    reason: DexJsonDecodeReason;
+  }>;
+}
+
+export function createDexPriceSourceLoadTelemetry(): DexPriceSourceLoadTelemetry {
+  return {
+    staleRows: [],
+    malformedRows: [],
+  };
+}
+
 /**
  * Load all qualifying individual pool prices per asset from the published challenger snapshot,
  * with safe legacy fallback when the challenger tables are absent.
@@ -147,6 +168,7 @@ export async function loadDexPoolChallengers(
 export async function loadDexPriceSources(
   db: D1Database,
   maxAgeSec = 2100, // 35 min = 30min cron + 5min buffer
+  telemetry?: DexPriceSourceLoadTelemetry,
 ): Promise<Map<string, DexPoolSource[]>> {
   const nowSec = Math.floor(Date.now() / 1000);
   try {
@@ -156,7 +178,16 @@ export async function loadDexPriceSources(
 
     const result = new Map<string, DexPoolSource[]>();
     for (const row of rows.results ?? []) {
-      if (nowSec - row.updated_at > maxAgeSec) continue;
+      const ageSec = nowSec - row.updated_at;
+      if (ageSec > maxAgeSec) {
+        telemetry?.staleRows.push({
+          stablecoinId: row.stablecoin_id,
+          updatedAt: row.updated_at,
+          ageSec,
+          maxAgeSec,
+        });
+        continue;
+      }
       const decoded = decodeJsonString<DexPoolSource[], DexJsonDecodeReason>(row.price_sources_json, {
         mode: "degraded",
         updatedAt: row.updated_at,
@@ -167,6 +198,11 @@ export async function loadDexPriceSources(
           : { ok: false, reason: "invalid-shape" },
       });
       if (!decoded.ok) {
+        telemetry?.malformedRows.push({
+          stablecoinId: row.stablecoin_id,
+          updatedAt: row.updated_at,
+          reason: decoded.reason,
+        });
         logMalformedJsonPath({
           scope: "lib",
           owner: "depeg-helpers",
