@@ -327,6 +327,45 @@ describe("parseEvmLogs", () => {
     });
   });
 
+  it("keeps rows recoverable when a configured amount data slot is missing", () => {
+    const seizedAddr = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const rows = parseEvmLogs(BUIDL_CONFIG, [{
+      address: BUIDL_CONFIG.contractAddress,
+      topics: [
+        "0x5c719d01bb88860dfca685ad3818d8b61a083caaf8f68abe6fa0fba4e40e33a9",
+        "0x000000000000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      ],
+      data: encodeAbiParameters([{ type: "address" }], [seizedAddr]),
+      blockNumber: "0x1234",
+      transactionHash: "0xbuidl-short",
+      logIndex: "0x6",
+      timeStamp: "0x65000000",
+    }]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      address: seizedAddr,
+      amount_native: null,
+      amount_usd_at_event: null,
+      amount_source: "unavailable",
+      amount_status: "recoverable_pending",
+    });
+  });
+
+  it("skips malformed scalar address data instead of creating a bogus 0x row", () => {
+    const rows = parseEvmLogs(USDC_CONFIG, [{
+      address: USDC_CONFIG.contractAddress,
+      topics: ["0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855"],
+      data: "0x1234",
+      blockNumber: "0x1234",
+      transactionHash: "0xshort-address",
+      logIndex: "0x7",
+      timeStamp: "0x65000000",
+    }]);
+
+    expect(rows).toHaveLength(0);
+  });
+
   it("decodes BUIDL Seize with amountDataIndex=0 (regression for Agent A C1)", async () => {
     const { encodeAbiParameters, keccak256, toBytes } = await import("viem");
     const seizeTopic = keccak256(toBytes("Seize(address,address,uint256,string)"));

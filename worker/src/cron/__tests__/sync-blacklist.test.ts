@@ -98,11 +98,25 @@ vi.mock("../../lib/evm-logs", () => ({
         fn(),
   ),
   decodeAddress: vi.fn((hex: string) => "0x" + hex.slice(-40)),
+  decodeAddressWord: vi.fn((hex: string | null | undefined) =>
+    typeof hex === "string" && /^(0x)?[0-9a-fA-F]{64}$/.test(hex)
+      ? "0x" + hex.slice(-40)
+      : null,
+  ),
   decodeUint256: vi.fn(() => 1000000),
+  decodeUint256Word: vi.fn((hex: string | null | undefined) =>
+    typeof hex === "string" && /^(0x)?[0-9a-fA-F]{64}$/.test(hex) ? 1000000 : null,
+  ),
+  decodeUint256AtSlotOrNull: vi.fn(() => 1000000),
   getEvmBlockNumber: vi.fn(async () => 20000000),
   fetchEvmLogsForTopic: vi.fn(async () => []),
   fetchEvmLogsForTopicWithCompleteness: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 99999999 })),
   fetchEvmLogsForTopics: vi.fn(async () => []),
+  readDataWord: vi.fn((hex: string, slotIndex: number) => {
+    const cleaned = hex.startsWith("0x") ? hex.slice(2) : hex;
+    const start = slotIndex * 64;
+    return cleaned.length >= start + 64 ? "0x" + cleaned.slice(start, start + 64) : null;
+  }),
 }));
 
 vi.mock("../../lib/chain-registry", () => ({
