@@ -115,6 +115,7 @@ Cron persistence helpers retry transient D1 queue pressure through `runWithOverl
 | Jupiter price fallback                | `50` ids/request, `5 s` timeout/request, `0` retries                         | `worker/src/cron/sync-stablecoins/enrich-prices-jupiter-pass.ts` | Solana-only enrichment pass between CMC and DexScreener                                                            |
 | DexScreener price-enrichment pass     | `10` total requests, `5 s` timeout/request, `45 s` total budget, `0` retries | `worker/src/cron/sync-stablecoins/enrich-prices-dexscreener-pass.ts` | Best-effort final fallback for missing prices; exact token-address lookups run first, and symbol search is reserved for addressless assets |
 | CoinMarketCap fallback                | `1 call / hour`, `10 s` timeout, `0` retries                                 | `worker/src/cron/sync-stablecoins/enrich-prices-cmc-pass.ts` | Rate-limited through cache key `cmc_last_fetch`                                                                    |
+| Direct DEX API fetch phase            | `2` protocol fetches in parallel, `15 s` request timeout, deterministic page caps (`50` default) | `worker/src/cron/dex-liquidity/direct-api-policy.ts`, `worker/src/cron/dex-liquidity/direct-api-paginated.ts`, protocol fetchers | Runs inside the existing `sync-dex-liquidity` trigger; page-cap errors include resume markers for large or drifting upstream responses |
 | Generic circuit breaker               | opens after `3` consecutive failures, probes every `30 minutes`              | `worker/src/lib/circuit-breaker.ts`       | Used to stop hammering degraded upstreams                                                                          |
 
 ### What this means operationally
@@ -133,6 +134,7 @@ Cron persistence helpers retry transient D1 queue pressure through `runWithOverl
 | CoinMarketCap price fallback        | `10_000 ms`                  | `worker/src/cron/sync-stablecoins/enrich-prices-cmc-pass.ts` |
 | Jupiter price fallback              | `5_000 ms`                   | `worker/src/cron/sync-stablecoins/enrich-prices-jupiter-pass.ts` |
 | DexScreener price fallback requests | up to `5_000 ms` per request | `worker/src/cron/sync-stablecoins/enrich-prices-dexscreener-pass.ts` |
+| Direct DEX API requests             | `15_000 ms` per request     | `worker/src/cron/dex-liquidity/direct-api-policy.ts`                 |
 | Ops admin status proxy reads       | `20_000 ms` for `/api/status` and `/api/status-history` | `functions/api/admin/[[path]].ts` |
 | Live reserve adapter attempt        | `20_000 ms`                  | `worker/src/cron/sync-live-reserves-config.ts`             |
 | Live reserve D1 finalize timeout    | `30_000 ms`                  | `worker/src/cron/sync-live-reserves-config.ts`             |

@@ -306,7 +306,16 @@ The canonical `stablecoins` cache is written only after `StablecoinListResponseS
 | `chainCirculating`     | `Record<string, ChainCirculating>` | Per-chain breakdown. For `"coingecko-gap-fill"` and `"defillama-history-gap-fill"` assets this remains DefiLlama-led unless the missing total can be allocated safely to one tracked chain, so the per-chain sum may be a lower bound on total supply. |
 | `chains`               | `string[]`                         | List of chain names where the token is deployed                                                                                                   |
 | `consensusSources`     | `string[]`                         | Source names that returned a valid price for this coin during the sync cycle. Defaults to `[]` when absent.                                        |
+| `priceSourceConfidenceProfile` | `PriceSourceConfidenceProfile \| undefined` | Present for DEX-inclusive primary prices. Summarizes active protocol DEX lanes, the freshest DEX lane age, and whether the price relies only on the aggregate `dex-promoted` lane. |
 | `agreeSources`         | `string[] \| undefined`            | Compatibility alias for agreeing/current price sources when present                                                                                |
+
+**`PriceSourceConfidenceProfile`**
+
+| Field                   | Type                 | Description                                                                                   |
+| ----------------------- | -------------------- | --------------------------------------------------------------------------------------------- |
+| `activeDexLanes`        | `number`             | Count of accepted protocol-specific DEX lanes such as `balancer-dex` or `raydium-dex`.         |
+| `freshestDexLaneAgeSec` | `number \| null`     | Age in seconds of the freshest accepted DEX lane when the source carried observation metadata. |
+| `aggregateLaneOnly`     | `boolean`            | `true` when the only DEX contribution is the legacy aggregate `dex-promoted` source.           |
 
 **`ChainCirculating`**
 

@@ -3,20 +3,37 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.02",
+  currentVersion: "5.03",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.03",
+      title: "DEX source telemetry and direct-API fetch hardening",
+      date: "2026-05-05",
+      effectiveAt: 1778010000,
+      summary:
+        "Added structured DEX source skip reasons, a compact DEX source-confidence profile on published stablecoin prices, bounded direct-API protocol fetch concurrency, shared timeout/pagination hard stops, and per-run source-summary dimensions for direct-API and staged-pool merge diagnostics.",
+      impact: [
+        "DEX bridge source drops are now explainable by stale row, malformed JSON, missing registry mapping, below-threshold TVL, or lack of corroboration without changing the existing admission gates",
+        "DEX-inclusive stablecoin prices can carry active protocol-lane count, freshest DEX lane age, and aggregate-only reliance through priceSourceConfidenceProfile",
+        "Direct DEX API fetches now share a 15-second request timeout, run independent protocol fetches with concurrency 2, and emit resume markers when deterministic page caps are reached",
+        "Direct-API and staged-pool merge metadata now count accepted protocol-chain lanes and excluded rows by reason, protocol, chain, threshold, and identity conflict",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.02",
       title: "ARS, KGS, and NGN non-USD peg hardening",
       date: "2026-05-05",
       effectiveAt: 1777983570,
       summary:
-        "Added the latest non-USD peg batch to the same guarded fiat pricing lanes as the earlier fiat expansion: ARS and KGS now participate in direct CoinGecko native-peg corroboration, KGS and NGN use secondary daily FX mirrors, and lower-nominal fiat pegs have explicit hardcoded validation bounds when no fresh FX reference is available.",
+        "Added the latest non-USD peg batch to the same guarded fiat pricing lanes as the earlier fiat expansion: ARS and NGN participate in direct CoinGecko native-peg corroboration where supported, KGS and NGN use secondary daily FX mirrors, and lower-nominal fiat pegs have explicit hardcoded validation bounds when no fresh FX reference is available.",
       impact: [
-        "WARS (ARS), KGST (KGS), and cNGN (NGN) can validate weak live USD marks against direct native-peg and/or daily FX references instead of relying only on USD-denominated market prints",
+        "WARS (ARS) and cNGN (NGN) can validate weak live USD marks against direct native-peg and daily FX references, while KGST (KGS) uses daily FX references plus deterministic bounds because CoinGecko does not expose a native KGS quote",
         "KGS and NGN use the same fawazahmed0 secondary FX cadence semantics as CNH, RUB, UAH, and ARS for live sync and historical backfills",
         "MYR, KRW, KGS, and NGN now retain deterministic fallback price bounds even during no-reference validation paths",
+        "Direct-API protocol DEX bridges (Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome Slipstream) now register as first-class soft-DEX pricing families (`meteora-dex`, `pancakeswap-dex`, `aerodrome-dex`, `velodrome-dex`) so they can contribute directly to primary consensus when promoted",
       ],
       commits: [],
       reconstructed: false,

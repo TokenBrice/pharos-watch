@@ -1,6 +1,28 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.01` (2026-02-01 -> 2026-04-29).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.03` (2026-02-01 -> 2026-05-05).
+
+---
+
+## v5.03 - DEX source telemetry and direct-API fetch hardening (May 5, 2026)
+
+**Commit:** `unreleased`
+
+- DEX source admission now emits structured skip reasons for stale bridge rows, malformed source snapshots, missing pricing-source registry mappings, below-threshold protocol TVL, and promoted DEX candidates rejected for lacking corroboration
+- DEX-inclusive stablecoin prices can expose `priceSourceConfidenceProfile`, summarizing accepted protocol DEX lane count, freshest DEX lane age, and aggregate-only reliance
+- Direct DEX API fetches now share a bounded `15 s` request policy, run independent protocol fetches with concurrency `2`, and use deterministic pagination caps with resume markers instead of silent truncation
+- Direct-API and staged-pool merge metadata now count accepted protocol-chain lanes and exclusions by reason, protocol, chain, threshold, and identity-conflict dimension for operator diagnostics
+
+---
+
+## v5.02 - ARS, KGS, and NGN non-USD peg hardening (May 5, 2026)
+
+**Commit:** `unreleased`
+
+- WARS (ARS) and cNGN (NGN) can validate weak live USD marks against direct native-peg and daily FX references; KGST (KGS) uses daily FX references plus deterministic bounds because CoinGecko does not expose a native `kgs` quote
+- KGS and NGN use the same `fawazahmed0` secondary FX cadence semantics as CNH, RUB, UAH, and ARS for live sync and historical backfills
+- MYR, KRW, KGS, and NGN now retain deterministic fallback price bounds even during no-reference validation paths
+- Direct-API protocol DEX bridges (`meteora-dex`, `pancakeswap-dex`, `aerodrome-dex`, `velodrome-dex`) are registered as first-class soft-DEX pricing families so they can contribute directly to primary consensus when promoted
 
 ---
 

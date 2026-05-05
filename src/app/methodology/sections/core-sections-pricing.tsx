@@ -32,8 +32,9 @@ export function PricingPipelineMethodologySection() {
         <p>
           <strong className="text-foreground">Source diversity.</strong>{" "}
           Kraken and Bitstamp extend the direct venue set. Fresh RedStone prices need timestamped multi-venue breakdowns.
-          The primary promoted DEX bridge now spans Fluid, Balancer, Raydium, and Orca, while the broader direct DEX
-          source set feeds liquidity and challenger observations. DEX bridge identity is canonical-only at runtime, so
+          The primary promoted DEX bridge now spans Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, Aerodrome
+          Slipstream, and Velodrome Slipstream, with structured source-filter telemetry and DEX lane confidence profiles
+          attached when those lanes participate. DEX bridge identity is canonical-only at runtime, so
           addressed unknown tokens are dropped instead of being reinterpreted by symbol, promoted protocol DEX prices
           only enter consensus when they are corroborated or no non-DEX voices exist, and direct-API quote legs prefer
           tracked live stablecoin prices instead of unconditional{" "}
@@ -223,7 +224,7 @@ export function PricingPipelineMethodologySection() {
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Curve on-chain</td><td className="py-2 pr-4">3</td><td className="py-2 pr-4">On-chain</td><td className="py-2">StableSwap implied prices via <code className="text-xs">get_dy()</code></td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Curve oracle</td><td className="py-2 pr-4">3</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Additional primary-consensus voice for <code className="text-xs">crvusd-curve</code></td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">DEX pools</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Aggregate DEX voice, but withheld when overlapping protocol-level DEX bridge data exists</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Protocol DEX APIs</td><td className="py-2 pr-4">2-3</td><td className="py-2 pr-4">On-chain / pool-state API</td><td className="py-2">Primary-consensus protocol promotion currently supports Fluid, Balancer, Raydium, and Orca. Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream feed liquidity and challenger observations unless matching registry keys are added.</td></tr>
+                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Protocol DEX APIs</td><td className="py-2 pr-4">2-3</td><td className="py-2 pr-4">On-chain / pool-state API</td><td className="py-2">Primary-consensus protocol promotion currently supports Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream when the protocol lane survives registry, TVL, freshness, and corroboration gates.</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">GeckoTerminal</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Pool-level cross-check for weak CG / DL-list soft-source outcomes (&ge;$10K TVL)</td></tr>
                 </tbody>
               </table>
