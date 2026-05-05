@@ -35,11 +35,13 @@ export function AdminActionButton({
   fullWidth = true,
   onFinished,
 }: AdminActionButtonProps) {
+  const isSupplyBackfillAction = action.path === "/api/backfill-supply-history";
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [stablecoinFilter, setStablecoinFilter] = useState("");
+  const [allowConstantPriceFallback, setAllowConstantPriceFallback] = useState(false);
 
   const handleConfirm = async () => {
     setLoading(true);
@@ -52,6 +54,10 @@ export function AdminActionButton({
         action.acceptsStablecoinFilter && trimmedFilter
           ? `${action.path}${action.path.includes("?") ? "&" : "?"}stablecoin=${encodeURIComponent(trimmedFilter)}`
           : action.path;
+      const effectivePathWithFallback =
+        isSupplyBackfillAction && allowConstantPriceFallback
+          ? `${effectivePath}${effectivePath.includes("?") ? "&" : "?"}allow-constant-price-fallback=true`
+          : effectivePath;
 
       const headers = new Headers();
       headers.set("X-Pharos-Admin", "1");
@@ -61,7 +67,7 @@ export function AdminActionButton({
           ? crypto.randomUUID()
           : `${action.path}:${Date.now()}`,
       );
-      const res = await fetch(buildRequestUrl(buildAdminApiPath(effectivePath)), {
+      const res = await fetch(buildRequestUrl(buildAdminApiPath(effectivePathWithFallback)), {
         method: action.method,
         headers,
       });
@@ -115,6 +121,7 @@ export function AdminActionButton({
           setResult(null);
           setError(null);
           setStablecoinFilter("");
+          setAllowConstantPriceFallback(false);
         }
       }}
     >
@@ -147,6 +154,21 @@ export function AdminActionButton({
               disabled={loading}
             />
           </div>
+        )}
+        {isSupplyBackfillAction && (
+          <label
+            htmlFor="allow-constant-price-fallback"
+            className="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm"
+          >
+            <input
+              id="allow-constant-price-fallback"
+              type="checkbox"
+              checked={allowConstantPriceFallback}
+              onChange={(e) => setAllowConstantPriceFallback(e.target.checked)}
+              disabled={loading}
+            />
+            Allow constant-price fallback for non-USD backfill
+          </label>
         )}
         {result && <pre className="max-h-60 overflow-auto rounded bg-muted p-3 text-xs">{result}</pre>}
         {error && (
