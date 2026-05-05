@@ -71,6 +71,7 @@ export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = {
   mento: ["http-json"],
   "openeden-usdo": ["http-json"],
   "re-metrics": ["http-html"],
+  "reserve-protocol-dtf": ["http-json"],
   reservoir: ["http-json"],
   "sgforge-coinvertible": ["http-html"],
   "solstice-attestation": ["http-json"],
@@ -198,6 +199,19 @@ const collateralPositionsParamsSchema = z.object({
 const curatedValidatedParamsSchema = z.object({
   rpcUrl: z.string().optional(),
   fallbackRpcUrl: z.string().optional(),
+}).strict();
+
+const reserveProtocolDtfAssetSchema = z.object({
+  address: z.string(),
+  name: z.string(),
+  risk: LiveReserveRiskSchema,
+  coinId: z.string().optional(),
+  depType: LiveReserveDependencyTypeSchema.optional(),
+  blacklistable: z.boolean().optional(),
+}).strict();
+
+const reserveProtocolDtfParamsSchema = z.object({
+  assets: z.array(reserveProtocolDtfAssetSchema).optional(),
 }).strict();
 
 const reserveSliceDescriptorSchema = z.object({
@@ -365,6 +379,7 @@ export const adapterParamsSchemas = {
   mento: noParamsSchema,
   "openeden-usdo": noParamsSchema,
   "re-metrics": noParamsSchema,
+  "reserve-protocol-dtf": reserveProtocolDtfParamsSchema,
   reservoir: noParamsSchema,
   "sgforge-coinvertible": sgForgeCoinvertibleParamsSchema,
   "solstice-attestation": noParamsSchema,

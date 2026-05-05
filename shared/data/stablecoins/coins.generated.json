@@ -15746,13 +15746,47 @@
         "url": "https://app.reserve.org/ethereum/token/0x0d86883faf4ffd7aeb116390af37746f45b6f378/overview",
         "label": "Reserve app"
       },
-      "adapter": "curated-validated",
+      "adapter": "reserve-protocol-dtf",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-json",
+          "url": "https://api.reserve.org/discover/dtfs"
         }
+      },
+      "params": {
+        "assets": [
+          {
+            "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+            "name": "Savings USDS",
+            "risk": "low",
+            "coinId": "susds-sky",
+            "depType": "collateral"
+          },
+          {
+            "address": "0x0adc69041a2b086f8772acce2a754f410f211bed",
+            "name": "Static Aave Ethereum USDC",
+            "risk": "medium",
+            "coinId": "usdc-circle",
+            "depType": "collateral",
+            "blacklistable": true
+          },
+          {
+            "address": "0x27f2f159fe990ba83d57f39fd69661764bebf37a",
+            "name": "Wrapped Compound USDCv3",
+            "risk": "medium",
+            "coinId": "usdc-circle",
+            "depType": "collateral",
+            "blacklistable": true
+          },
+          {
+            "address": "0xbeef01735c132ada46aa9aa4c54623caa92a64cb",
+            "name": "Steakhouse USDC strategy",
+            "risk": "medium",
+            "coinId": "usdc-circle",
+            "depType": "collateral",
+            "blacklistable": true
+          }
+        ]
       }
     },
     "yieldConfig": {

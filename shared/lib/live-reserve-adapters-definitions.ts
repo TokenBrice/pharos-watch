@@ -297,6 +297,16 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
+  "reserve-protocol-dtf": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+    },
+  },
   reservoir: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",

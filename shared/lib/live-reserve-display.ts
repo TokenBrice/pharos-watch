@@ -37,6 +37,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   mento: "live",
   "openeden-usdo": "live",
   "re-metrics": "live",
+  "reserve-protocol-dtf": "live",
   reservoir: "live",
   "sgforge-coinvertible": "live",
   "solstice-attestation": "proof",

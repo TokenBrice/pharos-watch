@@ -43,6 +43,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "mento",
   "openeden-usdo",
   "re-metrics",
+  "reserve-protocol-dtf",
   "reservoir",
   "sgforge-coinvertible",
   "solstice-attestation",
