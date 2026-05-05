@@ -162,6 +162,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
+    strictContract: true,
     probeGroup: "public",
   },
   {
@@ -171,6 +172,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
+    strictContract: true,
     probeGroup: "public",
   },
   {

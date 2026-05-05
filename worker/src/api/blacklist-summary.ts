@@ -12,8 +12,10 @@ import {
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/blacklist-tracker-version";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
 import { loadBlacklistCurrentBalanceMap } from "../lib/blacklist-current-balances";
+import { queryBlacklistGapMetrics, type BlacklistGapMetrics } from "../lib/blacklist-gaps";
 import {
   BLACKLIST_STABLECOINS,
   type BlacklistEvent,
@@ -29,7 +31,198 @@ import {
   buildBlacklistActiveRecords,
   computeBlacklistActiveSummaryStats,
   computeBlacklistTrackedSummaryStats,
+  type BlacklistCurrentBalanceSnapshot,
 } from "@shared/lib/blacklist-active-records";
+
+const BLACKLIST_IDENTITY_PARTITION_SQL = `
+  stablecoin,
+  chain_id,
+  LOWER(address),
+  COALESCE(LOWER(config_key), ''),
+  COALESCE(LOWER(contract_address), '')
+`;
+
+const DEFERRED_BLACKLIST_COVERAGE: Array<{
+  symbol: BlacklistStablecoin;
+  chainId: string;
+  reason: string;
+}> = [
+  { symbol: "AID", chainId: "base", reason: "deferred_contract_creation_verification" },
+  { symbol: "TGBP", chainId: "base", reason: "deferred_contract_creation_verification" },
+  { symbol: "TGBP", chainId: "bsc", reason: "deferred_contract_creation_verification" },
+  { symbol: "TUSD", chainId: "bsc", reason: "deferred_contract_creation_verification" },
+  { symbol: "TUSD", chainId: "avalanche", reason: "deferred_contract_creation_verification" },
+  { symbol: "TUSD", chainId: "polygon", reason: "bridged_token_without_blacklist_events" },
+  { symbol: "TUSD", chainId: "optimism", reason: "bridged_token_without_blacklist_events" },
+  { symbol: "USDA", chainId: "bsc", reason: "deferred_contract_creation_verification" },
+  { symbol: "AEUR", chainId: "bsc", reason: "deferred_contract_creation_verification" },
+  { symbol: "JPYC", chainId: "avalanche", reason: "deferred_contract_creation_verification" },
+];
+
+function incrementCount(record: Record<string, number>, key: string): void {
+  record[key] = (record[key] ?? 0) + 1;
+}
+
+function getProviderSource(chainType: "evm" | "tron" | "other"): "evm-logs" | "trongrid" | "other" {
+  if (chainType === "tron") return "trongrid";
+  if (chainType === "evm") return "evm-logs";
+  return "other";
+}
+
+function buildCoverage() {
+  const bySymbol: Record<string, number> = {};
+  const byChain: Record<string, number> = {};
+  const byProviderSource: Record<string, number> = {};
+  const supported = CONTRACT_CONFIGS.map((config) => {
+    const providerSource = getProviderSource(config.chain.type);
+    incrementCount(bySymbol, config.stablecoin);
+    incrementCount(byChain, config.chain.chainId);
+    incrementCount(byProviderSource, providerSource);
+    return {
+      symbol: config.stablecoin,
+      stablecoinId: config.stablecoinId,
+      chainId: config.chain.chainId,
+      chainName: config.chain.chainName,
+      contractAddress: config.contractAddress,
+      configKey: config.configKey,
+      providerSource,
+      eventFamilies: [...new Set(config.events.map((event) => event.signature))],
+      eventTypes: [...new Set(config.events.map((event) => event.eventType))],
+    };
+  });
+
+  return {
+    supported,
+    unsupportedDeferred: DEFERRED_BLACKLIST_COVERAGE,
+    counts: {
+      supportedConfigs: supported.length,
+      unsupportedDeferredConfigs: DEFERRED_BLACKLIST_COVERAGE.length,
+      bySymbol,
+      byChain,
+      byProviderSource,
+    },
+  };
+}
+
+function classifyLedgerFreshness(observedAt: number | null | undefined, now: number): "fresh" | "degraded" | "stale" {
+  if (observedAt == null) return "stale";
+  const ageSec = Math.max(0, now - observedAt);
+  if (ageSec <= API_FRESHNESS_MAX_AGE_SEC.blacklistSummary) return "fresh";
+  if (ageSec <= API_FRESHNESS_MAX_AGE_SEC.blacklistSummary * 2) return "degraded";
+  return "stale";
+}
+
+function sourceCategory(source: string): "bootstrap" | "current" | "destroy" | "other" {
+  if (source.includes("bootstrap")) return "bootstrap";
+  if (source === "destroy_event") return "destroy";
+  if (source === "current_balance") return "current";
+  return "other";
+}
+
+function buildFreezeLedgerMeta(
+  currentBalances: ReadonlyMap<string, BlacklistCurrentBalanceSnapshot>,
+  gapMetrics: BlacklistGapMetrics,
+  trackedGapCount: number,
+  now: number,
+) {
+  const statusDistribution: Record<string, number> = {};
+  const sourceDistribution: Record<string, number> = {};
+  const freshnessDistribution = { fresh: 0, degraded: 0, stale: 0 };
+  const sourceCategoryCounts = { bootstrap: 0, current: 0, destroy: 0, other: 0 };
+  const lastErrorClassDistribution: Record<string, number> = {};
+  let oldestObservedAt: number | null = null;
+  let newestObservedAt: number | null = null;
+  let providerFailedCount = 0;
+  let scopedRows = 0;
+  let legacyRows = 0;
+
+  for (const snapshot of currentBalances.values()) {
+    incrementCount(statusDistribution, snapshot.status);
+    incrementCount(sourceDistribution, snapshot.source);
+    sourceCategoryCounts[sourceCategory(snapshot.source)]++;
+    freshnessDistribution[classifyLedgerFreshness(snapshot.observedAt, now)]++;
+    if (snapshot.status === "provider_failed") providerFailedCount++;
+    if (snapshot.lastErrorClass) incrementCount(lastErrorClassDistribution, snapshot.lastErrorClass);
+    if (snapshot.configKey || snapshot.contractAddress) scopedRows++;
+    else legacyRows++;
+    oldestObservedAt = oldestObservedAt == null ? snapshot.observedAt : Math.min(oldestObservedAt, snapshot.observedAt);
+    newestObservedAt = newestObservedAt == null ? snapshot.observedAt : Math.max(newestObservedAt, snapshot.observedAt);
+  }
+
+  return {
+    totalRows: currentBalances.size,
+    scopedRows,
+    legacyRows,
+    oldestObservedAt,
+    newestObservedAt,
+    oldestAgeSec: oldestObservedAt == null ? null : Math.max(0, now - oldestObservedAt),
+    newestAgeSec: newestObservedAt == null ? null : Math.max(0, now - newestObservedAt),
+    statusDistribution,
+    sourceDistribution,
+    freshnessDistribution,
+    providerFailedCount,
+    lastErrorClassDistribution,
+    sourceCategoryCounts,
+    gaps: {
+      tracked: trackedGapCount,
+      recoverable: gapMetrics.missingAmounts,
+      unrecoverable: gapMetrics.unrecoverableMissingAmounts,
+      recentRecoverable: gapMetrics.recentMissingAmounts,
+      neverAttempted: gapMetrics.neverAttemptedCount,
+      repeatedFailures: gapMetrics.repeatedFailureCount,
+      oldestRecoverableAgeSec: gapMetrics.oldestRecoverableAgeSec,
+      amountStatusDistribution: gapMetrics.statusDistribution,
+      amountSourceDistribution: gapMetrics.sourceDistribution,
+    },
+  };
+}
+
+function buildDataQuality(
+  freezeLedgerMeta: ReturnType<typeof buildFreezeLedgerMeta>,
+  gapMetrics: BlacklistGapMetrics,
+  coverage: ReturnType<typeof buildCoverage>,
+) {
+  const gapStatus = getBlacklistGapStatus({
+    missingRatio: gapMetrics.missingRatio,
+    recentMissingAmounts: gapMetrics.recentMissingAmounts,
+  });
+  const staleLedgerRows = freezeLedgerMeta.freshnessDistribution.stale;
+  const status = gapStatus === "stale" || staleLedgerRows > 0
+    ? "stale"
+    : gapStatus === "degraded" || freezeLedgerMeta.providerFailedCount > 0
+      ? "degraded"
+      : "ok";
+  const warnings: string[] = [];
+  if (gapMetrics.missingAmounts > 0) warnings.push("recoverable-amount-gaps");
+  if (gapMetrics.unrecoverableMissingAmounts > 0) warnings.push("unrecoverable-amount-gaps");
+  if (freezeLedgerMeta.providerFailedCount > 0) warnings.push("current-balance-provider-failures");
+  if (staleLedgerRows > 0) warnings.push("stale-current-balance-snapshots");
+  if (coverage.counts.unsupportedDeferredConfigs > 0) warnings.push("deferred-coverage");
+
+  return {
+    status,
+    warnings,
+    amountGaps: {
+      totalEvents: gapMetrics.totalEvents,
+      recoverable: gapMetrics.missingAmounts,
+      unrecoverable: gapMetrics.unrecoverableMissingAmounts,
+      recentRecoverable: gapMetrics.recentMissingAmounts,
+      missingRatio: gapMetrics.missingRatio,
+      recentWindowSec: gapMetrics.recentWindowSec,
+    },
+    freezeLedger: {
+      providerFailedCount: freezeLedgerMeta.providerFailedCount,
+      staleSnapshotCount: staleLedgerRows,
+      trackedGapCount: freezeLedgerMeta.gaps.tracked,
+      scopedRows: freezeLedgerMeta.scopedRows,
+      legacyRows: freezeLedgerMeta.legacyRows,
+    },
+    coverage: {
+      supportedConfigs: coverage.counts.supportedConfigs,
+      unsupportedDeferredConfigs: coverage.counts.unsupportedDeferredConfigs,
+    },
+  };
+}
 
 export const handleBlacklistSummary = withErrorHandler(
   "blacklist-summary",
@@ -62,8 +255,8 @@ export const handleBlacklistSummary = withErrorHandler(
       .all<{ stablecoin: string; quarter_sort_key: number; event_type: string; n: number }>();
 
     // D1 supports SQLite >= 3.25 window functions (ROW_NUMBER OVER PARTITION BY).
-    // Latest event per (stablecoin, chain_id, LOWER(address)) drives both net-
-    // frozen semantics AND activeRecords construction.
+    // Latest event per contract/config-scoped identity drives net-frozen
+    // semantics. Legacy rows without config/contract stay address-scoped.
     const latestByAddrResult = await db
       .prepare(
         `WITH ranked AS (
@@ -73,7 +266,10 @@ export const handleBlacklistSummary = withErrorHandler(
              tx_hash, block_number, timestamp, methodology_version,
              contract_address, config_key, event_signature, event_topic0,
              suppression_reason, explorer_tx_url, explorer_address_url,
-             ROW_NUMBER() OVER (PARTITION BY stablecoin, chain_id, LOWER(address) ORDER BY timestamp DESC, id DESC) AS rn
+             ROW_NUMBER() OVER (
+               PARTITION BY ${BLACKLIST_IDENTITY_PARTITION_SQL}
+               ORDER BY timestamp DESC, id DESC
+             ) AS rn
            FROM blacklist_events
            WHERE suppression_reason IS NULL
          )
@@ -90,6 +286,37 @@ export const handleBlacklistSummary = withErrorHandler(
     // Map snake_case -> camelCase so buildBlacklistActiveRecords (and
     // buildBlacklistQuarterlyChartFromSnapshots) see a canonical BlacklistEvent.
     const latestByAddr: BlacklistEvent[] = (latestByAddrResult.results ?? []).map(mapBlacklistEventRow);
+
+    const activeHistoryResult = await db
+      .prepare(
+        `WITH latest_event_type AS (
+           SELECT
+             id, stablecoin, chain_id, chain_name, event_type, address,
+             amount_native, amount_usd_at_event, amount_source, amount_status,
+             tx_hash, block_number, timestamp, methodology_version,
+             contract_address, config_key, event_signature, event_topic0,
+             suppression_reason, explorer_tx_url, explorer_address_url,
+             ROW_NUMBER() OVER (
+               PARTITION BY ${BLACKLIST_IDENTITY_PARTITION_SQL}, event_type
+               ORDER BY timestamp DESC, id DESC
+             ) AS rn
+           FROM blacklist_events
+           WHERE suppression_reason IS NULL
+             AND event_type IN ('blacklist', 'unblacklist', 'destroy')
+         )
+         SELECT id, stablecoin, chain_id, chain_name, event_type, address,
+                amount_native, amount_usd_at_event, amount_source, amount_status,
+                tx_hash, block_number, timestamp, methodology_version,
+                contract_address, config_key, event_signature, event_topic0,
+                suppression_reason, explorer_tx_url, explorer_address_url
+         FROM latest_event_type
+         WHERE rn = 1
+         ORDER BY timestamp ASC, id ASC`,
+      )
+      .all<BlacklistEventRow>();
+
+    const activeHistory: BlacklistEvent[] = (activeHistoryResult.results ?? []).map(mapBlacklistEventRow);
+    const activeRecordEvents = activeHistory.length > 0 ? activeHistory : latestByAddr;
 
     // Preserve NET semantics: addresses whose LATEST action is still 'blacklist'.
     // A DISTINCT-ever-blacklisted count would silently inflate the metric.
@@ -115,9 +342,13 @@ export const handleBlacklistSummary = withErrorHandler(
     const latestTs = aggregateRow?.max_ts ?? Math.floor(Date.now() / 1000);
 
     const currentBalances = await loadBlacklistCurrentBalanceMap(db);
-    const activeRecords = buildBlacklistActiveRecords(latestByAddr, currentBalances);
+    const gapMetrics = await queryBlacklistGapMetrics(db, now);
+    const activeRecords = buildBlacklistActiveRecords(activeRecordEvents, currentBalances);
     const activeStats = computeBlacklistActiveSummaryStats(activeRecords);
     const trackedStats = computeBlacklistTrackedSummaryStats(currentBalances);
+    const coverage = buildCoverage();
+    const freezeLedgerMeta = buildFreezeLedgerMeta(currentBalances, gapMetrics, trackedStats.trackedAmountGapCount, now);
+    const dataQuality = buildDataQuality(freezeLedgerMeta, gapMetrics, coverage);
 
     const perCoinBlacklistCounts = Object.fromEntries(
       BLACKLIST_STABLECOINS.map((s) => [s, 0]),
@@ -205,7 +436,7 @@ export const handleBlacklistSummary = withErrorHandler(
       perCoinQuarterlyEventTypes[symbol] = points;
     }
 
-    const chart = buildBlacklistQuarterlyChartFromSnapshots(currentBalances, latestByAddr);
+    const chart = buildBlacklistQuarterlyChartFromSnapshots(currentBalances, activeRecordEvents);
 
     const chainOptions = [
       ...new Map(
@@ -241,6 +472,9 @@ export const handleBlacklistSummary = withErrorHandler(
         },
         chart,
         chains: chainOptions,
+        coverage,
+        freezeLedgerMeta,
+        dataQuality,
         totalEvents: aggregateRow?.total ?? 0,
         methodology: buildMethodologyEnvelope({
           version: BLACKLIST_TRACKER_METHODOLOGY_VERSION,

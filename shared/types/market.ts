@@ -585,10 +585,105 @@ const BlacklistChainOptionSchema = z.object({
   name: z.string(),
 });
 
+const BlacklistNumericDistributionSchema = z.record(z.string(), z.number());
+
+const BlacklistCoverageSupportedSchema = z.object({
+  symbol: z.enum(BLACKLIST_STABLECOINS),
+  stablecoinId: z.string(),
+  chainId: z.string(),
+  chainName: z.string(),
+  contractAddress: z.string(),
+  configKey: z.string(),
+  providerSource: z.enum(["evm-logs", "trongrid", "other"]),
+  eventFamilies: z.array(z.string()),
+  eventTypes: z.array(z.enum(["blacklist", "unblacklist", "destroy"])),
+});
+
+const BlacklistCoverageDeferredSchema = z.object({
+  symbol: z.enum(BLACKLIST_STABLECOINS),
+  chainId: z.string(),
+  reason: z.string(),
+});
+
+const BlacklistCoverageSchema = z.object({
+  supported: z.array(BlacklistCoverageSupportedSchema),
+  unsupportedDeferred: z.array(BlacklistCoverageDeferredSchema),
+  counts: z.object({
+    supportedConfigs: z.number(),
+    unsupportedDeferredConfigs: z.number(),
+    bySymbol: BlacklistNumericDistributionSchema,
+    byChain: BlacklistNumericDistributionSchema,
+    byProviderSource: BlacklistNumericDistributionSchema,
+  }),
+});
+
+const BlacklistFreezeLedgerMetaSchema = z.object({
+  totalRows: z.number(),
+  scopedRows: z.number(),
+  legacyRows: z.number(),
+  oldestObservedAt: z.number().nullable(),
+  newestObservedAt: z.number().nullable(),
+  oldestAgeSec: z.number().nullable(),
+  newestAgeSec: z.number().nullable(),
+  statusDistribution: BlacklistNumericDistributionSchema,
+  sourceDistribution: BlacklistNumericDistributionSchema,
+  freshnessDistribution: z.object({
+    fresh: z.number(),
+    degraded: z.number(),
+    stale: z.number(),
+  }),
+  providerFailedCount: z.number(),
+  lastErrorClassDistribution: BlacklistNumericDistributionSchema,
+  sourceCategoryCounts: z.object({
+    bootstrap: z.number(),
+    current: z.number(),
+    destroy: z.number(),
+    other: z.number(),
+  }),
+  gaps: z.object({
+    tracked: z.number(),
+    recoverable: z.number(),
+    unrecoverable: z.number(),
+    recentRecoverable: z.number(),
+    neverAttempted: z.number(),
+    repeatedFailures: z.number(),
+    oldestRecoverableAgeSec: z.number().nullable(),
+    amountStatusDistribution: BlacklistNumericDistributionSchema,
+    amountSourceDistribution: BlacklistNumericDistributionSchema,
+  }),
+});
+
+const BlacklistDataQualitySchema = z.object({
+  status: z.enum(["ok", "degraded", "stale"]),
+  warnings: z.array(z.string()),
+  amountGaps: z.object({
+    totalEvents: z.number(),
+    recoverable: z.number(),
+    unrecoverable: z.number(),
+    recentRecoverable: z.number(),
+    missingRatio: z.number(),
+    recentWindowSec: z.number(),
+  }),
+  freezeLedger: z.object({
+    providerFailedCount: z.number(),
+    staleSnapshotCount: z.number(),
+    trackedGapCount: z.number(),
+    scopedRows: z.number(),
+    legacyRows: z.number(),
+  }),
+  coverage: z.object({
+    supportedConfigs: z.number(),
+    unsupportedDeferredConfigs: z.number(),
+  }),
+});
+
 export const BlacklistSummaryResponseSchema = z.object({
   stats: BlacklistSummaryStatsSchema,
   chart: z.array(BlacklistChartPointSchema),
   chains: z.array(BlacklistChainOptionSchema),
+  coverage: BlacklistCoverageSchema.optional(),
+  freezeLedgerMeta: BlacklistFreezeLedgerMetaSchema.optional(),
+  dataQuality: BlacklistDataQualitySchema.optional(),
   totalEvents: z.number(),
   methodology: MethodologyEnvelopeSchema.optional(),
 });

@@ -50,8 +50,22 @@ export function decodeAddress(topicOrData: string): string {
   return "0x" + cleaned.slice(24).toLowerCase();
 }
 
+export function decodeAddressWord(topicOrData: string | null | undefined): string | null {
+  if (typeof topicOrData !== "string") return null;
+  const cleaned = topicOrData.startsWith("0x") ? topicOrData.slice(2) : topicOrData;
+  if (!/^[0-9a-fA-F]{64}$/.test(cleaned)) return null;
+  return "0x" + cleaned.slice(24).toLowerCase();
+}
+
 export function decodeUint256(hexData: string, decimals: number): number {
   const cleaned = hexData.startsWith("0x") ? hexData.slice(2) : hexData;
+  return bigIntToDecimal(BigInt("0x" + cleaned), decimals);
+}
+
+export function decodeUint256Word(hexData: string | null | undefined, decimals: number): number | null {
+  if (typeof hexData !== "string") return null;
+  const cleaned = hexData.startsWith("0x") ? hexData.slice(2) : hexData;
+  if (!/^[0-9a-fA-F]{64}$/.test(cleaned)) return null;
   return bigIntToDecimal(BigInt("0x" + cleaned), decimals);
 }
 
@@ -66,6 +80,10 @@ export function decodeUint256AtSlot(hexData: string, slotIndex: number, decimals
   const slot = cleaned.slice(start, start + 64);
   if (slot.length < 64) return 0;
   return bigIntToDecimal(BigInt("0x" + slot), decimals);
+}
+
+export function decodeUint256AtSlotOrNull(hexData: string, slotIndex: number, decimals: number): number | null {
+  return decodeUint256Word(readDataWord(hexData, slotIndex), decimals);
 }
 
 /**
@@ -124,6 +142,13 @@ export interface EtherscanLogEntry {
   logIndex: string;
 }
 
+export interface EvmLogFetchResult {
+  logs: EtherscanLogEntry[];
+  complete: boolean;
+  scannedToBlock: number;
+  failureReason?: string;
+}
+
 /** Topic filter entry for compound topic queries */
 export interface TopicFilter {
   index: number; // 0–3
@@ -146,14 +171,7 @@ export function buildTopicParams(topics: TopicFilter[]): URLSearchParams {
   return params;
 }
 
-/**
- * Fetch EVM logs for a specific topic from Etherscan v2.
- * Returns `null` on API failure (rate limit, network error, invalid key)
- * vs `[]` for a genuine "no records found" response.
- *
- * Delegates to `fetchEvmLogsForTopics` with a single topic0 filter.
- */
-export async function fetchEvmLogsForTopic(
+export async function fetchEvmLogsForTopicWithCompleteness(
   evmChainId: number,
   contractAddress: string,
   topicHash: string,
@@ -164,8 +182,8 @@ export async function fetchEvmLogsForTopic(
   rateLimit: RateLimitedFetch,
   budget: SubrequestBudget,
   signal?: AbortSignal,
-): Promise<EtherscanLogEntry[] | null> {
-  return fetchEvmLogsForTopics(
+): Promise<EvmLogFetchResult> {
+  return fetchEvmLogsForTopicsWithCompleteness(
     evmChainId,
     contractAddress,
     [{ index: 0, value: topicHash }],
@@ -201,8 +219,50 @@ export async function fetchEvmLogsForTopics(
   budget: SubrequestBudget,
   signal?: AbortSignal,
 ): Promise<EtherscanLogEntry[] | null> {
-  if (budgetExhausted(budget)) return null;
-  if (depth > MAX_RECURSION_DEPTH) return null;
+  const result = await fetchEvmLogsForTopicsWithCompleteness(
+    evmChainId,
+    contractAddress,
+    topics,
+    apiKey,
+    fromBlock,
+    toBlock,
+    depth,
+    rateLimit,
+    budget,
+    signal,
+  );
+  return result.complete ? result.logs : null;
+}
+
+export async function fetchEvmLogsForTopicsWithCompleteness(
+  evmChainId: number,
+  contractAddress: string,
+  topics: TopicFilter[],
+  apiKey: string | null,
+  fromBlock: number,
+  toBlock: number,
+  depth: number,
+  rateLimit: RateLimitedFetch,
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
+): Promise<EvmLogFetchResult> {
+  const unscannedBlock = fromBlock - 1;
+  if (budgetExhausted(budget)) {
+    return {
+      logs: [],
+      complete: false,
+      scannedToBlock: unscannedBlock,
+      failureReason: "budget-exhausted",
+    };
+  }
+  if (depth > MAX_RECURSION_DEPTH) {
+    return {
+      logs: [],
+      complete: false,
+      scannedToBlock: unscannedBlock,
+      failureReason: "max-recursion-depth",
+    };
+  }
 
   const topicParams = buildTopicParams(topics);
   const params = new URLSearchParams({
@@ -236,26 +296,46 @@ export async function fetchEvmLogsForTopics(
   });
 
   if (!json || json.status !== "1" || !Array.isArray(json.result)) {
-    if (json?.message === "No records found") return [];  // Genuine: no events in range
-    // API error — return null so callers know the scan was not reliable
+    if (json?.message === "No records found") {
+      return { logs: [], complete: true, scannedToBlock: toBlock };
+    }
+    // API error — return incomplete so callers know the scan was not reliable.
     if (json) console.warn(`[evm-logs] Etherscan v2 (chain ${evmChainId}) API error: ${json.message}`, json.result ? String(json.result).slice(0, 200) : "no result");
-    return null;
+    return {
+      logs: [],
+      complete: false,
+      scannedToBlock: unscannedBlock,
+      failureReason: json?.message ?? "etherscan-api-error",
+    };
   }
 
   const logs = json.result;
 
   if (logs.length >= ETHERSCAN_MAX_RESULTS) {
     const mid = Math.floor((fromBlock + toBlock) / 2);
-    if (mid === fromBlock) return logs;
+    if (mid === fromBlock) {
+      return {
+        logs,
+        complete: false,
+        scannedToBlock: unscannedBlock,
+        failureReason: "etherscan-result-cap-unsplittable",
+      };
+    }
 
     // Sequential splits to avoid fanning out into 2^depth concurrent connections.
     // Matches the sequential pattern in alchemy-logs.ts.
-    const first = await fetchEvmLogsForTopics(evmChainId, contractAddress, topics, apiKey, fromBlock, mid, depth + 1, rateLimit, budget, signal);
-    const second = await fetchEvmLogsForTopics(evmChainId, contractAddress, topics, apiKey, mid + 1, toBlock, depth + 1, rateLimit, budget, signal);
-    // Combine partial results; propagate null only if both halves failed
-    if (first === null && second === null) return null;
-    return [...(first ?? []), ...(second ?? [])];
+    const first = await fetchEvmLogsForTopicsWithCompleteness(evmChainId, contractAddress, topics, apiKey, fromBlock, mid, depth + 1, rateLimit, budget, signal);
+    if (!first.complete) {
+      return first;
+    }
+    const second = await fetchEvmLogsForTopicsWithCompleteness(evmChainId, contractAddress, topics, apiKey, mid + 1, toBlock, depth + 1, rateLimit, budget, signal);
+    return {
+      logs: [...first.logs, ...second.logs],
+      complete: second.complete,
+      scannedToBlock: second.complete ? toBlock : second.scannedToBlock,
+      failureReason: second.failureReason,
+    };
   }
 
-  return logs;
+  return { logs, complete: true, scannedToBlock: toBlock };
 }

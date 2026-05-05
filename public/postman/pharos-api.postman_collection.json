@@ -38,6 +38,10 @@
       "value": "usdt-tether"
     },
     {
+      "key": "blacklistStablecoinSymbol",
+      "value": "USDT"
+    },
+    {
       "key": "reserveStablecoinId",
       "value": "usdc-circle"
     },
@@ -398,7 +402,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{apiBaseUrl}}/api/blacklist?stablecoin=%7B%7BstablecoinId%7D%7D",
+              "raw": "{{apiBaseUrl}}/api/blacklist?stablecoin=%7B%7BblacklistStablecoinSymbol%7D%7D&chain=Ethereum&eventType=blacklist&q=&sortBy=date&sortDirection=desc&limit=%7B%7Blimit%7D%7D&offset=0",
               "host": [
                 "{{apiBaseUrl}}"
               ],
@@ -409,11 +413,39 @@
               "query": [
                 {
                   "key": "stablecoin",
-                  "value": "{{stablecoinId}}"
+                  "value": "{{blacklistStablecoinSymbol}}"
+                },
+                {
+                  "key": "chain",
+                  "value": "Ethereum"
+                },
+                {
+                  "key": "eventType",
+                  "value": "blacklist"
+                },
+                {
+                  "key": "q",
+                  "value": ""
+                },
+                {
+                  "key": "sortBy",
+                  "value": "date"
+                },
+                {
+                  "key": "sortDirection",
+                  "value": "desc"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
                 }
               ]
             },
-            "description": "Freeze and blacklist events with optional stablecoin/chain filters."
+            "description": "Freeze and blacklist events with optional symbol, chain, event type, search, sort, and pagination filters."
           },
           "response": []
         },

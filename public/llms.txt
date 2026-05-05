@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 242 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 240 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -118,7 +118,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [BlackRock USD (BUIDL)](https://pharos.watch/stablecoin/buidl-blackrock/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [USDD (USDD)](https://pharos.watch/stablecoin/usdd-tron-dao-reserve/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Ethena USDtb (USDTB)](https://pharos.watch/stablecoin/usdtb-ethena/): centralized stablecoin backed by real-world assets pegged to US Dollar.
-- [BFUSD (BFUSD)](https://pharos.watch/stablecoin/bfusd-binance/): centralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [M by M0 (M)](https://pharos.watch/stablecoin/m-m0/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [United Stables (U)](https://pharos.watch/stablecoin/u-united-stables/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [USD.AI (USDai)](https://pharos.watch/stablecoin/usdai-usd-ai/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
@@ -177,7 +176,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Gemini Dollar (GUSD)](https://pharos.watch/stablecoin/gusd-gemini/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Pax Dollar (USDP)](https://pharos.watch/stablecoin/usdp-paxos/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Sui Dollar (USDsui)](https://pharos.watch/stablecoin/usdsui-sui/): centralized stablecoin backed by real-world assets pegged to US Dollar.
-- [SuiUSDe (suiUSDe)](https://pharos.watch/stablecoin/suiusde-sui/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [eSui Dollar (suiUSDe)](https://pharos.watch/stablecoin/suiusde-sui/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Crown BRLV (BRLV)](https://pharos.watch/stablecoin/brlv-crown/): centralized stablecoin backed by real-world assets pegged to Brazilian Real.
 - [Royal Euro (REUR)](https://pharos.watch/stablecoin/reur-royal-euro/): centralized stablecoin backed by real-world assets pegged to Euro.
 - [Alloy Tether (aUSD₮)](https://pharos.watch/stablecoin/ausdt-tether-alloy/): centralized stablecoin backed by real-world assets pegged to US Dollar.
@@ -296,7 +295,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [ZARP Stablecoin (ZARP)](https://pharos.watch/stablecoin/zarp-zarp/): centralized stablecoin backed by real-world assets pegged to South African Rand.
 - [International Stable Currency (ISC)](https://pharos.watch/stablecoin/isc-international-stable-currency/): CeFi-dependent stablecoin backed by real-world assets pegged to CPI.
 - [CAD Coin (CADC)](https://pharos.watch/stablecoin/cadc-cad-coin/): centralized stablecoin backed by real-world assets pegged to Canadian Dollar.
-- [CAD Digital (CADD)](https://pharos.watch/stablecoin/cadd-cad-digital/): centralized stablecoin backed by real-world assets pegged to Canadian Dollar.
 - [PHT Stablecoin (PHT)](https://pharos.watch/stablecoin/pht-pht/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Philippine Peso.
 - [Etherfuse CETES (CETES)](https://pharos.watch/stablecoin/cetes-etherfuse/): centralized stablecoin backed by real-world assets pegged to Mexican Peso.
 - [Maple syrupUSDC (syrupUSDC)](https://pharos.watch/stablecoin/syrupusdc-maple/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.

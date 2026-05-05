@@ -5,7 +5,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain ev
 The tracker now has two distinct amount layers:
 
 - `blacklist_events` stores event-time amounts only when Pharos can justify them historically
-- `blacklist_current_balances` stores persistent freeze-ledger snapshots used by the public frozen-total summary
+- `blacklist_current_balances` stores last-known successful persistent freeze-ledger snapshots used by the public frozen-total summary
 - the `/blacklist` intervention ledger appears after the summary stats and before the status charts, keeping resolved exposure buckets separate from observed supported event history
 - the `/blacklist` status charts now support on-page drilldown into the matching stablecoin subset for each blacklistability bucket
 - the `/blacklist` summary cards now include an unfreezable market-share stat: blacklist-status `No` market cap divided by total tracked stablecoin market cap
@@ -598,7 +598,7 @@ CREATE INDEX idx_blacklist_events_suppression_reason ON blacklist_events(suppres
 
 **Migration:** `0081_blacklist_current_balances.sql`
 
-This table is a separate freeze-ledger snapshot store used by the public frozen-total summary. It does **not** replace `blacklist_events`.
+This table is a separate freeze-ledger snapshot store used by the public frozen-total summary. It does **not** replace `blacklist_events`, and it must not be described as a live balance guarantee. Public totals are last-known successful snapshots.
 
 Rows are seeded from externally reconciled freeze ledgers where Pharos has verified a higher-confidence historical surface. As of `v3.5`, that bootstrap source is `kyc.rip` / [`stables.rip`](https://stables.rip/) for:
 
@@ -629,7 +629,9 @@ Use it for:
 - tracked freeze-ledger record counts (`trackedAddressCount`)
 - tracked snapshot gap tracking (`trackedAmountGapCount`)
 
-Do **not** treat it as raw event history. It is a per-address ledger keyed to blacklist/freeze identities, preserved across later unblacklist events so seized or later-burned balances do not disappear from the public freeze totals. Destroy events can overwrite the stored amount with the seized burn amount when that event emits a better value than the original snapshot.
+Do **not** treat it as raw event history. New snapshot rows are keyed to contract/config-scoped blacklist/freeze identities so same-symbol/same-chain deployments cannot overwrite each other. Legacy rows can still fall back to the older symbol/chain/address identity until remediated. Rows are preserved across later unblacklist events so seized or later-burned balances do not disappear from the public freeze totals. Destroy events can overwrite the stored amount with the seized burn amount when that event emits a better value than the original snapshot.
+
+Provider refresh failures preserve the last successful amount and update status/provenance metadata instead of reducing the public frozen total to zero or null. Treat `status='provider_failed'`, stale `observed_at`, and `last_error_class` as data-quality signals around the last-known value, not as proof that funds were unfrozen.
 
 ### blacklist_sync_state table
 
@@ -684,6 +686,8 @@ For RPC log-scan chains (Base, Optimism, Avalanche, BSC), partial `eth_getLogs` 
 
 4. **Freeze-ledger snapshot refresh**
    - Newly blacklisted addresses fetch a latest token balance snapshot and persist it into `blacklist_current_balances`
+   - New snapshot writes are contract/config-scoped; legacy rows can use symbol/chain/address fallback identity during remediation
+   - Provider refresh failures retain the previous resolved amount while surfacing failure status/provenance
    - Later unblacklist events do **not** delete the ledger row; the freeze snapshot remains part of the historical freeze ledger
    - Destroy events preserve the row and can replace the stored amount with the emitted seized/burned amount when available
    - This ledger feeds the public tracked frozen-total summary without claiming unsupported event-time precision for blacklist rows
@@ -728,7 +732,8 @@ Per-chain block margins (`INDEXING_SAFETY_SEC / blockTime`):
 - Convert stored hex address to base58 for TronGrid account lookups
 - API: `GET /v1/accounts/{tronAddress}`
 - Extract TRC20 balance: `data[0].trc20[contractAddress]`
-- Empty account (`data === []`): return 0, not null
+- Missing account rows or missing TRC20 token-balance entries are treated as null/provider-missing, not false zero
+- Confirmed zero is used only when the token balance is present and explicitly reports zero
 - These balances seed the persistent freeze ledger only, not event-time blacklist row attribution
 
 ### Destroy Amount Recovery
@@ -790,8 +795,8 @@ The handler now exposes only unsuppressed rows for the live-supported symbols: U
   "methodology": {
     "version": "3.9",
     "versionLabel": "v3.9",
-    "currentVersion": "3.99",
-    "currentVersionLabel": "v3.99",
+    "currentVersion": "3.991",
+    "currentVersionLabel": "v3.991",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1704067200,
     "isCurrent": false
@@ -811,7 +816,8 @@ The summary now mixes two intentionally distinct lenses:
 - event-history stats such as `destroyedTotal`
 - recent activity stats such as `recentCount` (30d) and `recentCount24h`
 - local event-state stats such as `activeFrozenTotal`, sourced from Pharos' active blacklist state machine
-- tracked freeze-ledger stats such as `trackedFrozenTotal`, sourced from `blacklist_current_balances`
+- tracked freeze-ledger stats such as `trackedFrozenTotal`, sourced from last-known successful `blacklist_current_balances` snapshots
+- data-quality metadata when available, including snapshot age, source/status distributions, provider failures, and deferred coverage
 - quarterly chart buckets sourced from the tracked freeze ledger and attributed to each row's latest recorded blacklist quarter
 
 ---
@@ -873,13 +879,13 @@ Both endpoints now emit freshness headers from the same 6-hourly `sync-blacklist
 | BlacklistFilters | `src/components/blacklist-filters.tsx` | Stablecoin, chain, event type dropdowns                                                         |
 | Search           | (inline)                               | Server-backed address search                                                                    |
 | BlacklistTable   | `src/components/blacklist-table.tsx`   | Server-sorted, 50 rows per page                                                                 |
-| BlacklistStats   | `src/components/blacklist-stats.tsx`   | USDC/USDT unique blacklisted addresses, freeze-ledger totals across all tracked symbols, gold addresses, and destroyed funds |
+| BlacklistStats   | `src/components/blacklist-stats.tsx`   | Unfreezable market share, last-known freeze-ledger totals, destroyed funds, and snapshot/data-quality callouts |
 | BlacklistChart   | `src/components/blacklist-chart.tsx`   | Quarterly stacked bar chart of tracked freeze-ledger balances by stablecoin, attributed to blacklist quarter |
 | CSV export       | (inline)                               | Download filtered events as CSV                                                                 |
 
 ### Amount Display Logic
 
-- `null` or (`0` and not destroy): show "--"
+- `null` or (`0` and not destroy): show the amount status/source instead of implying a confirmed value
 - Gold coins (PAXG, XAUT): 4 decimal places + symbol (converted to USD using the coin-specific price-cache entry)
 - A7A5, EURC, BRZ, EURI, and TGBP: native amounts are non-USD-denominated and converted to USD using coin-specific price-cache entries
 - USD-pegged stablecoins: `formatCurrency` (USD)
@@ -924,7 +930,7 @@ Gating is driven by the view model (`src/lib/stablecoin-detail-view-model.ts` â†
 ## Known Gotchas
 
 1. **Tron address format:** events return `0x`-prefix hex; TronGrid API requires `41`-prefix hex.
-2. **Tron empty accounts:** `{ success: true, data: [] }` means 0 balance, NOT an API error.
+2. **Tron missing balances:** missing account rows or absent TRC20 token entries are null/provider-missing, not false zero; only an explicit token balance of `0` is treated as confirmed zero.
 3. **Tron sync state uses millisecond timestamps**, NOT block numbers.
 4. **USDT has TWO event patterns:** legacy (`AddedBlackList`, address NOT indexed) and USDT0 (`BlockPlaced`, address indexed). Some chains (Arbitrum, Polygon) emit both.
 5. **PAXG FrozenAddressWiped** has no amount in the event -- must fetch via `balanceOf` at `blockNumber - 1`.

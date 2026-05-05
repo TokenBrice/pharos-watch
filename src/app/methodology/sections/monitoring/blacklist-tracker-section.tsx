@@ -8,7 +8,7 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
-export const CONTENT_MARKDOWN = `## Blacklist Tracker Methodology\n\nThe blacklist tracker monitors issuer-controlled freeze, blocklist, account-pause, and token-destruction events across supported centralized stablecoin contracts.\n\nEvents are normalized by chain, stablecoin, action type, native amount, USD amount, and amount-status provenance. Recoverable amount gaps are queued for repair, while permanently unavailable rows remain auditable without polluting public aggregates.\n\nBlacklist exposure feeds report-card dependency and resilience review because the ability to freeze or destroy balances is a material operational risk even when the peg is stable.\n`;
+export const CONTENT_MARKDOWN = `## Blacklist Tracker Methodology\n\nThe blacklist tracker monitors issuer-controlled freeze, blocklist, account-pause, and token-destruction events across supported centralized stablecoin contracts.\n\nEvents are normalized by chain, stablecoin, action type, native amount, USD amount, and amount-status provenance. Recoverable amount gaps are queued for repair, while permanently unavailable rows remain auditable without polluting public aggregates.\n\nFrozen-total summaries use last-known successful freeze-ledger snapshots. New snapshots are contract/config scoped so same-symbol deployments do not overwrite each other; legacy rows can fall back to older address identity until remediated.\n\nBlacklist exposure feeds report-card dependency and resilience review because the ability to freeze or destroy balances is a material operational risk even when the peg is stable.\n`;
 export function BlacklistTrackerMethodologySection() {
   return (
           <MethodologySectionShell
@@ -35,6 +35,12 @@ export function BlacklistTrackerMethodologySection() {
                 ETH USDT, and TRON USDT. Non-USD or commodity-denominated assets use coin-specific price-cache entries
                 when Pharos reports USD frozen value.
               </p>
+              <p>
+                Public frozen totals are last-known successful freeze-ledger snapshots rather than live balance guarantees.
+                Provider refresh failures preserve the previous successful value and surface data-quality context. New
+                snapshot identities are contract/config scoped, while older rows can use legacy symbol/chain/address
+                fallback until remediation catches them up.
+              </p>
               <MethodologyFacts
                 facts={[
                   { label: "Data sources", value: "Etherscan v2, chain RPC / dRPC log scans, and TronGrid" },
@@ -51,7 +57,7 @@ export function BlacklistTrackerMethodologySection() {
                   <dt className="text-foreground font-medium">Required sources</dt>
                   <dd>Block explorer event logs with valid ABI decoding</dd>
                   <dt className="text-foreground font-medium">Failure behavior</dt>
-                  <dd>Falls back to last-known freeze ledger; stale-data banner shown</dd>
+                  <dd>Preserves last-known snapshots; stale/provider-failed status shown</dd>
                 </dl>
               </div>
               <WorkedExample summary="Worked example: blacklist event reconciliation">
@@ -62,8 +68,8 @@ export function BlacklistTrackerMethodologySection() {
               </WorkedExample>
               <MethodologyDetails summary="Technical details: freeze ledger reconciliation">
                 <div className="space-y-3">
-                  <p>The blacklist tracker stores event-time rows separately from a persistent freeze-ledger snapshot. Each cron run processes new events since the last indexed block; new blacklist rows refresh current balances, while later unblacklist events do not delete historical ledger rows.</p>
-                  <p>Backlog sync handles gaps from missed cron runs or RPC failures by replaying events from the last confirmed cursor. Tron events use a separate ingestion path due to the TRC-20 event format differences.</p>
+                  <p>The blacklist tracker stores event-time rows separately from a persistent freeze-ledger snapshot. Each cron run processes new events since the last indexed block; new blacklist rows refresh last-known snapshots, while later unblacklist events do not delete historical ledger rows.</p>
+                  <p>Backlog sync handles gaps from missed cron runs or RPC failures by replaying events from the last confirmed cursor. Tron events use a separate ingestion path due to the TRC-20 event format differences, and missing Tron account/token-balance data remains provider-missing rather than being converted to zero.</p>
                   <p>The public-facing freeze totals combine per-chain counts into a single figure. Destroy/seize events can overwrite the stored amount when they provide better seized-value evidence, and the public summary reads the persistent ledger rather than treating unfreeze rows as historical deletion.</p>
                 </div>
               </MethodologyDetails>

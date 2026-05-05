@@ -83,10 +83,6 @@
     "disposition": "queued-p4",
     "notes": "GHO reserve adapter logic predates the PharosVille split and remains a large adapter-specific parsing surface. Keep it waived for this host-route cleanup; split fetch, parse, and reserve projection helpers in a dedicated reserve-adapter cleanup."
   },
-  "worker/src/api/mint-burn-flows-shared.ts": {
-    "disposition": "queued-p4",
-    "notes": "Shared mint/burn response helpers predate the PharosVille split and aggregate several projection paths used by the flow API. Keep waived here; extract request-independent projection and summary helpers in the next mint/burn API cleanup."
-  },
   "src/components/pre-launch-detail.tsx": {
     "disposition": "queued-p4",
     "notes": "The pre-launch detail component is unrelated to the PharosVille host decommission and still combines page copy, eligibility tables, and linked-surface guidance. Keep waived until a frontend route-section cleanup can split it into smaller panels."

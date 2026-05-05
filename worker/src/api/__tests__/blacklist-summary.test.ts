@@ -96,6 +96,14 @@ describe("handleBlacklistSummary", () => {
       };
       chart: Array<{ total: number }>;
       chains: Array<{ id: string; name: string }>;
+      coverage: { counts: { supportedConfigs: number; byProviderSource: Record<string, number> } };
+      freezeLedgerMeta: {
+        totalRows: number;
+        statusDistribution: Record<string, number>;
+        sourceDistribution: Record<string, number>;
+        gaps: { recoverable: number; unrecoverable: number };
+      };
+      dataQuality: { status: string; coverage: { supportedConfigs: number } };
       totalEvents: number;
     };
     expect(body.totalEvents).toBe(2);
@@ -110,6 +118,14 @@ describe("handleBlacklistSummary", () => {
     expect(body.chart[0]?.total).toBe(1250);
     expect(body.chains.some((chain) => chain.id === "ethereum")).toBe(true);
     expect(body.chains.some((chain) => chain.id === "base")).toBe(true);
+    expect(body.coverage.counts.supportedConfigs).toBeGreaterThan(0);
+    expect(body.coverage.counts.byProviderSource["evm-logs"]).toBeGreaterThan(0);
+    expect(body.freezeLedgerMeta.totalRows).toBe(1);
+    expect(body.freezeLedgerMeta.statusDistribution.resolved).toBe(1);
+    expect(body.freezeLedgerMeta.sourceDistribution.current_balance).toBe(1);
+    expect(body.freezeLedgerMeta.gaps.recoverable).toBe(0);
+    expect(body.freezeLedgerMeta.gaps.unrecoverable).toBe(0);
+    expect(body.dataQuality.coverage.supportedConfigs).toBe(body.coverage.counts.supportedConfigs);
     // Per-coin detail fields surfaced for the detail-page block.
     expect(body.stats.perCoinFrozenAddressCount.USDT).toBe(1);
     expect(body.stats.perCoinFrozenAddressCount.USDC).toBe(0);
@@ -283,6 +299,109 @@ describe("handleBlacklistSummary", () => {
     const res = await handleBlacklistSummary(db);
     const json = await res.json() as { stats: { frozenAddresses: number } };
     expect(json.stats.frozenAddresses).toBe(1);
+  });
+
+  it("uses compact chronological history for blacklist to destroy summaries", async () => {
+    const blacklistedAt = 1_704_067_200; // Q1 '24
+    const destroyedAt = 1_712_534_400; // Q2 '24
+    const observedAt = 1_767_225_600; // Q1 '26; should not drive chart attribution
+    const db = mockD1([
+      {
+        match: "GROUP BY stablecoin, event_type",
+        rows: [
+          { stablecoin: "USDT", event_type: "blacklist", n: 1, usd_sum: 100 },
+          { stablecoin: "USDT", event_type: "destroy", n: 1, usd_sum: 100 },
+        ],
+      },
+      {
+        match: "WITH ranked AS",
+        rows: [
+          makeBlacklistRow({
+            id: "destroy-latest",
+            stablecoin: "USDT",
+            chain_id: "ethereum",
+            chain_name: "Ethereum",
+            event_type: "destroy",
+            address: "0xdestroyed",
+            amount_native: 100,
+            amount_usd_at_event: 100,
+            timestamp: destroyedAt,
+            config_key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+            contract_address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+          }),
+        ],
+      },
+      {
+        match: "latest_event_type",
+        rows: [
+          makeBlacklistRow({
+            id: "blacklist-prior",
+            stablecoin: "USDT",
+            chain_id: "ethereum",
+            chain_name: "Ethereum",
+            event_type: "blacklist",
+            address: "0xdestroyed",
+            amount_native: 100,
+            amount_usd_at_event: 100,
+            timestamp: blacklistedAt,
+            config_key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+            contract_address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+          }),
+          makeBlacklistRow({
+            id: "destroy-latest",
+            stablecoin: "USDT",
+            chain_id: "ethereum",
+            chain_name: "Ethereum",
+            event_type: "destroy",
+            address: "0xdestroyed",
+            amount_native: 100,
+            amount_usd_at_event: 100,
+            timestamp: destroyedAt,
+            config_key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+            contract_address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+          }),
+        ],
+      },
+      {
+        match: "COUNT(*) AS total",
+        rows: [],
+        first: { total: 2, max_ts: destroyedAt, recoverable_gap: 0, recent_30d: 0, recent_24h: 0 },
+      },
+      {
+        match: "FROM blacklist_current_balances",
+        rows: [
+          {
+            id: "USDT:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7:ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7:0xdestroyed",
+            stablecoin: "USDT",
+            chain_id: "ethereum",
+            address: "0xdestroyed",
+            config_key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+            contract_address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+            amount_native: 100,
+            amount_usd: 100,
+            source: "destroy_event",
+            status: "resolved",
+            observed_at: observedAt,
+            last_successful_observed_at: observedAt,
+            attempt_count: 1,
+            last_attempted_at: observedAt,
+            last_error_class: null,
+            consecutive_failures: 0,
+          },
+        ],
+      },
+      { match: "quarter_sort_key", rows: [] },
+      { match: "cron_runs", rows: [], first: { started_at: null } },
+    ]);
+
+    const res = await handleBlacklistSummary(db);
+    const json = await res.json() as {
+      stats: { activeAddressCount: number; activeFrozenTotal: number };
+      chart: Array<{ quarter: string; total: number }>;
+    };
+    expect(json.stats.activeAddressCount).toBe(1);
+    expect(json.stats.activeFrozenTotal).toBe(0);
+    expect(json.chart[0]).toMatchObject({ quarter: "Q1 '24", total: 100 });
   });
 
   it("surfaces destroy-only coins without a freeze-ledger snapshot", async () => {

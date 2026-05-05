@@ -62,4 +62,34 @@ describe("public API artifact catalog", () => {
     expect(PUBLIC_STATIC_POSTMAN_REQUESTS.map((request) => request.base)).toEqual(["site", "site", "site"]);
     expect(PUBLIC_STATIC_POSTMAN_REQUESTS.map((request) => request.noAuth)).toEqual([true, true, true]);
   });
+
+  it("documents the blacklist API's symbol filter and supported query contract", () => {
+    const endpoint = PUBLIC_API_ARTIFACT_ENDPOINTS.find((entry) => entry.key === "blacklist");
+    expect(endpoint).toBeDefined();
+    expect(endpoint?.parameters?.map((parameter) => parameter.name)).toEqual([
+      "stablecoin",
+      "chain",
+      "eventType",
+      "q",
+      "sortBy",
+      "sortDirection",
+      "limit",
+      "offset",
+    ]);
+
+    const stablecoin = endpoint?.parameters?.find((parameter) => parameter.name === "stablecoin");
+    expect(stablecoin?.description).toContain("stablecoin symbol");
+    expect(stablecoin?.schema.enum).toContain("USDT");
+    expect(stablecoin?.schema.enum).not.toContain("usdt-tether");
+
+    const eventType = endpoint?.parameters?.find((parameter) => parameter.name === "eventType");
+    expect(eventType?.schema.enum).toEqual(["blacklist", "unblacklist", "destroy"]);
+    const sortBy = endpoint?.parameters?.find((parameter) => parameter.name === "sortBy");
+    expect(sortBy?.schema.enum).toEqual(["date", "stablecoin", "chain", "event"]);
+    const sortDirection = endpoint?.parameters?.find((parameter) => parameter.name === "sortDirection");
+    expect(sortDirection?.schema.enum).toEqual(["asc", "desc"]);
+    const limit = endpoint?.parameters?.find((parameter) => parameter.name === "limit");
+    expect(limit?.schema.maximum).toBe(1000);
+    expect(endpoint?.postman?.query?.stablecoin).toBe("{{blacklistStablecoinSymbol}}");
+  });
 });

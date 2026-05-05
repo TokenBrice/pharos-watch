@@ -105,7 +105,10 @@ export async function fetchTronEventsIncremental(
       incomplete = true;
       break;
     }
-    if (blacklistSubrequestBudgetReached(runBudget)) break;
+    if (blacklistSubrequestBudgetReached(runBudget)) {
+      incomplete = true;
+      break;
+    }
 
     const tsFilter = lastTimestampMs > 0 ? `&min_block_timestamp=${lastTimestampMs}` : "";
     const eventName = eventDef.signature.split("(")[0];
@@ -118,7 +121,10 @@ export async function fetchTronEventsIncremental(
         incomplete = true;
         break;
       }
-      if (blacklistSubrequestBudgetReached(runBudget)) break;
+      if (blacklistSubrequestBudgetReached(runBudget)) {
+        incomplete = true;
+        break;
+      }
 
       runBudget.subrequestBudget.count++;
       const json: TronEventsResponse | null = await rateLimit(async () => {
@@ -141,6 +147,7 @@ export async function fetchTronEventsIncremental(
 
       if (!json?.success || !Array.isArray(json.data)) {
         apiError = true;
+        incomplete = true;
         break;
       }
 
@@ -154,7 +161,7 @@ export async function fetchTronEventsIncremental(
       url = json.meta?.links?.next || null;
     }
 
-    if (incomplete) break;
+    if (incomplete || apiError) break;
   }
 
   return { rows, maxBlock, incomplete, apiError };

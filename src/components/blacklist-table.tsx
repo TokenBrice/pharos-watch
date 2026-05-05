@@ -37,6 +37,24 @@ const AMOUNT_STATUS_TOOLTIPS: Record<string, string> = {
   permanently_unavailable: "Amount cannot be recovered (e.g., EURC mirror-zero or Tron legacy row).",
 };
 
+const AMOUNT_SOURCE_LABELS: Record<string, string> = {
+  event: "Event",
+  historical_balance: "Historical",
+  current_balance_snapshot: "Snapshot",
+  derived: "Derived",
+  legacy_migration: "Legacy",
+  unavailable: "Unavailable",
+};
+
+const AMOUNT_SOURCE_TOOLTIPS: Record<string, string> = {
+  event: "Amount came directly from the emitted event.",
+  historical_balance: "Amount was recovered from a historical balance lookup.",
+  current_balance_snapshot: "Amount is a last-known freeze-ledger snapshot, not event-time precision.",
+  derived: "Legacy derived amount retained for audit compatibility.",
+  legacy_migration: "Legacy migration amount retained for audit compatibility.",
+  unavailable: "No amount source is available for this row.",
+};
+
 const SKELETON_ROWS = Array.from({ length: 10 }, (_, i) => i);
 
 interface BlacklistTableProps {
@@ -97,7 +115,12 @@ export function BlacklistTable({
       },
       { header: "Amount Unit", accessor: (row) => row.stablecoin },
       { header: "Amount (USD at event)", accessor: (row) => row.amountUsdAtEvent },
+      { header: "Amount Source", accessor: (row) => row.amountSource },
       { header: "Amount Status", accessor: (row) => row.amountStatus },
+      { header: "Contract Address", accessor: (row) => row.contractAddress ?? "" },
+      { header: "Config Key", accessor: (row) => row.configKey ?? "" },
+      { header: "Event Signature", accessor: (row) => row.eventSignature ?? "" },
+      { header: "Event Topic0", accessor: (row) => row.eventTopic0 ?? "" },
       { header: "Tx URL", accessor: (row) => row.explorerTxUrl },
     ], "pharos-freeze-events");
   }, [events]);
@@ -182,15 +205,15 @@ export function BlacklistTable({
               </TableCell>
               <TableCell className="hidden sm:table-cell text-right font-mono">
                 {formatBlacklistAmountCell(evt)}
-                {evt.amountSource === "current_balance_snapshot" && evt.amountNative != null ? (
+                {evt.amountSource !== "unavailable" || evt.amountStatus === "resolved" ? (
                   <span
-                    className="ml-1 rounded px-1 py-0.5 text-[10px] uppercase tracking-wide border border-border text-muted-foreground"
-                    title="Amount is a freeze-ledger snapshot, not event-time precision"
+                    className="ml-1 inline-flex rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
+                    title={AMOUNT_SOURCE_TOOLTIPS[evt.amountSource]}
                   >
-                    Snapshot
+                    {AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " ")}
                   </span>
                 ) : null}
-                {!["resolved", "permanently_unavailable"].includes(evt.amountStatus) && (
+                {evt.amountStatus !== "resolved" && (
                   <span
                     className="ml-1 inline-flex items-center rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
                     title={AMOUNT_STATUS_TOOLTIPS[evt.amountStatus]}

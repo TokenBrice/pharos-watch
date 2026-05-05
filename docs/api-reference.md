@@ -16,7 +16,7 @@ The runtime now uses three HTTP lanes:
 
 Static dataset exports are served from the public website, not from the Worker API, and do not require `X-API-Key`. The Stablecoin Cemetery export is available as JSON at `https://pharos.watch/datasets/stablecoin-cemetery.json` and CSV at `https://pharos.watch/datasets/stablecoin-cemetery.csv`.
 
-Machine-readable integration artifacts are also served from the public website for onboarding. The OpenAPI endpoint catalogue is available at `https://pharos.watch/openapi.json`, and Postman artifacts are available at `https://pharos.watch/postman/pharos-api.postman_collection.json` plus `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both Postman files, then replace the environment `apiKey` placeholder with a real `X-API-Key`.
+Machine-readable integration artifacts are also served from the public website for onboarding. The OpenAPI endpoint catalogue is available at `https://pharos.watch/openapi.json`, and Postman artifacts are available at `https://pharos.watch/postman/pharos-api.postman_collection.json` plus `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both Postman files, then replace the environment `apiKey` placeholder with a real `X-API-Key`. The public artifacts intentionally exclude Cloudflare-Access-gated admin routes; use the operator documentation for admin dry-runs.
 
 Browser consumers should use same-origin `/_site-data/*` via the frontend helpers in `src/lib/api.ts`. In production, that Pages proxy targets `https://site-api.pharos.watch` through `SITE_API_ORIGIN`. Direct integrations, CI smoke, and build-time sync scripts should target `https://api.pharos.watch`.
 
@@ -640,7 +640,7 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 
 | Param        | Type      | Default | Description                                                    |
 | ------------ | --------- | ------- | -------------------------------------------------------------- |
-| `stablecoin` | `string`  | —       | Filter by token symbol from the full `BLACKLIST_STABLECOINS` set in `shared/types/market.ts` |
+| `stablecoin` | `string`  | —       | Filter by uppercase blacklist-tracker symbol from the full `BLACKLIST_STABLECOINS` set in `shared/types/market.ts` (for example `USDT`, not `usdt-tether`) |
 | `chain`      | `string`  | —       | Filter by chain name (e.g. `Ethereum`, `Tron`)                 |
 | `eventType`  | `string`  | —       | Filter by type: `blacklist`, `unblacklist`, `destroy`          |
 | `q`          | `string`  | —       | Case-insensitive address substring search                      |
@@ -658,11 +658,11 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
   "methodology": {
     "version": "3.99",
     "versionLabel": "v3.99",
-    "currentVersion": "3.99",
-    "currentVersionLabel": "v3.99",
+    "currentVersion": "3.991",
+    "currentVersionLabel": "v3.991",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1776729600,
-    "isCurrent": true
+    "isCurrent": false
   }
 }
 ```
@@ -711,9 +711,9 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 
 Server-side aggregates for the Blacklist Tracker overview cards, chart, and filter options. This lets the frontend render summary state without hydrating the full blacklist history first.
 
-`stats.destroyedTotal` remains an event-history total. `stats.activeFrozenTotal` reflects Pharos' local active blacklist state machine. `stats.trackedFrozenTotal` is the persistent freeze-ledger total sourced from `blacklist_current_balances`, including reconciled historical bootstrap rows where later seizures or unblacklists would otherwise hide the frozen amount. `stats.recentCount` covers the last 30 days, while `stats.recentCount24h` is the last-24-hours subset used by chrome-level monitoring surfaces. The `chart` now uses that same freeze ledger and attributes each tracked balance back to its latest recorded blacklist quarter, so the quarterly buckets explain the `trackedFrozenTotal` headline rather than raw event-time intake.
+`stats.destroyedTotal` remains an event-history total. `stats.activeFrozenTotal` reflects Pharos' local active blacklist state machine. `stats.trackedFrozenTotal` is the persistent freeze-ledger total sourced from `blacklist_current_balances`, including reconciled historical bootstrap rows where later seizures or unblacklists would otherwise hide the frozen amount. These current-balance totals are last-known successful snapshots, not a live guarantee; provider refresh failures preserve the last successful amount and should be interpreted through freshness, status, and provenance metadata when present. New snapshot rows are contract/config-scoped; older rows can still fall back to the legacy symbol/chain/address identity until remediated. `stats.recentCount` covers the last 30 days, while `stats.recentCount24h` is the last-24-hours subset used by chrome-level monitoring surfaces. The `chart` now uses that same freeze ledger and attributes each tracked balance back to its latest recorded blacklist quarter, so the quarterly buckets explain the `trackedFrozenTotal` headline rather than raw event-time intake.
 
-The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stablecoin detail pages. `perCoinFrozenAddressCount` counts addresses whose latest event is `blacklist` (net-frozen). `perCoinFrozenTotal` sums `blacklist_current_balances.balance_usd` per coin. `perCoinDestroyedTotal` sums `amount_usd_at_event` over `destroy` events per coin. `perCoinQuarterlyEventTypes` contains each coin's quarterly breakdown of event-type counts, zero-filled between the coin's first and last event quarters so bars render contiguously. All per-coin aggregations exclude rows where `suppression_reason` is set (e.g. EURC mirror zero-balance entries).
+The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stablecoin detail pages. `perCoinFrozenAddressCount` counts addresses whose latest event is `blacklist` (net-frozen). `perCoinFrozenTotal` sums last-known successful `blacklist_current_balances.balance_usd` snapshots per coin. `perCoinDestroyedTotal` sums `amount_usd_at_event` over `destroy` events per coin. `perCoinQuarterlyEventTypes` contains each coin's quarterly breakdown of event-type counts, zero-filled between the coin's first and last event quarters so bars render contiguously. All per-coin aggregations exclude rows where `suppression_reason` is set (e.g. EURC mirror zero-balance entries).
 
 **Cache:** realtime
 
@@ -754,18 +754,89 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
     { "id": "ethereum", "name": "Ethereum" },
     { "id": "tron", "name": "Tron" }
   ],
+  "coverage": {
+    "supported": [
+      {
+        "symbol": "USDT",
+        "stablecoinId": "usdt-tether",
+        "chainId": "ethereum",
+        "chainName": "Ethereum",
+        "contractAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "configKey": "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "providerSource": "evm-logs",
+        "eventFamilies": ["USDT legacy"],
+        "eventTypes": ["blacklist", "unblacklist", "destroy"]
+      }
+    ],
+    "unsupportedDeferred": [{ "symbol": "TUSD", "chainId": "bsc", "reason": "pending explorer coverage" }],
+    "counts": {
+      "supportedConfigs": 71,
+      "unsupportedDeferredConfigs": 6,
+      "bySymbol": { "USDT": 8 },
+      "byChain": { "ethereum": 35 },
+      "byProviderSource": { "evm-logs": 70, "trongrid": 1 }
+    }
+  },
+  "freezeLedgerMeta": {
+    "totalRows": 9466,
+    "scopedRows": 240,
+    "legacyRows": 9226,
+    "oldestObservedAt": 1710000000,
+    "newestObservedAt": 1776729600,
+    "oldestAgeSec": 66600000,
+    "newestAgeSec": 1200,
+    "statusDistribution": { "resolved": 9466 },
+    "sourceDistribution": { "current_balance": 240, "bootstrap_kyc_rip": 9226 },
+    "freshnessDistribution": { "fresh": 9450, "degraded": 10, "stale": 6 },
+    "providerFailedCount": 0,
+    "lastErrorClassDistribution": {},
+    "sourceCategoryCounts": { "bootstrap": 9226, "current": 240, "destroy": 0, "other": 0 },
+    "gaps": {
+      "tracked": 0,
+      "recoverable": 17,
+      "unrecoverable": 0,
+      "recentRecoverable": 0,
+      "neverAttempted": 0,
+      "repeatedFailures": 0,
+      "oldestRecoverableAgeSec": null,
+      "amountStatusDistribution": { "resolved": 13405, "recoverable_pending": 17 },
+      "amountSourceDistribution": { "historical_balance": 9000, "event": 4405, "unavailable": 17 }
+    }
+  },
+  "dataQuality": {
+    "status": "ok",
+    "warnings": [],
+    "amountGaps": {
+      "totalEvents": 13422,
+      "recoverable": 17,
+      "unrecoverable": 0,
+      "recentRecoverable": 0,
+      "missingRatio": 0.0013,
+      "recentWindowSec": 86400
+    },
+    "freezeLedger": {
+      "providerFailedCount": 0,
+      "staleSnapshotCount": 6,
+      "trackedGapCount": 0,
+      "scopedRows": 240,
+      "legacyRows": 9226
+    },
+    "coverage": { "supportedConfigs": 71, "unsupportedDeferredConfigs": 6 }
+  },
   "totalEvents": 13422,
   "methodology": {
-    "version": "3.99",
-    "versionLabel": "v3.99",
-    "currentVersion": "3.99",
-    "currentVersionLabel": "v3.99",
+    "version": "3.991",
+    "versionLabel": "v3.991",
+    "currentVersion": "3.991",
+    "currentVersionLabel": "v3.991",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1776729600,
     "isCurrent": true
   }
 }
 ```
+
+`coverage` is the machine-readable tracker coverage inventory. `supported` entries are contract/config-level rows, while `unsupportedDeferred` identifies known deferred deployments and the reason they are not live. `freezeLedgerMeta` describes the last-known snapshot ledger used by `trackedFrozenTotal`, including scoped-vs-legacy row counts, observed-age bounds, source/status distributions, provider failures, and amount-gap distributions. `dataQuality.status` summarizes those coverage, gap, and snapshot signals into `ok`, `degraded`, or `stale`; clients should display or alert on `warnings` rather than inferring quality from null amount fields alone.
 
 ---
 

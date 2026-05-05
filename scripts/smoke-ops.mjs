@@ -50,8 +50,8 @@ function sleep(delayMs) {
   return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
-export async function fetchJson(url, headers, fetchImpl = fetch) {
-  const response = await fetchImpl(url, { headers, redirect: "manual" });
+export async function fetchJson(url, headers, fetchImpl = fetch, requestInit = {}) {
+  const response = await fetchImpl(url, { ...requestInit, headers, redirect: "manual" });
   const bodyText = await response.text();
   let body = null;
   try {
@@ -220,6 +220,16 @@ export async function run() {
     fetchJson(new URL("/api/status", opsApiBase).toString(), headers),
     fetchJson(new URL("/api/status-history?limit=5", opsApiBase).toString(), headers),
     fetchJson(new URL("/api/audit-depeg-history?dry-run=true&limit=1", opsApiBase).toString(), headers),
+    fetchJson(
+      new URL("/api/backfill-blacklist-current-balances?dryRun=true&stablecoin=USDT&limit=1", opsApiBase).toString(),
+      {
+        ...headers,
+        "Content-Type": "application/json",
+        "X-Pharos-Admin": "1",
+      },
+      fetch,
+      { method: "POST", body: "{}" },
+    ),
   ]).then(
     (value) => ({ error: null, value }),
     (error) => ({ error, value: null }),
@@ -245,7 +255,7 @@ export async function run() {
   if (directOps.error) {
     throw directOps.error;
   }
-  const [status, history, audit] = directOps.value;
+  const [status, history, audit, blacklistBackfill] = directOps.value;
   if (status.response.status !== 200) {
     console.error(
       `[smoke-ops] /api/status returned ${status.response.status}, body: ${status.bodyText?.slice(0, 500)}`,
@@ -304,6 +314,20 @@ export async function run() {
   assert(audit.response.status === 200, `Expected dry-run audit 200, got ${audit.response.status}`);
   assert(audit.body && audit.body.dryRun === true, "Dry-run audit response missing dryRun=true");
   console.log("[smoke-ops] OK ops API dry-run action");
+
+  assert(
+    blacklistBackfill.response.status === 200,
+    `Expected blacklist balance dry-run 200, got ${blacklistBackfill.response.status}`,
+  );
+  assert(
+    blacklistBackfill.body && blacklistBackfill.body.dryRun === true,
+    "Blacklist balance dry-run response missing dryRun=true",
+  );
+  assert(
+    blacklistBackfill.body.totals && typeof blacklistBackfill.body.totals.candidates === "number",
+    "Blacklist balance dry-run response missing totals.candidates",
+  );
+  console.log("[smoke-ops] OK ops API blacklist balance dry-run");
 
   console.log("[smoke-ops] All checks passed.");
 }

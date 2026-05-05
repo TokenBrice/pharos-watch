@@ -1,3 +1,4 @@
+import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import {
   countPublicImpactOpenCircuits,
   getCircuitImpactStatus,
@@ -294,11 +295,20 @@ export async function assessPublicHealth(
     warnings.push("circuit-query-failed");
   }
 
+  const blacklistImpactStatus = blacklistResult.error
+    ? "degraded"
+    : blacklistResult.metrics
+      ? getBlacklistGapStatus({
+          missingRatio: blacklistResult.metrics.missingRatio,
+          recentMissingAmounts: blacklistResult.metrics.recentMissingAmounts,
+        })
+      : "healthy";
+
   const overallStatus = maxPublicStatus(
     cacheImpactStatus,
     mintBurnResult.mintBurnImpactStatus,
     circuitImpactStatus,
-    blacklistResult.error ? "degraded" : "healthy",
+    blacklistImpactStatus,
   );
 
   return {

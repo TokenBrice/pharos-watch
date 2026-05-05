@@ -54,3 +54,23 @@ export function buildBlacklistAddressCountKey(
   if (mode === "address-chain") return `${chainId}:${address.toLowerCase()}`;
   return `${stablecoin}:${chainId}:${address.toLowerCase()}`;
 }
+
+export function buildBlacklistContractBalanceKey(
+  stablecoin: BlacklistStablecoin,
+  chainId: string,
+  address: string,
+  configKey?: string | null,
+  contractAddress?: string | null,
+): string {
+  const legacyKey = buildBlacklistAddressCountKey(stablecoin, chainId, address);
+  const normalizedConfigKey = configKey?.trim().toLowerCase() || null;
+  const normalizedContractAddress = contractAddress?.trim().toLowerCase() || null;
+  if (!normalizedConfigKey && !normalizedContractAddress) return legacyKey;
+  return [
+    stablecoin,
+    chainId,
+    normalizedContractAddress ?? "unknown-contract",
+    normalizedConfigKey ?? "unknown-config",
+    address.toLowerCase(),
+  ].join(":");
+}
