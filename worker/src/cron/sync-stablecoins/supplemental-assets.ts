@@ -1,7 +1,8 @@
 import { CHAIN_META } from "@shared/lib/chains";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
@@ -26,27 +27,57 @@ function pegTypeKey(meta: StablecoinMeta): string {
   return `pegged${meta.flags.pegCurrency}`;
 }
 
-export type CoinGeckoMcapData = Record<string, { usd?: number; usd_market_cap?: number }>;
+export type CoinGeckoMcapData = Record<string, { usd?: number; usd_market_cap?: number; last_updated_at?: number }>;
+
+interface SupplementalPriceResolution {
+  price: number;
+  source: "coingecko-mirror" | "coingecko";
+  observedAt: number | null;
+  observedAtMode: PriceObservedAtMode | null;
+}
 
 function toPositiveFiniteNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
-function resolveSupplementalPrice(
+function isFreshSupplementalPrice(source: SupplementalPriceResolution["source"], observedAt: number | null): boolean {
+  if (observedAt == null) return true;
+  const maxTrustedAgeSec = getPricingSourceRegistryEntry(source)?.maxTrustedAgeSec ?? 15 * 60;
+  const nowSec = Math.floor(Date.now() / 1000);
+  return nowSec - observedAt <= maxTrustedAgeSec;
+}
+
+export function resolveSupplementalPrice(
   priceData: { coins: Record<string, DefiLlamaCoinPrice> },
   cgData: CoinGeckoMcapData,
   geckoId?: string,
-): { price: number; source: "coingecko-mirror" | "coingecko" } | null {
+): SupplementalPriceResolution | null {
   if (!geckoId) return null;
 
-  const dlPrice = toPositiveFiniteNumber(priceData.coins[`coingecko:${geckoId}`]?.price);
+  const dlEntry = priceData.coins[`coingecko:${geckoId}`];
+  const dlPrice = toPositiveFiniteNumber(dlEntry?.price);
   if (dlPrice != null) {
-    return { price: dlPrice, source: "coingecko-mirror" };
+    const observedAt = toPositiveFiniteNumber(dlEntry?.timestamp) ?? null;
+    const resolution = {
+      price: dlPrice,
+      source: "coingecko-mirror" as const,
+      observedAt,
+      observedAtMode: observedAt != null ? "upstream" as const : null,
+    };
+    if (isFreshSupplementalPrice(resolution.source, resolution.observedAt)) return resolution;
   }
 
-  const cgPrice = toPositiveFiniteNumber(cgData[geckoId]?.usd);
+  const cgEntry = cgData[geckoId];
+  const cgPrice = toPositiveFiniteNumber(cgEntry?.usd);
   if (cgPrice != null) {
-    return { price: cgPrice, source: "coingecko" };
+    const observedAt = toPositiveFiniteNumber(cgEntry?.last_updated_at) ?? null;
+    const resolution = {
+      price: cgPrice,
+      source: "coingecko" as const,
+      observedAt,
+      observedAtMode: observedAt != null ? "upstream" as const : null,
+    };
+    return isFreshSupplementalPrice(resolution.source, resolution.observedAt) ? resolution : null;
   }
 
   return null;
@@ -54,7 +85,7 @@ function resolveSupplementalPrice(
 
 function buildSupplementalAsset(input: {
   meta: StablecoinMeta;
-  priceResolution: { price: number; source: "coingecko-mirror" | "coingecko" };
+  priceResolution: SupplementalPriceResolution;
   mcap: number;
   supplySource: string;
   circulatingPrevDay?: number | null;
@@ -73,9 +104,9 @@ function buildSupplementalAsset(input: {
     price: input.priceResolution.price,
     priceSource: input.priceResolution.source,
     priceConfidence: "single-source",
-    priceUpdatedAt: nowSec,
-    priceObservedAt: nowSec,
-    priceObservedAtMode: "local_fetch",
+    priceUpdatedAt: input.priceResolution.observedAt ?? nowSec,
+    priceObservedAt: input.priceResolution.observedAt ?? nowSec,
+    priceObservedAtMode: input.priceResolution.observedAtMode ?? "local_fetch",
     priceSyncedAt: nowSec,
     supplySource: input.supplySource,
     circulating: { [pKey]: input.mcap },
@@ -462,9 +493,9 @@ async function fetchFiatCoinGeckoTokens(
           price: priceResolution?.price ?? null,
           priceSource: priceResolution?.source,
           priceConfidence: priceResolution ? "single-source" : null,
-          priceUpdatedAt: priceResolution ? nowSec : null,
-          priceObservedAt: priceResolution ? nowSec : null,
-          priceObservedAtMode: priceResolution ? "local_fetch" : null,
+          priceUpdatedAt: priceResolution ? priceResolution.observedAt ?? nowSec : null,
+          priceObservedAt: priceResolution ? priceResolution.observedAt ?? nowSec : null,
+          priceObservedAtMode: priceResolution ? priceResolution.observedAtMode ?? "local_fetch" : null,
           priceSyncedAt: priceResolution ? nowSec : null,
           supplySource,
           circulating: { [pKey]: mcap },
@@ -503,7 +534,7 @@ export async function fetchCoinGeckoMarketData(db: D1Database, signal?: AbortSig
   }
 
   const res = await fetchWithRetry(
-    cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`, coingeckoApiKey ?? null),
+    cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true&include_last_updated_at=true`, coingeckoApiKey ?? null),
     {
       headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
       signal,

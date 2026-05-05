@@ -1,6 +1,15 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.95` (2026-02-18 -> 2026-04-18).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.96` (2026-02-18 -> 2026-05-05).
+
+---
+## v5.96 — ARS native-peg and KGS FX corroboration (May 5, 2026)
+
+**Commit:** `unreleased`
+
+- Direct native-peg corroboration now includes ARS where CoinGecko exposes a supported quote currency
+- KGST (KGS) depeg checks use the secondary daily FX mirror and deterministic bounds because CoinGecko does not expose a native `kgs` quote
+- Historical replay behavior is unchanged except that assets with native ARS market history can prefer that direct native series when available
 
 ---
 ## v5.95 — Cross-asset contagion amplifier (Apr 18, 2026)

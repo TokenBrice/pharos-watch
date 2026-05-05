@@ -34,7 +34,7 @@ describe("native-peg-quotes", () => {
     expect(getPreferredNativePegQueryCurrency("CNH")).toBe("cny");
     expect(getPreferredNativePegQueryCurrency("ARS")).toBe("ars");
     expect(getPreferredNativePegQueryCurrency("BRL")).toBe("brl");
-    expect(getPreferredNativePegQueryCurrency("KGS")).toBe("kgs");
+    expect(getPreferredNativePegQueryCurrency("KGS")).toBeNull();
     expect(getPreferredNativePegQueryCurrency("NGN")).toBe("ngn");
   });
 
