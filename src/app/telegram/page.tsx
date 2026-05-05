@@ -320,7 +320,7 @@ export default function TelegramPage() {
         {/*  COMMAND REFERENCE (collapsible)                                  */}
         {/* ================================================================= */}
         <section className="mt-12" id="commands">
-          <details className="pharos-card-shell overflow-hidden group">
+          <details className="pharos-card-shell overflow-hidden group" open>
             <summary className="flex cursor-pointer items-center justify-between px-5 py-4 text-sm font-semibold select-none hover:bg-muted/30 transition-colors [&::-webkit-details-marker]:hidden list-none">
               <span className="flex items-center gap-2.5">
                 Command Reference

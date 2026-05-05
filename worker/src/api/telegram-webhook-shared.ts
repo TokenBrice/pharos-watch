@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
 
 export const START_MESSAGE = `<b>Welcome to PharosWatchBot</b>
@@ -14,8 +14,13 @@ Join <a href="https://t.me/pharoswatch">@pharoswatch</a> for Pharos updates and 
 - <b>launch</b> — Pre-launch stablecoin goes live on Pharos
 
 <b>Quick start</b>
+Recommended first setup:
+<code>/subscribe dews depeg usd-top25</code>
+
+Then customize:
 <code>/subscribe dews depeg USDC BOLD</code>
 <code>/subscribe dews usd-top25</code>
+<code>/subscribe dews usd-top-25</code>  ← dashed alias also works
 <code>/subscribe safety mcap-ge-1b</code>
 <code>/subscribe launch USDPT</code>  ← pre-launch watch
 <code>/subscribe safety all</code>  ← downgrades across all tracked coins (3-point drop when scored)
@@ -26,6 +31,9 @@ Join <a href="https://t.me/pharoswatch">@pharoswatch</a> for Pharos updates and 
 <code>/status USDC</code> — one-shot peg + DEWS + safety snapshot
 <code>/set all dews on</code> — global alerts across every tracked coin
 Inline buttons on each alert let you snooze 1h / 4h / 24h.
+
+<b>Groups</b>
+Add the bot to a group and use addressed commands such as <code>/subscribe@PharosWatchBot dews usd-top25</code>. Subscriptions apply to that chat.
 
 Use /help for commands and /presets for preset watchlists.`;
 
@@ -70,7 +78,10 @@ Show current subscriptions and settings
 <code>/cancel</code>
 Cancel a pending selection
 
-Preset watchlists expand into normal coin follows at subscribe time. Launch alerts require explicit tickers or coin ids.`;
+Preset watchlists expand into normal coin follows at subscribe time. Launch alerts require explicit tickers or coin ids.
+Preset aliases accept compact or dashed top-N spelling, e.g. <code>usd-top25</code> or <code>usd-top-25</code>.
+
+In groups, use addressed commands like <code>/subscribe@PharosWatchBot dews usd-top25</code>. Settings apply to the current chat, and pending ticker selections can only be completed by the user who started them.`;
 
 export const DISAMBIGUATION_TTL_SEC = 5 * 60;
 
@@ -86,6 +97,11 @@ export interface TelegramWebhookUpdate {
   update_id?: number;
   message?: {
     chat?: {
+      id?: number;
+      username?: string;
+      type?: "private" | "group" | "supergroup" | "channel" | string;
+    };
+    from?: {
       id?: number;
       username?: string;
     };
@@ -108,6 +124,7 @@ export interface PendingDisambiguationRow {
   candidates: string;
   remaining_tickers: string;
   expires_at: number;
+  initiator_user_id?: string | null;
 }
 
 export interface SubscribeActionPayload {
@@ -166,6 +183,7 @@ export type PendingAction =
       alertTypes: Set<string>;
       presetIds: string[];
       resolvedCoins: ResolvedCoin[];
+      initiatorUserId: string | null;
       ambiguousTicker: string;
       candidates: ResolvedCoin[];
       remainingTickers: string[];
@@ -174,6 +192,7 @@ export type PendingAction =
       actionType: "unsubscribe";
       presetIds: string[];
       resolvedCoins: ResolvedCoin[];
+      initiatorUserId: string | null;
       ambiguousTicker: string;
       candidates: ResolvedCoin[];
       remainingTickers: string[];
@@ -182,13 +201,14 @@ export type PendingAction =
       actionType: "set";
       command: ParsedSetCommand;
       resolvedCoins: ResolvedCoin[];
+      initiatorUserId: string | null;
       ambiguousTicker: string;
       candidates: ResolvedCoin[];
       remainingTickers: string[];
     };
 
 export const STABLECOIN_BY_ID = new Map<string, ResolvedCoin>(
-  [...ACTIVE_STABLECOINS, ...PRE_LAUNCH_STABLECOINS].map((coin) => [
+  TRACKED_STABLECOINS.map((coin) => [
     coin.id,
     {
       id: coin.id,

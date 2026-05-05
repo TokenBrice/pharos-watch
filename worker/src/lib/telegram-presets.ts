@@ -117,6 +117,15 @@ const PRESET_BY_ID = new Map(
   TELEGRAM_PRESET_DEFINITIONS.map((definition) => [definition.id, definition] as const),
 );
 
+const PRESET_ALIAS_TO_ID = (() => {
+  const map = new Map<string, TelegramPresetId>();
+  for (const definition of TELEGRAM_PRESET_DEFINITIONS) {
+    map.set(definition.id, definition.id);
+    map.set(definition.id.replace(/top(\d+)$/, "top-$1"), definition.id);
+  }
+  return map;
+})();
+
 const CANONICAL_ORDER_INDEX = new Map(
   TRACKED_STABLECOINS.map((stablecoin, index) => [stablecoin.id, index] as const),
 );
@@ -125,8 +134,12 @@ export function listTelegramPresets(): TelegramPresetDefinition[] {
   return TELEGRAM_PRESET_DEFINITIONS;
 }
 
+export function resolveTelegramPresetAlias(token: string): TelegramPresetId | null {
+  return PRESET_ALIAS_TO_ID.get(token.toLowerCase()) ?? null;
+}
+
 export function isTelegramPresetAlias(token: string): token is TelegramPresetId {
-  return PRESET_BY_ID.has(token.toLowerCase() as TelegramPresetId);
+  return resolveTelegramPresetAlias(token) !== null;
 }
 
 function compareStablecoinIdsByMarketCap(

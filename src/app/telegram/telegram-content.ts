@@ -106,8 +106,8 @@ export const TELEGRAM_COMMANDS = [
   },
   {
     command: "/subscribe <types> <targets>",
-    description: "Enable alert types for coins or preset watchlists",
-    example: "/subscribe dews,depeg USDT,USDC",
+    description: "Enable alert types for coins or preset watchlists; top-N presets accept compact or dashed spelling",
+    example: "/subscribe dews,depeg usd-top-25",
   },
   {
     command: "/status <ticker>",
@@ -186,7 +186,12 @@ export const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "What are preset watchlists?",
     answer:
-      "Presets are curated coin lists like usd-top25 or mcap-ge-1b. Subscribing to a preset expands to the current list of coins it contains. Send /presets in Telegram to browse them interactively.",
+      "Presets are curated coin lists like usd-top25, usd-top-25, or mcap-ge-1b. Subscribing to a preset expands to the current list of coins it contains. Send /presets in Telegram to browse them interactively.",
+  },
+  {
+    question: "Can I use the bot in a Telegram group?",
+    answer:
+      "Yes. Add @PharosWatchBot to the group and use addressed commands such as /subscribe@PharosWatchBot dews usd-top25. Subscriptions apply to that chat, and pending ticker selections can only be completed by the user who started them.",
   },
   {
     question: "How do I unsubscribe?",
@@ -221,16 +226,20 @@ export const TELEGRAM_HOW_IT_WORKS_CARDS = [
 
 export const TELEGRAM_GETTING_STARTED_OPTIONS = [
   {
-    command: "/subscribe dews,depeg USDT,USDC",
-    description: "Per-coin alerts for specific stablecoins",
+    command: "/subscribe dews,depeg usd-top25",
+    description: "Recommended first setup: top USD stablecoins, DEWS, and depeg events",
   },
   {
     command: "/presets",
     description: "Browse preset watchlists directly inside the bot",
   },
   {
-    command: "/subscribe dews usd-top25",
-    description: "Follow the current top USD stablecoins without listing them one by one",
+    command: "/subscribe dews usd-top-25",
+    description: "Dashed preset spelling also works in DMs and group addressed commands",
+  },
+  {
+    command: "/subscribe dews,depeg USDT,USDC",
+    description: "Per-coin alerts for specific stablecoins",
   },
   {
     command: "/subscribe safety mcap-ge-1b",
@@ -267,5 +276,5 @@ export const TELEGRAM_COMMAND_REFERENCE_NOTE = {
   beforeAll:
     "Ticker matching is case-insensitive. Exact Pharos coin IDs also work, which is useful when a ticker is ambiguous. Use",
   afterAll:
-    "to follow an alert type across every tracked stablecoin. Launch alerts still require explicit tickers or coin IDs and do not support presets. Unknown tickers get a closest-match suggestion when possible.",
+    "to follow an alert type across every tracked stablecoin. Launch alerts still require explicit tickers or coin IDs and do not support presets. In groups, address commands to @PharosWatchBot, for example /subscribe@PharosWatchBot dews usd-top25.",
 } as const;

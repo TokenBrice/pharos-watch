@@ -17,7 +17,18 @@ export function buildNotFoundMessage(ticker: string, suggestion?: ResolvedCoin):
   }
   lines.push("You can also use the exact Pharos coin id when a ticker is ambiguous.");
   lines.push("Use /presets to browse preset watchlists.");
+  lines.push("Example: /subscribe dews usd-top25");
   return escapeHtml(lines.join("\n"));
+}
+
+export function buildStatusAmbiguousMessage(ticker: string, candidates: ResolvedCoin[]): string {
+  return escapeHtml([
+    `"${ticker}" matches ${candidates.length} coins:`,
+    ...candidates.map((coin) => `- ${coin.symbol} — ${coin.name} (${coin.id})`),
+    "",
+    "Re-run /status with the exact Pharos coin id, e.g.:",
+    `/status ${candidates[0]?.id ?? "<coin-id>"}`,
+  ].join("\n"));
 }
 
 interface SubscriptionSummaryOptions {
@@ -154,6 +165,7 @@ export function buildPresetCatalogMessage(definitions: TelegramPresetDefinition[
     "",
     "Examples:",
     "- /subscribe dews usd-top25",
+    "- /subscribe dews usd-top-25",
     "- /subscribe safety mcap-ge-1b",
     "- /unsubscribe eur-top10",
   ];

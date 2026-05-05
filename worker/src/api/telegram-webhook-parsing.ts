@@ -44,11 +44,16 @@ function parsePendingJsonField<T>(
   }
 }
 
-export function parseCommand(text: string): { command: string; args: string } {
+export function parseCommand(text: string): { command: string; args: string; botMention: string | null } {
   const spaceIdx = text.indexOf(" ");
-  const command = (spaceIdx === -1 ? text : text.slice(0, spaceIdx)).toLowerCase().replace(/@\w+$/, "");
+  const commandToken = spaceIdx === -1 ? text : text.slice(0, spaceIdx);
+  const mentionIdx = commandToken.indexOf("@");
+  const rawCommand = mentionIdx === -1 ? commandToken : commandToken.slice(0, mentionIdx);
+  const rawMention = mentionIdx === -1 ? "" : commandToken.slice(mentionIdx + 1);
+  const command = rawCommand.toLowerCase();
+  const botMention = rawMention ? rawMention.toLowerCase() : null;
   const args = spaceIdx === -1 ? "" : text.slice(spaceIdx + 1).trim();
-  return { command, args };
+  return { command, args, botMention };
 }
 
 export function parseStoredSetCommand(payload: Record<string, unknown>): ParsedSetCommand | null {
@@ -150,6 +155,7 @@ export function parsePendingDisambiguation(pending: PendingDisambiguationRow): P
       alertTypes: actionAlertTypes,
       presetIds: parseStringArray(payload.presetIds),
       resolvedCoins,
+      initiatorUserId: pending.initiator_user_id ?? null,
       ambiguousTicker: pending.ambiguous_ticker,
       candidates,
       remainingTickers,
@@ -161,6 +167,7 @@ export function parsePendingDisambiguation(pending: PendingDisambiguationRow): P
       actionType,
       presetIds: parseStringArray(payload.presetIds),
       resolvedCoins,
+      initiatorUserId: pending.initiator_user_id ?? null,
       ambiguousTicker: pending.ambiguous_ticker,
       candidates,
       remainingTickers,
@@ -173,6 +180,7 @@ export function parsePendingDisambiguation(pending: PendingDisambiguationRow): P
     actionType: "set",
     command: setCommand,
     resolvedCoins,
+    initiatorUserId: pending.initiator_user_id ?? null,
     ambiguousTicker: pending.ambiguous_ticker,
     candidates,
     remainingTickers,

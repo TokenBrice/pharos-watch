@@ -1,6 +1,9 @@
 import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
 import { TRACKED_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins";
-import { isTelegramPresetAlias, type TelegramPresetId } from "./telegram-presets";
+import {
+  resolveTelegramPresetAlias,
+  type TelegramPresetId,
+} from "./telegram-presets";
 import { escapeHtml } from "./telegram";
 
 // Frozen coins are no longer subscribable for new alerts (no fresh data is being collected),
@@ -39,6 +42,8 @@ export interface ParsedTargetArgs {
   invalidTargets: string[];
 }
 
+export type TickerResolutionScope = "subscribable" | "tracked";
+
 // ---------- Constants ----------
 
 const ALERT_TYPES = new Set(["dews", "depeg", "safety", "launch"]);
@@ -46,10 +51,9 @@ const GLOBAL_SUBSCRIBE_TOKEN = "all";
 
 // ---------- Ticker Resolution ----------
 
-/** Build a map of lowercase symbol → matching tracked coins. Precomputed once at module load. */
-const SYMBOL_INDEX: Map<string, ResolvedCoin[]> = (() => {
+function buildSymbolIndex(coins: readonly typeof TRACKED_STABLECOINS[number][]): Map<string, ResolvedCoin[]> {
   const map = new Map<string, ResolvedCoin[]>();
-  for (const meta of SUBSCRIBABLE_STABLECOINS) {
+  for (const meta of coins) {
     const key = meta.symbol.toLowerCase();
     const coin: ResolvedCoin = { id: meta.id, symbol: meta.symbol, name: meta.name };
     const existing = map.get(key);
@@ -60,23 +64,39 @@ const SYMBOL_INDEX: Map<string, ResolvedCoin[]> = (() => {
     }
   }
   return map;
-})();
+}
 
-const ID_INDEX: Map<string, ResolvedCoin> = new Map(
-  SUBSCRIBABLE_STABLECOINS.map((meta) => [
+function buildIdIndex(coins: readonly typeof TRACKED_STABLECOINS[number][]): Map<string, ResolvedCoin> {
+  return new Map(coins.map((meta) => [
     meta.id.toLowerCase(),
     { id: meta.id, symbol: meta.symbol, name: meta.name },
-  ]),
-);
+  ]));
+}
+
+/** Build lowercase symbol / id indexes once at module load. */
+const SUBSCRIBABLE_SYMBOL_INDEX = buildSymbolIndex(SUBSCRIBABLE_STABLECOINS);
+const SUBSCRIBABLE_ID_INDEX = buildIdIndex(SUBSCRIBABLE_STABLECOINS);
+const TRACKED_SYMBOL_INDEX = buildSymbolIndex(TRACKED_STABLECOINS);
+const TRACKED_ID_INDEX = buildIdIndex(TRACKED_STABLECOINS);
+
+function indexesForScope(scope: TickerResolutionScope): {
+  symbols: Map<string, ResolvedCoin[]>;
+  ids: Map<string, ResolvedCoin>;
+} {
+  return scope === "tracked"
+    ? { symbols: TRACKED_SYMBOL_INDEX, ids: TRACKED_ID_INDEX }
+    : { symbols: SUBSCRIBABLE_SYMBOL_INDEX, ids: SUBSCRIBABLE_ID_INDEX };
+}
 
 /** Resolve a user-provided ticker to matching coin(s). Case-insensitive. */
-export function resolveTicker(ticker: string): TickerMatch {
+export function resolveTicker(ticker: string, scope: TickerResolutionScope = "subscribable"): TickerMatch {
+  const { symbols, ids } = indexesForScope(scope);
   const key = ticker.toLowerCase();
-  const exactIdMatch = ID_INDEX.get(key);
+  const exactIdMatch = ids.get(key);
   if (exactIdMatch) {
     return { status: "unique", matches: [exactIdMatch] };
   }
-  const matches = SYMBOL_INDEX.get(key);
+  const matches = symbols.get(key);
   if (matches && matches.length === 1) {
     return { status: "unique", matches };
   }
@@ -84,13 +104,13 @@ export function resolveTicker(ticker: string): TickerMatch {
     return { status: "ambiguous", matches };
   }
   // Not found — try prefix match for suggestion
-  const suggestion = findClosestMatch(key);
+  const suggestion = findClosestMatch(key, symbols);
   return { status: "not_found", matches: [], suggestion: suggestion ?? undefined };
 }
 
 /** Find a coin whose symbol starts with the given prefix, or null. */
-function findClosestMatch(lowerTicker: string): ResolvedCoin | null {
-  for (const [key, coins] of SYMBOL_INDEX) {
+function findClosestMatch(lowerTicker: string, symbols: Map<string, ResolvedCoin[]>): ResolvedCoin | null {
+  for (const [key, coins] of symbols) {
     if (key.startsWith(lowerTicker) || lowerTicker.startsWith(key)) {
       return coins[0];
     }
@@ -103,7 +123,11 @@ function findClosestMatch(lowerTicker: string): ResolvedCoin | null {
 /**
  * Parse target tokens shared by subscribe/unsubscribe flows.
  */
-export function parseTargetArgs(argsText: string): ParsedTargetArgs {
+export function parseTargetArgs(
+  argsText: string,
+  options: { resolutionScope?: TickerResolutionScope } = {},
+): ParsedTargetArgs {
+  const { symbols, ids } = indexesForScope(options.resolutionScope ?? "subscribable");
   const tokens = argsText.trim().split(/[\s,]+/).filter(Boolean);
   let includeAll = false;
   const presetIds: TelegramPresetId[] = [];
@@ -112,11 +136,12 @@ export function parseTargetArgs(argsText: string): ParsedTargetArgs {
 
   for (const token of tokens) {
     const lower = token.toLowerCase();
+    const presetId = resolveTelegramPresetAlias(lower);
     if (lower === GLOBAL_SUBSCRIBE_TOKEN) {
       includeAll = true;
-    } else if (isTelegramPresetAlias(lower)) {
-      presetIds.push(lower);
-    } else if (SYMBOL_INDEX.has(lower) || ID_INDEX.has(lower)) {
+    } else if (presetId) {
+      presetIds.push(presetId);
+    } else if (symbols.has(lower) || ids.has(lower)) {
       tickers.push(token);
     } else {
       invalidTargets.push(token);

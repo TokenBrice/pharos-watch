@@ -8,6 +8,7 @@ import {
   validateSubscribeArgs,
   parseDisambiguationReply,
   type ResolvedCoin,
+  type TickerResolutionScope,
 } from "../lib/telegram-alerts";
 import {
   listTelegramPresets,
@@ -34,6 +35,7 @@ import {
   buildPresetSubscriptionSummaryMessage,
   buildPresetUnavailableMessage,
   buildPresetUnsubscribeSummaryMessage,
+  buildStatusAmbiguousMessage,
   buildStatusMessage,
   buildSubscriptionSummaryMessage,
   buildUnsubscribeSuccessMessage,
@@ -73,7 +75,7 @@ export const handleTelegramWebhook = withErrorHandler(
     botToken?: string,
     previousWebhookSecret?: string,
   ): Promise<Response> => {
-    const ok = () => new Response("ok", { status: 200 });
+  const ok = () => new Response("ok", { status: 200 });
 
     const providedSecret =
       request.headers.get("X-Telegram-Bot-Api-Secret-Token") ?? "";
@@ -126,6 +128,8 @@ export const handleTelegramWebhook = withErrorHandler(
     const chatId = update.message?.chat?.id?.toString();
     const text = update.message?.text?.trim();
     const username = update.message?.chat?.username ?? null;
+    const actorUserId = update.message?.from?.id != null ? String(update.message.from.id) : null;
+    const chatType = update.message?.chat?.type ?? "private";
     if (!chatId || !text) return ok();
 
     const reply = async (message: string) => {
@@ -133,29 +137,50 @@ export const handleTelegramWebhook = withErrorHandler(
     };
 
     try {
+      const parsedCommand = text.startsWith("/") ? parseCommand(text) : null;
+      if (parsedCommand && isGroupChat(chatType) && !isAddressedToPharosBot(parsedCommand.botMention)) {
+        return ok();
+      }
+
       const pendingRow = await db
         .prepare(
-          "SELECT action_type, action_payload, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at FROM telegram_pending_disambiguation WHERE chat_id = ?",
+          "SELECT action_type, action_payload, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
         )
         .bind(chatId)
         .first<PendingDisambiguationRow>();
 
       const pendingAction = pendingRow ? parsePendingDisambiguation(pendingRow) : null;
-      const pendingActive = Boolean(pendingRow && pendingAction && unixNow() < pendingRow.expires_at);
+      const pendingNotExpired = Boolean(pendingRow && unixNow() < pendingRow.expires_at);
+      const pendingActive = Boolean(pendingRow && pendingAction && pendingNotExpired);
+
+      if (pendingRow && !pendingAction && pendingNotExpired) {
+        await clearPendingDisambiguation(db, chatId);
+        if (!parsedCommand) {
+          await reply("That pending selection could not be restored. Please rerun the command, or use /help for examples.");
+          return ok();
+        }
+      }
 
       if (pendingRow && !pendingActive) {
         await clearPendingDisambiguation(db, chatId);
       }
 
-      const parsedCommand = text.startsWith("/") ? parseCommand(text) : null;
       if (pendingActive && pendingAction) {
         if (!parsedCommand) {
+          if (!canActOnPending(pendingAction, actorUserId)) {
+            await reply("Only the user who started this pending selection can complete it.");
+            return ok();
+          }
           await handleDisambiguationReply(db, chatId, text, pendingAction, botToken, username);
           return ok();
         }
 
         switch (parsedCommand.command) {
           case "/cancel":
+            if (!canActOnPending(pendingAction, actorUserId)) {
+              await reply("Only the user who started this pending selection can cancel it.");
+              return ok();
+            }
             await clearPendingDisambiguation(db, chatId);
             await reply("Pending selection cancelled.");
             return ok();
@@ -179,6 +204,10 @@ export const handleTelegramWebhook = withErrorHandler(
           case "/set":
           case "/mute":
           case "/unmutehours":
+            if (!canActOnPending(pendingAction, actorUserId)) {
+              await reply("Another user has a pending ticker selection in this chat. Ask them to finish or /cancel it first.");
+              return ok();
+            }
             await clearPendingDisambiguation(db, chatId);
             break;
           default:
@@ -208,13 +237,13 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
           await handleStatus(db, chatId, parsedCommand.args, botToken);
           break;
         case "/subscribe":
-          await handleSubscribe(db, chatId, username, parsedCommand.args, botToken);
+          await handleSubscribe(db, chatId, username, actorUserId, parsedCommand.args, botToken);
           break;
         case "/unsubscribe":
-          await handleUnsubscribe(db, chatId, parsedCommand.args, botToken);
+          await handleUnsubscribe(db, chatId, actorUserId, parsedCommand.args, botToken);
           break;
         case "/set":
-          await handleSet(db, chatId, username, parsedCommand.args, botToken);
+          await handleSet(db, chatId, username, actorUserId, parsedCommand.args, botToken);
           break;
         case "/mute":
           await handleMute(db, chatId, username, parsedCommand.args, botToken);
@@ -271,15 +300,13 @@ async function handleStatus(
     await replyToChat(chatId, "Usage: /status &lt;ticker&gt;", botToken);
     return;
   }
-  const resolution = resolveTicker(trimmed);
+  const resolution = resolveTicker(trimmed, "tracked");
   if (resolution.status === "not_found") {
     await replyToChat(chatId, buildNotFoundMessage(trimmed, resolution.suggestion), botToken);
     return;
   }
   if (resolution.status === "ambiguous") {
-    // /status is read-only — do not set pending disambiguation state.
-    // Present the candidate list so the user can re-run with an exact coin ID.
-    await replyToChat(chatId, escapeHtml(formatDisambiguation(trimmed, resolution.matches)), botToken);
+    await replyToChat(chatId, buildStatusAmbiguousMessage(trimmed, resolution.matches), botToken);
     return;
   }
   const coin = resolution.matches[0];
@@ -291,6 +318,7 @@ interface TelegramActionContext {
   db: D1Database;
   chatId: string;
   username: string | null;
+  initiatorUserId: string | null;
 }
 
 type ActionPayloadMap = {
@@ -302,6 +330,20 @@ type ActionPayloadMap = {
 const TELEGRAM_PRESET_LABEL_BY_ID = new Map(
   listTelegramPresets().map((definition) => [definition.id, definition.label] as const),
 );
+
+const PHAROS_BOT_USERNAMES = new Set(["pharoswatchbot", "pharoswatch"]);
+
+function isGroupChat(chatType: string): boolean {
+  return chatType === "group" || chatType === "supergroup";
+}
+
+function isAddressedToPharosBot(botMention: string | null): boolean {
+  return botMention != null && PHAROS_BOT_USERNAMES.has(botMention);
+}
+
+function canActOnPending(pending: PendingAction, actorUserId: string | null): boolean {
+  return pending.initiatorUserId == null || pending.initiatorUserId === actorUserId;
+}
 
 function dedupePresetIds(presetIds: readonly string[]): TelegramPresetId[] {
   return Array.from(
@@ -386,10 +428,11 @@ type BoundActionRunner = <TActionType extends PendingActionType>(opts: {
   alertTypes?: Set<string>;
   initialCoins?: ResolvedCoin[];
   clearPendingOnTerminal?: boolean;
+  resolutionScope?: TickerResolutionScope;
 }) => Promise<void>;
 
 function makeActionRunner(context: TelegramActionContext, botToken: string): BoundActionRunner {
-  return ({ tickers, actionType, actionPayload, alertTypes, initialCoins, clearPendingOnTerminal }) =>
+  return ({ tickers, actionType, actionPayload, alertTypes, initialCoins, clearPendingOnTerminal, resolutionScope }) =>
     runCoinResolutionFlow({
       db: context.db,
       chatId: context.chatId,
@@ -397,8 +440,10 @@ function makeActionRunner(context: TelegramActionContext, botToken: string): Bou
       initialCoins,
       actionType,
       actionPayload,
+      initiatorUserId: context.initiatorUserId,
       alertTypes,
       clearPendingOnTerminal,
+      resolutionScope,
       reply: (message) => replyToChat(context.chatId, message, botToken),
       onComplete: (coins, options) => completionHandlers[actionType](context, coins, actionPayload, options),
     });
@@ -421,6 +466,7 @@ async function handleSubscribe(
   db: D1Database,
   chatId: string,
   username: string | null,
+  actorUserId: string | null,
   args: string,
   botToken: string,
 ): Promise<void> {
@@ -446,7 +492,7 @@ async function handleSubscribe(
       buildGlobalAlertSummaryMessage("Updated all-stablecoin subscriptions.", subscriber),
       botToken,
     );
-      return;
+    return;
   }
 
   const presetIds = dedupePresetIds(parsed.presetIds);
@@ -456,7 +502,7 @@ async function handleSubscribe(
     return;
   }
 
-  const runAction = makeActionRunner({ db, chatId, username }, botToken);
+  const runAction = makeActionRunner({ db, chatId, username, initiatorUserId: actorUserId }, botToken);
   await runAction({
     tickers: parsed.tickers,
     initialCoins: presetCoins,
@@ -466,8 +512,14 @@ async function handleSubscribe(
   });
 }
 
-async function handleUnsubscribe(db: D1Database, chatId: string, args: string, botToken: string): Promise<void> {
-  const parsed = parseTargetArgs(args);
+async function handleUnsubscribe(
+  db: D1Database,
+  chatId: string,
+  actorUserId: string | null,
+  args: string,
+  botToken: string,
+): Promise<void> {
+  const parsed = parseTargetArgs(args, { resolutionScope: "tracked" });
   if (args.trim().length === 0) {
     await replyToChat(chatId, "Specify ticker(s) or preset(s) to unsubscribe, or use /unsubscribe all", botToken);
     return;
@@ -480,7 +532,7 @@ async function handleUnsubscribe(db: D1Database, chatId: string, args: string, b
 
   if (parsed.invalidTargets.length > 0) {
     const invalidTarget = parsed.invalidTargets[0];
-    const match = resolveTicker(invalidTarget);
+    const match = resolveTicker(invalidTarget, "tracked");
     const suggestion = match.status === "not_found" ? match.suggestion : undefined;
     await replyToChat(chatId, buildNotFoundMessage(invalidTarget, suggestion), botToken);
     return;
@@ -518,12 +570,13 @@ async function handleUnsubscribe(db: D1Database, chatId: string, args: string, b
     return;
   }
 
-  const runAction = makeActionRunner({ db, chatId, username: null }, botToken);
+  const runAction = makeActionRunner({ db, chatId, username: null, initiatorUserId: actorUserId }, botToken);
   await runAction({
     tickers: parsed.tickers,
     initialCoins: presetCoins,
     actionType: "unsubscribe",
     actionPayload: { presetIds },
+    resolutionScope: "tracked",
   });
 }
 
@@ -531,6 +584,7 @@ async function handleSet(
   db: D1Database,
   chatId: string,
   username: string | null,
+  actorUserId: string | null,
   args: string,
   botToken: string,
 ): Promise<void> {
@@ -552,7 +606,7 @@ async function handleSet(
     return;
   }
 
-  const runAction = makeActionRunner({ db, chatId, username }, botToken);
+  const runAction = makeActionRunner({ db, chatId, username, initiatorUserId: actorUserId }, botToken);
   await runAction({ tickers: [parsed.ticker], actionType: "set", actionPayload: parsed });
 }
 
@@ -631,7 +685,7 @@ async function handleDisambiguationReply(
 
   switch (pending.actionType) {
     case "subscribe": {
-      const runAction = makeActionRunner({ db, chatId, username }, botToken);
+      const runAction = makeActionRunner({ db, chatId, username, initiatorUserId: pending.initiatorUserId }, botToken);
       await runAction({
         ...sharedOpts,
         actionType: "subscribe",
@@ -641,12 +695,17 @@ async function handleDisambiguationReply(
       return;
     }
     case "unsubscribe": {
-      const runAction = makeActionRunner({ db, chatId, username: null }, botToken);
-      await runAction({ ...sharedOpts, actionType: "unsubscribe", actionPayload: { presetIds: pending.presetIds } });
+      const runAction = makeActionRunner({ db, chatId, username: null, initiatorUserId: pending.initiatorUserId }, botToken);
+      await runAction({
+        ...sharedOpts,
+        actionType: "unsubscribe",
+        actionPayload: { presetIds: pending.presetIds },
+        resolutionScope: "tracked",
+      });
       return;
     }
     case "set": {
-      const runAction = makeActionRunner({ db, chatId, username }, botToken);
+      const runAction = makeActionRunner({ db, chatId, username, initiatorUserId: pending.initiatorUserId }, botToken);
       await runAction({ ...sharedOpts, actionType: "set", actionPayload: pending.command });
       return;
     }
