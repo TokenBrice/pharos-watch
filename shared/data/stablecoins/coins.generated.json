@@ -738,6 +738,11 @@
         "chain": "polygon",
         "address": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
         "decimals": 18
+      },
+      {
+        "chain": "conflux",
+        "address": "0x47a365e29697c700c75d58936b3d93a8a20a43c9",
+        "decimals": 18
       }
     ],
     "canBeBlacklisted": "possible",
@@ -1331,54 +1336,6 @@
         "title": "External security audit remediation: high and medium severity fixes merged",
         "description": "Merged fixes for LP token price manipulation vulnerability (H01) and timelock bypass bug (M02); fuzz tests added for Aero LP pricing.",
         "sourceUrl": "https://github.com/basedollar/basedollar/pull/98"
-      }
-    ]
-  },
-  {
-    "id": "bfusd-binance",
-    "detailProvider": "coingecko",
-    "name": "BFUSD",
-    "symbol": "BFUSD",
-    "flags": {
-      "backing": "crypto-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized",
-      "yieldBearing": false,
-      "rwa": false,
-      "navToken": false
-    },
-    "collateral": "Binance-managed collateral pool and reserve fund, with hedged crypto positions and issuer-controlled risk buffers supporting the account balance product",
-    "pegMechanism": "Binance account asset designed to hold a $1 reference value; eligible Binance users can subscribe and redeem within Binance rather than through an on-chain token contract",
-    "geckoId": "bfusd",
-    "cmcSlug": "bfusd",
-    "protocolSlug": "binance",
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.binance.com/en/bfusd"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/binance"
-      },
-      {
-        "label": "Docs",
-        "url": "https://bin.bnbstatic.com/static/cms/cg08ou2ak0tn7mcplvfg/file/c1dd5e9f6a6191ca85b3cd256bd831884372530e3b4204b9006bf273650c6f5b.pdf"
-      }
-    ],
-    "custodyModel": "cex",
-    "reserves": [
-      {
-        "name": "Binance collateral pool and reserve fund",
-        "pct": 100,
-        "risk": "high"
-      }
-    ],
-    "notices": [
-      {
-        "type": "info",
-        "title": "Off-chain account asset",
-        "message": "BFUSD is modeled from third-party market data and Binance documentation; no on-chain supply contract is configured."
       }
     ]
   },
@@ -2487,7 +2444,17 @@
         "label": "CAD trust reserves",
         "risk": "very-low"
       }
-    }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Active coverage pending",
+        "message": "CADD remains excluded from active runtime surfaces until CoinGecko or DefiLlama publishes usable live price and supply data."
+      }
+    ],
+    "status": "pre-launch",
+    "launchPhase": "beta",
+    "launchPhaseDetail": "Coverage pending: current CoinGecko and DefiLlama rows do not expose usable live price and supply data."
   },
   {
     "id": "cash-phantom",
@@ -2637,6 +2604,9 @@
           "chain": "flare",
           "rpcMode": "public-rpc"
         }
+      },
+      "params": {
+        "rpcUrl": "https://flare-api.flare.network/ext/C/rpc"
       }
     }
   },
@@ -8696,7 +8666,7 @@
       "navToken": false
     },
     "collateral": "Crypto collateral and protocol-managed reserve liquidity described in JUSD materials",
-    "pegMechanism": "Dollar stable token with issuer/protocol-managed collateral and redemption processes documented by JUSD",
+    "pegMechanism": "Dollar stable token with issuer/protocol-managed collateral and liquidity processes described by JUSD; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
     "geckoId": "jusd",
     "protocolSlug": "jusd",
     "links": [
@@ -8749,7 +8719,14 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Redemption backstop not modeled",
+        "message": "JUSD metadata is tracked from public materials, but Pharos has not source-reviewed a holder-exercisable redemption route for backstop scoring."
+      }
+    ]
   },
   {
     "id": "kag-kinesis",
@@ -13394,7 +13371,7 @@
       "navToken": false
     },
     "collateral": "SoulPeg protocol collateral and stablecoin liquidity on BSC",
-    "pegMechanism": "Protocol-issued dollar asset using collateral reserves and mint/redeem controls described by SoulPeg",
+    "pegMechanism": "Protocol-issued dollar asset using collateral reserves and mint/liquidity controls described by SoulPeg; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
     "geckoId": "soulpeg-usd",
     "protocolSlug": "soulpeg",
     "links": [
@@ -13443,7 +13420,14 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Redemption backstop not modeled",
+        "message": "SoulPeg materials describe protocol controls, but Pharos has not source-reviewed a holder-exercisable redemption route for backstop scoring."
+      }
+    ]
   },
   {
     "id": "stcusd-cap",
@@ -13712,7 +13696,7 @@
     "id": "suiusde-sui",
     "llamaId": "376",
     "detailProvider": "defillama",
-    "name": "SuiUSDe",
+    "name": "eSui Dollar",
     "symbol": "suiUSDe",
     "flags": {
       "backing": "crypto-backed",
@@ -13722,9 +13706,8 @@
       "rwa": false,
       "navToken": false
     },
-    "pegReferenceId": "usde-ethena",
-    "collateral": "Ethena USDe exposure bridged or represented on Sui",
-    "pegMechanism": "Sui deployment of a USDe-denominated dollar asset; peg quality inherits from Ethena USDe and the Sui deployment path",
+    "collateral": "Ethena whitelabel synthetic-dollar backing using digital-asset collateral and short futures exposure for the Sui deployment",
+    "pegMechanism": "Sui-native Ethena whitelabel dollar asset whose peg quality depends on Ethena-style delta-neutral backing and Sui deployment controls",
     "geckoId": "esui-dollar",
     "protocolSlug": "sui",
     "links": [
@@ -13744,15 +13727,20 @@
         "decimals": 6
       }
     ],
+    "dependencies": [
+      {
+        "id": "usde-ethena",
+        "weight": 1,
+        "type": "mechanism"
+      }
+    ],
     "chainTier": "mature-alt-l1",
-    "deploymentModel": "third-party-bridge",
+    "deploymentModel": "single-chain",
     "reserves": [
       {
-        "name": "USDe-linked backing on Sui",
+        "name": "Ethena whitelabel synthetic-dollar backing",
         "pct": 100,
-        "risk": "medium",
-        "coinId": "usde-ethena",
-        "depType": "collateral"
+        "risk": "high"
       }
     ]
   },
@@ -13765,7 +13753,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": false,
       "navToken": false
     },
@@ -13830,7 +13818,11 @@
         "title": "Restricted transfer and redemption path",
         "message": "HedgeCore docs describe sUSD as soul-bound, and early redemption is operator-controlled rather than a general liquid backstop."
       }
-    ]
+    ],
+    "yieldConfig": {
+      "yieldSource": "HedgeCore Venus strategy yield",
+      "yieldType": "lending-vault"
+    }
   },
   {
     "id": "susd-solayer",
@@ -19007,7 +18999,7 @@
       "navToken": false
     },
     "collateral": "Ring protocol crypto collateral and strategy assets managed through the protocol reserve system",
-    "pegMechanism": "Crypto-collateralized synthetic dollar with protocol-controlled mint, redeem, and liquidity-management routes",
+    "pegMechanism": "Crypto-collateralized synthetic dollar with protocol-controlled mint and liquidity-management routes; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
     "geckoId": "ring-usd",
     "protocolSlug": "ring-protocol",
     "links": [
@@ -19056,7 +19048,14 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Redemption backstop not modeled",
+        "message": "Ring Protocol materials describe protocol liquidity controls, but Pharos has not source-reviewed a holder-exercisable redemption route for backstop scoring."
+      }
+    ]
   },
   {
     "id": "usdr-stablr",
@@ -21789,6 +21788,9 @@
           "chain": "hemi",
           "rpcMode": "public-rpc"
         }
+      },
+      "params": {
+        "rpcUrl": "https://rpc.hemi.network/rpc"
       }
     }
   },
@@ -22947,7 +22949,7 @@
       "navToken": false
     },
     "collateral": "XT.com issuer-managed dollar reserves; public collateral detail is limited",
-    "pegMechanism": "Centralized exchange-issued dollar token with issuance and redemption handled through XT.com account infrastructure",
+    "pegMechanism": "Centralized exchange-issued dollar token with issuance and account exits handled through XT.com infrastructure; no Pharos redemption backstop is modeled without source-reviewed public terms",
     "geckoId": "xtusd",
     "protocolSlug": "xt-com",
     "links": [
@@ -22973,6 +22975,11 @@
         "type": "info",
         "title": "Unsupported issuance chain",
         "message": "XTUSD primarily circulates on XSC, which is not a configured Pharos chain, so no contract is stored."
+      },
+      {
+        "type": "info",
+        "title": "Redemption backstop not modeled",
+        "message": "XTUSD is tracked from market and issuer metadata, but Pharos has not source-reviewed a public holder redemption route for backstop scoring."
       }
     ]
   },

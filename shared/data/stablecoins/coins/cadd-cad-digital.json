@@ -2,6 +2,9 @@
   "id": "cadd-cad-digital",
   "name": "CAD Digital",
   "symbol": "CADD",
+  "status": "pre-launch",
+  "launchPhase": "beta",
+  "launchPhaseDetail": "Coverage pending: current CoinGecko and DefiLlama rows do not expose usable live price and supply data.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "CAD",
@@ -83,5 +86,12 @@
       "label": "CAD trust reserves",
       "risk": "very-low"
     }
-  }
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Active coverage pending",
+      "message": "CADD remains excluded from active runtime surfaces until CoinGecko or DefiLlama publishes usable live price and supply data."
+    }
+  ]
 }

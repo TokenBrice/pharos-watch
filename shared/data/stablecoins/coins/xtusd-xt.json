@@ -11,7 +11,7 @@
     "navToken": false
   },
   "collateral": "XT.com issuer-managed dollar reserves; public collateral detail is limited",
-  "pegMechanism": "Centralized exchange-issued dollar token with issuance and redemption handled through XT.com account infrastructure",
+  "pegMechanism": "Centralized exchange-issued dollar token with issuance and account exits handled through XT.com infrastructure; no Pharos redemption backstop is modeled without source-reviewed public terms",
   "detailProvider": "coingecko",
   "geckoId": "xtusd",
   "protocolSlug": "xt-com",
@@ -38,6 +38,11 @@
       "type": "info",
       "title": "Unsupported issuance chain",
       "message": "XTUSD primarily circulates on XSC, which is not a configured Pharos chain, so no contract is stored."
+    },
+    {
+      "type": "info",
+      "title": "Redemption backstop not modeled",
+      "message": "XTUSD is tracked from market and issuer metadata, but Pharos has not source-reviewed a public holder redemption route for backstop scoring."
     }
   ]
 }

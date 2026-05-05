@@ -6,7 +6,7 @@
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": false,
+    "yieldBearing": true,
     "rwa": false,
     "navToken": false
   },
@@ -65,6 +65,10 @@
         "rpcMode": "public-rpc"
       }
     }
+  },
+  "yieldConfig": {
+    "yieldSource": "HedgeCore Venus strategy yield",
+    "yieldType": "lending-vault"
   },
   "notices": [
     {

@@ -56,6 +56,9 @@
         "chain": "hemi",
         "rpcMode": "public-rpc"
       }
+    },
+    "params": {
+      "rpcUrl": "https://rpc.hemi.network/rpc"
     }
   }
 }

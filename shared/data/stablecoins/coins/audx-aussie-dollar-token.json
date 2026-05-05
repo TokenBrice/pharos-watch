@@ -42,6 +42,11 @@
       "chain": "polygon",
       "address": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
       "decimals": 18
+    },
+    {
+      "chain": "conflux",
+      "address": "0x47a365e29697c700c75d58936b3d93a8a20a43c9",
+      "decimals": 18
     }
   ],
   "canBeBlacklisted": "possible",

@@ -151,7 +151,7 @@
   },
   "cadd-cad-digital": {
     "title": "Canada's Institutional CAD Rail",
-    "text": "CADD launched on May 4, 2026 as a CAD-pegged stablecoin issued through Tetra Trust's regulated framework, with Alberta Treasury Board and Finance approval and trust-segregated reserves dedicated to redemption. The token is live on Ethereum and Base today, while issuer materials list Tempo and forthcoming Solana support, positioning CADD as an institutional settlement rail rather than a retail DeFi product first. DefiLlama and CoinGecko both list CADD but currently show near-zero circulating supply, which makes it strategically relevant but still early in observable market adoption. Monthly Baker Tilly reserve attestations and daily reserve-ratio disclosures provide a stronger transparency baseline than many long-tail fiat stablecoins if scale follows.",
+    "text": "CADD launched on May 4, 2026 as a CAD-pegged stablecoin issued through Tetra Trust's regulated framework, with Alberta Treasury Board and Finance approval and trust-segregated reserves dedicated to redemption. The token has Ethereum and Base contracts, while issuer materials list Tempo and forthcoming Solana support, positioning CADD as an institutional settlement rail rather than a retail DeFi product first. Pharos keeps CADD in coverage-pending status because DefiLlama and CoinGecko list the asset but currently do not expose usable live price and supply data. Monthly Baker Tilly reserve attestations and daily reserve-ratio disclosures provide a stronger transparency baseline than many long-tail fiat stablecoins if active market data follows.",
     "updatedAt": "2026-05-05"
   },
   "usde-ethena": {
@@ -1111,7 +1111,7 @@
   },
   "cngn-compliant-naira": {
     "title": "Naira Settlement Goes Multichain",
-    "text": "cNGN is a naira-backed stablecoin tracked by CoinGecko across Base, Ethereum, BNB Chain, Polygon, and Solana. The issuer describes 1:1 NGN reserves held in designated commercial banks, giving the dashboard a direct Nigerian naira peg with native NGN quote support where CoinGecko provides it. The Solana mint includes administrative controls, so holder risk includes issuer and contract-control assumptions in addition to banking concentration.",
+    "text": "cNGN is a naira-backed stablecoin tracked by CoinGecko across Base, Ethereum, BNB Chain, Polygon, Monad, and Solana. The issuer describes 1:1 NGN reserves held in designated commercial banks, giving the dashboard a direct Nigerian naira peg with native NGN quote support where CoinGecko provides it. The Solana mint includes administrative controls, so holder risk includes issuer and contract-control assumptions in addition to banking concentration.",
     "updatedAt": "2026-05-05"
   },
   "brl1-brl1": {
@@ -1122,11 +1122,6 @@
   "wars-argentine-peso": {
     "title": "ARS Peg With Split Signals",
     "text": "WARS is an Argentine peso stablecoin tracked by DefiLlama across Ethereum, Base, World Chain, BNB Chain, Polygon, and Gnosis, with CoinGecko also listing the token below the current $1M market-cap threshold. That split makes it eligible through DefiLlama coverage but still a higher-uncertainty addition: the same contract address appears across the EVM deployments, while reserve and redemption confidence remain weaker than major fiat issuers.",
-    "updatedAt": "2026-05-05"
-  },
-  "bfusd-binance": {
-    "title": "The Binance Balance Dollar",
-    "text": "BFUSD is an off-chain Binance account asset rather than a normal transferable stablecoin. Its stability depends on Binance-managed collateral, hedging, and reserve-fund controls, so Pharos treats the reserve profile as CEX-custodied and high risk despite the dollar target. Binance markets reward features around the product, but Pharos does not mark it as runtime yield-bearing without a public APY source the yield pipeline can verify. The main practical backstop is the user account redemption flow inside Binance, which is documented but not independently measurable as public liquidity.",
     "updatedAt": "2026-05-05"
   },
   "pusd-polymarket": {
@@ -1195,8 +1190,8 @@
     "updatedAt": "2026-05-05"
   },
   "suiusde-sui": {
-    "title": "The Sui USDe Proxy",
-    "text": "SuiUSDe is a Sui-based dollar asset linked to Ethena USDe exposure. Pharos models the reserve dependency through USDe rather than pretending the Sui token has an independent collateral stack. That means the major risks are Ethena collateral quality, Sui deployment mechanics, and bridge or representation assumptions. It is tracked through DefiLlama and the Sui contract, but current reserve sync adapters do not probe Sui supply.",
+    "title": "The Sui Ethena Dollar",
+    "text": "eSui Dollar is a Sui-native Ethena whitelabel synthetic dollar rather than a simple bridged USDe wrapper. Pharos models the dependency through Ethena-style collateral and hedging mechanics, with reserve risk concentrated in digital-asset collateral, short futures execution, and Sui deployment controls. It is tracked through DefiLlama and the Sui contract, but current reserve sync adapters do not probe Sui supply.",
     "updatedAt": "2026-05-05"
   },
   "vcred-vcred": {
@@ -1271,12 +1266,12 @@
   },
   "susd-hedgecore": {
     "title": "The Soul-Bound USDC Yield Token",
-    "text": "HedgeCore Staked USD Coin is built around USDC deposits routed into Venus yield strategies on BSC. The product has yield mechanics, but Pharos does not publish it as a runtime yield-bearing asset until a reliable APY source is wired. The token is operationally restricted: docs describe soul-bound behavior and operator-controlled early redemption paths. Pharos tracks the BSC contract, marks the USDC/Venus dependency, and enables curated reserve validation while keeping the exit path conservative.",
+    "text": "HedgeCore Staked USD Coin is built around USDC deposits routed into Venus yield strategies on BSC. Pharos marks the token as yield-bearing because the product documentation describes yield distribution through HedgeCore mechanisms, while keeping the yield source conservative until a reliable APY feed is wired. The token is operationally restricted: docs describe soul-bound behavior and operator-controlled early redemption paths. Pharos tracks the BSC contract, marks the USDC/Venus dependency, and enables curated reserve validation while keeping the exit path conservative.",
     "updatedAt": "2026-05-05"
   },
   "usd3-reserve-protocol": {
     "title": "The Reserve Basket Dollar",
-    "text": "Web 3 Dollar is a Reserve Protocol DTF backed by a basket of yield-bearing stablecoin strategies: Savings USDS, Aave USDC, wrapped Compound USDCv3, and Steakhouse USDC. The mechanism is more transparent than many small stablecoins because the Reserve app and API expose the basket, but redemption still depends on RToken/DTF throttles and basket mechanics. Pharos stores the Reserve proof URL, tracks Ethereum and Base contracts, and enables curated reserve validation. The main risks are strategy exposure, governance, and the fact that the token is a NAV-style basket rather than a simple bank dollar.",
+    "text": "Web 3 Dollar is a Reserve Protocol DTF backed by a basket of yield-bearing stablecoin strategies: Savings USDS, Aave USDC, wrapped Compound USDCv3, and Steakhouse USDC. The mechanism is more transparent than many small stablecoins because the Reserve app and API expose the basket, but redemption still depends on RToken/DTF throttles and basket mechanics. Pharos stores the Reserve proof URL, tracks Ethereum and Base contracts, and syncs the Reserve Protocol basket feed directly. The main risks are strategy exposure, governance, and the fact that the token is a NAV-style basket rather than a simple bank dollar.",
     "updatedAt": "2026-05-05"
   }
 }

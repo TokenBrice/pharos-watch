@@ -11,7 +11,7 @@
     "navToken": false
   },
   "collateral": "SoulPeg protocol collateral and stablecoin liquidity on BSC",
-  "pegMechanism": "Protocol-issued dollar asset using collateral reserves and mint/redeem controls described by SoulPeg",
+  "pegMechanism": "Protocol-issued dollar asset using collateral reserves and mint/liquidity controls described by SoulPeg; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
   "detailProvider": "coingecko",
   "geckoId": "soulpeg-usd",
   "protocolSlug": "soulpeg",
@@ -61,5 +61,12 @@
         "rpcMode": "public-rpc"
       }
     }
-  }
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Redemption backstop not modeled",
+      "message": "SoulPeg materials describe protocol controls, but Pharos has not source-reviewed a holder-exercisable redemption route for backstop scoring."
+    }
+  ]
 }

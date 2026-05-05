@@ -11,7 +11,7 @@
     "navToken": false
   },
   "collateral": "Ring protocol crypto collateral and strategy assets managed through the protocol reserve system",
-  "pegMechanism": "Crypto-collateralized synthetic dollar with protocol-controlled mint, redeem, and liquidity-management routes",
+  "pegMechanism": "Crypto-collateralized synthetic dollar with protocol-controlled mint and liquidity-management routes; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
   "detailProvider": "coingecko",
   "geckoId": "ring-usd",
   "protocolSlug": "ring-protocol",
@@ -61,5 +61,12 @@
         "rpcMode": "public-rpc"
       }
     }
-  }
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Redemption backstop not modeled",
+      "message": "Ring Protocol materials describe protocol liquidity controls, but Pharos has not source-reviewed a holder-exercisable redemption route for backstop scoring."
+    }
+  ]
 }

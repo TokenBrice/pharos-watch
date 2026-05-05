@@ -11,7 +11,7 @@
     "navToken": false
   },
   "collateral": "Crypto collateral and protocol-managed reserve liquidity described in JUSD materials",
-  "pegMechanism": "Dollar stable token with issuer/protocol-managed collateral and redemption processes documented by JUSD",
+  "pegMechanism": "Dollar stable token with issuer/protocol-managed collateral and liquidity processes described by JUSD; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
   "detailProvider": "coingecko",
   "geckoId": "jusd",
   "protocolSlug": "jusd",
@@ -65,5 +65,12 @@
         "rpcMode": "public-rpc"
       }
     }
-  }
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Redemption backstop not modeled",
+      "message": "JUSD metadata is tracked from public materials, but Pharos has not source-reviewed a holder-exercisable redemption route for backstop scoring."
+    }
+  ]
 }

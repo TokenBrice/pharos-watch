@@ -1,6 +1,6 @@
 # Pharos — Stablecoin Analytics Dashboard
 
-Public-facing analytics dashboard tracking 256 stablecoins in repo metadata: 242 active assets on public data surfaces, 12 pre-launch entries, 2 frozen archives (preserved historical records only), plus 2 shadow assets used only for PSI history. Pure information site — no wallet connectivity, no user accounts.
+Public-facing analytics dashboard tracking 255 stablecoins in repo metadata: 240 active assets on public data surfaces, 13 pre-launch entries, 2 frozen archives (preserved historical records only), plus 2 shadow assets used only for PSI history. Pure information site — no wallet connectivity, no user accounts.
 
 **Live at [pharos.watch](https://pharos.watch)**
 
@@ -19,7 +19,7 @@ Public-facing analytics dashboard tracking 256 stablecoins in repo metadata: 242
 - **Compare** — side-by-side stablecoin comparison across key metrics
 - **Daily Digest** — AI-generated daily summary of market movements and notable events
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
-- **Stablecoin Cemetery** — 90 dead stablecoins documented with cause of death, peak market cap, and obituaries
+- **Stablecoin Cemetery** — 88 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
 - **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 180 configured assets
 - **Detail pages** — full analytics dossiers for tracked live assets plus dedicated pre-launch detail views, with conditional reserve, redemption backstop, liquidity, and safety surfaces when data exists

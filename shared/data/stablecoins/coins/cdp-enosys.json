@@ -60,6 +60,9 @@
         "chain": "flare",
         "rpcMode": "public-rpc"
       }
+    },
+    "params": {
+      "rpcUrl": "https://flare-api.flare.network/ext/C/rpc"
     }
   }
 }
