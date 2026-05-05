@@ -53,6 +53,7 @@ const PEG_CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$", EUR: "€", GBP: "£", CHF: "₣", BRL: "R$", RUB: "₽", JPY: "¥",
   IDR: "Rp", SGD: "S$", TRY: "₺", AUD: "A$", ZAR: "R",
   CAD: "C$", CNY: "¥", CNH: "¥", PHP: "₱", MXN: "MX$", UAH: "₴", ARS: "AR$",
+  KGS: "som", NGN: "₦",
   GOLD: "$", SILVER: "$", VAR: "$", OTHER: "$",
 };
 

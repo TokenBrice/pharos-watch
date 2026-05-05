@@ -141,6 +141,8 @@ function classifyPegClass(pegCurrency: string | undefined, pegType: string | und
     pegType.includes("MXN") ||
     pegType.includes("MYR") ||
     pegType.includes("KRW") ||
+    pegType.includes("KGS") ||
+    pegType.includes("NGN") ||
     pegType.includes("UAH") ||
     pegType.includes("ARS")
   ) {

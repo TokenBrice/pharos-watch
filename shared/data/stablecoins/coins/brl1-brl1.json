@@ -1,0 +1,71 @@
+{
+  "id": "brl1-brl1",
+  "name": "BRL1",
+  "symbol": "BRL1",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "BRL",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Brazilian real reserves backing BRL1 at a 1:1 target against the Brazilian real",
+  "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 BRL1 = 1 BRL through Brazilian-real backing",
+  "detailProvider": "coingecko",
+  "geckoId": "brl1",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://brl1.io/en/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/BRL1Coin"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Brazil"
+  },
+  "contracts": [
+    {
+      "chain": "polygon",
+      "address": "0x5c067c80c00ecd2345b05e83a3e758ef799c40b5",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "chainTier": "stage1-l2",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Brazilian real fiat reserves",
+      "pct": 100,
+      "risk": "medium"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "brl1-brl1",
+    "display": {
+      "url": "https://brl1.io/en/",
+      "label": "BRL1"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "polygon",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Brazilian real fiat reserves",
+      "risk": "medium"
+    }
+  }
+}

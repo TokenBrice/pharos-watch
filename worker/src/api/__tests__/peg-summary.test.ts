@@ -209,6 +209,84 @@ describe("handlePegSummary", () => {
     });
   });
 
+  it("derives KGS and NGN DEX deviation from tracked peg metadata when cache pegType is empty", async () => {
+    const assets = [
+      makeAsset({
+        id: "kgst-kyrgyz-som",
+        name: "Kyrgyz Som Stablecoin",
+        symbol: "KGST",
+        geckoId: "kyrgyz-som-stablecoin",
+        pegType: "",
+        price: null,
+        circulating: { peggedKGS: 2_000_000 },
+      }),
+      makeAsset({
+        id: "cngn-compliant-naira",
+        name: "Compliant Naira",
+        symbol: "cNGN",
+        geckoId: "compliant-naira",
+        pegType: "",
+        price: null,
+        circulating: { peggedNGN: 2_000_000 },
+      }),
+    ];
+    const cacheValue = JSON.stringify({
+      peggedAssets: assets,
+      fxFallbackRates: {
+        peggedKGS: 1 / 87,
+        peggedNGN: 1 / 1370,
+      },
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [{ key: "stablecoins", value: cacheValue, updated_at: nowSec }],
+        first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+      },
+      { match: "depeg_events", rows: [] },
+      {
+        match: "dex_prices",
+        rows: [
+          {
+            stablecoin_id: "kgst-kyrgyz-som",
+            dex_price_usd: 1 / 87,
+            deviation_from_primary_bps: null,
+            source_pool_count: 2,
+            source_total_tvl: 2_000_000,
+            updated_at: nowSec - 60,
+          },
+          {
+            stablecoin_id: "cngn-compliant-naira",
+            dex_price_usd: 1 / 1370,
+            deviation_from_primary_bps: null,
+            source_pool_count: 2,
+            source_total_tvl: 2_000_000,
+            updated_at: nowSec - 60,
+          },
+        ],
+      },
+      { match: "supply_history", rows: [] },
+    ]);
+
+    const res = await handlePegSummary(db);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      coins: Array<{
+        id: string;
+        dexPriceCheck?: { dexDeviationBps: number; agrees: boolean } | null;
+      }>;
+    };
+
+    expect(body.coins.find((coin) => coin.id === "kgst-kyrgyz-som")?.dexPriceCheck).toMatchObject({
+      dexDeviationBps: 0,
+      agrees: true,
+    });
+    expect(body.coins.find((coin) => coin.id === "cngn-compliant-naira")?.dexPriceCheck).toMatchObject({
+      dexDeviationBps: 0,
+      agrees: true,
+    });
+  });
+
   it("includes navToken coins with null deviation fields", async () => {
     const db = makePegSummaryDb([
       makeAsset({

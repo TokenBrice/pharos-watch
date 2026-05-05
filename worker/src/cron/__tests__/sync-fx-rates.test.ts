@@ -45,7 +45,7 @@ describe("syncFxRates", () => {
       },
       {
         match: "currency-api",
-        body: { date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
+        body: { date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370 } },
       },
       {
         match: "gold-api.com/price/XAU",
@@ -122,7 +122,7 @@ describe("syncFxRates", () => {
       },
       {
         match: "currency-api",
-        body: { date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
+        body: { date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370 } },
       },
       {
         match: "gold-api.com/price/XAU",
@@ -317,7 +317,7 @@ describe("syncFxRates", () => {
           date: "2025-06-14",
           usd: {
             eur: 0.93, gbp: 0.8, chf: 0.88, brl: 5.01, jpy: 149.8, idr: 15810, sgd: 1.35, try: 36.1,
-            aud: 1.56, zar: 18.4, cad: 1.38, cny: 7.26, php: 56.1, mxn: 17.3, cnh: 7.31, rub: 90.5, uah: 41.2, ars: 1401,
+            aud: 1.56, zar: 18.4, cad: 1.38, cny: 7.26, php: 56.1, mxn: 17.3, cnh: 7.31, rub: 90.5, uah: 41.2, ars: 1401, kgs: 87.1, ngn: 1371,
             myr: 4.51, krw: 1382,
           },
         },
@@ -328,7 +328,7 @@ describe("syncFxRates", () => {
           date: "2025-06-15",
           usd: {
             eur: 0.925, gbp: 0.79, chf: 0.88, brl: 5.0, jpy: 149.5, idr: 15800, sgd: 1.35, try: 36,
-            aud: 1.55, zar: 18.3, cad: 1.37, cny: 7.25, php: 56, mxn: 17.2, cnh: 7.28, rub: 90, uah: 41, ars: 1400,
+            aud: 1.55, zar: 18.3, cad: 1.37, cny: 7.25, php: 56, mxn: 17.2, cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370,
             myr: 4.5, krw: 1380,
           },
         },
@@ -408,7 +408,7 @@ describe("syncFxRates", () => {
           time_last_update_unix: exchangeRateUpdatedAt,
           rates: {
             EUR: 0.925, GBP: 0.79, CHF: 0.88, BRL: 5.0, JPY: 149.5, IDR: 15800, SGD: 1.35, TRY: 36,
-            AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2, CNH: 7.28, RUB: 90, UAH: 41, ARS: 1400,
+            AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2, CNH: 7.28, RUB: 90, UAH: 41, ARS: 1400, KGS: 87, NGN: 1370,
             MYR: 4.5, KRW: 1380,
           },
         },
@@ -513,10 +513,12 @@ describe("syncFxRates", () => {
       peggedRUB: 1 / 90,
       peggedUAH: 1 / 41,
       peggedARS: 1 / 1400,
+      peggedKGS: 1 / 87,
+      peggedNGN: 1 / 1370,
       peggedMYR: 1 / 4.5,
       peggedKRW: 1 / 1380,
     };
-    const calendarDailyPegs = new Set(["peggedCNH", "peggedRUB", "peggedUAH", "peggedARS"]);
+    const calendarDailyPegs = new Set(["peggedCNH", "peggedRUB", "peggedUAH", "peggedARS", "peggedKGS", "peggedNGN"]);
     const sourceUpdatedAtByPeg = Object.fromEntries(
       Object.keys(fullPrevRates).map((pegKey) => [
         pegKey,
@@ -590,7 +592,7 @@ describe("syncFxRates", () => {
     expect(cachedMeta.consecutiveFallbackRuns).toBe(0);
   });
 
-  it("uses secondary API for CNH/RUB/UAH/ARS rates", async () => {
+  it("uses secondary API for CNH/RUB/UAH/ARS/KGS/NGN rates", async () => {
     mockFetch([
       {
         match: "frankfurter.dev",
@@ -602,7 +604,7 @@ describe("syncFxRates", () => {
       },
       {
         match: "currency-api",
-        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
+        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370 } },
       },
       {
         match: "gold-api.com/price/XAU",
@@ -633,7 +635,7 @@ describe("syncFxRates", () => {
     const metadata = JSON.parse(result.metadata ?? "{}");
     // Should include gold and silver prices
     expect(metadata.rateCount).toBeGreaterThanOrEqual(20);
-    expect(metadata.secondaryCoverage).toBe(4);
+    expect(metadata.secondaryCoverage).toBe(6);
   });
 
   it("prefers the fresher secondary FX mirror when the CDN payload lags a day behind", async () => {
@@ -648,11 +650,11 @@ describe("syncFxRates", () => {
       },
       {
         match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api",
-        body: { date: "2025-06-14", usd: { cnh: 7.31, rub: 90.5, uah: 41.2, ars: 1401 } },
+        body: { date: "2025-06-14", usd: { cnh: 7.31, rub: 90.5, uah: 41.2, ars: 1401, kgs: 87.1, ngn: 1371 } },
       },
       {
         match: "latest.currency-api.pages.dev",
-        body: { date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
+        body: { date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370 } },
       },
       {
         match: "gold-api.com/price/XAU",
@@ -713,7 +715,7 @@ describe("syncFxRates", () => {
         }), { status: 200 });
       }
       if (url.includes("currency-api")) {
-        return new Response(JSON.stringify({ usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } }), { status: 200 });
+        return new Response(JSON.stringify({ usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370 } }), { status: 200 });
       }
       if (url.includes("gold-api.com/price/XAU")) {
         return new Response(JSON.stringify({ price: 2900 }), { status: 200 });
@@ -798,7 +800,7 @@ describe("syncFxRates", () => {
         }), { status: 200 });
       }
       if (url.includes("currency-api")) {
-        return new Response(JSON.stringify({ usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } }), { status: 200 });
+        return new Response(JSON.stringify({ usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370 } }), { status: 200 });
       }
       if (url.includes("gold-api.com/price/XAU")) {
         return new Response(JSON.stringify({ price: 2900 }), { status: 200 });
@@ -890,6 +892,8 @@ describe("syncFxRates", () => {
       peggedRUB: 1 / 90,
       peggedUAH: 1 / 41,
       peggedARS: 1 / 1400,
+      peggedKGS: 1 / 87,
+      peggedNGN: 1 / 1370,
       peggedMYR: 1 / 4.5,
       peggedKRW: 1 / 1380,
     };
@@ -980,6 +984,8 @@ describe("syncFxRates", () => {
       peggedRUB: 1 / 90,
       peggedUAH: 1 / 41,
       peggedARS: 1 / 1400,
+      peggedKGS: 1 / 87,
+      peggedNGN: 1 / 1370,
       peggedMYR: 1 / 4.5,
       peggedKRW: 1 / 1380,
     };
@@ -1007,7 +1013,7 @@ describe("syncFxRates", () => {
         body: {
           rates: {
             EUR: 0.925, GBP: 0.79, CHF: 0.88, BRL: 5.0, JPY: 149.5, IDR: 15800, SGD: 1.35, TRY: 36,
-            AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, CNH: 7.28, PHP: 56, MXN: 17.2, RUB: 90, UAH: 41, ARS: 1400,
+            AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, CNH: 7.28, PHP: 56, MXN: 17.2, RUB: 90, UAH: 41, ARS: 1400, KGS: 87, NGN: 1370,
             MYR: 4.5, KRW: 1380,
           },
         },
@@ -1100,6 +1106,8 @@ describe("syncFxRates", () => {
       peggedRUB: 1 / 90,
       peggedUAH: 1 / 41,
       peggedARS: 1 / 1400,
+      peggedKGS: 1 / 87,
+      peggedNGN: 1 / 1370,
       peggedMYR: 1 / 4.5,
       peggedKRW: 1 / 1380,
     };
@@ -1205,7 +1213,7 @@ describe("syncFxRates", () => {
       },
       {
         match: "currency-api",
-        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
+        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370 } },
       },
       {
         match: "gold-api.com/price/XAU",
@@ -1275,7 +1283,7 @@ describe("syncFxRates", () => {
       },
       {
         match: "currency-api",
-        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
+        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370 } },
       },
       {
         match: "gold-api.com/price/XAU",
@@ -1342,7 +1350,7 @@ describe("syncFxRates", () => {
       },
       {
         match: "currency-api",
-        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
+        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370 } },
       },
       {
         match: "gold-api.com/price/XAU",
@@ -1419,7 +1427,7 @@ describe("syncFxRates", () => {
       },
       {
         match: "currency-api",
-        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
+        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370 } },
       },
       {
         match: "gold-api.com/price/XAU",
@@ -1485,7 +1493,7 @@ describe("syncFxRates", () => {
         callStartedAt.jsdelivr = performance.now();
         await new Promise((resolve) => setTimeout(resolve, 50));
         return new Response(
-          JSON.stringify({ date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } }),
+          JSON.stringify({ date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370 } }),
           { status: 200 },
         );
       }
@@ -1493,7 +1501,7 @@ describe("syncFxRates", () => {
         callStartedAt.pagesDev = performance.now();
         await new Promise((resolve) => setTimeout(resolve, 50));
         return new Response(
-          JSON.stringify({ date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } }),
+          JSON.stringify({ date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370 } }),
           { status: 200 },
         );
       }

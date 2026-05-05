@@ -45,6 +45,8 @@ export const SECONDARY_PEG_TO_FX: Record<string, string> = {
   RUB: "RUB",
   UAH: "UAH",
   ARS: "ARS",
+  KGS: "KGS",
+  NGN: "NGN",
 };
 
 /** Maps coin ID → historical FX code override for OTHER-pegged coins */

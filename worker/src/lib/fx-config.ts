@@ -41,6 +41,8 @@ export const SECONDARY_FX_CURRENCY_TO_PEG: Record<string, string> = {
   rub: "peggedRUB",
   uah: "peggedUAH",
   ars: "peggedARS",
+  kgs: "peggedKGS",
+  ngn: "peggedNGN",
 };
 
 export const REALTIME_FX_CURRENCY_TO_PEG: Record<string, string> = {
@@ -49,6 +51,8 @@ export const REALTIME_FX_CURRENCY_TO_PEG: Record<string, string> = {
   RUB: "peggedRUB",
   UAH: "peggedUAH",
   ARS: "peggedARS",
+  KGS: "peggedKGS",
+  NGN: "peggedNGN",
 };
 
 export const EXPECTED_FX_PEG_KEYS = [
@@ -77,6 +81,8 @@ const FX_RATE_BOUNDS: Record<string, [number, number]> = {
   peggedKRW: [0.0005, 0.0010],
   peggedUAH: [0.01, 0.10],
   peggedARS: [0.0001, 0.01],
+  peggedKGS: [0.005, 0.05],
+  peggedNGN: [0.0002, 0.005],
   peggedSILVER: [5, 500],
   peggedGOLD: [500, 10000],
 };

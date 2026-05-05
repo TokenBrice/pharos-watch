@@ -1093,5 +1093,40 @@
     "title": "First Korean Won stablecoin, RWA-backed",
     "text": "KRWQ is the first stablecoin pegged 1:1 to the South Korean won, launched October 2025 by IQ in partnership with Frax. It uses LayerZero's Omnichain Fungible Token (OFT) standard with Ethereum as the canonical mint chain and Base as the primary bridged destination, sharing unified supply across deployments. Reserves are transitioning from initial USDC backing toward a target mix dominated by short-term Korean Treasury Bonds, which are tokenized through Etherfuse's Stablebond framework and held in segregated, bankruptcy-remote custody at Shinhan Securities, alongside USDC and Frax frxUSD. Mint and redemption are KYC-gated to institutional counterparties (exchanges, market makers, OTC desks), and KRWQ is explicitly not marketed to South Korean residents while domestic stablecoin legislation moves through the National Assembly. The issuer commits to independent monthly attestations starting 2025 but has not yet named an auditor or published a report; live reserves are currently a self-reported on-chain dashboard.",
     "updatedAt": "2026-04-29"
+  },
+  "reur-royal-euro": {
+    "title": "Euro Rail, Early Liquidity",
+    "text": "REUR is a euro-referenced stable-value token issued by RIB Digital Holdings Limited and tracked by CoinGecko across Ethereum, BNB Chain, and Tron. The token has meaningful early market capitalization for a new euro peg, but reserve and redemption disclosures are thinner than the larger euro issuers already covered by Pharos, so its risk profile depends heavily on issuer execution rather than mature public transparency.",
+    "updatedAt": "2026-05-05"
+  },
+  "kgst-kyrgyz-som": {
+    "title": "Central Asia's On-Chain Som",
+    "text": "KGST is a Kyrgyz som stablecoin tracked by CoinGecko on BNB Chain. It is presented as a fully backed 1:1 KGS token, giving Pharos a direct Central Asian local-currency peg, but public reserve and redemption materials remain limited compared with established regulated fiat issuers. KGST also depends on secondary FX feeds for USD normalization because CoinGecko does not currently expose a native KGS quote.",
+    "updatedAt": "2026-05-05"
+  },
+  "eura-angle": {
+    "title": "Angle's Surviving Euro Primitive",
+    "text": "EURA is Angle Protocol's euro stablecoin, now tracked through both DefiLlama and CoinGecko. Unlike a bank-deposit euro token, EURA is a crypto-backed protocol asset supported by Angle collateral, oracle infrastructure, and an insurance-fund design. That gives it broader on-chain composability and multichain coverage, but its redemption quality depends on protocol collateral health and available conversion routes rather than a simple off-chain issuer promise.",
+    "updatedAt": "2026-05-05"
+  },
+  "audx-aussie-dollar-token": {
+    "title": "AUD Liquidity With Sparse Footing",
+    "text": "AUDX is an Australian dollar stablecoin issued by Tau Pty Ltd, trading as AUDX Token, and tracked by CoinGecko across Ethereum, Polygon, and Conflux. The issuer describes AUSTRAC registration and 1:1 AUD reserves held with regulated financial institutions. Market depth is still small, so Pharos treats the reserve story as useful but less battle-tested than older AUD rails with longer public operating histories.",
+    "updatedAt": "2026-05-05"
+  },
+  "cngn-compliant-naira": {
+    "title": "Naira Settlement Goes Multichain",
+    "text": "cNGN is a naira-backed stablecoin tracked by CoinGecko across Base, Ethereum, BNB Chain, Polygon, and Solana. The issuer describes 1:1 NGN reserves held in designated commercial banks, giving the dashboard a direct Nigerian naira peg with native NGN quote support where CoinGecko provides it. The Solana mint includes administrative controls, so holder risk includes issuer and contract-control assumptions in addition to banking concentration.",
+    "updatedAt": "2026-05-05"
+  },
+  "brl1-brl1": {
+    "title": "Small-Cap Real Exposure",
+    "text": "BRL1 is a Brazilian real stablecoin tracked by CoinGecko on Polygon. It adds another BRL-denominated route alongside the older Brazilian real tokens in Pharos, but with a smaller operating footprint and less public reserve transparency than the most established local issuers. Pharos therefore models the peg as issuer-backed while keeping disclosure confidence conservative.",
+    "updatedAt": "2026-05-05"
+  },
+  "wars-argentine-peso": {
+    "title": "ARS Peg With Split Signals",
+    "text": "WARS is an Argentine peso stablecoin tracked by DefiLlama across Ethereum, Base, World Chain, BNB Chain, Polygon, and Gnosis, with CoinGecko also listing the token below the current $1M market-cap threshold. That split makes it eligible through DefiLlama coverage but still a higher-uncertainty addition: the same contract address appears across the EVM deployments, while reserve and redemption confidence remain weaker than major fiat issuers.",
+    "updatedAt": "2026-05-05"
   }
 }

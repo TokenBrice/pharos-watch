@@ -1,0 +1,67 @@
+{
+  "id": "kgst-kyrgyz-som",
+  "name": "Kyrgyz Som Stablecoin",
+  "symbol": "KGST",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "KGS",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Kyrgyz som reserves held to back KGST 1:1 against the Kyrgyz som",
+  "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 KGST = 1 KGS through fully backed som reserves",
+  "detailProvider": "coingecko",
+  "geckoId": "kyrgyz-som-stablecoin",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.kgstoken.kg/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Kyrgyzstan"
+  },
+  "contracts": [
+    {
+      "chain": "bsc",
+      "address": "0x94be0bba8e1e303fe998c9360b57b826f1a4f828",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "chainTier": "established-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Kyrgyz som fiat reserves",
+      "pct": 100,
+      "risk": "medium"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "kgst-kyrgyz-som",
+    "display": {
+      "url": "https://www.kgstoken.kg/",
+      "label": "KGST"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "bsc",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Kyrgyz som fiat reserves",
+      "risk": "medium"
+    }
+  }
+}

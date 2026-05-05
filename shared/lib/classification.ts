@@ -339,6 +339,28 @@ export const PEG_METADATA = {
     },
     chart: { label: "ARS", textColor: "text-stone-700 dark:text-stone-400", bgColor: "bg-stone-500", hex: "#78716c" },
   },
+  KGS: {
+    label: "the Kyrgyz Som",
+    shortLabel: "Kyrgyz Som",
+    filterTag: "kgs-peg",
+    filterLabel: "KGS",
+    badge: {
+      label: "KGS Peg",
+      cls: "bg-cyan-600/10 text-cyan-700 dark:text-cyan-400 border-cyan-600/20",
+    },
+    chart: { label: "KGS", textColor: "text-cyan-700 dark:text-cyan-400", bgColor: "bg-cyan-600", hex: "#0891b2" },
+  },
+  NGN: {
+    label: "the Nigerian Naira",
+    shortLabel: "Nigerian Naira",
+    filterTag: "ngn-peg",
+    filterLabel: "NGN",
+    badge: {
+      label: "NGN Peg",
+      cls: "bg-green-600/10 text-green-700 dark:text-green-400 border-green-600/20",
+    },
+    chart: { label: "NGN", textColor: "text-green-700 dark:text-green-400", bgColor: "bg-green-600", hex: "#16a34a" },
+  },
   GOLD: {
     label: "Gold",
     shortLabel: "Gold",

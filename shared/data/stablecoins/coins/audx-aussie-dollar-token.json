@@ -1,0 +1,81 @@
+{
+  "id": "audx-aussie-dollar-token",
+  "name": "Aussie Dollar Token",
+  "symbol": "AUDX",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "AUD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Australian dollar reserves held 1:1 in regulated financial institutions by AUSTRAC-registered Tau Pty Ltd trading as AUDX Token",
+  "pegMechanism": "Issuer-managed mint and redemption path targeting 1 AUDX = 1 AUD through fully backed Australian-dollar reserves",
+  "detailProvider": "coingecko",
+  "geckoId": "aussie-dollar-token",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.audxtoken.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/audxtoken"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Australia",
+    "regulator": "AUSTRAC"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+      "decimals": 18
+    },
+    {
+      "chain": "conflux",
+      "address": "0x47a365e29697c700c75d58936b3d93a8a20a43c9",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "AUD fiat reserves at regulated financial institutions",
+      "pct": 100,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "audx-aussie-dollar-token",
+    "display": {
+      "url": "https://www.audxtoken.com/",
+      "label": "AUDX Token"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "AUD fiat reserves",
+      "risk": "low"
+    }
+  }
+}

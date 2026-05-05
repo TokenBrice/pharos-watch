@@ -1,0 +1,80 @@
+{
+  "id": "reur-royal-euro",
+  "name": "Royal Euro",
+  "symbol": "REUR",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Euro-denominated reserves held to target 1:1 backing for each REUR issued by The RIB Digital Holdings Limited",
+  "pegMechanism": "Issuer-managed mint and redemption route targeting 1 REUR = 1 EUR, subject to reserve sufficiency, redemption terms, and market conditions",
+  "detailProvider": "coingecko",
+  "geckoId": "royal-euro",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.rcoins.digital/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/rcoins_official"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Hong Kong"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
+      "decimals": 18
+    },
+    {
+      "chain": "tron",
+      "address": "TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Euro-denominated reserves",
+      "pct": 100,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "reur-royal-euro",
+    "display": {
+      "url": "https://www.rcoins.digital/",
+      "label": "Rcoins Digital"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Euro-denominated reserves",
+      "risk": "low"
+    }
+  }
+}

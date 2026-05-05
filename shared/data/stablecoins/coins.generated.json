@@ -690,6 +690,87 @@
     }
   },
   {
+    "id": "audx-aussie-dollar-token",
+    "detailProvider": "coingecko",
+    "name": "Aussie Dollar Token",
+    "symbol": "AUDX",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "AUD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Australian dollar reserves held 1:1 in regulated financial institutions by AUSTRAC-registered Tau Pty Ltd trading as AUDX Token",
+    "pegMechanism": "Issuer-managed mint and redemption path targeting 1 AUDX = 1 AUD through fully backed Australian-dollar reserves",
+    "geckoId": "aussie-dollar-token",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.audxtoken.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/audxtoken"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Australia",
+      "regulator": "AUSTRAC"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "decimals": 18
+      },
+      {
+        "chain": "conflux",
+        "address": "0x47a365e29697c700c75d58936b3d93a8a20a43c9",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "AUD fiat reserves at regulated financial institutions",
+        "pct": 100,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "audx-aussie-dollar-token",
+      "display": {
+        "url": "https://www.audxtoken.com/",
+        "label": "AUDX Token"
+      },
+      "adapter": "single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "AUD fiat reserves",
+        "risk": "low"
+      }
+    }
+  },
+  {
     "id": "ausd-agora",
     "llamaId": "205",
     "detailProvider": "defillama",
@@ -1393,6 +1474,77 @@
     "yieldConfig": {
       "yieldSource": "Liquity Stability Pool (via Yearn yBOLD)",
       "yieldType": "lending-vault"
+    }
+  },
+  {
+    "id": "brl1-brl1",
+    "detailProvider": "coingecko",
+    "name": "BRL1",
+    "symbol": "BRL1",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "BRL",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Brazilian real reserves backing BRL1 at a 1:1 target against the Brazilian real",
+    "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 BRL1 = 1 BRL through Brazilian-real backing",
+    "geckoId": "brl1",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://brl1.io/en/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/BRL1Coin"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Brazil"
+    },
+    "contracts": [
+      {
+        "chain": "polygon",
+        "address": "0x5c067c80c00ecd2345b05e83a3e758ef799c40b5",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "chainTier": "stage1-l2",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Brazilian real fiat reserves",
+        "pct": 100,
+        "risk": "medium"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "brl1-brl1",
+      "display": {
+        "url": "https://brl1.io/en/",
+        "label": "BRL1"
+      },
+      "adapter": "single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "polygon",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Brazilian real fiat reserves",
+        "risk": "medium"
+      }
     }
   },
   {
@@ -2825,6 +2977,96 @@
         "risk": "very-low"
       }
     ]
+  },
+  {
+    "id": "cngn-compliant-naira",
+    "detailProvider": "coingecko",
+    "name": "Compliant Naira",
+    "symbol": "cNGN",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "NGN",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Nigerian naira reserves held 1:1 in designated commercial bank accounts by the cNGN issuer consortium",
+    "pegMechanism": "Issuer-managed mint and redemption path designed to maintain 1 cNGN = 1 NGN through naira reserves and compliant transfer rails",
+    "geckoId": "compliant-naira",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.cngn.co/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/cngn_co"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Nigeria"
+    },
+    "contracts": [
+      {
+        "chain": "base",
+        "address": "0xc930784d6e14e2fc2a1f49be1068dc40f24762d3",
+        "decimals": 6
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab",
+        "decimals": 6
+      },
+      {
+        "chain": "bsc",
+        "address": "0xa8aea66b361a8d53e8865c62d142167af28af058",
+        "decimals": 6
+      },
+      {
+        "chain": "polygon",
+        "address": "0x52828daa48c1a9a06f37500882b42daf0be04c3b",
+        "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Nigerian naira deposits at designated commercial banks",
+        "pct": 100,
+        "risk": "medium"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "cngn-compliant-naira",
+      "display": {
+        "url": "https://www.cngn.co/",
+        "label": "cNGN"
+      },
+      "adapter": "single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "base",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Nigerian naira bank deposits",
+        "risk": "medium"
+      }
+    }
   },
   {
     "id": "crvusd-curve",
@@ -4462,6 +4704,107 @@
         "sourceUrl": "https://www.coindesk.com/policy/2026/04/17/french-government-pivots-from-slamming-privately-issued-stablecoins-to-supporting-them"
       }
     ]
+  },
+  {
+    "id": "eura-angle",
+    "llamaId": "55",
+    "detailProvider": "defillama",
+    "name": "EURA",
+    "symbol": "EURA",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "EUR",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Angle Protocol collateral vaults and insurance funds backing the euro peg through protocol-managed collateral and derivatives",
+    "pegMechanism": "Angle Protocol euro stablecoin convertible against protocol collateral, with euro reference pricing from Chainlink and Uniswap V3 oracle feeds",
+    "geckoId": "ageur",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.angle.money"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/AngleProtocol"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.angle.money/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x1a7e4e63778b4f12a199c062f3efdd288afcbce8",
+        "decimals": 18
+      },
+      {
+        "chain": "gnosis",
+        "address": "0x4b1e2c2762667331bc91648052f646d1b0d35984",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0xa61beb4a3d02decb01039e378237032b351125b4",
+        "decimals": 18
+      },
+      {
+        "chain": "celo",
+        "address": "0xc16b81af351ba9e64c1a069e3ab18c244a1e3049",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0xe0b52e49357fd4daf2c15e02058dce6bc0057db4",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x12f31b73d812c6bb0d735a218c086d44d5fe5f89",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xfa5ed56a203466cbbc2430a43c66b9d8723528e7",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "Angle Protocol collateral and insurance fund",
+        "pct": 100,
+        "risk": "medium"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "eura-angle",
+      "display": {
+        "url": "https://docs.angle.money/",
+        "label": "Angle Protocol"
+      },
+      "adapter": "single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Angle Protocol collateral and insurance fund",
+        "risk": "medium"
+      }
+    }
   },
   {
     "id": "eurau-allunity",
@@ -7891,6 +8234,73 @@
     ]
   },
   {
+    "id": "kgst-kyrgyz-som",
+    "detailProvider": "coingecko",
+    "name": "Kyrgyz Som Stablecoin",
+    "symbol": "KGST",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "KGS",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Kyrgyz som reserves held to back KGST 1:1 against the Kyrgyz som",
+    "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 KGST = 1 KGS through fully backed som reserves",
+    "geckoId": "kyrgyz-som-stablecoin",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.kgstoken.kg/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Kyrgyzstan"
+    },
+    "contracts": [
+      {
+        "chain": "bsc",
+        "address": "0x94be0bba8e1e303fe998c9360b57b826f1a4f828",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Kyrgyz som fiat reserves",
+        "pct": 100,
+        "risk": "medium"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "kgst-kyrgyz-som",
+      "display": {
+        "url": "https://www.kgstoken.kg/",
+        "label": "KGST"
+      },
+      "adapter": "single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "bsc",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Kyrgyz som fiat reserves",
+        "risk": "medium"
+      }
+    }
+  },
+  {
     "id": "klarnausd-klarna",
     "detailProvider": "defillama",
     "name": "KlarnaUSD",
@@ -10495,6 +10905,86 @@
       "params": {
         "label": "USD deposits, U.S. Treasuries & reverse repos",
         "risk": "very-low"
+      }
+    }
+  },
+  {
+    "id": "reur-royal-euro",
+    "detailProvider": "coingecko",
+    "name": "Royal Euro",
+    "symbol": "REUR",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "EUR",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Euro-denominated reserves held to target 1:1 backing for each REUR issued by The RIB Digital Holdings Limited",
+    "pegMechanism": "Issuer-managed mint and redemption route targeting 1 REUR = 1 EUR, subject to reserve sufficiency, redemption terms, and market conditions",
+    "geckoId": "royal-euro",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.rcoins.digital/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/rcoins_official"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Hong Kong"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
+        "decimals": 18
+      },
+      {
+        "chain": "tron",
+        "address": "TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Euro-denominated reserves",
+        "pct": 100,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "reur-royal-euro",
+      "display": {
+        "url": "https://www.rcoins.digital/",
+        "label": "Rcoins Digital"
+      },
+      "adapter": "single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Euro-denominated reserves",
+        "risk": "low"
       }
     }
   },
@@ -19581,6 +20071,98 @@
       "params": {
         "label": "GBP cash & equivalents",
         "risk": "very-low"
+      }
+    }
+  },
+  {
+    "id": "wars-argentine-peso",
+    "llamaId": "379",
+    "detailProvider": "defillama",
+    "name": "Argentine Peso",
+    "symbol": "WARS",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "ARS",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Argentine peso reserves backing WARS at a 1:1 target against the Argentine peso",
+    "pegMechanism": "Issuer-managed fiat-backed stablecoin route targeting 1 WARS = 1 ARS; DefiLlama classifies the asset as fiat-backed",
+    "geckoId": "argentine-peso",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.ripio.com/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Argentina"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "decimals": 18
+      },
+      {
+        "chain": "worldchain",
+        "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "decimals": 18
+      },
+      {
+        "chain": "gnosis",
+        "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Argentine peso fiat reserves",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "wars-argentine-peso",
+      "display": {
+        "url": "https://www.ripio.com/",
+        "label": "Ripio"
+      },
+      "adapter": "single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Argentine peso fiat reserves",
+        "risk": "high"
       }
     }
   },

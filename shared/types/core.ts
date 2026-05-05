@@ -37,6 +37,8 @@ export const PEG_CURRENCY_VALUES = [
   "MXN",
   "UAH",
   "ARS",
+  "KGS",
+  "NGN",
   "GOLD",
   "SILVER",
   "VAR",
@@ -302,6 +304,8 @@ export type FilterTag =
   | "mxn-peg"
   | "uah-peg"
   | "ars-peg"
+  | "kgs-peg"
+  | "ngn-peg"
   | "silver-peg"
   | "var-peg"
   | "other-peg"

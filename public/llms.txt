@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 205 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 212 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -175,6 +175,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Pax Dollar (USDP)](https://pharos.watch/stablecoin/usdp-paxos/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Sui Dollar (USDsui)](https://pharos.watch/stablecoin/usdsui-sui/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Crown BRLV (BRLV)](https://pharos.watch/stablecoin/brlv-crown/): centralized stablecoin backed by real-world assets pegged to Brazilian Real.
+- [Royal Euro (REUR)](https://pharos.watch/stablecoin/reur-royal-euro/): centralized stablecoin backed by real-world assets pegged to Euro.
 - [Alloy Tether (aUSD₮)](https://pharos.watch/stablecoin/ausdt-tether-alloy/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Hex Trust USDX (USDX)](https://pharos.watch/stablecoin/usdx-hex-trust/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [StraitsX XUSD (XUSD)](https://pharos.watch/stablecoin/xusd-straitsx/): centralized stablecoin backed by real-world assets pegged to US Dollar.
@@ -259,6 +260,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [AxCNH (AxCNH)](https://pharos.watch/stablecoin/axcnh-anchorx/): centralized stablecoin backed by real-world assets pegged to Offshore Yuan.
 - [Rupiah Token (IDRT)](https://pharos.watch/stablecoin/idrt-rupiah-token/): centralized stablecoin backed by real-world assets pegged to Indonesian Rupiah.
 - [Macropod (AUDM)](https://pharos.watch/stablecoin/audm-macropod/): centralized stablecoin backed by real-world assets pegged to Australian Dollar.
+- [Kyrgyz Som Stablecoin (KGST)](https://pharos.watch/stablecoin/kgst-kyrgyz-som/): centralized stablecoin backed by real-world assets pegged to Kyrgyz Som.
 - [Forte AUD (AUDF)](https://pharos.watch/stablecoin/audf-forte/): centralized stablecoin backed by real-world assets pegged to Australian Dollar.
 - [BiLira (TRYB)](https://pharos.watch/stablecoin/tryb-bilira/): centralized stablecoin backed by real-world assets pegged to Turkish Lira.
 - [Tether Gold (XAUT)](https://pharos.watch/stablecoin/xaut-tether/): centralized stablecoin backed by real-world assets pegged to Gold.
@@ -277,6 +279,8 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Quantoz EURQ (EURQ)](https://pharos.watch/stablecoin/eurq-quantoz/): centralized stablecoin backed by real-world assets pegged to Euro.
 - [AllUnity EUR (EURAU)](https://pharos.watch/stablecoin/eurau-allunity/): centralized stablecoin backed by real-world assets pegged to Euro.
 - [Decentralized Euro (DEURO)](https://pharos.watch/stablecoin/deuro-deuro/): decentralized stablecoin collateralized by crypto assets pegged to Euro.
+- [EURA (EURA)](https://pharos.watch/stablecoin/eura-angle/): decentralized stablecoin collateralized by crypto assets pegged to Euro.
+- [Aussie Dollar Token (AUDX)](https://pharos.watch/stablecoin/audx-aussie-dollar-token/): centralized stablecoin backed by real-world assets pegged to Australian Dollar.
 - [AllUnity CHF (CHFAU)](https://pharos.watch/stablecoin/chfau-allunity/): centralized stablecoin backed by real-world assets pegged to Swiss Franc.
 - [VNX Swiss Franc (VCHF)](https://pharos.watch/stablecoin/vchf-vnx/): centralized stablecoin backed by real-world assets pegged to Swiss Franc.
 - [VNX British Pound (VGBP)](https://pharos.watch/stablecoin/vgbp-vnx/): centralized stablecoin backed by real-world assets pegged to British Pound.
@@ -300,7 +304,10 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [BRLA Digital (BRLA)](https://pharos.watch/stablecoin/brla-brla-digital/): centralized stablecoin backed by real-world assets pegged to Brazilian Real.
 - [SILK (SILK)](https://pharos.watch/stablecoin/silk-shade-protocol/): decentralized stablecoin collateralized by crypto assets pegged to CPI.
 - [IDRX (IDRX)](https://pharos.watch/stablecoin/idrx-idrx/): centralized stablecoin backed by real-world assets pegged to Indonesian Rupiah.
+- [Compliant Naira (cNGN)](https://pharos.watch/stablecoin/cngn-compliant-naira/): centralized stablecoin backed by real-world assets pegged to Nigerian Naira.
 - [MXNB (MXNB)](https://pharos.watch/stablecoin/mxnb-juno/): centralized stablecoin backed by real-world assets pegged to Mexican Peso.
+- [BRL1 (BRL1)](https://pharos.watch/stablecoin/brl1-brl1/): centralized stablecoin backed by real-world assets pegged to Brazilian Real.
+- [Argentine Peso (WARS)](https://pharos.watch/stablecoin/wars-argentine-peso/): centralized stablecoin backed by real-world assets pegged to Argentine Peso.
 - [Convertible JPY Token (CJPY)](https://pharos.watch/stablecoin/cjpy-yamato/): decentralized stablecoin collateralized by crypto assets pegged to Japanese Yen.
 - [MYRC (MYRC)](https://pharos.watch/stablecoin/myrc-blox/): centralized stablecoin backed by real-world assets pegged to Malaysian Ringgit.
 - [KRWQ (KRWQ)](https://pharos.watch/stablecoin/krwq-iq/): centralized stablecoin backed by real-world assets pegged to Korean Won.

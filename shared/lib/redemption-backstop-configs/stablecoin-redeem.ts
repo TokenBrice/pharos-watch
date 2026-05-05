@@ -18,6 +18,26 @@ const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
 );
 
 export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  "eura-angle": {
+    ...stablecoinRedeemBase,
+    settlementModel: "immediate",
+    capacityModel: {
+      kind: "supply-full",
+      confidence: "documented-bound",
+      basis: "full-system-eventual",
+    },
+    costModel: documentedVariableFee(
+      "Angle docs describe EURA conversion against protocol collateral; public materials reviewed do not expose a single fixed redemption fee schedule",
+    ),
+    reviewedAt: "2026-05-05",
+    docs: [
+      sourceRef("Angle Protocol docs", "https://docs.angle.money/", ["route", "capacity"]),
+      sourceRef("Angle website", "https://www.angle.money/", ["route"]),
+    ],
+    notes: [
+      "Modeled as protocol-mediated EURA conversion rather than an off-chain issuer redemption; capacity depends on the live Angle collateral system and available conversion routes",
+    ],
+  },
   "dusd-dtrinity": {
     ...stablecoinRedeemBase,
     executionModel: "deterministic-basket",
