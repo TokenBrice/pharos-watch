@@ -7,6 +7,8 @@ import { getDigestBodyParagraphs, EDITORIAL_BODY_STYLE } from "@/lib/digest";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { digestDisplay } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@shared/lib/format";
+import type { DigestRiskSignal } from "@shared/types";
 
 function formatMasthead(ts: number): string {
   return new Date(ts * 1000).toLocaleDateString("en-US", {
@@ -19,6 +21,28 @@ function formatMasthead(ts: number): string {
 
 // Editorial body style imported from @/lib/digest for consistent wire-service aesthetic
 
+function formatRiskSignal(signal: DigestRiskSignal): string {
+  const severity = signal.severity === "critical" ? "Critical depeg" : "Depeg watch";
+  const mcap = signal.mcapUsd != null ? `, ${formatCurrency(signal.mcapUsd, 0)} mcap` : "";
+  return `${severity}: ${signal.symbol} ${Math.abs(signal.bps)} bps${mcap}`;
+}
+
+function DigestRiskSignalPill({ signal }: { signal: DigestRiskSignal | null | undefined }) {
+  if (!signal) return null;
+  return (
+    <div
+      className={cn(
+        "inline-flex w-fit items-center rounded-full border px-2.5 py-1 font-mono text-[0.68rem] font-semibold uppercase tracking-[0.18em]",
+        signal.severity === "critical"
+          ? "border-red-500/35 bg-red-500/10 text-red-700 dark:text-red-300"
+          : "border-amber-500/35 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+      )}
+    >
+      {formatRiskSignal(signal)}
+    </div>
+  );
+}
+
 interface DigestFullDisplayProps {
   label: string;
   dateString: string;
@@ -26,6 +50,7 @@ interface DigestFullDisplayProps {
   paragraphs: string[];
   ctaHref?: string;
   ctaLabel?: string;
+  riskSignal?: DigestRiskSignal | null;
 }
 
 function parseDigestParagraph(paragraph: string): { headerText: string | null; bodyText: string } {
@@ -65,7 +90,7 @@ function DigestParagraphList({ paragraphs, getParagraphClassName }: DigestParagr
   );
 }
 
-export function DigestFullDisplay({ label, dateString, title, paragraphs, ctaHref, ctaLabel }: DigestFullDisplayProps) {
+export function DigestFullDisplay({ label, dateString, title, paragraphs, ctaHref, ctaLabel, riskSignal }: DigestFullDisplayProps) {
   return (
     <div className="animate-in fade-in duration-300 mx-auto max-w-[68ch]">
       <div className="border-t border-b border-border py-3 text-left">
@@ -79,6 +104,7 @@ export function DigestFullDisplay({ label, dateString, title, paragraphs, ctaHre
         <h2 className="text-2xl font-bold sm:text-3xl" style={EDITORIAL_BODY_STYLE}>
           {title}
         </h2>
+        <DigestRiskSignalPill signal={riskSignal} />
 
         <DigestParagraphList
           paragraphs={paragraphs}
@@ -164,6 +190,7 @@ export function DailyDigest({ variant = "full", detailHref }: DailyDigestProps) 
         dateString={data?.generatedAt ? formatMasthead(data.generatedAt) : ""}
         title={data?.digestTitle || "Signal & Noise"}
         paragraphs={visibleParagraphs}
+        riskSignal={data?.riskSignal}
       />
     );
   }
@@ -231,6 +258,7 @@ export function DailyDigest({ variant = "full", detailHref }: DailyDigestProps) 
             >
               {title}
             </h2>
+            <DigestRiskSignalPill signal={data?.riskSignal} />
             {bodyBlock}
           </div>
         ) : (
@@ -249,6 +277,7 @@ export function DailyDigest({ variant = "full", detailHref }: DailyDigestProps) 
               >
                 {title}
               </h2>
+              <DigestRiskSignalPill signal={data?.riskSignal} />
             </div>
             {bodyBlock}
           </div>

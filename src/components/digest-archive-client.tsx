@@ -10,6 +10,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import { formatCurrency } from "@shared/lib/format";
+import type { DigestRiskSignal } from "@shared/types";
 import { splitDigestParagraphs, EDITORIAL_BODY_STYLE, EDITORIAL_META_STYLE } from "@/lib/digest";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +49,10 @@ function formatWeeklyMasthead(ts: number): string {
 }
 
 // Editorial typography imported from @/lib/digest for consistent wire-service aesthetic
+
+function formatArchiveRiskSignal(signal: DigestRiskSignal): string {
+  return `${signal.symbol} ${Math.abs(signal.bps)}bps`;
+}
 
 function WeeklyTeaser({ entry }: { entry: { digestTitle: string | null; digestExtended: string | null; generatedAt: number; editionNumber?: number } }) {
   const paragraphs = splitDigestParagraphs(entry.digestExtended);
@@ -236,14 +241,36 @@ export function DigestArchiveClient() {
                       Weekly{d.editionNumber ? ` #${d.editionNumber}` : ""}
                     </span>
                   )}
+                  {d.riskSignal && (
+                    <span
+                      className={cn(
+                        "rounded border px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider",
+                        d.riskSignal.severity === "critical"
+                          ? "border-red-500/35 bg-red-500/10 text-red-700 dark:text-red-300"
+                          : "border-amber-500/35 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+                      )}
+                    >
+                      {formatArchiveRiskSignal(d.riskSignal)}
+                    </span>
+                  )}
                   {!isWeekly && d.editionNumber != null && (
                     <span className="font-mono text-[0.65rem] text-muted-foreground/70">
                       #{d.editionNumber}
                     </span>
                   )}
                 </span>
-                {(d.psiBand || d.totalMcapUsd != null) && (
+                {(d.psiBand || d.totalMcapUsd != null || d.riskSignal) && (
                   <div className="flex items-center gap-2 mt-0.5 sm:hidden">
+                    {d.riskSignal && (
+                      <span className={cn(
+                        "text-xs font-mono font-medium",
+                        d.riskSignal.severity === "critical"
+                          ? "text-red-700 dark:text-red-300"
+                          : "text-amber-700 dark:text-amber-300",
+                      )}>
+                        {formatArchiveRiskSignal(d.riskSignal)}
+                      </span>
+                    )}
                     {d.psiBand && d.psiScore != null && (
                       <span className={`text-xs font-mono font-medium ${PSI_BAND_CLASSES[d.psiBand as ConditionBand] ?? ""}`}>
                         {d.psiBand} {d.psiScore.toFixed(1)}

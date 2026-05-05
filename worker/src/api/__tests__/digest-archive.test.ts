@@ -17,6 +17,8 @@ describe("handleDigestArchive", () => {
       input_data: JSON.stringify({
         stabilityIndex: { score: 72, band: "Stable" },
         totalMcapUsd: 150e9,
+        activeDepegCount: 1,
+        topDepegs: [{ symbol: "PMUSD", bps: -5284, mcapUsd: 65_000_000 }],
       }),
     });
     const db = mockD1([{ match: "daily_digest", rows: [row] }]);
@@ -30,6 +32,7 @@ describe("handleDigestArchive", () => {
         psiScore: number | null;
         psiBand: string | null;
         totalMcapUsd: number | null;
+        riskSignal: { symbol: string; bps: number; severity: string } | null;
       }>;
     };
     expect(body.digests).toHaveLength(1);
@@ -38,6 +41,7 @@ describe("handleDigestArchive", () => {
     expect(body.digests[0].psiScore).toBe(72);
     expect(body.digests[0].psiBand).toBe("Stable");
     expect(body.digests[0].totalMcapUsd).toBe(150e9);
+    expect(body.digests[0].riskSignal).toMatchObject({ symbol: "PMUSD", bps: -5284, severity: "critical" });
   });
 
   it("handles missing input_data gracefully", async () => {

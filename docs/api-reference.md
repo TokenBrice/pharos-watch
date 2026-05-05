@@ -1184,7 +1184,16 @@ Latest AI-generated market summary, produced daily at 08:05 UTC via the Claude A
 ```json
 {
   "digest": "USDC absorbed $812M of the market's $1.36B weekly inflow…",
-  "editionNumber": 214
+  "editionNumber": 214,
+  "riskSignal": {
+    "kind": "depeg",
+    "symbol": "PMUSD",
+    "bps": -5284,
+    "mcapUsd": 65610000,
+    "severity": "critical",
+    "activeCount": 7,
+    "date": null
+  }
 }
 ```
 
@@ -1197,6 +1206,7 @@ If no digest exists yet, the endpoint returns only `{ "digest": null }`.
 | `digestExtended` | `string \| null` | Extended commentary for the website view                                             |
 | `generatedAt`    | `number`         | Unix seconds when this digest was generated (present only when `digest` is non-null) |
 | `editionNumber`  | `number \| null` | Sequential daily digest number (present only when `digest` is non-null)              |
+| `riskSignal`     | `DigestRiskSignal \| null` | Compact active-depeg risk summary parsed from stored digest input data      |
 
 ---
 
@@ -1219,6 +1229,15 @@ Newest-first archive of up to 365 daily and weekly digests.
       "psiScore": 81.1,
       "psiBand": "STEADY",
       "totalMcapUsd": 234500000000,
+      "riskSignal": {
+        "kind": "depeg",
+        "symbol": "PMUSD",
+        "bps": -5284,
+        "mcapUsd": 65610000,
+        "severity": "critical",
+        "activeCount": 7,
+        "date": "2026-05-05"
+      },
       "digestType": "daily",
       "editionNumber": 214
     }
@@ -1237,8 +1256,21 @@ Each element uses `digestText` (note: differs from the singular `/api/daily-dige
 | `psiScore`       | `number \| null` | PSI score parsed from archived digest input data            |
 | `psiBand`        | `string \| null` | PSI condition band parsed from archived digest input data   |
 | `totalMcapUsd`   | `number \| null` | Ecosystem market cap parsed from archived digest input data |
+| `riskSignal`     | `DigestRiskSignal \| null` | Compact active-depeg risk summary parsed from archived digest input data |
 | `digestType`     | `"daily" \| "weekly"` | Digest cadence for this archived entry                 |
 | `editionNumber`  | `number`         | Sequential edition number within that digest cadence        |
+
+**`DigestRiskSignal`**
+
+| Field         | Type                   | Description                                                                         |
+| ------------- | ---------------------- | ----------------------------------------------------------------------------------- |
+| `kind`        | `"depeg"`              | Risk signal family; currently active-depeg context                                  |
+| `symbol`      | `string`               | Stablecoin symbol                                                                   |
+| `bps`         | `number`               | Signed basis-point deviation where available; archive badges display absolute value |
+| `mcapUsd`     | `number \| null`       | Market cap associated with the stored digest signal                                 |
+| `severity`    | `"critical" \| "watch"` | `"critical"` at ≥2,500 bps and ≥$50M mcap, or ≥5,000 bps and ≥$10M mcap          |
+| `activeCount` | `number`               | Active depeg count from the stored digest input, when available                     |
+| `date`        | `string \| null`       | Daily input date for weekly archive entries; `null` for latest daily responses      |
 
 ---
 

@@ -1,5 +1,10 @@
 import type { DigestInputData } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
+import {
+  getDepegEditorialImpactScore,
+  getDepegMarketImpactScore,
+  isCriticalDepegRisk,
+} from "@shared/lib/digest-risk";
 import { type CronResult } from "../lib/cron-logger";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { SECONDS } from "../lib/time-constants";
@@ -12,14 +17,16 @@ import {
 } from "./digest/platform";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
+import type { DigestValidationProfile } from "./daily-digest/response";
 
 const WEEKLY_SYSTEM_PROMPT = [
   "You write the weekly editorial recap for Pharos, a stablecoin analytics dashboard.",
   "Dry, sharp, memorable, like a sardonic columnist synthesizing rather than reporting.",
   "",
   "You receive a week of daily digest data, pre-aggregated weekly signal leaderboards, and week-over-week delta summaries.",
-  "Use the Weekly Signals block as the source of truth for the week's protagonists. Use the week-over-week deltas to frame where this week sits versus the previous one.",
+  "Use the Weekly Risk Leaderboard and Weekly Signals block as the source of truth for the week's protagonists. Use the week-over-week deltas to frame where this week sits versus the previous one.",
   "Daily headlines show how the week felt in sequence; the signal leaderboard and deltas decide what mattered.",
+  "The top unsuppressed Weekly Risk Leaderboard item must drive P1. If it is a critical depeg, PSI becomes regime context, not the lead.",
   "",
   "ARC FRAMING.",
   "Find the week's narrative arc: what started, what ended, what is building.",
@@ -44,7 +51,7 @@ const WEEKLY_SYSTEM_PROMPT = [
   "",
   "STRUCTURE.",
   "The extended field is 4-6 paragraphs, 250-400 words total.",
-  "P1: the week's headline, what defined it, PSI arc and dominant regime.",
+  "P1: the week's headline from the top unsuppressed risk leader, with PSI arc and dominant regime as context.",
   "P2: the dominant story, the thread that ran through multiple days.",
   "P3: the counter-narrative, what moved the opposite direction or was quietly significant.",
   "P4: supply and capital flows, weekly mcap movement, biggest movers, gauge trend, referring to week-over-week deltas when they change the story.",
@@ -59,6 +66,49 @@ const WEEKLY_SYSTEM_PROMPT = [
   "Allowed leads and tones are identical to the daily contract.",
 ].join("\n");
 
+type WeeklyRiskKind = "depeg" | "dews" | "mint-burn" | "blacklist" | "grade" | "yield" | "liquidity" | "supply";
+
+const DEWS_BAND_RANK: Record<string, number> = {
+  CALM: 0,
+  WATCH: 1,
+  ALERT: 2,
+  WARNING: 3,
+  DANGER: 4,
+};
+
+interface WeeklyDepegSignal {
+  id: string;
+  symbol: string;
+  label: string;
+  impactScore: number;
+  severityScore: number;
+  mcapUsd: number;
+  bps: number;
+  date: string;
+  kind: "active" | "resolved";
+  critical: boolean;
+  suppressReason?: string;
+}
+
+interface WeeklyRiskLeaderboardSignal {
+  id: string;
+  kind: WeeklyRiskKind;
+  label: string;
+  symbols: string[];
+  impactScore: number;
+  severityScore: number;
+  date?: string;
+  critical?: boolean;
+  suppressReason?: string;
+}
+
+interface WeeklySpikeMetrics {
+  minPsi: { date: string; score: number; band: string } | null;
+  minGauge: { date: string; score: number } | null;
+  maxDepeg: { id: string; date: string; symbol: string; bps: number; mcapUsd: number; impactScore: number; kind: "active" | "resolved"; critical: boolean } | null;
+  maxDepegImpact: { id: string; date: string; symbol: string; bps: number; mcapUsd: number; impactScore: number; kind: "active" | "resolved"; critical: boolean } | null;
+}
+
 interface WeeklyInputData {
   weekStartDate: string;
   weekEndDate: string;
@@ -72,8 +122,10 @@ interface WeeklyInputData {
   totalBlacklistAmountUsd: number;
   gradeTransitionCount: number;
   gaugeRange: { min: number; max: number } | null;
+  spikeMetrics: WeeklySpikeMetrics;
   weeklySignals: {
-    topDepegSignals: { symbol: string; label: string; impactScore: number; mcapUsd: number; bps: number; kind: "active" | "resolved"; suppressReason?: string }[];
+    riskLeaderboard: WeeklyRiskLeaderboardSignal[];
+    topDepegSignals: WeeklyDepegSignal[];
     topSupplySignals: { symbol: string; label: string; amountUsd: number }[];
     topDewsChanges: { symbol: string; from: string; to: string; score: number; mcapUsd: number; driver: string }[];
     maxAlertPlusMcapUsd: number;
@@ -113,6 +165,150 @@ interface WeeklyBasics {
   gradeTransitions: number;
   gaugeMid: number | null;
   days: number;
+}
+
+function weeklySignalId(kind: WeeklyRiskKind, parts: readonly string[]): string {
+  return ["weekly", kind, ...parts]
+    .join(":")
+    .toLowerCase()
+    .replace(/[^a-z0-9:.-]+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+function gradeRiskRank(grade: string): number {
+  const normalized = grade.trim().toUpperCase();
+  if (normalized.startsWith("A")) return 0;
+  if (normalized.startsWith("B")) return 1;
+  if (normalized.startsWith("C")) return 2;
+  if (normalized.startsWith("D")) return 3;
+  if (normalized.startsWith("F")) return 4;
+  return 2;
+}
+
+function buildWeeklyRiskLeaderboard(params: {
+  depegs: WeeklyDepegSignal[];
+  dewsChanges: WeeklyInputData["weeklySignals"]["topDewsChanges"];
+  pressureSignals: WeeklyInputData["weeklySignals"]["topPressureSignals"];
+  blacklistEvents: WeeklyInputData["weeklySignals"]["topBlacklistEvents"];
+  gradeTransitions: WeeklyInputData["weeklySignals"]["topGradeTransitions"];
+  yieldAnomalies: WeeklyInputData["weeklySignals"]["topYieldAnomalies"];
+  liquidityShifts: WeeklyInputData["weeklySignals"]["topLiquidityShifts"];
+  supplySignals: WeeklyInputData["weeklySignals"]["topSupplySignals"];
+}): WeeklyRiskLeaderboardSignal[] {
+  const rows: WeeklyRiskLeaderboardSignal[] = [];
+
+  for (const depeg of params.depegs) {
+    rows.push({
+      id: depeg.id,
+      kind: "depeg",
+      label: `${depeg.date} ${depeg.symbol}: ${depeg.label}, ${formatCurrency(depeg.mcapUsd)} mcap`,
+      symbols: [depeg.symbol],
+      date: depeg.date,
+      impactScore: depeg.impactScore,
+      severityScore: depeg.severityScore,
+      critical: depeg.critical,
+      ...(depeg.suppressReason ? { suppressReason: depeg.suppressReason } : {}),
+    });
+  }
+
+  for (const change of params.dewsChanges) {
+    const fromRank = DEWS_BAND_RANK[change.from] ?? 0;
+    const toRank = DEWS_BAND_RANK[change.to] ?? 0;
+    if (toRank <= fromRank) continue;
+    const score = Math.max(1, change.mcapUsd / 1_000_000 + change.score);
+    rows.push({
+      id: weeklySignalId("dews", [change.symbol, change.from, change.to]),
+      kind: "dews",
+      label: `${change.symbol}: DEWS ${change.from} -> ${change.to}, score ${change.score}, driver ${change.driver}`,
+      symbols: [change.symbol],
+      impactScore: change.mcapUsd / 1_000_000,
+      severityScore: score,
+    });
+  }
+
+  for (const pressure of params.pressureSignals) {
+    rows.push({
+      id: weeklySignalId("mint-burn", [pressure.date, pressure.symbol, "pressure"]),
+      kind: "mint-burn",
+      label: `${pressure.date} ${pressure.symbol}: mint/burn intensity ${Math.round(pressure.intensity)}, net ${formatCurrency(pressure.net24hUsd)}`,
+      symbols: [pressure.symbol],
+      date: pressure.date,
+      impactScore: Math.abs(pressure.net24hUsd) / 1_000_000,
+      severityScore: Math.abs(pressure.net24hUsd) / 1_000_000 + Math.abs(pressure.intensity),
+    });
+  }
+
+  for (const event of params.blacklistEvents) {
+    rows.push({
+      id: weeklySignalId("blacklist", [event.date, event.symbol, event.chain, event.type]),
+      kind: "blacklist",
+      label: `${event.date} ${event.symbol} on ${event.chain}: ${event.type}, ${formatCurrency(event.amountUsd)}`,
+      symbols: [event.symbol],
+      date: event.date,
+      impactScore: event.amountUsd / 1_000_000,
+      severityScore: event.amountUsd / 1_000_000,
+    });
+  }
+
+  for (const transition of params.gradeTransitions) {
+    const downgradeSteps = gradeRiskRank(transition.toGrade) - gradeRiskRank(transition.fromGrade);
+    if (downgradeSteps <= 0) continue;
+    rows.push({
+      id: weeklySignalId("grade", [transition.date, transition.symbol, transition.fromGrade, transition.toGrade]),
+      kind: "grade",
+      label: `${transition.date} ${transition.symbol}: grade ${transition.fromGrade} -> ${transition.toGrade}, ${formatCurrency(transition.mcapUsd)} mcap`,
+      symbols: [transition.symbol],
+      date: transition.date,
+      impactScore: transition.mcapUsd / 1_000_000,
+      severityScore: downgradeSteps * transition.mcapUsd / 1_000_000,
+    });
+  }
+
+  for (const anomaly of params.yieldAnomalies) {
+    rows.push({
+      id: weeklySignalId("yield", [anomaly.date, anomaly.symbol]),
+      kind: "yield",
+      label: `${anomaly.date} ${anomaly.symbol}: ${anomaly.apy}% APY, ${anomaly.warnings.join(", ")}`,
+      symbols: [anomaly.symbol],
+      date: anomaly.date,
+      impactScore: anomaly.mcapUsd / 1_000_000,
+      severityScore: anomaly.mcapUsd / 10_000_000 + anomaly.warnings.length * 25,
+      suppressReason: "yield anomaly requires corroboration before leading",
+    });
+  }
+
+  for (const shift of params.liquidityShifts) {
+    if (shift.scoreDelta >= 0) continue;
+    rows.push({
+      id: weeklySignalId("liquidity", [shift.date, shift.symbol]),
+      kind: "liquidity",
+      label: `${shift.date} ${shift.symbol}: liquidity score ${shift.scoreDelta}, ${formatCurrency(shift.mcapUsd)} mcap`,
+      symbols: [shift.symbol],
+      date: shift.date,
+      impactScore: Math.abs(shift.scoreDelta) * shift.mcapUsd / 1_000_000_000,
+      severityScore: Math.abs(shift.scoreDelta) * shift.mcapUsd / 1_000_000_000,
+    });
+  }
+
+  for (const supply of params.supplySignals) {
+    if (supply.amountUsd >= 0) continue;
+    rows.push({
+      id: weeklySignalId("supply", [supply.symbol, supply.label]),
+      kind: "supply",
+      label: `${supply.symbol}: ${supply.label}, ${formatCurrency(supply.amountUsd)}`,
+      symbols: [supply.symbol],
+      impactScore: Math.abs(supply.amountUsd) / 1_000_000,
+      severityScore: Math.abs(supply.amountUsd) / 1_000_000,
+    });
+  }
+
+  return rows
+    .sort((a, b) => {
+      const suppressionDelta = Number(Boolean(a.suppressReason)) - Number(Boolean(b.suppressReason));
+      const criticalDelta = Number(Boolean(b.critical)) - Number(Boolean(a.critical));
+      return suppressionDelta || criticalDelta || b.severityScore - a.severityScore || b.impactScore - a.impactScore;
+    })
+    .slice(0, 7);
 }
 
 function aggregateBasics(parsed: WeeklyBasicsParsedRow[]): WeeklyBasics {
@@ -195,19 +391,24 @@ function buildWeeklyInputData(
 
   const totalDepegObservations = parsed.reduce((sum, d) => sum + d.inputData.activeDepegCount, 0);
   const depegSignalKeys = new Set<string>();
-  const topDepegSignals = parsed.flatMap((d) => [
+  const allDepegSignals = parsed.flatMap((d) => [
     ...(d.inputData.topDepegs ?? []).map((depeg) => {
       const key = depeg.startedAt != null
         ? `${depeg.stablecoinId ?? depeg.symbol}:${depeg.startedAt}:active`
         : `${depeg.symbol}:${depeg.direction ?? ""}:${depeg.bps}:active`;
       depegSignalKeys.add(key);
+      const impactScore = depeg.impactScore ?? getDepegMarketImpactScore(depeg.bps, depeg.mcapUsd);
       return {
+        id: weeklySignalId("depeg", [depeg.stablecoinId ?? depeg.symbol, String(depeg.startedAt ?? d.date), "active"]),
         symbol: depeg.symbol,
         label: `${Math.abs(depeg.bps)} bps active ${depeg.direction ?? (depeg.bps >= 0 ? "above" : "below")} peg`,
-        impactScore: depeg.impactScore ?? Math.abs(depeg.bps) * depeg.mcapUsd / 1_000_000_000,
+        impactScore,
+        severityScore: getDepegEditorialImpactScore(depeg.bps, depeg.mcapUsd),
         mcapUsd: depeg.mcapUsd,
         bps: Math.abs(depeg.bps),
+        date: d.date,
         kind: "active" as const,
+        critical: isCriticalDepegRisk(depeg),
         suppressReason: depeg.suppressReason,
       };
     }),
@@ -216,16 +417,24 @@ function buildWeeklyInputData(
         ? `${depeg.stablecoinId ?? depeg.symbol}:${depeg.startedAt}:resolved`
         : `${depeg.symbol}:${depeg.direction ?? ""}:${depeg.peakBps}:resolved`;
       depegSignalKeys.add(key);
+      const impactScore = depeg.impactScore ?? getDepegMarketImpactScore(depeg.peakBps, depeg.mcapUsd);
       return {
+        id: weeklySignalId("depeg", [depeg.stablecoinId ?? depeg.symbol, String(depeg.startedAt ?? d.date), "resolved"]),
         symbol: depeg.symbol,
         label: `${depeg.peakBps} bps resolved after ${depeg.durationHours}h`,
-        impactScore: depeg.impactScore ?? depeg.peakBps * depeg.mcapUsd / 1_000_000_000,
+        impactScore,
+        severityScore: getDepegEditorialImpactScore(depeg.peakBps, depeg.mcapUsd),
         mcapUsd: depeg.mcapUsd,
         bps: depeg.peakBps,
+        date: d.date,
         kind: "resolved" as const,
+        critical: isCriticalDepegRisk({ bps: depeg.peakBps, mcapUsd: depeg.mcapUsd }),
       };
     }),
-  ]).sort((a, b) => b.impactScore - a.impactScore).slice(0, 7);
+  ]);
+  const topDepegSignals = [...allDepegSignals]
+    .sort((a, b) => Number(b.critical) - Number(a.critical) || b.severityScore - a.severityScore || b.impactScore - a.impactScore)
+    .slice(0, 7);
   const totalBlacklist = parsed.reduce((sum, d) => sum + (d.inputData.blacklistActivity?.eventCount ?? 0), 0);
   const totalBlacklistAmountUsd = parsed.reduce((sum, d) => sum + (d.inputData.blacklistActivity?.totalAmountUsd ?? 0), 0);
   const gradeTransitionCount = parsed.reduce((sum, d) => sum + (d.inputData.gradeTransitions?.length ?? 0), 0);
@@ -286,7 +495,15 @@ function buildWeeklyInputData(
       mcapUsd: transition.mcapUsd,
       date: d.date,
     }))
-  ).sort((a, b) => b.mcapUsd - a.mcapUsd).slice(0, 7);
+  )
+    .filter((transition): transition is { symbol: string; fromGrade: string; toGrade: string; mcapUsd: number; date: string } =>
+      typeof transition.symbol === "string"
+      && typeof transition.fromGrade === "string"
+      && typeof transition.toGrade === "string"
+      && typeof transition.mcapUsd === "number",
+    )
+    .sort((a, b) => b.mcapUsd - a.mcapUsd)
+    .slice(0, 7);
   const topYieldAnomalies = parsed.flatMap((d) =>
     (d.inputData.yieldAnomalies ?? []).map((anomaly) => ({
       symbol: anomaly.symbol,
@@ -304,6 +521,54 @@ function buildWeeklyInputData(
       date: d.date,
     }))
   ).sort((a, b) => Math.abs(b.scoreDelta) * b.mcapUsd - Math.abs(a.scoreDelta) * a.mcapUsd).slice(0, 7);
+
+  const psiObservations = parsed
+    .map((d) => d.inputData.stabilityIndex ? { date: d.date, score: d.inputData.stabilityIndex.score, band: d.inputData.stabilityIndex.band } : null)
+    .filter((entry): entry is { date: string; score: number; band: string } => entry !== null);
+  const gaugeObservations = parsed
+    .map((d) => d.inputData.mintBurnFlows?.gaugeScore != null ? { date: d.date, score: d.inputData.mintBurnFlows.gaugeScore } : null)
+    .filter((entry): entry is { date: string; score: number } => entry !== null);
+  const maxDepegByBps = [...allDepegSignals].sort((a, b) => b.bps - a.bps || b.impactScore - a.impactScore)[0];
+  const maxDepegByImpact = [...allDepegSignals].sort((a, b) => b.impactScore - a.impactScore || b.bps - a.bps)[0];
+  const spikeMetrics: WeeklySpikeMetrics = {
+    minPsi: psiObservations.length > 0 ? [...psiObservations].sort((a, b) => a.score - b.score)[0] : null,
+    minGauge: gaugeObservations.length > 0 ? [...gaugeObservations].sort((a, b) => a.score - b.score)[0] : null,
+    maxDepeg: maxDepegByBps
+      ? {
+        id: maxDepegByBps.id,
+        date: maxDepegByBps.date,
+        symbol: maxDepegByBps.symbol,
+        bps: maxDepegByBps.bps,
+        mcapUsd: maxDepegByBps.mcapUsd,
+        impactScore: maxDepegByBps.impactScore,
+        kind: maxDepegByBps.kind,
+        critical: maxDepegByBps.critical,
+      }
+      : null,
+    maxDepegImpact: maxDepegByImpact
+      ? {
+        id: maxDepegByImpact.id,
+        date: maxDepegByImpact.date,
+        symbol: maxDepegByImpact.symbol,
+        bps: maxDepegByImpact.bps,
+        mcapUsd: maxDepegByImpact.mcapUsd,
+        impactScore: maxDepegByImpact.impactScore,
+        kind: maxDepegByImpact.kind,
+        critical: maxDepegByImpact.critical,
+      }
+      : null,
+  };
+
+  const riskLeaderboard = buildWeeklyRiskLeaderboard({
+    depegs: topDepegSignals,
+    dewsChanges: topDewsChanges,
+    pressureSignals: topPressureSignals,
+    blacklistEvents: topBlacklistEvents,
+    gradeTransitions: topGradeTransitions,
+    yieldAnomalies: topYieldAnomalies,
+    liquidityShifts: topLiquidityShifts,
+    supplySignals: topSupplySignals,
+  });
 
   let weekOverWeekDeltas: WeeklyInputData["weekOverWeekDeltas"] = null;
   if (priorParsed.length >= 5) {
@@ -357,7 +622,9 @@ function buildWeeklyInputData(
     totalBlacklistAmountUsd,
     gradeTransitionCount,
     gaugeRange: gauges.length >= 3 ? { min: Math.min(...gauges), max: Math.max(...gauges) } : null,
+    spikeMetrics,
     weeklySignals: {
+      riskLeaderboard,
       topDepegSignals,
       topSupplySignals,
       topDewsChanges,
@@ -392,6 +659,20 @@ function buildWeeklyPrompt(
     lines.push(`Bank Run Gauge range: ${Math.round(data.gaugeRange.min * 10) / 10} to ${Math.round(data.gaugeRange.max * 10) / 10}`);
   }
 
+  lines.push("", "Weekly spike metrics (do not let averages erase these):");
+  if (data.spikeMetrics.minPsi) {
+    lines.push(`  Worst PSI day: ${data.spikeMetrics.minPsi.date}, ${data.spikeMetrics.minPsi.score} [${data.spikeMetrics.minPsi.band}]`);
+  }
+  if (data.spikeMetrics.minGauge) {
+    lines.push(`  Lowest Bank Run Gauge day: ${data.spikeMetrics.minGauge.date}, ${Math.round(data.spikeMetrics.minGauge.score * 10) / 10}`);
+  }
+  if (data.spikeMetrics.maxDepeg) {
+    lines.push(`  Worst depeg by bps: ${data.spikeMetrics.maxDepeg.date} ${data.spikeMetrics.maxDepeg.symbol}, ${data.spikeMetrics.maxDepeg.bps} bps, ${formatCurrency(data.spikeMetrics.maxDepeg.mcapUsd)} mcap`);
+  }
+  if (data.spikeMetrics.maxDepegImpact) {
+    lines.push(`  Largest depeg market impact: ${data.spikeMetrics.maxDepegImpact.date} ${data.spikeMetrics.maxDepegImpact.symbol}, impact ${data.spikeMetrics.maxDepegImpact.impactScore}, ${data.spikeMetrics.maxDepegImpact.bps} bps`);
+  }
+
   if (data.weekOverWeekDeltas) {
     const d = data.weekOverWeekDeltas;
     lines.push("", "Week-over-week deltas (this week vs prior week):");
@@ -411,12 +692,25 @@ function buildWeeklyPrompt(
     lines.push("", "Week-over-week deltas: unavailable (insufficient prior-week history).");
   }
 
+  lines.push("", "Weekly Risk Leaderboard (P1 lead must be the top unsuppressed item):");
+  if (data.weeklySignals.riskLeaderboard.length > 0) {
+    for (const signal of data.weeklySignals.riskLeaderboard) {
+      const critical = signal.critical ? " | critical" : "";
+      const suppression = signal.suppressReason ? ` | suppress: ${signal.suppressReason}` : "";
+      lines.push(`  ${signal.id} | ${signal.kind} | severity=${Math.round(signal.severityScore * 10) / 10} | impact=${Math.round(signal.impactScore * 10) / 10}${critical}${suppression}`);
+      lines.push(`    ${signal.label}`);
+    }
+  } else {
+    lines.push("  No material risk signals reconstructed from daily inputs.");
+  }
+
   lines.push("", "Weekly Signals (synthesize from this, do not merely recap daily copy):");
   if (data.weeklySignals.topDepegSignals.length > 0) {
     lines.push("  Top depeg signals by absolute market impact:");
     for (const signal of data.weeklySignals.topDepegSignals) {
       const suppression = signal.suppressReason ? ` | suppress: ${signal.suppressReason}` : "";
-      lines.push(`    ${signal.symbol}: ${signal.label}, ${formatCurrency(signal.mcapUsd)} mcap, impact ${signal.impactScore}${suppression}`);
+      const critical = signal.critical ? " | critical" : "";
+      lines.push(`    ${signal.date} ${signal.symbol}: ${signal.label}, ${formatCurrency(signal.mcapUsd)} mcap, impact ${signal.impactScore}, severity ${signal.severityScore}${critical}${suppression}`);
     }
   }
   if (data.weeklySignals.topSupplySignals.length > 0) {
@@ -484,6 +778,17 @@ function buildWeeklyPrompt(
   }
 
   return lines.join("\n");
+}
+
+function buildWeeklyLeadRequirements(data: WeeklyInputData): DigestValidationProfile["leadRequirements"] {
+  const topCritical = data.weeklySignals.riskLeaderboard.find((signal) => !signal.suppressReason && signal.critical);
+  if (!topCritical) return undefined;
+  return [{
+    candidateIds: [topCritical.id],
+    severity: "hard",
+    mentionTokens: topCritical.symbols,
+    reason: `weekly risk leaderboard critical ${topCritical.kind} must drive the lead`,
+  }];
 }
 
 export async function generateWeeklyRecap(
@@ -586,6 +891,7 @@ export async function generateWeeklyRecap(
     validationProfile: {
       kind: "weekly",
       recentMeta: recentWeeklyMeta,
+      leadRequirements: buildWeeklyLeadRequirements(weeklyData),
     },
   });
   if (digestCopy.kind === "circuit-open") {

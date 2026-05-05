@@ -1,5 +1,10 @@
 import type { DigestInputData } from "@shared/types/digest";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import {
+  ACTIVE_DEPEG_PROMPT_LIMIT,
+  getDepegMarketImpactScore,
+  isCriticalDepegRisk,
+} from "@shared/lib/digest-risk";
 import { buildInClause } from "../../lib/db";
 import { computeFlowIntensity, computeGaugeScore, getGaugeBand, detectFlightToQuality } from "../../lib/mint-burn-scoring";
 import { isCanonicalMintBurnPair } from "../../lib/mint-burn-canonical-chain";
@@ -17,15 +22,14 @@ type FlowIntensityRow = {
 
 type FlowIntensityRowWithIntensity = FlowIntensityRow & { intensity: number };
 
-function getDepegImpactScore(bps: number, mcapUsd: number): number {
-  return Math.round(Math.abs(bps) * mcapUsd / 1_000_000_000 * 10) / 10;
-}
-
 function getActiveDepegSuppressReason(params: {
   mcapUsd: number;
   ageHours: number;
   bps: number;
 }): string | undefined {
+  if (isCriticalDepegRisk(params)) {
+    return undefined;
+  }
   if (params.mcapUsd < 20_000_000) {
     return "sub-$20M active depeg, too small for a lead unless nothing larger moved";
   }
@@ -53,7 +57,7 @@ export async function collectActiveDepegs(
     const withImpact = rows.map((row) => {
       const mcapUsd = ctx.mcapById.get(row.stablecoin_id) ?? 0;
       const ageHours = Math.max(0, Math.round((ctx.nowSec - row.started_at) / SECONDS.ONE_HOUR));
-      const impactScore = getDepegImpactScore(row.peak_deviation_bps, mcapUsd);
+      const impactScore = getDepegMarketImpactScore(row.peak_deviation_bps, mcapUsd);
       return {
         stablecoinId: row.stablecoin_id,
         symbol: row.symbol,
@@ -66,8 +70,11 @@ export async function collectActiveDepegs(
         suppressReason: getActiveDepegSuppressReason({ mcapUsd, ageHours, bps: row.peak_deviation_bps }),
       };
     });
-    withImpact.sort((a, b) => b.impactScore - a.impactScore);
-    const topDepegs = withImpact.slice(0, 3).map(({
+    withImpact.sort((a, b) => {
+      const criticalDelta = Number(isCriticalDepegRisk(b)) - Number(isCriticalDepegRisk(a));
+      return criticalDelta || b.impactScore - a.impactScore || Math.abs(b.bps) - Math.abs(a.bps);
+    });
+    const topDepegs = withImpact.slice(0, ACTIVE_DEPEG_PROMPT_LIMIT).map(({
       stablecoinId,
       symbol,
       bps,
@@ -233,7 +240,7 @@ export async function collectResolvedDepegs(
           mcapUsd,
           startedAt: row.started_at,
           endedAt: row.ended_at,
-          impactScore: getDepegImpactScore(row.peak_deviation_bps, mcapUsd),
+          impactScore: getDepegMarketImpactScore(row.peak_deviation_bps, mcapUsd),
         };
       })
       .filter((row) => row.peakBps > 100 && row.mcapUsd > 20_000_000)

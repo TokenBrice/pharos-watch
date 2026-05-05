@@ -1,4 +1,5 @@
 import { DigestResponseSchema } from "../../lib/schemas";
+import { validateDigestLeadRequirements, type DigestLeadRequirement } from "./lead-requirements";
 import { findForbiddenTics, hasForwardLook, leadFamily, openingFingerprint, type LeadFamily } from "./voice-guards";
 
 const FORBIDDEN_PHRASES = [
@@ -32,6 +33,7 @@ export interface DigestValidationProfile {
     title: string | null;
     rawText?: string | null;
   }>;
+  leadRequirements?: DigestLeadRequirement[];
 }
 
 export interface DigestModelResponseParseOptions {
@@ -339,6 +341,14 @@ export function validateDigestModelOutput(
 
   const parsedMeta = parsed.digestMeta ? JSON.parse(parsed.digestMeta) as Record<string, unknown> : null;
   const recent = profile.recentMeta ?? [];
+
+  issues.push(...validateDigestLeadRequirements({
+    parsedMeta,
+    digestTitle: parsed.digestTitle,
+    digestText: parsed.digestText,
+    digestExtended: parsed.digestExtended,
+    leadRequirements: profile.leadRequirements,
+  }));
 
   const currentFingerprint = openingFingerprint(parsed.digestExtended);
   if (currentFingerprint) {

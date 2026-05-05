@@ -175,6 +175,7 @@ function makeParsedFixture(opts: {
   extended?: string;
   text?: string;
   lead?: string;
+  leadSignalId?: string;
   tone?: string;
 } = {}): ParsedDigestResponse {
   return {
@@ -182,6 +183,7 @@ function makeParsedFixture(opts: {
     digestText: opts.text ?? "T.",
     digestExtended: opts.extended ?? DEFAULT_PARSED_EXTENDED,
     digestMeta: JSON.stringify({
+      ...(opts.leadSignalId ? { leadSignalId: opts.leadSignalId } : {}),
       lead: opts.lead ?? "depeg",
       tone: opts.tone ?? "dry",
       coins: ["USDT"],
@@ -1078,6 +1080,50 @@ describe("forward-look voice guard", () => {
   });
 });
 
+describe("lead requirement validator", () => {
+  it("hard-fails when a required critical candidate is not the declared lead", () => {
+    const issues = validateDigestModelOutput(
+      makeParsedFixture({
+        leadSignalId: "market:usdc-circle:weekly-supply",
+        extended: "PMUSD stayed 5284 bps below peg on $65M.\n\nUSDC added $2B.\n\nIf PMUSD holds there next session, the peg stress remains the lead.",
+      }),
+      {
+        kind: "daily",
+        recentMeta: [],
+        leadRequirements: [{
+          candidateIds: ["depeg:pmusd-active"],
+          severity: "hard",
+          mentionTokens: ["PMUSD"],
+          reason: "PMUSD critical depeg must lead",
+        }],
+      },
+    );
+
+    expect(issues.some((issue) => issue.code === "lead-candidate-mismatch" && issue.severity === "hard")).toBe(true);
+  });
+
+  it("hard-fails when a required critical candidate is omitted from the copy", () => {
+    const issues = validateDigestModelOutput(
+      makeParsedFixture({
+        leadSignalId: "depeg:pmusd-active",
+        extended: "USDC added $2B.\n\nUSDT held steady.\n\nIf the flow reverses next session, the supply story changes.",
+      }),
+      {
+        kind: "daily",
+        recentMeta: [],
+        leadRequirements: [{
+          candidateIds: ["depeg:pmusd-active"],
+          severity: "hard",
+          mentionTokens: ["PMUSD"],
+          reason: "PMUSD critical depeg must lead",
+        }],
+      },
+    );
+
+    expect(issues.some((issue) => issue.code === "required-lead-missing" && issue.severity === "hard")).toBe(true);
+  });
+});
+
 describe("opening-fingerprint voice guard", () => {
   it("flags PSI-verb opening when any of last 3 also opened that way", () => {
     const recent = [
@@ -1379,6 +1425,30 @@ describe("collectActiveDepegs", () => {
       direction: "below",
     });
     expect(result.value.topDepegs[1].suppressReason).toContain("sub-$20M");
+  });
+
+  it("keeps critical stale depegs unsuppressed and returns more than three prompt candidates", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE ended_at IS NULL",
+        rows: [
+          { stablecoin_id: "dai-makerdao", symbol: "DAI", direction: "above", peak_deviation_bps: 500, started_at: nowSec - 8 * 86_400 },
+          { stablecoin_id: "usdt-tether", symbol: "USDT", direction: "below", peak_deviation_bps: -25, started_at: nowSec - 3600 },
+          { stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: -5200, started_at: nowSec - 10 * 86_400 },
+          { stablecoin_id: "dai-makerdao", symbol: "DAI2", direction: "above", peak_deviation_bps: 150, started_at: nowSec - 3600 },
+        ],
+      },
+    ]);
+
+    const result = await collectActiveDepegs(makeCollectorCtx(db));
+
+    expect(result.value.topDepegs).toHaveLength(4);
+    expect(result.value.topDepegs[0]).toMatchObject({
+      symbol: "USDC",
+      bps: -5200,
+    });
+    expect(result.value.topDepegs[0].suppressReason).toBeUndefined();
   });
 });
 

@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDigestSnapshot } from "@/hooks/api-hooks";
 import { formatCurrency, formatAddress, formatPercentChange, formatScore } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, PSI_BORDER_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
+import type { DigestInputData, DigestSnapshotResponse } from "@shared/types";
 import { Activity, ArrowDownUp, BarChart3, CheckCircle, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
 
 /* ---------- sub-section wrapper ---------- */
@@ -39,12 +40,96 @@ function deltaColor(value: number): string {
   return "text-muted-foreground";
 }
 
+function SnapshotUnavailable() {
+  return (
+    <section className="mt-8 space-y-3">
+      <p className="pharos-kicker">The data behind this digest</p>
+      <div className="rounded-lg border border-border/50 p-3 text-sm text-muted-foreground">
+        Digest context is unavailable for this archive entry.
+      </div>
+    </section>
+  );
+}
+
+interface VisibleDepeg {
+  key: string;
+  symbol: string;
+  bps: number;
+  direction: string | null;
+  mcapUsd: number | null;
+}
+
+function getVisibleDepegs(
+  inputData: DigestInputData,
+  depegEvents: DigestSnapshotResponse["depegEvents"],
+): { count: number; rows: VisibleDepeg[] } {
+  const inputTopDepegs = inputData.topDepegs ?? [];
+  if (depegEvents.length > 0) {
+    return {
+      count: depegEvents.length,
+      rows: depegEvents.slice(0, 5).map((depeg) => ({
+        key: `${depeg.stablecoinId}-${depeg.startedAt}`,
+        symbol: depeg.symbol,
+        bps: depeg.peakDeviationBps,
+        direction: depeg.direction,
+        mcapUsd: null,
+      })),
+    };
+  }
+  return {
+    count: inputData.activeDepegCount ?? inputTopDepegs.length,
+    rows: inputTopDepegs.slice(0, 5).map((depeg) => ({
+      key: `${depeg.stablecoinId ?? depeg.symbol}-${depeg.startedAt ?? depeg.bps}`,
+      symbol: depeg.symbol,
+      bps: depeg.bps,
+      direction: depeg.direction ?? (depeg.bps >= 0 ? "above" : "below"),
+      mcapUsd: depeg.mcapUsd,
+    })),
+  };
+}
+
+function ActiveDepegsCard({
+  inputData,
+  depegEvents,
+}: {
+  inputData: DigestInputData;
+  depegEvents: DigestSnapshotResponse["depegEvents"];
+}) {
+  const { count, rows } = getVisibleDepegs(inputData, depegEvents);
+  if (count <= 0) return null;
+  return (
+    <SnapshotCard
+      title="Active Depegs"
+      icon={<TriangleAlert className="h-4 w-4" aria-hidden="true" />}
+      borderClass="border-l-amber-500"
+    >
+      <p className="text-sm text-foreground/90">
+        <span className="font-medium">{count}</span>{" "}
+        active depeg{count !== 1 ? "s" : ""}
+      </p>
+      {rows.length > 0 && (
+        <ul className="space-y-0.5">
+          {rows.map((d) => (
+            <li key={d.key} className="text-xs text-muted-foreground">
+              {d.symbol}: {d.bps > 0 ? "+" : ""}
+              {d.bps} bps {d.direction ? `${d.direction} peg` : "off peg"}
+              {d.mcapUsd != null ? ` (${formatCurrency(d.mcapUsd)})` : ""}
+            </li>
+          ))}
+        </ul>
+      )}
+    </SnapshotCard>
+  );
+}
+
 /* ---------- main component ---------- */
 
 export function DigestSnapshot({ date }: { date: string }) {
   const { data, isLoading, isError } = useDigestSnapshot(date);
 
-  if (isError) return null;
+  if (isError) {
+    return <SnapshotUnavailable />;
+  }
 
   if (isLoading) {
     return (
@@ -57,9 +142,11 @@ export function DigestSnapshot({ date }: { date: string }) {
     );
   }
 
-  if (!data?.inputData) return null;
+  if (!data?.inputData) {
+    return <SnapshotUnavailable />;
+  }
 
-  const { inputData, prevInputData, blacklistEvents } = data;
+  const { inputData, prevInputData, depegEvents, blacklistEvents } = data;
   const prev = prevInputData ?? undefined;
 
   const mcapDelta = prev ? inputData.totalMcapUsd - prev.totalMcapUsd : 0;
@@ -175,31 +262,7 @@ export function DigestSnapshot({ date }: { date: string }) {
         )}
 
         {/* 4. Active Depegs */}
-        {inputData.activeDepegCount > 0 && (
-          <SnapshotCard
-            title="Active Depegs"
-            icon={<TriangleAlert className="h-4 w-4" aria-hidden="true" />}
-            borderClass="border-l-amber-500"
-          >
-            <p className="text-sm text-foreground/90">
-              <span className="font-medium">{inputData.activeDepegCount}</span>{" "}
-              active depeg{inputData.activeDepegCount !== 1 ? "s" : ""}
-            </p>
-            {inputData.topDepegs.length > 0 && (
-              <ul className="space-y-0.5">
-                {inputData.topDepegs.map((d) => (
-                  <li
-                    key={d.symbol}
-                    className="text-xs text-muted-foreground"
-                  >
-                    {d.symbol}: {d.bps > 0 ? "+" : ""}
-                    {d.bps} bps ({formatCurrency(d.mcapUsd)})
-                  </li>
-                ))}
-              </ul>
-            )}
-          </SnapshotCard>
-        )}
+        <ActiveDepegsCard inputData={inputData} depegEvents={depegEvents} />
 
         {/* 5. Blacklist Activity — spans full width since it's a list */}
         {blacklistEvents.length > 0 && (

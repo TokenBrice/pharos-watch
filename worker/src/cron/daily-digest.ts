@@ -17,6 +17,7 @@ import {
 } from "./digest/platform";
 import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
+import { buildCriticalDailyLeadRequirements } from "./daily-digest/critical-lead-requirements";
 
 export { classifyRegime } from "./daily-digest/prompt";
 
@@ -88,10 +89,7 @@ export async function generateDailyDigest(
     anthropicApiKey,
     systemPrompt: SYSTEM_PROMPT,
     userPrompt: userPromptContent,
-    // Anthropic's documented floor for Opus 4.7 adaptive thinking at xhigh/max
-    // effort. 16k and 32k both exited with stop_reason=max_tokens and only a
-    // signature_delta — thinking consumed the whole budget before any text
-    // block started. See digest/platform.ts for the effort rationale.
+    // Opus 4.7 xhigh needs this floor; see digest/platform.ts for the effort rationale.
     maxTokens: 64000,
     signal,
     logPrefix: "daily-digest",
@@ -102,6 +100,7 @@ export async function generateDailyDigest(
         title: entry.title,
         rawText: entry.rawText,
       })),
+      leadRequirements: buildCriticalDailyLeadRequirements(inputData),
     },
   });
   if (digestCopy.kind === "circuit-open") {

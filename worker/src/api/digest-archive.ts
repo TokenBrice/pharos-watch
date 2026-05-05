@@ -1,17 +1,31 @@
 import { withErrorHandler, jsonFreshResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import type { DigestRiskSignal } from "@shared/types/digest";
 import { decodeJsonString } from "../lib/cache-json";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
+import { selectDigestRiskSignal } from "./digest-risk-summary";
 
 function isDigestInputDataSummary(
   value: unknown,
-): value is { stabilityIndex?: { score: number; band: string } | null; totalMcapUsd?: number } {
+): value is {
+  stabilityIndex?: { score: number; band: string } | null;
+  totalMcapUsd?: number;
+  activeDepegCount?: number;
+  topDepegs?: unknown[];
+  dailyDigests?: unknown[];
+} {
   return typeof value === "object" && value !== null;
 }
 
 function decodeDigestInputData(value: string | null, generatedAt: number) {
-  const decoded = decodeJsonString<{ stabilityIndex?: { score: number; band: string } | null; totalMcapUsd?: number }, "missing" | "json-parse-failed" | "invalid-shape">(
+  const decoded = decodeJsonString<{
+    stabilityIndex?: { score: number; band: string } | null;
+    totalMcapUsd?: number;
+    activeDepegCount?: number;
+    topDepegs?: unknown[];
+    dailyDigests?: unknown[];
+  }, "missing" | "json-parse-failed" | "invalid-shape">(
     value,
     {
       mode: "best-effort",
@@ -77,11 +91,13 @@ export const handleDigestArchive = withErrorHandler("digest-archive", async (db:
     let psiScore: number | null = null;
     let psiBand: string | null = null;
     let totalMcapUsd: number | null = null;
+    let riskSignal: DigestRiskSignal | null = null;
     const input = decodeDigestInputData(r.input_data, r.generated_at);
     if (input) {
       psiScore = input.stabilityIndex?.score ?? null;
       psiBand = input.stabilityIndex?.band ?? null;
       totalMcapUsd = input.totalMcapUsd ?? null;
+      riskSignal = selectDigestRiskSignal(input);
     }
     let digestType: "daily" | "weekly" = "daily";
     const meta = decodeDigestMeta(r.digest_meta, r.generated_at);
@@ -96,6 +112,7 @@ export const handleDigestArchive = withErrorHandler("digest-archive", async (db:
       psiScore,
       psiBand,
       totalMcapUsd,
+      riskSignal,
       digestType,
       editionNumber: 0, // computed below
     };

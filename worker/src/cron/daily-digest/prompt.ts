@@ -21,6 +21,7 @@ export const SYSTEM_PROMPT = [
   "Do not lead with a candidate marked suppressReason, artifactRisk=high, chronic, stale, zero-dollar, or first-day/no-baseline, unless all larger candidates are explicitly worse.",
   "For yield and liquidity, require corroboration from TVL, flows, DEWS, or market cap before making them the lead.",
   "Rank by market impact: deviation times market cap for depegs, absolute net flow for supply, affected mcap for DEWS.",
+  "Critical depeg override: any unsuppressed active depeg at or above 2,500 bps on at least $50M mcap, or at or above 5,000 bps on at least $10M mcap, must lead unless a more severe unsuppressed depeg exists.",
   "Reference Momentum Candidates when building the forward-look line; those are the signals most likely to keep moving.",
   "",
   "OPENING RULE.",
@@ -161,7 +162,7 @@ function pushEditorialCandidateLines(lines: string[], data: DigestInputData): vo
   for (const candidate of usable) {
     const symbols = candidate.symbols.length > 0 ? ` | coins=${candidate.symbols.join(",")}` : "";
     lines.push(
-      `  ${candidate.id} | ${candidate.kind}/${candidate.novelty}${symbols} | impact=${candidate.impactScore} | confidence=${candidate.confidence} | artifactRisk=${candidate.artifactRisk}`,
+      `  ${candidate.id} | ${candidate.kind}/${candidate.novelty}${symbols} | impact/severity=${candidate.impactScore} | confidence=${candidate.confidence} | artifactRisk=${candidate.artifactRisk}`,
     );
     lines.push(`    facts: ${candidate.headlineFacts.join("; ")}`);
     lines.push(`    why: ${candidate.whyItMatters}`);

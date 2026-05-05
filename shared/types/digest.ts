@@ -231,6 +231,17 @@ export interface DailyDigestResponse {
   digestExtended: string | null;
   generatedAt: number | null;
   editionNumber: number | null;
+  riskSignal?: DigestRiskSignal | null;
+}
+
+export interface DigestRiskSignal {
+  kind: "depeg";
+  symbol: string;
+  bps: number;
+  mcapUsd: number | null;
+  severity: "critical" | "watch";
+  activeCount?: number;
+  date?: string | null;
 }
 
 export interface DigestArchiveEntry {
@@ -241,6 +252,7 @@ export interface DigestArchiveEntry {
   psiScore: number | null;
   psiBand: string | null;
   totalMcapUsd: number | null;
+  riskSignal?: DigestRiskSignal | null;
   digestType?: "daily" | "weekly";
   editionNumber?: number;
 }
