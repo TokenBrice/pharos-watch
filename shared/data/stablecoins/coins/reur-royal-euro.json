@@ -10,7 +10,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Euro-denominated reserves held to target 1:1 backing for each REUR issued by The RIB Digital Holdings Limited",
+  "collateral": "Euro cash reserves held through top-tier international banks to target 1:1 backing for each REUR issued by The RIB Digital Holdings Limited",
   "pegMechanism": "Issuer-managed mint and redemption route targeting 1 REUR = 1 EUR, subject to reserve sufficiency, redemption terms, and market conditions",
   "detailProvider": "coingecko",
   "geckoId": "royal-euro",
@@ -22,6 +22,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/rcoins_official"
+    },
+    {
+      "label": "Docs",
+      "url": "https://ribg.digital/faqs/"
     }
   ],
   "jurisdiction": {
@@ -44,14 +48,14 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-unregulated",
-  "governanceQuality": "single-entity",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "reserves": [
     {
-      "name": "Euro-denominated reserves",
+      "name": "Euro cash reserves at top-tier international banks",
       "pct": 100,
       "risk": "low"
     }
@@ -73,7 +77,7 @@
       }
     },
     "params": {
-      "label": "Euro-denominated reserves",
+      "label": "Euro cash reserves at top-tier international banks",
       "risk": "low"
     }
   }

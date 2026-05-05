@@ -7,7 +7,7 @@ Public-facing analytics dashboard tracking 225 stablecoins in repo metadata: 211
 ## Features
 
 - **Three-tier classification** — stablecoins categorized as CeFi, CeFi-Dependent, or DeFi based on actual dependency on centralized infrastructure, not marketing claims
-- **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, KRW, IDR, SGD, TRY, AUD, ZAR, CAD, CNH, PHP, MXN, MYR, gold, silver, and CPI-linked stablecoins with cross-currency FX-adjusted totals
+- **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, KRW, IDR, SGD, TRY, AUD, ZAR, CAD, CNH, PHP, MXN, MYR, UAH, ARS, KGS, NGN, gold, silver, and CPI-linked stablecoins with cross-currency FX-adjusted totals
 - **Peg Tracker** — 15-minute peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
 - **Freeze & Blacklist Tracker** — 6-hourly on-chain tracking of 35 stablecoins (USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, and others) freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, Gnosis, and Tron with BigInt-precision amounts
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, and pair diversity
@@ -69,9 +69,9 @@ All external API calls and on-chain contract reads go through the Cloudflare Wor
 | [Etherscan v2](https://etherscan.io/)                                   | Explorer-backed EVM freeze/blacklist/seize event scans for supported issuer-intervention configs           | Every 6h                          |
 | [TronGrid](https://www.trongrid.io/)                                    | Supported Tron blacklist/freeze events and freeze-ledger balance reads                                     | Every 6h                          |
 | [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/)         | RPC reads for blacklist balance enrichment (dRPC/Alchemy) and configured issuance-chain mint/burn event ingestion (Alchemy) | 6h / 30 min                       |
-| [api.frankfurter.dev](https://api.frankfurter.dev/v1/latest)           | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN                      | 30 min cooldown inside 15-min slot |
+| [api.frankfurter.dev](https://api.frankfurter.dev/v1/latest)           | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN, MYR, and KRW         | 30 min cooldown inside 15-min slot |
 | [Open Exchange Rates](https://openexchangerates.org/)                   | Real-time FX cross-validation overlay for supported fiat pegs when `OPENEXCHANGERATES_API_KEY` is set      | 30 min FX lane, additionally rate-limited to ~55 min |
-| [fawazahmed0/currency-api](https://github.com/fawazahmed0/currency-api) | Secondary live FX mirror for CNH, RUB, UAH, and ARS, plus full-set fallback coverage when Frankfurter fails | 30 min cooldown inside 15-min slot |
+| [fawazahmed0/currency-api](https://github.com/fawazahmed0/currency-api) | Secondary live FX mirror for CNH, RUB, UAH, ARS, KGS, and NGN, plus full-set fallback coverage when Frankfurter fails | 30 min cooldown inside 15-min slot |
 | [ExchangeRate-API](https://www.exchangerate-api.com/)                   | Tertiary live full-set FX fallback when both Frankfurter and the secondary FX mirrors are unavailable      | 30 min cooldown inside 15-min slot |
 | [gold-api.com](https://gold-api.com/)                                   | Gold and silver spot prices for commodity-pegged stablecoin peg validation                                 | 30 min cooldown inside 15-min slot |
 | [FRED (St. Louis Fed)](https://fred.stlouisfed.org/series/DGS3MO) / Treasury.gov yield curve XML / ECB Data API / SIX delayed SARON guest access | USD, EUR, and CHF benchmark rates for yield benchmarking (`excessYield`), with Treasury.gov as the USD fallback | Daily                             |

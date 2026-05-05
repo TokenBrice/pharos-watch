@@ -10,7 +10,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Australian dollar reserves held 1:1 in regulated financial institutions by AUSTRAC-registered Tau Pty Ltd trading as AUDX Token",
+  "collateral": "Australian-dollar cash and government-backed instruments held 1:1 for AUDX by TAU Pty Ltd trading as AUDX Token",
   "pegMechanism": "Issuer-managed mint and redemption path targeting 1 AUDX = 1 AUD through fully backed Australian-dollar reserves",
   "detailProvider": "coingecko",
   "geckoId": "aussie-dollar-token",
@@ -22,6 +22,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/audxtoken"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://www.audxtoken.com/transparency"
     }
   ],
   "jurisdiction": {
@@ -38,11 +42,6 @@
       "chain": "polygon",
       "address": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
       "decimals": 18
-    },
-    {
-      "chain": "conflux",
-      "address": "0x47a365e29697c700c75d58936b3d93a8a20a43c9",
-      "decimals": 18
     }
   ],
   "canBeBlacklisted": "possible",
@@ -50,9 +49,14 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.audxtoken.com/transparency",
+    "provider": "AUDX monthly reserve audit reports"
+  },
   "reserves": [
     {
-      "name": "AUD fiat reserves at regulated financial institutions",
+      "name": "AUD cash and government-backed instruments",
       "pct": 100,
       "risk": "low"
     }
@@ -63,8 +67,8 @@
     "semantics": "single-asset",
     "breakerScope": "audx-aussie-dollar-token",
     "display": {
-      "url": "https://www.audxtoken.com/",
-      "label": "AUDX Token"
+      "url": "https://www.audxtoken.com/transparency",
+      "label": "AUDX Transparency"
     },
     "inputs": {
       "primary": {
@@ -74,7 +78,7 @@
       }
     },
     "params": {
-      "label": "AUD fiat reserves",
+      "label": "AUD cash and government-backed instruments",
       "risk": "low"
     }
   }

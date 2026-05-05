@@ -10,7 +10,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Brazilian real reserves backing BRL1 at a 1:1 target against the Brazilian real",
+  "collateral": "Brazilian-real reserve portfolio backing BRL1 at a 1:1 target, including Brazilian Treasury ETFs, repo agreements, and cash equivalents",
   "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 BRL1 = 1 BRL through Brazilian-real backing",
   "detailProvider": "coingecko",
   "geckoId": "brl1",
@@ -22,6 +22,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/BRL1Coin"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://fact.finance/en/reserves/brl1"
     }
   ],
   "jurisdiction": {
@@ -40,9 +44,14 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://fact.finance/en/reserves/brl1",
+    "provider": "Fact Finance reserve report"
+  },
   "reserves": [
     {
-      "name": "Brazilian real fiat reserves",
+      "name": "Brazilian Treasury ETFs, repo agreements, and cash equivalents",
       "pct": 100,
       "risk": "medium"
     }
@@ -53,8 +62,8 @@
     "semantics": "single-asset",
     "breakerScope": "brl1-brl1",
     "display": {
-      "url": "https://brl1.io/en/",
-      "label": "BRL1"
+      "url": "https://fact.finance/en/reserves/brl1",
+      "label": "BRL1 Reserve Report"
     },
     "inputs": {
       "primary": {
@@ -64,7 +73,7 @@
       }
     },
     "params": {
-      "label": "Brazilian real fiat reserves",
+      "label": "Brazilian Treasury ETFs, repo agreements, and cash equivalents",
       "risk": "medium"
     }
   }

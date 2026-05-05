@@ -32,7 +32,10 @@ describe("native-peg-quotes", () => {
     expect(normalizeSupportedPegCurrency("gold")).toBeNull();
     expect(getNativePegQueryCurrencies("CNH")).toEqual(["cny", "cnh"]);
     expect(getPreferredNativePegQueryCurrency("CNH")).toBe("cny");
+    expect(getPreferredNativePegQueryCurrency("ARS")).toBe("ars");
     expect(getPreferredNativePegQueryCurrency("BRL")).toBe("brl");
+    expect(getPreferredNativePegQueryCurrency("KGS")).toBe("kgs");
+    expect(getPreferredNativePegQueryCurrency("NGN")).toBe("ngn");
   });
 
   it("fetches direct native quotes for supported non-USD fiat pegs", async () => {

@@ -10,7 +10,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Kyrgyz som reserves held to back KGST 1:1 against the Kyrgyz som",
+  "collateral": "Kyrgyz som fiat reserves and cash equivalents held in licensed banks and custodial institutions to back KGST 1:1 against the Kyrgyz som",
   "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 KGST = 1 KGS through fully backed som reserves",
   "detailProvider": "coingecko",
   "geckoId": "kyrgyz-som-stablecoin",
@@ -34,11 +34,11 @@
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-unregulated",
-  "governanceQuality": "single-entity",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "reserves": [
     {
-      "name": "Kyrgyz som fiat reserves",
+      "name": "Kyrgyz som fiat reserves and cash equivalents",
       "pct": 100,
       "risk": "medium"
     }
@@ -60,7 +60,7 @@
       }
     },
     "params": {
-      "label": "Kyrgyz som fiat reserves",
+      "label": "Kyrgyz som fiat reserves and cash equivalents",
       "risk": "medium"
     }
   }

@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.01",
+  currentVersion: "5.02",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.02",
+      title: "ARS, KGS, and NGN non-USD peg hardening",
+      date: "2026-05-05",
+      effectiveAt: 1777983570,
+      summary:
+        "Added the latest non-USD peg batch to the same guarded fiat pricing lanes as the earlier fiat expansion: ARS and KGS now participate in direct CoinGecko native-peg corroboration, KGS and NGN use secondary daily FX mirrors, and lower-nominal fiat pegs have explicit hardcoded validation bounds when no fresh FX reference is available.",
+      impact: [
+        "WARS (ARS), KGST (KGS), and cNGN (NGN) can validate weak live USD marks against direct native-peg and/or daily FX references instead of relying only on USD-denominated market prints",
+        "KGS and NGN use the same fawazahmed0 secondary FX cadence semantics as CNH, RUB, UAH, and ARS for live sync and historical backfills",
+        "MYR, KRW, KGS, and NGN now retain deterministic fallback price bounds even during no-reference validation paths",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.01",
       title: "MYR and KRW peg-currency support",

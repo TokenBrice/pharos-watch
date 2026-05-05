@@ -79,8 +79,12 @@ const HARDCODED_PRICE_BOUNDS: Record<string, [min: number, max: number]> = {
   CNH: [0.01, 0.5],
   PHP: [0.002, 0.1],
   MXN: [0.005, 0.2],
+  MYR: [0.18, 0.3],
+  KRW: [0.0005, 0.001],
   UAH: [0.002, 0.15],
   ARS: [0.000001, 0.05],
+  KGS: [0.005, 0.05],
+  NGN: [0.0002, 0.005],
   GOLD: [100, 100_000],
   SILVER: [5, 500],
 };

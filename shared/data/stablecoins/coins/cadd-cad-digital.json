@@ -11,10 +11,13 @@
     "navToken": false
   },
   "collateral": "Canadian dollar reserves held 1:1 in trust for token holders by Tetra Trust",
+  "canBeBlacklisted": "possible",
+  "collateralQuality": "rwa",
   "pegMechanism": "Direct 1:1 mint and redemption of CADD for CAD through CAD Digital's regulated issuance framework",
   "llamaId": "387",
   "detailProvider": "defillama",
   "geckoId": "cad-digital",
+  "governanceQuality": "regulated-entity",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://tetradg.com/cadd-reserve-attestations/",
@@ -52,6 +55,7 @@
     }
   ],
   "custodyModel": "institutional-regulated",
+  "deploymentModel": "native-multichain",
   "reserves": [
     {
       "name": "Canadian dollar trust reserves",

@@ -6,6 +6,7 @@ const COINGECKO_NATIVE_PEG_BATCH_SIZE = 50;
 const COINGECKO_NATIVE_PEG_TIMEOUT_MS = 10_000;
 const SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES = new Map<string, string[]>([
   ["AUD", ["aud"]],
+  ["ARS", ["ars"]],
   ["BRL", ["brl"]],
   ["CAD", ["cad"]],
   ["CHF", ["chf"]],
@@ -15,6 +16,7 @@ const SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES = new Map<string, string[]>([
   ["GBP", ["gbp"]],
   ["IDR", ["idr"]],
   ["JPY", ["jpy"]],
+  ["KGS", ["kgs"]],
   ["KRW", ["krw"]],
   ["MXN", ["mxn"]],
   ["MYR", ["myr"]],

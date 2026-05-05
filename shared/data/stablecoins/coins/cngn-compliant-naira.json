@@ -22,6 +22,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/cngn_co"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.cngn.co/integrations/contract-addresses"
     }
   ],
   "jurisdiction": {
@@ -30,7 +34,7 @@
   "contracts": [
     {
       "chain": "base",
-      "address": "0xc930784d6e14e2fc2a1f49be1068dc40f24762d3",
+      "address": "0x46c85152bfe9f96829aa94755d9f915f9b10ef5f",
       "decimals": 6
     },
     {
@@ -46,6 +50,11 @@
     {
       "chain": "polygon",
       "address": "0x52828daa48c1a9a06f37500882b42daf0be04c3b",
+      "decimals": 6
+    },
+    {
+      "chain": "monad",
+      "address": "0x4f90098ba5b08abaf039b95a851f8e764eb84b49",
       "decimals": 6
     },
     {

@@ -702,9 +702,14 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Australian dollar reserves held 1:1 in regulated financial institutions by AUSTRAC-registered Tau Pty Ltd trading as AUDX Token",
+    "collateral": "Australian-dollar cash and government-backed instruments held 1:1 for AUDX by TAU Pty Ltd trading as AUDX Token",
     "pegMechanism": "Issuer-managed mint and redemption path targeting 1 AUDX = 1 AUD through fully backed Australian-dollar reserves",
     "geckoId": "aussie-dollar-token",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://www.audxtoken.com/transparency",
+      "provider": "AUDX monthly reserve audit reports"
+    },
     "links": [
       {
         "label": "Website",
@@ -713,6 +718,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/audxtoken"
+      },
+      {
+        "label": "Transparency",
+        "url": "https://www.audxtoken.com/transparency"
       }
     ],
     "jurisdiction": {
@@ -729,11 +738,6 @@
         "chain": "polygon",
         "address": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
         "decimals": 18
-      },
-      {
-        "chain": "conflux",
-        "address": "0x47a365e29697c700c75d58936b3d93a8a20a43c9",
-        "decimals": 18
       }
     ],
     "canBeBlacklisted": "possible",
@@ -743,7 +747,7 @@
     "governanceQuality": "single-entity",
     "reserves": [
       {
-        "name": "AUD fiat reserves at regulated financial institutions",
+        "name": "AUD cash and government-backed instruments",
         "pct": 100,
         "risk": "low"
       }
@@ -753,8 +757,8 @@
       "semantics": "single-asset",
       "breakerScope": "audx-aussie-dollar-token",
       "display": {
-        "url": "https://www.audxtoken.com/",
-        "label": "AUDX Token"
+        "url": "https://www.audxtoken.com/transparency",
+        "label": "AUDX Transparency"
       },
       "adapter": "single-asset",
       "inputs": {
@@ -765,7 +769,7 @@
         }
       },
       "params": {
-        "label": "AUD fiat reserves",
+        "label": "AUD cash and government-backed instruments",
         "risk": "low"
       }
     }
@@ -1489,9 +1493,14 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Brazilian real reserves backing BRL1 at a 1:1 target against the Brazilian real",
+    "collateral": "Brazilian-real reserve portfolio backing BRL1 at a 1:1 target, including Brazilian Treasury ETFs, repo agreements, and cash equivalents",
     "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 BRL1 = 1 BRL through Brazilian-real backing",
     "geckoId": "brl1",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://fact.finance/en/reserves/brl1",
+      "provider": "Fact Finance reserve report"
+    },
     "links": [
       {
         "label": "Website",
@@ -1500,6 +1509,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/BRL1Coin"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://fact.finance/en/reserves/brl1"
       }
     ],
     "jurisdiction": {
@@ -1520,7 +1533,7 @@
     "governanceQuality": "single-entity",
     "reserves": [
       {
-        "name": "Brazilian real fiat reserves",
+        "name": "Brazilian Treasury ETFs, repo agreements, and cash equivalents",
         "pct": 100,
         "risk": "medium"
       }
@@ -1530,8 +1543,8 @@
       "semantics": "single-asset",
       "breakerScope": "brl1-brl1",
       "display": {
-        "url": "https://brl1.io/en/",
-        "label": "BRL1"
+        "url": "https://fact.finance/en/reserves/brl1",
+        "label": "BRL1 Reserve Report"
       },
       "adapter": "single-asset",
       "inputs": {
@@ -1542,7 +1555,7 @@
         }
       },
       "params": {
-        "label": "Brazilian real fiat reserves",
+        "label": "Brazilian Treasury ETFs, repo agreements, and cash equivalents",
         "risk": "medium"
       }
     }
@@ -2394,7 +2407,11 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "possible",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
     "reserves": [
       {
         "name": "Canadian dollar trust reserves",
@@ -3002,6 +3019,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/cngn_co"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.cngn.co/integrations/contract-addresses"
       }
     ],
     "jurisdiction": {
@@ -3010,7 +3031,7 @@
     "contracts": [
       {
         "chain": "base",
-        "address": "0xc930784d6e14e2fc2a1f49be1068dc40f24762d3",
+        "address": "0x46c85152bfe9f96829aa94755d9f915f9b10ef5f",
         "decimals": 6
       },
       {
@@ -3026,6 +3047,11 @@
       {
         "chain": "polygon",
         "address": "0x52828daa48c1a9a06f37500882b42daf0be04c3b",
+        "decimals": 6
+      },
+      {
+        "chain": "monad",
+        "address": "0x4f90098ba5b08abaf039b95a851f8e764eb84b49",
         "decimals": 6
       },
       {
@@ -8145,7 +8171,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Kyrgyz som reserves held to back KGST 1:1 against the Kyrgyz som",
+    "collateral": "Kyrgyz som fiat reserves and cash equivalents held in licensed banks and custodial institutions to back KGST 1:1 against the Kyrgyz som",
     "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 KGST = 1 KGS through fully backed som reserves",
     "geckoId": "kyrgyz-som-stablecoin",
     "links": [
@@ -8168,11 +8194,11 @@
     "chainTier": "established-alt-l1",
     "deploymentModel": "single-chain",
     "collateralQuality": "rwa",
-    "custodyModel": "institutional-unregulated",
-    "governanceQuality": "single-entity",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
     "reserves": [
       {
-        "name": "Kyrgyz som fiat reserves",
+        "name": "Kyrgyz som fiat reserves and cash equivalents",
         "pct": 100,
         "risk": "medium"
       }
@@ -8194,7 +8220,7 @@
         }
       },
       "params": {
-        "label": "Kyrgyz som fiat reserves",
+        "label": "Kyrgyz som fiat reserves and cash equivalents",
         "risk": "medium"
       }
     }
@@ -10820,7 +10846,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Euro-denominated reserves held to target 1:1 backing for each REUR issued by The RIB Digital Holdings Limited",
+    "collateral": "Euro cash reserves held through top-tier international banks to target 1:1 backing for each REUR issued by The RIB Digital Holdings Limited",
     "pegMechanism": "Issuer-managed mint and redemption route targeting 1 REUR = 1 EUR, subject to reserve sufficiency, redemption terms, and market conditions",
     "geckoId": "royal-euro",
     "links": [
@@ -10831,6 +10857,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/rcoins_official"
+      },
+      {
+        "label": "Docs",
+        "url": "https://ribg.digital/faqs/"
       }
     ],
     "jurisdiction": {
@@ -10853,14 +10883,14 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "possible",
+    "canBeBlacklisted": true,
     "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
-    "custodyModel": "institutional-unregulated",
-    "governanceQuality": "single-entity",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
     "reserves": [
       {
-        "name": "Euro-denominated reserves",
+        "name": "Euro cash reserves at top-tier international banks",
         "pct": 100,
         "risk": "low"
       }
@@ -10882,7 +10912,7 @@
         }
       },
       "params": {
-        "label": "Euro-denominated reserves",
+        "label": "Euro cash reserves at top-tier international banks",
         "risk": "low"
       }
     }
@@ -19987,13 +20017,22 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Argentine peso reserves backing WARS at a 1:1 target against the Argentine peso",
+    "collateral": "Argentine peso reserves and local-currency liquid instruments backing WARS at a 1:1 target against the Argentine peso",
     "pegMechanism": "Issuer-managed fiat-backed stablecoin route targeting 1 WARS = 1 ARS; DefiLlama classifies the asset as fiat-backed",
     "geckoId": "argentine-peso",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+      "provider": "Ripio wARS collateral attestations by local public accountants"
+    },
     "links": [
       {
         "label": "Website",
-        "url": "https://www.ripio.com/"
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       }
     ],
     "jurisdiction": {
@@ -20038,7 +20077,7 @@
     "governanceQuality": "single-entity",
     "reserves": [
       {
-        "name": "Argentine peso fiat reserves",
+        "name": "Argentine peso bank deposits and local-currency liquid instruments",
         "pct": 100,
         "risk": "high"
       }
@@ -20048,8 +20087,8 @@
       "semantics": "single-asset",
       "breakerScope": "wars-argentine-peso",
       "display": {
-        "url": "https://www.ripio.com/",
-        "label": "Ripio"
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "label": "Ripio wFIAT Updates"
       },
       "adapter": "single-asset",
       "inputs": {
@@ -20060,7 +20099,7 @@
         }
       },
       "params": {
-        "label": "Argentine peso fiat reserves",
+        "label": "Argentine peso bank deposits and local-currency liquid instruments",
         "risk": "high"
       }
     }

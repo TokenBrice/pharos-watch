@@ -220,6 +220,10 @@ describe("validatePriceCandidate", () => {
       peggedGOLD: 2_915,
       peggedSILVER: 32,
       peggedREAL: 0.2,
+      peggedMYR: 0.21,
+      peggedKRW: 0.00072,
+      peggedKGS: 0.011,
+      peggedNGN: 0.00065,
     },
     type: "fresh",
     updatedAt: Math.floor(Date.now() / 1000),
@@ -239,6 +243,23 @@ describe("validatePriceCandidate", () => {
 
     expect(result.accepted).toBe(false);
     expect(result.reasonCode).toBe("reference_upper_bound_exceeded");
+  });
+
+  it("keeps lower-nominal fiat pegs on bounded fiat validation paths", () => {
+    const myr = buildPriceValidationContext({ pegType: "peggedMYR", pegCurrency: "MYR" });
+    const krw = buildPriceValidationContext({ pegType: "peggedKRW", pegCurrency: "KRW" });
+    const kgs = buildPriceValidationContext({ pegType: "peggedKGS", pegCurrency: "KGS" });
+    const ngn = buildPriceValidationContext({ pegType: "peggedNGN", pegCurrency: "NGN" });
+    const noReference: PriceValidationReferences = { rates: {}, type: "none", updatedAt: null };
+
+    expect(validatePriceCandidate(0.21, myr, "fallback_enrichment", freshRefs).reasonCode).toBe("within_reference_band");
+    expect(validatePriceCandidate(0.00072, krw, "fallback_enrichment", freshRefs).reasonCode).toBe("within_reference_band");
+    expect(validatePriceCandidate(0.011, kgs, "fallback_enrichment", freshRefs).reasonCode).toBe("within_reference_band");
+    expect(validatePriceCandidate(0.00065, ngn, "fallback_enrichment", freshRefs).reasonCode).toBe("within_reference_band");
+    expect(validatePriceCandidate(1, myr, "fallback_enrichment", noReference).reasonCode).toBe("hardcoded_upper_bound_exceeded");
+    expect(validatePriceCandidate(0.01, krw, "fallback_enrichment", noReference).reasonCode).toBe("hardcoded_upper_bound_exceeded");
+    expect(validatePriceCandidate(1, kgs, "fallback_enrichment", noReference).reasonCode).toBe("hardcoded_upper_bound_exceeded");
+    expect(validatePriceCandidate(0.02, ngn, "fallback_enrichment", noReference).reasonCode).toBe("hardcoded_upper_bound_exceeded");
   });
 
   it("allows catastrophic downside in authoritative mode while keeping strict fallback behavior", () => {

@@ -12,13 +12,17 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Argentine peso reserves backing WARS at a 1:1 target against the Argentine peso",
+  "collateral": "Argentine peso reserves and local-currency liquid instruments backing WARS at a 1:1 target against the Argentine peso",
   "pegMechanism": "Issuer-managed fiat-backed stablecoin route targeting 1 WARS = 1 ARS; DefiLlama classifies the asset as fiat-backed",
   "geckoId": "argentine-peso",
   "links": [
     {
       "label": "Website",
-      "url": "https://www.ripio.com/"
+      "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
     }
   ],
   "jurisdiction": {
@@ -61,9 +65,14 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+    "provider": "Ripio wARS collateral attestations by local public accountants"
+  },
   "reserves": [
     {
-      "name": "Argentine peso fiat reserves",
+      "name": "Argentine peso bank deposits and local-currency liquid instruments",
       "pct": 100,
       "risk": "high"
     }
@@ -74,8 +83,8 @@
     "semantics": "single-asset",
     "breakerScope": "wars-argentine-peso",
     "display": {
-      "url": "https://www.ripio.com/",
-      "label": "Ripio"
+      "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+      "label": "Ripio wFIAT Updates"
     },
     "inputs": {
       "primary": {
@@ -85,7 +94,7 @@
       }
     },
     "params": {
-      "label": "Argentine peso fiat reserves",
+      "label": "Argentine peso bank deposits and local-currency liquid instruments",
       "risk": "high"
     }
   }
