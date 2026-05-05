@@ -23,7 +23,6 @@ export const BITSTAMP_MARKETS = [
 
 export const COINBASE_PRODUCTS = [
   { symbol: "USDT", productId: "USDT-USD" },
-  { symbol: "DAI", productId: "DAI-USD" },
   { symbol: "PAXG", productId: "PAXG-USD" },
   { symbol: "USDS", productId: "USDS-USD" },
   { symbol: "USD1", productId: "USD1-USD" },
