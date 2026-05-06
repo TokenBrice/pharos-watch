@@ -1,4 +1,5 @@
 import { API_PATHS } from "../../shared/lib/api-endpoints/paths";
+import { BLACKLIST_STABLECOINS } from "../../shared/types/market";
 
 export type QueryParamType = "string" | "integer" | "boolean";
 
@@ -102,6 +103,13 @@ export const STABLECOIN_QUERY_PARAM = {
   in: "query",
   schema: { type: "string" },
   description: "Optional canonical Pharos stablecoin ID filter.",
+} as const satisfies PublicApiArtifactParameter;
+
+export const BLACKLIST_STABLECOIN_SYMBOL_QUERY_PARAM = {
+  name: "stablecoin",
+  in: "query",
+  schema: { type: "string", enum: [...BLACKLIST_STABLECOINS] },
+  description: "Optional blacklist-tracker stablecoin symbol filter, for example `USDT` or `USDC`.",
 } as const satisfies PublicApiArtifactParameter;
 
 export const DAYS_PARAM = {
@@ -337,20 +345,65 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     key: "blacklist",
     path: API_PATHS.blacklist(),
     summary: "Blacklist events",
-    description: "Freeze and blacklist events with optional stablecoin/chain filters.",
+    description: "Freeze and blacklist events with optional symbol, chain, event type, search, sort, and pagination filters.",
     tags: ["Blacklist"],
     parameters: [
-      STABLECOIN_QUERY_PARAM,
+      BLACKLIST_STABLECOIN_SYMBOL_QUERY_PARAM,
       {
         name: "chain",
         in: "query",
         schema: { type: "string" },
-        description: "Optional chain filter.",
+        description: "Optional exact chain-name filter, for example `Ethereum` or `Tron`.",
+      },
+      {
+        name: "eventType",
+        in: "query",
+        schema: { type: "string", enum: ["blacklist", "unblacklist", "destroy"] },
+        description: "Optional event type filter.",
+      },
+      {
+        name: "q",
+        in: "query",
+        schema: { type: "string" },
+        description: "Optional case-insensitive affected-address substring search.",
+      },
+      {
+        name: "sortBy",
+        in: "query",
+        schema: { type: "string", enum: ["date", "stablecoin", "chain", "event"] },
+        description: "Sort field. Defaults to `date`.",
+      },
+      {
+        name: "sortDirection",
+        in: "query",
+        schema: { type: "string", enum: ["asc", "desc"] },
+        description: "Sort direction. Defaults to `desc`.",
+      },
+      {
+        name: "limit",
+        in: "query",
+        schema: { type: "integer", minimum: 1, maximum: 1000 },
+        description: "Maximum number of events to return. Defaults to 1000.",
+      },
+      {
+        name: "offset",
+        in: "query",
+        schema: { type: "integer", minimum: 0 },
+        description: "Pagination offset. Defaults to 0.",
       },
     ],
     postman: {
       folder: "Flows, blacklist, yield, and chains",
-      query: { stablecoin: "{{stablecoinId}}" },
+      query: {
+        stablecoin: "{{blacklistStablecoinSymbol}}",
+        chain: "Ethereum",
+        eventType: "blacklist",
+        q: "",
+        sortBy: "date",
+        sortDirection: "desc",
+        limit: "{{limit}}",
+        offset: "0",
+      },
     },
   },
   {

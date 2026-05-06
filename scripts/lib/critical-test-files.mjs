@@ -14,6 +14,8 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/api/__tests__/health.test.ts",
   "worker/src/api/__tests__/peg-summary.test.ts",
   "worker/src/api/__tests__/report-cards.test.ts",
+  "worker/src/api/__tests__/blacklist.test.ts",
+  "worker/src/api/__tests__/blacklist-summary.test.ts",
   "worker/src/api/__tests__/dex-liquidity.test.ts",
   "worker/src/api/__tests__/stress-signals.test.ts",
   "worker/src/api/__tests__/mint-burn-flows.test.ts",

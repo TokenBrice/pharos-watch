@@ -1,5 +1,9 @@
 import { buildBlacklistAddressCountKey } from "./blacklist";
-import type { BlacklistCurrentBalanceSnapshot } from "./blacklist-active-records";
+import {
+  buildBlacklistIdentityLookupKeys,
+  buildBlacklistRecordIdentityKey,
+  type BlacklistCurrentBalanceSnapshot,
+} from "./blacklist-active-records";
 import { BLACKLIST_STABLECOINS } from "../types/market";
 import type { BlacklistEvent, BlacklistStablecoin } from "../types/market";
 
@@ -23,17 +27,19 @@ export function buildBlacklistQuarterlyChartFromSnapshots(
   const latestBlacklistTsByKey = new Map<string, number>();
   for (const row of latestByAddr) {
     if (row.eventType !== "blacklist") continue;
-    const key = buildBlacklistAddressCountKey(row.stablecoin, row.chainId, row.address);
-    const prev = latestBlacklistTsByKey.get(key);
-    if (prev == null || row.timestamp > prev) latestBlacklistTsByKey.set(key, row.timestamp);
+    for (const key of buildBlacklistIdentityLookupKeys(row)) {
+      const prev = latestBlacklistTsByKey.get(key);
+      if (prev == null || row.timestamp > prev) latestBlacklistTsByKey.set(key, row.timestamp);
+    }
   }
   const emptyBucket = (): Record<BlacklistStablecoin, number> =>
     Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<BlacklistStablecoin, number>;
   const buckets = new Map<number, Record<BlacklistStablecoin, number>>();
   for (const snapshot of currentBalances.values()) {
     if (snapshot.amountUsd == null || snapshot.amountUsd <= 0) continue;
-    const key = buildBlacklistAddressCountKey(snapshot.stablecoin, snapshot.chainId, snapshot.address);
-    const ts = latestBlacklistTsByKey.get(key) ?? snapshot.observedAt;
+    const scopedKey = buildBlacklistRecordIdentityKey(snapshot);
+    const legacyKey = buildBlacklistAddressCountKey(snapshot.stablecoin, snapshot.chainId, snapshot.address);
+    const ts = latestBlacklistTsByKey.get(scopedKey) ?? latestBlacklistTsByKey.get(legacyKey) ?? snapshot.observedAt;
     const sortKey = quarterToSortKey(ts);
     const bucket = buckets.get(sortKey) ?? emptyBucket();
     bucket[snapshot.stablecoin] = (bucket[snapshot.stablecoin] ?? 0) + snapshot.amountUsd;

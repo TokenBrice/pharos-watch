@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildBlacklistRecordIdentityKey,
   buildBlacklistActiveRecords,
   computeBlacklistActiveSummaryStats,
   computeBlacklistTrackedSummaryStats,
@@ -122,6 +123,80 @@ describe("buildBlacklistActiveRecords", () => {
     expect(records).toHaveLength(1);
     expect(records[0]?.frozenAmountUsd).toBe(250);
     expect(records[0]?.amountSource).toBe("current_balance");
+  });
+
+  it("prefers contract-scoped current balance snapshots over legacy address rows", () => {
+    const event = makeEvent({
+      id: "1",
+      stablecoin: "USDT",
+      chainId: "optimism",
+      chainName: "Optimism",
+      address: "0x8888",
+      configKey: "optimism-0xnew",
+      contractAddress: "0xnew",
+      timestamp: 10,
+    });
+    const scopedKey = buildBlacklistRecordIdentityKey(event);
+
+    const balances = new Map<string, BlacklistCurrentBalanceSnapshot>([
+      [
+        "USDT:optimism:0x8888",
+        {
+          stablecoin: "USDT",
+          chainId: "optimism",
+          address: "0x8888",
+          amountNative: 100,
+          amountUsd: 100,
+          status: "resolved",
+          source: "current_balance",
+          observedAt: 20,
+        },
+      ],
+      [
+        scopedKey,
+        {
+          stablecoin: "USDT",
+          chainId: "optimism",
+          address: "0x8888",
+          configKey: "optimism-0xnew",
+          contractAddress: "0xnew",
+          amountNative: 250,
+          amountUsd: 250,
+          status: "resolved",
+          source: "current_balance",
+          observedAt: 21,
+        },
+      ],
+    ]);
+
+    const records = buildBlacklistActiveRecords([event], balances);
+    expect(records).toHaveLength(1);
+    expect(records[0]?.frozenAmountUsd).toBe(250);
+  });
+
+  it("does not collapse same-symbol same-chain records with different contract scope", () => {
+    const legacy = makeEvent({
+      id: "1",
+      chainId: "optimism",
+      chainName: "Optimism",
+      address: "0xshared",
+      configKey: "optimism-0xlegacy",
+      contractAddress: "0xlegacy",
+      timestamp: 10,
+    });
+    const upgraded = makeEvent({
+      id: "2",
+      chainId: "optimism",
+      chainName: "Optimism",
+      address: "0xshared",
+      configKey: "optimism-0xupgraded",
+      contractAddress: "0xupgraded",
+      timestamp: 11,
+    });
+
+    const records = buildBlacklistActiveRecords([legacy, upgraded]);
+    expect(records).toHaveLength(2);
+    expect(records.map((record) => record.contractAddress).sort()).toEqual(["0xlegacy", "0xupgraded"]);
   });
 
   it("falls back to event-time EVM amounts when current balance refresh fails", () => {

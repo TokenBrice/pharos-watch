@@ -3,6 +3,7 @@ import {
   formatDisambiguation,
   resolveTicker,
   type ResolvedCoin,
+  type TickerResolutionScope,
 } from "../lib/telegram-alerts";
 import { buildNotFoundMessage } from "./telegram-webhook-messages";
 import type {
@@ -18,13 +19,14 @@ import { dedupeCoins } from "./telegram-webhook-parsing";
 export function resolveCoinTargets(
   tickers: string[],
   initialCoins: ResolvedCoin[] = [],
+  resolutionScope: TickerResolutionScope = "subscribable",
 ): CoinResolution {
   const coins = dedupeCoins(initialCoins);
   const seenIds = new Set(coins.map((coin) => coin.id));
 
   for (let index = 0; index < tickers.length; index += 1) {
     const ticker = tickers[index];
-    const match = resolveTicker(ticker);
+    const match = resolveTicker(ticker, resolutionScope);
 
     if (match.status === "not_found") {
       return { kind: "not_found", ticker, suggestion: match.suggestion };
@@ -55,6 +57,7 @@ interface RunCoinResolutionFlowOptions<TActionPayload extends object> {
   tickers: string[];
   actionType: PendingActionType;
   actionPayload: TActionPayload;
+  initiatorUserId: string | null;
   reply: (message: string) => Promise<void>;
   onComplete: (
     coins: ResolvedCoin[],
@@ -63,6 +66,7 @@ interface RunCoinResolutionFlowOptions<TActionPayload extends object> {
   alertTypes?: Set<string>;
   initialCoins?: ResolvedCoin[];
   clearPendingOnTerminal?: boolean;
+  resolutionScope?: TickerResolutionScope;
 }
 
 export async function runCoinResolutionFlow<TActionPayload extends object>({
@@ -71,13 +75,15 @@ export async function runCoinResolutionFlow<TActionPayload extends object>({
   tickers,
   actionType,
   actionPayload,
+  initiatorUserId,
   reply,
   onComplete,
   alertTypes,
   initialCoins = [],
   clearPendingOnTerminal = false,
+  resolutionScope = "subscribable",
 }: RunCoinResolutionFlowOptions<TActionPayload>): Promise<void> {
-  const resolution = resolveCoinTargets(tickers, initialCoins);
+  const resolution = resolveCoinTargets(tickers, initialCoins, resolutionScope);
 
   if (resolution.kind === "not_found") {
     if (clearPendingOnTerminal) {
@@ -97,6 +103,7 @@ export async function runCoinResolutionFlow<TActionPayload extends object>({
       ambiguousTicker: resolution.ticker,
       candidates: resolution.candidates,
       remainingTickers: resolution.remainingTickers,
+      initiatorUserId,
     });
     await reply(
       escapeHtml(formatDisambiguation(resolution.ticker, resolution.candidates)),

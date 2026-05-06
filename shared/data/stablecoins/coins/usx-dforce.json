@@ -1,0 +1,103 @@
+{
+  "id": "usx-dforce",
+  "llamaId": "44",
+  "detailProvider": "defillama",
+  "name": "dForce USD",
+  "symbol": "USX",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "dForce/Unitus stablecoin reserves and overcollateralized crypto positions; docs describe USDT, USDC, DAI and protocol collateral routes",
+  "pegMechanism": "USX is minted and redeemed through dForce/Unitus stablecoin and lending routes, with sUSX as a separate yield-bearing wrapper",
+  "geckoId": "token-dforce-usd",
+  "cmcSlug": "dforce-usd",
+  "protocolSlug": "dforce-lending",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://dforce.network/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/dForcenet"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.dforce.network/ecosystem/usx-stablecoin"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x0a5e677a6a24b2f1a2bf4f3bffc443231d2fdec8",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0xb5102cee1528ce2c760893034a4603663495fd72",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x641441c631e2f909700d2f41fd87f0aa6a6b4edb",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0xbfd291da8a403daaf7e5e9dc1ec0aceacd4848b9",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xc142171b138db17a1b7cb999c44526094a4dae05",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xcf66eb3d546f0415b368d98a95eaf56ded7aa752",
+      "decimals": 18
+    },
+    {
+      "chain": "kava",
+      "address": "0xdb0e1e86b01c4ad25241b1843e407efc4d615248",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "reserves": [
+    {
+      "name": "dForce stablecoin and crypto collateral pool",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usx-dforce",
+    "display": {
+      "url": "https://docs.dforce.network/ecosystem/usx-stablecoin",
+      "label": "dForce USX docs"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Active depeg risk",
+      "message": "Recent provider data shows USX materially below $1; the configured reserve view is a collateral classification, not live redemption assurance."
+    }
+  ]
+}

@@ -765,25 +765,134 @@
           "Blacklist"
         ],
         "summary": "Blacklist events",
-        "description": "Freeze and blacklist events with optional stablecoin/chain filters.",
+        "description": "Freeze and blacklist events with optional symbol, chain, event type, search, sort, and pagination filters.",
         "operationId": "blacklist",
         "parameters": [
           {
             "name": "stablecoin",
             "in": "query",
             "required": false,
-            "description": "Optional canonical Pharos stablecoin ID filter.",
+            "description": "Optional blacklist-tracker stablecoin symbol filter, for example `USDT` or `USDC`.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "USDC",
+                "USDT",
+                "PAXG",
+                "XAUT",
+                "PYUSD",
+                "USD1",
+                "USDG",
+                "RLUSD",
+                "U",
+                "USDTB",
+                "A7A5",
+                "FDUSD",
+                "BRZ",
+                "AUSD",
+                "EURI",
+                "USDQ",
+                "USDO",
+                "USDX",
+                "AID",
+                "TGBP",
+                "MNEE",
+                "EURC",
+                "BUIDL",
+                "USDP",
+                "TUSD",
+                "NUSD",
+                "EURCV",
+                "USDA",
+                "USAT",
+                "AEUR",
+                "XUSD",
+                "XAUM",
+                "JPYC",
+                "FRXUSD",
+                "FIDD"
+              ]
             }
           },
           {
             "name": "chain",
             "in": "query",
             "required": false,
-            "description": "Optional chain filter.",
+            "description": "Optional exact chain-name filter, for example `Ethereum` or `Tron`.",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "eventType",
+            "in": "query",
+            "required": false,
+            "description": "Optional event type filter.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "blacklist",
+                "unblacklist",
+                "destroy"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Optional case-insensitive affected-address substring search.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "description": "Sort field. Defaults to `date`.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "date",
+                "stablecoin",
+                "chain",
+                "event"
+              ]
+            }
+          },
+          {
+            "name": "sortDirection",
+            "in": "query",
+            "required": false,
+            "description": "Sort direction. Defaults to `desc`.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of events to return. Defaults to 1000.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "Pagination offset. Defaults to 0.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
             }
           }
         ],

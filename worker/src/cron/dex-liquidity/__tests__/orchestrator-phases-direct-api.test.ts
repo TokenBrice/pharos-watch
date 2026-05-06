@@ -83,5 +83,82 @@ describe("integrateDirectApiLiquidityPhase", () => {
 
     expect(result.directApiSkippedUntracked).toBe(1);
     expect(result.directApiDedupSkippedByAddress).toBe(0);
+    expect(result.excludedByReason).toEqual({ untracked_token: 1 });
+  });
+
+  it("counts invalid direct API units before tracking and identity processing", () => {
+    const directApiPools: DexApiPool[] = [
+      {
+        source: "meteora",
+        chain: "solana",
+        poolAddress: "pool-invalid",
+        poolType: "meteora-dlmm",
+        tokens: [
+          { address: "token-a", symbol: "AAA", decimals: 6 },
+          { address: "token-b", symbol: "BBB", decimals: 6 },
+        ],
+        price: 1,
+        tvlUsd: Number.NaN,
+        volume24hUsd: 50_000,
+        feeRate: null,
+        balances: [500_000, 500_000],
+      },
+    ];
+
+    const result = integrateDirectApiLiquidityPhase({
+      directApiPools,
+      knownPoolIndex: createKnownPoolIdentityIndex(),
+      contractMetaByChainAddress: new Map(),
+      metrics: new Map(),
+      priceObservations: new Map(),
+      chainAddressToId: new Map([["solana:token-a", "aaa-test"]]),
+      symbolToChainScopedIds: new Map(),
+      symbolToIds: new Map(),
+      validationReferences: {} as never,
+      stablecoinPriceById: new Map(),
+    });
+
+    expect(result.directApiSkippedInvalidUnits).toBe(1);
+    expect(result.directApiSkippedUntracked).toBe(0);
+    expect(result.excludedByReason).toEqual({ invalid_units: 1 });
+  });
+
+  it("counts tracked direct API pools filtered by the TVL threshold", () => {
+    const poolAddress = "0x0000000000000000000000000000000000000abc";
+    const directApiPools: DexApiPool[] = [
+      {
+        source: "balancer",
+        chain: "ethereum",
+        poolAddress,
+        poolType: "balancer-stable",
+        tokens: [
+          { address: "0x00000000000000000000000000000000000000a1", symbol: "USDt", decimals: 6 },
+          { address: "0x00000000000000000000000000000000000000b2", symbol: "USDC", decimals: 6 },
+        ],
+        price: 1,
+        tvlUsd: 9_999,
+        volume24hUsd: 500,
+        feeRate: null,
+        balances: [5_000, 5_000],
+      },
+    ];
+
+    const result = integrateDirectApiLiquidityPhase({
+      directApiPools,
+      knownPoolIndex: createKnownPoolIdentityIndex(),
+      contractMetaByChainAddress: new Map(),
+      metrics: new Map(),
+      priceObservations: new Map(),
+      chainAddressToId: new Map([["ethereum:0x00000000000000000000000000000000000000a1", "usdt-tether"]]),
+      symbolToChainScopedIds: new Map(),
+      symbolToIds: new Map(),
+      validationReferences: {} as never,
+      stablecoinPriceById: new Map(),
+    });
+
+    expect(result.directApiSkippedBelowTvlThreshold).toBe(1);
+    expect(result.directApiSkippedAboveTvlSanityCap).toBe(0);
+    expect(result.acceptedByProtocolChain).toEqual({});
+    expect(result.excludedByReason).toEqual({ below_tvl_threshold: 1 });
   });
 });

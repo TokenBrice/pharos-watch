@@ -41,6 +41,8 @@ export function emptyReserveComposition(): StatusResponse["reserveComposition"] 
     weakProbeFresh: 0,
     writeTimeoutUncertain: 0,
     deferredCoins: 0,
+    runBudgetTruncated: false,
+    deferredAt: null,
     nextCursorStablecoinId: null,
     persistentlyStaleIndependentCoins: [],
     lastSuccessAt: null,

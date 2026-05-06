@@ -17,10 +17,10 @@ import {
 import type { BlacklistEventType } from "@shared/types/market";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import {
-  decodeAddress,
-  decodeUint256,
-  decodeUint256AtSlot,
-  fetchEvmLogsForTopic,
+  decodeAddressWord,
+  decodeUint256AtSlotOrNull,
+  decodeUint256Word,
+  fetchEvmLogsForTopicWithCompleteness,
   readDataWord,
   type EtherscanLogEntry,
   type RateLimitedFetch,
@@ -66,7 +66,7 @@ export interface FetchEvmEventsIncrementalResult {
   incomplete: boolean;
 }
 
-function shouldPreferRpcLogScan(chainId: string): boolean {
+export function shouldPreferRpcLogScan(chainId: string): boolean {
   return RPC_LOG_SCAN_CHAIN_IDS.has(chainId);
 }
 
@@ -97,8 +97,7 @@ function decodeAddressArrayData(data: string): string[] {
 }
 
 function decodeAddressAtDataSlot(data: string, slotIndex: number): string | null {
-  const word = readDataWord(data, slotIndex);
-  return word == null ? null : decodeAddress(word);
+  return decodeAddressWord(readDataWord(data, slotIndex));
 }
 
 /** Reads a uint256/bool slot from event data and resolves a blacklist/unblacklist
@@ -166,15 +165,15 @@ function decodeEvmLogAmount(
   if (!eventDef.hasAmount) return null;
 
   if (typeof eventDef.amountTopicIndex === "number" && log.topics.length > eventDef.amountTopicIndex) {
-    return decodeUint256(log.topics[eventDef.amountTopicIndex]!, decimals);
+    return decodeUint256Word(log.topics[eventDef.amountTopicIndex], decimals);
   }
   if (typeof eventDef.amountDataIndex === "number") {
-    return decodeUint256AtSlot(log.data, eventDef.amountDataIndex, decimals);
+    return decodeUint256AtSlotOrNull(log.data, eventDef.amountDataIndex, decimals);
   }
   if (addressFromTopic) {
-    return log.data.length >= 66 ? decodeUint256(log.data, decimals) : null;
+    return decodeUint256Word(readDataWord(log.data, 0), decimals);
   }
-  return log.data.length > 66 ? decodeUint256("0x" + log.data.slice(66), decimals) : null;
+  return decodeUint256Word(readDataWord(log.data, 1), decimals);
 }
 
 export function parseEvmLogs(
@@ -214,7 +213,12 @@ export function parseEvmLogs(
         ? decodeAddressAtDataSlot(log.data, eventDef.addressDataIndex)
         : null;
     const addressFromTopic = forcedDataAddress == null && log.topics.length > topicIdx;
-    const affectedAddress = forcedDataAddress ?? (addressFromTopic ? decodeAddress(log.topics[topicIdx]) : decodeAddress(log.data.slice(0, 66)));
+    const affectedAddress = forcedDataAddress ?? (
+      addressFromTopic
+        ? decodeAddressWord(log.topics[topicIdx])
+        : decodeAddressWord(readDataWord(log.data, 0))
+    );
+    if (!affectedAddress) continue;
     const amount = decodeEvmLogAmount(eventDef, log, config.decimals, addressFromTopic);
 
     const row = buildBlacklistRow(config, log, affectedAddress, amount, blockNumber, timestamp, "", eventTypeOverride);
@@ -286,19 +290,20 @@ export async function fetchEvmEventsIncremental(
   }
 
   const allRows: BlacklistRow[] = [];
-  let maxBlock = fromBlock;
   let apiError = false;
   let chainHead: number | null = null;
   let usedRpcLogs = false;
   let scannedToBlock: number | null = null;
   let incomplete = false;
+  let coveredTopicCount = 0;
   let rpcTargetPromise: Promise<RpcLogTarget | null> | null = null;
   const getRpcTarget = (): Promise<RpcLogTarget | null> => {
     rpcTargetPromise ??= resolveRpcLogTarget(config.chain.chainId, runBudget, signal, chainRpcs);
     return rpcTargetPromise;
   };
 
-  for (const topicHash of getBlacklistTopicHashes(config)) {
+  const topicHashes = getBlacklistTopicHashes(config);
+  for (const topicHash of topicHashes) {
     throwIfAborted(signal);
     if (blacklistRuntimeBudgetReached(runBudget)) {
       incomplete = true;
@@ -312,10 +317,11 @@ export async function fetchEvmEventsIncremental(
     let rows: BlacklistRow[] = [];
     let fetched = false;
     let sourceHadGap = false;
+    let topicScannedToBlock: number | null = null;
     const preferRpcLogs = shouldPreferRpcLogScan(config.chain.chainId);
 
     if (!preferRpcLogs) {
-      const logs = await fetchEvmLogsForTopic(
+      const fetchedLogs = await fetchEvmLogsForTopicWithCompleteness(
         evmChainId,
         config.contractAddress,
         topicHash,
@@ -327,9 +333,17 @@ export async function fetchEvmEventsIncremental(
         runBudget.subrequestBudget,
         signal,
       );
-      if (logs !== null) {
-        rows = parseEvmLogs(config, logs);
+      if (fetchedLogs.scannedToBlock >= fromBlock) {
+        const contiguousLogs = fetchedLogs.logs.filter((log) => {
+          const block = parseInt(log.blockNumber, 16);
+          return Number.isFinite(block) && block <= fetchedLogs.scannedToBlock;
+        });
+        rows = parseEvmLogs(config, contiguousLogs);
         fetched = true;
+        topicScannedToBlock = fetchedLogs.scannedToBlock;
+        sourceHadGap = !fetchedLogs.complete;
+      } else if (!fetchedLogs.complete) {
+        sourceHadGap = true;
       }
     }
 
@@ -382,6 +396,7 @@ export async function fetchEvmEventsIncremental(
             }
           }
           scannedToBlock = scannedToBlock == null ? eventScannedToBlock : Math.min(scannedToBlock, eventScannedToBlock);
+          topicScannedToBlock = eventScannedToBlock;
 
           rows = parseEvmLogs(config, fetchedLogs.logs as Array<AlchemyLogEntry>, blockTimestamps);
           fetched = true;
@@ -399,20 +414,31 @@ export async function fetchEvmEventsIncremental(
     if (sourceHadGap) {
       apiError = true;
     }
+    if (topicScannedToBlock != null && topicScannedToBlock >= fromBlock) {
+      coveredTopicCount++;
+      scannedToBlock = scannedToBlock == null ? topicScannedToBlock : Math.min(scannedToBlock, topicScannedToBlock);
+    }
 
     allRows.push(...rows);
-    for (const row of rows) {
-      if (row.block_number > maxBlock) maxBlock = row.block_number;
-    }
   }
 
+  const commonScannedToBlock = coveredTopicCount === topicHashes.length ? scannedToBlock : null;
+  const coveredRows =
+    commonScannedToBlock == null
+      ? (apiError || incomplete ? [] : allRows)
+      : allRows.filter((row) => row.block_number <= commonScannedToBlock);
+  const coveredMaxBlock = coveredRows.reduce(
+    (max, row) => Math.max(max, row.block_number),
+    fromBlock,
+  );
+
   return {
-    rows: allRows,
-    maxBlock,
+    rows: coveredRows,
+    maxBlock: coveredMaxBlock,
     apiError,
     chainHead,
     usedRpcLogs,
-    scannedToBlock,
+    scannedToBlock: commonScannedToBlock,
     incomplete,
   };
 }

@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "5.95",
+  currentVersion: "5.96",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+    {
+      version: "5.96",
+      title: "ARS native-peg and KGS FX corroboration",
+      date: "2026-05-05",
+      effectiveAt: 1777983570,
+      summary:
+        "Direct native-peg corroboration now includes ARS where CoinGecko exposes a supported quote currency, while KGS stays on the secondary daily FX path and deterministic bounds because CoinGecko does not expose a native KGS quote.",
+      impact: [
+        "WARS (ARS) live and pending depeg checks can use fresh native CoinGecko quotes before trusting USD/FX-derived divergence on its own",
+        "KGST (KGS) depeg checks use the secondary daily FX mirror and hardcoded validation bounds rather than an unsupported CoinGecko KGS quote",
+        "Historical replay behavior is unchanged except that assets with native ARS market history can prefer that direct native series when available",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.95",
       title: "Cross-asset contagion amplifier",

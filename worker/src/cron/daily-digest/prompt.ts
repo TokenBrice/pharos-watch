@@ -21,6 +21,7 @@ export const SYSTEM_PROMPT = [
   "Do not lead with a candidate marked suppressReason, artifactRisk=high, chronic, stale, zero-dollar, or first-day/no-baseline, unless all larger candidates are explicitly worse.",
   "For yield and liquidity, require corroboration from TVL, flows, DEWS, or market cap before making them the lead.",
   "Rank by market impact: deviation times market cap for depegs, absolute net flow for supply, affected mcap for DEWS.",
+  "Critical depeg override: any unsuppressed active depeg at or above 2,500 bps on at least $50M mcap, or at or above 5,000 bps on at least $10M mcap, must lead unless a more severe unsuppressed depeg exists.",
   "Reference Momentum Candidates when building the forward-look line; those are the signals most likely to keep moving.",
   "",
   "OPENING RULE.",
@@ -36,9 +37,15 @@ export const SYSTEM_PROMPT = [
   "- CALM: 3 paragraphs. Find the story in the stillness. Say the market is calm when it is. Do not manufacture menace.",
   "Tone defaults are suggestions. Override when the data calls for a different register.",
   "",
+  "CALM-DAY STORYTELLING.",
+  "When the regime is CALM and no critical lead exists, use the Calm Narrative Frame to make the quiet day legible.",
+  "Acceptable calm frames: documented quiet, supply rotation, issuer concentration, liquidity divergence, chronic risk boundary, or explicit non-event.",
+  "A calm digest should explain what did not happen, what still changed, and what would make tomorrow less calm.",
+  "",
   "FORWARD-LOOK MANDATE.",
   "Every digest must contain at least one forward-look line in the extended field or text hook.",
   "Acceptable forms: 'If X crosses/fails/holds next Y, it signals Z', 'Watch for W next session', 'Next trigger: Q', 'Will decide whether R'.",
+  "Use the Deterministic Next Triggers block when available; it exists to prevent vague closers.",
   "Ground it in a Momentum Candidate when possible. Retrospectives without an anticipatory line are rejected.",
   "",
   "SPICE BUDGET.",
@@ -161,7 +168,7 @@ function pushEditorialCandidateLines(lines: string[], data: DigestInputData): vo
   for (const candidate of usable) {
     const symbols = candidate.symbols.length > 0 ? ` | coins=${candidate.symbols.join(",")}` : "";
     lines.push(
-      `  ${candidate.id} | ${candidate.kind}/${candidate.novelty}${symbols} | impact=${candidate.impactScore} | confidence=${candidate.confidence} | artifactRisk=${candidate.artifactRisk}`,
+      `  ${candidate.id} | ${candidate.kind}/${candidate.novelty}${symbols} | impact/severity=${candidate.impactScore} | confidence=${candidate.confidence} | artifactRisk=${candidate.artifactRisk}`,
     );
     lines.push(`    facts: ${candidate.headlineFacts.join("; ")}`);
     lines.push(`    why: ${candidate.whyItMatters}`);
@@ -192,6 +199,53 @@ function pushMomentumLines(lines: string[], data: DigestInputData): void {
   }
 }
 
+function pushDigestIntelligenceLines(lines: string[], data: DigestInputData): void {
+  if (data.riskTape && data.riskTape.length > 0) {
+    lines.push("", "Risk Tape (compact reader-facing state):");
+    for (const item of data.riskTape) {
+      lines.push(`  ${item.label}: ${item.value} | tone=${item.tone}${item.detail ? ` | ${item.detail}` : ""}`);
+    }
+  }
+
+  const change = data.changeSummary;
+  if (change) {
+    lines.push("", `What changed since yesterday${change.previousDate ? ` (${change.previousDate})` : ""}:`);
+    if (change.newSignals.length > 0) {
+      lines.push(`  New: ${change.newSignals.map((item) => `${item.label} (${item.detail})`).join("; ")}`);
+    }
+    if (change.worsenedSignals.length > 0) {
+      lines.push(`  Worsened: ${change.worsenedSignals.map((item) => `${item.label} (${item.detail})`).join("; ")}`);
+    }
+    if (change.improvedSignals.length > 0) {
+      lines.push(`  Improved: ${change.improvedSignals.map((item) => `${item.label} (${item.detail})`).join("; ")}`);
+    }
+    if (change.resolvedSignals.length > 0) {
+      lines.push(`  Cleared: ${change.resolvedSignals.map((item) => `${item.label} (${item.detail})`).join("; ")}`);
+    }
+    if (change.repeatedSignals.length > 0) {
+      lines.push(`  Still present: ${change.repeatedSignals.map((item) => item.label).join("; ")}`);
+    }
+  }
+
+  if (data.forwardLookOutcomes && data.forwardLookOutcomes.length > 0) {
+    lines.push("", "Yesterday's forward-look outcomes:");
+    for (const outcome of data.forwardLookOutcomes) {
+      lines.push(`  ${outcome.status.toUpperCase()}: ${outcome.label} | ${outcome.detail}`);
+    }
+  }
+
+  if (data.nextTriggers && data.nextTriggers.length > 0) {
+    lines.push("", "Deterministic Next Triggers (use one for the required forward-look line):");
+    for (const trigger of data.nextTriggers) {
+      lines.push(`  ${trigger.id} | ${trigger.label} | ${trigger.thresholdLabel} | ${trigger.detail}`);
+    }
+  }
+
+  if (data.calmNarrativeFrame) {
+    lines.push("", `Calm Narrative Frame: ${data.calmNarrativeFrame.label} | ${data.calmNarrativeFrame.detail}`);
+  }
+}
+
 export function buildUserPrompt(
   data: DigestInputData,
   recentMeta: { meta: DigestMeta | null; rawText: string | null; title: string | null }[] = [],
@@ -204,6 +258,7 @@ export function buildUserPrompt(
   pushDataQualityLines(lines, data);
   pushEditorialCandidateLines(lines, data);
   pushMomentumLines(lines, data);
+  pushDigestIntelligenceLines(lines, data);
 
   lines.push(
     "",

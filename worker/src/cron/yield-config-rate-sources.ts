@@ -135,6 +135,7 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
   { stablecoinId: "ylds-figure", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" },
   { stablecoinId: "mtbill-midas", spreadBps: 0, label: "T-bill proxy" },
   { stablecoinId: "ousg-ondo-finance", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" },
+  { stablecoinId: "susd-solayer", spreadBps: 0, label: "T-bill proxy" },
 ];
 
 /**

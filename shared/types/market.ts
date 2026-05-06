@@ -10,6 +10,11 @@ import {
 } from "./core";
 
 const PegBucketsSchema = z.record(z.string(), z.number());
+const PriceSourceConfidenceProfileSchema = z.object({
+  activeDexLanes: z.number().int().min(0),
+  freshestDexLaneAgeSec: z.number().int().min(0).nullable(),
+  aggregateLaneOnly: z.boolean(),
+});
 const ChainCirculatingSchema = z.record(
   z.string(),
   z.object({
@@ -37,6 +42,7 @@ const StablecoinDataRawSchema = z.object({
   priceSyncedAt: z.number().nullable().optional(),
   consensusSources: z.array(z.string()).optional(),
   agreeSources: z.array(z.string()).optional(),
+  priceSourceConfidenceProfile: PriceSourceConfidenceProfileSchema.nullable().optional(),
   supplySource: z.string().optional(),
   circulating: PegBucketsSchema,
   circulatingPrevDay: PegBucketsSchema.nullish(),
@@ -64,6 +70,9 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   priceSyncedAt: asset.priceSyncedAt ?? null,
   consensusSources: asset.consensusSources ?? [],
   agreeSources: asset.agreeSources ?? [],
+  ...(asset.priceSourceConfidenceProfile != null
+    ? { priceSourceConfidenceProfile: asset.priceSourceConfidenceProfile }
+    : {}),
   supplySource: asset.supplySource,
   circulating: asset.circulating,
   circulatingPrevDay: asset.circulatingPrevDay ?? {},
@@ -576,10 +585,105 @@ const BlacklistChainOptionSchema = z.object({
   name: z.string(),
 });
 
+const BlacklistNumericDistributionSchema = z.record(z.string(), z.number());
+
+const BlacklistCoverageSupportedSchema = z.object({
+  symbol: z.enum(BLACKLIST_STABLECOINS),
+  stablecoinId: z.string(),
+  chainId: z.string(),
+  chainName: z.string(),
+  contractAddress: z.string(),
+  configKey: z.string(),
+  providerSource: z.enum(["evm-logs", "trongrid", "other"]),
+  eventFamilies: z.array(z.string()),
+  eventTypes: z.array(z.enum(["blacklist", "unblacklist", "destroy"])),
+});
+
+const BlacklistCoverageDeferredSchema = z.object({
+  symbol: z.enum(BLACKLIST_STABLECOINS),
+  chainId: z.string(),
+  reason: z.string(),
+});
+
+const BlacklistCoverageSchema = z.object({
+  supported: z.array(BlacklistCoverageSupportedSchema),
+  unsupportedDeferred: z.array(BlacklistCoverageDeferredSchema),
+  counts: z.object({
+    supportedConfigs: z.number(),
+    unsupportedDeferredConfigs: z.number(),
+    bySymbol: BlacklistNumericDistributionSchema,
+    byChain: BlacklistNumericDistributionSchema,
+    byProviderSource: BlacklistNumericDistributionSchema,
+  }),
+});
+
+const BlacklistFreezeLedgerMetaSchema = z.object({
+  totalRows: z.number(),
+  scopedRows: z.number(),
+  legacyRows: z.number(),
+  oldestObservedAt: z.number().nullable(),
+  newestObservedAt: z.number().nullable(),
+  oldestAgeSec: z.number().nullable(),
+  newestAgeSec: z.number().nullable(),
+  statusDistribution: BlacklistNumericDistributionSchema,
+  sourceDistribution: BlacklistNumericDistributionSchema,
+  freshnessDistribution: z.object({
+    fresh: z.number(),
+    degraded: z.number(),
+    stale: z.number(),
+  }),
+  providerFailedCount: z.number(),
+  lastErrorClassDistribution: BlacklistNumericDistributionSchema,
+  sourceCategoryCounts: z.object({
+    bootstrap: z.number(),
+    current: z.number(),
+    destroy: z.number(),
+    other: z.number(),
+  }),
+  gaps: z.object({
+    tracked: z.number(),
+    recoverable: z.number(),
+    unrecoverable: z.number(),
+    recentRecoverable: z.number(),
+    neverAttempted: z.number(),
+    repeatedFailures: z.number(),
+    oldestRecoverableAgeSec: z.number().nullable(),
+    amountStatusDistribution: BlacklistNumericDistributionSchema,
+    amountSourceDistribution: BlacklistNumericDistributionSchema,
+  }),
+});
+
+const BlacklistDataQualitySchema = z.object({
+  status: z.enum(["ok", "degraded", "stale"]),
+  warnings: z.array(z.string()),
+  amountGaps: z.object({
+    totalEvents: z.number(),
+    recoverable: z.number(),
+    unrecoverable: z.number(),
+    recentRecoverable: z.number(),
+    missingRatio: z.number(),
+    recentWindowSec: z.number(),
+  }),
+  freezeLedger: z.object({
+    providerFailedCount: z.number(),
+    staleSnapshotCount: z.number(),
+    trackedGapCount: z.number(),
+    scopedRows: z.number(),
+    legacyRows: z.number(),
+  }),
+  coverage: z.object({
+    supportedConfigs: z.number(),
+    unsupportedDeferredConfigs: z.number(),
+  }),
+});
+
 export const BlacklistSummaryResponseSchema = z.object({
   stats: BlacklistSummaryStatsSchema,
   chart: z.array(BlacklistChartPointSchema),
   chains: z.array(BlacklistChainOptionSchema),
+  coverage: BlacklistCoverageSchema.optional(),
+  freezeLedgerMeta: BlacklistFreezeLedgerMetaSchema.optional(),
+  dataQuality: BlacklistDataQualitySchema.optional(),
   totalEvents: z.number(),
   methodology: MethodologyEnvelopeSchema.optional(),
 });

@@ -1,0 +1,65 @@
+{
+  "id": "usda-alpha-partner",
+  "name": "Alpha Partner USDA",
+  "symbol": "USDA",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Alpha Partners protocol collateral and managed liquidity reserves on BSC",
+  "pegMechanism": "Protocol-managed dollar token using collateral reserves and incentive mechanisms to support the peg",
+  "detailProvider": "coingecko",
+  "geckoId": "usda-3",
+  "protocolSlug": "alpha-partners",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://alphapartner.vip/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/APalphalabs"
+    },
+    {
+      "label": "Docs",
+      "url": "https://ap-organization-1.gitbook.io/alpha-partners"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "bsc",
+      "address": "0x17eafd08994305d8ace37efb82f1523177ec70ee",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "deploymentModel": "single-chain",
+  "reserves": [
+    {
+      "name": "Protocol-managed collateral and liquidity reserves",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usda-alpha-partner",
+    "display": {
+      "url": "https://ap-organization-1.gitbook.io/alpha-partners",
+      "label": "Alpha Partners docs"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "bsc",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

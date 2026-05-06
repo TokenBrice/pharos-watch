@@ -1,5 +1,5 @@
 import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types/market";
-import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
+import { getBlacklistPriceAssetId } from "@shared/lib/blacklist";
 import { requireAdmin } from "../lib/auth";
 import { errorResponse, jsonResponse, parseOptionalRequestJsonObject, parseQueryParams } from "../lib/api-utils";
 import {
@@ -9,11 +9,20 @@ import {
   type ContractEventConfig,
 } from "../lib/blacklist-contracts";
 import { createBudget, createRateLimiter } from "../lib/evm-logs";
-import { fetchEvmTokenBalance } from "../cron/blacklist/balance-providers";
 import type { ChainRpcConfig } from "../lib/chain-registry";
+import {
+  recoverBlacklistAmountForRow,
+} from "../cron/blacklist/amount-recovery";
+import {
+  blacklistRuntimeBudgetReached,
+  blacklistSubrequestBudgetReached,
+  type BlacklistRunBudget,
+} from "../cron/blacklist/run-budget";
+import { fetchBlacklistAssetPriceFromCache } from "../cron/blacklist/row-preparation";
 
 const VALID_STABLECOINS = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 const RECOVERABLE_GAP_STATUSES = ["recoverable_pending", "provider_failed", "ambiguous"] as const;
+const RUNTIME_BUDGET_MS = 8 * 60_000;
 
 type GapRow = {
   id: string;
@@ -21,6 +30,7 @@ type GapRow = {
   chain_id: string;
   event_type: string;
   address: string;
+  tx_hash: string;
   block_number: number;
   timestamp: number;
   amount_status: string;
@@ -123,17 +133,19 @@ export async function handleRemediateBlacklistAmountGaps(
 
   const rows = await db
     .prepare(
-      `SELECT id, stablecoin, chain_id, event_type, address, block_number, timestamp, amount_status,
+      `SELECT id, stablecoin, chain_id, event_type, address, tx_hash, block_number, timestamp, amount_status,
               amount_attempt_count, amount_last_attempted_at, contract_address, config_key
        FROM blacklist_events
        WHERE ${conditions.join(" AND ")}
        ORDER BY timestamp ASC, id ASC
        LIMIT ?`,
     )
-    .bind(...binds, limit)
+    .bind(...binds, limit + 1)
     .all<GapRow>();
 
-  const candidates = (rows.results ?? []).map(resolveCandidate);
+  const selectedRows = rows.results ?? [];
+  const truncated = selectedRows.length > limit;
+  const candidates = selectedRows.slice(0, limit).map(resolveCandidate);
   const resolutionCounts = candidates.reduce(
     (acc, candidate) => {
       acc[candidate.kind] = (acc[candidate.kind] ?? 0) + 1;
@@ -155,6 +167,11 @@ export async function handleRemediateBlacklistAmountGaps(
       },
       candidateCount: candidates.length,
       resolutionCounts,
+      truncated,
+      budgetExhausted: false,
+      skippedDueBudget: 0,
+      budgetUsed: 0,
+      budgetLimit: 900,
       sample: candidates.slice(0, 10).map((candidate) => ({
         id: candidate.row.id,
         chainId: candidate.row.chain_id,
@@ -174,6 +191,12 @@ export async function handleRemediateBlacklistAmountGaps(
 
   const budget = createBudget(900);
   const limiter = createRateLimiter(4);
+  const runBudget = {
+    subrequestBudget: budget,
+    deadlineMs: Date.now() + RUNTIME_BUDGET_MS,
+    minimumConfigWindowMs: 0,
+  } satisfies BlacklistRunBudget;
+  const assetPriceCache = new Map<BlacklistStablecoin, number | null>();
   const updates: D1PreparedStatement[] = [];
   const attemptAt = Math.floor(Date.now() / 1000);
   let resolved = 0;
@@ -181,8 +204,17 @@ export async function handleRemediateBlacklistAmountGaps(
   let providerFailed = 0;
   let configMissing = 0;
   let configAmbiguous = 0;
+  let budgetExhausted = false;
+  let skippedDueBudget = 0;
 
-  for (const candidate of candidates) {
+  for (let index = 0; index < candidates.length; index++) {
+    if (blacklistRuntimeBudgetReached(runBudget) || blacklistSubrequestBudgetReached(runBudget)) {
+      budgetExhausted = true;
+      skippedDueBudget = candidates.length - index;
+      break;
+    }
+
+    const candidate = candidates[index]!;
     if (candidate.kind !== "resolved") {
       const errorClass = candidate.kind === "ambiguous_config" ? "ambiguous_config" : "config_missing";
       if (candidate.kind === "ambiguous_config") configAmbiguous++;
@@ -201,35 +233,24 @@ export async function handleRemediateBlacklistAmountGaps(
     }
 
     const { row, config } = candidate;
-    if (config.chain.type !== "evm" || config.chain.evmChainId == null) {
-      providerFailed++;
-      updates.push(
-        db.prepare(
-          `UPDATE blacklist_events
-           SET amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
-               amount_last_attempted_at = ?,
-               amount_last_error_class = ?,
-               amount_last_provider = ?,
-               amount_status = ?
-           WHERE id = ?`,
-        ).bind(attemptAt, "provider_unsupported", "none", "provider_failed", row.id),
-      );
-      continue;
+    let assetPriceUsd = assetPriceCache.get(config.stablecoin);
+    if (!assetPriceCache.has(config.stablecoin)) {
+      assetPriceUsd = getBlacklistPriceAssetId(config.stablecoin)
+        ? await fetchBlacklistAssetPriceFromCache(db, config.stablecoin)
+        : null;
+      assetPriceCache.set(config.stablecoin, assetPriceUsd ?? null);
     }
 
-    const amount = await fetchEvmTokenBalance(
-      config,
-      row.address,
-      row.block_number - 1,
-      null,
-      null,
-      limiter,
-      budget,
-      undefined,
+    const recovery = await recoverBlacklistAmountForRow(row, config, {
+      etherscanApiKey: null,
+      drpcApiKey: null,
+      etherscanLimiter: limiter,
+      runBudget,
       chainRpcs,
-    );
+      assetPriceUsd,
+    });
 
-    if (amount == null) {
+    if (recovery.amount == null) {
       providerFailed++;
       updates.push(
         db.prepare(
@@ -240,13 +261,19 @@ export async function handleRemediateBlacklistAmountGaps(
                amount_last_provider = ?,
                amount_status = ?
            WHERE id = ?`,
-        ).bind(attemptAt, "provider_null", "chain_rpc", "provider_failed", row.id),
+        ).bind(
+          attemptAt,
+          recovery.lastErrorClass ?? "provider_null",
+          recovery.lastProvider,
+          recovery.amountStatus,
+          row.id,
+        ),
       );
       continue;
     }
 
     resolved++;
-    if (amount === 0) resolvedZero++;
+    if (recovery.amount === 0) resolvedZero++;
     updates.push(
       db.prepare(
         `UPDATE blacklist_events
@@ -263,15 +290,15 @@ export async function handleRemediateBlacklistAmountGaps(
              amount_last_provider = ?
          WHERE id = ?`,
       ).bind(
-        amount,
-        amount,
-        computeBlacklistAmountUsdAtEvent(config.stablecoin, amount),
-        "historical_balance",
-        "resolved",
+        recovery.amount,
+        recovery.amount,
+        recovery.amountUsd,
+        recovery.amountSource,
+        recovery.amountStatus,
         config.contractAddress,
         config.configKey,
         attemptAt,
-        "chain_rpc",
+        recovery.lastProvider,
         row.id,
       ),
     );
@@ -293,6 +320,9 @@ export async function handleRemediateBlacklistAmountGaps(
     },
     candidateCount: candidates.length,
     resolutionCounts,
+    truncated,
+    budgetExhausted,
+    skippedDueBudget,
     applied: {
       resolved,
       resolvedZero,

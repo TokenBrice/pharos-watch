@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { buildChainRpcs } from "../../lib/chain-registry";
 
 const getReserveAdapterMock = vi.fn();
 const shouldAttemptFetchMock = vi.fn();
@@ -91,6 +92,34 @@ describe("syncLiveReserves", () => {
     vi.resetModules();
     shouldAttemptFetchMock.mockResolvedValue(true);
     recordOutcomeSafeMock.mockResolvedValue(undefined);
+  });
+
+  it("keeps public RPC live-reserve inputs resolvable", () => {
+    const chainRpcs = buildChainRpcs();
+    const missingRpc = ACTIVE_STABLECOINS
+      .filter((coin) => {
+        const primary = coin.liveReservesConfig?.inputs.primary;
+        return primary?.kind === "onchain-evm" && primary.rpcMode === "public-rpc";
+      })
+      .filter((coin) => {
+        const config = coin.liveReservesConfig!;
+        const primary = config.inputs.primary;
+        if (primary.kind !== "onchain-evm") return false;
+
+        const params = config.params;
+        const explicitRpcUrl = typeof params === "object" && params !== null && !Array.isArray(params)
+          ? (params as { rpcUrl?: unknown }).rpcUrl
+          : undefined;
+
+        return !chainRpcs.has(primary.chain)
+          && !(typeof explicitRpcUrl === "string" && explicitRpcUrl.length > 0);
+      })
+      .map((coin) => {
+        const primary = coin.liveReservesConfig!.inputs.primary;
+        return primary.kind === "onchain-evm" ? `${coin.id}:${primary.chain}` : coin.id;
+      });
+
+    expect(missingRpc).toEqual([]);
   });
 
   it("persists reserve snapshot + sync state and returns ok on a clean run", async () => {
@@ -468,6 +497,37 @@ describe("syncLiveReserves", () => {
     }
   });
 
+  it("defers the full queue safely when configured run budget is below adapter timeout", async () => {
+    const adapterFetch = mockAdapterRegistry(async () => ({
+      slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
+    }));
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    const result = await syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      { runBudgetMs: 1, adapterTimeoutMs: 20_000 },
+    );
+    const metadata = JSON.parse(result?.metadata ?? "{}") as {
+      synced?: number;
+      skipped?: number;
+      deferredCoins?: number;
+      runBudgetTruncated?: boolean;
+    };
+
+    expect(adapterFetch).not.toHaveBeenCalled();
+    expect(result?.status).toBe("error");
+    expect(metadata).toMatchObject({
+      synced: 0,
+      skipped: configuredCoinCount,
+      deferredCoins: configuredCoinCount,
+      runBudgetTruncated: true,
+    });
+  });
+
   it("retains shared source-cache failures for the run so a single fetch satisfies every sharing coin", async () => {
     // m0 has >=2 coins sharing the same source-invariant primary URL.
     const m0Coins = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig?.adapter === "m0");
@@ -568,7 +628,7 @@ describe("syncLiveReserves", () => {
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await syncLiveReserves(db, new AbortController().signal, {});
 
     const fallbackAttempt = db.getHistory().find((entry) => (
       entry.sql.includes("reserve_sync_attempt_history")
@@ -584,6 +644,30 @@ describe("syncLiveReserves", () => {
     expect(JSON.parse(metadataJson!)).toMatchObject({
       reason: "adapter-exception",
       attemptSummaries: [
+        {
+          source: "primary",
+          label: "primary:http-json",
+          message: "primary reserve source failed",
+        },
+        {
+          source: "fallback",
+          label: "fallback#1:http-json",
+          message: "fallback reserve source failed",
+        },
+      ],
+    });
+
+    const runMetadata = JSON.parse(result?.metadata ?? "{}") as {
+      attemptFailureSummaries?: Array<{
+        stablecoinId?: string;
+        adapter?: string;
+        attempts?: Array<{ source?: string; label?: string; message?: string }>;
+      }>;
+    };
+    expect(runMetadata.attemptFailureSummaries).toContainEqual({
+      stablecoinId: fallbackCoin!.id,
+      adapter: fallbackCoin!.liveReservesConfig!.adapter,
+      attempts: [
         {
           source: "primary",
           label: "primary:http-json",

@@ -26,6 +26,8 @@ export const CALENDAR_DAILY_FX_PEGS: ReadonlySet<string> = new Set([
   "peggedRUB",
   "peggedUAH",
   "peggedARS",
+  "peggedKGS",
+  "peggedNGN",
 ]);
 
 export function getNaturalFxCadence(pegKey: string): NaturalFxSourceCadence | null {

@@ -16,6 +16,7 @@ vi.mock("../../../lib/collateral-drift", () => ({
 }));
 vi.mock("../../../lib/live-reserves-store", () => ({
   getMaxSyncAge: vi.fn(),
+  computeReserveCompositionOverview: vi.fn(),
 }));
 vi.mock("../../../lib/alerts", () => ({
   sendAlert: vi.fn(async () => {}),
@@ -25,7 +26,7 @@ import { syncLiveReserves } from "../../../cron/sync-live-reserves";
 import { syncRedemptionBackstops } from "../../../cron/sync-redemption-backstops";
 import { syncKinesisSupply } from "../../../cron/sync-kinesis-supply";
 import { checkCollateralDrift } from "../../../lib/collateral-drift";
-import { getMaxSyncAge } from "../../../lib/live-reserves-store";
+import { computeReserveCompositionOverview, getMaxSyncAge } from "../../../lib/live-reserves-store";
 
 describe("runFourHourlyReserveSyncSlot", () => {
   let runLeasedCron: ReturnType<typeof vi.fn>;
@@ -40,6 +41,27 @@ describe("runFourHourlyReserveSyncSlot", () => {
       fallbackCoins: [],
     } as never);
     vi.mocked(getMaxSyncAge).mockResolvedValue(0);
+    vi.mocked(computeReserveCompositionOverview).mockResolvedValue({
+      configuredCoins: 0,
+      freshCoins: 0,
+      staleCoins: 0,
+      missingCoins: 0,
+      degradedCoins: 0,
+      errorCoins: 0,
+      corruptCoins: 0,
+      independentFreshEligible: 0,
+      independentFreshUnverified: 0,
+      staticValidatedFresh: 0,
+      weakProbeFresh: 0,
+      writeTimeoutUncertain: 0,
+      deferredCoins: 0,
+      runBudgetTruncated: false,
+      deferredAt: null,
+      nextCursorStablecoinId: null,
+      persistentlyStaleIndependentCoins: [],
+      lastSuccessAt: null,
+      oldestFreshAgeSec: null,
+    });
     errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     runLeasedCron = vi.fn(async (_job: string, fn: (signal: AbortSignal, reportProgress: unknown) => Promise<unknown>) => {

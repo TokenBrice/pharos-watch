@@ -4,6 +4,7 @@ import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { resolveTrackedStablecoinId } from "./token-resolution";
 import { classifyClPoolType, normalizeFeeRateFromBps } from "./direct-source-helpers";
+import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const PAGE_SIZE = 500;
@@ -114,7 +115,7 @@ async function fetchSugarPools(
     });
     const result = await fetchEvmCallHexAtBlock(chain, sugarAddress, data, "latest", {
       signal,
-      timeoutMs: 15_000,
+      timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS,
       chainRpcs,
       gas: "0x5B8D80",
     });
@@ -129,6 +130,9 @@ async function fetchSugarPools(
     if (decoded.length === 0) break;
     pools.push(...decoded);
     if (decoded.length < PAGE_SIZE) break;
+    if (page === MAX_PAGES - 1) {
+      throw new Error(`pagination cap reached at page ${page + 1}; resumeFromOffset=${MAX_PAGES * PAGE_SIZE}`);
+    }
   }
 
   return pools;
@@ -149,7 +153,7 @@ async function fetchSugarTokens(
   });
   const result = await fetchEvmCallHexAtBlock(chain, sugarAddress, data, "latest", {
     signal,
-    timeoutMs: 15_000,
+    timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS,
     chainRpcs,
     gas: "0x5B8D80",
   });

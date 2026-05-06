@@ -79,6 +79,9 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
               Next deferred cursor: {health.nextCursorStablecoinId}
             </div>
           )}
+          <div>
+            Run budget truncated: {health.runBudgetTruncated ? `yes${health.deferredAt ? ` at ${new Date(health.deferredAt * 1000).toLocaleString()}` : ""}` : "no"}
+          </div>
         </div>
 
         <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">

@@ -537,6 +537,8 @@ export interface StatusResponse {
     weakProbeFresh: number;
     writeTimeoutUncertain: number;
     deferredCoins: number;
+    runBudgetTruncated: boolean;
+    deferredAt: number | null;
     nextCursorStablecoinId: string | null;
     /**
      * Coins whose adapter is classified as independent evidence but whose
@@ -562,6 +564,7 @@ export interface StatusHistoryResponse {
   probe: StatusProbeSummary;
   discrepancy: StatusDiscrepancy;
   transitions: StatusTransition[];
+  reserveComposition: StatusResponse["reserveComposition"] | null;
 }
 
 export interface PublicStatusTransition {

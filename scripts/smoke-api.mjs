@@ -10,6 +10,8 @@ export const STRICT_CONTRACT_SMOKE_PATHS = [
   "/api/stability-index",
   "/api/report-cards",
   "/api/redemption-backstops",
+  "/api/blacklist",
+  "/api/blacklist-summary",
   "/api/mint-burn-flows",
   "/api/stress-signals",
 ];
@@ -265,6 +267,44 @@ export const ENDPOINT_ASSERTIONS = {
       "/api/redemption-backstops missing methodology.version",
     );
     return `${entries.length} redemption entries`;
+  },
+  "/api/blacklist": (result) => {
+    assert(result.status === 200, `/api/blacklist returned ${result.status}`);
+    const body = stripMeta(result.body);
+    assert(body && Array.isArray(body.events), "/api/blacklist missing events[]");
+    assert(isFiniteNumber(body.total) && body.total >= 0, "/api/blacklist total is invalid");
+    for (const event of body.events) {
+      assert(typeof event.stablecoin === "string" && event.stablecoin.length > 0, "/api/blacklist event missing stablecoin");
+      assert(typeof event.amountSource === "string", "/api/blacklist event missing amountSource");
+      assert(typeof event.amountStatus === "string", "/api/blacklist event missing amountStatus");
+      assert("contractAddress" in event, "/api/blacklist event missing contractAddress field");
+      assert("configKey" in event, "/api/blacklist event missing configKey field");
+      assert("eventSignature" in event, "/api/blacklist event missing eventSignature field");
+    }
+    assert(
+      body.methodology && typeof body.methodology.version === "string" && body.methodology.version.length > 0,
+      "/api/blacklist missing methodology.version",
+    );
+    return `${body.events.length}/${body.total} events`;
+  },
+  "/api/blacklist-summary": (result) => {
+    assert(result.status === 200, `/api/blacklist-summary returned ${result.status}`);
+    const body = stripMeta(result.body);
+    assert(body && body.stats && typeof body.stats === "object", "/api/blacklist-summary missing stats");
+    assert(Array.isArray(body.chart), "/api/blacklist-summary missing chart[]");
+    assert(Array.isArray(body.chains), "/api/blacklist-summary missing chains[]");
+    assert(isFiniteNumber(body.totalEvents) && body.totalEvents >= 0, "/api/blacklist-summary totalEvents invalid");
+    assert(
+      isFiniteNumber(body.stats.recoverableGapCount) && body.stats.recoverableGapCount >= 0,
+      "/api/blacklist-summary missing recoverableGapCount",
+    );
+    if (body.stats.trackedFrozenTotal != null) {
+      assert(
+        isFiniteNumber(body.stats.trackedFrozenTotal) && body.stats.trackedFrozenTotal >= 0,
+        "/api/blacklist-summary trackedFrozenTotal invalid",
+      );
+    }
+    return `${body.totalEvents} events, ${body.chains.length} chains`;
   },
   "/api/stress-signals": (result) => {
     assert(result.status === 200, `/api/stress-signals returned ${result.status}`);

@@ -48,13 +48,13 @@ The safety-alert path now has an additional hard dependency: `publish-report-car
 
 ## D1 Schema
 
-The Telegram subscriber, disambiguation, and overflow-queue tables are part of `worker/migrations/0000_baseline.sql`. The baseline includes the core tables and legacy alert/global fields through `global_alert_safety`; launch-alert columns are added by `worker/migrations/0072_telegram_launch_alerts.sql`, and `alert_snooze_until_ts` is added by `worker/migrations/0098_telegram_alert_snooze.sql`. [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) records the pre-squash lineage.
+The Telegram subscriber, disambiguation, and overflow-queue tables are part of `worker/migrations/0000_baseline.sql`. The baseline includes the core tables and legacy alert/global fields through `global_alert_safety`; launch-alert columns are added by `worker/migrations/0072_telegram_launch_alerts.sql`, `alert_snooze_until_ts` is added by `worker/migrations/0098_telegram_alert_snooze.sql`, and pending-selection ownership is added by `worker/migrations/0107_telegram_pending_initiator.sql`. [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) records the pre-squash lineage.
 
 | Table | Purpose | Key fields |
 |-------|---------|------------|
 | `telegram_subscribers` | Per-chat state and defaults | `chat_id`, `username`, legacy default flags, `global_alert_dews`, `global_alert_depeg`, `global_alert_safety`, `global_alert_launch`, `quiet_hours_enabled`, `quiet_hours_start_utc`, `quiet_hours_end_utc`, `alert_snooze_until_ts`, `created_at`, `last_active_at` |
 | `telegram_subscriptions` | Per-chat per-coin alert preferences | composite PK `chat_id, stablecoin_id`, `alert_dews`, `alert_depeg`, `alert_safety`, `alert_launch`, `dews_min_band`, `safety_mode`, `depeg_worsening_bps_step` |
-| `telegram_pending_disambiguation` | Short-lived state for ambiguous ticker replies | `chat_id`, `action_type`, `action_payload`, `resolved_ids`, `ambiguous_ticker`, `candidates`, `remaining_tickers`, `expires_at` |
+| `telegram_pending_disambiguation` | Short-lived state for ambiguous ticker replies | `chat_id`, `action_type`, `action_payload`, `resolved_ids`, `ambiguous_ticker`, `candidates`, `remaining_tickers`, `expires_at`, `initiator_user_id` |
 | `telegram_pending_alerts` | Overflow delivery queue | `id`, `chat_id`, `message_html`, `disable_notification`, `created_at`, `attempts` |
 
 The webhook also uses the generic `cache` table key `telegram:last-update-id` to deduplicate Telegram update re-delivery.
@@ -113,6 +113,8 @@ update types the bot handles.
 
 The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Token`. During rotation it accepts either `TELEGRAM_WEBHOOK_SECRET` or `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`. Invalid secrets, missing bot token, malformed JSON, and non-command messages all return `200 ok` without side effects so Telegram does not keep retrying.
 
+In group and supergroup chats, commands must be addressed to the bot, for example `/subscribe@PharosWatchBot dews usd-top25`. Unaddressed slash commands are ignored so Pharos does not intercept another bot's group command surface. Plain numeric replies for an active disambiguation prompt do not need a bot mention, but the reply must come from the same Telegram user who started the pending selection when `initiator_user_id` is available.
+
 ### Supported Commands
 
 | Command | Behavior |
@@ -143,7 +145,8 @@ The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Toke
 
 Preset watchlists are a v1 convenience layer on top of the existing per-coin subscription model.
 
-- Supported aliases: `usd-top10`, `usd-top25`, `usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, `mcap-ge-100m`
+- Supported canonical aliases: `usd-top10`, `usd-top25`, `usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, `mcap-ge-100m`
+- Top-N peg presets also accept dashed aliases, for example `usd-top-10`, `usd-top-25`, and `usd-top-50`; commands canonicalize them before subscription storage.
 - Resolution happens at command time inside `worker/src/lib/telegram-presets.ts`
 - The resolver uses the current strict `stablecoins` cache plus tracked stablecoin metadata to map each preset alias to concrete active coin IDs
 - `/subscribe ... <preset>` expands the preset into normal `telegram_subscriptions` rows; v1 does not add a separate smart-subscription table
@@ -183,10 +186,11 @@ Ticker parsing lives in `worker/src/lib/telegram-alerts.ts` and is built from `T
 - Ambiguous symbols create a row in `telegram_pending_disambiguation`.
 - Users reply with `1` or `1,2` style selections.
 - Pending disambiguation rows expire after `5 minutes`.
+- Pending rows record the initiating Telegram user when Telegram provides `message.from.id`; in groups, only that user can complete or cancel the selection.
 - Unknown tickers return a contextual error, with a prefix-based suggestion when available.
 - Unknown preset aliases are reported through the same contextual error path, with `/presets` suggested as the discovery surface.
 - `/cancel` clears a pending selection.
-- `/help`, `/list`, and new mutating commands are not trapped behind pending disambiguation; only plain numeric replies are treated as selections.
+- `/help`, `/list`, `/presets`, `/status`, and `/start` are not trapped behind pending disambiguation. New mutating commands clear a pending selection only when they come from the same initiating user.
 
 ### Update Deduplication
 

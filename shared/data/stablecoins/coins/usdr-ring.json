@@ -1,0 +1,73 @@
+{
+  "id": "usdr-ring",
+  "name": "Ring USD",
+  "symbol": "USDR",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Ring protocol crypto collateral and strategy assets managed through the protocol reserve system",
+  "pegMechanism": "Crypto-collateralized synthetic dollar with protocol-controlled mint and liquidity-management routes; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
+  "detailProvider": "coingecko",
+  "geckoId": "ring-usd",
+  "protocolSlug": "ring-protocol",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://ring.exchange/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/ProtocolRing"
+    },
+    {
+      "label": "Docs",
+      "url": "https://ringprotocol.gitbook.io/ring-protocol/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x4ea40dcee961675683e0a2e1721bd49cb9bca913",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "reserves": [
+    {
+      "name": "Ring protocol crypto collateral and liquidity positions",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usdr-ring",
+    "display": {
+      "url": "https://ringprotocol.gitbook.io/ring-protocol/",
+      "label": "Ring Protocol docs"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Redemption backstop not modeled",
+      "message": "Ring Protocol materials describe protocol liquidity controls, but Pharos has not source-reviewed a holder-exercisable redemption route for backstop scoring."
+    }
+  ]
+}

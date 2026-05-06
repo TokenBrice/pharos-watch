@@ -11,7 +11,7 @@ import { throwIfAborted } from "../lib/abort";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
-import { fetchEvmEventsIncremental } from "./blacklist/evm-source";
+import { fetchEvmEventsIncremental, shouldPreferRpcLogScan } from "./blacklist/evm-source";
 import { fetchTronEventsIncremental } from "./blacklist/tron-source";
 import type { BlacklistRow, BlacklistScanResult } from "./blacklist/shared";
 import { backfillAmounts } from "./blacklist/amount-recovery";
@@ -235,6 +235,9 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   let apiErrors = 0;
   let rpcLogConfigs = 0;
   let runtimeBudgetHit = false;
+  let providerCircuitSkips = 0;
+  let etherscanCircuitSkips = 0;
+  let tronGridCircuitSkips = 0;
   const counters = {
     totalInsertedRows: 0,
     enrichCounters: { attempted: 0, succeeded: 0, failed: 0 },
@@ -260,22 +263,29 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   };
   const { configStates, zeroCursorConfigs } = await loadBlacklistConfigStates(db);
   let tronLedgerUpdated = await applyTronLedgerMirrorPass(db, "initial");
+  const etherscanCircuitAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.ETHERSCAN);
 
   // Backfill NULL amounts first — this has priority over new event scanning
   // because the worker may time out before completing the full config loop.
-  try {
-    const backfill = await backfillAmounts(
-      db,
-      etherscanApiKey,
-      drpcApiKey,
-      etherscanLimiter,
-      runBudget,
-      signal,
-      chainRpcs,
-    );
-    runtimeBudgetHit ||= backfill.runtimeBudgetReached;
-  } catch (err) {
-    console.warn("[sync-blacklist] Backfill failed:", err);
+  if (etherscanCircuitAllowed) {
+    try {
+      const backfill = await backfillAmounts(
+        db,
+        etherscanApiKey,
+        drpcApiKey,
+        etherscanLimiter,
+        runBudget,
+        signal,
+        chainRpcs,
+      );
+      runtimeBudgetHit ||= backfill.runtimeBudgetReached;
+    } catch (err) {
+      console.warn("[sync-blacklist] Backfill failed:", err);
+    }
+  } else {
+    providerCircuitSkips++;
+    etherscanCircuitSkips++;
+    console.warn("[sync-blacklist] Etherscan circuit open, skipping EVM amount backfill");
   }
   console.log(`[sync-blacklist] Backfill done, budget: ${budget.count}/${budget.limit}`);
   await reportCronProgress(onProgress, {
@@ -322,6 +332,22 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     if (config.chain.type === "tron" && !(await shouldAttemptFetch(db, CIRCUIT_SOURCE.TRONGRID))) {
       console.log(`[sync-blacklist] TronGrid circuit open, skipping ${configKey}`);
       contractsSkipped++;
+      providerCircuitSkips++;
+      tronGridCircuitSkips++;
+      recordApiErrorConfig(apiErrorConfigs, configKey, config.stablecoin, config.chain.chainId, "trongrid-circuit-open");
+      continue;
+    }
+
+    if (
+      config.chain.type !== "tron"
+      && !shouldPreferRpcLogScan(config.chain.chainId)
+      && !etherscanCircuitAllowed
+    ) {
+      console.log(`[sync-blacklist] Etherscan circuit open, skipping ${configKey}`);
+      contractsSkipped++;
+      providerCircuitSkips++;
+      etherscanCircuitSkips++;
+      recordApiErrorConfig(apiErrorConfigs, configKey, config.stablecoin, config.chain.chainId, "etherscan-circuit-open");
       continue;
     }
 
@@ -366,12 +392,16 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         recordProcessedRows(counters, processed);
 
         if (result.incomplete) {
-          runtimeBudgetHit = true;
+          runtimeBudgetHit ||= !result.apiError;
           console.warn(
-            `[sync-blacklist] Runtime budget reached while scanning ${config.stablecoin} on ${config.chain.chainName}, keeping sync at ts ${lastBlock}`,
+            `[sync-blacklist] Incomplete scan for ${config.stablecoin} on ${config.chain.chainName}, keeping sync at ts ${lastBlock}`,
           );
         }
       } else {
+        if (!shouldPreferRpcLogScan(config.chain.chainId)) {
+          await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, !result.apiError);
+        }
+
         if (result.usedRpcLogs) {
           rpcLogConfigs++;
         }
@@ -393,9 +423,19 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         recordProcessedRows(counters, processed);
 
         if (result.incomplete) {
-          runtimeBudgetHit = true;
+          runtimeBudgetHit ||= !result.apiError;
+          if (result.apiError) {
+            apiErrors++;
+            recordApiErrorConfig(
+              apiErrorConfigs,
+              configKey,
+              config.stablecoin,
+              config.chain.chainId,
+              "incomplete-coverage",
+            );
+          }
           console.warn(
-            `[sync-blacklist] Runtime budget reached while scanning ${config.stablecoin} on ${config.chain.chainName}, keeping sync at block ${lastBlock}`,
+            `[sync-blacklist] Incomplete scan for ${config.stablecoin} on ${config.chain.chainName}, keeping sync at block ${lastBlock}`,
           );
         } else if (result.apiError) {
           apiErrors++;
@@ -460,7 +500,9 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   }, budget);
   // Tolerate up to 25% of configs failing (transient upstream timeouts) before
   // marking the run degraded.  More than 50% is a full error.
-  const status: SyncBlacklistResult["status"] = deriveSyncBlacklistStatus(apiErrors, runtimeBudgetHit);
+  const derivedStatus = deriveSyncBlacklistStatus(apiErrors, runtimeBudgetHit);
+  const status: SyncBlacklistResult["status"] =
+    derivedStatus === "ok" && providerCircuitSkips > 0 ? "degraded" : derivedStatus;
   return {
     status,
     itemCount: counters.totalInsertedRows,
@@ -473,6 +515,9 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       zeroCursorConfigCount: zeroCursorConfigs.length,
       zeroCursorConfigs: zeroCursorConfigs.slice(0, 10),
       rpcLogConfigs,
+      providerCircuitSkips,
+      etherscanCircuitSkips,
+      tronGridCircuitSkips,
       apiErrorClasses,
       runtimeBudgetReached: runtimeBudgetHit,
       subrequestBudgetReached: blacklistSubrequestBudgetReached(runBudget),

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createBudget } from "../../../lib/evm-logs";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import { type BlacklistRunBudget } from "../run-budget";
+import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
 
 vi.mock("../../../lib/blacklist-current-balances", () => ({
   upsertBlacklistCurrentBalance: vi.fn(),
@@ -115,7 +116,13 @@ describe("syncCurrentBalanceCacheForRows", () => {
       makeContext(),
     );
 
-    expect(result).toEqual({ updated: 0, deleted: 0, failed: 0 });
+    expect(result).toEqual({
+      updated: 0,
+      deleted: 0,
+      failed: 0,
+      skippedDueBudget: 0,
+      budgetExhausted: false,
+    });
     expect(deleteBlacklistCurrentBalance).not.toHaveBeenCalled();
     expect(upsertBlacklistCurrentBalance).not.toHaveBeenCalled();
   });
@@ -155,7 +162,13 @@ describe("syncCurrentBalanceCacheForRows", () => {
       makeContext(),
     );
 
-    expect(result).toEqual({ updated: 1, deleted: 0, failed: 0 });
+    expect(result).toEqual({
+      updated: 1,
+      deleted: 0,
+      failed: 0,
+      skippedDueBudget: 0,
+      budgetExhausted: false,
+    });
     expect(deleteBlacklistCurrentBalance).not.toHaveBeenCalled();
     expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(
       expect.anything(),
@@ -163,6 +176,8 @@ describe("syncCurrentBalanceCacheForRows", () => {
         stablecoin: "USDT",
         chainId: "ethereum",
         address: "0x222",
+        configKey: ethereumConfig.configKey,
+        contractAddress: ethereumConfig.contractAddress,
         amountNative: 500,
         amountUsd: 500,
         source: "destroy_event",
@@ -208,18 +223,123 @@ describe("syncCurrentBalanceCacheForRows", () => {
       makeContext(),
     );
 
-    expect(result).toEqual({ updated: 1, deleted: 0, failed: 0 });
+    expect(result).toEqual({
+      updated: 1,
+      deleted: 0,
+      failed: 0,
+      skippedDueBudget: 0,
+      budgetExhausted: false,
+    });
     expect(fetchEvmTokenCurrentBalance).toHaveBeenCalled();
     expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         address: "0x333",
+        configKey: ethereumConfig.configKey,
+        contractAddress: ethereumConfig.contractAddress,
         amountNative: 1250,
         amountUsd: 1250,
         source: "current_balance",
         status: "resolved",
       }),
     );
+  });
+
+  it("records provider failures with scoped identity without supplying replacement amounts", async () => {
+    vi.mocked(fetchEvmTokenCurrentBalance).mockResolvedValue(null);
+
+    const result = await syncCurrentBalanceCacheForRows(
+      {} as D1Database,
+      ethereumConfig,
+      [
+        {
+          id: "3b",
+          stablecoin: "USDT",
+          chain_id: "ethereum",
+          chain_name: "Ethereum",
+          event_type: "blacklist",
+          address: "0x333",
+          amount_native: 1250,
+          amount_usd_at_event: 1250,
+          amount_source: "historical_balance",
+          amount_status: "resolved",
+          tx_hash: "0xblacklist-fail",
+          block_number: 3,
+          timestamp: 12,
+          methodology_version: "3.5",
+          contract_address: ethereumConfig.contractAddress,
+          config_key: ethereumConfig.configKey,
+          event_signature: "AddedBlackList(address)",
+          event_topic0: "0xtopic",
+          amount_attempt_count: 0,
+          amount_last_attempted_at: null,
+          amount_last_error_class: null,
+          amount_last_provider: null,
+          explorer_tx_url: "https://etherscan.io/tx/0xblacklist-fail",
+          explorer_address_url: "https://etherscan.io/address/0x333",
+        },
+      ],
+      makeContext(),
+    );
+
+    expect(result).toEqual({
+      updated: 0,
+      deleted: 0,
+      failed: 1,
+      skippedDueBudget: 0,
+      budgetExhausted: false,
+    });
+    expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        address: "0x333",
+        configKey: ethereumConfig.configKey,
+        contractAddress: ethereumConfig.contractAddress,
+        amountNative: null,
+        amountUsd: null,
+        status: "provider_failed",
+        lastErrorClass: "provider_null",
+        consecutiveFailures: 1,
+      }),
+    );
+  });
+
+  it("updates provider-failure metadata without replacing prior amount columns", async () => {
+    const actual = await vi.importActual<typeof import("../../../lib/blacklist-current-balances")>(
+      "../../../lib/blacklist-current-balances",
+    );
+    const db = mockD1([
+      {
+        match: "UPDATE blacklist_current_balances",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+    ], { requireMatch: true });
+
+    await actual.upsertBlacklistCurrentBalance(db, {
+      stablecoin: "USDT",
+      chainId: "ethereum",
+      address: "0x333",
+      configKey: ethereumConfig.configKey,
+      contractAddress: ethereumConfig.contractAddress,
+      amountNative: null,
+      amountUsd: null,
+      source: "current_balance",
+      status: "provider_failed",
+      observedAt: 123,
+      lastSuccessfulObservedAt: null,
+      attemptCount: 1,
+      lastAttemptedAt: 123,
+      lastErrorClass: "provider_null",
+      consecutiveFailures: 1,
+    });
+
+    const sql = db.getHistory()[0]?.sql ?? "";
+    expect(sql).toContain("UPDATE blacklist_current_balances");
+    expect(sql).not.toContain("amount_native =");
+    expect(sql).not.toContain("amount_usd =");
+    expect(sql).toContain("last_successful_observed_at = COALESCE");
+    expect(sql).toContain("consecutive_failures = COALESCE(consecutive_failures, 0) + 1");
   });
 
   it("does NOT override genuine zero balance with historical amount for non-gold stablecoins", async () => {
@@ -259,7 +379,13 @@ describe("syncCurrentBalanceCacheForRows", () => {
       makeContext(),
     );
 
-    expect(result).toEqual({ updated: 1, deleted: 0, failed: 0 });
+    expect(result).toEqual({
+      updated: 1,
+      deleted: 0,
+      failed: 0,
+      skippedDueBudget: 0,
+      budgetExhausted: false,
+    });
     expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
@@ -307,7 +433,13 @@ describe("syncCurrentBalanceCacheForRows", () => {
       makeContext(),
     );
 
-    expect(result).toEqual({ updated: 1, deleted: 0, failed: 0 });
+    expect(result).toEqual({
+      updated: 1,
+      deleted: 0,
+      failed: 0,
+      skippedDueBudget: 0,
+      budgetExhausted: false,
+    });
     expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({

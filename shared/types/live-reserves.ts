@@ -43,6 +43,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "mento",
   "openeden-usdo",
   "re-metrics",
+  "reserve-protocol-dtf",
   "reservoir",
   "sgforge-coinvertible",
   "solstice-attestation",
@@ -240,6 +241,8 @@ export interface ReserveSyncStateView {
   lastSuccessAt?: number;
   warnings?: string[];
   lastError?: string;
+  failureCategory?: string;
+  uncertainWrite?: boolean;
 }
 
 export interface ReserveProvenanceView {
@@ -333,6 +336,8 @@ export const ReserveSyncStateViewSchema: z.ZodType<ReserveSyncStateView> = z.obj
   lastSuccessAt: z.number().finite().optional(),
   warnings: z.array(z.string()).optional(),
   lastError: z.string().optional(),
+  failureCategory: z.string().optional(),
+  uncertainWrite: z.boolean().optional(),
 }).strict();
 
 export const StablecoinReservesResponseSchema: z.ZodType<StablecoinReservesResponse> = z.object({

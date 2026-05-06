@@ -191,6 +191,7 @@ export function stampPriceMetadata(
   agreeSources?: string[],
   syncedAt?: number | null,
   selectedSource?: string | null,
+  sourceConfidenceProfile?: PeggedAsset["priceSourceConfidenceProfile"],
 ): void {
   asset.priceSource = source;
   asset.priceSelectedSource = selectedSource ?? source;
@@ -205,6 +206,9 @@ export function stampPriceMetadata(
   if (agreeSources !== undefined) {
     asset.agreeSources = agreeSources;
   }
+  if (sourceConfidenceProfile !== undefined) {
+    asset.priceSourceConfidenceProfile = sourceConfidenceProfile;
+  }
 }
 
 export function clearPriceMetadata(asset: PeggedAsset): void {
@@ -218,6 +222,7 @@ export function clearPriceMetadata(asset: PeggedAsset): void {
   asset.priceSyncedAt = null;
   asset.consensusSources = [];
   asset.agreeSources = [];
+  asset.priceSourceConfidenceProfile = null;
 }
 
 export function sumPegBuckets(buckets: Record<string, number> | undefined | null): number {

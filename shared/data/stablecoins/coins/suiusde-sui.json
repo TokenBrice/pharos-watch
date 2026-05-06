@@ -1,0 +1,53 @@
+{
+  "id": "suiusde-sui",
+  "llamaId": "376",
+  "detailProvider": "defillama",
+  "name": "eSui Dollar",
+  "symbol": "suiUSDe",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Ethena whitelabel synthetic-dollar backing using digital-asset collateral and short futures exposure for the Sui deployment",
+  "pegMechanism": "Sui-native Ethena whitelabel dollar asset whose peg quality depends on Ethena-style delta-neutral backing and Sui deployment controls",
+  "geckoId": "esui-dollar",
+  "protocolSlug": "sui",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://sui.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/SuiNetwork"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "sui",
+      "address": "0x41d587e5336f1c86cad50d38a7136db99333bb9bda91cea4ba69115defeb1402::sui_usde::SUI_USDE",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "chainTier": "mature-alt-l1",
+  "deploymentModel": "single-chain",
+  "dependencies": [
+    {
+      "id": "usde-ethena",
+      "weight": 1,
+      "type": "mechanism"
+    }
+  ],
+  "reserves": [
+    {
+      "name": "Ethena whitelabel synthetic-dollar backing",
+      "pct": 100,
+      "risk": "high"
+    }
+  ]
+}

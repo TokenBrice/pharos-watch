@@ -1,0 +1,69 @@
+{
+  "id": "cdp-enosys",
+  "name": "Enosys Loans CDP",
+  "symbol": "CDP",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Flare ecosystem collateral deposited into Enosys Loans CDP positions",
+  "pegMechanism": "Overcollateralized CDP stable asset minted against Enosys Loans collateral and managed through liquidations and repayment rules",
+  "detailProvider": "coingecko",
+  "geckoId": "enosys-loans-cdp",
+  "protocolSlug": "enosys-loans",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://enosys.global/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/enosys_global"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.enosys.global/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "flare",
+      "address": "0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "chainTier": "established-alt-l1",
+  "deploymentModel": "single-chain",
+  "reserves": [
+    {
+      "name": "Enosys Loans overcollateralized crypto positions",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "cdp-enosys",
+    "display": {
+      "url": "https://docs.enosys.global/",
+      "label": "Enosys docs"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "flare",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://flare-api.flare.network/ext/C/rpc"
+    }
+  }
+}

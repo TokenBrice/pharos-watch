@@ -401,7 +401,7 @@ Evaluate:
 - capacity model
 - cost model
 
-If the route is weak, unknown, or impossible to review cleanly, skip it rather than overstating exit quality.
+If the route is weak, unknown, or impossible to review cleanly, skip it rather than overstating exit quality. In that case, make the metadata explicit: soften `pegMechanism`/summary language so it does not imply a modeled holder backstop, and add a short notice or audit note explaining that redemption scoring is intentionally absent pending source review.
 
 ### 5e. Mint/burn flows
 

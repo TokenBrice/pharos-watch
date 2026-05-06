@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { parsePendingDisambiguation } from "../telegram-webhook-parsing";
+import { parseCommand, parsePendingDisambiguation } from "../telegram-webhook-parsing";
 import type { PendingDisambiguationRow } from "../telegram-webhook-shared";
 
 function makePendingRow(overrides: Partial<PendingDisambiguationRow> = {}): PendingDisambiguationRow {
@@ -15,9 +15,28 @@ function makePendingRow(overrides: Partial<PendingDisambiguationRow> = {}): Pend
     ]),
     remaining_tickers: JSON.stringify(["USDC"]),
     expires_at: 1_700_000_000,
+    initiator_user_id: "999",
     ...overrides,
   };
 }
+
+describe("parseCommand", () => {
+  it("normalizes addressed group commands while preserving the bot mention", () => {
+    expect(parseCommand("/subscribe@PharosWatchBot dews usd-top25")).toEqual({
+      command: "/subscribe",
+      args: "dews usd-top25",
+      botMention: "pharoswatchbot",
+    });
+  });
+
+  it("keeps unaddressed commands distinguishable from addressed commands", () => {
+    expect(parseCommand("/help")).toEqual({
+      command: "/help",
+      args: "",
+      botMention: null,
+    });
+  });
+});
 
 describe("parsePendingDisambiguation", () => {
   it("falls back to legacy alert types when action_payload is malformed", () => {
@@ -68,6 +87,7 @@ describe("parsePendingDisambiguation", () => {
     expect(parsed).toMatchObject({
       actionType: "subscribe",
       presetIds: ["usd-top25"],
+      initiatorUserId: "999",
     });
   });
 

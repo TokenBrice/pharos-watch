@@ -22,7 +22,7 @@ describe("useBlacklistEventsPage", () => {
 
   it("includes sort fields in the query key", () => {
     useBlacklistEventsPage({
-      stablecoin: "usdc-circle",
+      stablecoin: "USDC",
       chainName: "Ethereum",
       eventType: "blacklist",
       query: "0xabc",
@@ -35,7 +35,7 @@ describe("useBlacklistEventsPage", () => {
     expect(useApiQueryWithMetaMock).toHaveBeenCalledWith(
       [
         "blacklist-events",
-        "usdc-circle",
+        "USDC",
         "Ethereum",
         "blacklist",
         "0xabc",
@@ -44,7 +44,7 @@ describe("useBlacklistEventsPage", () => {
         25,
         50,
       ],
-      "/api/blacklist?stablecoin=usdc-circle&chain=Ethereum&eventType=blacklist&q=0xabc&sortBy=stablecoin&sortDirection=asc&limit=25&offset=50",
+      "/api/blacklist?stablecoin=USDC&chain=Ethereum&eventType=blacklist&q=0xabc&sortBy=stablecoin&sortDirection=asc&limit=25&offset=50",
       CRON_BLACKLIST,
       expect.anything(),
     );

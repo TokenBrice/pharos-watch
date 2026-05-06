@@ -3,9 +3,12 @@ import { LIVE_RESERVE_ADAPTER_KEYS } from "@shared/types/live-reserves";
 import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS,
+  LIVE_RESERVE_ADAPTER_PROVENANCE,
+  LIVE_RESERVE_ADAPTER_STATUS_VALUES,
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { getReserveAdapter } from "../index";
 
 const VALID_INPUT_KINDS = new Set([
@@ -65,6 +68,36 @@ describe("adapter registry completeness", () => {
     const definitionKeys = Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS).sort();
     const canonicalKeys = [...LIVE_RESERVE_ADAPTER_KEYS].sort();
     expect(definitionKeys).toEqual(canonicalKeys);
+  });
+
+  it("adapter provenance covers every canonical key with an explicit status and rationale", () => {
+    const provenanceKeys = Object.keys(LIVE_RESERVE_ADAPTER_PROVENANCE).sort();
+    const canonicalKeys = [...LIVE_RESERVE_ADAPTER_KEYS].sort();
+    const validStatuses = new Set(LIVE_RESERVE_ADAPTER_STATUS_VALUES);
+    expect(provenanceKeys).toEqual(canonicalKeys);
+
+    for (const key of LIVE_RESERVE_ADAPTER_KEYS) {
+      const provenance = LIVE_RESERVE_ADAPTER_PROVENANCE[key];
+      expect(validStatuses.has(provenance.status)).toBe(true);
+      expect(provenance.rationale.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it("active adapter provenance matches live-reserve metadata usage", () => {
+    const configuredKeys = new Set(
+      ACTIVE_STABLECOINS
+        .map((coin) => coin.liveReservesConfig?.adapter)
+        .filter((key): key is (typeof LIVE_RESERVE_ADAPTER_KEYS)[number] => !!key),
+    );
+
+    for (const key of LIVE_RESERVE_ADAPTER_KEYS) {
+      const provenance = LIVE_RESERVE_ADAPTER_PROVENANCE[key];
+      if (configuredKeys.has(key)) {
+        expect(provenance.status, `${key} is configured and should be marked active`).toBe("active");
+      } else {
+        expect(provenance.status, `${key} is unbound and must be staged, parked, or retired`).not.toBe("active");
+      }
+    }
   });
 
   it("LiveReservesConfigSchema accepts a representative config", () => {

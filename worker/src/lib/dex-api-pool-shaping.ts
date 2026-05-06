@@ -48,6 +48,68 @@ export function isPreferredDirectApiPool(
   return isEligibleDirectApiPool(pool, minTvlUsd) && Number.isFinite(pool.volume24hUsd) && pool.volume24hUsd > 0;
 }
 
+function toPositiveFiniteNumberOrNull(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function toNonNegativeFiniteNumberOrNull(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+export interface DexApiPoolNormalizationResult {
+  pools: DexApiPool[];
+  skippedInvalidUnitCount: number;
+}
+
+export function normalizeDexApiPoolsForMerge(pools: DexApiPool[]): DexApiPoolNormalizationResult {
+  const normalizedPools: DexApiPool[] = [];
+  let skippedInvalidUnitCount = 0;
+
+  for (const pool of pools) {
+    const tvlUsd = toPositiveFiniteNumberOrNull(pool.tvlUsd);
+    if (tvlUsd == null) {
+      skippedInvalidUnitCount++;
+      continue;
+    }
+
+    const tokens = pool.tokens
+      .filter((token) => typeof token.address === "string" && token.address.trim().length > 0)
+      .map((token) => ({
+        ...token,
+        priceUsd: toPositiveFiniteNumberOrNull(token.priceUsd),
+        weight: toPositiveFiniteNumberOrNull(token.weight),
+      }));
+    if (tokens.length < 2) {
+      skippedInvalidUnitCount++;
+      continue;
+    }
+
+    const balances = Array.isArray(pool.balances) &&
+      pool.balances.length === tokens.length &&
+      pool.balances.every((balance) => toNonNegativeFiniteNumberOrNull(balance) != null)
+      ? pool.balances
+      : null;
+    const tokenVolumes24h = Array.isArray(pool.tokenVolumes24h) &&
+      pool.tokenVolumes24h.length === tokens.length &&
+      pool.tokenVolumes24h.every((volume) => toNonNegativeFiniteNumberOrNull(volume) != null)
+      ? pool.tokenVolumes24h
+      : null;
+
+    normalizedPools.push({
+      ...pool,
+      tokens,
+      price: toPositiveFiniteNumberOrNull(pool.price),
+      tvlUsd,
+      volume24hUsd: toNonNegativeFiniteNumberOrNull(pool.volume24hUsd) ?? 0,
+      feeRate: toPositiveFiniteNumberOrNull(pool.feeRate),
+      balances,
+      ...(tokenVolumes24h ? { tokenVolumes24h } : { tokenVolumes24h: null }),
+    });
+  }
+
+  return { pools: normalizedPools, skippedInvalidUnitCount };
+}
+
 function getDisplayTokenSymbol(token: DexApiPoolToken): string {
   return normalizeDexSymbol(token.symbol) || token.address.slice(0, 10);
 }

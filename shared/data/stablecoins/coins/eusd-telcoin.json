@@ -1,0 +1,87 @@
+{
+  "id": "eusd-telcoin",
+  "name": "eUSD",
+  "symbol": "eUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash and high-quality liquid dollar reserves managed by Telcoin Digital Asset Bank for the eUSD issued token",
+  "pegMechanism": "Bank-issued dollar token with KYC-gated mint and redemption through Telcoin banking rails",
+  "detailProvider": "coingecko",
+  "geckoId": "eusd-2",
+  "cmcSlug": "eusd-telcoindab",
+  "protocolSlug": "telcoin-bank",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://bank.telco.in/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/telcoin"
+    },
+    {
+      "label": "Docs",
+      "url": "https://bank.telco.in/terms-of-use"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "Nebraska Department of Banking and Finance",
+    "license": "Digital Asset Depository Institution"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x14913815bcfde78baead2111f463d038ac9c2949",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0x14913815bcfde78baead2111f463d038ac9c2949",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0x14913815bcfde78baead2111f463d038ac9c2949",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "canBeBlacklisted": "possible",
+  "reserves": [
+    {
+      "name": "Cash and high-quality dollar reserve assets",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "eusd-telcoin",
+    "display": {
+      "url": "https://bank.telco.in/",
+      "label": "Telcoin Digital Asset Bank"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

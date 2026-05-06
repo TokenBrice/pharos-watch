@@ -1,6 +1,16 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.99` (2026-02-09 -> 2026-04-21).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.991` (2026-02-09 -> 2026-05-05).
+
+---
+
+## v3.991 — Public transparency and snapshot semantics (2026-05-05)
+
+- **API artifact correction** — OpenAPI/Postman now document `/api/blacklist?stablecoin=` as an uppercase blacklist-tracker symbol filter (for example `USDT`), not a canonical Pharos stablecoin ID
+- **Provenance UI** — blacklist table/detail surfaces expose amount source/status, contract/config metadata in CSV, and last-known snapshot context instead of rendering unresolved values as plain blanks
+- **Snapshot semantics clarified** — public frozen totals are described as last-known successful freeze-ledger snapshots; provider refresh failures preserve the previous successful value while surfacing status/provenance
+- **Identity semantics clarified** — new freeze-ledger snapshots are contract/config-scoped, with legacy symbol/chain/address fallback only for older rows until remediation
+- **Tron missing-balance correction** — missing account/token-balance data is documented as null/provider-missing rather than false zero
 
 ---
 

@@ -147,6 +147,7 @@ export async function persistPendingDisambiguation(
     candidates: ResolvedCoin[];
     remainingTickers: string[];
     alertTypes?: Set<string>;
+    initiatorUserId: string | null;
   },
 ): Promise<void> {
   await db
@@ -160,9 +161,10 @@ export async function persistPendingDisambiguation(
         ambiguous_ticker,
         candidates,
         remaining_tickers,
-        expires_at
+        expires_at,
+        initiator_user_id
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(chat_id) DO UPDATE SET
         action_type = excluded.action_type,
         action_payload = excluded.action_payload,
@@ -171,7 +173,8 @@ export async function persistPendingDisambiguation(
         ambiguous_ticker = excluded.ambiguous_ticker,
         candidates = excluded.candidates,
         remaining_tickers = excluded.remaining_tickers,
-        expires_at = excluded.expires_at
+        expires_at = excluded.expires_at,
+        initiator_user_id = excluded.initiator_user_id
     `)
     .bind(
       input.chatId,
@@ -183,6 +186,7 @@ export async function persistPendingDisambiguation(
       JSON.stringify(input.candidates),
       JSON.stringify(input.remainingTickers),
       unixNow() + DISAMBIGUATION_TTL_SEC,
+      input.initiatorUserId,
     )
     .run();
 }

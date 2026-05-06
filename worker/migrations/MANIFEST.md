@@ -50,6 +50,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0104     | `0104_blacklist_mirror_zero_permanently_unavailable.sql` | Stamp EURC mirror-zero rows as permanently_unavailable to exit backfill pool         |
 | 0105     | `0105_depeg_event_provenance.sql`               | Add `confirmation_sources` + `pending_reason` nullable TEXT columns to `depeg_events` for post-promotion provenance              |
 | 0106     | `0106_mbe_counted_coin_chain_index.sql`         | Add partial counted-flow index for mint/burn event totals and page reads                       |
+| 0107     | `0107_telegram_pending_initiator.sql`           | Add nullable `initiator_user_id` to Telegram pending disambiguation state for group-chat ownership checks |
 
 ## Retired Individual Migrations
 

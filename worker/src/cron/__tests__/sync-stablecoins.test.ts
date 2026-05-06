@@ -2125,7 +2125,7 @@ describe("syncStablecoins", () => {
             "coingecko:pleasing-gold": {
               price: 5_119.117514760049,
               symbol: "PGOLD",
-              timestamp: 1_773_122_336,
+              timestamp: Math.floor(Date.now() / 1000) - 60,
               confidence: 0.99,
             },
           },
@@ -2437,7 +2437,7 @@ describe("syncStablecoins", () => {
             "coingecko:gold-token-sa-dgld-tokenized-gold": {
               price: 10_700,
               symbol: "DGLD",
-              timestamp: 1_773_122_336,
+              timestamp: nowSec - 60,
               confidence: 0.99,
             },
           },

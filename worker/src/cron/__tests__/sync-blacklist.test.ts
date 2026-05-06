@@ -98,10 +98,25 @@ vi.mock("../../lib/evm-logs", () => ({
         fn(),
   ),
   decodeAddress: vi.fn((hex: string) => "0x" + hex.slice(-40)),
+  decodeAddressWord: vi.fn((hex: string | null | undefined) =>
+    typeof hex === "string" && /^(0x)?[0-9a-fA-F]{64}$/.test(hex)
+      ? "0x" + hex.slice(-40)
+      : null,
+  ),
   decodeUint256: vi.fn(() => 1000000),
+  decodeUint256Word: vi.fn((hex: string | null | undefined) =>
+    typeof hex === "string" && /^(0x)?[0-9a-fA-F]{64}$/.test(hex) ? 1000000 : null,
+  ),
+  decodeUint256AtSlotOrNull: vi.fn(() => 1000000),
   getEvmBlockNumber: vi.fn(async () => 20000000),
   fetchEvmLogsForTopic: vi.fn(async () => []),
+  fetchEvmLogsForTopicWithCompleteness: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 99999999 })),
   fetchEvmLogsForTopics: vi.fn(async () => []),
+  readDataWord: vi.fn((hex: string, slotIndex: number) => {
+    const cleaned = hex.startsWith("0x") ? hex.slice(2) : hex;
+    const start = slotIndex * 64;
+    return cleaned.length >= start + 64 ? "0x" + cleaned.slice(start, start + 64) : null;
+  }),
 }));
 
 vi.mock("../../lib/chain-registry", () => ({
@@ -143,7 +158,8 @@ vi.mock("@shared/lib/chains", () => ({
 }));
 
 import { syncBlacklist, type SyncBlacklistOptions } from "../sync-blacklist";
-import { fetchEvmLogsForTopic, getEvmBlockNumber } from "../../lib/evm-logs";
+import { fetchEvmLogsForTopicWithCompleteness, getEvmBlockNumber } from "../../lib/evm-logs";
+import type { EtherscanLogEntry, EvmLogFetchResult } from "../../lib/evm-logs";
 import { getLastBlock, setLastBlock, batchExecute } from "../../lib/db";
 import { fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockTimestamps } from "../../lib/alchemy-logs";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
@@ -179,6 +195,14 @@ function makeDb() {
   ]);
 }
 
+function completeEtherscanLogs(logs: EtherscanLogEntry[] = []): EvmLogFetchResult {
+  return { logs, complete: true, scannedToBlock: 99999999 };
+}
+
+function failedEtherscanLogs(): EvmLogFetchResult {
+  return { logs: [], complete: false, scannedToBlock: 0, failureReason: "test-failure" };
+}
+
 describe("syncBlacklist", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -188,7 +212,7 @@ describe("syncBlacklist", () => {
     vi.mocked(getLastBlock).mockResolvedValue(0);
     vi.mocked(setLastBlock).mockResolvedValue(undefined);
     vi.mocked(batchExecute).mockImplementation(async (_db, stmts) => stmts.length);
-    vi.mocked(fetchEvmLogsForTopic).mockResolvedValue([]);
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
     vi.mocked(getEvmBlockNumber).mockResolvedValue(20000000);
     vi.mocked(fetchAlchemyLogs).mockResolvedValue({
       logs: [],
@@ -221,7 +245,7 @@ describe("syncBlacklist", () => {
     const db = makeDb();
 
     // Simulate EVM logs for the USDC config — one blacklist event
-    vi.mocked(fetchEvmLogsForTopic).mockResolvedValueOnce([
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValueOnce(completeEtherscanLogs([
       {
         address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
         topics: [
@@ -234,7 +258,7 @@ describe("syncBlacklist", () => {
         transactionHash: "0xabc123",
         logIndex: "0x0",
       },
-    ]);
+    ]));
 
     // Stub global fetch for Tron API (returns empty events)
     vi.stubGlobal(
@@ -268,7 +292,7 @@ describe("syncBlacklist", () => {
       { match: "blacklist_events", rows: [] },
     ]);
 
-    vi.mocked(fetchEvmLogsForTopic).mockResolvedValueOnce([
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValueOnce(completeEtherscanLogs([
       {
         address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
         topics: [
@@ -281,7 +305,7 @@ describe("syncBlacklist", () => {
         transactionHash: "0xdup123",
         logIndex: "0x0",
       },
-    ]);
+    ]));
 
     vi.stubGlobal(
       "fetch",
@@ -308,7 +332,7 @@ describe("syncBlacklist", () => {
     const db = makeDb();
 
     // Simulate Etherscan returning null (API error) for the EVM config
-    vi.mocked(fetchEvmLogsForTopic).mockResolvedValueOnce(null as unknown as never[]);
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValueOnce(failedEtherscanLogs());
 
     // Tron fetch succeeds with one event for AddedBlackList only
     const fetchMock = vi.fn(async (url: string | Request) => {
@@ -364,10 +388,109 @@ describe("syncBlacklist", () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("trongrid.io"))).toBe(true);
   });
 
+  it("runs Tron and RPC-primary configs when the Etherscan circuit is open", async () => {
+    const openedAt = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: "circuit:etherscan",
+            value: JSON.stringify({
+              state: "open",
+              consecutiveFailures: 3,
+              lastFailureAt: openedAt,
+              lastSuccessAt: null,
+              openedAt,
+            }),
+          },
+        ],
+      },
+      { match: "blacklist_sync_state", rows: [] },
+      { match: "blacklist_events", rows: [] },
+    ]);
+
+    const fetchMock = vi.fn(async (url: string | Request) => {
+      const urlStr = typeof url === "string" ? url : url.url;
+      if (urlStr.includes("trongrid.io/v1/contracts") && urlStr.includes("event_name=AddedBlackList")) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: [
+              {
+                block_number: 50000000,
+                block_timestamp: 1718650752000,
+                transaction_id: "tx-tron-circuit",
+                event_index: 0,
+                event_name: "AddedBlackList",
+                result: { _user: "0x00000000000000000000000000000000000000cd" },
+              },
+            ],
+            meta: {},
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(JSON.stringify({ success: true, data: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncBlacklist(buildTestOpts({ db }));
+    const meta = JSON.parse(result.metadata);
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(1);
+    expect(meta.etherscanCircuitSkips).toBeGreaterThan(0);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("trongrid.io"))).toBe(true);
+    expect(fetchEvmLogsForTopicWithCompleteness).not.toHaveBeenCalled();
+    expect(fetchAlchemyLogs).toHaveBeenCalled();
+  });
+
+  it("marks TronGrid circuit-open skips as degraded instead of successful completion", async () => {
+    const openedAt = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: "circuit:trongrid",
+            value: JSON.stringify({
+              state: "open",
+              consecutiveFailures: 3,
+              lastFailureAt: openedAt,
+              lastSuccessAt: null,
+              openedAt,
+            }),
+          },
+        ],
+      },
+      { match: "blacklist_sync_state", rows: [] },
+      { match: "blacklist_events", rows: [] },
+    ]);
+    const fetchMock = vi.fn(
+      async (_url: string | Request) =>
+        new Response(JSON.stringify({ success: true, data: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncBlacklist(buildTestOpts({ db }));
+    const meta = JSON.parse(result.metadata);
+
+    expect(result.status).toBe("degraded");
+    expect(meta.tronGridCircuitSkips).toBe(1);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("trongrid.io/v1/contracts"))).toBe(false);
+  });
+
   it("reapplies the Tron ledger mirror after refreshing current balances", async () => {
     const db = makeDb();
 
-    vi.mocked(fetchEvmLogsForTopic).mockResolvedValue([]);
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
 
     const fetchMock = vi.fn(async (url: string | Request) => {
       const urlStr = typeof url === "string" ? url : url.url;
@@ -430,7 +553,7 @@ describe("syncBlacklist", () => {
   it("returns zero events when all APIs return empty", async () => {
     const db = makeDb();
 
-    vi.mocked(fetchEvmLogsForTopic).mockResolvedValue([]);
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
 
     // Tron API returns empty
     vi.stubGlobal(
@@ -456,12 +579,12 @@ describe("syncBlacklist", () => {
   it("stops cleanly before the cron wrapper timeout when runtime budget is nearly exhausted", async () => {
     const db = makeDb();
 
-    vi.mocked(fetchEvmLogsForTopic)
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness)
       .mockImplementationOnce(async () => {
         vi.setSystemTime(new Date("2025-06-15T12:06:30Z"));
-        return [];
+        return completeEtherscanLogs();
       })
-      .mockResolvedValue([]);
+      .mockResolvedValue(completeEtherscanLogs());
 
     vi.stubGlobal(
       "fetch",
@@ -485,7 +608,7 @@ describe("syncBlacklist", () => {
   it("advances sync state for EVM chains toward chain head when no events", async () => {
     const db = makeDb();
 
-    vi.mocked(fetchEvmLogsForTopic).mockResolvedValue([]);
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
     vi.mocked(getEvmBlockNumber).mockResolvedValue(20000000);
 
     vi.stubGlobal(
@@ -642,7 +765,7 @@ describe("syncBlacklist", () => {
     vi.mocked(getLastBlock).mockImplementation(async (_db, configKey: string) =>
       configKey.startsWith("base-") ? 0 : 100,
     );
-    vi.mocked(fetchEvmLogsForTopic).mockResolvedValue([]);
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
     vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
       logs: [],
       complete: false,
@@ -679,6 +802,74 @@ describe("syncBlacklist", () => {
     expect(setLastBlock).toHaveBeenCalledWith(db, "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", 12345);
   });
 
+  it("does not advance a shared Etherscan cursor when one configured topic fails", async () => {
+    const db = makeDb();
+    const ethereumConfig = CONTRACT_CONFIGS.find((config) => config.chain.chainId === "ethereum");
+    expect(ethereumConfig).toBeDefined();
+    if (!ethereumConfig) return;
+
+    const previousEvents = ethereumConfig.events;
+    const firstEvent = previousEvents[0];
+    expect(firstEvent).toBeDefined();
+    if (!firstEvent) return;
+    ethereumConfig.events = [
+      ...previousEvents,
+      {
+        signature: "UnBlacklisted(address)",
+        topicHash: "0x117e3210bb9aa7d9baff172026820255c6f6c30ba8999d1c2fd88e2848137c4e",
+        eventType: "unblacklist",
+        hasAmount: false,
+      },
+    ];
+
+    vi.mocked(getLastBlock).mockImplementation(async (_db, configKey: string) =>
+      configKey.startsWith("ethereum-") ? 100 : 100,
+    );
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness)
+      .mockResolvedValueOnce(completeEtherscanLogs([
+        {
+          address: ethereumConfig.contractAddress,
+          topics: [
+            firstEvent.topicHash,
+            "0x000000000000000000000000abcdef1234567890abcdef1234567890abcdef12",
+          ],
+          data: "0x",
+          blockNumber: "0xc8",
+          timeStamp: "0x6670a780",
+          transactionHash: "0xpartial-topic",
+          logIndex: "0x0",
+        },
+      ]))
+      .mockResolvedValueOnce(failedEtherscanLogs())
+      .mockResolvedValue(completeEtherscanLogs());
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    );
+
+    try {
+      const result = await syncBlacklist(buildTestOpts({ db }));
+      const meta = JSON.parse(result.metadata);
+
+      expect(meta.apiErrors).toBe(1);
+      expect(meta.eventsFetched).toBe(0);
+      expect(setLastBlock).not.toHaveBeenCalledWith(
+        db,
+        "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        expect.any(Number),
+      );
+    } finally {
+      ethereumConfig.events = previousEvents;
+    }
+  });
+
   it("does not advance a multi-topic RPC cursor when budget is exhausted before all topics are scanned", async () => {
     const db = makeDb();
     const baseConfig = CONTRACT_CONFIGS.find((config) => config.chain.chainId === "base");
@@ -699,7 +890,7 @@ describe("syncBlacklist", () => {
     vi.mocked(getLastBlock).mockImplementation(async (_db, configKey: string) =>
       configKey.startsWith("base-") ? 0 : 100,
     );
-    vi.mocked(fetchEvmLogsForTopic).mockResolvedValue([]);
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
     vi.mocked(fetchAlchemyLogs).mockImplementationOnce(async (
       _rpcUrl,
       _contractAddress,
@@ -758,7 +949,7 @@ describe("syncBlacklist", () => {
     vi.mocked(getLastBlock).mockImplementation(async (_db, configKey: string) =>
       configKey.startsWith("base-") ? 0 : 100,
     );
-    vi.mocked(fetchEvmLogsForTopic).mockResolvedValue([]);
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
     vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
       logs: [],
       complete: true,

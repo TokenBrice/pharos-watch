@@ -1,0 +1,80 @@
+{
+  "id": "susd-hedgecore",
+  "name": "Staked USD Coin",
+  "symbol": "SUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDC deposited into HedgeCore and routed through Venus Protocol yield strategies on BSC",
+  "pegMechanism": "Users deposit USDC to mint soul-bound sUSD, with yield distributed through HedgeCore mechanisms and liquidity exposed through hUSDC",
+  "detailProvider": "coingecko",
+  "geckoId": "staked-usd-coin",
+  "protocolSlug": "hedgecore",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://hedgecore.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/hedgecore_io"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.hedgecore.io/docs/protocol/yield-generation"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "bsc",
+      "address": "0xbe1922750760c4cae69edb6fe79a22ae9b62a23d",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "established-alt-l1",
+  "deploymentModel": "single-chain",
+  "canBeBlacklisted": "possible",
+  "reserves": [
+    {
+      "name": "USDC / Venus Protocol lending strategy",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "susd-hedgecore",
+    "display": {
+      "url": "https://docs.hedgecore.io/docs/protocol/yield-generation",
+      "label": "HedgeCore docs"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "bsc",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "HedgeCore Venus strategy yield",
+    "yieldType": "lending-vault"
+  },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Restricted transfer and redemption path",
+      "message": "HedgeCore docs describe sUSD as soul-bound, and early redemption is operator-controlled rather than a general liquid backstop."
+    }
+  ]
+}

@@ -192,6 +192,7 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
         <HistorySection
           allTransitions={allTransitions}
           latestTransition={latestTransition}
+          reserveComposition={data.reserveComposition}
           historyWindow={historyWindow}
           setHistoryWindow={setHistoryWindow}
           historyLoading={historyLoading}

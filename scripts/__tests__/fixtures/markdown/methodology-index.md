@@ -95,6 +95,8 @@ The blacklist tracker monitors issuer-controlled freeze, blocklist, account-paus
 
 Events are normalized by chain, stablecoin, action type, native amount, USD amount, and amount-status provenance. Recoverable amount gaps are queued for repair, while permanently unavailable rows remain auditable without polluting public aggregates.
 
+Frozen-total summaries use last-known successful freeze-ledger snapshots. New snapshots are contract/config scoped so same-symbol deployments do not overwrite each other; legacy rows can fall back to older address identity until remediated.
+
 Blacklist exposure feeds report-card dependency and resilience review because the ability to freeze or destroy balances is a material operational risk even when the peg is stable.
 
 

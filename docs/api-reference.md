@@ -16,7 +16,7 @@ The runtime now uses three HTTP lanes:
 
 Static dataset exports are served from the public website, not from the Worker API, and do not require `X-API-Key`. The Stablecoin Cemetery export is available as JSON at `https://pharos.watch/datasets/stablecoin-cemetery.json` and CSV at `https://pharos.watch/datasets/stablecoin-cemetery.csv`.
 
-Machine-readable integration artifacts are also served from the public website for onboarding. The OpenAPI endpoint catalogue is available at `https://pharos.watch/openapi.json`, and Postman artifacts are available at `https://pharos.watch/postman/pharos-api.postman_collection.json` plus `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both Postman files, then replace the environment `apiKey` placeholder with a real `X-API-Key`.
+Machine-readable integration artifacts are also served from the public website for onboarding. The OpenAPI endpoint catalogue is available at `https://pharos.watch/openapi.json`, and Postman artifacts are available at `https://pharos.watch/postman/pharos-api.postman_collection.json` plus `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both Postman files, then replace the environment `apiKey` placeholder with a real `X-API-Key`. The public artifacts intentionally exclude Cloudflare-Access-gated admin routes; use the operator documentation for admin dry-runs.
 
 Browser consumers should use same-origin `/_site-data/*` via the frontend helpers in `src/lib/api.ts`. In production, that Pages proxy targets `https://site-api.pharos.watch` through `SITE_API_ORIGIN`. Direct integrations, CI smoke, and build-time sync scripts should target `https://api.pharos.watch`.
 
@@ -306,7 +306,16 @@ The canonical `stablecoins` cache is written only after `StablecoinListResponseS
 | `chainCirculating`     | `Record<string, ChainCirculating>` | Per-chain breakdown. For `"coingecko-gap-fill"` and `"defillama-history-gap-fill"` assets this remains DefiLlama-led unless the missing total can be allocated safely to one tracked chain, so the per-chain sum may be a lower bound on total supply. |
 | `chains`               | `string[]`                         | List of chain names where the token is deployed                                                                                                   |
 | `consensusSources`     | `string[]`                         | Source names that returned a valid price for this coin during the sync cycle. Defaults to `[]` when absent.                                        |
+| `priceSourceConfidenceProfile` | `PriceSourceConfidenceProfile \| undefined` | Present for DEX-inclusive primary prices. Summarizes active protocol DEX lanes, the freshest DEX lane age, and whether the price relies only on the aggregate `dex-promoted` lane. |
 | `agreeSources`         | `string[] \| undefined`            | Compatibility alias for agreeing/current price sources when present                                                                                |
+
+**`PriceSourceConfidenceProfile`**
+
+| Field                   | Type                 | Description                                                                                   |
+| ----------------------- | -------------------- | --------------------------------------------------------------------------------------------- |
+| `activeDexLanes`        | `number`             | Count of accepted protocol-specific DEX lanes such as `balancer-dex` or `raydium-dex`.         |
+| `freshestDexLaneAgeSec` | `number \| null`     | Age in seconds of the freshest accepted DEX lane when the source carried observation metadata. |
+| `aggregateLaneOnly`     | `boolean`            | `true` when the only DEX contribution is the legacy aggregate `dex-promoted` source.           |
 
 **`ChainCirculating`**
 
@@ -561,9 +570,10 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 | `displayBadge` | `object?`        | User-facing reserve badge semantics for authoritative live snapshots (`live`, `curated-validated`, or `proof`)                  |
 | `metadata`     | `object?`        | Adapter snapshot metadata for authoritative live snapshots. This can include feed-specific context such as `yieldBasisCollateralPct` for `crvusd`; adapter-specific metadata and nested `details` remain passthrough |
 | `provenance`   | `object?`        | Evidence-quality envelope for authoritative live snapshots (`evidenceClass`, `sourceModel`, optional `freshnessMode`, `scoringEligible`) |
-| `sync`         | `object?`        | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`, `lastError`). Present only when live-enabled |
+| `sync`         | `object?`        | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`, `lastError`, optional `failureCategory`, optional `uncertainWrite`). Present only when live-enabled |
 
 `sync.warnings` can include both adapter-emitted warnings from the latest attempt and storage-integrity warnings when a stored live snapshot is rejected and the endpoint fails closed to a fallback presentation.
+`sync.failureCategory` is copied from `reserve_sync_state.metadata.failureCategory` when available. `sync.uncertainWrite=true` means the latest attempt hit the D1 write-timeout / finalize-rejection path, so the endpoint may be serving the last consistent snapshot or fallback while the attempted write remains ambiguous until the next clean run.
 
 `displayUrl` and `evidenceUrls` are intentionally different:
 
@@ -630,7 +640,7 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 
 | Param        | Type      | Default | Description                                                    |
 | ------------ | --------- | ------- | -------------------------------------------------------------- |
-| `stablecoin` | `string`  | —       | Filter by token symbol from the full `BLACKLIST_STABLECOINS` set in `shared/types/market.ts` |
+| `stablecoin` | `string`  | —       | Filter by uppercase blacklist-tracker symbol from the full `BLACKLIST_STABLECOINS` set in `shared/types/market.ts` (for example `USDT`, not `usdt-tether`) |
 | `chain`      | `string`  | —       | Filter by chain name (e.g. `Ethereum`, `Tron`)                 |
 | `eventType`  | `string`  | —       | Filter by type: `blacklist`, `unblacklist`, `destroy`          |
 | `q`          | `string`  | —       | Case-insensitive address substring search                      |
@@ -648,11 +658,11 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
   "methodology": {
     "version": "3.99",
     "versionLabel": "v3.99",
-    "currentVersion": "3.99",
-    "currentVersionLabel": "v3.99",
+    "currentVersion": "3.991",
+    "currentVersionLabel": "v3.991",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1776729600,
-    "isCurrent": true
+    "isCurrent": false
   }
 }
 ```
@@ -701,9 +711,9 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 
 Server-side aggregates for the Blacklist Tracker overview cards, chart, and filter options. This lets the frontend render summary state without hydrating the full blacklist history first.
 
-`stats.destroyedTotal` remains an event-history total. `stats.activeFrozenTotal` reflects Pharos' local active blacklist state machine. `stats.trackedFrozenTotal` is the persistent freeze-ledger total sourced from `blacklist_current_balances`, including reconciled historical bootstrap rows where later seizures or unblacklists would otherwise hide the frozen amount. `stats.recentCount` covers the last 30 days, while `stats.recentCount24h` is the last-24-hours subset used by chrome-level monitoring surfaces. The `chart` now uses that same freeze ledger and attributes each tracked balance back to its latest recorded blacklist quarter, so the quarterly buckets explain the `trackedFrozenTotal` headline rather than raw event-time intake.
+`stats.destroyedTotal` remains an event-history total. `stats.activeFrozenTotal` reflects Pharos' local active blacklist state machine. `stats.trackedFrozenTotal` is the persistent freeze-ledger total sourced from `blacklist_current_balances`, including reconciled historical bootstrap rows where later seizures or unblacklists would otherwise hide the frozen amount. These current-balance totals are last-known successful snapshots, not a live guarantee; provider refresh failures preserve the last successful amount and should be interpreted through freshness, status, and provenance metadata when present. New snapshot rows are contract/config-scoped; older rows can still fall back to the legacy symbol/chain/address identity until remediated. `stats.recentCount` covers the last 30 days, while `stats.recentCount24h` is the last-24-hours subset used by chrome-level monitoring surfaces. The `chart` now uses that same freeze ledger and attributes each tracked balance back to its latest recorded blacklist quarter, so the quarterly buckets explain the `trackedFrozenTotal` headline rather than raw event-time intake.
 
-The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stablecoin detail pages. `perCoinFrozenAddressCount` counts addresses whose latest event is `blacklist` (net-frozen). `perCoinFrozenTotal` sums `blacklist_current_balances.balance_usd` per coin. `perCoinDestroyedTotal` sums `amount_usd_at_event` over `destroy` events per coin. `perCoinQuarterlyEventTypes` contains each coin's quarterly breakdown of event-type counts, zero-filled between the coin's first and last event quarters so bars render contiguously. All per-coin aggregations exclude rows where `suppression_reason` is set (e.g. EURC mirror zero-balance entries).
+The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stablecoin detail pages. `perCoinFrozenAddressCount` counts addresses whose latest event is `blacklist` (net-frozen). `perCoinFrozenTotal` sums last-known successful `blacklist_current_balances.balance_usd` snapshots per coin. `perCoinDestroyedTotal` sums `amount_usd_at_event` over `destroy` events per coin. `perCoinQuarterlyEventTypes` contains each coin's quarterly breakdown of event-type counts, zero-filled between the coin's first and last event quarters so bars render contiguously. All per-coin aggregations exclude rows where `suppression_reason` is set (e.g. EURC mirror zero-balance entries).
 
 **Cache:** realtime
 
@@ -744,18 +754,89 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
     { "id": "ethereum", "name": "Ethereum" },
     { "id": "tron", "name": "Tron" }
   ],
+  "coverage": {
+    "supported": [
+      {
+        "symbol": "USDT",
+        "stablecoinId": "usdt-tether",
+        "chainId": "ethereum",
+        "chainName": "Ethereum",
+        "contractAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "configKey": "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "providerSource": "evm-logs",
+        "eventFamilies": ["USDT legacy"],
+        "eventTypes": ["blacklist", "unblacklist", "destroy"]
+      }
+    ],
+    "unsupportedDeferred": [{ "symbol": "TUSD", "chainId": "bsc", "reason": "pending explorer coverage" }],
+    "counts": {
+      "supportedConfigs": 71,
+      "unsupportedDeferredConfigs": 6,
+      "bySymbol": { "USDT": 8 },
+      "byChain": { "ethereum": 35 },
+      "byProviderSource": { "evm-logs": 70, "trongrid": 1 }
+    }
+  },
+  "freezeLedgerMeta": {
+    "totalRows": 9466,
+    "scopedRows": 240,
+    "legacyRows": 9226,
+    "oldestObservedAt": 1710000000,
+    "newestObservedAt": 1776729600,
+    "oldestAgeSec": 66600000,
+    "newestAgeSec": 1200,
+    "statusDistribution": { "resolved": 9466 },
+    "sourceDistribution": { "current_balance": 240, "bootstrap_kyc_rip": 9226 },
+    "freshnessDistribution": { "fresh": 9450, "degraded": 10, "stale": 6 },
+    "providerFailedCount": 0,
+    "lastErrorClassDistribution": {},
+    "sourceCategoryCounts": { "bootstrap": 9226, "current": 240, "destroy": 0, "other": 0 },
+    "gaps": {
+      "tracked": 0,
+      "recoverable": 17,
+      "unrecoverable": 0,
+      "recentRecoverable": 0,
+      "neverAttempted": 0,
+      "repeatedFailures": 0,
+      "oldestRecoverableAgeSec": null,
+      "amountStatusDistribution": { "resolved": 13405, "recoverable_pending": 17 },
+      "amountSourceDistribution": { "historical_balance": 9000, "event": 4405, "unavailable": 17 }
+    }
+  },
+  "dataQuality": {
+    "status": "ok",
+    "warnings": [],
+    "amountGaps": {
+      "totalEvents": 13422,
+      "recoverable": 17,
+      "unrecoverable": 0,
+      "recentRecoverable": 0,
+      "missingRatio": 0.0013,
+      "recentWindowSec": 86400
+    },
+    "freezeLedger": {
+      "providerFailedCount": 0,
+      "staleSnapshotCount": 6,
+      "trackedGapCount": 0,
+      "scopedRows": 240,
+      "legacyRows": 9226
+    },
+    "coverage": { "supportedConfigs": 71, "unsupportedDeferredConfigs": 6 }
+  },
   "totalEvents": 13422,
   "methodology": {
-    "version": "3.99",
-    "versionLabel": "v3.99",
-    "currentVersion": "3.99",
-    "currentVersionLabel": "v3.99",
+    "version": "3.991",
+    "versionLabel": "v3.991",
+    "currentVersion": "3.991",
+    "currentVersionLabel": "v3.991",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1776729600,
     "isCurrent": true
   }
 }
 ```
+
+`coverage` is the machine-readable tracker coverage inventory. `supported` entries are contract/config-level rows, while `unsupportedDeferred` identifies known deferred deployments and the reason they are not live. `freezeLedgerMeta` describes the last-known snapshot ledger used by `trackedFrozenTotal`, including scoped-vs-legacy row counts, observed-age bounds, source/status distributions, provider failures, and amount-gap distributions. `dataQuality.status` summarizes those coverage, gap, and snapshot signals into `ok`, `degraded`, or `stale`; clients should display or alert on `warnings` rather than inferring quality from null amount fields alone.
 
 ---
 
@@ -1184,7 +1265,32 @@ Latest AI-generated market summary, produced daily at 08:05 UTC via the Claude A
 ```json
 {
   "digest": "USDC absorbed $812M of the market's $1.36B weekly inflow…",
-  "editionNumber": 214
+  "editionNumber": 214,
+  "riskSignal": {
+    "kind": "depeg",
+    "symbol": "PMUSD",
+    "bps": -5284,
+    "mcapUsd": 65610000,
+    "severity": "critical",
+    "activeCount": 7,
+    "date": null
+  },
+  "riskTape": [
+    { "id": "risk-tape:depegs", "label": "Depegs", "value": "PMUSD 5284bps", "tone": "critical" }
+  ],
+  "nextTriggers": [
+    {
+      "id": "trigger:depeg:pmusd",
+      "label": "PMUSD depeg widening",
+      "metric": "depeg-bps",
+      "comparator": "abs-gte",
+      "thresholdLabel": "5500 bps off peg",
+      "thresholdValue": 5500,
+      "symbol": "PMUSD",
+      "rationale": "A wider deviation raises severity.",
+      "detail": "If PMUSD reaches 5500 bps off peg, severity rises."
+    }
+  ]
 }
 ```
 
@@ -1197,6 +1303,11 @@ If no digest exists yet, the endpoint returns only `{ "digest": null }`.
 | `digestExtended` | `string \| null` | Extended commentary for the website view                                             |
 | `generatedAt`    | `number`         | Unix seconds when this digest was generated (present only when `digest` is non-null) |
 | `editionNumber`  | `number \| null` | Sequential daily digest number (present only when `digest` is non-null)              |
+| `riskSignal`     | `DigestRiskSignal \| null` | Compact active-depeg risk summary parsed from stored digest input data      |
+| `changeSummary`  | `DigestChangeSummary \| null` | Deterministic "what changed since yesterday" summary parsed from stored digest input data |
+| `nextTriggers`   | `DigestNextTrigger[] \| null` | Structured forward-looking threshold checks for tomorrow's digest |
+| `forwardLookOutcomes` | `DigestForwardLookOutcome[] \| null` | Evaluation of the previous digest's next triggers against the latest input |
+| `riskTape`       | `DigestRiskTapeItem[] \| null` | Compact reader-facing risk state chips parsed from stored digest input data |
 
 ---
 
@@ -1219,6 +1330,31 @@ Newest-first archive of up to 365 daily and weekly digests.
       "psiScore": 81.1,
       "psiBand": "STEADY",
       "totalMcapUsd": 234500000000,
+      "riskSignal": {
+        "kind": "depeg",
+        "symbol": "PMUSD",
+        "bps": -5284,
+        "mcapUsd": 65610000,
+        "severity": "critical",
+        "activeCount": 7,
+        "date": "2026-05-05"
+      },
+      "riskTape": [
+        { "id": "risk-tape:depegs", "label": "Depegs", "value": "PMUSD 5284bps", "tone": "critical" }
+      ],
+      "nextTriggers": [
+        {
+          "id": "trigger:depeg:pmusd",
+          "label": "PMUSD depeg widening",
+          "metric": "depeg-bps",
+          "comparator": "abs-gte",
+          "thresholdLabel": "5500 bps off peg",
+          "thresholdValue": 5500,
+          "symbol": "PMUSD",
+          "rationale": "A wider deviation raises severity.",
+          "detail": "If PMUSD reaches 5500 bps off peg, severity rises."
+        }
+      ],
       "digestType": "daily",
       "editionNumber": 214
     }
@@ -1237,8 +1373,39 @@ Each element uses `digestText` (note: differs from the singular `/api/daily-dige
 | `psiScore`       | `number \| null` | PSI score parsed from archived digest input data            |
 | `psiBand`        | `string \| null` | PSI condition band parsed from archived digest input data   |
 | `totalMcapUsd`   | `number \| null` | Ecosystem market cap parsed from archived digest input data |
+| `riskSignal`     | `DigestRiskSignal \| null` | Compact active-depeg risk summary parsed from archived digest input data |
+| `nextTriggers`   | `DigestNextTrigger[] \| null` | Structured forward-looking threshold checks parsed from archived digest input data |
+| `forwardLookOutcomes` | `DigestForwardLookOutcome[] \| null` | Evaluation of the previous digest's next triggers parsed from archived digest input data |
+| `riskTape`       | `DigestRiskTapeItem[] \| null` | Compact risk-state chips parsed from archived digest input data |
 | `digestType`     | `"daily" \| "weekly"` | Digest cadence for this archived entry                 |
 | `editionNumber`  | `number`         | Sequential edition number within that digest cadence        |
+
+**`DigestRiskSignal`**
+
+| Field         | Type                   | Description                                                                         |
+| ------------- | ---------------------- | ----------------------------------------------------------------------------------- |
+| `kind`        | `"depeg"`              | Risk signal family; currently active-depeg context                                  |
+| `symbol`      | `string`               | Stablecoin symbol                                                                   |
+| `bps`         | `number`               | Signed basis-point deviation where available; archive badges display absolute value |
+| `mcapUsd`     | `number \| null`       | Market cap associated with the stored digest signal                                 |
+| `severity`    | `"critical" \| "watch"` | `"critical"` at ≥2,500 bps and ≥$50M mcap, or ≥5,000 bps and ≥$10M mcap          |
+| `activeCount` | `number`               | Active depeg count from the stored digest input, when available                     |
+| `date`        | `string \| null`       | Daily input date for weekly archive entries; `null` for latest daily responses      |
+
+**Digest intelligence fields**
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `DigestRiskTapeItem.id` | `string` | Stable identifier for the displayed tape item |
+| `DigestRiskTapeItem.label` | `string` | Short label such as `PSI`, `Depegs`, `Gauge`, `DEWS`, or `Supply` |
+| `DigestRiskTapeItem.value` | `string` | Already formatted compact value for display |
+| `DigestRiskTapeItem.tone` | `"critical" \| "warning" \| "neutral" \| "positive"` | Presentation severity |
+| `DigestRiskTapeItem.detail` | `string` | Optional supporting detail |
+| `DigestNextTrigger.metric` | `"depeg-bps" \| "supply-1d-usd" \| "supply-7d-usd" \| "bank-run-gauge" \| "dews-band" \| "psi-score"` | Metric that the next daily input can evaluate |
+| `DigestNextTrigger.comparator` | `"abs-gte" \| "gte" \| "lte" \| "band-gte"` | Comparison operator for `thresholdValue` |
+| `DigestNextTrigger.thresholdLabel` | `string` | Display string for the threshold |
+| `DigestForwardLookOutcome.status` | `"hit" \| "missed" \| "pending"` | Whether the prior trigger fired, failed, or still needs more data |
+| `DigestChangeSummary.*Signals` | `array` | Buckets of signal changes, each with `id`, `label`, `kind`, `symbols`, and `detail` |
 
 ---
 
@@ -1269,7 +1436,7 @@ Contextual data snapshot for a specific digest date — includes the digest's in
 | Field             | Type             | Description                                                         |
 | ----------------- | ---------------- | ------------------------------------------------------------------- |
 | `date`            | `string`         | The requested date                                                  |
-| `inputData`       | `object \| null` | Digest input data (mcap, depegs, supply changes, PSI) for this date |
+| `inputData`       | `object \| null` | Digest input data (mcap, depegs, supply changes, PSI, digest intelligence fields) for this date |
 | `prevInputData`   | `object \| null` | Previous day's input data for delta computation                     |
 | `depegEvents`     | `array`          | Up to 20 depeg events active on that date, ordered by severity      |
 | `blacklistEvents` | `array`          | Up to 50 blacklist events on that date                              |
@@ -2583,6 +2750,10 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "staticValidatedFresh": 4,
     "weakProbeFresh": 1,
     "writeTimeoutUncertain": 0,
+    "deferredCoins": 0,
+    "runBudgetTruncated": false,
+    "deferredAt": null,
+    "nextCursorStablecoinId": null,
     "lastSuccessAt": 1771855800,
     "oldestFreshAgeSec": 3100,
     "status": "healthy",
@@ -2715,6 +2886,8 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `reserveComposition.freshCoverageRatio` is `freshCoins / configuredCoins`. `reserveComposition.authoritativeFreshCoverageRatio` counts only stronger evidence cohorts (`independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`) over `configuredCoins`.
 
+`reserveComposition.runBudgetTruncated`, `deferredCoins`, `deferredAt`, and `nextCursorStablecoinId` expose the latest live-reserve deferred-tail cursor when the internal sync budget stopped the run before the queue tail. `writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path.
+
 `crons[*].healthy` reflects availability impact. Fresh cron runs with `status="degraded"` are warning-only and counted in `summary.degradedCrons`, but they do not mark availability unhealthy on their own.
 
 `availabilityStatus` also inherits the shared public-health floor used by `/api/health`: cache-impact status, the critical mint/burn lane's public warning/staleness contract, and 3+ public-impact open circuit groups can degrade availability even when cron freshness alone is still green. Dynamic per-coin `live-reserves:*` breakers remain visible in `circuits`, but they do not change `availabilityStatus` on their own.
@@ -2771,7 +2944,7 @@ Machine-readable status timeline endpoint for tooling and incident analysis.
 
 `limit` is clamped into `1..200` by the shared query parser.
 
-**Response shape:** `StatusHistoryResponse` (defined in `shared/types/index.ts`)
+**Response shape:** `StatusHistoryResponse` (defined in `shared/types/index.ts`). The response includes the current `reserveComposition` summary when it can be computed, or `null` if the reserve overview diagnostic query fails.
 
 ### `GET /api/request-source-stats`
 

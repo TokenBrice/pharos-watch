@@ -12,6 +12,7 @@ import {
 const REVIEWED_BASKET_REDEMPTION_AT = "2026-03-23";
 const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const REVIEWED_ROUTE_TUNING_AT = "2026-04-04";
+const REVIEWED_RESERVE_PROTOCOL_DTF_AT = "2026-05-05";
 const reviewedBasketRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_BASKET_REDEMPTION_AT,
 );
@@ -208,6 +209,20 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Redemption requires receiving the underlying basket composition rather than selecting a single stablecoin output",
     ],
   },
+  "usd3-reserve-protocol": {
+    ...basketRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_RESERVE_PROTOCOL_DTF_AT),
+    executionModel: "deterministic-basket",
+    outputAssetType: "stable-basket",
+    costModel: documentedVariableFee(
+      "Reserve Protocol DTF redemptions return the backing basket subject to protocol throttles and basket mechanics; public docs reviewed do not publish a separate fixed USD3 redemption fee",
+    ),
+    notes: [
+      "Reserve Protocol API-backed reserve sync exposes the current basket weights, but redemption scoring remains documented-bound rather than live-direct capacity because the feed does not publish current redeemable capacity or throttle state",
+    ],
+  },
 };
 
 applyTrackedReviewedDocs(PSM_AND_BASKET_BACKSTOP_CONFIGS, ["dai-makerdao", "usds-sky", "dusd-alto"], REVIEWED_REMEDIATION_AT);
+
+applyTrackedReviewedDocs(PSM_AND_BASKET_BACKSTOP_CONFIGS, ["usd3-reserve-protocol"], REVIEWED_RESERVE_PROTOCOL_DTF_AT);

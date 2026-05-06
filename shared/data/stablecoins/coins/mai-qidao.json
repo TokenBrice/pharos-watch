@@ -1,0 +1,107 @@
+{
+  "id": "mai-qidao",
+  "name": "MAI",
+  "symbol": "MAI",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Overcollateralized crypto vault collateral across QiDao markets, including bridged and wrapped assets",
+  "pegMechanism": "Borrowers mint MAI against overcollateralized vault positions and repay or liquidate through QiDao market rules",
+  "detailProvider": "coingecko",
+  "geckoId": "mimatic",
+  "cmcSlug": "mai",
+  "protocolSlug": "qidao",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.mai.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/QiDaoProtocol"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.mai.finance/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "polygon",
+      "address": "0xa3fa99a148fa48d14ed51d610c367c61876997f1",
+      "decimals": 18
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x8d6cebd76f18e1558d4db88138e2defb3909fad6",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x3f56e0c36d275367b8c502090edf38289b3dea0d",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0xdfa46478f9e5ea86d57387849598dbfb2e964b02",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xbf1aea8670d2528e08334083616dd9c5f3b087ae",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x5c49b268c9841aff1cc3b0a418ff5c3442ee3f3b",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0x3f56e0c36d275367b8c502090edf38289b3dea0d",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x3f56e0c36d275367b8c502090edf38289b3dea0d",
+      "decimals": 18
+    },
+    {
+      "chain": "linea",
+      "address": "0xf3b001d64c656e30a62fbaaca003b1336b4ce12a",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "deploymentModel": "native-multichain",
+  "governanceQuality": "multisig",
+  "reserves": [
+    {
+      "name": "QiDao overcollateralized crypto vaults",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "mai-qidao",
+    "display": {
+      "url": "https://docs.mai.finance/",
+      "label": "QiDao docs"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "polygon",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

@@ -10,7 +10,10 @@ import {
   buildPrimaryPricePlan,
   collectPrimaryProviderQuotes,
 } from "./enrich-prices-primary-provider-collection";
-import { buildPrimaryConsensusResults } from "./enrich-prices-primary-consensus";
+import {
+  buildPrimaryConsensusResults,
+  logDexPriceSourceLoadTelemetry,
+} from "./enrich-prices-primary-consensus";
 import {
   applyListAggregatorDowngrade,
   applyPoolChallenge,
@@ -62,6 +65,7 @@ export async function fetchPrimaryPrices(
   const plan = await buildPrimaryPricePlan(assets, db, dlListPrices);
 
   if (plan.candidates.length === 0) {
+    logDexPriceSourceLoadTelemetry(plan.dexPriceSourceTelemetry);
     return { results, stats, cgPrices: new Map() };
   }
 
@@ -79,6 +83,7 @@ export async function fetchPrimaryPrices(
     quoteMaps,
     dexRows: plan.dexRows,
     dexPriceSources: plan.dexPriceSources,
+    dexPriceSourceTelemetry: plan.dexPriceSourceTelemetry,
     nowSec: plan.nowSec,
     resolveDlListQuote,
     results,

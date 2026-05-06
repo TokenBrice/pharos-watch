@@ -31,13 +31,15 @@ export async function computeReserveCompositionOverview(
       independentFreshEligible: 0,
       independentFreshUnverified: 0,
       staticValidatedFresh: 0,
-    weakProbeFresh: 0,
-    writeTimeoutUncertain: 0,
-    deferredCoins: 0,
-    nextCursorStablecoinId: null,
-    persistentlyStaleIndependentCoins: [],
-    lastSuccessAt: null,
-    oldestFreshAgeSec: null,
+      weakProbeFresh: 0,
+      writeTimeoutUncertain: 0,
+      deferredCoins: 0,
+      runBudgetTruncated: false,
+      deferredAt: null,
+      nextCursorStablecoinId: null,
+      persistentlyStaleIndependentCoins: [],
+      lastSuccessAt: null,
+      oldestFreshAgeSec: null,
     };
   }
 
@@ -59,6 +61,8 @@ export async function computeReserveCompositionOverview(
   let weakProbeFresh = 0;
   let writeTimeoutUncertain = 0;
   let deferredCoins = 0;
+  let runBudgetTruncated = false;
+  let deferredAt: number | null = null;
   const persistentlyStaleIndependentCoins: Array<{ stablecoinId: string; ageSec: number }> = [];
   let lastSuccessAt: number | null = null;
   let oldestFreshAgeSec: number | null = null;
@@ -67,12 +71,20 @@ export async function computeReserveCompositionOverview(
   const cursorCache = await getCache(db, "live-reserves:run-cursor");
   if (cursorCache) {
     try {
-      const parsed = JSON.parse(cursorCache.value) as { nextStablecoinId?: unknown };
+      const parsed = JSON.parse(cursorCache.value) as {
+        nextStablecoinId?: unknown;
+        deferredCount?: unknown;
+        deferredAt?: unknown;
+      };
       if (typeof parsed.nextStablecoinId === "string") {
         nextCursorStablecoinId = parsed.nextStablecoinId;
       }
+      runBudgetTruncated = typeof parsed.deferredCount === "number" && parsed.deferredCount > 0;
+      deferredAt = typeof parsed.deferredAt === "number" ? parsed.deferredAt : null;
     } catch {
       nextCursorStablecoinId = null;
+      runBudgetTruncated = false;
+      deferredAt = null;
     }
   }
 
@@ -181,6 +193,8 @@ export async function computeReserveCompositionOverview(
     weakProbeFresh,
     writeTimeoutUncertain,
     deferredCoins,
+    runBudgetTruncated,
+    deferredAt,
     nextCursorStablecoinId,
     persistentlyStaleIndependentCoins: persistentlyStaleIndependentCoins.sort(
       (a, b) => b.ageSec - a.ageSec,

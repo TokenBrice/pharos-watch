@@ -1,10 +1,16 @@
 import { USER_AGENT } from "../../lib/constants";
 import { readDexApiJson } from "./direct-api-json";
+import {
+  DIRECT_API_DEFAULT_MAX_PAGES,
+  DIRECT_API_REQUEST_TIMEOUT_MS,
+  buildDirectApiRequestSignal,
+} from "./direct-api-policy";
 
 export interface PaginatedFetchOptions<TRow> {
   source: string;
   buildUrl: (page: number) => string;
   pageSize: number;
+  startPage?: number;
   maxPages?: number;
   timeoutMs?: number;
   signal?: AbortSignal;
@@ -17,6 +23,8 @@ export interface PaginatedFetchResult<TRow> {
   rows: TRow[];
   errors: string[];
   successfulPages: number;
+  completed: boolean;
+  nextPage: number | null;
 }
 
 export async function runPaginatedDirectApiFetch<TRow>(
@@ -26,8 +34,9 @@ export async function runPaginatedDirectApiFetch<TRow>(
     source,
     buildUrl,
     pageSize,
-    maxPages = 50,
-    timeoutMs = 15_000,
+    startPage = 1,
+    maxPages = DIRECT_API_DEFAULT_MAX_PAGES,
+    timeoutMs = DIRECT_API_REQUEST_TIMEOUT_MS,
     signal,
     parsePage,
     mapRow,
@@ -37,15 +46,19 @@ export async function runPaginatedDirectApiFetch<TRow>(
   const rows: TRow[] = [];
   const errors: string[] = [];
   let successfulPages = 0;
+  let completed = false;
+  let nextPage: number | null = startPage;
 
-  for (let page = 1; page <= maxPages; page++) {
+  const lastPage = startPage + maxPages - 1;
+  for (let page = startPage; page <= lastPage; page++) {
     const url = buildUrl(page);
+    nextPage = page;
 
     let res: Response;
     try {
       res = await fetch(url, {
         headers: { "User-Agent": USER_AGENT, ...extraHeaders },
-        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
+        signal: buildDirectApiRequestSignal(signal, timeoutMs),
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -71,15 +84,29 @@ export async function runPaginatedDirectApiFetch<TRow>(
     }
 
     successfulPages++;
-    if (pageRows.length === 0) break;
+    if (pageRows.length === 0) {
+      completed = true;
+      nextPage = null;
+      break;
+    }
 
     for (const raw of pageRows) {
       const mapped = mapRow(raw);
       if (mapped !== null) rows.push(mapped);
     }
 
-    if (pageRows.length < pageSize) break;
+    if (pageRows.length < pageSize) {
+      completed = true;
+      nextPage = null;
+      break;
+    }
+
+    if (page === lastPage) {
+      nextPage = page + 1;
+      errors.push(`${source} pagination cap reached at page ${page}; resumeFromPage=${nextPage}`);
+      break;
+    }
   }
 
-  return { rows, errors, successfulPages };
+  return { rows, errors, successfulPages, completed, nextPage };
 }

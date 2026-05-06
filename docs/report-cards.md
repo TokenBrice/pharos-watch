@@ -2,9 +2,9 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-The stablecoin registry currently contains 218 tracked metadata entries. Report-card snapshots score the 204 active tracked assets plus the 88 cemetery assets; pre-launch and frozen-archive tracked entries are emitted as stub `F` cards (defunct; pre-launch remain outside the snapshot until they launch).
+The stablecoin registry currently contains 255 tracked metadata entries. Report-card snapshots score the 240 active tracked assets plus the 88 cemetery assets; pre-launch and frozen-archive tracked entries are emitted as stub `F` cards (defunct; pre-launch remain outside the snapshot until they launch).
 
-## Overall Grade (v7.14)
+## Overall Grade (v7.16)
 
 Four-step computation:
 
@@ -15,7 +15,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.14 aligns score-grade live reserve dependency links with the rest of the report-card snapshot. When a fresh, clean, independent live reserve snapshot qualifies for collateral-quality scoring and its slices carry tracked `coinId` / `depType` links, those links now drive Dependency Risk, `rawInputs.dependencies`, topological ordering, and the public dependency graph. Unmapped live reserve share remains implicit self-backed or non-stablecoin exposure. The v7.13 `Possible` / `Upstream` blacklist split and all tracked-variant wrapper ceilings carry forward unchanged.
+Current-version note: v7.16 adds a follow-up review of six disputed `Freezable: No` classifications. HomeCoin now resolves as `Possible` because the holder-facing HOME token is a transparent upgradeable proxy with an active proxy-admin upgrade surface. HBD, vCRED, Freedom Dollar, LUAUSD, and NXUSD remain `No` after reviewing their native protocol or verified contract surfaces for freeze, blacklist, pause, denylist, arbitrary burn, or upgrade controls. Owner mint authority and user/allowance burn functions remain supply-control signals, not freeze signals, unless the contract also exposes holder-facing transfer gates, arbitrary burns, blacklist controls, or mutable holder-control surfaces.
 
 ## Dimensions
 
@@ -387,7 +387,7 @@ Users simulate a grade downgrade for any upstream coin and watch cascading grade
 
 - **Coin selector**: Filtered to coins appearing as `from` in `dependencyGraph.edges`, sorted by dependent count.
 - **Grade selector**: Only downgrades from the coin's current grade to F.
-- **Recomputation**: `computeStressedGrades()` injects a synthetic score, walks all transitive downstream dependencies, and recomputes only the Dependency Risk dimension for affected downstream coins in dependency order. The current snapshot size is 294 cards (204 active tracked assets plus 88 cemetery entries plus 2 frozen archives; pre-launch tracked assets are excluded) × 5 dimensions, which remains comfortably sub-millisecond in practice.
+- **Recomputation**: `computeStressedGrades()` injects a synthetic score, walks all transitive downstream dependencies, and recomputes only the Dependency Risk dimension for affected downstream coins in dependency order. The current snapshot size is 330 cards (240 active tracked assets plus 88 cemetery entries plus 2 frozen archives; pre-launch tracked assets are excluded) × 5 dimensions, which remains comfortably sub-millisecond in practice.
 - **Two display modes**: Portfolio mode (dollar-denominated, scoped to held coins in impact table) vs ecosystem mode (all affected coins with market cap).
 - **Card grid simulation**: ALL affected coins show dashed amber borders + "Simulated" badge regardless of portfolio mode. Unaffected cards dimmed. Sticky banner with clear button.
 

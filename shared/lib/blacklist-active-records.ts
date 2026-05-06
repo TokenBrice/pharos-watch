@@ -1,15 +1,25 @@
-import { buildBlacklistAddressCountKey } from "./blacklist";
+import {
+  buildBlacklistAddressCountKey,
+  buildBlacklistContractBalanceKey,
+} from "./blacklist";
 import type { BlacklistEvent, BlacklistStablecoin } from "../types/market";
 
 export interface BlacklistCurrentBalanceSnapshot {
+  id?: string;
   stablecoin: BlacklistStablecoin;
   chainId: string;
   address: string;
+  configKey?: string | null;
+  contractAddress?: string | null;
   amountNative: number | null;
   amountUsd: number | null;
   status: "resolved" | "provider_failed";
   source: string;
   observedAt: number;
+  lastSuccessfulObservedAt?: number | null;
+  lastAttemptedAt?: number | null;
+  lastErrorClass?: string | null;
+  consecutiveFailures?: number;
 }
 
 export interface BlacklistActiveRecord {
@@ -18,6 +28,8 @@ export interface BlacklistActiveRecord {
   chainId: string;
   chainName: string;
   address: string;
+  configKey?: string | null;
+  contractAddress?: string | null;
   blacklistedAt: number;
   blacklistTxHash: string;
   destroyedAt: number | null;
@@ -41,15 +53,88 @@ export interface BlacklistTrackedSummaryStats {
 }
 
 function buildActiveRecordKey(event: Pick<BlacklistEvent, "stablecoin" | "chainId" | "address">): string {
-  return buildBlacklistAddressCountKey(event.stablecoin, event.chainId, event.address);
+  return buildBlacklistRecordIdentityKey(event);
+}
+
+function hasScopedIdentity(
+  input: { configKey?: string | null; contractAddress?: string | null },
+): boolean {
+  return Boolean(input.configKey || input.contractAddress);
+}
+
+function buildBlacklistContractScopedKey(input: {
+  stablecoin: BlacklistStablecoin;
+  chainId: string;
+  address: string;
+  configKey?: string | null;
+  contractAddress?: string | null;
+}): string | null {
+  if (!hasScopedIdentity(input)) return null;
+  return buildBlacklistContractBalanceKey(
+    input.stablecoin,
+    input.chainId,
+    input.address,
+    input.configKey,
+    input.contractAddress,
+  );
+}
+
+function buildBlacklistLegacyIdentityKey(input: {
+  stablecoin: BlacklistStablecoin;
+  chainId: string;
+  address: string;
+}): string {
+  return buildBlacklistAddressCountKey(input.stablecoin, input.chainId, input.address);
+}
+
+export function buildBlacklistRecordIdentityKey(input: {
+  stablecoin: BlacklistStablecoin;
+  chainId: string;
+  address: string;
+  configKey?: string | null;
+  contractAddress?: string | null;
+}): string {
+  return buildBlacklistContractScopedKey(input) ?? buildBlacklistLegacyIdentityKey(input);
+}
+
+export function buildBlacklistIdentityLookupKeys(input: {
+  stablecoin: BlacklistStablecoin;
+  chainId: string;
+  address: string;
+  configKey?: string | null;
+  contractAddress?: string | null;
+}): string[] {
+  const scoped = buildBlacklistContractScopedKey(input);
+  const legacy = buildBlacklistLegacyIdentityKey(input);
+  return scoped && scoped !== legacy ? [scoped, legacy] : [legacy];
+}
+
+function findCurrentBalanceSnapshot(
+  event: BlacklistEvent,
+  currentBalances: ReadonlyMap<string, BlacklistCurrentBalanceSnapshot>,
+): BlacklistCurrentBalanceSnapshot | undefined {
+  for (const key of buildBlacklistIdentityLookupKeys(event)) {
+    const snapshot = currentBalances.get(key);
+    if (snapshot) return snapshot;
+  }
+  return undefined;
+}
+
+function findActiveRecordKey(
+  event: BlacklistEvent,
+  active: ReadonlyMap<string, BlacklistActiveRecord>,
+): string | null {
+  for (const key of buildBlacklistIdentityLookupKeys(event)) {
+    if (active.has(key)) return key;
+  }
+  return null;
 }
 
 function resolveBlacklistAmount(
   event: BlacklistEvent,
   currentBalances: ReadonlyMap<string, BlacklistCurrentBalanceSnapshot>,
 ): Pick<BlacklistActiveRecord, "frozenAmountNative" | "frozenAmountUsd" | "amountStatus" | "amountSource"> {
-  const activeKey = buildActiveRecordKey(event);
-  const currentBalance = currentBalances.get(activeKey);
+  const currentBalance = findCurrentBalanceSnapshot(event, currentBalances);
 
   if (currentBalance?.status === "resolved") {
     return {
@@ -105,6 +190,8 @@ export function buildBlacklistActiveRecords(
         chainId: event.chainId,
         chainName: event.chainName,
         address: event.address,
+        configKey: event.configKey,
+        contractAddress: event.contractAddress,
         blacklistedAt: event.timestamp,
         blacklistTxHash: event.txHash,
         destroyedAt: null,
@@ -115,10 +202,11 @@ export function buildBlacklistActiveRecords(
     }
 
     if (event.eventType === "destroy") {
-      const existing = active.get(key);
+      const existingKey = findActiveRecordKey(event, active);
+      const existing = existingKey ? active.get(existingKey) : undefined;
       if (!existing) continue;
       const amount = resolveDestroyAmount(event);
-      active.set(key, {
+      active.set(existingKey!, {
         ...existing,
         destroyedAt: event.timestamp,
         destroyTxHash: event.txHash,
@@ -128,7 +216,9 @@ export function buildBlacklistActiveRecords(
     }
 
     if (event.eventType === "unblacklist") {
-      active.delete(key);
+      for (const lookupKey of buildBlacklistIdentityLookupKeys(event)) {
+        active.delete(lookupKey);
+      }
     }
   }
 
@@ -165,8 +255,12 @@ export function computeBlacklistTrackedSummaryStats(
 ): BlacklistTrackedSummaryStats {
   let trackedFrozenTotal = 0;
   let trackedAmountGapCount = 0;
+  const seen = new Set<string>();
 
-  for (const snapshot of currentBalances.values()) {
+  for (const [key, snapshot] of currentBalances.entries()) {
+    const snapshotId = snapshot.id ?? key;
+    if (seen.has(snapshotId)) continue;
+    seen.add(snapshotId);
     if (snapshot.amountUsd == null) {
       trackedAmountGapCount++;
       continue;
@@ -175,7 +269,7 @@ export function computeBlacklistTrackedSummaryStats(
   }
 
   return {
-    trackedAddressCount: currentBalances.size,
+    trackedAddressCount: seen.size,
     trackedFrozenTotal,
     trackedAmountGapCount,
   };

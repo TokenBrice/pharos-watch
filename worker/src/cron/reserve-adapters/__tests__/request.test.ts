@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildBrowserHeaders } from "../request";
+import { buildBrowserHeaders, getCachedRequest } from "../request";
 
 describe("buildBrowserHeaders", () => {
   it("returns the canonical Origin/Referer/Accept-Language triple", () => {
@@ -16,5 +16,23 @@ describe("buildBrowserHeaders", () => {
     ) as Record<string, string>;
     expect(headers.Origin).toBe("https://app.ethena.fi");
     expect(headers.Referer).toBe("https://app.ethena.fi/dashboards/transparency");
+  });
+
+  it("evicts failed cached requests so the next call can recover", async () => {
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    let calls = 0;
+
+    await expect(getCachedRequest("recoverable", async () => {
+      calls++;
+      throw new Error("first attempt failed");
+    }, ctx)).rejects.toThrow("first attempt failed");
+
+    const recovered = await getCachedRequest("recoverable", async () => {
+      calls++;
+      return "ok";
+    }, ctx);
+
+    expect(recovered).toBe("ok");
+    expect(calls).toBe(2);
   });
 });

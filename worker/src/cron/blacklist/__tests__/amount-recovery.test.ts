@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { backfillAmounts, enrichRowBalances } from "../amount-recovery";
+import {
+  backfillAmounts,
+  enrichRowBalances,
+  extractDestroyAmountFromReceiptLogs,
+} from "../amount-recovery";
 import { shouldSuppressAsMirrorZero } from "../shared";
 import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
 import type { BlacklistRow } from "../shared";
@@ -16,6 +20,26 @@ function makeConfig(): ContractEventConfig {
     events: [{ signature: "Blacklisted(address)", eventType: "blacklist", topicHash: "0x00", hasAmount: false, addressTopicIndex: 1 }],
     configKey: "USDC:ethereum",
   };
+}
+
+function makeDestroyConfig(): ContractEventConfig {
+  return {
+    ...makeConfig(),
+    events: [{
+      signature: "DestroyedBlackFunds(address,uint256)",
+      eventType: "destroy",
+      topicHash: "0xdestroy",
+      hasAmount: true,
+    }],
+  };
+}
+
+function word(value: string): string {
+  return value.replace(/^0x/, "").padStart(64, "0");
+}
+
+function amountWord(raw: bigint): string {
+  return raw.toString(16).padStart(64, "0");
 }
 
 function makeRow(overrides: Partial<BlacklistRow> = {}): BlacklistRow {
@@ -110,5 +134,53 @@ describe("enrichRowBalances", () => {
     expect(result).toEqual({ attempted: 0, succeeded: 0, failed: 0 });
     expect(rows[0].amount_last_error_class).toBe("runtime_budget");
     expect(rows[0].amount_last_provider).toBe("none");
+  });
+
+  it("selects destroy receipt amounts for the intended affected address", () => {
+    const config = makeDestroyConfig();
+    const wanted = "0x1111111111111111111111111111111111111111";
+    const other = "0x2222222222222222222222222222222222222222";
+
+    const amount = extractDestroyAmountFromReceiptLogs(config, [
+      {
+        address: config.contractAddress,
+        topics: ["0xdestroy"],
+        data: "0x" + word(other) + amountWord(999_000000n),
+        blockNumber: "0x1",
+        timeStamp: "0x1",
+        transactionHash: "0xtx",
+        logIndex: "0x0",
+      },
+      {
+        address: config.contractAddress,
+        topics: ["0xdestroy"],
+        data: "0x" + word(wanted) + amountWord(123_000000n),
+        blockNumber: "0x1",
+        timeStamp: "0x1",
+        transactionHash: "0xtx",
+        logIndex: "0x1",
+      },
+    ], wanted);
+
+    expect(amount).toBe(123);
+  });
+
+  it("treats short destroy amount data as unresolved instead of zero", () => {
+    const config = makeDestroyConfig();
+    const wanted = "0x1111111111111111111111111111111111111111";
+
+    const amount = extractDestroyAmountFromReceiptLogs(config, [
+      {
+        address: config.contractAddress,
+        topics: ["0xdestroy"],
+        data: "0x" + word(wanted),
+        blockNumber: "0x1",
+        timeStamp: "0x1",
+        transactionHash: "0xtx",
+        logIndex: "0x0",
+      },
+    ], wanted);
+
+    expect(amount).toBeNull();
   });
 });

@@ -1,0 +1,73 @@
+{
+  "id": "luausd-lumi-finance",
+  "name": "Lumi Finance LUAUSD",
+  "symbol": "LUAUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "collateral": "LUA staking, floor-price mechanics, and protocol-owned liquidity described by Lumi Finance materials",
+  "pegMechanism": "Synthetic dollar reference token tied to Lumi Finance LUA mechanics; it is not a hard 1:1 redeemable fiat stablecoin",
+  "detailProvider": "coingecko",
+  "geckoId": "lumi-finance-luausd",
+  "cmcSlug": "lumi-finance-luausd",
+  "protocolSlug": "lumi-finance",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://lumi.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Lumi_finance"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "arbitrum",
+      "address": "0x1dd6b5f9281c6b4f043c02a83a46c2772024636c",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "stage1-l2",
+  "deploymentModel": "single-chain",
+  "reserves": [
+    {
+      "name": "LUA floor-price collateral and protocol-owned liquidity",
+      "pct": 100,
+      "risk": "very-high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "luausd-lumi-finance",
+    "display": {
+      "url": "https://lumi.finance/",
+      "label": "Lumi Finance"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "arbitrum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Lumi Finance LUAUSD NAV mechanics",
+    "yieldType": "nav-appreciation"
+  },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Nonstandard stable reference",
+      "message": "LUAUSD is included because providers classify it as a dollar asset, but its mechanics are closer to a floor-price synthetic than a hard 1:1 redemption token."
+    }
+  ]
+}

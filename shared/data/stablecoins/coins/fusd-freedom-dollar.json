@@ -1,0 +1,42 @@
+{
+  "id": "fusd-freedom-dollar",
+  "name": "Freedom Dollar",
+  "symbol": "FUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Privacy-chain stable asset collateral and reserve mechanisms on Zano; public reserve details are limited",
+  "pegMechanism": "Freedom Dollar targets $1 inside the Zano ecosystem through private-chain issuance and redemption mechanics",
+  "detailProvider": "coingecko",
+  "geckoId": "freedom-dollar",
+  "protocolSlug": "freedom-dollar",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://freedomdollar.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/freedomdollar"
+    }
+  ],
+  "reserves": [
+    {
+      "name": "Zano ecosystem collateral and reserve mechanisms",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Unsupported private chain",
+      "message": "FUSD primarily circulates on Zano, which is not a configured Pharos chain, so no contract is stored."
+    }
+  ]
+}

@@ -1,5 +1,66 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV716Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.16")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        Six disputed <code className="text-xs bg-muted px-1 py-0.5 rounded">Freezable: No</code> classifications were
+        rechecked against native protocol controls and verified contract surfaces.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          HomeCoin now resolves as <code className="text-xs bg-muted px-1 py-0.5 rounded">Possible</code> because the
+          holder-facing HOME token is a transparent upgradeable proxy with an active proxy-admin upgrade surface.
+        </li>
+        <li>
+          HBD, vCRED, Freedom Dollar, LUAUSD, and NXUSD remain{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">No</code> after review found no freeze, blacklist,
+          pause, denylist, arbitrary burn, or upgrade control on the holder-facing asset surface.
+        </li>
+        <li>
+          Owner mint authority and user or allowance burn functions stay classified as supply controls, not freeze
+          controls, unless paired with transfer gates, arbitrary burns, blacklist controls, or mutable holder-control
+          surfaces.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
+export function ScoringChangelogV715Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.15")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        The resolved <code className="text-xs bg-muted px-1 py-0.5 rounded">Freezable: No</code> cohort was reviewed
+        against token-level freeze, denylist, blacklist, pause, and arbitrary role-burn controls.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          JupUSD, eSui Dollar, MAI, JUSD, Alpha Partner USDA, Ring USDR, DOC, USDRIF, and Nest inALPHA now resolve as
+          direct <code className="text-xs bg-muted px-1 py-0.5 rounded">Freezable: Yes</code> where audited token or
+          vault contracts expose holder-facing controls.
+        </li>
+        <li>
+          sBOLD and Enosys CDP now resolve as <code className="text-xs bg-muted px-1 py-0.5 rounded">Possible</code>{" "}
+          because their audited contracts expose pause or mutable branch-control surfaces rather than a confirmed
+          current address-level blacklist.
+        </li>
+        <li>
+          The remaining resolved <code className="text-xs bg-muted px-1 py-0.5 rounded">No</code> cohort stays
+          unchanged where no direct holder-facing freeze, blacklist, pause, denylist, or arbitrary burn surface was
+          confirmed.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV714Entry() {
   return (
     <VersionCard

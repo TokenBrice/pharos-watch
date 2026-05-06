@@ -13,6 +13,7 @@ const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
 const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const REVIEWED_ZCHF_BRIDGE_AT = "2026-04-06";
 const REVIEWED_WRAPPER_REDEMPTION_AT = "2026-04-21";
+const REVIEWED_STABLECOIN_BATCH_AT = "2026-05-05";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
@@ -527,8 +528,52 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     ],
     notes: ["Retail users primarily access apxUSD via the Curve pool, while direct minting and redemption are reserved for whitelisted participants who rebalance the market"],
   },
+  "pusd-polymarket": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_BATCH_AT),
+    outputAssetType: "stable-basket",
+    costModel: documentedVariableFee(
+      "Polymarket docs describe PUSD as redeemable through Polymarket withdrawal rails into supported stablecoin balances; public docs reviewed do not publish a standalone fixed redemption fee",
+    ),
+    notes: [
+      "Application-dollar wrapper around Polymarket deposit/withdrawal rails; modeled as a stable-basket route because exits depend on supported USDC/USDC.e withdrawal paths",
+    ],
+  },
+  "susd-solayer": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_BATCH_AT),
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee(
+      "Solayer docs describe sUSD mint and redemption through protocol rails; public docs reviewed do not publish a fixed redemption fee",
+    ),
+  },
+  "usx-dforce": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_BATCH_AT),
+    outputAssetType: "stable-basket",
+    costModel: documentedVariableFee(
+      "dForce docs describe USX mint and redemption through supported collateral/stablecoin routes; public docs reviewed do not publish a single fixed redemption fee",
+    ),
+  },
+  "xdai-gnosis": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_BATCH_AT),
+    costModel: documentedVariableFee(
+      "Gnosis bridge docs describe xDAI/DAI bridge exits; public docs reviewed do not publish a separate fixed xDAI redemption fee",
+    ),
+    notes: [
+      "Modeled as a bridge-backed stablecoin redemption route into DAI rather than an independent fiat issuer rail",
+    ],
+  },
 };
 
 applyTrackedReviewedDocs(STABLECOIN_REDEEM_BACKSTOP_CONFIGS, ["ousg-ondo-finance", "u-united-stables", "usd0-usual"]);
 
 applyTrackedReviewedDocs(STABLECOIN_REDEEM_BACKSTOP_CONFIGS, ["dusd-dtrinity", "yousd-yield-optimizer"], REVIEWED_REMEDIATION_AT);
+
+applyTrackedReviewedDocs(STABLECOIN_REDEEM_BACKSTOP_CONFIGS, [
+  "pusd-polymarket",
+  "susd-solayer",
+  "usx-dforce",
+  "xdai-gnosis",
+], REVIEWED_STABLECOIN_BATCH_AT);

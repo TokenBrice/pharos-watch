@@ -36,6 +36,7 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "chainTier": "mature-alt-l1",
   "collateralQuality": "exotic",
   "reserves": [

@@ -55,6 +55,84 @@ export interface DigestDataQuality {
   };
 }
 
+export type DigestRiskTapeTone = "critical" | "warning" | "neutral" | "positive";
+
+export interface DigestRiskTapeItem {
+  id: string;
+  label: string;
+  value: string;
+  tone: DigestRiskTapeTone;
+  detail?: string;
+}
+
+export interface DigestSignalChange {
+  id: string;
+  label: string;
+  kind: DigestEditorialCandidateKind | "psi" | "gauge";
+  symbols: string[];
+  detail: string;
+}
+
+export interface DigestChangeSummary {
+  previousDate?: string | null;
+  newSignals: DigestSignalChange[];
+  worsenedSignals: DigestSignalChange[];
+  improvedSignals: DigestSignalChange[];
+  resolvedSignals: DigestSignalChange[];
+  repeatedSignals: DigestSignalChange[];
+}
+
+export type DigestNextTriggerMetric =
+  | "depeg-bps"
+  | "supply-1d-usd"
+  | "supply-7d-usd"
+  | "bank-run-gauge"
+  | "dews-band"
+  | "psi-score";
+
+export type DigestNextTriggerComparator = "abs-gte" | "gte" | "lte" | "band-gte";
+
+export interface DigestNextTrigger {
+  id: string;
+  label: string;
+  metric: DigestNextTriggerMetric;
+  comparator: DigestNextTriggerComparator;
+  thresholdLabel: string;
+  thresholdValue?: number;
+  symbol?: string;
+  candidateId?: string;
+  rationale: string;
+  detail: string;
+}
+
+export interface DigestForwardLookOutcome {
+  id: string;
+  triggerId: string;
+  label: string;
+  status: "hit" | "missed" | "pending";
+  detail: string;
+  sourceDate?: string | null;
+}
+
+export interface DigestCalmNarrativeFrame {
+  label: string;
+  detail: string;
+  candidateId?: string;
+}
+
+export interface DigestEditorialAudit {
+  topCandidateIds: string[];
+  usableCandidateIds: string[];
+  suppressedCandidateIds: string[];
+  momentumCandidateIds: string[];
+  requiredLeadCandidateIds?: string[];
+  leadCandidateId?: string | null;
+  leadCandidateTitle?: string | null;
+  usedCandidateIds?: string[];
+  modelSuppressedCandidateIds?: string[];
+  qualityIssueCodes?: string[];
+}
+
 export interface DigestInputData {
   digestVersion?: number;
   totalMcapUsd: number;
@@ -66,6 +144,12 @@ export interface DigestInputData {
   };
   dataQuality?: DigestDataQuality;
   editorialCandidates?: DigestEditorialCandidate[];
+  changeSummary?: DigestChangeSummary;
+  nextTriggers?: DigestNextTrigger[];
+  forwardLookOutcomes?: DigestForwardLookOutcome[];
+  riskTape?: DigestRiskTapeItem[];
+  calmNarrativeFrame?: DigestCalmNarrativeFrame;
+  editorialAudit?: DigestEditorialAudit;
   degradedSources?: string[];
   activeDepegCount: number;
   topDepegs: {
@@ -231,6 +315,21 @@ export interface DailyDigestResponse {
   digestExtended: string | null;
   generatedAt: number | null;
   editionNumber: number | null;
+  riskSignal?: DigestRiskSignal | null;
+  changeSummary?: DigestChangeSummary | null;
+  nextTriggers?: DigestNextTrigger[] | null;
+  forwardLookOutcomes?: DigestForwardLookOutcome[] | null;
+  riskTape?: DigestRiskTapeItem[] | null;
+}
+
+export interface DigestRiskSignal {
+  kind: "depeg";
+  symbol: string;
+  bps: number;
+  mcapUsd: number | null;
+  severity: "critical" | "watch";
+  activeCount?: number;
+  date?: string | null;
 }
 
 export interface DigestArchiveEntry {
@@ -241,6 +340,10 @@ export interface DigestArchiveEntry {
   psiScore: number | null;
   psiBand: string | null;
   totalMcapUsd: number | null;
+  riskSignal?: DigestRiskSignal | null;
+  nextTriggers?: DigestNextTrigger[] | null;
+  forwardLookOutcomes?: DigestForwardLookOutcome[] | null;
+  riskTape?: DigestRiskTapeItem[] | null;
   digestType?: "daily" | "weekly";
   editionNumber?: number;
 }

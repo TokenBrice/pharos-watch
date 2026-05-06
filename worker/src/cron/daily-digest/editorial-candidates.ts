@@ -7,6 +7,11 @@ import type {
   DigestInputData,
 } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
+import {
+  getDepegEditorialImpactScore,
+  getDepegMarketImpactScore,
+  isCriticalDepegRisk,
+} from "@shared/lib/digest-risk";
 
 const BAND_RANK: Record<string, number> = {
   CALM: 0,
@@ -22,10 +27,6 @@ function candidateId(kind: DigestEditorialCandidateKind, parts: string[]): strin
     .toLowerCase()
     .replace(/[^a-z0-9:.-]+/g, "-")
     .replace(/-+/g, "-");
-}
-
-function depegImpactScore(bps: number, mcapUsd: number): number {
-  return Math.round(Math.abs(bps) * mcapUsd / 1_000_000_000 * 10) / 10;
 }
 
 function addCandidate(
@@ -60,7 +61,9 @@ function sign(value: number): string {
 
 function addActiveDepegCandidates(candidates: DigestEditorialCandidate[], data: DigestInputData): void {
   for (const depeg of data.topDepegs) {
-    const impactScore = depeg.impactScore ?? depegImpactScore(depeg.bps, depeg.mcapUsd);
+    const marketImpactScore = depeg.impactScore ?? getDepegMarketImpactScore(depeg.bps, depeg.mcapUsd);
+    const impactScore = getDepegEditorialImpactScore(depeg.bps, depeg.mcapUsd);
+    const isCritical = isCriticalDepegRisk(depeg);
     const age = depeg.ageHours != null ? `${depeg.ageHours}h old` : "age unknown";
     addCandidate(candidates, {
       id: candidateId("depeg", [depeg.stablecoinId ?? depeg.symbol, "active"]),
@@ -75,7 +78,8 @@ function addActiveDepegCandidates(candidates: DigestEditorialCandidate[], data: 
         `${Math.abs(depeg.bps)} bps ${depeg.direction ?? (depeg.bps >= 0 ? "above" : "below")} peg`,
         `${formatCurrency(depeg.mcapUsd)} market cap`,
         `${age}`,
-        `impact score ${impactScore}`,
+        `market impact score ${marketImpactScore}`,
+        isCritical ? "critical depeg override threshold met" : "",
       ],
       whyItMatters: "Active peg stress matters when deviation and market cap combine into real holder exposure.",
       ...(depeg.suppressReason ? { suppressReason: depeg.suppressReason } : {}),
@@ -85,7 +89,7 @@ function addActiveDepegCandidates(candidates: DigestEditorialCandidate[], data: 
 
 function addResolvedDepegCandidates(candidates: DigestEditorialCandidate[], data: DigestInputData): void {
   for (const depeg of data.resolvedDepegs ?? []) {
-    const impactScore = depeg.impactScore ?? depegImpactScore(depeg.peakBps, depeg.mcapUsd);
+    const impactScore = depeg.impactScore ?? getDepegMarketImpactScore(depeg.peakBps, depeg.mcapUsd);
     addCandidate(candidates, {
       id: candidateId("resolved-depeg", [depeg.stablecoinId ?? depeg.symbol, String(depeg.startedAt ?? depeg.peakBps)]),
       kind: "resolved-depeg",

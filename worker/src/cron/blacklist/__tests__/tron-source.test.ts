@@ -1,6 +1,9 @@
-import { describe, it, expect } from "vitest";
-import { parseTronEvent } from "../tron-source";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
+import { fetchTronEventsIncremental, parseTronEvent } from "../tron-source";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
+import { createBudget, type RateLimitedFetch } from "../../../lib/evm-logs";
+import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
+import type { BlacklistRunBudget } from "../run-budget";
 
 function findConfig(stablecoinId: string) {
   const config = CONTRACT_CONFIGS.find(
@@ -8,6 +11,16 @@ function findConfig(stablecoinId: string) {
   );
   if (!config) throw new Error(`No Tron config for ${stablecoinId}`);
   return config;
+}
+
+const noopLimiter: RateLimitedFetch = (fn) => fn();
+
+function makeRunBudget(subrequestLimit = 100): BlacklistRunBudget {
+  return {
+    subrequestBudget: createBudget(subrequestLimit),
+    deadlineMs: Date.now() + 60_000,
+    minimumConfigWindowMs: 0,
+  };
 }
 
 describe("parseTronEvent", () => {
@@ -83,5 +96,76 @@ describe("parseTronEvent", () => {
     });
     expect(row).not.toBeNull();
     expect(row!.address).toBe("0x33".padEnd(42, "3"));
+  });
+});
+
+describe("fetchTronEventsIncremental cursor safety", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("marks the scan incomplete when a later event family fails", async () => {
+    const config = findConfig("usdt-tether");
+    const fetchMock = vi.mocked(fetch);
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: [
+              {
+                block_number: 100,
+                block_timestamp: 1_700_000_000_000,
+                transaction_id: "tx_tron_partial",
+                event_index: 0,
+                event_name: "AddedBlackList",
+                result: { _blackListedUser: "0xaa".padEnd(42, "a") },
+              },
+            ],
+            meta: {},
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(new Response("server error", { status: 500 }));
+
+    const result = await fetchTronEventsIncremental(config, null, 0, makeRunBudget(), noopLimiter);
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.maxBlock).toBe(1_700_000_000_000);
+    expect(result.apiError).toBe(true);
+    expect(result.incomplete).toBe(true);
+  });
+
+  it("marks the scan incomplete when pagination is truncated by the subrequest budget", async () => {
+    const baseConfig = findConfig("usdt-tether");
+    const firstEvent = baseConfig.events[0];
+    expect(firstEvent).toBeDefined();
+    if (!firstEvent) return;
+    const config: ContractEventConfig = {
+      ...baseConfig,
+      events: [firstEvent],
+    };
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: [],
+          meta: { links: { next: "https://api.trongrid.io/v1/contracts/TRX/events?page=2" } },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const result = await fetchTronEventsIncremental(config, null, 0, makeRunBudget(1), noopLimiter);
+
+    expect(result.rows).toHaveLength(0);
+    expect(result.apiError).toBe(false);
+    expect(result.incomplete).toBe(true);
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 });

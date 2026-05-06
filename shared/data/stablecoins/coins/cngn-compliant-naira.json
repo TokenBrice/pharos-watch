@@ -1,0 +1,99 @@
+{
+  "id": "cngn-compliant-naira",
+  "name": "Compliant Naira",
+  "symbol": "cNGN",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "NGN",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Nigerian naira reserves held 1:1 in designated commercial bank accounts by the cNGN issuer consortium",
+  "pegMechanism": "Issuer-managed mint and redemption path designed to maintain 1 cNGN = 1 NGN through naira reserves and compliant transfer rails",
+  "detailProvider": "coingecko",
+  "geckoId": "compliant-naira",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.cngn.co/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/cngn_co"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.cngn.co/integrations/contract-addresses"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Nigeria"
+  },
+  "contracts": [
+    {
+      "chain": "base",
+      "address": "0x46c85152bfe9f96829aa94755d9f915f9b10ef5f",
+      "decimals": 6
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0xa8aea66b361a8d53e8865c62d142167af28af058",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0x52828daa48c1a9a06f37500882b42daf0be04c3b",
+      "decimals": 6
+    },
+    {
+      "chain": "monad",
+      "address": "0x4f90098ba5b08abaf039b95a851f8e764eb84b49",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Nigerian naira deposits at designated commercial banks",
+      "pct": 100,
+      "risk": "medium"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "cngn-compliant-naira",
+    "display": {
+      "url": "https://www.cngn.co/",
+      "label": "cNGN"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "base",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Nigerian naira bank deposits",
+      "risk": "medium"
+    }
+  }
+}

@@ -1,4 +1,7 @@
-import { getBlacklistPriceAssetId } from "@shared/lib/blacklist";
+import {
+  buildBlacklistContractBalanceKey,
+  getBlacklistPriceAssetId,
+} from "@shared/lib/blacklist";
 import type { BlacklistStablecoin } from "@shared/types/market";
 import type { BlacklistRow } from "./shared";
 
@@ -9,7 +12,16 @@ export function buildLatestBlacklistRows(rows: readonly BlacklistRow[]): Blackli
   );
 
   for (const row of orderedRows) {
-    latestByAddress.set(row.address.toLowerCase(), row);
+    latestByAddress.set(
+      buildBlacklistContractBalanceKey(
+        row.stablecoin,
+        row.chain_id,
+        row.address,
+        row.config_key,
+        row.contract_address,
+      ),
+      row,
+    );
   }
 
   return Array.from(latestByAddress.values());

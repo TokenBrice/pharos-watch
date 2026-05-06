@@ -55,10 +55,18 @@ describe("loadDexPriceSources", () => {
       }),
     } as unknown as D1Database;
 
-    const { loadDexPriceSources } = await import("../../lib/depeg-helpers");
-    const result = await loadDexPriceSources(mockDb);
+    const { createDexPriceSourceLoadTelemetry, loadDexPriceSources } = await import("../../lib/depeg-helpers");
+    const telemetry = createDexPriceSourceLoadTelemetry();
+    const result = await loadDexPriceSources(mockDb, undefined, telemetry);
 
     expect(result.size).toBe(0);
+    expect(telemetry.malformedRows).toEqual([
+      {
+        stablecoinId: "usdc",
+        updatedAt: expect.any(Number),
+        reason: "json-parse-failed",
+      },
+    ]);
     expect(
       warnSpy.mock.calls.some(([message]) =>
         String(message).includes("owner=depeg-helpers")
@@ -67,5 +75,39 @@ describe("loadDexPriceSources", () => {
     ).toBe(true);
 
     warnSpy.mockRestore();
+  });
+
+  it("records stale price source rows without loading them", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 2_101;
+    const mockDb = {
+      prepare: vi.fn().mockReturnValue({
+        all: vi.fn().mockResolvedValue({
+          results: [
+            {
+              stablecoin_id: "usdc",
+              price_sources_json: JSON.stringify([
+                { protocol: "fluid", chain: "ethereum", price: 0.9998, tvl: 500000 },
+              ]),
+              updated_at: updatedAt,
+            },
+          ],
+        }),
+      }),
+    } as unknown as D1Database;
+
+    const { createDexPriceSourceLoadTelemetry, loadDexPriceSources } = await import("../../lib/depeg-helpers");
+    const telemetry = createDexPriceSourceLoadTelemetry();
+    const result = await loadDexPriceSources(mockDb, 2_100, telemetry);
+
+    expect(result.size).toBe(0);
+    expect(telemetry.staleRows).toEqual([
+      {
+        stablecoinId: "usdc",
+        updatedAt,
+        ageSec: expect.any(Number),
+        maxAgeSec: 2_100,
+      },
+    ]);
+    expect(telemetry.staleRows[0]!.ageSec).toBeGreaterThanOrEqual(2_101);
   });
 });

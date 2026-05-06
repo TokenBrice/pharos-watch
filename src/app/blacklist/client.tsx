@@ -93,6 +93,8 @@ export default function BlacklistClient() {
 
       <BlacklistStats
         stats={summary?.stats}
+        summary={summary}
+        freshnessMeta={freshnessMeta}
         isLoading={summaryLoading}
         blacklistStatusBuckets={blacklistStatusBuckets}
         supportDataLoading={supportDataLoading}

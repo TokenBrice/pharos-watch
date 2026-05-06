@@ -12,6 +12,46 @@ import { useCallback, useEffect, useMemo, useState } from "react";
  * This keeps route-local filter state shareable without requiring App Router navigation.
  */
 
+const URL_FILTER_HISTORY_CHANGE_EVENT = "pharos:url-filter-history-change";
+let historyPatchSubscribers = 0;
+let originalPushState: History["pushState"] | null = null;
+let originalReplaceState: History["replaceState"] | null = null;
+
+function dispatchHistoryChangeEvent(): void {
+  window.dispatchEvent(new Event(URL_FILTER_HISTORY_CHANGE_EVENT));
+}
+
+function subscribeToHistoryChanges(listener: () => void): () => void {
+  if (historyPatchSubscribers === 0) {
+    originalPushState = window.history.pushState;
+    originalReplaceState = window.history.replaceState;
+
+    window.history.pushState = ((data, unused, url) => {
+      originalPushState?.call(window.history, data, unused, url);
+      dispatchHistoryChangeEvent();
+    }) satisfies History["pushState"];
+
+    window.history.replaceState = ((data, unused, url) => {
+      originalReplaceState?.call(window.history, data, unused, url);
+      dispatchHistoryChangeEvent();
+    }) satisfies History["replaceState"];
+  }
+
+  historyPatchSubscribers += 1;
+  window.addEventListener(URL_FILTER_HISTORY_CHANGE_EVENT, listener);
+
+  return () => {
+    window.removeEventListener(URL_FILTER_HISTORY_CHANGE_EVENT, listener);
+    historyPatchSubscribers = Math.max(0, historyPatchSubscribers - 1);
+    if (historyPatchSubscribers === 0 && originalPushState && originalReplaceState) {
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+      originalPushState = null;
+      originalReplaceState = null;
+    }
+  };
+}
+
 export function isUrlFilterClearValue(value: string): boolean {
   return value === "all" || value === "";
 }
@@ -30,7 +70,11 @@ export function useUrlFilters() {
 
   useEffect(() => {
     window.addEventListener("popstate", syncFromLocation);
-    return () => window.removeEventListener("popstate", syncFromLocation);
+    const unsubscribeFromHistoryChanges = subscribeToHistoryChanges(syncFromLocation);
+    return () => {
+      window.removeEventListener("popstate", syncFromLocation);
+      unsubscribeFromHistoryChanges();
+    };
   }, [syncFromLocation]);
 
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);

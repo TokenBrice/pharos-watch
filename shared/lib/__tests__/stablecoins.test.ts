@@ -56,8 +56,8 @@ describe("tracked stablecoin metadata", () => {
     expect(nonUsd).toHaveLength(0);
     expect(commodity).toHaveLength(0);
     expect(preLaunch).toHaveLength(0);
-    expect(perCoinGenerated).toHaveLength(218);
-    expect(canonicalOrder).toHaveLength(218);
+    expect(perCoinGenerated).toHaveLength(255);
+    expect(canonicalOrder).toHaveLength(255);
     expect(
       usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
     ).toBe(canonicalOrder.length);
@@ -84,14 +84,15 @@ describe("tracked stablecoin metadata", () => {
     const preLaunchCoins = perCoinGenerated.filter((coin) => coin.status === "pre-launch");
 
     expect(legacyShellCoins).toEqual([]);
-    expect(preLaunchCoins).toHaveLength(12);
+    expect(preLaunchCoins).toHaveLength(13);
     expect(preLaunchCoins.every((coin) => coin.status === "pre-launch")).toBe(true);
   });
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
-    expect(TRACKED_STABLECOINS).toHaveLength(218);
-    expect(ACTIVE_STABLECOINS).toHaveLength(204);
+    expect(TRACKED_STABLECOINS).toHaveLength(255);
+    expect(ACTIVE_STABLECOINS).toHaveLength(240);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
+      "cadd-cad-digital",
       "usdpt-western-union",
       "roughrider-bnd",
       "fiusd-fiserv",

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
-import { selectSingleOnChainSupplyContract } from "../sync-stablecoins/supplemental-assets";
+import {
+  resolveSupplementalPrice,
+  selectSingleOnChainSupplyContract,
+} from "../sync-stablecoins/supplemental-assets";
 
 function makeMeta(contracts: StablecoinMeta["contracts"]): StablecoinMeta {
   return {
@@ -52,5 +55,44 @@ describe("selectSingleOnChainSupplyContract", () => {
       { chain: "tron", address: "TEST.TRON", decimals: 6 },
       { chain: "ethereum", address: "0x0000000000000000000000000000000000000001", decimals: 6 },
     ]))).toBeNull();
+  });
+});
+
+describe("resolveSupplementalPrice", () => {
+  it("rejects stale supplemental CoinGecko rows with upstream timestamps", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    expect(resolveSupplementalPrice(
+      { coins: {} },
+      {
+        vcred: {
+          usd: 1,
+          usd_market_cap: 1_000_000,
+          last_updated_at: nowSec - 60 * 60,
+        },
+      },
+      "vcred",
+    )).toBeNull();
+  });
+
+  it("preserves fresh supplemental CoinGecko upstream timestamps", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    expect(resolveSupplementalPrice(
+      { coins: {} },
+      {
+        vcred: {
+          usd: 1,
+          usd_market_cap: 1_000_000,
+          last_updated_at: nowSec - 60,
+        },
+      },
+      "vcred",
+    )).toEqual({
+      price: 1,
+      source: "coingecko",
+      observedAt: nowSec - 60,
+      observedAtMode: "upstream",
+    });
   });
 });

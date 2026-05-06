@@ -15,6 +15,7 @@ const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
 const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const REVIEWED_ISSUER_API_EXPANSION_AT = "2026-04-03";
 const REVIEWED_MAJOR_ISSUER_REDEMPTION_AT = "2026-04-16";
+const REVIEWED_NON_USD_BATCH_AT = "2026-05-05";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
@@ -90,8 +91,31 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "tbill-openeden",
       "cetes-etherfuse",
       "usdn-noble",
+      "reur-royal-euro",
+      "kgst-kyrgyz-som",
+      "audx-aussie-dollar-token",
+      "cngn-compliant-naira",
+      "brl1-brl1",
+      "wars-argentine-peso",
     ],
     issuerBase,
+  ),
+  ...expandIds(
+    [
+      "audx-aussie-dollar-token",
+      "brl1-brl1",
+      "cngn-compliant-naira",
+      "kgst-kyrgyz-som",
+      "reur-royal-euro",
+      "wars-argentine-peso",
+      "eusd-telcoin",
+      "jpyc-jpyc-v1",
+      "rusd-royal-dollar",
+    ],
+    {
+      ...issuerBase,
+      ...documentedBoundSupplyFull(REVIEWED_NON_USD_BATCH_AT),
+    },
   ),
   ...expandIds(
     ["usyc-hashnote", "ustb-superstate", "a7a5-old-vector", "gusd-gate"],
@@ -1137,3 +1161,15 @@ applyTrackedReviewedDocs(OFFCHAIN_ISSUER_BACKSTOP_CONFIGS, [
   "cgo-comtech",
   "dgld-gold-token-sa",
 ], REVIEWED_REMEDIATION_AT);
+
+applyTrackedReviewedDocs(OFFCHAIN_ISSUER_BACKSTOP_CONFIGS, [
+  "audx-aussie-dollar-token",
+  "brl1-brl1",
+  "cngn-compliant-naira",
+  "kgst-kyrgyz-som",
+  "reur-royal-euro",
+  "wars-argentine-peso",
+  "eusd-telcoin",
+  "jpyc-jpyc-v1",
+  "rusd-royal-dollar",
+], REVIEWED_NON_USD_BATCH_AT);

@@ -28,6 +28,26 @@ function parseMetadataObject(value: string | null | undefined): Record<string, u
   }
 }
 
+function numberFromMetadata(metadata: Record<string, unknown> | undefined, key: string): number {
+  const value = metadata?.[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function booleanFromMetadata(metadata: Record<string, unknown> | undefined, key: string): boolean {
+  return metadata?.[key] === true;
+}
+
+function hasBlacklistMaintenanceDegradation(metadata: Record<string, unknown> | undefined): boolean {
+  if (!metadata) return false;
+  return (
+    numberFromMetadata(metadata, "currentBalanceCacheFailed") > 0
+    || numberFromMetadata(metadata, "enrichFailed") > 0
+    || numberFromMetadata(metadata, "contractsSkipped") > 0
+    || booleanFromMetadata(metadata, "runtimeBudgetReached")
+    || booleanFromMetadata(metadata, "subrequestBudgetReached")
+  );
+}
+
 export async function loadCronHealth(
   db: D1Database,
   now: number,
@@ -195,6 +215,11 @@ export async function loadCronHealth(
         lastRun.status === "degraded" ||
         (lastRun.status === "skipped_locked" && hasFreshOk));
     const statusImpact = getCronStatusImpact(job);
+    const metadataDegraded =
+      job === "sync-blacklist"
+      && lastRun != null
+      && isFresh
+      && hasBlacklistMaintenanceDegradation(lastRun.metadata);
     // Bootstrap = never ran at all. For watch-tier crons (especially monthly
     // ones), a fresh install or a just-registered trigger legitimately has no
     // history yet; treating it as unhealthy produces a permanent false
@@ -215,7 +240,9 @@ export async function loadCronHealth(
         watchUnhealthyCrons++;
       }
     }
-    if (!telemetryUnknown && lastRun?.status === "degraded" && isFresh) degradedCronRuns++;
+    if (!telemetryUnknown && ((lastRun?.status === "degraded" && isFresh) || metadataDegraded)) {
+      degradedCronRuns++;
+    }
     if (!telemetryUnknown && lastRun?.status === "error" && !inFlightFresh) {
       cronErrorCount++;
       if (statusImpact === "critical") {

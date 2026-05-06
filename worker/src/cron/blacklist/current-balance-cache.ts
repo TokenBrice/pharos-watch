@@ -27,6 +27,8 @@ export interface SyncCurrentBalanceCacheResult {
   updated: number;
   deleted: number;
   failed: number;
+  skippedDueBudget: number;
+  budgetExhausted: boolean;
 }
 
 type CurrentBalanceFetchContext = {
@@ -82,14 +84,18 @@ async function persistCurrentBalanceResult(
       stablecoin: config.stablecoin,
       chainId: config.chain.chainId,
       address,
+      configKey: config.configKey,
+      contractAddress: config.contractAddress,
       amountNative: null,
       amountUsd: null,
       source: "current_balance",
       status: "provider_failed",
       observedAt: now,
+      lastSuccessfulObservedAt: null,
       attemptCount: 1,
       lastAttemptedAt: now,
       lastErrorClass: "provider_null",
+      consecutiveFailures: 1,
     });
     return "failed";
   }
@@ -98,14 +104,18 @@ async function persistCurrentBalanceResult(
     stablecoin: config.stablecoin,
     chainId: config.chain.chainId,
     address,
+    configKey: config.configKey,
+    contractAddress: config.contractAddress,
     amountNative: amount,
     amountUsd: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, assetPriceUsd),
     source: "current_balance",
     status: "resolved",
     observedAt: now,
+    lastSuccessfulObservedAt: now,
     attemptCount: 1,
     lastAttemptedAt: now,
     lastErrorClass: null,
+    consecutiveFailures: 0,
   });
   return "updated";
 }
@@ -117,20 +127,31 @@ export async function syncCurrentBalanceCacheForRows(
   context: CurrentBalanceFetchContext,
 ): Promise<SyncCurrentBalanceCacheResult> {
   if (rows.length === 0) {
-    return { updated: 0, deleted: 0, failed: 0 };
+    return { updated: 0, deleted: 0, failed: 0, skippedDueBudget: 0, budgetExhausted: false };
   }
 
   const latestRows = context.latestRows ?? buildLatestBlacklistRows(rows);
-  const counters: SyncCurrentBalanceCacheResult = { updated: 0, deleted: 0, failed: 0 };
+  const counters: SyncCurrentBalanceCacheResult = {
+    updated: 0,
+    deleted: 0,
+    failed: 0,
+    skippedDueBudget: 0,
+    budgetExhausted: false,
+  };
   const now = Math.floor(Date.now() / 1000);
 
   const assetPriceUsd = context.assetPriceUsd ?? await fetchBlacklistAssetPriceFromCache(db, config.stablecoin);
 
-  for (const row of latestRows) {
+  for (let index = 0; index < latestRows.length; index++) {
+    const row = latestRows[index]!;
     if (
       blacklistRuntimeBudgetReached(context.runBudget)
       || blacklistSubrequestBudgetReached(context.runBudget)
-    ) break;
+    ) {
+      counters.budgetExhausted = true;
+      counters.skippedDueBudget = latestRows.length - index;
+      break;
+    }
 
     if (row.event_type === "unblacklist") {
       // Preserve the freeze-ledger snapshot after releases so historical seized/frozen
@@ -144,14 +165,18 @@ export async function syncCurrentBalanceCacheForRows(
         stablecoin: config.stablecoin,
         chainId: config.chain.chainId,
         address: row.address,
+        configKey: config.configKey,
+        contractAddress: config.contractAddress,
         amountNative: row.amount_native,
         amountUsd: row.amount_usd_at_event ?? computeBlacklistAmountUsdAtEvent(config.stablecoin, row.amount_native, assetPriceUsd),
         source: "destroy_event",
         status: "resolved",
         observedAt: row.timestamp,
+        lastSuccessfulObservedAt: row.timestamp,
         attemptCount: 1,
         lastAttemptedAt: now,
         lastErrorClass: null,
+        consecutiveFailures: 0,
       });
       counters.updated++;
       continue;

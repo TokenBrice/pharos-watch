@@ -1,0 +1,144 @@
+{
+  "id": "usd3-reserve-protocol",
+  "llamaId": "178",
+  "detailProvider": "defillama",
+  "name": "Web 3 Dollar",
+  "symbol": "USD3",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "collateral": "Reserve Protocol DTF basket made up of Savings USDS, Aave USDC, wrapped Compound USDCv3, and Steakhouse USDC strategy exposure",
+  "pegMechanism": "Reserve RToken/DTF whose holders can redeem into the backing basket subject to Reserve protocol throttles and basket mechanics; RSR stakers govern and absorb losses",
+  "geckoId": "web-3-dollar",
+  "protocolSlug": "reserve-protocol",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://reserve.org/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/USD_3"
+    },
+    {
+      "label": "Docs",
+      "url": "https://reserve.org/protocol/"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://api.reserve.org/discover/dtfs"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x0d86883faf4ffd7aeb116390af37746f45b6f378",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xefb97aaf77993922ac4be4da8fbc9a2425322677",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "governanceQuality": "dao-governance",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://api.reserve.org/discover/dtfs",
+    "provider": "Reserve Protocol"
+  },
+  "reserves": [
+    {
+      "name": "Savings USDS",
+      "pct": 25,
+      "risk": "low",
+      "coinId": "susds-sky",
+      "depType": "collateral"
+    },
+    {
+      "name": "Static Aave Ethereum USDC",
+      "pct": 25,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true
+    },
+    {
+      "name": "Wrapped Compound USDCv3",
+      "pct": 25,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true
+    },
+    {
+      "name": "Steakhouse USDC strategy",
+      "pct": 25,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "reserve-protocol-dtf",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usd3-reserve-protocol",
+    "display": {
+      "url": "https://app.reserve.org/ethereum/token/0x0d86883faf4ffd7aeb116390af37746f45b6f378/overview",
+      "label": "Reserve app"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.reserve.org/discover/dtfs"
+      }
+    },
+    "params": {
+      "assets": [
+        {
+          "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "name": "Savings USDS",
+          "risk": "low",
+          "coinId": "susds-sky",
+          "depType": "collateral"
+        },
+        {
+          "address": "0x0adc69041a2b086f8772acce2a754f410f211bed",
+          "name": "Static Aave Ethereum USDC",
+          "risk": "medium",
+          "coinId": "usdc-circle",
+          "depType": "collateral",
+          "blacklistable": true
+        },
+        {
+          "address": "0x27f2f159fe990ba83d57f39fd69661764bebf37a",
+          "name": "Wrapped Compound USDCv3",
+          "risk": "medium",
+          "coinId": "usdc-circle",
+          "depType": "collateral",
+          "blacklistable": true
+        },
+        {
+          "address": "0xbeef01735c132ada46aa9aa4c54623caa92a64cb",
+          "name": "Steakhouse USDC strategy",
+          "risk": "medium",
+          "coinId": "usdc-circle",
+          "depType": "collateral",
+          "blacklistable": true
+        }
+      ]
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Reserve Protocol collateral yield",
+    "yieldType": "nav-appreciation"
+  }
+}

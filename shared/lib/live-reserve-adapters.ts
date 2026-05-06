@@ -8,6 +8,10 @@ import {
   type LiveReserveAdapterParamsByKey,
   type LiveReserveAdapterParams,
 } from "./live-reserve-adapters-schemas";
+import {
+  LIVE_RESERVE_ADAPTER_PROVENANCE,
+  LIVE_RESERVE_ADAPTER_STATUS_VALUES,
+} from "./live-reserve-adapter-provenance";
 
 export type LiveReserveRedemptionCapacityTelemetry = "direct" | "proxy" | "none";
 export type LiveReserveRedemptionFeeTelemetry = "current-bps" | "none";
@@ -16,6 +20,8 @@ export {
   LiveReservesConfigSchema,
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS,
+  LIVE_RESERVE_ADAPTER_PROVENANCE,
+  LIVE_RESERVE_ADAPTER_STATUS_VALUES,
 };
 
 export type {

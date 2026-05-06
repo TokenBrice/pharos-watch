@@ -281,6 +281,58 @@ describe("generateWeeklyRecap", () => {
     expect(body.messages[0].content).toMatch(/PSI midpoint: current .+ prior .+/i);
   });
 
+  it("surfaces critical weekly depegs in the risk leaderboard and spike metrics", async () => {
+    const rows = buildDailyRows();
+    const criticalRowIndex = 2;
+    const criticalStartedAt = rows[criticalRowIndex]!.generated_at - 3600;
+    rows[criticalRowIndex] = {
+      ...rows[criticalRowIndex]!,
+      input_data: JSON.stringify({
+        ...(JSON.parse(rows[criticalRowIndex]!.input_data) as Record<string, unknown>),
+        activeDepegCount: 1,
+        topDepegs: [{
+          stablecoinId: "pmusd-protocol",
+          symbol: "PMUSD",
+          bps: -5284,
+          direction: "below",
+          mcapUsd: 65_000_000,
+          startedAt: criticalStartedAt,
+          impactScore: 343.5,
+        }],
+      }),
+    };
+    const expectedLeadId = `weekly:depeg:pmusd-protocol:${criticalStartedAt}:active`;
+    const criticalExtended = VALID_WEEKLY_EXTENDED.replace(
+      "PSI opened",
+      "PMUSD spent Thursday 5284 bps below peg on $65M while PSI opened",
+    );
+    const db = mockD1(makeTables({ dailyRows: rows }), { requireMatch: true });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({
+      title: "Weekly Depeg Lead",
+      text: "PMUSD's 5284 bps depeg took the weekly lead while PSI only framed the regime.",
+      extended: criticalExtended,
+      meta: {
+        leadSignalId: expectedLeadId,
+        lead: "depeg",
+        tone: "forensic",
+        coins: ["PMUSD"],
+        usedCandidateIds: [expectedLeadId],
+      },
+    }));
+
+    const result = await generateWeeklyRecap(db, "anthropic-key", null);
+
+    expect(result.status).toBeUndefined();
+    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      messages: { content: string }[];
+    };
+    expect(body.messages[0].content).toContain("Weekly Risk Leaderboard");
+    expect(body.messages[0].content).toContain("Weekly spike metrics");
+    expect(body.messages[0].content).toContain(expectedLeadId);
+    expect(body.messages[0].content).toContain("PMUSD");
+    expect(body.messages[0].content).toContain("Worst depeg by bps");
+  });
+
   it("normalizes weekly meta lead and tone through the allowlist", async () => {
     const db = mockD1(makeTables(), { requireMatch: true });
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({

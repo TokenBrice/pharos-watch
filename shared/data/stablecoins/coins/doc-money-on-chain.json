@@ -41,6 +41,7 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "chainTier": "mature-alt-l1",
   "deploymentModel": "third-party-bridge",
   "reserves": [

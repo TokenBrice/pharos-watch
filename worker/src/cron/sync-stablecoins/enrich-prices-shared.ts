@@ -1,4 +1,4 @@
-import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
+import type { PriceConfidence, PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
 
 export interface PrimaryPriceResult {
   price: number;
@@ -16,6 +16,7 @@ export interface PrimaryPriceResult {
   observedAtMode?: PriceObservedAtMode | null;
   observedAtBySource?: Record<string, number | null>;
   observedAtModeBySource?: Record<string, PriceObservedAtMode | null>;
+  priceSourceConfidenceProfile?: PriceSourceConfidenceProfile | null;
 }
 
 export interface PeggedAsset {
@@ -48,6 +49,7 @@ export interface PeggedAsset {
   chainCirculating?: Record<string, Record<string, unknown>>;
   consensusSources?: string[];
   agreeSources?: string[];
+  priceSourceConfidenceProfile?: PriceSourceConfidenceProfile | null;
   frozen?: boolean;
   frozenAt?: string;
 }

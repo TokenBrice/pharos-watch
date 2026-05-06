@@ -1,9 +1,26 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.99",
+  currentVersion: "3.991",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.991",
+    title: "Public transparency and snapshot semantics",
+    date: "2026-05-05",
+    effectiveAt: 1777939200, // 2026-05-05T00:00:00Z
+    summary:
+      "Clarifies public API artifacts, UI provenance, and freeze-ledger snapshot semantics without changing event ingestion. `/api/blacklist` integration examples now use uppercase tracker symbols, frozen totals are labeled as last-known successful snapshots, and Tron missing-balance behavior is documented as provider-missing rather than false zero.",
+    impact: [
+      "OpenAPI/Postman document `/api/blacklist?stablecoin=` as an uppercase blacklist-tracker symbol filter",
+      "Blacklist UI/CSV surfaces amount source/status plus contract/config/event provenance",
+      "Public frozen totals are presented as last-known successful freeze-ledger snapshots, with provider failures preserving the previous successful value",
+      "New freeze-ledger snapshots are described as contract/config scoped, with legacy symbol/chain/address fallback for older rows",
+      "Tron missing account/token-balance data remains null/provider-missing instead of being converted to zero",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.99",
     title: "Same-run Tron ledger reconciliation",

@@ -1,9 +1,39 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.14",
+  currentVersion: "7.16",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.16",
+      title: "Follow-up freezability classification audit",
+      date: "2026-05-06",
+      effectiveAt: 1778040000,
+      summary:
+        "A follow-up review of six disputed `Freezable: No` classifications moves HomeCoin to `Possible` and leaves the other reviewed assets unchanged.",
+      impact: [
+        "HomeCoin now resolves as `Freezable: Possible` because the holder-facing HOME token is a transparent upgradeable proxy with an active proxy-admin upgrade surface",
+        "HBD, vCRED, Freedom Dollar, LUAUSD, and NXUSD remain `Freezable: No` after reviewing their native protocol or verified contract surfaces for freeze, blacklist, pause, denylist, arbitrary burn, or upgrade controls",
+        "Owner mint authority and user/allowance burn functions remain supply-control signals, not freeze signals, unless the contract also exposes holder-facing transfer gates, arbitrary burns, blacklist controls, or mutable holder-control surfaces",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "7.15",
+      title: "Direct freezability metadata audit",
+      date: "2026-05-05",
+      effectiveAt: 1777953600,
+      summary:
+        "The resolved `Freezable: No` cohort was reviewed against token-level freeze, denylist, blacklist, pause, and role-burn controls, moving confirmed direct-control assets out of the unfreezable bucket.",
+      impact: [
+        "JupUSD, eSui Dollar, MAI, JUSD, Alpha Partner USDA, Ring USDR, DOC, USDRIF, and Nest inALPHA now resolve as direct `Freezable: Yes` when their holder-facing token or vault exposes freeze, denylist, blacklist, or arbitrary role-burn controls",
+        "sBOLD and Enosys CDP now resolve as `Freezable: Possible` because the audited contracts expose direct vault pause or mutable branch-control surfaces rather than a current address-level blacklist",
+        "The remaining resolved `No` cohort was left unchanged where no direct holder-facing freeze, blacklist, pause, denylist, or arbitrary burn surface was confirmed",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.14",
       title: "Live reserve dependencies align with scoring",

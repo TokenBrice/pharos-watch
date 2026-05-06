@@ -1,0 +1,101 @@
+{
+  "id": "wars-argentine-peso",
+  "llamaId": "379",
+  "detailProvider": "defillama",
+  "name": "Argentine Peso",
+  "symbol": "WARS",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "ARS",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Argentine peso reserves and local-currency liquid instruments backing WARS at a 1:1 target against the Argentine peso",
+  "pegMechanism": "Issuer-managed fiat-backed stablecoin route targeting 1 WARS = 1 ARS; DefiLlama classifies the asset as fiat-backed",
+  "geckoId": "argentine-peso",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Argentina"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+      "decimals": 18
+    },
+    {
+      "chain": "worldchain",
+      "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+    "provider": "Ripio wARS collateral attestations by local public accountants"
+  },
+  "reserves": [
+    {
+      "name": "Argentine peso bank deposits and local-currency liquid instruments",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "wars-argentine-peso",
+    "display": {
+      "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+      "label": "Ripio wFIAT Updates"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Argentine peso bank deposits and local-currency liquid instruments",
+      "risk": "high"
+    }
+  }
+}

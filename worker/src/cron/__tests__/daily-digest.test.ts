@@ -160,6 +160,7 @@ import {
   collectSupplyVelocity,
   type CollectorContext,
 } from "../daily-digest/collectors";
+import { buildDigestIntelligence } from "../daily-digest/digest-intelligence";
 import type { DigestInputData } from "@shared/types/digest";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
@@ -175,6 +176,7 @@ function makeParsedFixture(opts: {
   extended?: string;
   text?: string;
   lead?: string;
+  leadSignalId?: string;
   tone?: string;
 } = {}): ParsedDigestResponse {
   return {
@@ -182,6 +184,7 @@ function makeParsedFixture(opts: {
     digestText: opts.text ?? "T.",
     digestExtended: opts.extended ?? DEFAULT_PARSED_EXTENDED,
     digestMeta: JSON.stringify({
+      ...(opts.leadSignalId ? { leadSignalId: opts.leadSignalId } : {}),
       lead: opts.lead ?? "depeg",
       tone: opts.tone ?? "dry",
       coins: ["USDT"],
@@ -437,11 +440,20 @@ describe("generateDailyDigest", () => {
       activeDepegCount: number;
       topDepegs: Array<{ symbol: string; bps: number }>;
       editorialCandidates?: unknown[];
+      riskTape?: unknown[];
+      nextTriggers?: unknown[];
+      calmNarrativeFrame?: { label: string };
+      editorialAudit?: { leadCandidateId?: string | null; usedCandidateIds?: string[] };
     };
     expect(storedInput.totalMcapUsd).toBe(160_000_000);
     expect(storedInput.activeDepegCount).toBe(1);
     expect(storedInput.topDepegs[0]).toMatchObject({ symbol: "USDT", bps: 150, mcapUsd: 100_000_000 });
     expect(storedInput.editorialCandidates?.length).toBeGreaterThan(0);
+    expect(storedInput.riskTape?.length).toBeGreaterThan(0);
+    expect(storedInput.nextTriggers?.length).toBeGreaterThan(0);
+    expect(storedInput.calmNarrativeFrame?.label).toBeTruthy();
+    expect(storedInput.editorialAudit?.leadCandidateId).toBe("depeg:usdt-tether:active");
+    expect(storedInput.editorialAudit?.usedCandidateIds).toEqual(["depeg:usdt-tether:active"]);
 
     expect(postDigestTweet).toHaveBeenCalledTimes(1);
     expect(postDigestToTelegram).toHaveBeenCalledTimes(1);
@@ -476,6 +488,9 @@ describe("generateDailyDigest", () => {
     expect(anthropicBody.stream).toBe(true);
     expect(anthropicBody.messages[0].content).toContain("Data quality notes:");
     expect(anthropicBody.messages[0].content).toContain("Editorial Candidates");
+    expect(anthropicBody.messages[0].content).toContain("Risk Tape");
+    expect(anthropicBody.messages[0].content).toContain("Deterministic Next Triggers");
+    expect(anthropicBody.messages[0].content).toContain("Calm Narrative Frame");
 
     const systemPrompt = anthropicBody.system;
     expect(systemPrompt).toContain("Do NOT reuse any of the following house-style tics");
@@ -485,6 +500,7 @@ describe("generateDailyDigest", () => {
     expect(systemPrompt).toContain("EXEMPLAR");
     expect(systemPrompt).toContain("Momentum Candidate");
     expect(systemPrompt).toContain("total-mcap ATH");
+    expect(systemPrompt).toContain("CALM-DAY STORYTELLING");
 
     const userPrompt = anthropicBody.messages[0].content;
     expect(userPrompt).not.toContain("Distribution: median");
@@ -1078,6 +1094,50 @@ describe("forward-look voice guard", () => {
   });
 });
 
+describe("lead requirement validator", () => {
+  it("hard-fails when a required critical candidate is not the declared lead", () => {
+    const issues = validateDigestModelOutput(
+      makeParsedFixture({
+        leadSignalId: "market:usdc-circle:weekly-supply",
+        extended: "PMUSD stayed 5284 bps below peg on $65M.\n\nUSDC added $2B.\n\nIf PMUSD holds there next session, the peg stress remains the lead.",
+      }),
+      {
+        kind: "daily",
+        recentMeta: [],
+        leadRequirements: [{
+          candidateIds: ["depeg:pmusd-active"],
+          severity: "hard",
+          mentionTokens: ["PMUSD"],
+          reason: "PMUSD critical depeg must lead",
+        }],
+      },
+    );
+
+    expect(issues.some((issue) => issue.code === "lead-candidate-mismatch" && issue.severity === "hard")).toBe(true);
+  });
+
+  it("hard-fails when a required critical candidate is omitted from the copy", () => {
+    const issues = validateDigestModelOutput(
+      makeParsedFixture({
+        leadSignalId: "depeg:pmusd-active",
+        extended: "USDC added $2B.\n\nUSDT held steady.\n\nIf the flow reverses next session, the supply story changes.",
+      }),
+      {
+        kind: "daily",
+        recentMeta: [],
+        leadRequirements: [{
+          candidateIds: ["depeg:pmusd-active"],
+          severity: "hard",
+          mentionTokens: ["PMUSD"],
+          reason: "PMUSD critical depeg must lead",
+        }],
+      },
+    );
+
+    expect(issues.some((issue) => issue.code === "required-lead-missing" && issue.severity === "hard")).toBe(true);
+  });
+});
+
 describe("opening-fingerprint voice guard", () => {
   it("flags PSI-verb opening when any of last 3 also opened that way", () => {
     const recent = [
@@ -1173,6 +1233,78 @@ describe("momentum candidates surface", () => {
       messages: { content: string }[];
     };
     expect(body.messages[0].content).toContain("Momentum Candidates");
+  });
+});
+
+describe("digest intelligence enrichment", () => {
+  const current: DigestInputData = {
+    totalMcapUsd: 160_000_000,
+    mcap7dDelta: 3_000_000,
+    activeDepegCount: 1,
+    topDepegs: [{ stablecoinId: "usdt-tether", symbol: "USDT", bps: -175, direction: "below", mcapUsd: 100_000_000 }],
+    biggestSupplyChange: { id: "usdc-circle", symbol: "USDC", name: "USD Coin", changeUsd: 40_000_000, currentMcap: 60_000_000 },
+    stabilityIndex: { score: 88, band: "STEADY", components: { severity: 4, breadth: 2, trend: -1 } },
+    yesterdayIndex: { score: 90, band: "BEDROCK" },
+    supplyVelocity: [{ coin: "USDC", change1d: 12_000_000, change7d: 40_000_000, signal: "accelerating" }],
+    editorialCandidates: [
+      {
+        id: "depeg:usdt-tether:active",
+        kind: "depeg",
+        title: "USDT active 175 bps below peg",
+        symbols: ["USDT"],
+        impactScore: 17.5,
+        novelty: "worsening",
+        confidence: "high",
+        artifactRisk: "low",
+        headlineFacts: ["175 bps below peg", "$100M market cap"],
+        whyItMatters: "Active peg stress is reader-relevant.",
+      },
+      {
+        id: "supply:usdc:accelerating",
+        kind: "supply",
+        title: "USDC supply accelerating",
+        symbols: ["USDC"],
+        impactScore: 12,
+        novelty: "accelerating",
+        confidence: "high",
+        artifactRisk: "low",
+        headlineFacts: ["+$12M in 1d"],
+        whyItMatters: "Supply velocity shows allocation.",
+      },
+    ],
+  };
+
+  it("builds risk tape, next triggers, changes, and prior-trigger outcomes", () => {
+    const previous: DigestInputData = {
+      ...current,
+      dataQuality: { generatedAt: 1_772_668_800, stablecoinsCacheUpdatedAt: null, stablecoinsCacheAgeSec: null, windows: current.dataQuality?.windows ?? {
+        blacklistActivity: { label: "x", start: 0, end: 0 },
+        mintBurnFlows: { label: "x", start: 0, end: 0 },
+        supplyVelocity: { label: "x", dates: [] },
+        psi: { label: "x", sampleAt: null, dailySnapshotAt: null },
+      } },
+      topDepegs: [{ stablecoinId: "usdt-tether", symbol: "USDT", bps: -100, direction: "below", mcapUsd: 100_000_000 }],
+      stabilityIndex: { score: 91, band: "BEDROCK", components: { severity: 2, breadth: 1, trend: 0 } },
+      nextTriggers: [{
+        id: "trigger:depeg:usdt",
+        label: "USDT depeg widening",
+        metric: "depeg-bps",
+        comparator: "abs-gte",
+        thresholdValue: 125,
+        thresholdLabel: "125 bps off peg",
+        symbol: "USDT",
+        rationale: "A wider deviation raises severity.",
+        detail: "If USDT reaches 125 bps off peg, severity rises.",
+      }],
+    };
+
+    const intelligence = buildDigestIntelligence(current, previous);
+
+    expect(intelligence.riskTape?.some((item) => item.id === "risk-tape:depegs")).toBe(true);
+    expect(intelligence.nextTriggers?.[0]).toMatchObject({ metric: "depeg-bps", symbol: "USDT" });
+    expect(intelligence.changeSummary?.worsenedSignals[0]).toMatchObject({ label: "USDT depeg widened" });
+    expect(intelligence.forwardLookOutcomes?.[0]).toMatchObject({ status: "hit", triggerId: "trigger:depeg:usdt" });
+    expect(intelligence.calmNarrativeFrame?.label).toBe("Supply rotation");
   });
 });
 
@@ -1379,6 +1511,30 @@ describe("collectActiveDepegs", () => {
       direction: "below",
     });
     expect(result.value.topDepegs[1].suppressReason).toContain("sub-$20M");
+  });
+
+  it("keeps critical stale depegs unsuppressed and returns more than three prompt candidates", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE ended_at IS NULL",
+        rows: [
+          { stablecoin_id: "dai-makerdao", symbol: "DAI", direction: "above", peak_deviation_bps: 500, started_at: nowSec - 8 * 86_400 },
+          { stablecoin_id: "usdt-tether", symbol: "USDT", direction: "below", peak_deviation_bps: -25, started_at: nowSec - 3600 },
+          { stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: -5200, started_at: nowSec - 10 * 86_400 },
+          { stablecoin_id: "dai-makerdao", symbol: "DAI2", direction: "above", peak_deviation_bps: 150, started_at: nowSec - 3600 },
+        ],
+      },
+    ]);
+
+    const result = await collectActiveDepegs(makeCollectorCtx(db));
+
+    expect(result.value.topDepegs).toHaveLength(4);
+    expect(result.value.topDepegs[0]).toMatchObject({
+      symbol: "USDC",
+      bps: -5200,
+    });
+    expect(result.value.topDepegs[0].suppressReason).toBeUndefined();
   });
 });
 

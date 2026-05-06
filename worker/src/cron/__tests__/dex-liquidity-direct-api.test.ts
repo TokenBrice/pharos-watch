@@ -1030,7 +1030,7 @@ describe("fetchOrcaPools", () => {
     const pools = await fetchOrcaPools();
     expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(true);
-    expect(pools.degraded).toBe(false);
+    expect(pools.degraded).toBe(true);
   });
 
   it("returns empty array on HTTP error", async () => {

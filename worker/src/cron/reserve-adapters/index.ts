@@ -32,6 +32,7 @@ import { fetchM0Reserves } from "./m0";
 import { fetchMentoReserves } from "./mento";
 import { fetchOpenEdenUsdoReserves } from "./openeden";
 import { fetchReMetricsReserves } from "./re-metrics";
+import { fetchReserveProtocolDtfReserves } from "./reserve-protocol-dtf";
 import { fetchReservoirReserves } from "./reservoir";
 import { fetchRiverProtocolInfoReserves } from "./river-protocol-info";
 import { fetchErc4626SingleAssetReserves } from "./erc4626-single-asset";
@@ -82,6 +83,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   mento: fetchMentoReserves,
   "openeden-usdo": fetchOpenEdenUsdoReserves,
   "re-metrics": fetchReMetricsReserves,
+  "reserve-protocol-dtf": fetchReserveProtocolDtfReserves,
   reservoir: fetchReservoirReserves,
   "river-protocol-info": fetchRiverProtocolInfoReserves,
   "sgforge-coinvertible": fetchSgForgeCoinvertibleReserves,

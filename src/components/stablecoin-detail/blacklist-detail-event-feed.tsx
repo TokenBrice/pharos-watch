@@ -10,6 +10,7 @@ import { DataTableShell, type DataTableColumn } from "@/components/data-table-sh
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, ShieldOff } from "lucide-react";
 import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
+import { isGoldBlacklistStablecoin } from "@shared/lib/blacklist";
 import { formatCurrency, timeAgo, formatEventDate } from "@shared/lib/format";
 import type { BlacklistEvent, BlacklistStablecoin } from "@shared/types";
 
@@ -54,6 +55,44 @@ function shortHash(hash: string): string {
 function shortAddress(addr: string): string {
   if (addr.length <= 12) return addr;
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+}
+
+const AMOUNT_SOURCE_LABELS: Record<string, string> = {
+  event: "event",
+  historical_balance: "historical",
+  current_balance_snapshot: "snapshot",
+  derived: "derived",
+  legacy_migration: "legacy",
+  unavailable: "unavailable",
+};
+
+const AMOUNT_STATUS_LABELS: Record<string, string> = {
+  recoverable_pending: "pending recovery",
+  provider_failed: "provider failed",
+  ambiguous: "ambiguous",
+  permanently_unavailable: "unavailable",
+};
+
+function formatFeedAmount(evt: BlacklistEvent): { primary: string; detail: string } {
+  if (evt.amountUsdAtEvent != null) {
+    return {
+      primary: formatCurrency(evt.amountUsdAtEvent),
+      detail: AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " "),
+    };
+  }
+
+  if (evt.amountNative != null && !(evt.amountNative === 0 && evt.eventType !== "destroy")) {
+    const digits = isGoldBlacklistStablecoin(evt.stablecoin) ? 4 : 2;
+    return {
+      primary: `${evt.amountNative.toLocaleString(undefined, { maximumFractionDigits: digits })} ${evt.stablecoin}`,
+      detail: AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " "),
+    };
+  }
+
+  return {
+    primary: AMOUNT_STATUS_LABELS[evt.amountStatus] ?? evt.amountStatus.replace(/_/g, " "),
+    detail: AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " "),
+  };
 }
 
 function FeedSkeleton() {
@@ -109,6 +148,7 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
       >
         {data.events.map((evt) => {
           const badge = eventBadge(evt.eventType);
+          const amount = formatFeedAmount(evt);
           return (
             <TableRow key={evt.id}>
               <TableCell className="whitespace-nowrap text-xs" title={formatEventDate(evt.timestamp)}>
@@ -130,11 +170,10 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
                 </a>
               </TableCell>
               <TableCell className="text-right font-mono tabular-nums text-sm">
-                {evt.amountUsdAtEvent != null ? (
-                  formatCurrency(evt.amountUsdAtEvent)
-                ) : (
-                  <span className="text-muted-foreground">&mdash;</span>
-                )}
+                <span className={evt.amountUsdAtEvent == null && evt.amountNative == null ? "text-muted-foreground" : ""}>
+                  {amount.primary}
+                </span>
+                <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">{amount.detail}</span>
               </TableCell>
               <TableCell className="hidden sm:table-cell text-sm">{evt.chainName}</TableCell>
               <TableCell className="text-center">

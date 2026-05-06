@@ -13,6 +13,7 @@ import {
 
 const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
 const REVIEWED_REMEDIATION_AT = "2026-03-30";
+const REVIEWED_HIVE_HBD_AT = "2026-05-05";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
@@ -265,6 +266,19 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       "Tracked metadata describes FPI as redeemable against a fully collateralized FRAX-backed system with the redemption price moving on-chain with CPI rather than staying fixed at $1",
     ],
   },
+  "hbd-hive": {
+    ...collateralRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_HIVE_HBD_AT),
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    outputAssetType: "mixed-collateral",
+    costModel: documentedVariableFee(
+      "Hive conversions settle over the protocol conversion window and can be affected by HBD debt-ratio haircut mechanics; public docs reviewed do not publish a fixed redemption fee",
+    ),
+    notes: [
+      "HBD is modeled as a protocol conversion route rather than a fiat issuer rail: holders can convert HBD through Hive mechanics, but the output and haircut behavior depend on protocol debt-ratio conditions",
+    ],
+  },
 };
 
 applyTrackedReviewedDocs(COLLATERAL_REDEEM_BACKSTOP_CONFIGS, [
@@ -281,3 +295,5 @@ applyTrackedReviewedDocs(COLLATERAL_REDEEM_BACKSTOP_CONFIGS, [
 ]);
 
 applyTrackedReviewedDocs(COLLATERAL_REDEEM_BACKSTOP_CONFIGS, ["ussd-sonic-labs", "usdp-parallel"], REVIEWED_REMEDIATION_AT);
+
+applyTrackedReviewedDocs(COLLATERAL_REDEEM_BACKSTOP_CONFIGS, ["hbd-hive"], REVIEWED_HIVE_HBD_AT);

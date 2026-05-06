@@ -1,0 +1,80 @@
+{
+  "id": "brl1-brl1",
+  "name": "BRL1",
+  "symbol": "BRL1",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "BRL",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Brazilian-real reserve portfolio backing BRL1 at a 1:1 target, including Brazilian Treasury ETFs, repo agreements, and cash equivalents",
+  "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 BRL1 = 1 BRL through Brazilian-real backing",
+  "detailProvider": "coingecko",
+  "geckoId": "brl1",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://brl1.io/en/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/BRL1Coin"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://fact.finance/en/reserves/brl1"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Brazil"
+  },
+  "contracts": [
+    {
+      "chain": "polygon",
+      "address": "0x5c067c80c00ecd2345b05e83a3e758ef799c40b5",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "chainTier": "stage1-l2",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://fact.finance/en/reserves/brl1",
+    "provider": "Fact Finance reserve report"
+  },
+  "reserves": [
+    {
+      "name": "Brazilian Treasury ETFs, repo agreements, and cash equivalents",
+      "pct": 100,
+      "risk": "medium"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "brl1-brl1",
+    "display": {
+      "url": "https://fact.finance/en/reserves/brl1",
+      "label": "BRL1 Reserve Report"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "polygon",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Brazilian Treasury ETFs, repo agreements, and cash equivalents",
+      "risk": "medium"
+    }
+  }
+}

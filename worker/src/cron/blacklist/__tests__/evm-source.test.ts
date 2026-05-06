@@ -1,7 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { encodeAbiParameters } from "viem/utils";
 import { parseEvmLogs } from "../evm-source";
 import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../../lib/blacklist-contracts";
+import {
+  createBudget,
+  fetchEvmLogsForTopicsWithCompleteness,
+  type EtherscanLogEntry,
+} from "../../../lib/evm-logs";
 
 const USD1_CONFIG: ContractEventConfig = {
   configKey: "ethereum-0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
@@ -126,6 +131,18 @@ const BUIDL_CONFIG: ContractEventConfig = {
     },
   ],
 };
+
+function makeEtherscanLog(blockNumber: number, index: number): EtherscanLogEntry {
+  return {
+    address: "0x123",
+    topics: ["0xabc"],
+    data: "0x",
+    blockNumber: `0x${blockNumber.toString(16)}`,
+    timeStamp: "0x65000000",
+    transactionHash: `0xhash${index}`,
+    logIndex: `0x${index.toString(16)}`,
+  };
+}
 
 describe("parseEvmLogs", () => {
   it("extracts address from topics[2] when addressTopicIndex is 2 (USD1)", () => {
@@ -310,6 +327,45 @@ describe("parseEvmLogs", () => {
     });
   });
 
+  it("keeps rows recoverable when a configured amount data slot is missing", () => {
+    const seizedAddr = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const rows = parseEvmLogs(BUIDL_CONFIG, [{
+      address: BUIDL_CONFIG.contractAddress,
+      topics: [
+        "0x5c719d01bb88860dfca685ad3818d8b61a083caaf8f68abe6fa0fba4e40e33a9",
+        "0x000000000000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      ],
+      data: encodeAbiParameters([{ type: "address" }], [seizedAddr]),
+      blockNumber: "0x1234",
+      transactionHash: "0xbuidl-short",
+      logIndex: "0x6",
+      timeStamp: "0x65000000",
+    }]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      address: seizedAddr,
+      amount_native: null,
+      amount_usd_at_event: null,
+      amount_source: "unavailable",
+      amount_status: "recoverable_pending",
+    });
+  });
+
+  it("skips malformed scalar address data instead of creating a bogus 0x row", () => {
+    const rows = parseEvmLogs(USDC_CONFIG, [{
+      address: USDC_CONFIG.contractAddress,
+      topics: ["0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855"],
+      data: "0x1234",
+      blockNumber: "0x1234",
+      transactionHash: "0xshort-address",
+      logIndex: "0x7",
+      timeStamp: "0x65000000",
+    }]);
+
+    expect(rows).toHaveLength(0);
+  });
+
   it("decodes BUIDL Seize with amountDataIndex=0 (regression for Agent A C1)", async () => {
     const { encodeAbiParameters, keccak256, toBytes } = await import("viem");
     const seizeTopic = keccak256(toBytes("Seize(address,address,uint256,string)"));
@@ -335,6 +391,46 @@ describe("parseEvmLogs", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].amount_native).toBe(25);
     expect(rows[0].event_type).toBe("destroy");
+  });
+});
+
+describe("fetchEvmLogsForTopicsWithCompleteness", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const noopLimiter = <T>(fn: () => Promise<T>) => fn();
+
+  it("returns incomplete split coverage when a recursive half fails", async () => {
+    const saturated = Array.from({ length: 1000 }, (_, index) => makeEtherscanLog(index, index));
+    const firstHalf = [makeEtherscanLog(10, 1001)];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn()
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ status: "1", message: "OK", result: saturated }), { status: 200 }),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ status: "1", message: "OK", result: firstHalf }), { status: 200 }),
+        )
+        .mockResolvedValueOnce(new Response("server error", { status: 500 })),
+    );
+
+    const result = await fetchEvmLogsForTopicsWithCompleteness(
+      1,
+      "0x123",
+      [{ index: 0, value: "0xabc" }],
+      null,
+      0,
+      100,
+      0,
+      noopLimiter,
+      createBudget(10),
+    );
+
+    expect(result.complete).toBe(false);
+    expect(result.scannedToBlock).toBe(50);
+    expect(result.logs).toEqual(firstHalf);
   });
 });
 

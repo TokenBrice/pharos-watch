@@ -458,7 +458,14 @@ export function buildDataQualityCauses(input: {
       code: "reserve_sync_stale",
       layer: "data-quality",
       severity: "critical",
-      message: "All configured live reserve feeds are missing, stale, or degraded.",
+      message:
+        "All configured live reserve feeds are missing, stale, or degraded." +
+        (input.reserveComposition.runBudgetTruncated
+          ? ` Last run was truncated by budget with ${input.reserveComposition.deferredCoins} deferred coin(s)${input.reserveComposition.nextCursorStablecoinId ? `; next cursor ${input.reserveComposition.nextCursorStablecoinId}` : ""}.`
+          : "") +
+        (input.reserveComposition.writeTimeoutUncertain > 0
+          ? ` ${input.reserveComposition.writeTimeoutUncertain} coin(s) have uncertain D1 write outcomes.`
+          : ""),
     });
   } else if (input.reserveComposition.status === "degraded") {
     pushCause(dataQualityCauses, {
@@ -470,7 +477,13 @@ export function buildDataQualityCauses(input: {
         `${formatRatio(input.reserveComposition.authoritativeFreshCoverageRatio)} authoritative). ` +
         `${input.reserveComposition.errorCoins} error, ${input.reserveComposition.missingCoins} missing, ` +
         `${input.reserveComposition.staleCoins} stale, ${input.reserveComposition.degradedCoins} degraded, ` +
-        `${input.reserveComposition.corruptCoins} corrupt live reserve feed(s).`,
+        `${input.reserveComposition.corruptCoins} corrupt live reserve feed(s).` +
+        (input.reserveComposition.runBudgetTruncated
+          ? ` Last run was truncated by budget with ${input.reserveComposition.deferredCoins} deferred coin(s)${input.reserveComposition.nextCursorStablecoinId ? `; next cursor ${input.reserveComposition.nextCursorStablecoinId}` : ""}.`
+          : "") +
+        (input.reserveComposition.writeTimeoutUncertain > 0
+          ? ` ${input.reserveComposition.writeTimeoutUncertain} coin(s) have uncertain D1 write outcomes.`
+          : ""),
     });
   }
 

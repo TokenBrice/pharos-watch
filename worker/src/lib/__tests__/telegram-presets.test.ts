@@ -4,6 +4,7 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import {
   isTelegramPresetAlias,
   listTelegramPresets,
+  resolveTelegramPresetAlias,
   resolveTelegramPresetTargets,
 } from "../telegram-presets";
 
@@ -58,8 +59,15 @@ describe("telegram preset catalog", () => {
 
   it("recognizes supported preset aliases", () => {
     expect(isTelegramPresetAlias("usd-top25")).toBe(true);
+    expect(isTelegramPresetAlias("usd-top-25")).toBe(true);
     expect(isTelegramPresetAlias("USD-TOP25".toLowerCase())).toBe(true);
     expect(isTelegramPresetAlias("usd-top100")).toBe(false);
+  });
+
+  it("normalizes dashed aliases to canonical preset ids", () => {
+    expect(resolveTelegramPresetAlias("usd-top-25")).toBe("usd-top25");
+    expect(resolveTelegramPresetAlias("usd-top25")).toBe("usd-top25");
+    expect(resolveTelegramPresetAlias("USD-TOP-10")).toBe("usd-top10");
   });
 });
 

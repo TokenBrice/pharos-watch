@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   resolveTicker,
   parseTargetArgs,
@@ -50,6 +51,18 @@ describe("resolveTicker", () => {
     expect(result.status).toBe("not_found");
     expect(result.matches).toEqual([]);
   });
+
+  it("can resolve frozen exact ids when the tracked scope is requested", () => {
+    const frozen = FROZEN_STABLECOINS[0];
+    expect(frozen).toBeDefined();
+
+    const defaultResult = resolveTicker(frozen!.id);
+    expect(defaultResult.status).toBe("not_found");
+
+    const trackedResult = resolveTicker(frozen!.id, "tracked");
+    expect(trackedResult.status).toBe("unique");
+    expect(trackedResult.matches[0].id).toBe(frozen!.id);
+  });
 });
 
 describe("parseSubscribeArgs", () => {
@@ -92,6 +105,15 @@ describe("parseSubscribeArgs", () => {
     expect(result.invalidTargets).toEqual([]);
   });
 
+  it("accepts dashed preset aliases and canonicalizes them", () => {
+    const result = parseSubscribeArgs("dews usd-top-25");
+    expect(result.alertTypes).toEqual(new Set(["dews"]));
+    expect(result.subscribeAll).toBe(false);
+    expect(result.presetIds).toEqual(["usd-top25"]);
+    expect(result.tickers).toEqual([]);
+    expect(result.invalidTargets).toEqual([]);
+  });
+
   it("classifies unknown tokens as invalidTargets", () => {
     const result = parseSubscribeArgs("foo dews USDC");
     expect(result.alertTypes).toEqual(new Set(["dews"]));
@@ -127,12 +149,32 @@ describe("parseTargetArgs", () => {
     expect(result.invalidTargets).toEqual([]);
   });
 
+  it("accepts dashed preset aliases for unsubscribe-style commands", () => {
+    const result = parseTargetArgs("usd-top-25 USDC");
+    expect(result.includeAll).toBe(false);
+    expect(result.presetIds).toEqual(["usd-top25"]);
+    expect(result.tickers).toEqual(["USDC"]);
+    expect(result.invalidTargets).toEqual([]);
+  });
+
   it("recognizes all as an exclusive target token", () => {
     const result = parseTargetArgs("all");
     expect(result.includeAll).toBe(true);
     expect(result.presetIds).toEqual([]);
     expect(result.tickers).toEqual([]);
     expect(result.invalidTargets).toEqual([]);
+  });
+
+  it("accepts frozen exact ids for tracked-scope target parsing", () => {
+    const frozen = FROZEN_STABLECOINS[0];
+    expect(frozen).toBeDefined();
+
+    const defaultResult = parseTargetArgs(frozen!.id);
+    expect(defaultResult.invalidTargets).toEqual([frozen!.id]);
+
+    const trackedResult = parseTargetArgs(frozen!.id, { resolutionScope: "tracked" });
+    expect(trackedResult.tickers).toEqual([frozen!.id]);
+    expect(trackedResult.invalidTargets).toEqual([]);
   });
 });
 

@@ -7,6 +7,7 @@ import type { StatusHistoryWindow } from "@/hooks/use-status-history";
 export interface HistorySectionProps {
   allTransitions: StatusResponse["timeline"];
   latestTransition: StatusResponse["timeline"][number] | null;
+  reserveComposition: StatusResponse["reserveComposition"];
   historyWindow: StatusHistoryWindow;
   setHistoryWindow: (window: StatusHistoryWindow) => void;
   historyLoading: boolean;
@@ -15,6 +16,7 @@ export interface HistorySectionProps {
 export function HistorySection({
   allTransitions,
   latestTransition,
+  reserveComposition,
   historyWindow,
   setHistoryWindow,
   historyLoading,
@@ -30,6 +32,8 @@ export function HistorySection({
           <SummaryBadge label="Window" value={historyWindow} />
           <SummaryBadge label="Transitions" value={String(allTransitions.length)} />
           <SummaryBadge label="Latest" value={latestTransition ? formatTransitionLabel(latestTransition) : "—"} />
+          <SummaryBadge label="Reserve Deferred" value={String(reserveComposition.deferredCoins)} />
+          <SummaryBadge label="Write Uncertain" value={String(reserveComposition.writeTimeoutUncertain)} />
         </>
       }
     >
@@ -39,6 +43,11 @@ export function HistorySection({
         onWindowChange={setHistoryWindow}
         isLoading={historyLoading}
       />
+      {reserveComposition.runBudgetTruncated && (
+        <div className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+          Live reserve sync last truncated by run budget; resumes at {reserveComposition.nextCursorStablecoinId ?? "next configured coin"}.
+        </div>
+      )}
     </StatusSection>
   );
 }

@@ -8,6 +8,7 @@ import {
   breakerKeyForConfig,
   classifyFailure,
   isReserveAdapterAttemptChainError,
+  type ReserveAttemptFailureSummary,
 } from "./sync-live-reserves-shared";
 import {
   beginReserveSyncAttempt,
@@ -32,6 +33,7 @@ export interface ReserveCoinSyncResult {
   breakerOutcome?: boolean;
   warningMessages: string[];
   hasWarnings: boolean;
+  attemptFailureSummaries?: ReserveAttemptFailureSummary[];
 }
 
 export type ReserveAdapterRunner = (
@@ -50,6 +52,7 @@ export async function syncReserveCoin(args: {
   runAdapter: ReserveAdapterRunner;
   breakerCanFetch: Map<string, boolean>;
   previousState: ReserveSyncStateRecord | null;
+  d1FinalizeTimeoutMs?: number;
 }): Promise<ReserveCoinSyncResult> {
   if (args.signal?.aborted) {
     throw args.signal.reason ?? new Error("sync-live-reserves aborted");
@@ -188,9 +191,9 @@ export async function syncReserveCoin(args: {
           db,
           compositionRecord,
           successState,
-          Date.now() + D1_WRITE_FINALIZE_TIMEOUT_MS,
+          Date.now() + (args.d1FinalizeTimeoutMs ?? D1_WRITE_FINALIZE_TIMEOUT_MS),
         ),
-        D1_WRITE_FINALIZE_TIMEOUT_MS,
+        args.d1FinalizeTimeoutMs ?? D1_WRITE_FINALIZE_TIMEOUT_MS,
         `D1 write timeout for ${coin.id}`,
       );
       finalizeSucceeded = finalizeResult.finalized;
@@ -234,8 +237,10 @@ export async function syncReserveCoin(args: {
   } catch (error) {
     console.error(`[sync-live-reserves] Failed for ${coin.id}:`, error);
     const extras: Record<string, unknown> = {};
+    let attemptFailureSummaries: ReserveAttemptFailureSummary[] | undefined;
     if (isReserveAdapterAttemptChainError(error)) {
       extras.attemptSummaries = error.attemptSummaries;
+      attemptFailureSummaries = error.attemptSummaries;
     }
     if (adapterStartMs !== null) {
       extras.durationMs = Date.now() - adapterStartMs;
@@ -247,6 +252,13 @@ export async function syncReserveCoin(args: {
       [],
       Object.keys(extras).length > 0 ? extras : undefined,
     );
-    return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
+    return {
+      breakerKey,
+      status: "failed",
+      breakerOutcome: false,
+      warningMessages: [],
+      hasWarnings: false,
+      ...(attemptFailureSummaries ? { attemptFailureSummaries } : {}),
+    };
   }
 }

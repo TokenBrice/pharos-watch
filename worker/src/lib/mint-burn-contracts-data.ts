@@ -66,6 +66,7 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "vchf-vnx", dustThreshold: 10_000 },
   { stablecoinId: "ussd-sonic-labs", dustThreshold: 10_000 },
   { stablecoinId: "cadc-cad-coin", dustThreshold: 10_000 },
+  { stablecoinId: "cadd-cad-digital", dustThreshold: 10_000 },
   { stablecoinId: "veur-vnx", dustThreshold: 10_000 },
   { stablecoinId: "dusd-dtrinity", dustThreshold: 10_000 },
   { stablecoinId: "usdaf-asymmetry", dustThreshold: 10_000 },

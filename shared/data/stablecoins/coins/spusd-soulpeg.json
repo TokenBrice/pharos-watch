@@ -1,0 +1,72 @@
+{
+  "id": "spusd-soulpeg",
+  "name": "SoulPeg USD",
+  "symbol": "spUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "SoulPeg protocol collateral and stablecoin liquidity on BSC",
+  "pegMechanism": "Protocol-issued dollar asset using collateral reserves and mint/liquidity controls described by SoulPeg; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
+  "detailProvider": "coingecko",
+  "geckoId": "soulpeg-usd",
+  "protocolSlug": "soulpeg",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.soulpeg.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/SoulPegOfficial"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.soulpeg.io/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "bsc",
+      "address": "0x40ff3dea2eec93a7b71879874dc4407918da77a6",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "established-alt-l1",
+  "deploymentModel": "single-chain",
+  "reserves": [
+    {
+      "name": "SoulPeg protocol collateral and stablecoin liquidity",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "spusd-soulpeg",
+    "display": {
+      "url": "https://docs.soulpeg.io/",
+      "label": "SoulPeg docs"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "bsc",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Redemption backstop not modeled",
+      "message": "SoulPeg materials describe protocol controls, but Pharos has not source-reviewed a holder-exercisable redemption route for backstop scoring."
+    }
+  ]
+}
