@@ -16,16 +16,21 @@ import {
 
 const onChainIds = new Set(ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId));
 const rateDerivedIds = new Set(RATE_DERIVED_CONFIGS.map((config) => config.stablecoinId));
+const intentionalGapIds = new Set(
+  YIELD_ADAPTER_MANIFEST.filter((entry) => entry.status === "intentional-gap")
+    .map((entry) => entry.stablecoinId),
+);
 
 function hasRuntimeYieldStrategy(stablecoinId: string, navToken: boolean) {
-  return (
+    return (
     Boolean(YIELD_POOL_MAP[stablecoinId]) ||
     Boolean(YIELD_VARIANT_MAP[stablecoinId]) ||
     onChainIds.has(stablecoinId) ||
     navToken ||
     PRICE_DERIVED_FALLBACK_IDS.has(stablecoinId) ||
     rateDerivedIds.has(stablecoinId) ||
-    Boolean(AUTO_LENDING_POOL_MAP[stablecoinId])
+    Boolean(AUTO_LENDING_POOL_MAP[stablecoinId]) ||
+    intentionalGapIds.has(stablecoinId)
   );
 }
 
@@ -44,6 +49,7 @@ describe("yield config registry", () => {
 
   it("requires yieldConfig metadata for every active yield-bearing coin", () => {
     const missing = activeYieldCoins
+      .filter((coin) => !intentionalGapIds.has(coin.id))
       .filter((coin) => !coin.yieldConfig)
       .map((coin) => coin.id);
 

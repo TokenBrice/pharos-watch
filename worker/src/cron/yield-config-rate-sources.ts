@@ -164,9 +164,9 @@ export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
 };
 
 export const INTENTIONAL_GAP_REASONS: Record<string, string> = {
-  "bd-basedollar": "pre-launch asset with no reliable runtime yield source yet",
-  "pusd-polaris": "pre-launch asset with no reliable runtime yield source yet",
+  "bd-basedollar": "asset with no reliable runtime yield source yet",
+  "pusd-polaris": "asset with no reliable runtime yield source yet",
   "stkgho-umbrella-aave": "Umbrella rewards are external emissions over a 1:1 GHO staking receipt; no reliable APY source is wired yet",
   "trusd-tori": "pre-launch asset with no reliable runtime yield source yet",
-  "usg-tangent": "pre-launch asset with no reliable runtime yield source yet",
+  "usg-tangent": "asset with no reliable runtime yield source yet",
 };

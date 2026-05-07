@@ -84,13 +84,13 @@ describe("tracked stablecoin metadata", () => {
     const preLaunchCoins = perCoinGenerated.filter((coin) => coin.status === "pre-launch");
 
     expect(legacyShellCoins).toEqual([]);
-    expect(preLaunchCoins).toHaveLength(13);
+    expect(preLaunchCoins).toHaveLength(12);
     expect(preLaunchCoins.every((coin) => coin.status === "pre-launch")).toBe(true);
   });
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
     expect(TRACKED_STABLECOINS).toHaveLength(255);
-    expect(ACTIVE_STABLECOINS).toHaveLength(240);
+    expect(ACTIVE_STABLECOINS).toHaveLength(241);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "cadd-cad-digital",
       "usdpt-western-union",
@@ -99,7 +99,6 @@ describe("tracked stablecoin metadata", () => {
       "eur-qivalis",
       "pusd-polaris",
       "pgold-polaris",
-      "usg-tangent",
       "klarnausd-klarna",
       "bd-basedollar",
       "trusd-tori",
