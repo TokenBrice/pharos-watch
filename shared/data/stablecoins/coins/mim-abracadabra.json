@@ -10,7 +10,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Interest-bearing tokens (yvWETH, yvUSDC, yvDAI, yvUSDT, xSUSHI, stETH, WBTC, WETH) deposited as collateral into Abracadabra cauldrons (isolated lending markets)",
+  "collateral": "Interest-bearing tokens and crypto collateral deposited into active Abracadabra cauldrons, currently concentrated in yvDAI and WBTC with smaller yvWETH/WETH positions",
   "pegMechanism": "CDP-style cauldrons with overcollateralization and automatic liquidations (4% liquidation fee); borrowers are incentivized to buy MIM below $1 to repay debt; 0.5% borrow/interest fees accrue to sSPELL stakers and governance treasury",
   "llamaId": "10",
   "detailProvider": "defillama",
@@ -81,30 +81,24 @@
   "collateralQuality": "exotic",
   "reserves": [
     {
-      "name": "Yield-bearing tokens (yvWETH, yvUSDC, yvUSDT, yvDAI)",
-      "pct": 35,
-      "risk": "high",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "wstETH / stETH",
-      "pct": 20,
-      "risk": "low"
-    },
-    {
-      "name": "WBTC / WETH",
-      "pct": 15,
+      "name": "yvDAI cauldron collateral",
+      "pct": 52,
       "risk": "medium"
     },
     {
-      "name": "GM tokens (GMX V2 LP)",
-      "pct": 15,
-      "risk": "very-high"
+      "name": "WBTC cauldron collateral",
+      "pct": 37,
+      "risk": "medium"
     },
     {
-      "name": "Other exotic collateral (xSUSHI, Super OETH, etc.)",
-      "pct": 15,
-      "risk": "very-high"
+      "name": "yvWETH cauldron collateral",
+      "pct": 8,
+      "risk": "high"
+    },
+    {
+      "name": "CDP WETH cauldron collateral",
+      "pct": 3,
+      "risk": "low"
     }
   ],
   "liveReservesConfig": {

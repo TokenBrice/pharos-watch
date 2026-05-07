@@ -10,7 +10,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Over-collateralized crypto assets (wstETH, WETH, INV, WBTC, LP tokens, and others) deposited in Inverse Finance's FiRM fixed-rate lending markets; USDS in the PSM as a peg backstop",
+  "collateral": "Over-collateralized assets deposited in Inverse Finance's FiRM fixed-rate lending markets, currently dominated by DOLA paired stablecoin collateral markets; USDS in the PSM remains a peg backstop",
   "pegMechanism": "Fed contracts govern DOLA supply: FiRM Fed mints/burns DOLA in overcollateralized lending markets (~98% of supply); PSM Fed enables 1:1 swaps with USDS as a peg floor; DEX Liquidity Feds adjust supply in AMM pools",
   "llamaId": "15",
   "detailProvider": "defillama",
@@ -73,43 +73,19 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "wstETH (Lido)",
-      "pct": 35,
+      "name": "Stablecoin collateral (sUSDe, sUSDS, scrvUSD)",
+      "pct": 97,
       "risk": "low"
     },
     {
-      "name": "sUSDe / PT-sUSDe (Ethena)",
-      "pct": 15,
-      "risk": "medium",
-      "coinId": "usde-ethena"
+      "name": "Governance tokens (INV, CRV, CVX)",
+      "pct": 2,
+      "risk": "very-high"
     },
     {
-      "name": "cbBTC (Coinbase wrapped Bitcoin)",
-      "pct": 12,
-      "risk": "medium"
-    },
-    {
-      "name": "WETH",
-      "pct": 10,
-      "risk": "very-low"
-    },
-    {
-      "name": "USDS in PSM (peg backstop)",
-      "pct": 8,
-      "risk": "low",
-      "coinId": "usds-sky",
-      "depType": "mechanism"
-    },
-    {
-      "name": "LP tokens (Curve, cvxCRV, st-yCRV)",
-      "pct": 8,
-      "risk": "high"
-    },
-    {
-      "name": "Other (sFRAX, INV, st-yETH)",
-      "pct": 12,
-      "risk": "very-high",
-      "coinId": "frax-frax"
+      "name": "ETH / liquid staking collateral",
+      "pct": 1,
+      "risk": "low"
     }
   ],
   "yieldConfig": {

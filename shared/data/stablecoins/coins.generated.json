@@ -4235,7 +4235,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Over-collateralized crypto assets (wstETH, WETH, INV, WBTC, LP tokens, and others) deposited in Inverse Finance's FiRM fixed-rate lending markets; USDS in the PSM as a peg backstop",
+    "collateral": "Over-collateralized assets deposited in Inverse Finance's FiRM fixed-rate lending markets, currently dominated by DOLA paired stablecoin collateral markets; USDS in the PSM remains a peg backstop",
     "pegMechanism": "Fed contracts govern DOLA supply: FiRM Fed mints/burns DOLA in overcollateralized lending markets (~98% of supply); PSM Fed enables 1:1 swaps with USDS as a peg floor; DEX Liquidity Feds adjust supply in AMM pools",
     "geckoId": "dola-usd",
     "proofOfReserves": {
@@ -4296,43 +4296,19 @@
     "governanceQuality": "dao-governance",
     "reserves": [
       {
-        "name": "wstETH (Lido)",
-        "pct": 35,
+        "name": "Stablecoin collateral (sUSDe, sUSDS, scrvUSD)",
+        "pct": 97,
         "risk": "low"
       },
       {
-        "name": "sUSDe / PT-sUSDe (Ethena)",
-        "pct": 15,
-        "risk": "medium",
-        "coinId": "usde-ethena"
+        "name": "Governance tokens (INV, CRV, CVX)",
+        "pct": 2,
+        "risk": "very-high"
       },
       {
-        "name": "cbBTC (Coinbase wrapped Bitcoin)",
-        "pct": 12,
-        "risk": "medium"
-      },
-      {
-        "name": "WETH",
-        "pct": 10,
-        "risk": "very-low"
-      },
-      {
-        "name": "USDS in PSM (peg backstop)",
-        "pct": 8,
-        "risk": "low",
-        "coinId": "usds-sky",
-        "depType": "mechanism"
-      },
-      {
-        "name": "LP tokens (Curve, cvxCRV, st-yCRV)",
-        "pct": 8,
-        "risk": "high"
-      },
-      {
-        "name": "Other (sFRAX, INV, st-yETH)",
-        "pct": 12,
-        "risk": "very-high",
-        "coinId": "frax-frax"
+        "name": "ETH / liquid staking collateral",
+        "pct": 1,
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -9738,7 +9714,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Interest-bearing tokens (yvWETH, yvUSDC, yvDAI, yvUSDT, xSUSHI, stETH, WBTC, WETH) deposited as collateral into Abracadabra cauldrons (isolated lending markets)",
+    "collateral": "Interest-bearing tokens and crypto collateral deposited into active Abracadabra cauldrons, currently concentrated in yvDAI and WBTC with smaller yvWETH/WETH positions",
     "pegMechanism": "CDP-style cauldrons with overcollateralization and automatic liquidations (4% liquidation fee); borrowers are incentivized to buy MIM below $1 to repay debt; 0.5% borrow/interest fees accrue to sSPELL stakers and governance treasury",
     "geckoId": "magic-internet-money",
     "pythFeedId": "0x7aa41f6ee464616f3cbc469fddfd7e63d8db319b7bd585cc95b24c29c9172916",
@@ -9807,30 +9783,24 @@
     "collateralQuality": "exotic",
     "reserves": [
       {
-        "name": "Yield-bearing tokens (yvWETH, yvUSDC, yvUSDT, yvDAI)",
-        "pct": 35,
-        "risk": "high",
-        "coinId": "usdc-circle"
-      },
-      {
-        "name": "wstETH / stETH",
-        "pct": 20,
-        "risk": "low"
-      },
-      {
-        "name": "WBTC / WETH",
-        "pct": 15,
+        "name": "yvDAI cauldron collateral",
+        "pct": 52,
         "risk": "medium"
       },
       {
-        "name": "GM tokens (GMX V2 LP)",
-        "pct": 15,
-        "risk": "very-high"
+        "name": "WBTC cauldron collateral",
+        "pct": 37,
+        "risk": "medium"
       },
       {
-        "name": "Other exotic collateral (xSUSHI, Super OETH, etc.)",
-        "pct": 15,
-        "risk": "very-high"
+        "name": "yvWETH cauldron collateral",
+        "pct": 8,
+        "risk": "high"
+      },
+      {
+        "name": "CDP WETH cauldron collateral",
+        "pct": 3,
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -19842,7 +19812,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "USDC deposits: 80% converted to JLP (a basket of BTC, ETH, SOL, and USDC earning Jupiter Perps trading fees); 20% held at Copper/Ceffu as margin for delta-neutral short perp positions; ~10% of protocol fees route to an Insurance Fund",
+    "collateral": "Live Accountable reserves split across Binance off-exchange/perp margin and on-chain Solana/BSC reserves; ~10% of protocol fees route to an Insurance Fund",
     "pegMechanism": "Overcollateralized, delta-neutral: long JLP + short perpetuals rebalanced hourly via Copper/Ceffu off-exchange settlement; whitelisted KYC/KYB participants mint/redeem 1:1 with USDC via API; most users acquire USDu on secondary markets",
     "geckoId": "usdu",
     "cmcSlug": "unitas-protocol",
@@ -19891,14 +19861,19 @@
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
-        "name": "JLP (Jupiter Perps LP: BTC, ETH, SOL, USDC basket)",
-        "pct": 80,
+        "name": "Binance off-exchange / perp margin",
+        "pct": 54,
         "risk": "high"
       },
       {
-        "name": "Short perp margin (Copper/Ceffu off-exchange)",
-        "pct": 20,
-        "risk": "high"
+        "name": "Solana on-chain reserves",
+        "pct": 42,
+        "risk": "low"
+      },
+      {
+        "name": "BSC on-chain reserves",
+        "pct": 4,
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -19921,7 +19896,8 @@
         "riskMap": {
           "Binance": "high",
           "Solana": "low",
-          "BNB Smart Chain": "low"
+          "Bnb_smartchain": "low",
+          "Aster": "high"
         }
       }
     },
