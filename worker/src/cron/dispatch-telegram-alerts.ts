@@ -242,7 +242,7 @@ async function loadGlobalSubscriberRows(
               last_active_at,
               quiet_hours_enabled,
               quiet_hours_start_utc,
-              quiet_hours_end_utc
+              quiet_hours_end_utc, global_depeg_worsening_bps_step
          FROM telegram_subscribers
         WHERE ${alertColumn} = 1
           AND (alert_snooze_until_ts IS NULL OR alert_snooze_until_ts <= ?)`,
@@ -255,7 +255,7 @@ async function loadGlobalSubscriberRows(
     last_active_at: row.last_active_at,
     dews_min_band: null,
     safety_mode: null,
-    depeg_worsening_bps_step: null,
+    depeg_worsening_bps_step: row.global_depeg_worsening_bps_step ?? null,
     quiet_hours_enabled: row.quiet_hours_enabled ?? 0,
     quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
     quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { stagedPoolConfidence, stagedPoolMaturityDays } from "../../dex-discovery/types";
+import { STAGED_POOL_MAX_TVL_USD, stagedPoolConfidence, stagedPoolMaturityDays } from "../../dex-discovery/types";
 import { mergeStagedPools } from "../staging-merge";
 import type { AuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases";
 import {
@@ -192,6 +192,47 @@ describe("mergeStagedPools", () => {
         chain: "ethereum",
         count: 1,
         conflict: "exact",
+      },
+    ]);
+  });
+
+  it("skips staged pools with impossible TVL values", async () => {
+    const mockDb = createMockDb([
+      {
+        pool_id: `ethereum:${newPoolAddress}`,
+        stablecoin_id: "usdt-tether",
+        source: "cg_onchain",
+        chain: "ethereum",
+        protocol: "uniswap-v3",
+        symbol: "USDT/WETH",
+        tvl_usd: STAGED_POOL_MAX_TVL_USD + 1,
+        volume_24h: 0,
+        quality_multiplier: 0.85,
+        pool_type: "cg-cl-30bp",
+        fee_tier: 30,
+        balance_ratio: null,
+        is_stable: null,
+        base_token: baseToken,
+        quote_token: quoteToken,
+        quote_symbol: "WETH",
+        price_usd: 1,
+        locked_liq_pct: null,
+        discovered_at: 1709900000,
+        refreshed_at: 1710000000,
+      },
+    ]);
+    const metrics = new Map();
+    const result = await mergeStagedPools(mockDb, metrics, makeKnownPoolIndex(), 1710000000);
+
+    expect(result.skippedCount).toBe(1);
+    expect(result.mergedCount).toBe(0);
+    expect(result.skipDimensions).toEqual([
+      {
+        reason: "invalid_tvl",
+        protocol: "uniswap-v3",
+        chain: "ethereum",
+        count: 1,
+        threshold: STAGED_POOL_MAX_TVL_USD,
       },
     ]);
   });

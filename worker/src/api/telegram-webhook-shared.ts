@@ -21,10 +21,12 @@ Then customize:
 <code>/subscribe dews depeg USDC BOLD</code>
 <code>/subscribe dews usd-top25</code>
 <code>/subscribe dews usd-top-25</code>  ← dashed alias also works
+<code>/subscribe usd-top-50 depeg-step 250</code>
 <code>/subscribe safety mcap-ge-1b</code>
 <code>/subscribe launch USDPT</code>  ← pre-launch watch
 <code>/subscribe safety all</code>  ← downgrades across all tracked coins (3-point drop when scored)
 <code>/set USDC depeg-step 250</code>
+<code>/set all depeg-step 250</code>
 <code>/mute 22-07</code>  ← quiet hours in UTC
 
 <b>Also useful</b>
@@ -41,6 +43,9 @@ export const HELP_MESSAGE = `<b>Commands</b>
 
 <code>/subscribe &lt;types&gt; &lt;targets&gt;</code>
 Enable alert types (dews, depeg, safety, launch) for one or more coins or preset watchlists
+
+<code>/subscribe &lt;targets&gt; depeg-step 250</code>
+Enable depeg alerts for coins or preset watchlists and alert again when worsening crosses 250 bps
 
 <code>/subscribe &lt;types&gt; all</code>
 Enable alert types across all tracked stablecoins
@@ -62,6 +67,7 @@ Examples:
 <code>/set all depeg off</code>
 <code>/set DAI safety downgrade-only</code>
 <code>/set USDC depeg-step 250</code>
+<code>/set all depeg-step 250</code>
 
 <code>/status &lt;ticker&gt;</code>
 Current peg, DEWS band, and safety grade for one coin — no subscription needed
@@ -130,6 +136,7 @@ export interface PendingDisambiguationRow {
 export interface SubscribeActionPayload {
   alertTypes: string[];
   presetIds?: string[];
+  depegWorseningBpsStep?: 100 | 250 | 500 | null;
 }
 
 export interface UnsubscribeActionPayload {
@@ -145,6 +152,7 @@ export interface SubscriberRow {
   global_alert_depeg?: number | null;
   global_alert_safety?: number | null;
   global_alert_launch?: number | null;
+  global_depeg_worsening_bps_step?: number | null;
   quiet_hours_enabled: number | null;
   quiet_hours_start_utc: number | null;
   quiet_hours_end_utc: number | null;
@@ -182,6 +190,7 @@ export type PendingAction =
       actionType: "subscribe";
       alertTypes: Set<string>;
       presetIds: string[];
+      depegWorseningBpsStep?: 100 | 250 | 500 | null;
       resolvedCoins: ResolvedCoin[];
       initiatorUserId: string | null;
       ambiguousTicker: string;

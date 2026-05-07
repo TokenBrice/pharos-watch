@@ -51,6 +51,8 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0105     | `0105_depeg_event_provenance.sql`               | Add `confirmation_sources` + `pending_reason` nullable TEXT columns to `depeg_events` for post-promotion provenance              |
 | 0106     | `0106_mbe_counted_coin_chain_index.sql`         | Add partial counted-flow index for mint/burn event totals and page reads                       |
 | 0107     | `0107_telegram_pending_initiator.sql`           | Add nullable `initiator_user_id` to Telegram pending disambiguation state for group-chat ownership checks |
+| 0108     | `0108_blacklist_current_balance_identity.sql`   | Add blacklist current-balance identity and status metadata for scoped address snapshots        |
+| 0109     | `0109_telegram_global_depeg_step.sql`           | Add optional global Telegram depeg worsening threshold for all-stablecoin follows              |
 
 ## Retired Individual Migrations
 

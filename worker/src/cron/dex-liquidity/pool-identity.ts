@@ -18,6 +18,7 @@ export interface KnownPoolIdentityIndex {
   derivedToExactKeys: Map<string, Set<string>>;
   wildcardKeyCounts: Map<string, number>;
   wildcardToExactKeys: Map<string, Set<string>>;
+  concreteFeeVariantKeys: Map<string, Set<string>>;
 }
 
 export function createKnownPoolIdentityIndex(): KnownPoolIdentityIndex {
@@ -27,6 +28,7 @@ export function createKnownPoolIdentityIndex(): KnownPoolIdentityIndex {
     derivedToExactKeys: new Map<string, Set<string>>(),
     wildcardKeyCounts: new Map<string, number>(),
     wildcardToExactKeys: new Map<string, Set<string>>(),
+    concreteFeeVariantKeys: new Map<string, Set<string>>(),
   };
 }
 
@@ -183,7 +185,9 @@ export function registerKnownPoolIdentity(known: KnownPoolIdentityIndex, identit
     known.exactKeys.add(identity.exactPoolKey);
   }
   if (!identity.derivedMatchKey) return;
-  known.derivedKeyCounts.set(identity.derivedMatchKey, (known.derivedKeyCounts.get(identity.derivedMatchKey) ?? 0) + 1);
+  const previousDerivedCount = known.derivedKeyCounts.get(identity.derivedMatchKey) ?? 0;
+  known.derivedKeyCounts.set(identity.derivedMatchKey, previousDerivedCount + 1);
+  updateConcreteFeeVariantIndex(known, identity.derivedMatchKey, previousDerivedCount);
   if (identity.exactPoolKey) {
     const existing = known.derivedToExactKeys.get(identity.derivedMatchKey) ?? new Set<string>();
     existing.add(identity.exactPoolKey);
@@ -198,6 +202,35 @@ export function registerKnownPoolIdentity(known: KnownPoolIdentityIndex, identit
     const existing = known.wildcardToExactKeys.get(identity.optionalWildcardKey) ?? new Set<string>();
     existing.add(identity.exactPoolKey);
     known.wildcardToExactKeys.set(identity.optionalWildcardKey, existing);
+  }
+}
+
+function buildConcreteFeeVariantKey(derivedKey: string): string | null {
+  const parts = derivedKey.split("|");
+  if (parts.length !== 6 || parts[4] === "na") return null;
+  return [...parts.slice(0, 4), parts[5]].join("|");
+}
+
+function updateConcreteFeeVariantIndex(
+  known: KnownPoolIdentityIndex,
+  derivedKey: string,
+  previousDerivedCount: number,
+): void {
+  const variantKey = buildConcreteFeeVariantKey(derivedKey);
+  if (!variantKey) return;
+
+  known.concreteFeeVariantKeys ??= new Map<string, Set<string>>();
+  const existing = known.concreteFeeVariantKeys.get(variantKey) ?? new Set<string>();
+  if (previousDerivedCount === 0) {
+    existing.add(derivedKey);
+  } else if (previousDerivedCount === 1) {
+    existing.delete(derivedKey);
+  }
+
+  if (existing.size === 0) {
+    known.concreteFeeVariantKeys.delete(variantKey);
+  } else {
+    known.concreteFeeVariantKeys.set(variantKey, existing);
   }
 }
 
@@ -255,24 +288,13 @@ export function getIdentityDedupReason(
       }
     }
     if (parts.length === 6 && parts[4] === "na") {
-      // Incoming has fee=na; scan known derived keys for a matching concrete-fee
-      // variant. Only match if exactly one candidate exists (otherwise ambiguous).
-      const prefix = parts.slice(0, 4).join("|");
-      const suffix = parts[5];
-      let matchKey: string | null = null;
-      let matchCount = 0;
-      for (const [knownKey, knownCount] of known.derivedKeyCounts) {
-        if (knownCount !== 1) continue;
-        const knownParts = knownKey.split("|");
-        if (knownParts.length !== 6) continue;
-        if (knownParts[4] === "na") continue;
-        if (knownParts[5] !== suffix) continue;
-        if (knownParts.slice(0, 4).join("|") !== prefix) continue;
-        matchKey = knownKey;
-        matchCount++;
-        if (matchCount > 1) break;
-      }
-      if (matchCount === 1 && matchKey) {
+      // Incoming has fee=na; use the maintained concrete-fee index to find a
+      // matching variant. Only match if exactly one candidate exists.
+      const variantKey = [...parts.slice(0, 4), parts[5]].join("|");
+      const candidateKeys = known.concreteFeeVariantKeys?.get(variantKey);
+      if (candidateKeys?.size === 1) {
+        const matchKey = candidateKeys.values().next().value;
+        if (!matchKey) return null;
         const knownExactCount = known.derivedToExactKeys.get(matchKey)?.size ?? 0;
         if (!(identity.exactPoolKey && knownExactCount > 0)) {
           return "derived_unique";

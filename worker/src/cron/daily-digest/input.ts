@@ -102,8 +102,10 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
 
   const stablecoinAssets = stablecoinsCacheResult.payload.peggedAssets as StablecoinData[];
   const trackedStablecoinAssets = stablecoinAssets.filter((coin) => ACTIVE_IDS.has(coin.id));
+  const stablecoinAssetById = new Map<string, StablecoinData>();
   const mcapById = new Map<string, number>();
   for (const coin of stablecoinAssets) {
+    stablecoinAssetById.set(coin.id, coin);
     const raw = getCirculatingRaw(coin);
     if (raw > 0) mcapById.set(coin.id, raw);
   }
@@ -139,7 +141,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const todayTs = nowSec - (nowSec % SECONDS.ONE_DAY);
   const yesterdayTs = todayTs - SECONDS.ONE_DAY;
 
-  const ctx: CollectorContext = { db, trackedStablecoinAssets, mcapById, nowSec, todayTs, yesterdayTs };
+  const ctx: CollectorContext = { db, trackedStablecoinAssets, stablecoinAssetById, mcapById, nowSec, todayTs, yesterdayTs };
 
   const { activeDepegCount, topDepegs } = consumeCollectorResult(await collectActiveDepegs(ctx), degradedReasons);
 

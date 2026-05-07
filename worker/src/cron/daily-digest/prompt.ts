@@ -11,6 +11,12 @@ export interface DigestMeta {
   suppressedCandidateIds?: string[];
 }
 
+function formatDigestUsdPrice(value: number | null | undefined): string | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  const decimals = Math.abs(value) < 0.1 ? 4 : 3;
+  return `$${value.toFixed(decimals)}`;
+}
+
 export const SYSTEM_PROMPT = [
   "You write the daily editorial summary for Pharos, a stablecoin analytics dashboard.",
   "Your voice is dry, sharp, and memorable, like a financial columnist who has seen too many death spirals to be impressed.",
@@ -282,7 +288,11 @@ export function buildUserPrompt(
     for (const depeg of data.topDepegs) {
       const age = depeg.ageHours != null ? ` | age ${depeg.ageHours}h` : "";
       const suppression = depeg.suppressReason ? ` | suppress: ${depeg.suppressReason}` : "";
-      lines.push(`  ${depeg.symbol} | ${Math.abs(depeg.bps)} bps ${depeg.direction ?? (depeg.bps >= 0 ? "above" : "below")}-peg | ${formatCurrency(depeg.mcapUsd)} mcap | impact ${depeg.impactScore ?? "n/a"}${age}${suppression}`);
+      const currentPrice = formatDigestUsdPrice(depeg.currentPriceUsd);
+      const peak = depeg.peakBps != null && depeg.peakBps !== depeg.bps
+        ? ` | peak ${Math.abs(depeg.peakBps)} bps`
+        : "";
+      lines.push(`  ${depeg.symbol} | ${Math.abs(depeg.bps)} bps ${depeg.direction ?? (depeg.bps >= 0 ? "above" : "below")}-peg${currentPrice ? ` | current ${currentPrice}` : ""}${peak} | ${formatCurrency(depeg.mcapUsd)} mcap | impact ${depeg.impactScore ?? "n/a"}${age}${suppression}`);
     }
   }
 

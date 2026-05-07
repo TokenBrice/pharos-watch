@@ -138,6 +138,37 @@ describe("parseSubscribeArgs", () => {
     expect(result.tickers).toEqual(["USDC"]);
     expect(result.invalidTargets).toEqual([]);
   });
+
+  it("parses depeg-step after preset targets and implies depeg", () => {
+    const result = parseSubscribeArgs("usd-top-50 depeg-step 250");
+    expect(result.alertTypes).toEqual(new Set(["depeg"]));
+    expect(result.presetIds).toEqual(["usd-top50"]);
+    expect(result.tickers).toEqual([]);
+    expect(result.depegWorseningBpsStep).toBe(250);
+    expect(result.invalidTargets).toEqual([]);
+  });
+
+  it("parses depeg-step before preset targets", () => {
+    const result = parseSubscribeArgs("depeg-step 250 usd-top-50");
+    expect(result.alertTypes).toEqual(new Set(["depeg"]));
+    expect(result.presetIds).toEqual(["usd-top50"]);
+    expect(result.depegWorseningBpsStep).toBe(250);
+    expect(result.invalidTargets).toEqual([]);
+  });
+
+  it("parses depeg-step off", () => {
+    const result = parseSubscribeArgs("depeg-step off USDC");
+    expect(result.alertTypes).toEqual(new Set(["depeg"]));
+    expect(result.tickers).toEqual(["USDC"]);
+    expect(result.depegWorseningBpsStep).toBeNull();
+  });
+
+  it("captures invalid depeg-step values", () => {
+    const result = parseSubscribeArgs("usd-top-50 depeg-step 75");
+    expect(result.alertTypes).toEqual(new Set(["depeg"]));
+    expect(result.invalidDepegWorseningBpsStep).toBe("75");
+    expect(validateSubscribeArgs(result)).toContain("Depeg-step values");
+  });
 });
 
 describe("parseTargetArgs", () => {

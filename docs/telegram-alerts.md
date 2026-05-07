@@ -52,7 +52,7 @@ The Telegram subscriber, disambiguation, and overflow-queue tables are part of `
 
 | Table | Purpose | Key fields |
 |-------|---------|------------|
-| `telegram_subscribers` | Per-chat state and defaults | `chat_id`, `username`, legacy default flags, `global_alert_dews`, `global_alert_depeg`, `global_alert_safety`, `global_alert_launch`, `quiet_hours_enabled`, `quiet_hours_start_utc`, `quiet_hours_end_utc`, `alert_snooze_until_ts`, `created_at`, `last_active_at` |
+| `telegram_subscribers` | Per-chat state and defaults | `chat_id`, `username`, legacy default flags, `global_alert_dews`, `global_alert_depeg`, `global_alert_safety`, `global_alert_launch`, `global_depeg_worsening_bps_step`, `quiet_hours_enabled`, `quiet_hours_start_utc`, `quiet_hours_end_utc`, `alert_snooze_until_ts`, `created_at`, `last_active_at` |
 | `telegram_subscriptions` | Per-chat per-coin alert preferences | composite PK `chat_id, stablecoin_id`, `alert_dews`, `alert_depeg`, `alert_safety`, `alert_launch`, `dews_min_band`, `safety_mode`, `depeg_worsening_bps_step` |
 | `telegram_pending_disambiguation` | Short-lived state for ambiguous ticker replies | `chat_id`, `action_type`, `action_payload`, `resolved_ids`, `ambiguous_ticker`, `candidates`, `remaining_tickers`, `expires_at`, `initiator_user_id` |
 | `telegram_pending_alerts` | Overflow delivery queue | `id`, `chat_id`, `message_html`, `disable_notification`, `created_at`, `attempts` |
@@ -125,11 +125,12 @@ In group and supergroup chats, commands must be addressed to the bot, for exampl
 | `/list` | Returns enabled alert types plus subscribed coins for the chat |
 | `/status <ticker>` | Returns a compact snapshot: current price, DEWS band, safety grade, and active-depeg state for the given coin. No subscription required. |
 | `/subscribe <types> <targets>` | Enables one or more alert types and subscribes the chat to one or more explicit coins or preset watchlists |
+| `/subscribe <targets> depeg-step <value>` | Enables depeg alerts for explicit coins or preset watchlists and stores a worsening-step threshold (`100`, `250`, `500`, or `off`) |
 | `/subscribe <types> all` | Enables one or more alert types across all tracked stablecoins |
 | `/unsubscribe <targets>` | Removes explicit coin subscriptions and can also remove the coins covered by a preset watchlist |
 | `/unsubscribe all` | Clears all per-coin subscriptions and disables every current alert flag, including launch |
 | `/set <ticker> <setting> <value>` | Tunes per-coin settings such as DEWS floor, safety direction mode, or depeg worsening step |
-| `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`) |
+| `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`) or sets the global depeg worsening step |
 | `/mute <start>-<end>` | Enables quiet hours in UTC (messages still deliver, notifications are silenced) |
 | `/unmutehours` | Disables quiet hours |
 | `/cancel` | Cancels a pending disambiguation flow |
@@ -160,6 +161,7 @@ Additional alert controls:
 - `dews_min_band`: optional per-coin floor (`ALERT` default, or `WARNING` / `DANGER`)
 - `safety_mode`: `all`, `downgrade-only`, or `upgrade-only`
 - `depeg_worsening_bps_step`: optional per-coin worsening follow-up step (`100`, `250`, `500`)
+- `global_depeg_worsening_bps_step`: optional all-stablecoin depeg worsening follow-up step (`100`, `250`, `500`)
 - `global_alert_*`: subscriber-level flags that subscribe the chat to every tracked stablecoin for that alert type, including `launch`
 - quiet hours: subscriber-level UTC hour window that forces `disable_notification = true`
 
@@ -173,6 +175,8 @@ Global all-stablecoin safety follows are intentionally narrower than per-coin sa
 - material-only when scores are present (`oldScore - newScore >= 3`)
 
 This policy applies only to the global `safety all` tier. Explicit per-coin safety follows still honor the coin's configured `safety_mode`.
+
+Global all-stablecoin depeg follows can also carry a worsening-step threshold through `/set all depeg-step 100|250|500`. A value of `off` clears the threshold while leaving global depeg alerts enabled. Preset subscriptions can set the same per-coin threshold in one command, for example `/subscribe usd-top-50 depeg-step 250`.
 
 ### Ticker Resolution
 
@@ -282,6 +286,7 @@ Filtering is subscription-aware:
 - Per-coin safety changes respect the coin's `safety_mode`
 - Global all-stablecoin safety follows accept downgrades only, with a materiality filter when scores are present (`oldScore - newScore >= 3`; scoreless downgrades still pass through)
 - Depeg worsening follows the coin's `depeg_worsening_bps_step`
+- Global depeg worsening follows the subscriber's `global_depeg_worsening_bps_step`
 - Quiet hours force `disable_notification = true`
 - Chats with `alert_snooze_until_ts > now` are fully skipped for the run. The count of currently-snoozed chats (whether or not they would have received an alert this run) surfaces as `chatsWithActiveSnooze` in dispatch metadata.
 

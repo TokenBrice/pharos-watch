@@ -1,5 +1,5 @@
 import { batchExecute } from "../../lib/db";
-import type { DiscoveryMeta, StagedPool } from "./types";
+import { STAGED_POOL_MAX_TVL_USD, type DiscoveryMeta, type StagedPool } from "./types";
 
 const STAGING_UPSERT_SQL = `INSERT INTO dex_pool_staging
   (pool_id, stablecoin_id, source, chain, protocol, dex_id, symbol, tvl_usd, volume_24h, quality_multiplier, pool_type, fee_tier, balance_ratio,
@@ -43,6 +43,13 @@ export function isValidStagedPoolId(poolId: string): boolean {
   return POOL_ID_REGEX.test(poolId);
 }
 
+export function hasValidStagedPoolTvl(pool: Pick<StagedPool, "tvlUsd">): boolean {
+  return (
+    pool.tvlUsd == null ||
+    (Number.isFinite(pool.tvlUsd) && pool.tvlUsd >= 0 && pool.tvlUsd <= STAGED_POOL_MAX_TVL_USD)
+  );
+}
+
 /**
  * Upsert discovered pools into dex_pool_staging.
  * Preserves initial discovery timestamp on re-discovery by updating conflicting rows in place.
@@ -52,11 +59,19 @@ export async function upsertStagedPools(db: D1Database, pools: StagedPool[]): Pr
   if (pools.length === 0) return;
 
   const validPools = pools.filter((pool) => {
-    if (isValidStagedPoolId(pool.poolId)) return true;
-    console.warn(
-      `[dex-discovery] rejected malformed pool_id: ${JSON.stringify(pool.poolId)} (stablecoin=${pool.stablecoinId})`,
-    );
-    return false;
+    if (!isValidStagedPoolId(pool.poolId)) {
+      console.warn(
+        `[dex-discovery] rejected malformed pool_id: ${JSON.stringify(pool.poolId)} (stablecoin=${pool.stablecoinId})`,
+      );
+      return false;
+    }
+    if (!hasValidStagedPoolTvl(pool)) {
+      console.warn(
+        `[dex-discovery] rejected staged pool with invalid tvl_usd=${String(pool.tvlUsd)} (pool=${pool.poolId}, stablecoin=${pool.stablecoinId})`,
+      );
+      return false;
+    }
+    return true;
   });
   if (validPools.length === 0) return;
 

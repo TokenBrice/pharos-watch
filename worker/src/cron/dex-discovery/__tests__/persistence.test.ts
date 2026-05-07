@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { isValidStagedPoolId } from "../persistence";
+import { hasValidStagedPoolTvl, isValidStagedPoolId } from "../persistence";
+import { STAGED_POOL_MAX_TVL_USD } from "../types";
 
 describe("isValidStagedPoolId", () => {
   it("accepts EVM chain:address lowercased form", () => {
@@ -25,5 +26,20 @@ describe("isValidStagedPoolId", () => {
 
   it("rejects empty string", () => {
     expect(isValidStagedPoolId("")).toBe(false);
+  });
+});
+
+describe("hasValidStagedPoolTvl", () => {
+  it("accepts null and finite TVL values inside the staging cap", () => {
+    expect(hasValidStagedPoolTvl({ tvlUsd: null })).toBe(true);
+    expect(hasValidStagedPoolTvl({ tvlUsd: 0 })).toBe(true);
+    expect(hasValidStagedPoolTvl({ tvlUsd: STAGED_POOL_MAX_TVL_USD })).toBe(true);
+  });
+
+  it("rejects non-finite, negative, and over-cap TVL values", () => {
+    expect(hasValidStagedPoolTvl({ tvlUsd: Number.NaN })).toBe(false);
+    expect(hasValidStagedPoolTvl({ tvlUsd: Number.POSITIVE_INFINITY })).toBe(false);
+    expect(hasValidStagedPoolTvl({ tvlUsd: -1 })).toBe(false);
+    expect(hasValidStagedPoolTvl({ tvlUsd: STAGED_POOL_MAX_TVL_USD + 1 })).toBe(false);
   });
 });

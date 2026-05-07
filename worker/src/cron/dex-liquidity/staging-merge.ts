@@ -1,6 +1,6 @@
 import type { StagedPool } from "../dex-discovery/types";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { stagedPoolConfidence, stagedPoolMaturityDays } from "../dex-discovery/types";
+import { STAGED_POOL_MAX_TVL_USD, stagedPoolConfidence, stagedPoolMaturityDays } from "../dex-discovery/types";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
 import { toFiniteNumber } from "../../lib/number-utils";
@@ -46,6 +46,7 @@ interface StagedPoolRow {
 
 export type StagedPoolSkipReason =
   | "malformed_identity"
+  | "invalid_tvl"
   | "stale_confidence_zero"
   | "authoritative_confirmation_missing"
   | "duplicate_exact_identity"
@@ -286,6 +287,16 @@ export async function mergeStagedPools(
     if (!stagedPool.poolId || !stagedPool.stablecoinId) {
       skippedCount++;
       incrementSkipDimension(skipDimensions, "malformed_identity", row);
+      continue;
+    }
+    if (
+      stagedPool.tvlUsd == null ||
+      !Number.isFinite(stagedPool.tvlUsd) ||
+      stagedPool.tvlUsd < 0 ||
+      stagedPool.tvlUsd > STAGED_POOL_MAX_TVL_USD
+    ) {
+      skippedCount++;
+      incrementSkipDimension(skipDimensions, "invalid_tvl", stagedPool, { threshold: STAGED_POOL_MAX_TVL_USD });
       continue;
     }
 

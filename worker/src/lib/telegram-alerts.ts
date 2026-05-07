@@ -33,6 +33,8 @@ export interface ParsedSubscribeArgs {
   presetIds: TelegramPresetId[];
   tickers: string[];
   invalidTargets: string[];
+  depegWorseningBpsStep?: 100 | 250 | 500 | null;
+  invalidDepegWorseningBpsStep?: string;
 }
 
 export interface ParsedTargetArgs {
@@ -48,6 +50,7 @@ export type TickerResolutionScope = "subscribable" | "tracked";
 
 const ALERT_TYPES = new Set(["dews", "depeg", "safety", "launch"]);
 const GLOBAL_SUBSCRIBE_TOKEN = "all";
+const DEPEG_STEP_TOKEN = "depeg-step";
 
 // ---------- Ticker Resolution ----------
 
@@ -159,11 +162,29 @@ export function parseSubscribeArgs(argsText: string): ParsedSubscribeArgs {
   const tokens = argsText.trim().split(/[\s,]+/).filter(Boolean);
   const alertTypes = new Set<string>();
   const targetTokens: string[] = [];
+  let depegWorseningBpsStep: ParsedSubscribeArgs["depegWorseningBpsStep"];
+  let invalidDepegWorseningBpsStep: string | undefined;
 
-  for (const token of tokens) {
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
     const lower = token.toLowerCase();
     if (ALERT_TYPES.has(lower)) {
       alertTypes.add(lower);
+    } else if (lower === DEPEG_STEP_TOKEN) {
+      alertTypes.add("depeg");
+      const rawStep = tokens[i + 1];
+      if (rawStep == null) {
+        invalidDepegWorseningBpsStep = "";
+      } else {
+        const parsedStep = parseDepegWorseningStep(rawStep);
+        if (parsedStep.valid) {
+          depegWorseningBpsStep = parsedStep.value;
+          i += 1;
+        } else {
+          invalidDepegWorseningBpsStep = rawStep;
+          i += 1;
+        }
+      }
     } else {
       targetTokens.push(token);
     }
@@ -176,7 +197,21 @@ export function parseSubscribeArgs(argsText: string): ParsedSubscribeArgs {
     presetIds: parsedTargets.presetIds,
     tickers: parsedTargets.tickers,
     invalidTargets: parsedTargets.invalidTargets,
+    depegWorseningBpsStep,
+    invalidDepegWorseningBpsStep,
   };
+}
+
+function parseDepegWorseningStep(value: string): { valid: true; value: 100 | 250 | 500 | null } | { valid: false } {
+  const normalized = value.toLowerCase();
+  if (normalized === "off") {
+    return { valid: true, value: null };
+  }
+  const step = Number(normalized);
+  if (step === 100 || step === 250 || step === 500) {
+    return { valid: true, value: step };
+  }
+  return { valid: false };
 }
 
 /**
@@ -184,6 +219,9 @@ export function parseSubscribeArgs(argsText: string): ParsedSubscribeArgs {
  * Checks invalidTargets first - contextual error message depends on whether alert types were provided.
  */
 export function validateSubscribeArgs(parsed: ParsedSubscribeArgs): string | null {
+  if (parsed.invalidDepegWorseningBpsStep != null) {
+    return "Depeg-step values: off, 100, 250, 500";
+  }
   if (parsed.invalidTargets.length > 0) {
     const unknown = parsed.invalidTargets.join(", ");
     if (parsed.alertTypes.size === 0) {

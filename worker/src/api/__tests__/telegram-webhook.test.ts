@@ -372,6 +372,54 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("Use /list");
   });
 
+  it("handles /subscribe with a preset watchlist and depeg-step modifier", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: {
+          value: makeStablecoinsCacheValue({
+            "usdt-tether": 100_000_000_000,
+            "usdc-circle": 90_000_000_000,
+            "dai-makerdao": 5_000_000_000,
+          }),
+          updated_at: 1_700_000_000,
+        },
+      },
+      {
+        match: "FROM telegram_subscriptions",
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            alert_dews: 0,
+            alert_depeg: 1,
+            alert_safety: 0,
+            alert_launch: 0,
+            dews_min_band: null,
+            safety_mode: null,
+            depeg_worsening_bps_step: 250,
+          },
+        ],
+      },
+    ]);
+    await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/subscribe usd-top-50 depeg-step 250"),
+      "test-secret",
+      "bot-token",
+    );
+
+    const subscriptionInsert = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"));
+    expect(subscriptionInsert?.sql).toContain("depeg_worsening_bps_step = excluded.depeg_worsening_bps_step");
+    expect(subscriptionInsert?.binds).toContain(250);
+    expect(sentMessageBody().text).toContain("Preset watchlists: USD Top 50");
+    expect(sentMessageBody().text).toContain("Depeg +250bps");
+  });
+
   it("handles /subscribe with a dashed preset alias", async () => {
     const db = mockD1([
       { match: "telegram_pending_disambiguation", rows: [] },
@@ -516,6 +564,39 @@ describe("handleTelegramWebhook", () => {
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("global_alert_depeg = excluded.global_alert_depeg"))).toBe(true);
     expect(sentMessageBody().text).toContain("Updated all-stablecoin alerts");
+  });
+
+  it("handles /set all depeg-step for global worsening alerts", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "FROM telegram_subscribers",
+        rows: [],
+        first: {
+          alert_dews: 0,
+          alert_depeg: 0,
+          alert_safety: 0,
+          alert_launch: 0,
+          global_alert_dews: 0,
+          global_alert_depeg: 1,
+          global_alert_safety: 0,
+          global_alert_launch: 0,
+          global_depeg_worsening_bps_step: 250,
+          quiet_hours_enabled: 0,
+          quiet_hours_start_utc: null,
+          quiet_hours_end_utc: null,
+        },
+      },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/set all depeg-step 250"), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("global_alert_depeg"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("global_depeg_worsening_bps_step = ?"))).toBe(true);
+    expect(history.some((entry) => entry.binds.includes(250))).toBe(true);
+    expect(sentMessageBody().text).toContain("Updated all-stablecoin alerts");
+    expect(sentMessageBody().text).toContain("Depeg +250bps");
   });
 
   it("shows global alert coverage in /list", async () => {

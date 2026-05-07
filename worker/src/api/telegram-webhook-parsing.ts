@@ -150,10 +150,18 @@ export function parsePendingDisambiguation(pending: PendingDisambiguationRow): P
     const actionAlertTypes = new Set(
       Array.isArray(payload.alertTypes) ? parseStringArray(payload.alertTypes) : Array.from(legacyAlertTypes),
     );
+    const depegWorseningBpsStep =
+      payload.depegWorseningBpsStep === 100 ||
+      payload.depegWorseningBpsStep === 250 ||
+      payload.depegWorseningBpsStep === 500 ||
+      payload.depegWorseningBpsStep === null
+        ? payload.depegWorseningBpsStep
+        : undefined;
     return {
       actionType,
       alertTypes: actionAlertTypes,
       presetIds: parseStringArray(payload.presetIds),
+      depegWorseningBpsStep,
       resolvedCoins,
       initiatorUserId: pending.initiator_user_id ?? null,
       ambiguousTicker: pending.ambiguous_ticker,

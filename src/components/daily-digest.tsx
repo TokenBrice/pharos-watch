@@ -279,6 +279,13 @@ export function DailyDigest({ variant = "full", detailHref }: DailyDigestProps) 
         );
 
         const title = data?.digestTitle || "Signal & Noise";
+        const compactIntelligence = (
+          <DigestIntelligencePanel
+            compact
+            nextTriggers={data?.nextTriggers}
+            riskTape={data?.riskTape}
+          />
+        );
 
         return detailHref ? (
           /* Archive: stacked layout — title above text */
@@ -292,11 +299,7 @@ export function DailyDigest({ variant = "full", detailHref }: DailyDigestProps) 
               {title}
             </h2>
             <DigestRiskSignalPill signal={data?.riskSignal} />
-            <DigestIntelligencePanel
-              compact
-              nextTriggers={data?.nextTriggers}
-              riskTape={data?.riskTape}
-            />
+            {compactIntelligence}
             {bodyBlock}
           </div>
         ) : (
@@ -316,13 +319,11 @@ export function DailyDigest({ variant = "full", detailHref }: DailyDigestProps) 
                 {title}
               </h2>
               <DigestRiskSignalPill signal={data?.riskSignal} />
-              <DigestIntelligencePanel
-                compact
-                nextTriggers={data?.nextTriggers}
-                riskTape={data?.riskTape}
-              />
             </div>
-            {bodyBlock}
+            <div className="min-w-0 space-y-4">
+              {compactIntelligence}
+              {bodyBlock}
+            </div>
           </div>
         );
       })()}

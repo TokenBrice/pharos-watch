@@ -4,7 +4,7 @@ import {
 } from "@shared/lib/liquidity-score-version";
 import { MethodologyDetails, MethodologyFacts, MethodologySectionShell, WorkedExample } from "../../methodology-shared";
 import { LiquidityTechnicalDetails } from "./liquidity-technical-details";
-export const CONTENT_MARKDOWN = `## Liquidity Score\n\nThe Liquidity Score measures how safely a stablecoin can exit through decentralized markets. It combines TVL depth, volume activity, pool quality, durability, and pair diversity into a 0-100 score.\n\nTVL depth uses log-scale scoring so small assets can improve without requiring blue-chip depth, while very deep pools still receive credit. Volume rewards active markets. Pool quality adjusts for mechanism type, pool balance, pair quality, and risky counterparties. Durability measures persistence across observations, and pair diversity penalizes concentration in one venue or one unstable route.\n\nDiscovery is source-aware. Pharos stages pools from DefiLlama, direct protocol APIs, CoinGecko on-chain data, GeckoTerminal, DexScreener, and curated DEX sources, then deduplicates by exact pool identity or conservative derived identity. Thin, stale, or identity-poor pools remain visible for diagnostics but do not receive the same scoring weight as durable high-quality venues.\n`;
+export const CONTENT_MARKDOWN = `## Liquidity Score\n\nThe Liquidity Score measures how safely a stablecoin can exit through decentralized markets. It combines TVL depth, volume activity, pool quality, durability, and pair diversity into a 0-100 score.\n\nTVL depth uses log-scale scoring so small assets can improve without requiring blue-chip depth, while very deep pools still receive credit. Volume rewards active markets. Pool quality adjusts for mechanism type, pool balance, pair quality, and risky counterparties. Durability measures persistence across observations, and pair diversity penalizes concentration in one venue or one unstable route.\n\nDiscovery is source-aware. Pharos stages pools from DefiLlama, direct protocol APIs, CoinGecko on-chain data, GeckoTerminal, DexScreener, and curated DEX sources, then deduplicates by exact pool identity or conservative derived identity. Thin, stale, or identity-poor pools remain visible for diagnostics but do not receive the same scoring weight as durable high-quality venues. Secondary discovery rows with non-finite, negative, or impossible pool TVL are rejected before they can enter scoring.\n`;
 export function LiquidityMethodologySection() {
   return (
     <MethodologySectionShell
@@ -35,7 +35,7 @@ export function LiquidityMethodologySection() {
           <p>
             Discovery coverage is less page-fragile now: CoinGecko Onchain and GeckoTerminal token crawls read multiple
             bounded pages, and fallback enrichment can activate for weak partial coverage instead of waiting for a strict
-            zero-pool outcome.
+            zero-pool outcome. Secondary discovery rows with non-finite, negative, or impossible pool TVL are rejected before staging and skipped again at scoring merge time if stale bad data is already present.
           </p>
           <p>
             Matching is chain-aware: `chain + address` resolves first, and symbol fallback is only allowed when it is unique
