@@ -95,9 +95,9 @@
     "disposition": "queued-p4",
     "notes": "Blacklist amount recovery is an existing cron repair surface with chain-specific parsing and persistence branches. Keep waived here; split chain fetch, event normalization, and balance reconciliation in a dedicated blacklist cron cleanup."
   },
-  "worker/src/cron/dex-liquidity/pool-helpers.ts": {
+  "worker/src/lib/telegram-alerts.ts": {
     "disposition": "queued-p4",
-    "notes": "DEX liquidity pool helpers predate this route split and centralize protocol-specific pool normalization. Keep waived for this cleanup; extract protocol parsing families in the next liquidity ingestion refactor."
+    "notes": "Telegram alert parsing and formatting now includes preset, all-chat, launch, and depeg-step command policy. Keep waived while preserving existing helper-module boundaries; split command parsing from alert message formatting in a dedicated bot cleanup pass."
   },
   "src/app/yield/client.tsx": {
     "disposition": "queued-p4",

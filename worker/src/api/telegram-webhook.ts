@@ -374,7 +374,10 @@ const completionHandlers: CompletionHandlerMap = {
       context.username,
       alertTypes,
       coins.map((coin) => coin.id),
-      { clearPending: options.clearPending },
+      {
+        clearPending: options.clearPending,
+        depegWorseningBpsStep: payload.depegWorseningBpsStep,
+      },
     );
     const subscriptions = await loadSubscriptionsByIds(
       context.db,
@@ -507,7 +510,11 @@ async function handleSubscribe(
     tickers: parsed.tickers,
     initialCoins: presetCoins,
     actionType: "subscribe",
-    actionPayload: { alertTypes: [...parsed.alertTypes], presetIds },
+    actionPayload: {
+      alertTypes: [...parsed.alertTypes],
+      presetIds,
+      depegWorseningBpsStep: parsed.depegWorseningBpsStep,
+    },
     alertTypes: parsed.alertTypes,
   });
 }

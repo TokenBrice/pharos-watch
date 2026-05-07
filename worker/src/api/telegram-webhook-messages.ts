@@ -248,7 +248,11 @@ export function describeGlobalAlertSettings(subscriber: SubscriberRow | null): s
     labels.push("DEWS");
   }
   if (subscriber.global_alert_depeg) {
-    labels.push("Depeg");
+    labels.push(
+      subscriber.global_depeg_worsening_bps_step != null
+        ? `Depeg +${subscriber.global_depeg_worsening_bps_step}bps`
+        : "Depeg",
+    );
   }
   if (subscriber.global_alert_safety) {
     labels.push(GLOBAL_SAFETY_LABEL);

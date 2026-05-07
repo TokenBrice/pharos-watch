@@ -206,6 +206,7 @@ export async function loadSubscriberByChat(
          global_alert_depeg,
          global_alert_safety,
          global_alert_launch,
+         global_depeg_worsening_bps_step,
          quiet_hours_enabled,
          quiet_hours_start_utc,
          quiet_hours_end_utc,
@@ -242,11 +243,11 @@ export async function upsertSubscriberAndSubscriptions(
   username: string | null,
   alertTypes: Set<string>,
   stablecoinIds: string[],
-  options?: { clearPending?: boolean },
+  options?: { clearPending?: boolean; depegWorseningBpsStep?: 100 | 250 | 500 | null },
 ): Promise<void> {
   const now = unixNow();
   const alertDews = alertTypes.has("dews") ? 1 : 0;
-  const alertDepeg = alertTypes.has("depeg") ? 1 : 0;
+  const alertDepeg = alertTypes.has("depeg") || options?.depegWorseningBpsStep !== undefined ? 1 : 0;
   const alertSafety = alertTypes.has("safety") ? 1 : 0;
   const alertLaunch = alertTypes.has("launch") ? 1 : 0;
   const uniqueStablecoinIds = Array.from(new Set(stablecoinIds));
@@ -272,6 +273,10 @@ export async function upsertSubscriberAndSubscriptions(
     );
   }
   for (const stablecoinId of uniqueStablecoinIds) {
+    const depegStepUpdate =
+      options?.depegWorseningBpsStep === undefined
+        ? "depeg_worsening_bps_step = telegram_subscriptions.depeg_worsening_bps_step"
+        : "depeg_worsening_bps_step = excluded.depeg_worsening_bps_step";
     statements.push(
       db.prepare(`
         INSERT INTO telegram_subscriptions (
@@ -280,15 +285,25 @@ export async function upsertSubscriberAndSubscriptions(
           alert_dews,
           alert_depeg,
           alert_safety,
-          alert_launch
+          alert_launch,
+          depeg_worsening_bps_step
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
           alert_dews = MAX(telegram_subscriptions.alert_dews, excluded.alert_dews),
           alert_depeg = MAX(telegram_subscriptions.alert_depeg, excluded.alert_depeg),
           alert_safety = MAX(telegram_subscriptions.alert_safety, excluded.alert_safety),
-          alert_launch = MAX(telegram_subscriptions.alert_launch, excluded.alert_launch)
-      `).bind(chatId, stablecoinId, alertDews, alertDepeg, alertSafety, alertLaunch),
+          alert_launch = MAX(telegram_subscriptions.alert_launch, excluded.alert_launch),
+          ${depegStepUpdate}
+      `).bind(
+        chatId,
+        stablecoinId,
+        alertDews,
+        alertDepeg,
+        alertSafety,
+        alertLaunch,
+        options?.depegWorseningBpsStep ?? null,
+      ),
     );
   }
   if (statements.length > 0) await db.batch(statements);
@@ -378,9 +393,6 @@ export async function applySettingToSubscriptions(
 }
 
 export function validateGlobalSetCommand(command: ParsedSetCommand): string | null {
-  if (command.setting === "depeg-step") {
-    return "Global all-stablecoin alerts do not support depeg-step. Use /set <ticker> depeg-step <value> for per-coin worsening alerts.";
-  }
   if (command.setting === "dews" && command.enabled && command.minBand != null) {
     return "Global DEWS alerts only support the default ALERT threshold. Use /subscribe dews all or /set all dews off; WARNING/DANGER remain per-coin.";
   }
@@ -397,7 +409,23 @@ export async function applyGlobalSetting(
   command: ParsedSetCommand,
 ): Promise<void> {
   if (command.setting === "depeg-step") {
-    throw new Error("Global depeg-step is not supported");
+    const now = unixNow();
+    await upsertSubscriberRow(db, {
+      chatId,
+      username,
+      nowSec: now,
+      globalAlertBumps: { depeg: 1 },
+    });
+    await db
+      .prepare(
+        `UPDATE telegram_subscribers
+            SET global_depeg_worsening_bps_step = ?,
+                last_active_at = ?
+          WHERE chat_id = ?`,
+      )
+      .bind(command.step, now, chatId)
+      .run();
+    return;
   }
   const override: 0 | 1 = command.enabled ? 1 : 0;
 

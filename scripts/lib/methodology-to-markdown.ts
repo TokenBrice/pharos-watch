@@ -96,6 +96,7 @@ export function getMethodologyChangelogPath(key: MethodologyChangelogKey): strin
 }
 
 export function buildMethodologyIndexMarkdown(): string {
+  const body = SECTIONS.join("\n\n").replace(/\n+$/, "");
   return (
     frontMatterBlock({
       title: "Methodology: How Pharos Grades Stablecoins",
@@ -103,7 +104,7 @@ export function buildMethodologyIndexMarkdown(): string {
       description:
         "Full methodology behind Pharos safety grades, peg scores, liquidity scores, PSI, DEWS, yield intelligence, and contagion tests.",
     }) +
-    `# Methodology\n\n${SECTIONS.join("\n\n")}\n`
+    `# Methodology\n\n${body}\n`
   );
 }
 

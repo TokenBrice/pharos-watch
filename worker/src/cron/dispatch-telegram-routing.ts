@@ -18,6 +18,7 @@ export interface SubscriberRow {
   dews_min_band: string | null;
   safety_mode: string | null;
   depeg_worsening_bps_step: number | null;
+  global_depeg_worsening_bps_step?: number | null;
   quiet_hours_enabled: number | null;
   quiet_hours_start_utc: number | null;
   quiet_hours_end_utc: number | null;

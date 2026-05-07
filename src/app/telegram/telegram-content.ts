@@ -110,6 +110,11 @@ export const TELEGRAM_COMMANDS = [
     example: "/subscribe dews,depeg usd-top-25",
   },
   {
+    command: "/subscribe <targets> depeg-step <value>",
+    description: "Enable depeg alerts for coins or preset watchlists and alert again when worsening crosses 100, 250, or 500 bps",
+    example: "/subscribe usd-top-50 depeg-step 250",
+  },
+  {
     command: "/status <ticker>",
     description: "Current peg, DEWS band, and safety grade for one coin \u2014 no subscription needed",
     example: "/status USDC",
@@ -137,8 +142,8 @@ export const TELEGRAM_COMMANDS = [
   },
   {
     command: "/set all <setting> <value>",
-    description: "Toggle dews, depeg, or safety across every tracked coin",
-    example: "/set all depeg off",
+    description: "Toggle dews, depeg, or safety across every tracked coin, or set the global depeg worsening step",
+    example: "/set all depeg-step 250",
   },
   {
     command: "/mute <start>-<end>",
@@ -251,6 +256,10 @@ export const TELEGRAM_GETTING_STARTED_OPTIONS = [
       "Global safety watchtower for downgrades across all tracked stablecoins, with a 3-point filter when scores are present",
   },
   {
+    command: "/subscribe usd-top-50 depeg-step 250",
+    description: "Track preset depeg worsening milestones every 250 bps",
+  },
+  {
     command: "/subscribe launch USDPT",
     description: "Launch alerts for explicit pre-launch tickers or coin IDs",
   },
@@ -265,6 +274,10 @@ export const TELEGRAM_GETTING_STARTED_OPTIONS = [
   {
     command: "/set USDC depeg-step 250",
     description: "Worsening-depeg milestones every 250 bps",
+  },
+  {
+    command: "/set all depeg-step 250",
+    description: "Global depeg worsening milestones every 250 bps",
   },
   {
     command: "/mute 22-07",
