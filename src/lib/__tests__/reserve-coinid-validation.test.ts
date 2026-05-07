@@ -5,10 +5,6 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 const KNOWN_TICKERS = ["USDC", "USDT", "DAI", "FRAX", "USDe", "USDtb", "BUIDL", "USDS", "USYC", "OUSG", "DOLA", "GHO", "crvUSD", "FRXUSD", "USD0"];
 const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
-    "usdu-unitas::JLP (Jupiter Perps LP: BTC, ETH, SOL, USDC basket)::USDC",
-    "JLP is a mixed basket reserve slice, not a direct USDC holding.",
-  ],
-  [
     "gho-aave::GhoDirectFacilitator GSMs Mainnet::GHO",
     "GHO facilitator labels describe issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
   ],
@@ -27,6 +23,18 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "gho-aave::HorizonGhoDirectMinter::GHO",
     "GHO direct-minter labels describe facilitator issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
+  ],
+  [
+    "dola-inverse-finance::Stablecoin collateral (sUSDe, sUSDS, scrvUSD)::USDe",
+    "DOLA live reserves aggregate multiple stablecoin markets into one mixed collateral bucket, so no single coinId is representative.",
+  ],
+  [
+    "dola-inverse-finance::Stablecoin collateral (sUSDe, sUSDS, scrvUSD)::USDS",
+    "DOLA live reserves aggregate multiple stablecoin markets into one mixed collateral bucket, so no single coinId is representative.",
+  ],
+  [
+    "dola-inverse-finance::Stablecoin collateral (sUSDe, sUSDS, scrvUSD)::crvUSD",
+    "DOLA live reserves aggregate multiple stablecoin markets into one mixed collateral bucket, so no single coinId is representative.",
   ],
 ]);
 

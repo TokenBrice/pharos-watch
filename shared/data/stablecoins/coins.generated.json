@@ -9785,7 +9785,8 @@
       {
         "name": "yvDAI cauldron collateral",
         "pct": 52,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "dai-makerdao"
       },
       {
         "name": "WBTC cauldron collateral",
