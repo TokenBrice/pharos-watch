@@ -13,13 +13,17 @@ const WIDTH = 900;
 const HEIGHT = 460;
 
 const topology = JSON.parse(readFileSync(SRC, "utf8")) as Topology;
-const countries = feature(
+const allCountries = feature(
   topology,
   topology.objects.countries as GeometryCollection,
 ) as FeatureCollection<Geometry, GeoJsonProperties>;
+const countries: FeatureCollection<Geometry, GeoJsonProperties> = {
+  ...allCountries,
+  features: allCountries.features.filter((feat) => M49_TO_ISO2[String(feat.id)] !== "AQ"),
+};
 
 const projection = geoNaturalEarth1()
-  .fitExtent([[4, 4], [WIDTH - 4, HEIGHT - 24]], countries);
+  .fitExtent([[4, 4], [WIDTH - 4, HEIGHT - 4]], countries);
 const path = geoPath(projection);
 
 const paths: string[] = [];

@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, waitFor } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
 
@@ -34,5 +36,10 @@ describe("WorldMap", () => {
     const styleEl = container.querySelector("style");
     expect(styleEl).not.toBeNull();
     expect(styleEl!.textContent).not.toMatch(/path#\w+\{fill:/);
+  });
+
+  it("omits Antarctica from the checked-in atlas asset", () => {
+    const svg = readFileSync(resolve("public/maps/world-countries.svg"), "utf8");
+    expect(svg).not.toContain('id="AQ"');
   });
 });
