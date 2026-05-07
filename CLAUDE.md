@@ -4,6 +4,8 @@ Analytics dashboard tracking 255 stablecoins (+2 shadow assets for PSI). Static 
 
 Live: https://pharos.watch
 
+**Note**: This file is deliberately kept in sync with `AGENTS.md`. Durable guidance lives in `/docs/process/` and `/docs/`. Changes to rules, gotchas, or repo map must be mirrored in both files (or moved to `docs/process/agent-artifacts.md` + referenced here).
+
 ## Methodology
 
 - State assumptions before non-trivial work; ask when ambiguity blocks a safe choice.
