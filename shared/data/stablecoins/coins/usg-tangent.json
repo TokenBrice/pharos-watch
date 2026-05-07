@@ -6,10 +6,12 @@
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "decentralized",
-    "yieldBearing": true,
+    "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
+  "collateral": "Over-collateralized productive DeFi collateral, including Curve Finance LP tokens, Pendle PTs, and other yield-bearing or LP positions from protocols such as Curve, Convex, Stake DAO, and Spectra.",
+  "pegMechanism": "USG has no collateral redemption path. Tangent targets the peg with Peg Keeper contracts, price-dependent reward deductions, and dynamic interest: HEC borrowers can be interest-free while USG stays above each market's threshold but lose more collateral rewards as USG falls, while LEC borrowers pay price-dependent interest immediately.",
   "detailProvider": "coingecko",
   "links": [
     {
@@ -18,7 +20,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.tangent.finance/docs/overview"
+      "url": "https://docs.tangent.finance/docs/usg/overview_usg"
     },
     {
       "label": "Twitter",
@@ -38,9 +40,8 @@
   ],
   "status": "active",
   "announcedDate": "2026-03",
-  "expectedLaunchDate": "2026-Q2",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Five audits referenced in docs (Sherlock, Egis, Pashov x2 through Dec 2025, plus Zerocool AI audit); beta testing underway; site still shows 'SOON' placeholders for APY/supply; mainnet launch pending with no firm date",
+  "launchPhaseDetail": "Five audit reports are referenced in docs (Sherlock, Egis, Pashov x2, plus Zerocool AI audit); beta testing is still disclosed; Ethereum token contract is live with nonzero supply, while the public site still shows placeholder APY/TVL metrics and no CoinGecko or DefiLlama market row is available yet",
   "featuredContent": [
     {
       "type": "tweet",
@@ -80,7 +81,7 @@
       "date": "2026-03-01",
       "type": "announcement",
       "title": "Tangent announces USG stablecoin backed by productive DeFi collateral",
-      "description": "0% interest borrowing, backed by Curve LP and Pendle PT positions. sUSG (ERC4626) as yield-bearing wrapper.",
+      "description": "0% interest borrowing, backed by Curve LP and Pendle PT positions. sUSG is the Yearn v3 savings wrapper.",
       "sourceUrl": "https://www.tangent.finance/"
     },
     {

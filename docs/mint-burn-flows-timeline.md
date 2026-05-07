@@ -1,6 +1,17 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.0` (2026-03-01 -> 2026-04-17).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.1` (2026-03-01 -> 2026-05-08).
+
+---
+
+## v6.1 - USG extended transfer coverage (May 8, 2026)
+
+**Commit:** `unreleased`
+
+- Added Tangent USD (`usg-tangent`) to the extended Ethereum mint/burn registry.
+- The config uses the verified USG ERC-20 contract's standard zero-address `Transfer` events from reviewed deployment block `24,442,033`.
+- An RPC log review from deployment through the current head found three zero-address mint events totaling 40.02M USG, matching the contract's current `totalSupply`.
+- No bridge classifier was added: only the Ethereum token contract is currently tracked, and public Tangent docs do not publish a separate bridge route.
 
 ---
 

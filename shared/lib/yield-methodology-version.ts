@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "7.44",
+  currentVersion: "7.45",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "7.45",
+    title: "USG Yield Ownership Correction",
+    date: "2026-05-08",
+    effectiveAt: 1778198400,
+    summary:
+      "Tangent USG is no longer treated as a yield-bearing asset because yield accrues in the separate sUSG savings wrapper, not in USG itself.",
+    impact: [
+      "`usg-tangent` now carries `yieldBearing: false`, matching Tangent's USG/sUSG split",
+      "`usg-tangent` is removed from intentional yield-gap coverage because it is no longer part of the yield-bearing manifest universe",
+      "The intentional-gap manifest remains reserved for assets that are actually marked yield-bearing but lack a reliable runtime APY source",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "7.44",
     title: "Solayer sUSD Treasury fallback coverage",
@@ -394,7 +409,7 @@ const yieldMethodology = createMethodologyVersion({
     impact: [
       "DeFiLlama discovery, variant matching, and protocol-native adapters now prefer chain+address identity and drop ambiguous symbol-only candidates instead of attaching them to the first matching coin",
       "Protocol-native source keys now use full chain-aware identifiers (Morpho, Pendle, Yearn, Kong, Beefy, Compound, Aave) and source-link matching understands prefixed and chain-qualified labels",
-      "Yield manifest coverage now includes explicit price-derived fallbacks and intentional gaps, so assets like cetes-etherfuse and usg-tangent are no longer invisible to coverage reporting",
+      "Yield manifest coverage now includes explicit price-derived fallbacks and intentional gaps, so assets like cetes-etherfuse no longer disappear from coverage reporting",
       "Warning heuristics and published `medianApy` now share the same TVL-weighted 30d benchmark",
       "yield-history no longer advances past the latest published yield-rankings snapshot when DB writes and cache publication diverge",
     ],

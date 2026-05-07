@@ -1,6 +1,14 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.44` (2026-03-01 -> 2026-05-05).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.45` (2026-03-01 -> 2026-05-08).
+
+---
+
+## v7.45 - USG Yield Ownership Correction (May 8, 2026)
+
+- `usg-tangent` is no longer marked as a yield-bearing asset because USG itself does not accrue yield
+- Tangent yield exposure belongs to the separate sUSG savings wrapper; USG is the borrowable CDP stablecoin
+- The intentional-gap manifest now covers only assets that are actually marked yield-bearing but lack a reliable runtime APY source
 
 ---
 
@@ -68,7 +76,7 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 ## v7.1 - Explicit intentional gaps for pre-launch yield assets (Apr 3, 2026)
 
 - Pre-launch yield-bearing assets with no live runtime source now publish as explicit intentional manifest gaps instead of appearing as covered entries with zero strategies
-- `bd-basedollar` now follows the same intentional-gap path as `trusd-tori` and `usg-tangent`
+- `bd-basedollar` now follows the same intentional-gap path as `trusd-tori`
 - Coverage audits and operator tooling still inventory every yield-bearing asset, but these pre-launch gaps now fail closed and stay visible as missing runtime coverage
 
 ## v7.0 - Supply-relative size gates for published lending suggestions (Apr 3, 2026)
@@ -185,7 +193,7 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 
 - DeFiLlama discovery, variant matching, and protocol-native adapters now resolve by chain and address before symbol fallback and drop ambiguous candidates instead of guessing
 - Protocol-native source keys now use full chain-aware identifiers, and source-link resolution understands prefixed labels such as `Morpho: ...`, `Pendle: ...`, `Yearn: ...`, `Kong: ...`, `Beefy: ...`, and chain-qualified labels such as `Aave v3 (base)`
-- Yield manifest coverage is now explicit for every yield-bearing asset, including price-derived fallback-only assets and intentional gaps such as pre-launch `usg-tangent`
+- Yield manifest coverage is now explicit for every yield-bearing asset, including price-derived fallback-only assets and intentional gaps
 - Warning divergence checks and published `medianApy` now share the same TVL-weighted 30d median benchmark
 - `/api/yield-history` is now bounded to the latest published `/api/yield-rankings` snapshot so history cannot advance past an unpublished cache state
 

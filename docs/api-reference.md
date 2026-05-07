@@ -2165,8 +2165,8 @@ For the five tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, 
   },
   "history": [YieldHistoryPoint, "..."],
   "methodology": {
-    "version": "7.43",
-    "currentVersion": "7.43",
+    "version": "7.45",
+    "currentVersion": "7.45",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }

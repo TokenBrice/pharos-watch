@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const mintBurnFlow = createMethodologyVersion({
-  currentVersion: "6.0",
+  currentVersion: "6.1",
   changelogPath: "/methodology/mint-burn-flow-changelog/",
   changelog: [
+  {
+    version: "6.1",
+    title: "USG extended transfer coverage",
+    date: "2026-05-08",
+    effectiveAt: 1778198400,
+    summary:
+      "Tangent USD (USG) now has extended Ethereum mint/burn tracking from its reviewed deployment block using standard ERC-20 zero-address Transfer events.",
+    impact: [
+      "Adds USG to the extended mint/burn config registry with a reviewed deployment-block start bound",
+      "Captures the initial 40.02M USG zero-address mint history plus future USG supply changes through the standard Transfer decoder",
+      "Keeps bridge and custom-event handling unchanged; no USG bridge classifier is configured because only the Ethereum token contract is currently tracked",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "6.0",
     title: "Bridge classifier parity, LayerZero endpoint-only signal, canonical-chain gauge weighting",

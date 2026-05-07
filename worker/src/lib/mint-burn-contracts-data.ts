@@ -462,6 +462,16 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     events: transferMintBurn(),
   },
   {
+    // Tangent USD (USG) — verified ERC-20 deployed by tangent-finance.eth in tx
+    // 0xeae86c6a45b049ab20cb3d7e13b6dcd39e2a5b4b47ac05d79a35cf7c2018a1ed.
+    chain: ETHEREUM,
+    stablecoinId: "usg-tangent",
+    dustThreshold: 10_000,
+    startBlock: 24_442_033,
+    tier: "extended",
+    events: transferMintBurn(),
+  },
+  {
     // Wrapped M (wM) — WrappedMToken proxy 0x437cc33344a0b27a429f795ff6b469c72698b291, deployed ~Aug 2024
     // startBlock bisected via eth_getCode: contract absent at 20_527_909, present at 20_527_947
     chain: ETHEREUM,
