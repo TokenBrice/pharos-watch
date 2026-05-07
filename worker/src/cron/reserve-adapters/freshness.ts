@@ -83,7 +83,7 @@ export function parseTimestampLikeToUnixSeconds(value: unknown): number | null {
     return normalizeUnixTimestampSeconds(Number(trimmed));
   }
 
-  const shortDateMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
+  const shortDateMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
   if (shortDateMatch) {
     const [, day, month, year] = shortDateMatch;
     const parsed = Date.UTC(2000 + Number(year), Number(month) - 1, Number(day));

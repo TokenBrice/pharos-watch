@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "5.5",
+  currentVersion: "5.6",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+    {
+      version: "5.6",
+      title: "Staged discovery TVL sanity ceiling",
+      date: "2026-05-07",
+      effectiveAt: 1778144000,
+      summary:
+        "Secondary discovery rows now reject impossible pool TVL before staging and skip any already-staged over-cap row during the scoring merge.",
+      impact: [
+        "CoinGecko Onchain, GeckoTerminal, DexScreener, and CoinGecko ticker staging can no longer persist non-finite, negative, or over-cap TVL values",
+        "The scoring cron skips legacy staged rows above the same sanity ceiling before they can affect global TVL, coverage drift, or DEX price observations",
+        "Valid high-liquidity pools below the ceiling continue through the existing dedupe, protocol-cap, and retained-pool quality gates",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.5",
       title: "Absolute TVL Depth fallback recalibration and Slipstream sqrt_ratio price",

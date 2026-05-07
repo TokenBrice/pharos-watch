@@ -59,6 +59,8 @@ After pool filtering and protocol-level TVL caps are applied, the scorer rebuild
 
 `dex_pool_staging` is the handoff point for discovery-only sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers). The scoring cron does not call those discovery APIs directly anymore; it consumes staged rows refreshed within the last 24 hours and gracefully falls back to primary-only scoring when the staging table is absent or empty.
 
+Staged rows with non-finite, negative, or impossible pool TVL above the discovery sanity ceiling are rejected before persistence and skipped again at scoring merge time. This prevents one malformed secondary-source reserve field from poisoning global TVL or CPU-heavy downstream diagnostics.
+
 Shared source-specific helpers now own the duplicate discovery/liquidity normalization rules:
 
 - GeckoTerminal request construction, bounded pagination, pool parsing, and pool-type normalization: `worker/src/cron/dex-liquidity/geckoterminal-shared.ts`

@@ -35,6 +35,12 @@ export interface DiscoveryMeta {
 }
 
 /**
+ * Max TVL for a staged secondary-source pool. Anything above this is treated as
+ * malformed upstream data rather than a valid DEX venue.
+ */
+export const STAGED_POOL_MAX_TVL_USD = 10_000_000_000;
+
+/**
  * Defaults applied when staged pools lack fields that primary sources expose.
  * The scoring merge should stay aligned with these values instead of inlining its own.
  */

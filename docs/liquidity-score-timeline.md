@@ -1,6 +1,16 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.5` (2026-02-19 -> 2026-04-17).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.6` (2026-02-19 -> 2026-05-07).
+
+---
+
+## v5.6 - Staged discovery TVL sanity ceiling (May 7, 2026)
+
+**Commit:** `unreleased`
+
+- Secondary discovery rows now reject non-finite, negative, or impossible pool TVL values before staging
+- The scoring merge applies the same TVL sanity ceiling to already-staged rows, so stale malformed discovery data cannot affect global TVL, drift diagnostics, retained-pool scoring, or DEX price observations
+- Valid high-liquidity rows below the ceiling still flow through the existing dedupe, protocol-cap, and retained-pool quality gates
 
 ---
 

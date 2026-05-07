@@ -419,6 +419,7 @@ describe("parseTimestampLikeToUnixSeconds", () => {
     expect(parseTimestampLikeToUnixSeconds("1773337492853")).toBe(1_773_337_492);
     expect(parseTimestampLikeToUnixSeconds("Feb 28, 2026")).toBe(Date.UTC(2026, 1, 28) / 1000);
     expect(parseTimestampLikeToUnixSeconds("20/03/26")).toBe(Date.UTC(2026, 2, 20) / 1000);
+    expect(parseTimestampLikeToUnixSeconds("7/05/26")).toBe(Date.UTC(2026, 4, 7) / 1000);
   });
 
   it("returns null for unsupported timestamp values", () => {
