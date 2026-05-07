@@ -82,6 +82,23 @@ describe("coingecko-onchain", () => {
     });
   });
 
+  it("treats CoinGecko onchain lookup misses as source-healthy empty results", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("{}", { status: 404 }));
+    await expect(fetchCgTokenPoolsWithStatus("eth", "0xmissing")).resolves.toEqual({
+      ok: true,
+      pools: [],
+    });
+
+    expect(fetchWithRetry).toHaveBeenLastCalledWith(
+      expect.any(String),
+      expect.any(Object),
+      1,
+      expect.objectContaining({
+        passthroughStatuses: [400, 404],
+      }),
+    );
+  });
+
   it("fetches token batches, short-circuits empty input, and handles failures", async () => {
     expect(await fetchCgTokensBatch("base", [])).toEqual([]);
     expect(fetchWithRetry).not.toHaveBeenCalled();

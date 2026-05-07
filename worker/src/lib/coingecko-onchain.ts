@@ -10,6 +10,7 @@ import { USER_AGENT } from "./constants";
 import { fetchPagedTokenPools } from "./paged-token-pools";
 import { RATE_LIMITS } from "./rate-limit";
 import { sleepWithSignal } from "./abort";
+import { cancelResponseBodyQuietly } from "./response-body";
 import { CG_ONCHAIN_TOKEN_POOLS_MAX_PAGES, CG_ONCHAIN_TOKEN_POOLS_PAGE_SIZE } from "../cron/dex-liquidity/constants";
 
 export { CG_CHAIN_MAP, CG_CHAIN_REVERSE } from "@shared/lib/chain-provider-registry";
@@ -76,6 +77,8 @@ export interface CgTokenPoolsResult {
   pools: CgPool[];
 }
 
+const CG_ONCHAIN_LOOKUP_MISS_STATUSES = new Set([400, 404]);
+
 // ---------------------------------------------------------------------------
 // API functions
 // ---------------------------------------------------------------------------
@@ -121,9 +124,16 @@ export async function fetchCgTokenPoolsWithStatus(
       const res = await fetchWithRetry(url, {
         headers: cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }, apiKey),
         signal,
-      }, options?.maxRetries ?? 1, { timeoutMs: options?.timeoutMs });
+      }, options?.maxRetries ?? 1, {
+        timeoutMs: options?.timeoutMs,
+        passthroughStatuses: [...CG_ONCHAIN_LOOKUP_MISS_STATUSES],
+      });
       if (!res?.ok) {
-        ok = false;
+        if (res && CG_ONCHAIN_LOOKUP_MISS_STATUSES.has(res.status)) {
+          await cancelResponseBodyQuietly(res);
+        } else {
+          ok = false;
+        }
         return [];
       }
       const json = (await res.json()) as { data?: unknown };
