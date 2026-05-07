@@ -347,6 +347,7 @@ describe("generateDailyDigest", () => {
           makeAsset({
             id: "usdt-tether",
             symbol: "USDT",
+            price: 0.985,
             circulating: { peggedUSD: 100_000_000 },
             circulatingPrevWeek: { peggedUSD: 95_000_000 },
           }),
@@ -447,7 +448,7 @@ describe("generateDailyDigest", () => {
     };
     expect(storedInput.totalMcapUsd).toBe(160_000_000);
     expect(storedInput.activeDepegCount).toBe(1);
-    expect(storedInput.topDepegs[0]).toMatchObject({ symbol: "USDT", bps: 150, mcapUsd: 100_000_000 });
+    expect(storedInput.topDepegs[0]).toMatchObject({ symbol: "USDT", bps: -150, mcapUsd: 100_000_000 });
     expect(storedInput.editorialCandidates?.length).toBeGreaterThan(0);
     expect(storedInput.riskTape?.length).toBeGreaterThan(0);
     expect(storedInput.nextTriggers?.length).toBeGreaterThan(0);
@@ -1443,22 +1444,26 @@ function makeCollectorCtx(db: ReturnType<typeof mockD1>): CollectorContext {
     makeAsset({
       id: "usdt-tether",
       symbol: "USDT",
+      price: 0.9975,
       circulating: { peggedUSD: 100_000_000_000 },
       circulatingPrevWeek: { peggedUSD: 95_000_000_000 },
     }),
     makeAsset({
       id: "usdc-circle",
       symbol: "USDC",
+      price: 0.99,
       circulating: { peggedUSD: 50_000_000_000 },
       circulatingPrevWeek: { peggedUSD: 52_000_000_000 },
     }),
     makeAsset({
       id: "dai-makerdao",
       symbol: "DAI",
+      price: 1.05,
       circulating: { peggedUSD: 5_000_000 },
       circulatingPrevWeek: { peggedUSD: 5_000_000 },
     }),
   ];
+  const stablecoinAssetById = new Map(trackedStablecoinAssets.map((asset) => [asset.id, asset]));
 
   const mcapById = new Map<string, number>([
     ["usdt-tether", 100_000_000_000],
@@ -1466,7 +1471,7 @@ function makeCollectorCtx(db: ReturnType<typeof mockD1>): CollectorContext {
     ["dai-makerdao", 5_000_000],
   ]);
 
-  return { db: db as unknown as D1Database, trackedStablecoinAssets, mcapById, nowSec, todayTs, yesterdayTs };
+  return { db: db as unknown as D1Database, trackedStablecoinAssets, stablecoinAssetById, mcapById, nowSec, todayTs, yesterdayTs };
 }
 
 describe("collectActiveDepegs", () => {
@@ -1513,7 +1518,7 @@ describe("collectActiveDepegs", () => {
     expect(result.value.topDepegs[1].suppressReason).toContain("sub-$20M");
   });
 
-  it("keeps critical stale depegs unsuppressed and returns more than three prompt candidates", async () => {
+  it("keeps critical live depegs unsuppressed and returns more than three prompt candidates", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
@@ -1527,7 +1532,11 @@ describe("collectActiveDepegs", () => {
       },
     ]);
 
-    const result = await collectActiveDepegs(makeCollectorCtx(db));
+    const ctx = makeCollectorCtx(db);
+    ctx.stablecoinAssetById.set("usdc-circle", { ...ctx.stablecoinAssetById.get("usdc-circle")!, price: 0.48 });
+    ctx.stablecoinAssetById.set("usdt-tether", { ...ctx.stablecoinAssetById.get("usdt-tether")!, price: 0.97 });
+
+    const result = await collectActiveDepegs(ctx);
 
     expect(result.value.topDepegs).toHaveLength(4);
     expect(result.value.topDepegs[0]).toMatchObject({
@@ -1535,6 +1544,64 @@ describe("collectActiveDepegs", () => {
       bps: -5200,
     });
     expect(result.value.topDepegs[0].suppressReason).toBeUndefined();
+  });
+
+  it("uses the live stablecoins-cache price instead of the open event peak", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE ended_at IS NULL",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            symbol: "USDC",
+            peg_type: "peggedUSD",
+            direction: "below",
+            peak_deviation_bps: -5568,
+            peak_price: 0.443,
+            peg_reference: 1,
+            started_at: nowSec - 3600,
+          },
+        ],
+      },
+    ]);
+
+    const result = await collectActiveDepegs(makeCollectorCtx(db));
+
+    expect(result.value.activeDepegCount).toBe(1);
+    expect(result.value.topDepegs[0]).toMatchObject({
+      symbol: "USDC",
+      bps: -100,
+      peakBps: -5568,
+      currentPriceUsd: 0.99,
+      peakPriceUsd: 0.443,
+    });
+  });
+
+  it("does not keep an active depeg candidate when fresh cache price recovered", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE ended_at IS NULL",
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            peg_type: "peggedUSD",
+            direction: "below",
+            peak_deviation_bps: -500,
+            peak_price: 0.95,
+            peg_reference: 1,
+            started_at: nowSec - 3600,
+          },
+        ],
+      },
+    ]);
+
+    const result = await collectActiveDepegs(makeCollectorCtx(db));
+
+    expect(result.value.activeDepegCount).toBe(0);
+    expect(result.value.topDepegs).toEqual([]);
   });
 });
 

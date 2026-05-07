@@ -5,6 +5,7 @@ import type { SafetyGradeRow } from "../../lib/safety-scores";
 export interface CollectorContext {
   db: D1Database;
   trackedStablecoinAssets: StablecoinData[];
+  stablecoinAssetById: Map<string, StablecoinData>;
   mcapById: Map<string, number>;
   nowSec: number;
   todayTs: number;

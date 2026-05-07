@@ -161,6 +161,9 @@ export interface DigestInputData {
     startedAt?: number;
     ageHours?: number;
     impactScore?: number;
+    peakBps?: number;
+    peakPriceUsd?: number;
+    currentPriceUsd?: number;
     suppressReason?: string;
   }[];
   biggestSupplyChange: {

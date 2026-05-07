@@ -76,6 +76,8 @@ function addActiveDepegCandidates(candidates: DigestEditorialCandidate[], data: 
       artifactRisk: artifactRiskForSuppression(depeg.suppressReason, depeg.mcapUsd < 50_000_000 ? "medium" : "low"),
       headlineFacts: [
         `${Math.abs(depeg.bps)} bps ${depeg.direction ?? (depeg.bps >= 0 ? "above" : "below")} peg`,
+        depeg.currentPriceUsd != null ? `current price $${depeg.currentPriceUsd.toFixed(3)}` : "",
+        depeg.peakBps != null && depeg.peakBps !== depeg.bps ? `peak was ${Math.abs(depeg.peakBps)} bps` : "",
         `${formatCurrency(depeg.mcapUsd)} market cap`,
         `${age}`,
         `market impact score ${marketImpactScore}`,
