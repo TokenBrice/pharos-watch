@@ -1,5 +1,30 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV717Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.17")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        USD3 / Web 3 Dollar is reclassified from DeFi to CeFi-dependent because its Reserve Protocol DTF basket is
+        concentrated in centralized stablecoin-derived collateral.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">usd3-reserve-protocol</code> now uses governance{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">centralized-dependent</code>.
+        </li>
+        <li>
+          The correction reflects Savings USDS, Aave USDC, wrapped Compound USDCv3, and Steakhouse USDC strategy
+          exposure in the curated and live reserve configuration.
+        </li>
+        <li>Scoring weights, thresholds, reserve risks, and live reserve adapter behavior are unchanged.</li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV716Entry() {
   return (
     <VersionCard

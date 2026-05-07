@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.16",
+  currentVersion: "7.17",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.17",
+      title: "USD3 centralized-collateral dependency correction",
+      date: "2026-05-07",
+      effectiveAt: 1778112000,
+      summary:
+        "USD3 / Web 3 Dollar is reclassified from DeFi to CeFi-dependent because its Reserve Protocol DTF basket is concentrated in centralized stablecoin-derived collateral.",
+      impact: [
+        "`usd3-reserve-protocol` now uses governance `centralized-dependent` instead of `decentralized`",
+        "The correction reflects Savings USDS, Aave USDC, wrapped Compound USDCv3, and Steakhouse USDC strategy exposure in the curated and live reserve configuration",
+        "Scoring weights, thresholds, reserve risks, and live reserve adapter behavior are unchanged",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.16",
       title: "Follow-up freezability classification audit",

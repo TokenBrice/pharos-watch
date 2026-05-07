@@ -4,7 +4,7 @@ Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Compu
 
 The stablecoin registry currently contains 255 tracked metadata entries. Report-card snapshots score the 240 active tracked assets plus the 88 cemetery assets; pre-launch and frozen-archive tracked entries are emitted as stub `F` cards (defunct; pre-launch remain outside the snapshot until they launch).
 
-## Overall Grade (v7.16)
+## Overall Grade (v7.17)
 
 Four-step computation:
 
@@ -15,7 +15,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.16 adds a follow-up review of six disputed `Freezable: No` classifications. HomeCoin now resolves as `Possible` because the holder-facing HOME token is a transparent upgradeable proxy with an active proxy-admin upgrade surface. HBD, vCRED, Freedom Dollar, LUAUSD, and NXUSD remain `No` after reviewing their native protocol or verified contract surfaces for freeze, blacklist, pause, denylist, arbitrary burn, or upgrade controls. Owner mint authority and user/allowance burn functions remain supply-control signals, not freeze signals, unless the contract also exposes holder-facing transfer gates, arbitrary burns, blacklist controls, or mutable holder-control surfaces.
+Current-version note: v7.17 reclassifies USD3 / Web 3 Dollar from DeFi to CeFi-dependent because its Reserve Protocol DTF basket is concentrated in centralized stablecoin-derived collateral. Scoring weights, thresholds, reserve risks, and live reserve adapter behavior are unchanged.
 
 ## Dimensions
 

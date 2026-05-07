@@ -1,6 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.16 (2026-02-25 → 2026-05-06). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.17 (2026-02-25 → 2026-05-07). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.17 — USD3 centralized-collateral dependency correction (2026-05-07)
+
+- `usd3-reserve-protocol` now uses governance `centralized-dependent` instead of `decentralized`
+- The correction reflects Savings USDS, Aave USDC, wrapped Compound USDCv3, and Steakhouse USDC strategy exposure in the curated and live reserve configuration
+- Scoring weights, thresholds, reserve risks, and live reserve adapter behavior are unchanged
 
 ## v7.16 — Follow-up freezability classification audit (2026-05-06)
 
