@@ -6,6 +6,7 @@ import { adaptSgForgeCoinvertible } from "../sgforge-coinvertible";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const SAMPLE_HTML = readFileSync(join(FIXTURES_DIR, "sgforge-coinvertible-eur.html"), "utf8");
+const MAY_7_2026_NOON_UTC = Date.UTC(2026, 4, 7, 12) / 1000;
 
 describe("adaptSgForgeCoinvertible", () => {
   it("maps the EUR CoinVertible block into a single cash reserve slice", () => {
@@ -36,6 +37,26 @@ describe("adaptSgForgeCoinvertible", () => {
 
   it("throws when the expected disclosure block is missing", () => {
     expect(() => adaptSgForgeCoinvertible("<html></html>", "eur")).toThrow("layout-changed");
+  });
+
+  it("keeps European slash dates when they are not future-dated", () => {
+    const html = SAMPLE_HTML.replace("Last update 20/03/26", "Last update 7/05/26");
+    const result = adaptSgForgeCoinvertible(html, "eur", { nowSec: MAY_7_2026_NOON_UTC });
+
+    expect(result.metadata).toMatchObject({
+      lastUpdate: "7/05/26",
+      sourceTimestamp: Date.UTC(2026, 4, 7) / 1000,
+    });
+  });
+
+  it("falls back to U.S. slash dates when the European interpretation would be future-dated", () => {
+    const html = SAMPLE_HTML.replace("Last update 20/03/26", "Last update 5/07/26");
+    const result = adaptSgForgeCoinvertible(html, "eur", { nowSec: MAY_7_2026_NOON_UTC });
+
+    expect(result.metadata).toMatchObject({
+      lastUpdate: "5/07/26",
+      sourceTimestamp: Date.UTC(2026, 4, 7) / 1000,
+    });
   });
 
   it("throws parse-failed when localized amounts become unreadable", () => {

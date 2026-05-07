@@ -14,6 +14,12 @@ import {
 
 type SgForgeCoinType = "eur" | "usd";
 
+const SG_FORGE_FUTURE_TOLERANCE_SEC = 10 * 60;
+
+interface SgForgeAdaptOptions {
+  nowSec?: number;
+}
+
 function normalizeLocalizedNumber(raw: string): number {
   const compact = raw.replace(/\s+/g, "").trim();
   const normalized = compact.includes(",")
@@ -38,6 +44,48 @@ function getHeadingNeedle(coinType: SgForgeCoinType): string {
   return coinType === "eur" ? "EUR CoinVertible in circulation" : "USD CoinVertible in circulation";
 }
 
+function buildShortDateUtc(day: number, month: number, year: number): number | null {
+  if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) return null;
+  if (day < 1 || month < 1 || month > 12) return null;
+
+  const parsed = Date.UTC(2000 + year, month - 1, day);
+  const date = new Date(parsed);
+  if (
+    date.getUTCFullYear() !== 2000 + year
+    || date.getUTCMonth() !== month - 1
+    || date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return Math.floor(parsed / 1000);
+}
+
+function parseSgForgeLastUpdate(value: string | null | undefined, nowSec: number): number | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+
+  const shortDateMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+  if (!shortDateMatch) {
+    return parseTimestampLikeToUnixSeconds(trimmed);
+  }
+
+  const first = Number(shortDateMatch[1]);
+  const second = Number(shortDateMatch[2]);
+  const year = Number(shortDateMatch[3]);
+  const european = buildShortDateUtc(first, second, year);
+  const us = buildShortDateUtc(second, first, year);
+
+  if (european != null && european - nowSec <= SG_FORGE_FUTURE_TOLERANCE_SEC) {
+    return european;
+  }
+  if (us != null && us - nowSec <= SG_FORGE_FUTURE_TOLERANCE_SEC) {
+    return us;
+  }
+
+  return european ?? us;
+}
+
 function extractDisclosureBlock(html: string, coinType: SgForgeCoinType): string {
   const headingNeedle = getHeadingNeedle(coinType);
   const start = html.indexOf(headingNeedle);
@@ -52,7 +100,11 @@ function extractDisclosureBlock(html: string, coinType: SgForgeCoinType): string
   return html.slice(start, nextBlockStart === -1 ? undefined : nextBlockStart);
 }
 
-export function adaptSgForgeCoinvertible(html: string, coinType: SgForgeCoinType): AdapterResult {
+export function adaptSgForgeCoinvertible(
+  html: string,
+  coinType: SgForgeCoinType,
+  options: SgForgeAdaptOptions = {},
+): AdapterResult {
   const disclosureBlock = extractDisclosureBlock(html, coinType);
   const numberMatch = disclosureBlock.match(
     /class="coinvertible_number">\s*([^<]+?)\s*<span[^>]*>Last update\s*([^<]+)</i,
@@ -71,7 +123,10 @@ export function adaptSgForgeCoinvertible(html: string, coinType: SgForgeCoinType
   const bankName = bankMatch[1]?.replace(/\s+/g, " ").trim();
   const bankPct = Number.parseFloat(bankMatch[2] ?? "");
   const cashAmount = normalizeLocalizedNumber(cashMatch[1]);
-  const sourceTimestamp = parseTimestampLikeToUnixSeconds(lastUpdate ?? null);
+  const sourceTimestamp = parseSgForgeLastUpdate(
+    lastUpdate,
+    options.nowSec ?? Math.floor(Date.now() / 1000),
+  );
   const collateralizationRatio = cashAmount / circulationAmount;
 
   if (!bankName || !Number.isFinite(bankPct) || bankPct <= 0) {
@@ -133,5 +188,9 @@ export async function fetchSgForgeCoinvertibleReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const html = await fetchPrimaryHtmlInput(config, "sgforge-coinvertible", signal, ctx);
-  return adaptSgForgeCoinvertible(html, readCoinType(config));
+  return adaptSgForgeCoinvertible(
+    html,
+    readCoinType(config),
+    ctx?.nowSec != null ? { nowSec: ctx.nowSec } : undefined,
+  );
 }
