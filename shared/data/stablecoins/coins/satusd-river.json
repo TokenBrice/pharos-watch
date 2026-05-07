@@ -111,7 +111,7 @@
     "inputs": {
       "primary": {
         "kind": "http-json",
-        "url": "https://api-v2.satoshiprotocol.org/protocol-info"
+        "url": "https://api.satoshiprotocol.org/protocol-info"
       }
     }
   }

@@ -47,6 +47,19 @@ describe("adaptRiverProtocolInfo", () => {
     expect(result.metadata?.latestSourceTimestamp).toBe(1_776_500_000);
   });
 
+  it("degrades when protocol TVL falls below circulating satUSD", () => {
+    const result = adaptRiverProtocolInfo({
+      tvl: 640,
+      circulatingSupply: 1000,
+    });
+
+    expect(result.metadata?.collateralizationRatio).toBe(0.64);
+    expect(result.warnings?.[0]).toMatchObject({
+      code: "reserve-undercollateralized",
+      effect: "degraded",
+    });
+  });
+
   it("throws when TVL or circulatingSupply is missing (parse-failure path)", () => {
     expect(() => adaptRiverProtocolInfo({ circulatingSupply: 100 })).toThrow(
       "river-protocol-info missing TVL or circulating supply",

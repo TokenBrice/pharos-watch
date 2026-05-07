@@ -4,6 +4,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
   requireJsonInputFromConfig,
+  reserveDegradedWarning,
   summarizeSourceTimestamps,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
@@ -29,6 +30,13 @@ export function adaptRiverProtocolInfo(payload: RiverProtocolInfoPayload): Adapt
   if (!Number.isFinite(totalReserveUsd) || !Number.isFinite(supplyUsd) || (totalReserveUsd ?? 0) <= 0 || (supplyUsd ?? 0) <= 0) {
     throw new Error("river-protocol-info missing TVL or circulating supply");
   }
+  const collateralizationRatio = (totalReserveUsd ?? 0) / (supplyUsd ?? 1);
+  const warnings = collateralizationRatio < 0.995
+    ? [reserveDegradedWarning(
+        "reserve-undercollateralized",
+        `River protocol-info TVL covers ${(collateralizationRatio * 100).toFixed(2)}% of circulating satUSD`,
+      )]
+    : [];
 
   const timestampSummary = summarizeSourceTimestamps([
     ...(payload.tvlData ?? []).map((point) => point.timestamp),
@@ -43,6 +51,7 @@ export function adaptRiverProtocolInfo(payload: RiverProtocolInfoPayload): Adapt
         risk: "medium",
       },
     ],
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...(timestampSummary
         ? {
@@ -58,7 +67,7 @@ export function adaptRiverProtocolInfo(payload: RiverProtocolInfoPayload): Adapt
           )),
       totalReserveUsd,
       supplyUsd,
-      collateralizationRatio: (totalReserveUsd ?? 0) / (supplyUsd ?? 1),
+      collateralizationRatio,
       chainCirculatingCount: payload.chainCirculating?.length ?? 0,
       tvlPointCount: payload.tvlData?.length ?? 0,
       circulatingPointCount: payload.circulatingData?.length ?? 0,
