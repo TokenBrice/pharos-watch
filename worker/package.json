@@ -12,13 +12,13 @@
     "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "4.20260502.1",
+    "@cloudflare/workers-types": "4.20260507.1",
     "typescript": "~5.9.0",
-    "wrangler": "4.87.0"
+    "wrangler": "4.90.0"
   },
   "dependencies": {
-    "@cf-wasm/resvg": "^0.3.3",
+    "@cf-wasm/resvg": "^0.3.4",
     "satori": "^0.26.0",
-    "viem": "2.48.8"
+    "viem": "2.48.11"
   }
 }
