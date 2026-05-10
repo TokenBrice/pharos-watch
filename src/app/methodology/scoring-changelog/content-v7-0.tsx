@@ -1,5 +1,27 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV718Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.18")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        Liquidity / Exit now applies stricter live redemption telemetry gates before redemption capacity can improve
+        Safety Scores.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Unverified nested redemption freshness is excluded unless a route-specific lower-bound allowlist explicitly
+          permits it.
+        </li>
+        <li>Daily redemption limits emitted by adapters cap usable scoring capacity while raw capacity stays visible.</li>
+        <li>Proxy and queue capacity kinds cannot qualify as severe-depeg live-direct evidence.</li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV717Entry() {
   return (
     <VersionCard

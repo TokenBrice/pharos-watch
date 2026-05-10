@@ -1,6 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.17 (2026-02-25 → 2026-05-07). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.18 (2026-02-25 → 2026-05-10). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.18 — Redemption freshness and daily-limit eligibility gates (2026-05-10)
+
+- Severe active-depeg survivability now requires direct live capacity-kind evidence in addition to live-direct confidence, dynamic source mode, permissionless access, and atomic/immediate settlement
+- Nested live redemption freshness marked `unverified` is excluded from Liquidity / Exit unless a route-specific lower-bound allowlist explicitly permits it
+- Adapter-emitted daily redemption limits cap the usable redemption capacity for scoring, while raw immediate capacity and route constraints remain visible on redemption surfaces
 
 ## v7.17 — USD3 centralized-collateral dependency correction (2026-05-07)
 

@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.17",
+  currentVersion: "7.18",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.18",
+      title: "Redemption freshness and daily-limit eligibility gates",
+      date: "2026-05-10",
+      effectiveAt: 1778371200,
+      summary:
+        "Liquidity / Exit now consumes the stricter redemption-backstop live telemetry policy, so unverified nested redemption freshness is excluded unless route-specific lower-bound approval exists and live daily limits cap usable scoring capacity.",
+      impact: [
+        "Severe active-depeg survivability now requires direct live capacity kind evidence in addition to live-direct confidence, dynamic source mode, permissionless access, and atomic/immediate settlement",
+        "Live reserve adapters can surface redemption constraints such as queue depth, settlement delay, daily limits, and minimum redemption size without those fields being mistaken for unconditional Safety eligibility",
+        "Daily redemption limits reduce the capacity score used by redemption-backed Liquidity / Exit while leaving raw immediate capacity visible in the redemption API",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.17",
       title: "USD3 centralized-collateral dependency correction",

@@ -12,9 +12,8 @@ import {
 const REVIEWED_QUEUE_REDEMPTION_AT = "2026-03-23";
 const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const REVIEWED_WRAPPER_QUEUE_AT = "2026-04-21";
-const reviewedQueueRedemptionSupplyFull = documentedBoundSupplyFull(
-  REVIEWED_QUEUE_REDEMPTION_AT,
-);
+const REVIEWED_PHASE_4_COVERAGE_AT = "2026-05-10";
+const reviewedQueueRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_QUEUE_REDEMPTION_AT);
 
 export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "alusd-alchemix": {
@@ -23,7 +22,11 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     settlementModel: "days",
     costModel: documentedVariableFee("1:1 via the Transmuter; no separate redemption fee is disclosed"),
     docs: [
-      sourceRef("Alchemix Transmuter docs", "https://v2-docs.alchemix.fi/alchemix-ecosystem/transmuter", ["route", "capacity", "settlement"]),
+      sourceRef("Alchemix Transmuter docs", "https://v2-docs.alchemix.fi/alchemix-ecosystem/transmuter", [
+        "route",
+        "capacity",
+        "settlement",
+      ]),
       sourceRef("Alchemix protocol docs", "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemist", ["capacity"]),
     ],
     notes: [
@@ -53,16 +56,13 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
         "https://docs.falcon.finance/resources/quick-app-guide/navigating-the-swap-tab/redeem",
         ["route", "settlement", "access"],
       ),
-      sourceRef(
-        "Falcon FAQ",
-        "https://docs.falcon.finance/resources/frequently-asked-questions-faq",
-        ["route", "fees", "access", "settlement"],
-      ),
-      sourceRef(
-        "Falcon transparency API",
-        "https://api.falcon.finance/api/v1/transparency",
-        ["capacity"],
-      ),
+      sourceRef("Falcon FAQ", "https://docs.falcon.finance/resources/frequently-asked-questions-faq", [
+        "route",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("Falcon transparency API", "https://api.falcon.finance/api/v1/transparency", ["capacity"]),
     ],
     notes: [
       "Fresh live reserve metadata scores against Falcon's current stablecoin reserve bucket; redeemed assets are still credited only after the documented 7-day cooldown",
@@ -82,11 +82,11 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
         "https://docs.maple.finance/syrupusdc-usdt-for-lenders/risk",
         ["route", "settlement", "fees"],
       ),
-      sourceRef(
-        "Maple Pools technical reference",
-        "https://docs.maple.finance/technical-resources/pools/pools",
-        ["route", "access", "settlement"],
-      ),
+      sourceRef("Maple Pools technical reference", "https://docs.maple.finance/technical-resources/pools/pools", [
+        "route",
+        "access",
+        "settlement",
+      ]),
     ],
     notes: [
       "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues, with most withdrawals processed in under 24 hours but potentially taking up to 30 days as liquidity becomes available",
@@ -106,11 +106,11 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
         "https://docs.maple.finance/syrupusdc-usdt-for-lenders/risk",
         ["route", "settlement", "fees"],
       ),
-      sourceRef(
-        "Maple Pools technical reference",
-        "https://docs.maple.finance/technical-resources/pools/pools",
-        ["route", "access", "settlement"],
-      ),
+      sourceRef("Maple Pools technical reference", "https://docs.maple.finance/technical-resources/pools/pools", [
+        "route",
+        "access",
+        "settlement",
+      ]),
     ],
     notes: [
       "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues, with most withdrawals processed in under 24 hours but potentially taking up to 30 days as liquidity becomes available",
@@ -155,8 +155,16 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       "Ethena staking docs describe sUSDe unstaking as a 7-day cooldown into USDe, with users bearing transaction and execution costs rather than paying a separate fixed protocol redemption fee",
     ),
     docs: [
-      sourceRef("Ethena staking docs", "https://docs.ethena.fi/solution-design/staking-usde", ["route", "capacity", "settlement"]),
-      sourceRef("Ethena staking key functions", "https://docs.ethena.fi/solution-design/staking-usde/staking-key-functions", ["route", "access", "settlement"]),
+      sourceRef("Ethena staking docs", "https://docs.ethena.fi/solution-design/staking-usde", [
+        "route",
+        "capacity",
+        "settlement",
+      ]),
+      sourceRef(
+        "Ethena staking key functions",
+        "https://docs.ethena.fi/solution-design/staking-usde/staking-key-functions",
+        ["route", "access", "settlement"],
+      ),
       sourceRef("Ethena key addresses", "https://docs.ethena.fi/solution-design/key-addresses", ["route"]),
     ],
     notes: [
@@ -170,12 +178,43 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     settlementModel: "days",
     costModel: fixedFee(0, "Aegis docs describe sYUSD staking and unstaking with 0% protocol fee"),
     docs: [
-      sourceRef("Aegis sYUSD docs", "https://docs.aegis.im/tokens/syusd-yield-bearing-token", ["route", "capacity", "fees", "settlement"]),
+      sourceRef("Aegis sYUSD docs", "https://docs.aegis.im/tokens/syusd-yield-bearing-token", [
+        "route",
+        "capacity",
+        "fees",
+        "settlement",
+      ]),
       sourceRef("Aegis smart contracts", "https://docs.aegis.im/smart-contracts", ["route"]),
     ],
     notes: [
       "sYUSD exits through a documented 7-day cooldown back into YUSD at the live staking-vault exchange rate",
       "The wrapper queue is distinct from YUSD's own primary-market redemption path and does not assume a separate instant-liquidity buffer beyond the contract's cooldown release",
+    ],
+  },
+  "stkgho-umbrella-aave": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_PHASE_4_COVERAGE_AT),
+    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    docs: [
+      sourceRef("Aave Umbrella unstake guide", "https://aave.com/help/umbrella/unstake", [
+        "route",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("Aave Umbrella overview", "https://aave.com/help/umbrella/umbrella", [
+        "route",
+        "capacity",
+        "settlement",
+      ]),
+      sourceRef(
+        "Aave stkGHO token contract",
+        "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033",
+        ["capacity"],
+      ),
+    ],
+    notes: [
+      "stkGHO exits through Aave Umbrella's cooldown and withdrawal-window flow back into GHO rather than through an immediate public stablecoin buffer",
+      "Staked assets remain slashable during cooldown, so the route is modeled as queued eventual redeemability and not as live direct redemption capacity",
     ],
   },
   "cgusd-cygnus-finance": {
@@ -261,11 +300,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
         "https://docs.avantprotocol.com/overview/using-the-avant-protocol/redeeming-avassets",
         ["route", "settlement", "fees", "capacity"],
       ),
-      sourceRef(
-        "Avant core tokens",
-        "https://docs.avantprotocol.com/overview/core-tokens",
-        ["route", "capacity"],
-      ),
+      sourceRef("Avant core tokens", "https://docs.avantprotocol.com/overview/core-tokens", ["route", "capacity"]),
     ],
     notes: [
       "Avant docs describe redeeming avUSD back into USDC through an onchain request flow that usually completes within hours but can take up to 7 days depending on liquidity",
@@ -279,17 +314,13 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     costModel: fixedFee(0, "Unitas docs list a 0% redemption fee"),
     reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
     docs: [
-      sourceRef(
-        "Unitas minting USDu",
-        "https://docs.unitas.so/solution-design/minting-usdu",
-        ["route", "capacity", "access"],
-      ),
+      sourceRef("Unitas minting USDu", "https://docs.unitas.so/solution-design/minting-usdu", [
+        "route",
+        "capacity",
+        "access",
+      ]),
       sourceRef("Unitas overview", "https://docs.unitas.so/", ["route", "fees"]),
-      sourceRef(
-        "Unitas off-exchange settlement",
-        "https://docs.unitas.so/off-exchange-settlement",
-        ["settlement"],
-      ),
+      sourceRef("Unitas off-exchange settlement", "https://docs.unitas.so/off-exchange-settlement", ["settlement"]),
     ],
     notes: [
       "Direct USDu minting and redemption are restricted to whitelisted participants, while docs describe on-demand redemption flows supported by Unitas's OES settlement rails",
@@ -303,10 +334,16 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedQueueRedemptionSupplyFull,
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
     docs: [
-      sourceRef("Yuzu Money documentation", "https://yuzu-money.gitbook.io/yuzu-money", ["route", "capacity", "access"]),
+      sourceRef("Yuzu Money documentation", "https://yuzu-money.gitbook.io/yuzu-money", [
+        "route",
+        "capacity",
+        "access",
+      ]),
       sourceRef("Yuzu Accountable dashboard", "https://yuzu.accountable.capital/", ["capacity"]),
     ],
-    notes: ["Yuzu documents primary minting and redemption for eligible KYC / AML-cleared investors; current model treats that rail as a reviewed queued exit rather than assuming continuously available public stablecoin liquidity"],
+    notes: [
+      "Yuzu documents primary minting and redemption for eligible KYC / AML-cleared investors; current model treats that rail as a reviewed queued exit rather than assuming continuously available public stablecoin liquidity",
+    ],
   },
   "usdat-saturn": {
     ...queueRedeemBase,
@@ -335,9 +372,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       "Nerona documents permissioned 1:1 USDnr mint and redeem against underlying M; public docs reviewed do not publish a separate numeric redemption fee",
     ),
     reviewedAt: "2026-04-16",
-    docs: [
-      sourceRef("Nerona documentation", "https://docs.nerona.finance/", ["route", "capacity", "access"]),
-    ],
+    docs: [sourceRef("Nerona documentation", "https://docs.nerona.finance/", ["route", "capacity", "access"])],
     notes: [
       "Permissioned M0 wrapper: KYC-gated to Nerona's private wealth platform clients; T-bill yield accrues to M0/Nerona rather than USDnr holders",
       "The 50% ratio is a reviewed heuristic placeholder pending a published primary-market liquidity bound for Nerona's M wrapper",
@@ -361,6 +396,33 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       "The 10% ratio is a reviewed heuristic reflecting typical delta-neutral protocol cash buffers rather than a published Hermetica-specific figure",
     ],
   },
+  "usdrif-rif": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_PHASE_4_COVERAGE_AT),
+    outputAssetType: "mixed-collateral",
+    costModel: fixedFee(25, "RIF On Chain FAQ lists a 0.25% mint/redeem fee paid in RIF for USDRIF"),
+    docs: [
+      sourceRef(
+        "RIF On Chain USDRIF redemption docs",
+        "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/getting-rdocs/redeeming-rdocs",
+        ["route", "settlement", "access"],
+      ),
+      sourceRef("RIF On Chain FAQ", "https://wiki.rifonchain.com/frequently-asked-questions/web-app-faq", [
+        "route",
+        "capacity",
+        "fees",
+      ]),
+      sourceRef(
+        "RIF On Chain system states",
+        "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/system-states",
+        ["route", "capacity", "settlement"],
+      ),
+    ],
+    notes: [
+      "USDRIF supports settlement-cycle redemption requests into RIF collateral; the 90-day settlement cadence means Pharos treats the broad holder route as queued eventual redeemability",
+      "Outside-settlement redemption is limited to free USDRIF, so immediate capacity is not modeled until live Rootstock telemetry exposes free redeemable amount, queue depth, and current system state",
+    ],
+  },
   "nusd-neutrl": {
     ...queueRedeemBase,
     ...reviewedQueueRedemptionSupplyFull,
@@ -370,10 +432,16 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ),
     docs: [
       sourceRef("Neutrl minting", "https://docs.neutrl.fi/protocol-mechanics/minting", ["route", "capacity"]),
-      sourceRef("Neutrl redemption", "https://docs.neutrl.fi/protocol-mechanics/redemption", ["route", "capacity", "access"]),
+      sourceRef("Neutrl redemption", "https://docs.neutrl.fi/protocol-mechanics/redemption", [
+        "route",
+        "capacity",
+        "access",
+      ]),
       sourceRef("Neutrl transparency", "https://docs.neutrl.fi/protocol-design/transparency", ["capacity"]),
     ],
-    notes: ["Neutrl docs establish a dual-path redemption system with instant execution when AssetReserve liquidity is available and an onchain queued fallback when it is not; current model scores eventual redeemability rather than a separately measured live instant buffer"],
+    notes: [
+      "Neutrl docs establish a dual-path redemption system with instant execution when AssetReserve liquidity is available and an onchain queued fallback when it is not; current model scores eventual redeemability rather than a separately measured live instant buffer",
+    ],
   },
 };
 

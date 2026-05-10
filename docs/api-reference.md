@@ -1869,7 +1869,7 @@ Current redemption-backstop dataset for redeemable assets.
 
 **Error responses:** `503` when `redemption_backstop` has no rows yet, or when the current snapshot cannot be read cleanly.
 
-Rows written by the current worker are grouped by a completed snapshot run manifest. The API serves the latest completed run when one exists, which prevents a partially written hourly sync from being treated as a fresh complete dataset. Legacy rows without a completed run remain readable during bootstrap and migration fallback.
+Rows written by the current worker are grouped by a completed snapshot run manifest. The API serves the latest valid completed run when one exists, which prevents a partially written hourly sync from being treated as a fresh complete dataset. If the newest completed manifest is incomplete or its rows are unreadable, the reader tries recent earlier completed runs before returning `503`. Legacy rows without a completed run remain readable during bootstrap and migration fallback.
 
 **Response**
 
@@ -1894,18 +1894,27 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "holderEligibility": "any-holder",
       "capacityConfidence": "heuristic",
       "capacitySemantics": "eventual-only",
+      "capacityKind": "documented-eventual",
+      "freshnessKind": "reviewed-static",
+      "sourceTimestamp": 1773350300,
+      "sourceUrls": ["https://example.com/redemption-source"],
+      "settlementDelaySec": 86400,
+      "queueDepthUsd": 12000000,
+      "dailyLimitUsd": 5000000,
+      "minRedeemUsd": 100000,
+      "liveHolderEligibility": "any-holder",
       "feeConfidence": "undisclosed-reviewed",
       "feeModelKind": "undisclosed-reviewed",
       "modelConfidence": "low",
       "updatedAt": 1773350400,
-      "methodologyVersion": "3.992"
+      "methodologyVersion": "3.994"
     }
   },
   "methodology": {
-    "version": "3.992",
-    "versionLabel": "v3.992",
-    "currentVersion": "3.992",
-    "currentVersionLabel": "v3.992",
+    "version": "3.994",
+    "versionLabel": "v3.994",
+    "currentVersion": "3.994",
+    "currentVersionLabel": "v3.994",
     "changelogPath": "/methodology/#safety-scores-methodology",
     "asOf": 1773350400,
     "isCurrent": true,
@@ -1977,6 +1986,15 @@ Top-level fields:
 | `capacityConfidence`     | `string`                                        | `live-direct`, `live-proxy`, `documented-bound`, `heuristic`, or legacy `dynamic` fidelity tag for the capacity model |
 | `capacityBasis`          | `string \| undefined`                           | Typed basis for the modeled capacity, such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `live-direct-telemetry`, or `live-proxy-buffer` |
 | `capacitySemantics`      | `string`                                        | `immediate-bounded` or `eventual-only`, distinguishing current redeemable buffer from eventual redeemability |
+| `capacityKind`           | `string \| undefined`                           | Optional adapter-declared live evidence shape, such as `live-direct-bounded`, `live-queue`, `live-proxy-validated`, `documented-bound`, `documented-eventual`, or `heuristic`. Context only; not Safety eligibility by itself |
+| `freshnessKind`          | `string \| undefined`                           | Optional adapter-declared redemption freshness evidence, such as `verified-source-timestamp`, `same-run-onchain`, `same-run-api`, `reviewed-static`, or `unverified` |
+| `sourceTimestamp`        | `number \| undefined`                           | Optional source timestamp emitted by a live reserve adapter for the redemption telemetry |
+| `sourceUrls`             | `string[] \| undefined`                         | Optional source URLs emitted by a live reserve adapter for the redemption telemetry |
+| `settlementDelaySec`     | `number \| undefined`                           | Optional adapter-emitted settlement delay constraint in seconds |
+| `queueDepthUsd`          | `number \| undefined`                           | Optional adapter-emitted queued redemption depth in USD |
+| `dailyLimitUsd`          | `number \| undefined`                           | Optional adapter-emitted daily redemption limit in USD |
+| `minRedeemUsd`           | `number \| undefined`                           | Optional adapter-emitted minimum redemption size in USD |
+| `liveHolderEligibility`  | `string \| undefined`                           | Optional adapter-emitted holder eligibility context when it differs from or sharpens the static model |
 | `feeConfidence`          | `string`                                        | `fixed`, `formula`, or `undisclosed-reviewed` fidelity tag for the fee model                                |
 | `feeModelKind`           | `string`                                        | `fixed-bps`, `formula`, `documented-variable`, or `undisclosed-reviewed`                                    |
 | `modelConfidence`        | `string`                                        | Overall route-fidelity rollup: `high`, `medium`, or `low`                                                   |
