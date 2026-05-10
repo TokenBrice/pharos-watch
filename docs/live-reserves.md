@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
 - **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 193 active live-enabled stablecoins across 45 registered adapters; 194 tracked metadata entries have live reserve configs, including pre-launch CADD. 43 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
+- **Current coverage:** 192 active live-enabled stablecoins across 45 registered adapters; 193 tracked metadata entries have live reserve configs, including pre-launch CADD. These counts are active/configured stablecoin entries, not raw source JSON files. 43 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -35,6 +35,8 @@ Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig`
 | `inputs.primary`   | Primary source input                                                                  |
 | `inputs.fallbacks` | Optional fallback inputs                                                              |
 | `params`           | Adapter-specific validated settings enforced by the shared live-reserve config schema |
+
+All configured source URLs must be absolute URLs. The schema enforces this for HTTP/indexer inputs, `display.url`, and adapter-specific URL params such as RPC endpoints, dashboard APIs, and liquidity endpoints. Adapter definitions also declare their supported `semantics` values and config `version` set, so metadata changes cannot silently pair an adapter with unsupported reserve semantics.
 
 ### Registry-Defined Adapter Classes
 
@@ -180,7 +182,7 @@ Cron result statuses:
 
 Per-coin warnings still matter operationally, but they affect `reserve_sync_state.last_status` for that coin (`degraded`) and the cron metadata warning list, not the run-level `CronResult.status`.
 
-The cron loop is sequential. This is deliberate: reserve adapters can hit multiple heterogeneous sources, and the isolated 4-hourly trigger keeps connection pressure predictable. Each adapter attempt also receives a per-attempt I/O limiter with a peak of 2 outbound HTTP/RPC operations, so internally parallel adapters such as GHO, Cap, Anzen, and crvUSD cannot consume the whole six-connection trigger pool. The leased wrapper gives `sync-live-reserves` a 12-minute outer wall-clock budget; the sync loop defaults to an internal 11-minute budget for cursoring, 20-second adapter attempts, and a 30-second D1 finalize timeout, all resolved through `LiveReserveSyncBudgetConfig` so tests and operational wrappers can exercise safe edge values without editing cron logic. The cron reports `setup`, `syncing`, and `finalizing` progress stages so `/status` can show which coin is currently in flight. When the internal budget is exhausted, the cron records `reserve_sync_state.last_status = "skipped"` with `metadata.failureCategory = "run-budget-exhausted"` for the untouched tail and persists a lightweight cursor in `cache.key = 'live-reserves:run-cursor'`, so the next run resumes from the first deferred coin instead of always restarting from the top of the configured list. Cron metadata sets `runBudgetTruncated`, `deferredCoins`, `nextCursorStablecoinId`, and the resolved budget values; `/api/status`, `/api/status-history`, and the admin status dashboard surface those fields so operators can see the deferred tail at a glance. Within a run, fetched results are only reused when the adapter registry marks the adapter as `source-invariant` (currently `m0`, `mento`, and `sky-makercore`); coin-aware adapters such as `frax` never share cached results across coins. At the end of each run, the cron also removes stale operational artifacts for coins that are no longer live-enabled: orphaned `reserve_sync_state` rows and stale `cache.key = 'circuit:live-reserves:*'` entries are deleted so `/status` and `/api/health` stop surfacing removed reserve sources as active incidents after coverage changes.
+The cron loop is sequential. This is deliberate: reserve adapters can hit multiple heterogeneous sources, and the isolated 4-hourly trigger keeps connection pressure predictable. Each adapter attempt also receives a per-attempt I/O limiter with a peak of 2 outbound HTTP/RPC operations, so internally parallel adapters such as GHO, Cap, Anzen, and crvUSD cannot consume the whole six-connection trigger pool. The leased wrapper gives `sync-live-reserves` a 12-minute outer wall-clock budget; the sync loop defaults to an internal 11-minute budget for cursoring, 20-second adapter attempts, a 30-second D1 finalize timeout, and a 5-second finalization margin, all resolved through `LiveReserveSyncBudgetConfig` so tests and operational wrappers can exercise safe edge values without editing cron logic. The cron defers before starting the next coin unless the remaining budget can cover adapter timeout, D1 finalization, and the margin. The cron reports `setup`, `syncing`, and `finalizing` progress stages so `/status` can show which coin is currently in flight. When the internal budget is exhausted, the cron records `reserve_sync_state.last_status = "skipped"` with `metadata.failureCategory = "run-budget-exhausted"` for the untouched tail and persists a lightweight cursor in `cache.key = 'live-reserves:run-cursor'`, so the next run resumes from the first deferred coin instead of always restarting from the top of the configured list. Deferred rows clear `last_attempt_id` and `pending_attempt_id`; they describe skipped tail work, not an attempted fetch/finalize transaction. Run-budget deferred rows are intentionally excluded from persistent-stale independent alerts because they represent scheduler capacity pressure rather than source failure. Cron metadata sets `runBudgetTruncated`, `deferredCoins`, `nextCursorStablecoinId`, and the resolved budget values; `/api/status`, `/api/status-history`, and the admin status dashboard surface those fields so operators can see the deferred tail at a glance. Within a run, fetched results are only reused when the adapter registry marks the adapter as `source-invariant` (currently `m0`, `mento`, and `sky-makercore`); coin-aware adapters such as `frax` never share cached results across coins. At the end of each run, the cron also removes stale operational artifacts for coins that are no longer live-enabled: orphaned `reserve_sync_state` rows and stale `cache.key = 'circuit:live-reserves:*'` entries are deleted so `/status` and `/api/health` stop surfacing removed reserve sources as active incidents after coverage changes.
 
 ---
 
@@ -252,7 +254,7 @@ Freshness and consistency rules now live across the `worker/src/lib/live-reserve
 - `independentFreshUnverified`
 - `staticValidatedFresh`
 - `weakProbeFresh`
-- `persistentlyStaleIndependentCoins` (independent feeds older than the persistent-staleness window that can escalate status beyond normal short-lived lag)
+- `persistentlyStaleIndependentCoins` (independent feeds older than the persistent-staleness window that can escalate status beyond normal short-lived lag; includes old active failures and circuit-open skips, but not run-budget deferred rows)
 - `writeTimeoutUncertain`
 - `deferredCoins`
 - `runBudgetTruncated`
@@ -346,7 +348,7 @@ The optional `sync` object exposes the last operational state:
 | `failureCategory` | Machine-readable failure class from attempt metadata, when present                                                                  |
 | `uncertainWrite`  | `true` when the latest attempt hit the D1 write-timeout / finalize-rejection path and authoritative state could not be proven       |
 
-Uncertain write attempts are intentionally exposed as `sync.uncertainWrite = true` instead of being collapsed into generic stale/error narration. The API may still serve the last consistent snapshot or fallback presentation, but operators can tell that the latest attempted write is ambiguous until a clean follow-up run resolves it.
+Uncertain write attempts are intentionally exposed as `sync.uncertainWrite = true` instead of being collapsed into generic stale/error narration. The API may still serve the last consistent snapshot or fallback presentation, but operators can tell that the latest attempted write is ambiguous until a clean follow-up run resolves it. Detail-page polling uses the normal 4-hour reserve cadence only for clean live responses; live responses with `sync.status !== "ok"` or `sync.uncertainWrite = true` use recovery polling and render the active status, failure category, and last error above the reserve card footer.
 
 ### Edge Cache Implications for Monitoring
 
@@ -406,7 +408,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `single-asset`             | `http-json` / `onchain-evm` | `single-asset`                       | 48               |
 | `sky-makercore`            | `http-json`                 | `collateral-mix`                     | 2                |
 | `solstice-attestation`     | `http-json`                 | `protocol-reserve`                   | 1                |
-| `superstate-liquidity`     | `onchain-evm` + `http-json` | `single-asset`                       | 1                |
+| `superstate-liquidity`     | `onchain-evm` primary; `params.liquidityUrl` API | `single-asset`                       | 1                |
 | `usdgo-transparency`       | `http-json`                 | `attestation-mix`                    | 1                |
 | `usdai-proof-of-reserves`  | `http-json`                 | `collateral-mix`                     | 1                |
 | `usd1-bundle-oracle`       | `onchain-evm`               | `single-asset`                       | 1                |
@@ -450,7 +452,7 @@ Liquity v1 note:
 the `liquity-v1` adapter covers `lusd-liquity` by reading `getEntireSystemColl()` and `getEntireSystemDebt()` from the official Ethereum `TroveManager`, preserving LUSD as a one-slice 100% ETH reserve view while classifying the feed as independent latest-state on-chain evidence rather than a generic ERC-20 liveness probe. The adapter also publishes nested redemption telemetry from the same run: `capacityUsd` is derived from `getEntireSystemDebt()`, `capacityKind = "live-direct-bounded"`, `freshnessKind = "same-run-onchain"`, and the existing redemption-fee probe populates the nested fee field when available.
 
 Liquity v2 branch note:
-the `liquity-v2-branches` adapter reads branch ActivePool collateral balances, DefiLlama prices, ActivePool debt, optional branch shutdown status, and optional live redemption-fee telemetry. `bold-liquity`, `feusd-felix`, `usnd-nerite`, and `usdq-quill` use this path so their reserve slices remain branch-collateral based while nested redemption telemetry uses aggregate branch debt as `capacityUsd` with `capacityKind = "live-direct-bounded"` and `freshnessKind = "same-run-onchain"`.
+the `liquity-v2-branches` adapter reads branch ActivePool collateral balances, DefiLlama prices, ActivePool debt, optional branch shutdown status, and optional live redemption-fee telemetry. `bold-liquity`, `feusd-felix`, and `usdq-quill` use this path so their reserve slices remain branch-collateral based while nested redemption telemetry uses aggregate branch debt as `capacityUsd` with `capacityKind = "live-direct-bounded"` and `freshnessKind = "same-run-onchain"`.
 
 `fx` now publishes f(x) protocol-pool API debt balances as conservative live proxy redemption capacity for `fxusd-f-x-protocol`. `asymmetry` now publishes USDaf protocol supply from the timestamped stats API as live direct redemption capacity alongside branch collateral slices. `jupusd` consumes Jupiter's public transparency API and latest snapshot timestamp, grouping USDC/USDtb holdings into reserve slices while emitting whitelisted-primary live redemption capacity and route status from the public oracle endpoint.
 
