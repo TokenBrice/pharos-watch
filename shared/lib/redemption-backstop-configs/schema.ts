@@ -15,13 +15,13 @@ import {
 const REVIEWED_AT_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const RatioSchema = z.number().gt(0).lte(1);
 
-export const RedemptionDocSourceSchema = z.strictObject({
+const RedemptionDocSourceSchema = z.strictObject({
   label: z.string().min(1),
   url: z.string().url(),
   supports: z.array(RedemptionDocSourceSupportSchema).optional(),
 });
 
-export const RedemptionCapacityModelSchema = z.discriminatedUnion("kind", [
+const RedemptionCapacityModelSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("supply-full"),
     confidence: RedemptionCapacityConfidenceSchema.optional(),
@@ -41,7 +41,7 @@ export const RedemptionCapacityModelSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
-export const RedemptionCostModelSchema = z.discriminatedUnion("kind", [
+const RedemptionCostModelSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("fee-bps"),
     feeBps: z.number().nonnegative(),

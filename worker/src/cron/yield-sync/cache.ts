@@ -156,7 +156,7 @@ function summarizeInvalidRows(rows: unknown[], getKey: (row: unknown, index: num
   return rows.slice(0, 5).map(getKey);
 }
 
-export function isValidDlPool(value: unknown): value is DlPool {
+function isValidDlPool(value: unknown): value is DlPool {
   if (!isRecord(value)) return false;
   if (typeof value.pool !== "string" || value.pool.trim() === "") return false;
   if (typeof value.chain !== "string" || value.chain.trim() === "") return false;
