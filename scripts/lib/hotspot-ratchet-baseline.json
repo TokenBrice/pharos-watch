@@ -372,7 +372,7 @@
     "notes": "The yield adapter registry is large but mostly data-heavy. Keep additions structured, and extract manifest families before allowing the registry file to grow further."
   },
   "worker/src/cron/yield-sync/sources.ts": {
-    "fileLines": 28,
+    "fileLines": 29,
     "maxFunctionLines": 0,
     "branchCount": 0,
     "disposition": "deferred",

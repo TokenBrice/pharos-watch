@@ -15,10 +15,6 @@
     "disposition": "queued-p4",
     "notes": "The command palette still combines indexing, keyboard handling, and rendering in one shell. Keep it waived until the navigation/search UI cleanup lane is scheduled."
   },
-  "worker/src/lib/fx-rate-state.ts": {
-    "disposition": "deferred",
-    "notes": "FX fallback state handling has many branches but a wide caller surface. Defer refactoring until the next pricing/runtime state follow-up."
-  },
   "worker/src/cron/sync-stablecoins/supplemental-assets.ts": {
     "disposition": "deferred",
     "notes": "Supplemental asset intake still mixes multiple provider families. Defer further splitting until the stablecoin sync surface stabilizes after the current tranche."
@@ -87,9 +83,17 @@
     "disposition": "queued-p4",
     "notes": "Blacklist amount recovery is an existing cron repair surface with chain-specific parsing and persistence branches. Keep waived here; split chain fetch, event normalization, and balance reconciliation in a dedicated blacklist cron cleanup."
   },
-  "worker/src/lib/telegram-alerts.ts": {
+  "worker/src/cron/yield-sync/sources-rpc.ts": {
     "disposition": "queued-p4",
-    "notes": "Telegram alert parsing and formatting now includes preset, all-chat, launch, and depeg-step command policy. Keep waived while preserving existing helper-module boundaries; split command parsing from alert message formatting in a dedicated bot cleanup pass."
+    "notes": "Surfaced after merging the local yield coverage and publication-health tranche. Optional protocol RPC handling still combines deterministic rate fetches, telemetry, fallback routing, and source emission; split fetch-family orchestration from per-source adapters in a dedicated yield cleanup pass."
+  },
+  "worker/src/cron/yield-sync/cache.ts": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after merging the local yield coverage and publication-health tranche. Yield cache validation now covers rankings publication state, benchmark caches, supplemental source caches, and deterministic on-chain health; split schema parsing by cache family in a dedicated yield cleanup pass."
+  },
+  "worker/src/cron/yield-sync/sources-optional-protocols-supplemental.ts": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after merging the local yield coverage and publication-health tranche. Supplemental optional protocol adapters still colocate Morpho, Pendle, Kong, and Beefy source collection; split provider adapters once the new yield publication guardrails settle."
   },
   "src/app/yield/client.tsx": {
     "disposition": "queued-p4",
