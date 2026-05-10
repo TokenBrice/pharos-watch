@@ -1,0 +1,59 @@
+{
+  "id": "usdb-bridge",
+  "name": "Bridge USDB",
+  "symbol": "USDB",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "1:1 USD reserves held in cash and BlackRock money market funds; managed by Bridge (Stripe subsidiary) under conditional OCC national trust bank charter",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.bridge.xyz"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Bridge"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "OCC (conditional national trust bank charter)"
+  },
+  "custodyModel": "institutional-regulated",
+  "status": "pre-launch",
+  "announcedDate": "2026-02",
+  "expectedLaunchDate": "2026",
+  "launchPhase": "beta",
+  "launchPhaseDetail": "USDB powers Stripe's Stablecoin Financial Accounts in 101 countries; 1:1 backed by USD held in cash and BlackRock money market funds; Bridge received conditional OCC national trust bank charter Feb 2026; distinct from Blast's USDB (usdb-blast)",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.ledgerinsights.com/stripe-rolls-out-stablecoin-accounts-in-101-countries-as-bridge-launches-usdb/",
+      "title": "Stripe rolls out stablecoin accounts in 101 countries as Bridge launches USDB",
+      "description": "Bridge's USDB underpins Stripe's global stablecoin financial accounts with 1:1 USD backing via cash and BlackRock MMFs.",
+      "source": "Ledger Insights"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-02-17",
+      "type": "regulatory",
+      "title": "Bridge receives conditional OCC national trust bank charter",
+      "description": "Approval enables Bridge to custody crypto assets, issue stablecoins, and manage reserves as a federally regulated entity.",
+      "sourceUrl": "https://www.coindesk.com/business/2026/02/17/stripe-s-stablecoin-firm-bridge-wins-initial-approval-of-national-bank-trust-charter/"
+    },
+    {
+      "date": "2026-02-20",
+      "type": "milestone",
+      "title": "USDB launches powering Stripe's Stablecoin Financial Accounts in 101 countries",
+      "sourceUrl": "https://www.ledgerinsights.com/stripe-rolls-out-stablecoin-accounts-in-101-countries-as-bridge-launches-usdb/"
+    }
+  ]
+}

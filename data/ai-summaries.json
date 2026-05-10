@@ -1273,5 +1273,50 @@
     "title": "The Reserve Basket Dollar",
     "text": "Web 3 Dollar is a Reserve Protocol DTF backed by a basket of yield-bearing stablecoin strategies: Savings USDS, Aave USDC, wrapped Compound USDCv3, and Steakhouse USDC. The mechanism is more transparent than many small stablecoins because the Reserve app and API expose the basket, but redemption still depends on RToken/DTF throttles and basket mechanics. Pharos stores the Reserve proof URL, tracks Ethereum and Base contracts, and syncs the Reserve Protocol basket feed directly. The main risks are strategy exposure, governance, and the fact that the token is a NAV-style basket rather than a simple bank dollar.",
     "updatedAt": "2026-05-05"
+  },
+  "sofid-sofi": {
+    "title": "The Fed's Own Stablecoin Customer",
+    "text": "SoFi Bank is the first nationally chartered, FDIC-insured U.S. bank to issue a stablecoin on a public permissionless blockchain — and the reserves sit in the Federal Reserve's own master account, which is a sentence that would have been science fiction three years ago. SOFID launched on Ethereum in December 2025, minted 100 million tokens for institutional settlement, and has exactly three holders — making it the highest-supply, lowest-holder-count stablecoin on the dashboard by a margin that borders on absurd. The Mastercard settlement partnership and BitGo Mint infrastructure suggest the plumbing is designed for scale; the Solana expansion announced at Accelerate Miami in May 2026 adds the speed layer. The real question isn't whether SoFi can issue a technically competent stablecoin — it clearly can — but whether 13.7 million retail SoFi members will be told they're holding a stablecoin or just 'dollars in their account,' and whether that distinction matters more to regulators than to users.",
+    "updatedAt": "2026-05-10"
+  },
+  "usdb-bridge": {
+    "title": "Stripe's Invisible Dollar",
+    "text": "USDB is the stablecoin most people will never know they're using. Bridge — Stripe's $1.1 billion acquisition — quietly powers Stablecoin Financial Accounts in 101 countries, turning every Stripe merchant into a potential stablecoin endpoint without the merchant ever touching a token. The OCC conditional national trust bank charter from February 2026 gives Bridge the federal regulatory cover that most stablecoin issuers spend years pursuing, and the reserves sit in cash and BlackRock money market funds. What makes USDB strategically interesting isn't the token itself — it's that Stripe processes $1 trillion annually and can embed stablecoin settlement into existing payment flows without asking permission from anyone downstream. The competitive moat isn't technology or regulation; it's distribution through indifference.",
+    "updatedAt": "2026-05-10"
+  },
+  "hkdap-anchorpoint": {
+    "title": "Hong Kong's First Licensed Dollar",
+    "text": "HKDAP is what happens when Standard Chartered, Hong Kong's largest telco (HKT), and Animoca Brands form a joint venture to build the first stablecoin licensed under the HKMA's Stablecoins Ordinance — a regulatory framework that went from proposal to law faster than most jurisdictions manage a consultation paper. The HKD peg is backed by high-quality liquid assets in segregated accounts, which is regulatory-speak for 'we learned from Tether's early years.' The B2B2C model targeting RWA settlement and cross-border payments positions HKDAP as infrastructure for Hong Kong's push to become Asia's regulated digital asset hub. Whether the consortium structure — a bank, a telco, and a gaming company — can move at stablecoin speed rather than committee speed is the operational question nobody has answered yet.",
+    "updatedAt": "2026-05-10"
+  },
+  "hkd-hsbc": {
+    "title": "PayMe Gets a Blockchain",
+    "text": "HSBC's HKD stablecoin is the second HKMA-licensed entry and the one with the distribution advantage that matters: 3.3 million PayMe users who already use the app for peer-to-peer payments and won't need to download anything new. The integration into HSBC's HK App for tokenized investment subscriptions hints at the actual product thesis — not a standalone stablecoin for DeFi, but a settlement layer for HSBC's own digital asset products. H2 2026 is the target, the reserves will be HKD-denominated high-quality liquid assets in segregated accounts per HKMA rules, and the symbol hasn't even been confirmed yet. The interesting tension: HSBC is building a stablecoin specifically to avoid depending on anyone else's stablecoin, which is either strategic autonomy or institutional NIH syndrome depending on your perspective.",
+    "updatedAt": "2026-05-10"
+  },
+  "okrw-hashed": {
+    "title": "Korea Builds Its Own Chain",
+    "text": "Hashed Open Finance didn't just build a KRW stablecoin — it built an entire Layer 1 blockchain to host it. Maroo is positioned as the first 'sovereign L1' purpose-built for Korean Won stablecoins, with a dual-track design that offers both a regulated path (bank-backed, KYC-gated) and an open path (permissionless issuance). The testnet went live in May 2026 with OKRW as the native token, and mainnet is targeted before year-end. In a country where crypto trading volumes regularly rival the stock market but regulated stablecoin infrastructure is virtually nonexistent, the thesis is less about technology and more about regulatory positioning: whoever builds the compliant KRW on-ramp first captures a market that has been using USDT as a proxy currency by default.",
+    "updatedAt": "2026-05-10"
+  },
+  "arc-anq": {
+    "title": "The Rupee's On-Chain Debut",
+    "text": "ARC is India's first attempt at a regulated rupee stablecoin, built by Anq with Polygon's backing and designed to prevent the USD liquidity outflow that India's regulators have been quietly panicking about since USDT volumes on Indian exchanges started dwarfing domestic payment rail throughput. The collateral — cash, fixed deposits, and Indian government securities — reads like a mutual fund prospectus, and the two-tier framework is explicitly designed to complement rather than compete with the RBI's digital rupee CBDC. The Uniswap v4 whitelisting for compliance is a novel technical approach to the 'permissioned token on a permissionless chain' problem. Whether India's regulatory apparatus will actually let a private rupee stablecoin operate alongside its CBDC remains the existential question that no amount of technical architecture can answer.",
+    "updatedAt": "2026-05-10"
+  },
+  "brl-b3": {
+    "title": "The Stock Exchange Mints Money",
+    "text": "When Latin America's largest stock exchange decides it needs its own stablecoin for tokenized asset settlement, the signal is less about crypto adoption and more about what traditional financial infrastructure considers table stakes in 2026. B3's BRL stablecoin fills the gap left by Brazil's Drex CBDC narrowing its scope — the central bank's digital currency was supposed to handle settlement, but as the project slowed, B3 apparently decided to build the plumbing itself. The H1 2026 target, the exchange-as-issuer model, and the settlement-first use case make this less a DeFi primitive and more a capital markets upgrade with a token wrapper. The question isn't whether B3 can issue a BRL stablecoin — it clears $3 trillion annually — but whether the regulatory environment will let a stock exchange compete with the central bank's own digital currency project.",
+    "updatedAt": "2026-05-10"
+  },
+  "usdf-flipcash": {
+    "title": "Coinbase's White-Label Dollar",
+    "text": "USDF is the first stablecoin minted through Coinbase's Custom Stablecoins platform — a stablecoin-as-a-service product that lets any business launch a branded dollar backed 1:1 by USDC. Flipcash is the guinea pig, and the product itself is less interesting than the platform it proves out: if Custom Stablecoins works, every fintech, neobank, and loyalty program can have its own branded dollar without touching reserve management. The dependency chain is explicit — USDF is a wrapper around USDC, which is a wrapper around BlackRock-managed T-bills — and the governance is centralized-dependent because the token's existence depends on Coinbase continuing to operate the platform. Whether the world needs branded USDC wrappers or whether this is just a new distribution strategy for Circle's existing product is a question Coinbase would prefer you didn't ask too loudly.",
+    "updatedAt": "2026-05-10"
+  },
+  "krw-imbank": {
+    "title": "Quantum-Resistant Won",
+    "text": "iM Bank's KRW stablecoin proof-of-concept has a feature that most stablecoins won't need for a decade but makes excellent press releases: quantum-resistant post-quantum cryptography via BTQ Technologies on the Kaia blockchain. Set aside the security theater angle, and the actual significance is that a Korean commercial bank is building a KRW stablecoin at all — South Korea's regulatory stance on private stablecoins has been cautious to the point of paralysis, and a bank-led PoC signals that the regulatory ice may be thawing. The Finger partnership handles the wallet and DeFi integration layer, while iM Bank brings the banking license and the KRW reserves. Whether this moves beyond proof-of-concept depends entirely on whether Korean regulators want to compete with Hashed's OKRW for the title of first regulated KRW stablecoin — or whether they'd prefer neither existed.",
+    "updatedAt": "2026-05-10"
   }
 }

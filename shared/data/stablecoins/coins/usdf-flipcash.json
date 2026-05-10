@@ -1,0 +1,55 @@
+{
+  "id": "usdf-flipcash",
+  "name": "Flipcash USDF",
+  "symbol": "USDF",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "1:1 collateralized by USDC via Coinbase's Custom Stablecoins platform; reserves managed by Coinbase infrastructure",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.flipcash.com"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "custodyModel": "institutional-unregulated",
+  "status": "pre-launch",
+  "announcedDate": "2026-01",
+  "expectedLaunchDate": "2026",
+  "launchPhase": "beta",
+  "launchPhaseDetail": "First Coinbase Custom Stablecoin; 1:1 collateralized by USDC via Coinbase's stablecoin-as-a-service platform; backend testing confirmed Jan 2026; Coinbase Custom Stablecoins lets any business launch branded coins backed by USDC",
+  "dependencies": [
+    {
+      "id": "usdc-circle",
+      "weight": 1.0,
+      "type": "collateral"
+    }
+  ],
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://finance.yahoo.com/news/coinbase-experiments-flipcash-usdf-rolls-055734489.html",
+      "title": "Coinbase experiments: Flipcash USDF rolls out as first Custom Stablecoin",
+      "description": "First stablecoin issued through Coinbase's Custom Stablecoins platform, backed 1:1 by USDC.",
+      "source": "Yahoo Finance"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-01-15",
+      "type": "announcement",
+      "title": "USDF launches as first Coinbase Custom Stablecoin",
+      "description": "Flipcash's USDF is the first stablecoin issued through Coinbase's stablecoin-as-a-service platform, backed 1:1 by USDC.",
+      "sourceUrl": "https://finance.yahoo.com/news/coinbase-experiments-flipcash-usdf-rolls-055734489.html"
+    }
+  ]
+}

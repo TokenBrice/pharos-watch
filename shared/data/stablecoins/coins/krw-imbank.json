@@ -1,0 +1,48 @@
+{
+  "id": "krw-imbank",
+  "name": "iM Bank KRW Stablecoin",
+  "symbol": "KRW-iM",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "KRW",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Bank-backed KRW reserves; proof-of-concept features quantum-resistant post-quantum cryptography (PQC) security via BTQ Technologies on Kaia blockchain",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.imbank.co.kr"
+    }
+  ],
+  "jurisdiction": {
+    "country": "South Korea"
+  },
+  "custodyModel": "institutional-regulated",
+  "status": "pre-launch",
+  "announcedDate": "2026-05",
+  "expectedLaunchDate": "2026",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "South Korea's first bank-led KRW stablecoin proof-of-concept; built by iM Bank and Finger on the Kaia blockchain; features quantum-resistant (PQC) security via BTQ Technologies; pilot announced May 2026; symbol and ticker not yet confirmed",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.prnewswire.com/news-releases/btq-technologies-qssn-selected-as-core-security-infrastructure-for-south-koreas-first-bank-led-krw-stablecoin-proof-of-concept-302763840.html",
+      "title": "BTQ selected as core security for South Korea's first bank-led KRW stablecoin PoC",
+      "description": "iM Bank and Finger pilot a quantum-resistant KRW stablecoin on Kaia blockchain with BTQ's post-quantum cryptography.",
+      "source": "PR Newswire"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-05-07",
+      "type": "announcement",
+      "title": "iM Bank and Finger announce first bank-led KRW stablecoin PoC on Kaia",
+      "description": "Pilot features quantum-resistant security via BTQ Technologies' post-quantum cryptography stack.",
+      "sourceUrl": "https://www.prnewswire.com/news-releases/btq-technologies-qssn-selected-as-core-security-infrastructure-for-south-koreas-first-bank-led-krw-stablecoin-proof-of-concept-302763840.html"
+    }
+  ]
+}

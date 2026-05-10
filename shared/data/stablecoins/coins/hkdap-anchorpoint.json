@@ -1,0 +1,49 @@
+{
+  "id": "hkdap-anchorpoint",
+  "name": "HKDAP",
+  "symbol": "HKDAP",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "OTHER",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "1:1 HKD-denominated high-quality liquid assets held in segregated accounts under HKMA Stablecoins Ordinance requirements",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://anchorpoint.fi"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Hong Kong",
+    "regulator": "HKMA (Stablecoins Ordinance)"
+  },
+  "custodyModel": "institutional-regulated",
+  "status": "pre-launch",
+  "announcedDate": "2026-03",
+  "expectedLaunchDate": "2026-Q2",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "First licensed HKD stablecoin under Hong Kong's Stablecoins Ordinance; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets; phased B2B2C rollout targeting Q2 2026 for RWA settlement and cross-border payments",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://crypto.news/animoca-backed-anchorpoint-to-launch-regulated-hkd-stablecoin-hkdap-in-hong-kong/",
+      "title": "Animoca-backed Anchorpoint to launch regulated HKD stablecoin HKDAP",
+      "description": "Standard Chartered, HKT, and Animoca Brands JV receives first HKMA stablecoin license for HKD-pegged HKDAP.",
+      "source": "crypto.news"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-03-24",
+      "type": "regulatory",
+      "title": "HKMA awards first stablecoin license to Anchorpoint Financial",
+      "description": "Standard Chartered / HKT / Animoca Brands JV becomes first licensed HKD stablecoin issuer under Hong Kong's Stablecoins Ordinance.",
+      "sourceUrl": "https://www.coindesk.com/policy/2026/03/24/hong-kong-awards-first-stablecoin-licenses-to-hsbc-standard-chartered-led-group"
+    }
+  ]
+}

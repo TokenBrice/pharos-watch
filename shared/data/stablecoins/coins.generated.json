@@ -415,6 +415,54 @@
     }
   },
   {
+    "id": "arc-anq",
+    "detailProvider": "defillama",
+    "name": "ARC",
+    "symbol": "ARC",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "OTHER",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "1:1 Indian Rupee reserves collateralized by cash, fixed deposits, and Indian government securities; two-tier framework complementing RBI's digital rupee CBDC",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.anq.money"
+      }
+    ],
+    "jurisdiction": {
+      "country": "India"
+    },
+    "custodyModel": "institutional-unregulated",
+    "status": "pre-launch",
+    "announcedDate": "2025-11",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "announced",
+    "launchPhaseDetail": "India's first regulated rupee stablecoin; built by Anq with Polygon; 1:1 INR collateralized by cash, fixed deposits, and government securities; designed to prevent USD liquidity outflow; two-tier framework complementing RBI's CBDC; Uniswap v4 whitelisting for compliance",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://www.coindesk.com/markets/2025/11/20/india-s-debt-backed-arc-token-eyes-tentative-january-2026-debut-sources-say/",
+        "title": "India's debt-backed ARC token eyes tentative January 2026 debut",
+        "description": "ARC is India's first regulated rupee stablecoin, built by Anq with Polygon, collateralized by government securities and cash.",
+        "source": "CoinDesk"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2025-11-20",
+        "type": "announcement",
+        "title": "ARC rupee stablecoin announced by Anq and Polygon",
+        "description": "India's first regulated INR stablecoin; collateralized by cash, fixed deposits, and government securities; January 2026 debut targeted.",
+        "sourceUrl": "https://www.coindesk.com/markets/2025/11/20/india-s-debt-backed-arc-token-eyes-tentative-january-2026-debut-sources-say/"
+      }
+    ]
+  },
+  {
     "id": "audd-novatti",
     "llamaId": "165",
     "detailProvider": "defillama",
@@ -1484,6 +1532,58 @@
       "yieldSource": "Liquity Stability Pool (via Yearn yBOLD)",
       "yieldType": "lending-vault"
     }
+  },
+  {
+    "id": "brl-b3",
+    "detailProvider": "defillama",
+    "name": "B3 BRL Stablecoin",
+    "symbol": "BRL-B3",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "BRL",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "1:1 Brazilian Real reserves; designed as settlement layer for B3's tokenized asset trading platform",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.b3.com.br"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/B3_oficial"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Brazil"
+    },
+    "custodyModel": "institutional-regulated",
+    "status": "pre-launch",
+    "announcedDate": "2025-12",
+    "expectedLaunchDate": "2026-H1",
+    "launchPhase": "announced",
+    "launchPhaseDetail": "Latin America's largest stock exchange (B3/Sao Paulo) developing its own BRL settlement stablecoin for tokenized asset trading; H1 2026 target; fills gap left by narrowing of Brazil's Drex CBDC scope; symbol and ticker not yet confirmed",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://www.coindesk.com/business/2025/12/17/brazilian-stock-exchange-b3-to-launch-its-own-tokenization-platform-and-stablecoin/",
+        "title": "Brazilian stock exchange B3 to launch its own tokenization platform and stablecoin",
+        "description": "B3 plans a BRL settlement stablecoin for tokenized asset trading as Brazil's Drex CBDC scope narrows.",
+        "source": "CoinDesk"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2025-12-17",
+        "type": "announcement",
+        "title": "B3 announces BRL stablecoin and tokenization platform",
+        "description": "Latin America's largest stock exchange plans a BRL-pegged settlement stablecoin for tokenized asset trading.",
+        "sourceUrl": "https://www.coindesk.com/business/2025/12/17/brazilian-stock-exchange-b3-to-launch-its-own-tokenization-platform-and-stablecoin/"
+      }
+    ]
   },
   {
     "id": "brl1-brl1",
@@ -7506,6 +7606,108 @@
     ]
   },
   {
+    "id": "hkd-hsbc",
+    "detailProvider": "defillama",
+    "name": "HSBC HKD Stablecoin",
+    "symbol": "HKD-HSBC",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "OTHER",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "1:1 HKD-denominated high-quality liquid assets held in segregated accounts under HKMA Stablecoins Ordinance requirements",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.hsbc.com.hk"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/HSBC_HK"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Hong Kong",
+      "regulator": "HKMA (Stablecoins Ordinance)"
+    },
+    "custodyModel": "institutional-regulated",
+    "status": "pre-launch",
+    "announcedDate": "2026-03",
+    "expectedLaunchDate": "2026-H2",
+    "launchPhase": "announced",
+    "launchPhaseDetail": "Second HKMA-licensed stablecoin issuer; launching H2 2026 integrated into PayMe (3.3M users) and HSBC HK App; peer-to-peer payments and tokenized investment subscriptions; 1:1 backed by HKD-denominated high-quality liquid assets in segregated accounts; symbol and ticker not yet confirmed",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://www.theasianbanker.com/press-releases/hsbc-to-launch-hkd-denominated-stablecoin-in-second-half-of-2026",
+        "title": "HSBC to launch HKD-denominated stablecoin in second half of 2026",
+        "description": "HSBC plans to integrate HKD stablecoin into PayMe and HSBC HK App for peer-to-peer payments and tokenized investment subscriptions.",
+        "source": "The Asian Banker"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2026-03-24",
+        "type": "regulatory",
+        "title": "HKMA awards stablecoin license to HSBC",
+        "description": "HSBC becomes second HKMA-licensed stablecoin issuer alongside Anchorpoint Financial under Hong Kong's Stablecoins Ordinance.",
+        "sourceUrl": "https://www.coindesk.com/policy/2026/03/24/hong-kong-awards-first-stablecoin-licenses-to-hsbc-standard-chartered-led-group"
+      }
+    ]
+  },
+  {
+    "id": "hkdap-anchorpoint",
+    "detailProvider": "defillama",
+    "name": "HKDAP",
+    "symbol": "HKDAP",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "OTHER",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "1:1 HKD-denominated high-quality liquid assets held in segregated accounts under HKMA Stablecoins Ordinance requirements",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://anchorpoint.fi"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Hong Kong",
+      "regulator": "HKMA (Stablecoins Ordinance)"
+    },
+    "custodyModel": "institutional-regulated",
+    "status": "pre-launch",
+    "announcedDate": "2026-03",
+    "expectedLaunchDate": "2026-Q2",
+    "launchPhase": "announced",
+    "launchPhaseDetail": "First licensed HKD stablecoin under Hong Kong's Stablecoins Ordinance; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets; phased B2B2C rollout targeting Q2 2026 for RWA settlement and cross-border payments",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://crypto.news/animoca-backed-anchorpoint-to-launch-regulated-hkd-stablecoin-hkdap-in-hong-kong/",
+        "title": "Animoca-backed Anchorpoint to launch regulated HKD stablecoin HKDAP",
+        "description": "Standard Chartered, HKT, and Animoca Brands JV receives first HKMA stablecoin license for HKD-pegged HKDAP.",
+        "source": "crypto.news"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2026-03-24",
+        "type": "regulatory",
+        "title": "HKMA awards first stablecoin license to Anchorpoint Financial",
+        "description": "Standard Chartered / HKT / Animoca Brands JV becomes first licensed HKD stablecoin issuer under Hong Kong's Stablecoins Ordinance.",
+        "sourceUrl": "https://www.coindesk.com/policy/2026/03/24/hong-kong-awards-first-stablecoin-licenses-to-hsbc-standard-chartered-led-group"
+      }
+    ]
+  },
+  {
     "id": "hollar-hydrated",
     "llamaId": "312",
     "detailProvider": "defillama",
@@ -9034,6 +9236,54 @@
         "title": "Tempo mainnet launches; KlarnaUSD not yet migrated from testnet",
         "description": "Tempo L1 goes live with sub-second finality, Machine Payments Protocol for AI agents, and partners including Anthropic, Mastercard, Visa, and Revolut. Klarna absent from mainnet launch partners.",
         "sourceUrl": "https://www.coindesk.com/tech/2026/03/18/stripe-led-payments-blockchain-tempo-goes-live-with-protocol-for-ai-agents"
+      }
+    ]
+  },
+  {
+    "id": "krw-imbank",
+    "detailProvider": "defillama",
+    "name": "iM Bank KRW Stablecoin",
+    "symbol": "KRW-iM",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "KRW",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Bank-backed KRW reserves; proof-of-concept features quantum-resistant post-quantum cryptography (PQC) security via BTQ Technologies on Kaia blockchain",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.imbank.co.kr"
+      }
+    ],
+    "jurisdiction": {
+      "country": "South Korea"
+    },
+    "custodyModel": "institutional-regulated",
+    "status": "pre-launch",
+    "announcedDate": "2026-05",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "announced",
+    "launchPhaseDetail": "South Korea's first bank-led KRW stablecoin proof-of-concept; built by iM Bank and Finger on the Kaia blockchain; features quantum-resistant (PQC) security via BTQ Technologies; pilot announced May 2026; symbol and ticker not yet confirmed",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://www.prnewswire.com/news-releases/btq-technologies-qssn-selected-as-core-security-infrastructure-for-south-koreas-first-bank-led-krw-stablecoin-proof-of-concept-302763840.html",
+        "title": "BTQ selected as core security for South Korea's first bank-led KRW stablecoin PoC",
+        "description": "iM Bank and Finger pilot a quantum-resistant KRW stablecoin on Kaia blockchain with BTQ's post-quantum cryptography.",
+        "source": "PR Newswire"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2026-05-07",
+        "type": "announcement",
+        "title": "iM Bank and Finger announce first bank-led KRW stablecoin PoC on Kaia",
+        "description": "Pilot features quantum-resistant security via BTQ Technologies' post-quantum cryptography stack.",
+        "sourceUrl": "https://www.prnewswire.com/news-releases/btq-technologies-qssn-selected-as-core-security-infrastructure-for-south-koreas-first-bank-led-krw-stablecoin-proof-of-concept-302763840.html"
       }
     ]
   },
@@ -10964,6 +11214,54 @@
         }
       }
     }
+  },
+  {
+    "id": "okrw-hashed",
+    "detailProvider": "defillama",
+    "name": "OKRW",
+    "symbol": "OKRW",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "KRW",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "1:1 Korean Won fiat reserves; dual-track regulated and open issuance paths on the Maroo L1 blockchain",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.hashedopenfinance.com"
+      }
+    ],
+    "jurisdiction": {
+      "country": "South Korea"
+    },
+    "custodyModel": "institutional-unregulated",
+    "status": "pre-launch",
+    "announcedDate": "2026-05",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "testnet",
+    "launchPhaseDetail": "First sovereign L1 blockchain (Maroo) purpose-built for KRW stablecoins; testnet live May 2026; dual-track regulated and open paths; mainnet targeted before end of 2026; 1:1 Korean Won fiat-backed",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://www.benzinga.com/pressreleases/26/05/52366344/hashed-open-finance-launch-testnet-of-maroo-first-sovereign-l1-blockchain-for-krw-stablecoins-and-a",
+        "title": "Hashed Open Finance launches testnet of Maroo, first sovereign L1 for KRW stablecoins",
+        "description": "Maroo L1 testnet goes live with OKRW as the native KRW stablecoin; dual-track regulated/open design.",
+        "source": "Benzinga"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2026-05-06",
+        "type": "testnet",
+        "title": "Maroo L1 testnet launches with OKRW as native KRW stablecoin",
+        "description": "First sovereign L1 blockchain purpose-built for KRW stablecoins; dual-track regulated and open paths.",
+        "sourceUrl": "https://www.benzinga.com/pressreleases/26/05/52366344/hashed-open-finance-launch-testnet-of-maroo-first-sovereign-l1-blockchain-for-krw-stablecoins-and-a"
+      }
+    ]
   },
   {
     "id": "ousd-origin-protocol",
@@ -13393,6 +13691,104 @@
         "name": "SHD governance token (bounded minting backing)",
         "pct": 10,
         "risk": "high"
+      }
+    ]
+  },
+  {
+    "id": "sofid-sofi",
+    "detailProvider": "defillama",
+    "name": "SoFiUSD",
+    "symbol": "SOFID",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "1:1 USD reserves held as cash or cash equivalents at SoFi Bank's Federal Reserve master account; reserves earn interest on reserve balances (IORB) retained by SoFi, not passed to holders",
+    "pegMechanism": "1:1 mint and redeem via BitGo infrastructure; instant conversions between dollars and SOFID",
+    "geckoId": "sofiusd",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.sofi.com/crypto/sofiusd/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/SoFi"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "OCC (national bank charter)"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x0CB6d03B0aC88A463F67B7Ad99f9f3ec4678092E",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "custodyModel": "institutional-regulated",
+    "status": "pre-launch",
+    "announcedDate": "2025-12",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "launching-soon",
+    "launchPhaseDetail": "LIVE on Ethereum since Dec 2025 — ~100M SOFID minted, 3 holders, 73 transactions; first nationally chartered FDIC-insured U.S. bank stablecoin on public blockchain; Mastercard settlement partnership (Mar 2026); BitGo Mint infrastructure (Apr 2026); Solana expansion announced May 5 at Solana Accelerate Miami; CoinGecko preview listing (no trades); not on DefiLlama; retail rollout to 13.7M SoFi members 'in coming months'; PROMOTION CANDIDATE pending aggregator data and public trading",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://www.coindesk.com/business/2025/12/18/sofi-unveils-first-bank-issued-stablecoin-for-enterprise-payments",
+        "title": "SoFi unveils first bank-issued stablecoin for enterprise payments",
+        "description": "SoFi Bank becomes the first nationally chartered U.S. bank to issue a stablecoin on a public blockchain, targeting enterprise settlement.",
+        "source": "CoinDesk"
+      },
+      {
+        "type": "article",
+        "url": "https://cryptobriefing.com/sofiusd-launch-solana/",
+        "title": "SoFiUSD to launch on Solana, citing speed and cost",
+        "description": "SoFi announces Solana expansion at Solana Accelerate Miami, May 5, 2026.",
+        "source": "CryptoBriefing"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2025-12-18",
+        "type": "announcement",
+        "title": "SoFiUSD launches as first nationally chartered U.S. bank stablecoin",
+        "description": "SoFi Bank, N.A. issues SOFID on Ethereum; 1:1 backed by cash at Federal Reserve master account; initially for enterprise settlement, not consumer-facing.",
+        "sourceUrl": "https://investors.sofi.com/news/news-details/2025/SoFi-Launches-Fully-Reserved-Stablecoin-to-Power-Financial-Infrastructure-for-Banks-Fintechs-and-Enterprise-Partners/default.aspx"
+      },
+      {
+        "date": "2026-03-03",
+        "type": "partnership",
+        "title": "Mastercard partnership for SoFiUSD settlement across global payments network",
+        "description": "Card issuers and acquirers can settle transactions using SoFiUSD 24/7 via Mastercard's Multi-Token Network (MTN) across 200+ countries.",
+        "sourceUrl": "https://www.mastercard.com/us/en/news-and-trends/press/2026/march/sofi-and-mastercard-partner-to-enable-sofiusd-settlement-across-.html"
+      },
+      {
+        "date": "2026-03-05",
+        "type": "partnership",
+        "title": "BitGo selected as infrastructure and distribution partner",
+        "description": "BitGo Bank & Trust provides Stablecoin-as-a-Service: minting, burning, custody, smart contract management, and distribution.",
+        "sourceUrl": "https://www.bitgo.com/resources/blog/bitgo-selected-by-sofi-to-provide-stablecoin-infrastructure/"
+      },
+      {
+        "date": "2026-04-02",
+        "type": "milestone",
+        "title": "SoFi launches Big Business Banking platform integrating SoFiUSD and Solana",
+        "description": "Enterprise banking platform with SOFID settlement; BitGo Mint launches with SoFiUSD as first supported stablecoin alongside USD1.",
+        "sourceUrl": "https://www.cryptotimes.io/2026/04/02/sofi-unveils-enterprise-banking-platform-integrating-sofiusd-and-solana/"
+      },
+      {
+        "date": "2026-05-05",
+        "type": "milestone",
+        "title": "SoFiUSD expansion to Solana announced at Solana Accelerate Miami",
+        "description": "Solana deployment in progress; retail rollout to SoFi's 13.7M members planned for 'coming months'.",
+        "sourceUrl": "https://cryptobriefing.com/sofiusd-launch-solana/"
       }
     ]
   },
@@ -16424,6 +16820,65 @@
     }
   },
   {
+    "id": "usdb-bridge",
+    "detailProvider": "defillama",
+    "name": "Bridge USDB",
+    "symbol": "USDB",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "1:1 USD reserves held in cash and BlackRock money market funds; managed by Bridge (Stripe subsidiary) under conditional OCC national trust bank charter",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.bridge.xyz"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Bridge"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "OCC (conditional national trust bank charter)"
+    },
+    "custodyModel": "institutional-regulated",
+    "status": "pre-launch",
+    "announcedDate": "2026-02",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "beta",
+    "launchPhaseDetail": "USDB powers Stripe's Stablecoin Financial Accounts in 101 countries; 1:1 backed by USD held in cash and BlackRock money market funds; Bridge received conditional OCC national trust bank charter Feb 2026; distinct from Blast's USDB (usdb-blast)",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://www.ledgerinsights.com/stripe-rolls-out-stablecoin-accounts-in-101-countries-as-bridge-launches-usdb/",
+        "title": "Stripe rolls out stablecoin accounts in 101 countries as Bridge launches USDB",
+        "description": "Bridge's USDB underpins Stripe's global stablecoin financial accounts with 1:1 USD backing via cash and BlackRock MMFs.",
+        "source": "Ledger Insights"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2026-02-17",
+        "type": "regulatory",
+        "title": "Bridge receives conditional OCC national trust bank charter",
+        "description": "Approval enables Bridge to custody crypto assets, issue stablecoins, and manage reserves as a federally regulated entity.",
+        "sourceUrl": "https://www.coindesk.com/business/2026/02/17/stripe-s-stablecoin-firm-bridge-wins-initial-approval-of-national-bank-trust-charter/"
+      },
+      {
+        "date": "2026-02-20",
+        "type": "milestone",
+        "title": "USDB launches powering Stripe's Stablecoin Financial Accounts in 101 countries",
+        "sourceUrl": "https://www.ledgerinsights.com/stripe-rolls-out-stablecoin-accounts-in-101-countries-as-bridge-launches-usdb/"
+      }
+    ]
+  },
+  {
     "id": "usdc-circle",
     "llamaId": "2",
     "detailProvider": "defillama",
@@ -17336,6 +17791,61 @@
       "yieldSource": "Falcon Finance savings (sUSDf)",
       "yieldType": "lending-vault"
     }
+  },
+  {
+    "id": "usdf-flipcash",
+    "detailProvider": "defillama",
+    "name": "Flipcash USDF",
+    "symbol": "USDF",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "1:1 collateralized by USDC via Coinbase's Custom Stablecoins platform; reserves managed by Coinbase infrastructure",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.flipcash.com"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States"
+    },
+    "dependencies": [
+      {
+        "id": "usdc-circle",
+        "weight": 1,
+        "type": "collateral"
+      }
+    ],
+    "custodyModel": "institutional-unregulated",
+    "status": "pre-launch",
+    "announcedDate": "2026-01",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "beta",
+    "launchPhaseDetail": "First Coinbase Custom Stablecoin; 1:1 collateralized by USDC via Coinbase's stablecoin-as-a-service platform; backend testing confirmed Jan 2026; Coinbase Custom Stablecoins lets any business launch branded coins backed by USDC",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://finance.yahoo.com/news/coinbase-experiments-flipcash-usdf-rolls-055734489.html",
+        "title": "Coinbase experiments: Flipcash USDF rolls out as first Custom Stablecoin",
+        "description": "First stablecoin issued through Coinbase's Custom Stablecoins platform, backed 1:1 by USDC.",
+        "source": "Yahoo Finance"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2026-01-15",
+        "type": "announcement",
+        "title": "USDF launches as first Coinbase Custom Stablecoin",
+        "description": "Flipcash's USDF is the first stablecoin issued through Coinbase's stablecoin-as-a-service platform, backed 1:1 by USDC.",
+        "sourceUrl": "https://finance.yahoo.com/news/coinbase-experiments-flipcash-usdf-rolls-055734489.html"
+      }
+    ]
   },
   {
     "id": "usdg-paxos",

@@ -1,0 +1,48 @@
+{
+  "id": "okrw-hashed",
+  "name": "OKRW",
+  "symbol": "OKRW",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "KRW",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "1:1 Korean Won fiat reserves; dual-track regulated and open issuance paths on the Maroo L1 blockchain",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.hashedopenfinance.com"
+    }
+  ],
+  "jurisdiction": {
+    "country": "South Korea"
+  },
+  "custodyModel": "institutional-unregulated",
+  "status": "pre-launch",
+  "announcedDate": "2026-05",
+  "expectedLaunchDate": "2026",
+  "launchPhase": "testnet",
+  "launchPhaseDetail": "First sovereign L1 blockchain (Maroo) purpose-built for KRW stablecoins; testnet live May 2026; dual-track regulated and open paths; mainnet targeted before end of 2026; 1:1 Korean Won fiat-backed",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.benzinga.com/pressreleases/26/05/52366344/hashed-open-finance-launch-testnet-of-maroo-first-sovereign-l1-blockchain-for-krw-stablecoins-and-a",
+      "title": "Hashed Open Finance launches testnet of Maroo, first sovereign L1 for KRW stablecoins",
+      "description": "Maroo L1 testnet goes live with OKRW as the native KRW stablecoin; dual-track regulated/open design.",
+      "source": "Benzinga"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-05-06",
+      "type": "testnet",
+      "title": "Maroo L1 testnet launches with OKRW as native KRW stablecoin",
+      "description": "First sovereign L1 blockchain purpose-built for KRW stablecoins; dual-track regulated and open paths.",
+      "sourceUrl": "https://www.benzinga.com/pressreleases/26/05/52366344/hashed-open-finance-launch-testnet-of-maroo-first-sovereign-l1-blockchain-for-krw-stablecoins-and-a"
+    }
+  ]
+}

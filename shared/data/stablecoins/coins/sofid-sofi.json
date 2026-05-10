@@ -1,0 +1,98 @@
+{
+  "id": "sofid-sofi",
+  "name": "SoFiUSD",
+  "symbol": "SOFID",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "1:1 USD reserves held as cash or cash equivalents at SoFi Bank's Federal Reserve master account; reserves earn interest on reserve balances (IORB) retained by SoFi, not passed to holders",
+  "pegMechanism": "1:1 mint and redeem via BitGo infrastructure; instant conversions between dollars and SOFID",
+  "canBeBlacklisted": "possible",
+  "detailProvider": "defillama",
+  "geckoId": "sofiusd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.sofi.com/crypto/sofiusd/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/SoFi"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "OCC (national bank charter)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x0CB6d03B0aC88A463F67B7Ad99f9f3ec4678092E",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "status": "pre-launch",
+  "announcedDate": "2025-12",
+  "expectedLaunchDate": "2026",
+  "launchPhase": "launching-soon",
+  "launchPhaseDetail": "LIVE on Ethereum since Dec 2025 — ~100M SOFID minted, 3 holders, 73 transactions; first nationally chartered FDIC-insured U.S. bank stablecoin on public blockchain; Mastercard settlement partnership (Mar 2026); BitGo Mint infrastructure (Apr 2026); Solana expansion announced May 5 at Solana Accelerate Miami; CoinGecko preview listing (no trades); not on DefiLlama; retail rollout to 13.7M SoFi members 'in coming months'; PROMOTION CANDIDATE pending aggregator data and public trading",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.coindesk.com/business/2025/12/18/sofi-unveils-first-bank-issued-stablecoin-for-enterprise-payments",
+      "title": "SoFi unveils first bank-issued stablecoin for enterprise payments",
+      "description": "SoFi Bank becomes the first nationally chartered U.S. bank to issue a stablecoin on a public blockchain, targeting enterprise settlement.",
+      "source": "CoinDesk"
+    },
+    {
+      "type": "article",
+      "url": "https://cryptobriefing.com/sofiusd-launch-solana/",
+      "title": "SoFiUSD to launch on Solana, citing speed and cost",
+      "description": "SoFi announces Solana expansion at Solana Accelerate Miami, May 5, 2026.",
+      "source": "CryptoBriefing"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2025-12-18",
+      "type": "announcement",
+      "title": "SoFiUSD launches as first nationally chartered U.S. bank stablecoin",
+      "description": "SoFi Bank, N.A. issues SOFID on Ethereum; 1:1 backed by cash at Federal Reserve master account; initially for enterprise settlement, not consumer-facing.",
+      "sourceUrl": "https://investors.sofi.com/news/news-details/2025/SoFi-Launches-Fully-Reserved-Stablecoin-to-Power-Financial-Infrastructure-for-Banks-Fintechs-and-Enterprise-Partners/default.aspx"
+    },
+    {
+      "date": "2026-03-03",
+      "type": "partnership",
+      "title": "Mastercard partnership for SoFiUSD settlement across global payments network",
+      "description": "Card issuers and acquirers can settle transactions using SoFiUSD 24/7 via Mastercard's Multi-Token Network (MTN) across 200+ countries.",
+      "sourceUrl": "https://www.mastercard.com/us/en/news-and-trends/press/2026/march/sofi-and-mastercard-partner-to-enable-sofiusd-settlement-across-.html"
+    },
+    {
+      "date": "2026-03-05",
+      "type": "partnership",
+      "title": "BitGo selected as infrastructure and distribution partner",
+      "description": "BitGo Bank & Trust provides Stablecoin-as-a-Service: minting, burning, custody, smart contract management, and distribution.",
+      "sourceUrl": "https://www.bitgo.com/resources/blog/bitgo-selected-by-sofi-to-provide-stablecoin-infrastructure/"
+    },
+    {
+      "date": "2026-04-02",
+      "type": "milestone",
+      "title": "SoFi launches Big Business Banking platform integrating SoFiUSD and Solana",
+      "description": "Enterprise banking platform with SOFID settlement; BitGo Mint launches with SoFiUSD as first supported stablecoin alongside USD1.",
+      "sourceUrl": "https://www.cryptotimes.io/2026/04/02/sofi-unveils-enterprise-banking-platform-integrating-sofiusd-and-solana/"
+    },
+    {
+      "date": "2026-05-05",
+      "type": "milestone",
+      "title": "SoFiUSD expansion to Solana announced at Solana Accelerate Miami",
+      "description": "Solana deployment in progress; retail rollout to SoFi's 13.7M members planned for 'coming months'.",
+      "sourceUrl": "https://cryptobriefing.com/sofiusd-launch-solana/"
+    }
+  ]
+}

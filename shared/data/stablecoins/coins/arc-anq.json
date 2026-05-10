@@ -1,0 +1,48 @@
+{
+  "id": "arc-anq",
+  "name": "ARC",
+  "symbol": "ARC",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "OTHER",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "1:1 Indian Rupee reserves collateralized by cash, fixed deposits, and Indian government securities; two-tier framework complementing RBI's digital rupee CBDC",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.anq.money"
+    }
+  ],
+  "jurisdiction": {
+    "country": "India"
+  },
+  "custodyModel": "institutional-unregulated",
+  "status": "pre-launch",
+  "announcedDate": "2025-11",
+  "expectedLaunchDate": "2026",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "India's first regulated rupee stablecoin; built by Anq with Polygon; 1:1 INR collateralized by cash, fixed deposits, and government securities; designed to prevent USD liquidity outflow; two-tier framework complementing RBI's CBDC; Uniswap v4 whitelisting for compliance",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.coindesk.com/markets/2025/11/20/india-s-debt-backed-arc-token-eyes-tentative-january-2026-debut-sources-say/",
+      "title": "India's debt-backed ARC token eyes tentative January 2026 debut",
+      "description": "ARC is India's first regulated rupee stablecoin, built by Anq with Polygon, collateralized by government securities and cash.",
+      "source": "CoinDesk"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2025-11-20",
+      "type": "announcement",
+      "title": "ARC rupee stablecoin announced by Anq and Polygon",
+      "description": "India's first regulated INR stablecoin; collateralized by cash, fixed deposits, and government securities; January 2026 debut targeted.",
+      "sourceUrl": "https://www.coindesk.com/markets/2025/11/20/india-s-debt-backed-arc-token-eyes-tentative-january-2026-debut-sources-say/"
+    }
+  ]
+}

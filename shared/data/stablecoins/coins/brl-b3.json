@@ -1,0 +1,52 @@
+{
+  "id": "brl-b3",
+  "name": "B3 BRL Stablecoin",
+  "symbol": "BRL-B3",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "BRL",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "1:1 Brazilian Real reserves; designed as settlement layer for B3's tokenized asset trading platform",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.b3.com.br"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/B3_oficial"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Brazil"
+  },
+  "custodyModel": "institutional-regulated",
+  "status": "pre-launch",
+  "announcedDate": "2025-12",
+  "expectedLaunchDate": "2026-H1",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Latin America's largest stock exchange (B3/Sao Paulo) developing its own BRL settlement stablecoin for tokenized asset trading; H1 2026 target; fills gap left by narrowing of Brazil's Drex CBDC scope; symbol and ticker not yet confirmed",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.coindesk.com/business/2025/12/17/brazilian-stock-exchange-b3-to-launch-its-own-tokenization-platform-and-stablecoin/",
+      "title": "Brazilian stock exchange B3 to launch its own tokenization platform and stablecoin",
+      "description": "B3 plans a BRL settlement stablecoin for tokenized asset trading as Brazil's Drex CBDC scope narrows.",
+      "source": "CoinDesk"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2025-12-17",
+      "type": "announcement",
+      "title": "B3 announces BRL stablecoin and tokenization platform",
+      "description": "Latin America's largest stock exchange plans a BRL-pegged settlement stablecoin for tokenized asset trading.",
+      "sourceUrl": "https://www.coindesk.com/business/2025/12/17/brazilian-stock-exchange-b3-to-launch-its-own-tokenization-platform-and-stablecoin/"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "id": "hkd-hsbc",
+  "name": "HSBC HKD Stablecoin",
+  "symbol": "HKD-HSBC",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "OTHER",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "1:1 HKD-denominated high-quality liquid assets held in segregated accounts under HKMA Stablecoins Ordinance requirements",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.hsbc.com.hk"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/HSBC_HK"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Hong Kong",
+    "regulator": "HKMA (Stablecoins Ordinance)"
+  },
+  "custodyModel": "institutional-regulated",
+  "status": "pre-launch",
+  "announcedDate": "2026-03",
+  "expectedLaunchDate": "2026-H2",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Second HKMA-licensed stablecoin issuer; launching H2 2026 integrated into PayMe (3.3M users) and HSBC HK App; peer-to-peer payments and tokenized investment subscriptions; 1:1 backed by HKD-denominated high-quality liquid assets in segregated accounts; symbol and ticker not yet confirmed",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.theasianbanker.com/press-releases/hsbc-to-launch-hkd-denominated-stablecoin-in-second-half-of-2026",
+      "title": "HSBC to launch HKD-denominated stablecoin in second half of 2026",
+      "description": "HSBC plans to integrate HKD stablecoin into PayMe and HSBC HK App for peer-to-peer payments and tokenized investment subscriptions.",
+      "source": "The Asian Banker"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-03-24",
+      "type": "regulatory",
+      "title": "HKMA awards stablecoin license to HSBC",
+      "description": "HSBC becomes second HKMA-licensed stablecoin issuer alongside Anchorpoint Financial under Hong Kong's Stablecoins Ordinance.",
+      "sourceUrl": "https://www.coindesk.com/policy/2026/03/24/hong-kong-awards-first-stablecoin-licenses-to-hsbc-standard-chartered-led-group"
+    }
+  ]
+}
