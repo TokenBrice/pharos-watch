@@ -34,7 +34,7 @@
   "announcedDate": "2026-02",
   "expectedLaunchDate": "2026-Q2",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Brand and logo unveiled Feb 27, 2026; first trust bank-backed JPY stablecoin under Japan's Type III electronic payment instrument framework; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; up to 50% of reserves can be allocated to government bonds under Japan's trust-based stablecoin rules; Q2 2026 launch pending regulatory approval; deployment chain not publicly confirmed",
+  "launchPhaseDetail": "Brand and logo unveiled Feb 27; first trust bank-backed JPY stablecoin under Japan's Type III electronic payment instrument framework; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; Startale closed $63M Series A (SBI $50M + Sony $13M) Mar 26 earmarked for JPYSC/USDSC; Strium L1 unveiled Feb 5 as likely deployment target alongside Soneium; SBI VC Trade now distributing RLUSD (distributor infra live); Q2 2026 launch pending FSA approval — Japan's PSA amendments take full effect June 13; deployment chain not publicly confirmed",
   "featuredContent": [
     {
       "type": "blog",
@@ -53,11 +53,32 @@
   ],
   "milestones": [
     {
+      "date": "2026-02-05",
+      "type": "milestone",
+      "title": "Startale and SBI unveil Strium L1 for tokenized securities and RWA trading",
+      "description": "Strium described as destination for a 'complementary currency stack' of JPYSC and USDSC; likely deployment target for JPYSC.",
+      "sourceUrl": "https://startale.com/en/blog/strium-announcement"
+    },
+    {
       "date": "2026-02-27",
       "type": "announcement",
       "title": "Startale Group and SBI Holdings unveil JPYSC, first trust bank-backed JPY stablecoin",
       "description": "Brand and logo announced; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; Q2 2026 launch target under Japan's Type III electronic payment instrument framework.",
       "sourceUrl": "https://startale.com/en/blog/jpysc"
+    },
+    {
+      "date": "2026-03-26",
+      "type": "partnership",
+      "title": "Startale closes $63M Series A (SBI $50M + Sony $13M) earmarked for JPYSC expansion",
+      "description": "Funds target Strium scaling, stablecoin expansion (JPYSC + USDSC), and Startale App enhancement; confirms JPYSC remains a 2026 priority.",
+      "sourceUrl": "https://www.coindesk.com/business/2026/03/25/sbi-sony-back-startale-s-usd63-million-push-to-expand-japan-s-tokenized-finance-stack"
+    },
+    {
+      "date": "2026-03-31",
+      "type": "milestone",
+      "title": "SBI VC Trade begins RLUSD distribution in Japan — JPYSC distributor infrastructure now live",
+      "description": "SBI VC Trade, JPYSC's designated distributor, operationally distributing Ripple's RLUSD stablecoin, de-risking the JPYSC distribution pathway.",
+      "sourceUrl": "https://coinpaper.com/16814/what-is-sbi-holdings-actually-building-with-ripple-xrp-and-rlusd-in-2026"
     }
   ]
 }

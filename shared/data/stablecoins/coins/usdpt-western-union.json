@@ -32,7 +32,7 @@
     { "date": "2026-Q2", "setOn": "2026-05-03" }
   ],
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "May 2026 launch confirmed by CEO McGranahan on Q1 earnings call (Apr 24); Digital Asset Network (DAN) live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian; USD Stable Card planned for later 2026; CoinGecko preview listing remains zero-supply pending mainnet",
+  "launchPhaseDetail": "LAUNCHED May 4 on Solana — Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian; CoinGecko listing remains zero-supply (B2B settlement, not exchange-traded yet); PROMOTION CANDIDATE pending aggregator data",
   "featuredContent": [
     {
       "type": "tweet",
@@ -54,6 +54,13 @@
       "title": "Western Union has big plans for stablecoins",
       "description": "CEO Devin McGranahan outlines strategy: converting negative float to positive float revenue, opening network to community banks, and enabling dollar-denominated holdings in inflationary regions.",
       "source": "American Banker"
+    },
+    {
+      "type": "article",
+      "url": "https://www.coindesk.com/business/2026/05/05/western-union-s-solana-based-stablecoin-could-reshape-its-payment-model-analyst-says",
+      "title": "Western Union's Solana-Based Stablecoin Could Reshape Its Payment Model",
+      "description": "Analyst coverage of the May 4 USDPT launch: B2B agent settlement first, consumer-facing 'Stable by Western Union' product planned for 40+ markets later in 2026.",
+      "source": "CoinDesk"
     }
   ],
   "custodyModel": "institutional-regulated",
@@ -98,6 +105,20 @@
       "title": "Digital Asset Network (DAN) goes live with first partner",
       "description": "First DAN partner activates the week of Apr 27, giving crypto wallets access to Western Union's 360,000+ payout locations across 200+ countries via single API; seven additional DAN partners expected before end of 2026.",
       "sourceUrl": "https://www.coindesk.com/business/2026/04/27/western-union-eyeing-stablecoin-launch-to-settle-global-transactions-without-swift-ceo-says"
+    },
+    {
+      "date": "2026-05-04",
+      "type": "milestone",
+      "title": "USDPT launches on Solana; Philippines and Bolivia as first markets",
+      "description": "Western Union officially rolls out USDPT on the Solana blockchain for B2B agent settlement, with 'Stable by Western Union' consumer product planned for 40+ markets later in 2026.",
+      "sourceUrl": "https://www.businesswire.com/news/home/20260504531737/en/Western-Union-Launches-USDPT-on-Solana-Advancing-Regulated-Digital-Infrastructure-for-Global-Payments"
+    },
+    {
+      "date": "2026-05-04",
+      "type": "partnership",
+      "title": "Fireblocks selected as core settlement infrastructure partner",
+      "description": "Fireblocks (including Dynamic embedded wallets and TRES financial platform) powers USDPT's custody, settlement, and wallet infrastructure.",
+      "sourceUrl": "https://www.prnewswire.com/news-releases/western-union-selects-fireblocks-to-power-its-first-stablecoin-usdpt-302760774.html"
     }
   ]
 }

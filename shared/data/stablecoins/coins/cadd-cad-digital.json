@@ -3,8 +3,8 @@
   "name": "CAD Digital",
   "symbol": "CADD",
   "status": "pre-launch",
-  "launchPhase": "beta",
-  "launchPhaseDetail": "Coverage pending: current CoinGecko and DefiLlama rows do not expose usable live price and supply data.",
+  "launchPhase": "launching-soon",
+  "launchPhaseDetail": "LAUNCHED May 4 — Canada's first CAD-backed stablecoin issued by a financial institution; ~530K CADD circulating on Ethereum + Base; now also deployed on Tempo (contract address TBA); backers include Shopify, National Bank of Canada, ATB Financial, Wealthsimple, Shakepay; Baker Tilly monthly attestations live; CoinGecko still zero price/supply, DefiLlama detail endpoint has data but aggregate list does not; PROMOTION CANDIDATE pending aggregator coverage",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "CAD",
@@ -87,11 +87,29 @@
       "risk": "very-low"
     }
   },
+  "milestones": [
+    {
+      "date": "2026-05-04",
+      "type": "milestone",
+      "title": "CADD officially launches as Canada's first regulated CAD-backed stablecoin",
+      "description": "Tetra Digital Group launches CADD with backing from Shopify, National Bank of Canada, ATB Financial, Wealthsimple, Shakepay, Purpose Unlimited, and Urbana Corporation; deployed on Ethereum, Base, and Tempo.",
+      "sourceUrl": "https://www.businesswire.com/news/home/20260504197679/en/Tetra-Digital-Group-Launches-CADD-Canadas-First-CAD-Backed-Stablecoin-Issued-by-a-Financial-Institution"
+    }
+  ],
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.coindesk.com/business/2026/05/04/shopify-and-national-bank-of-canada-are-among-backers-of-a-new-digital-currency-built-to-settle-trades-24-7",
+      "title": "Shopify and National Bank of Canada Are Among Backers of a New Digital Currency",
+      "description": "Canada's first regulated CAD-backed stablecoin launches with backing from Shopify, National Bank of Canada, Wealthsimple, and others.",
+      "source": "CoinDesk"
+    }
+  ],
   "notices": [
     {
       "type": "info",
       "title": "Active coverage pending",
-      "message": "CADD remains excluded from active runtime surfaces until CoinGecko or DefiLlama publishes usable live price and supply data."
+      "message": "CADD launched May 4, 2026 but remains excluded from active runtime surfaces until CoinGecko or DefiLlama publishes usable live price and supply data."
     }
   ]
 }

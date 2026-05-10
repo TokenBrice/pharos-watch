@@ -2449,12 +2449,30 @@
       {
         "type": "info",
         "title": "Active coverage pending",
-        "message": "CADD remains excluded from active runtime surfaces until CoinGecko or DefiLlama publishes usable live price and supply data."
+        "message": "CADD launched May 4, 2026 but remains excluded from active runtime surfaces until CoinGecko or DefiLlama publishes usable live price and supply data."
       }
     ],
     "status": "pre-launch",
-    "launchPhase": "beta",
-    "launchPhaseDetail": "Coverage pending: current CoinGecko and DefiLlama rows do not expose usable live price and supply data."
+    "launchPhase": "launching-soon",
+    "launchPhaseDetail": "LAUNCHED May 4 — Canada's first CAD-backed stablecoin issued by a financial institution; ~530K CADD circulating on Ethereum + Base; now also deployed on Tempo (contract address TBA); backers include Shopify, National Bank of Canada, ATB Financial, Wealthsimple, Shakepay; Baker Tilly monthly attestations live; CoinGecko still zero price/supply, DefiLlama detail endpoint has data but aggregate list does not; PROMOTION CANDIDATE pending aggregator coverage",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://www.coindesk.com/business/2026/05/04/shopify-and-national-bank-of-canada-are-among-backers-of-a-new-digital-currency-built-to-settle-trades-24-7",
+        "title": "Shopify and National Bank of Canada Are Among Backers of a New Digital Currency",
+        "description": "Canada's first regulated CAD-backed stablecoin launches with backing from Shopify, National Bank of Canada, Wealthsimple, and others.",
+        "source": "CoinDesk"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2026-05-04",
+        "type": "milestone",
+        "title": "CADD officially launches as Canada's first regulated CAD-backed stablecoin",
+        "description": "Tetra Digital Group launches CADD with backing from Shopify, National Bank of Canada, ATB Financial, Wealthsimple, Shakepay, Purpose Unlimited, and Urbana Corporation; deployed on Ethereum, Base, and Tempo.",
+        "sourceUrl": "https://www.businesswire.com/news/home/20260504197679/en/Tetra-Digital-Group-Launches-CADD-Canadas-First-CAD-Backed-Stablecoin-Issued-by-a-Financial-Institution"
+      }
+    ]
   },
   {
     "id": "cash-phantom",
@@ -4795,7 +4813,7 @@
     "announcedDate": "2025-09",
     "expectedLaunchDate": "2026-Q4",
     "launchPhase": "announced",
-    "launchPhaseDetail": "12-bank consortium (incl. ING, UniCredit, BNP Paribas, BBVA, CaixaBank); French Finance Minister Lescure publicly endorses project at Paris crypto conference (Apr 17) — sharp reversal from previous administration's hostility; EMI license application with Dutch Central Bank reportedly in final stages; advanced exchange/market-maker discussions (Bit2Me named); launching on Ethereum (primary), Polygon, Base with permissioned KYC layer",
+    "launchPhaseDetail": "17-bank consortium (second wave May 5: Sabadell, Bankinter, Abanca, Kutxabank, Cecabank); Fireblocks selected as core infrastructure partner Apr 21; French Finance Minister Lescure publicly endorses project (Apr 17); EMI license with Dutch Central Bank in final stages; ERC-20F standard with built-in governance/AML/KYC; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer; H2 2026 on track",
     "featuredContent": [
       {
         "type": "article",
@@ -4854,6 +4872,20 @@
         "title": "French Finance Minister Lescure publicly endorses Qivalis and euro stablecoins",
         "description": "At a Paris crypto conference, Lescure called current euro stablecoin volumes 'not satisfactory' and urged EU banks to accelerate tokenized deposits — a sharp reversal from predecessor Bruno Le Maire's stance that private stablecoins had 'no place on European soil'.",
         "sourceUrl": "https://www.coindesk.com/policy/2026/04/17/french-government-pivots-from-slamming-privately-issued-stablecoins-to-supporting-them"
+      },
+      {
+        "date": "2026-04-21",
+        "type": "partnership",
+        "title": "Fireblocks selected as core infrastructure partner for tokenization and treasury management",
+        "description": "ERC-20F standard with built-in governance controls, AML/KYC, sanctions screening, and fraud monitoring; multi-institution architecture supporting granular permission controls across member banks.",
+        "sourceUrl": "https://www.prnewswire.com/news-releases/major-european-bank-consortium-qivalis-plans-to-leverage-fireblocks-to-power-micar-compliant-euro-denominated-stablecoin-302748775.html"
+      },
+      {
+        "date": "2026-05-05",
+        "type": "partnership",
+        "title": "Second wave of banks join: Sabadell, Bankinter, Abanca, Kutxabank, Cecabank — consortium now 17 members",
+        "description": "Five Spanish and European banks expand the consortium beyond the original 12 founding members.",
+        "sourceUrl": "https://www.banklesstimes.com/articles/2026/05/05/sabadell-bankinter-join-qivalis-euro-stablecoin-push-in-2026/"
       }
     ]
   },
@@ -6274,7 +6306,7 @@
     "announcedDate": "2025-06",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
-    "launchPhaseDetail": "Platform live; INDX cash settlement launched Feb 2026; StoneCastle acquired; Roughrider pilot approved by ND IC March 25 with Fiserv contract finalization underway; pilots referenced with Bank of North Dakota, Huntington and others (cross-border, digital escrow, interbank money movement); next visibility: Q1 2026 earnings May 5 and Investor Day May 14",
+    "launchPhaseDetail": "Platform live; Q1 2026 earnings (May 5): CEO Lyons confirms stablecoin pilot 'on track for this summer' for interbank money movement; Huntington confirmed as pilot partner alongside Bank of North Dakota and others (cross-border, digital escrow); INDX cash settlement launched Feb 2026; StoneCastle acquired; Investor Day May 14 expected to detail digital asset strategy",
     "featuredContent": [
       {
         "type": "article",
@@ -6329,6 +6361,13 @@
         "title": "INDX real-time cash settlement platform launched for digital asset firms",
         "description": "Up to $25M FDIC insurance, distributes across 1,100+ insured financial institutions.",
         "sourceUrl": "https://investors.fiserv.com/news-releases/news-release-details/fiserv-introduces-indx-real-time-cash-settlement-platform"
+      },
+      {
+        "date": "2026-05-05",
+        "type": "milestone",
+        "title": "Q1 earnings: CEO confirms stablecoin pilot on track for summer 2026",
+        "description": "CEO Michael Lyons: 'on track to launch our previously announced stablecoin pilot this summer to facilitate interbank money movement.' Huntington confirmed as pilot partner alongside Bank of North Dakota and several other banks.",
+        "sourceUrl": "https://www.fool.com/earnings/call-transcripts/2026/05/05/fiserv-fisv-q1-2026-earnings-call-transcript/"
       }
     ]
   },
@@ -8532,7 +8571,7 @@
     "announcedDate": "2026-02",
     "expectedLaunchDate": "2026-Q2",
     "launchPhase": "announced",
-    "launchPhaseDetail": "Brand and logo unveiled Feb 27, 2026; first trust bank-backed JPY stablecoin under Japan's Type III electronic payment instrument framework; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; up to 50% of reserves can be allocated to government bonds under Japan's trust-based stablecoin rules; Q2 2026 launch pending regulatory approval; deployment chain not publicly confirmed",
+    "launchPhaseDetail": "Brand and logo unveiled Feb 27; first trust bank-backed JPY stablecoin under Japan's Type III electronic payment instrument framework; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; Startale closed $63M Series A (SBI $50M + Sony $13M) Mar 26 earmarked for JPYSC/USDSC; Strium L1 unveiled Feb 5 as likely deployment target alongside Soneium; SBI VC Trade now distributing RLUSD (distributor infra live); Q2 2026 launch pending FSA approval — Japan's PSA amendments take full effect June 13; deployment chain not publicly confirmed",
     "featuredContent": [
       {
         "type": "blog",
@@ -8551,11 +8590,32 @@
     ],
     "milestones": [
       {
+        "date": "2026-02-05",
+        "type": "milestone",
+        "title": "Startale and SBI unveil Strium L1 for tokenized securities and RWA trading",
+        "description": "Strium described as destination for a 'complementary currency stack' of JPYSC and USDSC; likely deployment target for JPYSC.",
+        "sourceUrl": "https://startale.com/en/blog/strium-announcement"
+      },
+      {
         "date": "2026-02-27",
         "type": "announcement",
         "title": "Startale Group and SBI Holdings unveil JPYSC, first trust bank-backed JPY stablecoin",
         "description": "Brand and logo announced; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; Q2 2026 launch target under Japan's Type III electronic payment instrument framework.",
         "sourceUrl": "https://startale.com/en/blog/jpysc"
+      },
+      {
+        "date": "2026-03-26",
+        "type": "partnership",
+        "title": "Startale closes $63M Series A (SBI $50M + Sony $13M) earmarked for JPYSC expansion",
+        "description": "Funds target Strium scaling, stablecoin expansion (JPYSC + USDSC), and Startale App enhancement; confirms JPYSC remains a 2026 priority.",
+        "sourceUrl": "https://www.coindesk.com/business/2026/03/25/sbi-sony-back-startale-s-usd63-million-push-to-expand-japan-s-tokenized-finance-stack"
+      },
+      {
+        "date": "2026-03-31",
+        "type": "milestone",
+        "title": "SBI VC Trade begins RLUSD distribution in Japan — JPYSC distributor infrastructure now live",
+        "description": "SBI VC Trade, JPYSC's designated distributor, operationally distributing Ripple's RLUSD stablecoin, de-risking the JPYSC distribution pathway.",
+        "sourceUrl": "https://coinpaper.com/16814/what-is-sbi-holdings-actually-building-with-ripple-xrp-and-rlusd-in-2026"
       }
     ]
   },
@@ -8932,7 +8992,7 @@
     "announcedDate": "2025-11",
     "expectedLaunchDate": "2026",
     "launchPhase": "testnet",
-    "launchPhaseDetail": "Tempo mainnet live since March 18; KlarnaUSD still on testnet; Bridge OCC charter approved Feb 2026; mainnet deployment could come at any time",
+    "launchPhaseDetail": "Tempo mainnet live since March 18 but KlarnaUSD still absent — USD1 (WLFI) launched on Tempo May 8 as first native stablecoin, beating KlarnaUSD to market; Bridge OCC charter approved Feb 2026; KlarnaUSD absent from Bridge Open Issuance live issuer list; Klarna Q1 2026 earnings May 14 is next likely update venue; IPO completed Sep 2025 (NYSE: KLAR), KlarnaUSD in F-1 prospectus as strategic initiative",
     "featuredContent": [
       {
         "type": "tweet",
@@ -18674,7 +18734,7 @@
     "announcedDate": "2025-10",
     "expectedLaunchDate": "2026-05",
     "launchPhase": "launching-soon",
-    "launchPhaseDetail": "May 2026 launch confirmed by CEO McGranahan on Q1 earnings call (Apr 24); Digital Asset Network (DAN) live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian; USD Stable Card planned for later 2026; CoinGecko preview listing remains zero-supply pending mainnet",
+    "launchPhaseDetail": "LAUNCHED May 4 on Solana — Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian; CoinGecko listing remains zero-supply (B2B settlement, not exchange-traded yet); PROMOTION CANDIDATE pending aggregator data",
     "featuredContent": [
       {
         "type": "tweet",
@@ -18696,6 +18756,13 @@
         "title": "Western Union has big plans for stablecoins",
         "description": "CEO Devin McGranahan outlines strategy: converting negative float to positive float revenue, opening network to community banks, and enabling dollar-denominated holdings in inflationary regions.",
         "source": "American Banker"
+      },
+      {
+        "type": "article",
+        "url": "https://www.coindesk.com/business/2026/05/05/western-union-s-solana-based-stablecoin-could-reshape-its-payment-model-analyst-says",
+        "title": "Western Union's Solana-Based Stablecoin Could Reshape Its Payment Model",
+        "description": "Analyst coverage of the May 4 USDPT launch: B2B agent settlement first, consumer-facing 'Stable by Western Union' product planned for 40+ markets later in 2026.",
+        "source": "CoinDesk"
       }
     ],
     "milestones": [
@@ -18739,6 +18806,20 @@
         "title": "Digital Asset Network (DAN) goes live with first partner",
         "description": "First DAN partner activates the week of Apr 27, giving crypto wallets access to Western Union's 360,000+ payout locations across 200+ countries via single API; seven additional DAN partners expected before end of 2026.",
         "sourceUrl": "https://www.coindesk.com/business/2026/04/27/western-union-eyeing-stablecoin-launch-to-settle-global-transactions-without-swift-ceo-says"
+      },
+      {
+        "date": "2026-05-04",
+        "type": "milestone",
+        "title": "USDPT launches on Solana; Philippines and Bolivia as first markets",
+        "description": "Western Union officially rolls out USDPT on the Solana blockchain for B2B agent settlement, with 'Stable by Western Union' consumer product planned for 40+ markets later in 2026.",
+        "sourceUrl": "https://www.businesswire.com/news/home/20260504531737/en/Western-Union-Launches-USDPT-on-Solana-Advancing-Regulated-Digital-Infrastructure-for-Global-Payments"
+      },
+      {
+        "date": "2026-05-04",
+        "type": "partnership",
+        "title": "Fireblocks selected as core settlement infrastructure partner",
+        "description": "Fireblocks (including Dynamic embedded wallets and TRES financial platform) powers USDPT's custody, settlement, and wallet infrastructure.",
+        "sourceUrl": "https://www.prnewswire.com/news-releases/western-union-selects-fireblocks-to-power-its-first-stablecoin-usdpt-302760774.html"
       }
     ],
     "dateHistory": [

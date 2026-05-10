@@ -28,7 +28,7 @@
   "announcedDate": "2025-06",
   "expectedLaunchDate": "2026",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Platform live; INDX cash settlement launched Feb 2026; StoneCastle acquired; Roughrider pilot approved by ND IC March 25 with Fiserv contract finalization underway; pilots referenced with Bank of North Dakota, Huntington and others (cross-border, digital escrow, interbank money movement); next visibility: Q1 2026 earnings May 5 and Investor Day May 14",
+  "launchPhaseDetail": "Platform live; Q1 2026 earnings (May 5): CEO Lyons confirms stablecoin pilot 'on track for this summer' for interbank money movement; Huntington confirmed as pilot partner alongside Bank of North Dakota and others (cross-border, digital escrow); INDX cash settlement launched Feb 2026; StoneCastle acquired; Investor Day May 14 expected to detail digital asset strategy",
   "featuredContent": [
     {
       "type": "article",
@@ -84,6 +84,13 @@
       "title": "INDX real-time cash settlement platform launched for digital asset firms",
       "description": "Up to $25M FDIC insurance, distributes across 1,100+ insured financial institutions.",
       "sourceUrl": "https://investors.fiserv.com/news-releases/news-release-details/fiserv-introduces-indx-real-time-cash-settlement-platform"
+    },
+    {
+      "date": "2026-05-05",
+      "type": "milestone",
+      "title": "Q1 earnings: CEO confirms stablecoin pilot on track for summer 2026",
+      "description": "CEO Michael Lyons: 'on track to launch our previously announced stablecoin pilot this summer to facilitate interbank money movement.' Huntington confirmed as pilot partner alongside Bank of North Dakota and several other banks.",
+      "sourceUrl": "https://www.fool.com/earnings/call-transcripts/2026/05/05/fiserv-fisv-q1-2026-earnings-call-transcript/"
     }
   ]
 }

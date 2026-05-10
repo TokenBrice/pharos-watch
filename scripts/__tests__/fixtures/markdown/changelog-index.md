@@ -6,6 +6,17 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-05-04 to 2026-05-10
+
+Non-USD stablecoin batch ships, DEX pricing gains confidence telemetry, and Telegram adds depeg-step commands.
+
+- **Non-USD coverage expansion**: Non-USD peg batch ships with supply-backfill fallback, CADD joins with full redemption + live-reserve coverage, Tangent USG activates, and the homepage Fiat filter works on first click.
+- **Live reserve hardening**: Reserve Protocol DTF adapter goes live, deferred and uncertain sync states surface in the UI, adapter helper contracts expand coverage, and River/SG Forge date handling hardens.
+- **DEX pricing telemetry**: Confidence telemetry exposes per-source reliability, expanded bridge sources widen DEX coverage, impossible TVL and fee-variant duplicates rejected, and stale Coinbase DAI-USD dropped.
+- **Digest intelligence**: Daily digest leads with critical risk signals and uses live prices for active depegs. Telegram gains depeg-step commands and hardened group UX; homepage preview rebalanced.
+- **Freezability and blacklist audit**: Freezability classifications audited and corrected, USD3 reclassified as CeFi-dependent, blacklist identity tracking improved with new API artifacts and redemption backstop coverage.
+- **Infrastructure and docs**: Alt-peg atlas positioning fixed, LLMs stablecoin export refreshed, sitemap test prereqs generated correctly, and README gains TOC with AI guidance cross-reference.
+
 ## 2026-04-27 to 2026-05-03
 
 PharosVille v1 ships, frozen lifecycle lands with USR + BUCK archived, and a 10-phase audit remediation closes.
