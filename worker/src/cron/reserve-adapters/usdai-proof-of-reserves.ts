@@ -7,6 +7,8 @@ import {
   parseTimestampLikeToUnixSeconds,
   requireJsonInput,
   reserveInfoWarning,
+  reserveDegradedWarning,
+  SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
   slicesFromPercentages,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
@@ -32,6 +34,13 @@ interface ResolvedReserveBucket {
 }
 
 type WeightMode = "share" | "amount";
+
+interface UsdAiProofTimestampSummary {
+  sourceTimestamp: number;
+  latestSourceTimestamp: number;
+  sourceTimestampSpreadSec: number;
+  timestampCount: number;
+}
 
 function parseIntegerLike(value: unknown): bigint | null {
   if (typeof value === "string" && /^\d+$/.test(value.trim())) {
@@ -97,7 +106,28 @@ function resolveTbillBucket(name: string): ResolvedReserveBucket {
 // that might appear elsewhere (activity feed, news) in future layouts.
 const USDAI_PROOF_SCOPE_KEY = '\\"dealsDetailsCache\\":';
 
-export function extractUsdAiProofPageTimestamp(html: string): number | null {
+function summarizeUsdAiProofTimestamps(timestamps: number[]): UsdAiProofTimestampSummary | null {
+  if (timestamps.length === 0) return null;
+  const sorted = [...timestamps].sort((left, right) => left - right);
+  const sourceTimestamp = sorted[0];
+  const latestSourceTimestamp = sorted[sorted.length - 1];
+  return {
+    sourceTimestamp,
+    latestSourceTimestamp,
+    sourceTimestampSpreadSec: latestSourceTimestamp - sourceTimestamp,
+    timestampCount: sorted.length,
+  };
+}
+
+function extractUsdAiProofTimestampSummaryFromSlice(proofSlice: string): UsdAiProofTimestampSummary | null {
+  const timestamps = Array.from(proofSlice.matchAll(/"timeLastUpdated"\s*:\s*"([^"\\]+)"/g))
+    .map((match) => parseTimestampLikeToUnixSeconds(match[1]))
+    .filter((value): value is number => value != null);
+
+  return summarizeUsdAiProofTimestamps(timestamps);
+}
+
+export function extractUsdAiProofPageTimestampSummary(html: string): UsdAiProofTimestampSummary | null {
   let proofSlice: string;
   try {
     proofSlice = extractEscapedJsonValueAfterKey(
@@ -109,11 +139,11 @@ export function extractUsdAiProofPageTimestamp(html: string): number | null {
     return null;
   }
 
-  const timestamps = Array.from(proofSlice.matchAll(/"timeLastUpdated"\s*:\s*"([^"\\]+)"/g))
-    .map((match) => parseTimestampLikeToUnixSeconds(match[1]))
-    .filter((value): value is number => value != null);
+  return extractUsdAiProofTimestampSummaryFromSlice(proofSlice);
+}
 
-  return timestamps.length > 0 ? Math.max(...timestamps) : null;
+export function extractUsdAiProofPageTimestamp(html: string): number | null {
+  return extractUsdAiProofPageTimestampSummary(html)?.latestSourceTimestamp ?? null;
 }
 
 export function parseUsdAiProofOfReserves(raw: string): UsdAiProofOfReservesEntry[] {
@@ -136,6 +166,14 @@ export function parseUsdAiProofOfReserves(raw: string): UsdAiProofOfReservesEntr
 export function adaptUsdAiProofOfReserves(
   entries: UsdAiProofOfReservesEntry[],
   sourceTimestamp: number | null = null,
+  sourceTimestampSummary: UsdAiProofTimestampSummary | null = sourceTimestamp != null
+    ? {
+        sourceTimestamp,
+        latestSourceTimestamp: sourceTimestamp,
+        sourceTimestampSpreadSec: 0,
+        timestampCount: 1,
+      }
+    : null,
 ): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
   const tbillBuckets = new Map<string, { share: bigint; bucket: ResolvedReserveBucket }>();
@@ -277,6 +315,15 @@ export function adaptUsdAiProofOfReserves(
       unknownExposurePct: weightToPct(unknownShare),
     }));
   }
+  if (
+    sourceTimestampSummary
+    && sourceTimestampSummary.sourceTimestampSpreadSec > SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC
+  ) {
+    warnings.push(reserveDegradedWarning(
+      "source-timestamp-spread",
+      `USD.AI proof-row source timestamps span ${sourceTimestampSummary.sourceTimestampSpreadSec} seconds`,
+    ));
+  }
 
   return {
     slices,
@@ -299,20 +346,29 @@ export function adaptUsdAiProofOfReserves(
             "usdai-proof-of-reserves-api",
             "USD.AI proof-of-reserves API does not expose a trustworthy source timestamp",
           )),
+      ...(sourceTimestampSummary != null
+        ? {
+            oldestSourceTimestamp: sourceTimestampSummary.sourceTimestamp,
+            latestSourceTimestamp: sourceTimestampSummary.latestSourceTimestamp,
+            sourceTimestampSpreadSec: sourceTimestampSummary.sourceTimestampSpreadSec,
+            sourceTimestampCount: sourceTimestampSummary.timestampCount,
+          }
+        : {}),
     },
   };
 }
 
-function extractUsdAiProofPageTimestampFallback(html: string): number | null {
+function extractUsdAiProofPageTimestampFallback(html: string): UsdAiProofTimestampSummary | null {
   const timestamps = Array.from(html.matchAll(/\\?"timeLastUpdated\\?"\s*:\s*\\?"([^"\\]+)\\?"/g))
     .map((match) => parseTimestampLikeToUnixSeconds(match[1]))
     .filter((value): value is number => value != null);
 
-  return timestamps.length > 0 ? Math.max(...timestamps) : null;
+  return summarizeUsdAiProofTimestamps(timestamps);
 }
 
 interface UsdAiProofPageTimestampResult {
   timestamp: number | null;
+  summary: UsdAiProofTimestampSummary | null;
   fallbackWarning?: LiveReserveWarning;
 }
 
@@ -322,21 +378,22 @@ async function fetchUsdAiProofPageTimestamp(
   ctx?: AdapterContext,
 ): Promise<UsdAiProofPageTimestampResult> {
   const url = config.display?.url;
-  if (!url) return { timestamp: null };
+  if (!url) return { timestamp: null, summary: null };
   let html: string;
   try {
     html = await fetchTextWithRetry(url, signal, 12_000, ctx);
   } catch {
-    return { timestamp: null };
+    return { timestamp: null, summary: null };
   }
-  const scoped = extractUsdAiProofPageTimestamp(html);
-  if (scoped != null) return { timestamp: scoped };
+  const scoped = extractUsdAiProofPageTimestampSummary(html);
+  if (scoped != null) return { timestamp: scoped.sourceTimestamp, summary: scoped };
 
   const whole = extractUsdAiProofPageTimestampFallback(html);
-  if (whole == null) return { timestamp: null };
+  if (whole == null) return { timestamp: null, summary: null };
 
   return {
-    timestamp: whole,
+    timestamp: whole.sourceTimestamp,
+    summary: whole,
     fallbackWarning: reserveInfoWarning(
       "usdai-proof-scope-fallback",
       "USD.AI proof-row scope not found; used whole-page MAX timeLastUpdated as source timestamp",
@@ -355,7 +412,11 @@ export async function fetchUsdAiProofOfReserves(
     fetchTextWithRetry(input.url, signal, 12_000, ctx),
     fetchUsdAiProofPageTimestamp(config, signal, ctx),
   ]);
-  const result = adaptUsdAiProofOfReserves(parseUsdAiProofOfReserves(raw), pageTs.timestamp);
+  const result = adaptUsdAiProofOfReserves(
+    parseUsdAiProofOfReserves(raw),
+    pageTs.timestamp,
+    pageTs.summary,
+  );
   if (pageTs.fallbackWarning) {
     return {
       ...result,

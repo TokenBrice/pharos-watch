@@ -151,6 +151,56 @@ describe("adaptCapVaultState", () => {
     expect(result.metadata?.immediateRedeemableUsd).toBe(100);
   });
 
+  it("classifies unknown active vault assets as high risk with a degraded warning", () => {
+    const result = adaptCapVaultState({
+      contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+      supplyUsd: 100,
+      assets: [
+        {
+          address: "0x9999999999999999999999999999999999999999",
+          name: "Cap asset 0x9999...9999",
+          risk: "high",
+          configured: false,
+          decimals: 18,
+          totalSupplied: 25,
+          totalBorrowed: 0,
+          available: 25,
+          paused: false,
+          pausedStatusUnavailable: false,
+        },
+      ],
+    });
+
+    expect(result.slices).toEqual([
+      { name: "Cap asset 0x9999...9999", pct: 100, risk: "high" },
+    ]);
+    const warning = result.warnings?.find((w) => w.code === "unknown-vault-asset");
+    expect(warning).toBeDefined();
+    expect(warning?.effect).toBe("degraded");
+  });
+
+  it("fails closed for configured non-USD-like assets without priceUsd", () => {
+    expect(() =>
+      adaptCapVaultState({
+        contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+        supplyUsd: 100,
+        assets: [
+          {
+            address: "0x4200000000000000000000000000000000000006",
+            name: "WETH",
+            risk: "medium",
+            decimals: 18,
+            totalSupplied: 1,
+            totalBorrowed: 0,
+            available: 1,
+            paused: false,
+            pausedStatusUnavailable: false,
+          },
+        ],
+      }),
+    ).toThrow(/missing priceUsd/);
+  });
+
   it("scales totals by priceUsd when configured and omits the peg-assumed warning", () => {
     const result = adaptCapVaultState({
       contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
@@ -316,5 +366,31 @@ describe("fetchCapVaultReserves", () => {
     expect(warning).toBeDefined();
     // Paused-treated-as-true must exclude from immediateRedeemable
     expect(result.metadata?.immediateRedeemableUsd).toBe(0);
+  });
+
+  it("defaults an unconfigured on-chain asset to high risk and emits a degraded warning", async () => {
+    primeMocks({
+      decimals: 6n,
+      totalSupplies: 50_000000n,
+      totalBorrows: 0n,
+      available: 50_000000n,
+      paused: encodedFalse,
+    });
+
+    const result = await fetchCapVaultReserves(
+      coin,
+      {
+        ...config,
+        params: { assets: [] },
+      },
+      signal,
+    );
+
+    expect(result.slices).toEqual([
+      expect.objectContaining({ name: "Cap asset 0xa0b8...eb48", risk: "high" }),
+    ]);
+    const warning = result.warnings?.find((w) => w.code === "unknown-vault-asset");
+    expect(warning).toBeDefined();
+    expect(warning?.effect).toBe("degraded");
   });
 });

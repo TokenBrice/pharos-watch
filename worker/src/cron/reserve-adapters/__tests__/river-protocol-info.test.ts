@@ -28,7 +28,7 @@ describe("adaptRiverProtocolInfo", () => {
     });
   });
 
-  it("uses the latest point for snapshot timestamp (not min)", () => {
+  it("uses the oldest material point for snapshot timestamp and keeps spread provenance", () => {
     const result = adaptRiverProtocolInfo({
       tvl: 300_000_000,
       circulatingSupply: 150_000_000,
@@ -42,9 +42,16 @@ describe("adaptRiverProtocolInfo", () => {
       ],
     });
 
-    expect(result.metadata?.sourceTimestamp).toBe(1_776_500_000);
+    expect(result.metadata?.sourceTimestamp).toBe(1_775_000_000);
     expect(result.metadata?.freshnessMode).toBe("verified");
     expect(result.metadata?.latestSourceTimestamp).toBe(1_776_500_000);
+    expect(result.metadata?.sourceTimestampSpreadSec).toBe(1_500_000);
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: "source-timestamp-spread",
+        effect: "degraded",
+      }),
+    ]));
   });
 
   it("degrades when protocol TVL falls below circulating satUSD", () => {

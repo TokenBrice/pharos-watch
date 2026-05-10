@@ -245,6 +245,36 @@ describe("fetchSingleAssetReserves", () => {
     });
   });
 
+  it("emits a degraded warning when meaningful reserve/supply probes are undercollateralized", async () => {
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+      reserve_total: "99000000",
+      supply_total: "100000000",
+      asOf: "2026-03-20T12:00:00Z",
+    });
+    const config: LiveReservesConfig = {
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      inputs: { primary: { kind: "http-json", url: "https://example.com/api" } },
+      params: {
+        label: "Treasury reserve",
+        risk: "very-low",
+        reserveProbe: { kind: "json-path", path: ["reserve_total"] },
+        supplyProbe: { kind: "json-path", path: ["supply_total"] },
+        timestampProbe: { kind: "json-path", path: ["asOf"] },
+      },
+    };
+
+    const result = await fetchSingleAssetReserves(makeCoin(), config, signal);
+    expect(result.metadata?.collateralizationRatio).toBe(0.99);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "reserve-undercollateralized",
+        effect: "degraded",
+      }),
+    ]);
+  });
+
   it("marks timestamp-backed liveness probes as freshness-verified even without reserve totals", async () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue({
       data: {

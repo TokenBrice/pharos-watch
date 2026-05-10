@@ -39,22 +39,28 @@ describe("adaptOpenEdenUsdo", () => {
     // subscriptions are non-zero. Values mirror the 2026-04-19 live
     // production payload shape: pendingUsdc accounts for ~1.76% of
     // reserveAssetsInUsd, which previously tripped the validation.
-    expect(() =>
-      adaptOpenEdenUsdo({
-        date: "2026-04-19T00:00:00.000Z",
-        usdoAmount: 44_085_617.15,
-        totalTbillAmountInUsd: 38_824_683.87,
-        usdcAmount: 411_606.20,
-        rlusdAmount: 4_000_200,
-        buidlAmount: 3_219_897.49,
-        vbillAmount: 1_763_678.75,
-        usycAmountInUsd: 0,
-        benjiAmount: 0,
-        pendingUsdc: 864_831.69,
-        reserveAssetsInUsd: 49_084_898.00,
-        ratio: 111.3399,
-      }),
-    ).not.toThrow();
+    const result = adaptOpenEdenUsdo({
+      date: "2026-04-19T00:00:00.000Z",
+      usdoAmount: 44_085_617.15,
+      totalTbillAmountInUsd: 38_824_683.87,
+      usdcAmount: 411_606.20,
+      rlusdAmount: 4_000_200,
+      buidlAmount: 3_219_897.49,
+      vbillAmount: 1_763_678.75,
+      usycAmountInUsd: 0,
+      benjiAmount: 0,
+      pendingUsdc: 864_831.69,
+      reserveAssetsInUsd: 49_084_898.00,
+      ratio: 111.3399,
+    });
+
+    expect(result.slices).toContainEqual({
+      name: "Pending USDC",
+      pct: 1.8,
+      risk: "very-low",
+      coinId: "usdc-circle",
+    });
+    expect(result.metadata?.componentTotalUsd).toBeCloseTo(49_084_898.00, 2);
   });
 
   it("includes the RLUSD component in component-total validation and slices", () => {

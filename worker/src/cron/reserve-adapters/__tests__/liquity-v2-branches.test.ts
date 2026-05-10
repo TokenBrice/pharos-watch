@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildLiquityV2Warnings,
   buildLiquityV2RedemptionMetadata,
 } from "../liquity-v2-branches";
 
@@ -63,6 +64,33 @@ describe("buildLiquityV2RedemptionMetadata", () => {
       routeStatus: "degraded",
       routeStatusReason: "Collateral branch shutdown detected for: WETH",
     });
+  });
+
+  it("marks unreadable shutdown status as unknown and emits a degraded warning", () => {
+    const snapshot = {
+      balances: [{ branch, balanceRaw: 2_000_000_000_000_000_000n }],
+      redemptionFeeBps: null,
+      debts: [
+        {
+          entry: { branch, balanceRaw: 2_000_000_000_000_000_000n },
+          debtRaw: 1_250_000_000_000_000_000_000n,
+          shutDown: null,
+        },
+      ],
+    };
+    const metadata = buildLiquityV2RedemptionMetadata(snapshot);
+    const warnings = buildLiquityV2Warnings(snapshot);
+
+    expect(metadata.redemption).toMatchObject({
+      routeStatus: "unknown",
+      routeStatusReason: "Could not verify branch shutdown status for: WETH",
+    });
+    expect(warnings).toEqual([
+      expect.objectContaining({
+        code: "redemption-route-status-unreadable",
+        effect: "degraded",
+      }),
+    ]);
   });
 
   it("fails closed when active-pool debt is zero", () => {

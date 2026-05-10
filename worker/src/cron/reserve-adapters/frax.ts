@@ -80,6 +80,8 @@ const TOKEN_DISPLAY: Record<string, TokenDisplayConfig> = {
   ZZ: { label: "ZZ", risk: "very-high" },
 };
 
+const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;
+
 /* ---------- v2 balance-sheet adapter ---------- */
 
 export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse): AdapterResult {
@@ -99,8 +101,13 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse): Adapte
     bySymbol.set(asset.tokenSymbol, (bySymbol.get(asset.tokenSymbol) ?? 0) + usd);
   }
 
-  const total = [...bySymbol.values()].reduce((a, b) => a + b, 0);
-  if (total <= 0) throw new Error("Frax balance-sheet total asset value is zero");
+  const categorizedAssetTotal = [...bySymbol.values()].reduce((a, b) => a + b, 0);
+  if (categorizedAssetTotal <= 0) throw new Error("Frax balance-sheet total asset value is zero");
+  const sourceTotal = Number(payload.totalAssets);
+  if (!Number.isFinite(sourceTotal) || sourceTotal <= 0) {
+    throw new Error("Frax balance-sheet totalAssets is invalid or zero");
+  }
+  const total = Math.max(categorizedAssetTotal, sourceTotal);
   const stableRedeemableUsd = ["USDC", "USDS", "PYUSD", "DAI", "FRAX"]
     .reduce((sum, symbol) => sum + (bySymbol.get(symbol) ?? 0), 0);
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.asOfTimestamp);
@@ -128,7 +135,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse): Adapte
     slices.push({
       name: "Unmapped Frax balance-sheet assets",
       pct: (unknownUsd / total) * 100,
-      risk: "medium",
+      risk: "high",
     });
     warnings.push(buildUnknownExposureWarning({
       code: "unknown-token",
@@ -137,11 +144,30 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse): Adapte
     }));
   }
 
+  const sourceTotalGapUsd = sourceTotal - categorizedAssetTotal;
+  const sourceTotalGapPct = sourceTotalGapUsd > 0 ? (sourceTotalGapUsd / total) * 100 : 0;
+  if (sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
+    slices.push({
+      name: "Unmapped Frax balance-sheet total-assets gap",
+      pct: sourceTotalGapPct,
+      risk: "high",
+    });
+    warnings.push(buildUnknownExposureWarning({
+      code: "source-total-gap",
+      message: "Frax balance-sheet totalAssets exceeds mapped asset-category rows",
+      unknownExposurePct: sourceTotalGapPct,
+      thresholdPct: SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
+    }));
+  }
+
   return {
     slices: normalizeSlices(slices),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       totalCollateralUsd: total,
+      categorizedAssetTotalUsd: categorizedAssetTotal,
+      sourceTotalAssetsUsd: sourceTotal,
+      ...(sourceTotalGapPct > 0 ? { sourceTotalGapPct } : {}),
       assetCount: bySymbol.size,
       ...(sourceTimestamp != null
         ? { sourceTimestamp, freshnessMode: "verified" as const }

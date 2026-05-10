@@ -6,6 +6,21 @@ import { validateAdapterOutput } from "../validate";
 const slices = [{ name: "USDC", pct: 100, risk: "low" as const }];
 
 describe("validateAdapterOutput redemption telemetry", () => {
+  it("rejects slices above the public 100% per-slice schema limit", () => {
+    const result = validateAdapterOutput({
+      slices: [
+        { name: "Oversized", pct: 101, risk: "low" },
+        { name: "Remainder", pct: 1, risk: "medium" },
+      ],
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.warnings[0]).toMatchObject({
+      code: "invalid-pct",
+      effect: "fatal",
+    });
+  });
+
   it("rejects invalid nested redemption capacity even when legacy capacity is valid", () => {
     const adapter = getReserveAdapter("gho");
     const result = validateAdapterOutput(

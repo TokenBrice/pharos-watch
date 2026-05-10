@@ -19,7 +19,7 @@ export interface TetherTransparencyResponse {
 
 function toNumber(value: string | number | undefined): number {
   if (typeof value === "number") return value;
-  if (typeof value === "string") return Number.parseFloat(value);
+  if (typeof value === "string") return Number(value.trim());
   return Number.NaN;
 }
 
@@ -33,6 +33,12 @@ export function adaptTetherTransparency(payload: TetherTransparencyResponse): Ad
 
   if (!Number.isFinite(total_assets) || total_assets <= 0) {
     throw new Error("Tether total_assets invalid or zero");
+  }
+  if (!Number.isFinite(total_liabilities) || total_liabilities < 0) {
+    throw new Error("Tether total_liabilities invalid or negative");
+  }
+  if (!Number.isFinite(shareholder_eq)) {
+    throw new Error("Tether shareholder_eq invalid");
   }
 
   return {

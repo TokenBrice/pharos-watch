@@ -64,6 +64,22 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
     expect(result.warnings).toBeUndefined();
   });
 
+  it("parses large wei-denominated token values without raw Number conversion", () => {
+    const html = `
+<html><body><script>
+self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\\":\\"2026-04-14\\",\\"rows\\":[{\\"tokenSymbol\\":\\"usdc\\",\\"valueWei\\":\\"100000000000000000000000123456\\",\\"valueKnown\\":true}]}},\\"series\\":[{\\"seriesKey\\":\\"offchain_capital\\",\\"stats\\":{\\"current\\":100},\\"points\\":[{\\"date\\":\\"2026-04-14\\",\\"value\\":100}]}]..."]);
+</script></body></html>
+`;
+    const result = adaptReMetrics(html);
+
+    expect(result.metadata?.stableAssetUsd).toBe(100_000_000_000);
+    expect(result.slices[0]).toMatchObject({
+      name: "USDC reserves",
+      risk: "low",
+      coinId: "usdc-circle",
+    });
+  });
+
 
   it("throws when the page no longer exposes the expected metrics payload", () => {
     expect(() => adaptReMetrics("<html></html>")).toThrow("layout-changed");

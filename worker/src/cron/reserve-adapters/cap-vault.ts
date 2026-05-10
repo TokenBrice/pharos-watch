@@ -37,15 +37,15 @@ interface CapVaultAssetState {
   risk: ReserveSlice["risk"];
   coinId?: string;
   depType?: ReserveSlice["depType"];
+  configured?: boolean;
   decimals: number;
   totalSupplied: number;
   totalBorrowed: number;
   available: number;
   paused: boolean;
   /**
-   * When omitted, USD accumulation falls back to 1.0 per asset unit and a
-   * `cap-vault-peg-assumed` info warning is emitted so operators know the
-   * assumption was relied upon.
+   * When omitted, only recognized USD-like reserves use the 1.0 peg
+   * assumption. Configured non-USD-like assets must provide priceUsd.
    */
   priceUsd?: number;
   /**
@@ -100,11 +100,23 @@ function normalizeAssetConfigs(config: LiveReservesConfig): Map<string, CapVault
 }
 
 function resolveAssetConfig(address: string, configs: Map<string, CapVaultAssetConfig>): CapVaultAssetConfig {
-  return configs.get(address.toLowerCase()) ?? {
+  const configured = configs.get(address.toLowerCase());
+  return configured ?? {
     address: address.toLowerCase(),
     name: `Cap asset ${address.slice(0, 6)}...${address.slice(-4)}`,
-    risk: "medium",
+    risk: "high",
   };
+}
+
+function isRecognizedUsdLikeReserve(asset: CapVaultAssetState): boolean {
+  if (asset.priceUsd != null) return true;
+  if (asset.coinId?.match(/^(usdc|usdt|pyusd|rlusd|usdp|gusd|usds|dai)-/)) return true;
+  return /^(usdc|usdt|pyusd|rlusd|usdp|gusd|usds|dai)$/i.test(asset.name);
+}
+
+function priceForCapAsset(asset: CapVaultAssetState): number {
+  if (asset.priceUsd != null) return asset.priceUsd;
+  return 1.0;
 }
 
 export function adaptCapVaultState(args: {
@@ -114,7 +126,28 @@ export function adaptCapVaultState(args: {
 }): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
   const activeAssets = args.assets.filter((asset) => asset.totalSupplied > 0);
-  const pegAssumedAssets = activeAssets.filter((asset) => asset.priceUsd == null);
+  const unknownAssets = activeAssets.filter((asset) => asset.configured === false);
+  for (const asset of unknownAssets) {
+    warnings.push(reserveDegradedWarning(
+      "unknown-vault-asset",
+      `Cap vault returned unconfigured asset "${asset.name}" (${asset.address}); exposure is classified high risk`,
+    ));
+  }
+  const unpricedNonUsdAssets = activeAssets.filter((asset) => (
+    asset.configured !== false
+    && asset.priceUsd == null
+    && !isRecognizedUsdLikeReserve(asset)
+  ));
+  if (unpricedNonUsdAssets.length > 0) {
+    throw new Error(
+      `cap-vault configured non-USD-like asset(s) missing priceUsd: ${unpricedNonUsdAssets.map((a) => a.name).join(", ")}`,
+    );
+  }
+  const pegAssumedAssets = activeAssets.filter((asset) => (
+    asset.configured !== false
+    && asset.priceUsd == null
+    && isRecognizedUsdLikeReserve(asset)
+  ));
   if (pegAssumedAssets.length > 0) {
     warnings.push(reserveInfoWarning(
       "cap-vault-peg-assumed",
@@ -122,11 +155,11 @@ export function adaptCapVaultState(args: {
     ));
   }
   const totalReserveUsd = activeAssets.reduce(
-    (sum, asset) => sum + asset.totalSupplied * (asset.priceUsd ?? 1.0),
+    (sum, asset) => sum + asset.totalSupplied * priceForCapAsset(asset),
     0,
   );
   const immediateRedeemableUsd = activeAssets.reduce(
-    (sum, asset) => sum + (asset.paused ? 0 : Math.max(0, asset.available) * (asset.priceUsd ?? 1.0)),
+    (sum, asset) => sum + (asset.paused ? 0 : Math.max(0, asset.available) * priceForCapAsset(asset)),
     0,
   );
   const pausedAssets = activeAssets.filter((asset) => asset.paused);
@@ -147,7 +180,7 @@ export function adaptCapVaultState(args: {
   return {
     slices: slicesFromValues(activeAssets.map((asset) => ({
       name: asset.name,
-      value: asset.totalSupplied * (asset.priceUsd ?? 1.0),
+      value: asset.totalSupplied * priceForCapAsset(asset),
       risk: asset.risk,
       ...(asset.coinId ? { coinId: asset.coinId } : {}),
       ...(asset.depType ? { depType: asset.depType } : {}),
@@ -172,6 +205,7 @@ export function adaptCapVaultState(args: {
         available: asset.available,
         paused: asset.paused,
         ...(asset.priceUsd != null ? { priceUsd: asset.priceUsd } : {}),
+        ...(asset.configured === false ? { configured: false } : {}),
       })),
       redemption: {
         capacityUsd: immediateRedeemableUsd,
@@ -316,6 +350,7 @@ export async function fetchCapVaultReserves(
       risk: assetConfig.risk,
       ...(assetConfig.coinId ? { coinId: assetConfig.coinId } : {}),
       ...(assetConfig.depType ? { depType: assetConfig.depType } : {}),
+      configured: assetConfigs.has(address.toLowerCase()),
       decimals,
       totalSupplied: decimalNumberFromBigInt(totalSuppliesRaw, decimals),
       totalBorrowed: decimalNumberFromBigInt(totalBorrowsRaw, decimals),

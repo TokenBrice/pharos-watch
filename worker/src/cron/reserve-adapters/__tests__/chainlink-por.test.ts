@@ -73,6 +73,7 @@ describe("adaptChainlinkPorResponse", () => {
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 1450,
       supplyUsd: 144_000_000,
+      supplyReadComplete: true,
     });
   });
 
@@ -145,6 +146,35 @@ describe("adaptChainlinkPorResponse", () => {
     expect(omitted).toBeDefined();
     expect(omitted?.severity).toBe("info");
     expect(omitted?.message).toContain("tron");
+  });
+
+  it("degrades and marks supply incomplete when any EVM supply source fails", () => {
+    const result = adaptChainlinkPorResponse(
+      { reserves: 100_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
+      params,
+      {
+        contributions: [
+          {
+            chain: "ethereum",
+            tokenAddress: "0x0000000000000000000000000000000000000001",
+            raw: 1000_000000000000000000n,
+            decimals: 18,
+          },
+        ],
+        omittedNonEvmChains: [],
+        omittedReadFailureChains: ["bsc"],
+      },
+    );
+
+    expect(result.metadata).toMatchObject({
+      supplyUsd: 1000,
+      supplyReadComplete: false,
+      collateralizationRatio: 1,
+    });
+    const warning = result.warnings?.find((w) => w.code === "partial-supply-read-failure");
+    expect(warning).toBeDefined();
+    expect(warning?.effect).toBe("degraded");
+    expect(warning?.message).toContain("bsc");
   });
 
   it("throws on zero reserves", () => {
@@ -222,6 +252,7 @@ describe("fetchChainlinkPorReserves", () => {
     // reserves = $600, multichain supply = 600 tokens -> ratio ~ 1.0
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.0, 5);
     expect(result.metadata?.supplyUsd).toBeCloseTo(600, 5);
+    expect(result.metadata?.supplyReadComplete).toBe(true);
 
     // Non-EVM chain (tron) should emit info warning
     const omitted = result.warnings?.find((w) => w.code === "por-supply-chain-omitted");

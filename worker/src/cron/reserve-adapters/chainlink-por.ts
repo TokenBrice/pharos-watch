@@ -93,8 +93,8 @@ export function adaptChainlinkPorResponse(
     ));
   }
   if (supply && supply.omittedReadFailureChains.length > 0) {
-    warnings.push(reserveInfoWarning(
-      "por-supply-chain-partial-omitted",
+    warnings.push(reserveDegradedWarning(
+      "partial-supply-read-failure",
       `Supply aggregation omits EVM chains whose totalSupply() read failed: ${supply.omittedReadFailureChains.join(", ")}`,
     ));
   }
@@ -132,6 +132,7 @@ export function adaptChainlinkPorResponse(
               supplyRaw: contribution.raw.toString(),
               decimals: contribution.decimals,
             })),
+            supplyReadComplete: supply!.omittedReadFailureChains.length === 0,
             ...(primaryContribution
               ? {
                   supplyRaw: primaryContribution.raw.toString(),

@@ -38,9 +38,14 @@ describe("adaptSuperstateLiquidity", () => {
         freshnessKind: "same-run-api",
         routeStatus: "open",
         routeStatusSource: "protocol-api",
-        sourceTimestamp: 1_776_000_000,
+      },
+      liquidityFreshnessSource: "same-run-api",
+      details: {
+        liquidityFreshnessSource: "same-run-api",
       },
     });
+    expect(result.metadata?.sourceTimestamp).toBe(1_776_000_000);
+    expect(result.metadata?.redemption?.sourceTimestamp).toBeUndefined();
   });
 
   it("marks the route paused when current liquidity is zero", () => {

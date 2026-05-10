@@ -105,10 +105,13 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
   },
 ];
 
+const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;
+
 export interface AdaptReservoirResult {
   slices: ReserveSlice[];
   unknownAssets: string[];
   unknownExposurePct: number;
+  sourceTotalGapPct: number;
   immediateRedeemableUsd: number;
   supplyUsd: number | null;
 }
@@ -116,11 +119,27 @@ export interface AdaptReservoirResult {
 export function adaptReservoirReserves(payload: ReservoirReservesResponse): AdaptReservoirResult {
   const totalAssets = Number(payload.totalAssets);
   if (!Number.isFinite(totalAssets) || totalAssets <= 0) {
-    return { slices: [], unknownAssets: [], unknownExposurePct: 0, immediateRedeemableUsd: 0, supplyUsd: null };
+    return { slices: [], unknownAssets: [], unknownExposurePct: 0, sourceTotalGapPct: 0, immediateRedeemableUsd: 0, supplyUsd: null };
   }
 
+  const disclosedAssetValue = payload.assets.reduce((sum, asset) => {
+    const value = Number(asset.totalBalanceValue);
+    return Number.isFinite(value) && value > 0 ? sum + value : sum;
+  }, 0);
+  const sourceTotalGapUsd = Math.max(0, totalAssets - disclosedAssetValue);
+  const sourceTotalGapPct = (sourceTotalGapUsd / totalAssets) * 100;
+  const assets = sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT
+    ? [
+        ...payload.assets,
+        {
+          label: "Unmapped Reservoir balance-sheet total-assets gap",
+          totalBalanceValue: String(sourceTotalGapUsd),
+        },
+      ]
+    : payload.assets;
+
   const classified = classifyBucketedValues({
-    items: payload.assets,
+    items: assets,
     rules: RESERVOIR_BUCKETS,
     getValue: (asset) => Number(asset.totalBalanceValue),
     getUnknownLabel: (asset) => asset.label,
@@ -139,6 +158,7 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
     slices: classified.slices,
     unknownAssets: classified.unknownItems,
     unknownExposurePct: classified.unknownExposurePct,
+    sourceTotalGapPct,
     immediateRedeemableUsd,
     supplyUsd,
   };
@@ -170,6 +190,14 @@ export async function fetchReservoirReserves(
         unknownExposurePct: adapted.unknownExposurePct,
       })]
     : [];
+  if (adapted.sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
+    warnings.push(buildUnknownExposureWarning({
+      code: "source-total-gap",
+      message: "Reservoir totalAssets exceeds disclosed asset rows",
+      unknownExposurePct: adapted.sourceTotalGapPct,
+      thresholdPct: SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
+    }));
+  }
   if (
     Number.isFinite(totalAssetsUsd)
     && Number.isFinite(totalLiabilitiesUsd)
@@ -195,6 +223,7 @@ export async function fetchReservoirReserves(
       equity: payload.equity,
       unknownAssetCount: adapted.unknownAssets.length,
       ...(adapted.unknownAssets.length > 0 ? { unknownAssetLabels: adapted.unknownAssets } : {}),
+      ...(adapted.sourceTotalGapPct > 0 ? { sourceTotalGapPct: adapted.sourceTotalGapPct } : {}),
       ...unverifiedFreshnessMetadata(
         "protocol-balance-sheet-api",
         "Reservoir balance-sheet payload does not include a trustworthy source timestamp",

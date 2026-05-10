@@ -4,6 +4,7 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  decimalNumberFromBigInt,
   fetchErc20Balance,
   fetchJsonWithRetry,
   normalizeSlices,
@@ -117,6 +118,13 @@ function inferDepType(symbol: string): ReserveSlice["depType"] | undefined {
   return getProtocolAssetConfig(symbol)?.depType;
 }
 
+function parseCollateralBalance(raw: string | undefined, decimals: number): number {
+  if (typeof raw !== "string" || !/^\d+$/.test(raw)) return 0;
+  if (!Number.isInteger(decimals) || decimals < 0) return 0;
+  const parsed = decimalNumberFromBigInt(BigInt(raw), decimals);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
 export function adaptCollateralPositions(
   details: PositionDetailsPayload,
   prices: PriceMappingPayload,
@@ -139,15 +147,13 @@ export function adaptCollateralPositions(
   for (const entry of Object.values(details)) {
     const totalBalance = entry.positions.reduce((acc, position) => {
       if (position.closed || position.denied) return acc;
-      const raw = Number(position.collateralBalance ?? "0");
-      return Number.isFinite(raw) && raw > 0 ? acc + raw / (10 ** entry.decimals) : acc;
+      return acc + parseCollateralBalance(position.collateralBalance, entry.decimals);
     }, 0);
 
     if (totalBalance <= 0) continue;
     activePositionCount += entry.positions.filter((position) => {
       if (position.closed || position.denied) return false;
-      const raw = Number(position.collateralBalance ?? "0");
-      return Number.isFinite(raw) && raw > 0;
+      return parseCollateralBalance(position.collateralBalance, entry.decimals) > 0;
     }).length;
 
     const priceInfo = prices[entry.address.toLowerCase()];

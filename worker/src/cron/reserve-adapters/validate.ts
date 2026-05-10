@@ -219,6 +219,9 @@ export function validateAdapterOutput(
     if (!Number.isFinite(slice.pct) || slice.pct <= 0) {
       return { valid: false, warnings: [fatalWarning("invalid-pct", `Slice "${slice.name}" has invalid pct: ${slice.pct}`)] };
     }
+    if (slice.pct > 100) {
+      return { valid: false, warnings: [fatalWarning("invalid-pct", `Slice "${slice.name}" has pct above 100: ${slice.pct}`)] };
+    }
     if (!isReserveRisk(slice.risk)) {
       return { valid: false, warnings: [fatalWarning("invalid-risk", `Slice "${slice.name}" has invalid risk: ${slice.risk}`)] };
     }

@@ -184,4 +184,43 @@ describe("adaptCollateralPositions", () => {
       immediateRedeemableUsd: 395_346.145491,
     });
   });
+
+  it("parses large raw collateral balances through bigint decimal conversion", () => {
+    const result = adaptCollateralPositions(
+      {
+        "0xusdc": {
+          address: "0xUSDC",
+          name: "USD Coin",
+          symbol: "USDC",
+          decimals: 18,
+          positions: [
+            { collateralBalance: "100000000000000000000000123456" },
+          ],
+        },
+        "0xdai": {
+          address: "0xDAI",
+          name: "Dai Stablecoin",
+          symbol: "DAI",
+          decimals: 18,
+          positions: [
+            { collateralBalance: "100000000000000000000000123456" },
+          ],
+        },
+      },
+      {
+        "0xusdc": { price: { usd: 1 } },
+        "0xdai": { price: { usd: 1 } },
+      },
+      0,
+    );
+
+    expect(result.metadata).toMatchObject({
+      assetCount: 2,
+      activePositionCount: 2,
+    });
+    expect(result.slices).toEqual([
+      { name: "USDC (USD Coin)", pct: 50, risk: "low", coinId: "usdc-circle" },
+      { name: "DAI (Dai Stablecoin)", pct: 50, risk: "low", coinId: "dai-makerdao" },
+    ]);
+  });
 });

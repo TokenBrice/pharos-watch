@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adaptInfiniFi, type InfiniFiProtocolData } from "../infinifi";
+import { adaptInfiniFi, fetchInfiniFiReserves, type InfiniFiProtocolData } from "../infinifi";
 
 const SAMPLE_RESPONSE: InfiniFiProtocolData = {
   code: "OK",
@@ -164,5 +164,77 @@ describe("adaptInfiniFi", () => {
     // Both farms should be present (0.5% passes the >=0.05 threshold)
     expect(slices).toHaveLength(2);
     expect(slices.reduce((acc, s) => acc + s.pct, 0)).toBe(100);
+  });
+
+  it("keeps PROTOCOL farm exposure explicit instead of renormalizing active farm subset", () => {
+    const response: InfiniFiProtocolData = {
+      ...SAMPLE_RESPONSE,
+      data: {
+        ...SAMPLE_RESPONSE.data,
+        stats: { asset: { totalTVLAssetNormalized: 125 } },
+        farms: [
+          ...SAMPLE_RESPONSE.data.farms,
+          {
+            name: "ProtocolBuffer",
+            label: "Protocol Buffer",
+            assetsNormalized: 25,
+            type: "PROTOCOL",
+            underlyingAssetSymbol: "USDC",
+          },
+        ],
+      },
+    };
+
+    const result = adaptInfiniFi(response);
+    expect(result.excludedProtocolFarms).toEqual(["ProtocolBuffer"]);
+    expect(result.sourceTotalGapPct).toBe(20);
+    expect(result.slices).toEqual(expect.arrayContaining([
+      { name: "InfiniFi protocol-level reserve positions", pct: 20, risk: "high" },
+    ]));
+  });
+
+  it("warns when source TVL exceeds emitted active farm rows", async () => {
+    const url = "https://example.com/infinifi";
+    const response: InfiniFiProtocolData = {
+      ...SAMPLE_RESPONSE,
+      data: {
+        ...SAMPLE_RESPONSE.data,
+        stats: { asset: { totalTVLAssetNormalized: 125 } },
+        farms: [
+          ...SAMPLE_RESPONSE.data.farms,
+          {
+            name: "ProtocolBuffer",
+            label: "Protocol Buffer",
+            assetsNormalized: 25,
+            type: "PROTOCOL",
+            underlyingAssetSymbol: "USDC",
+          },
+        ],
+      },
+    };
+
+    const result = await fetchInfiniFiReserves(
+      { id: "infinifi" } as never,
+      {
+        adapter: "infinifi",
+        version: 1,
+        semantics: "collateral-mix",
+        inputs: { primary: { kind: "http-json", url } },
+      },
+      new AbortController().signal,
+      {
+        requestCache: new Map([
+          [`json-get:${url}:12000:null`, Promise.resolve(response)],
+        ]),
+      } as never,
+    );
+
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "source-total-gap", effect: "degraded" }),
+    ]));
+    expect(result.metadata).toMatchObject({
+      sourceTotalGapPct: 20,
+      excludedProtocolFarms: ["ProtocolBuffer"],
+    });
   });
 });

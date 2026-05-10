@@ -68,6 +68,19 @@ describe("adaptReservoirReserves", () => {
     expect(unknownExposurePct).toBeCloseTo((3 / 103) * 100, 6);
   });
 
+  it("keeps source total-assets gaps explicit instead of renormalizing disclosed rows", () => {
+    const { slices, unknownAssets, sourceTotalGapPct } = adaptReservoirReserves({
+      ...SAMPLE_RESPONSE,
+      totalAssets: "125",
+    });
+
+    expect(unknownAssets).toContain("Unmapped Reservoir balance-sheet total-assets gap");
+    expect(sourceTotalGapPct).toBe(20);
+    expect(slices).toEqual(expect.arrayContaining([
+      { name: "Unmapped reserve positions", pct: 20, risk: "high" },
+    ]));
+  });
+
   it("handles non-integer percentages correctly via normalizeSlices", () => {
     const { slices } = adaptReservoirReserves({
       assets: [
@@ -148,6 +161,34 @@ describe("adaptReservoirReserves", () => {
       unknownAssetCount: 2,
       unknownAssetLabels: ["Mystery Adapter A", "Mystery Adapter B"],
       unknownExposurePct: (5 / 105) * 100,
+    });
+  });
+
+  it("emits a degraded warning when totalAssets exceeds disclosed asset rows", async () => {
+    const result = await fetchReservoirReserves(
+      { id: "r" } as never,
+      {
+        adapter: "reservoir",
+        version: 1,
+        semantics: "protocol-reserve",
+        inputs: { primary: { kind: "http-json", url: "https://example.com/reservoir" } },
+      },
+      new AbortController().signal,
+      {
+        requestCache: new Map([
+          ["json-get:https://example.com/reservoir:12000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
+            ...SAMPLE_RESPONSE,
+            totalAssets: "125",
+          })],
+        ]),
+      } as never,
+    );
+
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "source-total-gap", effect: "degraded" }),
+    ]));
+    expect(result.metadata).toMatchObject({
+      sourceTotalGapPct: 20,
     });
   });
 

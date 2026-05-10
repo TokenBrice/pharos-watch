@@ -66,11 +66,15 @@ const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
   "sGHO":                    { risk: "medium", ...wrapperAssetMeta("gho") },
 };
 
+const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;
+
 export interface AdaptInfiniFiResult {
   slices: ReserveSlice[];
   /** Farm names not found in FARM_RISK_MAP (for operator awareness). */
   unknownFarms: string[];
   unknownExposurePct: number;
+  sourceTotalGapPct: number;
+  excludedProtocolFarms: string[];
   activeFarmCount: number;
   immediateRedeemableUsd: number;
   supplyUsd?: number;
@@ -84,6 +88,8 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
       slices: [],
       unknownFarms: [],
       unknownExposurePct: 0,
+      sourceTotalGapPct: 0,
+      excludedProtocolFarms: [],
       activeFarmCount: 0,
       immediateRedeemableUsd: payload.data.stats.asset.totalLiquidAssetNormalized ?? 0,
       ...(payload.data.receipt?.totalSupplyNormalized != null ? { supplyUsd: payload.data.receipt.totalSupplyNormalized } : {}),
@@ -93,6 +99,12 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
   const activeFarms = payload.data.farms.filter(
     (f) => f.type !== "PROTOCOL" && f.assetsNormalized > 0,
   );
+  const excludedProtocolFarms = payload.data.farms.filter(
+    (f) => f.type === "PROTOCOL" && f.assetsNormalized > 0,
+  );
+  const activeFarmTotal = activeFarms.reduce((sum, farm) => sum + farm.assetsNormalized, 0);
+  const sourceTotalGapUsd = Math.max(0, tvl - activeFarmTotal);
+  const sourceTotalGapPct = (sourceTotalGapUsd / tvl) * 100;
 
   const unknownFarms: string[] = [];
   let unknownExposurePct = 0;
@@ -118,10 +130,22 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
     } satisfies ReserveSlice);
   }
 
+  if (sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
+    rawSlices.push({
+      name: excludedProtocolFarms.length > 0
+        ? "InfiniFi protocol-level reserve positions"
+        : "Unmapped InfiniFi TVL gap",
+      pct: sourceTotalGapPct,
+      risk: "high",
+    });
+  }
+
   return {
     slices: normalizeSlices(rawSlices),
     unknownFarms,
     unknownExposurePct,
+    sourceTotalGapPct,
+    excludedProtocolFarms: excludedProtocolFarms.map((farm) => farm.name).sort(),
     activeFarmCount: activeFarms.length,
     immediateRedeemableUsd: payload.data.stats.asset.totalLiquidAssetNormalized ?? 0,
     ...(payload.data.receipt?.totalSupplyNormalized != null ? { supplyUsd: payload.data.receipt.totalSupplyNormalized } : {}),
@@ -148,6 +172,16 @@ export async function fetchInfiniFiReserves(
         unknownExposurePct: adapted.unknownExposurePct,
       })]
     : [];
+  if (adapted.sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
+    warnings.push(buildUnknownExposureWarning({
+      code: "source-total-gap",
+      message: adapted.excludedProtocolFarms.length > 0
+        ? `InfiniFi PROTOCOL farm exposure excluded from mapped farm rows: ${adapted.excludedProtocolFarms.join(", ")}`
+        : "InfiniFi total TVL exceeds mapped active farm assets",
+      unknownExposurePct: adapted.sourceTotalGapPct,
+      thresholdPct: SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
+    }));
+  }
 
   const totalReserveUsd = payload.data.stats.asset.totalTVLAssetNormalized;
   const illiquidReserveUsd = payload.data.stats.asset.totalIlliquidAssetNormalized ?? 0;
@@ -160,6 +194,8 @@ export async function fetchInfiniFiReserves(
       activeFarmCount: adapted.activeFarmCount,
       unknownFarmCount: adapted.unknownFarms.length,
       unknownExposurePct: adapted.unknownExposurePct,
+      sourceTotalGapPct: adapted.sourceTotalGapPct,
+      ...(adapted.excludedProtocolFarms.length > 0 ? { excludedProtocolFarms: adapted.excludedProtocolFarms } : {}),
       ...unverifiedFreshnessMetadata(
         "protocol-stats-api",
         "InfiniFi protocol stats payload does not expose a trustworthy source timestamp",

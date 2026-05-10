@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   adaptUsdAiProofOfReserves,
   extractUsdAiProofPageTimestamp,
+  extractUsdAiProofPageTimestampSummary,
   fetchUsdAiProofOfReserves,
   parseUsdAiProofOfReserves,
 } from "../usdai-proof-of-reserves";
@@ -99,6 +100,20 @@ describe("usdai-proof-of-reserves adapter", () => {
     expect(timestamp).toBe(Math.floor(Date.parse("2026-04-10T03:44:09.495Z") / 1000));
   });
 
+  it("summarizes proof-page collateral update timestamps for oldest-component freshness", () => {
+    const summary = extractUsdAiProofPageTimestampSummary(
+      '\\"dealsDetailsCache\\":{\\"proofs\\":[{\\"timeLastUpdated\\":\\"2026-04-10T03:44:09.495Z\\"},'
+      + '{\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"}]}',
+    );
+
+    expect(summary).toEqual({
+      sourceTimestamp: Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000),
+      latestSourceTimestamp: Math.floor(Date.parse("2026-04-10T03:44:09.495Z") / 1000),
+      sourceTimestampSpreadSec: 28837,
+      timestampCount: 2,
+    });
+  });
+
   it("picks the latest timeLastUpdated only from the proof-row payload", () => {
     const html =
       '\\"activity\\":[{\\"timeLastUpdated\\":\\"2099-01-01T00:00:00.000Z\\"}],'
@@ -125,6 +140,33 @@ describe("usdai-proof-of-reserves adapter", () => {
       freshnessMode: "verified",
       sourceTimestamp,
     });
+  });
+
+  it("uses oldest proof-row timestamp and warns when proof-row freshness is widely spread", () => {
+    const oldest = Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000);
+    const latest = Math.floor(Date.parse("2026-04-10T03:44:09.495Z") / 1000);
+    const result = adaptUsdAiProofOfReserves(
+      parseUsdAiProofOfReserves(SAMPLE_RAW_PAYLOAD),
+      oldest,
+      {
+        sourceTimestamp: oldest,
+        latestSourceTimestamp: latest,
+        sourceTimestampSpreadSec: latest - oldest,
+        timestampCount: 2,
+      },
+    );
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: oldest,
+      oldestSourceTimestamp: oldest,
+      latestSourceTimestamp: latest,
+      sourceTimestampSpreadSec: latest - oldest,
+      sourceTimestampCount: 2,
+    });
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "source-timestamp-spread", effect: "degraded" }),
+    ]));
   });
 
   it("ignores amount-only rows when share-bearing rows already disclose the full mix", () => {

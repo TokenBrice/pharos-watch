@@ -101,6 +101,12 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
       coinId: "usdc-circle",
     },
     {
+      name: "Pending USDC",
+      value: payload.pendingUsdc ?? 0,
+      risk: "very-low",
+      coinId: "usdc-circle",
+    },
+    {
       name: "RLUSD buffer",
       value: payload.rlusdAmount ?? 0,
       risk: "low",

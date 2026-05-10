@@ -2,6 +2,7 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  decimalNumberFromBigInt,
   fetchPrimaryHtmlInput,
   htmlLayoutChangedError,
   htmlParseError,
@@ -95,9 +96,8 @@ const SYMBOL_CONFIG: Record<string, {
 
 function parseValueUsdFromWei(raw: string | undefined): number | null {
   if (!raw || !/^\d+$/.test(raw)) return null;
-  const whole = raw.length > 18 ? raw.slice(0, -18) : "0";
-  const fraction = raw.length > 18 ? raw.slice(-18) : raw.padStart(18, "0");
-  return Number(`${whole}.${fraction}`.replace(/\.$/, ""));
+  const value = decimalNumberFromBigInt(BigInt(raw), 18);
+  return Number.isFinite(value) ? value : null;
 }
 
 function parseInitialChainBreakdowns(html: string): Record<string, ReMetricsChainBreakdown> {

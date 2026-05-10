@@ -1,5 +1,5 @@
 import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildRedemptionSnapshotMetadata,
@@ -8,6 +8,7 @@ import {
   fetchOnchainUint256,
   probeOptionalRedemptionRateBps,
   requireOnchainInput,
+  reserveDegradedWarning,
 } from "./helpers";
 import {
   adaptBranchBalanceReserves,
@@ -76,7 +77,11 @@ export function buildLiquityV2RedemptionMetadata(
   const unreadableShutdownBranches = snapshot.debts
     .filter((entry) => entry.shutDown == null)
     .map((entry) => entry.entry.branch.name);
-  const routeStatus = shutdownBranches.length === 0 ? "open" : "degraded";
+  const routeStatus = shutdownBranches.length > 0
+    ? "degraded"
+    : unreadableShutdownBranches.length > 0
+      ? "unknown"
+      : "open";
   const routeStatusReason =
     shutdownBranches.length > 0
       ? `Collateral branch shutdown detected for: ${shutdownBranches.join(", ")}`
@@ -104,8 +109,24 @@ export function buildLiquityV2RedemptionMetadata(
         debtRaw: entry.debtRaw?.toString() ?? null,
         shutDown: entry.shutDown,
       })),
+      ...(unreadableShutdownBranches.length > 0 ? { unreadableShutdownBranches } : {}),
     },
   };
+}
+
+export function buildLiquityV2Warnings(
+  snapshot: LiquityV2BranchSnapshot,
+): LiveReserveWarning[] {
+  const unreadableShutdownBranches = snapshot.debts
+    .filter((entry) => entry.shutDown == null)
+    .map((entry) => entry.entry.branch.name);
+  if (unreadableShutdownBranches.length === 0) return [];
+  return [
+    reserveDegradedWarning(
+      "redemption-route-status-unreadable",
+      `Could not verify branch shutdown status for: ${unreadableShutdownBranches.join(", ")}`,
+    ),
+  ];
 }
 
 export async function fetchLiquityV2BranchReserves(
@@ -174,10 +195,15 @@ export async function fetchLiquityV2BranchReserves(
   }
 
   const priceMap = await fetchBranchPriceMap(balances, signal, ctx);
-  return adaptBranchBalanceReserves({
+  const snapshot = { balances, debts, redemptionFeeBps };
+  const result = adaptBranchBalanceReserves({
     adapterKey: ADAPTER_KEY,
     balances,
     priceMap,
-    metadata: buildLiquityV2RedemptionMetadata({ balances, debts, redemptionFeeBps }, debtDecimals),
+    metadata: buildLiquityV2RedemptionMetadata(snapshot, debtDecimals),
   });
+  const warnings = buildLiquityV2Warnings(snapshot);
+  return warnings.length > 0
+    ? { ...result, warnings: [...(result.warnings ?? []), ...warnings] }
+    : result;
 }

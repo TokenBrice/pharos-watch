@@ -91,6 +91,23 @@ describe("adaptJupUsdData", () => {
     expect(result.metadata?.unknownExposurePct).toBe(10);
   });
 
+  it("converts large raw integer holdings through bounded decimal parsing", () => {
+    const result = adaptJupUsdData({
+      holdings: [
+        {
+          name: "USDC",
+          amount: "100000000000000000000000123456",
+          decimals: 18,
+        },
+      ],
+    });
+
+    expect(result.metadata?.totalReserveUsd).toBe(100_000_000_000);
+    expect(result.slices).toEqual([
+      { name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+    ]);
+  });
+
   it("passes through extra warnings from the fetch layer", () => {
     const result = adaptJupUsdData(
       {

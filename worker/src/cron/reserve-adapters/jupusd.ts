@@ -4,6 +4,7 @@ import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildUnknownExposureWarning,
+  decimalNumberFromBigInt,
   fetchJsonWithRetry,
   normalizeSlices,
   parseTimestampLikeToUnixSeconds,
@@ -60,7 +61,8 @@ const HOLDING_META: Record<string, Pick<JupUsdHoldingValue, "risk" | "coinId" | 
 function parseAmount(amount: string | undefined, decimals: number | undefined): number {
   if (typeof amount !== "string" || !/^\d+$/.test(amount)) return 0;
   const precision = Number.isInteger(decimals) && decimals != null && decimals >= 0 ? decimals : 0;
-  return Number(amount) / (10 ** precision);
+  const parsed = decimalNumberFromBigInt(BigInt(amount), precision);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
 function resolveHoldingMeta(name: string): Pick<JupUsdHoldingValue, "risk" | "coinId" | "depType" | "unknown"> {

@@ -33,9 +33,10 @@ export function adaptSuperstateLiquidity(
   const circleUsdAvailable = parseAmount(entry.circle_usd_available_amount, "circle_usd_available_amount");
   const usdcRedemptionIdle = parseAmount(entry.usdc_redemption_idle_balance, "usdc_redemption_idle_balance");
   const capacityUsd = circleUsdAvailable + usdcRedemptionIdle;
-
-  const navSourceTimestamp =
-    navResult.metadata?.sourceTimestamp ?? navResult.metadata?.redemption?.sourceTimestamp;
+  const navDetails =
+    typeof navResult.metadata?.details === "object" && navResult.metadata.details != null
+      ? navResult.metadata.details
+      : {};
 
   return {
     ...navResult,
@@ -45,14 +46,18 @@ export function adaptSuperstateLiquidity(
       circleUsdAvailable,
       usdcRedemptionIdle,
       immediateRedeemableUsd: capacityUsd,
+      liquidityFreshnessSource: "same-run-api" as const,
       redemption: {
         capacityUsd,
         capacityKind: "live-proxy-validated" as const,
         freshnessKind: "same-run-api" as const,
-        ...(navSourceTimestamp !== undefined ? { sourceTimestamp: navSourceTimestamp } : {}),
         routeStatus: capacityUsd > 0 ? "open" as const : "paused" as const,
         routeStatusSource: "protocol-api" as const,
         sourceUrls: ["https://api.superstate.com/v1/funds/liquidity"],
+      },
+      details: {
+        ...navDetails,
+        liquidityFreshnessSource: "same-run-api",
       },
     },
   };

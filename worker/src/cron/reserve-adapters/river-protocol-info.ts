@@ -5,6 +5,7 @@ import {
   fetchJsonWithRetry,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
+  SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
   summarizeSourceTimestamps,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
@@ -42,6 +43,15 @@ export function adaptRiverProtocolInfo(payload: RiverProtocolInfoPayload): Adapt
     ...(payload.tvlData ?? []).map((point) => point.timestamp),
     ...(payload.circulatingData ?? []).map((point) => point.timestamp),
   ]);
+  if (
+    timestampSummary
+    && timestampSummary.sourceTimestampSpreadSec > SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC
+  ) {
+    warnings.push(reserveDegradedWarning(
+      "source-timestamp-spread",
+      `River protocol-info source timestamps span ${timestampSummary.sourceTimestampSpreadSec} seconds`,
+    ));
+  }
 
   return {
     slices: [
@@ -55,7 +65,7 @@ export function adaptRiverProtocolInfo(payload: RiverProtocolInfoPayload): Adapt
     metadata: {
       ...(timestampSummary
         ? {
-            ...verifiedFreshnessMetadata(timestampSummary.latestSourceTimestamp),
+            ...verifiedFreshnessMetadata(timestampSummary.sourceTimestamp),
             oldestSourceTimestamp: timestampSummary.sourceTimestamp,
             latestSourceTimestamp: timestampSummary.latestSourceTimestamp,
             sourceTimestampSpreadSec: timestampSummary.sourceTimestampSpreadSec,

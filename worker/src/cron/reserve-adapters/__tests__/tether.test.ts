@@ -65,6 +65,32 @@ describe("adaptTetherTransparency", () => {
     ).toThrow();
   });
 
+  it("throws before metadata emission when liabilities or shareholder equity are invalid", () => {
+    expect(() =>
+      adaptTetherTransparency({
+        data: {
+          usdt: {
+            total_assets: "100",
+            total_liabilities: "not-a-number",
+            shareholder_eq: "1",
+          },
+        },
+      }),
+    ).toThrow(/total_liabilities/);
+
+    expect(() =>
+      adaptTetherTransparency({
+        data: {
+          usdt: {
+            total_assets: "100",
+            total_liabilities: "99",
+            shareholder_eq: "not-a-number",
+          },
+        },
+      }),
+    ).toThrow(/shareholder_eq/);
+  });
+
   it("accepts numeric (non-string) fields", () => {
     const result = adaptTetherTransparency({
       data: {

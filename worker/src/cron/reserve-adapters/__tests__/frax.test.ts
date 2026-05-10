@@ -86,7 +86,31 @@ describe("adaptFraxBalanceSheet", () => {
     expect(result.warnings![0].message).toContain("XYZZY");
     expect(result.warnings![0].effect).toBe("info");
     const unknown = result.slices.find((s) => s.name === "Unmapped Frax balance-sheet assets");
-    expect(unknown!.risk).toBe("medium");
+    expect(unknown!.risk).toBe("high");
+  });
+
+  it("keeps source total-assets gaps explicit instead of renormalizing mapped rows", () => {
+    const result = adaptFraxBalanceSheet({
+      ...BALANCE_SHEET_SAMPLE,
+      totalAssets: 200_000_000,
+    });
+
+    expect(result.slices).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: "Unmapped Frax balance-sheet total-assets gap",
+        risk: "high",
+      }),
+    ]));
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: "source-total-gap",
+        effect: "degraded",
+      }),
+    ]));
+    expect(result.metadata).toMatchObject({
+      sourceTotalAssetsUsd: 200_000_000,
+      sourceTotalGapPct: expect.any(Number),
+    });
   });
 
   it("maps current frxUSD balance-sheet symbols from recorded fixture without degrading warnings", () => {
@@ -133,4 +157,3 @@ describe("adaptFraxBalanceSheet", () => {
     expect(result.metadata?.sourceTimestamp).toBe(1775653427);
   });
 });
-

@@ -1,5 +1,5 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import type { OnchainRateProbe } from "./helpers";
@@ -14,6 +14,7 @@ import {
   probeOnchainTotalSupply,
   requireOnchainInput,
   notApplicableFreshnessMetadata,
+  reserveDegradedWarning,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -96,6 +97,15 @@ export async function fetchSingleAssetReserves(
           "single-asset-json-probe",
           "The configured single-asset reserve probe does not include a trustworthy source timestamp",
         );
+    const collateralizationRatio = totalReserveUsd != null && supplyUsd != null && supplyUsd > 0
+      ? totalReserveUsd / supplyUsd
+      : null;
+    const warnings: LiveReserveWarning[] = collateralizationRatio != null && collateralizationRatio < 0.995
+      ? [reserveDegradedWarning(
+          "reserve-undercollateralized",
+          `Single-asset reserve probe covers ${(collateralizationRatio * 100).toFixed(2)}% of observed supply`,
+        )]
+      : [];
 
     return {
       slices: [{
@@ -105,12 +115,13 @@ export async function fetchSingleAssetReserves(
         ...(params.coinId ? { coinId: params.coinId } : {}),
         ...(params.depType ? { depType: params.depType } : {}),
       }],
+      ...(warnings.length > 0 ? { warnings } : {}),
       metadata: {
         ...freshnessMetadata,
         ...(totalReserveUsd != null ? { totalReserveUsd } : {}),
         ...(supplyUsd != null ? { supplyUsd } : {}),
-        ...(totalReserveUsd != null && supplyUsd != null && supplyUsd > 0
-          ? { collateralizationRatio: totalReserveUsd / supplyUsd }
+        ...(collateralizationRatio != null
+          ? { collateralizationRatio }
           : {}),
         ...buildRedemptionSnapshotMetadata({
           capacityKind: "documented-bound",

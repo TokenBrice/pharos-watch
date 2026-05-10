@@ -600,6 +600,40 @@ describe("fetchEvmBranchBalancesReserves", () => {
     expect(warning?.severity).toBe("warning");
   });
 
+  it("preserves wrapper depeg warnings when debt reconciliation also warns", async () => {
+    vi.mocked(fetchErc20Balance).mockResolvedValueOnce(100_000_000n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["USDC branch", 0.9]]));
+    vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(100n * 10n ** 18n);
+
+    const config: LiveReservesConfig = {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        branches: [
+          {
+            name: "USDC branch",
+            holder: "0xAAA",
+            token: { chain: "ethereum", address: "0xBBB", decimals: 6 },
+            risk: "low",
+            coinId: "usdc-circle",
+          },
+        ],
+        debtSelector: "0x18160ddd",
+        debtDecimals: 18,
+      },
+    };
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+    expect(result.warnings?.map((warning) => warning.code)).toEqual([
+      "wrapper-depeg-detected",
+      "undercollateralized",
+    ]);
+  });
+
   it("skips debt reconciliation when debtSelector is omitted", async () => {
     vi.mocked(fetchErc20Balance).mockResolvedValueOnce(1_000_000_000_000_000_000n);
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["wstETH", 2000]]));

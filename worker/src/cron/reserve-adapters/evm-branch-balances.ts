@@ -91,7 +91,9 @@ export async function fetchEvmBranchBalancesReserves(
         ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
       },
     });
-    return warnings.length > 0 ? { ...result, warnings } : result;
+    return warnings.length > 0
+      ? { ...result, warnings: [...(result.warnings ?? []), ...warnings] }
+      : result;
   }
 
   return adaptBranchBalanceReserves({
