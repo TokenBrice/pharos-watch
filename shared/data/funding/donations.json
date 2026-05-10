@@ -1,5 +1,5 @@
 {
-  "last_updated_at": 1778429107,
+  "last_updated_at": 1778429520,
   "donations": [
     {
       "chain": "ethereum",
@@ -158,6 +158,18 @@
       "price_note": "stablecoin-1-to-1"
     },
     {
+      "chain": "arbitrum",
+      "tx_hash": "0xe6a83a8d2d2a0fffdb2d6855a0cfcc688b568d77ab75aee184529b5dff6570c4",
+      "block_timestamp": 1777311211,
+      "from_address": "0xd2b8d3a60008c58c4a43e296481536a9e902971b",
+      "display": "0xd2b8d3...971b",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 0.001,
+      "usd_at_receipt": 2.37,
+      "price_note": "coingecko-historical-2026-04-27"
+    },
+    {
       "chain": "ethereum",
       "tx_hash": "0x28b97a0e8ccd4c839baf023fc0f9de1d7b7403b1d7d9ddb3d3a42afd8499550a",
       "block_timestamp": 1777319123,
@@ -312,6 +324,42 @@
       "amount_decimal": 1.5,
       "usd_at_receipt": 1.5,
       "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "arbitrum",
+      "tx_hash": "0x5147d666c6db908ba5e7835d8e45e0c7cea57cfa6dc2541d715644c5d8da2cc2",
+      "block_timestamp": 1778160368,
+      "from_address": "0x02feb744ca516fd6e41d940ae2d0f7cb6fcb1ac3",
+      "display": "rozengarden.eth",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 0.2,
+      "usd_at_receipt": 470.1,
+      "price_note": "coingecko-historical-2026-05-07"
+    },
+    {
+      "chain": "arbitrum",
+      "tx_hash": "0xcbb405969f595bd7591a7a65a67b0c84b71f8973d1a4fd57e589969a34ad94de",
+      "block_timestamp": 1778161950,
+      "from_address": "0x4d6caa3e0983fac7b514d60339ebb538c5a85aae",
+      "display": "0xalex0.eth",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 0.0024,
+      "usd_at_receipt": 5.64,
+      "price_note": "coingecko-historical-2026-05-07"
+    },
+    {
+      "chain": "arbitrum",
+      "tx_hash": "0xe8677aeae3f40887d5b60e6bba62c8399c345d50cf816669fe0ef4389cfbe23c",
+      "block_timestamp": 1778166760,
+      "from_address": "0x860714ffc0a1f8719986d9e072b69af91682527a",
+      "display": "0x860714...527a",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 0.001136,
+      "usd_at_receipt": 2.67,
+      "price_note": "coingecko-historical-2026-05-07"
     },
     {
       "chain": "ethereum",
