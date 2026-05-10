@@ -1,12 +1,16 @@
 import { TRACKED_META_BY_ID } from "./stablecoins";
-import type { RedemptionBackstopConfig } from "./redemption-backstop-configs/shared";
 import type { RedemptionBackstopEntry, RedemptionDocSource, RedemptionDocsProvenance } from "../types/redemption";
 
 type RedemptionDocs = NonNullable<RedemptionBackstopEntry["docs"]>;
 type RedemptionDocSources = NonNullable<RedemptionDocs["sources"]>;
+type RedemptionDocsConfig = {
+  reviewedAt?: string;
+  capacityModel: { kind: string };
+  docs?: RedemptionDocSource[];
+};
 
 function buildDocs(
-  config: Pick<RedemptionBackstopConfig, "reviewedAt">,
+  config: Pick<RedemptionDocsConfig, "reviewedAt">,
   provenance: RedemptionDocsProvenance,
   sources: RedemptionDocSources,
 ): RedemptionBackstopEntry["docs"] | undefined {
@@ -73,7 +77,7 @@ export function trackedRedemptionDocSources(
 
 export function resolveRedemptionDocs(
   stablecoinId: string,
-  config: RedemptionBackstopConfig,
+  config: RedemptionDocsConfig,
 ): RedemptionBackstopEntry["docs"] | undefined {
   if (config.docs && config.docs.length > 0) {
     return buildDocs(config, "config-reviewed", config.docs);
