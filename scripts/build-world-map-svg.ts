@@ -37,7 +37,7 @@ for (const feat of countries.features) {
 }
 
 const svg = [
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="img" aria-label="World map">`,
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${WIDTH} ${HEIGHT}" preserveAspectRatio="none" role="img" aria-label="World map">`,
   `<g class="world-countries" fill="var(--world-default-fill)" stroke="var(--world-stroke)" stroke-width="0.5" stroke-linejoin="round">`,
   paths.join(""),
   `</g>`,

@@ -68,13 +68,22 @@
   display: flex;
   justify-content: center;
   align-items: flex-end;
+  container-type: inline-size;
 }
 .peg-hero__map-frame {
   position: relative;
   isolation: isolate;
+  width: 100%;
   height: 100%;
   aspect-ratio: 900 / 460;
   max-width: 100%;
+}
+
+/* Keep country paths and percentage-positioned logos on the same 900x460 plane. */
+@supports (height: 100cqw) {
+  .peg-hero__map-frame {
+    height: min(100%, calc(100cqw * 460 / 900));
+  }
 }
 
 .peg-hero__scale-key {

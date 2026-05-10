@@ -42,4 +42,9 @@ describe("WorldMap", () => {
     const svg = readFileSync(resolve("public/maps/world-countries.svg"), "utf8");
     expect(svg).not.toContain('id="AQ"');
   });
+
+  it("allows the atlas to stretch the map and logo plane together", () => {
+    const svg = readFileSync(resolve("public/maps/world-countries.svg"), "utf8");
+    expect(svg).toContain('preserveAspectRatio="none"');
+  });
 });
