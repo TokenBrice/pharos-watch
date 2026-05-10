@@ -6,6 +6,9 @@
   "workspaces": [
     "worker"
   ],
+  "overrides": {
+    "postcss": "8.5.14"
+  },
   "engines": {
     "node": ">=24 <25"
   },
