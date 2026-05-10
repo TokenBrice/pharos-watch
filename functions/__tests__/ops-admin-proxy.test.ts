@@ -312,6 +312,29 @@ describe("ops admin proxy", () => {
     expect(await response.json()).toEqual({ error: "Operator API upstream timed out" });
   });
 
+  it("gives audit-depeg-history a longer proxy timeout budget", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn((_input: RequestInfo | URL, init?: RequestInit) => (
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
+        });
+      })
+    )));
+
+    const responsePromise = onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/audit-depeg-history?dry-run=true"),
+      env: BASE_ENV,
+      params: { path: "audit-depeg-history" },
+    });
+
+    await vi.advanceTimersByTimeAsync(45_000);
+
+    const response = await responsePromise;
+    expect(response.status).toBe(504);
+    expect(await response.json()).toEqual({ error: "Operator API upstream timed out" });
+  });
+
   it("keeps the default 10s proxy timeout on non-status admin routes", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("fetch", vi.fn((_input: RequestInfo | URL, init?: RequestInit) => (

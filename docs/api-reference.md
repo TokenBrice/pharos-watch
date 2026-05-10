@@ -4,7 +4,7 @@ The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 databa
 
 **Base URL:** `https://api.pharos.watch`
 
-Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` returns `image/png`, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and auth/limiter dependency failures can return `503`.
+Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` returns `image/png`, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and cold auth/limiter dependency failures can still return `503`.
 
 ## Surface Split
 
@@ -41,6 +41,8 @@ Public, non-admin routes on `https://api.pharos.watch` that do not require `X-AP
 Admin/operator routes are also outside the public API-key gate, but they remain Cloudflare-Access-gated and are supported only through `ops-api.pharos.watch` or the `ops.pharos.watch/api/admin/*` Pages proxy.
 
 The worker stores only the key prefix plus a peppered HMAC of the secret portion. Admin callers create, rotate, and deactivate keys through the operator lane (`ops.pharos.watch` / `ops-api.pharos.watch`); plaintext tokens are returned only once at creation/rotation time.
+
+For protected cacheable `GET` routes, the worker keeps a bounded isolate-local verified-key cache and a bounded isolate-local fallback limiter. During a brief D1 auth/limiter outage, a recently verified key can continue to read those cached routes; unknown or not-yet-verified keys still fail closed.
 
 ---
 
@@ -178,7 +180,7 @@ Rate-limited responses include the retry delay in the HTTP `Retry-After` header 
 
 `POST /api/feedback` also has a form-specific limiter. Its `429` body is `{ "error": "Too many submissions. Please wait a few minutes." }`, and it should be handled as a local submission throttle rather than as a public API quota response. If the feedback limiter's D1 dependency is unavailable, the endpoint returns `503 Service Unavailable` with `{ "error": "Feedback service temporarily unavailable. Please try again." }` and `Retry-After: 60`.
 
-API-key authentication and per-key limiter storage failures fail closed immediately with `503 Service Unavailable`, `{ "error": "Public API temporarily unavailable" }`, and `Retry-After: 60`. Best-effort API-key usage timestamp updates do not fail otherwise successful reads.
+API-key authentication and per-key limiter storage normally rely on D1. For protected cacheable `GET` routes, the worker can continue serving a recently verified key during a brief D1 outage by reusing its bounded verified-key cache and a bounded isolate-local fallback limiter. Unknown or not-yet-verified keys still fail closed with `503 Service Unavailable`, `{ "error": "Public API temporarily unavailable" }`, and `Retry-After: 60`. Best-effort API-key usage timestamp updates do not fail otherwise successful reads.
 
 ### Retry Guidance
 
@@ -200,7 +202,7 @@ JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` retu
 | 429    | Too Many Requests     | Rate limit exceeded (per-key public API limiter or feedback-specific limiter; feedback uses its own message body)                                                               |
 | 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                                                                                                                       |
 | 502    | Bad Gateway           | Upstream fetch failed (external data provider or Pages proxy upstream), or the ops proxy received a Cloudflare Access login redirect from `ops-api` |
-| 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated, cached payload is corrupt / rejected by validation, limiter storage fails closed after repeated D1 errors, feedback limiter/storage dependency failure, or `MAINTENANCE_MODE=true` (global kill switch via `wrangler secret put`) |
+| 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated, cached payload is corrupt / rejected by validation, a protected public API request cannot be authenticated from D1 or the recent verified-key cache, the feedback limiter/storage dependency fails, or `MAINTENANCE_MODE=true` (global kill switch via `wrangler secret put`) |
 | 504    | Gateway Timeout       | Pages `/_site-data/*` or `/api/admin/*` proxy timed out waiting for its Worker upstream (10 s default; 20 s for ops `/api/status` and `/api/status-history`) |
 
 **Rule:** Cache-passthrough handlers return **503** when data hasn't been populated yet or when the stored cache payload is malformed and rejected at read time. Query handlers that find no matching rows return **200** with empty results (e.g., `{ events: [], total: 0 }`). When `MAINTENANCE_MODE` is set to `"true"`, all non-`OPTIONS` requests immediately return `503` with `{ "error": "maintenance", "message": "..." }` — used during DB migrations. `OPTIONS` CORS preflights are handled before the maintenance gate.
@@ -3321,7 +3323,7 @@ The same endpoint also supports dry-run historical repair previews:
 
 | Param        | Type      | Default  | Description                              |
 | ------------ | --------- | -------- | ---------------------------------------- |
-| `limit`      | `integer` | `200`    | Max events to audit                      |
+| `limit`      | `integer` | `25`     | Max events or repair candidates to inspect per request (`max 25`) |
 | `offset`     | `integer` | `0`      | Pagination offset                        |
 | `dry-run`    | `"true"`  | required | Must be exactly `"true"` for `GET`       |
 | `min-supply` | `number`  | `0`      | Minimum supply (USD) to include in audit |
@@ -3341,6 +3343,7 @@ When a repair group ends in a live row, the live tail is kept as the canonical r
 
 `POST /api/audit-depeg-history?repair=contradictory-recovery-price` instead nulls ended-event `recovery_price` values that still sit outside the permitted depeg threshold. This is the bounded repair path for legacy rows closed by a native-quote recovery while the stored USD price still looked depegged.
 
+Mutating delete/repair runs and false-positive deletes stage any required PSI stability-index recompute into the same D1 batch commit. If that commit fails, the endpoint now returns `500` with a specific error and does not leave a partial delete/repair behind.
 
 `GET` is accepted only with `dry-run=true`; mutating audits require `POST`.
 
@@ -3348,7 +3351,7 @@ When a repair group ends in a live row, the live tail is kept as the canonical r
 
 | Param        | Type      | Default | Description                                                                                    |
 | ------------ | --------- | ------- | ---------------------------------------------------------------------------------------------- |
-| `limit`      | `integer` | `200`   | Max events to audit                                                                            |
+| `limit`      | `integer` | `25`    | Max events or repair candidates to process per request (`max 25`)                             |
 | `offset`     | `integer` | `0`     | Pagination offset                                                                              |
 | `delete`     | `string`  | —       | Comma-separated event IDs to delete directly (skips CG audit)                                  |
 | `dry-run`    | `"true"`  | —       | When `"true"`, preview deletions without touching DB. Default behavior deletes false positives |

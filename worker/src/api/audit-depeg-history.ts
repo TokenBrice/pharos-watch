@@ -4,7 +4,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { getDepegThresholdBps, DEPEG_SECONDARY_THRESHOLD_RATIO, USER_AGENT } from "../lib/constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { computeStabilityIndex } from "../lib/stability-index";
-import { batchExecute } from "../lib/db";
+import { buildInClause } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import type { DepegRow } from "../lib/depeg-helpers";
 import {
@@ -27,7 +27,11 @@ type RepairMode = "synthetic-splits" | "contradictory-recovery-price";
 const SYNTHETIC_SPLIT_MAX_GAP_SEC = 30 * 60;
 const SYNTHETIC_SPLIT_RECOVERY_BAR_BPS = 50;
 const SYNTHETIC_SPLIT_RESUME_MIN_BPS = 500;
+const AUDIT_DEPEG_HISTORY_DEFAULT_LIMIT = 25;
+const AUDIT_DEPEG_HISTORY_MAX_LIMIT = 25;
 const DELETE_ID_PATTERN = /^\d+$/;
+
+class AuditMutationCommitError extends Error {}
 
 interface AuditedEvent {
   id: number;
@@ -253,6 +257,164 @@ function summarizeContradictoryRecoveryEvent(event: DepegRow): ContradictoryReco
   };
 }
 
+async function loadRemainingDepegEvents(
+  db: D1Database,
+  excludedIds: readonly number[] = [],
+): Promise<PsiDepegEventRow[]> {
+  const baseSql = "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events";
+  const orderBy = " ORDER BY started_at";
+  if (excludedIds.length === 0) {
+    const rows = await db.prepare(`${baseSql}${orderBy}`).all<PsiDepegEventRow>();
+    return rows.results ?? [];
+  }
+
+  const idClause = buildInClause(excludedIds);
+  const rows = await db
+    .prepare(`${baseSql} WHERE id NOT IN (${idClause.sql})${orderBy}`)
+    .bind(...idClause.binds)
+    .all<PsiDepegEventRow>();
+  return rows.results ?? [];
+}
+
+function projectSyntheticSplitDepegEvents(
+  events: DepegRow[],
+  repairedGroups: DepegRow[][],
+): PsiDepegEventRow[] {
+  const removedIds = new Set<number>();
+  const updatedRows = new Map<number, PsiDepegEventRow>();
+
+  for (const group of repairedGroups) {
+    const keeper = pickSyntheticSplitKeeper(group);
+    const first = group[0];
+    const tail = group[group.length - 1];
+    let worst = keeper;
+    for (const row of group) {
+      if (Math.abs(row.peak_deviation_bps) > Math.abs(worst.peak_deviation_bps)) {
+        worst = row;
+      }
+      if (row.id !== keeper.id) {
+        removedIds.add(row.id);
+      }
+    }
+
+    updatedRows.set(keeper.id, {
+      stablecoin_id: keeper.stablecoin_id,
+      peak_deviation_bps: worst.peak_deviation_bps,
+      peg_reference: first.peg_reference,
+      started_at: first.started_at,
+      ended_at: tail.ended_at,
+    });
+  }
+
+  const projected: PsiDepegEventRow[] = [];
+  for (const row of events) {
+    if (removedIds.has(row.id)) {
+      continue;
+    }
+    projected.push(
+      updatedRows.get(row.id) ?? {
+        stablecoin_id: row.stablecoin_id,
+        peak_deviation_bps: row.peak_deviation_bps,
+        peg_reference: row.peg_reference,
+        started_at: row.started_at,
+        ended_at: row.ended_at,
+      },
+    );
+  }
+
+  projected.sort((a, b) => a.started_at - b.started_at);
+  return projected;
+}
+
+async function buildRecomputeStabilityStatements(
+  db: D1Database,
+  affectedDays: Set<number>,
+  depegEvents: PsiDepegEventRow[],
+): Promise<{ statements: D1PreparedStatement[]; daysRecomputed: number }> {
+  if (affectedDays.size === 0) {
+    return { statements: [], daysRecomputed: 0 };
+  }
+
+  const sortedDays = [...affectedDays].sort((a, b) => a - b);
+  const now = Math.floor(Date.now() / 1000);
+  const allSupply = await db
+    .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date")
+    .all<PsiSupplyRow>();
+  const supplyByCoin = buildSupplySnapshotMap(allSupply.results ?? []);
+
+  const statements: D1PreparedStatement[] = [];
+  let daysRecomputed = 0;
+
+  for (const day of sortedDays) {
+    const input = buildStabilityInputForDay(day, now, depegEvents, supplyByCoin);
+    const indexResult = computeStabilityIndex({
+      depegs: input.depegs,
+      totalMcapUsd: input.totalMcapUsd,
+      mcap7dChangePct: input.mcap7dChangePct,
+    });
+    if (!indexResult) {
+      continue;
+    }
+
+    const methodologyVersion = getPsiMethodologyVersionAt(day);
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(computed_at) DO UPDATE SET
+           score = excluded.score,
+           band = excluded.band,
+           components = excluded.components,
+           input_snapshot = excluded.input_snapshot,
+           methodology_version = excluded.methodology_version`,
+        )
+        .bind(
+          day,
+          indexResult.score,
+          indexResult.band,
+          JSON.stringify(indexResult.components),
+          JSON.stringify({
+            depegCount: input.depegCount,
+            totalMcapUsd: input.totalMcapUsd,
+            mcap7dChangePct: input.mcap7dChangePct,
+            methodologyVersion,
+          }),
+          methodologyVersion,
+        ),
+    );
+    daysRecomputed++;
+  }
+
+  return { statements, daysRecomputed };
+}
+
+async function commitAuditMutation(
+  db: D1Database,
+  mutationStatements: D1PreparedStatement[],
+  failureMessage: string,
+  recomputePlan?: { affectedDays: Set<number>; remainingDepegEvents: PsiDepegEventRow[] },
+): Promise<number> {
+  const recompute = recomputePlan
+    ? await buildRecomputeStabilityStatements(db, recomputePlan.affectedDays, recomputePlan.remainingDepegEvents)
+    : { statements: [], daysRecomputed: 0 };
+  const statements = [...mutationStatements, ...recompute.statements];
+  if (statements.length === 0) {
+    return recompute.daysRecomputed;
+  }
+
+  try {
+    // D1 batches execute as a single SQL transaction; keep the mutation and
+    // any downstream PSI repairs in the same commit boundary for admin runs.
+    await db.batch(statements);
+  } catch (error) {
+    console.error(`[audit] ${failureMessage}:`, error);
+    throw new AuditMutationCommitError(`${failureMessage}; no changes were committed.`);
+  }
+
+  return recompute.daysRecomputed;
+}
+
 export async function handleAuditDepegHistory(
   db: D1Database,
   url: URL,
@@ -262,226 +424,248 @@ export async function handleAuditDepegHistory(
   return withAdmin(
     request,
     async () => {
-      // Pagination + supply filter
-      const parsed = parseQueryParams(url.searchParams, {
-        limit: { type: "int", default: 200, min: 1, max: 100_000 },
-        offset: { type: "int", default: 0, min: 0, max: 100_000 },
-        "min-supply": { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER, name: "min-supply" },
-      });
-      if (parsed instanceof Response) return parsed;
-      const { limit, offset } = parsed;
-      const minSupply = parsed["min-supply"];
-      // Direct delete: ?delete=ID1,ID2 skips CG checks and deletes specified events
-      const deleteParam = url.searchParams.get("delete");
-      const hasDeleteParam = deleteParam != null;
-      const repairModeRaw = url.searchParams.get("repair");
-      const repairMode: RepairMode | null =
-        repairModeRaw === "synthetic-splits"
-          ? "synthetic-splits"
-          : repairModeRaw === "contradictory-recovery-price"
-            ? "contradictory-recovery-price"
-            : null;
-      if (repairModeRaw && repairMode == null) {
-        return errorResponse(400, `Unsupported repair mode: ${repairModeRaw}`);
-      }
-      if (hasDeleteParam && repairMode) {
-        return errorResponse(400, "Use either delete=... or repair=..., not both");
-      }
-      // Dry run: preview deletions without touching the DB
-      const dryRun = url.searchParams.get("dry-run") === "true";
-      const method = request?.method ?? "GET";
-      if (method === "GET" && !dryRun) {
-        return new Response(
-          JSON.stringify({ error: "Method not allowed. GET supports dry-run=true only; use POST for mutations." }),
-          { status: 405, headers: { "Content-Type": "application/json", Allow: "POST" } },
-        );
-      }
-      // Optional symbol filter: ?symbol=USDC (case-insensitive)
-      const symbolFilter = url.searchParams.get("symbol")?.toUpperCase() ?? null;
-      const deleteIds = deleteParam == null ? null : parseDeleteIds(deleteParam);
-      if (deleteIds instanceof Response) return deleteIds;
-
-      // 1. Query closed depeg events
-      // Apply pagination only for the default audit path. The delete path
-      // targets events by ID (doesn't need the full set), and the repair path
-      // has its own separate query at line 290.
-      const usePagination = deleteIds == null && !repairMode;
-      const eventsSql = "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at"
-        + (usePagination ? " LIMIT ? OFFSET ?" : "");
-      const eventsStmt = usePagination
-        ? db.prepare(eventsSql).bind(limit, offset)
-        : db.prepare(eventsSql);
-      const allEvents = await eventsStmt.all<DepegRow>();
-      const events = allEvents.results ?? [];
-
-      // Fast path: direct delete of specific event IDs (pre-verified externally)
-      if (deleteIds) {
-        const toDelete = events.filter((e) => deleteIds.includes(e.id));
-        if (toDelete.length === 0) {
-          return errorResponse(404, "No matching events found");
+      try {
+        // Pagination + supply filter
+        const parsed = parseQueryParams(url.searchParams, {
+          limit: {
+            type: "int",
+            default: AUDIT_DEPEG_HISTORY_DEFAULT_LIMIT,
+            min: 1,
+            max: AUDIT_DEPEG_HISTORY_MAX_LIMIT,
+            rangePolicy: "reject",
+          },
+          offset: { type: "int", default: 0, min: 0, max: 100_000 },
+          "min-supply": { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER, name: "min-supply" },
+        });
+        if (parsed instanceof Response) return parsed;
+        const { limit, offset } = parsed;
+        const minSupply = parsed["min-supply"];
+        // Direct delete: ?delete=ID1,ID2 skips CG checks and deletes specified events
+        const deleteParam = url.searchParams.get("delete");
+        const hasDeleteParam = deleteParam != null;
+        const repairModeRaw = url.searchParams.get("repair");
+        const repairMode: RepairMode | null =
+          repairModeRaw === "synthetic-splits"
+            ? "synthetic-splits"
+            : repairModeRaw === "contradictory-recovery-price"
+              ? "contradictory-recovery-price"
+              : null;
+        if (repairModeRaw && repairMode == null) {
+          return errorResponse(400, `Unsupported repair mode: ${repairModeRaw}`);
         }
+        if (hasDeleteParam && repairMode) {
+          return errorResponse(400, "Use either delete=... or repair=..., not both");
+        }
+        // Dry run: preview deletions without touching the DB
+        const dryRun = url.searchParams.get("dry-run") === "true";
+        const method = request?.method ?? "GET";
+        if (method === "GET" && !dryRun) {
+          return new Response(
+            JSON.stringify({ error: "Method not allowed. GET supports dry-run=true only; use POST for mutations." }),
+            { status: 405, headers: { "Content-Type": "application/json", Allow: "POST" } },
+          );
+        }
+        // Optional symbol filter: ?symbol=USDC (case-insensitive)
+        const symbolFilter = url.searchParams.get("symbol")?.toUpperCase() ?? null;
+        const deleteIds = deleteParam == null ? null : parseDeleteIds(deleteParam);
+        if (deleteIds instanceof Response) return deleteIds;
 
-        if (dryRun) {
+        const allClosedEvents = await db
+          .prepare(
+            "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at",
+          )
+          .all<DepegRow>();
+        const events = allClosedEvents.results ?? [];
+
+        // Fast path: direct delete of specific event IDs (pre-verified externally)
+        if (deleteIds) {
+          const toDelete = events.filter((e) => deleteIds.includes(e.id));
+          if (toDelete.length === 0) {
+            return errorResponse(404, "No matching events found");
+          }
+
+          if (dryRun) {
+            return jsonResponse({
+              dryRun: true,
+              deletedEvents: toDelete.map((e) => ({
+                id: e.id,
+                symbol: e.symbol,
+                startedAt: e.started_at,
+                peakBps: e.peak_deviation_bps,
+              })),
+              daysRecomputed: 0,
+            });
+          }
+
+          const affectedDays = new Set<number>();
+          const deleteStatements = toDelete.map((event) => {
+            const startDay = Math.floor(event.started_at / DAY_SECONDS) * DAY_SECONDS;
+            const endDay = Math.floor((event.ended_at ?? event.started_at) / DAY_SECONDS) * DAY_SECONDS;
+            for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
+              affectedDays.add(day);
+            }
+            console.log(`[audit] Direct delete: ${event.symbol} id=${event.id} peak=${event.peak_deviation_bps}bps`);
+            return db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(event.id);
+          });
+          const remainingDepegEvents = await loadRemainingDepegEvents(db, toDelete.map((event) => event.id));
+          const daysRecomputed = await commitAuditMutation(
+            db,
+            deleteStatements,
+            "Direct delete failed before the stability-index repair could finish",
+            { affectedDays, remainingDepegEvents },
+          );
+
           return jsonResponse({
-            dryRun: true,
+            dryRun: false,
             deletedEvents: toDelete.map((e) => ({
               id: e.id,
               symbol: e.symbol,
               startedAt: e.started_at,
               peakBps: e.peak_deviation_bps,
             })),
-            daysRecomputed: 0,
+            daysRecomputed,
           });
         }
 
-        const affectedDays = new Set<number>();
-        for (const event of toDelete) {
-          await db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(event.id).run();
-          const startDay = Math.floor(event.started_at / DAY_SECONDS) * DAY_SECONDS;
-          const endDay = Math.floor((event.ended_at ?? event.started_at) / DAY_SECONDS) * DAY_SECONDS;
-          for (let d = startDay; d <= endDay; d += DAY_SECONDS) {
-            affectedDays.add(d);
-          }
-          console.log(`[audit] Direct delete: ${event.symbol} id=${event.id} peak=${event.peak_deviation_bps}bps`);
-        }
-
-        const daysRecomputed = await recomputeStabilityDays(db, affectedDays);
-
-        return jsonResponse({
-          dryRun: false,
-          deletedEvents: toDelete.map((e) => ({
-            id: e.id,
-            symbol: e.symbol,
-            startedAt: e.started_at,
-            peakBps: e.peak_deviation_bps,
-          })),
-          daysRecomputed,
-        });
-      }
-
-      if (repairMode === "synthetic-splits") {
-        const liveAndClosedOrOpen = await db
-          .prepare(
-            "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events ORDER BY stablecoin_id, started_at",
-          )
-          .all<DepegRow>();
-        const groupedCandidates = collectSyntheticSplitGroups(
-          (liveAndClosedOrOpen.results ?? []).filter((event) =>
-            symbolFilter ? event.symbol.toUpperCase() === symbolFilter : true,
-          ),
-        );
-        const paginatedGroups = groupedCandidates.slice(offset, offset + limit);
-        const result: SyntheticSplitRepairResult = {
-          repair: repairMode,
-          totalMatching: groupedCandidates.length,
-          offset,
-          limit,
-          dryRun,
-          candidateGroups: paginatedGroups.map((group) => summarizeSyntheticSplitGroup(group)),
-          repairedGroups: [],
-          repairedEventCount: 0,
-          daysRecomputed: 0,
-        };
-
-        if (dryRun || paginatedGroups.length === 0) {
-          return jsonResponse(result);
-        }
-
-        const affectedDays = new Set<number>();
-        const stmts: D1PreparedStatement[] = [];
-        const now = Math.floor(Date.now() / 1000);
-
-        for (const group of paginatedGroups) {
-          const summary = summarizeSyntheticSplitGroup(group);
-          const keeper = pickSyntheticSplitKeeper(group);
-          const first = group[0];
-          const tail = group[group.length - 1];
-          let worst = keeper;
-          for (const row of group) {
-            if (Math.abs(row.peak_deviation_bps) > Math.abs(worst.peak_deviation_bps)) {
-              worst = row;
-            }
-          }
-
-          stmts.push(
-            db
-              .prepare(
-                "UPDATE depeg_events SET started_at = ?, start_price = ?, peg_reference = ?, peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ? WHERE id = ?",
-              )
-              .bind(
-                first.started_at,
-                first.start_price,
-                first.peg_reference,
-                worst.peak_deviation_bps,
-                worst.peak_price ?? worst.start_price,
-                tail.ended_at,
-                tail.ended_at == null ? null : tail.recovery_price,
-                keeper.id,
-              ),
+        if (repairMode === "synthetic-splits") {
+          const liveAndClosedOrOpen = await db
+            .prepare(
+              "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events ORDER BY stablecoin_id, started_at",
+            )
+            .all<DepegRow>();
+          const allRows = liveAndClosedOrOpen.results ?? [];
+          const groupedCandidates = collectSyntheticSplitGroups(
+            allRows.filter((event) =>
+              symbolFilter ? event.symbol.toUpperCase() === symbolFilter : true,
+            ),
           );
-          for (const row of group) {
-            if (row.id === keeper.id) continue;
-            stmts.push(db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(row.id));
+          const paginatedGroups = groupedCandidates.slice(offset, offset + limit);
+          const result: SyntheticSplitRepairResult = {
+            repair: repairMode,
+            totalMatching: groupedCandidates.length,
+            offset,
+            limit,
+            dryRun,
+            candidateGroups: paginatedGroups.map((group) => summarizeSyntheticSplitGroup(group)),
+            repairedGroups: [],
+            repairedEventCount: 0,
+            daysRecomputed: 0,
+          };
+
+          if (dryRun || paginatedGroups.length === 0) {
+            return jsonResponse(result);
           }
 
-          const startDay = Math.floor(summary.startedAt / DAY_SECONDS) * DAY_SECONDS;
-          const endTs = summary.endedAt ?? now;
-          const endDay = Math.floor(endTs / DAY_SECONDS) * DAY_SECONDS;
-          for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
-            affectedDays.add(day);
+          const affectedDays = new Set<number>();
+          const stmts: D1PreparedStatement[] = [];
+          const now = Math.floor(Date.now() / 1000);
+
+          for (const group of paginatedGroups) {
+            const summary = summarizeSyntheticSplitGroup(group);
+            const keeper = pickSyntheticSplitKeeper(group);
+            const first = group[0];
+            const tail = group[group.length - 1];
+            let worst = keeper;
+            for (const row of group) {
+              if (Math.abs(row.peak_deviation_bps) > Math.abs(worst.peak_deviation_bps)) {
+                worst = row;
+              }
+            }
+
+            stmts.push(
+              db
+                .prepare(
+                  "UPDATE depeg_events SET started_at = ?, start_price = ?, peg_reference = ?, peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ? WHERE id = ?",
+                )
+                .bind(
+                  first.started_at,
+                  first.start_price,
+                  first.peg_reference,
+                  worst.peak_deviation_bps,
+                  worst.peak_price ?? worst.start_price,
+                  tail.ended_at,
+                  tail.ended_at == null ? null : tail.recovery_price,
+                  keeper.id,
+                ),
+            );
+            for (const row of group) {
+              if (row.id === keeper.id) continue;
+              stmts.push(db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(row.id));
+            }
+
+            const startDay = Math.floor(summary.startedAt / DAY_SECONDS) * DAY_SECONDS;
+            const endTs = summary.endedAt ?? now;
+            const endDay = Math.floor(endTs / DAY_SECONDS) * DAY_SECONDS;
+            for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
+              affectedDays.add(day);
+            }
+
+            result.repairedGroups.push(summary);
+            result.repairedEventCount += summary.mergedIds.length;
           }
 
-          result.repairedGroups.push(summary);
-          result.repairedEventCount += summary.mergedIds.length;
-        }
-
-        await batchExecute(db, stmts);
-        if (affectedDays.size > 0) {
-          result.daysRecomputed = await recomputeStabilityDays(db, affectedDays);
-        }
-        return jsonResponse(result);
-      }
-
-      if (repairMode === "contradictory-recovery-price") {
-        const filteredCandidates = events
-          .filter((event) => (symbolFilter ? event.symbol.toUpperCase() === symbolFilter : true))
-          .map((event) => summarizeContradictoryRecoveryEvent(event))
-          .filter((event): event is ContradictoryRecoveryRepairSummary => event !== null);
-        const paginatedCandidates = filteredCandidates.slice(offset, offset + limit);
-        const result: ContradictoryRecoveryRepairResult = {
-          repair: repairMode,
-          totalMatching: filteredCandidates.length,
-          offset,
-          limit,
-          dryRun,
-          candidateEvents: paginatedCandidates,
-          repairedEvents: [],
-          repairedEventCount: 0,
-        };
-
-        if (dryRun || paginatedCandidates.length === 0) {
+          result.daysRecomputed = await commitAuditMutation(
+            db,
+            stmts,
+            "Synthetic split repair failed before the stability-index repair could finish",
+            {
+              affectedDays,
+              remainingDepegEvents: projectSyntheticSplitDepegEvents(allRows, paginatedGroups),
+            },
+          );
           return jsonResponse(result);
         }
 
-        const stmts = paginatedCandidates.map((candidate) =>
-          db.prepare("UPDATE depeg_events SET recovery_price = NULL WHERE id = ?").bind(candidate.id)
-        );
-        await batchExecute(db, stmts);
-        result.repairedEvents = paginatedCandidates;
-        result.repairedEventCount = paginatedCandidates.length;
+        if (repairMode === "contradictory-recovery-price") {
+          const filteredCandidates = events
+            .filter((event) => (symbolFilter ? event.symbol.toUpperCase() === symbolFilter : true))
+            .map((event) => summarizeContradictoryRecoveryEvent(event))
+            .filter((event): event is ContradictoryRecoveryRepairSummary => event !== null);
+          const paginatedCandidates = filteredCandidates.slice(offset, offset + limit);
+          const result: ContradictoryRecoveryRepairResult = {
+            repair: repairMode,
+            totalMatching: filteredCandidates.length,
+            offset,
+            limit,
+            dryRun,
+            candidateEvents: paginatedCandidates,
+            repairedEvents: [],
+            repairedEventCount: 0,
+          };
+
+          if (dryRun || paginatedCandidates.length === 0) {
+            return jsonResponse(result);
+          }
+
+          const stmts = paginatedCandidates.map((candidate) =>
+            db.prepare("UPDATE depeg_events SET recovery_price = NULL WHERE id = ?").bind(candidate.id)
+          );
+          await commitAuditMutation(
+            db,
+            stmts,
+            "Contradictory recovery-price repair failed",
+          );
+          result.repairedEvents = paginatedCandidates;
+          result.repairedEventCount = paginatedCandidates.length;
+          return jsonResponse(result);
+        }
+
+        const result = await auditEvents(db, {
+          events,
+          minSupply,
+          symbolFilter,
+          offset,
+          limit,
+          dryRun,
+        });
+
         return jsonResponse(result);
+      } catch (error) {
+        if (error instanceof AuditMutationCommitError) {
+          return errorResponse(500, error.message);
+        }
+        throw error;
       }
-
-      const result = await auditEvents(db, {
-        events,
-        minSupply,
-        symbolFilter,
-        offset,
-        limit,
-        dryRun,
-      });
-
-      return jsonResponse(result);
     },
     trustedAdmin,
   );
@@ -561,6 +745,8 @@ export async function auditEvents(
     : undefined;
 
   const affectedDays = new Set<number>();
+  const deleteStatements: D1PreparedStatement[] = [];
+  const deletedIds: number[] = [];
 
   for (const event of paginatedEvents) {
     const meta = TRACKED_META_BY_ID.get(event.stablecoin_id);
@@ -665,7 +851,8 @@ export async function auditEvents(
         });
 
         if (!dryRun) {
-          await db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(event.id).run();
+          deleteStatements.push(db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(event.id));
+          deletedIds.push(event.id);
           result.deletedEvents.push({
             id: event.id,
             symbol: event.symbol,
@@ -708,76 +895,15 @@ export async function auditEvents(
     }
   }
 
-  // Recompute stability index for affected days
-  if (affectedDays.size > 0) {
-    result.daysRecomputed = await recomputeStabilityDays(db, affectedDays);
+  if (!dryRun && deleteStatements.length > 0) {
+    const remainingDepegEvents = await loadRemainingDepegEvents(db, deletedIds);
+    result.daysRecomputed = await commitAuditMutation(
+      db,
+      deleteStatements,
+      "False-positive audit delete failed before the stability-index repair could finish",
+      { affectedDays, remainingDepegEvents },
+    );
   }
 
   return result;
-}
-
-/** Recompute stability index for a set of affected days after event deletions */
-async function recomputeStabilityDays(db: D1Database, affectedDays: Set<number>): Promise<number> {
-  const sortedDays = [...affectedDays].sort((a, b) => a - b);
-  const now = Math.floor(Date.now() / 1000);
-  let recomputedCount = 0;
-
-  const remainingDepegs = await db
-    .prepare(
-      "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events ORDER BY started_at",
-    )
-    .all<PsiDepegEventRow>();
-  const depegEvents = remainingDepegs.results ?? [];
-
-  const allSupply = await db
-    .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date")
-    .all<PsiSupplyRow>();
-  const supplyByCoin = buildSupplySnapshotMap(allSupply.results ?? []);
-
-  const stmts: D1PreparedStatement[] = [];
-
-  for (const day of sortedDays) {
-    const input = buildStabilityInputForDay(day, now, depegEvents, supplyByCoin);
-
-    const indexResult = computeStabilityIndex({
-      depegs: input.depegs,
-      totalMcapUsd: input.totalMcapUsd,
-      mcap7dChangePct: input.mcap7dChangePct,
-    });
-    if (!indexResult) {
-      continue;
-    }
-    const methodologyVersion = getPsiMethodologyVersionAt(day);
-
-    stmts.push(
-      db
-        .prepare(
-          `INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
-         VALUES (?, ?, ?, ?, ?, ?)
-         ON CONFLICT(computed_at) DO UPDATE SET
-           score = excluded.score,
-           band = excluded.band,
-           components = excluded.components,
-           input_snapshot = excluded.input_snapshot,
-           methodology_version = excluded.methodology_version`,
-        )
-        .bind(
-          day,
-          indexResult.score,
-          indexResult.band,
-          JSON.stringify(indexResult.components),
-          JSON.stringify({
-            depegCount: input.depegCount,
-            totalMcapUsd: input.totalMcapUsd,
-            mcap7dChangePct: input.mcap7dChangePct,
-            methodologyVersion,
-          }),
-          methodologyVersion,
-        ),
-    );
-    recomputedCount++;
-  }
-
-  await batchExecute(db, stmts);
-  return recomputedCount;
 }

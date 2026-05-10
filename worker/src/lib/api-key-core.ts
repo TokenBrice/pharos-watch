@@ -21,7 +21,8 @@ const API_KEY_NAME_MAX_LENGTH = 80;
 const API_KEY_OWNER_EMAIL_MAX_LENGTH = 200;
 const API_KEY_TIER_MAX_LENGTH = 40;
 const API_KEY_TRAFFIC_CLASS_DEFAULT: ApiKeyTrafficClass = "external";
-const API_KEY_CACHE_TTL_MS = 5_000;
+const API_KEY_AUTH_CACHE_TTL_MS = 300_000;
+const API_KEY_AUTH_CACHE_STALE_TTL_MS = 900_000;
 const API_KEY_USAGE_UPDATE_WINDOW_SEC = 120;
 const API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER = 10;
 
@@ -65,8 +66,14 @@ export interface ApiKeyRow {
 export type ApiKeyPublicRow = Omit<ApiKeyRow, "secret_hash">;
 
 interface CachedApiKeyEntry {
-  cacheExpiresAt: number;
-  row: ApiKeyRow | null;
+  freshUntilMs: number;
+  staleUntilMs: number;
+  row: ApiKeyRow;
+}
+
+interface IsolateLocalApiKeyRateLimitEntry {
+  bucketStart: number;
+  count: number;
 }
 
 export interface ParsedApiKeyToken {
@@ -155,6 +162,7 @@ export function buildPublicApiKeyReturningClause(): string {
 const _ak = new IsolateLocalState(() => ({
   apiKeyCache: new Map<string, CachedApiKeyEntry>(),
   apiKeyLastUsageUpdateById: new Map<number, number>(),
+  apiKeyFallbackRateLimitById: new Map<number, IsolateLocalApiKeyRateLimitEntry>(),
   lastApiKeyRateLimitPruneBucket: null as number | null,
   pendingApiKeyPrune: null as Promise<void> | null,
 }));
@@ -354,11 +362,32 @@ export function clearApiKeyCache(keyPrefix: string): void {
   getApiKeyRuntimeState().apiKeyCache.delete(keyPrefix);
 }
 
-export async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Promise<ApiKeyRow | null> {
-  const now = Date.now();
+export function getCachedApiKeyByPrefix(
+  keyPrefix: string,
+  options: { allowStale?: boolean; nowMs?: number } = {},
+): ApiKeyRow | null {
+  const nowMs = options.nowMs ?? Date.now();
   const cached = getApiKeyRuntimeState().apiKeyCache.get(keyPrefix);
-  if (cached && cached.cacheExpiresAt > now) {
+  if (!cached) {
+    return null;
+  }
+  if (cached.freshUntilMs > nowMs) {
     return cached.row;
+  }
+  if (options.allowStale && cached.staleUntilMs > nowMs) {
+    return cached.row;
+  }
+  if (cached.staleUntilMs <= nowMs) {
+    getApiKeyRuntimeState().apiKeyCache.delete(keyPrefix);
+  }
+  return null;
+}
+
+export async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Promise<ApiKeyRow | null> {
+  const nowMs = Date.now();
+  const cached = getCachedApiKeyByPrefix(keyPrefix, { nowMs });
+  if (cached) {
+    return cached;
   }
 
   const row = await db.prepare(buildPrivateApiKeySelectQueryWithPepper("WHERE key_prefix = ?"))
@@ -367,7 +396,8 @@ export async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Pro
 
   if (row) {
     getApiKeyRuntimeState().apiKeyCache.set(keyPrefix, {
-      cacheExpiresAt: now + API_KEY_CACHE_TTL_MS,
+      freshUntilMs: nowMs + API_KEY_AUTH_CACHE_TTL_MS,
+      staleUntilMs: nowMs + API_KEY_AUTH_CACHE_STALE_TTL_MS,
       row,
     });
   }
@@ -512,4 +542,12 @@ export function getApiKeyUsageUpdateWindowSec(): number {
 
 export function getApiKeyRateLimitPruneWindowMultiplier(): number {
   return API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER;
+}
+
+export function getApiKeyAuthCacheTtlMs(): number {
+  return API_KEY_AUTH_CACHE_TTL_MS;
+}
+
+export function getApiKeyAuthCacheStaleTtlMs(): number {
+  return API_KEY_AUTH_CACHE_STALE_TTL_MS;
 }

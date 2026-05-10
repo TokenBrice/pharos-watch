@@ -40,6 +40,7 @@ import { MUTATING_METHODS, X_PHAROS_ADMIN_HEADER } from "@shared/lib/admin-gate"
 const ACCESS_SESSION_COOKIE = "CF_Authorization";
 const EXTENDED_STATUS_PROXY_PATHS = new Set(["/api/status", "/api/status-history"]);
 const OPS_STATUS_PROXY_TIMEOUT_MS = 20_000;
+const OPS_AUDIT_DEPEG_HISTORY_PROXY_TIMEOUT_MS = 45_000;
 
 interface OpsAdminProxyContext {
   request: Request;
@@ -55,6 +56,9 @@ function resolveUpstreamPath(params: OpsAdminProxyContext["params"]): string | n
 
 
 function resolveOpsAdminProxyTimeoutMs(upstreamPath: string): number {
+  if (upstreamPath === "/api/audit-depeg-history") {
+    return OPS_AUDIT_DEPEG_HISTORY_PROXY_TIMEOUT_MS;
+  }
   return EXTENDED_STATUS_PROXY_PATHS.has(upstreamPath)
     ? OPS_STATUS_PROXY_TIMEOUT_MS
     : DEFAULT_PROXY_TIMEOUT_MS;

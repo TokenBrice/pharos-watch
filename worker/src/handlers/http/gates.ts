@@ -1,4 +1,4 @@
-import { getPublicApiAccess, isSiteDataAllowedPath } from "@shared/lib/api-endpoints";
+import { getPublicApiAccess, isCacheBypassPath, isSiteDataAllowedPath } from "@shared/lib/api-endpoints";
 import { API_KEY_DEPENDENCY_RETRY_AFTER_SEC } from "@shared/lib/ops-limits";
 import { SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import { errorResponse } from "../../lib/api-utils";
@@ -6,6 +6,7 @@ import {
   authenticateApiKey,
   type AuthenticatedApiKey,
   checkApiKeyRateLimit,
+  checkIsolateLocalApiKeyRateLimit,
   recordApiKeyUsage,
 } from "../../lib/api-keys";
 import {
@@ -123,6 +124,7 @@ export async function evaluateAccessGate(
     };
   }
 
+  const canUseIsolateFallbackRateLimit = request.method === "GET" && !isCacheBypassPath(url.pathname);
   let rateLimitResponse: Response | null;
   try {
     rateLimitResponse = await checkApiKeyRateLimit(
@@ -131,8 +133,16 @@ export async function evaluateAccessGate(
       apiKeyAuth.key.rateLimitPerMinute,
     );
   } catch (err) {
-    console.warn("[public-api-auth] API key rate-limit dependency unavailable:", err);
-    return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: publicApiUnavailableResponse() };
+    if (canUseIsolateFallbackRateLimit) {
+      console.warn("[public-api-auth] API key rate-limit dependency unavailable; using isolate-local fallback limiter:", err);
+      rateLimitResponse = checkIsolateLocalApiKeyRateLimit(
+        apiKeyAuth.key.id,
+        apiKeyAuth.key.rateLimitPerMinute,
+      );
+    } else {
+      console.warn("[public-api-auth] API key rate-limit dependency unavailable:", err);
+      return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: publicApiUnavailableResponse() };
+    }
   }
   if (rateLimitResponse) {
     return { isAdmin, isSiteProxy: false, apiKey: apiKeyAuth.key, requestLane: "public-api", response: rateLimitResponse };

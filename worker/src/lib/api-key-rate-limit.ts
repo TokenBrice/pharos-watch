@@ -51,6 +51,32 @@ export async function checkApiKeyRateLimit(
   return null;
 }
 
+export function checkIsolateLocalApiKeyRateLimit(
+  apiKeyId: number,
+  limit: number,
+  nowSec = getNowSec(),
+): Response | null {
+  const bucketStart = nowSec - (nowSec % 60);
+  const retryAfterSec = bucketStart + 60 - nowSec;
+  const state = getApiKeyRuntimeState();
+  const existing = state.apiKeyFallbackRateLimitById.get(apiKeyId);
+
+  if (!existing || existing.bucketStart !== bucketStart) {
+    state.apiKeyFallbackRateLimitById.set(apiKeyId, {
+      bucketStart,
+      count: 1,
+    });
+    return null;
+  }
+
+  existing.count = Math.min(existing.count + 1, 2147483647);
+  if (existing.count > limit) {
+    return errorResponse(429, "Rate limit exceeded", { retryAfterSec });
+  }
+
+  return null;
+}
+
 export function flushPendingApiKeyPrunes(): Promise<void> {
   const state = getApiKeyRuntimeState();
   const pending = state.pendingApiKeyPrune;

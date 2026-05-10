@@ -1,10 +1,13 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { hmacSha256Hex } from "../../api/__tests__/helpers/auth";
 import {
   authenticateApiKey,
   checkApiKeyRateLimit,
+  checkIsolateLocalApiKeyRateLimit,
   createApiKey,
+  getApiKeyAuthCacheStaleTtlMs,
+  getApiKeyAuthCacheTtlMs,
   listApiKeys,
   parseApiKeyToken,
   resetApiKeyStateForTests,
@@ -16,6 +19,10 @@ import {
 describe("api key helpers", () => {
   beforeEach(() => {
     resetApiKeyStateForTests();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("parses the canonical API key token shape", () => {
@@ -514,6 +521,64 @@ describe("api key helpers", () => {
     ).resolves.toMatchObject({ kind: "valid" });
   });
 
+  it("authenticates with a stale cached row when D1 lookup fails after a recent verification", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-11T10:00:00.000Z"));
+
+    const pepper = "pepper";
+    const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
+    const secretHash = await hmacSha256Hex(pepper, secret);
+    const prefix = "0123456789abcdef";
+    const cachedRow = {
+      id: 7,
+      key_prefix: prefix,
+      secret_hash: secretHash,
+      name: "Cached",
+      owner_email: null,
+      tier: "standard",
+      traffic_class: "external",
+      rate_limit_per_minute: 120,
+      is_active: 1,
+      expires_at: null,
+      created_at: 1,
+      updated_at: 1,
+      last_used_at: null,
+      last_used_route: null,
+    };
+    const dbHit = mockD1([
+      {
+        match: "FROM api_keys",
+        matchBinds: [prefix],
+        rows: [cachedRow],
+      },
+    ], { requireMatch: true });
+    const dbUnavailable = mockD1([
+      {
+        match: "FROM api_keys",
+        matchBinds: [prefix],
+        rows: [],
+        throwError: new Error("lookup failed"),
+      },
+    ], { requireMatch: true });
+
+    await expect(
+      authenticateApiKey(dbHit, `ph_live_${prefix}_${secret}`, pepper),
+    ).resolves.toMatchObject({ kind: "valid" });
+
+    vi.advanceTimersByTime(getApiKeyAuthCacheTtlMs() + 1);
+
+    await expect(
+      authenticateApiKey(dbUnavailable, `ph_live_${prefix}_${secret}`, pepper),
+    ).resolves.toMatchObject({ kind: "valid" });
+    expect(dbUnavailable.getHistory().filter((entry) => entry.sql.includes("FROM api_keys"))).toHaveLength(1);
+
+    vi.advanceTimersByTime(getApiKeyAuthCacheStaleTtlMs() - getApiKeyAuthCacheTtlMs());
+
+    await expect(
+      authenticateApiKey(dbUnavailable, `ph_live_${prefix}_${secret}`, pepper),
+    ).resolves.toEqual({ kind: "unavailable" });
+  });
+
   it("authenticates with previous pepper and opportunistically re-hashes", async () => {
     const oldPepper = "old-pepper";
     const newPepper = "new-pepper";
@@ -583,7 +648,7 @@ describe("api key helpers", () => {
     ).resolves.toEqual({ kind: "unavailable" });
   });
 
-  it("returns unavailable when previous-pepper rehash storage fails", async () => {
+  it("treats previous-pepper rehash storage as best-effort after auth succeeds", async () => {
     const oldPepper = "old-pepper";
     const newPepper = "new-pepper";
     const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
@@ -620,7 +685,13 @@ describe("api key helpers", () => {
 
     await expect(
       authenticateApiKey(db, `ph_live_${prefix}_${secret}`, newPepper, oldPepper, 1_000),
-    ).resolves.toEqual({ kind: "unavailable" });
+    ).resolves.toMatchObject({ kind: "valid" });
+  });
+
+  it("uses the isolate-local fallback limiter when D1 minute-bucket storage is unavailable", () => {
+    expect(checkIsolateLocalApiKeyRateLimit(7, 2, 600)).toBeNull();
+    expect(checkIsolateLocalApiKeyRateLimit(7, 2, 601)).toBeNull();
+    expect(checkIsolateLocalApiKeyRateLimit(7, 2, 602)?.status).toBe(429);
   });
 
   it("records an audit log entry when creating a key", async () => {

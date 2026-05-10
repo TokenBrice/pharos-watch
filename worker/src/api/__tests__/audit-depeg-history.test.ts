@@ -124,9 +124,20 @@ describe("handleAuditDepegHistory method safety", () => {
 
     const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { dryRun: boolean; totalMatching: number };
+    const body = (await res.json()) as { dryRun: boolean; totalMatching: number; limit: number };
     expect(body.dryRun).toBe(true);
     expect(body.totalMatching).toBe(0);
+    expect(body.limit).toBe(25);
+  });
+
+  it("rejects limit values above the bounded audit cap", async () => {
+    const db = mockD1([]);
+    const req = makeApiRequest("/api/audit-depeg-history?dry-run=true&limit=26", { adminKey: "secret" });
+
+    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toContain("limit");
   });
 
   it("rejects malformed direct delete IDs instead of partially parsing them", async () => {
@@ -155,6 +166,31 @@ describe("handleAuditDepegHistory method safety", () => {
     const body = (await res.json()) as { dryRun: boolean; deletedEvents: Array<{ id: number }> };
     expect(body.dryRun).toBe(true);
     expect(body.deletedEvents.map((event) => event.id)).toEqual([1, 2]);
+  });
+
+  it("returns a clear 500 when direct delete recompute commit fails", async () => {
+    const rows = makeSyntheticSplitRows();
+    const db = mockD1([
+      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
+      {
+        match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events WHERE id NOT IN",
+        rows: [],
+      },
+      {
+        match: "SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date",
+        rows: [{ stablecoin_id: "usdt-tether", snapshot_date: 1_799_971_200, circulating_usd: 1_000_000_000 }],
+      },
+      { match: "INSERT INTO stability_index", rows: [], throwError: new Error("insert failed") },
+    ]) as MockD1Database;
+    const req = makeApiRequest("/api/audit-depeg-history?delete=1", {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toContain("no changes were committed");
   });
 
   it("surfaces synthetic split repair candidates in dry-run mode", async () => {

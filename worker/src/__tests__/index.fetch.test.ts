@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../index";
 import { mockD1, type MockTableConfig } from "../api/__tests__/helpers/mock-d1";
 import { hmacSha256Hex, makeExecutionContext } from "../api/__tests__/helpers/auth";
-import { resetApiKeyStateForTests } from "../lib/api-keys";
+import { getApiKeyAuthCacheTtlMs, resetApiKeyStateForTests } from "../lib/api-keys";
 import { resetRateLimitStateForTests } from "../lib/rate-limit";
 import { resetRequestAttributionStateForTests } from "../lib/request-source-attribution";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
@@ -64,6 +64,7 @@ describe("worker.fetch", () => {
   const cachePut = vi.fn(async () => undefined);
 
   beforeEach(() => {
+    vi.useRealTimers();
     resetApiKeyStateForTests();
     resetRateLimitStateForTests();
     resetRequestAttributionStateForTests();
@@ -477,8 +478,80 @@ describe("worker.fetch", () => {
     await expect(res.json()).resolves.toEqual({ error: "Public API temporarily unavailable" });
   });
 
-  it("returns 503 when API key rate-limit storage fails", async () => {
+  it("serves protected cacheable reads when API key lookup storage fails after a recent verification", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-11T10:00:00.000Z"));
+
+    cacheMatch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ cached: true, warm: 1 }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ cached: true, warm: 2 }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }));
+
+    const warmEnv = makeEnv({
+      DB: mockD1(await validKeyDbTables(), { requireMatch: true }),
+    });
+    const { ctx: warmCtx, waits: warmWaits } = makeExecutionContext();
+
+    const warmRes = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        headers: { "X-API-Key": VALID_API_KEY },
+      }),
+      warmEnv as never,
+      warmCtx,
+    );
+    await Promise.all(warmWaits);
+
+    expect(warmRes.status).toBe(200);
+    await expect(warmRes.json()).resolves.toEqual({ cached: true, warm: 1 });
+
+    vi.advanceTimersByTime(getApiKeyAuthCacheTtlMs() + 1);
+
+    const degradedEnv = makeEnv({
+      DB: mockD1([
+        {
+          match: "FROM api_keys",
+          matchBinds: [VALID_KEY_PREFIX],
+          rows: [],
+          throwError: new Error("api key lookup unavailable"),
+        },
+        { match: "INSERT INTO api_key_rate_limit", rows: [], first: { count: 1 } },
+        { match: "UPDATE api_keys SET last_used_at", rows: [], runMeta: { changes: 1 } },
+        { match: "DELETE FROM api_key_rate_limit", rows: [], runMeta: { changes: 0 } },
+        { match: "INSERT INTO api_request_consumer_stats", rows: [], runMeta: { changes: 1 } },
+        { match: "INSERT INTO api_key_request_stats", rows: [], runMeta: { changes: 1 } },
+        { match: "DELETE FROM api_request_consumer_stats", rows: [], runMeta: { changes: 0 } },
+        { match: "DELETE FROM api_key_request_stats", rows: [], runMeta: { changes: 0 } },
+      ], { requireMatch: true }),
+    });
+    const { ctx, waits } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        headers: { "X-API-Key": VALID_API_KEY },
+      }),
+      degradedEnv as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ cached: true, warm: 2 });
+    expect(
+      degradedEnv.DB.getHistory().filter((entry) => entry.sql.includes("FROM api_keys") && entry.binds[0] === VALID_KEY_PREFIX),
+    ).toHaveLength(1);
+  });
+
+  it("serves protected cacheable reads when API key rate-limit storage fails", async () => {
     const row = await validKeyRow();
+    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
     const env = makeEnv({
       DB: mockD1([
         { match: "FROM api_keys", matchBinds: [VALID_KEY_PREFIX], rows: [row] },
@@ -489,6 +562,16 @@ describe("worker.fetch", () => {
         },
         {
           match: "INSERT INTO api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "INSERT INTO api_key_request_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "UPDATE api_keys SET last_used_at = ?, last_used_route = ? WHERE id = ?",
           rows: [],
           runMeta: { changes: 1 },
         },
@@ -515,15 +598,95 @@ describe("worker.fetch", () => {
     );
     await Promise.all(waits);
 
-    expect(res.status).toBe(503);
-    expect(res.headers.get("Retry-After")).toBe("60");
-    await expect(res.json()).resolves.toEqual({ error: "Public API temporarily unavailable" });
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ cached: true });
   });
 
-  it("returns 503 when previous-pepper migration storage fails", async () => {
+  it("rate-limits repeated cacheable reads with the isolate-local fallback when limiter storage fails", async () => {
+    cacheMatch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ cached: true, hit: 1 }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ cached: true, hit: 2 }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }));
+
+    const row = {
+      ...(await validKeyRow()),
+      rate_limit_per_minute: 1,
+    };
+    const env = makeEnv({
+      DB: mockD1([
+        { match: "FROM api_keys", matchBinds: [VALID_KEY_PREFIX], rows: [row] },
+        {
+          match: "INSERT INTO api_key_rate_limit",
+          rows: [],
+          throwError: new Error("api key limiter unavailable"),
+        },
+        {
+          match: "UPDATE api_keys SET last_used_at = ?, last_used_route = ? WHERE id = ?",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "INSERT INTO api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "INSERT INTO api_key_request_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "DELETE FROM api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+        {
+          match: "DELETE FROM api_key_request_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+      ], { requireMatch: true }),
+    });
+    const { ctx: firstCtx, waits: firstWaits } = makeExecutionContext();
+    const firstRes = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        headers: { "X-API-Key": VALID_API_KEY },
+      }),
+      env as never,
+      firstCtx,
+    );
+    await Promise.all(firstWaits);
+
+    expect(firstRes.status).toBe(200);
+    await expect(firstRes.json()).resolves.toEqual({ cached: true, hit: 1 });
+
+    const { ctx: secondCtx, waits: secondWaits } = makeExecutionContext();
+    const secondRes = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        headers: { "X-API-Key": VALID_API_KEY },
+      }),
+      env as never,
+      secondCtx,
+    );
+    await Promise.all(secondWaits);
+
+    expect(secondRes.status).toBe(429);
+    await expect(secondRes.json()).resolves.toEqual({ error: "Rate limit exceeded" });
+  });
+
+  it("serves requests when previous-pepper migration storage fails after auth succeeds", async () => {
     const oldPepper = "old-pepper";
     const newPepper = "new-pepper";
     const oldSecretHash = await hmacSha256Hex(oldPepper, VALID_KEY_SECRET);
+    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
     const env = makeEnv({
       API_KEY_HASH_PEPPER: newPepper,
       API_KEY_HASH_PEPPER_PREVIOUS: oldPepper,
@@ -554,7 +717,27 @@ describe("worker.fetch", () => {
           throwError: new Error("pepper migration failed"),
         },
         {
+          match: "INSERT INTO api_key_rate_limit",
+          rows: [],
+          first: { count: 1 },
+        },
+        {
+          match: "UPDATE api_keys SET last_used_at = ?, last_used_route = ? WHERE id = ?",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "DELETE FROM api_key_rate_limit",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+        {
           match: "INSERT INTO api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "INSERT INTO api_key_request_stats",
           rows: [],
           runMeta: { changes: 1 },
         },
@@ -581,9 +764,8 @@ describe("worker.fetch", () => {
     );
     await Promise.all(waits);
 
-    expect(res.status).toBe(503);
-    expect(res.headers.get("Retry-After")).toBe("60");
-    await expect(res.json()).resolves.toEqual({ error: "Public API temporarily unavailable" });
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ cached: true });
   });
 
   it("serves protected reads when last-used metadata storage fails", async () => {
