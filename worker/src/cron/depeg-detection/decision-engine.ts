@@ -10,9 +10,9 @@ import {
 } from "../../lib/constants";
 import {
   buildPendingReason,
+  countDexProtocolCorroborations,
   isExtremeMovePending,
   type DepegRow,
-  type DexPoolSource,
   type DexPriceRow,
   type PendingDepegReason,
   type PendingDepegReasonFlag,
@@ -81,31 +81,6 @@ function isDexFresh(
   now: number,
 ): boolean {
   return dexAbsBps != null && dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg");
-}
-
-function countRecoveryProtocolCorroborations(
-  protocolSources: DexPoolSource[] | undefined,
-  pegRef: number,
-  threshold: number,
-): number {
-  if (!protocolSources || protocolSources.length === 0) return 0;
-  return protocolSources.reduce((count, source) => {
-    const signal = deriveDepegSignal(source.price, pegRef);
-    return signal != null && signal.absBps < threshold ? count + 1 : count;
-  }, 0);
-}
-
-function countDirectionalProtocolCorroborations(
-  protocolSources: DexPoolSource[] | undefined,
-  pegRef: number,
-  threshold: number,
-  direction: DepegDirection,
-): number {
-  if (!protocolSources || protocolSources.length === 0) return 0;
-  return protocolSources.reduce((count, source) => {
-    const signal = deriveDepegSignal(source.price, pegRef);
-    return signal != null && signalCrossesThreshold(signal, threshold) && signal.direction === direction ? count + 1 : count;
-  }, 0);
 }
 
 function hasRecoveryChallenge(
@@ -424,8 +399,8 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
     ? Math.round(((input.dexRow.dex_price_usd / pegRef) - 1) * 10000)
     : null;
   const dexAbsBps = dexBps == null ? null : Math.abs(dexBps);
-  const dexDirectionProtocolCount = countDirectionalProtocolCorroborations(input.protocolSources, pegRef, threshold, direction);
-  const dexRecoveryProtocolCount = countRecoveryProtocolCorroborations(input.protocolSources, pegRef, threshold);
+  const dexDirectionProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, threshold, direction, "confirm");
+  const dexRecoveryProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, threshold, direction, "recover");
   const recoveryVetoDirection: DepegDirection =
     existing?.direction === "above" ? "above" : existing?.direction === "below" ? "below" : direction;
   const dexRecoveryChallenged = hasRecoveryChallenge(input.challengerPools, pegRef, threshold, recoveryVetoDirection);

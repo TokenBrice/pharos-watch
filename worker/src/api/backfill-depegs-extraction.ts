@@ -1,7 +1,7 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { binarySearchNearest } from "../lib/binary-search";
-import { DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
+import { DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_EVENT_MIN_SUPPLY_USD } from "../lib/constants";
 import {
   buildPriceValidationContext,
   type PriceReasonablenessOptions,
@@ -40,6 +40,7 @@ export interface BackfillEventExtractionOptions {
   confirmationMinPoints?: number;
   confirmationMaxGapSec?: number;
   extremeSinglePointBps?: number | null;
+  missingSupplyUsd?: number | null;
 }
 
 export function parseSupplyData(tokens: SupplyPoint[]): SupplySnapshot[] {
@@ -91,6 +92,16 @@ export function extractDepegEvents(
     pegRef: number;
   } | null = null;
 
+  function resolveSupply(timestamp: number): number | null {
+    if (supplyByDate.length > 0) {
+      return findNearestSupply(supplyByDate, timestamp);
+    }
+    const missingSupplyUsd = options?.missingSupplyUsd;
+    return typeof missingSupplyUsd === "number" && Number.isFinite(missingSupplyUsd)
+      ? missingSupplyUsd
+      : null;
+  }
+
   function promotePending(): void {
     if (!pending) return;
     current = {
@@ -111,10 +122,8 @@ export function extractDepegEvents(
     const { timestamp, price } = point;
     if (price <= 0) continue;
 
-    if (supplyByDate.length > 0) {
-      const supply = findNearestSupply(supplyByDate, timestamp);
-      if (supply !== null && supply < 1_000_000) continue;
-    }
+    const supply = resolveSupply(timestamp);
+    if (supply === null || supply < DEPEG_EVENT_MIN_SUPPLY_USD) continue;
 
     const pegRef = getPegRef(timestamp);
     if (pegRef <= 0) continue;
@@ -127,8 +136,7 @@ export function extractDepegEvents(
     const bps = Math.round((price / pegRef - 1) * 10_000);
     const absBps = Math.abs(bps);
     const direction = bps >= 0 ? "above" : "below";
-    const supply = findNearestSupply(supplyByDate, timestamp);
-    const isLargeCap = supply !== null && supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD;
+    const isLargeCap = supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD;
 
     if (absBps >= threshold) {
       if (current) {

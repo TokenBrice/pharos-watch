@@ -232,6 +232,57 @@ describe("extractDepegEvents", () => {
     });
   });
 
+  it("uses the current supply fallback when historical supply is absent", () => {
+    const belowFloor = extractDepegEvents(
+      [
+        { timestamp: 1_000, price: 0.5 },
+        { timestamp: 2_000, price: 1.0 },
+      ],
+      () => 1,
+      "peggedUSD",
+      [],
+      undefined,
+      undefined,
+      { missingSupplyUsd: 999_999 },
+    );
+    expect(belowFloor).toEqual([]);
+
+    const largeCapSinglePoint = extractDepegEvents(
+      [
+        { timestamp: 1_000, price: 0.98 },
+        { timestamp: 2_000, price: 1.0 },
+      ],
+      () => 1,
+      "peggedUSD",
+      [],
+      undefined,
+      undefined,
+      { missingSupplyUsd: 2_000_000_000 },
+    );
+    expect(largeCapSinglePoint).toEqual([]);
+
+    const largeCapConfirmed = extractDepegEvents(
+      [
+        { timestamp: 1_000, price: 0.98 },
+        { timestamp: 2_000, price: 0.97 },
+        { timestamp: 3_000, price: 1.0 },
+      ],
+      () => 1,
+      "peggedUSD",
+      [],
+      undefined,
+      undefined,
+      { missingSupplyUsd: 2_000_000_000 },
+    );
+    expect(largeCapConfirmed).toHaveLength(1);
+    expect(largeCapConfirmed[0]).toMatchObject({
+      direction: "below",
+      startedAt: 1_000,
+      peakPrice: 0.97,
+      recoveryPrice: 1.0,
+    });
+  });
+
   it("supports daily native-peg confirmation windows with wider point gaps", () => {
     const day = 24 * 3_600;
     const events = extractDepegEvents(

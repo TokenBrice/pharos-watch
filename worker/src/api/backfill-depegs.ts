@@ -1,6 +1,7 @@
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DAY_MS } from "@shared/lib/time-constants";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { sumPegBuckets } from "@shared/lib/supply";
 import { cancelResponseBodyQuietly } from "../lib/response-body";
 import {
   DEFILLAMA_BASE,
@@ -60,6 +61,7 @@ interface PreparedBackfillCoin {
   meta: StablecoinMeta;
   geckoId?: string;
   supplyByDate: SupplySnapshot[];
+  currentSupplyUsd: number | null;
 }
 
 export async function applyBackfillEvents(
@@ -148,6 +150,7 @@ export async function handleBackfillDepegs(
       // Get peg rates from cached stablecoin data
       let pegRates: Record<string, number> = { peggedUSD: 1 };
       let fxRates: Record<string, number> | undefined;
+      const currentSupplyById = new Map<string, number>();
 
       const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
       if (stablecoinsCache.kind !== "ok") {
@@ -165,6 +168,9 @@ export async function handleBackfillDepegs(
           stablecoinsPayload.fxFallbackRates,
         ));
         fxRates = stablecoinsPayload.fxFallbackRates;
+        for (const asset of stablecoinsPayload.peggedAssets) {
+          currentSupplyById.set(asset.id, sumPegBuckets(asset.circulating));
+        }
       }
 
       // Filter to processable coins (skip NAV tokens)
@@ -215,7 +221,12 @@ export async function handleBackfillDepegs(
         const trackedMeta = PSI_ELIGIBLE_META_BY_ID.get(meta.id);
         const geckoId = trackedMeta?.geckoId ?? detail?.gecko_id;
         const supplyByDate = parseSupplyData(detail?.tokens ?? []);
-        preparedCoins.push({ meta, geckoId, supplyByDate });
+        preparedCoins.push({
+          meta,
+          geckoId,
+          supplyByDate,
+          currentSupplyUsd: currentSupplyById.get(meta.id) ?? null,
+        });
 
         const peg = meta.flags.pegCurrency;
         if (peg === "USD") continue;
@@ -307,7 +318,7 @@ export async function handleBackfillDepegs(
 
       // Process coins sequentially — each still needs CG price history fetch.
       // Serializing avoids memory pressure from parsing multiple large JSON responses.
-      for (const { meta, geckoId, supplyByDate } of preparedCoins) {
+      for (const { meta, geckoId, supplyByDate, currentSupplyUsd } of preparedCoins) {
         if (!geckoId) {
           skipped.push(meta.symbol);
           continue;
@@ -357,6 +368,7 @@ export async function handleBackfillDepegs(
             fxRates,
             replayWindow,
             coingeckoApiKey ?? null,
+            currentSupplyUsd,
           );
           const events = replay.events;
 
@@ -386,12 +398,6 @@ export async function handleBackfillDepegs(
 
           // Only replace backfill-sourced events; preserve live-cron-detected events
           // (live cron catches brief intraday depegs that daily backfill data misses).
-          if (events.length === 0) {
-            // Explicitly preserve existing rows when replay window yields nothing.
-            // Upstream caller already handled the `events === null` (no-trusted-source) branch.
-            totalEvents += 0;
-            continue;
-          }
           const replayEvents = events.map((e) => ({
             pegType: e.pegType,
             direction: e.direction,

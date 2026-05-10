@@ -37,12 +37,27 @@ export async function backfillCoin(
   fxRates?: Record<string, number>,
   replayWindow?: BackfillReplayWindow | null,
   coingeckoApiKey?: string | null,
+  missingSupplyUsd?: number | null,
 ): Promise<BackfillCoinReplayResult> {
   const pegType = `pegged${meta.flags.pegCurrency}`;
   const nativePegCurrency = normalizeSupportedPegCurrency(meta.flags.pegCurrency);
   const candidateSupplySnapshots = replayWindow
     ? supplyByDate.filter((snapshot) => timestampInReplayWindow(snapshot.ts, replayWindow))
     : supplyByDate;
+  if (
+    supplyByDate.length === 0 &&
+    (typeof missingSupplyUsd !== "number" || !Number.isFinite(missingSupplyUsd))
+  ) {
+    console.warn(
+      `[backfill-depegs] no historical or current supply floor available for ${meta.symbol}; preserving existing backfill rows`,
+    );
+    return {
+      events: null,
+      sourceKind: "preserve-existing",
+      authoritativeSource: null,
+      marketDiagnostics: null,
+    };
+  }
 
   let marketSeries:
     | Awaited<ReturnType<typeof fetchMarketBackfillPriceSeries>>
@@ -155,8 +170,9 @@ export async function backfillCoin(
           confirmationMinPoints: BACKFILL_MIN_CONFIRM_POINTS,
           confirmationMaxGapSec: BACKFILL_NATIVE_PEG_PENDING_MAX_GAP_SEC,
           extremeSinglePointBps: BACKFILL_NATIVE_PEG_EXTREME_SINGLE_POINT_BPS,
+          missingSupplyUsd,
         }
-      : undefined,
+      : { missingSupplyUsd },
   );
 
   return {

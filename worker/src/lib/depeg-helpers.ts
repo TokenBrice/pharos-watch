@@ -4,6 +4,12 @@ import {
   type DexPriceChallengerLoadRow,
 } from "../cron/dex-liquidity/challenger-persistence";
 import { decodeJsonString } from "./cache-json";
+import {
+  deriveDepegSignal,
+  signalCrossesThreshold,
+  type DepegDirection,
+  type DepegSignal,
+} from "./depeg-signals";
 import { logMalformedJsonPath } from "./json-decode-observability";
 
 /** D1 row shape for the depeg_events table (snake_case columns) */
@@ -87,6 +93,7 @@ export interface DexPoolSource {
   price: number;
   tvl: number;
   updatedAt: number;
+  sourceFamily?: string;
 }
 
 type DexJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
@@ -124,7 +131,7 @@ export async function loadDexPoolChallengers(
   minPoolTvlUsd: number,
   maxAgeSec: number,
   nowSec: number,
-): Promise<Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string; observedAt?: number }>>> {
+): Promise<Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string; observedAt?: number; sourceFamily?: string }>>> {
   const { challengersByStablecoin, diagnostics } = await loadPublishedDexPoolChallengers(
     db,
     minPoolTvlUsd,
@@ -159,9 +166,75 @@ export async function loadDexPoolChallengers(
         protocol: row.protocol,
         chain: row.chain,
         observedAt: row.snapshotAt,
+        sourceFamily: row.sourceFamily,
       })),
     ]),
   );
+}
+
+function normalizeDexGroupPart(value: string | null | undefined, fallback: string): string {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized.length > 0 ? normalized : fallback;
+}
+
+export function dexProtocolGroupKey(source: Pick<DexPoolSource, "protocol" | "chain">): string {
+  return normalizeDexGroupPart(source.protocol, normalizeDexGroupPart(source.chain, "unknown"));
+}
+
+export function dexPoolIndependentGroupKey(
+  source: Pick<{ protocol: string; sourceFamily?: string }, "protocol" | "sourceFamily">,
+): string {
+  return `${normalizeDexGroupPart(source.protocol, "unknown")}:${normalizeDexGroupPart(source.sourceFamily, "unknown")}`;
+}
+
+export interface DexProtocolCorroboration {
+  key: string;
+  source: DexPoolSource;
+  signal: DepegSignal;
+}
+
+export function collectDexProtocolCorroborations(
+  protocolSources: DexPoolSource[] | undefined,
+  pegRef: number,
+  threshold: number,
+  direction: DepegDirection,
+  mode: "confirm" | "recover" | "contradict",
+): DexProtocolCorroboration[] {
+  if (!protocolSources || protocolSources.length === 0) return [];
+  const groups = new Map<string, DexProtocolCorroboration>();
+  for (const source of protocolSources) {
+    const signal = deriveDepegSignal(source.price, pegRef);
+    if (signal == null) continue;
+
+    const matches =
+      mode === "recover"
+        ? signal.absBps < threshold
+        : signalCrossesThreshold(signal, threshold) &&
+          (mode === "confirm" ? signal.direction === direction : signal.direction !== direction);
+    if (!matches) continue;
+
+    const key = dexProtocolGroupKey(source);
+    const existing = groups.get(key);
+    if (
+      existing == null ||
+      (mode === "recover"
+        ? signal.absBps < existing.signal.absBps
+        : signal.absBps > existing.signal.absBps)
+    ) {
+      groups.set(key, { key, source, signal });
+    }
+  }
+  return [...groups.values()];
+}
+
+export function countDexProtocolCorroborations(
+  protocolSources: DexPoolSource[] | undefined,
+  pegRef: number,
+  threshold: number,
+  direction: DepegDirection,
+  mode: "confirm" | "recover" | "contradict",
+): number {
+  return collectDexProtocolCorroborations(protocolSources, pegRef, threshold, direction, mode).length;
 }
 
 /** Load per-protocol price breakdowns from dex_prices.price_sources_json for trusted rows. */
@@ -215,16 +288,21 @@ export async function loadDexPriceSources(
         continue;
       }
       if (decoded.payload.length === 0) continue;
-      result.set(
-        row.stablecoin_id,
-        decoded.payload.map((source) => ({
+      const sources = decoded.payload
+        .map((source) => ({
           ...source,
           updatedAt:
             typeof source.updatedAt === "number" && Number.isFinite(source.updatedAt) && source.updatedAt > 0
               ? source.updatedAt
               : row.updated_at,
-        })),
-      );
+        }))
+        .filter((source) => {
+          const ageSec = nowSec - source.updatedAt;
+          return ageSec >= 0 && ageSec <= maxAgeSec;
+        });
+      if (sources.length > 0) {
+        result.set(row.stablecoin_id, sources);
+      }
     }
     return result;
   } catch (err) {

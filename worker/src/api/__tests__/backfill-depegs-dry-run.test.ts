@@ -139,6 +139,72 @@ describe("handleBackfillDepegs replay windows", () => {
     expect(history.some((entry) => entry.sql.includes("INSERT INTO depeg_events"))).toBe(false);
   });
 
+  it("previews stale-row removal when a trusted replay finds zero events", async () => {
+    vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce({
+      prices: [
+        { timestamp: 1_000, price: 1.0 },
+        { timestamp: 2_000, price: 0.999 },
+      ],
+      diagnostics: {
+        granularity: "hourly",
+        sourcesUsed: ["coingecko"],
+        quoteMode: "usd",
+        quoteCurrency: "usd",
+        mergeReasons: [],
+        perSourceStats: [],
+        policyAdjustments: [],
+        finalPointCount: 2,
+      },
+    });
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
+        matchBinds: ["usdt-tether"],
+        rows: [
+          {
+            id: 10,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            peg_type: "peggedUSD",
+            direction: "below",
+            peak_deviation_bps: -250,
+            started_at: 1_000,
+            ended_at: 2_000,
+            start_price: 0.975,
+            peak_price: 0.975,
+            recovery_price: 1,
+            peg_reference: 1,
+            source: "backfill",
+          },
+        ],
+      },
+    ]);
+
+    const req = makeApiRequest("/api/backfill-depegs?stablecoin=usdt-tether&dry-run=true", {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleBackfillDepegs(db, makeApiUrl(req.url), true, req);
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      recomputedBackfillEvents: number;
+      previews: Array<{
+        recomputedBackfillEventCount: number | null;
+        removedBackfillEventCount: number;
+        removedBackfillEventIdsSample: number[];
+      }>;
+    };
+
+    expect(body.recomputedBackfillEvents).toBe(0);
+    expect(body.previews[0]).toMatchObject({
+      recomputedBackfillEventCount: 0,
+      removedBackfillEventCount: 1,
+      removedBackfillEventIdsSample: [10],
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM depeg_events"))).toBe(false);
+  });
+
   it("passes a bounded replay window through dry-run backfill previews", async () => {
     const day1 = Math.floor(new Date("2025-01-01T00:00:00Z").getTime() / 1000);
     const day2 = Math.floor(new Date("2025-01-31T00:00:00Z").getTime() / 1000);
@@ -367,5 +433,39 @@ describe("handleBackfillDepegs replay windows", () => {
     const inserts = history.filter((entry) => entry.sql.includes("INSERT INTO depeg_events"));
     expect(inserts).toHaveLength(1);
     expect(inserts[0]?.binds.slice(0, 2)).toEqual(["usdt-tether", "USDT"]);
+  });
+
+  it("deletes overlapping backfill rows when a mutating trusted replay finds zero events", async () => {
+    vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce({
+      prices: [
+        { timestamp: 1_000, price: 1.0 },
+        { timestamp: 2_000, price: 0.999 },
+      ],
+      diagnostics: {
+        granularity: "hourly",
+        sourcesUsed: ["coingecko"],
+        quoteMode: "usd",
+        quoteCurrency: "usd",
+        mergeReasons: [],
+        perSourceStats: [],
+        policyAdjustments: [],
+        finalPointCount: 2,
+      },
+    });
+    const db = mockD1();
+    const req = makeApiRequest("/api/backfill-depegs?stablecoin=usdt-tether", {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleBackfillDepegs(db, makeApiUrl(req.url), true, req);
+    expect(res.status).toBe(200);
+    const body = await res.json() as { eventsCreated: number; skipped?: string[] };
+    expect(body.eventsCreated).toBe(0);
+    expect(body.skipped ?? []).toEqual([]);
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM depeg_events"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO depeg_events"))).toBe(false);
   });
 });

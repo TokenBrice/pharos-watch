@@ -1,4 +1,5 @@
 import type { PegRateSource } from "@shared/lib/peg-rates";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { DepegPrimaryTrust, PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import {
   DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
@@ -38,6 +39,8 @@ interface PegReferenceTrustInput {
   pegRateContributorCount?: number | null;
 }
 
+export type OffchainDepegConfirmerKey = "coingecko-confirm" | "defillama-confirm";
+
 function getPrimaryPriceAgeSec(
   input: Pick<PrimaryPriceTrustInput, "priceObservedAt" | "priceUpdatedAt">,
   nowSec: number,
@@ -53,6 +56,59 @@ function getPrimaryTrustSources(input: Pick<PrimaryPriceTrustInput, "agreeSource
   return input.agreeSources && input.agreeSources.length > 0
     ? input.agreeSources
     : splitCompositePriceSource(input.priceSource ?? "");
+}
+
+export function resolveDepegSourceFamily(sourceKey: string | null | undefined): string | null {
+  if (!sourceKey) return null;
+  const normalized = sourceKey.trim().toLowerCase();
+  if (!normalized) return null;
+
+  if (
+    normalized === "coingecko" ||
+    normalized === "coingecko-native-implied" ||
+    normalized === "coingecko-mirror" ||
+    normalized === "cg-ticker"
+  ) {
+    return "coingecko";
+  }
+  if (
+    normalized === "defillama" ||
+    normalized === "defillama-list" ||
+    normalized === "defillama-contract"
+  ) {
+    return "defillama";
+  }
+  if (
+    normalized === "dex-promoted" ||
+    normalized === "geckoterminal" ||
+    normalized === "pool-tvl-weighted" ||
+    normalized === "dexscreener" ||
+    normalized.endsWith("-dex")
+  ) {
+    return "dex";
+  }
+
+  return getPricingSourceRegistryEntry(normalized)?.trustTier ?? normalized;
+}
+
+export function getPrimaryDepegSourceFamilies(
+  input: Pick<PrimaryPriceTrustInput, "agreeSources" | "priceSource">,
+): Set<string> {
+  const families = new Set<string>();
+  for (const source of getPrimaryTrustSources(input)) {
+    const family = resolveDepegSourceFamily(source);
+    if (family) families.add(family);
+  }
+  return families;
+}
+
+export function chooseIndependentOffchainDepegConfirmer(
+  input: Pick<PrimaryPriceTrustInput, "agreeSources" | "priceSource">,
+): OffchainDepegConfirmerKey | null {
+  const primaryFamilies = getPrimaryDepegSourceFamilies(input);
+  if (!primaryFamilies.has("coingecko")) return "coingecko-confirm";
+  if (!primaryFamilies.has("defillama")) return "defillama-confirm";
+  return null;
 }
 
 export function getDexTrustPolicy(tier: DexPriceTrustTier): DexTrustPolicy {

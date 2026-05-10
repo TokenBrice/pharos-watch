@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  chooseIndependentOffchainDepegConfirmer,
   classifyPrimaryDepegTrust,
   getDexTrustPolicy,
+  getPrimaryDepegSourceFamilies,
   hasFreshMultiSourcePrimaryAgreement,
   isAuthoritativeDepegPegReference,
   isTrustedDexPriceRow,
+  resolveDepegSourceFamily,
 } from "../depeg-trust-policy";
 
 describe("classifyPrimaryDepegTrust", () => {
@@ -124,5 +127,31 @@ describe("DEX trust policy", () => {
 
     expect(isTrustedDexPriceRow(thinFreshRow, nowSec, "ui")).toBe(true);
     expect(isTrustedDexPriceRow(thinFreshRow, nowSec, "depeg")).toBe(false);
+  });
+});
+
+describe("depeg confirmation source families", () => {
+  it("normalizes correlated CoinGecko and DefiLlama source variants", () => {
+    expect(resolveDepegSourceFamily("coingecko")).toBe("coingecko");
+    expect(resolveDepegSourceFamily("cg-ticker")).toBe("coingecko");
+    expect(resolveDepegSourceFamily("defillama-list")).toBe("defillama");
+    expect(resolveDepegSourceFamily("defillama-contract")).toBe("defillama");
+    expect(resolveDepegSourceFamily("balancer-dex")).toBe("dex");
+  });
+
+  it.each([
+    ["coingecko+pyth", undefined, "defillama-confirm"],
+    ["pyth+coingecko", undefined, "defillama-confirm"],
+    ["defillama-list+coingecko", undefined, null],
+    ["pyth", ["pyth", "coingecko"], "defillama-confirm"],
+  ])("chooses an independent off-chain confirmer for %s", (priceSource, agreeSources, expected) => {
+    expect(chooseIndependentOffchainDepegConfirmer({ priceSource, agreeSources })).toBe(expected);
+  });
+
+  it("derives source families from agreeSources before falling back to priceSource order", () => {
+    expect([...getPrimaryDepegSourceFamilies({
+      priceSource: "pyth",
+      agreeSources: ["defillama-list", "coingecko"],
+    })].sort()).toEqual(["coingecko", "defillama"]);
   });
 });

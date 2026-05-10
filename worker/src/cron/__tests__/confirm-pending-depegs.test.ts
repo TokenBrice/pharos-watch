@@ -155,7 +155,10 @@ function makeDb(config: {
         }
         if (sql.includes("FROM dex_prices")) {
           if (config.dexError != null) throw (config.dexError instanceof Error ? config.dexError : new Error(String(config.dexError)));
-          return { results: (config.dexRows ?? []) as T[], success: true, meta: {} };
+          const rows = sql.includes("price_sources_json")
+            ? (config.dexRows ?? []).filter((row) => row.price_sources_json != null)
+            : (config.dexRows ?? []);
+          return { results: rows as T[], success: true, meta: {} };
         }
         if (sql.includes("FROM depeg_events")) {
           return { results: (config.openRows ?? []) as T[], success: true, meta: {} };
@@ -179,6 +182,7 @@ describe("confirmPendingDepegs", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
+    vi.mocked(fetchWithRetry).mockReset();
     vi.mocked(fetchCurrentNativePegQuotes).mockReset().mockResolvedValue(new Map());
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
   });
@@ -365,6 +369,10 @@ describe("confirmPendingDepegs", () => {
             updated_at: nowSec - 30,
             source_pool_count: 4,
             source_total_tvl: 5_000_000,
+            price_sources_json: JSON.stringify([
+              { price: 0.96, tvl: 3_000_000, protocol: "curve", chain: "ethereum" },
+              { price: 0.955, tvl: 2_000_000, protocol: "uniswap", chain: "ethereum" },
+            ]),
           },
           {
             stablecoin_id: "usde-ethena",
@@ -372,6 +380,10 @@ describe("confirmPendingDepegs", () => {
             updated_at: nowSec - 30,
             source_pool_count: 4,
             source_total_tvl: 5_000_000,
+            price_sources_json: JSON.stringify([
+              { price: 1.001, tvl: 3_000_000, protocol: "curve", chain: "ethereum" },
+              { price: 1, tvl: 2_000_000, protocol: "uniswap", chain: "ethereum" },
+            ]),
           },
         ],
       }),
@@ -407,7 +419,7 @@ describe("confirmPendingDepegs", () => {
       0.975,
       0.95,
       1,
-      "CoinGecko",
+      "coingecko-confirm",
       "large-cap",
     ]);
     expect(inserts[1]?.boundValues).toEqual([
@@ -420,7 +432,7 @@ describe("confirmPendingDepegs", () => {
       0.98,
       0.94,
       1,
-      "DEX",
+      "dex:curve+dex:uniswap",
       "large-cap",
     ]);
     expect(deletes).toEqual([10, 11, 12, 13]);
@@ -686,18 +698,18 @@ describe("confirmPendingDepegs", () => {
       "USDT",
       "peggedUSD",
       "below",
-      -240,
+      -500,
       nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
       0.976,
-      0.976,
+      0.95,
       1,
-      "DefiLlama",
+      "defillama-confirm",
       "large-cap",
     ]);
     expect(deletes).toEqual([31]);
   });
 
-  it("promotes a refreshed pending row using stored peak state", async () => {
+  it("promotes a refreshed pending row using the worst stored or confirmer peak state", async () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -737,12 +749,12 @@ describe("confirmPendingDepegs", () => {
       "USDT",
       "peggedUSD",
       "below",
-      -400,
+      -500,
       nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
       0.98,
-      0.96,
+      0.95,
       1,
-      "CoinGecko",
+      "coingecko-confirm",
       "large-cap",
     ]);
   });
@@ -799,6 +811,44 @@ describe("confirmPendingDepegs", () => {
     expect(batchExecute).not.toHaveBeenCalled();
   });
 
+  it("does not promote large-cap pending rows from already-used off-chain source families", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.mocked(fetchWithRetry).mockResolvedValue(new Response(JSON.stringify({ tether: { usd: 0.95 } }), { status: 200 }));
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 51,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            direction: "below",
+            first_seen_bps: -240,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.976,
+            reason: "large-cap",
+          }),
+        ],
+      }),
+      [
+        makeAuthoritativeUsdAsset(nowSec, {
+          id: "usdt-tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          price: 0.95,
+          priceSource: "defillama-list+coingecko",
+          agreeSources: ["defillama-list", "coingecko"],
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(batchExecute).not.toHaveBeenCalled();
+  });
+
   it("does not let a thin DEX row promote a pending event without CoinGecko support", async () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
@@ -821,6 +871,44 @@ describe("confirmPendingDepegs", () => {
             updated_at: nowSec - 30,
             source_pool_count: 1,
             source_total_tvl: 250_000,
+          },
+        ],
+      }),
+      [
+        makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: "tether", price: 0.94 }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(batchExecute).not.toHaveBeenCalled();
+  });
+
+  it("does not let one aggregate DEX protocol group promote a pending event", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.mocked(fetchWithRetry).mockResolvedValue(null);
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 25,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+          }),
+        ],
+        dexRows: [
+          {
+            stablecoin_id: "usdt-tether",
+            dex_price_usd: 0.96,
+            updated_at: nowSec - 30,
+            source_pool_count: 2,
+            source_total_tvl: 5_000_000,
+            price_sources_json: JSON.stringify([
+              { price: 0.96, tvl: 3_000_000, protocol: "curve", chain: "ethereum" },
+              { price: 0.959, tvl: 2_000_000, protocol: "curve", chain: "ethereum" },
+            ]),
           },
         ],
       }),
@@ -990,6 +1078,47 @@ describe("confirmPendingDepegs", () => {
       ],
     );
 
+    expect(recordOutcomeSafe).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.COINGECKO_CONFIRM,
+      false,
+    );
+  });
+
+  it("cancels non-OK off-chain confirmation response bodies", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const response = new Response(JSON.stringify({ error: "rate-limited" }), { status: 429 });
+    const cancelSpy = vi.spyOn(response.body!, "cancel");
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(response);
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 92,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            first_seen_bps: -240,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.976,
+            reason: "large-cap",
+          }),
+        ],
+      }),
+      [
+        makeAuthoritativeUsdAsset(nowSec, {
+          id: "usdt-tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          price: 0.94,
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(cancelSpy).toHaveBeenCalledOnce();
     expect(recordOutcomeSafe).toHaveBeenCalledWith(
       expect.anything(),
       CIRCUIT_SOURCE.COINGECKO_CONFIRM,
@@ -1204,6 +1333,49 @@ describe("confirmPendingDepegs", () => {
     expect(inserts).toHaveLength(0);
   });
 
+  it("does not count same-protocol pool challengers as independent confirmation", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.mocked(fetchWithRetry).mockResolvedValue(null);
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 42,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            peg_type: "peggedUSD",
+            first_seen_bps: -200,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.98,
+            peg_reference: 1,
+          }),
+        ],
+        dexRows: [
+          {
+            stablecoin_id: "usdt-tether",
+            dex_price_usd: 1.0,
+            updated_at: nowSec - 30,
+            source_pool_count: 5,
+            source_total_tvl: 10_000_000,
+            price_sources_json: JSON.stringify([
+              { price: 0.98, tvl: 1_000_000, protocol: "curve", chain: "ethereum" },
+              { price: 0.979, tvl: 1_000_000, protocol: "curve", chain: "ethereum" },
+            ]),
+          },
+        ],
+      }),
+      [
+        makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: "tether", price: 0.98 }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(batchExecute).not.toHaveBeenCalled();
+  });
+
   describe("pool challenger status classification", () => {
     // Inline captureLogs equivalent: collect console.log output into an array so
     // tests can assert on the "[depeg-confirm] ... pool summary: ... status=..."
@@ -1406,6 +1578,10 @@ describe("confirmPendingDepegs", () => {
             updated_at: nowSec - 30,
             source_pool_count: 3,
             source_total_tvl: 5_000_000,
+            price_sources_json: JSON.stringify([
+              { price: 0.988, tvl: 3_000_000, protocol: "curve", chain: "ethereum" },
+              { price: 0.987, tvl: 2_000_000, protocol: "uniswap", chain: "ethereum" },
+            ]),
           },
         ],
       }),
@@ -1425,7 +1601,7 @@ describe("confirmPendingDepegs", () => {
     // [5]=startedAt, [6]=startPrice, [7]=peakPrice, [8]=pegReference,
     // [9]=confirmationSources, [10]=pendingReason
     const bound = inserts[0]!.boundValues;
-    expect(bound[9]).toMatch(/DEX/);
+    expect(bound[9]).toBe("dex:curve+dex:uniswap");
     expect(bound[10]).toBe("large-cap");
   });
 });
