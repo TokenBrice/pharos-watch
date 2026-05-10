@@ -2,6 +2,7 @@ import type {
   LiveReserveAdapterKey,
   LiveReserveAdapterValidationPolicy,
   LiveReserveEvidenceClass,
+  LiveReserveSemantics,
   LiveReserveSourceModel,
   LiveReserveSourceSharingMode,
 } from "../types/live-reserves";
@@ -16,11 +17,77 @@ import {
   VERIFIED_OR_UNVERIFIED_FRESHNESS,
 } from "./live-reserve-adapters-schemas";
 
+type LiveReserveAdapterConfigValidationPolicy = {
+  allowedSemantics: readonly LiveReserveSemantics[];
+  allowedVersions: readonly number[];
+};
+
+const CONFIG_COLLATERAL_V1 = {
+  allowedSemantics: ["collateral-mix"],
+  allowedVersions: [1],
+} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+
+const CONFIG_COLLATERAL_V2 = {
+  allowedSemantics: ["collateral-mix"],
+  allowedVersions: [2],
+} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+
+const CONFIG_COLLATERAL_V1_V2 = {
+  allowedSemantics: ["collateral-mix"],
+  allowedVersions: [1, 2],
+} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+
+const CONFIG_ATTESTATION_V1 = {
+  allowedSemantics: ["attestation-mix"],
+  allowedVersions: [1],
+} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+
+const CONFIG_ATTESTATION_V1_V2 = {
+  allowedSemantics: ["attestation-mix"],
+  allowedVersions: [1, 2],
+} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+
+const CONFIG_PROTOCOL_V1 = {
+  allowedSemantics: ["protocol-reserve"],
+  allowedVersions: [1],
+} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+
+const CONFIG_PROTOCOL_V2 = {
+  allowedSemantics: ["protocol-reserve"],
+  allowedVersions: [2],
+} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+
+const CONFIG_SINGLE_ASSET_V1 = {
+  allowedSemantics: ["single-asset"],
+  allowedVersions: [1],
+} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+
+const CONFIG_SINGLE_ASSET_V2 = {
+  allowedSemantics: ["single-asset"],
+  allowedVersions: [2],
+} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+
+const CONFIG_SINGLE_ASSET_V1_V2 = {
+  allowedSemantics: ["single-asset"],
+  allowedVersions: [1, 2],
+} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+
+const CONFIG_ACCOUNTABLE = {
+  allowedSemantics: ["collateral-mix", "protocol-reserve"],
+  allowedVersions: [1],
+} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+
+const CONFIG_CURATED_VALIDATED = {
+  allowedSemantics: ["attestation-mix", "collateral-mix", "single-asset"],
+  allowedVersions: [1, 2],
+} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+
 export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
   abracadabra: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
@@ -31,6 +98,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_ACCOUNTABLE,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -41,6 +109,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
@@ -50,6 +119,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -61,6 +131,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS },
   },
@@ -68,6 +139,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
@@ -78,6 +150,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_PROTOCOL_V1,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
@@ -85,6 +158,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1_V2,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS },
   },
@@ -92,6 +166,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_ATTESTATION_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS },
   },
@@ -99,6 +174,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_ATTESTATION_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
@@ -109,6 +185,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1_V2,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
@@ -119,6 +196,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V2,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
@@ -129,12 +207,14 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "validated-static",
     evidenceClass: "static-validated",
     sharedSourceMode: "none",
+    configValidation: CONFIG_CURATED_VALIDATED,
     redemptionTelemetry: { capacity: "none", fee: "none" },
   },
   "dola-inverse": {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -145,6 +225,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
@@ -152,6 +233,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -163,6 +245,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "none", fee: "current-bps" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
@@ -170,6 +253,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -181,6 +265,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_ATTESTATION_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
@@ -191,6 +276,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_ATTESTATION_V1_V2,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -202,6 +288,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -212,6 +299,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_PROTOCOL_V2,
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
@@ -219,6 +307,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -230,6 +319,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -240,6 +330,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
@@ -247,6 +338,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V2,
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
@@ -254,6 +346,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1_V2,
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
@@ -261,6 +354,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "source-invariant",
+    configValidation: CONFIG_PROTOCOL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -271,6 +365,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "source-invariant",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -281,6 +376,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -291,6 +387,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -301,6 +398,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
@@ -311,6 +409,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_PROTOCOL_V1,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -322,6 +421,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_ATTESTATION_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
@@ -332,6 +432,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
+    configValidation: CONFIG_PROTOCOL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -342,12 +443,14 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
     redemptionTelemetry: { capacity: "none", fee: "current-bps" },
   },
   "sky-makercore": {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "source-invariant",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -359,6 +462,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
@@ -368,6 +472,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
+    configValidation: CONFIG_ATTESTATION_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC },
   },
@@ -375,6 +480,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
+    configValidation: CONFIG_PROTOCOL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -385,6 +491,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
+    configValidation: CONFIG_ATTESTATION_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
@@ -395,6 +502,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
+    configValidation: CONFIG_ATTESTATION_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       // Native Markets USDH publishes attestation PDFs monthly; use the 33-day window.
@@ -406,6 +514,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V2,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
@@ -417,6 +526,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V2,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
@@ -427,6 +537,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -437,6 +548,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
   sourceModel: LiveReserveSourceModel;
   evidenceClass: LiveReserveEvidenceClass;
   sharedSourceMode: LiveReserveSourceSharingMode;
+  configValidation: LiveReserveAdapterConfigValidationPolicy;
   redemptionTelemetry: {
     capacity: "direct" | "proxy" | "none";
     fee: "current-bps" | "none";

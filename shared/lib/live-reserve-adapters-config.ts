@@ -1,17 +1,48 @@
 import { z } from "zod";
-import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReservesConfig } from "../types/live-reserves";
+import {
+  LIVE_RESERVE_ADAPTER_KEYS,
+  type LiveReserveAdapterKey,
+  type LiveReservesConfig,
+} from "../types/live-reserves";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "./live-reserve-adapters-definitions";
 import {
   adapterParamsSchemas,
   baseLiveReserveConfigSchema,
   createLiveReserveInputsSchema,
 } from "./live-reserve-adapters-schemas";
 
+function validateAdapterConfigPolicy(
+  adapterKey: LiveReserveAdapterKey,
+  config: Pick<LiveReservesConfig, "semantics" | "version">,
+  ctx: z.RefinementCtx,
+): void {
+  const policy = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].configValidation;
+  const allowedSemantics = policy.allowedSemantics as readonly LiveReservesConfig["semantics"][];
+  const allowedVersions = policy.allowedVersions as readonly number[];
+
+  if (!allowedSemantics.includes(config.semantics)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["semantics"],
+      message: `${adapterKey} adapter does not support semantics "${config.semantics}"`,
+    });
+  }
+
+  if (!allowedVersions.includes(config.version)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["version"],
+      message: `${adapterKey} adapter does not support config version ${config.version}`,
+    });
+  }
+}
+
 const liveReserveConfigVariants = LIVE_RESERVE_ADAPTER_KEYS.map((adapterKey) =>
   baseLiveReserveConfigSchema.extend({
     adapter: z.literal(adapterKey),
     inputs: createLiveReserveInputsSchema(adapterKey),
     params: adapterParamsSchemas[adapterKey].optional(),
-  }),
+  }).superRefine((config, ctx) => validateAdapterConfigPolicy(adapterKey, config, ctx)),
 // Zod discriminatedUnion requires a non-empty tuple type that TS cannot infer from array operations
 ) as unknown as readonly [z.ZodTypeAny, ...z.ZodTypeAny[]];
 

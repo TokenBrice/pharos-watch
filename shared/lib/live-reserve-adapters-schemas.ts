@@ -15,19 +15,20 @@ const LiveReserveRpcModeSchema = z.enum(LIVE_RESERVE_RPC_MODE_VALUES);
 const LiveReserveRiskSchema = ReserveRiskSchema;
 const LiveReserveDependencyTypeSchema = z.enum(DEPENDENCY_TYPE_VALUES);
 type LiveReserveInputKind = LiveReserveInput["kind"];
+const AbsoluteUrlSchema = z.string().url();
 
 const LiveReserveInputSchemaByKind = {
   "http-json": z.object({
     kind: z.literal("http-json"),
-    url: z.string(),
+    url: AbsoluteUrlSchema,
   }).strict(),
   "http-html": z.object({
     kind: z.literal("http-html"),
-    url: z.string(),
+    url: AbsoluteUrlSchema,
   }).strict(),
   indexer: z.object({
     kind: z.literal("indexer"),
-    url: z.string(),
+    url: AbsoluteUrlSchema,
   }).strict(),
   "onchain-solana": z.object({
     kind: z.literal("onchain-solana"),
@@ -104,7 +105,7 @@ export function createLiveReserveInputsSchema(adapterKey: LiveReserveAdapterKey)
 }
 
 const LiveReserveDisplaySchema = z.object({
-  url: z.string().optional(),
+  url: AbsoluteUrlSchema.optional(),
   label: z.string().optional(),
 }).strict();
 
@@ -114,8 +115,8 @@ const riskRecordSchema = z.record(z.string(), LiveReserveRiskSchema);
 const noParamsSchema = z.object({}).strict();
 
 const usd1BundleOracleParamsSchema = z.object({
-  rpcUrl: z.string().optional(),
-  fallbackRpcUrl: z.string().optional(),
+  rpcUrl: AbsoluteUrlSchema.optional(),
+  fallbackRpcUrl: AbsoluteUrlSchema.optional(),
 }).strict();
 
 const accountableParamsSchema = z.object({
@@ -132,7 +133,7 @@ const accountableParamsSchema = z.object({
 }).strict();
 
 const btcfiParamsSchema = z.object({
-  handlersUrl: z.string(),
+  handlersUrl: AbsoluteUrlSchema,
 }).strict();
 
 const chainlinkNavParamsSchema = z.object({
@@ -141,13 +142,13 @@ const chainlinkNavParamsSchema = z.object({
   assetLabel: z.string(),
   assetRisk: LiveReserveRiskSchema,
   oracleMethod: z.enum(["latestRoundData", "getPrice", "getAssetPrice"]).optional(),
-  rpcUrl: z.string().optional(),
-  fallbackRpcUrl: z.string().optional(),
+  rpcUrl: AbsoluteUrlSchema.optional(),
+  fallbackRpcUrl: AbsoluteUrlSchema.optional(),
   maxOracleAgeSec: z.number().positive().optional(),
 }).strict();
 
 const superstateLiquidityParamsSchema = chainlinkNavParamsSchema.extend({
-  liquidityUrl: z.string(),
+  liquidityUrl: AbsoluteUrlSchema,
   ticker: z.enum(["USTB", "USCC"]),
 }).strict();
 
@@ -161,8 +162,8 @@ const capVaultAssetSchema = z.object({
 }).strict();
 
 const capVaultParamsSchema = z.object({
-  rpcUrl: z.string().optional(),
-  fallbackRpcUrl: z.string().optional(),
+  rpcUrl: AbsoluteUrlSchema.optional(),
+  fallbackRpcUrl: AbsoluteUrlSchema.optional(),
   assets: z.array(capVaultAssetSchema).optional(),
 }).strict();
 
@@ -170,8 +171,8 @@ const chainlinkPorParamsSchema = z.object({
   porFeedAddress: z.string(),
   assetLabel: z.string(),
   assetRisk: LiveReserveRiskSchema,
-  rpcUrl: z.string().optional(),
-  fallbackRpcUrl: z.string().optional(),
+  rpcUrl: AbsoluteUrlSchema.optional(),
+  fallbackRpcUrl: AbsoluteUrlSchema.optional(),
   maxOracleAgeSec: z.number().positive().optional(),
 }).strict();
 
@@ -186,19 +187,19 @@ const collateralPositionsRedemptionBridgeSchema = z.object({
   tokenAddress: z.string(),
   tokenDecimals: z.number().int().nonnegative(),
   priceAddress: z.string().optional(),
-  rpcUrl: z.string().optional(),
-  fallbackRpcUrl: z.string().optional(),
+  rpcUrl: AbsoluteUrlSchema.optional(),
+  fallbackRpcUrl: AbsoluteUrlSchema.optional(),
 }).strict();
 
 const collateralPositionsParamsSchema = z.object({
-  pricesUrl: z.string(),
+  pricesUrl: AbsoluteUrlSchema,
   otherThresholdPct: z.number().positive().optional(),
   redemptionBridge: collateralPositionsRedemptionBridgeSchema.optional(),
 }).strict();
 
 const curatedValidatedParamsSchema = z.object({
-  rpcUrl: z.string().optional(),
-  fallbackRpcUrl: z.string().optional(),
+  rpcUrl: AbsoluteUrlSchema.optional(),
+  fallbackRpcUrl: AbsoluteUrlSchema.optional(),
 }).strict();
 
 const reserveProtocolDtfAssetSchema = z.object({
@@ -236,8 +237,8 @@ const singleAssetProbeSchema = z.object({
 
 const erc4626SingleAssetParamsSchema = z.object({
   slice: reserveSliceDescriptorSchema,
-  rpcUrl: z.string().optional(),
-  fallbackRpcUrl: z.string().optional(),
+  rpcUrl: AbsoluteUrlSchema.optional(),
+  fallbackRpcUrl: AbsoluteUrlSchema.optional(),
 }).strict();
 
 const evmBranchBalanceBranchSchema = z.object({
@@ -255,8 +256,8 @@ const evmBranchBalanceBranchSchema = z.object({
 }).strict();
 
 const evmBranchBalancesParamsSchema = z.object({
-  rpcUrl: z.string().optional(),
-  fallbackRpcUrl: z.string().optional(),
+  rpcUrl: AbsoluteUrlSchema.optional(),
+  fallbackRpcUrl: AbsoluteUrlSchema.optional(),
   branches: z.array(evmBranchBalanceBranchSchema).min(1),
   redemptionRateProbe: redemptionRateProbeSchema.optional(),
   /**
@@ -281,22 +282,22 @@ const ghoGsmModuleSchema = z.object({
 }).strict();
 
 const ghoParamsSchema = z.object({
-  rpcUrl: z.string().optional(),
-  fallbackRpcUrl: z.string().optional(),
+  rpcUrl: AbsoluteUrlSchema.optional(),
+  fallbackRpcUrl: AbsoluteUrlSchema.optional(),
   gsmModules: z.array(ghoGsmModuleSchema).min(1),
 }).strict();
 
 const liquityV1ParamsSchema = z.object({
   troveManagerAddress: z.string(),
   slice: reserveSliceDescriptorSchema,
-  rpcUrl: z.string().optional(),
-  fallbackRpcUrl: z.string().optional(),
+  rpcUrl: AbsoluteUrlSchema.optional(),
+  fallbackRpcUrl: AbsoluteUrlSchema.optional(),
   redemptionRateProbe: redemptionRateProbeSchema.optional(),
 }).strict();
 
 const jupusdParamsSchema = z.object({
-  snapshotsUrl: z.string().optional(),
-  oracleUrl: z.string().optional(),
+  snapshotsUrl: AbsoluteUrlSchema.optional(),
+  oracleUrl: AbsoluteUrlSchema.optional(),
 }).strict();
 
 const sgForgeCoinvertibleParamsSchema = z.object({
@@ -308,8 +309,8 @@ const singleAssetParamsSchema = z.object({
   risk: LiveReserveRiskSchema,
   coinId: z.string().optional(),
   depType: LiveReserveDependencyTypeSchema.optional(),
-  rpcUrl: z.string().optional(),
-  fallbackRpcUrl: z.string().optional(),
+  rpcUrl: AbsoluteUrlSchema.optional(),
+  fallbackRpcUrl: AbsoluteUrlSchema.optional(),
   probe: singleAssetProbeSchema.optional(),
   reserveProbe: singleAssetProbeSchema.optional(),
   supplyProbe: singleAssetProbeSchema.optional(),
@@ -338,8 +339,8 @@ const abracadabraCauldronSchema = z.object({
 }).strict();
 
 const abracadabraParamsSchema = z.object({
-  rpcUrl: z.string().optional(),
-  fallbackRpcUrl: z.string().optional(),
+  rpcUrl: AbsoluteUrlSchema.optional(),
+  fallbackRpcUrl: AbsoluteUrlSchema.optional(),
   // BentoBox / DegenBox contract that backs the configured cauldrons. Used to
   // convert per-cauldron `totalCollateralShare` into underlying token amounts
   // via `toAmount(token, share, false)`.
