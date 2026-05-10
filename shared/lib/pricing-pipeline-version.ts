@@ -3,9 +3,26 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.03",
+  currentVersion: "5.04",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.04",
+      title: "Source freshness and independent corroboration hardening",
+      date: "2026-05-10",
+      effectiveAt: 1778451808,
+      summary:
+        "Centralized primary source freshness checks, made severe fixed-peg downside publication count independent source families, and hardened tracked-base authoritative inheritance so weak parent prices cannot become high-confidence protocol-redeem child prices.",
+      impact: [
+        "Bitstamp, Coinbase, oracle, Curve, CoinGecko-derived, and promoted DEX protocol candidates are rejected before primary admission when their timestamps are stale, invalid, missing where required, or future-skewed beyond the shared freshness ceiling",
+        "Promoted DEX protocol lanes are freshness-checked per lane, so a fresh parent dex_prices row cannot carry stale protocol-level sources into consensus",
+        "Severe fixed-peg downside publication now requires independent source-family corroboration; correlated CoinGecko plus DefiLlama-list evidence no longer satisfies the guardrail on its own",
+        "Tracked-base authoritative inheritance now requires a fresh, replay-safe, high-confidence or explicitly authoritative parent and carries parent provenance through accepted overrides",
+        "The methodology now documents the existing trust-tier-first low-confidence selector and upper-middle median estimator for even-sized clusters",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.03",
       title: "DEX source telemetry and direct-API fetch hardening",

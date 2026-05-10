@@ -54,6 +54,8 @@ npm run test:smoke-ui -- --url https://pharos.watch --mode live # Browser-level 
 
 Markdown variants for `/methodology/`, `/changelog/`, and stablecoin detail pages have checked-in fixture snapshots under `scripts/__tests__/fixtures/markdown/`. When an intentional visible copy or renderer change updates those outputs, run `npm run build` or `npx tsx scripts/generate-markdown-exports.ts`, copy the matching `out/**/index.md` file over its fixture, and commit the fixture in the same change as the JSX or renderer edit.
 
+`npm run audit:pricing-providers` checks the configured CEX and RedStone provider contracts against live metadata and is covered by mocked unit tests for success, regional blocking, provider drift, non-OK responses, and malformed metadata shapes. Optional live source-shape probes can be run with `tsx scripts/audit-pricing-provider-config.ts --live-source-shapes`; this adds Jupiter V3 shape validation and, when `CMC_API_KEY` is set, a CoinMarketCap category shape check. Stablecoins sync metadata also emits `pricingSourceAuditReport`, which summarizes source distribution risks such as missing prices, fallback/cache reliance, low-confidence pricing, assets without an independent hard source, and structured provider rejection counts.
+
 When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` also verifies that the homepage artifact includes the expected GA script tag and `gtag('config', ...)` initialization before it runs the browser checks. The config init may live in the root static RSC payload (`/index.txt`) on newer Next.js static exports rather than directly in `index.html`.
 
 ## CI Pipeline

@@ -8,7 +8,7 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
-export const CONTENT_MARKDOWN = `## PegScore and Depeg Early Warning Score (DEWS)\n\nPegScore measures historical peg quality from time-at-peg and event severity. The tracking window is capped by asset age and uses curated launch dates when available.\n\nDEWS is a forward-looking stress score. It combines price deviation, source divergence, liquidity erosion, pool imbalance, supply velocity, blacklist activity, mint/burn pressure, and yield anomalies into a 0-100 warning signal.\n\nPending depegs require corroboration before promotion. Pharos treats contradictory evidence as a reason to hold or reject an event, not as weak support, and it records the source family behind every confirmed mutation.\n`;
+export const CONTENT_MARKDOWN = `## PegScore and Depeg Early Warning Score (DEWS)\n\nPegScore measures historical peg quality from time-at-peg and event severity. The tracking window is capped by asset age and uses curated launch dates when available.\n\nDEWS is a forward-looking stress score. It combines price deviation, source divergence, liquidity erosion, pool imbalance, supply velocity, blacklist activity, mint/burn pressure, and yield anomalies into a 0-100 warning signal.\n\nPending depegs require source-family-aware corroboration before promotion. Pharos treats contradictory evidence as a reason to hold or reject an event, not as weak support, and it records canonical source keys behind every confirmed mutation.\n`;
 export function PegScoreDewsMethodologySection() {
   return (
           <MethodologySectionShell
@@ -21,10 +21,7 @@ export function PegScoreDewsMethodologySection() {
             badgeClassName="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
             changelogClassName="hover:text-amber-700 dark:text-amber-400"
           >
-              <p>
-                PegScore observes the past and present by scoring realized peg behavior, while DEWS is forward-looking and
-                tries to anticipate future depeg risk before it fully manifests.
-              </p>
+              <p>PegScore observes the past and present by scoring realized peg behavior, while DEWS is forward-looking and tries to anticipate future depeg risk before it fully manifests.</p>
               <p>
                 Depeg Tracker combines live event detection, secondary-source confirmation rules for large-cap assets,
                 low-confidence primary prices, and extreme moves, plus a per-coin peg score that penalizes time off peg,
@@ -46,7 +43,10 @@ export function PegScoreDewsMethodologySection() {
                     the peg.
                   </p>
                   <p>
-                    DEX cross-validation uses explicit trust gates: detection and pending confirmation only trust fresh DEX rows with at least $1M of aggregate source TVL, while the public DEX Price Check UI requires a lighter but still non-trivial floor of $250K. Aggregate DEX rows also need deeper corroboration before they can mutate live event state: recoveries/suppression now require at least two protocol-level DEX groups inside threshold, and ambiguous-primary recoveries are vetoed when a large challenger pool still shows the old depeg direction. For already-open depegs, same-direction aggregate DEX disagreement is advisory rather than a synthetic recovery signal, so events stay continuous until the normal recovery path confirms the coin is back inside threshold.
+                    DEX cross-validation uses explicit trust gates: detection and pending confirmation only trust fresh DEX rows with at least $1M of aggregate source TVL, while the public DEX Price Check UI requires a lighter but still non-trivial floor of $250K. Aggregate DEX rows also need deeper corroboration before they can mutate live event state: recoveries/suppression and pending confirmation now require at least two protocol-level DEX groups, and ambiguous-primary recoveries are vetoed when a large challenger pool still shows the old depeg direction. Pool challenger confirmation counts distinct protocol/source-family groups, with the documented $5M single-pool exception preserved. For already-open depegs, same-direction aggregate DEX disagreement is advisory rather than a synthetic recovery signal, so events stay continuous until the normal recovery path confirms the coin is back inside threshold.
+                  </p>
+                  <p>
+                    Pending confirmation chooses off-chain confirmers by source family from the primary <code className="mx-1 text-xs">agreeSources</code> set. CoinGecko-family primary evidence cannot be confirmed by CoinGecko again, DefiLlama-family evidence cannot be confirmed by DefiLlama again, and promoted rows store canonical keys such as <code className="mx-1 text-xs">coingecko-confirm</code>, <code className="mx-1 text-xs">dex:curve</code>, and <code className="mx-1 text-xs">pool:curve:gecko_terminal</code> for auditability.
                   </p>
                   <p>
                     Thin non-USD fiat peg groups also fail closed when the live peg reference would have to rely on a 1&ndash;2 coin peer median or an empty peer set instead of cached FX. Once a live row is already open, a fresh non-cached multi-source primary cluster can retire it after recovery even if that source mix is still too soft to open brand-new events directly.
@@ -55,7 +55,7 @@ export function PegScoreDewsMethodologySection() {
                     For supported fiat pairs with a clean native-market quote, depeg routing now also checks that direct native quote before trusting a derived USD-versus-FX move. That means BRZ-style BRL reference drift can no longer open, sustain, or confirm a live depeg when the fresh direct <code className="mx-1 text-xs">BRZ/BRL</code> quote is already back near parity. Historical backfill now follows the same principle for supported non-USD fiat assets: when CoinGecko exposes a native fiat pair, replay prefers that native history and compares it directly to the native <code className="mx-1 text-xs">1.0</code> peg before falling back to USD-plus-FX reconstruction. In that native-replay mode, Pharos now uses daily points plus a two-point confirmation window across 36 hours so thin hourly native prints do not manufacture long false historical depeg streaks.
                   </p>
                   <p>
-                    Live depeg events still require at least $1M of current circulating supply. Below that floor, the detail page may still show the current price deviation from peg, but it labels live event coverage as limited instead of implying the coin held peg.
+                    Live depeg events still require at least $1M of current circulating supply. Historical replay applies the same floor from historical supply snapshots, or from current stablecoins-cache supply when historical supply is absent; if neither supply source exists, backfill preserves existing rows. Below that floor, the detail page may still show the current price deviation from peg, but it labels live event coverage as limited instead of implying the coin held peg.
                   </p>
                   <p>
                     DEWS (Depeg Early Warning System) computes forward-looking stress every 30 minutes from market, liquidity,

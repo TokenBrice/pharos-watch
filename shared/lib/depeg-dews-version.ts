@@ -1,9 +1,26 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "5.96",
+  currentVersion: "5.97",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+    {
+      version: "5.97",
+      title: "Source-family confirmation and zero-event backfill parity",
+      date: "2026-05-11",
+      effectiveAt: 1778457600,
+      summary:
+        "Pending depeg confirmation now requires source-family-aware corroboration, stricter DEX/pool independence, refreshed peg references, and canonical confirmer provenance; trusted zero-event backfills now remove stale backfill rows.",
+      impact: [
+        "CoinGecko/DefiLlama off-chain confirmation is selected from the primary agreeSources family set, so same-family circular evidence cannot promote large-cap pending rows on its own",
+        "Aggregate DEX confirmation requires at least two fresh protocol groups, and pool challengers count distinct protocol/source-family groups while preserving the documented >= $5M single-pool exception",
+        "Promoted pending rows use refreshed peg references, canonical confirmation_sources keys, and the worst trustworthy confirmer price when setting peak severity",
+        "Backfill dry-runs and mutating runs now agree when a trusted replay finds zero events: stale source='backfill' rows are previewed and then deleted",
+        "Historical replay applies the live supply floor from historical supply or current stablecoins-cache supply; when both are absent, existing backfill rows are preserved",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.96",
       title: "ARS native-peg and KGS FX corroboration",

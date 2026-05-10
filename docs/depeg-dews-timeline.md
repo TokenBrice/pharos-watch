@@ -1,6 +1,17 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.96` (2026-02-18 -> 2026-05-05).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.97` (2026-02-18 -> 2026-05-11).
+
+---
+## v5.97 — Source-family confirmation and zero-event backfill parity (May 11, 2026)
+
+**Commit:** `unreleased`
+
+- Pending confirmation now chooses off-chain confirmers by primary `agreeSources` source family, stores canonical confirmer keys, and ignores same-family CoinGecko/DefiLlama circular evidence
+- Aggregate DEX pending confirmation requires at least two independent fresh protocol groups, while pool challengers count distinct protocol/source-family groups with the existing `>= $5M` single-pool exception preserved
+- Promoted pending rows use the refreshed peg reference and include trustworthy confirmer prices when computing peak severity
+- Trusted zero-event depeg backfills now delete stale `source='backfill'` rows, and dry-runs preview the same deletion scope
+- Backfill replay applies the live supply floor from historical supply or current stablecoins-cache supply; if both are absent, existing rows are preserved instead of replaying without a floor
 
 ---
 ## v5.96 — ARS native-peg and KGS FX corroboration (May 5, 2026)

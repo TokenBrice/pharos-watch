@@ -193,11 +193,12 @@ Age checks:
 **Off-chain check:**
 
 - Preferred path for supported non-USD fiat pegs: use a fresh direct native-peg quote (for example `BRZ/BRL` or `EURC/EUR`) and compare that quote directly to the native `1.0` peg
-- Default path: fetch CoinGecko `/simple/price` for the coin's `geckoId`
-- If the current primary price already comes from CoinGecko (`priceSource.startsWith("coingecko")`), switch the confirmer to DefiLlama `coins.llama.fi/prices/current/coingecko:{geckoId}` instead of querying CoinGecko again
-- Calculate deviation against `peg_reference`
+- Default path: choose an independent off-chain family from the current primary `agreeSources` (falling back to `priceSource`). CoinGecko-family primaries use DefiLlama confirmation, DefiLlama-family primaries use CoinGecko confirmation, and primary clusters that already include both families do not get an off-chain confirmation vote.
+- CoinGecko confirmation uses `/simple/price` with `include_last_updated_at=true`; DefiLlama confirmation uses `coins.llama.fi/prices/current/coingecko:{geckoId}`. When those timestamps are present, stale or future-dated observations are ignored, and non-OK response bodies are canceled before later confirmation fetches.
+- Calculate deviation against the current peg reference recomputed during confirmation, falling back to the pending-row reference only when the current reference is unavailable
 - Counts as confirmation only when deviation >= `secondaryBar` (50% of primary threshold) **and** it points in the same direction as the pending incident
 - Non-fatal: if fetch fails, the off-chain agreement remains `null`
+- Canonical persisted keys are `coingecko-confirm`, `defillama-confirm`, or `native:<peg>`.
 
 **CEX ticker check:**
 
@@ -210,14 +211,17 @@ Age checks:
 
 - Read from `dex_prices` table (same data as Stage 1)
 - Must be within 35-minute freshness window and have aggregate source TVL >= $1M
+- Aggregate DEX confirmation now also requires at least `DEPEG_DEX_PROTOCOL_CORROBORATION_MIN` independent protocol groups from fresh per-source `price_sources_json`; one protocol cannot promote, recover, or decisively contradict a pending row by itself
 - Counts as confirmation only when deviation >= `secondaryBar` and points in the same direction as the pending incident
+- Persisted confirmation keys use `dex:<protocol>`.
 
 **Pool challenger check:**
 
 - Loads qualifying individual DEX pool challengers from the published challenger snapshot tables via `loadDexPoolChallengers(...)`
 - Uses the same freshness / minimum-TVL guardrail family as the depeg helper layer
-- Counts as confirmation only when **at least two** qualifying pools diverge by `secondaryBar` in the same direction, **or** a single qualifying pool with `>= $5M` TVL does so. A single thin pool can no longer promote a pending depeg on its own.
+- Counts as confirmation only when **at least two distinct protocol/source-family groups** diverge by `secondaryBar` in the same direction, **or** a single qualifying pool with `>= $5M` TVL does so. Multiple same-protocol pools from the same source family count as one group.
 - Non-fatal: missing challenger tables or incomplete published snapshots fall back through the helper's legacy path and still yield `null`/`false` safely
+- Persisted confirmation keys use `pool:<protocol>:<sourceFamily>`.
 
 ### Decision Matrix
 
@@ -226,20 +230,23 @@ Age checks:
 | true | any | any | any | any | PROMOTE to `depeg_events`, except low-confidence rows still need CEX, aggregate DEX, or pool confirmation |
 | any | true | any | any | any | PROMOTE to `depeg_events` |
 | any | any | true | any | any | PROMOTE to `depeg_events` |
-| any | any | any | true | any | PROMOTE to `depeg_events` (pool-only path requires 2 pools or one pool with `>= $5M` TVL) |
+| any | any | any | true | any | PROMOTE to `depeg_events` (pool-only path requires 2 distinct protocol/source-family groups or one pool with `>= $5M` TVL) |
 | true | false/null | false/null | false/null | any | Keep pending when reason includes `low-confidence`; low-confidence rows need a hard secondary source (CEX, aggregate DEX, or pool challenger) |
 | false | any | false | any | true | REJECT (off-chain and aggregate DEX both oppose the pending direction) |
 | false | any | null | false/null | true | REJECT (directional contradiction with no same-direction rescue signal) |
 | null | null | false | false/null | true | REJECT (available secondary evidence points the other way) |
+| null | null | false/null | false/null | true | REJECT when DEX or pool contradiction is decisive and no same-direction source rescues the candidate |
 | null | null | null | null | false | Keep pending (retry next cycle) |
 
-Promotion inserts into `depeg_events` with `started_at` = original `first_seen_at`, direction = the active pending direction, and peak = worst of the stored pending peak vs the current trustworthy confirmer state, then deletes from `depeg_pending`.
+Promotion inserts into `depeg_events` with `started_at` = original `first_seen_at`, direction = the active pending direction, refreshed `peg_reference`, canonical `confirmation_sources`, and peak = worst of the stored pending peak, current authoritative primary, and trustworthy same-direction confirmer prices, then deletes from `depeg_pending`.
 
 ## Historical Backfill Validation
 
 Historical backfills in `worker/src/api/backfill-depegs.ts` do **not** reuse the exact same guard as live DEX or fallback enrichment, but they now consult the same authoritative-price provider registry as live sync before falling back to market history.
 
-Backfill rewrites are atomic: the delete of prior `source='backfill'` rows and the insert of replacement rows now share a single D1 `batch()` call, so a worker interruption mid-rewrite can no longer leave a coin with zero depeg rows.
+Backfill rewrites delete prior `source='backfill'` rows even when a trusted replay finds zero replacement events. Dry-runs preview that same removal scope through `removedBackfillEventCount`. For non-empty replacements, the delete and first insert chunk share one D1 `batch()` call (up to the D1 100-statement batch limit: delete + 99 inserts). Additional inserts are written in later chunks, so large replacements are bounded and restartable but not a single all-rows transaction.
+
+When DefiLlama historical supply is absent, replay applies the live `$1M` event floor using the current stablecoins-cache supply for that asset. If neither historical nor current supply is available, the backfill preserves existing rows instead of silently replaying market prices without a supply floor. The same fallback supply also controls large-cap confirmation behavior for absent-history assets.
 
 Supported non-USD fiat backfills now prefer direct CoinGecko native-fiat history first and compare that series against the native `1.0` peg. In that native-fiat mode, replay uses daily points plus a two-point confirmation window across 36 hours before opening a normal event, while still preserving extreme single-point crashes of `>= 5000 bps`. Only when that native history is unavailable does the replay fall back to USD-denominated CoinGecko/DefiLlama history plus the historical FX reference.
 

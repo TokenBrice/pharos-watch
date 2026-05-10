@@ -1,6 +1,21 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.03` (2026-02-01 -> 2026-05-05).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.04` (2026-02-01 -> 2026-05-10).
+
+---
+
+## v5.04 - Source freshness and independent corroboration hardening (May 10, 2026)
+
+**Commit:** `unreleased`
+
+- Primary candidate admission now uses a registry-backed freshness gate for timestamped sources, including stale and future-skew rejection for Bitstamp, Coinbase, oracles, Curve, CoinGecko-derived rows, and promoted DEX protocol lanes
+- Promoted DEX protocol lanes are freshness-checked per source before admission, so a fresh parent `dex_prices` row cannot carry a stale protocol-level price into consensus
+- Severe fixed-peg downside publication now counts independent source families instead of raw candidates; correlated CoinGecko plus DefiLlama-list downside evidence no longer satisfies corroboration on its own
+- Tracked-base authoritative inheritance now requires a fresh, replay-safe, high-confidence or explicitly authoritative parent and preserves parent provenance on accepted inherited overrides
+- DefiLlama contract fallback and CoinMarketCap category fallback now preserve upstream quote timestamps and validate response shape before recording provider success; stale, low-confidence, wrong-symbol, malformed, or apparently truncated fallback responses no longer look like healthy empty coverage
+- Jupiter fallback now accepts documented Price API V3 payloads without relying on undocumented liquidity fields, validates `blockId` against Solana current slot freshness, and treats malformed OK responses as provider failures
+- DexScreener fallback now separates exact-address provenance from last-resort symbol-search provenance and restricts symbol search to configured chains with USD-like quotes, minimum pair age, 24h volume, and liquidity
+- The methodology now documents the intentional trust-tier-first low-confidence selection policy and the upper-middle estimator used for even-sized consensus clusters
 
 ---
 

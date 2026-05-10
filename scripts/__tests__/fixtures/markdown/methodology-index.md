@@ -77,7 +77,7 @@ PegScore measures historical peg quality from time-at-peg and event severity. Th
 
 DEWS is a forward-looking stress score. It combines price deviation, source divergence, liquidity erosion, pool imbalance, supply velocity, blacklist activity, mint/burn pressure, and yield anomalies into a 0-100 warning signal.
 
-Pending depegs require corroboration before promotion. Pharos treats contradictory evidence as a reason to hold or reject an event, not as weak support, and it records the source family behind every confirmed mutation.
+Pending depegs require source-family-aware corroboration before promotion. Pharos treats contradictory evidence as a reason to hold or reject an event, not as weak support, and it records canonical source keys behind every confirmed mutation.
 
 
 ## Contagion Stress Test
