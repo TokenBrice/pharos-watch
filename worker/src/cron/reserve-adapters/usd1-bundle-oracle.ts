@@ -11,6 +11,7 @@ import {
   requireOnchainInput,
   verifiedFreshnessMetadata,
 } from "./helpers";
+import { buildDocumentedRedemptionTelemetry } from "./redemption";
 
 const USD1_BUNDLE_ORACLE = "0x691b74146cdba162449012aa32d3cbf5df77d4c4";
 const USD1_RESERVE_LABEL = "U.S. Treasury Bills, Money Market Funds & Cash";
@@ -98,13 +99,7 @@ export function adaptUsd1BundleOracle(input: {
       reserveDecimals,
       totalSupplyRaw: input.totalSupplyRaw.toString(),
       tokenDecimals: input.tokenDecimals,
-      redemption: {
-        capacityKind: "documented-bound" as const,
-        freshnessKind: "verified-source-timestamp" as const,
-        sourceTimestamp: bundleTimestamp,
-        routeStatus: "unknown" as const,
-        holderEligibility: "verified-customer",
-      },
+      redemption: buildDocumentedRedemptionTelemetry(bundleTimestamp, { holderEligibility: "verified-customer" }),
     },
   };
 }

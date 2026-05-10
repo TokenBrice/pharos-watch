@@ -1,9 +1,6 @@
 import type {
   LiveReserveInput,
-  LiveReserveRedemptionCapacityKind,
-  LiveReserveRedemptionFreshnessKind,
-  LiveReserveRedemptionRouteStatus,
-  LiveReserveRedemptionRouteStatusSource,
+  LiveReserveRedemptionTelemetry,
   LiveReserveSnapshotMetadata,
 } from "@shared/types/live-reserves";
 import type { AdapterContext } from "./types";
@@ -11,24 +8,25 @@ import { fetchOnchainRateBps, type OnchainRateProbe } from "./onchain";
 
 type EvmInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
 
-interface BuildRedemptionSnapshotMetadataOptions {
-  capacityUsd?: number;
-  capacityRatioOfSupply?: number;
-  capacityKind?: LiveReserveRedemptionCapacityKind;
-  freshnessKind?: LiveReserveRedemptionFreshnessKind;
-  sourceTimestamp?: number;
-  blockNumber?: number;
-  routeStatus?: LiveReserveRedemptionRouteStatus;
-  routeStatusSource?: LiveReserveRedemptionRouteStatusSource;
-  routeStatusReason?: string;
-  routeStatusReviewedAt?: string;
+type BuildRedemptionSnapshotMetadataOptions = Omit<LiveReserveRedemptionTelemetry, "feeBps"> & {
+  feeBps?: LiveReserveRedemptionTelemetry["feeBps"] | null;
+};
+
+interface DocumentedRedemptionTelemetryOptions {
   holderEligibility?: string;
-  settlementDelaySec?: number;
-  queueDepthUsd?: number;
-  dailyLimitUsd?: number;
-  minRedeemUsd?: number;
-  feeBps?: number | null;
-  sourceUrls?: string[];
+}
+
+export function buildDocumentedRedemptionTelemetry(
+  sourceTimestamp?: number | null,
+  options: DocumentedRedemptionTelemetryOptions = {},
+): LiveReserveRedemptionTelemetry {
+  return {
+    capacityKind: "documented-bound",
+    freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "unverified",
+    ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
+    routeStatus: "unknown",
+    ...(options.holderEligibility ? { holderEligibility: options.holderEligibility } : {}),
+  };
 }
 
 export function buildRedemptionSnapshotMetadata(

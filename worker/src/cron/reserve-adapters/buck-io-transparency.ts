@@ -9,6 +9,7 @@ import {
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
+import { buildDocumentedRedemptionTelemetry } from "./redemption";
 
 /**
  * Parse a dollar amount like "$150.00K" / "$1.20M" / "$650.00" into a Number.
@@ -95,13 +96,7 @@ export function adaptBuckIoTransparency(html: string): AdapterResult {
             "html-disclosure",
             "Buck transparency page did not expose a parseable 'Last updated' timestamp",
           )),
-      redemption: {
-        capacityKind: "documented-bound" as const,
-        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
-        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        routeStatus: "unknown" as const,
-        holderEligibility: "verified-customer",
-      },
+      redemption: buildDocumentedRedemptionTelemetry(sourceTimestamp, { holderEligibility: "verified-customer" }),
     },
   };
 }

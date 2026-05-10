@@ -8,6 +8,7 @@ import {
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
+import { buildDocumentedRedemptionTelemetry } from "./redemption";
 
 const MONTH_INDEX: Record<string, number> = {
   january: 0,
@@ -107,13 +108,7 @@ export function adaptUsdhNativeMarkets(html: string): AdapterResult {
             "html-disclosure",
             "USDH reserves page did not expose a parseable attestation month",
           )),
-      redemption: {
-        capacityKind: "documented-bound" as const,
-        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
-        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        routeStatus: "unknown" as const,
-        holderEligibility: "verified-customer",
-      },
+      redemption: buildDocumentedRedemptionTelemetry(sourceTimestamp, { holderEligibility: "verified-customer" }),
     },
   };
 }

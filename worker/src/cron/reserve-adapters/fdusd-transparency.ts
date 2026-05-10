@@ -9,6 +9,7 @@ import {
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
+import { buildDocumentedRedemptionTelemetry } from "./redemption";
 
 const FDUSD_LABEL_MAP: Record<string, string> = {
   "US Treasury Bills": "U.S. Treasury Bills",
@@ -72,12 +73,7 @@ export function adaptFdusdTransparency(html: string): AdapterResult {
             "html-disclosure",
             "FDUSD reserve page did not expose a parseable 'As of' timestamp",
           )),
-      redemption: {
-        capacityKind: "documented-bound" as const,
-        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
-        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        routeStatus: "unknown" as const,
-      },
+      redemption: buildDocumentedRedemptionTelemetry(sourceTimestamp),
     },
   };
 }

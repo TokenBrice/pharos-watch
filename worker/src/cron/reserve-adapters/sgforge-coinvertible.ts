@@ -11,6 +11,7 @@ import {
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
+import { buildDocumentedRedemptionTelemetry } from "./redemption";
 
 type SgForgeCoinType = "eur" | "usd";
 
@@ -170,13 +171,7 @@ export function adaptSgForgeCoinvertible(
             "html-disclosure",
             "SG Forge CoinVertible page did not expose a parseable 'Last update' timestamp",
           )),
-      redemption: {
-        capacityKind: "documented-bound" as const,
-        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
-        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        routeStatus: "unknown" as const,
-        holderEligibility: "verified-customer",
-      },
+      redemption: buildDocumentedRedemptionTelemetry(sourceTimestamp, { holderEligibility: "verified-customer" }),
     },
   };
 }

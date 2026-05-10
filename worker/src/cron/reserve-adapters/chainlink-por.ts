@@ -14,6 +14,7 @@ import {
   reserveDegradedWarning,
   reserveInfoWarning,
 } from "./helpers";
+import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
 const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;
 
@@ -116,12 +117,7 @@ export function adaptChainlinkPorResponse(
       feedUpdatedAt: data.updatedAt,
       sourceTimestamp: data.updatedAt,
       freshnessMode: "verified",
-      redemption: {
-        capacityKind: "documented-bound" as const,
-        freshnessKind: "verified-source-timestamp" as const,
-        sourceTimestamp: data.updatedAt,
-        routeStatus: "unknown" as const,
-      },
+      redemption: buildDocumentedRedemptionTelemetry(data.updatedAt),
       totalReserveUsd,
       ...(supplyUsd != null
         ? {
