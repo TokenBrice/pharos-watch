@@ -12,12 +12,22 @@ const { staleTime: LIVE_STALE_TIME, refetchInterval: LIVE_REFETCH_INTERVAL } = g
 const FALLBACK_STALE_TIME = 60 * 1000; // fallback/live-stale responses are intentionally short-lived
 const FALLBACK_REFETCH_INTERVAL = 2 * 60 * 1000;
 
+function hasActiveSyncIssue(data: StablecoinReservesResponse | null | undefined): boolean {
+  return data?.mode === "live" && !!data.sync && (
+    data.sync?.status !== "ok" || data.sync?.uncertainWrite === true
+  );
+}
+
 function reserveQueryStaleTime(query: { state: { data?: StablecoinReservesResponse | null } }): number {
-  return query.state.data?.mode === "live" ? LIVE_STALE_TIME : FALLBACK_STALE_TIME;
+  return query.state.data?.mode === "live" && !hasActiveSyncIssue(query.state.data)
+    ? LIVE_STALE_TIME
+    : FALLBACK_STALE_TIME;
 }
 
 function reserveQueryRefetchInterval(query: { state: { data?: StablecoinReservesResponse | null } }): number {
-  return query.state.data?.mode === "live" ? LIVE_REFETCH_INTERVAL : FALLBACK_REFETCH_INTERVAL;
+  return query.state.data?.mode === "live" && !hasActiveSyncIssue(query.state.data)
+    ? LIVE_REFETCH_INTERVAL
+    : FALLBACK_REFETCH_INTERVAL;
 }
 
 export interface StablecoinReservesQueryState {

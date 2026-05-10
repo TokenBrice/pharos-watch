@@ -82,4 +82,33 @@ describe("useStablecoinReserves", () => {
     expect(options.staleTime({ state: { data: { mode: "curated-fallback" } } })).toBe(60 * 1000);
     expect(options.refetchInterval({ state: { data: { mode: "curated-fallback" } } })).toBe(2 * 60 * 1000);
   });
+
+  it("uses recovery polling for live responses with active sync issues", () => {
+    useQueryMock.mockReturnValue({ data: null, error: null });
+
+    renderHook(() => useStablecoinReserves("usdc-circle", true));
+    const options = useQueryMock.mock.calls[0][0] as {
+      staleTime: (query: { state: { data?: { mode: string; sync?: { status: string; uncertainWrite?: boolean } } | null } }) => number;
+      refetchInterval: (query: { state: { data?: { mode: string; sync?: { status: string; uncertainWrite?: boolean } } | null } }) => number;
+    };
+
+    const degradedLive = {
+      mode: "live",
+      sync: {
+        status: "degraded",
+      },
+    };
+    const uncertainLive = {
+      mode: "live",
+      sync: {
+        status: "ok",
+        uncertainWrite: true,
+      },
+    };
+
+    expect(options.staleTime({ state: { data: degradedLive } })).toBe(60 * 1000);
+    expect(options.refetchInterval({ state: { data: degradedLive } })).toBe(2 * 60 * 1000);
+    expect(options.staleTime({ state: { data: uncertainLive } })).toBe(60 * 1000);
+    expect(options.refetchInterval({ state: { data: uncertainLive } })).toBe(2 * 60 * 1000);
+  });
 });

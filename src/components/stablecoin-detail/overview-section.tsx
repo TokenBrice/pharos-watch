@@ -256,6 +256,28 @@ function buildReserveProvenanceNotice(
   }
 }
 
+function buildReserveSyncNotice(
+  reserves: ReserveResult | null,
+): { title: string; rows: string[]; toneClass: string } | null {
+  const sync = reserves?.sync;
+  if (!sync || (sync.status === "ok" && !sync.uncertainWrite)) {
+    return null;
+  }
+
+  const rows = [`Status: ${sync.status}`];
+  if (sync.failureCategory) rows.push(`Failure category: ${sync.failureCategory}`);
+  if (sync.lastError) rows.push(`Last error: ${sync.lastError}`);
+  if (sync.uncertainWrite) rows.push("Latest write state uncertain");
+
+  return {
+    title: sync.status === "error" ? "Live reserve sync error" : "Live reserve sync degraded",
+    rows,
+    toneClass: sync.status === "error"
+      ? "border-destructive/50 bg-destructive/10 text-destructive"
+      : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  };
+}
+
 export function OverviewSection({
   stablecoinId,
   coin,
@@ -278,6 +300,7 @@ export function OverviewSection({
     : null;
   const reserveCompositionNote = buildReserveCompositionNote(reserves);
   const reserveProvenanceNotice = buildReserveProvenanceNotice(reserves);
+  const reserveSyncNotice = buildReserveSyncNotice(reserves);
 
   const hasRightColumn = hasDews || hasPriceTransparency;
   const hasAnything = hasLeft || hasRightColumn;
@@ -343,6 +366,20 @@ export function OverviewSection({
                   <div className={`mt-2 rounded-lg border px-4 py-3 text-sm leading-relaxed ${reserveProvenanceNotice.toneClass}`}>
                     <p className="font-medium text-foreground">{reserveProvenanceNotice.title}</p>
                     <p className="mt-1">{reserveProvenanceNotice.message}</p>
+                  </div>
+                ) : null}
+                {reserveSyncNotice ? (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className={`mt-2 rounded-lg border px-4 py-3 text-sm leading-relaxed ${reserveSyncNotice.toneClass}`}
+                  >
+                    <p className="font-medium">{reserveSyncNotice.title}</p>
+                    <div className="mt-1 space-y-1">
+                      {reserveSyncNotice.rows.map((row) => (
+                        <p key={row}>{row}</p>
+                      ))}
+                    </div>
                   </div>
                 ) : null}
                 {reserves.sync?.warnings && reserves.sync.warnings.length > 0 && (

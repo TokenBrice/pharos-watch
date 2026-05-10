@@ -53,6 +53,46 @@ describe("OverviewSection", () => {
     expect(html).toContain("last worker-resolved reserve snapshot");
   });
 
+  it("surfaces active sync failures on fresh live reserve snapshots", () => {
+    const coin = TRACKED_META_BY_ID.get("iusd-infinifi");
+    expect(coin).toBeDefined();
+
+    const html = renderToStaticMarkup(
+      <OverviewSection
+        stablecoinId="iusd-infinifi"
+        coin={coin!}
+        summary={null}
+        reserves={{
+          reserves: [{ name: "Live farm", pct: 100, risk: "low" }],
+          estimated: false,
+          mode: "live",
+          liveAt: 1_700_000_000,
+          source: "infinifi",
+          sync: {
+            enabled: true,
+            status: "error",
+            stale: false,
+            bootstrap: false,
+            lastSuccessAt: 1_700_000_000,
+            lastAttemptedAt: 1_700_100_000,
+            lastError: "HTTP 503 from reserve API",
+            failureCategory: "circuit-open",
+            uncertainWrite: true,
+          },
+        }}
+        reserveFetchError={null}
+        isNavToken
+      />,
+    );
+
+    expect(html).toContain("Live reserve sync error");
+    expect(html).toContain("Status: error");
+    expect(html).toContain("Failure category: circuit-open");
+    expect(html).toContain("Last error: HTTP 503 from reserve API");
+    expect(html).toContain("Latest write state uncertain");
+    expect(html).toContain(">Updated");
+  });
+
   it("renders independent live reserve provenance messaging", () => {
     const coin = TRACKED_META_BY_ID.get("iusd-infinifi");
     expect(coin).toBeDefined();
