@@ -15,6 +15,7 @@ import {
   StablecoinChartResponseSchema,
   StressSignalsAllResponseSchema,
   StressSignalDetailResponseSchema,
+  UsdsStatusResponseSchema,
   YieldHistoryResponseSchema,
   YieldRankingsResponseSchema,
   type BluechipRatingsMap,
@@ -231,7 +232,9 @@ export function useStabilityIndexDetail() {
 }
 
 export function useUsdsStatus() {
-  return useApiQuery<UsdsStatusResponse | null>(["usds-status"], API_PATHS.usdsStatus(), CRON_15MIN);
+  return useApiQuery<UsdsStatusResponse | null>(["usds-status"], API_PATHS.usdsStatus(), CRON_15MIN, {
+    schema: UsdsStatusResponseSchema,
+  });
 }
 
 export function useYieldHistory(

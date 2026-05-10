@@ -88,6 +88,34 @@ describe("syncUsdsStatus", () => {
     expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
   });
 
+  it("returns degraded when the upstream probe payload is malformed", async () => {
+    mockFetch([
+      {
+        match: "action=eth_getStorageAt",
+        body: {
+          result: "0x000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        },
+      },
+      {
+        match: "action=eth_call",
+        body: { result: "0x01" },
+      },
+    ]);
+
+    const db = mockD1();
+    const result = await syncUsdsStatus(db, "etherscan-key");
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      reason: string;
+      implementationAddress: string;
+    };
+    expect(metadata.reason).toBe("freeze-probe-failed");
+    expect(metadata.implementationAddress).toBe("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
+  });
+
   it("returns degraded on invalid implementation-slot payload", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     mockFetch([

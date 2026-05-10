@@ -31,6 +31,15 @@ function makeBluechipRating(overrides: Partial<Record<string, unknown>> = {}) {
   };
 }
 
+function makeUsdsStatus(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    freezeActive: false,
+    implementationAddress: "0x1923dfee706a8e78157416c29cbccfde7cdf4102",
+    lastChecked: 1_762_000_000,
+    ...overrides,
+  };
+}
+
 function makeCacheDb(key: string, value: unknown, updatedAt: number) {
   const jsonValue = typeof value === "string" ? value : JSON.stringify(value);
   return mockD1([
@@ -187,11 +196,42 @@ describe("cache-passthrough: handleUsdsStatus", () => {
 
   it("returns 200 with concrete _meta on cache hit", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = makeCacheDb("usds-status", { status: "ok" }, nowSec - 42);
+    const db = makeCacheDb("usds-status", makeUsdsStatus(), nowSec - 42);
     const res = await handleUsdsStatus(db);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { _meta: { status: string; ageSeconds: number } };
+    const body = (await res.json()) as {
+      freezeActive: boolean;
+      implementationAddress: string;
+      lastChecked: number;
+      _meta: { status: string; ageSeconds: number };
+    };
+    expect(body.freezeActive).toBe(false);
+    expect(body.implementationAddress).toBe("0x1923dfee706a8e78157416c29cbccfde7cdf4102");
+    expect(body.lastChecked).toBe(1_762_000_000);
     expect(body._meta.status).toBe("fresh");
+    expect(body._meta.ageSeconds).toBe(42);
+  });
+
+  it("sanitizes malformed freezeActive and lastChecked fields", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeCacheDb("usds-status", makeUsdsStatus({
+      freezeActive: "yes",
+      implementationAddress: "0x1923DFEe706A8E78157416C29CBCCFDE7CDF4102",
+      lastChecked: "not-a-number",
+    }), nowSec - 42);
+
+    const res = await handleUsdsStatus(db);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      freezeActive: boolean;
+      implementationAddress: string;
+      lastChecked: number;
+      _meta: { ageSeconds: number };
+    };
+    expect(body.freezeActive).toBe(false);
+    expect(body.implementationAddress).toBe("0x1923dfee706a8e78157416c29cbccfde7cdf4102");
+    expect(body.lastChecked).toBe(nowSec - 42);
     expect(body._meta.ageSeconds).toBe(42);
   });
 });

@@ -1,6 +1,7 @@
 import type { ReportCard } from "@shared/types/report-cards";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { UsdsStatusResponseSchema, type UsdsStatusResponse } from "@shared/types";
 import { YieldRankingsResponseSchema, type YieldRanking, type YieldRankingsResponse } from "@shared/types/yield";
 import { BluechipRatingsMapSchema, StablecoinListResponseSchema } from "@shared/types/market";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
@@ -76,6 +77,20 @@ export const handleUsdsStatus = createCacheHandler(
   "usds-status",
   CACHE_PROFILES.standard,
   API_FRESHNESS_MAX_AGE_SEC.usdsStatus,
+  {
+    schema: UsdsStatusResponseSchema,
+    malformedMessage: "Cached usds-status payload is malformed",
+    transform: (payload, { cached }) => {
+      const status = payload as UsdsStatusResponse;
+      if (status.lastChecked > 0) {
+        return status;
+      }
+      return {
+        ...status,
+        lastChecked: cached.updatedAt,
+      };
+    },
+  },
 );
 
 const YIELD_RANKINGS_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];

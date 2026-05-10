@@ -1,3 +1,4 @@
+import { UsdsStatusResponseSchema, type UsdsStatusResponse } from "@shared/types";
 import { shouldSkipFreshCache, setCacheIfNewer, type CacheWriteResult } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { fetchEtherscanProxyHex } from "../lib/evm-rpc";
@@ -17,12 +18,8 @@ const NO_FREEZE_IMPL = "0x1923dfee706a8e78157416c29cbccfde7cdf4102";
 const ETH_CHAIN_ID = 1;
 // isBlocked(address) selector = keccak256("isBlocked(address)")[:4]
 const IS_BLOCKED_SELECTOR = "0xe4c0aaf4";
-
-interface UsdsStatus {
-  freezeActive: boolean;
-  implementationAddress: string;
-  lastChecked: number;
-}
+const THIRTY_TWO_BYTE_HEX_RE = /^0x[a-fA-F0-9]{64}$/;
+const EVM_ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
 
 async function readImplementationSlot(apiKey: string | null, signal?: AbortSignal): Promise<string | null> {
   try {
@@ -36,8 +33,10 @@ async function readImplementationSlot(apiKey: string | null, signal?: AbortSigna
       signal,
     });
     if (!result) return null;
+    if (!THIRTY_TWO_BYTE_HEX_RE.test(result)) return null;
     // Result is a 32-byte hex — extract the address from the last 20 bytes
-    return "0x" + result.slice(-40).toLowerCase();
+    const implementationAddress = `0x${result.slice(-40).toLowerCase()}`;
+    return EVM_ADDRESS_RE.test(implementationAddress) ? implementationAddress : null;
   } catch (e) {
     console.warn("[sync-usds] getImplementationAddress failed:", e);
     return null;
@@ -59,8 +58,8 @@ async function probeFreeze(apiKey: string | null, signal?: AbortSignal): Promise
       signal,
     });
     if (!result) return null;
-    // A successful call returns at least 66 chars (0x + 32 bytes)
-    return result.length >= 66;
+    if (!THIRTY_TWO_BYTE_HEX_RE.test(result)) return null;
+    return true;
   } catch (e) {
     console.warn("[sync-usds] probeFreeze failed:", e);
     return null;
@@ -113,11 +112,21 @@ export async function syncUsdsStatus(
     console.log("[usds-status] Implementation unchanged, no freeze");
   }
 
-  const status: UsdsStatus = {
+  const statusResult = UsdsStatusResponseSchema.safeParse({
     freezeActive,
     implementationAddress,
-    lastChecked: Math.floor(Date.now() / 1000),
-  };
+    lastChecked: syncStartSec,
+  });
+  if (!statusResult.success) {
+    await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, false);
+    console.error("[sync-usds-status] Status payload validation failed:", statusResult.error.issues);
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "status-payload-invalid", implementationAddress, freezeActive }),
+    };
+  }
+  const status: UsdsStatusResponse = statusResult.data;
 
   let cacheResult: CacheWriteResult;
   try {

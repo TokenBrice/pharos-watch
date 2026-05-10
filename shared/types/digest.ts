@@ -371,6 +371,25 @@ export interface UsdsStatusResponse {
   lastChecked: number;
 }
 
+const UsdsImplementationAddressSchema = z
+  .string()
+  .trim()
+  .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid implementation address")
+  .transform((value) => value.toLowerCase());
+
+export const UsdsStatusResponseSchema = z.object({
+  implementationAddress: UsdsImplementationAddressSchema,
+  freezeActive: z.unknown().optional(),
+  lastChecked: z.unknown().optional(),
+}).transform((value): UsdsStatusResponse => ({
+  freezeActive: typeof value.freezeActive === "boolean" ? value.freezeActive : false,
+  implementationAddress: value.implementationAddress,
+  lastChecked:
+    typeof value.lastChecked === "number" && Number.isFinite(value.lastChecked) && value.lastChecked >= 0
+      ? Math.floor(value.lastChecked)
+      : 0,
+}));
+
 export interface DigestSnapshotResponse {
   date: string;
   inputData: DigestInputData | null;

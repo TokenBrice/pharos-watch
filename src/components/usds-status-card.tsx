@@ -14,7 +14,10 @@ const LAST_CHECKED_FMT = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 
-function formatLastChecked(timestamp: number): string {
+function formatLastChecked(timestamp: number): string | null {
+  if (!Number.isFinite(timestamp) || timestamp <= 0) {
+    return null;
+  }
   return LAST_CHECKED_FMT.format(new Date(timestamp * 1000));
 }
 
@@ -68,6 +71,8 @@ export function UsdsStatusCard() {
 
   if (!status) return null;
 
+  const lastCheckedLabel = formatLastChecked(status.lastChecked);
+
   return (
     <MetricStatCard
       borderColorClass="border-l-violet-500"
@@ -90,7 +95,7 @@ export function UsdsStatusCard() {
             Sky (ex-MakerDAO) can enable blacklist-related features via a governance vote
           </p>
           <p className="text-xs text-muted-foreground">
-            Last checked: {formatLastChecked(status.lastChecked)}
+            {lastCheckedLabel ? `Last checked: ${lastCheckedLabel}` : "Last checked unavailable"}
           </p>
         </div>
       </div>
