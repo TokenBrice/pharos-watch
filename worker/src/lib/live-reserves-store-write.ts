@@ -11,6 +11,7 @@ import {
 } from "./live-reserves-store-shared";
 import {
   buildReserveCompositionHistoryInsertStatement,
+  buildReserveCompositionFinalizeSuccessStatement,
   buildReserveCompositionUpsertStatement,
   buildReserveSyncAttemptHistoryInsertStatement,
   buildReserveSyncAttemptStartStatement,
@@ -54,10 +55,10 @@ export async function finalizeReserveSyncSuccess(
   composition: ReserveCompositionRecord,
   syncState: ReserveSyncStateRecord,
   finalizeDeadlineMs: number,
-): Promise<{ finalized: boolean }> {
+): Promise<{ finalized: boolean; historyRecorded: boolean; historyError?: string }> {
   const [compositionRes, finalizeRes] = await runWithOverloadRetry(() =>
     db.batch<unknown>([
-      buildReserveCompositionUpsertStatement(db, composition),
+      buildReserveCompositionFinalizeSuccessStatement(db, composition),
       buildReserveSyncFinalizeSuccessStatement(db, syncState, finalizeDeadlineMs),
     ]),
   );
@@ -65,28 +66,36 @@ export async function finalizeReserveSyncSuccess(
   const finalized = ((finalizeRes as D1Result).meta.changes ?? 0) > 0;
 
   if (!finalized || !compositionApplied) {
-    return { finalized: false };
+    return { finalized: false, historyRecorded: false };
   }
 
-  await runWithOverloadRetry(() =>
-    db.batch([
-      buildReserveCompositionHistoryInsertStatement(db, composition),
-      buildReserveSyncAttemptHistoryInsertStatement(db, {
-        stablecoinId: syncState.stablecoinId,
-        attemptedAt: syncState.lastAttemptedAt ?? composition.fetchedAt,
-        adapterKey: syncState.adapterKey,
-        breakerKey: syncState.breakerKey,
-        status: syncState.lastStatus,
-        warningCount: syncState.warningCount,
-        warnings: syncState.warnings,
-        lastError: syncState.lastError,
-        metadata: syncState.metadata,
-        attemptId: syncState.lastAttemptId ?? null,
-      }),
-    ]),
-  );
+  try {
+    await runWithOverloadRetry(() =>
+      db.batch([
+        buildReserveCompositionHistoryInsertStatement(db, composition),
+        buildReserveSyncAttemptHistoryInsertStatement(db, {
+          stablecoinId: syncState.stablecoinId,
+          attemptedAt: syncState.lastAttemptedAt ?? composition.fetchedAt,
+          adapterKey: syncState.adapterKey,
+          breakerKey: syncState.breakerKey,
+          status: syncState.lastStatus,
+          warningCount: syncState.warningCount,
+          warnings: syncState.warnings,
+          lastError: syncState.lastError,
+          metadata: syncState.metadata,
+          attemptId: syncState.lastAttemptId ?? null,
+        }),
+      ]),
+    );
+  } catch (error) {
+    return {
+      finalized: true,
+      historyRecorded: false,
+      historyError: error instanceof Error ? error.message : String(error),
+    };
+  }
 
-  return { finalized: true };
+  return { finalized: true, historyRecorded: true };
 }
 
 export async function finalizeReserveSyncAttempt(

@@ -13,6 +13,15 @@ import { loadReserveCompositionRowMap, loadReserveSyncStateMap } from "./live-re
 import { hasConsistentSnapshotState, hasScoringEligibleLiveReserveFreshness, hasUncertainWriteState } from "./live-reserves-store-legacy";
 import { parseReserveCompositionRow } from "./live-reserves-store-row-decoding";
 
+function isPersistentlyStaleIndependentStatus(syncState: ReserveSyncStateRecord): boolean {
+  if (syncState.lastStatus === "degraded" || syncState.lastStatus === "error") {
+    return true;
+  }
+
+  return syncState.lastStatus === "skipped"
+    && syncState.metadata.failureCategory === "circuit-open";
+}
+
 export async function computeReserveCompositionOverview(
   db: D1Database,
   now: number,
@@ -100,7 +109,7 @@ export async function computeReserveCompositionOverview(
       coin.liveReservesConfig
       && syncState
       && syncState.lastSuccessAt != null
-      && (syncState.lastStatus === "degraded" || syncState.lastStatus === "error")
+      && isPersistentlyStaleIndependentStatus(syncState)
       && now - syncState.lastSuccessAt > PERSISTENTLY_STALE_INDEPENDENT_THRESHOLD_SEC
     ) {
       const adapterDef = getLiveReserveAdapterDefinition(coin.liveReservesConfig.adapter);

@@ -6,6 +6,7 @@ import {
   finalizeReserveSyncSuccess,
   loadFreshIndependentLiveReserveMap,
   pruneLiveReserveHistory,
+  recordReserveSyncDeferred,
   resolveReserveResult,
 } from "../live-reserves-store";
 
@@ -87,6 +88,49 @@ describe("live-reserves-store", () => {
         bootstrap: false,
         stale: false,
       },
+    });
+  });
+
+  it("does not mark explicitly unverified timestamped snapshots as scoring eligible", async () => {
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          slices: JSON.stringify(LIVE_SLICES),
+          fetched_at: 1_000,
+          source: "infinifi",
+          metadata: JSON.stringify({ freshnessMode: "unverified", sourceTimestamp: 1_000 }),
+          adapter_source_model: "dynamic-mix",
+          adapter_evidence_class: "independent",
+        },
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          adapter_key: "infinifi",
+          breaker_key: "live-reserves:infinifi",
+          last_attempted_at: 1_000,
+          last_success_at: 1_000,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+        },
+      },
+    ]);
+
+    const result = await resolveReserveResult(db, "iusd-infinifi", 1_200);
+
+    expect(result?.mode).toBe("live");
+    expect(result?.provenance).toMatchObject({
+      evidenceClass: "independent",
+      freshnessMode: "unverified",
+      scoringEligible: false,
     });
   });
 
@@ -334,7 +378,7 @@ describe("live-reserves-store", () => {
       attemptId,
     });
 
-    const { finalized } = await finalizeReserveSyncSuccess(
+    const { finalized, historyRecorded } = await finalizeReserveSyncSuccess(
       db,
       {
         stablecoinId: "iusd-infinifi",
@@ -367,6 +411,7 @@ describe("live-reserves-store", () => {
     );
 
     expect(finalized).toBe(true);
+    expect(historyRecorded).toBe(true);
     const history = db.getHistory().map((entry) => entry.sql);
     expect(history.some((sql) => sql.includes("INSERT INTO reserve_composition ("))).toBe(true);
     expect(history.some((sql) => sql.includes("INSERT INTO reserve_composition_history"))).toBe(true);
@@ -460,6 +505,7 @@ describe("live-reserves-store", () => {
     );
 
     expect(result.finalized).toBe(false);
+    expect(result.historyRecorded).toBe(false);
     const history = db.getHistory().map((entry) => entry.sql);
     expect(history.some((sql) => sql.includes("INSERT INTO reserve_composition_history"))).toBe(false);
     expect(history.some((sql) => sql.includes("INSERT INTO reserve_sync_attempt_history"))).toBe(false);
@@ -502,9 +548,82 @@ describe("live-reserves-store", () => {
     );
 
     expect(result.finalized).toBe(true);
+    expect(result.historyRecorded).toBe(true);
     const historySqls = db.getHistory().map((entry) => entry.sql);
     expect(historySqls.some((sql) => sql.includes("INSERT INTO reserve_composition_history"))).toBe(true);
     expect(historySqls.some((sql) => sql.includes("INSERT INTO reserve_sync_attempt_history"))).toBe(true);
+  });
+
+  it("clears active attempt fencing when recording a deferred tail row", async () => {
+    const db = mockD1();
+
+    await recordReserveSyncDeferred(db, {
+      stablecoinId: "iusd-infinifi",
+      adapterKey: "infinifi",
+      breakerKey: "live-reserves:infinifi",
+      attemptedAt: 1_700_000_000,
+      reason: "run-budget-exhausted",
+    });
+
+    const statement = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO reserve_sync_state"));
+    expect(statement).toBeDefined();
+    expect(statement!.sql).toContain("last_attempt_id = NULL");
+    expect(statement!.sql).toContain("pending_attempt_id = NULL");
+  });
+
+  it("keeps authoritative success when non-authoritative history writes fail", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT INTO reserve_composition_history",
+        rows: [],
+        throwError: new Error("history unavailable"),
+      },
+    ]);
+    const attemptId = "attempt-history-failure";
+
+    await beginReserveSyncAttempt(db, {
+      stablecoinId: "iusd-infinifi",
+      adapterKey: "infinifi",
+      breakerKey: "live-reserves:infinifi",
+      attemptedAt: 1_000,
+      attemptId,
+    });
+
+    const result = await finalizeReserveSyncSuccess(
+      db,
+      {
+        stablecoinId: "iusd-infinifi",
+        slices: LIVE_SLICES,
+        fetchedAt: 1_000,
+        source: "infinifi",
+        attemptId,
+        metadata: {},
+        warningCount: 0,
+        warnings: [],
+        adapterSourceModel: "dynamic-mix",
+        adapterEvidenceClass: "independent",
+      },
+      {
+        stablecoinId: "iusd-infinifi",
+        adapterKey: "infinifi",
+        breakerKey: "live-reserves:infinifi",
+        lastAttemptedAt: 1_000,
+        lastSuccessAt: 1_000,
+        lastStatus: "ok",
+        warningCount: 0,
+        warnings: [],
+        lastError: null,
+        metadata: {},
+        lastAttemptId: attemptId,
+        pendingAttemptId: attemptId,
+        lastSuccessAttemptId: attemptId,
+      },
+      Date.now() + 30_000,
+    );
+
+    expect(result.finalized).toBe(true);
+    expect(result.historyRecorded).toBe(false);
+    expect(result.historyError).toContain("history unavailable");
   });
 
   it("prunes reserve history tables by retention cutoff", async () => {
@@ -1095,7 +1214,7 @@ describe("live-reserves-store", () => {
             slices: JSON.stringify([{ name: "Known Farm", pct: 100, risk: "low" }]),
             fetched_at: now,
             source: "infinifi",
-            metadata: JSON.stringify({ freshnessMode: "unverified" }),
+            metadata: JSON.stringify({ freshnessMode: "unverified", sourceTimestamp: now }),
             adapter_source_model: "dynamic-mix",
             adapter_evidence_class: "independent",
           },
@@ -1379,6 +1498,78 @@ describe("live-reserves-store", () => {
     );
     expect(entry).toBeDefined();
     expect(entry!.ageSec).toBeGreaterThanOrEqual(FIFTEEN_DAYS);
+  });
+
+  it("flags old circuit-open independent feeds as persistently stale", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const FIFTEEN_DAYS = 15 * 86_400;
+    const db = mockD1([
+      {
+        match: "reserve_sync_state",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            adapter_key: "infinifi",
+            breaker_key: "live-reserves:infinifi",
+            last_attempted_at: now,
+            last_success_at: now - FIFTEEN_DAYS,
+            last_status: "skipped",
+            warning_count: 0,
+            warnings: null,
+            last_error: "Circuit open for live-reserves:infinifi",
+            metadata: JSON.stringify({ failureCategory: "circuit-open" }),
+          },
+        ],
+      },
+      {
+        match: "reserve_composition",
+        rows: [],
+      },
+    ]);
+
+    const overview = await computeReserveCompositionOverview(db, now);
+
+    const entry = overview.persistentlyStaleIndependentCoins.find(
+      (e) => e.stablecoinId === "iusd-infinifi",
+    );
+    expect(entry).toBeDefined();
+    expect(entry!.ageSec).toBeGreaterThanOrEqual(FIFTEEN_DAYS);
+  });
+
+  it("does not flag old run-budget deferred rows as persistently stale", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const FIFTEEN_DAYS = 15 * 86_400;
+    const db = mockD1([
+      {
+        match: "reserve_sync_state",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            adapter_key: "infinifi",
+            breaker_key: "live-reserves:infinifi",
+            last_attempted_at: now,
+            last_success_at: now - FIFTEEN_DAYS,
+            last_status: "skipped",
+            warning_count: 0,
+            warnings: null,
+            last_error: "run-budget-exhausted",
+            metadata: JSON.stringify({ failureCategory: "run-budget-exhausted" }),
+          },
+        ],
+      },
+      {
+        match: "reserve_composition",
+        rows: [],
+      },
+    ]);
+
+    const overview = await computeReserveCompositionOverview(db, now);
+
+    expect(
+      overview.persistentlyStaleIndependentCoins.find(
+        (e) => e.stablecoinId === "iusd-infinifi",
+      ),
+    ).toBeUndefined();
   });
 
   it("does not flag independent coins whose last success is within the 14d threshold", async () => {

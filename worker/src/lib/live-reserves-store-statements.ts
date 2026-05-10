@@ -52,6 +52,74 @@ export function buildReserveCompositionUpsertStatement(
     );
 }
 
+export function buildReserveCompositionFinalizeSuccessStatement(
+  db: D1Database,
+  record: ReserveCompositionRecord,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT INTO reserve_composition (
+         stablecoin_id,
+         slices,
+         fetched_at,
+         source,
+         attempt_id,
+         metadata,
+         warning_count,
+         warnings,
+         adapter_source_model,
+         adapter_evidence_class
+       )
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+       WHERE EXISTS (
+         SELECT 1
+           FROM reserve_sync_state
+          WHERE stablecoin_id = ?
+            AND last_attempt_id = ?
+            AND pending_attempt_id = ?
+       )
+       ON CONFLICT(stablecoin_id) DO UPDATE SET
+         slices = excluded.slices,
+         fetched_at = excluded.fetched_at,
+         source = excluded.source,
+         attempt_id = excluded.attempt_id,
+         metadata = excluded.metadata,
+         warning_count = excluded.warning_count,
+         warnings = excluded.warnings,
+         adapter_source_model = excluded.adapter_source_model,
+         adapter_evidence_class = excluded.adapter_evidence_class
+       WHERE (
+            reserve_composition.fetched_at < excluded.fetched_at
+            OR (reserve_composition.fetched_at = excluded.fetched_at AND reserve_composition.attempt_id IS NULL)
+         )
+         AND EXISTS (
+           SELECT 1
+             FROM reserve_sync_state
+            WHERE stablecoin_id = ?
+              AND last_attempt_id = ?
+              AND pending_attempt_id = ?
+         )`,
+    )
+    .bind(
+      record.stablecoinId,
+      JSON.stringify(record.slices),
+      record.fetchedAt,
+      record.source,
+      record.attemptId ?? null,
+      JSON.stringify(record.metadata),
+      record.warningCount,
+      record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
+      record.adapterSourceModel,
+      record.adapterEvidenceClass,
+      record.stablecoinId,
+      record.attemptId ?? null,
+      record.attemptId ?? null,
+      record.stablecoinId,
+      record.attemptId ?? null,
+      record.attemptId ?? null,
+    );
+}
+
 export function buildReserveCompositionHistoryInsertStatement(
   db: D1Database,
   record: ReserveCompositionRecord,
@@ -179,6 +247,13 @@ export function buildReserveSyncFinalizeSuccessStatement(
        WHERE stablecoin_id = ?
          AND last_attempt_id = ?
          AND pending_attempt_id = ?
+         AND EXISTS (
+           SELECT 1
+             FROM reserve_composition
+            WHERE stablecoin_id = ?
+              AND fetched_at = ?
+              AND attempt_id = ?
+         )
          AND ${SQLITE_NOW_MS_EXPRESSION} <= ?`,
     )
     .bind(
@@ -196,6 +271,9 @@ export function buildReserveSyncFinalizeSuccessStatement(
       record.stablecoinId,
       record.lastAttemptId ?? null,
       record.pendingAttemptId ?? null,
+      record.stablecoinId,
+      record.lastSuccessAt ?? null,
+      record.lastSuccessAttemptId ?? null,
       finalizeDeadlineMs,
     );
 }
@@ -276,6 +354,7 @@ export function buildReserveSyncRecordDeferredStatement(
          warnings = NULL,
          last_error = excluded.last_error,
          metadata = excluded.metadata,
+         last_attempt_id = NULL,
          pending_attempt_id = NULL`,
     )
     .bind(

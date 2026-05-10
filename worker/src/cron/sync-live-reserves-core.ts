@@ -13,10 +13,8 @@ import {
 import {
   beginReserveSyncAttempt,
   createReserveSyncAttemptId,
-  didReserveSyncAttemptFinalizeAsSuccess,
   finalizeReserveSyncAttempt,
   finalizeReserveSyncSuccess,
-  getReserveSyncState,
   type ReserveCompositionRecord,
   type ReserveSyncStateRecord,
 } from "../lib/live-reserves-store";
@@ -184,6 +182,7 @@ export async function syncReserveCoin(args: {
     });
 
     let finalizeSucceeded = false;
+    let historyWriteFailed: string | null = null;
     let failureAlreadyRecorded = false;
     try {
       const finalizeResult = await raceWithTimeout(
@@ -197,6 +196,10 @@ export async function syncReserveCoin(args: {
         `D1 write timeout for ${coin.id}`,
       );
       finalizeSucceeded = finalizeResult.finalized;
+      if (finalizeResult.finalized && !finalizeResult.historyRecorded) {
+        historyWriteFailed = finalizeResult.historyError ?? "unknown history write failure";
+        console.warn(`[sync-live-reserves] History write failed after authoritative success for ${coin.id}: ${historyWriteFailed}`);
+      }
     } catch (error) {
       const timeoutMessage = `D1 write timeout for ${coin.id}`;
       if (!(error instanceof Error) || error.message !== timeoutMessage) {
@@ -212,27 +215,29 @@ export async function syncReserveCoin(args: {
     }
 
     if (!finalizeSucceeded) {
-      const latestState = await getReserveSyncState(db, coin.id).catch(() => null);
-      if (!didReserveSyncAttemptFinalizeAsSuccess(latestState, attemptId)) {
-        if (!failureAlreadyRecorded) {
-          await recordFailure(
-            "error",
-            `Authoritative live reserve finalize rejected for ${coin.id}`,
-            "success-finalize-rejected",
-            warnings,
-            { uncertainWrite: true, durationMs },
-          );
-        }
-        return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
+      if (!failureAlreadyRecorded) {
+        await recordFailure(
+          "error",
+          `Authoritative live reserve finalize rejected for ${coin.id}`,
+          "success-finalize-rejected",
+          warnings,
+          { uncertainWrite: true, durationMs },
+        );
       }
+      return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
+    }
+
+    const warningMessages = warnings.map((warning) => `${coin.id}:${warning.code}`);
+    if (historyWriteFailed) {
+      warningMessages.push(`${coin.id}:history-write-failed`);
     }
 
     return {
       breakerKey,
       status: "synced",
       breakerOutcome: true,
-      warningMessages: warnings.map((warning) => `${coin.id}:${warning.code}`),
-      hasWarnings: warnings.length > 0,
+      warningMessages,
+      hasWarnings: warningMessages.length > 0,
     };
   } catch (error) {
     console.error(`[sync-live-reserves] Failed for ${coin.id}:`, error);

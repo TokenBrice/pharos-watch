@@ -58,9 +58,7 @@ function createAbortableAttemptSignal(
     timeoutReason: new Error("adapter-timeout"),
     parentSignal,
   });
-  const cleanup = () => {
-    timeout.dispose();
-  };
+  const cleanup = () => timeout.dispose();
 
   return { signal: timeout.signal, cleanup };
 }
@@ -225,7 +223,7 @@ async function runReserveCoinQueue(args: {
   for (const [index, coin] of args.orderedCoins.entries()) {
     if (args.signal?.aborted) throw args.signal.reason ?? new Error("sync-live-reserves aborted");
     const budgetRemaining = args.budgetConfig.runBudgetMs - (Date.now() - args.runStartedMs);
-    if (budgetRemaining < args.budgetConfig.adapterTimeoutMs) {
+    if (budgetRemaining < args.budgetConfig.minimumAttemptBudgetMs) {
       console.warn(
         `[sync-live-reserves] Run budget exhausted at coin ${index}/${total}, deferring remaining`,
       );
@@ -392,6 +390,7 @@ async function finalizeReserveSyncRun(args: {
       budgetMs: args.budgetConfig.runBudgetMs,
       adapterTimeoutMs: args.budgetConfig.adapterTimeoutMs,
       d1FinalizeTimeoutMs: args.budgetConfig.d1FinalizeTimeoutMs,
+      finalizationMarginMs: args.budgetConfig.finalizationMarginMs,
       ...(args.coinsWithWarnings.length > 0 ? { coinsWithWarnings: args.coinsWithWarnings } : {}),
       ...(args.coinsWithErrors.length > 0 ? { coinsWithErrors: args.coinsWithErrors } : {}),
       ...(args.attemptFailureSummaries.length > 0 ? { attemptFailureSummaries: args.attemptFailureSummaries } : {}),

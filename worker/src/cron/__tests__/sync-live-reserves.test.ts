@@ -528,6 +528,43 @@ describe("syncLiveReserves", () => {
     });
   });
 
+  it("defers when remaining budget covers the adapter timeout but not finalize margin", async () => {
+    const adapterFetch = mockAdapterRegistry(async () => ({
+      slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
+    }));
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    const result = await syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      {
+        runBudgetMs: 1_699,
+        adapterTimeoutMs: 1_000,
+        d1FinalizeTimeoutMs: 500,
+        finalizationMarginMs: 200,
+      },
+    );
+    const metadata = JSON.parse(result?.metadata ?? "{}") as {
+      synced?: number;
+      skipped?: number;
+      deferredCoins?: number;
+      runBudgetTruncated?: boolean;
+      finalizationMarginMs?: number;
+    };
+
+    expect(adapterFetch).not.toHaveBeenCalled();
+    expect(metadata).toMatchObject({
+      synced: 0,
+      skipped: configuredCoinCount,
+      deferredCoins: configuredCoinCount,
+      runBudgetTruncated: true,
+      finalizationMarginMs: 200,
+    });
+  });
+
   it("retains shared source-cache failures for the run so a single fetch satisfies every sharing coin", async () => {
     // m0 has >=2 coins sharing the same source-invariant primary URL.
     const m0Coins = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig?.adapter === "m0");
