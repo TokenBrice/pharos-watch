@@ -85,13 +85,6 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     outputAssetType: "mixed-collateral",
     costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
   },
-  "usnd-nerite": {
-    ...collateralRedeemBase,
-    capacityModel: { kind: "reserve-sync-metadata" },
-    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
-    outputAssetType: "mixed-collateral",
-    costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
-  },
   "usdq-quill": {
     ...collateralRedeemBase,
     capacityModel: { kind: "reserve-sync-metadata" },
@@ -288,7 +281,6 @@ applyTrackedReviewedDocs(COLLATERAL_REDEEM_BACKSTOP_CONFIGS, [
   "usdq-quill",
   "usdk-orki",
   "usdaf-asymmetry",
-  "usnd-nerite",
   "ebusd-ebisu",
   "reusd-resupply",
   "satusd-river",

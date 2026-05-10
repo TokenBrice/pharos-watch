@@ -150,5 +150,56 @@
         "Ethereum"
       ]
     }
+  },
+  {
+    "id": "usnd-nerite",
+    "capturedAt": "2026-05-10T21:31:53Z",
+    "peggedAssetRow": {
+      "id": "usnd-nerite",
+      "name": "Nerite USND",
+      "symbol": "USND",
+      "geckoId": "us-nerite-dollar",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": 1.003,
+      "priceSource": "coingecko+defillama-list",
+      "priceConfidence": "single-source",
+      "priceUpdatedAt": 1778447693,
+      "priceObservedAt": 1778447693,
+      "priceObservedAtMode": "unknown",
+      "priceSyncedAt": 1778447762,
+      "consensusSources": [
+        "coingecko",
+        "defillama-list"
+      ],
+      "agreeSources": [
+        "coingecko",
+        "defillama-list"
+      ],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 98458.94041795064
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 104972.04205455205
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 105080.31975685594
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 1274906.7380789593
+      },
+      "chainCirculating": {
+        "Arbitrum": {
+          "current": 98458.94041795064,
+          "circulatingPrevDay": 104972.04205455205,
+          "circulatingPrevWeek": 105080.31975685594,
+          "circulatingPrevMonth": 1274906.7380789593
+        }
+      },
+      "chains": [
+        "Arbitrum"
+      ]
+    }
   }
 ]

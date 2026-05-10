@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 241 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 240 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -212,7 +212,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Royal Dollar (RUSD)](https://pharos.watch/stablecoin/rusd-royal-dollar/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Ring USD (USDR)](https://pharos.watch/stablecoin/usdr-ring/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Asymmetry USDaf (USDaf)](https://pharos.watch/stablecoin/usdaf-asymmetry/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Nerite USND (USND)](https://pharos.watch/stablecoin/usnd-nerite/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Quill USD (USDQ)](https://pharos.watch/stablecoin/usdq-quill/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Orki USD (USDK)](https://pharos.watch/stablecoin/usdk-orki/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Ebisu ebUSD (ebUSD)](https://pharos.watch/stablecoin/ebusd-ebisu/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.

@@ -36,6 +36,12 @@ export const entry: ChangelogEntry = {
         "Freezability classifications audited and corrected, USD3 reclassified as CeFi-dependent, blacklist identity tracking improved with new API artifacts and redemption backstop coverage.",
     },
     {
+      label: "USND archive",
+      tag: "coverage",
+      description:
+        "Nerite USND moves to the frozen cemetery archive after the rsETH collateral incident, preserving the detail page while removing live reserve tracking.",
+    },
+    {
       label: "Infrastructure and docs",
       tag: "infra",
       description:

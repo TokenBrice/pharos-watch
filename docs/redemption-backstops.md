@@ -20,8 +20,8 @@ There is no standalone changelog page yet. The public methodology link currently
 
 Configured coverage is defined statically behind the thin facade in `shared/lib/redemption-backstops.ts`, with route-family modules under `shared/lib/redemption-backstop-configs/`.
 
-- **Configured coins:** 194
-- **Route families:** 102 `offchain-issuer`, 34 `stablecoin-redeem`, 24 `collateral-redeem`, 20 `queue-redeem`, 9 `psm-swap`, 5 `basket-redeem`
+- **Configured coins:** 193
+- **Route families:** 102 `offchain-issuer`, 34 `stablecoin-redeem`, 23 `collateral-redeem`, 20 `queue-redeem`, 9 `psm-swap`, 5 `basket-redeem`
 - **No discovery layer:** only coins present in `REDEMPTION_BACKSTOP_CONFIGS` are modeled
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.
@@ -132,7 +132,7 @@ Live reserve adapters can now emit a nested `metadata.redemption` object for new
 Sky `DAI` and `USDS` now use the live `sky-makercore` PSM `USDC` balance as their immediate redeemable bound when that telemetry is fresh, with the prior 33% reviewed heuristic retained only as fallback.
 `cUSD` now uses the live `cap-vault` onchain adapter for bounded current redemption capacity, scoring against unpaused available vault balances rather than full eventual basket redeemability.
 `LUSD` now uses the live `liquity-v1` onchain adapter for bounded current direct capacity, scoring against `TroveManager.getEntireSystemDebt()` when the 4-hourly reserve snapshot is fresh and clean rather than the old static full-supply model.
-`BOLD`, `feUSD`, `USND`, and `USDQ` now use the live `liquity-v2-branches` onchain adapter for bounded current direct capacity, scoring against aggregate ActivePool branch debt when the 4-hourly reserve snapshot is fresh and clean rather than the old static full-supply model. The adapter can also surface branch shutdown as degraded route status.
+`BOLD`, `feUSD`, and `USDQ` now use the live `liquity-v2-branches` onchain adapter for bounded current direct capacity, scoring against aggregate ActivePool branch debt when the 4-hourly reserve snapshot is fresh and clean rather than the old static full-supply model. The adapter can also surface branch shutdown as degraded route status.
 `fxUSD` now uses f(x)'s protocol pool API debt balances as live proxy capacity, while `USDaf` uses Asymmetry's timestamped protocol supply data as direct live capacity. `JupUSD` uses Jupiter's public transparency API for current USDC/USDtb holdings and oracle route-status context, with the previous 10% reviewed buffer retained only as fallback.
 `GHO` now uses tracked swappable GSM backing as a live lower bound even when reserve sync is degraded solely by aggregated residual issuance outside the configured GSM set, because that warning reflects reserve completeness rather than invalid tracked telemetry.
 `wsrUSD` continues to prefer live Reservoir USDC balance telemetry when available, but now falls back to Reservoir's documented 25 bps minimum USDC PSM balance instead of remaining unrated when the live feed lacks a trustworthy source timestamp.

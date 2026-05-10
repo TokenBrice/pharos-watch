@@ -15,6 +15,7 @@ Non-USD stablecoin batch ships, DEX pricing gains confidence telemetry, and Tele
 - **DEX pricing telemetry**: Confidence telemetry exposes per-source reliability, expanded bridge sources widen DEX coverage, impossible TVL and fee-variant duplicates rejected, and stale Coinbase DAI-USD dropped.
 - **Digest intelligence**: Daily digest leads with critical risk signals and uses live prices for active depegs. Telegram gains depeg-step commands and hardened group UX; homepage preview rebalanced.
 - **Freezability and blacklist audit**: Freezability classifications audited and corrected, USD3 reclassified as CeFi-dependent, blacklist identity tracking improved with new API artifacts and redemption backstop coverage.
+- **USND archive**: Nerite USND moves to the frozen cemetery archive after the rsETH collateral incident, preserving the detail page while removing live reserve tracking.
 - **Infrastructure and docs**: Alt-peg atlas positioning fixed, LLMs stablecoin export refreshed, sitemap test prereqs generated correctly, and README gains TOC with AI guidance cross-reference.
 
 ## 2026-04-27 to 2026-05-03

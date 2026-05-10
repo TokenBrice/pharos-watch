@@ -9,7 +9,7 @@
   "sourceDataPath": "shared/data/dead-stablecoins.json",
   "sourceChecksum": "sha256:490b87d9b7aef29b71b116be626c9637e69d22563cd799e480f48394a8e65882",
   "recordsOrderedBy": "deathDate descending, then peakMcapUsd descending, then symbol ascending",
-  "rowCount": 90,
+  "rowCount": 91,
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
@@ -61,6 +61,32 @@
         }
       ],
       "pharosUrl": "https://pharos.watch/stablecoin/buck-buck-assets/"
+    },
+    {
+      "id": "usnd-nerite",
+      "name": "Nerite USND",
+      "symbol": "USND",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/usnd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2026-04",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 2712729,
+      "epitaph": "Immutable credit met mutable collateral",
+      "obituary": "Nerite built USND on immutable Liquity V2-style contracts, but one of its approved collateral branches depended on rsETH. After the rsETH hack impaired that collateral, Nerite could not simply patch the market away or rewrite the risk controls. Supply collapsed from a $2.7M peak to under $100K, leaving USND as an archived case study in how immutable CDP systems can still inherit external collateral failure when a supported asset breaks upstream.",
+      "sourceUrl": "https://x.com/NeriteOrg/status/2045635669775487192?s=20",
+      "sourceLabel": "Nerite post-incident update",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "arbitrum",
+          "address": "0x4ecf61a6c2fab8a047ceb3b3b263b401763e9d49",
+          "decimals": 18
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/usnd-nerite/"
     },
     {
       "id": "usr-resolv",
