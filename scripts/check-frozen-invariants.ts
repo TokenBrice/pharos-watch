@@ -29,10 +29,10 @@ const failures: string[] = [];
 //    duplicate check here for fast feedback)
 for (const coin of FROZEN_STABLECOINS) {
   if (!coin.frozenAt) {
-    failures.push(`${coin.id}: missing frozenAt (shared/data/stablecoins/*.json)`);
+    failures.push(`${coin.id}: missing frozenAt (shared/data/stablecoins/coins/*.json)`);
   }
   if (!coin.obituary) {
-    failures.push(`${coin.id}: missing obituary (shared/data/stablecoins/*.json)`);
+    failures.push(`${coin.id}: missing obituary (shared/data/stablecoins/coins/*.json)`);
   }
 }
 

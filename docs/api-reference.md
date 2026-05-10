@@ -58,7 +58,7 @@ Canonical IDs use `ticker-issuer` format — lowercase ticker symbol hyphenated 
 | `"ustb-superstate"` | Superstate USTB |
 | `"gyen-gyen"`       | GYEN            |
 
-The full list is exported from `shared/lib/stablecoins/index.ts`, with the raw metadata stored in `shared/data/stablecoins/*.json` and validated by `shared/lib/stablecoins/schema.ts`. The API accepts canonical IDs only. Non-canonical stablecoin detail URLs and legacy frontend route aliases are retired and unsupported.
+The full list is exported from `shared/lib/stablecoins/index.ts`, with editable per-coin metadata stored in `shared/data/stablecoins/coins/*.json`, the checked-in generated aggregate at `shared/data/stablecoins/coins.generated.json`, and validation in `shared/lib/stablecoins/schema.ts`. The API accepts canonical IDs only. Non-canonical stablecoin detail URLs and legacy frontend route aliases are retired and unsupported.
 
 ---
 
@@ -217,7 +217,7 @@ HTTP method allowance is defined centrally in `shared/lib/api-endpoints/` and en
 - `POST` is accepted on `/api/api-keys/:id/update`, `/api/api-keys/:id/deactivate`, and `/api/api-keys/:id/rotate`.
 - `/api/audit-depeg-history` allows `GET` only with `?dry-run=true`; otherwise it is `POST`-only.
 - `/api/backfill-dews` allows `GET` for the historical backtest and for `repair=...&dry-run=true` previews; mutating repair runs are `POST`-only.
-- Unknown `GET` paths fall through to `404` because no route dependencies can be hydrated. Other unknown-method combinations are still checked by the shared method validator first, so for example `POST /api/unknown` returns `405` with `Allow: GET` before route matching. Once a static or dynamic route family is registered, known paths with disallowed methods return `405` with `Allow`; unsupported verbs on known endpoint families return `405` with `Allow: GET, POST`.
+- Unknown public `/api/*` requests can return `401` first when the API key is missing or invalid. After lane auth succeeds, unregistered paths return `404` because no route dependencies can be hydrated. Once a static or dynamic route family is registered, known paths with disallowed methods return `405` with `Allow`; unsupported verbs on known endpoint families return `405` with `Allow: GET, POST`.
 
 The same shared endpoint descriptors now also carry static worker dependency-hydration hints consumed by `worker/src/routes/registry.ts`, where the worker binds shared endpoint keys directly to handlers through a single static route-definition list. That keeps endpoint metadata, router behavior, method guards, admin status-page actions, and worker-side static route wiring aligned from one source of truth plus one worker binding table.
 
@@ -2492,7 +2492,7 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
 
 **`malformedRows`** — count of DB rows with unparseable JSON signal data (expected 0 under normal operation)
 
-**`oldestComputedAt`** — aggregate mode only; oldest returned current row and the timestamp used for response freshness headers
+**`oldestComputedAt`** — aggregate mode only; oldest returned current row, exposed as a body-only lag diagnostic
 
 **`amplifiers`** — clamped multipliers that were applied on top of the base weighted score. `psi` is the systemic PSI amplifier (range `[1.0, 1.3]`); `contagion` is the per-peg-type cross-asset amplifier (range `[1.0, 1.2]`). Both default to `1.0` for legacy cached rows written before v5.95.
 

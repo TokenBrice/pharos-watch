@@ -16,6 +16,7 @@ Primary files:
 - `src/components/stablecoin-cemetery.tsx`
 - `src/components/cemetery-tombstones.tsx`
 - `src/components/cemetery-charts.tsx`
+- `shared/lib/cemetery-merged.ts`
 - `shared/lib/dead-stablecoins.ts`
 - `shared/data/dead-stablecoins.json`
 - `scripts/generate-cemetery-dataset.ts`
@@ -24,7 +25,7 @@ Primary files:
 
 ### Data model
 
-Cemetery data is static and versioned in-repo. The raw dataset lives in `shared/data/dead-stablecoins.json` and is validated/exported as `DEAD_STABLECOINS` by `shared/lib/dead-stablecoins.ts`.
+Cemetery data is static and versioned in-repo. The curated dead-coin dataset lives in `shared/data/dead-stablecoins.json` and is validated/exported as `DEAD_STABLECOINS` by `shared/lib/dead-stablecoins.ts`. The route, charts, and public dataset export consume `CEMETERY_ENTRIES` from `shared/lib/cemetery-merged.ts`, which combines those curated dead rows with frozen tracked stablecoins.
 
 Each entry follows `DeadStablecoin` (`shared/types/index.ts`) with fields such as:
 - identity (`id`, `name`, `symbol`, optional `llamaId`)
@@ -50,15 +51,15 @@ The `/cemetery/` page links directly to both exports from the route header so re
 
 ### Frozen entries in the cemetery
 
-Frozen tracked stablecoins (registry entries with `status: "frozen"`) merge into the cemetery alongside curated `DEAD_STABLECOINS`:
+Frozen tracked stablecoins (registry entries with `status: "frozen"`) merge into the cemetery alongside curated `DEAD_STABLECOINS` through `shared/lib/cemetery-merged.ts`:
 
-- The cemetery client builds its rendered list by concatenating `DEAD_STABLECOINS` with each `FROZEN_STABLECOINS` entry, mapping `frozenAt` to `deathDate` and the registry `obituary` block to `epitaph` / `obituary` / `causeOfDeath` / `sourceUrl` / `sourceLabel`. Frozen rows are flagged with `archivedDataAvailable: true` so the tombstone and obituary panels render a "View archived data →" link to `/stablecoin/<id>/` (which serves the frozen detail page with the `<FrozenStateBanner>` and "Data frozen on YYYY-MM-DD" chart footer). Curated `DEAD_STABLECOINS` entries leave `archivedDataAvailable` falsy and link only to the cemetery anchor.
+- `buildCemeteryEntries()` maps each `FROZEN_STABLECOINS` entry's `frozenAt` to `deathDate` and the registry `obituary` block to `epitaph` / `obituary` / `causeOfDeath` / `sourceUrl` / `sourceLabel`. Frozen rows are flagged with `archivedDataAvailable: true` so the tombstone and obituary panels render a "View archived data ->" link to `/stablecoin/<id>/` (which serves the frozen detail page with the `<FrozenStateBanner>` and "Data frozen on YYYY-MM-DD" chart footer). Curated `DEAD_STABLECOINS` entries leave `archivedDataAvailable` falsy and link only to the cemetery anchor.
 - Identifier rules: the merged `id` for a frozen row is the registry `id` (the same canonical ticker-issuer ID used everywhere else on the site). Curated dead-coin ids (e.g. `ust-luna-2022`) keep their stable cemetery-only identifiers.
 - Sort and grouping: the merged list keeps the same year-grouped, newest-first behavior the cemetery already uses. `frozenAt` participates in the same sort key as `deathDate`.
 
-The static cemetery dataset export reflects the merge:
+The static cemetery dataset export reflects the same merge:
 
-- `scripts/generate-cemetery-dataset.ts` consumes both `DEAD_STABLECOINS` and `FROZEN_STABLECOINS` and writes one combined row set to `public/datasets/stablecoin-cemetery.json` and `public/datasets/stablecoin-cemetery.csv`.
+- `scripts/generate-cemetery-dataset.ts` consumes `CEMETERY_ENTRIES` and writes one combined row set to `public/datasets/stablecoin-cemetery.json` and `public/datasets/stablecoin-cemetery.csv`.
 - `archivedDataAvailable` is exposed as a row field, with a schema description, and `pharosUrl` resolves to `/stablecoin/<id>/` when archived data is available and to the cemetery anchor otherwise.
 - `npm run check:cemetery-dataset` continues to guard drift across both sources.
 
@@ -83,7 +84,7 @@ Each appendix includes the epitaph for every newly added coin plus a rotating da
 - Tombstone hover and keyboard focus reveal an over-grave plaque with the stablecoin name, symbol, cause, death date, peak market cap, peg currency, archive status, and obituary lead.
 - Tombstone selection auto-expands the matching obituary and scrolls into view.
 - `StablecoinCemetery` renders collapsible rows with source links and cause badges, using the same order as the tombstone field above.
-- `CemeteryCharts` computes all chart series directly from `DEAD_STABLECOINS` (no API fetch).
+- `CemeteryCharts` computes all chart series directly from `CEMETERY_ENTRIES` (no API fetch).
 
 ## Compare (`/compare` + `/compare/[slug]`)
 

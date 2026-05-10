@@ -125,7 +125,7 @@ Below the identity block, the classification line renders three small focus-ring
 
 - **Component:** `PriceTransparencyCard` (`src/components/stablecoin-detail/price-transparency-card.tsx`)
 - **Data:** `coinData.price`, `coinData.priceSource`, `coinData.priceConfidence`, `coinData.priceUpdatedAt` from stablecoins API; `consensusSources` and `dexPriceCheck` from peg-summary API
-- **Scrollspy ID:** `price` (label: "Price"); replaces the former `price-transparency` id
+- **Scrollspy ID:** `price` (label: "Price"); the nested card still carries the legacy `price-transparency` id
 - **Mount point:** nested inside `OverviewSection` (`src/components/stablecoin-detail/overview-section.tsx`)
 - **Hidden when:** there is no `coinData`, or both `coinData.price == null` and no `dexPriceCheck`
 - Shows current price, source label, confidence badge, update recency, and a table of all known price sources with their status (Used/Available/No data). When protocol-redeem overrides are active, all market sources show "Not applicable". DEX Price Check section renders when `dexPriceCheck` data exists.

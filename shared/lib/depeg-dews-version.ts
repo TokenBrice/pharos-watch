@@ -87,9 +87,9 @@ const depegDews = createMethodologyVersion({
       date: "2026-04-11",
       effectiveAt: 1775901000,
       summary:
-        "DEWS aggregate freshness now reflects the oldest included current row, and eligible assets with no current circulating supply no longer keep stale current radar rows.",
+        "DEWS aggregate responses now expose oldest-row lag separately, and eligible assets with no current circulating supply no longer keep stale current radar rows.",
       impact: [
-        "The aggregate `/api/stress-signals` response preserves `updatedAt` as the newest row while adding `oldestComputedAt` and using it for freshness headers",
+        "The aggregate `/api/stress-signals` response preserves `updatedAt` as the newest row used for freshness headers while adding `oldestComputedAt` as a body-only lag diagnostic",
         "The DEWS cron now retires current `stress_signals` rows for PSI-eligible assets that are explicitly present in the stablecoins cache with zero current supply, without deleting daily history",
         "Last-valid cached rows still remain available for coins that have positive current supply but insufficient signal coverage in an individual cycle",
       ],

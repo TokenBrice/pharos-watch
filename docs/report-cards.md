@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-The stablecoin registry currently contains 255 tracked metadata entries. Report-card snapshots score the 241 active tracked assets plus the 88 cemetery assets; pre-launch and frozen-archive tracked entries are emitted as stub `F` cards (defunct; pre-launch remain outside the snapshot until they launch).
+The stablecoin registry currently contains 264 tracked metadata entries. Report-card snapshots score the 241 active tracked assets plus the 88 cemetery assets; frozen-archive tracked entries are emitted as stub `F` cards, while pre-launch entries remain outside the snapshot until they launch.
 
 ## Overall Grade (v7.17)
 
@@ -59,7 +59,7 @@ Current-version note: v7.17 reclassifies USD3 / Web 3 Dollar from DeFi to CeFi-d
 - Low-confidence redemption routes stay visible in the dimension detail, but they do not improve the Safety Score liquidity score
 - Formula-based routes with live on-chain fee telemetry can use the current redemption fee bps for cost scoring while remaining labeled as formula models
 - When DEX liquidity is stale (age beyond `CRON_INTERVALS["sync-dex-liquidity"] * 2`), the last-known score still feeds effective-exit scoring; staleness is surfaced via `liquidityStale` and `inputFreshness.dexLiquidity.stale` so consumers can warn on age without losing the dimension. Scoring only falls back to redemption-only or `NR` when no DEX snapshot exists at all
-- When the current redemption-backstop snapshot is stale or missing (defined here as missing or older than twice the 4-hourly redemption sync cadence), report cards suppress redemption inputs for Safety Score liquidity; the dimension falls back to fresh DEX liquidity or `NR`
+- When the current redemption-backstop snapshot is stale or missing (defined here as missing or older than twice the 4-hourly redemption sync cadence), report cards suppress redemption inputs for Safety Score liquidity; the dimension falls back to the last-known DEX liquidity snapshot when one exists, with DEX staleness surfaced via `liquidityStale` and `inputFreshness.dexLiquidity.stale`, or `NR` when no DEX snapshot exists
 - If the DEX liquidity snapshot loader fails outright at read time, `/api/report-cards` degrades in place: the (empty) map is used, so coins with no DEX coverage still `NR` as before
 - If a redemption route is configured but currently unrated, the dimension stays `NR` without pretending the route is absent; the detail string calls out the configured-but-unrated state explicitly
 - High concentration (HHI > 0.5) remains descriptive context, not an extra penalty

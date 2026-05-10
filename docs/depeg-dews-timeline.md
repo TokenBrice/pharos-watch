@@ -55,8 +55,8 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.96`
 
 **Commit:** `unreleased`
 
-- Aggregate `/api/stress-signals` responses now keep `updatedAt` as the newest returned row while exposing `oldestComputedAt`
-- Aggregate freshness headers now use the oldest returned current row, so a stale per-coin row cannot be hidden by newer rows for other coins
+- Aggregate `/api/stress-signals` responses now keep `updatedAt` as the newest returned row and expose `oldestComputedAt` as a body-only lag diagnostic
+- Aggregate freshness headers continue to use `updatedAt`, while consumers that need per-coin lag detection can inspect `oldestComputedAt`
 - The DEWS cron now retires current `stress_signals` rows for PSI-eligible assets that are explicitly present in the stablecoins cache with zero current circulating supply
 - Daily `stress_signal_history` remains intact for those assets, and last-valid rows still remain available for positive-supply coins that only miss enough signal coverage in a single cycle
 

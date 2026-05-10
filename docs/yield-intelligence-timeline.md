@@ -48,7 +48,7 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 
 ## v7.4 - Pre-launch lending overrides quarantined (Apr 13, 2026)
 
-- Pre-launch metadata now lives in `shared/data/stablecoins/pre-launch.json` instead of the active peg-category data shards
+- Pre-launch metadata lives in per-coin files with `status: "pre-launch"`; legacy `shared/data/stablecoins/pre-launch.json` remains an empty compatibility shell
 - `pusd-polaris` is now an explicit pre-launch intentional gap instead of resolving through a deterministic Silo v2 lending override
 - Explicit and deterministic lending candidate publication now checks the active stablecoin universe before resolving metadata, so upcoming assets cannot enter live yield rankings before launch
 - `/upcoming/`, pre-launch detail pages, and Telegram launch alerts continue to use the combined tracked metadata universe
@@ -58,8 +58,8 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 ## v7.3 - scrvUSD current-rate on-chain reader (Apr 11, 2026)
 
 - Curve Savings crvUSD now uses a dedicated Yearn V3 profit-unlock reader for current APY instead of the generic 7-day ERC-4626 exchange-rate delta
-- The generic `convertToAssets(1e18)` reader is quarantined for `crvusd-curve` because the trailing 7-day delta understated Curve's current savings APY
-- The new `onchain:crvusd-curve:scrvusd-current-rate` source reads `totalSupply`, `totalAssets`, `profitUnlockingRate`, and `fullProfitUnlockDate`, then daily-compounds the active unlock APR
+- The generic `convertToAssets(1e18)` reader is quarantined for legacy parent-side `crvusd-curve` rows because the trailing 7-day delta understated Curve's current savings APY
+- The new `onchain:scrvusd-curve:scrvusd-current-rate` source reads `totalSupply`, `totalAssets`, `profitUnlockingRate`, and `fullProfitUnlockDate`, then daily-compounds the active unlock APR
 - The curated DeFiLlama scrvUSD pool remains as an alternative/fallback source while source-specific current-rate history starts fresh under the new source key
 
 ---

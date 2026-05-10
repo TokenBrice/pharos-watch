@@ -31,7 +31,7 @@ const FIXTURES_DIR = join(
 );
 
 // Canonical upstream URLs per HTML source. Keep in sync with
-// shared/data/stablecoins/*.json and the adapter modules.
+// shared/data/stablecoins/coins/*.json and the adapter modules.
 const FIXTURES: readonly HtmlFixtureSpec[] = [
   {
     name: "Circle transparency (USDC/EURC)",

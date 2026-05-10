@@ -25,14 +25,14 @@ The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains
    - Cache age > 1200 seconds (20 min): skip snapshot and return cron `status: "degraded"` with `reason: "cache_stale"`
    - Cache age > 600 seconds (10 min): log warning but proceed (degraded freshness)
 3. Parse and validate the cached payload via `loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false })`
-4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 257 entries: 255 tracked + 2 shadow)
+4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 264 entries: 262 non-frozen tracked + 2 shadow)
 5. Floor current date/time to UTC midnight:
    ```typescript
    const snapshotDate = Math.floor(
      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000
    );
    ```
-6. For each tracked coin:
+6. For each PSI-eligible cached asset:
    - Sum circulating supply via `sumPegBuckets(asset.circulating)` --- already in USD
    - Skip if sum <= 0
    - Extract price (must be a number > 0, else `null`)
@@ -159,7 +159,7 @@ All in `shared/lib/supply.ts`:
 
 ### Decimal handling
 
-Do not assume `18` decimals, or even one fixed decimal count per token across all chains. The authoritative source is `contracts[].decimals` in the metadata assets under `shared/data/stablecoins/*.json`, loaded via `shared/lib/stablecoins/index.ts`. The exact exception set changes as metadata evolves; use the live metadata, not hardcoded examples.
+Do not assume `18` decimals, or even one fixed decimal count per token across all chains. The authoritative source is `contracts[].decimals` in the per-coin metadata assets under `shared/data/stablecoins/coins/*.json`, loaded via `shared/lib/stablecoins/index.ts`. The exact exception set changes as metadata evolves; use the live metadata, not hardcoded examples.
 
 ---
 
@@ -279,7 +279,7 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 | `shared/lib/psi-eligible.ts` | PSI-eligible tracked + shadow stablecoin registry used by the snapshot filter |
 | `shared/lib/shadow-stablecoins.ts` | Shadow-asset metadata referenced by `PSI_ELIGIBLE_STABLECOINS` |
 | `shared/types/index.ts` | `StablecoinMeta` types |
-| `shared/lib/stablecoins/index.ts` | Stablecoin metadata loader backed by `shared/data/stablecoins/*.json` |
+| `shared/lib/stablecoins/index.ts` | Stablecoin metadata loader backed by `shared/data/stablecoins/coins/*.json` and `shared/data/stablecoins/coins.generated.json` |
 | `src/hooks/use-stablecoins.ts` | `useSupplyHistory()` hook for `/api/supply-history` |
 | `src/hooks/use-compare-data-model.ts` | Compare-page supply-history queries |
 | `src/components/mcap-chart.tsx` | Individual mcap chart |

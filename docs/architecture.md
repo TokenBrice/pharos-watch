@@ -218,15 +218,15 @@ Every entry in `TRACKED_STABLECOINS` is in one of three lifecycle phases. The ph
 
 | Phase | `status` field | New data collected? | Score recomputation? | Listed on |
 | --- | --- | --- | --- | --- |
-| Active | `"active"` (or omitted) | Yes | Yes | Homepage table, search, compare picker, sitemap, every aggregate |
-| Pre-launch | `"pre-launch"` | No (no live data yet) | No | `/upcoming/` only |
+| Active | `"active"` (or omitted) | Yes | Yes | Homepage table, active taxonomy pages, portfolio picker, live aggregates, and `/stablecoin/<id>/` detail pages |
+| Pre-launch | `"pre-launch"` | No (no live data yet) | No | `/upcoming/` cards and the pre-launch `/stablecoin/<id>/` detail variant |
 | Frozen | `"frozen"` (requires `frozenAt`, `obituary`) | No (archive) | No | `/cemetery/` (with archived-data link) and the preserved detail page at `/stablecoin/<id>/` |
 
 The registry exposes four universes from `shared/lib/stablecoins/registry.ts`:
 
-- `TRACKED_STABLECOINS` — every tracked coin (active + pre-launch + frozen). Used for canonical-ID lookups, registry validation, and shared metadata reads.
+- `TRACKED_STABLECOINS` — every tracked coin (active + pre-launch + frozen). Used for canonical-ID lookups, registry validation, shared metadata reads, static stablecoin detail params, and stablecoin detail sitemap entries.
 - `ACTIVE_STABLECOINS` — `status === "active"` only. Used by every write-side cron, live aggregator, PSI/DEWS/Bank-Run-Gauge inputs, and Telegram alert eligibility.
-- `READABLE_STABLECOINS` — active + frozen. Used by the sitemap, search, compare picker, OG renderer, and detail-page API endpoints (`stablecoin-reserves`, `stress-signals`, `stablecoin-summary`) so frozen archives stay reachable.
+- `READABLE_STABLECOINS` — active + frozen. Used by the compare picker and readback/archive surfaces that should preserve frozen assets while excluding pre-launch assets.
 - `FROZEN_STABLECOINS` — `status === "frozen"` only. Drives the cemetery merge, the static cemetery dataset export, and the frozen detail-page banner/footer.
 
 The freeze procedure is documented in [`docs/freezing-stablecoins.md`](./freezing-stablecoins.md).

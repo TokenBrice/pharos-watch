@@ -37,10 +37,10 @@ Coins where the upstream source is genuinely opaque at the asset-composition lev
 
 | Coin | Evidence class today | Ceiling reason |
 |---|---|---|
-| `kau-kinesis` | weak-live-probe | Kinesis publishes PDF-only commodity audits; no structured per-asset feed. |
-| `pmusd-precious-metals` | weak-live-probe | PDF-only commodity audits; no structured per-asset feed. |
-| `cgo-comtech` | weak-live-probe | PDF-only commodity audits; no structured per-asset feed. |
-| `mxnb-juno` | weak-live-probe | MXNB transparency scraper deferred (page exposes only aggregate MXN vs MXNB ratio, no asset breakdown; would deliver less than curated). Re-evaluate if Juno publishes per-asset breakdown. |
+| `kau-kinesis` | no live adapter / curated reserve view only | Kinesis publishes PDF-only commodity audits; no structured per-asset feed. |
+| `pmusd-precious-metals` | no live adapter / curated reserve view only | PDF-only commodity audits; no structured per-asset feed. |
+| `cgo-comtech` | no live adapter / curated reserve view only | PDF-only commodity audits; no structured per-asset feed. |
+| `mxnb-juno` | no live adapter / curated reserve view only | MXNB transparency scraper deferred (page exposes only aggregate MXN vs MXNB ratio, no asset breakdown; would deliver less than curated). Re-evaluate if Juno publishes per-asset breakdown. |
 | `usdz-anzen` | weak-live-probe | Per-asset SPCT portfolio snapshots + attestation timestamps are not published. Promotion requires Chainlink PoR, rwa.xyz Enterprise Data API, or machine-parseable monthly audit PDFs with per-asset SPCT portfolio snapshots and payload-native attestation timestamps. |
 
 ---

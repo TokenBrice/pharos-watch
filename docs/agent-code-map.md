@@ -330,7 +330,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Stablecoin data
 
-- `shared/data/stablecoins/canonical-order.json` - 215 entries
+- `shared/data/stablecoins/canonical-order.json` - 264 entries
 - `shared/data/stablecoins/coins/*.json` - editable source-of-truth per-coin catalog
 - `shared/data/stablecoins/coins.generated.json` - generated/runtime aggregate; regenerate with `tsx scripts/generate-stablecoin-per-coin-asset.ts`
 - `shared/data/stablecoins/commodity.json` - read-only legacy compatibility shell

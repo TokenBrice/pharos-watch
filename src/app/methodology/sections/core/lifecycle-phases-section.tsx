@@ -4,7 +4,7 @@ import {
   MethodologySectionShell,
 } from "../../methodology-shared";
 
-export const CONTENT_MARKDOWN = `## Stablecoin Lifecycle Phases\n\nEvery tracked stablecoin sits in one of three lifecycle phases: active, pre-launch, or frozen. The phase controls which surfaces ingest, score, and display the coin. It is a data-collection lifecycle policy, not a scoring methodology — per-domain version constants (Safety Scores, Liquidity, PegScore + DEWS, PSI, Yield, Mint/Burn Flow, Pricing Pipeline, Blacklist Tracker, Chain Health) are unaffected when a coin transitions between phases.\n\nActive coins receive full data collection and contribute to every aggregate. Pre-launch coins are listed for context on the upcoming page but have no live data yet. Frozen coins are archived: their historical data and detail page are preserved, but no new data is collected, and they are excluded from live aggregates and new score computations.\n`;
+export const CONTENT_MARKDOWN = `## Stablecoin Lifecycle Phases\n\nEvery tracked stablecoin sits in one of three lifecycle phases: active, pre-launch, or frozen. The phase controls which surfaces ingest, score, and display the coin. It is a data-collection lifecycle policy, not a scoring methodology — per-domain version constants (Safety Scores, Liquidity, PegScore + DEWS, PSI, Yield, Mint/Burn Flow, Pricing Pipeline, Blacklist Tracker, Chain Health) are unaffected when a coin transitions between phases.\n\nActive coins receive full data collection and contribute to every aggregate. Pre-launch coins are listed for context on the upcoming page and get a dedicated pre-launch detail page, but they have no live data yet. Frozen coins are archived: their historical data and detail page are preserved, but no new data is collected, and they are excluded from live aggregates and new score computations.\n`;
 
 export function LifecyclePhasesMethodologySection() {
   return (
@@ -36,7 +36,8 @@ export function LifecyclePhasesMethodologySection() {
           <Link href="/upcoming/" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">
             /upcoming
           </Link>
-          {" "}with milestone metadata; not in the homepage table, search, or compare.
+          {" "}with milestone metadata and on its own pre-launch detail page; not in the homepage
+          table, active taxonomy pages, portfolio picker, or live comparison picker.
         </p>
       </div>
       <div className="space-y-2">
@@ -58,7 +59,7 @@ export function LifecyclePhasesMethodologySection() {
         facts={[
           {
             label: "TRACKED",
-            value: "Every tracked coin (active + pre-launch + frozen). Used for canonical-ID lookups and registry validation.",
+            value: "Every tracked coin (active + pre-launch + frozen). Used for canonical-ID lookups, registry validation, and static stablecoin detail routes.",
           },
           {
             label: "ACTIVE",
@@ -66,7 +67,7 @@ export function LifecyclePhasesMethodologySection() {
           },
           {
             label: "READABLE",
-            value: "Active + frozen. Used by the sitemap, search, compare picker, detail-page API endpoints, and OG renderer so frozen archives stay reachable.",
+            value: "Active + frozen. Used by readback/archive surfaces that should preserve frozen assets while excluding pre-launch assets.",
           },
           {
             label: "FROZEN",

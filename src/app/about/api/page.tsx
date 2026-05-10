@@ -31,7 +31,7 @@ const HERO_LANES = [
     icon: Globe,
     eyebrow: "Same-origin only",
     description:
-      "Browsers on `pharos.watch` use same-origin `/_site-data/*`. The lane accepts only requests whose `Origin` or `Referer` maps to `pharos.watch` or `ops.pharos.watch`; external clients cannot use it.",
+      "Browsers on `pharos.watch`, `ops.pharos.watch`, and Pages previews use same-origin `/_site-data/*`. The lane accepts only requests whose `Origin` or `Referer` maps to an allowed site hostname; external integrations should use the public API lane.",
   },
   {
     title: "Ops lane",
@@ -56,7 +56,7 @@ const ABOUT_API_FAQ: FaqItem[] = [
   {
     question: "What is the difference between the public API lane and the website lane?",
     answer:
-      "The public lane is https://api.pharos.watch and requires a valid X-API-Key. The website lane is same-origin /_site-data/* on pharos.watch, gated to the site's own origin — external consumers cannot use it.",
+      "The public lane is https://api.pharos.watch and requires a valid X-API-Key. The website lane is same-origin /_site-data/* for browsers on pharos.watch, ops.pharos.watch, and Pages previews; the Pages function rejects requests without an allowed Origin or Referer, so external integrations should use the public API lane.",
   },
   {
     question: "How is admin auth handled?",

@@ -99,7 +99,7 @@ The observed-event block is separate from those exposure buckets. Event counts a
 
 **File:** `worker/src/lib/blacklist-contracts.ts`
 
-Canonical token addresses and decimals now resolve from the shared stablecoin loader in `shared/lib/stablecoins/index.ts`, backed by `shared/data/stablecoins/*.json`. `blacklist-contracts.ts` keeps only tracker-specific chain/event configuration, with one traded-contract exception for Optimism `USDT0` sourced from the shared `tradedContracts` metadata.
+Canonical token addresses and decimals now resolve from the shared stablecoin loader in `shared/lib/stablecoins/index.ts`, backed by per-coin metadata in `shared/data/stablecoins/coins/*.json` and the generated aggregate `shared/data/stablecoins/coins.generated.json`. `blacklist-contracts.ts` keeps only tracker-specific chain/event configuration, with one traded-contract exception for Optimism `USDT0` sourced from the shared `tradedContracts` metadata.
 
 ### USDC (6 chains)
 

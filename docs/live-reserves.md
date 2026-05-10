@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
 - **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 194 live-enabled stablecoins across 45 registered adapters; 43 adapter keys are currently configured by `shared/data/stablecoins/*.json`
+- **Current coverage:** 193 active live-enabled stablecoins across 45 registered adapters; 194 tracked metadata entries have live reserve configs, including pre-launch CADD. 43 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -21,7 +21,7 @@ This pipeline is intentionally separate from curated reserve metadata in `Stable
 
 ## Metadata Contract
 
-Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig` (`shared/types/live-reserves.ts`, loaded from `shared/data/stablecoins/*.json` via `shared/lib/stablecoins/index.ts` and validated by `shared/lib/stablecoins/schema.ts`).
+Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig` (`shared/types/live-reserves.ts`, loaded from `shared/data/stablecoins/coins/*.json` via `shared/lib/stablecoins/index.ts` and validated by `shared/lib/stablecoins/schema.ts`).
 
 `LiveReservesConfig` fields:
 
@@ -365,7 +365,7 @@ Fallback, template-fallback, and unavailable responses use a shorter edge cache 
 ## Adapter Registry
 
 Registered in `worker/src/cron/reserve-adapters/index.ts`.
-This table reflects the adapter keys currently configured in `shared/data/stablecoins/*.json`; the runtime registry also retains unconfigured implementations.
+This table reflects the adapter keys currently configured in `shared/data/stablecoins/coins/*.json`; the runtime registry also retains unconfigured implementations.
 
 | Adapter                    | Primary input               | Semantics                            | Configured coins |
 | -------------------------- | --------------------------- | ------------------------------------ | ---------------- |
@@ -507,7 +507,7 @@ Adapter helpers now live in a small helper family, with `worker/src/cron/reserve
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `shared/types/live-reserves.ts`                 | `LiveReservesConfig`, `StablecoinReservesResponse`, sync-state types                             |
 | `shared/lib/live-reserve-adapters.ts`           | Shared adapter registry, source/evidence classes, validation policy, and config schemas          |
-| `shared/lib/stablecoins/index.ts`               | Loader for per-coin `liveReservesConfig` declarations backed by `shared/data/stablecoins/*.json` |
+| `shared/lib/stablecoins/index.ts`               | Loader for per-coin `liveReservesConfig` declarations backed by `shared/data/stablecoins/coins/*.json` |
 | `worker/src/cron/sync-live-reserves.ts`         | 4-hourly sync orchestration and cron result statuses                                             |
 | `worker/src/cron/reserve-adapters/index.ts`     | Adapter registry                                                                                 |
 | `worker/src/cron/reserve-adapters/helpers.ts`   | Shared adapter fetch / normalization helpers                                                     |

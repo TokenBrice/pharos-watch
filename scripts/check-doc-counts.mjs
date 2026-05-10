@@ -34,12 +34,14 @@ function getModuleExport(module, name) {
 
 const [
   stablecoinsModule,
+  psiEligibleModule,
   shadowStablecoinsModule,
   reserveAdaptersModule,
   bluechipSlugsModule,
   deadStablecoinsModule,
 ] = await Promise.all([
   import("../shared/lib/stablecoins/index.ts"),
+  import("../shared/lib/psi-eligible.ts"),
   import("../shared/lib/shadow-stablecoins.ts"),
   import("../shared/lib/live-reserve-adapters-definitions.ts"),
   import("../shared/lib/bluechip-slugs.ts"),
@@ -49,6 +51,7 @@ const [
 const TRACKED_STABLECOINS = getModuleExport(stablecoinsModule, "TRACKED_STABLECOINS");
 const ACTIVE_STABLECOINS = getModuleExport(stablecoinsModule, "ACTIVE_STABLECOINS");
 const PRE_LAUNCH_STABLECOINS = getModuleExport(stablecoinsModule, "PRE_LAUNCH_STABLECOINS");
+const PSI_ELIGIBLE_STABLECOINS = getModuleExport(psiEligibleModule, "PSI_ELIGIBLE_STABLECOINS");
 const SHADOW_STABLECOINS = getModuleExport(shadowStablecoinsModule, "SHADOW_STABLECOINS");
 const LIVE_RESERVE_ADAPTER_DEFINITIONS = getModuleExport(
   reserveAdaptersModule,
@@ -67,7 +70,8 @@ const frozenCount = FROZEN_STABLECOINS.length;
 // 2. Shadow stablecoins
 const shadowCount = SHADOW_STABLECOINS.length;
 
-const psiCount = trackedCount + shadowCount;
+const psiCount = PSI_ELIGIBLE_STABLECOINS.length;
+const nonFrozenTrackedCount = trackedCount - frozenCount;
 
 // 3. Reserve adapters
 const adapterCount = Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS).length;
@@ -76,7 +80,10 @@ const adapterCount = Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS).length;
 const bluechipCount = Object.keys(BLUECHIP_SLUG_MAP).length;
 
 // 5. Live-enabled stablecoins
-const liveEnabledCount = TRACKED_STABLECOINS.filter(
+const trackedLiveReserveConfigCount = TRACKED_STABLECOINS.filter(
+  (coin) => Object.hasOwn(coin, "liveReservesConfig"),
+).length;
+const activeLiveEnabledCount = ACTIVE_STABLECOINS.filter(
   (coin) => Object.hasOwn(coin, "liveReservesConfig"),
 ).length;
 
@@ -87,7 +94,7 @@ const cemeteryCount = DEAD_STABLECOINS.length;
 const reportCardSnapshotCount = activeCount + cemeteryCount + frozenCount;
 
 console.log(
-  `Authoritative counts: ${trackedCount} tracked (${activeCount} active + ${preLaunchCount} pre-launch + ${frozenCount} frozen), ${shadowCount} shadow, ${psiCount} PSI-eligible, ${adapterCount} adapters, ${bluechipCount} bluechip slugs, ${liveEnabledCount} live-enabled, ${cemeteryCount} cemetery, ${reportCardSnapshotCount} report-card snapshot`,
+  `Authoritative counts: ${trackedCount} tracked (${activeCount} active + ${preLaunchCount} pre-launch + ${frozenCount} frozen), ${shadowCount} shadow, ${psiCount} PSI-eligible (${nonFrozenTrackedCount} non-frozen tracked + ${shadowCount} shadow), ${adapterCount} adapters, ${bluechipCount} bluechip slugs, ${activeLiveEnabledCount} active live-enabled / ${trackedLiveReserveConfigCount} tracked live-reserve configs, ${cemeteryCount} cemetery, ${reportCardSnapshotCount} report-card snapshot`,
 );
 
 // --- Check primary docs for stale counts ---
@@ -114,6 +121,12 @@ const CHECKS = [
   {
     file: "docs/report-cards.md",
     pattern: /(\d+) tracked metadata entries/,
+    expected: trackedCount,
+    label: "tracked",
+  },
+  {
+    file: "docs/agent-code-map.md",
+    pattern: /canonical-order\.json` - (\d+) entries/,
     expected: trackedCount,
     label: "tracked",
   },
@@ -161,9 +174,9 @@ const CHECKS = [
   },
   {
     file: "docs/supply-snapshot.md",
-    pattern: /(\d+) tracked/,
-    expected: trackedCount,
-    label: "tracked",
+    pattern: /(\d+) non-frozen tracked/,
+    expected: nonFrozenTrackedCount,
+    label: "non-frozen tracked",
   },
 
   // Reserve adapter counts
@@ -215,9 +228,9 @@ const CHECKS = [
   // Live-enabled stablecoin count
   {
     file: "docs/live-reserves.md",
-    pattern: /(\d+) live-enabled stablecoins/,
-    expected: liveEnabledCount,
-    label: "live-enabled",
+    pattern: /(\d+) active live-enabled stablecoins/,
+    expected: activeLiveEnabledCount,
+    label: "active live-enabled",
   },
 ];
 
@@ -246,7 +259,7 @@ if (failures > 0) {
   console.error(
     `\n${failures} check(s) failed. Update docs to match source:` +
     `\n  CANONICAL_ORDER=${trackedCount}, SHADOW=${shadowCount}, PSI=${psiCount}` +
-    `\n  ADAPTERS=${adapterCount}, BLUECHIP_SLUG_MAP=${bluechipCount}, LIVE_ENABLED=${liveEnabledCount}`,
+    `\n  ADAPTERS=${adapterCount}, BLUECHIP_SLUG_MAP=${bluechipCount}, ACTIVE_LIVE_ENABLED=${activeLiveEnabledCount}, TRACKED_LIVE_RESERVE_CONFIGS=${trackedLiveReserveConfigCount}`,
   );
   process.exit(1);
 }

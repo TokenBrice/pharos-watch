@@ -5,7 +5,7 @@ Two metadata entries are maintained outside the tracked public stablecoin set fo
 - `ust-terra`
 - `iron-iron-finance`
 
-They live in `shared/lib/shadow-stablecoins.ts` and are intentionally separated from the tracked stablecoin registry (`shared/lib/stablecoins/index.ts`, backed by `shared/data/stablecoins/*.json`).
+They live in `shared/lib/shadow-stablecoins.ts` and are intentionally separated from the tracked stablecoin registry (`shared/lib/stablecoins/index.ts`, backed by per-coin files in `shared/data/stablecoins/coins/*.json` plus `shared/data/stablecoins/coins.generated.json`).
 
 ---
 
@@ -15,7 +15,7 @@ Shadow stablecoins preserve historically important collapse events in systems th
 
 They are used where historical continuity matters:
 
-- `shared/lib/psi-eligible.ts` combines `TRACKED_STABLECOINS` + `SHADOW_STABLECOINS` into `PSI_ELIGIBLE_STABLECOINS`
+- `shared/lib/psi-eligible.ts` combines tracked + shadow assets into `PSI_ELIGIBLE_STABLECOINS`, excluding frozen tracked entries
 - `worker/src/cron/detect-depegs.ts` and `worker/src/cron/compute-dews.ts` use the PSI-eligible set
 - `worker/src/cron/stability-index.ts` filters the live cache against `PSI_ELIGIBLE_IDS`
 - `worker/src/cron/snapshot-supply.ts` and `worker/src/api/backfill-supply-history.ts` use the PSI-eligible registry
@@ -63,7 +63,7 @@ Operational consequence:
 
 ## Gotchas
 
-- Do not add a shadow asset to `shared/data/stablecoins/*.json` unless it should become publicly tracked everywhere
+- Do not add a shadow asset to `shared/data/stablecoins/coins/*.json` unless it should become publicly tracked everywhere
 - Do not remove a shadow asset without checking PSI, depeg backfill, and supply-history continuity first
 - If a shadow asset gains a reliable live source, update both `shared/lib/shadow-stablecoins.ts` and the paths that depend on `PSI_ELIGIBLE_STABLECOINS`
 

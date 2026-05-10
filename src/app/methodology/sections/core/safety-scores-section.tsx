@@ -474,9 +474,7 @@ export function SafetyScoresMethodologySection() {
                     risk score is capped relative to its upstream:
                   </p>
                   <ul className="list-disc list-inside space-y-1">
-                    <li>
-                      <strong>Wrapper dependency:</strong> capped at upstream score minus 3 points
-                    </li>
+                    <li><strong>Wrapper dependency:</strong> legacy wrappers and tracked savings variants cap at upstream score minus 3; strategy-vault/risk-absorption variants cap at minus 5; bond-maturity variants cap at minus 8</li>
                     <li>
                       <strong>Mechanism dependency:</strong> capped at upstream score
                     </li>
@@ -499,7 +497,7 @@ export function SafetyScoresMethodologySection() {
                       nobody trades them
                     </li>
                     <li>Decentralization is structural, not a value judgment</li>
-                    <li>Dependency map is manually maintained &mdash; may not capture every collateral relationship</li>
+                    <li>Dependency inputs come from score-grade live reserve slices when available, then curated reserve links, then manual dependency metadata; unmapped collateral relationships may still be missed</li>
                   </ul>
                 </div>
               </MethodologyDetails>

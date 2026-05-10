@@ -32,11 +32,12 @@ The page is organized into these sections, in order:
 3. `Live Walkthrough`
 4. `What Pharos Tracks`
 5. `What Pharos Computes`
-6. `Classification`
-7. `Data Pipeline`
-8. `Methodology`
-9. `Disclaimer` (rendered as an `<aside>`, not a titled `AboutSection`)
-10. `Get in Touch`
+6. `Companion Experiences`
+7. `Classification`
+8. `Data Pipeline`
+9. `Methodology`
+10. `Disclaimer` (rendered as an `<aside>`, not a titled `AboutSection`)
+11. `Get in Touch`
 
 ## Design And Interaction Rules
 

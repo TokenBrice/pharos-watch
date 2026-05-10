@@ -164,7 +164,7 @@ Safety Score active-depeg handling and report-card input freshness were tightene
 
 - Peg Stability now passes through `computePegScore()` directly during active depegs instead of applying the legacy 65-point peg-dimension cap before the multiplier
 - `activeDepegBps` now uses the open depeg event's absolute peak deviation, aligning final D/F caps with the severe-redemption impairment source
-- Stale redemption-backstop snapshots are suppressed from Safety Score Liquidity / Exit; report cards fall back to fresh DEX liquidity or `NR`
+- Stale redemption-backstop snapshots are suppressed from Safety Score Liquidity / Exit; report cards fall back to the last-known DEX snapshot with staleness surfaced, or `NR` when no DEX snapshot exists
 - Partially unavailable upstream dependency scores are applied at the 70-point unavailable fallback for their declared weights instead of being treated as self-backed
 - Contagion stress recomputation now propagates through transitive downstream dependency chains
 

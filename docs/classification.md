@@ -2,7 +2,7 @@
 
 ## Stablecoin Classification System
 
-Each tracked stablecoin is defined in the checked-in data assets under `shared/data/stablecoins/*.json` and loaded through `shared/lib/stablecoins/index.ts` + `shared/lib/stablecoins/schema.ts`. Each entry carries these flags:
+Each tracked stablecoin is defined in the checked-in per-coin data assets under `shared/data/stablecoins/coins/*.json`, loaded through the generated aggregate `shared/data/stablecoins/coins.generated.json`, and validated by `shared/lib/stablecoins/index.ts` + `shared/lib/stablecoins/schema.ts`. Each entry carries these flags:
 
 ### Type (governance field internally)
 

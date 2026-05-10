@@ -6,7 +6,7 @@ Historical-reference note:
 
 - section headers such as `usd-major.ts` and `usd-minor.ts` refer to the retired pre-JSON registry files those comments originally lived in
 - line numbers below are archival anchors into that historical TypeScript registry, not guaranteed positions inside the current JSON assets
-- current canonical registry data lives under `shared/data/stablecoins/*.json`
+- current canonical registry data lives under `shared/data/stablecoins/coins/*.json`, loaded through `shared/data/stablecoins/coins.generated.json`
 
 ## usd-major.ts
 - Line 296: Source: BitGo monthly attestation reports (AICPA criteria). Exact % not published; estimated from collateral description.

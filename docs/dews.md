@@ -203,7 +203,7 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
 }
 ```
 
-`updatedAt` is the newest current row in the aggregate response. `oldestComputedAt` is the oldest returned current row and is the timestamp used for aggregate `X-Data-Age` / `Warning` freshness headers, so one stale per-coin row cannot be hidden by newer rows for other coins.
+`updatedAt` is the newest current row in the aggregate response and is used for aggregate `X-Data-Age` / `Warning` freshness headers. `oldestComputedAt` is the oldest returned current row and is body-only for consumers that need per-coin lag detection.
 
 **Single coin:** `?stablecoin=usdt-tether&days=30` (default 30, min 1, max 365) — Returns latest + daily history.
 

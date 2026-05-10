@@ -44,7 +44,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 - `WORKER_RESERVED_ENV_KEYS`
 - `WORKER_ACTIVE_ENV_KEYS` (`required + optional`)
 
-The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `functions/lib/site-api-env.ts`, with the same `required` / `optional` / `reserved` / `active` shape derived from that shared manifest. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, when `SITE_API_SHARED_SECRET` is missing, or when `API_KEY_HASH_PEPPER` is missing. The Pages ops-proxy contract now actively requires `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD` for inbound UI JWT verification, and the Pages `site-data` contract expects a `DB` binding so same-origin demand telemetry can be written into the shared D1 database.
+The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `functions/lib/site-api-env.ts`, with the same `required` / `optional` / `reserved` / `active` shape derived from that shared manifest. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, when `SITE_API_SHARED_SECRET` is missing, or when `API_KEY_HASH_PEPPER` is missing. The Pages ops-proxy contract now actively requires `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD` for inbound UI JWT verification. The Pages `site-data` `DB` binding is optional: binding it enables same-origin demand telemetry for `/api/request-source-stats`; without `DB`, allowed proxy reads still work but site-data attribution is skipped.
 
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:BEGIN -->
 Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worker and Pages env modules derive their `required` / `optional` / `reserved` views from that manifest.
@@ -132,7 +132,7 @@ The no-key public exceptions are `GET /api/health`, `GET /api/og/*`, `POST /api/
 | `OPTIONS` | Returns 204 with CORS headers (preflight)                                                                            |
 | `POST`    | `/api/feedback`, `/api/telegram-webhook`, and mutating admin endpoints from `shared/lib/api-endpoints/`            |
 | `GET`     | Read endpoints + admin debug routes; mutating admin routes return 405 except dry-run previews such as `/api/audit-depeg-history?dry-run=true` and `/api/backfill-dews?repair=...&dry-run=true`, plus the read-only `GET /api/backfill-dews` backtest |
-| Other     | Returns 405 `{ error: "Method not allowed" }`                                                                        |
+| Other     | Known endpoint families with disallowed methods return 405 `{ error: "Method not allowed" }` with `Allow`; unregistered public `/api/*` paths can return auth errors first, then 404 after lane auth succeeds because no route dependencies can be hydrated |
 
 Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions) are centralized in the folderized `shared/lib/api-endpoints/` module surface and consumed by both worker and frontend status tooling.
 
@@ -1001,7 +1001,7 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 
 **Registered adapters:**
 
-The authoritative adapter registry lives in `shared/lib/live-reserve-adapters-definitions.ts`, with worker implementations registered from `worker/src/cron/reserve-adapters/index.ts`. Coin-to-adapter assignment is source metadata: inspect `liveReservesConfig.adapter` in `shared/data/stablecoins/*.json`, or run `npm run check:doc-counts` to verify the registered-adapter count that primary docs expose.
+The authoritative adapter registry lives in `shared/lib/live-reserve-adapters-definitions.ts`, with worker implementations registered from `worker/src/cron/reserve-adapters/index.ts`. Coin-to-adapter assignment is source metadata: inspect `liveReservesConfig.adapter` in `shared/data/stablecoins/coins/*.json`, or run `npm run check:doc-counts` to verify the registered-adapter count that primary docs expose.
 
 This doc intentionally avoids a hand-maintained adapter-by-coin table because live reserve coverage changes frequently and stale enumerations have caused drift. For current coverage, use `docs/live-reserves.md`, the adapter registry files above, and the checked-in stablecoin metadata.
 

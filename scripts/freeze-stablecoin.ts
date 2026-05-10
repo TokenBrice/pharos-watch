@@ -8,13 +8,13 @@
  *   API_KEY=... npx tsx scripts/freeze-stablecoin.ts <coinId>
  *
  * Inputs:
- *   - <coinId>: must already exist in shared/data/stablecoins/*.json
+ *   - <coinId>: must already exist in shared/data/stablecoins/coins/*.json
  *   - $PHAROS_API_KEY: required to call api.pharos.watch
  *
  * Outputs (printed to stdout):
  *   - The full JSON entry to append to shared/data/stablecoins/frozen-snapshots.json
- *   - The patch to apply to the coin's existing entry in usd-major.json /
- *     usd-minor.json / etc. — set status=frozen, frozenAt, obituary skeleton.
+ *   - The patch to apply to the coin's existing per-coin registry entry:
+ *     set status=frozen, frozenAt, and an obituary skeleton.
  *
  * The operator finalizes the obituary copy (causeOfDeath, deathDate,
  * epitaph, obituary, sourceUrl, sourceLabel) by hand and reviews the diff.

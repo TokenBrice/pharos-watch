@@ -24,7 +24,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 - `sUSDai` is now a first-class tracked yield-bearing NAV token, so base `USDai` no longer inherits the USD.AI savings venue through `YIELD_VARIANT_MAP`
 - Risk-bearing wrappers with materially different holder exposure now own their yield rows directly when they are tracked as separate assets: `stcUSD`, `sAID`, `msY`, and K3 `sBOLD` no longer publish through their base stablecoin rows
 - `stUSDS` uses a direct ERC-4626 exchange-rate reader, while Aave Umbrella `stkGHO` is inventoried as an intentional runtime-yield gap until reliable reward APY telemetry is available
-- `crvusd-curve` now uses a dedicated scrvUSD current-rate on-chain reader based on the Yearn V3 profit-unlock stream, rather than the generic 7-day `convertToAssets` exchange-rate delta
+- `scrvusd-curve` now owns the dedicated scrvUSD current-rate on-chain reader based on the Yearn V3 profit-unlock stream, while legacy parent-side `crvusd-curve` rows are suppressed
 - PYS now keeps raw APY as the base yield term, then adds 25% of the row's benchmark spread before applying the safety and consistency penalties
 - supplemental protocol families now keep asset-scoped source identity for same-chain markets (notably Aave V3), preventing cross-coin cache collapse and preserving per-asset alternative-source coverage
 - protocol-native lending venue readers such as Aave V3 and Compound V3 stay in the curated Tier 2.5 lane rather than inheriting Tier 1 deterministic wrapper precedence, so a lower-yield supplemental market does not displace a stronger native wrapper purely by source family
@@ -218,7 +218,7 @@ Published lending-opportunity suggestions also apply an explicit venue exclusion
 
 | Coin ID | Source | Endpoint |
 | ------- | ------ | -------- |
-| `crvusd-curve` | `Curve Savings crvUSD current-rate` | on-chain scrvUSD Yearn V3 profit-unlock reader |
+| `scrvusd-curve` | `Curve Savings crvUSD current-rate` | on-chain scrvUSD Yearn V3 profit-unlock reader |
 | `usbd-bima` | `BIMA savings (sUSBD)` | `https://bima.money/api/earn/pools?network=Ethereum&user=0x0000000000000000000000000000000000000000` |
 | `lusd-liquity` | `B.Protocol LQTY-only source` | deterministic on-chain LQTY-only source reader |
 | `usyc-hashnote` | `Hashnote USYC` | Hashnote protocol API |

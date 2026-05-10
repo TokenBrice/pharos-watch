@@ -110,7 +110,7 @@ const blacklistTracker = createMethodologyVersion({
     date: "2026-04-17",
     effectiveAt: 1776466970, // 2026-04-17T00:00:00Z
     summary:
-      "Worker correctness fixes (Gnosis dRPC 9k-block scan cap, dual-index-freeze family split from WLFI destroy events, TronGrid failure propagation to the circuit breaker, EURC mirror-zero rows locked to permanently_unavailable, address[] expansion capped, Tron maxBlock cursor init), five D1 migrations (derived-row reset, sync_state dedup, EURC mirror-zero stamp, blacklist_events index adjustments, amount-status backfill), summary endpoint rewritten to aggregate in SQL with post-fetch counters inlined, frontend polish (data-driven stats strip, amount-status badge, per-coin stat border, CSV column split, page-clamp + filter-reset coverage), and minor chain-coverage additions (Polygon USDQ, Arbitrum + Base AID, Base + BSC + Polygon TGBP).",
+      "Worker correctness fixes (Gnosis dRPC 9k-block scan cap, dual-index-freeze family split from WLFI destroy events, TronGrid failure propagation to the circuit breaker, EURC mirror-zero rows locked to permanently_unavailable, address[] expansion capped, Tron maxBlock cursor init), five D1 migrations (derived-row reset, sync_state dedup, EURC mirror-zero stamp, blacklist_events index adjustments, amount-status backfill), summary endpoint rewritten to aggregate in SQL with post-fetch counters inlined, frontend polish (data-driven stats strip, amount-status badge, per-coin stat border, CSV column split, page-clamp + filter-reset coverage), and minor chain-coverage additions (Polygon USDQ, Arbitrum AID, Polygon TGBP; Base AID plus Base/BSC TGBP remain deferred).",
     impact: [
       "Gnosis BRZ scans now stay within the dRPC free-tier 10k-block cap and drain the ~12.5M-block backlog that previously masked 2 missed events",
       "FDUSD / EURI / AEUR configs use DUAL_INDEX_FREEZE_EVENT_FAMILY without inheriting WLFI FrozenAccountDrained / FrozenFundsReallocated topics they cannot emit",
@@ -121,7 +121,7 @@ const blacklistTracker = createMethodologyVersion({
       "Five D1 migrations applied: 0100 dedup mixed-case blacklist_sync_state keys, 0101 reset legacy derived amount rows, 0102 Gnosis BRZ cursor reseed, 0103 backfill + API composite indexes, 0104 stamp EURC mirror-zero rows as permanently_unavailable",
       "/api/blacklist-summary aggregates quarterly chart points and per-coin counts in SQL, dropping summary-endpoint memory from ~5-10MB to a few KB per cache miss",
       "Frontend: data-driven stats strip + amount-status badge, per-coin stat border rendered via inline style, CSV splits native / unit / USD / status columns, page-clamp + zero-total + filter-reset covered by tests",
-      "Seven new chain-coverage rows for existing coins: Polygon USDQ; Arbitrum + Base AID; Base + BSC + Polygon TGBP",
+      "Three new chain-coverage rows for existing coins: Polygon USDQ, Arbitrum AID, and Polygon TGBP; Base AID plus Base/BSC TGBP remain deferred",
     ],
     commits: [],
     reconstructed: false,
