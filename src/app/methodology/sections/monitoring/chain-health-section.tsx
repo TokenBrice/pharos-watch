@@ -8,12 +8,12 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
-export const CONTENT_MARKDOWN = `## Chain Health Score\n\nChain Health Score evaluates how healthy each chain's stablecoin stack is. It combines supply-weighted Safety Score quality, chain environment, stablecoin concentration, peg stability, and RWA/crypto backing diversity.\n\nThe score is computed from current stablecoin and report-card data rather than a separate opaque dataset. A chain with large supply but one dominant issuer, weak collateral quality, poor peg behavior, or narrow backing diversity can score below a smaller but more diversified chain.\n\nChain Health is intended as market-structure context: it helps users understand whether a chain's stablecoin liquidity is deep, resilient, and diversified enough to support activity during stress.\n`;
+import { CHAIN_HEALTH_SECTION_CONTENT } from "../methodology-content";
 export function ChainHealthMethodologySection() {
   return (
           <MethodologySectionShell
-            id="chain-health-score"
-            title="Chain Health Score"
+            id={CHAIN_HEALTH_SECTION_CONTENT.id}
+            title={CHAIN_HEALTH_SECTION_CONTENT.title}
             versionLabel={CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL}
             changelogPath={CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when factor weights, tier assignments, or sub-factor formulas change."

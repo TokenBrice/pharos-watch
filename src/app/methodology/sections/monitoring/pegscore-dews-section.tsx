@@ -8,12 +8,12 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
-export const CONTENT_MARKDOWN = `## PegScore and Depeg Early Warning Score (DEWS)\n\nPegScore measures historical peg quality from time-at-peg and event severity. The tracking window is capped by asset age and uses curated launch dates when available.\n\nDEWS is a forward-looking stress score. It combines price deviation, source divergence, liquidity erosion, pool imbalance, supply velocity, blacklist activity, mint/burn pressure, and yield anomalies into a 0-100 warning signal.\n\nPending depegs require source-family-aware corroboration before promotion. Pharos treats contradictory evidence as a reason to hold or reject an event, not as weak support, and it records canonical source keys behind every confirmed mutation.\n`;
+import { PEGSCORE_DEWS_SECTION_CONTENT } from "../methodology-content";
 export function PegScoreDewsMethodologySection() {
   return (
           <MethodologySectionShell
-            id="pegscore-dews-methodology"
-            title="PegScore and Depeg Early Warning Score (DEWS)"
+            id={PEGSCORE_DEWS_SECTION_CONTENT.id}
+            title={PEGSCORE_DEWS_SECTION_CONTENT.title}
             versionLabel={DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}
             changelogPath={DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when depeg thresholds, confirmation policy, peg-score formula terms, or DEWS signal composition or score-affecting input semantics change."

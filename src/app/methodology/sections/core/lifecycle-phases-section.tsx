@@ -3,14 +3,13 @@ import {
   MethodologyFacts,
   MethodologySectionShell,
 } from "../../methodology-shared";
-
-export const CONTENT_MARKDOWN = `## Stablecoin Lifecycle Phases\n\nEvery tracked stablecoin sits in one of three lifecycle phases: active, pre-launch, or frozen. The phase controls which surfaces ingest, score, and display the coin. It is a data-collection lifecycle policy, not a scoring methodology — per-domain version constants (Safety Scores, Liquidity, PegScore + DEWS, PSI, Yield, Mint/Burn Flow, Pricing Pipeline, Blacklist Tracker, Chain Health) are unaffected when a coin transitions between phases.\n\nActive coins receive full data collection and contribute to every aggregate. Pre-launch coins are listed for context on the upcoming page and get a dedicated pre-launch detail page, but they have no live data yet. Frozen coins are archived: their historical data and detail page are preserved, but no new data is collected, and they are excluded from live aggregates and new score computations.\n`;
+import { LIFECYCLE_PHASES_SECTION_CONTENT } from "../methodology-content";
 
 export function LifecyclePhasesMethodologySection() {
   return (
     <MethodologySectionShell
-      id="lifecycle-phases-methodology"
-      title="Stablecoin Lifecycle Phases"
+      id={LIFECYCLE_PHASES_SECTION_CONTENT.id}
+      title={LIFECYCLE_PHASES_SECTION_CONTENT.title}
       accentClassName="border-l-zinc-500"
       versionNote="Lifecycle phase is a data-collection policy. No per-domain methodology version is bumped when a coin transitions between phases."
     >

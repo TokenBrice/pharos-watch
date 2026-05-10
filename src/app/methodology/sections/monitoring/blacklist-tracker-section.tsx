@@ -8,12 +8,12 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
-export const CONTENT_MARKDOWN = `## Blacklist Tracker Methodology\n\nThe blacklist tracker monitors issuer-controlled freeze, blocklist, account-pause, and token-destruction events across supported centralized stablecoin contracts.\n\nEvents are normalized by chain, stablecoin, action type, native amount, USD amount, and amount-status provenance. Recoverable amount gaps are queued for repair, while permanently unavailable rows remain auditable without polluting public aggregates.\n\nFrozen-total summaries use last-known successful freeze-ledger snapshots. New snapshots are contract/config scoped so same-symbol deployments do not overwrite each other; legacy rows can fall back to older address identity until remediated.\n\nBlacklist exposure feeds report-card dependency and resilience review because the ability to freeze or destroy balances is a material operational risk even when the peg is stable.\n`;
+import { BLACKLIST_SECTION_CONTENT } from "../methodology-content";
 export function BlacklistTrackerMethodologySection() {
   return (
           <MethodologySectionShell
-            id="blacklist-tracker-methodology"
-            title="Blacklist Tracker Methodology"
+            id={BLACKLIST_SECTION_CONTENT.id}
+            title={BLACKLIST_SECTION_CONTENT.title}
             versionLabel={BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL}
             changelogPath={BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when tracked contracts, event parsing rules, cursor semantics, or amount-enrichment logic change."

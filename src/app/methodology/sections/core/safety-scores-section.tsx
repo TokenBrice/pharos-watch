@@ -10,12 +10,12 @@ import {
 } from "../../methodology-shared";
 import { SafetyScoreCalculator } from "@/components/methodology/safety-score-calculator";
 import { CollateralQualityMethodologyCopy, ReserveRelatedSignalsMethodologyCopy } from "../core-sections-fragments";
-export const CONTENT_MARKDOWN = `## Safety Scores Grading Methodology\n\nPharos synthesizes stablecoin risk into a single transparent grade. The score starts with weighted base dimensions for Liquidity / Exit, Resilience, Decentralization, and Dependency Risk, then applies a peg-stability multiplier.\n\nLiquidity / Exit measures how much usable exit capacity exists across DEX depth and eligible redemption backstops. Resilience measures collateral quality and custody model. Chain tier and deployment model affect only the Decentralization chain-risk penalty. Dependency Risk penalizes wrapper, collateral, and mechanism exposure to other assets, with tracked parent-linked variants applying family-specific wrapper ceilings.\n\nThe peg multiplier prevents a structurally strong asset with a bad peg from receiving an inflated grade. Severe active depegs, missing liquidity, stale redemption evidence, and high dependency concentration all cap or penalize the final result.\n`;
+import { SAFETY_SCORES_SECTION_CONTENT } from "../methodology-content";
 export function SafetyScoresMethodologySection() {
   return (
           <MethodologySectionShell
-            id="safety-scores-methodology"
-            title="Safety Scores Grading Methodology"
+            id={SAFETY_SCORES_SECTION_CONTENT.id}
+            title={SAFETY_SCORES_SECTION_CONTENT.title}
             versionLabel={SAFETY_SCORE_VERSION_LABEL}
             changelogPath={SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when weights, thresholds, or dimension definitions change."

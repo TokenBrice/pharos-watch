@@ -8,32 +8,8 @@ import { PRICING_PIPELINE_CHANGELOG } from "../../shared/lib/pricing-pipeline-ve
 import { SAFETY_SCORE_CHANGELOG } from "../../shared/lib/safety-score-version";
 import { PSI_METHODOLOGY_CHANGELOG } from "../../shared/lib/stability-index-version";
 import { YIELD_METHODOLOGY_CHANGELOG } from "../../shared/lib/yield-methodology-version";
-import { CONTENT_MARKDOWN as PRICING_PIPELINE } from "../../src/app/methodology/sections/core-sections-pricing";
-import { CONTENT_MARKDOWN as INFRASTRUCTURE } from "../../src/app/methodology/sections/core/infrastructure-section";
-import { CONTENT_MARKDOWN as LIQUIDITY } from "../../src/app/methodology/sections/core/liquidity-section";
-import { CONTENT_MARKDOWN as MINT_BURN_FLOW } from "../../src/app/methodology/sections/core/mint-burn-flow-section";
-import { CONTENT_MARKDOWN as SAFETY_SCORES } from "../../src/app/methodology/sections/core/safety-scores-section";
-import { CONTENT_MARKDOWN as STABILITY_INDEX } from "../../src/app/methodology/sections/core/stability-index-section";
-import { CONTENT_MARKDOWN as BLACKLIST } from "../../src/app/methodology/sections/monitoring/blacklist-tracker-section";
-import { CONTENT_MARKDOWN as CHAIN_HEALTH } from "../../src/app/methodology/sections/monitoring/chain-health-section";
-import { CONTENT_MARKDOWN as CONTAGION } from "../../src/app/methodology/sections/monitoring/contagion-stress-test-section";
-import { CONTENT_MARKDOWN as PEGSCORE_DEWS } from "../../src/app/methodology/sections/monitoring/pegscore-dews-section";
-import { CONTENT_MARKDOWN as YIELD } from "../../src/app/methodology/sections/monitoring/yield-intelligence-section";
+import { METHODOLOGY_INDEX_SECTION_CONTENT } from "../../src/app/methodology/sections/methodology-content";
 import { frontMatterBlock } from "./markdown-renderers";
-
-const SECTIONS = [
-  PRICING_PIPELINE,
-  STABILITY_INDEX,
-  SAFETY_SCORES,
-  INFRASTRUCTURE,
-  LIQUIDITY,
-  MINT_BURN_FLOW,
-  YIELD,
-  PEGSCORE_DEWS,
-  CONTAGION,
-  BLACKLIST,
-  CHAIN_HEALTH,
-];
 
 const CHANGELOG_REGISTRY = {
   scoring: {
@@ -96,7 +72,9 @@ export function getMethodologyChangelogPath(key: MethodologyChangelogKey): strin
 }
 
 export function buildMethodologyIndexMarkdown(): string {
-  const body = SECTIONS.join("\n\n").replace(/\n+$/, "");
+  const body = METHODOLOGY_INDEX_SECTION_CONTENT.map((section) => section.markdown)
+    .join("\n\n")
+    .replace(/\n+$/, "");
   return (
     frontMatterBlock({
       title: "Methodology: How Pharos Grades Stablecoins",

@@ -8,12 +8,12 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
-export const CONTENT_MARKDOWN = `## Mint/Burn Flow Scoring\n\nMint/burn flow scoring tracks issuance and redemption pressure across supported token contracts. Pharos classifies transfers into mint, burn, bridge-mint, bridge-burn, atomic roundtrip, and ignored noise so the gauge reflects meaningful supply movement instead of mechanical churn.\n\nThe score compares recent net flow against trailing closed-day baselines, distinguishes canonical-chain activity from bridge effects, and flags pressure shifts when risky outflows and safer inflows diverge.\n\nCoverage is intentionally explicit. Unsupported chains, deferred configs, null-price repair, and stale lanes are surfaced as metadata rather than hidden behind a clean-looking aggregate.\n`;
+import { MINT_BURN_FLOW_SECTION_CONTENT } from "../methodology-content";
 export function MintBurnFlowMethodologySection() {
   return (
           <MethodologySectionShell
-            id="mint-burn-flow-methodology"
-            title="Mint/Burn Flow Scoring"
+            id={MINT_BURN_FLOW_SECTION_CONTENT.id}
+            title={MINT_BURN_FLOW_SECTION_CONTENT.title}
             versionLabel={MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}
             changelogPath={MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when flow scoring logic, tracked event semantics, or ingestion attribution policies change."

@@ -2,12 +2,12 @@ import {
   MethodologyFacts,
   MethodologySectionShell,
 } from "../../methodology-shared";
-export const CONTENT_MARKDOWN = `## Infrastructure Tagging\n\nInfrastructure tags identify stablecoins that share issuance frameworks, protocol mechanisms, or operational dependencies. Examples include Liquity v1, Liquity v2, and M0.\n\nTags help Pharos group related assets without pretending they are the same stablecoin. They support navigation, taxonomy pages, comparison context, and dependency-aware risk review.\n\nInfrastructure tags do not override the underlying governance, backing, peg, collateral, or report-card inputs. They are descriptive metadata used to expose shared machinery.\n`;
+import { INFRASTRUCTURE_SECTION_CONTENT } from "../methodology-content";
 export function InfrastructureMethodologySection() {
   return (
     <MethodologySectionShell
-      id="infrastructure-methodology"
-      title="Infrastructure Tagging"
+      id={INFRASTRUCTURE_SECTION_CONTENT.id}
+      title={INFRASTRUCTURE_SECTION_CONTENT.title}
       versionLabel="v1.0"
       accentClassName="border-l-violet-500"
       badgeClassName="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400"

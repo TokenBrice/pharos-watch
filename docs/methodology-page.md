@@ -10,6 +10,7 @@
 - **Shared helpers + section metadata:** `src/app/methodology/methodology-shared.tsx`
 - **Section composition module:** `src/app/methodology/methodology-sections.tsx`
 - **Section composition shells:** `src/app/methodology/sections/core-sections.tsx`, `src/app/methodology/sections/core-sections-pricing.tsx`, and `src/app/methodology/sections/monitoring-sections.tsx`
+- **Shared section summary/markdown registry:** `src/app/methodology/sections/methodology-content.ts` (non-React section ids, titles, and markdown-export summaries)
 - **Per-section body modules:** `src/app/methodology/sections/core/*.tsx` and `src/app/methodology/sections/monitoring/*.tsx`
 - **Navigation model:** `METHODOLOGY_SECTIONS` + `LongformScrollspyNav`
 - **Mode switching:** `MethodologyModeToggle`; mobile renders the toggle inside the hero guide card, `md+` renders it in the jump rail
@@ -48,7 +49,7 @@ When changing any methodology surface, update the runtime implementation, the de
 
 1. Runtime implementation (source file above).
 2. Detailed methodology doc (`docs/*.md` for that system).
-3. `/methodology` page copy and worked examples in the relevant section body module under `src/app/methodology/sections/core/` or `src/app/methodology/sections/monitoring/`. Use `core-sections.tsx`, `core-sections-pricing.tsx`, `monitoring-sections.tsx`, or `src/app/methodology/methodology-sections.tsx` only when changing section composition or order.
+3. `/methodology` page copy and worked examples in the relevant section body module under `src/app/methodology/sections/core/` or `src/app/methodology/sections/monitoring/`. If the markdown export summary should also change, update the matching entry in `src/app/methodology/sections/methodology-content.ts`. Use `core-sections.tsx`, `core-sections-pricing.tsx`, `monitoring-sections.tsx`, or `src/app/methodology/methodology-sections.tsx` only when changing section composition or order.
 
 If a versioned methodology changes, bump the corresponding version module in `shared/lib/*-version.ts` so badges/changelog links stay consistent.
 
@@ -95,6 +96,7 @@ For the safety-score changelog specifically, update both:
 
 ## Changelog
 
+- **v3.11** (2026-05-11): Moved methodology markdown-export summaries and stable section ids/titles into `src/app/methodology/sections/methodology-content.ts` so markdown generation no longer imports React section modules.
 - **v3.10** (2026-03-24): Corrected the methodology route contract to include the dedicated pricing-section source file, clarified that `src/lib/methodology-context.ts` owns hard-coded methodology anchors while changelog paths come from shared version modules, and fixed the stale liquidity-discovery cadence/budget note.
 - **v3.9** (2026-03-22): Corrected the update contract so authored methodology copy points to the grouped section modules under `src/app/methodology/sections/`, not the thin `methodology-sections.tsx` composition wrapper.
 - **v3.8** (2026-03-21): Split the authored long-form methodology body out of the single 2.8k-line hotspot into grouped section modules under `src/app/methodology/sections/`, while keeping `methodology-sections.tsx` as the composition root.
