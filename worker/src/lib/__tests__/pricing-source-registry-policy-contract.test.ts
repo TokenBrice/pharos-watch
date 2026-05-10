@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PRICING_SOURCE_REGISTRY } from "@shared/lib/pricing-source-registry";
 import {
+  getPriceCacheMaxAgeSec,
   isPoolChallengeEligibleConsensus,
   isReplaySafePriceSource,
 } from "../pricing-source-policy";
@@ -29,5 +30,12 @@ describe("pricing-source registry ↔ policy contract", () => {
     expect(isReplaySafePriceSource(undefined)).toBe(false);
     expect(isReplaySafePriceSource("dexscreener-search")).toBe(false);
     expect(isPoolChallengeEligibleConsensus([])).toBe(false);
+  });
+
+  it("uses the strictest component freshness for replay-cache composite sources", () => {
+    expect(getPriceCacheMaxAgeSec("coingecko+pyth", 6 * 3600)).toBe(5 * 60);
+    expect(getPriceCacheMaxAgeSec("bitstamp+coinbase", 6 * 3600)).toBe(10 * 60);
+    expect(getPriceCacheMaxAgeSec("coingecko+not-a-source", 6 * 3600)).toBe(0);
+    expect(getPriceCacheMaxAgeSec(null, 6 * 3600)).toBe(6 * 3600);
   });
 });

@@ -7,6 +7,43 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 
+const freshObservedAtSec = () => Math.floor(Date.now() / 1000) - 60;
+const staleObservedAtSec = () => Math.floor(Date.now() / 1000) - (2 * 3600);
+const freshIsoTimestamp = () => new Date(freshObservedAtSec() * 1000).toISOString();
+const staleIsoTimestamp = () => new Date(staleObservedAtSec() * 1000).toISOString();
+const maturePairCreatedAt = () => Date.now() - (2 * 24 * 60 * 60 * 1000);
+
+function dlQuote(
+  price: number,
+  symbol: string,
+  overrides: Partial<{ timestamp: number; confidence: number; symbol: string }> = {},
+) {
+  return {
+    price,
+    symbol,
+    timestamp: freshObservedAtSec(),
+    confidence: 0.99,
+    ...overrides,
+  };
+}
+
+function cmcUsdQuote(price: number, lastUpdated = freshIsoTimestamp()) {
+  return { price, last_updated: lastUpdated };
+}
+
+function cmcCategory(coins: unknown[], numTokens = coins.length) {
+  return {
+    data: {
+      num_tokens: numTokens,
+      coins,
+    },
+  };
+}
+
+function solanaSlotResponse(slot: number) {
+  return { jsonrpc: "2.0", result: slot, id: 1 };
+}
+
 describe("PRICE_BOUNDS", () => {
   it("has entries for all major peg types", () => {
     const expected = [
@@ -319,7 +356,7 @@ describe("enrichMissingPrices", () => {
         match: "coins.llama.fi/prices",
         body: {
           coins: {
-            "ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7": { price: 1.0, symbol: "USDT", timestamp: 1718650000, confidence: 0.99 },
+            "ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7": dlQuote(1.0, "USDT"),
           },
         },
       },
@@ -346,7 +383,7 @@ describe("enrichMissingPrices", () => {
         match: "coins.llama.fi/prices/current/citrea:0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d",
         body: {
           coins: {
-            "citrea:0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d": { price: 1.0015, symbol: "ctUSD", timestamp: 1776079738, confidence: 0.97 },
+            "citrea:0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d": dlQuote(1.0015, "ctUSD", { confidence: 0.97 }),
           },
         },
       },
@@ -375,19 +412,15 @@ describe("enrichMissingPrices", () => {
         match: "coins.llama.fi/prices",
         body: {
           coins: {
-            "ethereum:0xjpyc": { price: 0.5, symbol: "JPYC", timestamp: 1718650000, confidence: 0.99 },
+            "ethereum:0xjpyc": dlQuote(0.5, "JPYC"),
           },
         },
       },
       {
         match: "pro-api.coinmarketcap.com",
-        body: {
-          data: {
-            coins: [
-              { slug: "jpyc", symbol: "JPYC", quote: { USD: { price: 0.0068 } } },
-            ],
-          },
-        },
+        body: cmcCategory([
+          { slug: "jpyc", symbol: "JPYC", quote: { USD: cmcUsdQuote(0.0068) } },
+        ]),
       },
     ]);
 
@@ -469,6 +502,7 @@ describe("enrichMissingPrices", () => {
         symbol: "CJPY",
         price: 0,
         pegType: "peggedJPY",
+        chains: ["Ethereum"],
         circulating: {},
       },
     ];
@@ -483,6 +517,8 @@ describe("enrichMissingPrices", () => {
               quoteToken: { symbol: "USDT" },
               priceUsd: "0.0005",
               liquidity: { usd: 100_000 },
+              volume: { h24: 25_000 },
+              pairCreatedAt: maturePairCreatedAt(),
               chainId: "ethereum",
             },
           ],
@@ -541,7 +577,7 @@ describe("enrichMissingPrices", () => {
 
     expect(stats.passDex).toBe(1);
     expect(assets[0].price).toBe(1.0004);
-    expect(assets[0].priceSource).toBe("dexscreener");
+    expect(assets[0].priceSource).toBe("dexscreener-exact");
     expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("latest/dex/search"))).toBe(false);
   });
 
@@ -553,6 +589,7 @@ describe("enrichMissingPrices", () => {
         symbol: "MUSD",
         price: 0,
         pegType: "peggedUSD",
+        chains: ["Ethereum"],
         circulating: {},
       },
     ];
@@ -603,9 +640,10 @@ describe("enrichMissingPrices", () => {
       {
         id: "search-usd",
         name: "Search USD",
-        symbol: "MNEE",
+        symbol: "CHFAU",
         price: 0,
         pegType: "peggedUSD",
+        chains: ["Ethereum"],
         circulating: { total: 90 },
       },
     ];
@@ -627,7 +665,7 @@ describe("enrichMissingPrices", () => {
           },
         ]), { status: 200 });
       }
-      if (url.includes("dexscreener.com/latest/dex/search?q=MNEE")) {
+      if (url.includes("dexscreener.com/latest/dex/search?q=CHFAU")) {
         return new Response("upstream error", { status: 500 });
       }
       return new Response("Not found", { status: 404 });
@@ -668,9 +706,10 @@ describe("enrichMissingPrices", () => {
       {
         id: "search-usd",
         name: "Search USD",
-        symbol: "MNEE",
+        symbol: "CHFAU",
         price: 0,
         pegType: "peggedUSD",
+        chains: ["Ethereum"],
         circulating: { total: 90 },
       },
     ];
@@ -844,6 +883,8 @@ describe("enrichMissingPrices", () => {
               quoteToken: { symbol: "USDC" },
               priceUsd: "1.126",
               liquidity: { usd: 250_000 },
+              volume: { h24: 25_000 },
+              pairCreatedAt: maturePairCreatedAt(),
               chainId: "ethereum",
             },
           ],
@@ -857,7 +898,7 @@ describe("enrichMissingPrices", () => {
 
     expect(result.resolved).toBe(1);
     expect(assets[10].price).toBe(1.126);
-    expect(assets[10].priceSource).toBe("dexscreener");
+    expect(assets[10].priceSource).toBe("dexscreener-search");
     expect(fetchSpy).toHaveBeenCalledTimes(6);
     expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("q=CHFAU"))).toBe(true);
   });
@@ -888,14 +929,10 @@ describe("enrichMissingPrices", () => {
     mockFetch([
       {
         match: "pro-api.coinmarketcap.com",
-        body: {
-          data: {
-            coins: [
-              { slug: "gemini-dollar", symbol: "GUSD", quote: { USD: { price: 1.0001 } } },
-              { slug: "gatechain-token", symbol: "GUSD", quote: { USD: { price: 0.998 } } },
-            ],
-          },
-        },
+        body: cmcCategory([
+          { slug: "gemini-dollar", symbol: "GUSD", quote: { USD: cmcUsdQuote(1.0001) } },
+          { slug: "gatechain-token", symbol: "GUSD", quote: { USD: cmcUsdQuote(0.998) } },
+        ]),
       },
     ]);
 
@@ -909,7 +946,8 @@ describe("enrichMissingPrices", () => {
     expect(stats.passCmc).toBe(2);
   });
 
-  it("fills missing Solana prices from Jupiter when liquidity is sufficient", async () => {
+  it("fills missing Solana prices from documented Jupiter V3 payloads without liquidity", async () => {
+    const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
       {
         id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0,
@@ -919,13 +957,15 @@ describe("enrichMissingPrices", () => {
 
     mockFetch([
       { match: "coins.llama.fi", body: { coins: {} } },
+      { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
       {
         match: "api.jup.ag/price/v3",
         body: {
           "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
             usdPrice: 1.0002,
-            liquidity: 250_000,
-            createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+            decimals: 6,
+            blockId: currentSlot - 20,
+            priceChange24h: 0.01,
           },
         },
       },
@@ -940,6 +980,7 @@ describe("enrichMissingPrices", () => {
   });
 
   it("does not reject Jupiter V3 quotes solely because createdAt is old", async () => {
+    const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
       {
         id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0,
@@ -949,12 +990,16 @@ describe("enrichMissingPrices", () => {
 
     mockFetch([
       { match: "coins.llama.fi", body: { coins: {} } },
+      { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
       {
         match: "api.jup.ag/price/v3",
         body: {
           "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
             usdPrice: 0.9998,
             liquidity: 250_000,
+            decimals: 6,
+            blockId: currentSlot - 20,
+            priceChange24h: 0.01,
             createdAt: "2025-01-06T18:38:31Z",
           },
         },
@@ -967,6 +1012,83 @@ describe("enrichMissingPrices", () => {
     expect(assets[0].price).toBe(0.9998);
     expect(assets[0].priceSource).toBe("jupiter");
     expect(stats.finalMissing).toBe(0);
+  });
+
+  it("rejects Jupiter quotes with stale block ids", async () => {
+    const currentSlot = 418_913_760;
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    mockFetch([
+      { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
+      {
+        match: "api.jup.ag/price/v3",
+        body: {
+          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
+            usdPrice: 1.0002,
+            decimals: 6,
+            blockId: currentSlot - 3_000,
+            priceChange24h: 0.01,
+          },
+        },
+      },
+    ]);
+
+    const result = await runJupiterPass(assets, undefined, undefined);
+
+    expect(result.resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
+  });
+
+  it("records a Jupiter breaker failure when an OK response has a malformed V3 payload", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.JUPITER_PRICES}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    mockFetch([
+      {
+        match: "api.jup.ag/price/v3",
+        body: {
+          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
+            price: 1.0002,
+            blockId: 418_913_700,
+          },
+        },
+      },
+    ]);
+
+    const result = await runJupiterPass(assets, undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(result.diagnostics?.[0]).toMatchObject({
+      source: "jupiter",
+      success: false,
+      errorClass: "invalid-shape",
+    });
+    const circuitWrite = db
+      .getHistory()
+      .find((entry) =>
+        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.JUPITER_PRICES}`
+      );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+      consecutiveFailures: 1,
+    });
   });
 
   it("reports Jupiter non-OK responses in pass diagnostics", async () => {
@@ -1078,13 +1200,9 @@ describe("enrichMissingPrices", () => {
     mockFetch([
       {
         match: "pro-api.coinmarketcap.com",
-        body: {
-          data: {
-            coins: [
-              { slug: "gemini-dollar", symbol: "GUSD", quote: { USD: { price: 1.0001 } } },
-            ],
-          },
-        },
+        body: cmcCategory([
+          { slug: "gemini-dollar", symbol: "GUSD", quote: { USD: cmcUsdQuote(1.0001) } },
+        ]),
       },
     ]);
 
@@ -1092,6 +1210,224 @@ describe("enrichMissingPrices", () => {
 
     expect(result.resolved).toBe(0);
     expect(assets[0].price).toBe(0);
+  });
+
+  it("reports CMC fallback diagnostics on successful slug matches", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "test-dollar",
+        name: "Test Dollar",
+        symbol: "TUSD",
+        price: 0,
+        cmcSlug: "test-dollar",
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["cmc_last_fetch"],
+        rows: [],
+        first: null,
+      },
+      { match: "circuit", rows: [] },
+    ]);
+
+    mockFetch([
+      {
+        match: "pro-api.coinmarketcap.com",
+        body: cmcCategory([
+          { slug: "test-dollar", symbol: "TUSD", quote: { USD: cmcUsdQuote(1.0001) } },
+        ]),
+      },
+    ]);
+
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+
+    expect(result.resolved).toBe(1);
+    expect(assets[0].priceSource).toBe("coinmarketcap");
+    expect(result.diagnostics?.[0]).toMatchObject({
+      source: "coinmarketcap",
+      stage: "fallback",
+      ok: true,
+      success: true,
+      responseRowCount: 1,
+      resolvedCount: 1,
+    });
+  });
+
+  it("skips CMC quotes with stale quote timestamps", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "test-dollar",
+        name: "Test Dollar",
+        symbol: "TUSD",
+        price: 0,
+        cmcSlug: "test-dollar",
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["cmc_last_fetch"],
+        rows: [],
+        first: null,
+      },
+      { match: "circuit", rows: [] },
+    ]);
+
+    mockFetch([
+      {
+        match: "pro-api.coinmarketcap.com",
+        body: cmcCategory([
+          { slug: "test-dollar", symbol: "TUSD", quote: { USD: cmcUsdQuote(1.0001, staleIsoTimestamp()) } },
+        ]),
+      },
+    ]);
+
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
+  });
+
+  it("records a CMC breaker failure when an OK response has a malformed payload", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "test-dollar",
+        name: "Test Dollar",
+        symbol: "TUSD",
+        price: 0,
+        cmcSlug: "test-dollar",
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["cmc_last_fetch"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.CMC_PRICES}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    mockFetch([
+      {
+        match: "pro-api.coinmarketcap.com",
+        body: { data: { coins: [] } },
+      },
+    ]);
+
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(result.diagnostics?.[0]).toMatchObject({
+      source: "coinmarketcap",
+      success: false,
+      errorClass: "invalid-shape",
+    });
+    const circuitWrite = db
+      .getHistory()
+      .find((entry) =>
+        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.CMC_PRICES}`
+      );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+      consecutiveFailures: 1,
+    });
+  });
+
+  it("records a CMC breaker failure when the category response is truncated", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "test-dollar",
+        name: "Test Dollar",
+        symbol: "TUSD",
+        price: 0,
+        cmcSlug: "test-dollar",
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["cmc_last_fetch"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.CMC_PRICES}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    mockFetch([
+      {
+        match: "pro-api.coinmarketcap.com",
+        body: cmcCategory([
+          { slug: "test-dollar", symbol: "TUSD", quote: { USD: cmcUsdQuote(1.0001) } },
+        ], 301),
+      },
+    ]);
+
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(result.diagnostics?.[0]).toMatchObject({
+      errorClass: "invalid-shape",
+    });
+    const circuitWrite = db
+      .getHistory()
+      .find((entry) =>
+        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.CMC_PRICES}`
+      );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+      consecutiveFailures: 1,
+    });
+  });
+
+  it("drains CMC non-OK response bodies before recording failure", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "test-dollar",
+        name: "Test Dollar",
+        symbol: "TUSD",
+        price: 0,
+        cmcSlug: "test-dollar",
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["cmc_last_fetch"],
+        rows: [],
+        first: null,
+      },
+      { match: "circuit", rows: [] },
+    ]);
+    const response = new Response("blocked", { status: 500 });
+    vi.stubGlobal("fetch", vi.fn(async () => response));
+
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(response.bodyUsed).toBe(true);
   });
 
   it("skips Jupiter fetches when there are no Solana fallback candidates and the circuit is closed", async () => {
@@ -1147,6 +1483,199 @@ describe("enrichMissingPrices", () => {
 
     expect(result.resolved).toBe(0);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("skips DexScreener symbol search for addressless assets without configured chains", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "search-usd",
+        name: "Search USD",
+        symbol: "CHFAU",
+        price: 0,
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    const db = mockD1([
+      { match: "circuit", rows: [] },
+      { match: "cache", rows: [] },
+    ], { requireMatch: true });
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const result = await runDexScreenerPass(assets, undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects DexScreener symbol search pairs outside the configured chain allowlist", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "search-usd",
+        name: "Search USD",
+        symbol: "CHFAU",
+        price: 0,
+        pegType: "peggedUSD",
+        chains: ["Ethereum"],
+        circulating: {},
+      },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({
+        pairs: [
+          {
+            baseToken: { symbol: "CHFAU" },
+            quoteToken: { symbol: "USDC" },
+            priceUsd: "1.0001",
+            liquidity: { usd: 250_000 },
+            volume: { h24: 25_000 },
+            pairCreatedAt: maturePairCreatedAt(),
+            chainId: "bsc",
+          },
+        ],
+      }), { status: 200 }),
+    ));
+
+    const result = await runDexScreenerPass(assets, undefined, undefined);
+
+    expect(result.resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
+  });
+
+  it("rejects DexScreener symbol search pairs without quote, volume, and age quality", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "search-usd",
+        name: "Search USD",
+        symbol: "CHFAU",
+        price: 0,
+        pegType: "peggedUSD",
+        chains: ["Ethereum"],
+        circulating: {},
+      },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({
+        pairs: [
+          {
+            baseToken: { symbol: "CHFAU" },
+            quoteToken: { symbol: "WETH" },
+            priceUsd: "1.0001",
+            liquidity: { usd: 250_000 },
+            volume: { h24: 25_000 },
+            pairCreatedAt: maturePairCreatedAt(),
+            chainId: "ethereum",
+          },
+          {
+            baseToken: { symbol: "CHFAU" },
+            quoteToken: { symbol: "USDC" },
+            priceUsd: "1.0001",
+            liquidity: { usd: 250_000 },
+            volume: { h24: 100 },
+            pairCreatedAt: maturePairCreatedAt(),
+            chainId: "ethereum",
+          },
+          {
+            baseToken: { symbol: "CHFAU" },
+            quoteToken: { symbol: "USDC" },
+            priceUsd: "1.0001",
+            liquidity: { usd: 250_000 },
+            volume: { h24: 25_000 },
+            pairCreatedAt: Date.now(),
+            chainId: "ethereum",
+          },
+        ],
+      }), { status: 200 }),
+    ));
+
+    const result = await runDexScreenerPass(assets, undefined, undefined);
+
+    expect(result.resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
+  });
+
+  it.each([
+    ["stale timestamp", dlQuote(1.0, "USDT", { timestamp: staleObservedAtSec() })],
+    ["low confidence", dlQuote(1.0, "USDT", { confidence: 0.2 })],
+    ["wrong symbol", dlQuote(1.0, "USDC")],
+  ])("skips DefiLlama contract quotes with %s", async (_caseName, quote) => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdt-tether",
+        name: "Tether",
+        symbol: "USDT",
+        price: 0,
+        address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    mockFetch([
+      {
+        match: "coins.llama.fi/prices",
+        body: {
+          coins: {
+            "ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7": quote,
+          },
+        },
+      },
+    ]);
+
+    const result = await runDlContractPasses(assets, undefined);
+
+    expect(result.resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
+  });
+
+  it("records a defillama-coins breaker failure when DL /coins OK response is malformed", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.DL_COINS}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdt-tether",
+        name: "Tether",
+        symbol: "USDT",
+        price: 0,
+        address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    mockFetch([
+      {
+        match: "coins.llama.fi/prices",
+        body: {
+          coins: {
+            "ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7": { price: "1.0" },
+          },
+        },
+      },
+    ]);
+
+    const result = await runDlContractPasses(assets, undefined, undefined, db);
+
+    expect(result.resolved).toBe(0);
+    const circuitWrite = db
+      .getHistory()
+      .find((entry) =>
+        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DL_COINS}`
+      );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+      consecutiveFailures: 1,
+    });
   });
 
   it("skips DL /coins fetch when the defillama-coins breaker is open", async () => {
@@ -1489,6 +2018,7 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("includes Kraken and Bitstamp in the consensus cluster when they agree", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
     const assets: PeggedAsset[] = [
       { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
@@ -1505,7 +2035,7 @@ describe("fetchPrimaryPrices", () => {
       }
       if (url.includes("bitstamp.net")) {
         return new Response(JSON.stringify([
-          { pair: "USDT/USD", market: "USDT/USD", last: "1.0002" },
+          { pair: "USDT/USD", market: "USDT/USD", last: "1.0002", timestamp: String(nowSec - 60) },
         ]), { status: 200 });
       }
       return new Response("Not found", { status: 404 });

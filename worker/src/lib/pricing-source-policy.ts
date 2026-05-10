@@ -21,12 +21,19 @@ export function isReplaySafePriceSource(source: string | null | undefined): bool
 
 /** Returns the per-source max trusted age (seconds), or the composite cap when the source has no per-source window. */
 export function getPriceCacheMaxAgeSec(source: string | null | undefined, compositeCapSec: number): number {
-  const entry = getPricingSourceRegistryEntry(source ?? "");
-  const sourceWindow = entry?.maxTrustedAgeSec;
-  if (typeof sourceWindow !== "number" || !Number.isFinite(sourceWindow) || sourceWindow <= 0) {
-    return compositeCapSec;
+  if (!source) return compositeCapSec;
+  let maxAgeSec = compositeCapSec;
+  for (const part of splitCompositePriceSource(source)) {
+    const entry = getPricingSourceRegistryEntry(part);
+    if (!entry?.isReplaySafe) {
+      return 0;
+    }
+    const sourceWindow = entry.maxTrustedAgeSec;
+    if (typeof sourceWindow === "number" && Number.isFinite(sourceWindow) && sourceWindow > 0) {
+      maxAgeSec = Math.min(maxAgeSec, sourceWindow);
+    }
   }
-  return Math.min(sourceWindow, compositeCapSec);
+  return maxAgeSec;
 }
 
 export function hasDepegAuthoritativeSource(sources: string[] | null | undefined): boolean {

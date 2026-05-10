@@ -3,8 +3,11 @@ import {
   buildPriceReasonablenessOptions,
   isReasonablePrice,
 } from "../../lib/price-validation";
+import type { PriceObservedAtMode } from "@shared/types/core";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import type { PeggedAsset } from "./enrich-prices-shared";
+
+const FALLBACK_FUTURE_TIMESTAMP_SKEW_SEC = 120;
 
 export interface EnrichPassResult {
   resolved: number;
@@ -17,12 +20,41 @@ export interface DlContractPassResult extends EnrichPassResult {
   pass1b: number;
 }
 
+export interface FallbackPriceQuote {
+  price: number;
+  observedAt?: number;
+  observedAtMode?: PriceObservedAtMode;
+  symbol?: string;
+  confidence?: number;
+}
+
 export function sumCirculatingValue(asset: PeggedAsset): number {
   if (!asset.circulating || typeof asset.circulating !== "object") return 0;
   return Object.values(asset.circulating).reduce(
     (sum, value) => sum + (typeof value === "number" && Number.isFinite(value) ? value : 0),
     0,
   );
+}
+
+export function isFreshFallbackObservedAt(
+  observedAtSec: number | null | undefined,
+  maxAgeSec: number,
+  nowSec = Math.floor(Date.now() / 1000),
+): boolean {
+  if (typeof observedAtSec !== "number" || !Number.isFinite(observedAtSec)) return false;
+  if (observedAtSec > nowSec + FALLBACK_FUTURE_TIMESTAMP_SKEW_SEC) return false;
+  return nowSec - observedAtSec <= maxAgeSec;
+}
+
+export function parseUnixOrIsoTimestampSec(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.floor(value);
+  }
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return null;
+  }
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : null;
 }
 
 export function isUsableFallbackPrice(

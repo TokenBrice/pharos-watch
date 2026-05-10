@@ -43,6 +43,7 @@ describe("buildPrimarySourceCandidates", () => {
     const { sources, hasPromotedDexProtocolSource, dexCandidateTelemetry } = buildPrimarySourceCandidates(
       { id: "dusd-test", symbol: "DUSD" },
       collected,
+      { nowSec: 1_700_000_030 },
     );
 
     expect(hasPromotedDexProtocolSource).toBe(true);
@@ -176,6 +177,7 @@ describe("buildPrimarySourceCandidates", () => {
     const { sources } = buildPrimarySourceCandidates(
       { id: "usdt-test", symbol: "USDT" },
       collected,
+      { nowSec: 1_776_439_400 },
     );
 
     const bitstamp = sources.find((s) => s.source === "bitstamp");
@@ -193,11 +195,100 @@ describe("buildPrimarySourceCandidates", () => {
     const { sources } = buildPrimarySourceCandidates(
       { id: "usdt-test", symbol: "USDT" },
       collected,
+      { nowSec: 1_776_439_510 },
     );
 
     const coinbase = sources.find((s) => s.source === "coinbase");
     expect(coinbase).toBeDefined();
     expect(coinbase?.observedAt).toBe(1_776_439_504);
     expect(coinbase?.observedAtMode).toBe("upstream");
+  });
+
+  it("rejects stale Bitstamp and Coinbase upstream observations before hard-market admission", () => {
+    const collected = makeCollected({
+      bitstampPrice: 0.9999,
+      bitstampObservedAt: 1_776_438_000,
+      coinbasePrice: 0.9998,
+      coinbaseObservedAt: 1_776_438_050,
+    });
+
+    const { sources } = buildPrimarySourceCandidates(
+      { id: "usdt-test", symbol: "USDT" },
+      collected,
+      { nowSec: 1_776_439_000 },
+    );
+
+    expect(sources.some((source) => source.source === "bitstamp")).toBe(false);
+    expect(sources.some((source) => source.source === "coinbase")).toBe(false);
+  });
+
+  it("rejects stale per-protocol DEX lanes even when other live sources exist", () => {
+    const collected = makeCollected({
+      binancePrice: 1.0,
+      binanceObservedAt: 1_700_000_000,
+      protocolSources: [
+        {
+          protocol: "balancer",
+          price: 1.0,
+          tvl: 500_000,
+          updatedAt: 1_699_997_800,
+          chain: "ethereum",
+        },
+      ],
+    });
+
+    const { sources, dexCandidateTelemetry } = buildPrimarySourceCandidates(
+      { id: "dusd-test", symbol: "DUSD" },
+      collected,
+      { nowSec: 1_700_000_000 },
+    );
+
+    expect(sources.map((source) => source.source)).toEqual(["binance"]);
+    expect(dexCandidateTelemetry).toMatchObject([
+      {
+        sourceKey: "balancer-dex",
+        status: "excluded",
+        reason: "stale_source_age",
+      },
+    ]);
+  });
+
+  it("rejects future-skewed oracle, CEX, aggregator, and DEX observations", () => {
+    const collected = makeCollected({
+      cgPrice: 1.0,
+      cgObservedAt: 1_700_001_000,
+      cgObservedAtMode: "upstream",
+      pythQuote: {
+        price: 1.0,
+        confidenceBps: 5,
+        publishTime: 1_700_001_000,
+      },
+      coinbasePrice: 1.0,
+      coinbaseObservedAt: 1_700_001_000,
+      protocolSources: [
+        {
+          protocol: "balancer",
+          price: 1.0,
+          tvl: 500_000,
+          updatedAt: 1_700_001_000,
+          chain: "ethereum",
+        },
+      ],
+    });
+
+    const { sources, dexCandidateTelemetry } = buildPrimarySourceCandidates(
+      { id: "dusd-test", symbol: "DUSD" },
+      collected,
+      { nowSec: 1_700_000_000 },
+    );
+
+    expect(sources).toEqual([]);
+    expect(dexCandidateTelemetry).toMatchObject([
+      {
+        sourceKey: "balancer-dex",
+        status: "excluded",
+        reason: "future_source_timestamp",
+      },
+    ]);
   });
 });

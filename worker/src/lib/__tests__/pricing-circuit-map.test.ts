@@ -1,12 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { PRICING_SOURCE_REGISTRY } from "@shared/lib/pricing-source-registry";
 import { CIRCUIT_SOURCE } from "../constants";
-import { PRICING_SOURCE_TO_CIRCUIT } from "../pricing-circuit-map";
+import { PRICING_SOURCE_CIRCUIT_METADATA, PRICING_SOURCE_TO_CIRCUIT } from "../pricing-circuit-map";
 
 describe("PRICING_SOURCE_TO_CIRCUIT contract", () => {
   it("every registry source has an entry in PRICING_SOURCE_TO_CIRCUIT", () => {
     for (const entry of PRICING_SOURCE_REGISTRY) {
       expect(PRICING_SOURCE_TO_CIRCUIT).toHaveProperty(entry.key);
+      expect(PRICING_SOURCE_CIRCUIT_METADATA).toHaveProperty(entry.key);
     }
   });
 
@@ -23,5 +24,43 @@ describe("PRICING_SOURCE_TO_CIRCUIT contract", () => {
     for (const key of Object.keys(PRICING_SOURCE_TO_CIRCUIT)) {
       expect(registryKeys).toContain(key);
     }
+    for (const key of Object.keys(PRICING_SOURCE_CIRCUIT_METADATA)) {
+      expect(registryKeys).toContain(key);
+    }
+  });
+
+  it("distinguishes directly enforced sources from synthesized and cached sources", () => {
+    expect(PRICING_SOURCE_CIRCUIT_METADATA["dexscreener-exact"]).toMatchObject({
+      circuit: CIRCUIT_SOURCE.DEXSCREENER_PRICES,
+      enforced: true,
+      enforcementPath: "direct-provider",
+    });
+    expect(PRICING_SOURCE_CIRCUIT_METADATA["dexscreener-search"]).toMatchObject({
+      circuit: CIRCUIT_SOURCE.DEXSCREENER_SEARCH,
+      enforced: true,
+      enforcementPath: "direct-provider",
+    });
+    expect(PRICING_SOURCE_CIRCUIT_METADATA["coingecko-native-implied"]).toMatchObject({
+      circuit: null,
+      enforced: false,
+      enforcementPath: "synthesized",
+    });
+    expect(PRICING_SOURCE_CIRCUIT_METADATA["protocol-redeem"]).toMatchObject({
+      circuit: null,
+      enforced: false,
+      enforcementPath: "synthesized",
+    });
+    expect(PRICING_SOURCE_CIRCUIT_METADATA.cached).toMatchObject({
+      circuit: null,
+      enforced: false,
+      enforcementPath: "cache",
+    });
+  });
+
+  it("maps coingecko-mirror to the DefiLlama coins circuit that actually serves it", () => {
+    expect(PRICING_SOURCE_CIRCUIT_METADATA["coingecko-mirror"]).toMatchObject({
+      circuit: CIRCUIT_SOURCE.DL_COINS,
+      enforced: true,
+    });
   });
 });

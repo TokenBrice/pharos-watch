@@ -35,7 +35,8 @@ describe("pricing source registry", () => {
       "velodrome-dex",
       "jupiter",
       "coinmarketcap",
-      "dexscreener",
+      "dexscreener-exact",
+      "dexscreener-search",
       "defillama-contract",
       "protocol-redeem",
       "pool-tvl-weighted",
@@ -76,6 +77,16 @@ describe("pricing source registry", () => {
       defaultWeight: 0,
       isReplaySafe: false,
       defaultObservedAtMode: null,
+    });
+
+    expect(getPricingSourceRegistryEntry("dexscreener-exact")).toMatchObject({
+      key: "dexscreener-exact",
+      isSearchDerived: false,
+    });
+
+    expect(getPricingSourceRegistryEntry("dexscreener-search")).toMatchObject({
+      key: "dexscreener-search",
+      isSearchDerived: true,
     });
   });
 

@@ -1,5 +1,5 @@
 import type { PriceReferenceType } from "./price-validation";
-import { fetchCurrentNativePegQuotes } from "./native-peg-quotes";
+import { fetchCurrentNativePegQuotes, type NativePegQuoteFetchOptions } from "./native-peg-quotes";
 
 export const COINGECKO_NATIVE_IMPLIED_SOURCE = "coingecko-native-implied";
 export const NATIVE_PEG_PRICE_GUARD_MAX_DRIFT_BPS = 75;
@@ -52,12 +52,13 @@ export async function fetchCurrentNativePegImpliedUsdQuotes(
   },
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
+  options?: NativePegQuoteFetchOptions,
 ): Promise<Map<string, NativePegImpliedUsdQuote>> {
   if (!validationReferences) {
     return new Map();
   }
 
-  const nativeQuotes = await fetchCurrentNativePegQuotes(requests, signal, coingeckoApiKey);
+  const nativeQuotes = await fetchCurrentNativePegQuotes(requests, signal, coingeckoApiKey, options);
   if (nativeQuotes.size === 0) {
     return new Map();
   }

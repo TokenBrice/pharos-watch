@@ -193,6 +193,7 @@ describe("authoritative-price-sources", () => {
   });
 
   it("returns a live USDAI override from tracked PYUSD pricing", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
     const overrides = await fetchAuthoritativeLivePriceOverrides([
       {
         id: "usdai-usd-ai",
@@ -207,6 +208,8 @@ describe("authoritative-price-sources", () => {
         price: 1.00006543,
         priceSource: "coingecko+defillama-list+pyth",
         priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
         circulating: { peggedUSD: 880_000_000 },
       },
     ]);
@@ -215,11 +218,22 @@ describe("authoritative-price-sources", () => {
       price: 1.00006543,
       source: "protocol-redeem",
       confidence: "high",
+      observedAt: nowSec - 60,
+      observedAtMode: "upstream",
+      metadata: {
+        inheritedFrom: "pyusd-paypal",
+        parentSource: "coingecko+defillama-list+pyth",
+        parentConfidence: "high",
+        parentObservedAt: nowSec - 60,
+        parentObservedAtMode: "upstream",
+        parentReplaySafe: true,
+      },
     });
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
   });
 
   it("returns live inherited overrides for M0 extension assets from tracked wM pricing", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
     const overrides = await fetchAuthoritativeLivePriceOverrides([
       {
         id: "usdk-kast",
@@ -246,24 +260,41 @@ describe("authoritative-price-sources", () => {
         price: 0.99981234,
         priceSource: "coingecko+raydium-dex",
         priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
         circulating: { peggedUSD: 93_000_000 },
       },
     ]);
 
-    expect(overrides.get("usdk-kast")).toEqual({
+    expect(overrides.get("usdk-kast")).toMatchObject({
       price: 0.99981234,
       source: "protocol-redeem",
       confidence: "high",
+      observedAt: nowSec - 60,
+      metadata: {
+        inheritedFrom: "wm-m0",
+        parentReplaySafe: true,
+      },
     });
-    expect(overrides.get("xo-exodus")).toEqual({
+    expect(overrides.get("xo-exodus")).toMatchObject({
       price: 0.99981234,
       source: "protocol-redeem",
       confidence: "high",
+      observedAt: nowSec - 60,
+      metadata: {
+        inheritedFrom: "wm-m0",
+        parentReplaySafe: true,
+      },
     });
-    expect(overrides.get("usdnr-nerona")).toEqual({
+    expect(overrides.get("usdnr-nerona")).toMatchObject({
       price: 0.99981234,
       source: "protocol-redeem",
       confidence: "high",
+      observedAt: nowSec - 60,
+      metadata: {
+        inheritedFrom: "wm-m0",
+        parentReplaySafe: true,
+      },
     });
   });
 
@@ -568,6 +599,98 @@ describe("authoritative-price-sources", () => {
     ]);
 
     expect(overrides.has("usdk-kast")).toBe(false);
+  });
+
+  it("skips inherited tracked-price overrides when the parent price is low confidence, cached, stale, or missing provenance", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const child = {
+      id: "usdk-kast",
+      name: "KAST Dollar",
+      symbol: "USDK",
+      circulating: { peggedUSD: 24_000_000 },
+    };
+
+    for (const parent of [
+      {
+        id: "wm-m0",
+        name: "Wrapped M",
+        symbol: "wM",
+        price: 0.9998,
+        priceSource: "coingecko+pyth",
+        priceConfidence: "low" as const,
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream" as const,
+      },
+      {
+        id: "wm-m0",
+        name: "Wrapped M",
+        symbol: "wM",
+        price: 0.9998,
+        priceSource: "cached",
+        priceConfidence: "high" as const,
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream" as const,
+      },
+      {
+        id: "wm-m0",
+        name: "Wrapped M",
+        symbol: "wM",
+        price: 0.9998,
+        priceSource: "coingecko+pyth",
+        priceConfidence: "high" as const,
+        priceObservedAt: nowSec - 1_000,
+        priceObservedAtMode: "upstream" as const,
+      },
+      {
+        id: "wm-m0",
+        name: "Wrapped M",
+        symbol: "wM",
+        price: 0.9998,
+        priceConfidence: "high" as const,
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream" as const,
+      },
+    ]) {
+      const overrides = await fetchAuthoritativeLivePriceOverrides([child, parent]);
+      expect(overrides.has("usdk-kast")).toBe(false);
+    }
+
+    warnSpy.mockRestore();
+  });
+
+  it("allows inherited tracked-price overrides from a fresh protocol-authoritative parent", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "usdk-kast",
+        name: "KAST Dollar",
+        symbol: "USDK",
+        circulating: { peggedUSD: 24_000_000 },
+      },
+      {
+        id: "wm-m0",
+        name: "Wrapped M",
+        symbol: "wM",
+        price: 0.9998,
+        priceSource: "protocol-redeem",
+        priceConfidence: "single-source",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "local_fetch",
+      },
+    ]);
+
+    expect(overrides.get("usdk-kast")).toMatchObject({
+      price: 0.9998,
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: {
+        inheritedFrom: "wm-m0",
+        parentSource: "protocol-redeem",
+        parentConfidence: "single-source",
+        parentReplaySafe: true,
+      },
+    });
   });
 
   it("does not return a crvUSD override (demoted to regular consensus source)", async () => {

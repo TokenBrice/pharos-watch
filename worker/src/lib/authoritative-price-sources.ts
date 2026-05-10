@@ -1,11 +1,14 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { sumPegBuckets } from "@shared/lib/supply";
-import type { PriceConfidence, StablecoinMeta } from "@shared/types/core";
+import type { PriceConfidence, PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../cron/sync-stablecoins/enrich-prices-shared";
 import { fetchMarketBackfillPriceSeries } from "../api/backfill-price-sources";
 import { binarySearchNearest } from "./binary-search";
 import { fetchEvmCallHexAtBlock, resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockSearchCache } from "./evm-rpc";
 import { getArchiveFallbackRpcUrls } from "./public-rpc-registry";
+import { rethrowIfAborted } from "./abort";
+import { validateCompositePricingSourceFreshness } from "./pricing-source-freshness";
+import { isReplaySafePriceSource } from "./pricing-source-policy";
 
 const ETHEREUM_CHAIN = "ethereum";
 
@@ -38,6 +41,16 @@ export interface CurrentPriceOverride {
   price: number;
   source: string;
   confidence: PriceConfidence;
+  observedAt?: number | null;
+  observedAtMode?: PriceObservedAtMode | null;
+  metadata?: {
+    inheritedFrom?: string;
+    parentSource?: string | null;
+    parentConfidence?: PriceConfidence | null;
+    parentObservedAt?: number | null;
+    parentObservedAtMode?: PriceObservedAtMode | null;
+    parentReplaySafe?: boolean;
+  };
 }
 
 export interface HistoricalPricePoint {
@@ -138,6 +151,51 @@ function getFinitePositivePrice(asset: Pick<PeggedAsset, "price"> | undefined): 
 
 function getInheritedTrackedPriceParentId(stablecoinId: string): string | null {
   return INHERITED_TRACKED_PRICE_PARENTS[stablecoinId as keyof typeof INHERITED_TRACKED_PRICE_PARENTS] ?? null;
+}
+
+function isExplicitAuthoritativeParent(asset: PeggedAsset): boolean {
+  return asset.priceSource === PROTOCOL_REDEEM_SOURCE &&
+    asset.priceConfidence !== "fallback" &&
+    asset.priceConfidence !== "low" &&
+    asset.priceConfidence != null;
+}
+
+function resolveTrustedInheritedParent(asset: PeggedAsset, nowSec: number): {
+  price: number;
+  observedAt: number;
+  observedAtMode: PriceObservedAtMode | null;
+  replaySafe: boolean;
+} | null {
+  const price = getFinitePositivePrice(asset);
+  if (price == null) return null;
+
+  const parentSource = asset.priceSource ?? null;
+  const parentConfidence = asset.priceConfidence ?? null;
+  if (!parentSource) return null;
+
+  const confidenceTrusted = parentConfidence === "high" || isExplicitAuthoritativeParent(asset);
+  if (!confidenceTrusted) return null;
+
+  const replaySafe = isReplaySafePriceSource(parentSource);
+  if (!replaySafe) return null;
+
+  const observedAt = asset.priceObservedAt ?? asset.priceUpdatedAt ?? null;
+  const observedAtMode = asset.priceObservedAtMode ?? null;
+  const freshness = validateCompositePricingSourceFreshness({
+    source: parentSource,
+    observedAt,
+    observedAtMode,
+    nowSec,
+    requireObservedAt: true,
+  });
+  if (!freshness.accepted || freshness.observedAt == null) return null;
+
+  return {
+    price,
+    observedAt: freshness.observedAt,
+    observedAtMode: freshness.observedAtMode,
+    replaySafe,
+  };
 }
 
 function findNearestSupply(snapshots: HistoricalSupplySnapshot[] | undefined, timestamp: number): number | null {
@@ -362,13 +420,31 @@ const inheritedTrackedPriceProvider: PriceSourceProvider = {
     if (!parentId) return null;
 
     const parentAsset = context.assetsById.get(parentId);
-    const price = getFinitePositivePrice(parentAsset);
-    if (price == null) return null;
+    if (!parentAsset) return null;
 
+    const trustedParent = resolveTrustedInheritedParent(parentAsset, Math.floor(Date.now() / 1000));
+    if (!trustedParent) {
+      console.warn(
+        `[authoritative-price-sources] ${asset.id}: skipped inherited ${parentId} price because parent provenance is not trusted`,
+      );
+      return null;
+    }
+
+    const parentObservedAt = parentAsset.priceObservedAt ?? parentAsset.priceUpdatedAt ?? null;
     return {
-      price,
+      price: trustedParent.price,
       source: PROTOCOL_REDEEM_SOURCE,
       confidence: "high",
+      observedAt: trustedParent.observedAt,
+      observedAtMode: trustedParent.observedAtMode,
+      metadata: {
+        inheritedFrom: parentId,
+        parentSource: parentAsset.priceSource ?? null,
+        parentConfidence: parentAsset.priceConfidence ?? null,
+        parentObservedAt,
+        parentObservedAtMode: parentAsset.priceObservedAtMode ?? null,
+        parentReplaySafe: trustedParent.replaySafe,
+      },
     };
   },
   async fetchHistoricalPrices(
@@ -407,6 +483,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
         results.set(asset.id, override);
       }
     } catch (error) {
+      rethrowIfAborted(error, signal);
       console.warn(`[authoritative-price-sources] ${asset.id} live override failed:`, error);
     }
   }
@@ -431,6 +508,7 @@ export async function fetchAuthoritativeHistoricalPriceSeries(
       prices,
     };
   } catch (error) {
+    rethrowIfAborted(error, context.signal);
     console.warn(`[authoritative-price-sources] ${meta.id} historical source failed:`, error);
     return {
       matched: true,

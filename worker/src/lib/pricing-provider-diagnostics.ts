@@ -1,4 +1,39 @@
-export type PricingProviderDiagnosticSource = "binance" | "jupiter";
+export type PricingProviderDiagnosticSource =
+  | "binance"
+  | "kraken"
+  | "bitstamp"
+  | "coinbase"
+  | "coingecko"
+  | "cg-ticker"
+  | "defillama-list"
+  | "defillama-contract"
+  | "coinmarketcap"
+  | "jupiter"
+  | "dexscreener-exact"
+  | "dexscreener-search"
+  | "geckoterminal"
+  | "pyth"
+  | "redstone"
+  | "curve-onchain"
+  | "curve-oracle"
+  | "dex-promoted"
+  | "protocol-dex"
+  | "native-peg"
+  | "cached";
+
+export type PricingProviderRejectionReason =
+  | "blocked"
+  | "empty-response"
+  | "invalid-shape"
+  | "malformed-json"
+  | "missing-provider"
+  | "no-candidates"
+  | "non-ok"
+  | "price-rejected"
+  | "stale"
+  | "timeout"
+  | "unsupported-quote"
+  | "upstream-error";
 
 export interface PricingProviderAttemptDiagnostic {
   source: PricingProviderDiagnosticSource;
@@ -11,6 +46,7 @@ export interface PricingProviderAttemptDiagnostic {
   responseRowCount?: number;
   matchedCount?: number;
   resolvedCount?: number;
+  rejectionReasonCounts?: Partial<Record<PricingProviderRejectionReason, number>>;
   errorClass?: string;
   errorMessage?: string;
   snippet?: string;

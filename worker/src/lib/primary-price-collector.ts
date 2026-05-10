@@ -2,6 +2,10 @@ import type { PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import type { SourcePrice } from "./price-consensus";
+import {
+  validatePricingSourceFreshness,
+  type PricingSourceFreshnessRejectReason,
+} from "./pricing-source-freshness";
 
 interface PrimaryPriceAssetLike {
   id: string;
@@ -41,7 +45,11 @@ export type PrimaryDexCandidateExclusionReason =
   | "missing_registry_mapping"
   | "invalid_price"
   | "below_tvl_threshold"
-  | "lacked_corroboration";
+  | "lacked_corroboration"
+  | "stale_source_age"
+  | "future_source_timestamp"
+  | "missing_observed_at"
+  | "invalid_observed_at";
 
 export interface PrimaryDexCandidateTelemetry {
   stablecoinId: string;
@@ -102,6 +110,7 @@ function buildSourcePrice(input: {
   weight?: number;
   observedAt?: number | null;
   observedAtMode?: PriceObservedAtMode | null;
+  nowSec?: number;
   metadata?: Record<string, unknown>;
 }): SourcePrice | null {
   if (typeof input.price !== "number" || !Number.isFinite(input.price) || input.price <= 0) {
@@ -109,12 +118,22 @@ function buildSourcePrice(input: {
   }
 
   const registryEntry = getPricingSourceRegistryEntry(input.source);
+  const freshness = validatePricingSourceFreshness({
+    source: input.source,
+    observedAt: input.observedAt,
+    observedAtMode: input.observedAtMode,
+    nowSec: input.nowSec,
+  });
+  if (!freshness.accepted) {
+    return null;
+  }
+
   return {
     source: input.source,
     price: input.price,
     weight: input.weight ?? registryEntry?.defaultWeight ?? 1,
-    observedAt: input.observedAt ?? null,
-    observedAtMode: input.observedAtMode ?? registryEntry?.defaultObservedAtMode ?? null,
+    observedAt: freshness.observedAt,
+    observedAtMode: freshness.observedAtMode,
     metadata: input.metadata,
   };
 }
@@ -142,6 +161,23 @@ const DEX_PROTOCOL_SOURCE_MIN_TVL_USD = 50_000;
 
 function isDexSourceKey(source: string): boolean {
   return source === "dex-promoted" || source.endsWith("-dex");
+}
+
+function mapFreshnessReasonToDexExclusion(
+  reason: PricingSourceFreshnessRejectReason,
+): PrimaryDexCandidateExclusionReason {
+  switch (reason) {
+    case "stale_observed_at":
+      return "stale_source_age";
+    case "future_observed_at":
+      return "future_source_timestamp";
+    case "missing_observed_at":
+      return "missing_observed_at";
+    case "invalid_observed_at":
+      return "invalid_observed_at";
+    case "unknown_source":
+      return "missing_registry_mapping";
+  }
 }
 
 function buildPriceSourceConfidenceProfile(
@@ -177,6 +213,7 @@ export function buildPrimarySourceCandidates(
   options?: { divergenceThresholdBps?: number; nowSec?: number },
 ): PrimarySourceBuildResult {
   const divergenceThresholdBps = options?.divergenceThresholdBps ?? DIVERGENCE_THRESHOLD_BPS;
+  const nowSec = options?.nowSec;
   const sources: SourcePrice[] = [];
 
   const baseSources = [
@@ -185,47 +222,56 @@ export function buildPrimarySourceCandidates(
       price: collected.cgPrice,
       observedAt: collected.cgObservedAt,
       observedAtMode: collected.cgObservedAtMode,
+      nowSec,
     }),
     buildSourcePrice({
       source: "cg-ticker",
       price: collected.cgTickerPrice,
       observedAt: collected.cgTickerObservedAt,
+      nowSec,
     }),
     buildSourcePrice({
       source: "defillama-list",
       price: collected.dlListQuote?.price ?? null,
       observedAt: collected.dlListQuote?.observedAt ?? null,
       observedAtMode: collected.dlListQuote?.observedAtMode ?? "unknown",
+      nowSec,
     }),
     buildSourcePrice({
       source: "binance",
       price: collected.binancePrice,
       observedAt: collected.binanceObservedAt,
+      nowSec,
     }),
     buildSourcePrice({
       source: "kraken",
       price: collected.krakenPrice,
       observedAt: collected.krakenObservedAt,
+      nowSec,
     }),
     buildSourcePrice({
       source: "bitstamp",
       price: collected.bitstampPrice,
       observedAt: collected.bitstampObservedAt,
+      nowSec,
     }),
     buildSourcePrice({
       source: "coinbase",
       price: collected.coinbasePrice,
       observedAt: collected.coinbaseObservedAt,
+      nowSec,
     }),
     buildSourcePrice({
       source: "curve-onchain",
       price: collected.curvePrice,
       observedAt: collected.curveObservedAt,
+      nowSec,
     }),
     buildSourcePrice({
       source: "curve-oracle",
       price: asset.id === "crvusd-curve" ? collected.curveOraclePrice : null,
       observedAt: collected.curveOracleObservedAt,
+      nowSec,
     }),
   ].filter((source): source is SourcePrice => source != null);
   sources.push(...baseSources);
@@ -241,6 +287,7 @@ export function buildPrimarySourceCandidates(
       price: pythQuote.price,
       weight: pythWeight,
       observedAt: pythQuote.publishTime,
+      nowSec,
       metadata: { confidenceBps: pythQuote.confidenceBps },
     });
     if (pythSource && pythSource.weight > 0) {
@@ -254,6 +301,7 @@ export function buildPrimarySourceCandidates(
       source: "redstone",
       price: redstoneQuote.price,
       observedAt: redstoneQuote.timestamp,
+      nowSec,
       metadata: {
         venueCount: redstoneQuote.venueCount,
         venueAgreementPct: redstoneQuote.venueAgreementPct,
@@ -288,10 +336,26 @@ export function buildPrimarySourceCandidates(
       continue;
     }
 
+    const freshness = validatePricingSourceFreshness({
+      source: sourceKey,
+      observedAt: protocolSource.updatedAt,
+      nowSec,
+    });
+    if (!freshness.accepted) {
+      dexCandidateTelemetry.push({
+        ...telemetryBase,
+        status: "excluded",
+        reason: mapFreshnessReasonToDexExclusion(freshness.reason),
+      });
+      continue;
+    }
+
     const source = buildSourcePrice({
       source: sourceKey,
       price: protocolSource.price,
-      observedAt: protocolSource.updatedAt,
+      observedAt: freshness.observedAt,
+      observedAtMode: freshness.observedAtMode,
+      nowSec,
       metadata: { tvl: protocolSource.tvl, chain: protocolSource.chain },
     });
     if (!source) {
@@ -378,6 +442,7 @@ export function buildPrimarySourceCandidates(
       source: "dex-promoted",
       price: collected.dexAggregateQuote.dex_price_usd,
       observedAt: collected.dexAggregateQuote.updated_at,
+      nowSec,
       metadata: {
         poolCount: collected.dexAggregateQuote.source_pool_count,
         tvl: collected.dexAggregateQuote.source_total_tvl,

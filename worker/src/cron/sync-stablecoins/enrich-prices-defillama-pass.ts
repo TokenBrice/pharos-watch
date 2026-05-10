@@ -12,8 +12,13 @@ import {
 } from "./enrich-prices-shared";
 import {
   type DlContractPassResult,
+  type FallbackPriceQuote,
+  isFreshFallbackObservedAt,
   isUsableFallbackPrice,
 } from "./enrich-prices-pass-common";
+
+const DL_CONTRACT_MAX_AGE_SEC = 15 * 60;
+const DL_CONTRACT_MIN_CONFIDENCE = 0.8;
 
 const DL_COINS_CHAIN_PREFIX_BY_CHAIN: Record<string, string> = {
   avalanche: "avax",
@@ -34,12 +39,32 @@ function addressToCoinId(address: string): string {
   return `solana:${address}`;
 }
 
-function parseDefiLlamaPriceMap(json: unknown): Map<string, number> {
-  const prices = new Map<string, number>();
+interface DefiLlamaContractQuote extends FallbackPriceQuote {
+  observedAt: number;
+  symbol: string;
+  confidence: number;
+}
+
+function parseDefiLlamaPriceMap(json: unknown): Map<string, DefiLlamaContractQuote> {
+  const prices = new Map<string, DefiLlamaContractQuote>();
   const { coins } = DLPriceResponseSchema.parse(json);
   for (const [id, info] of Object.entries(coins)) {
-    if (info.price > 0) {
-      prices.set(id, info.price);
+    if (
+      info.price > 0 &&
+      typeof info.timestamp === "number" &&
+      Number.isFinite(info.timestamp) &&
+      typeof info.confidence === "number" &&
+      Number.isFinite(info.confidence) &&
+      typeof info.symbol === "string" &&
+      info.symbol.trim().length > 0
+    ) {
+      prices.set(id, {
+        price: info.price,
+        observedAt: Math.floor(info.timestamp),
+        observedAtMode: "upstream",
+        symbol: info.symbol,
+        confidence: info.confidence,
+      });
     }
   }
   return prices;
@@ -50,7 +75,7 @@ async function fetchPriceMapByIds(
   source: string,
   signal?: AbortSignal,
   db?: D1Database,
-): Promise<Map<string, number> | null> {
+): Promise<Map<string, DefiLlamaContractQuote> | null> {
   if (ids.length === 0) return new Map();
 
   if (db && !(await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_COINS))) {
@@ -61,19 +86,43 @@ async function fetchPriceMapByIds(
     `${DEFILLAMA_COINS}/prices/current/${ids.join(",")}`,
     signal ? { signal } : undefined,
   );
-  if (db) {
-    await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, res?.ok === true);
-  }
   if (!res?.ok) {
+    if (db) {
+      await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
+    }
     return null;
   }
 
   try {
-    return parseDefiLlamaPriceMap(await res.json());
+    const prices = parseDefiLlamaPriceMap(await res.json());
+    if (db) {
+      await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, true);
+    }
+    return prices;
   } catch {
     console.error(`[enrich-prices] Failed to parse JSON from ${source}: ${res.status}`);
+    if (db) {
+      await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
+    }
     return new Map();
   }
+}
+
+function isDefiLlamaContractQuoteUsable(
+  asset: PeggedAsset,
+  quote: DefiLlamaContractQuote,
+  fxRates: Record<string, number> | undefined,
+): boolean {
+  if (quote.symbol.trim().toUpperCase() !== asset.symbol.trim().toUpperCase()) {
+    return false;
+  }
+  if (quote.confidence < DL_CONTRACT_MIN_CONFIDENCE) {
+    return false;
+  }
+  if (!isFreshFallbackObservedAt(quote.observedAt, DL_CONTRACT_MAX_AGE_SEC)) {
+    return false;
+  }
+  return isUsableFallbackPrice(asset, quote.price, fxRates);
 }
 
 function buildDefiLlamaCoinIdForChainAddress(chain: string, address: string): string {
@@ -162,9 +211,16 @@ export async function runDlContractPasses(
         const resolved = new Set<number>();
         for (const lookup of withAddress) {
           if (resolved.has(lookup.index)) continue;
-          const price = pass1Prices.get(lookup.coinId);
-          if (price != null && isUsableFallbackPrice(assets[lookup.index], price, fxRates)) {
-            applyResolvedPrice(assets[lookup.index], price, "defillama-contract", "single-source");
+          const quote = pass1Prices.get(lookup.coinId);
+          if (quote != null && isDefiLlamaContractQuoteUsable(assets[lookup.index], quote, fxRates)) {
+            applyResolvedPrice(
+              assets[lookup.index],
+              quote.price,
+              "defillama-contract",
+              "single-source",
+              quote.observedAt,
+              quote.observedAtMode,
+            );
             pass1Count += 1;
             resolved.add(lookup.index);
           }
@@ -196,9 +252,16 @@ export async function runDlContractPasses(
           const resolved = new Set<number>();
           for (const lookup of altLookups) {
             if (resolved.has(lookup.index)) continue;
-            const price = pass1bPrices.get(lookup.coinId);
-            if (price != null && isUsableFallbackPrice(assets[lookup.index], price, fxRates)) {
-              applyResolvedPrice(assets[lookup.index], price, "defillama-contract", "single-source");
+            const quote = pass1bPrices.get(lookup.coinId);
+            if (quote != null && isDefiLlamaContractQuoteUsable(assets[lookup.index], quote, fxRates)) {
+              applyResolvedPrice(
+                assets[lookup.index],
+                quote.price,
+                "defillama-contract",
+                "single-source",
+                quote.observedAt,
+                quote.observedAtMode,
+              );
               pass1bCount += 1;
               resolved.add(lookup.index);
             }

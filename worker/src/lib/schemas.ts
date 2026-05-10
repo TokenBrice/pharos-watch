@@ -7,12 +7,55 @@ export const DLPriceResponseSchema = z.object({
       z.string(),
       z.object({
         price: z.number(),
+        symbol: z.string().optional(),
         timestamp: z.number().optional(),
         confidence: z.number().optional(),
       }),
     )
     .optional()
     .default({}),
+});
+
+export const CmcCategoryResponseSchema = z.object({
+  data: z.object({
+    num_tokens: z.number().int().nonnegative(),
+    coins: z.array(
+      z.object({
+        slug: z.string().optional(),
+        symbol: z.string(),
+        last_updated: z.string().optional(),
+        quote: z.object({
+          USD: z.object({
+            price: z.number(),
+            last_updated: z.string(),
+          }),
+        }),
+      }),
+    ),
+  }),
+  status: z
+    .object({
+      error_code: z.number().optional(),
+      error_message: z.string().nullable().optional(),
+      timestamp: z.string().optional(),
+    })
+    .optional(),
+});
+
+export const JupiterPriceResponseSchema = z.record(
+  z.string(),
+  z.object({
+    usdPrice: z.number(),
+    decimals: z.number().int().nonnegative(),
+    blockId: z.number().int().positive(),
+    priceChange24h: z.number().nullable().optional(),
+    createdAt: z.union([z.string(), z.number()]).optional(),
+    liquidity: z.number().nullable().optional(),
+  }),
+);
+
+export const SolanaSlotResponseSchema = z.object({
+  result: z.number().int().positive(),
 });
 
 /** Cron metadata JSON stored in cron_runs.metadata */

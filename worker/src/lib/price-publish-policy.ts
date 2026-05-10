@@ -1,4 +1,8 @@
-import { isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
+import {
+  getPricingSourceRegistryEntry,
+  isPricingSourceSoftGuardrailExempt,
+} from "@shared/lib/pricing-source-registry";
+import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationDecision, type PriceValidationReferences } from "./price-validation";
 import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO, hasDepegAuthoritativeSource } from "./pricing-source-policy";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
@@ -51,6 +55,8 @@ function priceValidationModeForAsset(asset: PriceAssetPublicationLike): "primary
     asset.priceSource === "defillama-contract" ||
     asset.priceSource === "coinmarketcap" ||
     asset.priceSource === "dexscreener" ||
+    asset.priceSource === "dexscreener-exact" ||
+    asset.priceSource === "dexscreener-search" ||
     asset.priceSource === "cached"
     ? "fallback_enrichment"
     : "primary_authoritative";
@@ -58,6 +64,69 @@ function priceValidationModeForAsset(asset: PriceAssetPublicationLike): "primary
 
 function isFixedPegValidationContext(context: PriceValidationContext): boolean {
   return context.pegClass === "usd" || context.pegClass === "fiat_fx" || context.pegClass === "commodity";
+}
+
+function sourceLineageFamily(source: string): string | null {
+  const entry = getPricingSourceRegistryEntry(source);
+  if (!entry) return null;
+
+  if (source === "coingecko" || source === "coingecko-native-implied" || source === "coingecko-mirror" || source === "cg-ticker") {
+    return "coingecko";
+  }
+  if (source === "defillama" || source === "defillama-list" || source === "defillama-contract") {
+    return "defillama";
+  }
+  if (source === "protocol-redeem") {
+    return "protocol:redeem";
+  }
+  if (source === "curve-onchain" || source === "curve-oracle") {
+    return "protocol:curve";
+  }
+  if (source === "dex-promoted") {
+    return "dex:aggregate";
+  }
+  if (source.endsWith("-dex")) {
+    return `dex:${source.replace(/-dex$/, "")}`;
+  }
+  if (entry.trustTier === "hard_market") {
+    return `cex:${source}`;
+  }
+  if (entry.trustTier === "hard_oracle") {
+    return `oracle:${source}`;
+  }
+  return source;
+}
+
+function sourceParts(source: string | null | undefined): string[] {
+  return source ? splitCompositePriceSource(source) : [];
+}
+
+function countIndependentSevereSourceFamilies(sources: string[]): {
+  independentFamilyCount: number;
+  allListAggregators: boolean;
+} {
+  const families = new Set<string>();
+  let sawSource = false;
+  let allListAggregators = true;
+
+  for (const source of sources) {
+    const entry = getPricingSourceRegistryEntry(source);
+    const family = sourceLineageFamily(source);
+    if (!entry || !family) continue;
+    sawSource = true;
+    families.add(family);
+    allListAggregators = allListAggregators && !!entry.isListAggregator;
+  }
+
+  return {
+    independentFamilyCount: families.size,
+    allListAggregators: sawSource && allListAggregators,
+  };
+}
+
+function hasIndependentSevereSourceFamilyCorroboration(sources: string[]): boolean {
+  const { independentFamilyCount, allListAggregators } = countIndependentSevereSourceFamilies(sources);
+  return independentFamilyCount >= 2 && !allListAggregators;
 }
 
 function hasSevereDownsidePublicationCorroboration(input: PublishablePriceInput): boolean {
@@ -69,7 +138,14 @@ function hasSevereDownsidePublicationCorroboration(input: PublishablePriceInput)
     return true;
   }
 
-  if (input.confidence === "high" && (input.agreeSources?.length ?? 0) >= 2) {
+  if (
+    input.confidence === "high" &&
+    hasIndependentSevereSourceFamilyCorroboration(
+      input.agreeSources && input.agreeSources.length > 0
+        ? input.agreeSources
+        : sourceParts(input.source),
+    )
+  ) {
     return true;
   }
 
@@ -88,11 +164,15 @@ function hasSevereDownsidePublicationCorroboration(input: PublishablePriceInput)
   // Directional corroboration: if 2+ independent candidate sources independently
   // confirm severe downside, the depeg is real even without a tight-cluster consensus.
   if (input.candidatePrices) {
-    const severeCount = Object.values(input.candidatePrices).filter(
-      (p) => typeof p === "number" && Number.isFinite(p) && p > 0 &&
-        isSevereFixedPegDownside(p, input.validationContext, input.validationReferences, FIXED_PEG_SEVERE_DOWNSIDE_RATIO),
-    ).length;
-    if (severeCount >= 2) return true;
+    const severeSources = Object.entries(input.candidatePrices)
+      .filter(([, p]) => (
+        typeof p === "number" &&
+        Number.isFinite(p) &&
+        p > 0 &&
+        isSevereFixedPegDownside(p, input.validationContext, input.validationReferences, FIXED_PEG_SEVERE_DOWNSIDE_RATIO)
+      ))
+      .map(([source]) => source);
+    if (hasIndependentSevereSourceFamilyCorroboration(severeSources)) return true;
   }
 
   return false;

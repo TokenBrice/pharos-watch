@@ -5,8 +5,8 @@
  * Algorithm:
  * 1. Build agreement graph: sources whose prices agree within `thresholdBps`.
  * 2. Find all maximal cliques (sets of mutually agreeing sources).
- * 3. Pick the best cluster by: largest size → highest total weight → tightest
- *    spread → closest to pegRef → alphabetical tiebreak.
+ * 3. Pick the best cluster by: largest size → highest total weight → strongest
+ *    trust tier → tightest spread → closest to pegRef → alphabetical tiebreak.
  * 4. Return the median price of the winning cluster with confidence metadata.
  *
  * Pairwise agreement is required (not transitive) to prevent a chain like
@@ -61,7 +61,8 @@ export interface ConsensusOptions {
  * 3. For 2+ sources, find the largest cluster of sources that agree within
  *    `thresholdBps` of each other (pairwise).
  * 4. If majority cluster has 2+ members → high confidence, pick highest-weight member.
- * 5. If no majority → low confidence, pick source closest to `pegRef` (or highest-weight if NAV).
+ * 5. If no majority → low confidence, pick by trust tier first, then closeness
+ *    to `pegRef` (or the source median when the reference is unavailable).
  *
  * @param sources - Candidate price feeds, each with a source name, price, and weight.
  * @param pegRef - The expected peg price (e.g. 1.0 for USD stablecoins). Used as
@@ -283,8 +284,8 @@ function clusterTierRank(cluster: SourcePrice[]): number {
 
 /**
  * Selects the winning cluster from all maximal cliques by a priority cascade:
- * largest size → highest total weight → tightest price spread → closest median
- * to `pegRef` → alphabetical source label tiebreak.
+ * largest size → highest total weight → strongest trust tier → tightest price
+ * spread → closest median to `pegRef` → alphabetical source label tiebreak.
  *
  * @param clusters - All maximal agreement cliques found by Bron-Kerbosch.
  * @param pegRef - The expected peg price used as a proximity tiebreaker.

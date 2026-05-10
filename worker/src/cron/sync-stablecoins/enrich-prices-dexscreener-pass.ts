@@ -6,7 +6,6 @@ import {
   USER_AGENT,
 } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
 import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd, dsRateLimit } from "../../lib/dexscreener";
 import {
@@ -20,17 +19,37 @@ import {
   sumCirculatingValue,
   UNIQUE_ACTIVE_SYMBOLS,
 } from "./enrich-prices-pass-common";
+import {
+  endpointLabel,
+  readResponseSnippet,
+  type PricingProviderAttemptDiagnostic,
+} from "../../lib/pricing-provider-diagnostics";
 
 const DEXSCREENER_MAX_REQUESTS = 10;
 const DEXSCREENER_REQUEST_TIMEOUT_MS = 5_000;
 const DEXSCREENER_MAX_RETRIES = 0;
 const DEXSCREENER_PASS_BUDGET_MS = 45_000;
+const DEXSCREENER_SEARCH_MIN_VOLUME_24H_USD = 10_000;
+const DEXSCREENER_SEARCH_MIN_PAIR_AGE_MS = 24 * 60 * 60 * 1000;
+const DEXSCREENER_SEARCH_QUOTE_SYMBOLS = new Set([
+  "USDC",
+  "USDT",
+  "USD",
+  "DAI",
+  "USDS",
+  "USDP",
+  "PYUSD",
+  "FRAX",
+  "USDE",
+]);
 
 interface DexScreenerPair {
   baseToken: { symbol: string };
   quoteToken: { symbol: string };
   priceUsd: string;
   liquidity: { usd: number };
+  volume?: { h24?: number };
+  pairCreatedAt?: number | null;
   chainId: string;
 }
 
@@ -146,6 +165,29 @@ function shouldAllowDexScreenerSymbolSearch(asset: PeggedAsset, exactTargets: De
   return UNIQUE_ACTIVE_SYMBOLS.has(asset.symbol.toUpperCase());
 }
 
+function isDexScreenerSearchCandidate(
+  pair: DexScreenerPair,
+  symbolKey: string,
+  allowedChains: Set<string>,
+): boolean {
+  if (allowedChains.size === 0) return false;
+  if (pair.baseToken.symbol.toUpperCase() !== symbolKey) return false;
+  if (!DEXSCREENER_SEARCH_QUOTE_SYMBOLS.has(pair.quoteToken.symbol.toUpperCase())) return false;
+  if (!pair.priceUsd || !pair.liquidity?.usd) return false;
+  if (pair.liquidity.usd < DEXSCREENER_MIN_LIQUIDITY_USD) return false;
+  if (!allowedChains.has(String(pair.chainId).toLowerCase())) return false;
+
+  const volume24h = pair.volume?.h24;
+  if (typeof volume24h !== "number" || !Number.isFinite(volume24h) || volume24h < DEXSCREENER_SEARCH_MIN_VOLUME_24H_USD) {
+    return false;
+  }
+
+  if (typeof pair.pairCreatedAt !== "number" || !Number.isFinite(pair.pairCreatedAt)) {
+    return false;
+  }
+  return Date.now() - pair.pairCreatedAt >= DEXSCREENER_SEARCH_MIN_PAIR_AGE_MS;
+}
+
 export async function runDexScreenerPass(
   assets: PeggedAsset[],
   fxRates: Record<string, number> | undefined,
@@ -153,6 +195,7 @@ export async function runDexScreenerPass(
   signal?: AbortSignal,
 ): Promise<EnrichPassResult> {
   let resolved = 0;
+  const diagnostics: PricingProviderAttemptDiagnostic[] = [];
 
   const stillMissing = assets
     .map((asset, index) => ({ asset, index }))
@@ -228,12 +271,23 @@ export async function runDexScreenerPass(
             dexExactSuccessfulCalls += 1;
           } else {
             console.warn(`[enrich] DexScreener exact lookup failed for ${entry.asset.symbol} (${target.chain}:${target.address})`);
+            diagnostics.push({
+              source: "dexscreener-exact",
+              stage: "fallback",
+              endpoint: endpointLabel(`https://api.dexscreener.com/tokens/v1/${target.chain}/${target.address}`),
+              status: null,
+              ok: false,
+              success: false,
+              candidateCount: 1,
+              errorClass: "upstream-error",
+              errorMessage: "DexScreener exact lookup returned no usable response",
+            });
           }
 
           const exactPrice = resolveDexScreenerAddressPrice(entry.asset, target.address, pairs, fxRates);
           if (exactPrice == null) continue;
 
-          applyResolvedPrice(assets[entry.index], exactPrice, "dexscreener", "fallback");
+          applyResolvedPrice(assets[entry.index], exactPrice, "dexscreener-exact", "fallback");
           resolved += 1;
           resolvedFromDex = true;
           break;
@@ -257,30 +311,56 @@ export async function runDexScreenerPass(
 
         const symbolKey = entry.asset.symbol.toUpperCase();
         const allowedChains = buildAllowedDexSearchChains(entry.asset);
+        if (allowedChains.size === 0) {
+          continue;
+        }
 
         if (totalAttempts() > 0) {
           await dsRateLimit(signal);
         }
 
         dexSearchAttempts += 1;
+        const searchUrl = `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(entry.asset.symbol)}`;
         const res = await fetchWithRetry(
-          `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(entry.asset.symbol)}`,
+          searchUrl,
           { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal },
           DEXSCREENER_MAX_RETRIES,
           { timeoutMs: Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, searchRemainingBudgetMs) },
         );
+        const searchDiagnostic: PricingProviderAttemptDiagnostic = {
+          source: "dexscreener-search",
+          stage: "fallback",
+          endpoint: endpointLabel(searchUrl),
+          status: res?.status ?? null,
+          ok: res?.ok === true,
+          success: false,
+          candidateCount: 1,
+        };
         if (!res) {
+          diagnostics.push({
+            ...searchDiagnostic,
+            ok: false,
+            errorClass: "no-response",
+            errorMessage: "DexScreener search returned no response",
+          });
           console.warn(`[enrich] DexScreener returned no response for ${entry.asset.symbol}`);
           continue;
         }
         if (!res.ok) {
-          await cancelResponseBodyQuietly(res);
+          searchDiagnostic.snippet = await readResponseSnippet(res);
+          diagnostics.push(searchDiagnostic);
           console.warn(`[enrich] DexScreener returned ${res.status} for ${entry.asset.symbol}`);
           continue;
         }
 
         const data = (await res.json()) as { pairs?: unknown };
         if (data.pairs != null && !Array.isArray(data.pairs)) {
+          diagnostics.push({
+            ...searchDiagnostic,
+            ok: true,
+            errorClass: "invalid-shape",
+            errorMessage: "Expected DexScreener search pairs to be an array",
+          });
           console.warn(`[enrich] DexScreener returned malformed pairs for ${entry.asset.symbol}`);
           continue;
         }
@@ -288,19 +368,23 @@ export async function runDexScreenerPass(
           ? data.pairs.filter(isDexScreenerSearchPair)
           : [];
         if (Array.isArray(data.pairs) && data.pairs.length > 0 && pairs.length === 0) {
+          diagnostics.push({
+            ...searchDiagnostic,
+            ok: true,
+            responseRowCount: data.pairs.length,
+            errorClass: "no-usable-pairs",
+            errorMessage: "DexScreener search returned no usable pairs",
+          });
           console.warn(`[enrich] DexScreener returned no usable pairs for ${entry.asset.symbol}`);
           continue;
         }
 
         dexSuccessfulSearchCalls += 1;
+        searchDiagnostic.responseRowCount = pairs.length;
         if (pairs.length === 0) continue;
 
         const candidates = pairs.filter((pair) => {
-          if (pair.baseToken.symbol.toUpperCase() !== symbolKey) return false;
-          if (!pair.priceUsd || !pair.liquidity?.usd) return false;
-          if (pair.liquidity.usd < DEXSCREENER_MIN_LIQUIDITY_USD) return false;
-          if (allowedChains.size > 0 && !allowedChains.has(String(pair.chainId).toLowerCase())) return false;
-          return true;
+          return isDexScreenerSearchCandidate(pair, symbolKey, allowedChains);
         });
         if (candidates.length === 0) continue;
 
@@ -311,8 +395,18 @@ export async function runDexScreenerPass(
         );
         if (price == null) continue;
         if (isUsableFallbackPrice(entry.asset, price, fxRates)) {
-          applyResolvedPrice(assets[entry.index], price, "dexscreener", "fallback");
+          applyResolvedPrice(assets[entry.index], price, "dexscreener-search", "fallback");
+          searchDiagnostic.resolvedCount = 1;
+          searchDiagnostic.success = true;
+          diagnostics.push(searchDiagnostic);
           resolved += 1;
+        } else {
+          diagnostics.push({
+            ...searchDiagnostic,
+            matchedCount: candidates.length,
+            errorClass: "price-rejected",
+            errorMessage: "DexScreener search price failed fallback validation",
+          });
         }
       } catch (error) {
         if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
@@ -331,5 +425,5 @@ export async function runDexScreenerPass(
     console.warn("[enrich] DexScreener exact and search circuits open — skipping pass 4");
   }
 
-  return { resolved, failures: [] };
+  return { resolved, failures: [], diagnostics };
 }

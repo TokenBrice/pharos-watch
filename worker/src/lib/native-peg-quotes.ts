@@ -1,6 +1,13 @@
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, USER_AGENT } from "./constants";
 import { cgHeaders, cgUrl } from "./coingecko";
 import { fetchWithRetry } from "./fetch-retry";
+import {
+  endpointLabel,
+  errorClassFor,
+  errorMessageFor,
+  readResponseSnippet,
+  type PricingProviderAttemptDiagnostic,
+} from "./pricing-provider-diagnostics";
 
 const COINGECKO_NATIVE_PEG_BATCH_SIZE = 50;
 const COINGECKO_NATIVE_PEG_TIMEOUT_MS = 10_000;
@@ -42,6 +49,11 @@ export interface NativePegQuote {
   updatedAt: number;
 }
 
+export interface NativePegQuoteFetchOptions {
+  diagnostics?: PricingProviderAttemptDiagnostic[];
+  stage?: PricingProviderAttemptDiagnostic["stage"];
+}
+
 export function normalizeSupportedPegCurrency(pegCurrency: string | null | undefined): string | null {
   if (!pegCurrency) return null;
   const normalized = pegCurrency.trim().toUpperCase();
@@ -70,6 +82,7 @@ export async function fetchCurrentNativePegQuotes(
   requests: NativePegQuoteRequest[],
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
+  options?: NativePegQuoteFetchOptions,
 ): Promise<Map<string, NativePegQuote>> {
   const supportedRequests = requests
     .map((request) => ({
@@ -82,6 +95,18 @@ export async function fetchCurrentNativePegQuotes(
     ));
 
   if (supportedRequests.length === 0) {
+    if (requests.length > 0) {
+      options?.diagnostics?.push({
+        source: "native-peg",
+        stage: options.stage ?? "depeg-confirmation",
+        endpoint: "api.coingecko.com/api/v3/simple/price",
+        status: null,
+        ok: true,
+        success: true,
+        candidateCount: 0,
+        rejectionReasonCounts: { "unsupported-quote": requests.length },
+      });
+    }
     return new Map();
   }
 
@@ -109,6 +134,15 @@ export async function fetchCurrentNativePegQuotes(
           `/simple/price?ids=${encodeURIComponent(uniqueGeckoIds.join(","))}&vs_currencies=${vsCurrency}&include_last_updated_at=true`,
           coingeckoApiKey ?? null,
         );
+        const diagnostic: PricingProviderAttemptDiagnostic = {
+          source: "native-peg",
+          stage: options?.stage ?? "depeg-confirmation",
+          endpoint: endpointLabel(url),
+          status: null,
+          ok: false,
+          success: false,
+          candidateCount: pendingRequests.length,
+        };
 
         try {
           const response = await fetchWithRetry(
@@ -120,32 +154,51 @@ export async function fetchCurrentNativePegQuotes(
             1,
             { timeoutMs: COINGECKO_NATIVE_PEG_TIMEOUT_MS },
           );
+          diagnostic.status = response?.status ?? null;
+          diagnostic.ok = response?.ok === true;
           if (!response?.ok) {
-            if (response) {
-              try {
-                await response.text();
-              } catch {
-                // Ignore failed body reads on non-OK responses.
-              }
-            }
+            diagnostic.snippet = response ? await readResponseSnippet(response) : undefined;
+            diagnostic.rejectionReasonCounts = { "non-ok": 1 };
+            options?.diagnostics?.push(diagnostic);
             continue;
           }
 
           const payload = await response.json();
           if (!isObjectRecord(payload)) {
+            options?.diagnostics?.push({
+              ...diagnostic,
+              ok: true,
+              errorClass: "invalid-shape",
+              errorMessage: "Expected CoinGecko native-peg payload to be an object",
+              rejectionReasonCounts: { "invalid-shape": 1 },
+            });
             continue;
           }
 
           let filledAny = false;
+          let staleCount = 0;
+          let emptyCount = 0;
           for (const request of pendingRequests) {
             const rawEntry = payload[request.geckoId];
-            if (!isObjectRecord(rawEntry)) continue;
+            if (!isObjectRecord(rawEntry)) {
+              emptyCount++;
+              continue;
+            }
 
             const price = rawEntry[vsCurrency];
             const updatedAt = rawEntry.last_updated_at;
-            if (typeof price !== "number" || !Number.isFinite(price) || price <= 0) continue;
-            if (typeof updatedAt !== "number" || !Number.isFinite(updatedAt) || updatedAt <= 0) continue;
-            if (nowSec - updatedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC) continue;
+            if (typeof price !== "number" || !Number.isFinite(price) || price <= 0) {
+              emptyCount++;
+              continue;
+            }
+            if (typeof updatedAt !== "number" || !Number.isFinite(updatedAt) || updatedAt <= 0) {
+              emptyCount++;
+              continue;
+            }
+            if (nowSec - updatedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC) {
+              staleCount++;
+              continue;
+            }
 
             quotes.set(request.stablecoinId, {
               stablecoinId: request.stablecoinId,
@@ -156,6 +209,16 @@ export async function fetchCurrentNativePegQuotes(
               updatedAt,
             });
             filledAny = true;
+          }
+          diagnostic.responseRowCount = Object.keys(payload).length;
+          diagnostic.resolvedCount = pendingRequests.filter((request) => quotes.has(request.stablecoinId)).length;
+          diagnostic.success = filledAny;
+          if (staleCount > 0 || emptyCount > 0 || filledAny) {
+            diagnostic.rejectionReasonCounts = {
+              ...(staleCount > 0 ? { stale: staleCount } : {}),
+              ...(emptyCount > 0 ? { "empty-response": emptyCount } : {}),
+            };
+            options?.diagnostics?.push(diagnostic);
           }
 
           if (filledAny && batch.every((request) => quotes.has(request.stablecoinId))) {
@@ -169,6 +232,12 @@ export async function fetchCurrentNativePegQuotes(
             `[native-peg-quotes] CoinGecko ${pegCurrency} quote fetch failed for ${uniqueGeckoIds.join(",")}:`,
             error,
           );
+          options?.diagnostics?.push({
+            ...diagnostic,
+            errorClass: errorClassFor(error),
+            errorMessage: errorMessageFor(error),
+            rejectionReasonCounts: { "upstream-error": 1 },
+          });
         }
       }
     }

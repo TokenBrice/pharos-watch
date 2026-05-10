@@ -53,10 +53,10 @@ describe("shouldQuarantineTemporalJump", () => {
   it("returns false for corroborated severe-downside (2+ candidate sources confirm)", () => {
     const quarantined = shouldQuarantineTemporalJump({
       price: 0.38,
-      source: "coingecko+defillama-list",
+      source: "coingecko+pyth",
       confidence: "low",
-      agreeSources: ["coingecko", "defillama-list"],
-      candidatePrices: { coingecko: 0.38, "defillama-list": 0.39 },
+      agreeSources: ["coingecko", "pyth"],
+      candidatePrices: { coingecko: 0.38, pyth: 0.39 },
       mode: "primary_authoritative",
       validationContext: USD_CONTEXT,
       previousTrustedPrice: {
@@ -67,7 +67,7 @@ describe("shouldQuarantineTemporalJump", () => {
         agreeSources: ["pyth"],
       },
     });
-    // Both 0.38 and 0.39 are < 0.50 (severe) → 2+ severe corroboration → bypass quarantine.
+    // Both 0.38 and 0.39 are < 0.50 (severe) and come from independent families.
     expect(quarantined).toBe(false);
   });
 

@@ -12,6 +12,7 @@ import {
   getPreferredNativePegQueryCurrency,
   normalizeSupportedPegCurrency,
 } from "../native-peg-quotes";
+import type { PricingProviderAttemptDiagnostic } from "../pricing-provider-diagnostics";
 
 function makeJsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -93,6 +94,54 @@ describe("native-peg-quotes", () => {
       pegCurrency: "CNH",
       vsCurrency: "cnh",
       price: 1.002,
+    });
+  });
+
+  it("records diagnostics for stale native quote responses", async () => {
+    fetchWithRetryMock.mockResolvedValueOnce(makeJsonResponse({
+      "euro-coin": {
+        eur: 1.0012,
+        last_updated_at: 1_699_900_000,
+      },
+    }));
+    const diagnostics: PricingProviderAttemptDiagnostic[] = [];
+
+    const quotes = await fetchCurrentNativePegQuotes(
+      [{ stablecoinId: "eurc-circle", geckoId: "euro-coin", pegCurrency: "EUR" }],
+      undefined,
+      undefined,
+      { diagnostics, stage: "fallback" },
+    );
+
+    expect(quotes.size).toBe(0);
+    expect(diagnostics[0]).toMatchObject({
+      source: "native-peg",
+      stage: "fallback",
+      ok: true,
+      success: false,
+      rejectionReasonCounts: { stale: 1 },
+    });
+  });
+
+  it("records diagnostics for failed native quote fetches", async () => {
+    fetchWithRetryMock.mockResolvedValueOnce(new Response("blocked", { status: 403 }));
+    const diagnostics: PricingProviderAttemptDiagnostic[] = [];
+
+    const quotes = await fetchCurrentNativePegQuotes(
+      [{ stablecoinId: "eurc-circle", geckoId: "euro-coin", pegCurrency: "EUR" }],
+      undefined,
+      undefined,
+      { diagnostics, stage: "fallback" },
+    );
+
+    expect(quotes.size).toBe(0);
+    expect(diagnostics[0]).toMatchObject({
+      source: "native-peg",
+      status: 403,
+      ok: false,
+      success: false,
+      snippet: "blocked",
+      rejectionReasonCounts: { "non-ok": 1 },
     });
   });
 });

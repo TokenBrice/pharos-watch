@@ -47,11 +47,16 @@ const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
   {
     label: "CoinMarketCap",
     failureLabel: "coinmarketcap",
-    run: async ({ assets, cmcApiKey, fxRates, db, signal }) => ({
-      counts: {
-        passCmc: (await runCmcPass(assets, cmcApiKey, fxRates, db, signal)).resolved,
-      },
-    }),
+    run: async ({ assets, cmcApiKey, fxRates, db, signal }) => {
+      const result = await runCmcPass(assets, cmcApiKey, fxRates, db, signal);
+      return {
+        counts: {
+          passCmc: result.resolved,
+        },
+        failures: result.failures,
+        diagnostics: result.diagnostics,
+      };
+    },
   },
   {
     label: "Jupiter",
@@ -70,11 +75,16 @@ const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
   {
     label: "DexScreener",
     failureLabel: "dexscreener",
-    run: async ({ assets, fxRates, db, signal }) => ({
-      counts: {
-        passDex: (await runDexScreenerPass(assets, fxRates, db, signal)).resolved,
-      },
-    }),
+    run: async ({ assets, fxRates, db, signal }) => {
+      const result = await runDexScreenerPass(assets, fxRates, db, signal);
+      return {
+        counts: {
+          passDex: result.resolved,
+        },
+        failures: result.failures,
+        diagnostics: result.diagnostics,
+      };
+    },
   },
 ];
 

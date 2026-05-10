@@ -8,13 +8,15 @@ import {
   REDSTONE_SYMBOL_CONFIG,
 } from "../shared/lib/pricing-provider-config";
 
-interface AuditSection {
+export interface AuditSection {
   provider: string;
   ok: boolean;
   checked: number;
   missing: string[];
   notes: string[];
 }
+
+type FetchLike = typeof fetch;
 
 class HttpFetchError extends Error {
   status: number;
@@ -28,8 +30,8 @@ class HttpFetchError extends Error {
   }
 }
 
-async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, {
+async function fetchJson<T>(url: string, fetchImpl: FetchLike = fetch): Promise<T> {
+  const response = await fetchImpl(url, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(15_000),
   });
@@ -39,11 +41,22 @@ async function fetchJson<T>(url: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-async function auditBinance(): Promise<AuditSection> {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value != null && !Array.isArray(value);
+}
+
+function assertArray(value: unknown, provider: string, path: string): asserts value is unknown[] {
+  if (!Array.isArray(value)) {
+    throw new Error(`${provider} metadata shape drift: expected ${path} to be an array`);
+  }
+}
+
+export async function auditBinance(fetchImpl: FetchLike = fetch): Promise<AuditSection> {
   let payload: { symbols?: Array<{ symbol?: string; status?: string }> };
   try {
     payload = await fetchJson<{ symbols?: Array<{ symbol?: string; status?: string }> }>(
       CEX_PROVIDER_AUDIT_CONFIG.binance.metadataUrl,
+      fetchImpl,
     );
   } catch (error) {
     if (
@@ -61,6 +74,7 @@ async function auditBinance(): Promise<AuditSection> {
     }
     throw error;
   }
+  assertArray(payload.symbols, "binance", "symbols");
 
   const tradablePairs = new Set(
     (payload.symbols ?? [])
@@ -79,15 +93,18 @@ async function auditBinance(): Promise<AuditSection> {
   };
 }
 
-async function auditKraken(): Promise<AuditSection> {
+export async function auditKraken(fetchImpl: FetchLike = fetch): Promise<AuditSection> {
   const requestedPairs = KRAKEN_MARKETS.map((market) => market.requestPair);
   const payload = await fetchJson<{
     error?: string[];
     result?: Record<string, { altname?: string; wsname?: string; status?: string }>;
-  }>(`${CEX_PROVIDER_AUDIT_CONFIG.kraken.metadataUrl}?pair=${requestedPairs.join(",")}`);
+  }>(`${CEX_PROVIDER_AUDIT_CONFIG.kraken.metadataUrl}?pair=${requestedPairs.join(",")}`, fetchImpl);
 
   if (Array.isArray(payload.error) && payload.error.length > 0) {
     throw new Error(payload.error.join(", "));
+  }
+  if (!isRecord(payload.result)) {
+    throw new Error("kraken metadata shape drift: expected result object");
   }
 
   const entries = Object.entries(payload.result ?? {});
@@ -111,10 +128,12 @@ async function auditKraken(): Promise<AuditSection> {
   };
 }
 
-async function auditBitstamp(): Promise<AuditSection> {
+export async function auditBitstamp(fetchImpl: FetchLike = fetch): Promise<AuditSection> {
   const payload = await fetchJson<Array<{ name?: string; trading?: string }>>(
     CEX_PROVIDER_AUDIT_CONFIG.bitstamp.metadataUrl,
+    fetchImpl,
   );
+  assertArray(payload, "bitstamp", "root");
   const activePairs = new Set(
     payload
       .filter((entry) => entry.name && (entry.trading == null || entry.trading === "Enabled"))
@@ -132,10 +151,12 @@ async function auditBitstamp(): Promise<AuditSection> {
   };
 }
 
-async function auditCoinbase(): Promise<AuditSection> {
+export async function auditCoinbase(fetchImpl: FetchLike = fetch): Promise<AuditSection> {
   const payload = await fetchJson<Array<{ id?: string; status?: string; trading_disabled?: boolean }>>(
     CEX_PROVIDER_AUDIT_CONFIG.coinbase.metadataUrl,
+    fetchImpl,
   );
+  assertArray(payload, "coinbase", "root");
   const activeProducts = new Set(
     payload
       .filter((entry) => (
@@ -157,7 +178,7 @@ async function auditCoinbase(): Promise<AuditSection> {
   };
 }
 
-async function auditRedstone(): Promise<AuditSection> {
+export async function auditRedstone(fetchImpl: FetchLike = fetch): Promise<AuditSection> {
   const missing: string[] = [];
   const notes: string[] = [];
   const batchSize = 12;
@@ -167,7 +188,11 @@ async function auditRedstone(): Promise<AuditSection> {
     const symbolsParam = batch.map((config) => config.apiSymbol).join(",");
     const payload = await fetchJson<Record<string, unknown>>(
       `${REDSTONE_PROVIDER_AUDIT_CONFIG.metadataUrl}?symbols=${encodeURIComponent(symbolsParam)}&provider=redstone-primary-prod`,
+      fetchImpl,
     );
+    if (!isRecord(payload)) {
+      throw new Error("redstone metadata shape drift: expected root object");
+    }
     for (const config of batch) {
       if (!(config.apiSymbol in payload)) {
         missing.push(config.metaSymbol);
@@ -188,6 +213,52 @@ async function auditRedstone(): Promise<AuditSection> {
   };
 }
 
+export async function auditOptionalSourceShapes(input: {
+  fetchImpl?: FetchLike;
+  cmcApiKey?: string;
+} = {}): Promise<AuditSection[]> {
+  const fetchImpl = input.fetchImpl ?? fetch;
+  const sections: AuditSection[] = [];
+
+  const jupiterPayload = await fetchJson<Record<string, unknown>>(
+    "https://api.jup.ag/price/v3?ids=So11111111111111111111111111111111111111112",
+    fetchImpl,
+  );
+  const jupiterRows = Object.values(jupiterPayload).filter(isRecord);
+  sections.push({
+    provider: "jupiter-shape",
+    ok: jupiterRows.length > 0 && jupiterRows.some((row) => typeof row.usdPrice === "number"),
+    checked: 1,
+    missing: jupiterRows.some((row) => typeof row.usdPrice === "number") ? [] : ["usdPrice"],
+    notes: ["Optional live source-shape check; not part of the default audit:pricing-providers run"],
+  });
+
+  if (input.cmcApiKey) {
+    const cmcPayload = await fetchJson<unknown>(
+      "https://pro-api.coinmarketcap.com/v1/cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=1&convert=USD",
+      async (url, init) => fetchImpl(url, {
+        ...init,
+        headers: {
+          ...(init?.headers as Record<string, string> | undefined),
+          "X-CMC_PRO_API_KEY": input.cmcApiKey!,
+        },
+      }),
+    );
+    const coins = isRecord(cmcPayload) && isRecord(cmcPayload.data)
+      ? (cmcPayload.data.coins as unknown)
+      : undefined;
+    sections.push({
+      provider: "coinmarketcap-shape",
+      ok: Array.isArray(coins),
+      checked: 1,
+      missing: Array.isArray(coins) ? [] : ["data.coins"],
+      notes: ["Optional live source-shape check; requires CMC_API_KEY"],
+    });
+  }
+
+  return sections;
+}
+
 function printSection(section: AuditSection): void {
   const status = section.ok ? "OK" : "DRIFT";
   console.log(`[pricing-provider-audit] ${section.provider}: ${status} (${section.checked} checked)`);
@@ -199,24 +270,45 @@ function printSection(section: AuditSection): void {
   }
 }
 
-async function main(): Promise<void> {
+export async function runPricingProviderAudit(options: {
+  fetchImpl?: FetchLike;
+  liveSourceShapes?: boolean;
+  cmcApiKey?: string;
+} = {}): Promise<AuditSection[]> {
+  const fetchImpl = options.fetchImpl ?? fetch;
   const sections = await Promise.all([
-    auditBinance(),
-    auditKraken(),
-    auditBitstamp(),
-    auditCoinbase(),
-    auditRedstone(),
+    auditBinance(fetchImpl),
+    auditKraken(fetchImpl),
+    auditBitstamp(fetchImpl),
+    auditCoinbase(fetchImpl),
+    auditRedstone(fetchImpl),
   ]);
-
-  sections.forEach(printSection);
+  if (options.liveSourceShapes) {
+    sections.push(...await auditOptionalSourceShapes({
+      fetchImpl,
+      cmcApiKey: options.cmcApiKey,
+    }));
+  }
 
   const failed = sections.filter((section) => !section.ok);
   if (failed.length > 0) {
     throw new Error(`provider config drift detected: ${failed.map((section) => section.provider).join(", ")}`);
   }
+  return sections;
 }
 
-main().catch((error) => {
-  console.error("[pricing-provider-audit] failed:", error instanceof Error ? error.message : error);
-  process.exitCode = 1;
-});
+async function main(): Promise<void> {
+  const liveSourceShapes = process.argv.includes("--live-source-shapes");
+  const sections = await runPricingProviderAudit({
+    liveSourceShapes,
+    cmcApiKey: process.env.CMC_API_KEY,
+  });
+  sections.forEach(printSection);
+}
+
+if (process.argv[1]?.endsWith("audit-pricing-provider-config.ts")) {
+  main().catch((error) => {
+    console.error("[pricing-provider-audit] failed:", error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  });
+}

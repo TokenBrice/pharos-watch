@@ -14,6 +14,18 @@ describe("computePriceConsensus", () => {
     expect(result!.source).toContain("coingecko");
   });
 
+  it("uses the upper-middle cluster median for even-sized agreement clusters", () => {
+    const sources: SourcePrice[] = [
+      { source: "coingecko", price: 0.999, weight: 2 },
+      { source: "pyth", price: 1.001, weight: 2 },
+    ];
+
+    const result = computePriceConsensus(sources, 1.0, 50);
+
+    expect(result!.confidence).toBe("high");
+    expect(result!.price).toBe(1.001);
+  });
+
   it("returns low confidence when sources diverge", () => {
     const sources: SourcePrice[] = [
       { source: "coingecko", price: 1.01, weight: 1 },
@@ -21,6 +33,19 @@ describe("computePriceConsensus", () => {
     ];
     const result = computePriceConsensus(sources, 1.0, 50);
     expect(result!.confidence).toBe("low");
+  });
+
+  it("chooses trust tier before peg proximity for divergent fixed-peg sources", () => {
+    const sources: SourcePrice[] = [
+      { source: "coingecko", price: 1.001, weight: 2 },
+      { source: "binance", price: 0.985, weight: 2 },
+    ];
+
+    const result = computePriceConsensus(sources, 1.0, 50);
+
+    expect(result!.confidence).toBe("low");
+    expect(result!.source).toBe("binance");
+    expect(result!.price).toBe(0.985);
   });
 
   it("returns single-source when only one source available", () => {
