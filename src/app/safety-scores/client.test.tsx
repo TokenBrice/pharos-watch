@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReportCardsClient } from "./client";
 import type { ReportCard } from "@shared/types";
+import { makeCoreSettlementReportCard as makeCard } from "./test-helpers";
 
 const refetchReportCards = vi.fn();
 const refetchPrices = vi.fn();
@@ -98,51 +99,6 @@ vi.mock("@/components/systemic-risk-headline", () => ({
     <button onClick={onOpenSimulator}>open-simulator</button>
   ),
 }));
-
-function makeCard(overrides: Partial<ReportCard> = {}): ReportCard {
-  return {
-    id: overrides.id ?? "usdc-circle",
-    name: overrides.name ?? "USD Coin",
-    symbol: overrides.symbol ?? "USDC",
-    overallScore: overrides.overallScore !== undefined ? overrides.overallScore : 92,
-    overallGrade: overrides.overallGrade ?? "A",
-    isDefunct: overrides.isDefunct ?? false,
-    dimensions: overrides.dimensions ?? {
-      pegStability: { score: 95, grade: "A" },
-      liquidity: { score: 90, grade: "A" },
-      resilience: { score: 88, grade: "B+" },
-      decentralization: { score: 70, grade: "B-" },
-      dependencyRisk: { score: 95, grade: "A+" },
-    },
-    rawInputs: overrides.rawInputs ?? {
-      pegScore: 95,
-      activeDepeg: false,
-      activeDepegBps: null,
-      depegEventCount: 0,
-      lastEventAt: null,
-      liquidityScore: 90,
-      effectiveExitScore: 90,
-      redemptionBackstopScore: 65,
-      redemptionRouteFamily: "offchain-issuer",
-      redemptionModelConfidence: "medium",
-      redemptionUsedForLiquidity: true,
-      redemptionImmediateCapacityUsd: null,
-      redemptionImmediateCapacityRatio: null,
-      concentrationHhi: 0.01,
-      bluechipGrade: null,
-      canBeBlacklisted: true,
-      chainTier: "ethereum",
-      deploymentModel: "native-multichain",
-      collateralQuality: "rwa",
-      custodyModel: "institutional-top",
-      governanceTier: "centralized",
-      governanceQuality: "regulated-entity",
-      dependencies: [],
-      navToken: false,
-      collateralFromLive: true,
-    },
-  } as ReportCard;
-}
 
 describe("ReportCardsClient", () => {
   beforeEach(() => {

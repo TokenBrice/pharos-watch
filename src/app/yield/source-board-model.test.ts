@@ -1,110 +1,29 @@
 import { describe, expect, it } from "vitest";
 import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
-import type { AltYieldSource, YieldBenchmarkRegistry, YieldRanking, YieldRankingProvenance } from "@shared/types";
-
-function makeProvenance(overrides: Partial<YieldRankingProvenance> = {}): YieldRankingProvenance {
-  return {
-    sourceKey: "selected-source",
-    sourceObservedAt: 1_776_000_000,
-    sourceAgeSeconds: 300,
-    comparisonAnchorObservedAt: null,
-    comparisonAnchorAgeSeconds: null,
-    confidenceTier: "curated",
-    selectionMethod: "confidence-weighted",
-    selectionReason: "selected by confidence-weighted arbitration",
-    sourceSwitch: false,
-    previousBestSourceKey: null,
-    usedLegacyHistory: false,
-    usedDefaultSafety: false,
-    benchmarkKey: "USD",
-    benchmarkLabel: "USD 3M T-Bill",
-    benchmarkCurrency: "USD",
-    benchmarkRate: 4.25,
-    benchmarkRecordDate: "2026-04-23",
-    benchmarkIsFallback: false,
-    benchmarkFallbackMode: null,
-    benchmarkSelectionMode: "native",
-    benchmarkIsProxy: false,
-    anomalies: [],
-    ...overrides,
-  };
-}
-
-function makeAltSource(overrides: Partial<AltYieldSource> = {}): AltYieldSource {
-  return {
-    sourceKey: "alt-source",
-    yieldSource: "Aave V3 USDC",
-    yieldSourceUrl: "https://example.com/aave",
-    yieldType: "lending-opportunity",
-    currentApy: 4,
-    apy30d: 4,
-    sourceTvlUsd: 2_000_000,
-    dataSource: "defillama-auto",
-    ...overrides,
-  };
-}
-
-function makeRanking(overrides: Partial<YieldRanking> = {}): YieldRanking {
-  return {
-    id: "usdc-circle",
-    symbol: "USDC",
-    name: "USD Coin",
-    currentApy: 5,
-    apy7d: 5,
-    apy30d: 5,
-    apyBase: null,
-    apyReward: null,
-    yieldSource: "Compound V3 USDC",
-    yieldSourceUrl: "https://example.com/compound",
-    yieldType: "lending-opportunity",
-    dataSource: "protocol-api",
-    sourceTvlUsd: 5_000_000,
-    pharosYieldScore: 50,
-    safetyScore: 80,
-    safetyGrade: "A",
-    yieldToRisk: 1.2,
-    excessYield: 0.75,
-    benchmarkKey: "USD",
-    benchmarkLabel: "USD 3M T-Bill",
-    benchmarkCurrency: "USD",
-    benchmarkRate: 4.25,
-    benchmarkRecordDate: "2026-04-23",
-    benchmarkIsFallback: false,
-    benchmarkFallbackMode: null,
-    benchmarkSelectionMode: "native",
-    benchmarkIsProxy: false,
-    yieldStability: 0.9,
-    apyVariance30d: 0.3,
-    apyMin30d: 4.5,
-    apyMax30d: 5.5,
-    warningSignals: [],
-    altSources: [],
-    provenance: makeProvenance(),
-    ...overrides,
-  };
-}
+import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "./test-helpers";
+import type { YieldBenchmarkRegistry } from "@shared/types";
 
 describe("buildYieldSourceBoardModel", () => {
   it("summarizes selected rows, alternate rows, confidence, switches, anomalies, and source-row APY", () => {
     const rankings = [
-      makeRanking({
+      makeYieldRanking({
         id: "usdc-circle",
         apy30d: 5,
-        provenance: makeProvenance({
+        provenance: makeYieldProvenance({
           sourceKey: "compound-usdc",
           confidenceTier: "curated",
           sourceSwitch: true,
           anomalies: ["low-source-tvl"],
         }),
         altSources: [
-          makeAltSource({
+          makeAltYieldSource({
             sourceKey: "aave-usdc",
             yieldSource: "Aave V3 USDC",
             yieldType: "lending-opportunity",
             dataSource: "defillama-auto",
             apy30d: 4,
           }),
-          makeAltSource({
+          makeAltYieldSource({
             sourceKey: "sky-usdc",
             yieldSource: "Sky Savings",
             yieldType: "lending-vault",
@@ -113,7 +32,7 @@ describe("buildYieldSourceBoardModel", () => {
           }),
         ],
       }),
-      makeRanking({
+      makeYieldRanking({
         id: "eurc-circle",
         symbol: "EURC",
         name: "EURC",
@@ -123,7 +42,7 @@ describe("buildYieldSourceBoardModel", () => {
         benchmarkKey: "EUR",
         benchmarkLabel: "EUR 3M compounded ESTR",
         benchmarkCurrency: "EUR",
-        provenance: makeProvenance({
+        provenance: makeYieldProvenance({
           sourceKey: "morpho-eurc",
           confidenceTier: "deterministic",
           benchmarkKey: "EUR",
@@ -183,10 +102,10 @@ describe("buildYieldSourceBoardModel", () => {
 
   it("does not assign confidence tiers to alternate source rows", () => {
     const model = buildYieldSourceBoardModel([
-      makeRanking({
+      makeYieldRanking({
         provenance: null,
         altSources: [
-          makeAltSource({
+          makeAltYieldSource({
             dataSource: "defillama-auto",
             yieldType: "lending-opportunity",
             apy30d: 7,
@@ -223,7 +142,7 @@ describe("buildYieldSourceBoardModel", () => {
     };
     const model = buildYieldSourceBoardModel(
       [
-        makeRanking({
+        makeYieldRanking({
           benchmarkKey: "USD",
           benchmarkLabel: undefined,
           benchmarkSelectionMode: undefined,

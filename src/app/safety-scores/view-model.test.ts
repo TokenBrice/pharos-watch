@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { ReportCard } from "@shared/types";
 import {
   buildSafetyGradeCounts,
   buildSafetyHeadlineStats,
@@ -11,51 +10,7 @@ import {
   getCoreSettlementProfile,
   groupReportCardsByGrade,
 } from "./view-model";
-
-function makeCard(overrides: Partial<ReportCard> = {}): ReportCard {
-  return {
-    id: overrides.id ?? "usdc-circle",
-    name: overrides.name ?? "USD Coin",
-    symbol: overrides.symbol ?? "USDC",
-    overallScore: overrides.overallScore !== undefined ? overrides.overallScore : 92,
-    overallGrade: overrides.overallGrade ?? "A",
-    isDefunct: overrides.isDefunct ?? false,
-    dimensions: overrides.dimensions ?? {
-      pegStability: { score: 95, grade: "A" },
-      liquidity: { score: 90, grade: "A" },
-      resilience: { score: 88, grade: "B+" },
-      decentralization: { score: 70, grade: "B-" },
-      dependencyRisk: { score: 62, grade: "C" },
-    },
-    rawInputs: overrides.rawInputs ?? {
-      pegScore: 95,
-      activeDepeg: false,
-      activeDepegBps: null,
-      depegEventCount: 0,
-      lastEventAt: null,
-      liquidityScore: 90,
-      effectiveExitScore: 90,
-      redemptionBackstopScore: 65,
-      redemptionRouteFamily: "offchain-issuer",
-      redemptionModelConfidence: "medium",
-      redemptionUsedForLiquidity: true,
-      redemptionImmediateCapacityUsd: null,
-      redemptionImmediateCapacityRatio: null,
-      concentrationHhi: 0.01,
-      bluechipGrade: null,
-      canBeBlacklisted: true,
-      chainTier: "ethereum",
-      deploymentModel: "native-multichain",
-      collateralQuality: "rwa",
-      custodyModel: "institutional-top",
-      governanceTier: "centralized",
-      governanceQuality: "regulated-entity",
-      dependencies: [],
-      navToken: false,
-      collateralFromLive: true,
-    },
-  } as ReportCard;
-}
+import { makeReportCard as makeCard } from "./test-helpers";
 
 describe("safety score view-model", () => {
   it("builds market-cap lookups from pegged asset supply buckets", () => {
