@@ -228,23 +228,23 @@ describe("buildReportCardsSnapshot", () => {
 
   it("uses live-derived dependencies consistently in raw inputs and dependency graph", async () => {
     const db = makeReportCardsDb([makeAsset({ id: "dai-makerdao", symbol: "DAI" })]);
-    loadFreshIndependentLiveReserveMapMock.mockResolvedValueOnce(new Map([
-      [
-        "dai-makerdao",
+    loadFreshIndependentLiveReserveMapMock.mockResolvedValueOnce(
+      new Map([
         [
-          { name: "Live USDT PSM", pct: 55, risk: "low", coinId: "usdt-tether", depType: "mechanism" },
-          { name: "Unmapped live collateral", pct: 45, risk: "very-low" },
+          "dai-makerdao",
+          [
+            { name: "Live USDT PSM", pct: 55, risk: "low", coinId: "usdt-tether", depType: "mechanism" },
+            { name: "Unmapped live collateral", pct: 45, risk: "very-low" },
+          ],
         ],
-      ],
-    ]));
+      ]),
+    );
 
     const snapshot = await buildReportCardsSnapshot(db);
     const card = snapshot.cards.find((entry) => entry.id === "dai-makerdao");
 
     expect(card?.rawInputs.dependencyFromLive).toBe(true);
-    expect(card?.rawInputs.dependencies).toEqual([
-      { id: "usdt-tether", weight: 0.55, type: "mechanism" },
-    ]);
+    expect(card?.rawInputs.dependencies).toEqual([{ id: "usdt-tether", weight: 0.55, type: "mechanism" }]);
     expect(snapshot.dependencyGraph.edges).toContainEqual({
       from: "usdt-tether",
       to: "dai-makerdao",
@@ -687,6 +687,7 @@ describe("buildReportCardsSnapshot", () => {
       map: {
         "cusd-cap": makeRedemptionEntry({
           capacityConfidence: "live-direct",
+          capacityKind: "live-direct",
           sourceMode: "dynamic",
           accessModel: "permissionless-onchain",
           settlementModel: "atomic",

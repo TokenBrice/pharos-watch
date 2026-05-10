@@ -135,7 +135,7 @@ describe("computeCapacityScore", () => {
     expect(bp001.coverageRatioScore).toBe(20);
     const bp005 = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.05 });
     expect(bp005.coverageRatioScore).toBe(40);
-    const bp010 = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.10 });
+    const bp010 = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.1 });
     expect(bp010.coverageRatioScore).toBe(60);
     const bp025 = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.25 });
     expect(bp025.coverageRatioScore).toBe(80);
@@ -164,8 +164,12 @@ describe("computeRedemptionBackstopScore", () => {
   it("returns null when capacity is null", () => {
     const result = computeRedemptionBackstopScore({
       routeFamily: "stablecoin-redeem",
-      accessScore: 100, settlementScore: 100, executionCertaintyScore: 100,
-      capacityScore: null, outputAssetQualityScore: 100, costScore: 100,
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      capacityScore: null,
+      outputAssetQualityScore: 100,
+      costScore: 100,
     });
     expect(result.score).toBeNull();
     expect(result.capsApplied).toEqual([]);
@@ -175,8 +179,12 @@ describe("computeRedemptionBackstopScore", () => {
     // All 100 → 100*0.20 + 100*0.15 + 100*0.15 + 100*0.25 + 100*0.15 + 100*0.10 = 100
     const result = computeRedemptionBackstopScore({
       routeFamily: "stablecoin-redeem",
-      accessScore: 100, settlementScore: 100, executionCertaintyScore: 100,
-      capacityScore: 100, outputAssetQualityScore: 100, costScore: 100,
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      capacityScore: 100,
+      outputAssetQualityScore: 100,
+      costScore: 100,
     });
     expect(result.score).toBe(100);
   });
@@ -184,8 +192,12 @@ describe("computeRedemptionBackstopScore", () => {
   it("applies queue-redeem cap at 70", () => {
     const result = computeRedemptionBackstopScore({
       routeFamily: "queue-redeem",
-      accessScore: 100, settlementScore: 100, executionCertaintyScore: 100,
-      capacityScore: 100, outputAssetQualityScore: 100, costScore: 100,
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      capacityScore: 100,
+      outputAssetQualityScore: 100,
+      costScore: 100,
     });
     expect(result.score).toBe(70);
     expect(result.capsApplied).toContain("queue-route-cap");
@@ -194,8 +206,12 @@ describe("computeRedemptionBackstopScore", () => {
   it("applies offchain-issuer cap at 65", () => {
     const result = computeRedemptionBackstopScore({
       routeFamily: "offchain-issuer",
-      accessScore: 100, settlementScore: 100, executionCertaintyScore: 100,
-      capacityScore: 100, outputAssetQualityScore: 100, costScore: 100,
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      capacityScore: 100,
+      outputAssetQualityScore: 100,
+      costScore: 100,
     });
     expect(result.score).toBe(65);
     expect(result.capsApplied).toContain("offchain-route-cap");
@@ -204,8 +220,12 @@ describe("computeRedemptionBackstopScore", () => {
   it("applies config-level cap", () => {
     const result = computeRedemptionBackstopScore({
       routeFamily: "stablecoin-redeem",
-      accessScore: 100, settlementScore: 100, executionCertaintyScore: 100,
-      capacityScore: 100, outputAssetQualityScore: 100, costScore: 100,
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      capacityScore: 100,
+      outputAssetQualityScore: 100,
+      costScore: 100,
       totalScoreCap: 50,
     });
     expect(result.score).toBe(50);
@@ -215,8 +235,12 @@ describe("computeRedemptionBackstopScore", () => {
   it("does not apply caps when score is below threshold", () => {
     const result = computeRedemptionBackstopScore({
       routeFamily: "queue-redeem",
-      accessScore: 20, settlementScore: 20, executionCertaintyScore: 20,
-      capacityScore: 20, outputAssetQualityScore: 20, costScore: 20,
+      accessScore: 20,
+      settlementScore: 20,
+      executionCertaintyScore: 20,
+      capacityScore: 20,
+      outputAssetQualityScore: 20,
+      costScore: 20,
     });
     expect(result.score).toBe(20);
     expect(result.capsApplied).toEqual([]);
@@ -227,8 +251,12 @@ describe("computeRedemptionBackstopScore", () => {
     for (const routeFamily of families) {
       const result = computeRedemptionBackstopScore({
         routeFamily,
-        accessScore: 100, settlementScore: 100, executionCertaintyScore: 100,
-        capacityScore: 100, outputAssetQualityScore: 100, costScore: 100,
+        accessScore: 100,
+        settlementScore: 100,
+        executionCertaintyScore: 100,
+        capacityScore: 100,
+        outputAssetQualityScore: 100,
+        costScore: 100,
       });
       expect(result.capsApplied).toEqual([]);
     }
@@ -237,8 +265,12 @@ describe("computeRedemptionBackstopScore", () => {
   it("queue-redeem cap is NOT applied when weighted score is exactly 70", () => {
     const result = computeRedemptionBackstopScore({
       routeFamily: "queue-redeem",
-      accessScore: 70, settlementScore: 70, executionCertaintyScore: 70,
-      capacityScore: 70, outputAssetQualityScore: 70, costScore: 70,
+      accessScore: 70,
+      settlementScore: 70,
+      executionCertaintyScore: 70,
+      capacityScore: 70,
+      outputAssetQualityScore: 70,
+      costScore: 70,
     });
     expect(result.score).toBe(70);
     expect(result.capsApplied).toEqual([]);
@@ -247,8 +279,12 @@ describe("computeRedemptionBackstopScore", () => {
   it("queue-redeem cap is applied when weighted score is 71", () => {
     const result = computeRedemptionBackstopScore({
       routeFamily: "queue-redeem",
-      accessScore: 71, settlementScore: 71, executionCertaintyScore: 71,
-      capacityScore: 71, outputAssetQualityScore: 71, costScore: 71,
+      accessScore: 71,
+      settlementScore: 71,
+      executionCertaintyScore: 71,
+      capacityScore: 71,
+      outputAssetQualityScore: 71,
+      costScore: 71,
     });
     expect(result.score).toBe(70);
     expect(result.capsApplied).toContain("queue-route-cap");
@@ -257,8 +293,12 @@ describe("computeRedemptionBackstopScore", () => {
   it("offchain-issuer cap is NOT applied when weighted score is exactly 65", () => {
     const result = computeRedemptionBackstopScore({
       routeFamily: "offchain-issuer",
-      accessScore: 65, settlementScore: 65, executionCertaintyScore: 65,
-      capacityScore: 65, outputAssetQualityScore: 65, costScore: 65,
+      accessScore: 65,
+      settlementScore: 65,
+      executionCertaintyScore: 65,
+      capacityScore: 65,
+      outputAssetQualityScore: 65,
+      costScore: 65,
     });
     expect(result.score).toBe(65);
     expect(result.capsApplied).toEqual([]);
@@ -267,8 +307,12 @@ describe("computeRedemptionBackstopScore", () => {
   it("offchain-issuer cap is applied when weighted score is 66", () => {
     const result = computeRedemptionBackstopScore({
       routeFamily: "offchain-issuer",
-      accessScore: 66, settlementScore: 66, executionCertaintyScore: 66,
-      capacityScore: 66, outputAssetQualityScore: 66, costScore: 66,
+      accessScore: 66,
+      settlementScore: 66,
+      executionCertaintyScore: 66,
+      capacityScore: 66,
+      outputAssetQualityScore: 66,
+      costScore: 66,
     });
     expect(result.score).toBe(65);
     expect(result.capsApplied).toContain("offchain-route-cap");
@@ -278,6 +322,7 @@ describe("computeRedemptionBackstopScore", () => {
 describe("isStrongLiveDirectRoute", () => {
   const strongInput = {
     capacityConfidence: "live-direct" as const,
+    capacityKind: "live-direct" as const,
     sourceMode: "dynamic" as const,
     accessModel: "permissionless-onchain" as const,
     settlementModel: "atomic" as const,
@@ -289,6 +334,26 @@ describe("isStrongLiveDirectRoute", () => {
 
   it("returns true for live-direct dynamic permissionless immediate", () => {
     expect(isStrongLiveDirectRoute({ ...strongInput, settlementModel: "immediate" })).toBe(true);
+  });
+
+  it("returns true for explicit bounded live-direct capacity kind", () => {
+    expect(isStrongLiveDirectRoute({ ...strongInput, capacityKind: "live-direct-bounded" })).toBe(true);
+  });
+
+  it("returns false when the live capacity kind is missing", () => {
+    expect(
+      isStrongLiveDirectRoute({
+        capacityConfidence: "live-direct",
+        sourceMode: "dynamic",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+      }),
+    ).toBe(false);
+  });
+
+  it("returns false when the live capacity kind is proxy or queue evidence", () => {
+    expect(isStrongLiveDirectRoute({ ...strongInput, capacityKind: "live-proxy-validated" })).toBe(false);
+    expect(isStrongLiveDirectRoute({ ...strongInput, capacityKind: "live-queue" })).toBe(false);
   });
 
   it("returns false for live-proxy capacity confidence", () => {

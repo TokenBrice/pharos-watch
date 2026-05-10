@@ -2,6 +2,7 @@ import type {
   RedemptionAccessModel,
   RedemptionCapacityConfidence,
   RedemptionExecutionModel,
+  RedemptionLiveCapacityKind,
   RedemptionOutputAssetType,
   RedemptionRouteFamily,
   RedemptionSettlementModel,
@@ -9,15 +10,15 @@ import type {
 } from "../types";
 
 export const REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS = {
-  access: 0.20,
+  access: 0.2,
   settlement: 0.15,
   executionCertainty: 0.15,
   capacity: 0.25,
   outputAssetQuality: 0.15,
-  cost: 0.10,
+  cost: 0.1,
 } as const;
 
-export const EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR = 0.10;
+export const EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR = 0.1;
 
 /**
  * Route-family score ceilings applied after the weighted component score.
@@ -41,20 +42,24 @@ export const REDEMPTION_ROUTE_FAMILY_CAPS = {
  * Input shape for {@link isStrongLiveDirectRoute}.
  *
  * A route qualifies as a "strong live-direct" route when its current redemption
- * evidence is fresh on-chain telemetry AND the route itself is permissionless +
- * atomic/immediate. Only these routes remain scoreable during a severe active
- * depeg because only they provide current direct exercisability evidence.
+ * evidence is fresh direct on-chain telemetry AND the route itself is
+ * permissionless + atomic/immediate. Only these routes remain scoreable during a
+ * severe active depeg because only they provide current direct exercisability
+ * evidence.
  * See redemption backstop methodology v3.8.
  */
 export interface StrongLiveDirectRouteInput {
   capacityConfidence: RedemptionCapacityConfidence;
+  capacityKind?: RedemptionLiveCapacityKind;
   sourceMode: RedemptionSourceMode;
   accessModel: RedemptionAccessModel;
   settlementModel: RedemptionSettlementModel;
 }
 
 export function isStrongLiveDirectRoute(input: StrongLiveDirectRouteInput): boolean {
+  const hasDirectCapacityKind = input.capacityKind === "live-direct" || input.capacityKind === "live-direct-bounded";
   return (
+    hasDirectCapacityKind &&
     input.capacityConfidence === "live-direct" &&
     input.sourceMode === "dynamic" &&
     input.accessModel === "permissionless-onchain" &&
@@ -69,10 +74,7 @@ export const REDEMPTION_ACCESS_SCORES: Record<RedemptionAccessModel, number> = {
   manual: 20,
 };
 
-export const REDEMPTION_SETTLEMENT_SCORES: Record<
-  RedemptionSettlementModel,
-  number
-> = {
+export const REDEMPTION_SETTLEMENT_SCORES: Record<RedemptionSettlementModel, number> = {
   atomic: 100,
   immediate: 90,
   "same-day": 65,
@@ -80,20 +82,14 @@ export const REDEMPTION_SETTLEMENT_SCORES: Record<
   queued: 20,
 };
 
-export const REDEMPTION_EXECUTION_SCORES: Record<
-  RedemptionExecutionModel,
-  number
-> = {
+export const REDEMPTION_EXECUTION_SCORES: Record<RedemptionExecutionModel, number> = {
   "deterministic-onchain": 100,
   "deterministic-basket": 80,
   "rules-based-nav": 60,
   opaque: 30,
 };
 
-export const REDEMPTION_OUTPUT_ASSET_SCORES: Record<
-  RedemptionOutputAssetType,
-  number
-> = {
+export const REDEMPTION_OUTPUT_ASSET_SCORES: Record<RedemptionOutputAssetType, number> = {
   "stable-single": 100,
   "stable-basket": 80,
   "bluechip-collateral": 65,
@@ -105,9 +101,9 @@ const COVERAGE_RATIO_BREAKPOINTS = [
   { value: 0, score: 0 },
   { value: 0.01, score: 20 },
   { value: 0.05, score: 40 },
-  { value: 0.10, score: 60 },
+  { value: 0.1, score: 60 },
   { value: 0.25, score: 80 },
-  { value: 0.50, score: 100 },
+  { value: 0.5, score: 100 },
 ] as const;
 
 const ABSOLUTE_CAPACITY_BREAKPOINTS = [
@@ -133,7 +129,7 @@ function interpolateScore(
       const span = next.value - prev.value;
       if (span <= 0) return next.score;
       const progress = (value - prev.value) / span;
-      return Math.round(prev.score + ((next.score - prev.score) * progress));
+      return Math.round(prev.score + (next.score - prev.score) * progress);
     }
   }
 
@@ -148,14 +144,8 @@ export function computeCapacityScore(args: {
   coverageRatioScore: number | null;
   absoluteCapacityScore: number | null;
 } {
-  const coverageRatioScore = interpolateScore(
-    args.immediateCapacityRatio,
-    COVERAGE_RATIO_BREAKPOINTS,
-  );
-  const absoluteCapacityScore = interpolateScore(
-    args.immediateCapacityUsd,
-    ABSOLUTE_CAPACITY_BREAKPOINTS,
-  );
+  const coverageRatioScore = interpolateScore(args.immediateCapacityRatio, COVERAGE_RATIO_BREAKPOINTS);
+  const absoluteCapacityScore = interpolateScore(args.immediateCapacityUsd, ABSOLUTE_CAPACITY_BREAKPOINTS);
 
   if (coverageRatioScore == null && absoluteCapacityScore == null) {
     return {
@@ -169,7 +159,7 @@ export function computeCapacityScore(args: {
   const absolute = absoluteCapacityScore ?? coverageRatioScore ?? 0;
 
   return {
-    score: Math.round((coverage * 0.6) + (absolute * 0.4)),
+    score: Math.round(coverage * 0.6 + absolute * 0.4),
     coverageRatioScore,
     absoluteCapacityScore,
   };
@@ -193,30 +183,21 @@ export function computeRedemptionBackstopScore(args: {
   }
 
   let score =
-    (args.accessScore * REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.access) +
-    (args.settlementScore *
-      REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.settlement) +
-    (args.executionCertaintyScore *
-      REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.executionCertainty) +
-    (args.capacityScore * REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.capacity) +
-    (args.outputAssetQualityScore *
-      REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.outputAssetQuality) +
-    (args.costScore * REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.cost);
+    args.accessScore * REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.access +
+    args.settlementScore * REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.settlement +
+    args.executionCertaintyScore * REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.executionCertainty +
+    args.capacityScore * REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.capacity +
+    args.outputAssetQualityScore * REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.outputAssetQuality +
+    args.costScore * REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.cost;
 
   const capsApplied: string[] = [];
 
-  if (
-    args.routeFamily === "queue-redeem" &&
-    score > REDEMPTION_ROUTE_FAMILY_CAPS.queueRedeem
-  ) {
+  if (args.routeFamily === "queue-redeem" && score > REDEMPTION_ROUTE_FAMILY_CAPS.queueRedeem) {
     score = REDEMPTION_ROUTE_FAMILY_CAPS.queueRedeem;
     capsApplied.push("queue-route-cap");
   }
 
-  if (
-    args.routeFamily === "offchain-issuer" &&
-    score > REDEMPTION_ROUTE_FAMILY_CAPS.offchainIssuer
-  ) {
+  if (args.routeFamily === "offchain-issuer" && score > REDEMPTION_ROUTE_FAMILY_CAPS.offchainIssuer) {
     score = REDEMPTION_ROUTE_FAMILY_CAPS.offchainIssuer;
     capsApplied.push("offchain-route-cap");
   }
@@ -237,9 +218,7 @@ export function computeEffectiveExitScore(
   redemptionBackstopScore: number | null | undefined,
 ): number | null {
   const liquidity =
-    liquidityScore != null && Number.isFinite(liquidityScore)
-      ? Math.max(0, Math.min(100, liquidityScore))
-      : null;
+    liquidityScore != null && Number.isFinite(liquidityScore) ? Math.max(0, Math.min(100, liquidityScore)) : null;
   const redemption =
     redemptionBackstopScore != null && Number.isFinite(redemptionBackstopScore)
       ? Math.max(0, Math.min(100, redemptionBackstopScore))
@@ -256,10 +235,7 @@ export function computeEffectiveExitScore(
   return null;
 }
 
-export const REDEMPTION_ROUTE_FAMILY_LABELS: Record<
-  RedemptionRouteFamily,
-  string
-> = {
+export const REDEMPTION_ROUTE_FAMILY_LABELS: Record<RedemptionRouteFamily, string> = {
   "stablecoin-redeem": "Stablecoin redeem",
   "basket-redeem": "Basket redeem",
   "collateral-redeem": "Collateral redeem",
@@ -268,20 +244,14 @@ export const REDEMPTION_ROUTE_FAMILY_LABELS: Record<
   "offchain-issuer": "Offchain issuer",
 };
 
-export const REDEMPTION_ACCESS_LABELS: Record<
-  RedemptionAccessModel,
-  string
-> = {
+export const REDEMPTION_ACCESS_LABELS: Record<RedemptionAccessModel, string> = {
   "permissionless-onchain": "Permissionless onchain",
   "whitelisted-onchain": "Whitelisted onchain",
   "issuer-api": "Issuer / institutional",
   manual: "Manual / discretionary",
 };
 
-export const REDEMPTION_SETTLEMENT_LABELS: Record<
-  RedemptionSettlementModel,
-  string
-> = {
+export const REDEMPTION_SETTLEMENT_LABELS: Record<RedemptionSettlementModel, string> = {
   atomic: "Atomic",
   immediate: "Immediate",
   "same-day": "Same day",
@@ -289,20 +259,14 @@ export const REDEMPTION_SETTLEMENT_LABELS: Record<
   queued: "Queued",
 };
 
-export const REDEMPTION_EXECUTION_LABELS: Record<
-  RedemptionExecutionModel,
-  string
-> = {
+export const REDEMPTION_EXECUTION_LABELS: Record<RedemptionExecutionModel, string> = {
   "deterministic-onchain": "Deterministic onchain",
   "deterministic-basket": "Deterministic basket",
   "rules-based-nav": "Rules-based NAV",
   opaque: "Opaque",
 };
 
-export const REDEMPTION_OUTPUT_ASSET_LABELS: Record<
-  RedemptionOutputAssetType,
-  string
-> = {
+export const REDEMPTION_OUTPUT_ASSET_LABELS: Record<RedemptionOutputAssetType, string> = {
   "stable-single": "Stable output",
   "stable-basket": "Stable basket",
   "bluechip-collateral": "Blue-chip collateral",
