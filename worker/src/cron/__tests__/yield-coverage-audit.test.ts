@@ -75,6 +75,57 @@ describe("identifyCoverageGaps", () => {
     );
   });
 
+  it("splits source-family adapter and lending allowlist recommendations", () => {
+    const dlPools: DlPool[] = [
+      { pool: "morpho-usdc", chain: "Ethereum", project: "morpho-blue", symbol: "USDC", tvlUsd: 12_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "new-usdc", chain: "Ethereum", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+    ];
+
+    const gaps = identifyCoverageGaps(dlPools, new Set(), new Set(["morpho-blue"]));
+
+    expect(gaps.sourceFamilyAdapterRecommendations).toContainEqual(
+      expect.objectContaining({
+        project: "morpho-blue",
+        totalTvlUsd: 12_000_000,
+      }),
+    );
+    expect(gaps.lendingAllowlistRecommendations).toContainEqual(
+      expect.objectContaining({
+        project: "new-lender",
+        totalTvlUsd: 12_000_000,
+      }),
+    );
+    expect(gaps.lendingAllowlistRecommendations).not.toContainEqual(
+      expect.objectContaining({ project: "morpho-blue" }),
+    );
+  });
+
+  it("recommends native exact pools for tracked yield-bearing symbols", () => {
+    const dlPools: DlPool[] = [{
+      pool: "susde-native",
+      chain: "Ethereum",
+      project: "ethena",
+      symbol: "sUSDe",
+      tvlUsd: 50_000_000,
+      apy: 5,
+      apyBase: 5,
+      apyReward: null,
+      apyMean30d: 5,
+      stablecoin: true,
+      exposure: "single",
+      underlyingTokens: null,
+    }];
+
+    const gaps = identifyCoverageGaps(dlPools, new Set());
+
+    expect(gaps.nativeExactPoolRecommendations).toContainEqual(
+      expect.objectContaining({
+        pool: "susde-native",
+        stablecoinIds: expect.arrayContaining(["susde-ethena"]),
+      }),
+    );
+  });
+
   it("marks review-needed for protocols with <$10M TVL or <3 pools", () => {
     const dlPools: DlPool[] = [
       { pool: "p1", chain: "Ethereum", project: "small-protocol", symbol: "USDC", tvlUsd: 6_000_000, apy: 3, apyBase: 3, apyReward: null, apyMean30d: 3, stablecoin: true, exposure: "single", underlyingTokens: null },

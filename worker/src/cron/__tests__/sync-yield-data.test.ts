@@ -255,7 +255,7 @@ vi.mock("../../lib/constants", () => ({
 
 import { syncYieldData } from "../sync-yield-data";
 import { batchExecute } from "../../lib/db";
-import { getCache, setCache, setCacheIfNewer } from "../../lib/db-cache";
+import { getCache, setCache, setCacheIfNewer, writeFreshnessSentinel } from "../../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
@@ -342,6 +342,7 @@ describe("syncYieldData", () => {
     vi.mocked(getCache).mockReset().mockResolvedValue(null);
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
     vi.mocked(setCacheIfNewer).mockReset().mockResolvedValue({ written: true, skippedBecauseNewer: false });
+    vi.mocked(writeFreshnessSentinel).mockReset().mockResolvedValue(undefined);
     vi.mocked(batchExecute).mockReset().mockResolvedValue(0);
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(undefined);
@@ -402,8 +403,17 @@ describe("syncYieldData", () => {
     expect(result.itemCount).toBe(1);
     // batchExecute should have been called for upserts
     expect(batchExecute).toHaveBeenCalled();
-    // Cache should have been written for yield-rankings and report_card_cache
-    expect(setCache).toHaveBeenCalled();
+    expect(setCacheIfNewer).toHaveBeenCalledWith(
+      db,
+      "yield-rankings",
+      expect.any(String),
+      Math.floor(Date.now() / 1000),
+    );
+    expect(writeFreshnessSentinel).toHaveBeenCalledWith(
+      db,
+      "yield-data",
+      Math.floor(Date.now() / 1000),
+    );
   });
 
   it("returns a degraded no-op result while the cleanup writer pause is armed", async () => {
@@ -1535,7 +1545,7 @@ describe("syncYieldData", () => {
     expect(batchExecute).not.toHaveBeenCalled();
   });
 
-  it("marks the run degraded when the previous yield-rankings cache payload is malformed", async () => {
+  it("recovers a malformed previous yield-rankings cache when the new payload passes guards", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
@@ -1573,11 +1583,15 @@ describe("syncYieldData", () => {
     ]);
 
     const result = await syncYieldData(db);
-    const metadata = JSON.parse(result.metadata ?? "{}") as { reason?: string };
 
-    expect(result.status).toBe("degraded");
-    expect(metadata.reason).toBe("previous-yield-rankings-cache-invalid");
-    expect(batchExecute).not.toHaveBeenCalled();
+    expect(result.itemCount).toBe(1);
+    expect(batchExecute).toHaveBeenCalled();
+    expect(setCacheIfNewer).toHaveBeenCalledWith(
+      db,
+      "yield-rankings",
+      expect.any(String),
+      nowSec,
+    );
   });
 
   it("returns early when tracked yield coverage regresses below the guard threshold", async () => {
@@ -1667,7 +1681,7 @@ describe("syncYieldData", () => {
     expect(metadata.publishFailure).toBe("schema-validation-failed");
     expect(metadata.validationFailures).toBe(1);
     expect(batchExecute).not.toHaveBeenCalled();
-    const cacheCalls = vi.mocked(setCache).mock.calls;
+    const cacheCalls = vi.mocked(setCacheIfNewer).mock.calls;
     const wroteYieldRankings = cacheCalls.some((call) => call[1] === "yield-rankings");
     expect(wroteYieldRankings).toBe(false);
   });
@@ -1717,6 +1731,7 @@ describe("syncYieldData", () => {
     expect(metadata.fallbackMode ?? "").toContain("schema-validation-failed");
     expect(metadata.validationFailures).toBe(2);
     expect(metadata.cacheWriteSkipped).toBe(true);
+    expect(writeFreshnessSentinel).not.toHaveBeenCalled();
   });
 
   it("tries price-derived as additional source when DL returns 0% APY for navToken", async () => {
@@ -1788,7 +1803,7 @@ describe("syncYieldData", () => {
     // price-derived should be is_best (higher APY than DL's 0%)
     expect(priceDerivedRow?.boundValues?.[25]).toBe(1);
 
-    const rankingsCacheCall = vi.mocked(setCache).mock.calls.find((call) => call[1] === "yield-rankings");
+    const rankingsCacheCall = vi.mocked(setCacheIfNewer).mock.calls.find((call) => call[1] === "yield-rankings");
     const rankingsPayload = JSON.parse(String(rankingsCacheCall?.[2])) as {
       rankings: Array<{
         id: string;
@@ -2181,7 +2196,7 @@ describe("syncYieldData", () => {
     expect(onChainRow).toBeDefined();
     expect(Number(onChainRow?.boundValues?.[3])).toBeGreaterThan(0);
 
-    const rankingsCacheCall = vi.mocked(setCache).mock.calls.find((call) => call[1] === "yield-rankings");
+    const rankingsCacheCall = vi.mocked(setCacheIfNewer).mock.calls.find((call) => call[1] === "yield-rankings");
     const rankingsPayload = JSON.parse(String(rankingsCacheCall?.[2])) as {
       rankings: Array<{
         id: string;
@@ -3108,7 +3123,7 @@ describe("syncYieldData", () => {
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toContain("risk-free-rate:fred-api-error-retained");
 
-    const rankingsCacheCall = vi.mocked(setCache).mock.calls.find((call) => call[1] === "yield-rankings");
+    const rankingsCacheCall = vi.mocked(setCacheIfNewer).mock.calls.find((call) => call[1] === "yield-rankings");
     expect(rankingsCacheCall).toBeDefined();
     const rankingsPayload = JSON.parse(String(rankingsCacheCall?.[2])) as {
       provenance: { benchmark: { fallbackMode: string | null; isFallback: boolean } };
@@ -3183,7 +3198,7 @@ describe("syncYieldData", () => {
     expect(metadata.cacheWriteSkipped).toBe(false);
     expect(metadata.sourceCoverage.safetyCoverageRatio).toBe(0);
 
-    const cacheCalls = vi.mocked(setCache).mock.calls;
+    const cacheCalls = vi.mocked(setCacheIfNewer).mock.calls;
     expect(cacheCalls.some((call) => call[1] === "yield-rankings")).toBe(true);
     expect(cacheCalls.some((call) => call[1] === "report_card_cache")).toBe(false);
   });

@@ -67,6 +67,23 @@ describe("fetchYearnKongSources", () => {
     expect(results[0].yield.sourceKey).toContain("protocol-api:kong:");
   });
 
+  it("uses current net APY instead of monthly net APY", async () => {
+    mockFetch([{
+      match: "kong.yearn.fi",
+      body: { data: { vaults: [{
+        address: "0xabc", name: "USDC yVault", yearn: true,
+        asset: { symbol: "USDC" },
+        tvl: { close: 50_000_000 },
+        apy: { net: 0.025, monthlyNet: 0.1 },
+        meta: { category: "Stablecoin", isRetired: false },
+      }] } },
+    }]);
+
+    const results = await fetchYearnKongSources();
+    expect(results[0].yield.currentApy).toBeCloseTo(2.5);
+    expect(results[0].yield.apyBase).toBeCloseTo(2.5);
+  });
+
   it("maps Staked yBOLD to sBOLD as a native K3 source", async () => {
     mockFetch([{
       match: "kong.yearn.fi",

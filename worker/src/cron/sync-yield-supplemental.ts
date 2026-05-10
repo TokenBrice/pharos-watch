@@ -56,6 +56,7 @@ export async function syncYieldSupplemental(
   const {
     candidates,
     sourceFamilyCounts,
+    supplementalSourceAccounting,
     optionalRpcTelemetry,
   } = await loadSupplementalSourceFamilies({
     startSec,
@@ -78,6 +79,7 @@ export async function syncYieldSupplemental(
         dedupedSupplementalCandidates: 0,
         supplementalCandidatesWritten: 0,
         sourceFamilyCounts,
+        supplementalSourceAccounting,
         optionalRpcTelemetry,
       },
       fallbackMode: "empty-snapshot",
@@ -104,6 +106,7 @@ export async function syncYieldSupplemental(
         dedupedSupplementalCandidates: dedupedCandidates.length,
         supplementalCandidatesWritten: cacheResult.written ? dedupedCandidates.length : 0,
         sourceFamilyCounts,
+        supplementalSourceAccounting,
         optionalRpcTelemetry,
       },
       fallbackMode: null,

@@ -153,4 +153,16 @@ describe("yield config registry", () => {
       }),
     );
   });
+
+  it("keeps exact-pool overrides separate from the yield-bearing manifest", () => {
+    const manifestIds = new Set(YIELD_ADAPTER_MANIFEST.map((entry) => entry.stablecoinId));
+    const trackedById = new Map(TRACKED_STABLECOINS.map((coin) => [coin.id, coin]));
+    const nonYieldBearingExplicitPoolIds = Object.keys(EXPLICIT_YIELD_SOURCE_POOL_MAP)
+      .filter((stablecoinId) => !trackedById.get(stablecoinId)?.flags.yieldBearing);
+
+    expect(nonYieldBearingExplicitPoolIds).toContain("xaut-tether");
+    for (const stablecoinId of nonYieldBearingExplicitPoolIds) {
+      expect(manifestIds.has(stablecoinId), stablecoinId).toBe(false);
+    }
+  });
 });

@@ -205,7 +205,7 @@ describe("handleYieldRankings", () => {
         safetyScore: number;
         yieldToRisk: number | null;
         pharosYieldScore: number | null;
-        provenance: { usedDefaultSafety: boolean } | null;
+        provenance: { usedDefaultSafety: boolean; safetyProvenance?: string } | null;
       }>;
       provenance: {
         safetySnapshot: {
@@ -216,6 +216,7 @@ describe("handleYieldRankings", () => {
           reason: string | null;
         };
       };
+      warnings?: Array<{ code: string; reasons?: string[] }>;
       _meta: { ageSeconds: number };
     };
     expect(body.rankings).toHaveLength(3);
@@ -235,24 +236,58 @@ describe("handleYieldRankings", () => {
     expect(rated?.yieldToRisk).toBeCloseTo(5 / 35);
     expect(rated?.pharosYieldScore).toBe(12);
     expect(rated?.provenance?.usedDefaultSafety).toBe(false);
+    expect(rated?.provenance?.safetyProvenance).toBe("live-report-card");
 
     expect(unrated?.safetyGrade).toBe("NR");
     expect(unrated?.safetyScore).toBe(40);
     expect(unrated?.provenance?.usedDefaultSafety).toBe(true);
+    expect(unrated?.provenance?.safetyProvenance).toBe("default-safety");
 
     expect(body.provenance.safetySnapshot).toEqual({
       kind: "ok",
-      coverageRatio: 0.5,
+      coverageRatio: 0.3333,
       coveredCount: 1,
-      trackedCount: 2,
-      reason: null,
+      trackedCount: 3,
+      reason: "low-row-safety-coverage",
     });
+    expect(body.warnings?.[0]).toMatchObject({
+      code: "yield-safety-hydration-degraded",
+      reasons: ["low-row-safety-coverage"],
+    });
+    expect(res.headers.get("Warning")).toContain("199");
     expect(body._meta.ageSeconds).toBe(30);
   });
 
   it("returns 503 when cache is empty", async () => {
     const res = await handleYieldRankings(mockD1());
     expect(res.status).toBe(503);
+  });
+
+  it("keeps cached safety fields and emits Warning 199 when live safety hydration fails", async () => {
+    buildReportCardsSnapshotMock.mockRejectedValueOnce(new Error("report cards unavailable"));
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const db = makeCacheDb({
+      rankings: [],
+      riskFreeRate: 4.25,
+      scalingFactor: 8,
+      medianApy: 4.2,
+      updatedAt,
+      provenance: null,
+    }, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as {
+      warnings?: Array<{ code: string; reasons?: string[] }>;
+      _meta: { ageSeconds: number };
+    };
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Warning")).toContain("199");
+    expect(body.warnings?.[0]).toMatchObject({
+      code: "yield-safety-hydration-degraded",
+      reasons: ["live-report-card-hydration-failed"],
+    });
+    expect(body._meta.ageSeconds).toBe(30);
   });
 
   it("returns 503 when cached rankings JSON is malformed", async () => {

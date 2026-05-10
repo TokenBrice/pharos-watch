@@ -3,6 +3,7 @@ import { mockD1 } from "./helpers/mock-d1";
 import { makeYieldHistoryRow } from "./helpers/fixtures";
 import { handleYieldHistory } from "../yield-history";
 import { YIELD_HISTORY_OWNERSHIP_HANDOFFS } from "../../lib/yield-history-ownership-handoffs";
+import { YieldHistoryResponseSchema } from "@shared/types";
 
 describe("handleYieldHistory", () => {
   afterEach(() => {
@@ -324,6 +325,7 @@ describe("handleYieldHistory", () => {
 
     const body = await res.json() as { warning?: string };
     expect(body.warning).toContain("freshness lookup failed");
+    expect(() => YieldHistoryResponseSchema.parse(body)).not.toThrow();
 
     const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history"));
     expect(historyQuery?.binds[2]).toBe(nowSec - 60);

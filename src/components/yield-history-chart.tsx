@@ -59,6 +59,7 @@ export function YieldHistoryChart({
     externalSourceKeys,
   });
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
+  const historyWarning = model.bodyWarning ?? model.historyQuery.meta?.warning ?? null;
 
   const chartHeightClass = compact ? "h-[200px]" : "h-[300px]";
   const referenceLabelStyle = compact
@@ -95,6 +96,11 @@ export function YieldHistoryChart({
   if (model.chartData.length === 0) {
     return (
       <div className="space-y-3">
+        {historyWarning ? (
+          <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+            {historyWarning}
+          </div>
+        ) : null}
         <Controls
           compact={compact}
           days={model.days}
@@ -121,9 +127,9 @@ export function YieldHistoryChart({
 
   return (
     <div className="space-y-3">
-      {model.historyQuery.meta?.warning ? (
+      {historyWarning ? (
         <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-          {model.historyQuery.meta.warning}
+          {historyWarning}
         </div>
       ) : null}
       <Controls
@@ -284,6 +290,10 @@ export function YieldHistoryChart({
       </ChartShell>
       <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: BRAND_ACCENT }} />
+          Primary: {model.primarySourceLabel.label}
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
           <span className="font-mono tabular-nums">{formatChartNumber(benchmarkRate)}%</span>
           {model.resolvedBenchmarkLabel} reference
         </span>
@@ -301,10 +311,10 @@ export function YieldHistoryChart({
           <span className="h-2 w-2 rounded-[2px]" style={{ backgroundColor: CHART_BLUE }} />
           Source switches
         </span>
-        {model.overlayLabels.map((label, i) => (
-          <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
+        {model.overlayLabels.map((source, i) => (
+          <span key={source.sourceKey} className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: OVERLAY_COLORS[i + 1] ?? OVERLAY_COLORS[0] }} />
-            {label}
+            {source.label}
           </span>
         ))}
       </div>

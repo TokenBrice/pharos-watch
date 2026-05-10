@@ -5,6 +5,8 @@ import {
   buildRiskFreeRateCachePayload,
   serializeRiskFreeRateCache,
   buildDlStablecoinPoolsCache,
+  buildYieldSupplementalSourcesCache,
+  parseYieldSupplementalSourcesCache,
 } from "../yield-sync/cache";
 
 describe("parseRiskFreeRateCache", () => {
@@ -73,5 +75,132 @@ describe("parseDlStablecoinPoolsCache", () => {
 
   it("returns null for non-array non-object JSON", () => {
     expect(parseDlStablecoinPoolsCache('"just a string"', nowSec, nowSec)).toBeNull();
+  });
+
+  it("drops malformed cached DL rows while keeping valid rows", () => {
+    const raw = JSON.stringify([
+      { pool: "bad-apy", chain: "Ethereum", symbol: "sDAI", apy: Number.NaN, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null, apyMean30d: 5.0, underlyingTokens: null },
+      { pool: "valid", chain: "Ethereum", symbol: "sDAI", apy: 5.0, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null, apyMean30d: 5.0, underlyingTokens: null },
+    ]);
+
+    const result = parseDlStablecoinPoolsCache(raw, nowSec - 3600, nowSec);
+
+    expect(result?.pools.map((pool) => pool.pool)).toEqual(["valid"]);
+    expect(result?.meta.poolCount).toBe(1);
+  });
+
+  it("rejects structured DL cache payloads with future updatedAt", () => {
+    const raw = buildDlStablecoinPoolsCache([
+      { pool: "valid", chain: "Ethereum", symbol: "sDAI", apy: 5.0, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null, apyMean30d: 5.0, underlyingTokens: null },
+    ], nowSec + 1);
+
+    expect(parseDlStablecoinPoolsCache(raw, nowSec, nowSec)).toBeNull();
+  });
+});
+
+describe("parseYieldSupplementalSourcesCache", () => {
+  const nowSec = 1710500000;
+
+  it("accepts nullable reward and source TVL fields for otherwise valid supplemental candidates", () => {
+    const raw = buildYieldSupplementalSourcesCache([
+      {
+        symbol: "sDAI",
+        chain: "ethereum",
+        address: null,
+        yield: {
+          currentApy: 4.2,
+          apyBase: 4.2,
+          apyReward: null,
+          sourcePool: null,
+          sourceTvlUsd: null,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: "protocol-api:test:ethereum:0x1",
+          yieldSource: "Test Source",
+          yieldType: "lending-opportunity",
+          sourceObservedAt: nowSec,
+          comparisonAnchorObservedAt: null,
+        },
+      },
+    ], nowSec);
+
+    const result = parseYieldSupplementalSourcesCache(raw, nowSec, nowSec);
+
+    expect(result?.candidates).toHaveLength(1);
+  });
+
+  it("drops supplemental candidates with future observations or non-finite APY", () => {
+    const raw = JSON.stringify({
+      version: 1,
+      updatedAt: nowSec,
+      source: "sync-yield-supplemental",
+      sourceCount: 3,
+      data: [
+        {
+          symbol: "sDAI",
+          yield: {
+            currentApy: 4.2,
+            apyBase: 4.2,
+            apyReward: null,
+            sourcePool: null,
+            sourceTvlUsd: null,
+            dataSource: "protocol-api",
+            exchangeRate: null,
+            sourceKey: "valid",
+            sourceObservedAt: nowSec,
+            comparisonAnchorObservedAt: null,
+          },
+        },
+        {
+          symbol: "sDAI",
+          yield: {
+            currentApy: "bad",
+            sourceKey: "bad-apy",
+          },
+        },
+        {
+          symbol: "sDAI",
+          yield: {
+            currentApy: 4.2,
+            apyBase: 4.2,
+            apyReward: null,
+            sourcePool: null,
+            sourceTvlUsd: null,
+            dataSource: "protocol-api",
+            exchangeRate: null,
+            sourceKey: "future",
+            sourceObservedAt: nowSec + 1,
+            comparisonAnchorObservedAt: null,
+          },
+        },
+      ],
+    });
+
+    const result = parseYieldSupplementalSourcesCache(raw, nowSec, nowSec);
+
+    expect(result?.candidates.map((candidate) => candidate.yield.sourceKey)).toEqual(["valid"]);
+    expect(result?.sourceCount).toBe(3);
+  });
+
+  it("rejects supplemental cache payloads with future updatedAt", () => {
+    const raw = buildYieldSupplementalSourcesCache([
+      {
+        symbol: "sDAI",
+        yield: {
+          currentApy: 4.2,
+          apyBase: 4.2,
+          apyReward: null,
+          sourcePool: null,
+          sourceTvlUsd: null,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: "valid",
+          sourceObservedAt: nowSec,
+          comparisonAnchorObservedAt: null,
+        },
+      },
+    ], nowSec + 1);
+
+    expect(parseYieldSupplementalSourcesCache(raw, nowSec, nowSec)).toBeNull();
   });
 });

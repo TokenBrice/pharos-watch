@@ -131,7 +131,6 @@ export const PRICE_DERIVED_FALLBACK_IDS = new Set([
 
 export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
   { stablecoinId: "buidl-blackrock", spreadBps: 20, label: "T-bill proxy (net of 0.20% fee)" },
-  { stablecoinId: "usyc-hashnote", spreadBps: 50, label: "T-bill proxy (net of 0.50% performance fee)" },
   { stablecoinId: "ylds-figure", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" },
   { stablecoinId: "mtbill-midas", spreadBps: 0, label: "T-bill proxy" },
   { stablecoinId: "ousg-ondo-finance", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" },

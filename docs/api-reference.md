@@ -2150,7 +2150,7 @@ For the five tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, 
 | Param       | Type      | Default | Bounds | Description                                                       |
 | ----------- | --------- | ------- | ------ | ----------------------------------------------------------------- |
 | `days`      | `integer` | `90`    | 1–365  | Lookback window in days                                           |
-| `mode`      | `string`  | `best`  | —      | `best` for historically selected best-source rows                 |
+| `mode`      | `string`  | `best`  | `best`, `source` | `best` for historically selected best-source rows; `source` requires `sourceKey` |
 | `sourceKey` | `string`  | —       | —      | When present, returns source-specific history for that source key |
 
 **Response**

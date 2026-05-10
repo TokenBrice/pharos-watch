@@ -713,7 +713,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{apiBaseUrl}}/api/yield-history?stablecoin=%7B%7BstablecoinId%7D%7D&days=%7B%7Bdays%7D%7D",
+              "raw": "{{apiBaseUrl}}/api/yield-history?stablecoin=%7B%7BstablecoinId%7D%7D&days=%7B%7Bdays%7D%7D&mode=best",
               "host": [
                 "{{apiBaseUrl}}"
               ],
@@ -729,10 +729,14 @@
                 {
                   "key": "days",
                   "value": "{{days}}"
+                },
+                {
+                  "key": "mode",
+                  "value": "best"
                 }
               ]
             },
-            "description": "Historical yield observations for a stablecoin."
+            "description": "Historical yield observations for a required stablecoin. `days` accepts 1-365; `mode` accepts `best` or `source`."
           },
           "response": []
         },

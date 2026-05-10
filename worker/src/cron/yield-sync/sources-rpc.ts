@@ -1,5 +1,6 @@
 import { CHAIN_META } from "@shared/lib/chains";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
+import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
 import {
   fetchEtherscanUint256AtBlock,
   fetchEvmCallHexAtBlock,
@@ -261,7 +262,12 @@ export async function fetchOnChainRates(
 
 const COMPOUND_V3_GET_UTILIZATION = "0x7eb71131";
 const COMPOUND_V3_GET_SUPPLY_RATE = "0xd955759d";
+const ERC20_TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
 const SECONDS_PER_YEAR = 31_536_000;
+
+function inferStablecoinDecimals(symbol: string): number {
+  return symbol.toUpperCase() === "USDC" || symbol.toUpperCase() === "USDT" ? 6 : 18;
+}
 
 export interface CompoundV3SupplyRateResult {
   results: Array<{ stablecoinId: string; yield: ResolvedYield }>;
@@ -321,10 +327,39 @@ export async function fetchCompoundV3SupplyRates(
           continue;
         }
 
-        const ratePerSecond = Number(perSecondRate) / 1e18;
+        const ratePerSecond = finiteDecimalNumberFromBigInt(perSecondRate, 18);
+        if (ratePerSecond == null) {
+          recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "supply-rate-overflow");
+          accountedTargets.add(targetLabel);
+          continue;
+        }
         const apy = (Math.pow(1 + ratePerSecond, SECONDS_PER_YEAR) - 1) * 100;
         if (!Number.isFinite(apy) || apy <= 0) {
           recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "non-positive-apy");
+          accountedTargets.add(targetLabel);
+          continue;
+        }
+
+        const totalSupplyRaw = await fetchEvmUint256AtBlock(
+          target.chain,
+          target.comet,
+          ERC20_TOTAL_SUPPLY_SELECTOR,
+          "latest",
+          opts,
+        );
+        if (totalSupplyRaw == null || totalSupplyRaw === 0n) {
+          recordOptionalRpcMiss(
+            telemetry,
+            target.chain,
+            targetLabel,
+            totalSupplyRaw === 0n ? "zero-tvl" : "tvl-unavailable",
+          );
+          accountedTargets.add(targetLabel);
+          continue;
+        }
+        const sourceTvlUsd = finiteDecimalNumberFromBigInt(totalSupplyRaw, inferStablecoinDecimals(target.symbol));
+        if (sourceTvlUsd == null || sourceTvlUsd <= 0) {
+          recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "invalid-tvl");
           accountedTargets.add(targetLabel);
           continue;
         }
@@ -333,7 +368,7 @@ export async function fetchCompoundV3SupplyRates(
           stablecoinId: target.stablecoinId,
           yield: {
             currentApy: apy, apyBase: apy, apyReward: null,
-            sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
+            sourcePool: target.comet, sourceTvlUsd, dataSource: "protocol-api",
             exchangeRate: null,
             sourceKey: `protocol-api:compound-v3-supply:${target.chain}:${target.comet.toLowerCase()}`,
             yieldSource: `Compound V3 (${target.chain})`,
@@ -380,11 +415,30 @@ const AAVE_V3_POOL_ADDRESSES: Record<string, string> = {
   base: "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5",
 };
 const AAVE_GET_RESERVE_DATA_SELECTOR = "0x35ea6a75";
-const RAY = 10n ** 27n;
+const AAVE_RESERVE_DATA_CURRENT_LIQUIDITY_RATE_WORD = 2;
+const AAVE_RESERVE_DATA_ATOKEN_ADDRESS_WORD = 8;
 
 function rayToApy(currentLiquidityRate: bigint): number {
-  const ratePerSecond = Number(currentLiquidityRate) / Number(RAY) / 31536000;
+  const liquidityRate = finiteDecimalNumberFromBigInt(currentLiquidityRate, 27);
+  if (liquidityRate == null) return Number.NaN;
+  const ratePerSecond = liquidityRate / 31536000;
   return (Math.pow(1 + ratePerSecond, 31536000) - 1) * 100;
+}
+
+function readAbiWord(strippedHex: string, wordIndex: number): string | null {
+  const start = wordIndex * 64;
+  const end = start + 64;
+  if (strippedHex.length < end) return null;
+  return strippedHex.slice(start, end);
+}
+
+function readAbiAddress(strippedHex: string, wordIndex: number): string | null {
+  const word = readAbiWord(strippedHex, wordIndex);
+  if (!word) return null;
+  const address = `0x${word.slice(24)}`;
+  return /^0x[0-9a-fA-F]{40}$/.test(address) && address !== "0x0000000000000000000000000000000000000000"
+    ? address
+    : null;
 }
 
 export interface AaveV3RateTarget {
@@ -392,10 +446,21 @@ export interface AaveV3RateTarget {
   symbol: string;
   chain: string;
   assetAddress: string;
+  assetDecimals?: number;
+}
+
+export interface AaveV3SupplyRateRow {
+  stablecoinId: string;
+  symbol: string;
+  chain: string;
+  assetAddress: string;
+  apy: number;
+  sourceTvlUsd: number;
 }
 
 export interface AaveV3RateResult {
-  rates: Map<string, { apy: number; chain: string }>;
+  rates: Map<string, { apy: number; chain: string; sourceTvlUsd: number }>;
+  results: AaveV3SupplyRateRow[];
   telemetry: OptionalRpcFamilyTelemetry;
 }
 
@@ -404,7 +469,8 @@ export async function fetchAaveV3SupplyRates(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<AaveV3RateResult> {
-  const rates = new Map<string, { apy: number; chain: string }>();
+  const rates = new Map<string, { apy: number; chain: string; sourceTvlUsd: number }>();
+  const results: AaveV3SupplyRateRow[] = [];
   const telemetry = createOptionalRpcFamilyTelemetry(targets.length);
   const accountedTargets = new Set<string>();
   const resolvedTargets = new Set<string>();
@@ -418,7 +484,7 @@ export async function fetchAaveV3SupplyRates(
     }
     telemetry.emittedCount = rates.size;
     logOptionalRpcTelemetry("aave-v3", telemetry);
-    return { rates, telemetry };
+    return { rates, results, telemetry };
   }
 
   const budget = createOptionalSourceBudget("Aave V3 supply rates", OPTIONAL_PROTOCOL_RPC_BUDGET_MS, signal);
@@ -473,13 +539,13 @@ export async function fetchAaveV3SupplyRates(
             }
 
             const stripped = hex.slice(2);
-            if (stripped.length < 192) {
+            const liquidityRateHex = readAbiWord(stripped, AAVE_RESERVE_DATA_CURRENT_LIQUIDITY_RATE_WORD);
+            if (!liquidityRateHex) {
               recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "reserve-data-short");
               accountedTargets.add(targetLabel);
               return;
             }
 
-            const liquidityRateHex = stripped.slice(128, 192);
             const currentLiquidityRate = BigInt("0x" + liquidityRateHex);
             const apy = rayToApy(currentLiquidityRate);
             if (!Number.isFinite(apy) || apy <= 0) {
@@ -488,9 +554,55 @@ export async function fetchAaveV3SupplyRates(
               return;
             }
 
+            const aTokenAddress = readAbiAddress(stripped, AAVE_RESERVE_DATA_ATOKEN_ADDRESS_WORD);
+            if (!aTokenAddress) {
+              recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "atoken-address-unavailable");
+              accountedTargets.add(targetLabel);
+              return;
+            }
+            const aTokenSupplyRaw = await fetchEvmUint256AtBlock(
+              target.chain,
+              aTokenAddress,
+              ERC20_TOTAL_SUPPLY_SELECTOR,
+              "latest",
+              {
+                extraRpcUrls: rpcUrls,
+                signal: budget.signal,
+                timeoutMs: OPTIONAL_PROTOCOL_RPC_REQUEST_TIMEOUT_MS,
+                maxRetries: OPTIONAL_PROTOCOL_RPC_MAX_RETRIES,
+              },
+            );
+            if (aTokenSupplyRaw == null || aTokenSupplyRaw === 0n) {
+              recordOptionalRpcMiss(
+                telemetry,
+                target.chain,
+                targetLabel,
+                aTokenSupplyRaw === 0n ? "zero-tvl" : "tvl-unavailable",
+              );
+              accountedTargets.add(targetLabel);
+              return;
+            }
+            const sourceTvlUsd = finiteDecimalNumberFromBigInt(
+              aTokenSupplyRaw,
+              target.assetDecimals ?? inferStablecoinDecimals(target.symbol),
+            );
+            if (sourceTvlUsd == null || sourceTvlUsd <= 0) {
+              recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "invalid-tvl");
+              accountedTargets.add(targetLabel);
+              return;
+            }
+
+            results.push({
+              stablecoinId: target.stablecoinId,
+              symbol: target.symbol,
+              chain: target.chain,
+              assetAddress: target.assetAddress,
+              apy,
+              sourceTvlUsd,
+            });
             const existing = rates.get(target.stablecoinId);
             if (!existing || apy > existing.apy) {
-              rates.set(target.stablecoinId, { apy, chain: target.chain });
+              rates.set(target.stablecoinId, { apy, chain: target.chain, sourceTvlUsd });
             }
             resolvedTargets.add(targetLabel);
             telemetry.resolvedTargetCount = resolvedTargets.size;
@@ -521,9 +633,9 @@ export async function fetchAaveV3SupplyRates(
       }
     }
 
-    telemetry.emittedCount = rates.size;
+    telemetry.emittedCount = results.length;
     logOptionalRpcTelemetry("aave-v3", telemetry);
-    return { rates, telemetry };
+    return { rates, results, telemetry };
   } finally {
     budget.cleanup();
   }

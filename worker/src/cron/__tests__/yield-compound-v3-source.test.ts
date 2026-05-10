@@ -31,7 +31,8 @@ describe("fetchCompoundV3SupplyRates", () => {
   it("derives APY from per-second supply rate", async () => {
     mockEvmCall
       .mockResolvedValueOnce(687_700_000_000_000_000n)
-      .mockResolvedValueOnce(795_585_475n);
+      .mockResolvedValueOnce(795_585_475n)
+      .mockResolvedValueOnce(125_000_000_000_000n);
 
     const { results, telemetry } = await fetchCompoundV3SupplyRates(
       [
@@ -43,6 +44,8 @@ describe("fetchCompoundV3SupplyRates", () => {
     expect(results.length).toBe(1);
     expect(results[0].stablecoinId).toBe("usdc-circle");
     expect(results[0].yield.currentApy).toBeGreaterThan(0);
+    expect(results[0].yield.sourcePool).toBe("0xc3d688B66703497DAA19211EEdff47f25384cdc3");
+    expect(results[0].yield.sourceTvlUsd).toBe(125_000_000);
     expect(results[0].yield.sourceKey).toContain("protocol-api:compound-v3-supply:");
     expect(telemetry.resolvedTargetCount).toBe(1);
     expect(telemetry.emittedCount).toBe(1);
@@ -77,7 +80,8 @@ describe("fetchCompoundV3SupplyRates", () => {
   it("still probes the primary RPC when no fallback URL exists", async () => {
     mockEvmCall
       .mockResolvedValueOnce(687_700_000_000_000_000n)
-      .mockResolvedValueOnce(795_585_475n);
+      .mockResolvedValueOnce(795_585_475n)
+      .mockResolvedValueOnce(25_000_000_000_000n);
 
     const chainRpcs = new Map<string, ChainRpcConfig>([[
       "ethereum",

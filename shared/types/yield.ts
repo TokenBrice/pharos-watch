@@ -4,6 +4,13 @@ import { ReportCardGrade, ReportCardGradeSchema } from "./report-cards";
 
 export type YieldBenchmarkKey = "USD" | "EUR" | "CHF";
 export type YieldBenchmarkSelectionMode = "native" | "fallback-usd" | "manual-override";
+export type YieldSafetyProvenance = "live-report-card" | "cached-publish" | "default-safety";
+
+export interface YieldResponseWarning {
+  code: string;
+  message: string;
+  reasons?: string[];
+}
 
 export interface AltYieldSource {
   sourceKey: string;
@@ -65,6 +72,7 @@ export interface YieldRankingProvenance {
   previousBestSourceKey: string | null;
   usedLegacyHistory: boolean;
   usedDefaultSafety: boolean;
+  safetyProvenance?: YieldSafetyProvenance;
   benchmarkKey?: YieldBenchmarkKey;
   benchmarkLabel?: string;
   benchmarkCurrency?: string;
@@ -179,6 +187,7 @@ const YieldRankingProvenanceSchema = z.object({
   previousBestSourceKey: z.string().nullable(),
   usedLegacyHistory: z.boolean(),
   usedDefaultSafety: z.boolean(),
+  safetyProvenance: z.enum(["live-report-card", "cached-publish", "default-safety"]).optional(),
   benchmarkKey: z.enum(["USD", "EUR", "CHF"]).optional(),
   benchmarkLabel: z.string().optional(),
   benchmarkCurrency: z.string().optional(),
@@ -281,6 +290,7 @@ export interface YieldRankingsResponse {
   medianApy: number;
   updatedAt: number;
   provenance?: YieldRankingsProvenance | null;
+  warnings?: YieldResponseWarning[];
 }
 
 export const YieldRankingsResponseSchema: z.ZodType<YieldRankingsResponse> = z.object({
@@ -291,16 +301,23 @@ export const YieldRankingsResponseSchema: z.ZodType<YieldRankingsResponse> = z.o
   medianApy: z.number(),
   updatedAt: z.number(),
   provenance: YieldRankingsProvenanceSchema.nullable().optional(),
+  warnings: z.array(z.object({
+    code: z.string(),
+    message: z.string(),
+    reasons: z.array(z.string()).optional(),
+  })).optional(),
 });
 
 export interface YieldHistoryResponse {
   current: YieldHistoryPoint | null;
   history: YieldHistoryPoint[];
+  warning?: string;
   methodology: MethodologyEnvelope;
 }
 
 export const YieldHistoryResponseSchema: z.ZodType<YieldHistoryResponse> = z.object({
   current: YieldHistoryPointSchema.nullable(),
   history: z.array(YieldHistoryPointSchema),
+  warning: z.string().optional(),
   methodology: MethodologyEnvelopeSchema,
 });

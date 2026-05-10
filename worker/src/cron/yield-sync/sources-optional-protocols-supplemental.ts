@@ -1,3 +1,4 @@
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
 import { createOptionalSourceBudget, resolveCanonicalChain } from "./sources-helpers";
@@ -41,19 +42,92 @@ interface BeefyVault {
   tokenAddress: string;
 }
 
+interface TrackedMorphoAsset {
+  stablecoinId: string;
+  symbol: string;
+}
+
+interface TrackedMorphoFilters {
+  symbols: string[];
+  assetsByChainAddress: Map<string, TrackedMorphoAsset>;
+}
+
+const MORPHO_PAGE_SIZE = 100;
+const MORPHO_MIN_TVL_USD = 100_000;
+const PENDLE_MIN_EXPIRY_DAYS = 3;
+const PENDLE_MAX_EXPIRY_YEARS = 5;
+const PENDLE_MAX_IMPLIED_APY = 1;
+const BEEFY_MAX_APY = 0.5;
+const BEEFY_MIN_TVL_USD = 100_000;
+
+function buildMorphoFilters(): TrackedMorphoFilters {
+  const symbols = new Set<string>();
+  const assetsByChainAddress = new Map<string, TrackedMorphoAsset>();
+
+  for (const meta of ACTIVE_STABLECOINS) {
+    if (meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER") continue;
+    symbols.add(meta.symbol);
+
+    for (const contract of [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])]) {
+      const chain = resolveCanonicalChain(contract.chain);
+      if (!chain || !contract.address) continue;
+      assetsByChainAddress.set(`${chain}:${contract.address.toLowerCase()}`, {
+        stablecoinId: meta.id,
+        symbol: meta.symbol,
+      });
+    }
+  }
+
+  return {
+    symbols: [...symbols].sort((a, b) => a.localeCompare(b)),
+    assetsByChainAddress,
+  };
+}
+
+function resolveMorphoTrackedAsset(
+  filters: TrackedMorphoFilters,
+  chain: string,
+  asset: MorphoVaultItem["asset"],
+): TrackedMorphoAsset | null {
+  const normalizedAddress = asset.address?.toLowerCase() ?? null;
+  if (normalizedAddress) {
+    const byAddress = filters.assetsByChainAddress.get(`${chain}:${normalizedAddress}`);
+    if (byAddress) return byAddress;
+  }
+
+  const symbol = asset.symbol.trim();
+  const meta = ACTIVE_STABLECOINS.find((entry) => entry.symbol.toLowerCase() === symbol.toLowerCase());
+  return meta ? { stablecoinId: meta.id, symbol: meta.symbol } : null;
+}
+
+function isSanePendleExpiry(expiry: string, nowMs: number): boolean {
+  const expiryMs = Date.parse(expiry);
+  if (!Number.isFinite(expiryMs)) return false;
+
+  const minExpiryMs = nowMs + PENDLE_MIN_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+  const maxExpiryMs = nowMs + PENDLE_MAX_EXPIRY_YEARS * 365.25 * 24 * 60 * 60 * 1000;
+  return expiryMs >= minExpiryMs && expiryMs <= maxExpiryMs;
+}
+
 export async function fetchMorphoVaultSources(
   signal?: AbortSignal,
 ): Promise<ResolvedYieldCandidate[]> {
   const budget = createOptionalSourceBudget("Morpho vault sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
+  const filters = buildMorphoFilters();
+  if (filters.symbols.length === 0) return [];
+
   try {
-    const res = await fetchWithRetry(
-      "https://api.morpho.org/graphql",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
-        body: JSON.stringify({
-          query: `query($symbols: [String!]!) {
-  vaults(first: 100, where: { listed: true, assetSymbol_in: $symbols, totalAssetsUsd_gte: 100000 }) {
+    const results: ResolvedYieldCandidate[] = [];
+    let skip = 0;
+    while (!budget.budgetController.signal.aborted) {
+      const res = await fetchWithRetry(
+        "https://api.morpho.org/graphql",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+          body: JSON.stringify({
+            query: `query($symbols: [String!]!, $first: Int!, $skip: Int!) {
+  vaults(first: $first, skip: $skip, where: { listed: true, assetSymbol_in: $symbols, totalAssetsUsd_gte: 100000 }) {
     items {
       address name
       asset { symbol address }
@@ -62,48 +136,53 @@ export async function fetchMorphoVaultSources(
     }
   }
 }`,
-          variables: { symbols: ["USDC", "USDT", "DAI", "USDS", "GHO", "FRAX", "PYUSD", "FRXUSD", "crvUSD", "DOLA", "LUSD"] },
-        }),
-        signal: budget.signal,
-      },
-      0,
-      { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
-    );
-    if (!res?.ok) return [];
-
-    const body = (await res.json()) as { data?: { vaults?: { items?: MorphoVaultItem[] } } };
-    const items = body.data?.vaults?.items;
-    if (!Array.isArray(items)) return [];
-
-    const results: ResolvedYieldCandidate[] = [];
-    for (const vault of items) {
-      const apy = vault.state?.netApy;
-      if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0) continue;
-
-      const tvl = vault.state?.totalAssetsUsd;
-      if (typeof tvl !== "number" || tvl < 100_000) continue;
-      const chain = resolveCanonicalChain(vault.chain?.id);
-      if (!chain) continue;
-
-      results.push({
-        symbol: vault.asset.symbol,
-        chain,
-        address: vault.asset.address ?? null,
-        yield: {
-          currentApy: apy * 100,
-          apyBase: apy * 100,
-          apyReward: null,
-          sourcePool: vault.address,
-          sourceTvlUsd: tvl,
-          dataSource: "protocol-api",
-          exchangeRate: null,
-          sourceKey: `protocol-api:morpho-vault:${chain}:${vault.address.toLowerCase()}`,
-          yieldSource: `Morpho: ${vault.name}`,
-          yieldType: "lending-opportunity",
-          sourceObservedAt: Math.floor(Date.now() / 1000),
-          comparisonAnchorObservedAt: null,
+            variables: { symbols: filters.symbols, first: MORPHO_PAGE_SIZE, skip },
+          }),
+          signal: budget.signal,
         },
-      });
+        0,
+        { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+      );
+      if (!res?.ok) return results;
+
+      const body = (await res.json()) as { data?: { vaults?: { items?: MorphoVaultItem[] } } };
+      const items = body.data?.vaults?.items;
+      if (!Array.isArray(items) || items.length === 0) break;
+
+      for (const vault of items) {
+        const apy = vault.state?.netApy;
+        if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0) continue;
+
+        const tvl = vault.state?.totalAssetsUsd;
+        if (typeof tvl !== "number" || tvl < MORPHO_MIN_TVL_USD) continue;
+        const chain = resolveCanonicalChain(vault.chain?.id);
+        if (!chain) continue;
+        const trackedAsset = resolveMorphoTrackedAsset(filters, chain, vault.asset);
+        if (!trackedAsset) continue;
+
+        results.push({
+          stablecoinId: trackedAsset.stablecoinId,
+          symbol: trackedAsset.symbol,
+          chain,
+          address: vault.asset.address ?? null,
+          yield: {
+            currentApy: apy * 100,
+            apyBase: apy * 100,
+            apyReward: null,
+            sourcePool: vault.address,
+            sourceTvlUsd: tvl,
+            dataSource: "protocol-api",
+            exchangeRate: null,
+            sourceKey: `protocol-api:morpho-vault:${chain}:${vault.address.toLowerCase()}`,
+            yieldSource: `Morpho: ${vault.name}`,
+            yieldType: "lending-opportunity",
+            sourceObservedAt: Math.floor(Date.now() / 1000),
+            comparisonAnchorObservedAt: null,
+          },
+        });
+      }
+      skip += items.length;
+      if (items.length < MORPHO_PAGE_SIZE) break;
     }
     return results;
   } catch (error) {
@@ -124,6 +203,7 @@ export async function fetchPendleMarketSources(
 ): Promise<ResolvedYieldCandidate[]> {
   const results: ResolvedYieldCandidate[] = [];
   const budget = createOptionalSourceBudget("Pendle market sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
+  const nowMs = Date.now();
 
   try {
     for (const chainId of [1, 42161, 8453]) {
@@ -145,9 +225,12 @@ export async function fetchPendleMarketSources(
           for (const market of body.results) {
             if (!market.categoryIds?.includes("stables")) continue;
             if (!market.isActive) continue;
+            if (!isSanePendleExpiry(market.expiry, nowMs)) continue;
 
             const apy = market.impliedApy;
-            if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0) continue;
+            if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0 || apy > PENDLE_MAX_IMPLIED_APY) {
+              continue;
+            }
 
             const tvl = market.liquidity?.usd;
             if (typeof tvl !== "number" || tvl < 100_000) continue;
@@ -239,7 +322,7 @@ export async function fetchYearnKongSources(
           if (vault.meta?.isRetired) continue;
           if (vault.meta?.category !== "Stablecoin") continue;
 
-          const netApy = vault.apy?.monthlyNet ?? vault.apy?.net;
+          const netApy = vault.apy?.net;
           if (typeof netApy !== "number" || !Number.isFinite(netApy) || netApy <= 0) continue;
 
           const tvl = vault.tvl?.close;
@@ -297,7 +380,7 @@ export async function fetchBeefySources(
 ): Promise<ResolvedYieldCandidate[]> {
   const budget = createOptionalSourceBudget("Beefy sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
   try {
-    const [apyRes, vaultsRes] = await Promise.all([
+    const [apyRes, vaultsRes, tvlRes] = await Promise.all([
       fetchWithRetry(
         "https://api.beefy.finance/apy",
         { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal: budget.signal },
@@ -310,11 +393,18 @@ export async function fetchBeefySources(
         0,
         { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
       ),
+      fetchWithRetry(
+        "https://api.beefy.finance/tvl",
+        { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal: budget.signal },
+        0,
+        { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+      ),
     ]);
-    if (!apyRes?.ok || !vaultsRes?.ok) return [];
+    if (!apyRes?.ok || !vaultsRes?.ok || !tvlRes?.ok) return [];
 
     const apyMap = (await apyRes.json()) as Record<string, number | null>;
     const vaults = (await vaultsRes.json()) as BeefyVault[];
+    const tvlMap = (await tvlRes.json()) as Record<string, number | null>;
     if (!Array.isArray(vaults)) return [];
 
     const results: ResolvedYieldCandidate[] = [];
@@ -326,7 +416,9 @@ export async function fetchBeefySources(
       if (!vault.tokenAddress) continue;
 
       const apy = apyMap[vault.id];
-      if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0 || apy > 0.5) continue;
+      if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0 || apy > BEEFY_MAX_APY) continue;
+      const tvl = tvlMap[vault.id];
+      if (typeof tvl !== "number" || !Number.isFinite(tvl) || tvl < BEEFY_MIN_TVL_USD) continue;
 
       results.push({
         symbol: vault.assets[0],
@@ -337,7 +429,7 @@ export async function fetchBeefySources(
           apyBase: apy * 100,
           apyReward: null,
           sourcePool: vault.id,
-          sourceTvlUsd: null,
+          sourceTvlUsd: tvl,
           dataSource: "protocol-api",
           exchangeRate: null,
           sourceKey: `protocol-api:beefy:${chain}:${vault.id}`,

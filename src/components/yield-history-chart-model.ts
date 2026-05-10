@@ -11,6 +11,12 @@ export const BRAND_ACCENT = "oklch(0.72 0.14 248)";
 export const DEFAULT_DAYS = 90;
 export const PRESET_DAYS = [7, 30, 90, 365] as const;
 const MAX_OVERLAY_SOURCES = 4;
+const SOURCE_KEY_SUFFIX_LENGTH = 12;
+
+export interface YieldHistorySourceOption {
+  sourceKey: string;
+  yieldSource: string;
+}
 
 export interface YieldHistoryChartProps {
   stablecoinId: string;
@@ -20,10 +26,7 @@ export interface YieldHistoryChartProps {
   medianApy: number;
   defaultDays?: number;
   compact?: boolean;
-  availableSources?: Array<{
-    sourceKey: string;
-    yieldSource: string;
-  }>;
+  availableSources?: YieldHistorySourceOption[];
   hideSourceSelector?: boolean;
   externalSourceKey?: string;
   externalSourceKeys?: string[];
@@ -46,6 +49,11 @@ export interface YieldHistoryChartPoint {
 export type YieldHistoryChartSeriesPoint = YieldHistoryChartPoint & Partial<
   Record<`apy_overlay_${number}`, number | null>
 >;
+
+export interface YieldHistorySourceDisplay {
+  sourceKey: string;
+  label: string;
+}
 
 function normalizeDefaultDays(value?: number) {
   return PRESET_DAYS.includes(value as (typeof PRESET_DAYS)[number]) ? value! : DEFAULT_DAYS;
@@ -96,6 +104,39 @@ export function formatChartNumber(value: number, minimumFractionDigits = 2, maxi
 
 export function formatTickPercent(value: number) {
   return `${formatChartNumber(value, 0, Math.abs(value) >= 10 ? 1 : 2)}%`;
+}
+
+function formatSourceKeySuffix(sourceKey: string) {
+  return sourceKey.length > SOURCE_KEY_SUFFIX_LENGTH
+    ? `...${sourceKey.slice(-SOURCE_KEY_SUFFIX_LENGTH)}`
+    : sourceKey;
+}
+
+export function getYieldHistorySourceDisplayLabel(
+  source: YieldHistorySourceOption,
+  allSources: readonly YieldHistorySourceOption[],
+) {
+  const duplicateLabelCount = allSources.filter((candidate) => candidate.yieldSource === source.yieldSource).length;
+  if (duplicateLabelCount <= 1) {
+    return source.yieldSource;
+  }
+  return `${source.yieldSource} (${formatSourceKeySuffix(source.sourceKey)})`;
+}
+
+function getSourceDisplay(
+  sourceKey: string,
+  allSources: readonly YieldHistorySourceOption[],
+  fallbackLabel = sourceKey,
+): YieldHistorySourceDisplay {
+  if (sourceKey === "best") {
+    return { sourceKey, label: "Best source" };
+  }
+
+  const source = allSources.find((candidate) => candidate.sourceKey === sourceKey);
+  return {
+    sourceKey,
+    label: source ? getYieldHistorySourceDisplayLabel(source, allSources) : fallbackLabel,
+  };
 }
 
 function buildTicks(points: YieldHistoryChartPoint[], days: number) {
@@ -264,9 +305,12 @@ export function useYieldHistoryChartModel({
 
   const overlayLabels = useMemo(() => {
     return additionalOverlayKeys.map((key) => {
-      return availableSources.find((source) => source.sourceKey === key)?.yieldSource ?? key;
+      return getSourceDisplay(key, availableSources);
     });
   }, [additionalOverlayKeys, availableSources]);
+  const primarySourceLabel = useMemo(() => {
+    return getSourceDisplay(primarySourceKey, availableSources, primarySourceKey);
+  }, [availableSources, primarySourceKey]);
 
   const hasBreakdown = useMemo(() => {
     return chartData.some((point) => point.apyBase !== null);
@@ -313,6 +357,9 @@ export function useYieldHistoryChartModel({
     setShowBreakdown,
     onSourceChange,
     selectedSourceKey: effectiveSelectedSourceKey,
+    primarySourceKey,
+    primarySourceLabel,
+    bodyWarning: historyQuery.data?.warning ?? null,
     historyQuery,
     chartData,
     mergedChartData,

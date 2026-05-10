@@ -78,6 +78,7 @@ export async function publishYieldCoordinatorResults(params: {
       degradationReasons: string[];
       validationFailures: number;
       cacheWriteSkipped: boolean;
+      casSkipped: boolean;
     }
 > {
   const previewPublishability = await validateYieldRankingsPayloadForPublish(params.db, params.previewRankingsPayload);
@@ -107,11 +108,11 @@ export async function publishYieldCoordinatorResults(params: {
     medianApy: params.medianApy,
     dlPoolsMeta: params.dlPoolsMeta,
   });
-  await writeFreshnessSentinel(params.db, "yield-data", params.startSec);
-
-  const cacheWrite = await writeYieldRankingsCache(params.db, params.previewRankingsPayload);
+  const cacheWrite = await writeYieldRankingsCache(params.db, params.previewRankingsPayload, params.startSec);
   if (!cacheWrite.ok) {
     params.degradationReasons.push(cacheWrite.reason ?? "schema-validation-failed");
+  } else {
+    await writeFreshnessSentinel(params.db, "yield-data", params.startSec);
   }
 
   await pruneYieldTables(params.db, params.startSec, {
@@ -124,5 +125,6 @@ export async function publishYieldCoordinatorResults(params: {
     degradationReasons: params.degradationReasons,
     validationFailures: cacheWrite.validationFailures,
     cacheWriteSkipped: !cacheWrite.ok,
+    casSkipped: cacheWrite.cacheWrite?.skippedBecauseNewer === true,
   };
 }

@@ -127,13 +127,139 @@ export function parseYieldRankingsPublishedCutoff(
   }
 }
 
-function isResolvedYieldCandidate(value: unknown): value is ResolvedYieldCandidate {
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isNullableFiniteNumber(value: unknown): value is number | null | undefined {
+  return value == null || isFiniteNumber(value);
+}
+
+function isNullableNonNegativeFiniteNumber(value: unknown): value is number | null | undefined {
+  return value == null || (isFiniteNumber(value) && value >= 0);
+}
+
+function isNullableStringValue(value: unknown): value is string | null | undefined {
+  return value == null || typeof value === "string";
+}
+
+function isObservedAt(value: unknown, nowSec: number): value is number | null | undefined {
+  return value == null || (isFiniteNumber(value) && value >= 0 && value <= nowSec);
+}
+
+function parseCachePayloadUpdatedAt(value: unknown, cacheUpdatedAt: number, nowSec: number): number | null {
+  const updatedAt = toFiniteNumber(value) ?? cacheUpdatedAt;
+  return updatedAt <= nowSec ? updatedAt : null;
+}
+
+function summarizeInvalidRows(rows: unknown[], getKey: (row: unknown, index: number) => string): string[] {
+  return rows.slice(0, 5).map(getKey);
+}
+
+export function isValidDlPool(value: unknown): value is DlPool {
+  if (!isRecord(value)) return false;
+  if (typeof value.pool !== "string" || value.pool.trim() === "") return false;
+  if (typeof value.chain !== "string" || value.chain.trim() === "") return false;
+  if (typeof value.project !== "string" || value.project.trim() === "") return false;
+  if (typeof value.symbol !== "string" || value.symbol.trim() === "") return false;
+  if (value.poolMeta != null && typeof value.poolMeta !== "string") return false;
+  if (!isFiniteNumber(value.tvlUsd) || value.tvlUsd < 0) return false;
+  if (!isFiniteNumber(value.apy)) return false;
+  if (!isNullableFiniteNumber(value.apyBase)) return false;
+  if (!isNullableFiniteNumber(value.apyReward)) return false;
+  if (value.apyMean30d != null && !isFiniteNumber(value.apyMean30d)) return false;
+  if (typeof value.stablecoin !== "boolean") return false;
+  if (typeof value.exposure !== "string") return false;
+  if (
+    value.underlyingTokens != null &&
+    (!Array.isArray(value.underlyingTokens) || value.underlyingTokens.some((token) => typeof token !== "string"))
+  ) {
+    return false;
+  }
+  return true;
+}
+
+export function filterValidDlPools(
+  rows: unknown[],
+  context: string,
+): { pools: DlPool[]; rejectedCount: number; rejectedExamples: string[] } {
+  const pools: DlPool[] = [];
+  const rejected: unknown[] = [];
+  for (const row of rows) {
+    if (isValidDlPool(row)) {
+      pools.push(row);
+    } else {
+      rejected.push(row);
+    }
+  }
+  const rejectedExamples = summarizeInvalidRows(rejected, (row, index) => {
+    if (isRecord(row) && typeof row.pool === "string") return row.pool;
+    return `row-${index}`;
+  });
+  if (rejected.length > 0) {
+    console.warn(
+      `[yield-sync] Dropped ${rejected.length} invalid DL pool rows from ${context}: ${rejectedExamples.join(", ")}`,
+    );
+  }
+  return { pools, rejectedCount: rejected.length, rejectedExamples };
+}
+
+function isResolvedYieldCandidate(value: unknown, nowSec: number): value is ResolvedYieldCandidate {
   if (!isRecord(value)) return false;
   if (typeof value.symbol !== "string" || value.symbol.trim() === "") return false;
   if (value.chain != null && typeof value.chain !== "string") return false;
   if (value.address != null && typeof value.address !== "string") return false;
   if (!isRecord(value.yield)) return false;
-  return typeof value.yield.sourceKey === "string" && value.yield.sourceKey.trim() !== "";
+  const candidateYield = value.yield;
+  if (typeof candidateYield.sourceKey !== "string" || candidateYield.sourceKey.trim() === "") return false;
+  if (!isFiniteNumber(candidateYield.currentApy)) return false;
+  if (!isNullableFiniteNumber(candidateYield.apyBase)) return false;
+  if (!isNullableFiniteNumber(candidateYield.apyReward)) return false;
+  if (!isNullableStringValue(candidateYield.sourcePool)) return false;
+  if (!isNullableNonNegativeFiniteNumber(candidateYield.sourceTvlUsd)) return false;
+  if (
+    candidateYield.dataSource !== "onchain" &&
+    candidateYield.dataSource !== "defillama" &&
+    candidateYield.dataSource !== "defillama-auto" &&
+    candidateYield.dataSource !== "price-derived" &&
+    candidateYield.dataSource !== "rate-derived" &&
+    candidateYield.dataSource !== "protocol-api"
+  ) {
+    return false;
+  }
+  if (!isNullableFiniteNumber(candidateYield.exchangeRate)) return false;
+  if (!isObservedAt(candidateYield.sourceObservedAt, nowSec)) return false;
+  if (!isObservedAt(candidateYield.comparisonAnchorObservedAt, nowSec)) return false;
+  if (candidateYield.yieldSource != null && typeof candidateYield.yieldSource !== "string") return false;
+  if (candidateYield.project != null && typeof candidateYield.project !== "string") return false;
+  return true;
+}
+
+function filterValidSupplementalCandidates(
+  rows: unknown[],
+  nowSec: number,
+): { candidates: ResolvedYieldCandidate[]; rejectedCount: number; rejectedExamples: string[] } {
+  const candidates: ResolvedYieldCandidate[] = [];
+  const rejected: unknown[] = [];
+  for (const row of rows) {
+    if (isResolvedYieldCandidate(row, nowSec)) {
+      candidates.push(row);
+    } else {
+      rejected.push(row);
+    }
+  }
+  const rejectedExamples = summarizeInvalidRows(rejected, (row, index) => {
+    if (isRecord(row) && isRecord(row.yield) && typeof row.yield.sourceKey === "string") {
+      return row.yield.sourceKey;
+    }
+    return `row-${index}`;
+  });
+  if (rejected.length > 0) {
+    console.warn(
+      `[yield-sync] Dropped ${rejected.length} invalid supplemental yield source rows: ${rejectedExamples.join(", ")}`,
+    );
+  }
+  return { candidates, rejectedCount: rejected.length, rejectedExamples };
 }
 
 export function buildRiskFreeRateCachePayload(
@@ -326,27 +452,38 @@ export function parseDlStablecoinPoolsCache(
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (Array.isArray(parsed)) {
+      const updatedAt = parseCachePayloadUpdatedAt(undefined, cacheUpdatedAt, nowSec);
+      if (updatedAt == null) {
+        console.warn("[yield-sync] Rejected legacy DL pools cache with future updatedAt");
+        return null;
+      }
+      const { pools } = filterValidDlPools(parsed, "legacy dl-stablecoin-pools cache");
       return {
-        pools: parsed as DlPool[],
+        pools,
         meta: {
           mode: "dex-cache",
-          updatedAt: cacheUpdatedAt,
-          ageSeconds: Math.max(0, nowSec - cacheUpdatedAt),
-          poolCount: parsed.length,
+          updatedAt,
+          ageSeconds: nowSec - updatedAt,
+          poolCount: pools.length,
           fallbackMode: "legacy-array-cache",
         },
       };
     }
 
     if (isRecord(parsed) && Array.isArray(parsed.data)) {
-      const updatedAt = toFiniteNumber(parsed.updatedAt) ?? cacheUpdatedAt;
+      const { pools } = filterValidDlPools(parsed.data, "structured dl-stablecoin-pools cache");
+      const updatedAt = parseCachePayloadUpdatedAt(parsed.updatedAt, cacheUpdatedAt, nowSec);
+      if (updatedAt == null) {
+        console.warn("[yield-sync] Rejected DL pools cache with future updatedAt");
+        return null;
+      }
       return {
-        pools: parsed.data as DlPool[],
+        pools,
         meta: {
           mode: "dex-cache",
           updatedAt,
           ageSeconds: Math.max(0, nowSec - updatedAt),
-          poolCount: toFiniteNumber(parsed.poolCount) ?? parsed.data.length,
+          poolCount: pools.length,
           fallbackMode: null,
         },
       };
@@ -380,18 +517,27 @@ export function parseYieldSupplementalSourcesCache(
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (Array.isArray(parsed)) {
-      const candidates = parsed.filter(isResolvedYieldCandidate);
+      const updatedAt = parseCachePayloadUpdatedAt(undefined, cacheUpdatedAt, nowSec);
+      if (updatedAt == null) {
+        console.warn("[yield-sync] Rejected legacy supplemental sources cache with future updatedAt");
+        return null;
+      }
+      const { candidates } = filterValidSupplementalCandidates(parsed, nowSec);
       return {
         candidates,
-        updatedAt: cacheUpdatedAt,
-        ageSeconds: Math.max(0, nowSec - cacheUpdatedAt),
+        updatedAt,
+        ageSeconds: nowSec - updatedAt,
         sourceCount: candidates.length,
       };
     }
 
     if (isRecord(parsed) && Array.isArray(parsed.data)) {
-      const candidates = parsed.data.filter(isResolvedYieldCandidate);
-      const updatedAt = toFiniteNumber(parsed.updatedAt) ?? cacheUpdatedAt;
+      const { candidates } = filterValidSupplementalCandidates(parsed.data, nowSec);
+      const updatedAt = parseCachePayloadUpdatedAt(parsed.updatedAt, cacheUpdatedAt, nowSec);
+      if (updatedAt == null) {
+        console.warn("[yield-sync] Rejected supplemental sources cache with future updatedAt");
+        return null;
+      }
       return {
         candidates,
         updatedAt,

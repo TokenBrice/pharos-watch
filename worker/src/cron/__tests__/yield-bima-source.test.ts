@@ -59,9 +59,9 @@ describe("fetchBimaSusbdSource", () => {
 
     expect(result).toEqual(
       expect.objectContaining({
-        currentApy: 5.5,
+        currentApy: 4.25,
         apyBase: 4.25,
-        apyReward: 1.25,
+        apyReward: null,
         sourcePool: "0x5F2283c7C8967c5Fb3a959E63ea89865B882d627",
         sourceTvlUsd: 250_000,
         dataSource: "protocol-api",
@@ -85,6 +85,27 @@ describe("fetchBimaSusbdSource", () => {
               amountTVL: 10,
               unboostedAPR: 1,
               boostedAPR: 1.5,
+            },
+          ],
+        },
+      },
+    ]);
+
+    await expect(fetchBimaSusbdSource()).resolves.toBeNull();
+  });
+
+  it("does not publish boosted-only APR because boosts are user-specific", async () => {
+    mockFetch([
+      {
+        match: "bima.money/api/earn/pools",
+        body: {
+          success: true,
+          data: [
+            {
+              id: "0x5F2283c7C8967c5Fb3a959E63ea89865B882d627",
+              token: { title: "USBD", label: "USBD" },
+              amountTVL: 250_000,
+              boostedAPR: 5.5,
             },
           ],
         },
