@@ -1,4 +1,4 @@
-import { BLUECHIP_SLUG_MAP } from "../lib/bluechip-slugs";
+import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
 import { excludeFrozenIds } from "./shared/exclude-frozen";
 import { BluechipGradeSchema } from "@shared/types/core";
 import type { BluechipRating, BluechipSmidge } from "@shared/types/market";

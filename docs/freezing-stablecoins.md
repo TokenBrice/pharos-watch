@@ -41,7 +41,7 @@ Some worker subsystems maintain their own per-coin tables. Remove the frozen coi
 
 - `worker/src/lib/mint-burn-contracts-data.ts` — remove from `MINT_BURN_CONFIG_SPECS` if present.
 - `worker/src/lib/blacklist-contracts.ts` — remove from `CONTRACT_CONFIGS` if present.
-- `worker/src/lib/bluechip-slugs.ts` — remove from `BLUECHIP_SLUG_MAP` if present.
+- `shared/lib/bluechip-slugs.ts` — remove from `BLUECHIP_SLUG_MAP` if present.
 - `worker/src/cron/yield-history-backfill.ts` — remove from `YIELD_POOL_MAP` if present.
 - `src/lib/compare-pages.ts` — remove from `STATIC_COMPARE_PAIRS` if any pair includes the coin.
 - Any per-coin sync cron (e.g. `sync-usds-status.ts`, `sync-kinesis-supply.ts`) — disable or remove.

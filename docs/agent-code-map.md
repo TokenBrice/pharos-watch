@@ -563,7 +563,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/blacklist-current-balances.ts` - BlacklistCurrentBalanceRow, deleteBlacklistCurrentBalance, loadBlacklistCurrentBalanceMap, upsertBlacklistCurrentBalance
 - `worker/src/lib/blacklist-gaps.ts` - BlacklistGapMetrics, queryBlacklistGapMetrics
 - `worker/src/lib/bluechip-cache.ts` - parseBluechipRatingsCache
-- `worker/src/lib/bluechip-slugs.ts` - BLUECHIP_SLUG_MAP
+- `shared/lib/bluechip-slugs.ts` - BLUECHIP_SLUG_MAP
 - `worker/src/lib/cache-json.ts` - CachedJsonRow, JsonDecodeMode, JsonDecodeResult, decodeCachedJson, decodeJsonString
 - `worker/src/lib/cex-orderbooks.ts` - CexOrderbookDepth, DirectCexOrderbookDepthSummary, computeOrderbookDepth, fetchBinanceOrderbookDepths, fetchCoinbaseOrderbookDepths, fetchKrakenOrderbookDepths
 - `worker/src/lib/cex-tickers.ts` - BINANCE_KNOWN_SYMBOLS, BITSTAMP_KNOWN_SYMBOLS, COINBASE_KNOWN_SYMBOLS, CexTickerBatch, KRAKEN_KNOWN_SYMBOLS, fetchBinancePricesDetailed

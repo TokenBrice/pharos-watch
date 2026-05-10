@@ -88,6 +88,7 @@ improvement.plan.md
 # worker
 /worker/node_modules
 /worker/.wrangler
+/.wrangler
 /worker/.dev.vars
 /.dev.vars
 

@@ -18,7 +18,7 @@ This subsystem is a reference-data sync, not a Pharos-owned scoring model. There
 
 ## Coverage
 
-Coverage is defined explicitly in `worker/src/lib/bluechip-slugs.ts`.
+Coverage is defined explicitly in `shared/lib/bluechip-slugs.ts`.
 
 - `BLUECHIP_SLUG_MAP` contains 19 Bluechip slugs mapped to canonical Pharos IDs.
 - Only coins present in both systems are fetched.
@@ -96,7 +96,7 @@ See [API Reference](./api-reference.md) for the exact response shape.
 
 | File | Role |
 |------|------|
-| `worker/src/lib/bluechip-slugs.ts` | Explicit Bluechip slug → Pharos ID coverage map |
+| `shared/lib/bluechip-slugs.ts` | Explicit Bluechip slug → Pharos ID coverage map |
 | `worker/src/cron/sync-bluechip.ts` | Daily fetch + normalization + cache write |
 | `worker/src/api/cache-handlers.ts` | Public cache-passthrough handler for `/api/bluechip-ratings` |
 | `src/hooks/api-hooks.ts` | TanStack Query hook export for `useBluechipRatings()` |

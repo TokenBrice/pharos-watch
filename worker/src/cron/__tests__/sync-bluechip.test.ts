@@ -3,7 +3,7 @@ import { mockD1, type MockD1Database } from "../../api/__tests__/helpers/mock-d1
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 import { recordOutcomeSafe } from "../../lib/circuit-breaker";
 
-vi.mock("../../lib/bluechip-slugs", () => ({
+vi.mock("@shared/lib/bluechip-slugs", () => ({
   BLUECHIP_SLUG_MAP: {
     tether: "usdt-tether",
     usdc: "usdc-circle",

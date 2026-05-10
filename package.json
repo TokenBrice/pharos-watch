@@ -10,9 +10,9 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "dev": "node scripts/run-dev-api-proxy.mjs & next dev",
+    "dev": "node scripts/dev-api-proxy.mjs & next dev",
     "dev:next": "next dev",
-    "dev:proxy": "node scripts/run-dev-api-proxy.mjs",
+    "dev:proxy": "node scripts/dev-api-proxy.mjs",
     "prebuild": "tsx scripts/generate-sitemap-dates.ts && tsx scripts/generate-docs-metadata.ts && tsx scripts/generate-cemetery-dataset.ts && tsx scripts/generate-postman-collection.ts && tsx scripts/generate-openapi-spec.ts && tsx scripts/generate-llms-txt.ts",
     "build": "next build",
     "build:world-map": "tsx scripts/build-world-map-svg.ts",

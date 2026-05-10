@@ -17,7 +17,7 @@ import { DEAD_STABLECOINS } from "../shared/lib/dead-stablecoins";
 // Independent registries that the freeze runbook requires us to clean up.
 import { MINT_BURN_CONFIG_SPECS } from "../worker/src/lib/mint-burn-contracts-data";
 import { CONTRACT_CONFIGS } from "../worker/src/lib/blacklist-contracts";
-import { BLUECHIP_SLUG_MAP } from "../worker/src/lib/bluechip-slugs";
+import { BLUECHIP_SLUG_MAP } from "../shared/lib/bluechip-slugs";
 // Raw pool map — `yield-config.ts` re-exports this with no frozen filter,
 // so the raw module is the source of truth for "is this id present?".
 import { YIELD_POOL_MAP } from "../worker/src/cron/yield-config-pools";
@@ -74,7 +74,7 @@ for (const config of CONTRACT_CONFIGS) {
 for (const id of Object.keys(BLUECHIP_SLUG_MAP)) {
   if (FROZEN_IDS.has(id)) {
     failures.push(
-      `${id}: still in BLUECHIP_SLUG_MAP (worker/src/lib/bluechip-slugs.ts) — remove per freeze runbook`,
+      `${id}: still in BLUECHIP_SLUG_MAP (shared/lib/bluechip-slugs.ts) — remove per freeze runbook`,
     );
   }
 }

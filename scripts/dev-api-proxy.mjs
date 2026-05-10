@@ -9,6 +9,14 @@
  */
 
 import { createServer } from "node:http";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+
+const envFile = resolve(".env.local");
+
+if (existsSync(envFile)) {
+  process.loadEnvFile(envFile);
+}
 
 const SECRET = process.env.SITE_API_SHARED_SECRET?.trim();
 const UPSTREAM_ORIGIN =

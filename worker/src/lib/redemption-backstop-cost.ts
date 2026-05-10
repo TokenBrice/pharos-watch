@@ -9,7 +9,7 @@ import type {
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReserveSnapshotMetadataRecord } from "./live-reserves-store";
 import { readRedemptionBackstopLiveMetadata } from "./redemption-backstop-live-metadata";
-import { resolveRedemptionDocs } from "./redemption-backstop-docs";
+import { resolveRedemptionDocs } from "@shared/lib/redemption-backstop-docs";
 
 export interface ResolvedRedemptionCost {
   score: number;
