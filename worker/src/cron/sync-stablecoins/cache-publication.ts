@@ -1,0 +1,148 @@
+import { FROZEN_IDS, FROZEN_META_BY_ID } from "@shared/lib/stablecoins";
+import { validatePayloadWithSchema } from "../../lib/api-utils";
+import { sendAlert } from "../../lib/alerts";
+import {
+  savePriceCache,
+  setCacheIfNewer,
+  type PriceCacheWriteEntry,
+} from "../../lib/db-cache";
+import type { PeggedAsset } from "./enrich-prices";
+import {
+  getStablecoinsCacheAgeSec,
+  normalizeStablecoinsPayload,
+  StablecoinListResponseSchema,
+  summarizeValidationIssues,
+  writeInvalidStablecoinsDiagnostic,
+  type CronResult,
+  type StablecoinsPayload,
+} from "./shared";
+
+export interface CacheValidationResult {
+  /** Whether the schema validation succeeded and the cache was written. */
+  written: boolean;
+  /** Whether the write was skipped because a newer canonical cache already exists. */
+  skippedBecauseNewer: boolean;
+  cacheKey: string;
+  syncStartSec: number;
+  /** If validation failed, the degraded CronResult to return. */
+  blockedResult?: CronResult;
+}
+
+export interface ValidateAndCacheInput {
+  assets: PeggedAsset[];
+  fxFallbackRates?: Record<string, number>;
+  db: D1Database;
+  syncStartSec: number;
+  signal?: AbortSignal;
+  alertWebhookUrl?: string | null;
+  /** "main" or "fallback" - controls log messages and alert context */
+  validationContext: "main" | "fallback";
+  returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
+  abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult;
+}
+
+/**
+ * Normalizes the payload, validates against the schema, and writes to the
+ * stablecoins cache. Returns the CAS outcome on valid payloads or
+ * `{ written: false, blockedResult }` on validation failure.
+ */
+export async function validateAndWriteStablecoinsCache(
+  input: ValidateAndCacheInput,
+  buildBlockedResult: (stablecoinsCacheAgeSec: number | null) => CronResult,
+): Promise<CacheValidationResult | CronResult> {
+  const {
+    assets,
+    fxFallbackRates,
+    db,
+    syncStartSec,
+    signal,
+    alertWebhookUrl,
+    validationContext,
+    returnIfAborted,
+  } = input;
+
+  // Tag frozen coins so /api/stablecoins exposes `frozen` and `frozenAt` per-coin.
+  // Runs after intake's mergeFrozenSnapshots so injected rows also get tagged here.
+  for (const asset of assets) {
+    if (FROZEN_IDS.has(asset.id)) {
+      asset.frozen = true;
+      const frozenAt = FROZEN_META_BY_ID.get(asset.id)?.frozenAt;
+      if (frozenAt != null) {
+        asset.frozenAt = frozenAt;
+      }
+    }
+  }
+
+  const llamaData: StablecoinsPayload = { peggedAssets: assets, fxFallbackRates };
+  const normalizedPayload = normalizeStablecoinsPayload(llamaData);
+  const validationLabel = validationContext === "fallback"
+    ? "sync-stablecoins:stablecoins:fallback"
+    : "sync-stablecoins:stablecoins";
+  const validation = validatePayloadWithSchema(
+    StablecoinListResponseSchema,
+    normalizedPayload,
+    validationLabel,
+  );
+
+  if (!validation.ok) {
+    const issueSummary = summarizeValidationIssues(validation.issues);
+    const stablecoinsCacheAgeSec = await getStablecoinsCacheAgeSec(db);
+    console.error(
+      `[sync-stablecoins] Schema validation failed${validationContext === "fallback" ? " in CG fallback" : ""}; blocking stablecoins cache write:`,
+      issueSummary,
+    );
+    await sendAlert(
+      alertWebhookUrl ?? null,
+      "Stablecoins schema validation warning",
+      `context=${validationContext}; blocked stablecoins cache write; issues=${issueSummary}; stablecoinsCacheAgeSec=${stablecoinsCacheAgeSec ?? "missing"}`,
+    );
+    await writeInvalidStablecoinsDiagnostic(
+      db,
+      syncStartSec,
+      validationContext,
+      normalizedPayload,
+      validation.issues,
+      stablecoinsCacheAgeSec,
+    );
+    return {
+      written: false,
+      skippedBecauseNewer: false,
+      cacheKey: "stablecoins",
+      syncStartSec,
+      blockedResult: buildBlockedResult(stablecoinsCacheAgeSec),
+    };
+  }
+
+  const cacheWriteAbort = returnIfAborted(signal, validationContext === "fallback" ? "fallback-cache-write" : "persist-main-cache");
+  if (cacheWriteAbort) return cacheWriteAbort;
+  const cacheResult = await setCacheIfNewer(db, "stablecoins", JSON.stringify(validation.data), syncStartSec);
+  if (cacheResult.written) {
+    console.log(`[sync-stablecoins] ${validationContext === "fallback" ? "CG fallback: cached" : "Cached"} ${assets.length} assets`);
+  } else {
+    console.log(
+      `[sync-stablecoins] Skipped stablecoins cache write; newer canonical cache already exists ` +
+      `(syncStartSec=${syncStartSec})`,
+    );
+  }
+
+  return {
+    ...cacheResult,
+    cacheKey: "stablecoins",
+    syncStartSec,
+  };
+}
+
+export async function commitReplayPriceCache(input: {
+  db: D1Database;
+  entries: PriceCacheWriteEntry[];
+  signal?: AbortSignal;
+  returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
+  stagePrefix?: string;
+}): Promise<CronResult | null> {
+  if (input.entries.length === 0) return null;
+  const stage = `${input.stagePrefix ?? ""}save-price-cache`;
+  const priceCacheWriteAbort = input.returnIfAborted(input.signal, stage);
+  if (priceCacheWriteAbort) return priceCacheWriteAbort;
+  await savePriceCache(input.db, input.entries);
+  return null;
+}

@@ -1,6 +1,6 @@
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices";
 import { buildSyncMetadata, type CronResult, type PriceSourceHealth } from "./shared";
-import type { CacheValidationResult } from "./post-enrichment";
+import type { CacheValidationResult } from "./cache-publication";
 import type { CanonicalDeduplicationResult } from "./phase-helpers";
 import type { GtProbeStats } from "../../lib/geckoterminal-price-probe";
 import {
@@ -8,6 +8,7 @@ import {
   isPriceSourceHealthBucketKey,
   splitCompositePriceSource,
 } from "@shared/lib/pricing-sources";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 
 function mapSourceToBucket(
@@ -74,6 +75,61 @@ export function buildPriceSourceHealth(assets: PeggedAsset[]): PriceSourceHealth
   };
 }
 
+interface PricingSourceAuditReport {
+  missingPriceCount: number;
+  fallbackOrCachedCount: number;
+  lowConfidenceCount: number;
+  assetsWithoutIndependentHardSource: string[];
+  providerRejectionCounts: Record<string, number>;
+  providerFailuresBySource: Record<string, number>;
+}
+
+function hasIndependentHardSource(asset: PeggedAsset): boolean {
+  const sources = asset.agreeSources && asset.agreeSources.length > 0
+    ? asset.agreeSources
+    : asset.priceSource
+      ? splitCompositePriceSource(asset.priceSource)
+      : [];
+  return sources.some((source) => {
+    const trustTier = getPricingSourceRegistryEntry(source)?.trustTier;
+    return trustTier === "hard_market" || trustTier === "hard_oracle" || trustTier === "hard_protocol";
+  });
+}
+
+export function buildPricingSourceAuditReport(
+  assets: PeggedAsset[],
+  providerDiagnostics: readonly PricingProviderAttemptDiagnostic[] = [],
+): PricingSourceAuditReport {
+  const providerRejectionCounts: Record<string, number> = {};
+  const providerFailuresBySource: Record<string, number> = {};
+
+  for (const diagnostic of providerDiagnostics) {
+    if (!diagnostic.success) {
+      providerFailuresBySource[diagnostic.source] = (providerFailuresBySource[diagnostic.source] ?? 0) + 1;
+    }
+    for (const [reason, count] of Object.entries(diagnostic.rejectionReasonCounts ?? {})) {
+      providerRejectionCounts[reason] = (providerRejectionCounts[reason] ?? 0) + (typeof count === "number" ? count : 0);
+    }
+  }
+
+  return {
+    missingPriceCount: assets.filter(hasMissingPrice).length,
+    fallbackOrCachedCount: assets.filter((asset) => {
+      const source = asset.priceSource;
+      if (source === "cached" || asset.priceConfidence === "fallback") return true;
+      const entry = source ? getPricingSourceRegistryEntry(source) : undefined;
+      return entry?.trustTier === "fallback_search" || entry?.trustTier === "cached_replay";
+    }).length,
+    lowConfidenceCount: assets.filter((asset) => asset.priceConfidence === "low").length,
+    assetsWithoutIndependentHardSource: assets
+      .filter((asset) => !hasMissingPrice(asset) && !hasIndependentHardSource(asset))
+      .map((asset) => asset.id)
+      .sort(),
+    providerRejectionCounts,
+    providerFailuresBySource,
+  };
+}
+
 export function buildStablecoinsSyncResult(input: {
   assets: PeggedAsset[];
   rawAssetCount: number;
@@ -100,6 +156,7 @@ export function buildStablecoinsSyncResult(input: {
 }): CronResult {
   const finalMissing = input.assets.filter(hasMissingPrice).length;
   const priceSourceHealth = buildPriceSourceHealth(input.assets);
+  const pricingSourceAuditReport = buildPricingSourceAuditReport(input.assets, input.providerDiagnostics ?? []);
   const status: CronResult["status"] = input.depegErrorCount > 0 ? "degraded" : "ok";
 
   const metadata: Record<string, unknown> = {
@@ -124,6 +181,7 @@ export function buildStablecoinsSyncResult(input: {
     nativePegFills: input.nativePegFillCount ?? 0,
     missingPrices: finalMissing,
     priceSourceHealth,
+    pricingSourceAuditReport,
     upstreamFetchOk: input.upstreamFetchOk ?? true,
     payloadAccepted: input.payloadAccepted ?? true,
     cacheWriteSucceeded: input.cacheWriteSucceeded ?? true,

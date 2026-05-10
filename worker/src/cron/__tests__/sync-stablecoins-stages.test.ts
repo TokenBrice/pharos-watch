@@ -149,6 +149,28 @@ describe("sync-stablecoins stage helpers", () => {
     expect(summary.stale).toBe(true);
   });
 
+  it("does not count same-price rows as stale when observation metadata advances", () => {
+    const previous = Array.from({ length: 60 }, (_, i) => ({
+      id: `coin-${i}`,
+      price: 1,
+      priceObservedAt: 1_700_000_000,
+      priceSyncedAt: 1_700_000_010,
+      priceSource: "coingecko",
+      priceConfidence: "single-source",
+    }));
+    const current = previous.map((row) => ({
+      ...row,
+      priceObservedAt: 1_700_000_300,
+      priceSyncedAt: 1_700_000_310,
+    }));
+
+    const summary = computePriceStalenessSummary(previous as never[], current as never[]);
+
+    expect(summary.compared).toBe(60);
+    expect(summary.identical).toBe(0);
+    expect(summary.stale).toBe(false);
+  });
+
   it("does not flag stale when compared population is too small", () => {
     const previous = Array.from({ length: 20 }, (_, i) => ({ id: `coin-${i}`, price: 1 }));
     const current = previous.map((row) => ({ ...row, price: row.price }));

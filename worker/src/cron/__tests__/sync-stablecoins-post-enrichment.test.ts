@@ -103,7 +103,7 @@ describe("runPostEnrichmentPricePipeline", () => {
     expect(asset.priceSelectedSource).toBe("coingecko-native-implied");
     expect(asset.priceConfidence).toBe("single-source");
     expect(asset.priceObservedAt).toBe(1_700_000_000);
-    expect(asset.priceObservedAtMode).toBe("local_fetch");
+    expect(asset.priceObservedAtMode).toBe("upstream");
     expect(asset.priceSyncedAt).toBe(1_700_000_050);
     expect(asset.consensusSources).toEqual(["coingecko-native-implied"]);
     expect(asset.agreeSources).toEqual(["coingecko-native-implied"]);
@@ -263,5 +263,50 @@ describe("runPostEnrichmentPricePipeline", () => {
     expect(
       db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO price_cache")),
     ).toBe(false);
+  });
+
+  it("stages replay-safe prices without writing price_cache before canonical publication", async () => {
+    const asset = makeAsset({
+      id: "usdc-circle",
+      symbol: "USDC",
+      price: 0.9998,
+      priceSource: "coingecko",
+      priceConfidence: "single-source",
+      priceObservedAt: 1_700_000_000,
+      priceObservedAtMode: "upstream",
+      priceSyncedAt: 1_700_000_050,
+      agreeSources: ["coingecko"],
+      consensusSources: ["coingecko"],
+      pegType: "peggedUSD",
+    });
+    const db = mockD1();
+
+    const result = await runPostEnrichmentPricePipeline({
+      assets: [asset],
+      missingBefore: new Set(),
+      db,
+      syncStartSec: 1_700_000_050,
+      validationContexts: { get: makeValidationContext },
+      previousTrustedPrices: new Map(),
+      returnIfAborted: () => null,
+      abortResult: () => ({ status: "error", metadata: "{}" }),
+    }, "");
+
+    expect(isAbortResult(result)).toBe(false);
+    if (isAbortResult(result)) {
+      throw new Error("unexpected abort result");
+    }
+    expect(result.priceCacheEntries).toEqual([{
+      id: "usdc-circle",
+      price: 0.9998,
+      source: "coingecko",
+      confidence: "single-source",
+      observedAt: 1_700_000_000,
+      observedAtMode: "upstream",
+      syncedAt: 1_700_000_050,
+      agreeSources: ["coingecko"],
+      consensusSources: ["coingecko"],
+    }]);
+    expect(db.getHistory().some((entry) => entry.sql.includes("price_cache") && entry.sql.includes("INSERT"))).toBe(false);
   });
 });

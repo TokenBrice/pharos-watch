@@ -182,7 +182,7 @@ export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCa
   return map;
 }
 
-export async function savePriceCache(db: D1Database, entries: Array<{
+export interface PriceCacheWriteEntry {
   id: string;
   price: number;
   source?: string | null;
@@ -192,13 +192,27 @@ export async function savePriceCache(db: D1Database, entries: Array<{
   syncedAt?: number | null;
   agreeSources?: string[];
   consensusSources?: string[];
-}>): Promise<void> {
+}
+
+export async function savePriceCache(db: D1Database, entries: PriceCacheWriteEntry[]): Promise<void> {
   if (entries.length === 0) return;
   const now = Math.floor(Date.now() / 1000);
   const stmts = entries.map((e) =>
     db
       .prepare(
-        "INSERT OR REPLACE INTO price_cache (asset_id, price, updated_at, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        `INSERT INTO price_cache (asset_id, price, updated_at, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(asset_id) DO UPDATE SET
+           price = excluded.price,
+           updated_at = excluded.updated_at,
+           source = excluded.source,
+           confidence = excluded.confidence,
+           observed_at = excluded.observed_at,
+           observed_at_mode = excluded.observed_at_mode,
+           synced_at = excluded.synced_at,
+           agree_sources_json = excluded.agree_sources_json,
+           consensus_sources_json = excluded.consensus_sources_json
+         WHERE COALESCE(excluded.synced_at, 0) >= COALESCE(price_cache.synced_at, 0)`,
       )
       .bind(
         e.id,

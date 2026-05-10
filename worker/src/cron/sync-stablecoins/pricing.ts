@@ -24,6 +24,8 @@ export interface ProtocolPriceOverride {
   price: number;
   source: string;
   confidence: PeggedAsset["priceConfidence"];
+  observedAt?: number | null;
+  observedAtMode?: PeggedAsset["priceObservedAtMode"];
 }
 
 export interface AcceptedPriceCandidate {
@@ -438,8 +440,8 @@ export function applyProtocolPriceOverrides(input: {
       price: override.price,
       source: override.source,
       confidence: override.confidence,
-      observedAt: syncStartSec,
-      observedAtMode: "local_fetch",
+      observedAt: override.observedAt ?? syncStartSec,
+      observedAtMode: override.observedAtMode ?? "local_fetch",
       consensusSources: [override.source],
       agreeSources: [override.source],
       syncedAt: syncStartSec,

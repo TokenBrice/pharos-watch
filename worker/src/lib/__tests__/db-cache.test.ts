@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getPriceCache } from "../db-cache";
+import { getPriceCache, savePriceCache } from "../db-cache";
 
 interface FullPriceCacheRow {
   asset_id: string;
@@ -124,5 +124,38 @@ describe("getPriceCache", () => {
     expect(queries).toHaveLength(1);
     expect(queries[0]).toContain("source, confidence, observed_at");
     expect(warn).toHaveBeenCalledWith("[db-cache] Full-column price_cache query failed:", "network connection reset");
+  });
+});
+
+describe("savePriceCache", () => {
+  it("uses synced_at as the monotonic conflict guard while preserving observed_at as updated_at", async () => {
+    const statements: Array<{ sql: string; bindings: unknown[] }> = [];
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...bindings: unknown[]) => {
+          statements.push({ sql, bindings });
+          return { sql, bindings };
+        },
+      }),
+      batch: async () => [{ success: true, meta: { changes: 1 }, results: [] }],
+    } as unknown as D1Database;
+
+    await savePriceCache(db, [{
+      id: "usdc-circle",
+      price: 0.9999,
+      source: "coingecko+pyth",
+      confidence: "high",
+      observedAt: 1800000000,
+      observedAtMode: "upstream",
+      syncedAt: 1800000100,
+      agreeSources: ["coingecko", "pyth"],
+      consensusSources: ["coingecko", "pyth"],
+    }]);
+
+    expect(statements).toHaveLength(1);
+    expect(statements[0].sql).toContain("ON CONFLICT(asset_id) DO UPDATE");
+    expect(statements[0].sql).toContain("excluded.synced_at");
+    expect(statements[0].bindings[2]).toBe(1800000000);
+    expect(statements[0].bindings[7]).toBe(1800000100);
   });
 });

@@ -80,6 +80,8 @@ export async function syncViaCoingeckoFallback(
     cachedFallbackCount,
     nativePegCorrectionCount,
     nativePegFillCount,
+    priceCacheEntries,
+    providerDiagnostics: fallbackProviderDiagnostics,
   } = enrichment;
 
   const supplyHistoryResult = await fillFallbackSupplyHistoryStage({
@@ -107,6 +109,7 @@ export async function syncViaCoingeckoFallback(
     syncStartSec,
     signal,
     reportProgress,
+    priceCacheEntries,
     fxFallbackRates,
     alertWebhookUrl,
     returnIfAborted,
@@ -140,7 +143,7 @@ export async function syncViaCoingeckoFallback(
       fallbackMode: "coingecko-supply-fallback",
       validationFailures: 0,
       enrichment: enrichStats,
-      providerDiagnostics: [...(enrichStats.providerDiagnostics ?? []), ...depegProviderDiagnostics],
+      providerDiagnostics: [...fallbackProviderDiagnostics, ...depegProviderDiagnostics],
       rejectedPrices: rejectedCount,
       nativePegCorrections: nativePegCorrectionCount,
       nativePegFills: nativePegFillCount,

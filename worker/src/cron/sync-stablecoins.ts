@@ -2,12 +2,9 @@ import {
   buildSyncMetadata,
   type CronResult,
 } from "./sync-stablecoins/shared";
-import {
-  validateAndWriteStablecoinsCache,
-  runDepegPipeline,
-  isAbortResult,
-} from "./sync-stablecoins/post-enrichment";
-import { buildStablecoinsSyncResult, buildStablecoinsUnwrittenCacheResult } from "./sync-stablecoins/metadata";
+import { isAbortResult } from "./sync-stablecoins/post-enrichment";
+import { buildStablecoinsSyncResult } from "./sync-stablecoins/metadata";
+import { publishMainStablecoinsAndRunFollowThrough } from "./sync-stablecoins/main-publication";
 import {
   abortResult,
   checkStablecoinsPriceStaleness,
@@ -19,10 +16,7 @@ import {
   runStablecoinsIntakeStage,
   runStablecoinsPricingStage,
 } from "./sync-stablecoins/stages";
-import { queueTrackedAdditionsNotice } from "./sync-stablecoins/telegram-tracked-additions";
 import type { ChainRpcConfig } from "../lib/chain-registry";
-import { CIRCUIT_SOURCE } from "../lib/constants";
-import { recordOutcome } from "../lib/circuit-breaker";
 import type { CronProgressReporter } from "../lib/cron-logger";
 
 export async function syncStablecoins(
@@ -47,9 +41,7 @@ export async function syncStablecoins(
     chainRpcs,
     reportProgress,
   });
-  if (!("kind" in intake)) {
-    return intake;
-  }
+  if (!("kind" in intake)) return intake;
   if (intake.kind === "fallback") {
     if (intake.result.itemCount && intake.result.itemCount > 0) {
       return intake.result;
@@ -84,7 +76,9 @@ export async function syncStablecoins(
     authoritativeOverrideCount,
     rejectedCount,
     nativePegCorrectionCount,
-    nativePegFillCount, providerDiagnostics,
+    nativePegFillCount,
+    priceCacheEntries,
+    providerDiagnostics,
   } = pricingStage;
   const fillSupplyHistoryResult = await fillStablecoinsSupplyHistoryStage(db, assets, signal);
   if (fillSupplyHistoryResult) return fillSupplyHistoryResult;
@@ -124,67 +118,27 @@ export async function syncStablecoins(
     }),
   });
   if (stalenessCheck.blockedResult) {
-    await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
     return stalenessCheck.blockedResult;
   }
   const { stalenessWarning, stalenessSummary } = stalenessCheck;
-  const validationAbort = returnIfAborted(signal, "validate-stablecoins-payload");
-  if (validationAbort) return validationAbort;
-  await reportStablecoinsStage(reportProgress, "cache-validation", "Validating stablecoins cache payload", {
-    itemsDone: assets.length,
-    itemsTotal: assets.length,
-  });
-  const cacheResult = await validateAndWriteStablecoinsCache({
+  const publication = await publishMainStablecoinsAndRunFollowThrough({
     assets,
     fxFallbackRates: intake.fxFallbackRates,
     db,
     syncStartSec,
     signal,
     alertWebhookUrl,
-    validationContext: "main",
+    coingeckoApiKey,
+    rawAssetCount,
+    droppedMalformedAssets,
+    priceCacheEntries,
+    previousAssetsById,
     returnIfAborted,
     abortResult,
-  }, (stablecoinsCacheAgeSec) => ({
-    status: "degraded",
-    itemCount: assets.length,
-    metadata: buildSyncMetadata({
-      rowsRead: rawAssetCount,
-      rowsWritten: 0,
-      rowsDropped: droppedMalformedAssets,
-      sourceCoverage: { defillama: true },
-      fallbackMode: null,
-      validationFailures: 1,
-      validationContext: "main",
-      stablecoinsCacheAgeSec,
-      cacheWriteMode: "blocked-invalid-payload",
-    }, {
-      cacheWriteMode: "blocked-invalid-payload",
-      capabilities: {
-        stablecoinsCache: false,
-        depegPipeline: false,
-      },
-    }),
-  }));
-  if (isAbortResult(cacheResult)) return cacheResult;
-  if (!cacheResult.written) {
-    await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
-    return buildStablecoinsUnwrittenCacheResult({ cacheResult, rawAssetCount, droppedMalformedAssets });
-  }
-  await reportStablecoinsStage(reportProgress, "cache-write", "Published stablecoins cache", {
-    itemsDone: assets.length,
-    itemsTotal: assets.length,
+    reportProgress,
   });
-  await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
-  await queueTrackedAdditionsNotice(db, previousAssetsById.keys(), assets);
-  await reportStablecoinsStage(reportProgress, "depeg-pipeline", "Running depeg pipeline", {
-    itemsTotal: assets.length,
-  });
-  const depegResult = await runDepegPipeline(
-    db, assets, intake.fxFallbackRates, signal, coingeckoApiKey,
-    returnIfAborted, abortResult, "", "",
-  );
-  if (isAbortResult(depegResult)) return depegResult;
-  const { depegErrorCount, depegErrors, providerDiagnostics: depegProviderDiagnostics } = depegResult;
+  if (isAbortResult(publication)) return publication;
+  const { cacheResult, depegErrorCount, depegErrors, providerDiagnostics: depegProviderDiagnostics } = publication;
   const result = buildStablecoinsSyncResult({
     assets,
     rawAssetCount,

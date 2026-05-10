@@ -1,4 +1,5 @@
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { PriceCacheWriteEntry } from "../../lib/db-cache";
 import { createEmptyGtProbeStats } from "../../lib/geckoterminal-price-probe";
 import { syncViaCoingeckoFallback } from "./fallback";
 import { loadStablecoinsIntake } from "./intake";
@@ -154,6 +155,7 @@ export async function runStablecoinsPricingStage(
       nativePegCorrectionCount: number;
       nativePegFillCount: number;
       cachedFallbackCount: number;
+      priceCacheEntries: PriceCacheWriteEntry[];
       providerDiagnostics: NonNullable<Awaited<ReturnType<typeof fetchPrimaryPrices>>["providerDiagnostics"]>;
     }
 > {
@@ -273,6 +275,8 @@ export async function runStablecoinsPricingStage(
     cachedFallbackCount,
     nativePegCorrectionCount,
     nativePegFillCount,
+    priceCacheEntries,
+    providerDiagnostics: nativePegProviderDiagnostics,
   } = priceCompletion;
 
   if (authoritativeOverrideCount > 0) {
@@ -314,9 +318,11 @@ export async function runStablecoinsPricingStage(
     nativePegCorrectionCount,
     nativePegFillCount,
     cachedFallbackCount,
+    priceCacheEntries,
     providerDiagnostics: [
       ...primaryProviderDiagnostics,
       ...(enrichStats.providerDiagnostics ?? []),
+      ...nativePegProviderDiagnostics,
     ],
   };
 }

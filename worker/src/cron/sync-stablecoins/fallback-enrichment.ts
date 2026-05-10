@@ -82,6 +82,8 @@ export async function runFallbackPriceEnrichmentPhase(
     cachedFallbackCount,
     nativePegCorrectionCount,
     nativePegFillCount,
+    priceCacheEntries,
+    providerDiagnostics,
   } = priceCompletion;
   await reportStablecoinsStage(
     input.reportProgress,
@@ -107,5 +109,10 @@ export async function runFallbackPriceEnrichmentPhase(
     cachedFallbackCount,
     nativePegCorrectionCount,
     nativePegFillCount,
+    priceCacheEntries,
+    providerDiagnostics: [
+      ...(enrichStats.providerDiagnostics ?? []),
+      ...providerDiagnostics,
+    ],
   };
 }

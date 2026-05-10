@@ -2,7 +2,7 @@ import {
   buildPreviousTrustedPriceLookup,
   createValidationContextResolver,
 } from "./pricing";
-import { loadFreshFxRates } from "./shared";
+import { loadFreshFxRates, loadReplayPriceCacheForTrustedContinuity } from "./shared";
 import type {
   FallbackFxInput,
   FallbackFxOutput,
@@ -16,6 +16,7 @@ export async function hydrateFallbackFxPhase(
     input.syncStartSec,
     "[sync-stablecoins:fallback]",
   );
+  const replayPriceCache = await loadReplayPriceCacheForTrustedContinuity(input.db);
 
   return {
     fxFallbackRates,
@@ -24,6 +25,7 @@ export async function hydrateFallbackFxPhase(
     previousTrustedPrices: buildPreviousTrustedPriceLookup(
       input.previousAssetsById,
       input.syncStartSec,
+      replayPriceCache,
     ),
   };
 }

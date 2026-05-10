@@ -143,4 +143,30 @@ describe("applyProtocolPriceOverrides", () => {
     expect(assets[0].priceObservedAtMode).toBe("local_fetch");
     expect(assets[0].priceSyncedAt).toBe(1_800_000_000);
   });
+
+  it("preserves override observation metadata when supplied", () => {
+    const assets = [makeAsset()];
+    const overrides = new Map([
+      [
+        "mkusd-prisma",
+        makeOverride({
+          price: 1.001,
+          observedAt: 1_799_999_940,
+          observedAtMode: "upstream",
+        }),
+      ],
+    ]);
+
+    const applied = applyProtocolPriceOverrides({
+      assets,
+      overrides,
+      validationContexts: createValidationContextResolver(),
+      syncStartSec: 1_800_000_000,
+    });
+
+    expect(applied).toBe(1);
+    expect(assets[0].priceObservedAt).toBe(1_799_999_940);
+    expect(assets[0].priceObservedAtMode).toBe("upstream");
+    expect(assets[0].priceSyncedAt).toBe(1_800_000_000);
+  });
 });

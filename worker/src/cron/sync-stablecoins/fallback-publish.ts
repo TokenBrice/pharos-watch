@@ -1,9 +1,6 @@
 import { queueTrackedAdditionsNotice } from "./telegram-tracked-additions";
-import {
-  isAbortResult,
-  runDepegPipeline,
-  validateAndWriteStablecoinsCache,
-} from "./post-enrichment";
+import { commitReplayPriceCache, validateAndWriteStablecoinsCache } from "./cache-publication";
+import { isAbortResult, runDepegPipeline } from "./post-enrichment";
 import { buildSyncMetadata } from "./shared";
 import { reportStablecoinsStage } from "./runtime";
 import type { CronResult } from "./shared";
@@ -95,6 +92,14 @@ export async function publishFallbackStablecoinsCache(
       itemsTotal: input.assets.length,
     },
   );
+  const priceCacheCommit = await commitReplayPriceCache({
+    db: input.db,
+    entries: input.priceCacheEntries,
+    signal: input.signal,
+    returnIfAborted: input.returnIfAborted,
+    stagePrefix: "fallback-",
+  });
+  if (priceCacheCommit) return priceCacheCommit;
 
   return {
     cacheKey: cacheResult.cacheKey,

@@ -1,5 +1,6 @@
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
+import type { PriceCacheWriteEntry } from "../../lib/db-cache";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { CronResult } from "./shared";
 import type { PeggedAsset, EnrichmentStats } from "./enrich-prices";
@@ -82,6 +83,8 @@ export interface FallbackPriceEnrichmentOutput {
   cachedFallbackCount: number;
   nativePegCorrectionCount: number;
   nativePegFillCount: number;
+  priceCacheEntries: PriceCacheWriteEntry[];
+  providerDiagnostics: PricingProviderAttemptDiagnostic[];
 }
 
 export interface FallbackSupplyHistoryInput extends FallbackAbortHandlers {
@@ -105,6 +108,7 @@ export interface FallbackStalenessOutput {
 
 export interface FallbackCachePublicationInput extends FallbackPhaseContext, FallbackAbortHandlers {
   assets: PeggedAsset[];
+  priceCacheEntries: PriceCacheWriteEntry[];
   fxFallbackRates?: Record<string, number>;
   alertWebhookUrl?: string | null;
 }

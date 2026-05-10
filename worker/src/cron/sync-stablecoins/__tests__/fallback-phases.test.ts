@@ -165,7 +165,15 @@ describe("CoinGecko fallback phases", () => {
       }),
     );
     const previousPayload = {
-      peggedAssets: assets.map((asset) => ({ id: asset.id, price: asset.price })),
+      peggedAssets: assets.map((asset) => ({
+        id: asset.id,
+        price: asset.price,
+        priceSource: asset.priceSource,
+        priceConfidence: asset.priceConfidence,
+        priceUpdatedAt: asset.priceUpdatedAt,
+        priceObservedAt: asset.priceObservedAt ?? asset.priceUpdatedAt,
+        priceSyncedAt: asset.priceSyncedAt,
+      })),
     };
     const db = mockD1([
       {

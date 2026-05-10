@@ -238,18 +238,37 @@ export function computePriceStalenessSummary(
   const previousPrices = new Map(
     previousAssets
       .filter((asset) => asset.price != null && typeof asset.price === "number" && asset.price > 0)
-      .map((asset) => [asset.id, asset.price as number]),
+      .map((asset) => [asset.id, {
+        price: asset.price as number,
+        observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
+        syncedAt: asset.priceSyncedAt ?? null,
+        source: asset.priceSource ?? null,
+        confidence: asset.priceConfidence ?? null,
+      }]),
   );
 
   let compared = 0;
   let identical = 0;
 
   for (const asset of currentAssets) {
-    const previousPrice = previousPrices.get(asset.id);
-    if (previousPrice == null || asset.price == null || typeof asset.price !== "number" || asset.price <= 0) continue;
+    const previous = previousPrices.get(asset.id);
+    if (previous == null || asset.price == null || typeof asset.price !== "number" || asset.price <= 0) continue;
 
     compared++;
-    if (Math.abs(asset.price - previousPrice) / previousPrice < 0.0001) {
+    const currentObservedAt = asset.priceObservedAt ?? asset.priceUpdatedAt ?? null;
+    const currentSyncedAt = asset.priceSyncedAt ?? null;
+    const currentSource = asset.priceSource ?? null;
+    const currentConfidence = asset.priceConfidence ?? null;
+    const hasNewerObservation =
+      (currentObservedAt != null && previous.observedAt != null && currentObservedAt > previous.observedAt) ||
+      (currentObservedAt != null && previous.observedAt == null) ||
+      (currentSyncedAt != null && previous.syncedAt != null && currentSyncedAt > previous.syncedAt) ||
+      (currentSyncedAt != null && previous.syncedAt == null);
+    const hasFreshMetadata =
+      hasNewerObservation ||
+      currentSource !== previous.source ||
+      currentConfidence !== previous.confidence;
+    if (Math.abs(asset.price - previous.price) / previous.price < 0.0001 && !hasFreshMetadata) {
       identical++;
     }
   }

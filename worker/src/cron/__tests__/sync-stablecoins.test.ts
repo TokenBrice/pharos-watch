@@ -1018,12 +1018,12 @@ describe("syncStablecoins", () => {
           {
             asset_id: "usdt-tether",
             price: 0.25580214,
-            updated_at: nowSec - 3600,
+            updated_at: nowSec - 120,
             source: "defillama-list+pyth",
             confidence: "high",
-            observed_at: nowSec - 3600,
+            observed_at: nowSec - 120,
             observed_at_mode: null,
-            synced_at: nowSec - 3615,
+            synced_at: nowSec - 135,
             agree_sources_json: JSON.stringify(["defillama-list", "pyth"]),
             consensus_sources_json: JSON.stringify(["coingecko", "defillama-list", "pyth"]),
           },
@@ -1051,24 +1051,24 @@ describe("syncStablecoins", () => {
     vi.mocked(enrichMissingPrices).mockImplementationOnce(async (assets) => {
       const target = assets.find((asset) => asset.id === "usdt-tether");
       if (target) {
-        target.price = 0.24;
-        target.priceSource = "coinmarketcap";
-        target.priceConfidence = "fallback";
-        target.priceUpdatedAt = nowSec;
-        target.priceObservedAt = nowSec;
-        target.priceSyncedAt = nowSec;
-        target.consensusSources = ["coinmarketcap"];
-        target.agreeSources = ["coinmarketcap"];
+        target.price = null;
+        target.priceSource = undefined;
+        target.priceConfidence = null;
+        target.priceUpdatedAt = null;
+        target.priceObservedAt = null;
+        target.priceSyncedAt = null;
+        target.consensusSources = [];
+        target.agreeSources = [];
       }
 
       return {
         totalMissing: 1,
         pass1: 0,
         pass1b: 0,
-        passCmc: 1,
+        passCmc: 0,
         passJupiter: 0,
         passDex: 0,
-        finalMissing: 0,
+        finalMissing: 1,
         failedPasses: [],
       };
     });
@@ -1098,8 +1098,8 @@ describe("syncStablecoins", () => {
       id: "usdt-tether",
       priceSource: "cached",
       priceConfidence: "fallback",
-      priceObservedAt: nowSec - 3600,
-      priceSyncedAt: nowSec - 3615,
+      priceObservedAt: nowSec - 120,
+      priceSyncedAt: nowSec - 135,
     });
     expect(usdt?.price).toBeCloseTo(0.25580214, 8);
   });
@@ -1460,8 +1460,17 @@ describe("syncStablecoins", () => {
 
   it("flags staleness warning metadata when prices are nearly identical to previous cache", async () => {
     const dlData = makeDlResponse(60);
+    const nowSec = Math.floor(Date.now() / 1000);
     const previousPayload = JSON.stringify({
-      peggedAssets: dlData.peggedAssets.map((a) => ({ id: a.id, price: a.price })),
+      peggedAssets: dlData.peggedAssets.map((a) => ({
+        id: a.id,
+        price: a.price,
+        priceSource: a.priceSource,
+        priceConfidence: "single-source",
+        priceUpdatedAt: nowSec,
+        priceObservedAt: nowSec,
+        priceSyncedAt: nowSec,
+      })),
     });
     const db = mockD1([
       {
@@ -1492,8 +1501,17 @@ describe("syncStablecoins", () => {
 
   it("preserves the stablecoins cache when severe price staleness is detected", async () => {
     const dlData = makeDlResponse(60);
+    const nowSec = Math.floor(Date.now() / 1000);
     const previousPayload = JSON.stringify({
-      peggedAssets: dlData.peggedAssets.map((a) => ({ id: a.id, price: a.price })),
+      peggedAssets: dlData.peggedAssets.map((a) => ({
+        id: a.id,
+        price: a.price,
+        priceSource: a.priceSource,
+        priceConfidence: "single-source",
+        priceUpdatedAt: nowSec,
+        priceObservedAt: nowSec,
+        priceSyncedAt: nowSec,
+      })),
     });
     const db = mockD1([
       {
@@ -2327,7 +2345,7 @@ describe("syncStablecoins", () => {
     });
 
     const savePriceCacheWrites = (db as ReturnType<typeof mockD1>).getHistory().filter(
-      (entry) => entry.sql.includes("INSERT OR REPLACE INTO price_cache"),
+      (entry) => entry.sql.includes("INSERT INTO price_cache"),
     );
     expect(savePriceCacheWrites.length).toBeGreaterThan(0);
   });

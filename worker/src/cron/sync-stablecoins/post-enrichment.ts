@@ -6,11 +6,9 @@
  */
 import { isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
-import { ACTIVE_META_BY_ID, FROZEN_IDS, FROZEN_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
-import { setCacheIfNewer, getPriceCache, savePriceCache } from "../../lib/db-cache";
-import { validatePayloadWithSchema } from "../../lib/api-utils";
-import { sendAlert } from "../../lib/alerts";
+import { getPriceCache, type PriceCacheWriteEntry } from "../../lib/db-cache";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
 import { enrichMissingPrices, hasMissingPrice, type PrimaryPriceResult } from "./enrich-prices";
@@ -32,13 +30,7 @@ import {
 } from "../../lib/native-peg-implied-prices";
 import {
   clearPriceMetadata,
-  StablecoinListResponseSchema,
-  normalizeStablecoinsPayload,
   stampPriceMetadata,
-  summarizeValidationIssues,
-  getStablecoinsCacheAgeSec,
-  writeInvalidStablecoinsDiagnostic,
-  type StablecoinsPayload,
   type CronResult,
 } from "./shared";
 import {
@@ -82,6 +74,8 @@ export interface PriceValidationResult {
   cachedFallbackCount: number;
   nativePegCorrectionCount: number;
   nativePegFillCount: number;
+  priceCacheEntries: PriceCacheWriteEntry[];
+  providerDiagnostics: PricingProviderAttemptDiagnostic[];
 }
 
 export interface SharedPriceCompletionInput extends Omit<PostEnrichmentInput, "missingBefore"> {
@@ -113,17 +107,6 @@ export interface DepegPipelineResult {
   providerDiagnostics: PricingProviderAttemptDiagnostic[];
 }
 
-export interface CacheValidationResult {
-  /** Whether the schema validation succeeded and the cache was written. */
-  written: boolean;
-  /** Whether the write was skipped because a newer canonical cache already exists. */
-  skippedBecauseNewer: boolean;
-  cacheKey: string;
-  syncStartSec: number;
-  /** If validation failed, the degraded CronResult to return. */
-  blockedResult?: CronResult;
-}
-
 // ---------------------------------------------------------------------------
 // Stage 1: Post-enrichment price validation + price cache
 // ---------------------------------------------------------------------------
@@ -131,7 +114,7 @@ export interface CacheValidationResult {
 /**
  * Runs the shared post-enrichment price pipeline:
  *   1. Reject unreasonable prices (so bad prices don't persist in cache)
- *   2. Save all valid prices to price_cache
+ *   2. Stage valid replay-safe prices for price_cache after canonical publication
  *   3. Apply cached fallback prices for assets still missing
  */
 export async function runPostEnrichmentPricePipeline(
@@ -179,6 +162,7 @@ export async function runPostEnrichmentPricePipeline(
     validationContexts.get(asset).pegClass === "fiat_fx"
   ));
 
+  const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
   const nativePegImpliedUsdQuotes = await fetchCurrentNativePegImpliedUsdQuotes(
     nativePegHardeningCandidates.map((asset) => {
       const meta = ACTIVE_META_BY_ID.get(asset.id);
@@ -193,6 +177,7 @@ export async function runPostEnrichmentPricePipeline(
     validationReferences,
     signal,
     coingeckoApiKey,
+    { diagnostics: providerDiagnostics, stage: "fallback" },
   );
 
   // --- Reject unreasonable prices BEFORE caching ---
@@ -251,7 +236,7 @@ export async function runPostEnrichmentPricePipeline(
         source: COINGECKO_NATIVE_IMPLIED_SOURCE,
         confidence: "single-source",
         observedAt: nativePegImpliedUsd.updatedAt,
-        observedAtMode: "local_fetch",
+        observedAtMode: "upstream",
         consensusSources: [COINGECKO_NATIVE_IMPLIED_SOURCE],
         agreeSources: [COINGECKO_NATIVE_IMPLIED_SOURCE],
         syncedAt: input.syncStartSec,
@@ -292,7 +277,7 @@ export async function runPostEnrichmentPricePipeline(
     }
   }
 
-  // --- Save replay-safe assets with valid prices to price_cache ---
+  // --- Stage replay-safe assets with valid prices for post-publication price_cache commit ---
   const withValidPrices = assets.filter(
     (asset) =>
       asset.price != null &&
@@ -302,21 +287,17 @@ export async function runPostEnrichmentPricePipeline(
       asset.priceConfidence !== "low" &&
       isReplaySafePriceSource(asset.priceSource),
   );
-  if (withValidPrices.length > 0) {
-    const priceCacheWriteAbort = returnIfAborted(signal, `${abortStagePrefix}save-price-cache`);
-    if (priceCacheWriteAbort) return priceCacheWriteAbort;
-    await savePriceCache(db, withValidPrices.map((asset) => ({
-      id: asset.id,
-      price: asset.price! as number,
-      source: asset.priceSource ?? null,
-      confidence: asset.priceConfidence ?? null,
-      observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
-      observedAtMode: asset.priceObservedAtMode ?? null,
-      syncedAt: asset.priceSyncedAt ?? input.syncStartSec,
-      agreeSources: asset.agreeSources ?? [],
-      consensusSources: asset.consensusSources ?? [],
-    })));
-  }
+  const priceCacheEntries = withValidPrices.map((asset): PriceCacheWriteEntry => ({
+    id: asset.id,
+    price: asset.price! as number,
+    source: asset.priceSource ?? null,
+    confidence: asset.priceConfidence ?? null,
+    observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
+    observedAtMode: asset.priceObservedAtMode ?? null,
+    syncedAt: asset.priceSyncedAt ?? input.syncStartSec,
+    agreeSources: asset.agreeSources ?? [],
+    consensusSources: asset.consensusSources ?? [],
+  }));
 
   // --- Apply cached fallback prices for assets still missing ---
   const now = Math.floor(Date.now() / 1000);
@@ -367,7 +348,14 @@ export async function runPostEnrichmentPricePipeline(
     }
   }
 
-  return { rejectedCount, cachedFallbackCount, nativePegCorrectionCount, nativePegFillCount };
+  return {
+    rejectedCount,
+    cachedFallbackCount,
+    nativePegCorrectionCount,
+    nativePegFillCount,
+    priceCacheEntries,
+    providerDiagnostics,
+  };
 }
 
 export async function runSharedPriceCompletion(
@@ -420,112 +408,7 @@ export async function runMissingPriceEnrichmentPhase(
 }
 
 // ---------------------------------------------------------------------------
-// Stage 2: Validate, cache-write, depeg pipeline
-// ---------------------------------------------------------------------------
-
-export interface ValidateAndCacheInput {
-  assets: PeggedAsset[];
-  fxFallbackRates?: Record<string, number>;
-  db: D1Database;
-  syncStartSec: number;
-  signal?: AbortSignal;
-  alertWebhookUrl?: string | null;
-  /** "main" or "fallback" — controls log messages and alert context */
-  validationContext: "main" | "fallback";
-  returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
-  abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult;
-}
-
-/**
- * Normalizes the payload, validates against the schema, and writes to the
- * stablecoins cache. Returns the CAS outcome on valid payloads or
- * `{ written: false, blockedResult }` on validation failure.
- */
-export async function validateAndWriteStablecoinsCache(
-  input: ValidateAndCacheInput,
-  buildBlockedResult: (stablecoinsCacheAgeSec: number | null) => CronResult,
-): Promise<CacheValidationResult | CronResult> {
-  const {
-    assets,
-    fxFallbackRates,
-    db,
-    syncStartSec,
-    signal,
-    alertWebhookUrl,
-    validationContext,
-    returnIfAborted,
-  } = input;
-
-  // Tag frozen coins so /api/stablecoins exposes `frozen` and `frozenAt` per-coin.
-  // Runs after intake's mergeFrozenSnapshots so injected rows also get tagged here.
-  for (const asset of assets) {
-    if (FROZEN_IDS.has(asset.id)) {
-      asset.frozen = true;
-      const frozenAt = FROZEN_META_BY_ID.get(asset.id)?.frozenAt;
-      if (frozenAt != null) {
-        asset.frozenAt = frozenAt;
-      }
-    }
-  }
-
-  const llamaData: StablecoinsPayload = { peggedAssets: assets, fxFallbackRates };
-  const normalizedPayload = normalizeStablecoinsPayload(llamaData);
-  const validationLabel = validationContext === "fallback"
-    ? "sync-stablecoins:stablecoins:fallback"
-    : "sync-stablecoins:stablecoins";
-  const validation = validatePayloadWithSchema(
-    StablecoinListResponseSchema,
-    normalizedPayload,
-    validationLabel,
-  );
-
-  if (!validation.ok) {
-    const issueSummary = summarizeValidationIssues(validation.issues);
-    const stablecoinsCacheAgeSec = await getStablecoinsCacheAgeSec(db);
-    console.error(`[sync-stablecoins] Schema validation failed${validationContext === "fallback" ? " in CG fallback" : ""}; blocking stablecoins cache write:`, issueSummary);
-    await sendAlert(
-      alertWebhookUrl ?? null,
-      "Stablecoins schema validation warning",
-      `context=${validationContext}; blocked stablecoins cache write; issues=${issueSummary}; stablecoinsCacheAgeSec=${stablecoinsCacheAgeSec ?? "missing"}`,
-    );
-    await writeInvalidStablecoinsDiagnostic(
-      db,
-      syncStartSec,
-      validationContext,
-      normalizedPayload,
-      validation.issues,
-      stablecoinsCacheAgeSec,
-    );
-    return {
-      written: false,
-      skippedBecauseNewer: false,
-      cacheKey: "stablecoins",
-      syncStartSec,
-      blockedResult: buildBlockedResult(stablecoinsCacheAgeSec),
-    };
-  }
-
-  const cacheWriteAbort = returnIfAborted(signal, validationContext === "fallback" ? "fallback-cache-write" : "persist-main-cache");
-  if (cacheWriteAbort) return cacheWriteAbort;
-  const cacheResult = await setCacheIfNewer(db, "stablecoins", JSON.stringify(validation.data), syncStartSec);
-  if (cacheResult.written) {
-    console.log(`[sync-stablecoins] ${validationContext === "fallback" ? "CG fallback: cached" : "Cached"} ${assets.length} assets`);
-  } else {
-    console.log(
-      `[sync-stablecoins] Skipped stablecoins cache write; newer canonical cache already exists ` +
-      `(syncStartSec=${syncStartSec})`,
-    );
-  }
-
-  return {
-    ...cacheResult,
-    cacheKey: "stablecoins",
-    syncStartSec,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Stage 3: Depeg detection + confirmation
+// Stage 2: Depeg detection + confirmation
 // ---------------------------------------------------------------------------
 
 /**

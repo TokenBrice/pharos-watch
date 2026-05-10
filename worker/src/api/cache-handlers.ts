@@ -2,7 +2,7 @@ import type { ReportCard } from "@shared/types/report-cards";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { YieldRankingsResponseSchema, type YieldRanking, type YieldRankingsResponse } from "@shared/types/yield";
-import { BluechipRatingsMapSchema } from "@shared/types/market";
+import { BluechipRatingsMapSchema, StablecoinListResponseSchema } from "@shared/types/market";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import {
   createCacheHandler,
@@ -22,6 +22,10 @@ export const handleStablecoins = createCacheHandler(
   "stablecoins",
   CACHE_PROFILES.realtime,
   API_FRESHNESS_MAX_AGE_SEC.stablecoins,
+  {
+    schema: StablecoinListResponseSchema,
+    malformedMessage: "Cached stablecoins payload is malformed",
+  },
 );
 
 export const handleStablecoinCharts = createCacheHandler(

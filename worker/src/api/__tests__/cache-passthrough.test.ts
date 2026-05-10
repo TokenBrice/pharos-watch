@@ -92,6 +92,15 @@ describe("cache-passthrough: handleStablecoins", () => {
     expect(res.headers.get("Warning")).toContain("Response is stale");
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
+
+  it("returns 503 when cached stablecoins JSON fails schema validation", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeCacheDb("stablecoins", { peggedAssets: "not-an-array" }, nowSec);
+    const res = await handleStablecoins(db);
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "Cached stablecoins payload is malformed" });
+  });
 });
 
 describe("cache-passthrough: handleStablecoinCharts", () => {
