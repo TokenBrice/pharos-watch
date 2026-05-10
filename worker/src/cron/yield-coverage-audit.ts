@@ -41,6 +41,10 @@ export interface ProtocolRecommendation {
   examplePools: string[];
 }
 
+export interface NativeExactPoolRecommendation extends CoverageGapPool {
+  stablecoinIds: string[];
+}
+
 export interface CoverageGaps {
   /** Pools above the TVL threshold that are not in the covered set. */
   unmatchedHighTvlPools: CoverageGapPool[];
@@ -48,6 +52,70 @@ export interface CoverageGaps {
   missingProtocols: CoverageGapPool[];
   /** Actionable protocol recommendations based on TVL and pool count. */
   protocolRecommendations: ProtocolRecommendation[];
+  /** High-TVL pools that look like native yield surfaces for tracked yield-bearing assets. */
+  nativeExactPoolRecommendations: NativeExactPoolRecommendation[];
+  /** High-TVL pools on protocol families that should be handled by source-family adapters. */
+  sourceFamilyAdapterRecommendations: ProtocolRecommendation[];
+  /** High-TVL non-allowlisted lending protocols that may warrant allowlist review. */
+  lendingAllowlistRecommendations: ProtocolRecommendation[];
+}
+
+const SOURCE_FAMILY_ADAPTER_PROJECTS = new Set([
+  "aave-v3",
+  "beefy",
+  "compound-v3",
+  "morpho-blue",
+  "morpho-v1",
+  "pendle",
+  "yearn-finance",
+]);
+
+function buildCoverageGapPool(pool: DlPool): CoverageGapPool {
+  return {
+    pool: pool.pool,
+    project: pool.project,
+    symbol: pool.symbol,
+    chain: pool.chain,
+    tvlUsd: pool.tvlUsd,
+    apy: pool.apy,
+  };
+}
+
+function buildProtocolRecommendations(pools: CoverageGapPool[]): ProtocolRecommendation[] {
+  const byProject = new Map<string, { pools: CoverageGapPool[]; tvl: number }>();
+  for (const pool of pools) {
+    const entry = byProject.get(pool.project) ?? { pools: [], tvl: 0 };
+    entry.pools.push(pool);
+    entry.tvl += pool.tvlUsd;
+    byProject.set(pool.project, entry);
+  }
+
+  return [...byProject.entries()]
+    .filter(([, v]) => v.tvl >= HIGH_TVL_THRESHOLD_USD)
+    .map(([project, v]) => ({
+      project,
+      poolCount: v.pools.length,
+      totalTvlUsd: v.tvl,
+      recommendedTier: (v.tvl >= 10_000_000 && v.pools.length >= 3 ? "high-confidence" : "review-needed") as "high-confidence" | "review-needed",
+      examplePools: v.pools.slice(0, 3).map((p) => p.pool),
+    }))
+    .sort((a, b) => b.totalTvlUsd - a.totalTvlUsd)
+    .slice(0, 20);
+}
+
+function normalizeRecommendationSymbol(symbol: string): string {
+  return symbol.trim().toUpperCase();
+}
+
+function buildYieldBearingSymbolIndex(): Map<string, string[]> {
+  const bySymbol = new Map<string, string[]>();
+  for (const coin of ACTIVE_YIELD_BEARING_STABLECOINS) {
+    const symbol = normalizeRecommendationSymbol(coin.symbol);
+    const ids = bySymbol.get(symbol) ?? [];
+    ids.push(coin.id);
+    bySymbol.set(symbol, ids);
+  }
+  return bySymbol;
 }
 
 /**
@@ -65,19 +133,16 @@ export function identifyCoverageGaps(
   const unmatchedHighTvlPools: CoverageGapPool[] = [];
   const missingProtocols: CoverageGapPool[] = [];
   const seenMissingProtocols = new Set<string>();
+  const uncoveredStablecoinPools: CoverageGapPool[] = [];
 
   for (const pool of dlPools) {
     // Skip pools already covered
     if (coveredPools.has(pool.pool)) continue;
 
-    const poolEntry: CoverageGapPool = {
-      pool: pool.pool,
-      project: pool.project,
-      symbol: pool.symbol,
-      chain: pool.chain,
-      tvlUsd: pool.tvlUsd,
-      apy: pool.apy,
-    };
+    const poolEntry = buildCoverageGapPool(pool);
+    if (pool.exposure === "single" && pool.stablecoin) {
+      uncoveredStablecoinPools.push(poolEntry);
+    }
 
     // High-TVL gaps should focus on surfaces outside the already-supported
     // allowlisted protocol universe; otherwise the report is dominated by
@@ -100,30 +165,36 @@ export function identifyCoverageGaps(
   unmatchedHighTvlPools.sort((a, b) => b.tvlUsd - a.tvlUsd);
   missingProtocols.sort((a, b) => b.tvlUsd - a.tvlUsd);
 
-  // Build protocol recommendations from non-allowlisted pools
-  const byProject = new Map<string, { pools: CoverageGapPool[]; tvl: number }>();
-  for (const pool of dlPools) {
-    if (LENDING_PROTOCOL_ALLOWLIST.has(pool.project)) continue;
-    if (pool.exposure !== "single" || !pool.stablecoin) continue;
-    const entry = byProject.get(pool.project) ?? { pools: [], tvl: 0 };
-    entry.pools.push({ pool: pool.pool, project: pool.project, symbol: pool.symbol, chain: pool.chain, tvlUsd: pool.tvlUsd, apy: pool.apy });
-    entry.tvl += pool.tvlUsd;
-    byProject.set(pool.project, entry);
-  }
+  const yieldBearingIdsBySymbol = buildYieldBearingSymbolIndex();
+  const nativeExactPoolRecommendations = uncoveredStablecoinPools
+    .filter((pool) => pool.tvlUsd >= HIGH_TVL_THRESHOLD_USD)
+    .flatMap((pool) => {
+      const stablecoinIds = yieldBearingIdsBySymbol.get(normalizeRecommendationSymbol(pool.symbol));
+      return stablecoinIds
+        ? [{ ...pool, stablecoinIds }]
+        : [];
+    })
+    .sort((a, b) => b.tvlUsd - a.tvlUsd)
+    .slice(0, 50);
 
-  const protocolRecommendations: ProtocolRecommendation[] = [...byProject.entries()]
-    .filter(([, v]) => v.tvl >= HIGH_TVL_THRESHOLD_USD)
-    .map(([project, v]) => ({
-      project,
-      poolCount: v.pools.length,
-      totalTvlUsd: v.tvl,
-      recommendedTier: (v.tvl >= 10_000_000 && v.pools.length >= 3 ? "high-confidence" : "review-needed") as "high-confidence" | "review-needed",
-      examplePools: v.pools.slice(0, 3).map((p) => p.pool),
-    }))
-    .sort((a, b) => b.totalTvlUsd - a.totalTvlUsd)
-    .slice(0, 20);
+  const sourceFamilyAdapterRecommendations = buildProtocolRecommendations(
+    uncoveredStablecoinPools.filter((pool) => SOURCE_FAMILY_ADAPTER_PROJECTS.has(pool.project)),
+  );
+  const lendingAllowlistRecommendations = buildProtocolRecommendations(
+    uncoveredStablecoinPools.filter((pool) => !supportedProtocols.has(pool.project) && !SOURCE_FAMILY_ADAPTER_PROJECTS.has(pool.project)),
+  );
+  const protocolRecommendations = buildProtocolRecommendations(
+    uncoveredStablecoinPools.filter((pool) => !supportedProtocols.has(pool.project)),
+  );
 
-  return { unmatchedHighTvlPools, missingProtocols, protocolRecommendations };
+  return {
+    unmatchedHighTvlPools,
+    missingProtocols,
+    protocolRecommendations,
+    nativeExactPoolRecommendations,
+    sourceFamilyAdapterRecommendations,
+    lendingAllowlistRecommendations,
+  };
 }
 
 /**
@@ -163,6 +234,27 @@ export async function runYieldCoverageAudit(
   const intentionalGapIds = YIELD_ADAPTER_MANIFEST
     .filter((entry) => entry.status === "intentional-gap")
     .map((entry) => entry.stablecoinId);
+  const yieldBearingIds = new Set(ACTIVE_YIELD_BEARING_STABLECOINS.map((coin) => coin.id));
+  const explicitPoolOverrides = Object.entries(EXPLICIT_YIELD_SOURCE_POOL_MAP).flatMap(
+    ([stablecoinId, configs]) => configs.map((config) => ({
+      stablecoinId,
+      poolId: config.poolId,
+      yieldType: config.yieldType,
+      yieldSource: config.yieldSource,
+      expectedProject: config.expectedProject ?? null,
+      expectedChain: config.expectedChain ?? null,
+    })),
+  );
+  const exactPoolOverrideYieldBearingIds = [...new Set(
+    explicitPoolOverrides
+      .filter((entry) => yieldBearingIds.has(entry.stablecoinId))
+      .map((entry) => entry.stablecoinId),
+  )].sort();
+  const exactPoolOverrideNonYieldBearingOpportunityIds = [...new Set(
+    explicitPoolOverrides
+      .filter((entry) => !yieldBearingIds.has(entry.stablecoinId))
+      .map((entry) => entry.stablecoinId),
+  )].sort();
 
   let publishedYieldIds = new Set<string>();
   const rankingsCache = readCachedJson<{ rankings?: Array<{ id?: string }> }>(
@@ -197,8 +289,22 @@ export async function runYieldCoverageAudit(
     yieldBearingMissingFromRankings,
     unmatchedHighTvlPoolCount: gaps.unmatchedHighTvlPools.length,
     missingProtocolCount: gaps.missingProtocols.length,
+    protocolRecommendationCount: gaps.protocolRecommendations.length,
+    nativeExactPoolRecommendationCount: gaps.nativeExactPoolRecommendations.length,
+    sourceFamilyAdapterRecommendationCount: gaps.sourceFamilyAdapterRecommendations.length,
+    lendingAllowlistRecommendationCount: gaps.lendingAllowlistRecommendations.length,
+    exactPoolOverrideCount: explicitPoolOverrides.length,
+    exactPoolOverrideYieldBearingCount: exactPoolOverrideYieldBearingIds.length,
+    exactPoolOverrideNonYieldBearingOpportunityCount: exactPoolOverrideNonYieldBearingOpportunityIds.length,
+    exactPoolOverrideYieldBearingIds,
+    exactPoolOverrideNonYieldBearingOpportunityIds,
+    exactPoolOverrides: explicitPoolOverrides,
     unmatchedHighTvlPools: gaps.unmatchedHighTvlPools.slice(0, 50),
     missingProtocols: gaps.missingProtocols.slice(0, 50),
+    protocolRecommendations: gaps.protocolRecommendations,
+    nativeExactPoolRecommendations: gaps.nativeExactPoolRecommendations,
+    sourceFamilyAdapterRecommendations: gaps.sourceFamilyAdapterRecommendations,
+    lendingAllowlistRecommendations: gaps.lendingAllowlistRecommendations,
     manifest: YIELD_ADAPTER_MANIFEST.map((entry) => ({
       stablecoinId: entry.stablecoinId,
       status: entry.status,
@@ -213,6 +319,9 @@ export async function runYieldCoverageAudit(
   const itemCount =
     gaps.unmatchedHighTvlPools.length +
     gaps.missingProtocols.length +
+    gaps.nativeExactPoolRecommendations.length +
+    gaps.sourceFamilyAdapterRecommendations.length +
+    gaps.lendingAllowlistRecommendations.length +
     manifestMissingIds.length +
     yieldBearingMissingFromRankings.length;
 
@@ -228,6 +337,12 @@ export async function runYieldCoverageAudit(
       yieldBearingMissingFromRankingsCount: yieldBearingMissingFromRankings.length,
       unmatchedHighTvlPoolCount: gaps.unmatchedHighTvlPools.length,
       missingProtocolCount: gaps.missingProtocols.length,
+      protocolRecommendationCount: gaps.protocolRecommendations.length,
+      nativeExactPoolRecommendationCount: gaps.nativeExactPoolRecommendations.length,
+      sourceFamilyAdapterRecommendationCount: gaps.sourceFamilyAdapterRecommendations.length,
+      lendingAllowlistRecommendationCount: gaps.lendingAllowlistRecommendations.length,
+      exactPoolOverrideCount: explicitPoolOverrides.length,
+      exactPoolOverrideNonYieldBearingOpportunityCount: exactPoolOverrideNonYieldBearingOpportunityIds.length,
     }),
   };
 }

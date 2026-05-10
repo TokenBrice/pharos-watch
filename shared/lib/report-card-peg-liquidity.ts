@@ -104,6 +104,7 @@ type RedemptionLiquidityInput = Pick<
   | "routeStatus"
   | "routeStatusReason"
   | "capacityConfidence"
+  | "capacityKind"
   | "sourceMode"
   | "accessModel"
   | "settlementModel"
@@ -127,6 +128,7 @@ function hasStrongLiveDirectRoute(redemption: RedemptionLiquidityInput): boolean
   }
   return isStrongLiveDirectRoute({
     capacityConfidence: redemption.capacityConfidence,
+    capacityKind: redemption.capacityKind,
     sourceMode: redemption.sourceMode,
     accessModel: redemption.accessModel,
     settlementModel: redemption.settlementModel,

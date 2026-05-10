@@ -109,10 +109,13 @@ describe("computeOverallGrade", () => {
       decentralization: makeDimension(70),
       dependencyRisk: makeDimension(85),
     };
-    const neutral = computeOverallGrade({
-      ...dims,
-      pegStability: makeDimension(null),
-    } as never, { navToken: true });
+    const neutral = computeOverallGrade(
+      {
+        ...dims,
+        pegStability: makeDimension(null),
+      } as never,
+      { navToken: true },
+    );
     const result = computeOverallGrade(dims as never, { navToken: true });
 
     expect(result.grade).not.toBe("NR");
@@ -170,39 +173,51 @@ describe("computeOverallGrade — active depeg cap", () => {
 
 describe("scoreDependencyRisk", () => {
   it("scores self-backed centralized coin at 95", () => {
-    const result = scoreDependencyRisk({
-      governance: "centralized",
-      dependencies: [],
-    }, new Map());
+    const result = scoreDependencyRisk(
+      {
+        governance: "centralized",
+        dependencies: [],
+      },
+      new Map(),
+    );
     expect(result.score).toBe(95);
   });
 
   it("scores self-backed decentralized coin at 90", () => {
-    const result = scoreDependencyRisk({
-      governance: "decentralized",
-      dependencies: [],
-    }, new Map());
+    const result = scoreDependencyRisk(
+      {
+        governance: "decentralized",
+        dependencies: [],
+      },
+      new Map(),
+    );
     expect(result.score).toBe(90);
   });
 
   it("caps wrapper dependency score", () => {
     const upstream = new Map([["usdc", 80]]);
-    const result = scoreDependencyRisk({
-      governance: "centralized",
-      dependencies: [{ id: "usdc", weight: 1.0, type: "wrapper" }],
-    }, upstream);
+    const result = scoreDependencyRisk(
+      {
+        governance: "centralized",
+        dependencies: [{ id: "usdc", weight: 1.0, type: "wrapper" }],
+      },
+      upstream,
+    );
     // Wrapper cap: dep_score - 3 = 77
     expect(result.score).toBeLessThanOrEqual(77);
   });
 
   it("scores partially unavailable dependency weights at the conservative fallback", () => {
-    const result = scoreDependencyRisk({
-      governance: "centralized",
-      dependencies: [
-        { id: "available", weight: 0.5, type: "collateral" as const },
-        { id: "missing", weight: 0.3, type: "collateral" as const },
-      ],
-    }, new Map([["available", 90]]));
+    const result = scoreDependencyRisk(
+      {
+        governance: "centralized",
+        dependencies: [
+          { id: "available", weight: 0.5, type: "collateral" as const },
+          { id: "missing", weight: 0.3, type: "collateral" as const },
+        ],
+      },
+      new Map([["available", 90]]),
+    );
 
     // 50% * 90 + 30% * 70 + 20% self-backed centralized score 95 = 85, then
     // the unavailable dependency is treated as weak (<75), applying -10.
@@ -211,34 +226,43 @@ describe("scoreDependencyRisk", () => {
   });
 
   it("uses the wider risk-absorption wrapper ceiling for tracked variants", () => {
-    const result = scoreDependencyRisk({
-      governance: "centralized-dependent",
-      dependencies: [{ id: "usds-sky", weight: 1, type: "wrapper" }],
-      variantParentId: "usds-sky",
-      variantKind: "risk-absorption",
-    }, new Map([["usds-sky", 80]]));
+    const result = scoreDependencyRisk(
+      {
+        governance: "centralized-dependent",
+        dependencies: [{ id: "usds-sky", weight: 1, type: "wrapper" }],
+        variantParentId: "usds-sky",
+        variantKind: "risk-absorption",
+      },
+      new Map([["usds-sky", 80]]),
+    );
 
     expect(result.score).toBe(75);
   });
 
   it("uses the strategy-vault wrapper ceiling for tracked strategy variants", () => {
-    const result = scoreDependencyRisk({
-      governance: "centralized-dependent",
-      dependencies: [{ id: "usdai-usd-ai", weight: 1, type: "wrapper" }],
-      variantParentId: "usdai-usd-ai",
-      variantKind: "strategy-vault",
-    }, new Map([["usdai-usd-ai", 80]]));
+    const result = scoreDependencyRisk(
+      {
+        governance: "centralized-dependent",
+        dependencies: [{ id: "usdai-usd-ai", weight: 1, type: "wrapper" }],
+        variantParentId: "usdai-usd-ai",
+        variantKind: "strategy-vault",
+      },
+      new Map([["usdai-usd-ai", 80]]),
+    );
 
     expect(result.score).toBe(75);
   });
 
   it("uses the strictest wrapper ceiling for bond-maturity variants", () => {
-    const result = scoreDependencyRisk({
-      governance: "centralized-dependent",
-      dependencies: [{ id: "usd0-usual", weight: 1, type: "wrapper" }],
-      variantParentId: "usd0-usual",
-      variantKind: "bond-maturity",
-    }, new Map([["usd0-usual", 95]]));
+    const result = scoreDependencyRisk(
+      {
+        governance: "centralized-dependent",
+        dependencies: [{ id: "usd0-usual", weight: 1, type: "wrapper" }],
+        variantParentId: "usd0-usual",
+        variantKind: "bond-maturity",
+      },
+      new Map([["usd0-usual", 95]]),
+    );
 
     expect(result.score).toBe(87);
   });
@@ -257,10 +281,13 @@ describe("scoreDependencyRisk", () => {
       },
     );
 
-    const result = scoreDependencyRisk({
-      governance: "centralized",
-      dependencies,
-    }, new Map([["live", 50]]));
+    const result = scoreDependencyRisk(
+      {
+        governance: "centralized",
+        dependencies,
+      },
+      new Map([["live", 50]]),
+    );
 
     expect(result.score).toBe(50);
   });
@@ -393,6 +420,7 @@ describe("scoreLiquidity", () => {
         modelConfidence: "high",
         capacitySemantics: "immediate-bounded",
         capacityConfidence: "live-direct",
+        capacityKind: "live-direct",
         sourceMode: "dynamic",
         accessModel: "permissionless-onchain",
         settlementModel: "atomic",
@@ -482,6 +510,7 @@ describe("scoreLiquidity", () => {
         capacitySemantics: "immediate-bounded",
         routeStatus: "open",
         capacityConfidence: "live-direct",
+        capacityKind: "live-direct",
         sourceMode: "dynamic",
         accessModel: "permissionless-onchain",
         settlementModel: "atomic",
@@ -856,7 +885,9 @@ describe("computeStressedGrades", () => {
     expect(stressedDependent.dimensions.dependencyRisk.score).toBe(44);
     expect(stressedDependent.dimensions.dependencyRisk.grade).toBe(scoreToGrade(44));
     expect(stressedDependent.overallScore).toBeLessThan(dependent.overallScore ?? 0);
-    expect(stressedTransitive.dimensions.dependencyRisk.score).toBeLessThan(transitive.dimensions.dependencyRisk.score ?? 100);
+    expect(stressedTransitive.dimensions.dependencyRisk.score).toBeLessThan(
+      transitive.dimensions.dependencyRisk.score ?? 100,
+    );
     expect(stressedTransitive.overallScore).toBeLessThan(transitive.overallScore ?? 0);
   });
 
@@ -896,10 +927,7 @@ describe("computeStressedGrades", () => {
       baseScore: 86.5,
     });
 
-    const [unchangedParent, stressedVariant] = computeStressedGrades(
-      [parent, variant],
-      new Map([["variant", 90]]),
-    );
+    const [unchangedParent, stressedVariant] = computeStressedGrades([parent, variant], new Map([["variant", 90]]));
 
     expect(unchangedParent.overallScore).toBe(72);
     expect(stressedVariant.overallScore).toBe(72);
@@ -947,10 +975,7 @@ describe("applyVariantOverallCap", () => {
   });
 
   it("skips the cap when the child score is null", () => {
-    const result = applyVariantOverallCap(
-      { grade: "NR", score: null, baseScore: null, ratedDimensions: 0 },
-      72,
-    );
+    const result = applyVariantOverallCap({ grade: "NR", score: null, baseScore: null, ratedDimensions: 0 }, 72);
     expect(result.overallCapped).toBe(false);
     expect(result.score).toBeNull();
     expect(result.uncappedOverallScore).toBeNull();
@@ -1120,9 +1145,7 @@ describe("isBlacklistable", () => {
     const meta = {
       flags: { governance: "centralized-dependent" as const },
       canBeBlacklisted: undefined,
-      reserves: [
-        { name: "Wrapped BTC", pct: 60, risk: "medium", blacklistable: true },
-      ],
+      reserves: [{ name: "Wrapped BTC", pct: 60, risk: "medium", blacklistable: true }],
     };
     expect(isBlacklistable(meta as never, new Set(["usdc-circle"]))).toBe("inherited");
   });
@@ -1195,9 +1218,7 @@ describe("isBlacklistable", () => {
     const meta = {
       flags: { governance: "centralized-dependent" as const },
       canBeBlacklisted: undefined,
-      reserves: [
-        { name: "ETH", pct: 100, risk: "very-low" },
-      ],
+      reserves: [{ name: "ETH", pct: 100, risk: "very-low" }],
     };
     expect(isBlacklistable(meta as never)).toBe(false);
   });

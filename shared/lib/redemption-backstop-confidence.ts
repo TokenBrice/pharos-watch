@@ -8,15 +8,24 @@ import type {
   RedemptionSourceMode,
 } from "../types";
 import type { RedemptionCapacityModel, RedemptionCostModel } from "./redemption-backstops";
+import {
+  getProviderIdForCapacityModelKind,
+  inferProviderCapacityConfidence,
+  inferProviderCapacitySemantics,
+  REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS,
+} from "./redemption-backstop-providers";
 
 export function resolveCapacityConfidence(model: RedemptionCapacityModel): RedemptionCapacityConfidence {
   if (model.confidence) return model.confidence;
-  if (model.kind === "reserve-sync-metadata") return "dynamic";
-  return "heuristic";
+  return REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[
+    getProviderIdForCapacityModelKind(model.kind)
+  ].defaultCapacityConfidence;
 }
 
 export function resolveCapacitySemantics(model: RedemptionCapacityModel): RedemptionCapacitySemantics {
-  return model.kind === "supply-full" ? "eventual-only" : "immediate-bounded";
+  return REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[
+    getProviderIdForCapacityModelKind(model.kind)
+  ].defaultCapacitySemantics;
 }
 
 export function resolveFeeConfidence(model: RedemptionCostModel): RedemptionFeeConfidence {
@@ -41,14 +50,13 @@ export function inferStoredCapacityConfidence(args: {
   provider: string;
   sourceMode: RedemptionSourceMode;
 }): RedemptionCapacityConfidence {
-  if (args.provider === "reserve-sync-metadata" && args.sourceMode === "dynamic") return "dynamic";
-  return "heuristic";
+  return inferProviderCapacityConfidence(args);
 }
 
 export function inferStoredCapacitySemantics(args: {
   provider: string;
 }): RedemptionCapacitySemantics {
-  return args.provider === "supply-full-model" ? "eventual-only" : "immediate-bounded";
+  return inferProviderCapacitySemantics(args);
 }
 
 export function inferStoredFeeConfidence(args: {

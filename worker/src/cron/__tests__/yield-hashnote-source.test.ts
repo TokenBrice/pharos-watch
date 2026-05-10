@@ -6,6 +6,7 @@ vi.mock("../../lib/fetch-retry", () => ({
 }));
 
 import { fetchHashnoteUsycSource } from "../yield-sync/sources";
+import { RATE_DERIVED_CONFIGS } from "../yield-config";
 
 describe("fetchHashnoteUsycSource", () => {
   afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
@@ -55,5 +56,9 @@ describe("fetchHashnoteUsycSource", () => {
 
     await expect(fetchHashnoteUsycSource()).resolves.toBeNull();
     vi.useRealTimers();
+  });
+
+  it("does not keep a rate-derived USYC proxy that can outrank the live Hashnote feed", () => {
+    expect(RATE_DERIVED_CONFIGS.some((config) => config.stablecoinId === "usyc-hashnote")).toBe(false);
   });
 });

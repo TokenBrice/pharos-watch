@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "../stablecoins";
+import { trackedRedemptionDocSources } from "../redemption-backstop-docs";
 import type {
   RedemptionAccessModel,
   RedemptionCapacityBasis,
@@ -160,59 +160,12 @@ export function documentedVariableFee(
   return { kind: "dynamic-or-unclear", feeDescription, confidence, feeModelKind };
 }
 
-export function sourceRef(
-  label: string,
-  url: string,
-  supports?: RedemptionDocSourceSupport[],
-): RedemptionDocSource {
+export function sourceRef(label: string, url: string, supports?: RedemptionDocSourceSupport[]): RedemptionDocSource {
   return supports && supports.length > 0 ? { label, url, supports } : { label, url };
 }
 
-function trackedReviewedDocs(
-  stablecoinId: string,
-): RedemptionDocSource[] {
-  const meta = TRACKED_META_BY_ID.get(stablecoinId);
-  if (!meta) {
-    throw new Error(`Unknown tracked stablecoin id "${stablecoinId}" while building redemption docs`);
-  }
-
-  const docs: RedemptionDocSource[] = [];
-  const seen = new Set<string>();
-  const push = (doc: RedemptionDocSource) => {
-    const key = `${doc.label}:${doc.url}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    docs.push(doc);
-  };
-
-  if (meta.liveReservesConfig?.display?.url) {
-    push(sourceRef(
-      meta.liveReservesConfig.display.label ?? "Live reserve source",
-      meta.liveReservesConfig.display.url,
-      ["capacity"],
-    ));
-  }
-
-  if (meta.proofOfReserves?.url) {
-    push(sourceRef(
-      meta.proofOfReserves.provider ? `${meta.proofOfReserves.provider} feed` : "Reserve feed",
-      meta.proofOfReserves.url,
-      ["capacity"],
-    ));
-  }
-
-  for (const link of meta.links ?? []) {
-    if (
-      link.label === "Docs"
-      || link.label === "Proof of Reserve"
-      || link.label === "Transparency"
-      || link.label === "Website"
-    ) {
-      push(sourceRef(link.label, link.url));
-    }
-  }
-
-  return docs;
+function trackedReviewedDocs(stablecoinId: string): RedemptionDocSource[] {
+  return trackedRedemptionDocSources(stablecoinId, { includeLiveReserveDisplay: true });
 }
 
 export const NO_PUBLIC_NUMERIC_REDEMPTION_FEE = "Public docs reviewed do not publish a numeric redemption fee.";

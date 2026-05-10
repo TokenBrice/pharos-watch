@@ -521,6 +521,50 @@ describe("api contract validation policy", () => {
     });
   });
 
+  it("preserves body-level API warnings in meta-aware fetches", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        current: null,
+        history: [],
+        warning: "Yield history freshness lookup failed; falling back to cache metadata.",
+        methodology: {
+          version: "7.45",
+          currentVersion: "7.45",
+          changelogPath: "/methodology/yield-changelog/",
+        },
+      }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "X-Data-Age": "60",
+        },
+      })
+    );
+
+    const result = await apiFetchWithMeta(
+      "/api/yield-history?stablecoin=usdt-tether",
+      z.object({
+        current: z.null(),
+        history: z.array(z.unknown()),
+        warning: z.string().optional(),
+        methodology: z.object({
+          version: z.string(),
+          currentVersion: z.string(),
+          changelogPath: z.string(),
+        }),
+      }),
+      undefined,
+      3600,
+    );
+
+    expect(result.data.warning).toContain("freshness lookup failed");
+    expect(result.meta).toMatchObject({
+      ageSeconds: 60,
+      status: "fresh",
+      warning: "Yield history freshness lookup failed; falling back to cache metadata.",
+    });
+  });
+
   it("uses the caller-provided maxAgeSec when deriving freshness from X-Data-Age", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: true }), {

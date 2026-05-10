@@ -12,7 +12,9 @@ import {
   formatChartNumber,
   formatTickPercent,
   formatTooltipDate,
+  getYieldHistorySourceDisplayLabel,
   toTimestampMs,
+  type YieldHistorySourceOption,
   type YieldHistoryChartPoint,
 } from "./yield-history-chart-model";
 
@@ -213,7 +215,7 @@ export function Controls({
   hasBreakdown: boolean;
   showBreakdown: boolean;
   onShowBreakdownChange: (pressed: boolean) => void;
-  availableSources: Array<{ sourceKey: string; yieldSource: string }>;
+  availableSources: YieldHistorySourceOption[];
   selectedSourceKey: string;
   onSourceChange: (sourceKey: string) => void;
   hideSourceSelector?: boolean;
@@ -259,7 +261,7 @@ export function Controls({
               <option value="best">Best source</option>
               {availableSources.map((source) => (
                 <option key={source.sourceKey} value={source.sourceKey}>
-                  {source.yieldSource}
+                  {getYieldHistorySourceDisplayLabel(source, availableSources)}
                 </option>
               ))}
             </select>

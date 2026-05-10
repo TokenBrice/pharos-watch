@@ -119,6 +119,28 @@ export const DAYS_PARAM = {
   description: "Historical lookback window in days. Endpoint-specific bounds may apply.",
 } as const satisfies PublicApiArtifactParameter;
 
+export const YIELD_HISTORY_STABLECOIN_QUERY_PARAM = {
+  name: "stablecoin",
+  in: "query",
+  required: true,
+  schema: { type: "string" },
+  description: "Required canonical Pharos stablecoin ID.",
+} as const satisfies PublicApiArtifactParameter;
+
+export const YIELD_HISTORY_DAYS_PARAM = {
+  name: "days",
+  in: "query",
+  schema: { type: "integer", minimum: 1, maximum: 365 },
+  description: "Historical lookback window in days. Defaults to 90.",
+} as const satisfies PublicApiArtifactParameter;
+
+export const YIELD_HISTORY_MODE_PARAM = {
+  name: "mode",
+  in: "query",
+  schema: { type: "string", enum: ["best", "source"] },
+  description: "History mode. `best` returns historically selected best-source rows; `source` requires `sourceKey`.",
+} as const satisfies PublicApiArtifactParameter;
+
 export const HOURS_PARAM = {
   name: "hours",
   in: "query",
@@ -457,14 +479,9 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     description: "Historical yield observations for a stablecoin.",
     tags: ["Yield", "History"],
     parameters: [
-      STABLECOIN_QUERY_PARAM,
-      DAYS_PARAM,
-      {
-        name: "mode",
-        in: "query",
-        schema: { type: "string" },
-        description: "Optional yield mode filter.",
-      },
+      YIELD_HISTORY_STABLECOIN_QUERY_PARAM,
+      YIELD_HISTORY_DAYS_PARAM,
+      YIELD_HISTORY_MODE_PARAM,
       {
         name: "sourceKey",
         in: "query",
@@ -475,7 +492,8 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     postman: {
       folder: "Historical data",
       order: 2,
-      query: { stablecoin: "{{stablecoinId}}", days: "{{days}}" },
+      description: "Historical yield observations for a required stablecoin. `days` accepts 1-365; `mode` accepts `best` or `source`.",
+      query: { stablecoin: "{{stablecoinId}}", days: "{{days}}", mode: "best" },
     },
   },
   {

@@ -25,6 +25,9 @@ interface ScatterDataPoint {
   safetyGrade: string | null;
   pharosYieldScore: number | null;
   yieldSource: string;
+  benchmarkLabel: string;
+  benchmarkRate: number;
+  excessYield: number | null;
   tvl: number | null;
   logoSrc?: string;
   isClipped: boolean;
@@ -130,6 +133,16 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
       <p className="text-muted-foreground">
         APY: <span className="font-mono">{d.y.toFixed(2)}%</span>
       </p>
+      <p className="text-muted-foreground">
+        Benchmark: <span className="font-mono">{d.benchmarkRate.toFixed(2)}%</span>{" "}
+        <span className="text-[11px]">({d.benchmarkLabel})</span>
+      </p>
+      <p className="text-muted-foreground">
+        Excess:{" "}
+        <span className="font-mono">
+          {d.excessYield !== null ? `${d.excessYield >= 0 ? "+" : ""}${d.excessYield.toFixed(2)}%` : "—"}
+        </span>
+      </p>
       {d.isClipped && d.clipThreshold !== null ? (
         <p className="text-muted-foreground">
           Chart rail: <span className="font-mono">&gt; {d.clipThreshold.toFixed(0)}%</span>
@@ -172,10 +185,16 @@ export function YieldScatterPlot({
         safetyGrade: r.safetyGrade,
         pharosYieldScore: r.pharosYieldScore,
         yieldSource: r.yieldSource,
+        benchmarkLabel: getYieldBenchmarkDisplayLabel({
+          benchmarkLabel: r.benchmarkLabel ?? benchmarkLabel,
+          benchmarkIsFallback: r.benchmarkIsFallback,
+        }),
+        benchmarkRate: r.benchmarkRate ?? benchmarkRate,
+        excessYield: r.excessYield,
         tvl: r.sourceTvlUsd,
         logoSrc: logos?.[r.id],
       }));
-  }, [logos, rankings]);
+  }, [benchmarkLabel, benchmarkRate, logos, rankings]);
 
   const apyAxis = useMemo(
     () =>

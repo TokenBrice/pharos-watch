@@ -1115,14 +1115,17 @@ describe("price-derived and auto-discovery yield paths", () => {
           value: JSON.stringify([
             {
               pool: "pool-u-venus",
+              chain: "BSC",
               symbol: "U",
               project: "venus-core-pool",
               tvlUsd: 5_000_000,
               apy: 3.5,
               apyBase: 3.5,
               apyReward: null,
+              apyMean30d: 3.4,
               exposure: "single",
               stablecoin: true,
+              underlyingTokens: null,
             },
           ]),
           updatedAt: nowSec - 300,

@@ -61,6 +61,7 @@ vi.mock("../yield-sync/sources", () => ({
   })),
   fetchAaveV3SupplyRates: vi.fn(async () => ({
     rates: new Map(),
+    results: [],
     telemetry: {
       targetCount: 0,
       attemptedCount: 0,
@@ -84,15 +85,31 @@ import { setCacheIfNewer } from "../../lib/db-cache";
 import {
   fetchAaveV3SupplyRates,
   fetchBeefySources,
+  fetchCompoundV3SupplyRates,
   fetchMorphoVaultSources,
+  fetchPendleMarketSources,
+  fetchYearnKongSources,
 } from "../yield-sync/sources";
 import { syncYieldSupplemental } from "../sync-yield-supplemental";
+import {
+  loadSupplementalSourceFamilies,
+  SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
+} from "../yield-sync/supplemental-source-families";
+
+async function flushMicrotasks() {
+  await Promise.resolve();
+  await Promise.resolve();
+}
 
 describe("syncYieldSupplemental", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-26T12:00:00.000Z"));
-    vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({ rates: new Map(), telemetry: emptyTelemetry });
+    vi.mocked(fetchMorphoVaultSources).mockResolvedValue([]);
+    vi.mocked(fetchPendleMarketSources).mockResolvedValue([]);
+    vi.mocked(fetchYearnKongSources).mockResolvedValue([]);
+    vi.mocked(fetchCompoundV3SupplyRates).mockResolvedValue({ results: [], telemetry: emptyTelemetry });
+    vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({ rates: new Map(), results: [], telemetry: emptyTelemetry });
     vi.mocked(fetchBeefySources).mockResolvedValue([]);
   });
 
@@ -104,10 +121,11 @@ describe("syncYieldSupplemental", () => {
   it("keeps distinct same-chain Aave candidates by using asset-scoped source keys", async () => {
     vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({
       rates: new Map([
-        ["usdc-circle", { apy: 4.25, chain: "ethereum" }],
-        ["usdt-tether", { apy: 3.75, chain: "ethereum" }],
-        ["eurc-circle", { apy: 2.1, chain: "base" }],
+        ["usdc-circle", { apy: 4.25, chain: "ethereum", sourceTvlUsd: 100_000_000 }],
+        ["usdt-tether", { apy: 3.75, chain: "ethereum", sourceTvlUsd: 80_000_000 }],
+        ["eurc-circle", { apy: 2.1, chain: "base", sourceTvlUsd: 10_000_000 }],
       ]),
+      results: [],
       telemetry: {
         ...emptyTelemetry,
         targetCount: 3,
@@ -165,6 +183,67 @@ describe("syncYieldSupplemental", () => {
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.resolvedTargetCount).toBe(3);
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.emittedCount).toBe(3);
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.missingTargetCount).toBe(0);
+  });
+
+  it("keeps same-asset Aave markets on different chains when per-target results are available", async () => {
+    vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({
+      rates: new Map([
+        ["usdc-circle", { apy: 4.25, chain: "ethereum", sourceTvlUsd: 100_000_000 }],
+      ]),
+      results: [
+        {
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          chain: "ethereum",
+          assetAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          apy: 4.25,
+          sourceTvlUsd: 100_000_000,
+        },
+        {
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          chain: "base",
+          assetAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          apy: 3.5,
+          sourceTvlUsd: 40_000_000,
+        },
+      ],
+      telemetry: {
+        ...emptyTelemetry,
+        targetCount: 2,
+        attemptedCount: 2,
+        resolvedTargetCount: 2,
+        emittedCount: 2,
+      },
+    });
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+
+    expect(result.itemCount).toBe(2);
+
+    const payload = JSON.parse(String(vi.mocked(setCacheIfNewer).mock.calls[0]?.[2])) as {
+      sourceCount: number;
+      data: Array<{ stablecoinId?: string; yield: { sourceKey: string; currentApy: number; sourceTvlUsd: number | null } }>;
+    };
+    expect(payload.sourceCount).toBe(2);
+    expect(payload.data).toEqual([
+      expect.objectContaining({
+        stablecoinId: "usdc-circle",
+        yield: expect.objectContaining({
+          sourceKey: "aave-v3-onchain:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          currentApy: 4.25,
+          sourceTvlUsd: 100_000_000,
+        }),
+      }),
+      expect.objectContaining({
+        stablecoinId: "usdc-circle",
+        yield: expect.objectContaining({
+          sourceKey: "aave-v3-onchain:base:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          currentApy: 3.5,
+          sourceTvlUsd: 40_000_000,
+        }),
+      }),
+    ]);
   });
 
   it("dedupes exact duplicate candidates and reports the drop count", async () => {
@@ -273,6 +352,147 @@ describe("syncYieldSupplemental", () => {
     expect(metadata.sourceCoverage?.dedupedSupplementalCandidates).toBe(2);
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.compoundV3?.emittedCount).toBe(0);
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.emittedCount).toBe(0);
+  });
+
+  it("drops malformed supplemental source rows with source-family examples", async () => {
+    vi.mocked(fetchBeefySources).mockResolvedValue([
+      {
+        symbol: "USDC",
+        chain: "ethereum",
+        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        yield: {
+          currentApy: 5,
+          apyBase: 5,
+          apyReward: null,
+          sourcePool: "vault-a",
+          sourceTvlUsd: 1_000_000,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: "",
+          yieldSource: "Beefy: vault-a",
+          yieldType: "lending-vault",
+          sourceObservedAt: 1_774_526_400,
+          comparisonAnchorObservedAt: null,
+        },
+      },
+      {
+        symbol: "USDT",
+        chain: "ethereum",
+        address: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        yield: {
+          currentApy: 4,
+          apyBase: 4,
+          apyReward: null,
+          sourcePool: "vault-b",
+          sourceTvlUsd: 2_000_000,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: "protocol-api:beefy:ethereum:vault-b",
+          yieldSource: "Beefy: vault-b",
+          yieldType: "lending-vault",
+          sourceObservedAt: 1_774_526_400,
+          comparisonAnchorObservedAt: null,
+        },
+      },
+    ]);
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+
+    expect(result.itemCount).toBe(1);
+
+    const payload = JSON.parse(String(vi.mocked(setCacheIfNewer).mock.calls[0]?.[2])) as {
+      sourceCount: number;
+      data: Array<{ yield: { sourceKey: string } }>;
+    };
+    expect(payload.sourceCount).toBe(1);
+    expect(payload.data[0]?.yield.sourceKey).toBe("protocol-api:beefy:ethereum:vault-b");
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      sourceCoverage?: {
+        sourceFamilyCounts?: { beefy?: number };
+        supplementalSourceAccounting?: {
+          malformedSourceDrops?: {
+            total?: number;
+            bySourceFamily?: { beefy?: number };
+            exampleSourceKeysBySourceFamily?: { beefy?: string[] };
+          };
+          sizeGatedDrops?: { total?: number };
+        };
+      };
+    };
+
+    expect(metadata.sourceCoverage?.sourceFamilyCounts?.beefy).toBe(2);
+    expect(metadata.sourceCoverage?.supplementalSourceAccounting?.malformedSourceDrops?.total).toBe(1);
+    expect(metadata.sourceCoverage?.supplementalSourceAccounting?.malformedSourceDrops?.bySourceFamily?.beefy).toBe(1);
+    expect(
+      metadata.sourceCoverage?.supplementalSourceAccounting?.malformedSourceDrops?.exampleSourceKeysBySourceFamily?.beefy,
+    ).toEqual(["(missing-source-key)"]);
+    expect(metadata.sourceCoverage?.supplementalSourceAccounting?.sizeGatedDrops?.total).toBe(0);
+  });
+
+  it("bounds supplemental source family execution concurrency", async () => {
+    type PendingSource = "morpho" | "pendle" | "yearnKong" | "beefy" | "compoundV3" | "aaveV3";
+
+    const started: PendingSource[] = [];
+    const pending = new Map<PendingSource, () => void>();
+    let active = 0;
+    let maxActive = 0;
+
+    function trackFamily<T>(key: PendingSource, result: T) {
+      return () => {
+        started.push(key);
+        active += 1;
+        maxActive = Math.max(maxActive, active);
+        return new Promise<T>((resolve) => {
+          pending.set(key, () => {
+            active -= 1;
+            pending.delete(key);
+            resolve(result);
+          });
+        });
+      };
+    }
+
+    vi.mocked(fetchMorphoVaultSources).mockImplementation(trackFamily("morpho", []));
+    vi.mocked(fetchPendleMarketSources).mockImplementation(trackFamily("pendle", []));
+    vi.mocked(fetchYearnKongSources).mockImplementation(trackFamily("yearnKong", []));
+    vi.mocked(fetchBeefySources).mockImplementation(trackFamily("beefy", []));
+    vi.mocked(fetchCompoundV3SupplyRates).mockImplementation(trackFamily("compoundV3", {
+      results: [],
+      telemetry: emptyTelemetry,
+    }));
+    vi.mocked(fetchAaveV3SupplyRates).mockImplementation(trackFamily("aaveV3", {
+      rates: new Map(),
+      results: [],
+      telemetry: emptyTelemetry,
+    }));
+
+    const loadPromise = loadSupplementalSourceFamilies({ startSec: 1 });
+    await flushMicrotasks();
+
+    expect(started).toEqual(["morpho", "pendle"]);
+
+    pending.get("morpho")?.();
+    await flushMicrotasks();
+    expect(started).toEqual(["morpho", "pendle", "yearnKong"]);
+
+    pending.get("pendle")?.();
+    await flushMicrotasks();
+    expect(started).toEqual(["morpho", "pendle", "yearnKong", "beefy"]);
+
+    while (pending.size > 0) {
+      const resolveNext = pending.values().next().value;
+      resolveNext?.();
+      await flushMicrotasks();
+    }
+
+    const result = await loadPromise;
+
+    expect(maxActive).toBeLessThanOrEqual(SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY);
+    expect(result.supplementalSourceAccounting.familyExecution).toEqual({
+      familyCount: 6,
+      concurrencyLimit: SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
+    });
   });
 
   it("keeps successful family results when another supplemental family throws", async () => {

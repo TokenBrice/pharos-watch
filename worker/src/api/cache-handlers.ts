@@ -5,8 +5,11 @@ import { YieldRankingsResponseSchema, type YieldRanking, type YieldRankingsRespo
 import { BluechipRatingsMapSchema, StablecoinListResponseSchema } from "@shared/types/market";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import {
+  addFreshnessHeaders,
+  buildFreshnessMeta,
   createCacheHandler,
   errorResponse,
+  jsonResponse,
 } from "../lib/api-utils";
 import { CACHE_PROFILES, DEFAULT_SAFETY_SCORE } from "../lib/constants";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
@@ -90,7 +93,7 @@ function recomputeYieldScore(row: YieldRanking, safetyInputScore: number, scalin
 function hydrateYieldRankingsWithLiveSafety(
   payload: YieldRankingsResponse,
   cards: ReportCard[],
-): YieldRankingsResponse {
+): { payload: YieldRankingsResponse; degradationReasons: string[] } {
   const reportCardById = new Map(
     cards
       .filter((card) => !card.isDefunct)
@@ -113,6 +116,9 @@ function hydrateYieldRankingsWithLiveSafety(
           ? {
             ...row.provenance,
             usedDefaultSafety: card?.overallScore == null,
+            safetyProvenance: card?.overallScore == null
+              ? "default-safety" as const
+              : "live-report-card" as const,
           }
           : null,
       };
@@ -125,12 +131,29 @@ function hydrateYieldRankingsWithLiveSafety(
       return a.name.localeCompare(b.name);
     });
 
-  const activeCards = cards.filter((card) => !card.isDefunct);
-  const coveredCount = activeCards.filter((card) => card.overallScore !== null).length;
-  const trackedCount = activeCards.length;
+  const coveredCount = rankings.filter((row) => row.provenance?.safetyProvenance === "live-report-card").length;
+  const trackedCount = rankings.length;
+  const coverageRatio = trackedCount > 0
+    ? Number((coveredCount / trackedCount).toFixed(4))
+    : 1;
+  const degradationReasons = coverageRatio < 0.75 ? ["low-row-safety-coverage"] : [];
 
   return {
+    degradationReasons,
+    payload: {
     ...payload,
+    ...(degradationReasons.length > 0
+      ? {
+          warnings: [
+            ...(payload.warnings ?? []),
+            {
+              code: "yield-safety-hydration-degraded",
+              message: "Live safety hydration coverage is degraded for public yield rankings.",
+              reasons: degradationReasons,
+            },
+          ],
+        }
+      : {}),
     rankings,
     provenance: payload.provenance
       ? {
@@ -139,14 +162,38 @@ function hydrateYieldRankingsWithLiveSafety(
           ...payload.provenance.safetySnapshot,
           coveredCount,
           trackedCount,
-          coverageRatio: trackedCount > 0
-            ? Number((coveredCount / trackedCount).toFixed(4))
-            : 1,
-          reason: null,
+          coverageRatio,
+          reason: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
         },
       }
       : payload.provenance,
+    },
   };
+}
+
+function buildYieldRankingsResponse(
+  payload: YieldRankingsResponse,
+  cached: { updatedAt: number },
+  warningReasons: string[],
+): Response {
+  const warning = warningReasons.length > 0
+    ? `199 - "Yield safety hydration degraded: ${warningReasons.join(",")}"`
+    : null;
+  const headers = addFreshnessHeaders({
+    "Content-Type": "application/json",
+    "Cache-Control": CACHE_PROFILES.standard,
+    ...(warning ? { Warning: warning } : {}),
+  }, cached.updatedAt, YIELD_RANKINGS_MAX_AGE_SEC);
+  if (warning && headers.Warning && !headers.Warning.includes(warning)) {
+    headers.Warning = `${headers.Warning}, ${warning}`;
+  }
+  return jsonResponse(
+    {
+      ...payload,
+      _meta: buildFreshnessMeta(cached.updatedAt, YIELD_RANKINGS_MAX_AGE_SEC),
+    },
+    headers,
+  );
 }
 
 /**
@@ -162,14 +209,33 @@ export const handleYieldRankings = createCacheHandler(
   {
     schema: YieldRankingsResponseSchema,
     malformedMessage: "Cached yield-rankings payload is malformed",
-    transform: async (payload, { db }) => {
+    transform: async (payload, { db, cached }) => {
       const validatedPayload = payload as YieldRankingsResponse;
       try {
         const snapshot = await buildReportCardsSnapshot(db);
-        return hydrateYieldRankingsWithLiveSafety(validatedPayload, snapshot.cards);
+        const hydrated = hydrateYieldRankingsWithLiveSafety(validatedPayload, snapshot.cards);
+        if (hydrated.degradationReasons.length > 0) {
+          return buildYieldRankingsResponse(hydrated.payload, cached, hydrated.degradationReasons);
+        }
+        return hydrated.payload;
       } catch (err) {
         console.warn("[yield-rankings] Live safety hydration failed:", err instanceof Error ? err.message : err);
-        return validatedPayload;
+        const degradedPayload: YieldRankingsResponse = {
+          ...validatedPayload,
+          warnings: [
+            ...(validatedPayload.warnings ?? []),
+            {
+              code: "yield-safety-hydration-degraded",
+              message: "Live safety hydration failed; cached published safety fields were returned.",
+              reasons: ["live-report-card-hydration-failed"],
+            },
+          ],
+        };
+        return buildYieldRankingsResponse(
+          degradedPayload,
+          cached,
+          ["live-report-card-hydration-failed"],
+        );
       }
     },
   },

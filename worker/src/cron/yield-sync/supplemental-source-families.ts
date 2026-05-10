@@ -9,6 +9,7 @@ import {
   fetchMorphoVaultSources,
   fetchPendleMarketSources,
   fetchYearnKongSources,
+  type AaveV3SupplyRateRow,
   type AaveV3RateTarget,
   type OptionalRpcFamilyTelemetry,
 } from "./sources";
@@ -37,10 +38,140 @@ interface SupplementalSourceFamilyContext {
 }
 
 interface SupplementalSourceFamilyResult {
-  key: "morpho" | "pendle" | "yearnKong" | "beefy" | "compoundV3" | "aaveV3";
+  key: SupplementalSourceFamilyKey;
   candidates: ResolvedYieldCandidate[];
   sourceFamilyCount: number;
   telemetry?: OptionalRpcFamilyTelemetry;
+}
+
+export type SupplementalSourceFamilyKey =
+  | "morpho"
+  | "pendle"
+  | "yearnKong"
+  | "beefy"
+  | "compoundV3"
+  | "aaveV3";
+
+type SourceFamilyCountRecord = Record<SupplementalSourceFamilyKey, number>;
+type SourceFamilyExampleRecord = Record<SupplementalSourceFamilyKey, string[]>;
+
+export interface SupplementalDropBucket {
+  total: number;
+  bySourceFamily: SourceFamilyCountRecord;
+  exampleSourceKeysBySourceFamily: SourceFamilyExampleRecord;
+}
+
+export interface SupplementalSourceAccounting {
+  familyExecution: {
+    familyCount: number;
+    concurrencyLimit: number;
+  };
+  malformedSourceDrops: SupplementalDropBucket;
+  sizeGatedDrops: SupplementalDropBucket;
+}
+
+const SUPPLEMENTAL_SOURCE_KEY_EXAMPLE_LIMIT = 5;
+export const SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY = 2;
+
+const SUPPLEMENTAL_SOURCE_FAMILY_KEYS: SupplementalSourceFamilyKey[] = [
+  "morpho",
+  "pendle",
+  "yearnKong",
+  "beefy",
+  "compoundV3",
+  "aaveV3",
+];
+
+function buildSourceFamilyCountRecord(): SourceFamilyCountRecord {
+  return {
+    morpho: 0,
+    pendle: 0,
+    yearnKong: 0,
+    beefy: 0,
+    compoundV3: 0,
+    aaveV3: 0,
+  };
+}
+
+function buildSourceFamilyExampleRecord(): SourceFamilyExampleRecord {
+  return {
+    morpho: [],
+    pendle: [],
+    yearnKong: [],
+    beefy: [],
+    compoundV3: [],
+    aaveV3: [],
+  };
+}
+
+function buildDropBucket(): SupplementalDropBucket {
+  return {
+    total: 0,
+    bySourceFamily: buildSourceFamilyCountRecord(),
+    exampleSourceKeysBySourceFamily: buildSourceFamilyExampleRecord(),
+  };
+}
+
+function getSupplementalCandidateSourceKey(candidate: ResolvedYieldCandidate): string {
+  const maybeYield = (candidate as { yield?: { sourceKey?: unknown } }).yield;
+  return typeof maybeYield?.sourceKey === "string" && maybeYield.sourceKey.trim()
+    ? maybeYield.sourceKey.trim()
+    : "(missing-source-key)";
+}
+
+function isStructurallyValidSupplementalCandidate(candidate: ResolvedYieldCandidate): boolean {
+  const maybeCandidate = candidate as {
+    symbol?: unknown;
+    yield?: {
+      currentApy?: unknown;
+      sourceKey?: unknown;
+      dataSource?: unknown;
+    };
+  };
+
+  return (
+    typeof maybeCandidate.symbol === "string" &&
+    maybeCandidate.symbol.trim().length > 0 &&
+    typeof maybeCandidate.yield?.sourceKey === "string" &&
+    maybeCandidate.yield.sourceKey.trim().length > 0 &&
+    typeof maybeCandidate.yield.currentApy === "number" &&
+    Number.isFinite(maybeCandidate.yield.currentApy) &&
+    typeof maybeCandidate.yield.dataSource === "string"
+  );
+}
+
+function recordDropExample(
+  bucket: SupplementalDropBucket,
+  familyKey: SupplementalSourceFamilyKey,
+  sourceKey: string,
+): void {
+  bucket.total += 1;
+  bucket.bySourceFamily[familyKey] += 1;
+
+  const examples = bucket.exampleSourceKeysBySourceFamily[familyKey];
+  if (examples.length < SUPPLEMENTAL_SOURCE_KEY_EXAMPLE_LIMIT && !examples.includes(sourceKey)) {
+    examples.push(sourceKey);
+  }
+}
+
+function filterMalformedSupplementalCandidates(
+  result: SupplementalSourceFamilyResult,
+  malformedSourceDrops: SupplementalDropBucket,
+): SupplementalSourceFamilyResult {
+  const candidates: ResolvedYieldCandidate[] = [];
+  for (const candidate of result.candidates) {
+    if (!isStructurallyValidSupplementalCandidate(candidate)) {
+      recordDropExample(
+        malformedSourceDrops,
+        result.key,
+        getSupplementalCandidateSourceKey(candidate),
+      );
+      continue;
+    }
+    candidates.push(candidate);
+  }
+
+  return { ...result, candidates };
 }
 
 function getTrackedContractAddress(stablecoinId: string, chain: string): string | null {
@@ -64,6 +195,7 @@ function buildAaveTargets(): AaveV3RateTarget[] {
           symbol: meta.symbol,
           chain: contract.chain,
           assetAddress: contract.address,
+          assetDecimals: contract.decimals,
         });
       }
     }
@@ -77,6 +209,24 @@ function buildAaveSourceKey(stablecoinId: string, chain: string, assetAddress: s
   return normalizedAddress
     ? `aave-v3-onchain:${chain}:${normalizedAddress}`
     : `aave-v3-onchain:${chain}:${stablecoinId}`;
+}
+
+function buildAaveRowsFromLegacyRates(
+  rates: Map<string, { apy: number; chain: string; sourceTvlUsd: number }>,
+): AaveV3SupplyRateRow[] {
+  return [...rates.entries()].flatMap(([stablecoinId, { apy, chain, sourceTvlUsd }]) => {
+    const meta = TRACKED_META_BY_ID.get(stablecoinId);
+    const assetAddress = getTrackedContractAddress(stablecoinId, chain);
+    if (!meta || !assetAddress) return [];
+    return [{
+      stablecoinId,
+      symbol: meta.symbol,
+      chain,
+      assetAddress,
+      apy,
+      sourceTvlUsd,
+    }];
+  });
 }
 
 async function runMorphoFamily(
@@ -176,23 +326,24 @@ async function runAaveFamily(
     };
   }
 
-  const { rates, telemetry } = await runOptionalSourceFamily(
+  const { rates, results, telemetry } = await runOptionalSourceFamily(
     "Aave V3 supplemental family",
     context.signal,
     () => fetchAaveV3SupplyRates(targets, context.signal, context.chainRpcs),
     {
       rates: new Map(),
+      results: [],
       telemetry: EMPTY_OPTIONAL_RPC_TELEMETRY,
     },
   );
 
   const candidates: ResolvedYieldCandidate[] = [];
-  for (const [stablecoinId, { apy, chain }] of rates) {
-    const meta = TRACKED_META_BY_ID.get(stablecoinId);
-    if (!meta || apy <= 0) continue;
-    const assetAddress = getTrackedContractAddress(stablecoinId, chain);
+  const aaveRows = results.length > 0 ? results : buildAaveRowsFromLegacyRates(rates);
+  for (const { stablecoinId, symbol, apy, chain, assetAddress, sourceTvlUsd } of aaveRows) {
+    if (apy <= 0) continue;
     candidates.push({
-      symbol: meta.symbol,
+      stablecoinId,
+      symbol,
       chain,
       address: assetAddress,
       yield: {
@@ -200,7 +351,7 @@ async function runAaveFamily(
         apyBase: apy,
         apyReward: null,
         sourcePool: null,
-        sourceTvlUsd: null,
+        sourceTvlUsd,
         dataSource: "protocol-api",
         exchangeRate: null,
         sourceKey: buildAaveSourceKey(stablecoinId, chain, assetAddress),
@@ -215,7 +366,7 @@ async function runAaveFamily(
   return {
     key: "aaveV3",
     candidates,
-    sourceFamilyCount: rates.size,
+    sourceFamilyCount: aaveRows.length,
     telemetry,
   };
 }
@@ -229,28 +380,47 @@ const SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY = [
   runAaveFamily,
 ] as const;
 
+async function runSupplementalFamiliesWithConcurrency(
+  context: SupplementalSourceFamilyContext,
+): Promise<SupplementalSourceFamilyResult[]> {
+  const results: SupplementalSourceFamilyResult[] = [];
+  let nextFamilyIndex = 0;
+  const workerCount = Math.min(
+    SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
+    SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY.length,
+  );
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextFamilyIndex < SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY.length) {
+        const familyIndex = nextFamilyIndex;
+        nextFamilyIndex += 1;
+        const runFamily = SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY[familyIndex];
+        results[familyIndex] = await runFamily(context);
+      }
+    }),
+  );
+
+  return results;
+}
+
 export async function loadSupplementalSourceFamilies(
   context: SupplementalSourceFamilyContext,
 ): Promise<{
   candidates: ResolvedYieldCandidate[];
-  sourceFamilyCounts: Record<SupplementalSourceFamilyResult["key"], number>;
+  sourceFamilyCounts: SourceFamilyCountRecord;
+  supplementalSourceAccounting: SupplementalSourceAccounting;
   optionalRpcTelemetry: {
     compoundV3: OptionalRpcFamilyTelemetry;
     aaveV3: OptionalRpcFamilyTelemetry;
   };
 }> {
-  const familyResults = await Promise.all(
-    SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY.map((runFamily) => runFamily(context)),
+  const rawFamilyResults = await runSupplementalFamiliesWithConcurrency(context);
+  const malformedSourceDrops = buildDropBucket();
+  const familyResults = rawFamilyResults.map((result) =>
+    filterMalformedSupplementalCandidates(result, malformedSourceDrops),
   );
-
-  const sourceFamilyCounts = {
-    morpho: 0,
-    pendle: 0,
-    yearnKong: 0,
-    beefy: 0,
-    compoundV3: 0,
-    aaveV3: 0,
-  };
+  const sourceFamilyCounts = buildSourceFamilyCountRecord();
 
   for (const result of familyResults) {
     sourceFamilyCounts[result.key] = result.sourceFamilyCount;
@@ -259,6 +429,14 @@ export async function loadSupplementalSourceFamilies(
   return {
     candidates: familyResults.flatMap((result) => result.candidates),
     sourceFamilyCounts,
+    supplementalSourceAccounting: {
+      familyExecution: {
+        familyCount: SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
+        concurrencyLimit: SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
+      },
+      malformedSourceDrops,
+      sizeGatedDrops: buildDropBucket(),
+    },
     optionalRpcTelemetry: {
       compoundV3:
         familyResults.find((result) => result.key === "compoundV3")?.telemetry

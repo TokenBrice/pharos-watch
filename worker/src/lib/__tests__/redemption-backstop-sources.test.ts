@@ -377,6 +377,12 @@ describe("buildRedemptionBackstopEntry", () => {
               capacityKind: "live-proxy-validated",
               freshnessKind: "verified-source-timestamp",
               sourceTimestamp: now - 120,
+              sourceUrls: ["https://example.com/redemption.json", "https://example.com/redemption.json"],
+              settlementDelaySec: 3600,
+              queueDepthUsd: 12_000_000,
+              dailyLimitUsd: 5_000_000,
+              minRedeemUsd: 100_000,
+              holderEligibility: "whitelisted-primary",
               routeStatus: "open",
             },
           },
@@ -391,6 +397,15 @@ describe("buildRedemptionBackstopEntry", () => {
 
     expect(entry.immediateCapacityUsd).toBe(50_000_000);
     expect(entry.immediateCapacityRatio).toBe(0.5);
+    expect(entry.capacityKind).toBe("live-proxy-validated");
+    expect(entry.freshnessKind).toBe("verified-source-timestamp");
+    expect(entry.sourceTimestamp).toBe(now - 120);
+    expect(entry.sourceUrls).toEqual(["https://example.com/redemption.json"]);
+    expect(entry.settlementDelaySec).toBe(3600);
+    expect(entry.queueDepthUsd).toBe(12_000_000);
+    expect(entry.dailyLimitUsd).toBe(5_000_000);
+    expect(entry.minRedeemUsd).toBe(100_000);
+    expect(entry.liveHolderEligibility).toBe("whitelisted-primary");
   });
 
   it("propagates live route status from reserve metadata", async () => {
@@ -452,36 +467,28 @@ describe("buildRedemptionBackstopEntry", () => {
     const config = getRedemptionBackstopConfig("lusd-liquity");
     expect(config).not.toBeNull();
 
-    const entry = await buildRedemptionBackstopEntry(
-      mockD1(),
-      "lusd-liquity",
-      config!,
-      100_000_000,
-      null,
-      now,
-      {
-        reserveSnapshotMetadata: {
-          stablecoinId: "lusd-liquity",
-          fetchedAt: now - 120,
-          source: "liquity-v1",
-          metadata: {
-            freshnessMode: "not-applicable",
-            redemptionFeeBps: 50,
-            redemption: {
-              capacityUsd: 84_000_000,
-              capacityKind: "live-direct-bounded",
-              freshnessKind: "same-run-onchain",
-              feeBps: 50,
-            },
+    const entry = await buildRedemptionBackstopEntry(mockD1(), "lusd-liquity", config!, 100_000_000, null, now, {
+      reserveSnapshotMetadata: {
+        stablecoinId: "lusd-liquity",
+        fetchedAt: now - 120,
+        source: "liquity-v1",
+        metadata: {
+          freshnessMode: "not-applicable",
+          redemptionFeeBps: 50,
+          redemption: {
+            capacityUsd: 84_000_000,
+            capacityKind: "live-direct-bounded",
+            freshnessKind: "same-run-onchain",
+            feeBps: 50,
           },
-          warningCount: 0,
-          warnings: [],
-          sourceModel: "single-bucket",
-          evidenceClass: "independent",
-          syncStatus: "ok",
         },
+        warningCount: 0,
+        warnings: [],
+        sourceModel: "single-bucket",
+        evidenceClass: "independent",
+        syncStatus: "ok",
       },
-    );
+    });
 
     expect(entry.provider).toBe("reserve-sync-metadata");
     expect(entry.sourceMode).toBe("dynamic");
@@ -499,37 +506,29 @@ describe("buildRedemptionBackstopEntry", () => {
     const config = getRedemptionBackstopConfig("bold-liquity");
     expect(config).not.toBeNull();
 
-    const entry = await buildRedemptionBackstopEntry(
-      mockD1(),
-      "bold-liquity",
-      config!,
-      40_000_000,
-      null,
-      now,
-      {
-        reserveSnapshotMetadata: {
-          stablecoinId: "bold-liquity",
-          fetchedAt: now - 120,
-          source: "liquity-v2-branches",
-          metadata: {
-            freshnessMode: "not-applicable",
-            redemptionFeeBps: 52,
-            redemption: {
-              capacityUsd: 32_000_000,
-              capacityKind: "live-direct-bounded",
-              freshnessKind: "same-run-onchain",
-              routeStatus: "open",
-              feeBps: 52,
-            },
+    const entry = await buildRedemptionBackstopEntry(mockD1(), "bold-liquity", config!, 40_000_000, null, now, {
+      reserveSnapshotMetadata: {
+        stablecoinId: "bold-liquity",
+        fetchedAt: now - 120,
+        source: "liquity-v2-branches",
+        metadata: {
+          freshnessMode: "not-applicable",
+          redemptionFeeBps: 52,
+          redemption: {
+            capacityUsd: 32_000_000,
+            capacityKind: "live-direct-bounded",
+            freshnessKind: "same-run-onchain",
+            routeStatus: "open",
+            feeBps: 52,
           },
-          warningCount: 0,
-          warnings: [],
-          sourceModel: "dynamic-mix",
-          evidenceClass: "independent",
-          syncStatus: "ok",
         },
+        warningCount: 0,
+        warnings: [],
+        sourceModel: "dynamic-mix",
+        evidenceClass: "independent",
+        syncStatus: "ok",
       },
-    );
+    });
 
     expect(entry.provider).toBe("reserve-sync-metadata");
     expect(entry.sourceMode).toBe("dynamic");
@@ -819,6 +818,14 @@ describe("buildRedemptionBackstopEntry", () => {
             immediateRedeemableUsd: 5_000_000,
             immediateRedeemableRatio: 0.1,
             sourceTimestamp: now - 120,
+            redemption: {
+              capacityUsd: 5_000_000,
+              capacityRatioOfSupply: 0.1,
+              capacityKind: "live-direct",
+              freshnessKind: "same-run-onchain",
+              sourceTimestamp: now - 120,
+              routeStatus: "open",
+            },
           },
           warningCount: 0,
           warnings: [],
@@ -841,7 +848,7 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.resolutionState).toBe("resolved");
     expect(entry.score).not.toBeNull();
     expect(entry.routeStatus).toBe("open");
-    expect(entry.routeStatusSource).toBe("static-config");
+    expect(entry.routeStatusSource).toBe("protocol-api");
     expect(entry.modelConfidence).toBe("high");
     expect(entry.capsApplied).not.toContain("market-implied-depeg-impairment");
   });

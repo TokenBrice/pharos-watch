@@ -192,6 +192,60 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
     expect(result.notes.some((n) => /exceeds current supply/i.test(n))).toBe(false);
   });
 
+  it("uses live daily limits as scoring capacity constraints without hiding raw capacity", async () => {
+    const db = {} as D1Database;
+    const supplyUsd = 1_000_000;
+    const result = await resolveRedemptionCapacity(
+      db,
+      "lusd-liquity",
+      { kind: "reserve-sync-metadata" },
+      supplyUsd,
+      now,
+      {
+        reserveSnapshotMetadata: baseSnapshot({
+          freshnessMode: "not-applicable",
+          redemption: {
+            capacityUsd: 800_000,
+            capacityKind: "live-direct-bounded",
+            freshnessKind: "same-run-onchain",
+            dailyLimitUsd: 250_000,
+          },
+        }),
+      },
+    );
+
+    expect(result.immediateCapacityUsd).toBe(800_000);
+    expect(result.immediateCapacityRatio).toBe(0.8);
+    expect(result.scoringCapacityUsd).toBe(250_000);
+    expect(result.scoringCapacityRatio).toBe(0.25);
+    expect(result.notes).toContain("Live redemption daily limit caps usable scoring capacity");
+  });
+
+  it("blocks unverified nested redemption freshness unless a route is explicitly allowlisted", async () => {
+    const db = {} as D1Database;
+    const result = await resolveRedemptionCapacity(
+      db,
+      "lusd-liquity",
+      { kind: "reserve-sync-metadata" },
+      1_000_000,
+      now,
+      {
+        reserveSnapshotMetadata: baseSnapshot({
+          freshnessMode: "not-applicable",
+          redemption: {
+            capacityUsd: 800_000,
+            capacityKind: "live-direct-bounded",
+            freshnessKind: "unverified",
+          },
+        }),
+      },
+    );
+
+    expect(result.resolutionState).toBe("missing-capacity");
+    expect(result.immediateCapacityUsd).toBeNull();
+    expect(result.notes).toContain("Live redemption capacity has unverified freshness; route-specific approval required");
+  });
+
   it("clamps live capacity to zero when supplyUsd is zero", async () => {
     const db = {} as D1Database;
     const result = await resolveRedemptionCapacity(

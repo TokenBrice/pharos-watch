@@ -1,9 +1,39 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.992",
+  currentVersion: "3.994",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.994",
+      title: "Conservative queued coverage for stkGHO and USDRIF",
+      date: "2026-05-10",
+      effectiveAt: 1778371200,
+      summary:
+        "Aave Umbrella stkGHO and RIF On Chain USDRIF now publish source-reviewed queued redemption routes with eventual-only capacity semantics.",
+      impact: [
+        "stkGHO is modeled as a queued wrapper exit into GHO through Aave Umbrella's cooldown and withdrawal-window process, with slashing risk retained in route notes",
+        "USDRIF is modeled as a queued RIF-collateral redemption route because broad holder redemption is settlement-cycle based, while outside-settlement redemption is limited to free USDRIF",
+        "Both routes use documented-bound eventual-only capacity, so they remain visible as reviewed coverage without creating immediate live-capacity evidence for Safety Score liquidity uplift",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "3.993",
+      title: "Live redemption telemetry gating and constraints",
+      date: "2026-05-10",
+      effectiveAt: 1778371200,
+      summary:
+        "Live redemption capacity now carries adapter-declared capacity/freshness context through the API, fails closed on unverified nested freshness unless explicitly allowlisted, and applies live daily limits as scoring capacity constraints.",
+      impact: [
+        "Reserve-sync redemption routes now persist and expose live capacity kind, freshness kind, source timestamp/URLs, settlement delay, queue depth, daily limit, minimum redeem size, and live holder eligibility when adapters emit them",
+        "Nested live redemption freshness marked `unverified` is no longer scoreable by default; only route-specific allowlisted lower-bound cases can continue to score while retaining the unverified context",
+        "Adapter-emitted daily redemption limits cap scoring capacity while raw immediate capacity remains visible for context",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.992",
       title: "Tracked wrapper routes inherit severe parent depegs",
@@ -71,7 +101,7 @@ const redemptionBackstop = createMethodologyVersion({
       date: "2026-04-15",
       effectiveAt: 1776290400,
       summary:
-        "The \"strong live-direct route\" predicate is now defined once and reused by both the report-card liquidity consumer and the backstop builder, with inline rationale on route family caps and new boundary test coverage.",
+        'The "strong live-direct route" predicate is now defined once and reused by both the report-card liquidity consumer and the backstop builder, with inline rationale on route family caps and new boundary test coverage.',
       impact: [
         "`isStrongLiveDirectRoute` is now a single shared predicate in `shared/lib/redemption-backstop-scoring.ts` consumed by both `scoreLiquidity` and `buildRedemptionBackstopEntry`, removing the prior drift-prone duplicate definitions",
         "Severe-depeg exclusion behavior is now locked in at the exact 2499 / 2500 bps boundary, live-proxy routes are explicitly confirmed not to survive severe depegs even with permissionless atomic execution, and all capacity-score and route-family cap breakpoints are covered by assertions",
@@ -610,8 +640,7 @@ const redemptionBackstop = createMethodologyVersion({
       title: "Initial redemption backstop scoring",
       date: "2026-02-28",
       effectiveAt: 1772272800,
-      summary:
-        "First operational release of the redemption backstop scoring framework with effective-exit assessment.",
+      summary: "First operational release of the redemption backstop scoring framework with effective-exit assessment.",
       impact: [
         "Introduced per-stablecoin redemption route configs with access, settlement, execution, and output-asset scoring",
         "Effective-exit score combined capacity utilization with weighted route-family scores",

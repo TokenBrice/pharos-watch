@@ -216,7 +216,7 @@ describe("inferStoredCapacityConfidence", () => {
       inferStoredCapacityConfidence({ provider: "supply-full-model", sourceMode: "dynamic" }),
     ).toBe("heuristic");
     expect(
-      inferStoredCapacityConfidence({ provider: "supply-ratio", sourceMode: "static" }),
+      inferStoredCapacityConfidence({ provider: "supply-ratio-model", sourceMode: "static" }),
     ).toBe("heuristic");
   });
 });
@@ -228,7 +228,7 @@ describe("inferStoredCapacitySemantics", () => {
 
   it("returns immediate-bounded for any other provider", () => {
     expect(inferStoredCapacitySemantics({ provider: "reserve-sync-metadata" })).toBe("immediate-bounded");
-    expect(inferStoredCapacitySemantics({ provider: "supply-ratio" })).toBe("immediate-bounded");
+    expect(inferStoredCapacitySemantics({ provider: "supply-ratio-model" })).toBe("immediate-bounded");
     expect(inferStoredCapacitySemantics({ provider: "sync-error" })).toBe("immediate-bounded");
   });
 });

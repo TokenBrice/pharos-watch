@@ -4,7 +4,7 @@ import { getCache } from "../../lib/db-cache";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { isYieldRelevantDlPool } from "./pool-filter";
-import { parseDlStablecoinPoolsCache } from "./cache";
+import { filterValidDlPools, parseDlStablecoinPoolsCache } from "./cache";
 import type { DlPool } from "./types";
 
 const DL_YIELDS_URL = "https://yields.llama.fi/pools";
@@ -28,9 +28,25 @@ export async function loadDlStablecoinPools(
         );
         fallbackMode = "cache-too-old";
       } else {
-        dlPools = parsed.pools;
+        dlPools = parsed.pools.filter(isYieldRelevantDlPool);
+        const droppedNonRelevantCount = parsed.pools.length - dlPools.length;
+        if (droppedNonRelevantCount > 0) {
+          console.warn(
+            `[sync-yield-data] Dropped ${droppedNonRelevantCount} non-yield-relevant cached DL pool rows`,
+          );
+        }
+        if (dlPools.length === 0) {
+          fallbackMode = "cache-no-relevant-pools";
+        } else {
         console.log(`[sync-yield-data] Using ${dlPools.length} cached stablecoin pools from DEX sync`);
-        return parsed;
+          return {
+            pools: dlPools,
+            meta: {
+              ...parsed.meta,
+              poolCount: dlPools.length,
+            },
+          };
+        }
       }
     } else {
       console.warn("[sync-yield-data] Failed to parse cached DL pools, falling back to direct fetch");
@@ -61,7 +77,8 @@ export async function loadDlStablecoinPools(
             },
           };
         }
-        dlPools = (body.data as DlPool[]).filter(isYieldRelevantDlPool);
+        const validated = filterValidDlPools(body.data, "direct DeFiLlama yields fetch");
+        dlPools = validated.pools.filter(isYieldRelevantDlPool);
         if (dlPools.length === 0) {
           console.warn("[sync-yield-data] DL yields direct fetch returned no relevant stablecoin pools");
           await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);

@@ -2,7 +2,7 @@ import { YieldRankingsResponseSchema, type AltYieldSource, type YieldBenchmarkMe
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_STABLECOINS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { batchExecute } from "../../lib/db";
-import { getCache, setCache } from "../../lib/db-cache";
+import { getCache, setCacheIfNewer, type CacheWriteResult } from "../../lib/db-cache";
 import { readCachedJson, validatePayloadWithSchema } from "../../lib/api-utils";
 import { PYS_SCALING_FACTOR } from "../../lib/constants";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
@@ -39,9 +39,23 @@ export async function readPreviousYieldRankingsCount(
     return { count: 0, malformed: false };
   }
   if (previousRankings.status === "malformed") {
+    if (options?.allowedIds) {
+      // Let the later schema and absolute-coverage publish guards decide whether
+      // a valid replacement can recover a malformed public cache.
+      return { count: 0, malformed: false };
+    }
     return { count: 0, malformed: true };
   }
   return countYieldRankings(previousRankings.data, options);
+}
+
+function hasDuplicateRankingIds(rankings: Array<{ id: string }>): boolean {
+  const seen = new Set<string>();
+  for (const ranking of rankings) {
+    if (seen.has(ranking.id)) return true;
+    seen.add(ranking.id);
+  }
+  return false;
 }
 
 function evaluatedSourceToRanking(
@@ -87,7 +101,12 @@ function evaluatedSourceToRanking(
     apyMax30d: source.apyMax30d,
     warningSignals: [...source.warnings],
     altSources: [] as AltYieldSource[],
-    provenance,
+    provenance: provenance
+      ? {
+          ...provenance,
+          safetyProvenance: source.usedDefaultSafety ? "default-safety" : "cached-publish",
+        }
+      : null,
   };
 }
 
@@ -114,8 +133,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     if (input.bestSourceKeyByCoin.get(source.id) === source.sourceKey) continue;
 
     const alts = altSourcesByCoin.get(source.id) ?? [];
-    // Deduplicate by yieldSource name — keep the entry with higher APY
-    const existingIdx = alts.findIndex((a) => a.yieldSource === source.yieldSource);
+    const existingIdx = alts.findIndex((a) => a.sourceKey === source.sourceKey);
     const alt: AltYieldSource = {
       sourceKey: source.sourceKey,
       yieldSource: source.yieldSource,
@@ -144,9 +162,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     const key = buildHistoryKey(source.id, source.sourceKey);
     const provenance = input.rankingProvenanceByKey.get(key) ?? null;
     const ranking = evaluatedSourceToRanking(source, provenance);
-    // Exclude alts whose display name matches the best source (duplicate label)
-    ranking.altSources = (altSourcesByCoin.get(source.id) ?? [])
-      .filter((alt) => alt.yieldSource !== source.yieldSource);
+    ranking.altSources = altSourcesByCoin.get(source.id) ?? [];
 
     const sourceObservedAt =
       provenance != null && typeof provenance.sourceObservedAt === "number"
@@ -196,13 +212,18 @@ export async function validateYieldRankingsPayloadForPublish(
   }
 
   const currentRankings = validation.data.rankings.length;
+  if (hasDuplicateRankingIds(validation.data.rankings)) {
+    console.warn("[sync-yield-data] Skipped yield-rankings cache write due to duplicate ranking IDs");
+    return { ok: false, validationFailures: 1, reason: "duplicate-ranking-ids" };
+  }
+
   const previousRankingsState = await readPreviousYieldRankingsCount(db);
-  if (previousRankingsState.malformed) {
-    console.warn("[sync-yield-data] Skipped yield-rankings cache write due to malformed previous cache");
+  if (previousRankingsState.malformed && currentRankings === 0) {
+    console.warn("[sync-yield-data] Skipped yield-rankings cache write because malformed previous cache recovery payload is empty");
     return {
       ok: false,
       validationFailures: 1,
-      reason: "previous-rankings-cache-invalid",
+      reason: "empty-rankings-payload",
     };
   }
   const previousRankings = previousRankingsState.count;
@@ -371,12 +392,26 @@ export async function pruneYieldTables(
 export async function writeYieldRankingsCache(
   db: D1Database,
   rankingsPayload: unknown,
-): Promise<{ ok: boolean; validationFailures: number; reason?: string }> {
+  syncStartSec: number,
+): Promise<{
+  ok: boolean;
+  validationFailures: number;
+  reason?: string;
+  cacheWrite?: CacheWriteResult;
+}> {
   const publishability = await validateYieldRankingsPayloadForPublish(db, rankingsPayload);
   if (!publishability.ok) {
     return publishability;
   }
 
-  await setCache(db, "yield-rankings", JSON.stringify(rankingsPayload));
-  return publishability;
+  const cacheWrite = await setCacheIfNewer(db, "yield-rankings", JSON.stringify(rankingsPayload), syncStartSec);
+  if (!cacheWrite.written) {
+    return {
+      ok: false,
+      validationFailures: 0,
+      reason: "cache-write-skipped-newer",
+      cacheWrite,
+    };
+  }
+  return { ...publishability, cacheWrite };
 }

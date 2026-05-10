@@ -1,5 +1,6 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { type ChainRpcConfig, getChainRpc } from "../../lib/chain-registry";
+import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchWithRetry } from "../../lib/fetch-retry";
@@ -30,6 +31,7 @@ const BIMA_EARN_POOLS_URL =
   "https://bima.money/api/earn/pools?network=Ethereum&user=0x0000000000000000000000000000000000000000";
 const BIMA_MIN_TVL_USD = 100_000;
 const BIMA_MIN_APY_PERCENT = 0.01;
+const BIMA_MAX_APY_PERCENT = 100;
 const HASHNOTE_USYC_SOURCE_KEY = "protocol-api:hashnote-usyc";
 const HASHNOTE_USYC_SOURCE_LABEL = "Hashnote USYC";
 const HASHNOTE_USYC_SOURCE_TYPE = "nav-appreciation";
@@ -67,12 +69,9 @@ export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<Resolv
     if (!pool) return null;
 
     const unboostedApr = getFiniteNumber(pool.unboostedAPR);
-    const boostedApr = getFiniteNumber(pool.boostedAPR);
-    const currentApy =
-      unboostedApr != null && boostedApr != null
-        ? Math.max(unboostedApr, boostedApr)
-        : (unboostedApr ?? boostedApr);
-    if (currentApy == null || currentApy < BIMA_MIN_APY_PERCENT) return null;
+    if (unboostedApr == null || unboostedApr < BIMA_MIN_APY_PERCENT || unboostedApr > BIMA_MAX_APY_PERCENT) {
+      return null;
+    }
 
     const sourceTvlUsd = getFiniteNumber(pool.amountTVL);
     const qualifiedTvlUsd = sourceTvlUsd != null && sourceTvlUsd >= BIMA_MIN_TVL_USD
@@ -81,12 +80,9 @@ export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<Resolv
     if (qualifiedTvlUsd == null) return null;
 
     return {
-      currentApy,
-      apyBase: unboostedApr ?? currentApy,
-      apyReward:
-        boostedApr != null && unboostedApr != null
-          ? Math.max(0, boostedApr - unboostedApr)
-          : null,
+      currentApy: unboostedApr,
+      apyBase: unboostedApr,
+      apyReward: null,
       sourcePool: typeof pool.id === "string" ? pool.id : null,
       sourceTvlUsd: qualifiedTvlUsd,
       dataSource: "protocol-api",
@@ -189,8 +185,8 @@ export async function fetchOndoUsdyOracleSource(
     );
     if (!currentPrice || currentPrice === 0n) return null;
 
-    const currentPriceFloat = Number(currentPrice) / 1e18;
-    if (!Number.isFinite(currentPriceFloat) || currentPriceFloat <= 0) return null;
+    const currentPriceFloat = finiteDecimalNumberFromBigInt(currentPrice, 18);
+    if (currentPriceFloat == null || !Number.isFinite(currentPriceFloat) || currentPriceFloat <= 0) return null;
 
     if (!prevPriceBigint || prevPriceBigint === 0n || daysDelta < 1) {
       return {
@@ -202,7 +198,8 @@ export async function fetchOndoUsdyOracleSource(
       };
     }
 
-    const prevPriceFloat = Number(prevPriceBigint) / 1e18;
+    const prevPriceFloat = finiteDecimalNumberFromBigInt(prevPriceBigint, 18);
+    if (prevPriceFloat == null || !Number.isFinite(prevPriceFloat) || prevPriceFloat <= 0) return null;
     const apy = (Math.pow(currentPriceFloat / prevPriceFloat, 365.25 / daysDelta) - 1) * 100;
     if (!Number.isFinite(apy) || apy < 0) return null;
 

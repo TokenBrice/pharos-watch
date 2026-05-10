@@ -15,6 +15,11 @@ export function decimalNumberFromBigInt(value: bigint, decimals: number): number
   return Number(decimalStringFromBigInt(value, decimals));
 }
 
+export function finiteDecimalNumberFromBigInt(value: bigint, decimals: number): number | null {
+  const parsed = decimalNumberFromBigInt(value, decimals);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 /**
  * Convert a raw BigInt value to a decimal number given the token's decimals.
  */

@@ -4,7 +4,7 @@ Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Compu
 
 The stablecoin registry currently contains 264 tracked metadata entries. Report-card snapshots score the 240 active tracked assets plus the 88 cemetery assets; frozen-archive tracked entries are emitted as stub `F` cards, while pre-launch entries remain outside the snapshot until they launch.
 
-## Overall Grade (v7.17)
+## Overall Grade (v7.18)
 
 Four-step computation:
 
@@ -15,7 +15,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.17 reclassifies USD3 / Web 3 Dollar from DeFi to CeFi-dependent because its Reserve Protocol DTF basket is concentrated in centralized stablecoin-derived collateral. Scoring weights, thresholds, reserve risks, and live reserve adapter behavior are unchanged.
+Current-version note: v7.18 tightens redemption-backed Liquidity / Exit eligibility. Nested live redemption freshness marked `unverified` is excluded unless a route-specific lower-bound allowlist permits it, live daily limits cap usable redemption capacity for scoring, and severe active-depeg survivability now requires direct live capacity-kind evidence.
 
 ## Dimensions
 
@@ -56,6 +56,7 @@ Current-version note: v7.17 reclassifies USD3 / Web 3 Dollar from DeFi to CeFi-d
 - Eventual-only redemption routes remain visible in the dimension detail. They do not replace missing DEX liquidity, but documented-bound offchain issuer routes can add a capped primary-market exit bonus when DEX liquidity is already available
 - Queue-like redemption routes can improve Liquidity / Exit when resolved and current, but their redemption contribution is capped before the best-path blend so delayed exits cannot behave like instant liquidity
 - During severe active depegs (`activeDepegBps >= 2500`), redemption uplift requires live-direct dynamic permissionless redemption capacity with atomic or immediate settlement; static, documented-bound, live-proxy, issuer/API, queue, and estimated routes stay visible but do not uplift Liquidity / Exit until live-open evidence returns
+- Live reserve redemption telemetry can further constrain scoring: nested `freshnessKind: "unverified"` fails closed unless route-specific lower-bound approval exists, proxy/queue capacity kinds cannot qualify as severe-depeg live-direct evidence, and adapter-emitted daily limits cap the usable capacity score
 - Low-confidence redemption routes stay visible in the dimension detail, but they do not improve the Safety Score liquidity score
 - Formula-based routes with live on-chain fee telemetry can use the current redemption fee bps for cost scoring while remaining labeled as formula models
 - When DEX liquidity is stale (age beyond `CRON_INTERVALS["sync-dex-liquidity"] * 2`), the last-known score still feeds effective-exit scoring; staleness is surfaced via `liquidityStale` and `inputFreshness.dexLiquidity.stale` so consumers can warn on age without losing the dimension. Scoring only falls back to redemption-only or `NR` when no DEX snapshot exists at all

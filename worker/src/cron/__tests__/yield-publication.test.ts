@@ -244,7 +244,7 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
 });
 
 describe("validateYieldRankingsPayloadForPublish", () => {
-  it("blocks publish when the previous rankings cache is malformed", async () => {
+  it("allows a valid replacement when the previous rankings cache is malformed", async () => {
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -257,10 +257,90 @@ describe("validateYieldRankingsPayloadForPublish", () => {
 
     const result = await validateYieldRankingsPayloadForPublish(db, payload);
 
+    expect(result).toEqual({ ok: true, validationFailures: 0 });
+  });
+
+  it("blocks malformed previous-cache recovery when the replacement has no rows", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["yield-rankings"],
+        rows: [{ value: "{not-json", updated_at: Math.floor(FIXED_NOW.getTime() / 1000) }],
+        first: { value: "{not-json", updated_at: Math.floor(FIXED_NOW.getTime() / 1000) },
+      },
+    ]);
+    const payload = {
+      ...buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000)),
+      rankings: [],
+    };
+
+    const result = await validateYieldRankingsPayloadForPublish(db, payload);
+
     expect(result).toEqual({
       ok: false,
       validationFailures: 1,
-      reason: "previous-rankings-cache-invalid",
+      reason: "empty-rankings-payload",
     });
+  });
+
+  it("blocks publish when ranking IDs are duplicated", async () => {
+    const db = mockD1();
+    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000));
+    payload.rankings = [
+      payload.rankings[0]!,
+      {
+        ...payload.rankings[0]!,
+        yieldSource: "Duplicate Source",
+      },
+    ];
+
+    const result = await validateYieldRankingsPayloadForPublish(db, payload);
+
+    expect(result).toEqual({
+      ok: false,
+      validationFailures: 1,
+      reason: "duplicate-ranking-ids",
+    });
+  });
+
+  it("keeps alternate sources with distinct source keys even when display labels match", () => {
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const benchmark = makeBenchmarkMeta();
+    const best = makeEvaluatedSource({
+      sourceKey: "defillama:best",
+      yieldSource: "Shared Venue",
+      currentApy: 6,
+      pharosYieldScore: 90,
+    });
+    const altA = makeEvaluatedSource({
+      sourceKey: "defillama:alt-a",
+      yieldSource: "Shared Venue",
+      currentApy: 5,
+      pharosYieldScore: 80,
+    });
+    const altB = makeEvaluatedSource({
+      sourceKey: "defillama:alt-b",
+      yieldSource: "Shared Venue",
+      currentApy: 4,
+      pharosYieldScore: 70,
+    });
+
+    const payload = buildYieldRankingsPayloadFromEvaluatedSources({
+      evaluatedSources: [best, altA, altB],
+      bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+      rankingProvenanceByKey: new Map(),
+      riskFreeRate: benchmark.rate,
+      riskFreeRateMeta: benchmark,
+      riskFreeRateRegistry: { USD: benchmark, EUR: null, CHF: null },
+      dlPoolsMeta: makeYieldSourceMeta(),
+      safetySnapshot: makeSafetySnapshotMeta(),
+      medianApy: 4.5,
+      startSec,
+    });
+
+    expect(payload.rankings[0]?.altSources.map((source) => source.sourceKey)).toEqual([
+      "defillama:alt-a",
+      "defillama:alt-b",
+    ]);
   });
 });

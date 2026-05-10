@@ -92,4 +92,27 @@ describe("public API artifact catalog", () => {
     expect(limit?.schema.maximum).toBe(1000);
     expect(endpoint?.postman?.query?.stablecoin).toBe("{{blacklistStablecoinSymbol}}");
   });
+
+  it("documents the yield-history query contract used by OpenAPI and Postman", () => {
+    const endpoint = PUBLIC_API_ARTIFACT_ENDPOINTS.find((entry) => entry.key === "yield-history");
+    expect(endpoint).toBeDefined();
+    expect(endpoint?.parameters?.map((parameter) => parameter.name)).toEqual([
+      "stablecoin",
+      "days",
+      "mode",
+      "sourceKey",
+    ]);
+
+    const stablecoin = endpoint?.parameters?.find((parameter) => parameter.name === "stablecoin");
+    expect(stablecoin?.required).toBe(true);
+
+    const days = endpoint?.parameters?.find((parameter) => parameter.name === "days");
+    expect(days?.schema.minimum).toBe(1);
+    expect(days?.schema.maximum).toBe(365);
+
+    const mode = endpoint?.parameters?.find((parameter) => parameter.name === "mode");
+    expect(mode?.schema.enum).toEqual(["best", "source"]);
+    expect(endpoint?.postman?.query?.mode).toBe("best");
+    expect(endpoint?.postman?.description).toContain("1-365");
+  });
 });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { resolveCapacitySemantics } from "../redemption-backstop-confidence";
 import { getRedemptionBackstopConfig } from "../redemption-backstops";
 
 describe("getRedemptionBackstopConfig", () => {
@@ -427,12 +428,7 @@ describe("getRedemptionBackstopConfig", () => {
   });
 
   it("marks the third lower-cap redemption tranche as reviewed documented-bound", () => {
-    const reviewedIssuerIds = [
-      "thbill-theo",
-      "xaum-matrixdock",
-      "usdgo-osl",
-      "usat-tether",
-    ] as const;
+    const reviewedIssuerIds = ["thbill-theo", "xaum-matrixdock", "usdgo-osl", "usat-tether"] as const;
 
     for (const id of reviewedIssuerIds) {
       const config = getRedemptionBackstopConfig(id);
@@ -814,6 +810,36 @@ describe("getRedemptionBackstopConfig", () => {
       "jupusd-jupiter",
     ] as const) {
       expect(getRedemptionBackstopConfig(id)?.docs?.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("adds conservative source-reviewed queued coverage for Phase 4 candidates", () => {
+    expect(getRedemptionBackstopConfig("stkgho-umbrella-aave")).toMatchObject({
+      routeFamily: "queue-redeem",
+      accessModel: "permissionless-onchain",
+      settlementModel: "queued",
+      executionModel: "rules-based-nav",
+      outputAssetType: "stable-single",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-05-10",
+    });
+
+    expect(getRedemptionBackstopConfig("usdrif-rif")).toMatchObject({
+      routeFamily: "queue-redeem",
+      accessModel: "permissionless-onchain",
+      settlementModel: "queued",
+      executionModel: "rules-based-nav",
+      outputAssetType: "mixed-collateral",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 25 },
+      reviewedAt: "2026-05-10",
+    });
+
+    for (const id of ["stkgho-umbrella-aave", "usdrif-rif"] as const) {
+      const config = getRedemptionBackstopConfig(id);
+      expect(config?.docs?.length).toBeGreaterThan(0);
+      expect(resolveCapacitySemantics(config!.capacityModel)).toBe("eventual-only");
     }
   });
 });

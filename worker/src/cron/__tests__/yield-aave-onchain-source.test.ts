@@ -5,11 +5,12 @@ vi.mock("../../lib/evm-rpc", () => ({
   fetchEvmUint256AtBlock: vi.fn(),
 }));
 
-import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
+import { fetchEvmCallHexAtBlock, fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchAaveV3SupplyRates, type AaveV3RateTarget } from "../yield-sync/sources";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 
 const mockFetchEvmCallHexAtBlock = vi.mocked(fetchEvmCallHexAtBlock);
+const mockFetchEvmUint256AtBlock = vi.mocked(fetchEvmUint256AtBlock);
 
 afterEach(() => vi.clearAllMocks());
 
@@ -41,12 +42,17 @@ function makeChainRpcs(chains: string[] = ["ethereum", "arbitrum", "base"]): Map
  *   [2] currentLiquidityRate (uint256) — bytes 64–95  ← we care about this
  *   ...more fields follow
  */
-function buildGetReserveDataHex(currentLiquidityRate: bigint): `0x${string}` {
+function buildGetReserveDataHex(
+  currentLiquidityRate: bigint,
+  aTokenAddress = "0xBcca60bB61934080951369a648Fb03DF4F96263C",
+): `0x${string}` {
   const configuration = "0".repeat(64); // slot 0
   const liquidityIndex = "0".repeat(64); // slot 1
   const liquidityRateHex = currentLiquidityRate.toString(16).padStart(64, "0"); // slot 2
+  const slots3to7 = "0".repeat(64 * 5);
+  const aToken = aTokenAddress.replace("0x", "").toLowerCase().padStart(64, "0"); // slot 8
   const trailing = "0".repeat(64 * 5); // remaining fields
-  return `0x${configuration}${liquidityIndex}${liquidityRateHex}${trailing}` as `0x${string}`;
+  return `0x${configuration}${liquidityIndex}${liquidityRateHex}${slots3to7}${aToken}${trailing}` as `0x${string}`;
 }
 
 // RAY = 10^27
@@ -79,6 +85,7 @@ describe("fetchAaveV3SupplyRates", () => {
     const rayRate = BigInt(Math.round(nominalRate * Number(RAY)));
     const hex = buildGetReserveDataHex(rayRate);
     mockFetchEvmCallHexAtBlock.mockResolvedValue(hex);
+    mockFetchEvmUint256AtBlock.mockResolvedValue(125_000_000_000_000n);
 
     const { rates, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
 
@@ -91,6 +98,7 @@ describe("fetchAaveV3SupplyRates", () => {
     expect(telemetry.resolvedTargetCount).toBe(1);
     expect(telemetry.emittedCount).toBe(1);
     expect(telemetry.missingTargetCount).toBe(0);
+    expect(rates.get("usdc-circle")!.sourceTvlUsd).toBe(125_000_000);
   });
 
   it("correctly reads currentLiquidityRate from byte offset 128 (slot 2 in the struct)", async () => {
@@ -98,6 +106,7 @@ describe("fetchAaveV3SupplyRates", () => {
     const rawRate = RAY / 1000n; // ~1e24 → nominal 0.1%/yr → APY ≈ 0.1%
     const hex = buildGetReserveDataHex(rawRate);
     mockFetchEvmCallHexAtBlock.mockResolvedValue(hex);
+    mockFetchEvmUint256AtBlock.mockResolvedValue(50_000_000_000_000n);
 
     const { rates } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
     expect(rates.has("usdc-circle")).toBe(true);
@@ -170,6 +179,9 @@ describe("fetchAaveV3SupplyRates", () => {
     mockFetchEvmCallHexAtBlock
       .mockResolvedValueOnce(buildGetReserveDataHex(rate5pct)) // USDC on ethereum
       .mockResolvedValueOnce(buildGetReserveDataHex(rate3pct)); // USDT on arbitrum
+    mockFetchEvmUint256AtBlock
+      .mockResolvedValueOnce(125_000_000_000_000n)
+      .mockResolvedValueOnce(75_000_000_000_000n);
 
     const { rates } = await fetchAaveV3SupplyRates(
       [USDC_TARGET, USDT_TARGET],
@@ -182,6 +194,48 @@ describe("fetchAaveV3SupplyRates", () => {
     expect(rates.get("usdc-circle")!.apy).toBeGreaterThan(5);
     expect(rates.get("usdt-tether")!.apy).toBeGreaterThan(3);
     expect(rates.get("usdt-tether")!.apy).toBeLessThan(5);
+  });
+
+  it("preserves per-market rows while keeping legacy best-rate lookup by stablecoin", async () => {
+    const rate5pct = BigInt(Math.round(0.05 * Number(RAY)));
+    const rate3pct = BigInt(Math.round(0.03 * Number(RAY)));
+    const baseTarget: AaveV3RateTarget = {
+      stablecoinId: "usdc-circle",
+      symbol: "USDC",
+      chain: "base",
+      assetAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    };
+
+    mockFetchEvmCallHexAtBlock
+      .mockResolvedValueOnce(buildGetReserveDataHex(rate5pct))
+      .mockResolvedValueOnce(buildGetReserveDataHex(rate3pct));
+    mockFetchEvmUint256AtBlock
+      .mockResolvedValueOnce(125_000_000_000_000n)
+      .mockResolvedValueOnce(75_000_000_000_000n);
+
+    const { rates, results, telemetry } = await fetchAaveV3SupplyRates(
+      [USDC_TARGET, baseTarget],
+      undefined,
+      makeChainRpcs(),
+    );
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        stablecoinId: "usdc-circle",
+        chain: "ethereum",
+        assetAddress: USDC_TARGET.assetAddress,
+        sourceTvlUsd: 125_000_000,
+      }),
+      expect.objectContaining({
+        stablecoinId: "usdc-circle",
+        chain: "base",
+        assetAddress: baseTarget.assetAddress,
+        sourceTvlUsd: 75_000_000,
+      }),
+    ]);
+    expect(telemetry.emittedCount).toBe(2);
+    expect(rates.size).toBe(1);
+    expect(rates.get("usdc-circle")?.chain).toBe("ethereum");
   });
 
   it("excludes rates where APY is zero (zero liquidity rate)", async () => {

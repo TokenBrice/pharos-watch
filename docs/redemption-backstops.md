@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.992`
+- **Current methodology version:** `v3.994`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v3.992` update: configured tracked wrappers now inherit a severe active-depeg impairment from the parent stablecoin whenever the wrapper keeps `pegReferenceId === variantOf`, so redemption exercisability stays aligned with the parent-linked Safety Score cap.
+Latest `v3.994` update: Aave Umbrella stkGHO and RIF On Chain USDRIF now publish source-reviewed queued redemption routes with documented-bound, eventual-only capacity semantics.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
@@ -20,8 +20,8 @@ There is no standalone changelog page yet. The public methodology link currently
 
 Configured coverage is defined statically behind the thin facade in `shared/lib/redemption-backstops.ts`, with route-family modules under `shared/lib/redemption-backstop-configs/`.
 
-- **Configured coins:** 193
-- **Route families:** 102 `offchain-issuer`, 34 `stablecoin-redeem`, 23 `collateral-redeem`, 20 `queue-redeem`, 9 `psm-swap`, 5 `basket-redeem`
+- **Configured coins:** 195
+- **Route families:** 102 `offchain-issuer`, 34 `stablecoin-redeem`, 23 `collateral-redeem`, 22 `queue-redeem`, 9 `psm-swap`, 5 `basket-redeem`
 - **No discovery layer:** only coins present in `REDEMPTION_BACKSTOP_CONFIGS` are modeled
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.
@@ -145,6 +145,20 @@ The resulting row is tagged with one `sourceMode`:
 - `estimated` when static supply models or configured reserve-sync fallback ratios are used
 - `static` when the route remains configured but the current snapshot could not resolve a usable score, including failure-safe rows written after per-coin sync errors
 
+### Provider / Source Definitions
+
+Provider identifiers are defined in `shared/lib/redemption-backstop-providers.ts` and describe where the capacity number came from, what confidence defaults apply, and whether the source can ever survive a severe-depeg gate.
+
+| Provider                  | Capacity source            | Default source mode | Default confidence | Default semantics    | Severe-depeg scoreability              |
+| ------------------------- | -------------------------- | ------------------- | ------------------ | -------------------- | -------------------------------------- |
+| `supply-full-model`       | Full supply model          | `estimated`         | `heuristic`        | `eventual-only`      | Not scoreable                          |
+| `supply-ratio-model`      | Configured supply ratio    | `estimated`         | `heuristic`        | `immediate-bounded`  | Not scoreable                          |
+| `reserve-sync-metadata`   | Live reserve metadata      | `dynamic`           | `dynamic`          | `immediate-bounded`  | Requires strong live-direct route      |
+| `reserve-sync-fallback`   | Reviewed fallback ratio    | `estimated`         | `heuristic`        | `immediate-bounded`  | Not scoreable                          |
+| `sync-error`              | Failure sentinel           | `static`            | `heuristic`        | `immediate-bounded`  | Not scoreable                          |
+
+`reserve-sync-metadata` readback can refine confidence to `live-direct` or `live-proxy` when the configured adapter declares direct or proxy redemption-capacity telemetry. Proxy and queue telemetry can provide context or lower-bound capacity, but they cannot qualify as severe active-depeg live-direct evidence.
+
 Each row also carries:
 
 - `resolutionState`:
@@ -176,6 +190,10 @@ Each row also carries:
   - `eventual-only` when the route is scored as eventual redeemability rather than immediate same-size liquidity. Report cards generally treat these as visible-only, except documented offchain issuer routes can add a DEX-gated primary-market exit bonus under Safety Score methodology v7.05+
 - `capacityBasis`:
   - typed evidence basis such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `live-direct-telemetry`, or `live-proxy-buffer`
+- Live reserve telemetry fields are additive display/provenance context, not Safety Score eligibility by themselves:
+  - `capacityKind` describes the adapter-declared evidence shape, such as `live-direct-bounded`, `live-queue`, `live-proxy-validated`, `documented-bound`, `documented-eventual`, or `heuristic`
+  - `freshnessKind` describes the adapter-declared redemption freshness evidence, such as `verified-source-timestamp`, `same-run-onchain`, `same-run-api`, `reviewed-static`, or `unverified`
+  - `sourceTimestamp`, `sourceUrls`, `settlementDelaySec`, `queueDepthUsd`, `dailyLimitUsd`, `minRedeemUsd`, and `liveHolderEligibility` are carried through the API/UI when emitted by live reserve adapters
 - `feeConfidence`:
   - `fixed` for bounded bps schedules
   - `formula` for disclosed formulas such as Liquity-style base-rate fees
@@ -248,9 +266,9 @@ Key columns:
 - `details_json`
 - `snapshot_run_id`
 
-`details_json` now also stores `routeFamily`, provider/source provenance, immediate-capacity fields, fee fields, `resolutionState`, `routeStatus`, `routeStatusSource`, `routeStatusReason`, `routeStatusReviewedAt`, `holderEligibility`, `capacityConfidence`, `capacityBasis`, `capacitySemantics`, `feeConfidence`, `feeModelKind`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so richer runtime context survives current-snapshot and history writes without a schema migration.
+`details_json` now also stores `routeFamily`, provider/source provenance, immediate-capacity fields, optional live telemetry fields, fee fields, `resolutionState`, `routeStatus`, `routeStatusSource`, `routeStatusReason`, `routeStatusReviewedAt`, `holderEligibility`, `capacityConfidence`, `capacityBasis`, `capacitySemantics`, `feeConfidence`, `feeModelKind`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so richer runtime context survives current-snapshot and history writes without a schema migration.
 
-`snapshot_run_id` links current rows to a completed `redemption_backstop_runs` manifest when written by the post-`0094` worker. API and report-card readers prefer the latest completed run and filter current rows to that generation. Legacy rows without a completed run remain readable as a fallback during rollout and local bootstrap.
+`snapshot_run_id` links current rows to a completed `redemption_backstop_runs` manifest when written by the post-`0094` worker. API and report-card readers prefer the latest valid completed run and filter current rows to that generation. If the newest completed manifest is incomplete or its rows are unreadable, readers try recent earlier completed runs before returning `503`. Legacy rows without a completed run remain readable as a fallback during rollout and local bootstrap.
 
 ### `redemption_backstop_history`
 
@@ -285,7 +303,7 @@ Stored fields:
 - `max_updated_at`
 - `metadata_json`
 
-The sync inserts a `running` row before writing current/history rows and marks it `completed` only after all row batches succeed. Readers prefer the latest completed run and use `max_updated_at` for response freshness. If no completed run exists, they fall back to legacy `MAX(updated_at)` behavior.
+The sync inserts a `running` row before writing current/history rows and marks it `completed` only after all row batches succeed. If a row batch or completion update fails after the manifest is started, the writer best-effort marks the manifest `failed` with failure metadata before rethrowing. Readers prefer the latest valid completed run and use `max_updated_at` for response freshness. If no completed run exists, they fall back to legacy `MAX(updated_at)` behavior.
 
 ---
 

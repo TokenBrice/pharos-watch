@@ -1116,8 +1116,8 @@
           {
             "name": "stablecoin",
             "in": "query",
-            "required": false,
-            "description": "Optional canonical Pharos stablecoin ID filter.",
+            "required": true,
+            "description": "Required canonical Pharos stablecoin ID.",
             "schema": {
               "type": "string"
             }
@@ -1126,19 +1126,24 @@
             "name": "days",
             "in": "query",
             "required": false,
-            "description": "Historical lookback window in days. Endpoint-specific bounds may apply.",
+            "description": "Historical lookback window in days. Defaults to 90.",
             "schema": {
               "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "maximum": 365
             }
           },
           {
             "name": "mode",
             "in": "query",
             "required": false,
-            "description": "Optional yield mode filter.",
+            "description": "History mode. `best` returns historically selected best-source rows; `source` requires `sourceKey`.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "best",
+                "source"
+              ]
             }
           },
           {

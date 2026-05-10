@@ -5,6 +5,7 @@ import { COLLATERAL_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backs
 import { OFFCHAIN_ISSUER_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/offchain-issuer";
 import { PSM_AND_BASKET_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/psm-and-basket";
 import { QUEUE_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/queue-redeem";
+import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import { STABLECOIN_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/stablecoin-redeem";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstops";
@@ -40,6 +41,19 @@ const familyModules = [
 ] as const;
 
 describe("redemption backstop config consistency", () => {
+  it("every config parses through the shared schema", () => {
+    const violations = entries.flatMap(([id, config]) => {
+      const result = RedemptionBackstopConfigSchema.safeParse(config);
+      if (result.success) return [];
+      return result.error.issues.map((issue) => {
+        const path = issue.path.length > 0 ? issue.path.join(".") : "<root>";
+        return `${id}: ${path}: ${issue.message}`;
+      });
+    });
+
+    expect(violations).toEqual([]);
+  });
+
   it("every config ID exists in TRACKED_META_BY_ID", () => {
     const missing = entries.filter(([id]) => !TRACKED_META_BY_ID.has(id)).map(([id]) => id);
     expect(missing).toEqual([]);

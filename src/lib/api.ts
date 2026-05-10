@@ -172,6 +172,15 @@ function isFreshnessWarningHeader(warningHeader: string): boolean {
     || /Response is (?:degraded|stale)/i.test(warningHeader);
 }
 
+function getBodyWarning(data: unknown): string | null {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return null;
+  }
+
+  const warning = (data as { warning?: unknown }).warning;
+  return typeof warning === "string" && warning.trim().length > 0 ? warning : null;
+}
+
 async function buildFetchError(path: string, res: Response): Promise<ApiFetchError> {
   let bodyText: string | null = null;
   try {
@@ -285,6 +294,7 @@ export async function apiFetchWithMeta<T>(
     if (parsed.success) meta = parsed.data;
     data = rest;
   }
+  const bodyWarning = getBodyWarning(data);
 
   // Fallback: read X-Data-Age header (for array responses or non-cache-handler endpoints)
   if (!meta) {
@@ -315,6 +325,12 @@ export async function apiFetchWithMeta<T>(
         warning: warningHeader,
       };
     }
+  }
+  if (bodyWarning && meta && !meta.warning) {
+    meta = {
+      ...meta,
+      warning: bodyWarning,
+    };
   }
 
   return { data: validateApiPayload(path, data, schema, contractMode), meta };

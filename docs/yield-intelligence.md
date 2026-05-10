@@ -654,13 +654,14 @@ Historical APY data points for a single coin. Reads from `yield_history` directl
 | ------------ | ------- | -------- | ------ | -------------------- |
 | `stablecoin` | string  | required | —      | Pharos stablecoin ID |
 | `days`       | integer | 90       | 1–365  | Lookback window      |
-| `mode`       | string  | best     | —      | `best` for historically selected best-source rows |
+| `mode`       | string  | best     | `best`, `source` | `best` for historically selected best-source rows; `source` requires `sourceKey` |
 | `sourceKey`  | string  | —        | —      | When present, returns source-specific history for that source key |
 
 **Response:** Envelope with:
 
 - `current`: latest row in the returned window, or `null`
 - `history`: array sorted by `date` ASC
+- `warning`: optional handler warning when the freshness cutoff lookup falls back
 - `methodology`: standard methodology envelope for Yield Intelligence
 
 Each `history` row includes:
@@ -747,7 +748,7 @@ Recharts scatter chart. X = safety score, Y = APY (%). The chart plots one best-
 | Play It Safe | High safety, below benchmark | Blue (5% opacity)  |
 | Why Bother?  | Low safety, below benchmark  | Gray (5% opacity)  |
 
-Dashed reference line at the benchmark frame rate. On benchmark-homogeneous scopes, that frame uses the shared visible benchmark. On mixed scopes, the chart keeps the overlay visible by using the default USD benchmark as a shared orientation frame while the table and row tags continue to show each stablecoin's local benchmark context. Click a dot to navigate to that coin's detail page.
+Dashed reference line at the benchmark frame rate. On benchmark-homogeneous scopes, that frame uses the shared visible benchmark. On mixed scopes, the chart keeps the overlay visible by using the default USD benchmark as a shared orientation frame while the table and row tags continue to show each stablecoin's local benchmark context. Scatter tooltips show each row's own benchmark label/rate and 30d excess-yield value. Click a dot to navigate to that coin's detail page.
 
 ### `YieldLeaderboard` (`src/components/yield-leaderboard.tsx`)
 
@@ -782,7 +783,7 @@ The chart now supports source-aware inspection. When alternative sources exist, 
 
 This lets the detail page and leaderboard inspect the actual history of an alternative source instead of only showing its current snapshot.
 
-Recharts line chart. Primary APY line with optional base/reward breakdown toggle. Two reference lines: the row's benchmark rate and peer median APY. Warning signal markers on data points. Time presets: 7d / 30d / 90d / 1y.
+Recharts line chart. Primary APY line with optional base/reward breakdown toggle. Two reference lines: the row's benchmark rate and peer median APY. Warning signal markers on data points. Time presets: 7d / 30d / 90d / 1y. The legend labels the primary line source and keys source overlays by `sourceKey`, adding a short source-key suffix when two retained sources share the same display name.
 
 It reads `/api/yield-history` through `useYieldHistory`, and points carrying `warningSignals` get amber markers so spike/divergence/reward-heavy regimes are visible without expanding the tooltip.
 
