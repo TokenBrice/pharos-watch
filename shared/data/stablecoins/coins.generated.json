@@ -432,6 +432,10 @@
       {
         "label": "Website",
         "url": "https://www.anq.money"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/AnqFinance"
       }
     ],
     "jurisdiction": {
@@ -11232,7 +11236,11 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://www.hashedopenfinance.com"
+        "url": "https://maroo.io/en"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/maroo_io"
       }
     ],
     "jurisdiction": {
@@ -16840,7 +16848,7 @@
       },
       {
         "label": "Twitter",
-        "url": "https://x.com/Bridge"
+        "url": "https://x.com/Stablecoin"
       }
     ],
     "jurisdiction": {
@@ -17810,6 +17818,10 @@
       {
         "label": "Website",
         "url": "https://www.flipcash.com"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/flipcash"
       }
     ],
     "jurisdiction": {
