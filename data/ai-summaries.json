@@ -721,13 +721,13 @@
   },
   "syrupusdc-maple": {
     "title": "Institutional Lending, Vaulted",
-    "text": "Maple Finance's syrupUSDC has become one of the largest yield-bearing stablecoins, channeling deposits into overcollateralized institutional loans. The ERC-4626 vault design makes it composable enough that Aave V3, Morpho, and Pendle have all integrated it — meaning your lending yield can itself be lent, borrowed against, or split into principal and yield tranches. Base expansion saw deposit caps fill immediately, suggesting institutional credit appetite exceeds available supply. The risk is the one that always haunts institutional credit: borrowers default, and 'overcollateralized' is only as good as the collateral's liquidation value in a downturn.",
-    "updatedAt": "2026-03-23"
+    "text": "Maple Finance's syrupUSDC has become one of the largest yield-bearing stablecoins, channeling deposits into overcollateralized institutional loans. The ERC-4626 vault design makes it composable enough that Aave V3, Morpho, and Pendle have all integrated it — meaning your lending yield can itself be lent, borrowed against, or split into principal and yield tranches. Maple's new Proof of Reserves layer adds independent verification by The Network Firm for collateral backing the loan book, improving transparency without eliminating credit, custody, or liquidation-timing risk. The risk is still the one that always haunts institutional credit: borrowers default, and 'overcollateralized' is only as good as the collateral's liquidation value in a downturn.",
+    "updatedAt": "2026-05-10"
   },
   "syrupusdt-maple": {
     "title": "The Mirror Vault",
-    "text": "Maple's USDT counterpart to syrupUSDC runs on identical mechanics — ERC-4626 vault, institutional borrower pool, overcollateralized credit lines — as the smaller sibling. The distinction matters less than it appears: both feed from the same Maple lending infrastructure, and yield differentials between the two are negligible. Ethereum-only deployment limits its DeFi composability compared to syrupUSDC's multi-chain reach, which may explain the size gap. For yield-seekers who prefer their stablecoin exposure in Tether rather than Circle, syrupUSDT is the vault; the economics are otherwise indistinguishable.",
-    "updatedAt": "2026-03-23"
+    "text": "Maple's USDT counterpart to syrupUSDC runs on identical mechanics — ERC-4626 vault, institutional borrower pool, overcollateralized credit lines — as the smaller sibling. The distinction matters less than it appears: both feed from the same Maple lending infrastructure, and Maple's Proof of Reserves now gives the USDT vault the same independent loan-collateral verification by The Network Firm. Ethereum-only deployment limits its DeFi composability compared to syrupUSDC's multi-chain reach, which may explain the size gap. For yield-seekers who prefer their stablecoin exposure in Tether rather than Circle, syrupUSDT is the vault; the economics are otherwise indistinguishable.",
+    "updatedAt": "2026-05-10"
   },
   "yousd-yield-optimizer": {
     "title": "Fifty Strategies, One Token",

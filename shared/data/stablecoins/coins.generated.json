@@ -14256,6 +14256,11 @@
     "pegMechanism": "ERC-4626 vault; USDC deposited into Maple lending pools, NAV appreciates with accrued interest; protocol withdrawals are requested onchain and serviced through a FIFO queue as liquidity becomes available",
     "geckoId": "syrupusdc",
     "pythFeedId": "0xe616297dab48626eaacf6d030717b25823b13ae6520b83f4735bf8deec8e2c9a",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://maple.finance/insights/introducing-proof-of-reserves",
+      "provider": "The Network Firm"
+    },
     "links": [
       {
         "label": "Website",
@@ -14264,6 +14269,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/maplefinance"
+      },
+      {
+        "label": "Proof of Reserves",
+        "url": "https://maple.finance/insights/introducing-proof-of-reserves"
       }
     ],
     "contracts": [
@@ -14343,6 +14352,11 @@
     "collateral": "USDT deposits lent to institutional borrowers via overcollateralized, fixed-rate loans on Maple Finance",
     "pegMechanism": "ERC-4626 vault; USDT deposited into Maple lending pools, NAV appreciates with accrued interest; protocol withdrawals are requested onchain and serviced through a FIFO queue as liquidity becomes available",
     "geckoId": "syrupusdt",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://maple.finance/insights/introducing-proof-of-reserves",
+      "provider": "The Network Firm"
+    },
     "links": [
       {
         "label": "Website",
@@ -14351,6 +14365,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/maplefinance"
+      },
+      {
+        "label": "Proof of Reserves",
+        "url": "https://maple.finance/insights/introducing-proof-of-reserves"
       }
     ],
     "contracts": [

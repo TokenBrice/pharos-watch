@@ -14,6 +14,11 @@
   "pegMechanism": "ERC-4626 vault; USDT deposited into Maple lending pools, NAV appreciates with accrued interest; protocol withdrawals are requested onchain and serviced through a FIFO queue as liquidity becomes available",
   "detailProvider": "coingecko",
   "geckoId": "syrupusdt",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://maple.finance/insights/introducing-proof-of-reserves",
+    "provider": "The Network Firm"
+  },
   "links": [
     {
       "label": "Website",
@@ -22,6 +27,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/maplefinance"
+    },
+    {
+      "label": "Proof of Reserves",
+      "url": "https://maple.finance/insights/introducing-proof-of-reserves"
     }
   ],
   "contracts": [
