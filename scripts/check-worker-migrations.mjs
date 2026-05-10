@@ -13,6 +13,7 @@ export const UNSAFE_ROLLOUT_SAFETY_PATTERNS = Object.freeze([
   { label: "ALTER TABLE ... RENAME COLUMN", pattern: /\bALTER\s+TABLE\b[\s\S]*?\bRENAME\s+COLUMN\b/i },
   { label: "ALTER TABLE ... DROP COLUMN", pattern: /\bALTER\s+TABLE\b[\s\S]*?\bDROP\s+COLUMN\b/i },
 ]);
+export const UNSAFE_ROLLOUT_ADD_COLUMN_LABEL = "ALTER TABLE ... ADD COLUMN ... NOT NULL without DEFAULT";
 
 export function getMigrationFiles(migrationsDir) {
   return readdirSync(migrationsDir)
@@ -108,7 +109,19 @@ export function stripSqlComments(sql) {
 
 export function findUnsafeRolloutStatements(sql) {
   const normalizedSql = stripSqlComments(sql);
-  return UNSAFE_ROLLOUT_SAFETY_PATTERNS.filter(({ pattern }) => pattern.test(normalizedSql)).map(({ label }) => label);
+  const unsafeStatements = UNSAFE_ROLLOUT_SAFETY_PATTERNS.filter(({ pattern }) => pattern.test(normalizedSql)).map(
+    ({ label }) => label,
+  );
+  const addColumnStatements = normalizedSql.match(/\bALTER\s+TABLE\b[\s\S]*?\bADD\s+COLUMN\b[\s\S]*?(?:;|$)/gi) ?? [];
+  const hasUnsafeAddColumn = addColumnStatements.some(
+    (statement) => /\bNOT\s+NULL\b/i.test(statement) && !/\bDEFAULT\b/i.test(statement),
+  );
+
+  if (hasUnsafeAddColumn) {
+    unsafeStatements.push(UNSAFE_ROLLOUT_ADD_COLUMN_LABEL);
+  }
+
+  return [...new Set(unsafeStatements)];
 }
 
 export function validateRolloutSafetyAnnotation(file, sql, enforcementPrefix = ROLLOUT_SAFETY_ENFORCEMENT_PREFIX) {

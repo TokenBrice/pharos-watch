@@ -14,7 +14,8 @@ describe("validateWorkerEnvContract", () => {
       CF_ACCESS_TEAM_DOMAIN: undefined,
       SITE_API_SHARED_SECRET: "site-secret",
       API_KEY_HASH_PEPPER: "pepper",
-      FEEDBACK_IP_SALT: undefined,
+      GITHUB_PAT: "ghp_test_token",
+      FEEDBACK_IP_SALT: "feedback",
     })).toContainEqual({
       code: "ops-access-partial-config",
       message: "CF_ACCESS_OPS_API_AUD and CF_ACCESS_TEAM_DOMAIN must be configured together for ops-api Access JWT verification.",
@@ -27,6 +28,7 @@ describe("validateWorkerEnvContract", () => {
       CF_ACCESS_TEAM_DOMAIN: undefined,
       SITE_API_SHARED_SECRET: "site-secret",
       API_KEY_HASH_PEPPER: "pepper",
+      GITHUB_PAT: "ghp_test_token",
       FEEDBACK_IP_SALT: "feedback",
       CLOUDFLARE_ACCOUNT_ID: "acct",
       CLOUDFLARE_D1_STATUS_API_TOKEN: undefined,
@@ -43,6 +45,7 @@ describe("validateWorkerEnvContract", () => {
       CF_ACCESS_TEAM_DOMAIN: undefined,
       SITE_API_SHARED_SECRET: undefined,
       API_KEY_HASH_PEPPER: "pepper",
+      GITHUB_PAT: "ghp_test_token",
       FEEDBACK_IP_SALT: "feedback",
     })).toContainEqual({
       code: "site-api-secret-misconfigured",
@@ -60,10 +63,25 @@ describe("validateWorkerEnvContract", () => {
       CF_ACCESS_TEAM_DOMAIN: undefined,
       SITE_API_SHARED_SECRET: "site-secret",
       API_KEY_HASH_PEPPER: undefined,
+      GITHUB_PAT: "ghp_test_token",
       FEEDBACK_IP_SALT: "feedback",
     })).toContainEqual({
       code: "public-api-auth-pepper-missing",
       message: "API_KEY_HASH_PEPPER must be configured; /api/* requires a valid X-API-Key.",
+    });
+  });
+
+  it("flags missing feedback submission bindings", () => {
+    expect(validateWorkerEnvContract({
+      CF_ACCESS_OPS_API_AUD: undefined,
+      CF_ACCESS_TEAM_DOMAIN: undefined,
+      SITE_API_SHARED_SECRET: "site-secret",
+      API_KEY_HASH_PEPPER: "pepper",
+      GITHUB_PAT: undefined,
+      FEEDBACK_IP_SALT: "feedback",
+    })).toContainEqual({
+      code: "feedback-env-misconfigured",
+      message: "GITHUB_PAT and FEEDBACK_IP_SALT must be configured together; POST /api/feedback returns 503 until both are set.",
     });
   });
 });

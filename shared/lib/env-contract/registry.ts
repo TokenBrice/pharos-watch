@@ -194,19 +194,19 @@ export const ENV_BINDINGS = [
   {
     key: "GITHUB_PAT",
     valueType: "string",
-    description: "GitHub personal access token used by the feedback -> issue bridge.",
-    example: { section: "workerOptional", value: "" },
+    description: "GitHub personal access token used by the feedback -> issue bridge; required to keep `POST /api/feedback` available.",
+    example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { order: 18, status: "optional" },
+      worker: { order: 18, status: "required" },
     },
   },
   {
     key: "FEEDBACK_IP_SALT",
     valueType: "string",
-    description: "Dedicated salt for hashed-IP feedback submission throttling.",
-    example: { section: "workerOptional", value: "" },
+    description: "Dedicated salt for hashed-IP feedback submission throttling; required to keep `POST /api/feedback` available.",
+    example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { order: 19, status: "optional" },
+      worker: { order: 19, status: "required" },
     },
   },
   {

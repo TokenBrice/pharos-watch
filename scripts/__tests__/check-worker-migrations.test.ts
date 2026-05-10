@@ -4,6 +4,7 @@ import {
   LEGACY_DUPLICATE_PREFIX_ALLOWLIST,
   REQUIRED_ROLLOUT_SAFETY_MODE,
   ROLLOUT_SAFETY_ENFORCEMENT_PREFIX,
+  UNSAFE_ROLLOUT_ADD_COLUMN_LABEL,
   parseDuplicatePrefixAllowlist,
   parseRolloutSafetyPolicy,
   validateDuplicatePrefixAllowlist,
@@ -122,6 +123,18 @@ describe("validateRolloutSafetyAnnotation", () => {
     ).toThrow("can break the still-live worker");
   });
 
+  it("rejects new NOT NULL columns that would break still-live writes without a default", () => {
+    expect(() =>
+      validateRolloutSafetyAnnotation(
+        "0071_add_required_column.sql",
+        [
+          `-- rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE}`,
+          "ALTER TABLE api_keys ADD COLUMN owner_team TEXT NOT NULL;",
+        ].join("\n"),
+      ),
+    ).toThrow(UNSAFE_ROLLOUT_ADD_COLUMN_LABEL);
+  });
+
   it("accepts additive migrations with the required rollout-safety header", () => {
     expect(() =>
       validateRolloutSafetyAnnotation(
@@ -130,6 +143,7 @@ describe("validateRolloutSafetyAnnotation", () => {
           "-- cleanup later: DROP TABLE old_table",
           `-- rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE}`,
           "CREATE TABLE example (id INTEGER PRIMARY KEY, value TEXT);",
+          "ALTER TABLE example ADD COLUMN display_name TEXT NOT NULL DEFAULT '';",
           "CREATE INDEX idx_example_value ON example(value);",
         ].join("\n"),
       ),

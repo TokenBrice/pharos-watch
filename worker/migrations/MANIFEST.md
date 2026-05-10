@@ -70,8 +70,10 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 - Rollout-safety enforcement starts at: `0071`
 - Required rollout-safety header: `-- rollout-safety: backward-compatible`
 - Standard production deploy applies D1 migrations before the new Worker is live, so every new migration from `0071` onward must keep the previous production Worker running until deploy completes.
-- `backward-compatible` means additive or compatibility-preserving changes only. Do not drop or rename tables/columns in the default deploy path.
+- `backward-compatible` means additive or compatibility-preserving changes only. Do not drop or rename tables/columns in the default deploy path, and do not add `NOT NULL` columns without a `DEFAULT` because the still-live Worker may still issue inserts before promotion.
+- The deploy workflow reruns `npm run check:migrations` on the release runner and uploads the candidate Worker version before remote `wrangler d1 migrations apply` so the schema-change-to-preview-smoke window stays as short as this default path allows.
 - Destructive cleanup must be scheduled as a separate, coordinated rollout after the old Worker code is no longer serving traffic. Do not merge those cleanup migrations into the normal deploy path without an explicit runbook/workflow change.
+- Automatic Worker rollback only re-promotes the previous Worker version. It does not undo D1 schema or data changes.
 
 ## Rollback Procedure
 

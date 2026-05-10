@@ -48,6 +48,7 @@ export interface WorkerEnvIssue {
     | "ops-access-partial-config"
     | "d1-status-partial-config"
     | "site-api-secret-misconfigured"
+    | "feedback-env-misconfigured"
     | "public-api-auth-pepper-missing"
     | "api-key-pepper-noop-rotation";
   message: string;
@@ -112,6 +113,7 @@ export function validateWorkerEnvContract(
     | "SITE_API_SHARED_SECRET"
     | "API_KEY_HASH_PEPPER"
     | "API_KEY_HASH_PEPPER_PREVIOUS"
+    | "GITHUB_PAT"
     | "FEEDBACK_IP_SALT"
     | "CLOUDFLARE_ACCOUNT_ID"
     | "CLOUDFLARE_D1_STATUS_API_TOKEN"
@@ -142,6 +144,13 @@ export function validateWorkerEnvContract(
     issues.push({
       code: "site-api-secret-misconfigured",
       message: "SITE_API_SHARED_SECRET is unset; the website site-api lane cannot authenticate until the shared secret is configured.",
+    });
+  }
+
+  if (!hasConfiguredValue(env.GITHUB_PAT) || !hasConfiguredValue(env.FEEDBACK_IP_SALT)) {
+    issues.push({
+      code: "feedback-env-misconfigured",
+      message: "GITHUB_PAT and FEEDBACK_IP_SALT must be configured together; POST /api/feedback returns 503 until both are set.",
     });
   }
 

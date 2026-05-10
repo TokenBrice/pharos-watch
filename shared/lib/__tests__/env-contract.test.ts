@@ -7,6 +7,15 @@ import {
 } from "../env-contract";
 
 describe("env contract manifest", () => {
+  it("keeps the worker required binding order stable", () => {
+    expect(getRuntimeEnvKeys("worker", "required")).toEqual([
+      "DB",
+      "CORS_ORIGIN",
+      "GITHUB_PAT",
+      "FEEDBACK_IP_SALT",
+    ]);
+  });
+
   it("keeps the Pages ops required binding order stable", () => {
     expect(getRuntimeEnvKeys("pagesOps", "required")).toEqual([
       "OPS_API_SERVICE_TOKEN_ID",

@@ -76,8 +76,8 @@ jobs:
             status?.versions?.find((entry) => entry?.percentage === 100)?.version_id ?? "";
           process.stdout.write(`previous_version_id=${previousVersionId}\n`);
           NODE
-      - name: Apply D1 migrations
-        run: cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote
+      - name: Rehearse D1 migrations locally
+        run: npm run check:migrations
       - name: Upload candidate worker version
         id: upload-version
         env:
@@ -103,6 +103,8 @@ jobs:
           process.stdout.write(`version_id=${uploadEvent.version_id}\n`);
           process.stdout.write(`preview_url=${uploadEvent.preview_url}\n`);
           NODE
+      - name: Apply production D1 migrations
+        run: cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote
       - name: Smoke uploaded preview worker
         run: npm run test:smoke-api
         env:
