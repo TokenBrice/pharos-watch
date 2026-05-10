@@ -1,6 +1,4 @@
-import {
-  getLiveReserveAdapterDefinition,
-} from "@shared/lib/live-reserve-adapters";
+import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type {
   LiveReserveEvidenceClass,
@@ -24,7 +22,11 @@ import type {
 
 const VALID_RISKS = new Set(["very-low", "low", "medium", "high", "very-high"]);
 const VALID_SOURCE_MODELS = new Set<LiveReserveSourceModel>(["dynamic-mix", "validated-static", "single-bucket"]);
-const VALID_EVIDENCE_CLASSES = new Set<LiveReserveEvidenceClass>(["independent", "static-validated", "weak-live-probe"]);
+const VALID_EVIDENCE_CLASSES = new Set<LiveReserveEvidenceClass>([
+  "independent",
+  "static-validated",
+  "weak-live-probe",
+]);
 const VALID_WARNING_EFFECTS = new Set(["info", "degraded", "fatal"]);
 const VALID_FRESHNESS_MODES = new Set<LiveReserveFreshnessMode>(["verified", "unverified", "not-applicable"]);
 const VALID_REDEMPTION_CAPACITY_KINDS = new Set<LiveReserveRedemptionCapacityKind>([
@@ -57,17 +59,25 @@ function parseJsonObject(value: string | null | undefined): Record<string, unkno
   const decoded = decodeJsonString<Record<string, unknown>, "json-parse-failed" | "invalid-payload">(value, {
     mode: "best-effort",
     parseErrorReason: "json-parse-failed",
-    normalize: (parsed) => (
+    normalize: (parsed) =>
       parsed && typeof parsed === "object" && !Array.isArray(parsed)
         ? { ok: true, payload: parsed as Record<string, unknown> }
-        : { ok: false, reason: "invalid-payload" }
-    ),
+        : { ok: false, reason: "invalid-payload" },
   });
   return decoded.payload ?? {};
 }
 
 function coerceFiniteMetadataNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReserveSnapshotMetadata {
@@ -168,7 +178,9 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
       delete redemption.holderEligibility;
     }
     if (Array.isArray(rawRedemption.sourceUrls)) {
-      redemption.sourceUrls = rawRedemption.sourceUrls.filter((url): url is string => typeof url === "string");
+      redemption.sourceUrls = rawRedemption.sourceUrls.filter(
+        (url): url is string => typeof url === "string" && isHttpUrl(url),
+      );
     } else {
       delete redemption.sourceUrls;
     }
@@ -193,18 +205,19 @@ export function parseWarnings(value: string | null): LiveReserveWarning[] {
       ok: true,
       payload: Array.isArray(parsed)
         ? parsed.flatMap((item) => {
-          if (!item || typeof item !== "object") return [];
-          const code = typeof item.code === "string" ? item.code : null;
-          const message = typeof item.message === "string" ? item.message : null;
-          if (!code || !message) return [];
-          const severity = item.severity === "info" ? "info" : "warning";
-          const effect = typeof item.effect === "string" && VALID_WARNING_EFFECTS.has(item.effect)
-            ? item.effect as LiveReserveWarning["effect"]
-            : severity === "info"
-              ? "info"
-              : "degraded";
-          return [{ code, message, severity, effect }];
-        })
+            if (!item || typeof item !== "object") return [];
+            const code = typeof item.code === "string" ? item.code : null;
+            const message = typeof item.message === "string" ? item.message : null;
+            if (!code || !message) return [];
+            const severity = item.severity === "info" ? "info" : "warning";
+            const effect =
+              typeof item.effect === "string" && VALID_WARNING_EFFECTS.has(item.effect)
+                ? (item.effect as LiveReserveWarning["effect"])
+                : severity === "info"
+                  ? "info"
+                  : "degraded";
+            return [{ code, message, severity, effect }];
+          })
         : [],
     }),
   });
@@ -215,13 +228,13 @@ function isValidSlice(item: unknown): item is ReserveSlice {
   if (!item || typeof item !== "object") return false;
   const slice = item as Partial<ReserveSlice>;
   return (
-    typeof slice.name === "string"
-    && slice.name.length > 0
-    && typeof slice.pct === "number"
-    && Number.isFinite(slice.pct)
-    && slice.pct > 0
-    && typeof slice.risk === "string"
-    && VALID_RISKS.has(slice.risk)
+    typeof slice.name === "string" &&
+    slice.name.length > 0 &&
+    typeof slice.pct === "number" &&
+    Number.isFinite(slice.pct) &&
+    slice.pct > 0 &&
+    typeof slice.risk === "string" &&
+    VALID_RISKS.has(slice.risk)
   );
 }
 
@@ -296,7 +309,10 @@ function resolveSnapshotEvidenceClass(
   row: ReserveCompositionRow,
   fallbackAdapterKey: string,
 ): LiveReserveEvidenceClass | null {
-  if (row.adapter_evidence_class && VALID_EVIDENCE_CLASSES.has(row.adapter_evidence_class as LiveReserveEvidenceClass)) {
+  if (
+    row.adapter_evidence_class &&
+    VALID_EVIDENCE_CLASSES.has(row.adapter_evidence_class as LiveReserveEvidenceClass)
+  ) {
     return row.adapter_evidence_class as LiveReserveEvidenceClass;
   }
   return getLiveReserveAdapterDefinition(fallbackAdapterKey)?.evidenceClass ?? null;
@@ -311,25 +327,22 @@ export function parseReserveCompositionRow(
     return { record: null, issue: parsedSlices.issue };
   }
 
-  const fallbackAdapterKey = syncState?.adapterKey
-    ?? TRACKED_META_BY_ID.get(row.stablecoin_id)?.liveReservesConfig?.adapter
-    ?? row.source;
+  const fallbackAdapterKey =
+    syncState?.adapterKey ?? TRACKED_META_BY_ID.get(row.stablecoin_id)?.liveReservesConfig?.adapter ?? row.source;
   const metadata = parseSnapshotMetadata(row.metadata);
   const warnings = parseWarnings(row.warnings ?? null);
   const allowLegacyRecovery = shouldUseLegacySnapshotFallback(syncState, {
     fetchedAt: row.fetched_at,
     attemptId: row.attempt_id ?? null,
   });
-  const legacyMetadata = allowLegacyRecovery
-    ? normalizeSnapshotMetadata(syncState?.metadata ?? {})
-    : {};
-  const finalMetadata = Object.keys(metadata).length === 0 && Object.keys(legacyMetadata).length > 0 ? legacyMetadata : metadata;
-  const finalWarnings = warnings.length === 0 && allowLegacyRecovery
-    ? syncState?.warnings ?? []
-    : warnings;
-  const warningCount = typeof row.warning_count === "number" && Number.isFinite(row.warning_count)
-    ? row.warning_count
-    : finalWarnings.length;
+  const legacyMetadata = allowLegacyRecovery ? normalizeSnapshotMetadata(syncState?.metadata ?? {}) : {};
+  const finalMetadata =
+    Object.keys(metadata).length === 0 && Object.keys(legacyMetadata).length > 0 ? legacyMetadata : metadata;
+  const finalWarnings = warnings.length === 0 && allowLegacyRecovery ? (syncState?.warnings ?? []) : warnings;
+  const warningCount =
+    typeof row.warning_count === "number" && Number.isFinite(row.warning_count)
+      ? row.warning_count
+      : finalWarnings.length;
 
   const adapterSourceModel = resolveSnapshotSourceModel(row, fallbackAdapterKey);
   const adapterEvidenceClass = resolveSnapshotEvidenceClass(row, fallbackAdapterKey);

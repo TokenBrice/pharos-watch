@@ -42,6 +42,11 @@ type DocSourceViewModel = {
   supports: string | null;
 };
 
+type TelemetryContextItem = {
+  label: string;
+  value: string;
+};
+
 function scoreToneClass(score: number | null): string {
   return scoreToColorClass(
     score,
@@ -211,6 +216,42 @@ function getCapacitySummary(entry: RedemptionBackstopEntry): CapacitySummary {
   };
 }
 
+function formatTelemetryKind(value: string): string {
+  return value.replaceAll("-", " ");
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 48 * 60 * 60) return `${Math.round(seconds / 60 / 60)}h`;
+  return `${Math.round(seconds / 60 / 60 / 24)}d`;
+}
+
+function buildTelemetryContext(entry: RedemptionBackstopEntry): TelemetryContextItem[] {
+  const items: TelemetryContextItem[] = [];
+  if (entry.capacityKind) {
+    items.push({ label: "Capacity evidence", value: formatTelemetryKind(entry.capacityKind) });
+  }
+  if (entry.freshnessKind) {
+    items.push({ label: "Freshness", value: formatTelemetryKind(entry.freshnessKind) });
+  }
+  if (entry.settlementDelaySec != null) {
+    items.push({ label: "Live delay", value: formatDuration(entry.settlementDelaySec) });
+  }
+  if (entry.queueDepthUsd != null) {
+    items.push({ label: "Queue depth", value: formatCurrency(entry.queueDepthUsd, 1) });
+  }
+  if (entry.dailyLimitUsd != null) {
+    items.push({ label: "Daily limit", value: formatCurrency(entry.dailyLimitUsd, 1) });
+  }
+  if (entry.minRedeemUsd != null) {
+    items.push({ label: "Minimum redeem", value: formatCurrency(entry.minRedeemUsd, 1) });
+  }
+  if (entry.liveHolderEligibility) {
+    items.push({ label: "Live eligibility", value: formatTelemetryKind(entry.liveHolderEligibility) });
+  }
+  return items;
+}
+
 function formatDocsProvenance(value: NonNullable<NonNullable<RedemptionBackstopEntry["docs"]>["provenance"]>): string {
   switch (value) {
     case "config-reviewed":
@@ -281,6 +322,7 @@ export function buildRedemptionBackstopCardViewModel(entry: RedemptionBackstopEn
     settlementLabel: REDEMPTION_SETTLEMENT_LABELS[entry.settlementModel],
     outputAssetLabel: REDEMPTION_OUTPUT_ASSET_LABELS[entry.outputAssetType],
     capacitySummary: getCapacitySummary(entry),
+    telemetryContext: buildTelemetryContext(entry),
     feeSummary: getFeeSummary(entry),
     filteredNotes: buildFilteredNotes(entry),
     docSources: buildDocSources(entry),

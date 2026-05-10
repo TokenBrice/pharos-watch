@@ -19,13 +19,7 @@ export const RedemptionAccessModelSchema = z.enum([
 ]);
 export type RedemptionAccessModel = z.infer<typeof RedemptionAccessModelSchema>;
 
-export const RedemptionSettlementModelSchema = z.enum([
-  "atomic",
-  "immediate",
-  "same-day",
-  "days",
-  "queued",
-]);
+export const RedemptionSettlementModelSchema = z.enum(["atomic", "immediate", "same-day", "days", "queued"]);
 export type RedemptionSettlementModel = z.infer<typeof RedemptionSettlementModelSchema>;
 
 export const RedemptionExecutionModelSchema = z.enum([
@@ -45,11 +39,7 @@ export const RedemptionOutputAssetTypeSchema = z.enum([
 ]);
 export type RedemptionOutputAssetType = z.infer<typeof RedemptionOutputAssetTypeSchema>;
 
-export const RedemptionSourceModeSchema = z.enum([
-  "dynamic",
-  "estimated",
-  "static",
-]);
+export const RedemptionSourceModeSchema = z.enum(["dynamic", "estimated", "static"]);
 export type RedemptionSourceMode = z.infer<typeof RedemptionSourceModeSchema>;
 
 export const RedemptionResolutionStateSchema = z.enum([
@@ -59,17 +49,9 @@ export const RedemptionResolutionStateSchema = z.enum([
   "failed",
   "impaired",
 ]);
-export type RedemptionResolutionState = z.infer<
-  typeof RedemptionResolutionStateSchema
->;
+export type RedemptionResolutionState = z.infer<typeof RedemptionResolutionStateSchema>;
 
-export const RedemptionRouteStatusSchema = z.enum([
-  "open",
-  "degraded",
-  "paused",
-  "cohort-limited",
-  "unknown",
-]);
+export const RedemptionRouteStatusSchema = z.enum(["open", "degraded", "paused", "cohort-limited", "unknown"]);
 export type RedemptionRouteStatus = z.infer<typeof RedemptionRouteStatusSchema>;
 
 export const RedemptionRouteStatusSourceSchema = z.enum([
@@ -79,9 +61,7 @@ export const RedemptionRouteStatusSourceSchema = z.enum([
   "protocol-api",
   "onchain",
 ]);
-export type RedemptionRouteStatusSource = z.infer<
-  typeof RedemptionRouteStatusSourceSchema
->;
+export type RedemptionRouteStatusSource = z.infer<typeof RedemptionRouteStatusSourceSchema>;
 
 export const RedemptionHolderEligibilitySchema = z.enum([
   "any-holder",
@@ -91,9 +71,7 @@ export const RedemptionHolderEligibilitySchema = z.enum([
   "issuer-discretionary",
   "unknown",
 ]);
-export type RedemptionHolderEligibility = z.infer<
-  typeof RedemptionHolderEligibilitySchema
->;
+export type RedemptionHolderEligibility = z.infer<typeof RedemptionHolderEligibilitySchema>;
 
 export const RedemptionCapacityConfidenceSchema = z.enum([
   "live-direct",
@@ -102,9 +80,7 @@ export const RedemptionCapacityConfidenceSchema = z.enum([
   "documented-bound",
   "heuristic",
 ]);
-export type RedemptionCapacityConfidence = z.infer<
-  typeof RedemptionCapacityConfidenceSchema
->;
+export type RedemptionCapacityConfidence = z.infer<typeof RedemptionCapacityConfidenceSchema>;
 
 export const RedemptionCapacityBasisSchema = z.enum([
   "issuer-term-redemption",
@@ -118,22 +94,11 @@ export const RedemptionCapacityBasisSchema = z.enum([
 ]);
 export type RedemptionCapacityBasis = z.infer<typeof RedemptionCapacityBasisSchema>;
 
-export const RedemptionCapacitySemanticsSchema = z.enum([
-  "immediate-bounded",
-  "eventual-only",
-]);
-export type RedemptionCapacitySemantics = z.infer<
-  typeof RedemptionCapacitySemanticsSchema
->;
+export const RedemptionCapacitySemanticsSchema = z.enum(["immediate-bounded", "eventual-only"]);
+export type RedemptionCapacitySemantics = z.infer<typeof RedemptionCapacitySemanticsSchema>;
 
-export const RedemptionFeeConfidenceSchema = z.enum([
-  "fixed",
-  "formula",
-  "undisclosed-reviewed",
-]);
-export type RedemptionFeeConfidence = z.infer<
-  typeof RedemptionFeeConfidenceSchema
->;
+export const RedemptionFeeConfidenceSchema = z.enum(["fixed", "formula", "undisclosed-reviewed"]);
+export type RedemptionFeeConfidence = z.infer<typeof RedemptionFeeConfidenceSchema>;
 
 export const RedemptionFeeModelKindSchema = z.enum([
   "fixed-bps",
@@ -141,29 +106,13 @@ export const RedemptionFeeModelKindSchema = z.enum([
   "documented-variable",
   "undisclosed-reviewed",
 ]);
-export type RedemptionFeeModelKind = z.infer<
-  typeof RedemptionFeeModelKindSchema
->;
+export type RedemptionFeeModelKind = z.infer<typeof RedemptionFeeModelKindSchema>;
 
-export const RedemptionModelConfidenceSchema = z.enum([
-  "high",
-  "medium",
-  "low",
-]);
-export type RedemptionModelConfidence = z.infer<
-  typeof RedemptionModelConfidenceSchema
->;
+export const RedemptionModelConfidenceSchema = z.enum(["high", "medium", "low"]);
+export type RedemptionModelConfidence = z.infer<typeof RedemptionModelConfidenceSchema>;
 
-export const RedemptionDocSourceSupportSchema = z.enum([
-  "route",
-  "capacity",
-  "fees",
-  "access",
-  "settlement",
-]);
-export type RedemptionDocSourceSupport = z.infer<
-  typeof RedemptionDocSourceSupportSchema
->;
+export const RedemptionDocSourceSupportSchema = z.enum(["route", "capacity", "fees", "access", "settlement"]);
+export type RedemptionDocSourceSupport = z.infer<typeof RedemptionDocSourceSupportSchema>;
 
 export const RedemptionDocsProvenanceSchema = z.enum([
   "config-reviewed",
@@ -171,20 +120,52 @@ export const RedemptionDocsProvenanceSchema = z.enum([
   "proof-of-reserves",
   "preferred-link",
 ]);
-export type RedemptionDocsProvenance = z.infer<
-  typeof RedemptionDocsProvenanceSchema
->;
+export type RedemptionDocsProvenance = z.infer<typeof RedemptionDocsProvenanceSchema>;
 
-const RedemptionDocSourceSchema = z.object({
+export const RedemptionLiveCapacityKindValues = [
+  "live-direct",
+  "live-direct-bounded",
+  "live-queue",
+  "live-proxy-validated",
+  "documented-bound",
+  "documented-eventual",
+  "heuristic",
+] as const;
+export const RedemptionLiveCapacityKindSchema = z.enum(RedemptionLiveCapacityKindValues);
+export type RedemptionLiveCapacityKind = z.infer<typeof RedemptionLiveCapacityKindSchema>;
+
+export const RedemptionLiveFreshnessKindValues = [
+  "verified-source-timestamp",
+  "same-run-onchain",
+  "same-run-api",
+  "reviewed-static",
+  "unverified",
+] as const;
+export const RedemptionLiveFreshnessKindSchema = z.enum(RedemptionLiveFreshnessKindValues);
+export type RedemptionLiveFreshnessKind = z.infer<typeof RedemptionLiveFreshnessKindSchema>;
+
+const HttpUrlSchema = z
+  .string()
+  .url()
+  .refine((value) => {
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, "Expected an http(s) URL");
+
+export const RedemptionDocSourceSchema = z.object({
   label: z.string(),
-  url: z.string().url(),
+  url: HttpUrlSchema,
   supports: z.array(RedemptionDocSourceSupportSchema).optional(),
 });
 export type RedemptionDocSource = z.infer<typeof RedemptionDocSourceSchema>;
 
-const RedemptionDocsSchema = z.object({
+export const RedemptionDocsSchema = z.object({
   label: z.string().optional(),
-  url: z.string().url().optional(),
+  url: HttpUrlSchema.optional(),
   reviewedAt: z.string().optional(),
   provenance: RedemptionDocsProvenanceSchema.optional(),
   sources: z.array(RedemptionDocSourceSchema).optional(),
@@ -222,6 +203,15 @@ export const RedemptionBackstopEntrySchema = z.object({
   modelConfidence: RedemptionModelConfidenceSchema,
   immediateCapacityUsd: z.number().nullable(),
   immediateCapacityRatio: z.number().nullable(),
+  capacityKind: RedemptionLiveCapacityKindSchema.optional(),
+  freshnessKind: RedemptionLiveFreshnessKindSchema.optional(),
+  sourceTimestamp: z.number().optional(),
+  sourceUrls: z.array(HttpUrlSchema).optional(),
+  settlementDelaySec: z.number().nonnegative().optional(),
+  queueDepthUsd: z.number().nonnegative().optional(),
+  dailyLimitUsd: z.number().nonnegative().optional(),
+  minRedeemUsd: z.number().nonnegative().optional(),
+  liveHolderEligibility: RedemptionHolderEligibilitySchema.optional(),
   feeBps: z.number().nullable(),
   feeDescription: z.string().optional(),
   queueEnabled: z.boolean(),
@@ -233,10 +223,7 @@ export const RedemptionBackstopEntrySchema = z.object({
 });
 export type RedemptionBackstopEntry = z.infer<typeof RedemptionBackstopEntrySchema>;
 
-export const RedemptionBackstopMapSchema = z.record(
-  z.string(),
-  RedemptionBackstopEntrySchema,
-);
+export const RedemptionBackstopMapSchema = z.record(z.string(), RedemptionBackstopEntrySchema);
 export type RedemptionBackstopMap = Record<string, RedemptionBackstopEntry>;
 
 export const RedemptionBackstopMethodologySchema = MethodologyEnvelopeSchema.extend({
@@ -257,15 +244,11 @@ export const RedemptionBackstopMethodologySchema = MethodologyEnvelopeSchema.ext
     offchainIssuer: z.number(),
   }),
 });
-export type RedemptionBackstopMethodology = z.infer<
-  typeof RedemptionBackstopMethodologySchema
->;
+export type RedemptionBackstopMethodology = z.infer<typeof RedemptionBackstopMethodologySchema>;
 
 export const RedemptionBackstopsResponseSchema = z.object({
   coins: RedemptionBackstopMapSchema,
   methodology: RedemptionBackstopMethodologySchema,
   updatedAt: z.number(),
 });
-export type RedemptionBackstopsResponse = z.infer<
-  typeof RedemptionBackstopsResponseSchema
->;
+export type RedemptionBackstopsResponse = z.infer<typeof RedemptionBackstopsResponseSchema>;

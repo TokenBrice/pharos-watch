@@ -89,6 +89,19 @@ export function RedemptionBackstopCard({
           </p>
           <p className="mt-1 text-sm font-medium">{viewModel.capacitySummary.headline}</p>
           <p className="mt-1 text-xs text-muted-foreground">{viewModel.capacitySummary.detail}</p>
+          {viewModel.telemetryContext.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {viewModel.telemetryContext.map((item) => (
+                <Badge
+                  key={`${item.label}:${item.value}`}
+                  variant="outline"
+                  className="border-border/60 bg-background/60 text-[11px] font-normal text-muted-foreground"
+                >
+                  {item.label}: {item.value}
+                </Badge>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         {/* ── Fee card (earns the card treatment — has detail) ── */}

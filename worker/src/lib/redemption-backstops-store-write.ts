@@ -24,6 +24,15 @@ function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
     sourceMode: record.sourceMode,
     immediateCapacityUsd: record.immediateCapacityUsd,
     immediateCapacityRatio: record.immediateCapacityRatio,
+    ...(record.capacityKind ? { capacityKind: record.capacityKind } : {}),
+    ...(record.freshnessKind ? { freshnessKind: record.freshnessKind } : {}),
+    ...(record.sourceTimestamp != null ? { sourceTimestamp: record.sourceTimestamp } : {}),
+    ...(record.sourceUrls ? { sourceUrls: record.sourceUrls } : {}),
+    ...(record.settlementDelaySec != null ? { settlementDelaySec: record.settlementDelaySec } : {}),
+    ...(record.queueDepthUsd != null ? { queueDepthUsd: record.queueDepthUsd } : {}),
+    ...(record.dailyLimitUsd != null ? { dailyLimitUsd: record.dailyLimitUsd } : {}),
+    ...(record.minRedeemUsd != null ? { minRedeemUsd: record.minRedeemUsd } : {}),
+    ...(record.liveHolderEligibility ? { liveHolderEligibility: record.liveHolderEligibility } : {}),
     feeBps: record.feeBps,
     ...(record.docs ? { docs: record.docs } : {}),
     ...(record.notes ? { notes: record.notes } : {}),
@@ -227,6 +236,33 @@ function buildRunCompleteUpdate(
     );
 }
 
+function buildRunFailedUpdate(
+  db: D1Database,
+  args: {
+    runId: string;
+    completedAt: number;
+    writtenCount: number;
+    metadata: Record<string, unknown>;
+  },
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `UPDATE redemption_backstop_runs
+          SET completed_at = ?,
+              status = 'failed',
+              written_count = ?,
+              metadata_json = ?
+        WHERE run_id = ?
+          AND status = 'running'`,
+    )
+    .bind(
+      args.completedAt,
+      args.writtenCount,
+      JSON.stringify(args.metadata),
+      args.runId,
+    );
+}
+
 function resolveRunBounds(records: RedemptionBackstopSnapshotRecord[]): {
   minUpdatedAt: number | null;
   maxUpdatedAt: number | null;
@@ -255,35 +291,68 @@ export async function upsertRedemptionBackstopSnapshots(
   const runId = options?.runId ?? createRedemptionBackstopRunId();
   const startedAt = Math.floor(Date.now() / 1000);
   const snapshotDate = Math.floor(Date.now() / 1000 / DAY_SECONDS) * DAY_SECONDS;
-  await runWithOverloadRetry(() =>
-    buildRunStartInsert(db, {
-      runId,
-      startedAt,
-      expectedCount: options?.expectedCount ?? records.length,
-      methodologyVersion: records[0].methodologyVersion,
-      metadata: options?.metadata,
-    }).run(),
-  );
+  let runStarted = false;
 
-  const stmts: D1PreparedStatement[] = [];
-  for (const record of records) {
-    stmts.push(buildCurrentUpsert(db, record, runId));
-    stmts.push(buildHistoryUpsert(db, record, snapshotDate, runId));
+  try {
+    await runWithOverloadRetry(() =>
+      buildRunStartInsert(db, {
+        runId,
+        startedAt,
+        expectedCount: options?.expectedCount ?? records.length,
+        methodologyVersion: records[0].methodologyVersion,
+        metadata: options?.metadata,
+      }).run(),
+    );
+    runStarted = true;
+
+    const stmts: D1PreparedStatement[] = [];
+    for (const record of records) {
+      stmts.push(buildCurrentUpsert(db, record, runId));
+      stmts.push(buildHistoryUpsert(db, record, snapshotDate, runId));
+    }
+
+    // Each coin produces 2 statements (current: 25 params, history: 9 params = 34 total).
+    // D1 limits total bound params per batch (~1000), so chunk at 20 (20×34=680).
+    await batchExecute(db, stmts, 20);
+
+    const { minUpdatedAt, maxUpdatedAt } = resolveRunBounds(records);
+    const completion = await runWithOverloadRetry(() =>
+      buildRunCompleteUpdate(db, {
+        runId,
+        completedAt: Math.floor(Date.now() / 1000),
+        writtenCount: records.length,
+        minUpdatedAt,
+        maxUpdatedAt,
+        metadata: options?.metadata,
+      }).run(),
+    );
+    if ((completion.meta?.changes ?? 0) <= 0) {
+      throw new Error(`Failed to mark redemption backstop run ${runId} completed`);
+    }
+  } catch (error) {
+    if (runStarted) {
+      const message = error instanceof Error ? error.message : String(error);
+      try {
+        await runWithOverloadRetry(() =>
+          buildRunFailedUpdate(db, {
+            runId,
+            completedAt: Math.floor(Date.now() / 1000),
+            writtenCount: 0,
+            metadata: {
+              ...(options?.metadata ?? {}),
+              failure: {
+                message,
+                name: error instanceof Error ? error.name : "Error",
+              },
+              attemptedCount: records.length,
+              expectedCount: options?.expectedCount ?? records.length,
+            },
+          }).run(),
+        );
+      } catch {
+        // Preserve the original write failure; a later sync can supersede the stale running manifest.
+      }
+    }
+    throw error;
   }
-
-  // Each coin produces 2 statements (current: 25 params, history: 9 params = 34 total).
-  // D1 limits total bound params per batch (~1000), so chunk at 20 (20×34=680).
-  await batchExecute(db, stmts, 20);
-
-  const { minUpdatedAt, maxUpdatedAt } = resolveRunBounds(records);
-  await runWithOverloadRetry(() =>
-    buildRunCompleteUpdate(db, {
-      runId,
-      completedAt: Math.floor(Date.now() / 1000),
-      writtenCount: records.length,
-      minUpdatedAt,
-      maxUpdatedAt,
-      metadata: options?.metadata,
-    }).run(),
-  );
 }

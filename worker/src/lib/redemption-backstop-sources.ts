@@ -14,18 +14,13 @@ import {
   REDEMPTION_OUTPUT_ASSET_SCORES,
   REDEMPTION_SETTLEMENT_SCORES,
 } from "@shared/lib/redemption-backstop-scoring";
-import {
-  getRedemptionBackstopConfig,
-  type RedemptionBackstopConfig,
-} from "@shared/lib/redemption-backstops";
+import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { resolveDefaultHolderEligibility } from "@shared/lib/redemption-backstop-configs/shared";
+import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backstop-providers";
 import { REDEMPTION_BACKSTOP_VERSION } from "@shared/lib/redemption-backstop-version";
 import type { StablecoinData } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import {
-  getLatestSuccessfulReserveSnapshotMetadata,
-  type ReserveSnapshotMetadataRecord,
-} from "./live-reserves-store";
+import { getLatestSuccessfulReserveSnapshotMetadata, type ReserveSnapshotMetadataRecord } from "./live-reserves-store";
 import {
   resolveCapacityBasis,
   resolveRedemptionCapacity,
@@ -39,7 +34,7 @@ function resolveStaticFields(
   config: RedemptionBackstopConfig,
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
   now = Math.floor(Date.now() / 1000),
-){
+) {
   const accessScore = REDEMPTION_ACCESS_SCORES[config.accessModel];
   const settlementScore = REDEMPTION_SETTLEMENT_SCORES[config.settlementModel];
   const executionCertaintyScore = REDEMPTION_EXECUTION_SCORES[config.executionModel];
@@ -120,9 +115,7 @@ export async function buildRedemptionBackstopEntry(
   let score = scored.score;
   let capsApplied = scored.capsApplied;
   let routeStatus: RedemptionBackstopEntry["routeStatus"] =
-    resolutionState === "resolved"
-      ? config.routeStatus ?? "open"
-      : "unknown";
+    resolutionState === "resolved" ? (config.routeStatus ?? "open") : "unknown";
   let routeStatusSource: RedemptionBackstopEntry["routeStatusSource"] = "static-config";
   let routeStatusReason: RedemptionBackstopEntry["routeStatusReason"];
   let routeStatusReviewedAt: RedemptionBackstopEntry["routeStatusReviewedAt"];
@@ -142,19 +135,16 @@ export async function buildRedemptionBackstopEntry(
     score = null;
     capsApplied = [...capsApplied, "live-route-status-impairment"];
   }
-  const holderEligibility =
-    config.holderEligibility ?? resolveDefaultHolderEligibility(config);
+  const holderEligibility = config.holderEligibility ?? resolveDefaultHolderEligibility(config);
   const routeAvailability = options.routeAvailability;
   const hasStrongLiveDirectRoute = isStrongLiveDirectRoute({
     capacityConfidence: capacity.capacityConfidence,
+    capacityKind: capacity.capacityKind,
     sourceMode: capacity.sourceMode,
     accessModel: config.accessModel,
     settlementModel: config.settlementModel,
   });
-  const routeImpaired =
-    resolutionState === "resolved" &&
-    routeAvailability != null &&
-    !hasStrongLiveDirectRoute;
+  const routeImpaired = resolutionState === "resolved" && routeAvailability != null && !hasStrongLiveDirectRoute;
 
   if (routeImpaired) {
     resolutionState = "impaired";
@@ -167,9 +157,7 @@ export async function buildRedemptionBackstopEntry(
   }
 
   const effectiveExitScore =
-    resolutionState === "resolved"
-      ? computeEffectiveExitScore(dexLiquidityScore, score)
-      : null;
+    resolutionState === "resolved" ? computeEffectiveExitScore(dexLiquidityScore, score) : null;
   const capacityBasis = resolveCapacityBasis(config.routeFamily, config.capacityModel, capacity.capacityConfidence);
   const modelConfidence = deriveModelConfidence({
     resolutionState,
@@ -215,6 +203,15 @@ export async function buildRedemptionBackstopEntry(
     modelConfidence,
     immediateCapacityUsd: capacity.immediateCapacityUsd,
     immediateCapacityRatio: capacity.immediateCapacityRatio,
+    ...(capacity.capacityKind ? { capacityKind: capacity.capacityKind } : {}),
+    ...(capacity.freshnessKind ? { freshnessKind: capacity.freshnessKind } : {}),
+    ...(capacity.sourceTimestamp != null ? { sourceTimestamp: capacity.sourceTimestamp } : {}),
+    ...(capacity.sourceUrls && capacity.sourceUrls.length > 0 ? { sourceUrls: capacity.sourceUrls } : {}),
+    ...(capacity.settlementDelaySec != null ? { settlementDelaySec: capacity.settlementDelaySec } : {}),
+    ...(capacity.queueDepthUsd != null ? { queueDepthUsd: capacity.queueDepthUsd } : {}),
+    ...(capacity.dailyLimitUsd != null ? { dailyLimitUsd: capacity.dailyLimitUsd } : {}),
+    ...(capacity.minRedeemUsd != null ? { minRedeemUsd: capacity.minRedeemUsd } : {}),
+    ...(capacity.liveHolderEligibility ? { liveHolderEligibility: capacity.liveHolderEligibility } : {}),
     feeBps: staticFields.feeBps,
     feeDescription: staticFields.feeDescription,
     queueEnabled: staticFields.queueEnabled,
@@ -250,8 +247,7 @@ export function buildFailedRedemptionBackstopEntry(
   const capacityBasis = resolveCapacityBasis(config.routeFamily, config.capacityModel, capacityConfidence);
   const capacitySemantics = resolveCapacitySemantics(config.capacityModel);
   const resolutionState: RedemptionBackstopEntry["resolutionState"] = "failed";
-  const holderEligibility =
-    config.holderEligibility ?? resolveDefaultHolderEligibility(config);
+  const holderEligibility = config.holderEligibility ?? resolveDefaultHolderEligibility(config);
 
   return {
     stablecoinId,
@@ -269,7 +265,7 @@ export function buildFailedRedemptionBackstopEntry(
     settlementModel: config.settlementModel,
     executionModel: config.executionModel,
     outputAssetType: config.outputAssetType,
-    provider: "sync-error",
+    provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.SYNC_ERROR,
     sourceMode: "static",
     resolutionState,
     routeStatus: "unknown",

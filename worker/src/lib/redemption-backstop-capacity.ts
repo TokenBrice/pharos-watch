@@ -4,6 +4,11 @@ import {
   resolveCapacityConfidence,
   resolveCapacitySemantics,
 } from "@shared/lib/redemption-backstop-confidence";
+import {
+  REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS,
+  REDEMPTION_BACKSTOP_PROVIDER_IDS,
+  type RedemptionBackstopProviderId,
+} from "@shared/lib/redemption-backstop-providers";
 import type {
   RedemptionBackstopConfig,
   RedemptionCapacityModel,
@@ -21,12 +26,21 @@ export interface CapacityResolution {
   immediateCapacityRatio: number | null;
   scoringCapacityUsd: number | null;
   scoringCapacityRatio: number | null;
-  provider: string;
+  provider: RedemptionBackstopProviderId;
   sourceMode: RedemptionBackstopEntry["sourceMode"];
   resolutionState: RedemptionBackstopEntry["resolutionState"];
   capacityConfidence: RedemptionBackstopEntry["capacityConfidence"];
   capacityBasis?: RedemptionBackstopEntry["capacityBasis"];
   capacitySemantics: RedemptionBackstopEntry["capacitySemantics"];
+  capacityKind?: RedemptionBackstopEntry["capacityKind"];
+  freshnessKind?: RedemptionBackstopEntry["freshnessKind"];
+  sourceTimestamp?: number;
+  sourceUrls?: string[];
+  settlementDelaySec?: number;
+  queueDepthUsd?: number;
+  dailyLimitUsd?: number;
+  minRedeemUsd?: number;
+  liveHolderEligibility?: RedemptionBackstopEntry["liveHolderEligibility"];
   routeStatus?: RedemptionBackstopEntry["routeStatus"];
   routeStatusSource?: RedemptionBackstopEntry["routeStatusSource"];
   routeStatusReason?: string;
@@ -117,21 +131,51 @@ async function resolveCapacityFromReserveSyncMetadata(
         : hasPositiveSupply
           ? Math.max(0, Math.min(1, immediateCapacityUsd / (supplyUsd as number)))
           : null;
+    const dailyLimitCapsCapacity =
+      liveMetadata.dailyLimitUsd != null && liveMetadata.dailyLimitUsd < immediateCapacityUsd;
+    const scoringCapacityUsd = dailyLimitCapsCapacity
+      ? Math.max(0, liveMetadata.dailyLimitUsd as number)
+      : immediateCapacityUsd;
+    const scoringCapacityRatio =
+      dailyLimitCapsCapacity && hasPositiveSupply
+        ? Math.max(0, Math.min(1, scoringCapacityUsd / (supplyUsd as number)))
+        : derivedRatio;
     const clampNote = capacityExceedsSupply
       ? "Live reserve redemption capacity exceeds current supply; clamped to supply for scoring"
+      : null;
+    const dailyLimitNote = dailyLimitCapsCapacity
+      ? "Live redemption daily limit caps usable scoring capacity"
+      : null;
+    const queueDepthNote = liveMetadata.queueDepthUsd != null
+      ? "Live redemption queue depth is surfaced as a route constraint"
+      : null;
+    const settlementDelayNote = liveMetadata.settlementDelaySec != null
+      ? "Live redemption settlement delay is surfaced as a route constraint"
       : null;
 
     return {
       immediateCapacityUsd,
       immediateCapacityRatio: derivedRatio,
-      scoringCapacityUsd: immediateCapacityUsd,
-      scoringCapacityRatio: derivedRatio,
-      provider: "reserve-sync-metadata",
-      sourceMode: "dynamic",
+      scoringCapacityUsd,
+      scoringCapacityRatio,
+      provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA,
+      sourceMode:
+        REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[
+          REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA
+        ].defaultSourceMode,
       resolutionState: "resolved",
       capacityConfidence: liveMetadata.capacityConfidence,
       capacityBasis: resolveCapacityBasis(null, model, liveMetadata.capacityConfidence),
       capacitySemantics,
+      ...(liveMetadata.capacityKind ? { capacityKind: liveMetadata.capacityKind } : {}),
+      ...(liveMetadata.freshnessKind ? { freshnessKind: liveMetadata.freshnessKind } : {}),
+      ...(liveMetadata.sourceTimestamp != null ? { sourceTimestamp: liveMetadata.sourceTimestamp } : {}),
+      ...(liveMetadata.sourceUrls.length > 0 ? { sourceUrls: liveMetadata.sourceUrls } : {}),
+      ...(liveMetadata.settlementDelaySec != null ? { settlementDelaySec: liveMetadata.settlementDelaySec } : {}),
+      ...(liveMetadata.queueDepthUsd != null ? { queueDepthUsd: liveMetadata.queueDepthUsd } : {}),
+      ...(liveMetadata.dailyLimitUsd != null ? { dailyLimitUsd: liveMetadata.dailyLimitUsd } : {}),
+      ...(liveMetadata.minRedeemUsd != null ? { minRedeemUsd: liveMetadata.minRedeemUsd } : {}),
+      ...(liveMetadata.liveHolderEligibility ? { liveHolderEligibility: liveMetadata.liveHolderEligibility } : {}),
       ...(liveMetadata.routeStatus ? { routeStatus: liveMetadata.routeStatus } : {}),
       ...(liveMetadata.routeStatusSource ? { routeStatusSource: liveMetadata.routeStatusSource } : {}),
       ...(liveMetadata.routeStatusReason ? { routeStatusReason: liveMetadata.routeStatusReason } : {}),
@@ -139,6 +183,9 @@ async function resolveCapacityFromReserveSyncMetadata(
       notes: [
         ...liveMetadata.capacityNotes,
         ...(clampNote ? [clampNote] : []),
+        ...(dailyLimitNote ? [dailyLimitNote] : []),
+        ...(queueDepthNote ? [queueDepthNote] : []),
+        ...(settlementDelayNote ? [settlementDelayNote] : []),
       ],
     };
   }
@@ -149,8 +196,11 @@ async function resolveCapacityFromReserveSyncMetadata(
       immediateCapacityRatio: model.fallbackRatio,
       scoringCapacityUsd: supplyUsd * model.fallbackRatio,
       scoringCapacityRatio: model.fallbackRatio,
-      provider: "reserve-sync-fallback",
-      sourceMode: "estimated",
+      provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_FALLBACK,
+      sourceMode:
+        REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[
+          REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_FALLBACK
+        ].defaultSourceMode,
       resolutionState: "resolved",
       capacityConfidence: fallbackCapacityConfidence,
       capacityBasis: resolveCapacityBasis(null, model, fallbackCapacityConfidence),
@@ -168,7 +218,7 @@ async function resolveCapacityFromReserveSyncMetadata(
     immediateCapacityRatio: null,
     scoringCapacityUsd: null,
     scoringCapacityRatio: null,
-    provider: "reserve-sync-metadata",
+    provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA,
     sourceMode: "static",
     resolutionState: supplyUsd == null ? "missing-cache" : "missing-capacity",
     capacityConfidence: liveCapacityConfidence,
@@ -195,7 +245,7 @@ export async function resolveRedemptionCapacity(
         immediateCapacityRatio: null,
         scoringCapacityUsd: null,
         scoringCapacityRatio: null,
-        provider: "supply-full-model",
+        provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_FULL_MODEL,
         sourceMode: "static",
         resolutionState: "missing-cache",
         capacityConfidence,
@@ -208,8 +258,11 @@ export async function resolveRedemptionCapacity(
       immediateCapacityRatio: null,
       scoringCapacityUsd: supplyUsd,
       scoringCapacityRatio: supplyUsd > 0 ? 1 : null,
-      provider: "supply-full-model",
-      sourceMode: "estimated",
+      provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_FULL_MODEL,
+      sourceMode:
+        REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[
+          REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_FULL_MODEL
+        ].defaultSourceMode,
       resolutionState: "resolved",
       capacityConfidence,
       capacitySemantics,
@@ -224,7 +277,7 @@ export async function resolveRedemptionCapacity(
         immediateCapacityRatio: null,
         scoringCapacityUsd: null,
         scoringCapacityRatio: null,
-        provider: "supply-ratio-model",
+        provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_RATIO_MODEL,
         sourceMode: "static",
         resolutionState: "missing-cache",
         capacityConfidence,
@@ -237,8 +290,11 @@ export async function resolveRedemptionCapacity(
       immediateCapacityRatio: model.ratio,
       scoringCapacityUsd: supplyUsd * model.ratio,
       scoringCapacityRatio: model.ratio,
-      provider: "supply-ratio-model",
-      sourceMode: "estimated",
+      provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_RATIO_MODEL,
+      sourceMode:
+        REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[
+          REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_RATIO_MODEL
+        ].defaultSourceMode,
       resolutionState: "resolved",
       capacityConfidence,
       capacitySemantics,

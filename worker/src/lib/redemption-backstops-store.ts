@@ -8,15 +8,22 @@ import type {
   RedemptionExecutionModel,
   RedemptionOutputAssetType,
   RedemptionSourceMode,
-  RedemptionResolutionState,
-  RedemptionCapacityConfidence,
-  RedemptionCapacitySemantics,
-  RedemptionFeeConfidence,
-  RedemptionFeeModelKind,
-  RedemptionModelConfidence,
-  RedemptionRouteStatus,
-  RedemptionRouteStatusSource,
-  RedemptionHolderEligibility,
+} from "@shared/types/redemption";
+import {
+  RedemptionBackstopEntrySchema,
+  RedemptionCapacityBasisSchema,
+  RedemptionCapacityConfidenceSchema,
+  RedemptionCapacitySemanticsSchema,
+  RedemptionDocsSchema,
+  RedemptionFeeConfidenceSchema,
+  RedemptionFeeModelKindSchema,
+  RedemptionHolderEligibilitySchema,
+  RedemptionLiveCapacityKindSchema,
+  RedemptionLiveFreshnessKindSchema,
+  RedemptionModelConfidenceSchema,
+  RedemptionResolutionStateSchema,
+  RedemptionRouteStatusSchema,
+  RedemptionRouteStatusSourceSchema,
 } from "@shared/types/redemption";
 import {
   REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
@@ -107,6 +114,15 @@ type RedemptionBackstopDetails = Partial<
     | "resolutionState"
     | "capacityConfidence"
     | "capacitySemantics"
+    | "capacityKind"
+    | "freshnessKind"
+    | "sourceTimestamp"
+    | "sourceUrls"
+    | "settlementDelaySec"
+    | "queueDepthUsd"
+    | "dailyLimitUsd"
+    | "minRedeemUsd"
+    | "liveHolderEligibility"
     | "feeConfidence"
     | "feeModelKind"
     | "modelConfidence"
@@ -118,24 +134,71 @@ type RedemptionBackstopDetails = Partial<
   >
 >;
 
+function pickStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) return undefined;
+  return value;
+}
+
+function pickSchemaValue<T>(
+  schema: { safeParse: (value: unknown) => { success: true; data: T } | { success: false } },
+  value: unknown,
+): T | undefined {
+  const parsed = schema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
+}
+
+function pickNonNegativeFiniteNumber(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return undefined;
+  return value;
+}
+
+function pickUrlArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const urls: string[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== "string") return undefined;
+    try {
+      const parsed = new URL(item);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return undefined;
+      const normalizedUrl = parsed.toString();
+      if (seen.has(normalizedUrl)) continue;
+      seen.add(normalizedUrl);
+      urls.push(normalizedUrl);
+    } catch {
+      return undefined;
+    }
+  }
+  return urls;
+}
+
 function pickValidDetails(raw: Record<string, unknown>): RedemptionBackstopDetails {
   const result: RedemptionBackstopDetails = {};
-  if (raw.docs) result.docs = raw.docs as RedemptionBackstopEntry["docs"];
-  if (Array.isArray(raw.notes)) result.notes = raw.notes;
-  if (Array.isArray(raw.capsApplied)) result.capsApplied = raw.capsApplied;
+  if (raw.docs != null) result.docs = pickSchemaValue(RedemptionDocsSchema.nullable(), raw.docs);
+  result.notes = pickStringArray(raw.notes);
+  result.capsApplied = pickStringArray(raw.capsApplied);
   if (typeof raw.feeDescription === "string") result.feeDescription = raw.feeDescription;
-  if (typeof raw.capacityBasis === "string") result.capacityBasis = raw.capacityBasis as RedemptionBackstopEntry["capacityBasis"];
-  if (typeof raw.resolutionState === "string") result.resolutionState = raw.resolutionState as RedemptionResolutionState;
-  if (typeof raw.capacityConfidence === "string") result.capacityConfidence = raw.capacityConfidence as RedemptionCapacityConfidence;
-  if (typeof raw.capacitySemantics === "string") result.capacitySemantics = raw.capacitySemantics as RedemptionCapacitySemantics;
-  if (typeof raw.feeConfidence === "string") result.feeConfidence = raw.feeConfidence as RedemptionFeeConfidence;
-  if (typeof raw.feeModelKind === "string") result.feeModelKind = raw.feeModelKind as RedemptionFeeModelKind;
-  if (typeof raw.modelConfidence === "string") result.modelConfidence = raw.modelConfidence as RedemptionModelConfidence;
-  if (typeof raw.routeStatus === "string") result.routeStatus = raw.routeStatus as RedemptionRouteStatus;
-  if (typeof raw.routeStatusSource === "string") result.routeStatusSource = raw.routeStatusSource as RedemptionRouteStatusSource;
+  result.capacityBasis = pickSchemaValue(RedemptionCapacityBasisSchema, raw.capacityBasis);
+  result.resolutionState = pickSchemaValue(RedemptionResolutionStateSchema, raw.resolutionState);
+  result.capacityConfidence = pickSchemaValue(RedemptionCapacityConfidenceSchema, raw.capacityConfidence);
+  result.capacitySemantics = pickSchemaValue(RedemptionCapacitySemanticsSchema, raw.capacitySemantics);
+  result.capacityKind = pickSchemaValue(RedemptionLiveCapacityKindSchema, raw.capacityKind);
+  result.freshnessKind = pickSchemaValue(RedemptionLiveFreshnessKindSchema, raw.freshnessKind);
+  result.sourceTimestamp = pickNonNegativeFiniteNumber(raw.sourceTimestamp);
+  result.sourceUrls = pickUrlArray(raw.sourceUrls);
+  result.settlementDelaySec = pickNonNegativeFiniteNumber(raw.settlementDelaySec);
+  result.queueDepthUsd = pickNonNegativeFiniteNumber(raw.queueDepthUsd);
+  result.dailyLimitUsd = pickNonNegativeFiniteNumber(raw.dailyLimitUsd);
+  result.minRedeemUsd = pickNonNegativeFiniteNumber(raw.minRedeemUsd);
+  result.liveHolderEligibility = pickSchemaValue(RedemptionHolderEligibilitySchema, raw.liveHolderEligibility);
+  result.feeConfidence = pickSchemaValue(RedemptionFeeConfidenceSchema, raw.feeConfidence);
+  result.feeModelKind = pickSchemaValue(RedemptionFeeModelKindSchema, raw.feeModelKind);
+  result.modelConfidence = pickSchemaValue(RedemptionModelConfidenceSchema, raw.modelConfidence);
+  result.routeStatus = pickSchemaValue(RedemptionRouteStatusSchema, raw.routeStatus);
+  result.routeStatusSource = pickSchemaValue(RedemptionRouteStatusSourceSchema, raw.routeStatusSource);
   if (typeof raw.routeStatusReason === "string") result.routeStatusReason = raw.routeStatusReason;
   if (typeof raw.routeStatusReviewedAt === "string") result.routeStatusReviewedAt = raw.routeStatusReviewedAt;
-  if (typeof raw.holderEligibility === "string") result.holderEligibility = raw.holderEligibility as RedemptionHolderEligibility;
+  result.holderEligibility = pickSchemaValue(RedemptionHolderEligibilitySchema, raw.holderEligibility);
   return result;
 }
 
@@ -185,7 +248,7 @@ function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {
   const routeStatus = details.routeStatus ?? "unknown";
   const routeStatusSource = details.routeStatusSource ?? "static-config";
   const holderEligibility = details.holderEligibility ?? "unknown";
-  return {
+  const entry = {
     stablecoinId: row.stablecoin_id,
     ...details,
     score: row.score,
@@ -222,6 +285,11 @@ function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {
     methodologyVersion: row.methodology_version,
     updatedAt: row.updated_at,
   };
+  const parsed = RedemptionBackstopEntrySchema.safeParse(entry);
+  if (!parsed.success) {
+    throw new Error(`Invalid redemption backstop row for ${row.stablecoin_id}: ${parsed.error.message}`);
+  }
+  return parsed.data;
 }
 
 export function resolveSnapshotMethodologyVersion(
@@ -245,38 +313,37 @@ export function resolveSnapshotMethodologyVersion(
   };
 }
 
-async function getLatestCompletedRedemptionBackstopRun(
+async function getRecentCompletedRedemptionBackstopRuns(
   db: D1Database,
-): Promise<RedemptionBackstopRunRow | null> {
+  limit = 5,
+): Promise<RedemptionBackstopRunRow[]> {
   try {
-    const row = await db
+    const rows = await db
       .prepare(
         `SELECT run_id, completed_at, expected_count, written_count, min_updated_at,
                 max_updated_at, methodology_version
            FROM redemption_backstop_runs
           WHERE status = 'completed'
           ORDER BY completed_at DESC
-          LIMIT 1`,
+          LIMIT ?`,
       )
-      .first<RedemptionBackstopRunRow>();
-    return typeof row?.run_id === "string" && row.run_id.length > 0 ? row : null;
+      .bind(limit)
+      .all<RedemptionBackstopRunRow>();
+    return (rows.results ?? []).filter((row) => typeof row.run_id === "string" && row.run_id.length > 0);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (message.toLowerCase().includes("no such table")) return null;
+    if (message.toLowerCase().includes("no such table")) return [];
     throw error;
   }
 }
 
-async function queryRedemptionBackstopMap(
-  db: D1Database,
-  runId?: string | null,
-): Promise<RedemptionBackstopMap> {
+async function queryRedemptionBackstopMap(db: D1Database, runId?: string | null): Promise<RedemptionBackstopMap> {
   let rows: D1Result<RedemptionBackstopRow>;
   try {
     const statement = runId
       ? db
-        .prepare(
-          `SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score,
+          .prepare(
+            `SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score,
                   access_score, settlement_score, execution_certainty_score,
                   capacity_score, output_asset_quality_score, cost_score,
                   route_family, access_model, settlement_model, execution_model,
@@ -285,10 +352,9 @@ async function queryRedemptionBackstopMap(
                   methodology_version, details_json, snapshot_run_id
              FROM redemption_backstop
             WHERE snapshot_run_id = ?`,
-        )
-        .bind(runId)
-      : db
-        .prepare(
+          )
+          .bind(runId)
+      : db.prepare(
           `SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score,
                 access_score, settlement_score, execution_certainty_score,
                 capacity_score, output_asset_quality_score, cost_score,
@@ -305,7 +371,13 @@ async function queryRedemptionBackstopMap(
     });
   }
 
-  return Object.fromEntries((rows.results ?? []).map((row) => [row.stablecoin_id, toEntry(row)]));
+  try {
+    return Object.fromEntries((rows.results ?? []).map((row) => [row.stablecoin_id, toEntry(row)]));
+  } catch (error) {
+    throw new RedemptionBackstopSnapshotUnavailableError("Failed to decode redemption backstop snapshot rows", {
+      cause: error,
+    });
+  }
 }
 
 export async function loadRedemptionBackstopMap(db: D1Database): Promise<RedemptionBackstopMap> {
@@ -314,25 +386,45 @@ export async function loadRedemptionBackstopMap(db: D1Database): Promise<Redempt
 
 export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<RedemptionBackstopLoadResult> {
   try {
-    const latestRun = await getLatestCompletedRedemptionBackstopRun(db);
-    if (latestRun) {
-      if (latestRun.written_count !== latestRun.expected_count) {
-        throw new RedemptionBackstopSnapshotUnavailableError(
-          `Latest completed redemption backstop run is incomplete (${latestRun.written_count}/${latestRun.expected_count})`,
-        );
+    const recentRuns = await getRecentCompletedRedemptionBackstopRuns(db);
+    if (recentRuns.length > 0) {
+      const rejectionReasons: string[] = [];
+
+      for (const run of recentRuns) {
+        if (run.written_count !== run.expected_count) {
+          rejectionReasons.push(`${run.run_id}: incomplete (${run.written_count}/${run.expected_count})`);
+          continue;
+        }
+        if (run.expected_count > 0 && run.max_updated_at == null) {
+          rejectionReasons.push(`${run.run_id}: missing max_updated_at`);
+          continue;
+        }
+
+        let map: RedemptionBackstopMap;
+        try {
+          map = await queryRedemptionBackstopMap(db, run.run_id);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          rejectionReasons.push(`${run.run_id}: query failed (${message})`);
+          continue;
+        }
+
+        const rowCount = Object.keys(map).length;
+        if (rowCount !== run.written_count) {
+          rejectionReasons.push(`${run.run_id}: row count mismatch (${rowCount}/${run.written_count})`);
+          continue;
+        }
+
+        return {
+          map,
+          latestUpdatedAt: run.max_updated_at,
+          runId: run.run_id,
+        };
       }
-      const map = await queryRedemptionBackstopMap(db, latestRun.run_id);
-      const rowCount = Object.keys(map).length;
-      if (rowCount !== latestRun.written_count) {
-        throw new RedemptionBackstopSnapshotUnavailableError(
-          `Latest completed redemption backstop run row count mismatch (${rowCount}/${latestRun.written_count})`,
-        );
-      }
-      return {
-        map,
-        latestUpdatedAt: latestRun.max_updated_at,
-        runId: latestRun.run_id,
-      };
+
+      throw new RedemptionBackstopSnapshotUnavailableError(
+        `No valid completed redemption backstop run found (${rejectionReasons.join("; ")})`,
+      );
     }
 
     const [map, latest] = await Promise.all([
