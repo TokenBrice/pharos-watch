@@ -7,90 +7,31 @@ import {
 } from "../lib/telegram-chat-member";
 import {
   formatDisambiguation,
-  parseTargetArgs,
-  resolveTicker,
-  parseSubscribeArgs,
   splitMessage,
-  validateSubscribeArgs,
   parseDisambiguationReply,
   type ResolvedCoin,
-  type TickerResolutionScope,
 } from "../lib/telegram-alerts";
 import {
-  listTelegramPresets,
-  resolveTelegramPresetTargets,
-  type TelegramPresetId,
-} from "../lib/telegram-presets";
-import { TRACKED_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins";
-import {
-  HELP_MESSAGE,
   SETUP_PENDING_ACTION_TYPE,
-  START_MESSAGE,
-  type ConfirmBulkPayload,
-  type ParsedSetCommand,
   type PendingAction,
   type PendingDisambiguationRow,
-  type SubscribeActionPayload,
-  type SubscriptionRow,
   type TelegramWebhookUpdate,
-  type UnsubscribeActionPayload,
 } from "./telegram-webhook-shared";
-import { handleSetupTickerInput, parseSetupState, sendWizardIntro } from "./telegram-webhook-setup";
-import { handleSettingsCommand } from "./telegram-webhook-settings";
-import {
-  buildGlobalAlertSummaryMessage,
-  buildListMessage,
-  buildManageEntryKeyboard,
-  buildNotFoundMessage,
-  buildPresetCatalogMessage,
-  buildPresetSubscriptionSummaryMessage,
-  buildPresetUnavailableMessage,
-  buildPresetUnsubscribeSummaryMessage,
-  buildStatusAmbiguousMessage,
-  buildStatusDiscoveryKeyboard,
-  buildStatusMessage,
-  buildSubscriptionSummaryMessage,
-  buildUnsubscribeSuccessMessage,
-  formatQuietHours,
-} from "./telegram-webhook-messages";
-import { loadStatusForCoin } from "./telegram-webhook-status";
+import { handleSetupTickerInput, parseSetupState } from "./telegram-webhook-setup";
 import {
   dedupeCoins,
   parseCommand,
   parsePendingDisambiguation,
-  parseQuietHours,
-  parseSetCommand,
-  parseStartPayload,
 } from "./telegram-webhook-parsing";
 import {
-  applyGlobalSetting,
-  applySettingToSubscriptions,
-  clearAlertSnooze,
   clearPendingDisambiguation,
-  loadPresetSubscriptions,
-  loadSubscriberByChat,
-  loadSubscriptionsByIds,
-  persistPendingConfirmBulk,
-  removePresetSubscriptions,
-  removeSubscriptions,
-  setSubscriberTimezone,
   unixNow,
-  upsertPresetSubscriptions,
-  upsertSubscriberAndSubscriptions,
-  upsertSubscriberRow,
-  validateGlobalSetCommand,
 } from "./telegram-webhook-store";
 import { withErrorHandler } from "../lib/api-utils";
 import { logTelegramEvent } from "../lib/telegram-log";
-import { isValidIanaTimezone } from "../cron/telegram-quiet-hours";
 import { handleCallbackQuery } from "./telegram-webhook-callbacks";
-import { runCoinResolutionFlow } from "./telegram-webhook-resolution";
-import {
-  buildBriefMessage,
-  buildCoverageMessage,
-  buildTopMessage,
-  buildWhyMessage,
-} from "./telegram-webhook-insights";
+import { COMMAND_HANDLERS, type WebhookCommandContext } from "./webhook-commands";
+import { makeActionRunner } from "./webhook-commands/action-runner";
 
 /**
  * Group admin gating mode for group-wide mutating commands in
@@ -115,6 +56,42 @@ const GROUP_ADMIN_GATED_COMMANDS = new Set([
   "/settings",
   "/timezone",
 ]);
+
+/**
+ * Commands that, when issued while a pending disambiguation is active, clear
+ * the pending state (after the permission check) and then run through the
+ * normal dispatch. All other commands either run as-is or get the pending
+ * reminder — see the dispatch loop below.
+ */
+const PENDING_CLEAR_AND_RUN_COMMANDS = new Set([
+  "/subscribe",
+  "/unsubscribe",
+  "/set",
+  "/settings",
+  "/mute",
+  "/unmutehours",
+  "/unsnooze",
+  "/timezone",
+]);
+
+/**
+ * Commands that may run even while a pending disambiguation is active, without
+ * clearing it. These are read-only / informational commands.
+ */
+const PENDING_PASSTHROUGH_COMMANDS = new Set([
+  "/presets",
+  "/help",
+  "/list",
+  "/status",
+  "/brief",
+  "/market",
+  "/top",
+  "/why",
+  "/coverage",
+  "/start",
+]);
+
+const PHAROS_BOT_USERNAMES = new Set(["pharoswatchbot"]);
 
 export const handleTelegramWebhook = withErrorHandler(
   "telegram-webhook",
@@ -195,6 +172,22 @@ export const handleTelegramWebhook = withErrorHandler(
     const reply = async (message: string) => {
       await replyToChat(chatId, message, botToken);
     };
+    const replyWithMarkup = async (
+      message: string,
+      options: { replyMarkup?: unknown },
+    ) => {
+      await replyToChat(chatId, message, botToken, options);
+    };
+    const commandContext: WebhookCommandContext = {
+      db,
+      chatId,
+      chatType,
+      username,
+      actorUserId,
+      botToken,
+      replyToChat: reply,
+      replyToChatWithMarkup: replyWithMarkup,
+    };
 
     try {
       const parsedCommand = text.startsWith("/") ? parseCommand(text) : null;
@@ -264,75 +257,36 @@ export const handleTelegramWebhook = withErrorHandler(
           return ok();
         }
 
-        switch (parsedCommand.command) {
-          case "/cancel":
-            if (!canActOnPending(pendingAction, actorUserId)) {
-              await reply("Only the user who started this pending selection can cancel it.");
-              return ok();
-            }
-            await clearPendingDisambiguation(db, chatId);
-            await reply("Pending selection cancelled.");
+        const command = parsedCommand.command;
+        if (command === "/cancel") {
+          if (!canActOnPending(pendingAction, actorUserId)) {
+            await reply("Only the user who started this pending selection can cancel it.");
             return ok();
-          case "/presets":
-            await reply(buildPresetCatalogMessage(listTelegramPresets()));
+          }
+          await clearPendingDisambiguation(db, chatId);
+          await reply("Pending selection cancelled.");
+          return ok();
+        }
+
+        if (PENDING_PASSTHROUGH_COMMANDS.has(command)) {
+          // Read-only commands run without disturbing the pending state.
+          // Falls through to the gating + dispatch below.
+        } else if (PENDING_CLEAR_AND_RUN_COMMANDS.has(command)) {
+          if (!canActOnPending(pendingAction, actorUserId)) {
+            await reply("Another user has a pending ticker selection in this chat. Ask them to finish or /cancel it first.");
             return ok();
-          case "/help":
-            await reply(HELP_MESSAGE);
+          }
+          await clearPendingDisambiguation(db, chatId);
+          // Falls through to the gating + dispatch below.
+        } else {
+          if (pendingAction.actionType === "confirm-bulk") {
+            await reply("You have a pending bulk confirmation. Tap Confirm or Cancel on the previous message, or send /cancel to abort.");
             return ok();
-          case "/list":
-            await handleList(db, chatId, botToken);
-            return ok();
-          case "/status":
-            await handleStatus(db, chatId, parsedCommand.args, botToken);
-            return ok();
-          case "/brief":
-          // @deprecated /market is an alias for /brief; remove in vN+1.
-          case "/market":
-            await handleBrief(db, chatId, botToken);
-            return ok();
-          case "/top":
-            await handleTop(db, chatId, parsedCommand.args, botToken);
-            return ok();
-          case "/why":
-            await handleWhy(db, chatId, parsedCommand.args, botToken);
-            return ok();
-          case "/coverage":
-            await handleCoverage(db, chatId, parsedCommand.args, botToken);
-            return ok();
-          case "/start":
-            await handleStart(
-              db,
-              chatId,
-              chatType,
-              username,
-              actorUserId,
-              parsedCommand.args,
-              botToken,
-            );
-            return ok();
-          case "/subscribe":
-          case "/unsubscribe":
-          case "/set":
-          case "/settings":
-          case "/mute":
-          case "/unmutehours":
-          case "/unsnooze":
-          case "/timezone":
-            if (!canActOnPending(pendingAction, actorUserId)) {
-              await reply("Another user has a pending ticker selection in this chat. Ask them to finish or /cancel it first.");
-              return ok();
-            }
-            await clearPendingDisambiguation(db, chatId);
-            break;
-          default:
-            if (pendingAction.actionType === "confirm-bulk") {
-              await reply("You have a pending bulk confirmation. Tap Confirm or Cancel on the previous message, or send /cancel to abort.");
-              return ok();
-            }
-            await reply(`You have a pending selection. Reply with the number(s) you want, or use /cancel.
+          }
+          await reply(`You have a pending selection. Reply with the number(s) you want, or use /cancel.
 
 ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.candidates))}`);
-            return ok();
+          return ok();
         }
       }
 
@@ -354,73 +308,11 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
         if (!proceed) return ok();
       }
 
-      switch (parsedCommand.command) {
-        case "/start":
-          await handleStart(
-            db,
-            chatId,
-            chatType,
-            username,
-            actorUserId,
-            parsedCommand.args,
-            botToken,
-          );
-          break;
-        case "/presets":
-          await reply(buildPresetCatalogMessage(listTelegramPresets()));
-          break;
-        case "/help":
-          await reply(HELP_MESSAGE);
-          break;
-        case "/list":
-          await handleList(db, chatId, botToken);
-          break;
-        case "/status":
-          await handleStatus(db, chatId, parsedCommand.args, botToken);
-          break;
-        case "/brief":
-        // @deprecated /market is an alias for /brief; remove in vN+1.
-        case "/market":
-          await handleBrief(db, chatId, botToken);
-          break;
-        case "/top":
-          await handleTop(db, chatId, parsedCommand.args, botToken);
-          break;
-        case "/why":
-          await handleWhy(db, chatId, parsedCommand.args, botToken);
-          break;
-        case "/coverage":
-          await handleCoverage(db, chatId, parsedCommand.args, botToken);
-          break;
-        case "/subscribe":
-          await handleSubscribe(db, chatId, username, actorUserId, parsedCommand.args, botToken);
-          break;
-        case "/unsubscribe":
-          await handleUnsubscribe(db, chatId, actorUserId, parsedCommand.args, botToken);
-          break;
-        case "/set":
-          await handleSet(db, chatId, username, actorUserId, parsedCommand.args, botToken);
-          break;
-        case "/settings":
-          await handleSettingsCommand(db, botToken, chatId, username, parsedCommand.args);
-          break;
-        case "/mute":
-          await handleMute(db, chatId, username, parsedCommand.args, botToken);
-          break;
-        case "/timezone":
-          await handleTimezone(db, chatId, username, parsedCommand.args, botToken);
-          break;
-        case "/unmutehours":
-          await handleUnmuteHours(db, chatId, username, botToken);
-          break;
-        case "/unsnooze":
-          await handleUnsnooze(db, chatId, username, botToken);
-          break;
-        case "/cancel":
-          await reply("No pending selection to cancel.");
-          break;
-        default:
-          await reply("Unknown command. Try /help");
+      const handler = COMMAND_HANDLERS[parsedCommand.command];
+      if (handler) {
+        await handler(commandContext, parsedCommand.args);
+      } else {
+        await reply("Unknown command. Try /help");
       }
     } catch (err) {
       logTelegramEvent({
@@ -436,231 +328,6 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
     return ok();
   },
 );
-
-async function handleStart(
-  db: D1Database,
-  chatId: string,
-  chatType: string,
-  username: string | null,
-  actorUserId: string | null,
-  args: string,
-  botToken: string,
-): Promise<void> {
-  const payload = parseStartPayload(args);
-  switch (payload.kind) {
-    case "subscribe":
-      if (chatType !== "private") {
-        await replyToChat(chatId, START_MESSAGE, botToken);
-        return;
-      }
-      await handleSubscribe(db, chatId, username, actorUserId, payload.args, botToken);
-      return;
-    case "status":
-      await handleStatus(db, chatId, payload.coinId, botToken);
-      return;
-    case "why":
-      await handleWhy(db, chatId, payload.coinId, botToken);
-      return;
-    case "coverage":
-      await handleCoverage(db, chatId, payload.coinId, botToken);
-      return;
-    case "setup":
-    case "none":
-      // Empty payload or `?start=setup` both open the wizard.
-      await sendWizardIntro(db, botToken, chatId, actorUserId);
-      return;
-  }
-}
-
-async function handleList(db: D1Database, chatId: string, botToken: string): Promise<void> {
-  const subscriber = await loadSubscriberByChat(db, chatId);
-
-  const [subscriptions, presetSubscriptions] = await Promise.all([
-    db
-      .prepare(
-        `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
-           FROM telegram_subscriptions
-          WHERE chat_id = ?
-          ORDER BY stablecoin_id`,
-      )
-      .bind(chatId)
-      .all<SubscriptionRow>(),
-    loadPresetSubscriptions(db, chatId),
-  ]);
-
-  const rows = subscriptions.results ?? [];
-  if (!subscriber && rows.length === 0 && presetSubscriptions.length === 0) {
-    await replyToChat(chatId, "No active subscriptions. Use /subscribe to get started, or try /presets for preset watchlists.", botToken);
-    return;
-  }
-
-  const message = buildListMessage(subscriber, rows, presetSubscriptions);
-  // Only attach the [Manage] keyboard when there is at least one explicit
-  // coin subscription — preset-only or quiet-hours-only chats have nothing
-  // to manage from this surface.
-  const replyMarkup = rows.length > 0 ? buildManageEntryKeyboard() : undefined;
-  await replyToChat(chatId, message, botToken, replyMarkup ? { replyMarkup } : {});
-}
-
-async function handleStatus(
-  db: D1Database,
-  chatId: string,
-  args: string,
-  botToken: string,
-): Promise<void> {
-  const trimmed = args.trim();
-  if (!trimmed) {
-    await replyToChat(chatId, "Usage: /status &lt;ticker&gt;", botToken);
-    return;
-  }
-  const resolution = resolveTicker(trimmed, "tracked");
-  if (resolution.status === "not_found") {
-    await replyToChat(chatId, buildNotFoundMessage(trimmed, resolution.suggestion), botToken);
-    return;
-  }
-  if (resolution.status === "ambiguous") {
-    await replyToChat(chatId, buildStatusAmbiguousMessage(trimmed, resolution.matches), botToken);
-    return;
-  }
-  const coin = resolution.matches[0];
-  const status = await loadStatusForCoin(db, coin.id);
-  await replyToChat(chatId, buildStatusMessage(coin.symbol, status), botToken, {
-    replyMarkup: buildStatusDiscoveryKeyboard(coin.id),
-  });
-}
-
-async function handleBrief(db: D1Database, chatId: string, botToken: string): Promise<void> {
-  await replyToChat(chatId, await buildBriefMessage(db), botToken);
-}
-
-async function handleTop(
-  db: D1Database,
-  chatId: string,
-  args: string,
-  botToken: string,
-): Promise<void> {
-  const view = args.trim();
-  if (!view) {
-    await replyToChat(chatId, "Usage: /top depeg|dews|yield|liquidity|chains|safety", botToken);
-    return;
-  }
-  await replyToChat(chatId, await buildTopMessage(db, view), botToken);
-}
-
-async function resolveSingleStatusTarget(
-  chatId: string,
-  args: string,
-  botToken: string,
-  commandName = "/why",
-): Promise<ResolvedCoin | null> {
-  const trimmed = args.trim();
-  if (!trimmed) {
-    await replyToChat(chatId, `Usage: ${commandName} &lt;ticker&gt;`, botToken);
-    return null;
-  }
-  const resolution = resolveTicker(trimmed, "tracked");
-  if (resolution.status === "not_found") {
-    await replyToChat(chatId, buildNotFoundMessage(trimmed, resolution.suggestion), botToken);
-    return null;
-  }
-  if (resolution.status === "ambiguous") {
-    await replyToChat(chatId, buildStatusAmbiguousMessage(trimmed, resolution.matches), botToken);
-    return null;
-  }
-  return resolution.matches[0] ?? null;
-}
-
-async function handleWhy(
-  db: D1Database,
-  chatId: string,
-  args: string,
-  botToken: string,
-): Promise<void> {
-  const coin = await resolveSingleStatusTarget(chatId, args, botToken, "/why");
-  if (!coin) return;
-  await replyToChat(chatId, await buildWhyMessage(db, coin.id), botToken);
-}
-
-async function handleCoverage(
-  db: D1Database,
-  chatId: string,
-  args: string,
-  botToken: string,
-): Promise<void> {
-  const coin = await resolveSingleStatusTarget(chatId, args, botToken, "/coverage");
-  if (!coin) return;
-  const status = await loadStatusForCoin(db, coin.id);
-  await replyToChat(chatId, buildCoverageMessage(coin.symbol, status), botToken);
-}
-
-interface TelegramActionContext {
-  db: D1Database;
-  chatId: string;
-  username: string | null;
-  initiatorUserId: string | null;
-}
-
-type ActionPayloadMap = {
-  subscribe: SubscribeActionPayload;
-  unsubscribe: UnsubscribeActionPayload;
-  set: ParsedSetCommand;
-};
-
-const TELEGRAM_PRESET_LABEL_BY_ID = new Map(
-  listTelegramPresets().map((definition) => [definition.id, definition.label] as const),
-);
-
-const PHAROS_BOT_USERNAMES = new Set(["pharoswatchbot"]);
-
-/**
- * Bulk subscribe/unsubscribe commands are gated behind an inline Confirm/Cancel
- * keyboard when the resolved coin set exceeds this threshold OR the literal
- * `all` token was used. See P0-C1 in `agents/pharoswatchbot-reliability-and-ux-plan-2026-05-11.md`.
- */
-const BULK_CONFIRM_COIN_THRESHOLD = 10;
-const BULK_CONFIRM_PREVIEW_LIMIT = 5;
-
-const SUBSCRIBABLE_COIN_COUNT = TRACKED_STABLECOINS.filter((coin) => !FROZEN_IDS.has(coin.id)).length;
-
-function subscribableCoinCount(): number {
-  return SUBSCRIBABLE_COIN_COUNT;
-}
-
-const BULK_CONFIRM_REPLY_MARKUP = {
-  inline_keyboard: [[
-    { text: "Confirm", callback_data: "confirm:bulk" },
-    { text: "Cancel", callback_data: "cancel:bulk" },
-  ]],
-} as const;
-
-function formatBulkAlertTypeList(alertTypes: readonly string[]): string {
-  if (alertTypes.length === 0) return "all";
-  return alertTypes.join(", ");
-}
-
-function formatBulkCoinPreview(symbols: readonly string[]): string {
-  if (symbols.length === 0) return "";
-  const head = symbols.slice(0, BULK_CONFIRM_PREVIEW_LIMIT);
-  const more = symbols.length - head.length;
-  const suffix = more > 0 ? `, ...and ${more} more` : "";
-  return `${head.join(", ")}${suffix}`;
-}
-
-function buildBulkConfirmMessage(
-  action: "subscribe" | "unsubscribe",
-  count: number,
-  alertTypes: readonly string[],
-  coinSymbols: readonly string[],
-): string {
-  const verb = action === "subscribe" ? "subscribe" : "unsubscribe";
-  const typesLine =
-    action === "subscribe"
-      ? `alert types ${escapeHtml(formatBulkAlertTypeList(alertTypes))}`
-      : "all alert types";
-  const preview = formatBulkCoinPreview(coinSymbols);
-  const previewLine = preview ? `\n${escapeHtml(preview)}` : "";
-  return `This will ${verb} ${count} coins for ${typesLine}. Confirm?${previewLine}`;
-}
 
 function isGroupChat(chatType: string): boolean {
   return chatType === "group" || chatType === "supergroup";
@@ -723,537 +390,6 @@ function looksLikeDisambiguationSelection(text: string): boolean {
   }
 
   return hasDigit && !pendingSeparator;
-}
-
-function dedupePresetIds(presetIds: readonly string[]): TelegramPresetId[] {
-  return Array.from(
-    new Set(
-      presetIds.filter((presetId): presetId is TelegramPresetId =>
-        TELEGRAM_PRESET_LABEL_BY_ID.has(presetId as TelegramPresetId),
-      ),
-    ),
-  );
-}
-
-type CompletionActionType = keyof ActionPayloadMap;
-
-type CompletionHandlerMap = {
-  [K in CompletionActionType]: (
-    context: TelegramActionContext,
-    coins: ResolvedCoin[],
-    payload: ActionPayloadMap[K],
-    options: { clearPending: boolean },
-  ) => Promise<string>;
-};
-
-const completionHandlers: CompletionHandlerMap = {
-  subscribe: async (context, coins, payload, options) => {
-    const alertTypes = new Set(payload.alertTypes);
-    const presetIds = dedupePresetIds(payload.presetIds ?? []);
-    await upsertSubscriberAndSubscriptions(
-      context.db,
-      context.chatId,
-      context.username,
-      alertTypes,
-      coins.map((coin) => coin.id),
-      {
-        clearPending: options.clearPending,
-        depegWorseningBpsStep: payload.depegWorseningBpsStep,
-      },
-    );
-    if (presetIds.length > 0) {
-      await upsertPresetSubscriptions(context.db, context.chatId, presetIds, alertTypes, {
-        depegWorseningBpsStep: payload.depegWorseningBpsStep,
-      });
-    }
-    const subscriptions = await loadSubscriptionsByIds(
-      context.db,
-      context.chatId,
-      coins.map((coin) => coin.id),
-    );
-    if (presetIds.length > 0) {
-      return buildPresetSubscriptionSummaryMessage(subscriptions, {
-        presetIds,
-        presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
-      });
-    }
-    return buildSubscriptionSummaryMessage("Updated subscriptions.", subscriptions);
-  },
-  unsubscribe: async (context, coins, payload, options) => {
-    const presetIds = dedupePresetIds(payload.presetIds ?? []);
-    if (options.clearPending) {
-      await clearPendingDisambiguation(context.db, context.chatId);
-    }
-    await removeSubscriptions(
-      context.db,
-      context.chatId,
-      coins.map((coin) => coin.id),
-    );
-    if (presetIds.length > 0) {
-      await removePresetSubscriptions(context.db, context.chatId, presetIds);
-    }
-    if (presetIds.length > 0) {
-      return buildPresetUnsubscribeSummaryMessage(coins, {
-        presetIds,
-        presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
-      });
-    }
-    return buildUnsubscribeSuccessMessage(coins);
-  },
-  set: async (context, coins, payload, options) => {
-    if (options.clearPending) {
-      await clearPendingDisambiguation(context.db, context.chatId);
-    }
-    await applySettingToSubscriptions(context.db, context.chatId, context.username, coins, payload);
-    const subscriptions = await loadSubscriptionsByIds(
-      context.db,
-      context.chatId,
-      coins.map((coin) => coin.id),
-    );
-    return buildSubscriptionSummaryMessage("Updated settings.", subscriptions);
-  },
-};
-
-type BoundActionRunner = <TActionType extends "subscribe" | "unsubscribe" | "set">(opts: {
-  tickers: string[];
-  actionType: TActionType;
-  actionPayload: ActionPayloadMap[TActionType];
-  alertTypes?: Set<string>;
-  initialCoins?: ResolvedCoin[];
-  clearPendingOnTerminal?: boolean;
-  resolutionScope?: TickerResolutionScope;
-}) => Promise<void>;
-
-/**
- * Optional gate that, when satisfied, defers subscribe/unsubscribe execution
- * behind an inline Confirm/Cancel keyboard. The gate fires once coin resolution
- * is complete; `kind` is fixed at handler construction so the deferred payload
- * matches the originating command.
- */
-type BulkGate =
-  | {
-      kind: "subscribe";
-      alertTypes: string[];
-      presetIds: string[];
-      depegWorseningBpsStep?: 100 | 250 | 500 | null;
-    }
-  | {
-      kind: "unsubscribe";
-      presetIds: string[];
-    };
-
-function shouldGateBulk(coinCount: number): boolean {
-  return coinCount > BULK_CONFIRM_COIN_THRESHOLD;
-}
-
-async function persistAndPromptBulkConfirm(
-  context: TelegramActionContext,
-  botToken: string,
-  gate: BulkGate,
-  coins: ResolvedCoin[],
-  clearPending: boolean,
-): Promise<string> {
-  if (clearPending) {
-    await clearPendingDisambiguation(context.db, context.chatId);
-  }
-  const coinIds = coins.map((coin) => coin.id);
-  const symbols = coins.map((coin) => coin.symbol);
-  const payload: ConfirmBulkPayload =
-    gate.kind === "subscribe"
-      ? {
-          kind: "subscribe",
-          alertTypes: gate.alertTypes,
-          presetIds: gate.presetIds,
-          depegWorseningBpsStep: gate.depegWorseningBpsStep,
-          coinIds,
-          subscribeAll: false,
-        }
-      : {
-          kind: "unsubscribe",
-          presetIds: gate.presetIds,
-          coinIds,
-          unsubscribeAll: false,
-        };
-  await persistPendingConfirmBulk(context.db, {
-    chatId: context.chatId,
-    payload,
-    initiatorUserId: context.initiatorUserId,
-  });
-  await replyToChat(
-    context.chatId,
-    buildBulkConfirmMessage(
-      gate.kind,
-      coinIds.length,
-      gate.kind === "subscribe" ? gate.alertTypes : [],
-      symbols,
-    ),
-    botToken,
-    { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },
-  );
-  // Sentinel: runCoinResolutionFlow will send this string. We have already
-  // replied with the inline keyboard, so return an empty string and short-circuit
-  // the outer reply via the GATED_SENTINEL check below.
-  return GATED_SENTINEL;
-}
-
-const GATED_SENTINEL = "\0__gated__";
-
-function makeActionRunner(
-  context: TelegramActionContext,
-  botToken: string,
-  gate?: BulkGate,
-): BoundActionRunner {
-  const reply = async (message: string) => {
-    if (message === GATED_SENTINEL) return;
-    await replyToChat(context.chatId, message, botToken);
-  };
-  return ({ tickers, actionType, actionPayload, alertTypes, initialCoins, clearPendingOnTerminal, resolutionScope }) =>
-    runCoinResolutionFlow({
-      db: context.db,
-      chatId: context.chatId,
-      tickers,
-      initialCoins,
-      actionType,
-      actionPayload,
-      initiatorUserId: context.initiatorUserId,
-      alertTypes,
-      clearPendingOnTerminal,
-      resolutionScope,
-      reply,
-      onComplete: async (coins, options) => {
-        if (gate && shouldGateBulk(coins.length) && (gate.kind === actionType)) {
-          return persistAndPromptBulkConfirm(context, botToken, gate, coins, options.clearPending);
-        }
-        return completionHandlers[actionType](context, coins, actionPayload, options);
-      },
-    });
-}
-
-async function resolvePresetCoins(
-  db: D1Database,
-  presetIds: readonly TelegramPresetId[],
-): Promise<ResolvedCoin[] | null> {
-  if (presetIds.length === 0) return [];
-
-  const resolvedPresets = await resolveTelegramPresetTargets(db, presetIds);
-  if (resolvedPresets.kind !== "ok") {
-    return null;
-  }
-  return dedupeCoins(resolvedPresets.presets.flatMap((preset) => preset.coins));
-}
-
-async function handleSubscribe(
-  db: D1Database,
-  chatId: string,
-  username: string | null,
-  actorUserId: string | null,
-  args: string,
-  botToken: string,
-): Promise<void> {
-  const parsed = parseSubscribeArgs(args);
-  const validationError = validateSubscribeArgs(parsed);
-  if (validationError) {
-    if (parsed.invalidTargets.length > 0 && parsed.alertTypes.size > 0) {
-      const invalidTarget = parsed.invalidTargets[0];
-      const match = resolveTicker(invalidTarget);
-      const suggestion = match.status === "not_found" ? match.suggestion : undefined;
-      await replyToChat(chatId, buildNotFoundMessage(invalidTarget, suggestion), botToken);
-      return;
-    }
-    await replyToChat(chatId, escapeHtml(validationError), botToken);
-    return;
-  }
-
-  if (parsed.subscribeAll) {
-    await persistPendingConfirmBulk(db, {
-      chatId,
-      payload: {
-        kind: "subscribe",
-        alertTypes: [...parsed.alertTypes],
-        presetIds: [],
-        depegWorseningBpsStep: parsed.depegWorseningBpsStep,
-        coinIds: [],
-        subscribeAll: true,
-      },
-      initiatorUserId: actorUserId,
-    });
-    await replyToChat(
-      chatId,
-      buildBulkConfirmMessage("subscribe", subscribableCoinCount(), [...parsed.alertTypes], []),
-      botToken,
-      { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },
-    );
-    return;
-  }
-
-  const presetIds = dedupePresetIds(parsed.presetIds);
-  const presetCoins = await resolvePresetCoins(db, presetIds);
-  if (presetCoins == null) {
-    await replyToChat(chatId, buildPresetUnavailableMessage(), botToken);
-    return;
-  }
-
-  const runAction = makeActionRunner(
-    { db, chatId, username, initiatorUserId: actorUserId },
-    botToken,
-    { kind: "subscribe", alertTypes: [...parsed.alertTypes], presetIds, depegWorseningBpsStep: parsed.depegWorseningBpsStep },
-  );
-  await runAction({
-    tickers: parsed.tickers,
-    initialCoins: presetCoins,
-    actionType: "subscribe",
-    actionPayload: {
-      alertTypes: [...parsed.alertTypes],
-      presetIds,
-      depegWorseningBpsStep: parsed.depegWorseningBpsStep,
-    },
-    alertTypes: parsed.alertTypes,
-  });
-}
-
-async function handleUnsubscribe(
-  db: D1Database,
-  chatId: string,
-  actorUserId: string | null,
-  args: string,
-  botToken: string,
-): Promise<void> {
-  const parsed = parseTargetArgs(args, { resolutionScope: "tracked" });
-  if (args.trim().length === 0) {
-    await replyToChat(chatId, "Specify ticker(s) or preset(s) to unsubscribe, or use /unsubscribe all", botToken);
-    return;
-  }
-
-  if (parsed.includeAll && (parsed.tickers.length > 0 || parsed.presetIds.length > 0)) {
-    await replyToChat(chatId, 'Use /unsubscribe all by itself, or specify ticker/preset targets without "all".', botToken);
-    return;
-  }
-
-  if (parsed.invalidTargets.length > 0) {
-    const invalidTarget = parsed.invalidTargets[0];
-    const match = resolveTicker(invalidTarget, "tracked");
-    const suggestion = match.status === "not_found" ? match.suggestion : undefined;
-    await replyToChat(chatId, buildNotFoundMessage(invalidTarget, suggestion), botToken);
-    return;
-  }
-
-  if (parsed.includeAll) {
-    await persistPendingConfirmBulk(db, {
-      chatId,
-      payload: {
-        kind: "unsubscribe",
-        presetIds: [],
-        coinIds: [],
-        unsubscribeAll: true,
-      },
-      initiatorUserId: actorUserId,
-    });
-    await replyToChat(
-      chatId,
-      buildBulkConfirmMessage("unsubscribe", subscribableCoinCount(), [], []),
-      botToken,
-      { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },
-    );
-    return;
-  }
-
-  const presetIds = dedupePresetIds(parsed.presetIds);
-  const presetCoins = await resolvePresetCoins(db, presetIds);
-  if (presetCoins == null) {
-    await replyToChat(chatId, buildPresetUnavailableMessage(), botToken);
-    return;
-  }
-
-  const runAction = makeActionRunner(
-    { db, chatId, username: null, initiatorUserId: actorUserId },
-    botToken,
-    { kind: "unsubscribe", presetIds },
-  );
-  await runAction({
-    tickers: parsed.tickers,
-    initialCoins: presetCoins,
-    actionType: "unsubscribe",
-    actionPayload: { presetIds },
-    resolutionScope: "tracked",
-  });
-}
-
-async function handleSet(
-  db: D1Database,
-  chatId: string,
-  username: string | null,
-  actorUserId: string | null,
-  args: string,
-  botToken: string,
-): Promise<void> {
-  const parsed = parseSetCommand(args);
-  if ("error" in parsed) {
-    await replyToChat(chatId, escapeHtml(parsed.error), botToken);
-    return;
-  }
-
-  if (parsed.ticker.toLowerCase() === "all") {
-    const globalError = validateGlobalSetCommand(parsed);
-    if (globalError) {
-      await replyToChat(chatId, escapeHtml(globalError), botToken);
-      return;
-    }
-    await applyGlobalSetting(db, chatId, username, parsed);
-    const subscriber = await loadSubscriberByChat(db, chatId);
-    await replyToChat(chatId, buildGlobalAlertSummaryMessage("Updated all-stablecoin alerts.", subscriber), botToken);
-    return;
-  }
-
-  const runAction = makeActionRunner({ db, chatId, username, initiatorUserId: actorUserId }, botToken);
-  await runAction({ tickers: [parsed.ticker], actionType: "set", actionPayload: parsed });
-}
-
-async function handleMute(
-  db: D1Database,
-  chatId: string,
-  username: string | null,
-  args: string,
-  botToken: string,
-): Promise<void> {
-  const parsed = parseQuietHours(args);
-  if ("error" in parsed) {
-    await replyToChat(chatId, escapeHtml(parsed.error), botToken);
-    return;
-  }
-  await upsertSubscriberRow(db, {
-    chatId,
-    username,
-    nowSec: unixNow(),
-    quietHours: {
-      enabled: true,
-      startHourUtc: parsed.startHourUtc,
-      endHourUtc: parsed.endHourUtc,
-    },
-  });
-  await replyToChat(
-    chatId,
-    escapeHtml(
-      `Quiet hours enabled: ${formatQuietHours(parsed.startHourUtc, parsed.endHourUtc)}.\n` +
-        "Messages will still arrive, but Telegram notifications will be silenced in that window.",
-    ),
-    botToken,
-  );
-}
-
-/**
- * Subset of IANA zones surfaced as a fallback inline keyboard when `/timezone`
- * is invoked without an argument. Kept short so the message fits one screen
- * and so we can verify each zone is recognized by the runtime ICU tables at
- * the call site rather than relying on user typing.
- */
-const TIMEZONE_QUICK_PICK_ZONES = [
-  "UTC",
-  "Europe/London",
-  "Europe/Paris",
-  "America/New_York",
-  "America/Los_Angeles",
-  "Asia/Tokyo",
-  "Asia/Singapore",
-  "Australia/Sydney",
-] as const;
-
-function buildTimezoneKeyboard(): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
-  const rows: Array<Array<{ text: string; callback_data: string }>> = [];
-  // Two zones per row keeps the callback labels readable on narrow Telegram
-  // clients and well under the 64-byte callback_data limit.
-  for (let i = 0; i < TIMEZONE_QUICK_PICK_ZONES.length; i += 2) {
-    const row = TIMEZONE_QUICK_PICK_ZONES.slice(i, i + 2).map((zone) => ({
-      text: zone,
-      callback_data: `tz:${zone}`,
-    }));
-    rows.push(row);
-  }
-  return { inline_keyboard: rows };
-}
-
-function formatTimezoneStatusLine(currentTimezone: string | null | undefined): string {
-  const current = currentTimezone ?? "UTC (default)";
-  return `Current timezone: ${current}.`;
-}
-
-async function handleTimezone(
-  db: D1Database,
-  chatId: string,
-  username: string | null,
-  args: string,
-  botToken: string,
-): Promise<void> {
-  const trimmed = args.trim();
-
-  if (!trimmed) {
-    const subscriber = await loadSubscriberByChat(db, chatId);
-    const message = [
-      formatTimezoneStatusLine(subscriber?.timezone ?? null),
-      "",
-      "Pick a common zone below, or send <code>/timezone &lt;IANA-zone&gt;</code> (e.g. <code>/timezone Europe/Paris</code>).",
-      "Quiet hours from /mute are interpreted in this zone (NULL = UTC).",
-    ].join("\n");
-    await replyToChat(chatId, message, botToken, { replyMarkup: buildTimezoneKeyboard() });
-    return;
-  }
-
-  // Accept a single token. Reject obviously malformed input before the more
-  // expensive ICU probe — keeps log noise down for spammy input.
-  if (/\s/.test(trimmed) || trimmed.length > 64) {
-    await replyToChat(
-      chatId,
-      escapeHtml(
-        "Usage: /timezone <IANA-zone>, e.g. /timezone Europe/Paris. Use /timezone with no argument to pick from common zones.",
-      ),
-      botToken,
-    );
-    return;
-  }
-
-  if (!isValidIanaTimezone(trimmed)) {
-    await replyToChat(
-      chatId,
-      escapeHtml(
-        `Unknown timezone "${trimmed}". Use an IANA zone like Europe/Paris or America/New_York, or send /timezone with no argument to pick from common zones.`,
-      ),
-      botToken,
-    );
-    return;
-  }
-
-  await setSubscriberTimezone(db, chatId, username, trimmed);
-  await replyToChat(
-    chatId,
-    escapeHtml(
-      `Timezone set to ${trimmed}. Quiet hours from /mute will now be interpreted in this zone.`,
-    ),
-    botToken,
-  );
-}
-
-async function handleUnmuteHours(
-  db: D1Database,
-  chatId: string,
-  username: string | null,
-  botToken: string,
-): Promise<void> {
-  await upsertSubscriberRow(db, {
-    chatId,
-    username,
-    nowSec: unixNow(),
-    quietHours: { enabled: false },
-  });
-  await replyToChat(chatId, "Quiet hours disabled.", botToken);
-}
-
-async function handleUnsnooze(
-  db: D1Database,
-  chatId: string,
-  username: string | null,
-  botToken: string,
-): Promise<void> {
-  await clearAlertSnooze(db, chatId, username);
-  await replyToChat(chatId, "Alert snooze cleared.", botToken);
 }
 
 async function handleDisambiguationReply(
