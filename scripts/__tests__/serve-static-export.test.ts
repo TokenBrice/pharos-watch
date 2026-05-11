@@ -48,6 +48,27 @@ async function listen(server: Server) {
 }
 
 describe("serve-static-export", () => {
+  it("serves exact /api and /api/ from the static API access page", async () => {
+    const root = await makeRoot();
+    await mkdir(path.join(root, "api"), { recursive: true });
+    await writeFile(path.join(root, "api", "index.html"), "<h1>API access</h1>");
+
+    const app = createStaticExportServer({
+      apiBaseUrl: "http://127.0.0.1:1",
+      port: 0,
+      rootDir: root,
+    });
+    const baseUrl = await listen(app.server);
+
+    const exactResponse = await fetch(`${baseUrl}/api`);
+    const slashResponse = await fetch(`${baseUrl}/api/`);
+
+    expect(exactResponse.status).toBe(200);
+    expect(await exactResponse.text()).toBe("<h1>API access</h1>");
+    expect(slashResponse.status).toBe(200);
+    expect(await slashResponse.text()).toBe("<h1>API access</h1>");
+  });
+
   it("serves static /api route assets before falling through to the API proxy", async () => {
     const root = await makeRoot();
     await mkdir(path.join(root, "api"), { recursive: true });
@@ -84,5 +105,89 @@ describe("serve-static-export", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ url: "/api/peg-summary?range=7d" });
+  });
+
+  it("proxies nested admin API paths during local static-export smoke runs", async () => {
+    const upstream = createServer((req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({
+        url: req.url,
+        adminHeader: req.headers["x-pharos-admin"] ?? null,
+      }));
+    });
+    const upstreamBaseUrl = await listen(upstream);
+
+    const app = createStaticExportServer({
+      apiBaseUrl: upstreamBaseUrl,
+      port: 0,
+      rootDir: await makeRoot(),
+    });
+    const baseUrl = await listen(app.server);
+
+    const response = await fetch(`${baseUrl}/api/api-key-requests-admin?limit=1`, {
+      headers: { "X-Pharos-Admin": "1" },
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      url: "/api/api-key-requests-admin?limit=1",
+      adminHeader: "1",
+    });
+  });
+
+  it("proxies POST bodies and headers for self-serve API endpoints", async () => {
+    const upstream = createServer((req, res) => {
+      let body = "";
+      req.setEncoding("utf8");
+      req.on("data", (chunk) => {
+        body += chunk;
+      });
+      req.on("end", () => {
+        res.writeHead(400, {
+          "Content-Type": "application/json; charset=utf-8",
+          "X-Upstream-Method": req.method ?? "",
+        });
+        res.end(JSON.stringify({
+          method: req.method,
+          url: req.url,
+          contentType: req.headers["content-type"],
+          body,
+        }));
+      });
+    });
+    const upstreamBaseUrl = await listen(upstream);
+
+    const app = createStaticExportServer({
+      apiBaseUrl: upstreamBaseUrl,
+      port: 0,
+      rootDir: await makeRoot(),
+    });
+    const baseUrl = await listen(app.server);
+
+    const requestResponse = await fetch(`${baseUrl}/api/api-key-requests`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{not-json",
+    });
+    const verifyResponse = await fetch(`${baseUrl}/api/api-key-requests/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{not-json",
+    });
+
+    expect(requestResponse.status).toBe(400);
+    await expect(requestResponse.json()).resolves.toEqual({
+      method: "POST",
+      url: "/api/api-key-requests",
+      contentType: "application/json",
+      body: "{not-json",
+    });
+    expect(verifyResponse.status).toBe(400);
+    await expect(verifyResponse.json()).resolves.toEqual({
+      method: "POST",
+      url: "/api/api-key-requests/verify",
+      contentType: "application/json",
+      body: "{not-json",
+    });
   });
 });

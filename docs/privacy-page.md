@@ -46,7 +46,7 @@ The current policy copy covers:
 7. optional Telegram/X handles submitted through the feedback form appear publicly on the GitHub issue created for your submission
 8. Telegram alert subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours, snooze state, and short-lived pending-command or pending-alert metadata
 9. self-serve API key requests store verified email plus optional requester/project/use-case metadata for private operator review; request throttling stores salted hashes of IP address and user-agent data
-10. Resend sends API verification emails, and optional GitHub issuance notifications deliberately exclude requester details and plaintext tokens
+10. Resend sends API verification emails and necessarily receives the one-time verification URL in the email body; optional GitHub issuance notifications deliberately exclude requester details and plaintext tokens
 
 Portfolio holdings are explicitly described as browser-local only, which matches the `/portfolio/` implementation. The page now also notes that any delegated feedback contact handle will be visible in the GitHub issues that Pharos creates.
 

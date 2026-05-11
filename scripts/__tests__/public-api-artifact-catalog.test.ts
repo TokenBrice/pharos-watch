@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ENDPOINT_DEFINITIONS } from "../../shared/lib/api-endpoints/definitions";
 import {
@@ -17,6 +19,11 @@ const integrationFacingPublicKeys = ENDPOINT_DEFINITIONS
   .sort();
 
 const noKeyPublicArtifactKeys = ["health"];
+const FORBIDDEN_ARTIFACT_PATHS = [
+  "/api/api-key-requests",
+  "/api/api-key-requests/verify",
+  "/api/api-key-requests-admin",
+];
 
 describe("public API artifact catalog", () => {
   it("covers every integration-facing public GET endpoint definition", () => {
@@ -61,6 +68,50 @@ describe("public API artifact catalog", () => {
 
     expect(PUBLIC_STATIC_POSTMAN_REQUESTS.map((request) => request.base)).toEqual(["site", "site", "site"]);
     expect(PUBLIC_STATIC_POSTMAN_REQUESTS.map((request) => request.noAuth)).toEqual([true, true, true]);
+  });
+
+  it("excludes self-serve issuance and admin routes from public artifacts", () => {
+    const catalogPaths = PUBLIC_API_ARTIFACT_ENDPOINTS.map((endpoint) => endpoint.path);
+    const openApi = JSON.parse(readFileSync(join(process.cwd(), "public/openapi.json"), "utf8")) as {
+      paths?: Record<string, unknown>;
+    };
+    const postman = JSON.parse(
+      readFileSync(join(process.cwd(), "public/postman/pharos-api.postman_collection.json"), "utf8"),
+    ) as unknown;
+    const postmanText = JSON.stringify(postman);
+
+    for (const path of FORBIDDEN_ARTIFACT_PATHS) {
+      expect(catalogPaths, path).not.toContain(path);
+      expect(Object.keys(openApi.paths ?? {}), path).not.toContain(path);
+      expect(postmanText, path).not.toContain(path);
+    }
+  });
+
+  it("keeps the public artifact catalog GET-only by omitting method declarations", () => {
+    for (const endpoint of PUBLIC_API_ARTIFACT_ENDPOINTS) {
+      expect("method" in endpoint, endpoint.key).toBe(false);
+      expect("methods" in endpoint, endpoint.key).toBe(false);
+    }
+  });
+
+  it("keeps generated OpenAPI and Postman artifacts free of POST operations", () => {
+    const openApi = JSON.parse(readFileSync(join(process.cwd(), "public/openapi.json"), "utf8")) as {
+      paths?: Record<string, Record<string, unknown>>;
+    };
+    const postman = JSON.parse(
+      readFileSync(join(process.cwd(), "public/postman/pharos-api.postman_collection.json"), "utf8"),
+    ) as {
+      item?: Array<{ item?: Array<{ request?: { method?: string } }> }>;
+    };
+
+    for (const operations of Object.values(openApi.paths ?? {})) {
+      expect(Object.keys(operations)).toEqual(["get"]);
+    }
+
+    const postmanMethods = postman.item?.flatMap((folder) =>
+      folder.item?.map((item) => item.request?.method) ?? [],
+    ) ?? [];
+    expect(new Set(postmanMethods)).toEqual(new Set(["GET"]));
   });
 
   it("documents the blacklist API's symbol filter and supported query contract", () => {

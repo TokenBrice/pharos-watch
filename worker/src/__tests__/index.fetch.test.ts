@@ -117,7 +117,7 @@ describe("worker.fetch", () => {
     expect(res.headers.get("Vary")).toBe("Origin");
   });
 
-  it("rejects GET on mutating admin endpoints", async () => {
+  it("hides mutating admin endpoints on the public API host", async () => {
     const env = makeEnv({ DB: mockD1(await validKeyDbTables(), { requireMatch: true }) });
     const { ctx } = makeExecutionContext();
 
@@ -130,9 +130,10 @@ describe("worker.fetch", () => {
       ctx,
     );
 
-    expect(res.status).toBe(405);
-    expect(res.headers.get("Allow")).toBe("POST");
+    expect(res.status).toBe(404);
+    expect(res.headers.get("Allow")).toBeNull();
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://pharos.watch");
+    expect(env.DB.getHistory()).toEqual([]);
   });
 
   it("rejects POST on read-only endpoints", async () => {
@@ -351,6 +352,95 @@ describe("worker.fetch", () => {
 
     expect(res.status).toBe(401);
     expect(cacheMatch).not.toHaveBeenCalled();
+  });
+
+  it("hides admin endpoints on the public API host before API-key auth", async () => {
+    const env = makeEnv({
+      DB: mockD1(await validKeyDbTables(), { requireMatch: true }),
+    });
+    const { ctx } = makeExecutionContext();
+
+    const listRes = await worker.fetch(
+      new Request("https://api.pharos.watch/api/api-key-requests-admin", { method: "GET" }),
+      env as never,
+      ctx,
+    );
+    const rejectRes = await worker.fetch(
+      new Request("https://api.pharos.watch/api/api-key-requests-admin/akr_abc12345/reject", {
+        method: "POST",
+      }),
+      env as never,
+      ctx,
+    );
+    const releaseRes = await worker.fetch(
+      new Request("https://api.pharos.watch/api/api-key-requests-admin/akr_abc12345/release-claim", {
+        method: "POST",
+      }),
+      env as never,
+      ctx,
+    );
+
+    expect(listRes.status).toBe(404);
+    expect(rejectRes.status).toBe(404);
+    expect(releaseRes.status).toBe(404);
+    expect(env.DB.getHistory()).toEqual([]);
+  });
+
+  it("hides malformed admin-like public paths without probing API-key auth", async () => {
+    const env = makeEnv({
+      DB: mockD1(await validKeyDbTables(), { requireMatch: true }),
+    });
+    const { ctx } = makeExecutionContext();
+
+    const badRequestIdRes = await worker.fetch(
+      new Request("https://api.pharos.watch/api/api-key-requests-admin/bad!/reject", { method: "POST" }),
+      env as never,
+      ctx,
+    );
+    const badApiKeyIdRes = await worker.fetch(
+      new Request("https://api.pharos.watch/api/api-keys/0/rotate", {
+        method: "POST",
+        headers: { "X-API-Key": VALID_API_KEY },
+      }),
+      env as never,
+      ctx,
+    );
+
+    expect(badRequestIdRes.status).toBe(404);
+    expect(badApiKeyIdRes.status).toBe(404);
+    expect(env.DB.getHistory()).toEqual([]);
+  });
+
+  it("does not let a valid public API key reach admin routes on the public host", async () => {
+    const env = makeEnv({
+      DB: mockD1(await validKeyDbTables(), { requireMatch: true }),
+    });
+    const { ctx } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/status", {
+        method: "GET",
+        headers: { "X-API-Key": VALID_API_KEY },
+      }),
+      env as never,
+      ctx,
+    );
+
+    expect(res.status).toBe(404);
+    expect(env.DB.getHistory()).toEqual([]);
+  });
+
+  it("preserves ops-api admin auth failures for requests without Access", async () => {
+    const env = makeEnv();
+    const { ctx } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://ops-api.pharos.watch/api/status", { method: "GET" }),
+      env as never,
+      ctx,
+    );
+
+    expect(res.status).toBe(401);
   });
 
   it("rejects unauthenticated public-status-history and telegram-pulse with 401", async () => {

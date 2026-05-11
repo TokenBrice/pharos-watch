@@ -77,16 +77,45 @@ function getProxyApiKey() {
   return (process.env.STATIC_EXPORT_API_KEY ?? "").trim();
 }
 
-async function proxyApiRequest(targetUrl, method, headers = {}) {
+async function readRequestBody(req, method) {
+  if (method === "GET" || method === "HEAD") {
+    return undefined;
+  }
+
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return chunks.length > 0 ? Buffer.concat(chunks) : undefined;
+}
+
+function buildForwardedRequestHeaders(req, extraHeaders = {}) {
+  const forwarded = {};
+  for (const name of ["accept", "content-type", "idempotency-key", "x-pharos-admin"]) {
+    const value = req.headers[name];
+    if (Array.isArray(value)) {
+      forwarded[name] = value.join(", ");
+    } else if (value) {
+      forwarded[name] = value;
+    }
+  }
+  return {
+    Accept: "application/json",
+    "User-Agent": "pharos-static-export-smoke/1.0",
+    ...forwarded,
+    ...extraHeaders,
+  };
+}
+
+async function proxyApiRequest(targetUrl, method, headers = {}, body) {
   const apiKey = getProxyApiKey();
   return fetch(targetUrl, {
     method,
     headers: {
-      Accept: "application/json",
-      "User-Agent": "pharos-static-export-smoke/1.0",
       ...(apiKey ? { "X-API-Key": apiKey } : {}),
       ...headers,
     },
+    body,
   });
 }
 
@@ -124,14 +153,11 @@ export function createStaticExportServer({
     const requestUrl = new URL(req.url ?? "/", `http://${host}:${port}`);
     const method = req.method ?? "GET";
 
-    if (method !== "GET" && method !== "HEAD") {
-      res.writeHead(405, { Allow: "GET, HEAD" });
-      res.end();
-      return;
-    }
-
     const isNestedApiPath = requestUrl.pathname.startsWith("/api/") && requestUrl.pathname !== "/api/";
-    if (isNestedApiPath) {
+    const isSiteDataPath = requestUrl.pathname.startsWith("/_site-data/");
+    const canServeStaticMethod = method === "GET" || method === "HEAD";
+
+    if (isNestedApiPath && canServeStaticMethod) {
       try {
         const staticFile = await readStaticExportFile(normalizedRoot, requestUrl.pathname);
         sendStaticExportFile(res, method, staticFile);
@@ -147,10 +173,16 @@ export function createStaticExportServer({
 
     if (
       isNestedApiPath
-      || requestUrl.pathname.startsWith("/_site-data/")
+      || isSiteDataPath
     ) {
+      if (isSiteDataPath && !canServeStaticMethod) {
+        res.writeHead(405, { Allow: "GET, HEAD" });
+        res.end();
+        return;
+      }
+
       try {
-        const isSiteDataRequest = requestUrl.pathname.startsWith("/_site-data/");
+        const isSiteDataRequest = isSiteDataPath;
         const resolveSiteDataUpstreamPath = isSiteDataRequest
           ? await getSiteDataResolver()
           : null;
@@ -164,12 +196,18 @@ export function createStaticExportServer({
         }
 
         const siteProxySecret = (process.env.STATIC_EXPORT_SITE_API_SHARED_SECRET ?? "").trim();
-        const upstream = await proxyApiRequest(
-          `${(isSiteDataRequest ? siteApiBaseUrl : apiBaseUrl)}${upstreamPath}${requestUrl.search}`,
-          method,
+        const proxyHeaders = buildForwardedRequestHeaders(
+          req,
           isSiteDataRequest && siteProxySecret
             ? { "X-Pharos-Site-Proxy-Secret": siteProxySecret }
             : {},
+        );
+        const requestBody = await readRequestBody(req, method);
+        const upstream = await proxyApiRequest(
+          `${(isSiteDataRequest ? siteApiBaseUrl : apiBaseUrl)}${upstreamPath}${requestUrl.search}`,
+          method,
+          proxyHeaders,
+          requestBody,
         );
         const body = method === "HEAD" ? null : Buffer.from(await upstream.arrayBuffer());
         const headers = {};
@@ -194,6 +232,12 @@ export function createStaticExportServer({
         res.writeHead(502, { "Content-Type": "text/plain; charset=utf-8" });
         res.end(`Proxy request failed: ${message}`);
       }
+      return;
+    }
+
+    if (!canServeStaticMethod) {
+      res.writeHead(405, { Allow: "GET, HEAD" });
+      res.end();
       return;
     }
 

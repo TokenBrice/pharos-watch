@@ -28,6 +28,7 @@ export {
   getPublicApiAccess,
   getSiteDataAccess,
   getProbePaths,
+  isAdminLikePath,
   isAdminPath,
   isProtectedPublicApiPath,
   isSiteDataAllowedPath,

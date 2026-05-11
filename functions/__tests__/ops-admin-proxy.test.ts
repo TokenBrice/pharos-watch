@@ -203,6 +203,89 @@ describe("ops admin proxy", () => {
     );
   });
 
+  it("proxies the self-serve request admin list route", async () => {
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ requests: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/api-key-requests-admin?limit=1"),
+      env: BASE_ENV,
+      params: { path: "api-key-requests-admin" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "https://ops-api.pharos.watch/api/api-key-requests-admin?limit=1",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("proxies self-serve reject actions with admin and idempotency headers", async () => {
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ status: "rejected" }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": "idem-123",
+        "X-Idempotent-Replay": "true",
+      },
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/api-key-requests-admin/akr_abc12345/reject", {
+        method: "POST",
+        headers: {
+          Origin: "https://ops.pharos.watch",
+          "Idempotency-Key": "idem-123",
+          "X-Pharos-Admin": "1",
+        },
+      }),
+      env: BASE_ENV,
+      params: { path: ["api-key-requests-admin", "akr_abc12345", "reject"] },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Idempotency-Key")).toBe("idem-123");
+    expect(response.headers.get("X-Idempotent-Replay")).toBe("true");
+    const [, init] = fetchSpy.mock.calls[0] ?? [];
+    const headers = init?.headers as Headers;
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "https://ops-api.pharos.watch/api/api-key-requests-admin/akr_abc12345/reject",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(headers.get("Idempotency-Key")).toBe("idem-123");
+    expect(headers.get("X-Pharos-Admin")).toBe("1");
+  });
+
+  it("proxies self-serve release-claim actions and leaves missing admin headers to the Worker", async () => {
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/api-key-requests-admin/akr_abc12345/release-claim", {
+        method: "POST",
+        headers: { Origin: "https://ops.pharos.watch" },
+      }),
+      env: BASE_ENV,
+      params: { path: ["api-key-requests-admin", "akr_abc12345", "release-claim"] },
+    });
+
+    expect(response.status).toBe(403);
+    const [, init] = fetchSpy.mock.calls[0] ?? [];
+    const headers = init?.headers as Headers;
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "https://ops-api.pharos.watch/api/api-key-requests-admin/akr_abc12345/release-claim",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(headers.get("X-Pharos-Admin")).toBeNull();
+  });
+
   it("returns 500 when the service-token pair is incomplete", async () => {
     const response = await onRequest({
       request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),

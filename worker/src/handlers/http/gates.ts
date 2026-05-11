@@ -1,6 +1,6 @@
-import { getPublicApiAccess, isCacheBypassPath, isSiteDataAllowedPath } from "@shared/lib/api-endpoints";
+import { getPublicApiAccess, isAdminLikePath, isCacheBypassPath, isSiteDataAllowedPath } from "@shared/lib/api-endpoints";
 import { API_KEY_DEPENDENCY_RETRY_AFTER_SEC } from "@shared/lib/ops-limits";
-import { SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
+import { OPS_API_HOSTNAME, SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import { errorResponse } from "../../lib/api-utils";
 import {
   authenticateApiKey,
@@ -93,6 +93,16 @@ export async function evaluateAccessGate(
 
   if (!url.pathname.startsWith("/api/") || url.pathname === "/api/telegram-webhook") {
     return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: null, response: null };
+  }
+
+  if (url.hostname !== OPS_API_HOSTNAME && isAdminLikePath(url.pathname)) {
+    return {
+      isAdmin,
+      isSiteProxy: false,
+      apiKey: null,
+      requestLane: "public-api",
+      response: notFoundResponse(),
+    };
   }
 
   if (getPublicApiAccess(url.pathname) === "exempt") {

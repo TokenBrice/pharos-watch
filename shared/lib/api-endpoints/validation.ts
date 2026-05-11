@@ -16,6 +16,15 @@ const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];
 const GET_AND_POST_METHODS = ["GET", "POST"] as const satisfies readonly EndpointMethod[];
 const AUDIT_DEPEG_HISTORY_PATH = "/api/audit-depeg-history";
 const BACKFILL_DEWS_PATH = "/api/backfill-dews";
+const ADMIN_DYNAMIC_PATH_ROOTS = [
+  "/api/api-key-requests-admin",
+  "/api/api-keys",
+  "/api/discovery-candidates",
+] as const;
+
+function isPathOrChild(path: string, root: string): boolean {
+  return path === root || path.startsWith(`${root}/`);
+}
 
 export function getPublicApiAccess(path: string): EndpointPublicApiAccess | null {
   const endpoint = getEndpointDefinition(path);
@@ -115,6 +124,12 @@ export function matchDynamicAdminEndpoint(path: string): DynamicAdminEndpointMat
 
 export function isAdminPath(path: string): boolean {
   return Boolean(getEndpointDefinition(path)?.adminRequired || matchDynamicAdminEndpoint(path));
+}
+
+export function isAdminLikePath(path: string): boolean {
+  if (isAdminPath(path)) return true;
+  if (ADMIN_DYNAMIC_PATH_ROOTS.some((root) => isPathOrChild(path, root))) return true;
+  return ENDPOINT_DEFINITIONS.some((endpoint) => endpoint.adminRequired && isPathOrChild(path, endpoint.path));
 }
 
 export function isMutatingAdminGetAllowed(url: URL): boolean {

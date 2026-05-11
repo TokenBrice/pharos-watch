@@ -330,6 +330,32 @@ Operational notes:
 - The Worker-side per-key limiter (see `docs/worker-infrastructure.md` → Public API Auth and Rate Limiting and the Edge Cache Strategy subsection) remains in force for keyed `/api/*` requests and persists across colos. The WAF rule is a coarser, zone-side floor sitting in front of it.
 - Cloudflare plan quotas (number of active rate-limiting rules, minimum counting periods, available match fields) vary by plan and change over time. Verify the current plan comparison page before adding a second rule.
 
+### 10. Maintain the self-serve API key intake rule
+
+The public key request surface needs a narrower edge rule than the broad API floor because it can create durable D1 rows and send email. Configure a dedicated WAF/rate-limit rule named `api-self-serve-key-intake-limit`:
+
+- Match:
+
+  ```
+  (http.host eq "api.pharos.watch"
+    and http.request.method eq "POST"
+    and (http.request.uri.path eq "/api/api-key-requests"
+      or http.request.uri.path eq "/api/api-key-requests/verify")
+    and not cf.bot_management.verified_bot)
+  ```
+
+- Threshold: `20` requests / `60` seconds per `IP` characteristic
+- Action: `Block` for `10` minutes
+- Placement: before the broad `api-rate-limit-ip` rule
+
+This expression deliberately uses exact path matches. It must not match `/api/api-key-requests-admin` or any `/api/api-key-requests-admin/*` operator route. Exact WAF blocking of these two POST paths is the first-line self-serve kill switch because hiding `/api/` requires a Pages deploy and `MAINTENANCE_MODE=true` is global.
+
+Verification:
+
+- Cloudflare dashboard → zone `pharos.watch` → Security → Events, filter by the self-serve rule ID after a test or simulated match.
+- Confirm the rule ID in the dashboard after creation and record it in the incident note when the rule is edited.
+- Confirm `/api/api-key-requests-admin*` is not present in the rule expression before enabling.
+
 ---
 
 ## Recommended Cloudflare Values

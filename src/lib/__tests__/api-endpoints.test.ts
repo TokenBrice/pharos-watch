@@ -8,6 +8,7 @@ import {
   ENDPOINT_DEFINITIONS,
   findDynamicEndpointDescriptor,
   getDynamicEndpointDescriptorByKey,
+  isAdminLikePath,
   isAdminPath,
   isCacheBypassPath,
   isMutatingAdminPath,
@@ -227,6 +228,21 @@ describe("api endpoint registry", () => {
     expect(isAdminPath("/api/discovery-candidates/0/dismiss")).toBe(false);
     expect(isAdminPath("/api/api-keys/0/update")).toBe(false);
     expect(isAdminPath("/api/stablecoins")).toBe(false);
+  });
+
+  it("flags malformed admin-family paths before descriptor matching", () => {
+    expect(isAdminLikePath("/api/status")).toBe(true);
+    expect(isAdminLikePath("/api/status/extra")).toBe(true);
+    expect(isAdminLikePath("/api/api-keys")).toBe(true);
+    expect(isAdminLikePath("/api/api-keys/0/update")).toBe(true);
+    expect(isAdminLikePath("/api/api-keys/not-a-number/rotate")).toBe(true);
+    expect(isAdminLikePath("/api/api-key-requests-admin")).toBe(true);
+    expect(isAdminLikePath("/api/api-key-requests-admin/bad!/reject")).toBe(true);
+    expect(isAdminLikePath("/api/discovery-candidates/not-a-number/dismiss")).toBe(true);
+    expect(isAdminLikePath("/api/api-key-requests")).toBe(false);
+    expect(isAdminLikePath("/api/api-key-requests/verify")).toBe(false);
+    expect(isAdminLikePath("/api/stablecoins")).toBe(false);
+    expect(isAdminLikePath("/api/api-key-requests-administer")).toBe(false);
   });
 
   it("keeps the shared dynamic descriptor table aligned with current access and dependency policies", () => {

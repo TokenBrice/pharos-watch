@@ -152,6 +152,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - on combined worker + Pages deploys, uses the uploaded Worker's preview URL for digest sync and local `/_site-data/*` proxying so CI rehearses the static export against the exact candidate API while `deploy-worker` and `smoke-api` continue in parallel
    - executes the predeploy Pages path:
      - `build-pages` fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, sending `DIGEST_API_KEY` from GitHub repository secrets and forwarding `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, uploads `out/`, serves the same local artifact with `npm run serve:static-export`, proxies direct `/api/*` calls to the selected public API base, proxies `/_site-data/*` to the `STATIC_EXPORT_SITE_API_BASE` worker target (required) and injects `SITE_API_SHARED_SECRET` for that hop, and verifies the expected GA snippet in the homepage shell or root static RSC payload when `SMOKE_UI_EXPECT_GA_ID` is configured
+     - the local static-export server treats exact `/api` and `/api/` as the public API access page, serves checked-in/static route payload artifacts below `/api/` when present, and proxies endpoint-like `/api/*` requests including JSON `POST` bodies to the selected public API base
 8. `pages-publish`
    - reusable workflow call to `.github/workflows/pages-publish.yml`
    - runs only when `detect-changes` reports `pages_changed=true`
@@ -254,6 +255,20 @@ The current origin split is:
 - operator API: `ops-api.pharos.watch`
 
 The browser-facing website data lane is same-origin `/_site-data/*` on the Pages project. Every Pages host (production and preview) proxies that lane with `SITE_API_SHARED_SECRET` to the explicit `SITE_API_ORIGIN` target and fails closed when the binding is missing. The lane also gates inbound requests on the caller's `Origin` (or `Referer` fallback); only `pharos.watch`, `ops.pharos.watch`, and `*.pages.dev` preview hostnames are accepted. Binding the shared D1 database as `DB` is optional and enables `/_site-data/*` cache-hit/proxy-outcome attribution for `/api/request-source-stats`; without it the proxy still serves allowed reads and skips telemetry writes. Worker route declarations for `site-api.pharos.watch` and `ops-api.pharos.watch` live in `worker/wrangler.toml` and deploy with the normal Worker job. The Pages custom domains plus Cloudflare Access applications for the ops surfaces are account-side setup and are documented in [operator-origin-access.md](./operator-origin-access.md).
+
+The public self-serve API-key form is not a production Pages proxy route. On `pharos.watch`, `/api/` is the static form page and its browser requests go cross-origin to `https://api.pharos.watch/api/api-key-requests` and `/api/api-key-requests/verify`; CORS must allow JSON `POST` from `https://pharos.watch`. Local static-export smoke uses a proxy for endpoint-like `/api/*` only so the built artifact can be rehearsed without a deployed Pages Function.
+
+## Self-Serve API Key Rollback
+
+For an incident isolated to public self-serve key issuance:
+
+1. Enable or tighten the exact-path WAF rule for `POST /api/api-key-requests` and `POST /api/api-key-requests/verify`; do not block `/api/api-key-requests-admin*`.
+2. Hide or disable the `/api/` form in Pages if the incident is not resolved by edge blocking.
+3. Roll back Worker or Pages through the normal deployment rollback path as needed.
+4. Query self-serve keys created after the incident cutoff, deactivate incident or smoke keys, release associated claims through the Access-gated admin route, and verify matching audit rows.
+5. Check Worker logs, email-provider logs, and Cloudflare Security Events for plaintext API keys, raw verification tokens, raw IP addresses, or provider-echoed requester data.
+
+Production smoke for this surface should request a smoke key, receive the email, verify once, confirm verification-token reuse fails, confirm the admin queue/key/claim/audit state through `ops-api`, then deactivate the smoke key and release its claim.
 
 ## Failure Policy
 

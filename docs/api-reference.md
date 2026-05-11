@@ -20,6 +20,8 @@ Machine-readable integration artifacts are also served from the public website f
 
 Browser consumers should use same-origin `/_site-data/*` via the frontend helpers in `src/lib/api.ts`. In production, that Pages proxy targets `https://site-api.pharos.watch` through `SITE_API_ORIGIN`. Direct integrations, CI smoke, and build-time sync scripts should target `https://api.pharos.watch`.
 
+Production Pages does not proxy public self-serve `/api/*` POST requests. The public form at `https://pharos.watch/api/` calls `https://api.pharos.watch/api/api-key-requests` and `https://api.pharos.watch/api/api-key-requests/verify` with normal CORS preflights for JSON `POST` requests.
+
 The direct Worker cache profiles below describe responses from `api.pharos.watch` / `site-api.pharos.watch`. The Pages `/_site-data/*` proxy adds a separate same-origin Cache API layer for successful responses without `Set-Cookie`, without `Cache-Control: no-store`, and without freshness `Warning: 110`; it does not cache no-store routes such as `/api/health`.
 
 ## Public API Auth
@@ -40,7 +42,7 @@ Public, non-admin routes on `https://api.pharos.watch` that do not require `X-AP
 
 `POST /api/telegram-webhook` is externally reachable but not anonymous: it requires `X-Telegram-Bot-Api-Secret-Token` instead of `X-API-Key`.
 
-Admin/operator routes are also outside the public API-key gate, but they remain Cloudflare-Access-gated and are supported only through `ops-api.pharos.watch` or the `ops.pharos.watch/api/admin/*` Pages proxy.
+Admin/operator routes are also outside the public API-key gate, but they remain Cloudflare-Access-gated and are supported only through `ops-api.pharos.watch` or the `ops.pharos.watch/api/admin/*` Pages proxy. The public API host rejects known admin and admin-like path families before API-key auth, so a public API key cannot be used to reach `/api/status`, `/api/api-keys*`, `/api/api-key-requests-admin*`, or other operator roots on `api.pharos.watch`.
 
 The public self-serve request form lives at `https://pharos.watch/api/`. It sends an email verification link, then exchanges that one-time token for a default key after verification. Default self-serve keys are `tier="self-serve"`, `trafficClass="external"`, limited to `30` requests per minute, expire after `60` days, and allow one active/pending self-serve claim per normalized email. Request details are available only in the private `ops.pharos.watch/admin-api/` UI.
 
