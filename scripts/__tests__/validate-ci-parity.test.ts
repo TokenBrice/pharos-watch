@@ -233,6 +233,25 @@ describe("validate-ci parity", () => {
     expect(validateJob).toContain('["test-noncritical", process.env.TEST_NONCRITICAL_RESULT]');
   });
 
+  it("starts non-mutating validate leaf jobs without waiting for validate-prebuild", () => {
+    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
+
+    for (const [jobName, nextJobName] of [
+      ["pages-build", "test-noncritical"],
+      ["test-noncritical", "coverage-critical"],
+      ["coverage-critical", "typecheck-worker"],
+      ["typecheck-worker", "typecheck-worker-scripts"],
+      ["typecheck-worker-scripts", "validate"],
+    ] as const) {
+      expect(extractJobBlock(workflow, jobName, nextJobName)).not.toContain("needs: validate-prebuild");
+    }
+
+    const validateJob = extractJobBlock(workflow, "validate");
+    expect(validateJob).toContain("- validate-prebuild");
+    expect(validateJob).toContain("- test-noncritical");
+    expect(validateJob).toContain("- coverage-critical");
+  });
+
   it("keeps PR Pages build validation but lets production deploy overlap safe prep with validation", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
     const pagesBuildJob = extractJobBlock(workflow, "pages-build", "test-noncritical");
