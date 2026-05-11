@@ -5,7 +5,7 @@
  * operator must paste into the registry source files.
  *
  * Usage:
- *   API_KEY=... npx tsx scripts/freeze-stablecoin.ts <coinId>
+ *   PHAROS_API_KEY=... npx tsx scripts/freeze-stablecoin.ts <coinId>
  *
  * Inputs:
  *   - <coinId>: must already exist in shared/data/stablecoins/coins/*.json
