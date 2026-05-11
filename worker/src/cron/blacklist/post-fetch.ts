@@ -66,6 +66,15 @@ async function filterNewBlacklistRows(
   return rows.filter((row) => !existingIds.has(row.id));
 }
 
+function filterCacheRepairLedgerRows(rows: BlacklistRow[]): BlacklistRow[] {
+  return rows.filter(
+    (row) =>
+      row.suppression_reason == null
+      && (row.event_type === "blacklist" || row.event_type === "destroy")
+      && !shouldSuppressAsMirrorZero(row.stablecoin, row.event_type, row.amount_native),
+  );
+}
+
 export async function processFetchedBlacklistRows(
   options: ProcessFetchedBlacklistRowsOptions,
 ): Promise<{
@@ -74,6 +83,8 @@ export async function processFetchedBlacklistRows(
   currentBalanceCacheCounters: CurrentBalanceCacheCounters;
 }> {
   const newRows = await filterNewBlacklistRows(options.db, options.rows);
+  const newRowIds = new Set(newRows.map((row) => row.id));
+  const duplicateRows = options.rows.filter((row) => !newRowIds.has(row.id));
   const duplicateCount = options.rows.length - newRows.length;
   if (duplicateCount > 0) {
     console.log(
@@ -82,6 +93,34 @@ export async function processFetchedBlacklistRows(
   }
 
   if (newRows.length === 0) {
+    const duplicateLedgerRows = filterCacheRepairLedgerRows(duplicateRows);
+    if (duplicateLedgerRows.length > 0) {
+      const assetPriceUsd = getBlacklistPriceAssetId(options.config.stablecoin)
+        ? await fetchBlacklistAssetPriceFromCache(options.db, options.config.stablecoin)
+        : null;
+      const currentBalanceCacheCounters = await syncCurrentBalanceCacheForRows(
+        options.db,
+        options.config,
+        duplicateLedgerRows,
+        {
+          etherscanApiKey: options.etherscanApiKey,
+          drpcApiKey: options.drpcApiKey,
+          trongridApiKey: options.trongridApiKey,
+          etherscanLimiter: options.etherscanLimiter,
+          tronLimiter: options.tronLimiter,
+          runBudget: options.runBudget,
+          signal: options.signal,
+          chainRpcs: options.chainRpcs,
+          assetPriceUsd,
+          latestRows: buildLatestBlacklistRows(duplicateLedgerRows),
+        },
+      );
+      return {
+        insertedRows: 0,
+        enrichCounters: { attempted: 0, succeeded: 0, failed: 0 },
+        currentBalanceCacheCounters,
+      };
+    }
     return {
       insertedRows: 0,
       enrichCounters: { attempted: 0, succeeded: 0, failed: 0 },
@@ -117,11 +156,13 @@ export async function processFetchedBlacklistRows(
 
   const insertedRows = await insertBlacklistRows(options.db, newRows);
   const ledgerRows = newRows.filter((row) => row.suppression_reason == null);
-  const latestLedgerRows = buildLatestBlacklistRows(ledgerRows);
+  const duplicateLedgerRows = filterCacheRepairLedgerRows(duplicateRows);
+  const cacheSyncRows = [...ledgerRows, ...duplicateLedgerRows];
+  const latestLedgerRows = buildLatestBlacklistRows(cacheSyncRows);
   const currentBalanceCacheCounters = await syncCurrentBalanceCacheForRows(
     options.db,
     options.config,
-    ledgerRows,
+    cacheSyncRows,
     {
       etherscanApiKey: options.etherscanApiKey,
       drpcApiKey: options.drpcApiKey,

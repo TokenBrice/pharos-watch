@@ -39,6 +39,78 @@ function jsonResponse(body: BlacklistResponse | BlacklistSummaryResponse): Respo
   });
 }
 
+function makeLegacySummaryWithoutCurrentFreshness(): BlacklistSummaryResponse {
+  const zeroByCoin = Object.fromEntries(
+    BLACKLIST_STABLECOINS.map((s) => [s, 0]),
+  ) as Record<BlacklistStablecoin, number>;
+  const emptyQuarterly = Object.fromEntries(
+    BLACKLIST_STABLECOINS.map((s) => [s, []]),
+  ) as Record<BlacklistStablecoin, Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>>;
+
+  return {
+    stats: {
+      usdcBlacklisted: 1,
+      usdtBlacklisted: 2,
+      goldBlacklisted: 0,
+      frozenAddresses: 3,
+      destroyedTotal: 1_000,
+      activeAddressCount: 3,
+      activeFrozenTotal: 10_000,
+      activeAmountGapCount: 0,
+      trackedAddressCount: 3,
+      trackedFrozenTotal: 10_000,
+      trackedAmountGapCount: 0,
+      recentCount: 4,
+      recentCount24h: 1,
+      recoverableGapCount: 0,
+      perCoinBlacklistCounts: zeroByCoin,
+      perCoinTotalEvents: zeroByCoin,
+      perCoinFrozenAddressCount: zeroByCoin,
+      perCoinFrozenTotal: zeroByCoin,
+      perCoinDestroyedTotal: zeroByCoin,
+      perCoinQuarterlyEventTypes: emptyQuarterly,
+    },
+    chart: [],
+    chains: [{ id: "ethereum", name: "Ethereum" }],
+    freezeLedgerMeta: {
+      totalRows: 0,
+      scopedRows: 0,
+      legacyRows: 0,
+      oldestObservedAt: null,
+      newestObservedAt: null,
+      oldestAgeSec: null,
+      newestAgeSec: null,
+      statusDistribution: {},
+      sourceDistribution: {},
+      freshnessDistribution: {
+        fresh: 0,
+        degraded: 0,
+        stale: 0,
+      },
+      providerFailedCount: 0,
+      lastErrorClassDistribution: {},
+      sourceCategoryCounts: {
+        bootstrap: 0,
+        current: 0,
+        destroy: 0,
+        other: 0,
+      },
+      gaps: {
+        tracked: 0,
+        recoverable: 0,
+        unrecoverable: 0,
+        recentRecoverable: 0,
+        neverAttempted: 0,
+        repeatedFailures: 0,
+        oldestRecoverableAgeSec: null,
+        amountStatusDistribution: {},
+        amountSourceDistribution: {},
+      },
+    },
+    totalEvents: 5,
+  };
+}
+
 describe("blacklist-api", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -140,6 +212,11 @@ describe("blacklist-api", () => {
           degraded: 0,
           stale: 0,
         },
+        currentFreshnessDistribution: {
+          fresh: 0,
+          degraded: 0,
+          stale: 0,
+        },
         providerFailedCount: 0,
         lastErrorClassDistribution: {},
         sourceCategoryCounts: {
@@ -190,6 +267,17 @@ describe("blacklist-api", () => {
     const result = await fetchBlacklistSummary();
 
     expect(result).toEqual(body);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/blacklist-summary");
+  });
+
+  it("accepts cached summary payloads from before the current-freshness split", async () => {
+    const body = makeLegacySummaryWithoutCurrentFreshness();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse(body));
+
+    const result = await fetchBlacklistSummary();
+
+    expect(result.stats.trackedFrozenTotal).toBe(10_000);
+    expect(result.freezeLedgerMeta?.currentFreshnessDistribution).toBeUndefined();
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/blacklist-summary");
   });
 });

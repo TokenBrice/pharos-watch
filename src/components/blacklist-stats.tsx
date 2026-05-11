@@ -45,6 +45,11 @@ interface BlacklistFreezeLedgerMeta {
     degraded?: number;
     stale?: number;
   } | null;
+  currentFreshnessDistribution?: {
+    fresh?: number;
+    degraded?: number;
+    stale?: number;
+  } | null;
 }
 
 interface BlacklistCoverageMeta {
@@ -115,6 +120,7 @@ export function BlacklistStats({
   const staleSnapshotCount =
     quality?.dataQuality?.freezeLedger?.staleSnapshotCount
       ?? freezeLedgerMeta?.staleSnapshotCount
+      ?? freezeLedgerMeta?.currentFreshnessDistribution?.stale
       ?? freezeLedgerMeta?.freshnessDistribution?.stale
       ?? readCount(statusCounts, ["stale", "stale_snapshot", "staleSnapshot"]);
   const trackedGapCount =

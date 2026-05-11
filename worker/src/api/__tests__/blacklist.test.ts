@@ -65,18 +65,24 @@ describe("handleBlacklist", () => {
     expect(body.methodology).toHaveProperty("changelogPath");
   });
 
-  it("derives response methodology from latest returned event", async () => {
+  it("derives response methodology from the latest returned event independent of sort order", async () => {
     const historicalRow = makeBlacklistRow({
       timestamp: 1771000000,
       methodology_version: "2.0",
     });
+    const newerRow = makeBlacklistRow({
+      id: "newer-methodology",
+      stablecoin: "USDT",
+      timestamp: 1772000000,
+      methodology_version: "3.0",
+    });
     const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
-      { match: "blacklist_events", rows: [historicalRow] },
+      { match: "COUNT", rows: [{ total: 2 }] },
+      { match: "blacklist_events", rows: [historicalRow, newerRow] },
     ]);
-    const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?sortBy=stablecoin&sortDirection=asc"));
     const body = (await res.json()) as { methodology: { version: string; isCurrent: boolean } };
-    expect(body.methodology.version).toBe("2.0");
+    expect(body.methodology.version).toBe("3.0");
     expect(body.methodology.isCurrent).toBe(false);
   });
 
@@ -173,6 +179,36 @@ describe("handleBlacklist", () => {
     expect(res.status).toBe(400);
   });
 
+  it("accepts chainId filters and normalizes them before binding", async () => {
+    let dataBinds: unknown[] = [];
+    const db = makeDbWithDataBindCapture((args) => {
+      dataBinds = args;
+    });
+
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?chainId=Ethereum"));
+    expect(res.status).toBe(200);
+    expect(dataBinds).toContain("ethereum");
+    expect(dataBinds).not.toContain("Ethereum");
+  });
+
+  it("rejects invalid chainId parameter with 400", async () => {
+    const db = mockD1([]);
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?chainId=unknown-chain"));
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects known chainIds outside blacklist tracker coverage", async () => {
+    const db = mockD1([]);
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?chainId=fantom"));
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects mismatched chain and chainId parameters", async () => {
+    const db = mockD1([]);
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?chain=Tron&chainId=ethereum"));
+    expect(res.status).toBe(400);
+  });
+
   it("rejects invalid eventType with 400", async () => {
     const db = mockD1([]);
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?eventType=hack"));
@@ -213,14 +249,32 @@ describe("handleBlacklist", () => {
 
   it("derives freshness from sync-blacklist cron timestamp", async () => {
     const now = Math.floor(Date.now() / 1000);
+    const eventTs = now - 14 * 86400;
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },
-      { match: "blacklist_events", rows: [makeBlacklistRow({ timestamp: now - 14 * 86400 })] },
+      { match: "blacklist_events", rows: [makeBlacklistRow({ timestamp: eventTs })] },
       { match: "cron_runs", rows: [], first: { started_at: now - 30 } },
     ]);
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
     const age = Number(res.headers.get("X-Data-Age"));
+    const body = await res.json() as { methodology: { asOf: number } };
     expect(age).toBeLessThan(120);
+    expect(body.methodology.asOf).toBe(eventTs);
+  });
+
+  it("falls back to latest event timestamp when sync-blacklist has no successful cron row", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const eventTs = now - 3600;
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "blacklist_events", rows: [makeBlacklistRow({ timestamp: eventTs })] },
+      { match: "cron_runs", rows: [], first: { started_at: null } },
+    ]);
+
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
+    const age = Number(res.headers.get("X-Data-Age"));
+    expect(age).toBeGreaterThanOrEqual(3600);
+    expect(age).toBeLessThan(3700);
   });
 
   it("rejects oversized limit values instead of silently clamping them", async () => {

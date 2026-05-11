@@ -565,9 +565,9 @@ const BlacklistSummaryStatsSchema = z.object({
   activeAddressCount: z.number(),
   activeFrozenTotal: z.number(),
   activeAmountGapCount: z.number(),
-  trackedAddressCount: z.number().optional(),
-  trackedFrozenTotal: z.number().optional(),
-  trackedAmountGapCount: z.number().optional(),
+  trackedAddressCount: z.number(),
+  trackedFrozenTotal: z.number(),
+  trackedAmountGapCount: z.number(),
   recentCount: z.number(),
   recentCount24h: z.number(),
   recoverableGapCount: z.number(),
@@ -619,6 +619,12 @@ const BlacklistCoverageSchema = z.object({
   }),
 });
 
+const BlacklistFreshnessDistributionSchema = z.object({
+  fresh: z.number(),
+  degraded: z.number(),
+  stale: z.number(),
+});
+
 const BlacklistFreezeLedgerMetaSchema = z.object({
   totalRows: z.number(),
   scopedRows: z.number(),
@@ -629,11 +635,8 @@ const BlacklistFreezeLedgerMetaSchema = z.object({
   newestAgeSec: z.number().nullable(),
   statusDistribution: BlacklistNumericDistributionSchema,
   sourceDistribution: BlacklistNumericDistributionSchema,
-  freshnessDistribution: z.object({
-    fresh: z.number(),
-    degraded: z.number(),
-    stale: z.number(),
-  }),
+  freshnessDistribution: BlacklistFreshnessDistributionSchema,
+  currentFreshnessDistribution: BlacklistFreshnessDistributionSchema.optional(),
   providerFailedCount: z.number(),
   lastErrorClassDistribution: BlacklistNumericDistributionSchema,
   sourceCategoryCounts: z.object({

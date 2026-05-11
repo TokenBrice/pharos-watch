@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { resolveBlacklistStatuses } from "@shared/lib/report-card-blacklist-authority";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { getTrackedBlacklistStatus } from "@shared/lib/tracked-blacklist-status";
+import {
+  buildBlacklistCoverageManifest,
+  getDeferredBlacklistCoverage,
+} from "../blacklist-coverage-manifest";
 import {
   CONTRACT_CONFIGS,
   PYUSD_EVENT_FAMILY,
@@ -62,6 +68,48 @@ describe("blacklist-contracts shared metadata alignment", () => {
       const topicHashes = getBlacklistTopicHashes(config);
       expect(new Set(topicHashes).size).toBe(topicHashes.length);
     }
+  });
+
+  it("keeps the coverage manifest aligned with tracker configs and deferred rows", () => {
+    const manifest = buildBlacklistCoverageManifest(ACTIVE_STABLECOINS, CONTRACT_CONFIGS);
+    const trackedManifestKeys = new Set(
+      manifest
+        .filter((entry) => entry.status === "tracked")
+        .map((entry) => `${entry.chainId}-${entry.contractAddress?.toLowerCase()}`),
+    );
+
+    for (const config of CONTRACT_CONFIGS) {
+      expect(
+        trackedManifestKeys.has(`${config.chain.chainId}-${config.contractAddress.toLowerCase()}`),
+        `missing manifest entry for ${config.configKey}`,
+      ).toBe(true);
+    }
+
+    const deferred = getDeferredBlacklistCoverage();
+    expect(deferred).toHaveLength(10);
+    expect(manifest.filter((entry) => entry.status === "deferred")).toHaveLength(deferred.length);
+  });
+
+  it("represents every active direct-Yes assessment in the coverage manifest", () => {
+    const resolved = resolveBlacklistStatuses(ACTIVE_STABLECOINS);
+    const manifest = buildBlacklistCoverageManifest(ACTIVE_STABLECOINS, CONTRACT_CONFIGS);
+    const manifestIds = new Set(manifest.map((entry) => entry.stablecoinId));
+    const missing = ACTIVE_STABLECOINS
+      .filter((meta) => resolved.get(meta.id) === true)
+      .map((meta) => meta.id)
+      .filter((id) => !manifestIds.has(id));
+
+    expect(missing).toEqual([]);
+  });
+
+  it("separates enum support from live tracker coverage", () => {
+    const trackedSymbols = new Set(CONTRACT_CONFIGS.map((config) => config.stablecoin));
+    const deferredSymbols = new Set(getDeferredBlacklistCoverage().map((entry) => entry.symbol));
+    const missing = BLACKLIST_STABLECOINS.filter(
+      (symbol) => !trackedSymbols.has(symbol) && !deferredSymbols.has(symbol),
+    );
+
+    expect(missing).toEqual([]);
   });
 
   it("includes first-wave blacklist expansion configs", () => {

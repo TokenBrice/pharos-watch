@@ -213,6 +213,149 @@ describe("handleBlacklistSummary", () => {
     expect(json.stats.recentCount24h).toBeDefined();
   });
 
+  it("scopes recoverableGapCount to recoverable blacklist and destroy amount gaps", async () => {
+    const db = mockD1([
+      { match: "GROUP BY stablecoin, event_type", rows: [] },
+      { match: "WITH ranked AS", rows: [] },
+      {
+        match: "COUNT(*) AS total",
+        rows: [],
+        first: { total: 5, max_ts: 1_700_200_000, recoverable_gap: 5, recent_30d: 0, recent_24h: 0 },
+      },
+      { match: "FROM blacklist_current_balances", rows: [] },
+      {
+        match: "blacklist-gap-aggregate",
+        rows: [],
+        first: {
+          total: 4,
+          missing: 2,
+          missing_recent: 1,
+          oldest_gap_age_sec: 100,
+          never_attempted: 1,
+          repeated_failures: 1,
+          unrecoverable: 0,
+        },
+      },
+      {
+        match: "blacklist-gap-status-distribution",
+        rows: [
+          { amount_status: "resolved", n: 2 },
+          { amount_status: "recoverable_pending", n: 2 },
+        ],
+      },
+      {
+        match: "blacklist-gap-source-distribution",
+        rows: [
+          { amount_source: "event", n: 2 },
+          { amount_source: "unavailable", n: 2 },
+        ],
+      },
+      { match: "quarter_sort_key", rows: [] },
+      { match: "cron_runs", rows: [], first: { started_at: null } },
+    ]);
+
+    const res = await handleBlacklistSummary(db);
+    const json = await res.json() as {
+      stats: { recoverableGapCount: number };
+      freezeLedgerMeta: { gaps: { recoverable: number; recentRecoverable: number } };
+      dataQuality: { amountGaps: { totalEvents: number; recoverable: number } };
+    };
+    expect(json.stats.recoverableGapCount).toBe(2);
+    expect(json.freezeLedgerMeta.gaps.recoverable).toBe(2);
+    expect(json.freezeLedgerMeta.gaps.recentRecoverable).toBe(1);
+    expect(json.dataQuality.amountGaps.totalEvents).toBe(4);
+    expect(json.dataQuality.amountGaps.recoverable).toBe(2);
+  });
+
+  it("falls back to latest event timestamp when sync-blacklist has no successful cron row", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const latestEventTs = now - 7200;
+    const db = mockD1([
+      { match: "GROUP BY stablecoin, event_type", rows: [] },
+      { match: "WITH ranked AS", rows: [] },
+      {
+        match: "COUNT(*) AS total",
+        rows: [],
+        first: { total: 1, max_ts: latestEventTs, recent_30d: 0, recent_24h: 0 },
+      },
+      { match: "FROM blacklist_current_balances", rows: [] },
+      { match: "quarter_sort_key", rows: [] },
+      { match: "cron_runs", rows: [], first: { started_at: null } },
+    ]);
+
+    const res = await handleBlacklistSummary(db);
+    const age = Number(res.headers.get("X-Data-Age"));
+    const body = await res.json() as { methodology: { asOf: number } };
+    expect(age).toBeGreaterThanOrEqual(7200);
+    expect(age).toBeLessThan(7300);
+    expect(body.methodology.asOf).toBe(latestEventTs);
+  });
+
+  it("does not mark data quality stale from historical bootstrap rows alone", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "GROUP BY stablecoin, event_type", rows: [] },
+      { match: "WITH ranked AS", rows: [] },
+      {
+        match: "COUNT(*) AS total",
+        rows: [],
+        first: { total: 1, max_ts: now, recent_30d: 1, recent_24h: 1 },
+      },
+      {
+        match: "FROM blacklist_current_balances",
+        rows: [
+          {
+            id: "USDC:ethereum:0xold",
+            stablecoin: "USDC",
+            chain_id: "ethereum",
+            address: "0xold",
+            amount_native: 1,
+            amount_usd: 1,
+            source: "bootstrap_log_scan",
+            status: "resolved",
+            observed_at: now - 90 * 86400,
+            attempt_count: 0,
+            last_attempted_at: null,
+            last_error_class: null,
+          },
+          {
+            id: "USDC:ethereum:0xfresh",
+            stablecoin: "USDC",
+            chain_id: "ethereum",
+            address: "0xfresh",
+            amount_native: 1,
+            amount_usd: 1,
+            source: "current_balance",
+            status: "resolved",
+            observed_at: now,
+            attempt_count: 1,
+            last_attempted_at: now,
+            last_error_class: null,
+          },
+        ],
+      },
+      { match: "quarter_sort_key", rows: [] },
+      { match: "cron_runs", rows: [], first: { started_at: now } },
+    ]);
+
+    const res = await handleBlacklistSummary(db);
+    const json = await res.json() as {
+      freezeLedgerMeta: {
+        freshnessDistribution: { stale: number };
+        currentFreshnessDistribution: { stale: number };
+      };
+      dataQuality: {
+        status: string;
+        freezeLedger: { staleSnapshotCount: number };
+      };
+    };
+
+    expect(json.freezeLedgerMeta.freshnessDistribution.stale).toBe(1);
+    expect(json.freezeLedgerMeta.currentFreshnessDistribution.stale).toBe(0);
+    expect(json.dataQuality.freezeLedger.staleSnapshotCount).toBe(0);
+    expect(json.dataQuality.status).toBe("ok");
+  });
+
   it("excludes suppression_reason != null from public aggregates", async () => {
     // Handler's WHERE suppression_reason IS NULL filter lives in SQL; the
     // aggregate queries would simply return empty/zero rows for suppressed-only

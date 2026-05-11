@@ -1,0 +1,117 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
+import { makeBlacklistRow } from "../../../api/__tests__/helpers/fixtures";
+import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
+import type { BlacklistRunBudget } from "../run-budget";
+import type { BlacklistRow } from "../shared";
+
+vi.mock("../amount-recovery", () => ({
+  enrichRowBalances: vi.fn(),
+}));
+
+vi.mock("../persistence", () => ({
+  insertBlacklistRows: vi.fn(),
+}));
+
+vi.mock("../current-balance-cache", () => ({
+  syncCurrentBalanceCacheForRows: vi.fn(),
+}));
+
+vi.mock("../row-preparation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../row-preparation")>();
+  return {
+    ...actual,
+    fetchBlacklistAssetPriceFromCache: vi.fn(async () => null),
+  };
+});
+
+import { enrichRowBalances } from "../amount-recovery";
+import { syncCurrentBalanceCacheForRows } from "../current-balance-cache";
+import { insertBlacklistRows } from "../persistence";
+import { processFetchedBlacklistRows } from "../post-fetch";
+
+const config: ContractEventConfig = {
+  configKey: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+  chain: {
+    chainId: "ethereum",
+    chainName: "Ethereum",
+    evmChainId: 1,
+    explorerUrl: "https://etherscan.io",
+    type: "evm",
+  },
+  stablecoinId: "usdt-tether",
+  stablecoin: "USDT",
+  contractAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+  decimals: 6,
+  events: [],
+};
+
+function makeRunBudget(): BlacklistRunBudget {
+  return {
+    subrequestBudget: { count: 0, limit: 10 },
+    deadlineMs: Date.now() + 10_000,
+    minimumConfigWindowMs: 0,
+  };
+}
+
+describe("processFetchedBlacklistRows", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("runs a current-balance cache repair lane for duplicate fetched rows", async () => {
+    const duplicateRow = makeBlacklistRow({
+      id: "ethereum-0xduplicate-0x0",
+      stablecoin: "USDT",
+      chain_id: "ethereum",
+      chain_name: "Ethereum",
+      event_type: "blacklist",
+      address: "0x0000000000000000000000000000000000000123",
+      amount_native: null,
+      amount_usd_at_event: null,
+      amount_source: "unavailable",
+      amount_status: "recoverable_pending",
+    }) as BlacklistRow;
+    const db = mockD1([
+      {
+        match: "SELECT id FROM blacklist_events WHERE id IN",
+        rows: [{ id: duplicateRow.id }],
+      },
+    ], { requireMatch: true });
+    vi.mocked(syncCurrentBalanceCacheForRows).mockResolvedValue({
+      updated: 1,
+      deleted: 0,
+      failed: 0,
+      skippedDueBudget: 0,
+      budgetExhausted: false,
+    });
+
+    const result = await processFetchedBlacklistRows({
+      db,
+      config,
+      rows: [duplicateRow],
+      chainLabel: "evm",
+      etherscanApiKey: null,
+      drpcApiKey: null,
+      trongridApiKey: null,
+      etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(),
+      tronLimiter: async <T>(fn: () => Promise<T>) => fn(),
+      runBudget: makeRunBudget(),
+    });
+
+    expect(result.insertedRows).toBe(0);
+    expect(result.enrichCounters).toEqual({ attempted: 0, succeeded: 0, failed: 0 });
+    expect(result.currentBalanceCacheCounters).toMatchObject({ updated: 1, deleted: 0, failed: 0 });
+    expect(enrichRowBalances).not.toHaveBeenCalled();
+    expect(insertBlacklistRows).not.toHaveBeenCalled();
+    expect(syncCurrentBalanceCacheForRows).toHaveBeenCalledWith(
+      db,
+      config,
+      [duplicateRow],
+      expect.objectContaining({
+        assetPriceUsd: null,
+        latestRows: [duplicateRow],
+      }),
+    );
+  });
+});

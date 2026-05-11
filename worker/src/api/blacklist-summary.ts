@@ -14,6 +14,7 @@ import {
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
+import { getDeferredBlacklistCoverage } from "../lib/blacklist-coverage-manifest";
 import { loadBlacklistCurrentBalanceMap } from "../lib/blacklist-current-balances";
 import { queryBlacklistGapMetrics, type BlacklistGapMetrics } from "../lib/blacklist-gaps";
 import {
@@ -42,23 +43,6 @@ const BLACKLIST_IDENTITY_PARTITION_SQL = `
   COALESCE(LOWER(contract_address), '')
 `;
 
-const DEFERRED_BLACKLIST_COVERAGE: Array<{
-  symbol: BlacklistStablecoin;
-  chainId: string;
-  reason: string;
-}> = [
-  { symbol: "AID", chainId: "base", reason: "deferred_contract_creation_verification" },
-  { symbol: "TGBP", chainId: "base", reason: "deferred_contract_creation_verification" },
-  { symbol: "TGBP", chainId: "bsc", reason: "deferred_contract_creation_verification" },
-  { symbol: "TUSD", chainId: "bsc", reason: "deferred_contract_creation_verification" },
-  { symbol: "TUSD", chainId: "avalanche", reason: "deferred_contract_creation_verification" },
-  { symbol: "TUSD", chainId: "polygon", reason: "bridged_token_without_blacklist_events" },
-  { symbol: "TUSD", chainId: "optimism", reason: "bridged_token_without_blacklist_events" },
-  { symbol: "USDA", chainId: "bsc", reason: "deferred_contract_creation_verification" },
-  { symbol: "AEUR", chainId: "bsc", reason: "deferred_contract_creation_verification" },
-  { symbol: "JPYC", chainId: "avalanche", reason: "deferred_contract_creation_verification" },
-];
-
 function incrementCount(record: Record<string, number>, key: string): void {
   record[key] = (record[key] ?? 0) + 1;
 }
@@ -70,6 +54,7 @@ function getProviderSource(chainType: "evm" | "tron" | "other"): "evm-logs" | "t
 }
 
 function buildCoverage() {
+  const deferredCoverage = getDeferredBlacklistCoverage();
   const bySymbol: Record<string, number> = {};
   const byChain: Record<string, number> = {};
   const byProviderSource: Record<string, number> = {};
@@ -93,10 +78,10 @@ function buildCoverage() {
 
   return {
     supported,
-    unsupportedDeferred: DEFERRED_BLACKLIST_COVERAGE,
+    unsupportedDeferred: deferredCoverage,
     counts: {
       supportedConfigs: supported.length,
-      unsupportedDeferredConfigs: DEFERRED_BLACKLIST_COVERAGE.length,
+      unsupportedDeferredConfigs: deferredCoverage.length,
       bySymbol,
       byChain,
       byProviderSource,
@@ -128,6 +113,7 @@ function buildFreezeLedgerMeta(
   const statusDistribution: Record<string, number> = {};
   const sourceDistribution: Record<string, number> = {};
   const freshnessDistribution = { fresh: 0, degraded: 0, stale: 0 };
+  const currentFreshnessDistribution = { fresh: 0, degraded: 0, stale: 0 };
   const sourceCategoryCounts = { bootstrap: 0, current: 0, destroy: 0, other: 0 };
   const lastErrorClassDistribution: Record<string, number> = {};
   let oldestObservedAt: number | null = null;
@@ -137,10 +123,15 @@ function buildFreezeLedgerMeta(
   let legacyRows = 0;
 
   for (const snapshot of currentBalances.values()) {
+    const category = sourceCategory(snapshot.source);
+    const freshness = classifyLedgerFreshness(snapshot.observedAt, now);
     incrementCount(statusDistribution, snapshot.status);
     incrementCount(sourceDistribution, snapshot.source);
-    sourceCategoryCounts[sourceCategory(snapshot.source)]++;
-    freshnessDistribution[classifyLedgerFreshness(snapshot.observedAt, now)]++;
+    sourceCategoryCounts[category]++;
+    freshnessDistribution[freshness]++;
+    if (category === "current" || snapshot.status === "provider_failed") {
+      currentFreshnessDistribution[freshness]++;
+    }
     if (snapshot.status === "provider_failed") providerFailedCount++;
     if (snapshot.lastErrorClass) incrementCount(lastErrorClassDistribution, snapshot.lastErrorClass);
     if (snapshot.configKey || snapshot.contractAddress) scopedRows++;
@@ -160,6 +151,7 @@ function buildFreezeLedgerMeta(
     statusDistribution,
     sourceDistribution,
     freshnessDistribution,
+    currentFreshnessDistribution,
     providerFailedCount,
     lastErrorClassDistribution,
     sourceCategoryCounts,
@@ -186,7 +178,7 @@ function buildDataQuality(
     missingRatio: gapMetrics.missingRatio,
     recentMissingAmounts: gapMetrics.recentMissingAmounts,
   });
-  const staleLedgerRows = freezeLedgerMeta.freshnessDistribution.stale;
+  const staleLedgerRows = freezeLedgerMeta.currentFreshnessDistribution.stale;
   const status = gapStatus === "stale" || staleLedgerRows > 0
     ? "stale"
     : gapStatus === "degraded" || freezeLedgerMeta.providerFailedCount > 0
@@ -331,14 +323,13 @@ export const handleBlacklistSummary = withErrorHandler(
         `SELECT
            COUNT(*) AS total,
            MAX(timestamp) AS max_ts,
-           SUM(CASE WHEN amount_status IN ('recoverable_pending','provider_failed','ambiguous') THEN 1 ELSE 0 END) AS recoverable_gap,
            SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS recent_30d,
            SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS recent_24h
          FROM blacklist_events
          WHERE suppression_reason IS NULL`,
       )
       .bind(now - 30 * 86400, now - 86400)
-      .first<{ total: number; max_ts: number | null; recoverable_gap: number; recent_30d: number; recent_24h: number }>();
+      .first<{ total: number; max_ts: number | null; recent_30d: number; recent_24h: number }>();
     const latestTs = aggregateRow?.max_ts ?? Math.floor(Date.now() / 1000);
 
     const currentBalances = await loadBlacklistCurrentBalanceMap(db);
@@ -456,7 +447,7 @@ export const handleBlacklistSummary = withErrorHandler(
           destroyedTotal,
           recentCount: aggregateRow?.recent_30d ?? 0,
           recentCount24h: aggregateRow?.recent_24h ?? 0,
-          recoverableGapCount: aggregateRow?.recoverable_gap ?? 0,
+          recoverableGapCount: gapMetrics.missingAmounts,
           activeAddressCount: activeStats.activeAddressCount,
           activeFrozenTotal: activeStats.activeFrozenTotal,
           activeAmountGapCount: activeStats.activeAmountGapCount,

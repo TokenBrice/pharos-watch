@@ -21,6 +21,10 @@ import {
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
+  getSupportedBlacklistChainIds,
+  getSupportedBlacklistChainNames,
+} from "../lib/blacklist-coverage-manifest";
+import {
   BLACKLIST_STABLECOINS,
   type BlacklistEvent,
   type BlacklistSortDirection,
@@ -30,7 +34,8 @@ import {
 import { mapBlacklistEventRow, type BlacklistEventRow } from "../lib/blacklist-api";
 
 const VALID_STABLECOINS = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
-const VALID_CHAIN_NAMES = new Set(Object.values(CHAIN_META).map((m) => m.name));
+const VALID_CHAIN_NAMES = getSupportedBlacklistChainNames();
+const VALID_CHAIN_IDS = getSupportedBlacklistChainIds();
 const VALID_EVENT_TYPES = new Set(["blacklist", "unblacklist", "destroy"]);
 const VALID_SORT_KEYS = new Set<BlacklistSortKey>(["date", "stablecoin", "chain", "event"]);
 const VALID_SORT_DIRECTIONS = new Set<BlacklistSortDirection>(["asc", "desc"]);
@@ -68,6 +73,7 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
   const { offset } = numericParams;
   const stablecoin = params.get("stablecoin");
   const chain = params.get("chain");
+  const chainId = params.get("chainId");
   const eventType = parseOptionalEnumParam(params.get("eventType"), VALID_EVENT_TYPES, "eventType");
   if (eventType instanceof Response) return eventType;
   const query = params.get("q")?.trim().toLowerCase() ?? "";
@@ -95,6 +101,17 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
     conditions.push("chain_name = ?");
     filterBindings.push(chain);
   }
+  if (chainId) {
+    const normalizedChainId = chainId.toLowerCase();
+    if (!VALID_CHAIN_IDS.has(normalizedChainId)) {
+      return errorResponse(400, "Invalid chainId parameter");
+    }
+    if (chain && CHAIN_META[normalizedChainId]?.name !== chain) {
+      return errorResponse(400, "chain and chainId parameters do not match");
+    }
+    conditions.push("chain_id = ?");
+    filterBindings.push(normalizedChainId);
+  }
   if (eventType) {
     conditions.push("event_type = ?");
     filterBindings.push(eventType);
@@ -118,7 +135,11 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
   const latestTs =
     events.length > 0 ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity) : Math.floor(Date.now() / 1000);
   const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "sync-blacklist", latestTs);
-  const methodologyVersion = events[0]?.methodologyVersion ?? getBlacklistTrackerMethodologyVersionAt(latestTs);
+  const latestEvent = events.reduce<BlacklistEvent | null>(
+    (latest, event) => latest == null || event.timestamp > latest.timestamp ? event : latest,
+    null,
+  );
+  const methodologyVersion = latestEvent?.methodologyVersion ?? getBlacklistTrackerMethodologyVersionAt(latestTs);
   const methodologyVersionLabel = toMethodologyVersionLabel(methodologyVersion);
 
   return jsonResponse(
