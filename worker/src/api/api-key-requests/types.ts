@@ -1,4 +1,8 @@
 import { z } from "zod";
+import type {
+  ApiKeySelfServeClaimStatus,
+  ApiKeySelfServeStatus,
+} from "@shared/types";
 import {
   SELF_SERVE_USE_CASE_MAX_LENGTH,
   SELF_SERVE_USE_CASE_MIN_LENGTH,
@@ -13,6 +17,65 @@ export interface ApiKeySelfServeEnv {
   API_KEY_SELF_SERVE_PUBLIC_BASE_URL?: string;
   RESEND_API_KEY?: string;
   GITHUB_PAT?: string;
+}
+
+export interface StatementRunResult {
+  meta?: { changes?: number };
+}
+
+export interface StatementResult<T> {
+  results?: T[];
+}
+
+export interface ApiKeyRequestStatement {
+  bind(...values: unknown[]): ApiKeyRequestStatement;
+  first<T>(): Promise<T | null>;
+  all<T>(): Promise<StatementResult<T>>;
+  run(): Promise<StatementRunResult>;
+}
+
+export interface ApiKeyRequestDb {
+  prepare(query: string): ApiKeyRequestStatement;
+}
+
+export interface ApiKeyRequestRow {
+  request_id: string;
+  api_key_id: number | null;
+  status: ApiKeySelfServeStatus;
+  normalized_email: string;
+  email_hash: string;
+  email_verified: number;
+  requester_name: string | null;
+  organization: string | null;
+  project_url: string | null;
+  use_case: string;
+  intended_endpoints_json: string | null;
+  expected_cadence: string | null;
+  expected_volume: string | null;
+  accepted_terms: number;
+  self_serve_rate_limit_per_minute: number;
+  self_serve_expires_at: number | null;
+  ip_hash: string;
+  user_agent_hash: string | null;
+  risk_score: number;
+  risk_reasons_json: string | null;
+  verification_token_hash: string | null;
+  verification_sent_at: number | null;
+  verification_expires_at: number | null;
+  issuance_locked_at: number | null;
+  issued_at: number | null;
+  rejected_at: number | null;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface ApiKeyRequestAdminRow extends ApiKeyRequestRow {
+  claim_status: ApiKeySelfServeClaimStatus | null;
+  linked_key_owner_email: string | null;
+  linked_key_prefix: string | null;
+  linked_key_tier: string | null;
+  linked_key_active: number | null;
+  linked_key_expires_at: number | null;
 }
 
 export interface RequiredInitialSelfServeEnv {

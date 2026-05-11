@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import type { StatusPageAction } from "@shared/lib/api-endpoints";
-import { buildAdminApiPath } from "@/lib/admin-access";
-import { buildRequestUrl } from "@/lib/api";
+import { adminMutation } from "@/lib/admin-access";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -59,38 +58,14 @@ export function AdminActionButton({
           ? `${effectivePath}${effectivePath.includes("?") ? "&" : "?"}allow-constant-price-fallback=true`
           : effectivePath;
 
-      const headers = new Headers();
-      headers.set("X-Pharos-Admin", "1");
-      headers.set(
-        "Idempotency-Key",
-        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-          ? crypto.randomUUID()
-          : `${action.path}:${Date.now()}`,
-      );
-      const res = await fetch(buildRequestUrl(buildAdminApiPath(effectivePathWithFallback)), {
+      const response = await adminMutation(effectivePathWithFallback, {
         method: action.method,
-        headers,
+        idempotencyKey:
+          typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+            ? crypto.randomUUID()
+            : `${action.path}:${Date.now()}`,
       });
-      const text = await res.text();
-
-      if (!res.ok) {
-        const output = `${res.status}: ${text}`;
-        setError(output);
-        onFinished?.({
-          action,
-          ok: false,
-          output,
-          executedAt: Math.floor(Date.now() / 1000),
-        });
-        return;
-      }
-
-      let output = text;
-      try {
-        output = JSON.stringify(JSON.parse(text), null, 2);
-      } catch {
-        // Keep plain text output.
-      }
+      const output = response.formattedBody;
       setResult(output);
       onFinished?.({
         action,

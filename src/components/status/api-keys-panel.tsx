@@ -18,8 +18,7 @@ import type {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
-import { buildAdminApiPath } from "@/lib/admin-access";
-import { buildRequestUrl } from "@/lib/api";
+import { postAdminJson } from "@/lib/admin-access";
 import { useApiKeys } from "@/hooks/use-api-keys";
 import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
 
@@ -124,37 +123,6 @@ function requirePlaintextToken<T extends { token?: unknown }>(response: T, actio
     return response.token;
   }
   throw new Error(`The key was ${action}, but the plaintext token was not returned. Rotate the key before using it.`);
-}
-
-async function postAdminJson<T>(
-  path: string,
-  body?: Record<string, unknown>,
-): Promise<T> {
-  const response = await fetch(buildRequestUrl(buildAdminApiPath(path)), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Pharos-Admin": "1",
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await response.text();
-  let parsed: unknown = null;
-  try {
-    parsed = text ? JSON.parse(text) : null;
-  } catch {
-    parsed = text;
-  }
-
-  if (!response.ok) {
-    const message =
-      parsed && typeof parsed === "object" && "error" in parsed && typeof parsed.error === "string"
-        ? parsed.error
-        : `${response.status}: ${text}`;
-    throw new Error(message);
-  }
-
-  return parsed as T;
 }
 
 export function ApiKeysPanel() {

@@ -10,8 +10,7 @@ import type {
 import { AlertCircle, CheckCircle2, RefreshCw, ShieldOff, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { buildAdminApiPath } from "@/lib/admin-access";
-import { buildRequestUrl } from "@/lib/api";
+import { postAdminJson } from "@/lib/admin-access";
 import { cn } from "@/lib/utils";
 import { useApiKeyRequests } from "@/hooks/use-api-key-requests";
 
@@ -73,37 +72,6 @@ function formatRelative(epochSeconds: number | null, nowSeconds: number): string
   }
   const days = Math.round(abs / 86_400);
   return delta >= 0 ? `in ${days}d` : `${days}d ago`;
-}
-
-async function postAdminJson<T>(
-  path: string,
-  body: { reason: string },
-  idempotencyKey: string,
-): Promise<T> {
-  const response = await fetch(buildRequestUrl(buildAdminApiPath(path)), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Pharos-Admin": "1",
-      "Idempotency-Key": idempotencyKey,
-    },
-    body: JSON.stringify(body),
-  });
-  const text = await response.text();
-  let parsed: unknown = null;
-  try {
-    parsed = text ? JSON.parse(text) : null;
-  } catch {
-    parsed = text;
-  }
-  if (!response.ok) {
-    const message =
-      parsed && typeof parsed === "object" && "error" in parsed && typeof parsed.error === "string"
-        ? parsed.error
-        : `${response.status}: ${text}`;
-    throw new Error(message);
-  }
-  return parsed as T;
 }
 
 function describeRequester(request: ApiKeySelfServeRequestAdminSummary): string {
@@ -392,7 +360,7 @@ export function ApiKeyRequestsPanel() {
       const result = await postAdminJson<ApiKeySelfServeAdminMutationResponse>(
         path,
         { reason },
-        createIdempotencyKey(action, request.requestId),
+        { idempotencyKey: createIdempotencyKey(action, request.requestId) },
       );
       setMutationNotice(`Request marked ${STATUS_LABELS[result.status].toLowerCase()}; claim ${result.claimStatus ?? "none"}.`);
       await refetch();

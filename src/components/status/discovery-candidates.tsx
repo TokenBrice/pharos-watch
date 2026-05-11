@@ -2,8 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { buildAdminApiPath } from "@/lib/admin-access";
-import { buildRequestUrl } from "@/lib/api";
+import { adminMutation } from "@/lib/admin-access";
 import { DISCOVERY_MIN_MCAP } from "@shared/lib/status-thresholds";
 import type { DiscoveryCandidate, StatusSectionError } from "@shared/types";
 import { useState } from "react";
@@ -56,17 +55,9 @@ export function DiscoveryCandidatesCard({
   const handleDismiss = async (id: number) => {
     setDismissError(null);
     try {
-      const res = await fetch(buildRequestUrl(buildAdminApiPath(`/api/discovery-candidates/${id}/dismiss`)), {
-        method: "POST",
-        headers: { "X-Pharos-Admin": "1" },
-      });
-      if (res.ok) {
-        setDismissed((prev) => new Set([...prev, id]));
-        onDismissed?.();
-      } else {
-        const text = await res.text();
-        setDismissError(`${res.status}: ${text}`);
-      }
+      await adminMutation(`/api/discovery-candidates/${id}/dismiss`);
+      setDismissed((prev) => new Set([...prev, id]));
+      onDismissed?.();
     } catch (err) {
       setDismissError(err instanceof Error ? err.message : "Unknown error");
     }

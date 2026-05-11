@@ -1,8 +1,5 @@
 "use client";
 
-import type { FormEvent } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { API_PATHS } from "@shared/lib/api-endpoints";
 import {
   SELF_SERVE_API_KEY_EXPIRY_SEC,
   SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
@@ -10,27 +7,21 @@ import {
   SELF_SERVE_USE_CASE_MAX_LENGTH,
   SELF_SERVE_USE_CASE_MIN_LENGTH,
 } from "@shared/lib/ops-limits";
-import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
-import type {
-  ApiKeySelfServeCadence,
-  ApiKeySelfServeIssueResponse,
-  ApiKeySelfServePendingResponse,
-  ApiKeySelfServeRequest,
-} from "@shared/types";
+import type { ApiKeySelfServeCadence } from "@shared/types";
 import { AlertCircle, CheckCircle2, Copy, KeyRound, Loader2, MailCheck, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { buildApiUrl } from "@/lib/api";
-
-declare global {
-  interface Window {
-    __PHAROS_API_KEY_VERIFY_TOKEN__?: string;
-    __PHAROS_SANITIZED_PATH__?: string;
-  }
-}
+import {
+  EMAIL_MAX_LENGTH,
+  EXPECTED_VOLUME_MAX_LENGTH,
+  NAME_MAX_LENGTH,
+  ORGANIZATION_MAX_LENGTH,
+  PROJECT_URL_MAX_LENGTH,
+  useApiKeyRequestFormState,
+} from "@/hooks/use-api-key-request-form-state";
 
 const ENDPOINT_OPTIONS = [
   { path: "/api/stablecoins", label: "Stablecoin list" },
@@ -57,122 +48,6 @@ const SAMPLE_PATH = "/api/stablecoins";
 const OWNERSHIP_LIMIT_LABEL = SELF_SERVE_MAX_ACTIVE_KEYS_PER_EMAIL === 1
   ? "One active key per email"
   : `${SELF_SERVE_MAX_ACTIVE_KEYS_PER_EMAIL} active keys per email`;
-const EMAIL_MAX_LENGTH = 200;
-const NAME_MAX_LENGTH = 80;
-const ORGANIZATION_MAX_LENGTH = 120;
-const PROJECT_URL_MAX_LENGTH = 300;
-const EXPECTED_VOLUME_MAX_LENGTH = 300;
-
-type RequestStatus = "idle" | "submitting" | "pending" | "error";
-type VerificationStatus = "idle" | "verifying" | "issued" | "error";
-
-interface ApiErrorPayload {
-  error?: string;
-  message?: string;
-}
-
-function isApiKeySelfServeIssueResponse(payload: unknown): payload is ApiKeySelfServeIssueResponse {
-  if (!payload || typeof payload !== "object") return false;
-  const candidate = payload as Partial<ApiKeySelfServeIssueResponse>;
-  const key = candidate.key;
-  return candidate.status === "issued"
-    && typeof candidate.token === "string"
-    && candidate.token.trim().length > 0
-    && !!key
-    && typeof key === "object"
-    && typeof key.keyPrefix === "string"
-    && key.keyPrefix.trim().length > 0
-    && typeof key.maskedToken === "string"
-    && key.maskedToken.trim().length > 0
-    && key.tier === "self-serve"
-    && key.trafficClass === "external"
-    && key.rateLimitPerMinute === SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE
-    && (typeof key.expiresAt === "number" || key.expiresAt === null);
-}
-
-async function readJson<T>(response: Response): Promise<T | null> {
-  const text = await response.text();
-  if (!text) return null;
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    return null;
-  }
-}
-
-function resolveErrorMessage(status: number, payload: ApiErrorPayload | null): string {
-  return payload?.error ?? payload?.message ?? `Request failed with status ${status}`;
-}
-
-function parseHashVerificationToken(hash: string): string | null {
-  const rawHash = hash.startsWith("#") ? hash.slice(1) : hash;
-  if (!rawHash) return null;
-
-  if (rawHash.startsWith("verify=") || rawHash.startsWith("token=")) {
-    return new URLSearchParams(rawHash).get("verify")?.trim()
-      ?? new URLSearchParams(rawHash).get("token")?.trim()
-      ?? null;
-  }
-
-  const queryStart = rawHash.indexOf("?");
-  if (queryStart >= 0) {
-    return new URLSearchParams(rawHash.slice(queryStart + 1)).get("verify")?.trim() ?? null;
-  }
-
-  return null;
-}
-
-function scrubHashVerificationToken(hash: string): string {
-  const rawHash = hash.startsWith("#") ? hash.slice(1) : hash;
-  if (!rawHash) return "";
-
-  if (rawHash.startsWith("verify=") || rawHash.startsWith("token=")) {
-    const params = new URLSearchParams(rawHash);
-    params.delete("verify");
-    params.delete("token");
-    const next = params.toString();
-    return next ? `#${next}` : "";
-  }
-
-  const queryStart = rawHash.indexOf("?");
-  if (queryStart < 0) return hash;
-
-  const path = rawHash.slice(0, queryStart);
-  const params = new URLSearchParams(rawHash.slice(queryStart + 1));
-  params.delete("verify");
-  const next = params.toString();
-  return `#${path}${next ? `?${next}` : ""}`;
-}
-
-function readVerificationTokenFromUrl(): string | null {
-  if (typeof window === "undefined") return null;
-  const url = new URL(window.location.href);
-  return url.searchParams.get("verify")?.trim() || parseHashVerificationToken(url.hash);
-}
-
-function stripVerificationTokenFromUrl(): void {
-  if (typeof window === "undefined") return;
-  const url = new URL(window.location.href);
-  const hasLegacyQueryToken = url.searchParams.has("verify");
-  const nextHash = scrubHashVerificationToken(url.hash);
-  const hashChanged = nextHash !== url.hash;
-  if (!hasLegacyQueryToken && !hashChanged) return;
-
-  url.searchParams.delete("verify");
-  const search = url.searchParams.toString();
-  const nextUrl = `${url.pathname}${search ? `?${search}` : ""}${nextHash}`;
-  window.history.replaceState(null, "", nextUrl);
-}
-
-function takePreSanitizedVerificationToken(): string | null {
-  if (typeof window === "undefined") return null;
-  const token = window.__PHAROS_API_KEY_VERIFY_TOKEN__?.trim();
-  if (token) {
-    delete window.__PHAROS_API_KEY_VERIFY_TOKEN__;
-    return token;
-  }
-  return null;
-}
 
 function endpointId(path: string): string {
   return `endpoint-${path.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase()}`;
@@ -183,206 +58,49 @@ function formatExpiry(epochSeconds: number | null): string {
   return new Date(epochSeconds * 1000).toLocaleString();
 }
 
-function buildCurlCommand(token: string): string {
-  return [
-    "curl https://api.pharos.watch/api/stablecoins \\",
-    `  -H "X-API-Key: ${token}" \\`,
-    "  -H \"Accept: application/json\"",
-  ].join("\n");
-}
-
 export function ApiKeyRequestForm() {
-  const [email, setEmail] = useState("");
-  const [requesterName, setRequesterName] = useState("");
-  const [organization, setOrganization] = useState("");
-  const [projectUrl, setProjectUrl] = useState("");
-  const [useCase, setUseCase] = useState("");
-  const [expectedCadence, setExpectedCadence] = useState<ApiKeySelfServeCadence>("hourly");
-  const [expectedVolume, setExpectedVolume] = useState("");
-  const [selectedEndpoints, setSelectedEndpoints] = useState<string[]>(["/api/stablecoins"]);
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [website, setWebsite] = useState("");
-  const [requestStatus, setRequestStatus] = useState<RequestStatus>("idle");
-  const [requestError, setRequestError] = useState<string | null>(null);
-  const [pendingRequest, setPendingRequest] = useState<ApiKeySelfServePendingResponse | null>(null);
-  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>("idle");
-  const [verificationError, setVerificationError] = useState<string | null>(null);
-  const [issuedKey, setIssuedKey] = useState<ApiKeySelfServeIssueResponse | null>(null);
-  const [copied, setCopied] = useState<"token" | "curl" | null>(null);
-  const [copyError, setCopyError] = useState<string | null>(null);
-  const [tokenCopied, setTokenCopied] = useState(false);
-  const [revealAcknowledged, setRevealAcknowledged] = useState(false);
-  const consumedVerificationTokenRef = useRef<string | null>(null);
-  const copyTokenButtonRef = useRef<HTMLButtonElement | null>(null);
-  const tokenCodeRef = useRef<HTMLElement | null>(null);
-
-  const curlCommand = useMemo(() => issuedKey ? buildCurlCommand(issuedKey.token) : "", [issuedKey]);
-  const trimmedUseCaseLength = useCase.trim().length;
-  const projectUrlValue = projectUrl.trim();
-  const projectUrlValid = !projectUrlValue || (() => {
-    try {
-      const parsed = new URL(projectUrlValue);
-      return parsed.protocol === "https:" && parsed.hostname.length > 0;
-    } catch {
-      return false;
-    }
-  })();
-  const tokenSecured = tokenCopied || revealAcknowledged;
-
-  const canSubmit =
-    requestStatus !== "submitting"
-    && email.trim().length > 3
-    && email.trim().length <= EMAIL_MAX_LENGTH
-    && requesterName.trim().length <= NAME_MAX_LENGTH
-    && organization.trim().length <= ORGANIZATION_MAX_LENGTH
-    && projectUrlValue.length <= PROJECT_URL_MAX_LENGTH
-    && projectUrlValid
-    && expectedVolume.trim().length <= EXPECTED_VOLUME_MAX_LENGTH
-    && trimmedUseCaseLength >= SELF_SERVE_USE_CASE_MIN_LENGTH
-    && trimmedUseCaseLength <= SELF_SERVE_USE_CASE_MAX_LENGTH
-    && acceptedTerms;
-
-  const copyText = useCallback(async (kind: "token" | "curl", value: string) => {
-    try {
-      if (!navigator.clipboard?.writeText) {
-        throw new Error("Clipboard API unavailable");
-      }
-      await navigator.clipboard.writeText(value);
-      setCopied(kind);
-      setCopyError(null);
-      if (kind === "token") {
-        setTokenCopied(true);
-      }
-      window.setTimeout(() => setCopied(null), 1800);
-    } catch {
-      setCopied(null);
-      setCopyError("Copy failed. Select the text and copy it manually before leaving this page.");
-    }
-  }, []);
-
-  const selectTokenText = useCallback(() => {
-    const tokenNode = tokenCodeRef.current;
-    const selection = window.getSelection?.();
-    if (!tokenNode || !selection) return;
-    const range = document.createRange();
-    range.selectNodeContents(tokenNode);
-    selection.removeAllRanges();
-    selection.addRange(range);
-    tokenNode.focus();
-  }, []);
-
-  const verifyToken = useCallback(async (token: string) => {
-    setVerificationStatus("verifying");
-    setVerificationError(null);
-    setIssuedKey(null);
-
-    try {
-      const response = await fetch(buildApiUrl(API_PATHS.apiKeyRequestVerify()), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: `application/json, ${PHAROS_WEB_ACCEPT_MARKER}`,
-        },
-        body: JSON.stringify({ token }),
-      });
-      const payload = await readJson<unknown>(response);
-      if (!response.ok) {
-        const errorPayload = payload && typeof payload === "object" && !("status" in payload)
-          ? payload as ApiErrorPayload
-          : null;
-        throw new Error(resolveErrorMessage(response.status, errorPayload));
-      }
-      if (!isApiKeySelfServeIssueResponse(payload)) {
-        throw new Error("Verification succeeded, but the API key was not returned. Please contact me@tokenbrice.com before leaving this page.");
-      }
-      setCopied(null);
-      setCopyError(null);
-      setTokenCopied(false);
-      setRevealAcknowledged(false);
-      setIssuedKey(payload);
-      setVerificationStatus("issued");
-    } catch (error) {
-      setVerificationError(error instanceof Error ? error.message : "Verification failed");
-      setVerificationStatus("error");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const token = takePreSanitizedVerificationToken() ?? readVerificationTokenFromUrl();
-    if (!token || consumedVerificationTokenRef.current === token) return;
-    consumedVerificationTokenRef.current = token;
-    stripVerificationTokenFromUrl();
-    void verifyToken(token);
-  }, [verifyToken]);
-
-  useEffect(() => {
-    if (!issuedKey) return;
-    copyTokenButtonRef.current?.focus();
-  }, [issuedKey]);
-
-  useEffect(() => {
-    if (!issuedKey || tokenSecured) return;
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-      return "";
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [issuedKey, tokenSecured]);
-
-  function toggleEndpoint(path: string): void {
-    setSelectedEndpoints((current) => {
-      if (current.includes(path)) {
-        return current.filter((item) => item !== path);
-      }
-      if (path === "unknown") {
-        return ["unknown"];
-      }
-      return [...current.filter((item) => item !== "unknown"), path];
-    });
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setRequestStatus("submitting");
-    setRequestError(null);
-    setPendingRequest(null);
-
-    const body: ApiKeySelfServeRequest = {
-      email: email.trim(),
-      ...(requesterName.trim() ? { requesterName: requesterName.trim() } : {}),
-      ...(organization.trim() ? { organization: organization.trim() } : {}),
-      ...(projectUrl.trim() ? { projectUrl: projectUrl.trim() } : {}),
-      useCase: useCase.trim(),
-      intendedEndpoints: selectedEndpoints,
-      expectedCadence,
-      ...(expectedVolume.trim() ? { expectedVolume: expectedVolume.trim() } : {}),
-      acceptedTerms,
-      website,
-    };
-
-    try {
-      const response = await fetch(buildApiUrl(API_PATHS.apiKeyRequests()), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: `application/json, ${PHAROS_WEB_ACCEPT_MARKER}`,
-        },
-        body: JSON.stringify(body),
-      });
-      const payload = await readJson<ApiKeySelfServePendingResponse | ApiErrorPayload>(response);
-      if (!response.ok || !payload || !("status" in payload) || payload.status !== "pending_verification") {
-        throw new Error(resolveErrorMessage(response.status, payload && !("status" in payload) ? payload : null));
-      }
-      setPendingRequest(payload);
-      setRequestStatus("pending");
-    } catch (error) {
-      setRequestError(error instanceof Error ? error.message : "Could not submit API key request");
-      setRequestStatus("error");
-    }
-  }
+  const {
+    acceptedTerms,
+    canSubmit,
+    copied,
+    copyError,
+    copyText,
+    copyTokenButtonRef,
+    curlCommand,
+    email,
+    expectedCadence,
+    expectedVolume,
+    handleSubmit,
+    issuedKey,
+    markTokenSaved,
+    organization,
+    pendingRequest,
+    projectUrl,
+    projectUrlValid,
+    projectUrlValue,
+    requestError,
+    requesterName,
+    requestStatus,
+    selectedEndpoints,
+    selectTokenText,
+    setAcceptedTerms,
+    setEmail,
+    setExpectedCadence,
+    setExpectedVolume,
+    setOrganization,
+    setProjectUrl,
+    setRequesterName,
+    setUseCase,
+    setWebsite,
+    toggleEndpoint,
+    tokenCodeRef,
+    tokenSecured,
+    trimmedUseCaseLength,
+    useCase,
+    verificationError,
+    verificationStatus,
+    website,
+  } = useApiKeyRequestFormState();
 
   return (
     <div
@@ -712,10 +430,7 @@ export function ApiKeyRequestForm() {
                 type="button"
                 variant={tokenSecured ? "outline" : "default"}
                 className="w-full"
-                onClick={() => {
-                  setRevealAcknowledged(true);
-                  setCopyError(null);
-                }}
+                onClick={markTokenSaved}
               >
                 {tokenSecured ? "Key Saved" : "I Saved This Key"}
               </Button>
