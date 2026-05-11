@@ -138,6 +138,28 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("/presets");
   });
 
+  it("/settings sends the chat-level settings keyboard", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      { match: "FROM telegram_subscribers WHERE chat_id = ?", rows: [], first: null },
+    ]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/settings"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    const body = sentMessageBody() as {
+      text: string;
+      reply_markup: { inline_keyboard: Array<Array<{ callback_data: string }>> };
+    };
+    expect(body.text).toContain("<b>Settings</b>");
+    const callbacks = body.reply_markup.inline_keyboard.flat().map((b) => b.callback_data);
+    expect(callbacks).toEqual(expect.arrayContaining(["settings:gt:dews", "settings:gt:depeg"]));
+  });
+
   it("ignores unaddressed commands in group chats", async () => {
     const db = mockD1([]);
     const res = await handleTelegramWebhook(

@@ -36,6 +36,7 @@ import {
   type UnsubscribeActionPayload,
 } from "./telegram-webhook-shared";
 import { handleSetupTickerInput, parseSetupState, sendWizardIntro } from "./telegram-webhook-setup";
+import { handleSettingsCommand } from "./telegram-webhook-settings";
 import {
   buildGlobalAlertSummaryMessage,
   buildListMessage,
@@ -109,6 +110,7 @@ const GROUP_ADMIN_GATED_COMMANDS = new Set([
   "/mute",
   "/unmutehours",
   "/unsnooze",
+  "/settings",
 ]);
 
 export const handleTelegramWebhook = withErrorHandler(
@@ -308,6 +310,7 @@ export const handleTelegramWebhook = withErrorHandler(
           case "/subscribe":
           case "/unsubscribe":
           case "/set":
+          case "/settings":
           case "/mute":
           case "/unmutehours":
           case "/unsnooze":
@@ -393,6 +396,9 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
           break;
         case "/set":
           await handleSet(db, chatId, username, actorUserId, parsedCommand.args, botToken);
+          break;
+        case "/settings":
+          await handleSettingsCommand(db, botToken, chatId, username, parsedCommand.args);
           break;
         case "/mute":
           await handleMute(db, chatId, username, parsedCommand.args, botToken);

@@ -830,4 +830,45 @@ describe("handleCallbackQuery", () => {
     const body = JSON.parse((ackCall?.[1] as RequestInit).body as string);
     expect(body.text).toMatch(/expired/i);
   });
+  describe("settings dispatch", () => {
+    it("settings:home routes to the settings handler and edits the message", async () => {
+      const db = mockD1([
+        { match: "FROM telegram_subscribers WHERE chat_id = ?", rows: [], first: null },
+      ]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-settings",
+        data: "settings:home",
+        from: { id: 1 },
+        message: { chat: { id: 42, type: "private" }, message_id: 999 },
+      });
+
+      // editMessageText was called, not sendMessage.
+      const edits = fetchSpy.mock.calls.filter((c) =>
+        String(c[0]).includes("editMessageText"),
+      );
+      expect(edits.length).toBe(1);
+    });
+
+    it("settings:c:<id>:db:A writes the alert_dews flag", async () => {
+      const db = mockD1([
+        { match: "FROM telegram_subscriptions", rows: [] },
+      ]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-coin",
+        data: "settings:c:usdc-circle:db:A",
+        from: { id: 1, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 999 },
+      });
+
+      const history = db.getHistory();
+      const insert = history.find(
+        (h) =>
+          /INSERT INTO telegram_subscriptions/.test(h.sql) &&
+          /dews_min_band = excluded\.dews_min_band/.test(h.sql),
+      );
+      expect(insert).toBeDefined();
+      expect(insert!.binds[2]).toBe(1); // alert_dews
+      expect(insert!.binds[3]).toBe("ALERT");
+    });
+  });
 });

@@ -1,0 +1,216 @@
+/**
+ * /settings inline-keyboard handler (P1-U7).
+ *
+ * Two views:
+ *   - chat-level (no ticker): quiet hours toggle, snooze clear, global alert toggles.
+ *   - per-coin (ticker arg): DEWS min band, safety mode, depeg step, launch.
+ *
+ * Callback namespace is `settings:*`. Render helpers live in
+ * `telegram-webhook-settings-render.ts` and D1 mutations in
+ * `telegram-webhook-settings-mutations.ts` so each surface stays narrow.
+ *
+ * Each callback updates D1 then edits the message in place via
+ * `editMessageText`. If the edit fails (e.g. message too old, identical
+ * content rejected by Telegram), the handler sends a fresh message instead.
+ */
+
+import { answerCallbackQuery, editMessage, sendToChat } from "../lib/telegram";
+import { resolveTicker } from "../lib/telegram-alerts";
+import {
+  buildNotFoundMessage,
+  buildStatusAmbiguousMessage,
+} from "./telegram-webhook-messages";
+import {
+  loadSubscriberByChat,
+  loadSubscriptionsByIds,
+} from "./telegram-webhook-store";
+import {
+  buildCoinKeyboard,
+  buildCoinMessage,
+  buildHomeKeyboard,
+  buildHomeMessage,
+} from "./telegram-webhook-settings-render";
+import {
+  applyCoinSetting,
+  clearSnoozeViaSettings,
+  setQuietHours,
+  toggleGlobalAlert,
+} from "./telegram-webhook-settings-mutations";
+import {
+  isGlobalAlertType,
+  isKnownStablecoinId,
+} from "./telegram-webhook-settings-shared";
+
+// Re-export for tests so existing imports keep working.
+export {
+  buildCoinKeyboard,
+  buildCoinMessage,
+  buildHomeKeyboard,
+  buildHomeMessage,
+};
+
+export interface SettingsCallbackQuery {
+  id: string;
+  data?: string;
+  from?: { id?: number; username?: string };
+  message?: { chat?: { id?: number; type?: string }; message_id?: number };
+}
+
+type RenderTarget = { mode: "send" } | { mode: "edit"; messageId: number };
+
+/**
+ * Render the chat-level or per-coin settings view as a top-level `/settings`
+ * command. `args` is the raw command argument string (e.g. "USDC", "").
+ */
+export async function handleSettingsCommand(
+  db: D1Database,
+  botToken: string,
+  chatId: string,
+  _username: string | null,
+  args: string,
+): Promise<void> {
+  const trimmed = args.trim();
+  if (!trimmed) {
+    await renderHome(db, chatId, botToken, { mode: "send" });
+    return;
+  }
+  const resolution = resolveTicker(trimmed, "tracked");
+  if (resolution.status === "not_found") {
+    await sendToChat(chatId, buildNotFoundMessage(trimmed, resolution.suggestion), botToken, {
+      disableWebPagePreview: true,
+    });
+    return;
+  }
+  if (resolution.status === "ambiguous") {
+    await sendToChat(chatId, buildStatusAmbiguousMessage(trimmed, resolution.matches), botToken, {
+      disableWebPagePreview: true,
+    });
+    return;
+  }
+  await renderCoin(db, chatId, resolution.matches[0].id, botToken, { mode: "send" });
+}
+
+/** Dispatch a `settings:*` callback_query. */
+export async function handleSettingsCallback(
+  db: D1Database,
+  botToken: string,
+  cb: SettingsCallbackQuery,
+  subAction: string,
+  subArg: string,
+): Promise<void> {
+  const chatId = cb.message?.chat?.id?.toString();
+  const messageId = cb.message?.message_id;
+  if (!chatId || messageId == null) {
+    await answerCallbackQuery(cb.id, botToken);
+    return;
+  }
+  const chatType = cb.message?.chat?.type ?? "private";
+  const username = chatType === "group" || chatType === "supergroup" ? null : cb.from?.username ?? null;
+  const target: RenderTarget = { mode: "edit", messageId };
+
+  if (subAction === "home") {
+    await renderHome(db, chatId, botToken, target);
+    await answerCallbackQuery(cb.id, botToken);
+    return;
+  }
+
+  if (subAction === "gt") {
+    if (!isGlobalAlertType(subArg)) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Unknown alert type." });
+      return;
+    }
+    await toggleGlobalAlert(db, chatId, username, subArg);
+    await renderHome(db, chatId, botToken, target);
+    await answerCallbackQuery(cb.id, botToken, { text: `Updated global ${subArg}.` });
+    return;
+  }
+
+  if (subAction === "q") {
+    const enabled = subArg === "1";
+    await setQuietHours(db, chatId, username, enabled);
+    await renderHome(db, chatId, botToken, target);
+    await answerCallbackQuery(cb.id, botToken, {
+      text: enabled ? "Quiet hours enabled." : "Quiet hours disabled.",
+    });
+    return;
+  }
+
+  if (subAction === "sc") {
+    await clearSnoozeViaSettings(db, chatId, username);
+    await renderHome(db, chatId, botToken, target);
+    await answerCallbackQuery(cb.id, botToken, { text: "Snooze cleared." });
+    return;
+  }
+
+  if (subAction === "o") {
+    if (!isKnownStablecoinId(subArg)) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Unknown coin." });
+      return;
+    }
+    await renderCoin(db, chatId, subArg, botToken, target);
+    await answerCallbackQuery(cb.id, botToken);
+    return;
+  }
+
+  if (subAction === "c") {
+    const [coinId, setting, value] = subArg.split(":");
+    if (!isKnownStablecoinId(coinId) || !setting || value == null) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Unknown setting." });
+      return;
+    }
+    const applied = await applyCoinSetting(db, chatId, username, coinId, setting, value);
+    if (!applied) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Unknown setting." });
+      return;
+    }
+    await renderCoin(db, chatId, coinId, botToken, target);
+    await answerCallbackQuery(cb.id, botToken, { text: applied });
+    return;
+  }
+
+  await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+}
+
+async function renderHome(
+  db: D1Database,
+  chatId: string,
+  botToken: string,
+  target: RenderTarget,
+): Promise<void> {
+  const subscriber = await loadSubscriberByChat(db, chatId);
+  await deliver(chatId, buildHomeMessage(subscriber), buildHomeKeyboard(subscriber), botToken, target);
+}
+
+async function renderCoin(
+  db: D1Database,
+  chatId: string,
+  coinId: string,
+  botToken: string,
+  target: RenderTarget,
+): Promise<void> {
+  const rows = await loadSubscriptionsByIds(db, chatId, [coinId]);
+  const row = rows[0] ?? null;
+  await deliver(chatId, buildCoinMessage(coinId, row), buildCoinKeyboard(coinId, row), botToken, target);
+}
+
+async function deliver(
+  chatId: string,
+  message: string,
+  replyMarkup: unknown,
+  botToken: string,
+  target: RenderTarget,
+): Promise<void> {
+  if (target.mode === "edit") {
+    const ok = await editMessage(chatId, target.messageId, message, botToken, {
+      disableWebPagePreview: true,
+      replyMarkup,
+    });
+    if (ok) return;
+    // Edit failed (e.g. message too old / unchanged content). Fall back to a
+    // fresh send so the user still sees the new state.
+  }
+  await sendToChat(chatId, message, botToken, {
+    disableWebPagePreview: true,
+    replyMarkup,
+  });
+}

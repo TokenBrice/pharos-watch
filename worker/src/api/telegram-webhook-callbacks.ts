@@ -48,6 +48,7 @@ import {
   handleSetupTypeToggle,
   parseSetupState,
 } from "./telegram-webhook-setup";
+import { handleSettingsCallback } from "./telegram-webhook-settings";
 import { parsePendingDisambiguation } from "./telegram-webhook-parsing";
 import {
   SETUP_PENDING_ACTION_TYPE,
@@ -76,6 +77,7 @@ const KNOWN_ACTIONS = new Set([
   "cancel",
   "manage",
   "unsub",
+  "settings",
 ]);
 
 type SnoozeArg = keyof typeof SNOOZE_SECONDS;
@@ -151,6 +153,13 @@ export async function handleCallbackQuery(
     }
 
     await answerCallbackQuery(cb.id, botToken, { text: result.text });
+    return;
+  }
+
+  if (action === "settings") {
+    const subAction = arg ?? "";
+    const subArg = data.split(":").slice(2).join(":");
+    await handleSettingsCallback(db, botToken, cb, subAction, subArg);
     return;
   }
 

@@ -382,6 +382,46 @@ export async function sendBatch(
   return results;
 }
 
+export interface EditMessageOpts {
+  disableWebPagePreview?: boolean;
+  replyMarkup?: unknown;
+}
+
+/**
+ * Edit a previously sent message in place. Used by inline-keyboard flows
+ * (e.g. /settings) so a tap mutates the visible message rather than appending
+ * a fresh reply. Returns `true` on success, `false` on any Telegram error so
+ * the caller can fall back to `sendToChat`. Body is drained to respect the
+ * per-trigger 6-connection cap.
+ */
+export async function editMessage(
+  chatId: string,
+  messageId: number,
+  text: string,
+  botToken: string,
+  opts?: EditMessageOpts,
+): Promise<boolean> {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/editMessageText`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        text,
+        parse_mode: "HTML",
+        ...(opts?.disableWebPagePreview && { disable_web_page_preview: true }),
+        ...(opts?.replyMarkup != null && { reply_markup: opts.replyMarkup }),
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    await drainResponseBody(res);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Edit an existing chat message's text in place. Used by inline-keyboard
  * flows that want to re-render the same message rather than send a new one

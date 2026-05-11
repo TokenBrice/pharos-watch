@@ -119,6 +119,18 @@ Current actions:
 - `quicksub:<stablecoinId>` (enables DEWS + depeg for that one coin; group chats require admin)
 - `manage:page:<N>` (paginates the `/list` `[ Manage ]` keyboard, edits the message in place)
 - `unsub:<stablecoinId>` (removes one coin from the chat's subscriptions; group chats require admin, gated identically to `/unsubscribe`)
+- `settings:home` — re-render the chat-level settings view
+- `settings:gt:<type>` where `type ∈ dews | depeg | safety | launch` — toggle global alert flag
+- `settings:q:<1|0>` — enable (22-07 UTC) or disable quiet hours
+- `settings:sc` — clear an active snooze
+- `settings:o:<stablecoinId>` — open the per-coin settings view (no mutation)
+- `settings:c:<stablecoinId>:<setting>:<value>` — apply a per-coin setting where `setting:value` uses short codes to stay within Telegram's 64-byte callback_data limit:
+  - `db:A|W|D|0` — DEWS min band `ALERT`, `WARNING`, `DANGER`, or off
+  - `sm:a|d|u|0` — Safety mode `all`, `downgrade-only`, `upgrade-only`, or off
+  - `ds:100|250|500|0` — Depeg worsening step in bps, or off (also clears `alert_depeg` for the coin)
+  - `lc:1|0` — Launch on/off
+
+Settings callbacks edit the message in place via `editMessageText`. If the edit fails (e.g. the message is too old or content is unchanged) the handler falls back to a fresh `sendMessage` so the user still sees the new state.
 
 Unknown action codes receive a visible callback toast but are not treated as
 errors, so the bot stays forward-compatible with future keyboards.
@@ -137,7 +149,7 @@ In group and supergroup chats, commands must be addressed to the bot, for exampl
 
 ### Group Admin Gating
 
-`/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/unmutehours`, and `/unsnooze` are gated to group administrators so a single member cannot rewrite the chat's subscription or quiet-hours state. The gating mode lives behind the `TELEGRAM_GROUP_ADMIN_GATING` toggle in `worker/src/api/telegram-webhook.ts`.
+`/subscribe`, `/unsubscribe`, `/set`, `/settings`, `/mute`, `/unmutehours`, and `/unsnooze` are gated to group administrators so a single member cannot rewrite the chat's subscription or quiet-hours state. The gating mode lives behind the `TELEGRAM_GROUP_ADMIN_GATING` toggle in `worker/src/api/telegram-webhook.ts`.
 
 - **Hard gate (current default):** non-admin invocations receive a refusal reply that names the current administrators ("Only group admins can change alert settings (/subscribe). Admins here: @Alice, Bob.") and the command is short-circuited; the dispatch does not run. Admin display names come from `getChatAdministrators`, which is already visible to every member through the Telegram group member list.
 - **Soft (emergency rollback):** flipping the toggle to `"soft"` warns the non-admin with the same copy but still runs the command. Kept as an operator escape hatch if the hard gate is ever too aggressive in production.
@@ -177,6 +189,8 @@ Wizard state is persisted as a row in `telegram_pending_disambiguation` with `ac
 Bulk `/subscribe` and `/unsubscribe` calls are gated behind an inline `[ Confirm ] [ Cancel ]` keyboard when the resolved coin set exceeds 10 coins or the literal `all` token is used. The deferred command is stored in `telegram_pending_disambiguation` with `action_type = 'confirm-bulk'` and inherits the standard 5-minute TTL. Tapping Confirm executes the original command; Cancel (or `/cancel`) clears the pending state without side effects. Confirmation is initiator-locked: only the user who started the bulk command may complete or cancel it.
 | `/set <ticker> <setting> <value>` | Tunes per-coin settings such as DEWS floor, safety direction mode, launch on/off, or depeg worsening step |
 | `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`, `launch`) or sets the global depeg worsening step |
+| `/settings` | Opens an inline-keyboard view of chat-level settings: quiet hours toggle, snooze clear, and global alert toggles for DEWS / depeg / safety / launch. Each tap edits the message in place via `editMessageText` so the user sees a single self-updating panel. |
+| `/settings <ticker>` | Opens a per-coin inline keyboard with DEWS min band (`ALERT/WARNING/DANGER/off`), safety mode (`all/downgrade-only/upgrade-only/off`), depeg worsening step (`100/250/500/off`), and launch on/off rows. A `← Back to chat settings` button returns to the chat-level view. |
 | `/mute <start>-<end>` | Enables quiet hours in UTC (messages still deliver, notifications are silenced) |
 | `/unsnooze` | Clears active alert snooze immediately |
 | `/unmutehours` | Disables quiet hours |
