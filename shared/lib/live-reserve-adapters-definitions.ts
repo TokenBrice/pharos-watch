@@ -127,6 +127,17 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
+  "attestation-pdf-index": {
+    sourceModel: "validated-static",
+    evidenceClass: "static-validated",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_ATTESTATION_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+    },
+  },
   btcfi: {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
@@ -277,6 +288,18 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_ATTESTATION_V1_V2,
+    redemptionTelemetry: { capacity: "proxy", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
+  },
+  "frax-fpi-collateral": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -544,14 +567,25 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
-} as const satisfies Record<LiveReserveAdapterKey, {
-  sourceModel: LiveReserveSourceModel;
-  evidenceClass: LiveReserveEvidenceClass;
-  sharedSourceMode: LiveReserveSourceSharingMode;
-  configValidation: LiveReserveAdapterConfigValidationPolicy;
-  redemptionTelemetry: {
-    capacity: "direct" | "proxy" | "none";
-    fee: "current-bps" | "none";
-  };
-  validation?: LiveReserveAdapterValidationPolicy;
-}>;
+  yamato: {
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
+} as const satisfies Record<
+  LiveReserveAdapterKey,
+  {
+    sourceModel: LiveReserveSourceModel;
+    evidenceClass: LiveReserveEvidenceClass;
+    sharedSourceMode: LiveReserveSourceSharingMode;
+    configValidation: LiveReserveAdapterConfigValidationPolicy;
+    redemptionTelemetry: {
+      capacity: "direct" | "proxy" | "none";
+      fee: "current-bps" | "none";
+    };
+    validation?: LiveReserveAdapterValidationPolicy;
+  }
+>;

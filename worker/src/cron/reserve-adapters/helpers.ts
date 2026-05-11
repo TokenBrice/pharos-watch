@@ -6,10 +6,7 @@ export {
   requireJsonInputFromConfig,
   requireOnchainInput,
 } from "./input-guards";
-export {
-  accumulateBucketedExposure,
-  classifyBucketedValues,
-} from "./classification";
+export { accumulateBucketedExposure, classifyBucketedValues } from "./classification";
 export {
   buildUnknownExposureWarning,
   buildBucketSlices,
@@ -32,28 +29,19 @@ export {
   verifiedFreshnessMetadata,
 } from "./freshness";
 export { htmlLayoutChangedError, htmlParseError } from "./html";
-export {
-  fetchJsonPostWithRetry,
-  fetchJsonWithRetry,
-  fetchPrimaryHtmlInput,
-  fetchTextWithRetry,
-} from "./request";
+export { fetchJsonPostWithRetry, fetchJsonWithRetry, fetchPrimaryHtmlInput, fetchTextWithRetry } from "./request";
 export { fetchDefiLlamaPrices } from "./defillama";
 export {
   fetchErc20Balance,
   fetchErc20TotalSupply,
+  fetchOnchainMulticall3,
   fetchOnchainRateBps,
   fetchOnchainRawCall,
   fetchOnchainUint256,
+  type OnchainMulticall3Call,
   type OnchainRateProbe,
 } from "./onchain";
-export {
-  probeOnchainTotalSupply,
-  probeTrackedTokenSupply,
-} from "./token-supply";
-export {
-  buildRedemptionSnapshotMetadata,
-  probeOptionalRedemptionRateBps,
-} from "./redemption";
+export { probeOnchainTotalSupply, probeTrackedTokenSupply } from "./token-supply";
+export { buildRedemptionSnapshotMetadata, probeOptionalRedemptionRateBps } from "./redemption";
 export { getJsonPath } from "./json-path";
 export { reserveDegradedWarning, reserveInfoWarning } from "./warnings";

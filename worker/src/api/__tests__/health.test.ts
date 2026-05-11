@@ -194,12 +194,15 @@ describe("handleHealth", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       warnings: string[];
-      caches: Record<string, {
-        ageSeconds: number | null;
-        freshnessSource?: string;
-        sentinelValidationReason?: string;
-        warning?: string;
-      }>;
+      caches: Record<
+        string,
+        {
+          ageSeconds: number | null;
+          freshnessSource?: string;
+          sentinelValidationReason?: string;
+          warning?: string;
+        }
+      >;
     };
 
     expect(body.caches["dex-liquidity"]).toMatchObject({
@@ -212,9 +215,7 @@ describe("handleHealth", () => {
   });
 
   it("returns stale with warnings when the DB health sentinel fails", async () => {
-    const db = mockD1([
-      { match: "SELECT 1", rows: [], throwError: new Error("db down") },
-    ]);
+    const db = mockD1([{ match: "SELECT 1", rows: [], throwError: new Error("db down") }]);
 
     const res = await handleHealth(db);
     expect(res.status).toBe(200);
@@ -307,7 +308,11 @@ describe("handleHealth", () => {
     ]);
 
     const res = await handleHealth(db);
-    const body = (await res.json()) as { status: string; warnings: string[]; caches: Record<string, { mode?: string; sourceStatus?: string }> };
+    const body = (await res.json()) as {
+      status: string;
+      warnings: string[];
+      caches: Record<string, { mode?: string; sourceStatus?: string }>;
+    };
 
     expect(body.status).toBe("degraded");
     expect(body.caches["fx-rates"]).toMatchObject({
@@ -319,13 +324,14 @@ describe("handleHealth", () => {
 
   it("degrades when three or more circuit groups are open", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const openCircuitValue = (openedAt: number) => JSON.stringify({
-      state: "open",
-      consecutiveFailures: 3,
-      lastFailureAt: openedAt - 30,
-      lastSuccessAt: null,
-      openedAt,
-    });
+    const openCircuitValue = (openedAt: number) =>
+      JSON.stringify({
+        state: "open",
+        consecutiveFailures: 3,
+        lastFailureAt: openedAt - 30,
+        lastSuccessAt: null,
+        openedAt,
+      });
     const db = mockD1([
       {
         match: "cache WHERE key IN",
@@ -369,13 +375,14 @@ describe("handleHealth", () => {
 
   it("keeps public health healthy when only live-reserve circuit groups are open", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const openCircuitValue = (openedAt: number) => JSON.stringify({
-      state: "open",
-      consecutiveFailures: 3,
-      lastFailureAt: openedAt - 30,
-      lastSuccessAt: null,
-      openedAt,
-    });
+    const openCircuitValue = (openedAt: number) =>
+      JSON.stringify({
+        state: "open",
+        consecutiveFailures: 3,
+        lastFailureAt: openedAt - 30,
+        lastSuccessAt: null,
+        openedAt,
+      });
     const db = mockD1([
       {
         match: "cache WHERE key IN",
@@ -560,13 +567,14 @@ describe("handleHealth", () => {
 
   it("filters stale removed live-reserve circuit keys from the health payload", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const openCircuitValue = (openedAt: number) => JSON.stringify({
-      state: "open",
-      consecutiveFailures: 3,
-      lastFailureAt: openedAt - 30,
-      lastSuccessAt: null,
-      openedAt,
-    });
+    const openCircuitValue = (openedAt: number) =>
+      JSON.stringify({
+        state: "open",
+        consecutiveFailures: 3,
+        lastFailureAt: openedAt - 30,
+        lastSuccessAt: null,
+        openedAt,
+      });
     const db = mockD1([
       {
         match: "cache WHERE key IN",
@@ -591,7 +599,7 @@ describe("handleHealth", () => {
       {
         match: "key LIKE 'circuit:%'",
         rows: [
-          { key: "circuit:live-reserves:kau-kinesis", value: openCircuitValue(now - 600) },
+          { key: "circuit:live-reserves:pmusd-precious-metals", value: openCircuitValue(now - 600) },
           { key: "circuit:live-reserves:ethena", value: openCircuitValue(now - 600) },
         ],
       },
@@ -602,7 +610,7 @@ describe("handleHealth", () => {
       circuits: Record<string, { state: string }>;
     };
 
-    expect(body.circuits["live-reserves:kau-kinesis"]).toBeUndefined();
+    expect(body.circuits["live-reserves:pmusd-precious-metals"]).toBeUndefined();
     expect(body.circuits["live-reserves:ethena"]?.state).toBe("open");
   });
 });

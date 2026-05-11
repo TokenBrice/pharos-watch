@@ -48,6 +48,22 @@
       "depType": "wrapper"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "frax-fpi-collateral",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "fpi-frax",
+    "display": {
+      "url": "https://frax.com/transparency",
+      "label": "Frax Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.frax.finance/v2/fpifpis/fpi-collateral"
+      }
+    }
+  },
   "collateralQuality": "rwa",
   "governanceQuality": "wrapper"
 }

@@ -35,10 +35,6 @@
     "disposition": "queued-p4",
     "notes": "The public self-serve request form intentionally ships as a single client workflow for intake, verification-token exchange, one-time token reveal, and copy actions. Split field groups, verification state, and issued-key rendering into focused subcomponents after the API access launch stabilizes."
   },
-  "shared/lib/format.ts": {
-    "disposition": "deferred",
-    "notes": "Shared formatting helpers are branchy but broadly reused. Defer any breakup until a dedicated shared-utility cleanup lane exists."
-  },
   "worker/src/cron/sync-fx-rates-helpers.ts": {
     "disposition": "deferred",
     "notes": "FX-rate helper orchestration remains a large policy surface after earlier trims. Defer another split until the next FX-state/runtime cleanup tranche."
@@ -98,5 +94,9 @@
   "src/app/yield/client.tsx": {
     "disposition": "queued-p4",
     "notes": "Surfaced after Phase 6 reduced larger hotspots. The yield client still combines filter state, table shaping, and interaction handling in one route shell; split view-model and table controls in the next yield UI cleanup pass."
+  },
+  "worker/src/lib/evm-rpc.ts": {
+    "disposition": "queued-p4",
+    "notes": "Multicall3 support expanded the shared EVM RPC helper while keeping existing RPC fallback, timeout, and critical-coverage paths centralized. Split Multicall3 ABI encoding/decoding into a dedicated helper module in the next on-chain reserve cleanup pass if this file grows again."
   }
 }

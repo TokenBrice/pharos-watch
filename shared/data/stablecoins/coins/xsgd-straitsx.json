@@ -72,9 +72,9 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "single-asset",
+    "adapter": "attestation-pdf-index",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "attestation-mix",
     "breakerScope": "xsgd-straitsx",
     "display": {
       "url": "https://www.straitsx.com/xsgd",
@@ -82,14 +82,18 @@
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.straitsx.com/xsgd"
       }
     },
     "params": {
-      "label": "SGD deposits & MAS-eligible securities",
-      "risk": "very-low"
+      "slices": [
+        {
+          "name": "SGD deposits & MAS-eligible securities",
+          "pct": 100,
+          "risk": "very-low"
+        }
+      ]
     }
   }
 }

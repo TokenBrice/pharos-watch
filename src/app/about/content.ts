@@ -72,12 +72,12 @@ export const DATA_SOURCE_GROUPS = [
   {
     label: "Reserve Transparency",
     sources:
-      "Issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads (including live reserve composition feeds from providers such as Anzen, Ethena, Falcon, Frankencoin, Hashnote, infiniFi, M0, Mento Reserve / analytics API, OpenEden, Re, Reserve Protocol, USDD, USD.AI, USD1 Chainlink bundle oracle, Accountable, Tether, Frax, Circle, First Digital Labs, SG-FORGE, Paxos, Sky/MakerDAO, Chainlink PoR/NAV oracles, Aave GHO, f(x), Asymmetry, JupUSD, USDGO, Solstice, River, Alloy, and Curve/Yield Basis reserve reads where available)",
+      "Issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, issuer attestation indexes, and direct on-chain vault/accounting reads (including live reserve composition feeds from providers such as Anzen, Ethena, Falcon, Frankencoin, Hashnote, infiniFi, M0, Mento Reserve / analytics API, OpenEden, Re, Reserve Protocol, USDD, USD.AI, USD1 Chainlink bundle oracle, Accountable, Tether, Frax, Circle, First Digital Labs, SG-FORGE, Paxos, Sky/MakerDAO, Chainlink PoR/NAV oracles, StraitsX, Kinesis, Yamato, Aave GHO, f(x), Asymmetry, JupUSD, USDGO, Solstice, River, Alloy, and Curve/Yield Basis reserve reads where available)",
   },
   {
     label: "On-chain Reads & Events",
     sources:
-      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (including EVM RPCs for configured mint/burn flows, direct Liquity/B.Protocol branch debt reads, and Frankencoin's ZCHF -> VCHF StablecoinBridge balance probe, plus Solana mainnet RPC reads for tracked mint-supply validation), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage",
+      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (including MegaETH public RPC, EVM RPCs for configured mint/burn flows, direct Liquity/B.Protocol branch debt reads, and Frankencoin's ZCHF -> VCHF StablecoinBridge balance probe, plus Solana mainnet RPC reads for tracked mint-supply validation), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage",
   },
   {
     label: "Ratings & Reference",
@@ -104,8 +104,7 @@ export const DATA_PIPELINE_STEPS = [
     step: 1,
     ariaLabel: "Step 1: Sources",
     title: "Sources",
-    description:
-      "Market, on-chain, ratings, FX, commodity, and digest inputs are collected on a fixed schedule.",
+    description: "Market, on-chain, ratings, FX, commodity, and digest inputs are collected on a fixed schedule.",
   },
   {
     step: 2,

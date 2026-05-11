@@ -55,13 +55,13 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "single-asset",
+    "adapter": "chainlink-por",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "attestation-mix",
     "breakerScope": "kag-kinesis",
     "display": {
-      "url": "https://kinesis.money/silver/",
-      "label": "Kinesis"
+      "url": "https://data.chain.link/feeds/ethereum/mainnet/kag-por",
+      "label": "Chainlink PoR"
     },
     "inputs": {
       "primary": {
@@ -71,8 +71,10 @@
       }
     },
     "params": {
-      "label": "Physical silver bullion (LBMA 999 fine)",
-      "risk": "very-low"
+      "porFeedAddress": "0x3F0543aA057BcAeA152Fe9462Cb3ffaB305a6F8D",
+      "assetLabel": "Physical silver reserves",
+      "assetRisk": "very-low",
+      "reserveUnit": "XAG"
     }
   }
 }

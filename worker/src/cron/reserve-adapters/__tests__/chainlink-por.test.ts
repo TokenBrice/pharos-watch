@@ -12,16 +12,8 @@ vi.mock("../helpers", async (importOriginal) => {
   };
 });
 
-import {
-  adaptChainlinkPorResponse,
-  fetchChainlinkPorReserves,
-  type ChainlinkPorParams,
-} from "../chainlink-por";
-import {
-  fetchErc20TotalSupply,
-  fetchOnchainRawCall,
-  fetchOnchainUint256,
-} from "../helpers";
+import { adaptChainlinkPorResponse, fetchChainlinkPorReserves, type ChainlinkPorParams } from "../chainlink-por";
+import { fetchErc20TotalSupply, fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
 
 const signal = AbortSignal.timeout(5_000);
 
@@ -75,6 +67,56 @@ describe("adaptChainlinkPorResponse", () => {
       supplyUsd: 144_000_000,
       supplyReadComplete: true,
     });
+  });
+
+  it.each([
+    ["XAU", "troy ounces of gold"],
+    ["XAG", "troy ounces of silver"],
+  ] as const)("labels %s reserves as commodity quantities instead of USD", (reserveUnit, reserveUnitLabel) => {
+    const result = adaptChainlinkPorResponse(
+      { reserves: 145_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
+      { ...params, reserveUnit },
+    );
+
+    expect(result.metadata).toMatchObject({
+      reserveUnit,
+      reserveUnitLabel,
+      totalReserveQuantity: 1450,
+      totalReservesRaw: "145000000000",
+      feedDecimals: 8,
+      feedRoundId: "42",
+      feedUpdatedAt: 1710000000,
+    });
+    expect(result.metadata?.totalReserveUsd).toBeUndefined();
+  });
+
+  it("does not emit USD supply or collateralization ratio for commodity reserves", () => {
+    const result = adaptChainlinkPorResponse(
+      { reserves: 99_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
+      { ...params, reserveUnit: "XAU" },
+      {
+        contributions: [
+          {
+            chain: "ethereum",
+            tokenAddress: "0x0000000000000000000000000000000000000001",
+            raw: 1000_000000000000000000n,
+            decimals: 18,
+          },
+        ],
+        omittedNonEvmChains: [],
+        omittedReadFailureChains: [],
+      },
+    );
+
+    expect(result.metadata).toMatchObject({
+      reserveUnit: "XAU",
+      totalReserveQuantity: 990,
+    });
+    expect(result.metadata?.totalReserveUsd).toBeUndefined();
+    expect(result.metadata?.supplyUsd).toBeUndefined();
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
+    expect(result.warnings?.some((w) => w.code === "por-reserve-over-supply")).not.toBe(true);
   });
 
   it("degrades when reserves do not cover multichain token supply", () => {
@@ -179,10 +221,7 @@ describe("adaptChainlinkPorResponse", () => {
 
   it("throws on zero reserves", () => {
     expect(() =>
-      adaptChainlinkPorResponse(
-        { reserves: 0n, decimals: 8, roundId: 1n, updatedAt: 1710000000 },
-        params,
-      ),
+      adaptChainlinkPorResponse({ reserves: 0n, decimals: 8, roundId: 1n, updatedAt: 1710000000 }, params),
     ).toThrow();
   });
 });
@@ -237,9 +276,7 @@ describe("fetchChainlinkPorReserves", () => {
     // decimals() returns 8 for the PoR feed
     vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
     // latestRoundData() returns reserves of 600e8 (600 tokens' worth)
-    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(
-      encodeLatestRoundData(600_00000000n, now - 60),
-    );
+    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(encodeLatestRoundData(600_00000000n, now - 60));
 
     // EVM chains each return 200 tokens (18 decimals) — total 600 tokens supply
     vi.mocked(fetchErc20TotalSupply)
@@ -284,12 +321,51 @@ describe("fetchChainlinkPorReserves", () => {
 
     const now = 1_700_000_000;
     vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
-    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(
-      encodeLatestRoundData(100_00000000n, now - 60),
-    );
+    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(encodeLatestRoundData(100_00000000n, now - 60));
     vi.mocked(fetchErc20TotalSupply).mockResolvedValue(null);
 
-    await expect(fetchChainlinkPorReserves(coin, config, signal, { nowSec: now }))
-      .rejects.toThrow(/chainlink-por/);
+    await expect(fetchChainlinkPorReserves(coin, config, signal, { nowSec: now })).rejects.toThrow(/chainlink-por/);
+  });
+
+  it("does not require token contracts when a commodity reserve unit is configured", async () => {
+    const coin: StablecoinMeta = {
+      id: "kau-kinesis",
+      name: "Kinesis Gold",
+      symbol: "KAU",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "GOLD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: true,
+        navToken: false,
+      },
+    };
+    const now = 1_700_000_000;
+    vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(18n);
+    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(encodeLatestRoundData(12_345_000000000000000000n, now - 60));
+
+    const result = await fetchChainlinkPorReserves(
+      coin,
+      {
+        ...config,
+        params: {
+          ...baseParams,
+          assetLabel: "Physical gold bullion",
+          reserveUnit: "XAU",
+        },
+      },
+      signal,
+      { nowSec: now },
+    );
+
+    expect(fetchErc20TotalSupply).not.toHaveBeenCalled();
+    expect(result.metadata).toMatchObject({
+      reserveUnit: "XAU",
+      reserveUnitLabel: "troy ounces of gold",
+      totalReserveQuantity: 12_345,
+    });
+    expect(result.metadata?.supplyUsd).toBeUndefined();
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
   });
 });

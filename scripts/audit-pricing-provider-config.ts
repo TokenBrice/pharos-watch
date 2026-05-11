@@ -81,9 +81,7 @@ export async function auditBinance(fetchImpl: FetchLike = fetch): Promise<AuditS
       .filter((entry) => entry.symbol && (entry.status == null || entry.status === "TRADING"))
       .map((entry) => entry.symbol as string),
   );
-  const missing = BINANCE_MARKETS
-    .filter((market) => !tradablePairs.has(market.pair))
-    .map((market) => market.pair);
+  const missing = BINANCE_MARKETS.filter((market) => !tradablePairs.has(market.pair)).map((market) => market.pair);
   return {
     provider: "binance",
     ok: missing.length === 0,
@@ -108,16 +106,15 @@ export async function auditKraken(fetchImpl: FetchLike = fetch): Promise<AuditSe
   }
 
   const entries = Object.entries(payload.result ?? {});
-  const missing = KRAKEN_MARKETS
-    .filter((market) => !entries.some(([key, value]) => {
-      const responseKeys = market.responseKeys as readonly string[];
-      return (
-      responseKeys.includes(key) ||
-      value.altname === market.requestPair ||
-      value.wsname === `${market.symbol}/USD`
-      );
-    }))
-    .map((market) => market.requestPair);
+  const missing = KRAKEN_MARKETS.filter(
+    (market) =>
+      !entries.some(([key, value]) => {
+        const responseKeys = market.responseKeys as readonly string[];
+        return (
+          responseKeys.includes(key) || value.altname === market.requestPair || value.wsname === `${market.symbol}/USD`
+        );
+      }),
+  ).map((market) => market.requestPair);
 
   return {
     provider: "kraken",
@@ -139,9 +136,7 @@ export async function auditBitstamp(fetchImpl: FetchLike = fetch): Promise<Audit
       .filter((entry) => entry.name && (entry.trading == null || entry.trading === "Enabled"))
       .map((entry) => entry.name as string),
   );
-  const missing = BITSTAMP_MARKETS
-    .filter((market) => !activePairs.has(market.pair))
-    .map((market) => market.pair);
+  const missing = BITSTAMP_MARKETS.filter((market) => !activePairs.has(market.pair)).map((market) => market.pair);
   return {
     provider: "bitstamp",
     ok: missing.length === 0,
@@ -159,16 +154,17 @@ export async function auditCoinbase(fetchImpl: FetchLike = fetch): Promise<Audit
   assertArray(payload, "coinbase", "root");
   const activeProducts = new Set(
     payload
-      .filter((entry) => (
-        entry.id &&
-        entry.trading_disabled !== true &&
-        (entry.status == null || entry.status === "online" || entry.status === "internal")
-      ))
+      .filter(
+        (entry) =>
+          entry.id &&
+          entry.trading_disabled !== true &&
+          (entry.status == null || entry.status === "online" || entry.status === "internal"),
+      )
       .map((entry) => entry.id as string),
   );
-  const missing = COINBASE_PRODUCTS
-    .filter((product) => !activeProducts.has(product.productId))
-    .map((product) => product.productId);
+  const missing = COINBASE_PRODUCTS.filter((product) => !activeProducts.has(product.productId)).map(
+    (product) => product.productId,
+  );
   return {
     provider: "coinbase",
     ok: missing.length === 0,
@@ -213,10 +209,12 @@ export async function auditRedstone(fetchImpl: FetchLike = fetch): Promise<Audit
   };
 }
 
-export async function auditOptionalSourceShapes(input: {
-  fetchImpl?: FetchLike;
-  cmcApiKey?: string;
-} = {}): Promise<AuditSection[]> {
+export async function auditOptionalSourceShapes(
+  input: {
+    fetchImpl?: FetchLike;
+    cmcApiKey?: string;
+  } = {},
+): Promise<AuditSection[]> {
   const fetchImpl = input.fetchImpl ?? fetch;
   const sections: AuditSection[] = [];
 
@@ -236,17 +234,16 @@ export async function auditOptionalSourceShapes(input: {
   if (input.cmcApiKey) {
     const cmcPayload = await fetchJson<unknown>(
       "https://pro-api.coinmarketcap.com/v1/cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=1&convert=USD",
-      async (url, init) => fetchImpl(url, {
-        ...init,
-        headers: {
-          ...(init?.headers as Record<string, string> | undefined),
-          "X-CMC_PRO_API_KEY": input.cmcApiKey!,
-        },
-      }),
+      async (url, init) =>
+        fetchImpl(url, {
+          ...init,
+          headers: {
+            ...(init?.headers as Record<string, string> | undefined),
+            "X-CMC_PRO_API_KEY": input.cmcApiKey!,
+          },
+        }),
     );
-    const coins = isRecord(cmcPayload) && isRecord(cmcPayload.data)
-      ? (cmcPayload.data.coins as unknown)
-      : undefined;
+    const coins = isRecord(cmcPayload) && isRecord(cmcPayload.data) ? (cmcPayload.data.coins as unknown) : undefined;
     sections.push({
       provider: "coinmarketcap-shape",
       ok: Array.isArray(coins),
@@ -270,24 +267,25 @@ function printSection(section: AuditSection): void {
   }
 }
 
-export async function runPricingProviderAudit(options: {
-  fetchImpl?: FetchLike;
-  liveSourceShapes?: boolean;
-  cmcApiKey?: string;
-} = {}): Promise<AuditSection[]> {
+export async function runPricingProviderAudit(
+  options: {
+    fetchImpl?: FetchLike;
+    liveSourceShapes?: boolean;
+    cmcApiKey?: string;
+  } = {},
+): Promise<AuditSection[]> {
   const fetchImpl = options.fetchImpl ?? fetch;
-  const sections = await Promise.all([
-    auditBinance(fetchImpl),
-    auditKraken(fetchImpl),
-    auditBitstamp(fetchImpl),
-    auditCoinbase(fetchImpl),
-    auditRedstone(fetchImpl),
-  ]);
+  const sections: AuditSection[] = [];
+  for (const audit of [auditBinance, auditKraken, auditBitstamp, auditCoinbase, auditRedstone]) {
+    sections.push(await audit(fetchImpl));
+  }
   if (options.liveSourceShapes) {
-    sections.push(...await auditOptionalSourceShapes({
-      fetchImpl,
-      cmcApiKey: options.cmcApiKey,
-    }));
+    sections.push(
+      ...(await auditOptionalSourceShapes({
+        fetchImpl,
+        cmcApiKey: options.cmcApiKey,
+      })),
+    );
   }
 
   const failed = sections.filter((section) => !section.ok);

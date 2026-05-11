@@ -19,6 +19,8 @@ export interface EvmRpcOptions {
   maxRetries?: number;
   /** Gas limit for eth_call (hex string, e.g. "0x7A120"). Needed for cross-contract calls. */
   gas?: string;
+  /** Maximum number of calls per Multicall3 aggregate3 request. Defaults to one request for the full input. */
+  multicallBatchSize?: number;
   /** Chain RPC config map (built via buildChainRpcs). Required for RPC URL resolution. */
   chainRpcs?: Map<string, ChainRpcConfig>;
 }
@@ -41,9 +43,162 @@ export interface EvmBlockSearchCache {
   blockTimestampByNumber: Map<number, number>;
 }
 
+export const MULTICALL3_ADDRESS = "0xcA11bde05977b3631167028862bE2a173976CA11";
+
+const MULTICALL3_AGGREGATE3_SELECTOR = "0x82ad56cb";
+
+export interface EvmMulticall3Call {
+  label: string;
+  target: string;
+  callData: string;
+  allowFailure?: boolean;
+}
+
+export interface EvmMulticall3Result {
+  label: string;
+  success: boolean;
+  returnData: `0x${string}`;
+}
+
 interface EvmBlockResult {
   number: string;
   timestamp: string;
+}
+
+function stripHexPrefix(value: string): string {
+  return value.startsWith("0x") ? value.slice(2) : value;
+}
+
+function normalizeEvenHex(value: string): string | null {
+  const body = stripHexPrefix(value);
+  if (body.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(body)) return null;
+  return body.toLowerCase();
+}
+
+function requireEvenHex(value: string, fieldName: string): string {
+  const body = normalizeEvenHex(value);
+  if (body == null) throw new Error(`Invalid ${fieldName}: expected even-length hex`);
+  return body;
+}
+
+function encodeAbiUint(value: bigint | number): string {
+  const uint = typeof value === "bigint" ? value : BigInt(value);
+  if (uint < 0n) throw new Error("ABI uint values must be non-negative");
+  return uint.toString(16).padStart(64, "0");
+}
+
+function encodeAbiBool(value: boolean): string {
+  return encodeAbiUint(value ? 1 : 0);
+}
+
+function encodeAbiAddress(address: string): string {
+  const body = stripHexPrefix(address);
+  if (!/^[0-9a-fA-F]{40}$/.test(body)) {
+    throw new Error("Invalid Multicall3 target: expected 20-byte hex address");
+  }
+  return body.toLowerCase().padStart(64, "0");
+}
+
+function encodeAbiBytes(hexValue: string): string {
+  const body = requireEvenHex(hexValue, "Multicall3 callData");
+  const paddedByteLength = Math.ceil(body.length / 2 / 32) * 32;
+  return `${encodeAbiUint(body.length / 2)}${body.padEnd(paddedByteLength * 2, "0")}`;
+}
+
+function readAbiWord(hexBody: string, byteOffset: number): string | null {
+  if (!Number.isSafeInteger(byteOffset) || byteOffset < 0) return null;
+  const start = byteOffset * 2;
+  const end = start + 64;
+  if (end > hexBody.length) return null;
+  return hexBody.slice(start, end);
+}
+
+function parseAbiWordAsSafeNumber(word: string | null): number | null {
+  if (word == null) return null;
+  const value = BigInt(`0x${word}`);
+  if (value > BigInt(Number.MAX_SAFE_INTEGER)) return null;
+  return Number(value);
+}
+
+function readAbiOffset(hexBody: string, byteOffset: number): number | null {
+  const offset = parseAbiWordAsSafeNumber(readAbiWord(hexBody, byteOffset));
+  if (offset == null || offset % 32 !== 0 || offset > hexBody.length / 2) return null;
+  return offset;
+}
+
+function readAbiBytes(hexBody: string, byteOffset: number): `0x${string}` | null {
+  const byteLength = parseAbiWordAsSafeNumber(readAbiWord(hexBody, byteOffset));
+  if (byteLength == null) return null;
+  const dataStart = byteOffset + 32;
+  const dataEnd = dataStart + byteLength;
+  const paddedEnd = dataStart + Math.ceil(byteLength / 32) * 32;
+  if (dataEnd > hexBody.length / 2 || paddedEnd > hexBody.length / 2) return null;
+  return `0x${hexBody.slice(dataStart * 2, dataEnd * 2)}` as `0x${string}`;
+}
+
+export function encodeMulticall3Aggregate3CallData(calls: readonly EvmMulticall3Call[]): `0x${string}` {
+  const encodedCalls = calls.map((call) => {
+    const encodedCallData = encodeAbiBytes(call.callData);
+    return `${encodeAbiAddress(call.target)}${encodeAbiBool(call.allowFailure ?? true)}${encodeAbiUint(96)}${encodedCallData}`;
+  });
+
+  let nextOffset = calls.length * 32;
+  const offsets = encodedCalls.map((encodedCall) => {
+    const offset = encodeAbiUint(nextOffset);
+    nextOffset += encodedCall.length / 2;
+    return offset;
+  });
+
+  return `${MULTICALL3_AGGREGATE3_SELECTOR}${encodeAbiUint(32)}${encodeAbiUint(calls.length)}${offsets.join("")}${encodedCalls.join("")}` as `0x${string}`;
+}
+
+export function decodeMulticall3Aggregate3Result(
+  result: `0x${string}`,
+  labels: readonly string[],
+): EvmMulticall3Result[] | null {
+  const hexBody = normalizeEvenHex(result);
+  if (hexBody == null || hexBody.length < 64) return null;
+
+  const arrayOffset = readAbiOffset(hexBody, 0);
+  if (arrayOffset == null) return null;
+
+  const length = parseAbiWordAsSafeNumber(readAbiWord(hexBody, arrayOffset));
+  if (length == null || length !== labels.length) return null;
+
+  const elementOffsetBase = arrayOffset + 32;
+  if (elementOffsetBase + length * 32 > hexBody.length / 2) return null;
+
+  const decoded: EvmMulticall3Result[] = [];
+  for (let index = 0; index < length; index += 1) {
+    const relativeOffset = readAbiOffset(hexBody, elementOffsetBase + index * 32);
+    if (relativeOffset == null || relativeOffset < length * 32) return null;
+
+    const tupleStart = elementOffsetBase + relativeOffset;
+    const successWord = parseAbiWordAsSafeNumber(readAbiWord(hexBody, tupleStart));
+    if (successWord !== 0 && successWord !== 1) return null;
+
+    const returnDataOffset = readAbiOffset(hexBody, tupleStart + 32);
+    if (returnDataOffset == null || returnDataOffset < 64) return null;
+
+    const returnData = readAbiBytes(hexBody, tupleStart + returnDataOffset);
+    if (returnData == null) return null;
+
+    decoded.push({
+      label: labels[index],
+      success: successWord === 1,
+      returnData,
+    });
+  }
+
+  return decoded;
+}
+
+function resolveMulticallBatchSize(callsLength: number, rawBatchSize: number | undefined): number {
+  if (rawBatchSize == null || !Number.isSafeInteger(rawBatchSize) || rawBatchSize <= 0 || rawBatchSize >= callsLength) {
+    return callsLength;
+  }
+
+  return rawBatchSize;
 }
 
 function buildRpcUrls(chainId?: string, extraRpcUrls?: string[], chainRpcs?: Map<string, ChainRpcConfig>): string[] {
@@ -97,7 +252,7 @@ async function fetchJsonRpcResult<T>(
         continue;
       }
 
-      const body = await res.json() as JsonRpcEnvelope<unknown>;
+      const body = (await res.json()) as JsonRpcEnvelope<unknown>;
       if (body.error) {
         failures.push(`${rpcUrl}: RPC error ${body.error.code ?? ""} ${body.error.message ?? ""}`);
         continue;
@@ -163,9 +318,7 @@ export async function fetchJsonRpcHexAtUrl(
   options?: Pick<EvmRpcOptions, "signal" | "timeoutMs">,
 ): Promise<`0x${string}` | null> {
   const result = await fetchJsonRpcResult<string>([rpcUrl], method, params, options);
-  return isHexResult(result ?? undefined) && result !== "0x"
-    ? result as `0x${string}`
-    : null;
+  return isHexResult(result ?? undefined) && result !== "0x" ? (result as `0x${string}`) : null;
 }
 
 export async function fetchEvmCallHexAtBlock(
@@ -184,20 +337,47 @@ export async function fetchEvmCallHexAtBlock(
     if (normalizedGas) callObj.gas = normalizedGas;
   }
   const blockTag = toBlockTag(blockNumberOrTag);
-  const result = await fetchJsonRpcResult<string>(
-    urls,
-    "eth_call",
-    [callObj, blockTag],
-    options,
-    {
-      acceptResult: (value): value is `0x${string}` => isHexResult(value as string) && value !== "0x",
-      rejectedReason: () => {
-        return "null result";
-      },
+  const result = await fetchJsonRpcResult<string>(urls, "eth_call", [callObj, blockTag], options, {
+    acceptResult: (value): value is `0x${string}` => isHexResult(value as string) && value !== "0x",
+    rejectedReason: () => {
+      return "null result";
     },
-  );
+  });
 
   return result as `0x${string}` | null;
+}
+
+export async function fetchEvmMulticall3Aggregate3AtBlock(
+  chainId: string | undefined,
+  calls: readonly EvmMulticall3Call[],
+  blockNumberOrTag: number | "latest" = "latest",
+  options?: EvmRpcOptions,
+): Promise<EvmMulticall3Result[] | null> {
+  if (calls.length === 0) return [];
+
+  const batchSize = resolveMulticallBatchSize(calls.length, options?.multicallBatchSize);
+  const decodedResults: EvmMulticall3Result[] = [];
+
+  for (let start = 0; start < calls.length; start += batchSize) {
+    const batch = calls.slice(start, start + batchSize);
+    const result = await fetchEvmCallHexAtBlock(
+      chainId,
+      MULTICALL3_ADDRESS,
+      encodeMulticall3Aggregate3CallData(batch),
+      blockNumberOrTag,
+      options,
+    );
+    if (result == null) return null;
+
+    const decoded = decodeMulticall3Aggregate3Result(
+      result,
+      batch.map((call) => call.label),
+    );
+    if (decoded == null) return null;
+    decodedResults.push(...decoded);
+  }
+
+  return decodedResults;
 }
 
 export async function fetchEvmUint256AtBlock(
@@ -211,9 +391,7 @@ export async function fetchEvmUint256AtBlock(
   return parseUint256Hex(result);
 }
 
-export async function fetchEtherscanProxyHex(
-  request: EtherscanProxyRequest,
-): Promise<`0x${string}` | null> {
+export async function fetchEtherscanProxyHex(request: EtherscanProxyRequest): Promise<`0x${string}` | null> {
   if (!request.apiKey) return null;
 
   const params = new URLSearchParams({
@@ -244,7 +422,7 @@ export async function fetchEtherscanProxyHex(
   );
   if (!res?.ok) return null;
 
-  const body = await res.json() as JsonRpcEnvelope<string>;
+  const body = (await res.json()) as JsonRpcEnvelope<string>;
   if (body.error) return null;
   if (!isHexResult(body.result ?? undefined) || body.result === "0x") return null;
   return body.result as `0x${string}`;
@@ -270,10 +448,7 @@ export async function fetchEtherscanUint256AtBlock(
   return parseUint256Hex(result);
 }
 
-export async function fetchEvmBlockNumber(
-  chainId: string,
-  options?: EvmRpcOptions,
-): Promise<number | null> {
+export async function fetchEvmBlockNumber(chainId: string, options?: EvmRpcOptions): Promise<number | null> {
   const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
   if (urls.length === 0) return null;
 

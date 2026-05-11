@@ -44,14 +44,36 @@
   "deploymentModel": "single-chain",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",
-  "infrastructures": [
-    "liquity-v1"
-  ],
+  "infrastructures": ["liquity-v1"],
   "reserves": [
     {
       "name": "ETH",
       "pct": 100,
       "risk": "very-low"
     }
-  ]
+  ],
+  "liveReservesConfig": {
+    "adapter": "yamato",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "cjpy-yamato",
+    "display": {
+      "url": "https://docs.yamato.fi/readme/kontorakutoadoresu",
+      "label": "Yamato Docs"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "yamatoAddress": "0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257",
+      "slice": {
+        "name": "ETH",
+        "risk": "very-low"
+      }
+    }
+  }
 }
