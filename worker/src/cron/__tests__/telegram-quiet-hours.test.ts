@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { isQuietHoursActive } from "../telegram-quiet-hours";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DISAMBIGUATION_TTL_SEC } from "../../api/telegram-webhook-shared";
+import { cleanExpiredDisambiguations, isQuietHoursActive } from "../telegram-quiet-hours";
 
 const hour = (hourUtc: number) => hourUtc * 3600;
 
@@ -24,5 +25,118 @@ describe("isQuietHoursActive", () => {
     expect(isQuietHoursActive(hour(2), true, 22, 6)).toBe(true);
     expect(isQuietHoursActive(hour(6), true, 22, 6)).toBe(false);
     expect(isQuietHoursActive(hour(12), true, 22, 6)).toBe(false);
+  });
+});
+
+interface DisambiguationRow {
+  chat_id: string;
+  expires_at: number;
+}
+
+function createStubDb(rows: DisambiguationRow[]): D1Database {
+  function prepare(sql: string): D1PreparedStatement {
+    let bound: unknown[] = [];
+    const stmt = {
+      bind: (...args: unknown[]) => {
+        bound = args;
+        return stmt as unknown as D1PreparedStatement;
+      },
+      run: async () => {
+        if (sql.startsWith("DELETE FROM telegram_pending_disambiguation WHERE expires_at <")) {
+          const [cutoff] = bound as [number];
+          let removed = 0;
+          for (let i = rows.length - 1; i >= 0; i--) {
+            if (rows[i].expires_at < cutoff) {
+              rows.splice(i, 1);
+              removed += 1;
+            }
+          }
+          return { success: true, meta: { changes: removed } };
+        }
+        return { success: true, meta: { changes: 0 } };
+      },
+      first: async () => null,
+      all: async () => ({ results: [], success: true, meta: {} }),
+    };
+    return stmt as unknown as D1PreparedStatement;
+  }
+
+  return {
+    prepare,
+    batch: async () => [],
+    exec: async () => ({ count: 0, duration: 0 }),
+    dump: async () => new ArrayBuffer(0),
+  } as unknown as D1Database;
+}
+
+describe("cleanExpiredDisambiguations", () => {
+  const NOW_SEC = 1_800_000_000;
+  const GRACE_SEC = Math.max(2 * DISAMBIGUATION_TTL_SEC, 600);
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("throws before any D1 work when the signal is already aborted", async () => {
+    const rows: DisambiguationRow[] = [{ chat_id: "1", expires_at: NOW_SEC - GRACE_SEC - 60 }];
+    const db = createStubDb(rows);
+    const controller = new AbortController();
+    controller.abort(new Error("aborted"));
+
+    await expect(cleanExpiredDisambiguations(db, controller.signal)).rejects.toThrow("aborted");
+    expect(rows).toHaveLength(1);
+  });
+
+  it("removes rows whose expires_at is older than the grace window", async () => {
+    const rows: DisambiguationRow[] = [
+      { chat_id: "old", expires_at: NOW_SEC - GRACE_SEC - 60 },
+      { chat_id: "older", expires_at: NOW_SEC - GRACE_SEC - 3600 },
+    ];
+    const db = createStubDb(rows);
+
+    const result = await cleanExpiredDisambiguations(db);
+
+    expect(rows).toHaveLength(0);
+    expect(result.itemCount).toBe(2);
+    expect(result.status).toBe("ok");
+    const metadata = JSON.parse(result.metadata!) as {
+      disambiguationRowsCleaned: number;
+      cutoffSec: number;
+    };
+    expect(metadata.disambiguationRowsCleaned).toBe(2);
+    expect(metadata.cutoffSec).toBe(NOW_SEC - GRACE_SEC);
+  });
+
+  it("preserves rows within the grace window (still inside active TTL or recently expired)", async () => {
+    const rows: DisambiguationRow[] = [
+      // Active selection — expires_at is in the future.
+      { chat_id: "active", expires_at: NOW_SEC + 60 },
+      // Just expired, well within the grace window.
+      { chat_id: "fresh-expired", expires_at: NOW_SEC - 30 },
+      // Expired exactly at the cutoff boundary — strict `<` keeps it.
+      { chat_id: "boundary", expires_at: NOW_SEC - GRACE_SEC },
+    ];
+    const db = createStubDb(rows);
+
+    const result = await cleanExpiredDisambiguations(db);
+
+    expect(rows.map((row) => row.chat_id)).toEqual(["active", "fresh-expired", "boundary"]);
+    expect(result.itemCount).toBe(0);
+  });
+
+  it("reports zero cleaned when the table is empty", async () => {
+    const db = createStubDb([]);
+
+    const result = await cleanExpiredDisambiguations(db);
+
+    expect(result.itemCount).toBe(0);
+    expect(result.status).toBe("ok");
+    const metadata = JSON.parse(result.metadata!) as { disambiguationRowsCleaned: number };
+    expect(metadata.disambiguationRowsCleaned).toBe(0);
   });
 });

@@ -207,6 +207,7 @@ Ticker parsing lives in `worker/src/lib/telegram-alerts.ts` and is built from `T
 - Ambiguous symbols create a row in `telegram_pending_disambiguation`.
 - Users reply with `1` or `1,2` style selections.
 - Pending disambiguation rows expire after `5 minutes`.
+- Expired rows are swept by the `telegram-disambiguation-cleanup` job on the 5-minute Telegram cron slot once `expires_at` is older than `2 * DISAMBIGUATION_TTL_SEC` (10 min minimum) so a slow user mid-selection is not raced. The pass emits `disambiguationRowsCleaned` in its run metadata.
 - Pending rows record the initiating Telegram user when Telegram provides `message.from.id`; in groups, only that user can complete or cancel the selection.
 - Unknown tickers return a contextual error, with a prefix-based suggestion when available.
 - Unknown preset aliases are reported through the same contextual error path, with `/presets` suggested as the discovery surface.
