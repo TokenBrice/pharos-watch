@@ -40,6 +40,7 @@ import {
 } from "./telegram-pending-queue";
 import {
   buildSubscriberQueue,
+  emptyPerAlertTypeDelivery,
   routeAlertEvents,
   type AlertsByChatEntry,
   type SubscriberRow,
@@ -115,6 +116,7 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     presetQueryFailures: 0,
     presetResolutionFailures: 0,
     presetFailure: false,
+    perAlertType: emptyPerAlertTypeDelivery(),
   };
 }
 
@@ -390,6 +392,8 @@ export async function dispatchTelegramAlerts(
   if (!allowed) {
     return { itemCount: 0, metadata: JSON.stringify({ skipped: "circuit-open" }) };
   }
+
+  const dispatchStartedAtMs = Date.now();
 
   try {
     throwIfAborted(signal);
@@ -706,6 +710,7 @@ export async function dispatchTelegramAlerts(
       freshDeferredPerChat,
       pendingEnqueued,
       cappedAtLimit,
+      perAlertType,
     } = await deliverTelegramSubscriberQueue({
       db,
       botToken,
@@ -714,6 +719,7 @@ export async function dispatchTelegramAlerts(
       maxMessagesPerRun: MAX_MESSAGES_PER_RUN,
       nowSec,
       chatsInBackoff,
+      dispatchStartedAtMs,
       signal,
     });
 
@@ -766,6 +772,7 @@ export async function dispatchTelegramAlerts(
       presetQueryFailures: 0,
       presetResolutionFailures: 0,
       presetFailure: false,
+      perAlertType,
     };
 
     const attemptedMessages = result.pendingAttempted + result.freshAttempted;

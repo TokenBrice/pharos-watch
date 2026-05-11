@@ -9,8 +9,48 @@ import {
   SEND_BATCH_SIZE,
   disableBlockedSubscriber,
 } from "./telegram-pending-queue";
+import type {
+  PerAlertTypeDelivery,
+  PerAlertTypeDeliveryStats,
+  TelegramAlertType,
+} from "@shared/types/status";
 
 type AlertAppender<T> = (alerts: ConsolidatedAlerts) => T[];
+
+/**
+ * Priority used to pick the "dominant" type for a consolidated message.
+ * Depeg fires on live price action and is the most operationally urgent,
+ * followed by DEWS (stress), safety (grade movement), then launch (info).
+ * Used purely for delivery-metric attribution.
+ */
+const ALERT_TYPE_PRIORITY: readonly TelegramAlertType[] = ["depeg", "dews", "safety", "launch"];
+
+export const TELEGRAM_ALERT_TYPES: readonly TelegramAlertType[] = ["dews", "depeg", "safety", "launch"];
+
+function emptyPerAlertTypeStats(): PerAlertTypeDeliveryStats {
+  return { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null };
+}
+
+export function emptyPerAlertTypeDelivery(): PerAlertTypeDelivery {
+  return {
+    dews: emptyPerAlertTypeStats(),
+    depeg: emptyPerAlertTypeStats(),
+    safety: emptyPerAlertTypeStats(),
+    launch: emptyPerAlertTypeStats(),
+  };
+}
+
+export function dominantAlertType(alerts: ConsolidatedAlerts): TelegramAlertType {
+  if (alerts.depegTriggered.length + alerts.depegResolved.length + alerts.depegWorsening.length > 0) {
+    return "depeg";
+  }
+  if (alerts.dews.length > 0) return "dews";
+  if (alerts.safety.length > 0) return "safety";
+  if (alerts.launch.length > 0) return "launch";
+  // Fallback: an empty consolidated alert should not reach this path. Pick the
+  // lowest-priority type so we never crash on metric attribution.
+  return ALERT_TYPE_PRIORITY[ALERT_TYPE_PRIORITY.length - 1];
+}
 
 export interface SubscriberRow {
   chat_id: string;
@@ -41,6 +81,7 @@ export interface RoutedSubscriberAlert {
   canonicalHtml: string;
   chunks: string[];
   disableNotification: boolean;
+  alertType: TelegramAlertType;
 }
 
 export interface FreshSendOutcome {
@@ -51,6 +92,7 @@ export interface FreshSendOutcome {
   blockedUsersCleanupFailed: number;
   blockedChats: Set<string>;
   retryableFreshMessages: Array<{ message: BatchMessage; result: BatchResult }>;
+  perAlertType: PerAlertTypeDelivery;
 }
 
 function emptyAlerts(): ConsolidatedAlerts {
@@ -127,6 +169,7 @@ export function buildSubscriberQueue(
         canonicalHtml,
         chunks: splitMessage(canonicalHtml),
         disableNotification: resolveDisableNotification(entry),
+        alertType: dominantAlertType(entry.alerts),
       };
     })
     .sort((a, b) => b.lastActiveAt - a.lastActiveAt);
@@ -178,6 +221,7 @@ export function expandSubscriberChunks(
         disableNotification: sub.disableNotification,
         replyMarkup: buildAlertReplyMarkup(sub.alerts, chunkIndex),
         chunkIndex,
+        alertType: sub.alertType,
       });
     }
   }
@@ -191,6 +235,7 @@ export async function deliverFreshAlerts(
   botToken: string,
   blockedUsersCleanedUpSeed: number,
   blockedUsersCleanupFailedSeed: number,
+  dispatchStartedAtMs: number,
   signal?: AbortSignal,
 ): Promise<FreshSendOutcome> {
   const sendResults = sendList.length > 0
@@ -199,6 +244,7 @@ export async function deliverFreshAlerts(
   const blockedChats = new Set<string>();
   const retryableFreshMessages: Array<{ message: BatchMessage; result: BatchResult }> = [];
   const resultsByChat = new Map<string, BatchResult[]>();
+  const perAlertType = emptyPerAlertTypeDelivery();
   let subscribersNotified = 0;
   let freshSent = 0;
   let freshPermanentFailures = 0;
@@ -214,8 +260,17 @@ export async function deliverFreshAlerts(
     existing.push(result);
     resultsByChat.set(result.chatId, existing);
 
+    const alertType: TelegramAlertType | undefined = sendPlan.alertType;
+    const bucket = alertType ? perAlertType[alertType] : null;
+
     if (result.ok) {
       freshSent++;
+      if (bucket) {
+        bucket.sent++;
+        if (bucket.firstSendLatencyMs == null) {
+          bucket.firstSendLatencyMs = Math.max(0, Date.now() - dispatchStartedAtMs);
+        }
+      }
       continue;
     }
 
@@ -228,13 +283,16 @@ export async function deliverFreshAlerts(
           blockedUsersCleanupFailed++;
         }
       }
+      if (bucket) bucket.blocked++;
       continue;
     }
 
     if (result.retryable) {
       retryableFreshMessages.push({ message: sendPlan, result });
+      if (bucket) bucket.enqueued++;
     } else {
       freshPermanentFailures++;
+      if (bucket) bucket.failed++;
     }
   }
 
@@ -254,5 +312,6 @@ export async function deliverFreshAlerts(
     blockedUsersCleanupFailed,
     blockedChats,
     retryableFreshMessages,
+    perAlertType,
   };
 }

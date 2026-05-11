@@ -97,6 +97,25 @@ describe("status-metadata", () => {
         launch: 5,
         suppressedMethodologyChanges: 6,
       },
+      perAlertType: null,
+    });
+  });
+
+  it("parses perAlertType delivery stats per category with defensive defaults", () => {
+    const metadata = parseTelegramDispatchCronMetadata({
+      perAlertType: {
+        dews: { sent: "3", enqueued: 1, failed: 0, blocked: "0", firstSendLatencyMs: "240" },
+        depeg: { sent: 1, enqueued: "2", failed: 1, blocked: 0, firstSendLatencyMs: null },
+        // safety omitted — should fall back to zeroed stats with null latency.
+        launch: {},
+      },
+    });
+
+    expect(metadata?.perAlertType).toEqual({
+      dews: { sent: 3, enqueued: 1, failed: 0, blocked: 0, firstSendLatencyMs: 240 },
+      depeg: { sent: 1, enqueued: 2, failed: 1, blocked: 0, firstSendLatencyMs: null },
+      safety: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
+      launch: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
     });
   });
 });

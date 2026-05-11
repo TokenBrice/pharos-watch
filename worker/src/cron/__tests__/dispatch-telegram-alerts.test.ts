@@ -1956,4 +1956,152 @@ describe("dispatchTelegramAlerts", () => {
     );
     expect(counterWrite?.[2]).toBe("0");
   });
+  it("attributes per-alert-type delivery stats by dominant category", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    // Subscriber A receives only a DEWS change → dominant = dews.
+    // Subscriber B receives only a launch promotion → dominant = launch.
+    // Subscriber C receives only a depeg trigger → dominant = depeg.
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") return { value: JSON.stringify({}), updatedAt: now - 60 };
+      if (key === "alert:safety-snapshot") return { value: JSON.stringify({}), updatedAt: now - 60 };
+      if (key === "alert:launch-snapshot") return { value: JSON.stringify([]), updatedAt: now - 60 };
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "WHERE alert_snooze_until_ts IS NOT NULL", rows: [] },
+      {
+        match: "FROM stress_signals",
+        rows: [{ stablecoin_id: "usdc-circle", score: 42, band: "ALERT", signals_json: "{}" }],
+      },
+      {
+        match: "FROM depeg_events WHERE ended_at IS NULL",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            symbol: "USDC",
+            direction: "below",
+            peak_deviation_bps: 125,
+            start_price: 0.9875,
+            peg_reference: 1,
+          },
+        ],
+      },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      {
+        match: "sub.alert_dews = 1",
+        rows: [{ stablecoin_id: "usdc-circle", chat_id: "A", last_active_at: now }],
+      },
+      {
+        match: "sub.alert_depeg = 1",
+        rows: [{ stablecoin_id: "usdc-circle", chat_id: "C", last_active_at: now - 10 }],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      perAlertType: Record<string, { sent: number; enqueued: number; failed: number; blocked: number; firstSendLatencyMs: number | null }>;
+      messagesSent: number;
+    };
+
+    expect(metadata.messagesSent).toBe(2);
+    expect(metadata.perAlertType.dews.sent).toBe(1);
+    expect(metadata.perAlertType.depeg.sent).toBe(1);
+    expect(metadata.perAlertType.safety.sent).toBe(0);
+    expect(metadata.perAlertType.launch.sent).toBe(0);
+    expect(metadata.perAlertType.dews.firstSendLatencyMs).not.toBeNull();
+    expect(metadata.perAlertType.depeg.firstSendLatencyMs).not.toBeNull();
+    expect(metadata.perAlertType.safety.firstSendLatencyMs).toBeNull();
+    expect(metadata.perAlertType.launch.firstSendLatencyMs).toBeNull();
+  });
+
+  it("buckets blocked/failed/enqueued by alert type", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    // One DEWS-only subscriber whose send returns blocked → blocked++.
+    // One depeg-only subscriber whose send returns a permanent failure → failed++.
+    mockSendBatch.mockResolvedValueOnce([
+      {
+        chatId: "A",
+        ok: false,
+        blocked: true,
+        retryable: false,
+        permanentFailure: true,
+        statusCode: 403,
+        errorClass: "blocked",
+        delivery: "blocked",
+        retryAfterSec: null,
+      },
+      {
+        chatId: "B",
+        ok: false,
+        blocked: false,
+        retryable: false,
+        permanentFailure: true,
+        statusCode: 400,
+        errorClass: "permanent",
+        delivery: "permanent_failure",
+        retryAfterSec: null,
+      },
+    ]);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") return { value: JSON.stringify({}), updatedAt: now - 60 };
+      if (key === "alert:safety-snapshot") return { value: JSON.stringify({}), updatedAt: now - 60 };
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "WHERE alert_snooze_until_ts IS NOT NULL", rows: [] },
+      {
+        match: "FROM stress_signals",
+        rows: [{ stablecoin_id: "usdc-circle", score: 42, band: "ALERT", signals_json: "{}" }],
+      },
+      {
+        match: "FROM depeg_events WHERE ended_at IS NULL",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            symbol: "USDC",
+            direction: "below",
+            peak_deviation_bps: 125,
+            start_price: 0.9875,
+            peg_reference: 1,
+          },
+        ],
+      },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      {
+        match: "sub.alert_dews = 1",
+        rows: [{ stablecoin_id: "usdc-circle", chat_id: "A", last_active_at: now }],
+      },
+      {
+        match: "sub.alert_depeg = 1",
+        rows: [{ stablecoin_id: "usdc-circle", chat_id: "B", last_active_at: now - 10 }],
+      },
+      { match: "UPDATE telegram_subscribers", rows: [] },
+      { match: "UPDATE telegram_subscriptions", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      perAlertType: Record<string, { sent: number; enqueued: number; failed: number; blocked: number; firstSendLatencyMs: number | null }>;
+    };
+
+    expect(metadata.perAlertType.dews.blocked).toBe(1);
+    expect(metadata.perAlertType.dews.sent).toBe(0);
+    expect(metadata.perAlertType.depeg.failed).toBe(1);
+    expect(metadata.perAlertType.depeg.sent).toBe(0);
+  });
 });

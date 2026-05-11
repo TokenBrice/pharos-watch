@@ -261,6 +261,13 @@ export interface BatchMessage {
    * key survives unrelated changes to `splitMessage`.
    */
   canonicalHtml?: string;
+  /**
+   * Dominant alert type for the consolidated message this chunk belongs to.
+   * Set by the dispatch router for fresh sends so the delivery loop can
+   * aggregate per-type delivery metrics. Pending-queue replays do not carry
+   * a type because the persisted row only stores the rendered HTML.
+   */
+  alertType?: import("@shared/types/status").TelegramAlertType;
 }
 
 export interface BatchResult {

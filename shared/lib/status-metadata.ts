@@ -1,4 +1,11 @@
-import type { TelegramDispatchCronMetadata } from "../types/status";
+import type {
+  PerAlertTypeDelivery,
+  PerAlertTypeDeliveryStats,
+  TelegramAlertType,
+  TelegramDispatchCronMetadata,
+} from "../types/status";
+
+const TELEGRAM_ALERT_TYPES: readonly TelegramAlertType[] = ["dews", "depeg", "safety", "launch"];
 
 /**
  * Maps each tracked cache key to the primary upstream provider whose outage
@@ -44,6 +51,31 @@ export function readMetadataBoolean(value: unknown): boolean | null {
     if (value === "false") return false;
   }
   return null;
+}
+
+function parsePerAlertTypeStats(value: unknown): PerAlertTypeDeliveryStats {
+  const record = readMetadataRecord(value);
+  // `firstSendLatencyMs` is intentionally nullable to mean "no successful send
+  // recorded for this category". `readMetadataNumber(null)` returns 0 because
+  // `Number(null) === 0`, so guard explicitly to preserve the null signal.
+  const rawLatency = record?.firstSendLatencyMs;
+  return {
+    sent: readMetadataNumber(record?.sent) ?? 0,
+    enqueued: readMetadataNumber(record?.enqueued) ?? 0,
+    failed: readMetadataNumber(record?.failed) ?? 0,
+    blocked: readMetadataNumber(record?.blocked) ?? 0,
+    firstSendLatencyMs: rawLatency == null ? null : readMetadataNumber(rawLatency),
+  };
+}
+
+function parsePerAlertTypeDelivery(value: unknown): PerAlertTypeDelivery | null {
+  const record = readMetadataRecord(value);
+  if (!record) return null;
+  const result = {} as PerAlertTypeDelivery;
+  for (const type of TELEGRAM_ALERT_TYPES) {
+    result[type] = parsePerAlertTypeStats(record[type]);
+  }
+  return result;
 }
 
 export function parseTelegramDispatchCronMetadata(value: unknown): TelegramDispatchCronMetadata | null {
@@ -96,5 +128,6 @@ export function parseTelegramDispatchCronMetadata(value: unknown): TelegramDispa
           suppressedMethodologyChanges: readMetadataNumber(eventsRecord.suppressedMethodologyChanges),
         }
       : null,
+    perAlertType: parsePerAlertTypeDelivery(record.perAlertType),
   };
 }

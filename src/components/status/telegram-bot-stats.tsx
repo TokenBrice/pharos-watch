@@ -1,8 +1,15 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
-import type { StatusResponse, StatusSectionError } from "@shared/types";
+import type { StatusResponse, StatusSectionError, TelegramAlertType } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
+
+const PER_ALERT_TYPE_LABELS: Record<TelegramAlertType, string> = {
+  dews: "DEWS",
+  depeg: "Depeg",
+  safety: "Safety",
+  launch: "Launch",
+};
 
 interface TelegramBotStatsProps {
   telegramBot: StatusResponse["telegramBot"];
@@ -154,6 +161,34 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
                 {renderDelta("Safety changes", dispatchMeta?.eventsDetected?.safety ?? null)}
                 {renderDelta("Launch changes", dispatchMeta?.eventsDetected?.launch ?? null)}
                 {renderDelta("Methodology suppressions", dispatchMeta?.eventsDetected?.suppressedMethodologyChanges ?? null)}
+                {dispatchMeta?.perAlertType ? (
+                  <div className="border-t pt-3">
+                    <div className="mb-2 text-xs font-medium text-muted-foreground">
+                      Per-alert-type delivery
+                    </div>
+                    <div className="space-y-1.5 text-xs">
+                      {(Object.keys(PER_ALERT_TYPE_LABELS) as TelegramAlertType[]).map((type) => {
+                        const stats = dispatchMeta.perAlertType?.[type];
+                        if (!stats) return null;
+                        return (
+                          <div
+                            key={type}
+                            className="grid grid-cols-[6rem_repeat(4,minmax(0,1fr))_minmax(0,1.25fr)] items-center gap-2 font-mono tabular-nums"
+                          >
+                            <span className="text-sm font-medium text-foreground">{PER_ALERT_TYPE_LABELS[type]}</span>
+                            <span title="sent">sent {stats.sent}</span>
+                            <span title="enqueued">enq {stats.enqueued}</span>
+                            <span title="failed">fail {stats.failed}</span>
+                            <span title="blocked">blk {stats.blocked}</span>
+                            <span className="text-muted-foreground" title="first send latency">
+                              {stats.firstSendLatencyMs != null ? `${stats.firstSendLatencyMs}ms` : "—"}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="flex flex-wrap gap-2 pt-1">
                   {dispatchMeta?.snapshotSeeded ? <Badge variant="secondary">snapshot reseeded</Badge> : null}
                   {dispatchMeta?.cappedAtLimit ? <Badge variant="secondary">hit message cap</Badge> : null}

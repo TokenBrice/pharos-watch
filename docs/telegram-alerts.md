@@ -471,6 +471,27 @@ Additional Telegram bot status metrics now include:
 
 The watchdog is wired through `runBestEffortScheduledJob` so its own failures never block the dispatch lane, and its metadata captures `triggered`, `recovered`, and `alertSent` flags per condition for admin inspection via `cron_runs`.
 
+### Per-alert-type delivery breakdown
+
+The dispatch metadata also exposes a `perAlertType` map covering each of the four
+alert categories: `dews`, `depeg`, `safety`, `launch`. Each entry reports the
+delivery outcome for that category in the latest run so operators can spot
+"DEWS delivery fine but safety alerts stalled" at a glance:
+
+- `sent` — chunks that delivered successfully on this run.
+- `enqueued` — chunks deferred to the pending queue (rate-limit overflow,
+  capacity overflow, or retryable failure).
+- `failed` — permanent failures (non-retryable, non-blocked).
+- `blocked` — chunks where the chat returned a "blocked" delivery class.
+- `firstSendLatencyMs` — wall-clock latency from the start of the dispatch
+  run to the first successful send of that category, or `null` if none sent.
+
+A consolidated message can mix multiple alert categories for a single chat.
+Attribution uses the chat's "dominant" alert type with priority order
+`depeg > dews > safety > launch`, since depeg is the most time-sensitive
+event. Pending-queue replays are not attributed because the persisted row
+stores only the rendered HTML.
+
 ### Circuit Breaker
 
 The dispatcher is protected by `CIRCUIT_SOURCE.TELEGRAM_API`.

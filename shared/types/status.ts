@@ -288,6 +288,19 @@ export interface TelegramDispatchEventsDetected {
   suppressedMethodologyChanges: number;
 }
 
+/** The four alert categories tracked by the Telegram dispatcher. */
+export type TelegramAlertType = "dews" | "depeg" | "safety" | "launch";
+
+export interface PerAlertTypeDeliveryStats {
+  sent: number;
+  enqueued: number;
+  failed: number;
+  blocked: number;
+  firstSendLatencyMs: number | null;
+}
+
+export type PerAlertTypeDelivery = Record<TelegramAlertType, PerAlertTypeDeliveryStats>;
+
 export type SafetyAlertSourceState = "ok" | "missing" | "corrupt" | "stale" | "wrong-generation";
 
 export interface TelegramDispatchCronResult {
@@ -327,6 +340,7 @@ export interface TelegramDispatchCronResult {
   presetResolutionFailures: number;
   presetFailure: boolean;
   eventsDetected: TelegramDispatchEventsDetected;
+  perAlertType: PerAlertTypeDelivery;
 }
 
 export interface ParsedTelegramDispatchEventsDetected {
@@ -374,6 +388,7 @@ export interface TelegramDispatchCronMetadata {
   presetResolutionFailures: number | null;
   presetFailure: boolean;
   eventsDetected: ParsedTelegramDispatchEventsDetected | null;
+  perAlertType: PerAlertTypeDelivery | null;
 }
 
 export interface DiscoveryCandidate {

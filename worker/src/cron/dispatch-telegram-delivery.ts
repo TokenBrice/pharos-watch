@@ -9,6 +9,7 @@ import {
   splitFreshQueue,
   type RoutedSubscriberAlert,
 } from "./dispatch-telegram-routing";
+import type { PerAlertTypeDelivery } from "@shared/types/status";
 
 interface DeliverTelegramSubscriberQueueOptions {
   db: D1Database;
@@ -18,6 +19,7 @@ interface DeliverTelegramSubscriberQueueOptions {
   maxMessagesPerRun: number;
   nowSec: number;
   chatsInBackoff: ReadonlySet<string>;
+  dispatchStartedAtMs: number;
   signal?: AbortSignal;
 }
 
@@ -32,6 +34,7 @@ export interface DeliverTelegramSubscriberQueueResult {
   freshDeferredPerChat: number;
   pendingEnqueued: number;
   cappedAtLimit: boolean;
+  perAlertType: PerAlertTypeDelivery;
 }
 
 export async function deliverTelegramSubscriberQueue({
@@ -42,6 +45,7 @@ export async function deliverTelegramSubscriberQueue({
   maxMessagesPerRun,
   nowSec,
   chatsInBackoff,
+  dispatchStartedAtMs,
   signal,
 }: DeliverTelegramSubscriberQueueOptions): Promise<DeliverTelegramSubscriberQueueResult> {
   const freshBudget = Math.max(0, maxMessagesPerRun - drainResult.attempted);
@@ -59,6 +63,7 @@ export async function deliverTelegramSubscriberQueue({
     blockedUsersCleanupFailed,
     blockedChats,
     retryableFreshMessages,
+    perAlertType,
   } = await deliverFreshAlerts(
     db,
     sendList,
@@ -66,9 +71,18 @@ export async function deliverTelegramSubscriberQueue({
     botToken,
     drainResult.blocked - drainResult.blockedCleanupFailed,
     drainResult.blockedCleanupFailed,
+    dispatchStartedAtMs,
     signal,
   );
   const overflowMessages = expandSubscriberChunks(toEnqueue, blockedChats);
+
+  // Attribute capacity-overflow enqueues to each subscriber's dominant alert
+  // type. Retry-queued enqueues were already counted inside deliverFreshAlerts
+  // since they are per-chunk and tagged on the BatchMessage.
+  for (const sub of toEnqueue) {
+    if (blockedChats.has(sub.chatId)) continue;
+    perAlertType[sub.alertType].enqueued += sub.chunks.length;
+  }
 
   if (overflowMessages.length > 0) {
     await enqueuePendingAlerts(db, overflowMessages, nowSec, {});
@@ -98,5 +112,6 @@ export async function deliverTelegramSubscriberQueue({
     freshDeferredPerChat: deferredPerChat.length,
     pendingEnqueued: overflowMessages.length + retryableFreshMessages.length,
     cappedAtLimit: cappedOverflow > 0,
+    perAlertType,
   };
 }
