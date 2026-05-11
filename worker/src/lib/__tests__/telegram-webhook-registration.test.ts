@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import {
   buildTelegramWebhookUrl,
+  reconcileTelegramCommandRegistration,
   reconcileTelegramWebhookRegistration,
+  TELEGRAM_BOT_COMMANDS,
 } from "../telegram-webhook-registration";
 
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
@@ -28,6 +30,13 @@ async function expectedWebhookCacheValue(
       present: true,
       marker: await secretTokenMarker(secret),
     },
+  });
+}
+
+function expectedCommandsCacheValue(): string {
+  return JSON.stringify({
+    version: 1,
+    commands: TELEGRAM_BOT_COMMANDS,
   });
 }
 
@@ -261,5 +270,110 @@ describe("reconcileTelegramWebhookRegistration", () => {
         selfUrl: "https://api.pharos.watch",
       }),
     ).rejects.toThrow("Telegram setWebhook rejected registration");
+  });
+});
+
+describe("reconcileTelegramCommandRegistration", () => {
+  beforeEach(() => {
+    fetchSpy.mockReset();
+  });
+
+  it("skips the Telegram API call when the command reconciliation cache is still fresh", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:commands-reconciled"],
+        rows: [{ value: expectedCommandsCacheValue(), updated_at: nowSec }],
+      },
+    ], { requireMatch: true });
+
+    const result = await reconcileTelegramCommandRegistration(db, {
+      botToken: "bot-token",
+    });
+
+    expect(result).toEqual({
+      attempted: false,
+      skipped: true,
+      reason: "fresh-cache",
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("registers native slash-command suggestions and records the reconciliation cache", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:commands-reconciled"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+        rows: [],
+      },
+    ], { requireMatch: true });
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const result = await reconcileTelegramCommandRegistration(db, {
+      botToken: "bot-token",
+    });
+
+    expect(result).toEqual({
+      attempted: true,
+      skipped: false,
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe("https://api.telegram.org/botbot-token/setMyCommands");
+    const body = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
+    expect(body).toEqual({
+      commands: TELEGRAM_BOT_COMMANDS,
+    });
+    expect(body.commands.map((entry: { command: string }) => entry.command)).toEqual([
+      "start",
+      "help",
+      "status",
+      "brief",
+      "top",
+      "why",
+      "coverage",
+      "list",
+      "subscribe",
+      "unsubscribe",
+      "presets",
+      "set",
+      "mute",
+      "unsnooze",
+      "unmutehours",
+      "cancel",
+    ]);
+
+    const writes = db.getHistory().filter((entry) =>
+      entry.sql.includes("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)"),
+    );
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.binds[0]).toBe("telegram:commands-reconciled");
+    expect(writes[0]?.binds[1]).toBe(expectedCommandsCacheValue());
+    expect(typeof writes[0]?.binds[2]).toBe("number");
+  });
+
+  it("throws when Telegram rejects command registration", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:commands-reconciled"],
+        rows: [],
+        first: null,
+      },
+    ], { requireMatch: true });
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: false, description: "Bad Request: command is invalid" }), { status: 200 }),
+    );
+
+    await expect(
+      reconcileTelegramCommandRegistration(db, {
+        botToken: "bot-token",
+      }),
+    ).rejects.toThrow("Telegram setMyCommands rejected registration");
   });
 });
