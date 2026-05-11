@@ -435,6 +435,18 @@ Formatting helpers in `worker/src/lib/telegram-alerts.ts` emit:
 - Safety-grade changes with old/new grade and score when present
 - One contextual line when cached report-card, liquidity, or supply data is available for the affected coin
 
+Subscriber alert messages no longer carry a top-level `Pharos Alerts` header — the alert body starts directly with the first section. Each alert line is prefixed with a data-tied glyph so a subscriber can triage at a glance. These glyphs are a sanctioned exception to the repo's no-emoji rule because each one encodes a specific data dimension; **any future addition to the glyph set requires a separate review**.
+
+| Glyph | Meaning | Applied to |
+|-------|---------|------------|
+| `▲` | Price above peg | Depeg-triggered and depeg-worsening lines with `direction = above` |
+| `▼` | Price below peg | Depeg-triggered and depeg-worsening lines with `direction = below` |
+| `🟢` | DEWS `CALM` | DEWS band transition lines |
+| `🟡` | DEWS `WATCH` and `ALERT` | DEWS band transition lines |
+| `🟠` | DEWS `WARNING` | DEWS band transition lines |
+| `🔴` | DEWS `DANGER` | DEWS band transition lines |
+| `✦` | Launch promotion | Newly tracked stablecoin lines |
+
 Subscriber alert messages end with a `View on Pharos` link. Telegram digest posts end with `Read on Pharos →`, even when cemetery or tracking appendices are present.
 
 ## Digest vs Subscriber Alerts

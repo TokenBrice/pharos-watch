@@ -383,18 +383,39 @@ export const SNOOZE_REPLY_MARKUP = {
   ]],
 } as const;
 
+// Data-tied glyphs for alert lines. These are a sanctioned exception to the
+// CLAUDE.md no-emoji rule: each glyph encodes a specific data dimension
+// (depeg direction, DEWS severity, launch promotion). Any future addition to
+// this set requires a separate review — do not strip these without coordination.
+const DEPEG_DIRECTION_GLYPH = { above: "▲", below: "▼" } as const;
+const DEWS_SEVERITY_GLYPH: Record<string, string> = {
+  CALM: "🟢",
+  WATCH: "🟡",
+  ALERT: "🟡",
+  WARNING: "🟠",
+  DANGER: "🔴",
+};
+const LAUNCH_GLYPH = "✦";
+
+function dewsGlyphFor(band: string): string {
+  return DEWS_SEVERITY_GLYPH[band] ?? "";
+}
+
 export function formatDewsLine(e: DewsChange): string {
   // DEWS sub-signal values are already 0-100 integers (see SignalResult in worker/src/lib/dews.ts).
   const signals = e.topSignals
     .slice(0, 2)
     .map((s) => `${s.name} (${Math.round(s.value)}%)`)
     .join(", ");
-  return `<b>${escapeHtml(e.symbol)}</b> — ${e.oldBand} → ${e.newBand} (score: ${e.score})${signals ? `\nTop signals: ${signals}` : ""}${e.contextLine ? `\n${escapeHtml(e.contextLine)}` : ""}`;
+  const glyph = dewsGlyphFor(e.newBand);
+  const prefix = glyph ? `${glyph} ` : "";
+  return `${prefix}<b>${escapeHtml(e.symbol)}</b> — ${e.oldBand} → ${e.newBand} (score: ${e.score})${signals ? `\nTop signals: ${signals}` : ""}${e.contextLine ? `\n${escapeHtml(e.contextLine)}` : ""}`;
 }
 
 export function formatDepegTriggeredLine(e: DepegAlertPayload): string {
   const pct = (e.deviationBps / 100).toFixed(1);
-  return `<b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg by ${pct}% (${e.deviationBps} bps)\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})${e.contextLine ? `\n${escapeHtml(e.contextLine)}` : ""}`;
+  const glyph = DEPEG_DIRECTION_GLYPH[e.direction];
+  return `${glyph} <b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg by ${pct}% (${e.deviationBps} bps)\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})${e.contextLine ? `\n${escapeHtml(e.contextLine)}` : ""}`;
 }
 
 export function formatDepegResolvedLine(e: DepegResolved): string {
@@ -410,7 +431,8 @@ export function formatDepegWorseningLine(e: DepegWorsening): string {
   const deltaBps = e.currentDeviationBps - e.previousDeviationBps;
   const deltaPct = (deltaBps / 100).toFixed(1);
   const deltaStr = deltaBps >= 0 ? `+${deltaPct}%` : `${deltaPct}%`;
-  return `<b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg worsening\nDeviation: ${prev}% → ${curr}% (${deltaStr})\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})${e.contextLine ? `\n${escapeHtml(e.contextLine)}` : ""}`;
+  const glyph = DEPEG_DIRECTION_GLYPH[e.direction];
+  return `${glyph} <b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg worsening\nDeviation: ${prev}% → ${curr}% (${deltaStr})\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})${e.contextLine ? `\n${escapeHtml(e.contextLine)}` : ""}`;
 }
 
 export function formatSafetyLine(e: SafetyChange): string {
@@ -425,7 +447,7 @@ export interface LaunchAlert {
 }
 
 export function formatLaunchLine(e: LaunchAlert): string {
-  return `<b>${escapeHtml(e.symbol)}</b> — ${escapeHtml(e.name)} has launched and is now tracked by Pharos`;
+  return `${LAUNCH_GLYPH} <b>${escapeHtml(e.symbol)}</b> — ${escapeHtml(e.name)} has launched and is now tracked by Pharos`;
 }
 
 export interface ConsolidatedAlerts {
@@ -475,7 +497,7 @@ export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
     uniqueIds.size === 1
       ? `https://pharos.watch/stablecoin/${[...uniqueIds][0]}`
       : "https://pharos.watch";
-  return `<b>Pharos Alerts</b>\n\n${body}\n\n<a href="${url}">View on Pharos</a>`;
+  return `${body}\n\n<a href="${url}">View on Pharos</a>`;
 }
 
 export function getSingleAlertStablecoinId(alerts: ConsolidatedAlerts): string | null {

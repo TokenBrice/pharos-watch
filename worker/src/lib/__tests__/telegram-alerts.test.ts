@@ -7,6 +7,9 @@ import {
   validateSubscribeArgs,
   formatDisambiguation,
   formatDewsLine,
+  formatDepegTriggeredLine,
+  formatDepegWorseningLine,
+  formatLaunchLine,
   parseDisambiguationReply,
   formatConsolidatedMessage,
   splitMessage,
@@ -402,7 +405,7 @@ describe("formatConsolidatedMessage", () => {
     });
     expect(msg).toContain("DEWS");
     expect(msg).toContain("Depeg Detected");
-    expect(msg).toContain("Pharos Alerts");
+    expect(msg).not.toContain("Pharos Alerts");
     expect(msg).toContain("View on Pharos");
   });
 
@@ -508,6 +511,92 @@ describe("formatDewsLine", () => {
       topSignals: [],
     });
     expect(line).not.toContain("Top signals");
+  });
+
+  it("prefixes the line with a severity glyph derived from newBand", () => {
+    const watch = formatDewsLine({
+      stablecoinId: "usdt-tether",
+      symbol: "USDT",
+      oldBand: "CALM",
+      newBand: "WATCH",
+      score: 20,
+      topSignals: [],
+    });
+    const alert = formatDewsLine({
+      stablecoinId: "usdt-tether",
+      symbol: "USDT",
+      oldBand: "WATCH",
+      newBand: "ALERT",
+      score: 42,
+      topSignals: [],
+    });
+    const warning = formatDewsLine({
+      stablecoinId: "usdt-tether",
+      symbol: "USDT",
+      oldBand: "ALERT",
+      newBand: "WARNING",
+      score: 65,
+      topSignals: [],
+    });
+    const danger = formatDewsLine({
+      stablecoinId: "usdt-tether",
+      symbol: "USDT",
+      oldBand: "WARNING",
+      newBand: "DANGER",
+      score: 85,
+      topSignals: [],
+    });
+    expect(watch.startsWith("🟡 ")).toBe(true);
+    expect(alert.startsWith("🟡 ")).toBe(true);
+    expect(warning.startsWith("🟠 ")).toBe(true);
+    expect(danger.startsWith("🔴 ")).toBe(true);
+  });
+});
+
+describe("depeg direction glyphs", () => {
+  it("prefixes triggered lines with ▼ below or ▲ above", () => {
+    const below = formatDepegTriggeredLine({
+      stablecoinId: "bold-liquity",
+      symbol: "BOLD",
+      direction: "below",
+      deviationBps: 230,
+      price: 0.977,
+      pegReference: 1.0,
+    });
+    const above = formatDepegTriggeredLine({
+      stablecoinId: "bold-liquity",
+      symbol: "BOLD",
+      direction: "above",
+      deviationBps: 230,
+      price: 1.023,
+      pegReference: 1.0,
+    });
+    expect(below.startsWith("▼ ")).toBe(true);
+    expect(above.startsWith("▲ ")).toBe(true);
+  });
+
+  it("prefixes worsening lines with the same direction glyph", () => {
+    const below = formatDepegWorseningLine({
+      stablecoinId: "usdc-circle",
+      symbol: "USDC",
+      direction: "below",
+      previousDeviationBps: 120,
+      currentDeviationBps: 260,
+      price: 0.974,
+      pegReference: 1,
+    });
+    expect(below.startsWith("▼ ")).toBe(true);
+  });
+});
+
+describe("formatLaunchLine", () => {
+  it("prefixes launch lines with the ✦ promotion glyph", () => {
+    const line = formatLaunchLine({
+      stablecoinId: "usdpt-western-union",
+      symbol: "USDPT",
+      name: "Western Union USD",
+    });
+    expect(line.startsWith("✦ ")).toBe(true);
   });
 });
 
