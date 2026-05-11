@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { randomUUID } from "node:crypto";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiKeyRequestForm } from "@/components/api-key-request-form";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  window.history.replaceState(null, "", "/");
+});
 
 describe("ApiKeyRequestForm", () => {
   it("enables submission for a concise completed request", () => {
@@ -37,5 +41,52 @@ describe("ApiKeyRequestForm", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: /I will use the API for read-only public data/i }));
 
     expect(submit.disabled).toBe(false);
+  });
+
+  it("prominently reveals an issued key after email verification", async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const token = `ph_test_${suffix}_${randomUUID().replaceAll("-", "").slice(0, 24)}`;
+    const keyPrefix = `prefix-${suffix}`;
+
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      status: "issued",
+      requestId: `akr_${suffix}`,
+      key: {
+        id: 1,
+        keyPrefix,
+        maskedToken: `${keyPrefix}...`,
+        name: `self-serve-${suffix}`,
+        ownerEmail: `api-smoke-${suffix}@example.com`,
+        tier: "self-serve",
+        trafficClass: "external",
+        rateLimitPerMinute: 30,
+        isActive: true,
+        expiresAt: 1_788_888_888,
+        createdAt: 1_783_704_000,
+        updatedAt: 1_783_704_000,
+        lastUsedAt: null,
+        lastUsedRoute: null,
+      },
+      token,
+      usage: {
+        baseUrl: "https://api.pharos.watch",
+        headerName: "X-API-Key",
+        retryGuidance: "Respect 429 Retry-After responses.",
+      },
+    }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    })));
+
+    window.history.replaceState(null, "", `/api/?verify=verify-${suffix}`);
+    render(<ApiKeyRequestForm />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Your API Key Is Ready" })).toBeTruthy();
+    });
+
+    expect(screen.getByText("Copy this token now.")).toBeTruthy();
+    expect(screen.getByText(token)).toBeTruthy();
+    expect(screen.getByText("Issued Key Policy")).toBeTruthy();
   });
 });

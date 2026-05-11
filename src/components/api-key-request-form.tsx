@@ -226,7 +226,14 @@ export function ApiKeyRequestForm() {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,0.58fr)_minmax(20rem,0.42fr)]">
+    <div
+      className={cn(
+        "grid gap-5",
+        issuedKey
+          ? "lg:grid-cols-[minmax(0,0.46fr)_minmax(28rem,0.54fr)]"
+          : "lg:grid-cols-[minmax(0,0.58fr)_minmax(20rem,0.42fr)]",
+      )}
+    >
       <form onSubmit={handleSubmit} className="rounded-[1.5rem] border border-border/60 bg-card/78 p-4 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
@@ -414,21 +421,36 @@ export function ApiKeyRequestForm() {
         </div>
       </form>
 
-      <aside className="space-y-4">
-        <section className="rounded-[1.5rem] border border-border/60 bg-card/78 p-4 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:p-5">
+      <aside className={cn("space-y-4", issuedKey ? "lg:sticky lg:top-24 lg:self-start" : "")}>
+        <section
+          className={cn(
+            "rounded-[1.5rem] border border-border/60 bg-card/78 p-4 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:p-5",
+            issuedKey
+              ? "border-emerald-500/45 bg-emerald-500/8 shadow-[0_24px_70px_oklch(0.73_0.17_160_/0.18)] ring-1 ring-emerald-500/20"
+              : "",
+          )}
+          aria-live={verificationStatus === "issued" || verificationStatus === "verifying" ? "polite" : undefined}
+        >
           <div className="flex items-start gap-3">
-            <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/75 text-foreground">
+            <span
+              className={cn(
+                "inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/75 text-foreground",
+                issuedKey ? "size-12 border-emerald-500/35 bg-emerald-500/12 text-emerald-600 dark:text-emerald-300" : "",
+              )}
+            >
               {verificationStatus === "verifying" ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               ) : verificationStatus === "issued" ? (
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" aria-hidden="true" />
+                <CheckCircle2 className={cn("h-4 w-4 text-emerald-500", issuedKey ? "h-5 w-5" : "")} aria-hidden="true" />
               ) : (
                 <KeyRound className="h-4 w-4" aria-hidden="true" />
               )}
             </span>
             <div className="space-y-1">
-              <p className="pharos-kicker">Verification</p>
-              <h2 className="text-lg font-semibold tracking-tight text-foreground">One-Time Key Reveal</h2>
+              <p className="pharos-kicker">{issuedKey ? "Verification Complete" : "Verification"}</p>
+              <h2 className={cn("font-semibold tracking-tight text-foreground", issuedKey ? "text-2xl" : "text-lg")}>
+                {issuedKey ? "Your API Key Is Ready" : "One-Time Key Reveal"}
+              </h2>
             </div>
           </div>
 
@@ -449,16 +471,19 @@ export function ApiKeyRequestForm() {
           ) : null}
 
           {issuedKey ? (
-            <div className="mt-4 space-y-4">
-              <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-300">
-                <p className="font-medium">API key issued.</p>
-                <p className="mt-1 text-xs opacity-90">
+            <div className="mt-5 space-y-4">
+              <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/12 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-300">
+                <p className="text-base font-semibold">Copy this token now.</p>
+                <p className="mt-1 text-xs leading-relaxed opacity-90">
+                  It is only displayed once after email verification.
+                </p>
+                <p className="mt-2 text-xs opacity-90">
                   Prefix {issuedKey.key.keyPrefix} - Expires {formatExpiry(issuedKey.key.expiresAt)}
                 </p>
               </div>
 
-              <div className="overflow-hidden rounded-xl border border-border/60 bg-zinc-950 text-zinc-100">
-                <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
+              <div className="overflow-hidden rounded-2xl border border-emerald-500/35 bg-zinc-950 text-zinc-100 shadow-inner">
+                <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                   <span className="text-xs font-semibold uppercase text-zinc-400">Token</span>
                   <Button
                     type="button"
@@ -471,7 +496,7 @@ export function ApiKeyRequestForm() {
                     {copied === "token" ? "Copied" : "Copy"}
                   </Button>
                 </div>
-                <code className="block break-all px-3 py-3 font-mono text-xs leading-relaxed">{issuedKey.token}</code>
+                <code className="block break-all px-4 py-4 font-mono text-sm leading-relaxed sm:text-[0.95rem]">{issuedKey.token}</code>
               </div>
 
               <div className="overflow-hidden rounded-xl border border-border/60 bg-zinc-950 text-zinc-100">
@@ -499,8 +524,13 @@ export function ApiKeyRequestForm() {
           ) : null}
         </section>
 
-        <section className="rounded-[1.5rem] border border-border/60 bg-card/78 p-4 text-sm leading-relaxed text-muted-foreground shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:p-5">
-          <p className="pharos-kicker">Default Policy</p>
+        <section
+          className={cn(
+            "rounded-[1.5rem] border border-border/60 bg-card/78 p-4 text-sm leading-relaxed text-muted-foreground shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:p-5",
+            issuedKey ? "border-emerald-500/25 bg-emerald-500/6" : "",
+          )}
+        >
+          <p className="pharos-kicker">{issuedKey ? "Issued Key Policy" : "Default Policy"}</p>
           <dl className="mt-3 grid grid-cols-2 gap-3">
             <div>
               <dt className="text-xs uppercase text-muted-foreground">Quota</dt>
