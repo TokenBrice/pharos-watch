@@ -40,6 +40,7 @@ export default function createNextConfig(phase: string): NextConfig {
   if (phase === PHASE_DEVELOPMENT_SERVER) {
     return {
       ...baseConfig,
+      allowedDevOrigins: ["ops.pharos.watch"],
       rewrites: devRewrites,
     };
   }

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiRequestAttributionResponse, EndpointProbeResult, HealthResponse, StatusCause, StatusResponse } from "@shared/types";
 
@@ -478,21 +478,25 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cleanup();
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
 describe("admin status client", () => {
-  it("shows the public-host gate when the ops host is unavailable", () => {
+  it("shows the public-host gate when the ops host is unavailable", async () => {
     isOpsUiHostMock.mockReturnValue(false);
 
     render(<StatusClient />);
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     expect(screen.getByText("Operator tooling is no longer available on the public host.")).toBeTruthy();
     expect(screen.queryByText("Current incident picture")).toBeNull();
   });
 
-  it("renders the dashboard, auto-expands critical details, and wires refresh/sign-out actions", () => {
+  it("renders the dashboard, auto-expands critical details, and wires refresh/sign-out actions", async () => {
     const handleRefresh = vi.fn();
     const assignSpy = vi.fn();
     const originalLocation = window.location;
@@ -521,6 +525,9 @@ describe("admin status client", () => {
     });
 
     render(<StatusClient />);
+    await act(async () => {
+      await Promise.resolve();
+    });
     // Advance enough to flush initial useEffects (ops-host gate, FreshnessIndicator
     // label compute) without spinning the FreshnessIndicator's 1s interval forever.
     act(() => {

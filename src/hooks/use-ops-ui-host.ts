@@ -1,24 +1,29 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { isOpsUiHost } from "@/lib/admin-access";
 
-function subscribeToOpsUiHost(): () => void {
-  return () => undefined;
-}
-
-function getOpsUiHostSnapshot(): boolean | null {
-  return isOpsUiHost();
-}
-
-function getServerOpsUiHostSnapshot(): boolean | null {
-  return null;
-}
-
 export function useOpsUiHost(): boolean | null {
-  return useSyncExternalStore(
-    subscribeToOpsUiHost,
-    getOpsUiHostSnapshot,
-    getServerOpsUiHostSnapshot,
-  );
+  const [opsUiHost, setOpsUiHost] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const update = () => {
+      if (!cancelled) {
+        setOpsUiHost(isOpsUiHost());
+      }
+    };
+
+    if (typeof queueMicrotask === "function") {
+      queueMicrotask(update);
+    } else {
+      window.setTimeout(update, 0);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return opsUiHost;
 }
