@@ -8,7 +8,12 @@ import {
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { sumPegBuckets } from "@shared/lib/supply";
+import {
+  getCirculatingRaw,
+  getPrevDayRaw,
+  getPrevMonthRawOrNull,
+  getPrevWeekRaw,
+} from "@shared/lib/supply";
 
 export const handleStablecoinSummary = withErrorHandler("stablecoin-summary", async (
   db: D1Database,
@@ -24,10 +29,10 @@ export const handleStablecoinSummary = withErrorHandler("stablecoin-summary", as
     return errorResponse(404, `Stablecoin ${id} not found`);
   }
 
-  const currentSupplyUsd = sumPegBuckets(coin.circulating);
-  const prevDaySupplyUsd = sumPegBuckets(coin.circulatingPrevDay);
-  const prevWeekSupplyUsd = sumPegBuckets(coin.circulatingPrevWeek);
-  const prevMonthSupplyUsd = sumPegBuckets(coin.circulatingPrevMonth);
+  const currentSupplyUsd = getCirculatingRaw(coin);
+  const prevDaySupplyUsd = getPrevDayRaw(coin);
+  const prevWeekSupplyUsd = getPrevWeekRaw(coin);
+  const prevMonthSupplyUsd = getPrevMonthRawOrNull(coin) ?? 0;
 
   return jsonResponse({
     id: coin.id,

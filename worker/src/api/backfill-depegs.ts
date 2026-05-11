@@ -1,7 +1,7 @@
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DAY_MS } from "@shared/lib/time-constants";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { cancelResponseBodyQuietly } from "../lib/response-body";
 import {
   DEFILLAMA_BASE,
@@ -169,7 +169,7 @@ export async function handleBackfillDepegs(
         ));
         fxRates = stablecoinsPayload.fxFallbackRates;
         for (const asset of stablecoinsPayload.peggedAssets) {
-          currentSupplyById.set(asset.id, sumPegBuckets(asset.circulating));
+          currentSupplyById.set(asset.id, getCirculatingRaw(asset));
         }
       }
 

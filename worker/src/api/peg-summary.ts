@@ -3,7 +3,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { StablecoinData } from "@shared/types/market";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   withErrorHandler,
   addFreshnessHeaders,
@@ -184,9 +184,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     // Build DEX price check if available (only for coins with meaningful supply)
     let dexPriceCheck: typeof coins[number]["dexPriceCheck"] = null;
     const dexRow = dexPrices.get(meta.id);
-    const supply = asset?.circulating
-      ? sumPegBuckets(asset.circulating)
-      : 0;
+    const supply = asset ? getCirculatingRaw(asset) : 0;
     if (dexRow && supply >= DEPEG_EVENT_MIN_SUPPLY_USD && isTrustedDexPriceRow(dexRow, now, "ui")) {
       const pegType = pegData.pegType || asset?.pegType || pegTypeFromCurrency(meta.flags.pegCurrency);
       const dexBps = deriveDexDeviationBps(

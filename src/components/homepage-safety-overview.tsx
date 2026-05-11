@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { gradeRange, scoreToGrade } from "@shared/lib/report-cards";
 import { formatCurrency } from "@shared/lib/format";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import type { ReportCard, StablecoinData } from "@shared/types";
 
 interface HomepageSafetyOverviewProps {
@@ -124,7 +124,7 @@ export function HomepageSafetyOverview({ cards, peggedAssets, className }: Homep
 
     const mcapById = new Map<string, number>();
     for (const asset of peggedAssets ?? []) {
-      mcapById.set(asset.id, sumPegBuckets(asset.circulating));
+      mcapById.set(asset.id, getCirculatingRaw(asset));
     }
 
     let weightedNumerator = 0;

@@ -1,7 +1,7 @@
 import { formatCurrency } from "@shared/lib/format";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { VerificationResult } from "./types";
 
@@ -20,7 +20,7 @@ export async function verifyDataCorrection(
 
     const meta = TRACKED_META_BY_ID.get(stablecoinId);
     const price = coin.price ?? null;
-    const totalUsd = sumPegBuckets(coin.circulating);
+    const totalUsd = getCirculatingRaw(coin);
     const cacheAgeSec = Math.floor(Date.now() / 1000) - stablecoinsCache.updatedAt;
     const pegRates = derivePegRates(
       stablecoinsCache.payload.peggedAssets,

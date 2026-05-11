@@ -6,7 +6,7 @@ import {
   gradeRange,
   scoreToGrade,
 } from "@shared/lib/report-cards";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import type { DimensionKey, ReportCard, ReportCardGrade, StablecoinData } from "@shared/types";
 
 export type GradeFilter = "all" | "A" | "B" | "C" | "D" | "F" | "NR";
@@ -69,7 +69,7 @@ export function buildSafetyMcapMap(
   peggedAssets?: Array<{ id: string; circulating?: Record<string, number> | null }>,
 ): Map<string, number> {
   if (!peggedAssets) return new Map<string, number>();
-  return new Map(peggedAssets.map((asset) => [asset.id, asset.circulating ? sumPegBuckets(asset.circulating) : 0]));
+  return new Map(peggedAssets.map((asset) => [asset.id, getCirculatingRaw(asset)]));
 }
 
 export function buildSafetyStablecoinMap(
@@ -84,7 +84,7 @@ export function getCoreSettlementProfile(
   stablecoin?: Pick<StablecoinData, "id" | "circulating" | "chains">,
 ): CoreSettlementProfile | null {
   if (card.isDefunct || !stablecoin) return null;
-  const marketCapUsd = stablecoin.circulating ? sumPegBuckets(stablecoin.circulating) : 0;
+  const marketCapUsd = getCirculatingRaw(stablecoin);
   const chainCount = stablecoin.chains.length;
   const hasIssuerExit =
     card.rawInputs.redemptionBackstopScore != null &&

@@ -10,7 +10,7 @@ import { StabilityIndexCard, type StabilityIndexCardData } from "../lib/og-templ
 import { resolveOrReject } from "../lib/api-utils";
 import { loadDexLiquidityMap } from "../lib/dex-liquidity";
 import { getConditionBand } from "../lib/stability-index";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { ACTIVE_IDS, FROZEN_IDS, READABLE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache } from "../lib/report-card-cache";
@@ -129,8 +129,8 @@ export function deriveStablecoinOgCardData({
   isFrozen,
 }: StablecoinOgSignalsInput): StablecoinCardData {
   const pegPrice = coin.price ?? 1;
-  const mcap = sumPegBuckets(coin.circulating);
-  const prevWeekMcap = sumPegBuckets(coin.circulatingPrevWeek ?? undefined);
+  const mcap = getCirculatingRaw(coin);
+  const prevWeekMcap = getPrevWeekRaw(coin);
   const sparklineData = sparklineRows.map((row) => row.price).reverse();
 
   return {

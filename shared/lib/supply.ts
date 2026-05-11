@@ -5,14 +5,16 @@ import { TRACKED_META_BY_ID } from "./stablecoins";
 const safeNum = (v: number | null | undefined): number =>
   typeof v === "number" && Number.isFinite(v) ? v : 0;
 
+type PegBucketRecord = Record<string, number> | null | undefined;
+
 /** Sum all values in a peg-bucket record, treating missing/invalid entries as 0. */
-export function sumPegBuckets(obj: Record<string, number> | undefined): number {
+export function sumPegBuckets(obj: PegBucketRecord): number {
   if (!obj) return 0;
   return Object.values(obj).reduce((s, v) => s + safeNum(v), 0);
 }
 
 /** Return true when at least one peg bucket has a non-zero finite numeric value. */
-function hasAnyBucket(obj: Record<string, number> | undefined): boolean {
+function hasAnyBucket(obj: PegBucketRecord): boolean {
   if (!obj) return false;
   return Object.values(obj).some((v) => typeof v === "number" && Number.isFinite(v) && v !== 0);
 }
@@ -22,29 +24,29 @@ function hasAnyBucket(obj: Record<string, number> | undefined): boolean {
  * DefiLlama's list API returns values already in USD for all peg types,
  * so the values we receive here are always in USD — no FX conversion needed.
  */
-export function getCirculatingRaw(c: StablecoinData): number {
+export function getCirculatingRaw(c: { circulating?: PegBucketRecord }): number {
   return sumPegBuckets(c.circulating);
 }
 
-export function getPrevDayRaw(c: StablecoinData): number {
+export function getPrevDayRaw(c: { circulatingPrevDay?: PegBucketRecord }): number {
   return sumPegBuckets(c.circulatingPrevDay);
 }
 
-export function getPrevDayRawOrNull(c: StablecoinData): number | null {
+export function getPrevDayRawOrNull(c: { circulatingPrevDay?: PegBucketRecord }): number | null {
   const val = sumPegBuckets(c.circulatingPrevDay);
   return val === 0 && !hasAnyBucket(c.circulatingPrevDay) ? null : val;
 }
 
-export function getPrevWeekRaw(c: StablecoinData): number {
+export function getPrevWeekRaw(c: { circulatingPrevWeek?: PegBucketRecord }): number {
   return sumPegBuckets(c.circulatingPrevWeek);
 }
 
-export function getPrevWeekRawOrNull(c: StablecoinData): number | null {
+export function getPrevWeekRawOrNull(c: { circulatingPrevWeek?: PegBucketRecord }): number | null {
   const val = sumPegBuckets(c.circulatingPrevWeek);
   return val === 0 && !hasAnyBucket(c.circulatingPrevWeek) ? null : val;
 }
 
-export function getPrevMonthRawOrNull(c: StablecoinData): number | null {
+export function getPrevMonthRawOrNull(c: { circulatingPrevMonth?: PegBucketRecord }): number | null {
   const val = sumPegBuckets(c.circulatingPrevMonth);
   return val === 0 && !hasAnyBucket(c.circulatingPrevMonth) ? null : val;
 }

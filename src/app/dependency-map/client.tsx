@@ -9,7 +9,7 @@ import { DependencyMapMobileSummary } from "@/components/dependency-map-mobile-s
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { DependencyHubsBoard } from "./dependency-hubs-board";
 import { buildDependencyHubsModel } from "./dependency-hubs-model";
 
@@ -33,7 +33,7 @@ export function DependencyMapClient() {
 
   const mcapMap = useMemo(() => {
     if (!stablecoinsData?.peggedAssets) return new Map<string, number>();
-    return new Map(stablecoinsData.peggedAssets.map((a) => [a.id, a.circulating ? sumPegBuckets(a.circulating) : 0]));
+    return new Map(stablecoinsData.peggedAssets.map((asset) => [asset.id, getCirculatingRaw(asset)]));
   }, [stablecoinsData]);
 
   const dependencyHubsModel = useMemo(() => {
