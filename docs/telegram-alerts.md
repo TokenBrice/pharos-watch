@@ -161,9 +161,11 @@ Wizard state is persisted as a row in `telegram_pending_disambiguation` with `ac
 | `/coverage <ticker>` | Shows which Pharos data surfaces currently cover one coin |
 | `/subscribe <types> <targets>` | Enables one or more alert types and subscribes the chat to one or more explicit coins or preset watchlists |
 | `/subscribe <targets> depeg-step <value>` | Enables depeg alerts for explicit coins or preset watchlists and stores a worsening-step threshold (`100`, `250`, `500`, or `off`) |
-| `/subscribe <types> all` | Enables one or more alert types across all tracked stablecoins |
+| `/subscribe <types> all` | Enables one or more alert types across all tracked stablecoins (always gated; see below) |
 | `/unsubscribe <targets>` | Removes explicit coin subscriptions and can also remove the coins covered by a preset watchlist |
-| `/unsubscribe all` | Clears all per-coin subscriptions, disables every current alert flag including launch, and clears the global depeg worsening step |
+| `/unsubscribe all` | Clears all per-coin subscriptions, disables every current alert flag including launch, and clears the global depeg worsening step (always gated; see below) |
+
+Bulk `/subscribe` and `/unsubscribe` calls are gated behind an inline `[ Confirm ] [ Cancel ]` keyboard when the resolved coin set exceeds 10 coins or the literal `all` token is used. The deferred command is stored in `telegram_pending_disambiguation` with `action_type = 'confirm-bulk'` and inherits the standard 5-minute TTL. Tapping Confirm executes the original command; Cancel (or `/cancel`) clears the pending state without side effects. Confirmation is initiator-locked: only the user who started the bulk command may complete or cancel it.
 | `/set <ticker> <setting> <value>` | Tunes per-coin settings such as DEWS floor, safety direction mode, launch on/off, or depeg worsening step |
 | `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`, `launch`) or sets the global depeg worsening step |
 | `/mute <start>-<end>` | Enables quiet hours in UTC (messages still deliver, notifications are silenced) |

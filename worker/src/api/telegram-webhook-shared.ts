@@ -115,7 +115,28 @@ In groups, use addressed commands like <code>/subscribe@PharosWatchBot dews usd-
 
 export const DISAMBIGUATION_TTL_SEC = 5 * 60;
 
-export type PendingActionType = "subscribe" | "unsubscribe" | "set";
+export type PendingActionType = "subscribe" | "unsubscribe" | "set" | "confirm-bulk";
+
+/**
+ * Stored payload for a "confirm-bulk" pending action. Captures everything
+ * needed to execute the deferred subscribe/unsubscribe once the user taps
+ * Confirm on the inline keyboard.
+ */
+export type ConfirmBulkPayload =
+  | {
+      kind: "subscribe";
+      alertTypes: string[];
+      presetIds: string[];
+      depegWorseningBpsStep?: 100 | 250 | 500 | null;
+      coinIds: string[];
+      subscribeAll: boolean;
+    }
+  | {
+      kind: "unsubscribe";
+      presetIds: string[];
+      coinIds: string[];
+      unsubscribeAll: boolean;
+    };
 
 /**
  * Setup wizard state machine. Persisted in `telegram_pending_disambiguation`
@@ -276,6 +297,11 @@ export type PendingAction =
       ambiguousTicker: string;
       candidates: ResolvedCoin[];
       remainingTickers: string[];
+    }
+  | {
+      actionType: "confirm-bulk";
+      payload: ConfirmBulkPayload;
+      initiatorUserId: string | null;
     };
 
 export const STABLECOIN_BY_ID = new Map<string, ResolvedCoin>(

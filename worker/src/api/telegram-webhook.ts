@@ -21,13 +21,14 @@ import {
   resolveTelegramPresetTargets,
   type TelegramPresetId,
 } from "../lib/telegram-presets";
+import { TRACKED_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins";
 import {
   HELP_MESSAGE,
   SETUP_PENDING_ACTION_TYPE,
   START_MESSAGE,
+  type ConfirmBulkPayload,
   type ParsedSetCommand,
   type PendingAction,
-  type PendingActionType,
   type PendingDisambiguationRow,
   type SubscribeActionPayload,
   type SubscriptionRow,
@@ -66,10 +67,10 @@ import {
   loadPresetSubscriptions,
   loadSubscriberByChat,
   loadSubscriptionsByIds,
+  persistPendingConfirmBulk,
   removePresetSubscriptions,
   removeSubscriptions,
   unixNow,
-  upsertGlobalAlertTypes,
   upsertPresetSubscriptions,
   upsertSubscriberAndSubscriptions,
   upsertSubscriberRow,
@@ -220,6 +221,13 @@ export const handleTelegramWebhook = withErrorHandler(
 
       if (pendingActive && pendingAction) {
         if (!parsedCommand) {
+          if (pendingAction.actionType === "confirm-bulk") {
+            // Bulk-confirm pending waits for an inline button tap, not a text reply.
+            // Ignore plain text in groups; in private chats, nudge toward the buttons.
+            if (isGroupChat(chatType)) return ok();
+            await reply("Tap Confirm or Cancel on the previous message, or send /cancel to abort.");
+            return ok();
+          }
           if (!canActOnPending(pendingAction, actorUserId)) {
             if (isGroupChat(chatType) && !looksLikeDisambiguationSelection(text)) {
               return ok();
@@ -281,6 +289,10 @@ export const handleTelegramWebhook = withErrorHandler(
             await clearPendingDisambiguation(db, chatId);
             break;
           default:
+            if (pendingAction.actionType === "confirm-bulk") {
+              await reply("You have a pending bulk confirmation. Tap Confirm or Cancel on the previous message, or send /cancel to abort.");
+              return ok();
+            }
             await reply(`You have a pending selection. Reply with the number(s) you want, or use /cancel.
 
 ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.candidates))}`);
@@ -545,6 +557,56 @@ const TELEGRAM_PRESET_LABEL_BY_ID = new Map(
 
 const PHAROS_BOT_USERNAMES = new Set(["pharoswatchbot"]);
 
+/**
+ * Bulk subscribe/unsubscribe commands are gated behind an inline Confirm/Cancel
+ * keyboard when the resolved coin set exceeds this threshold OR the literal
+ * `all` token was used. See P0-C1 in `agents/pharoswatchbot-reliability-and-ux-plan-2026-05-11.md`.
+ */
+const BULK_CONFIRM_COIN_THRESHOLD = 10;
+const BULK_CONFIRM_PREVIEW_LIMIT = 5;
+
+const SUBSCRIBABLE_COIN_COUNT = TRACKED_STABLECOINS.filter((coin) => !FROZEN_IDS.has(coin.id)).length;
+
+function subscribableCoinCount(): number {
+  return SUBSCRIBABLE_COIN_COUNT;
+}
+
+const BULK_CONFIRM_REPLY_MARKUP = {
+  inline_keyboard: [[
+    { text: "Confirm", callback_data: "confirm:bulk" },
+    { text: "Cancel", callback_data: "cancel:bulk" },
+  ]],
+} as const;
+
+function formatBulkAlertTypeList(alertTypes: readonly string[]): string {
+  if (alertTypes.length === 0) return "all";
+  return alertTypes.join(", ");
+}
+
+function formatBulkCoinPreview(symbols: readonly string[]): string {
+  if (symbols.length === 0) return "";
+  const head = symbols.slice(0, BULK_CONFIRM_PREVIEW_LIMIT);
+  const more = symbols.length - head.length;
+  const suffix = more > 0 ? `, ...and ${more} more` : "";
+  return `${head.join(", ")}${suffix}`;
+}
+
+function buildBulkConfirmMessage(
+  action: "subscribe" | "unsubscribe",
+  count: number,
+  alertTypes: readonly string[],
+  coinSymbols: readonly string[],
+): string {
+  const verb = action === "subscribe" ? "subscribe" : "unsubscribe";
+  const typesLine =
+    action === "subscribe"
+      ? `alert types ${escapeHtml(formatBulkAlertTypeList(alertTypes))}`
+      : "all alert types";
+  const preview = formatBulkCoinPreview(coinSymbols);
+  const previewLine = preview ? `\n${escapeHtml(preview)}` : "";
+  return `This will ${verb} ${count} coins for ${typesLine}. Confirm?${previewLine}`;
+}
+
 function isGroupChat(chatType: string): boolean {
   return chatType === "group" || chatType === "supergroup";
 }
@@ -618,8 +680,10 @@ function dedupePresetIds(presetIds: readonly string[]): TelegramPresetId[] {
   );
 }
 
+type CompletionActionType = keyof ActionPayloadMap;
+
 type CompletionHandlerMap = {
-  [K in PendingActionType]: (
+  [K in CompletionActionType]: (
     context: TelegramActionContext,
     coins: ResolvedCoin[],
     payload: ActionPayloadMap[K],
@@ -695,7 +759,7 @@ const completionHandlers: CompletionHandlerMap = {
   },
 };
 
-type BoundActionRunner = <TActionType extends PendingActionType>(opts: {
+type BoundActionRunner = <TActionType extends "subscribe" | "unsubscribe" | "set">(opts: {
   tickers: string[];
   actionType: TActionType;
   actionPayload: ActionPayloadMap[TActionType];
@@ -705,7 +769,89 @@ type BoundActionRunner = <TActionType extends PendingActionType>(opts: {
   resolutionScope?: TickerResolutionScope;
 }) => Promise<void>;
 
-function makeActionRunner(context: TelegramActionContext, botToken: string): BoundActionRunner {
+/**
+ * Optional gate that, when satisfied, defers subscribe/unsubscribe execution
+ * behind an inline Confirm/Cancel keyboard. The gate fires once coin resolution
+ * is complete; `kind` is fixed at handler construction so the deferred payload
+ * matches the originating command.
+ */
+type BulkGate =
+  | {
+      kind: "subscribe";
+      alertTypes: string[];
+      presetIds: string[];
+      depegWorseningBpsStep?: 100 | 250 | 500 | null;
+    }
+  | {
+      kind: "unsubscribe";
+      presetIds: string[];
+    };
+
+function shouldGateBulk(coinCount: number): boolean {
+  return coinCount > BULK_CONFIRM_COIN_THRESHOLD;
+}
+
+async function persistAndPromptBulkConfirm(
+  context: TelegramActionContext,
+  botToken: string,
+  gate: BulkGate,
+  coins: ResolvedCoin[],
+  clearPending: boolean,
+): Promise<string> {
+  if (clearPending) {
+    await clearPendingDisambiguation(context.db, context.chatId);
+  }
+  const coinIds = coins.map((coin) => coin.id);
+  const symbols = coins.map((coin) => coin.symbol);
+  const payload: ConfirmBulkPayload =
+    gate.kind === "subscribe"
+      ? {
+          kind: "subscribe",
+          alertTypes: gate.alertTypes,
+          presetIds: gate.presetIds,
+          depegWorseningBpsStep: gate.depegWorseningBpsStep,
+          coinIds,
+          subscribeAll: false,
+        }
+      : {
+          kind: "unsubscribe",
+          presetIds: gate.presetIds,
+          coinIds,
+          unsubscribeAll: false,
+        };
+  await persistPendingConfirmBulk(context.db, {
+    chatId: context.chatId,
+    payload,
+    initiatorUserId: context.initiatorUserId,
+  });
+  await replyToChat(
+    context.chatId,
+    buildBulkConfirmMessage(
+      gate.kind,
+      coinIds.length,
+      gate.kind === "subscribe" ? gate.alertTypes : [],
+      symbols,
+    ),
+    botToken,
+    { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },
+  );
+  // Sentinel: runCoinResolutionFlow will send this string. We have already
+  // replied with the inline keyboard, so return an empty string and short-circuit
+  // the outer reply via the GATED_SENTINEL check below.
+  return GATED_SENTINEL;
+}
+
+const GATED_SENTINEL = " __gated__";
+
+function makeActionRunner(
+  context: TelegramActionContext,
+  botToken: string,
+  gate?: BulkGate,
+): BoundActionRunner {
+  const reply = async (message: string) => {
+    if (message === GATED_SENTINEL) return;
+    await replyToChat(context.chatId, message, botToken);
+  };
   return ({ tickers, actionType, actionPayload, alertTypes, initialCoins, clearPendingOnTerminal, resolutionScope }) =>
     runCoinResolutionFlow({
       db: context.db,
@@ -718,8 +864,13 @@ function makeActionRunner(context: TelegramActionContext, botToken: string): Bou
       alertTypes,
       clearPendingOnTerminal,
       resolutionScope,
-      reply: (message) => replyToChat(context.chatId, message, botToken),
-      onComplete: (coins, options) => completionHandlers[actionType](context, coins, actionPayload, options),
+      reply,
+      onComplete: async (coins, options) => {
+        if (gate && shouldGateBulk(coins.length) && (gate.kind === actionType)) {
+          return persistAndPromptBulkConfirm(context, botToken, gate, coins, options.clearPending);
+        }
+        return completionHandlers[actionType](context, coins, actionPayload, options);
+      },
     });
 }
 
@@ -759,12 +910,23 @@ async function handleSubscribe(
   }
 
   if (parsed.subscribeAll) {
-    await upsertGlobalAlertTypes(db, chatId, username, parsed.alertTypes);
-    const subscriber = await loadSubscriberByChat(db, chatId);
+    await persistPendingConfirmBulk(db, {
+      chatId,
+      payload: {
+        kind: "subscribe",
+        alertTypes: [...parsed.alertTypes],
+        presetIds: [],
+        depegWorseningBpsStep: parsed.depegWorseningBpsStep,
+        coinIds: [],
+        subscribeAll: true,
+      },
+      initiatorUserId: actorUserId,
+    });
     await replyToChat(
       chatId,
-      buildGlobalAlertSummaryMessage("Updated all-stablecoin subscriptions.", subscriber),
+      buildBulkConfirmMessage("subscribe", subscribableCoinCount(), [...parsed.alertTypes], []),
       botToken,
+      { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },
     );
     return;
   }
@@ -776,7 +938,11 @@ async function handleSubscribe(
     return;
   }
 
-  const runAction = makeActionRunner({ db, chatId, username, initiatorUserId: actorUserId }, botToken);
+  const runAction = makeActionRunner(
+    { db, chatId, username, initiatorUserId: actorUserId },
+    botToken,
+    { kind: "subscribe", alertTypes: [...parsed.alertTypes], presetIds, depegWorseningBpsStep: parsed.depegWorseningBpsStep },
+  );
   await runAction({
     tickers: parsed.tickers,
     initialCoins: presetCoins,
@@ -817,29 +983,22 @@ async function handleUnsubscribe(
   }
 
   if (parsed.includeAll) {
-    const now = unixNow();
-    await db.batch([
-      db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
-      db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
-      db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
-      db
-        .prepare(
-          `UPDATE telegram_subscribers
-            SET alert_dews = 0,
-                alert_depeg = 0,
-                alert_safety = 0,
-                alert_launch = 0,
-                global_alert_dews = 0,
-                global_alert_depeg = 0,
-                global_alert_safety = 0,
-                global_alert_launch = 0,
-                global_depeg_worsening_bps_step = NULL,
-                last_active_at = ?
-          WHERE chat_id = ?`,
-        )
-        .bind(now, chatId),
-    ]);
-    await replyToChat(chatId, "Removed all subscriptions.", botToken);
+    await persistPendingConfirmBulk(db, {
+      chatId,
+      payload: {
+        kind: "unsubscribe",
+        presetIds: [],
+        coinIds: [],
+        unsubscribeAll: true,
+      },
+      initiatorUserId: actorUserId,
+    });
+    await replyToChat(
+      chatId,
+      buildBulkConfirmMessage("unsubscribe", subscribableCoinCount(), [], []),
+      botToken,
+      { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },
+    );
     return;
   }
 
@@ -850,7 +1009,11 @@ async function handleUnsubscribe(
     return;
   }
 
-  const runAction = makeActionRunner({ db, chatId, username: null, initiatorUserId: actorUserId }, botToken);
+  const runAction = makeActionRunner(
+    { db, chatId, username: null, initiatorUserId: actorUserId },
+    botToken,
+    { kind: "unsubscribe", presetIds },
+  );
   await runAction({
     tickers: parsed.tickers,
     initialCoins: presetCoins,
@@ -955,6 +1118,10 @@ async function handleDisambiguationReply(
   botToken: string,
   username: string | null,
 ): Promise<void> {
+  if (pending.actionType === "confirm-bulk") {
+    // confirm-bulk uses inline buttons; plain text replies are handled upstream.
+    return;
+  }
   const selectedIndices = parseDisambiguationReply(text, pending.candidates.length);
   if (!selectedIndices) {
     const reminder = [
@@ -975,7 +1142,16 @@ async function handleDisambiguationReply(
 
   switch (pending.actionType) {
     case "subscribe": {
-      const runAction = makeActionRunner({ db, chatId, username, initiatorUserId: pending.initiatorUserId }, botToken);
+      const runAction = makeActionRunner(
+        { db, chatId, username, initiatorUserId: pending.initiatorUserId },
+        botToken,
+        {
+          kind: "subscribe",
+          alertTypes: [...pending.alertTypes],
+          presetIds: pending.presetIds,
+          depegWorseningBpsStep: pending.depegWorseningBpsStep,
+        },
+      );
       await runAction({
         ...sharedOpts,
         actionType: "subscribe",
@@ -989,7 +1165,11 @@ async function handleDisambiguationReply(
       return;
     }
     case "unsubscribe": {
-      const runAction = makeActionRunner({ db, chatId, username: null, initiatorUserId: pending.initiatorUserId }, botToken);
+      const runAction = makeActionRunner(
+        { db, chatId, username: null, initiatorUserId: pending.initiatorUserId },
+        botToken,
+        { kind: "unsubscribe", presetIds: pending.presetIds },
+      );
       await runAction({
         ...sharedOpts,
         actionType: "unsubscribe",
@@ -1006,9 +1186,22 @@ async function handleDisambiguationReply(
   }
 }
 
-async function replyToChat(chatId: string, message: string, botToken: string): Promise<void> {
-  for (const chunk of splitMessage(message)) {
-    const result = await sendToChat(chatId, chunk, botToken, { disableWebPagePreview: true });
+async function replyToChat(
+  chatId: string,
+  message: string,
+  botToken: string,
+  options: { replyMarkup?: unknown } = {},
+): Promise<void> {
+  const chunks = splitMessage(message);
+  for (let i = 0; i < chunks.length; i += 1) {
+    const chunk = chunks[i];
+    // Only attach the reply markup to the last chunk so a multi-part message
+    // does not produce multiple inline keyboards.
+    const isLastChunk = i === chunks.length - 1;
+    const result = await sendToChat(chatId, chunk, botToken, {
+      disableWebPagePreview: true,
+      ...(isLastChunk && options.replyMarkup != null ? { replyMarkup: options.replyMarkup } : {}),
+    });
     if (!result.ok) {
       console.warn(`[telegram-webhook] Reply to ${chatId} failed: ${result.errorClass ?? "unknown"} (${result.statusCode})`);
       if (result.errorClass === "rate_limit") return;

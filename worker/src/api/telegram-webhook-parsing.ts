@@ -1,5 +1,6 @@
 import type { ResolvedCoin } from "../lib/telegram-alerts";
 import type {
+  ConfirmBulkPayload,
   ParsedSetCommand,
   PendingAction,
   PendingActionType,
@@ -16,8 +17,38 @@ function logPendingParseWarning(pending: PendingDisambiguationRow, field: string
 }
 
 function parsePendingActionType(value: string | null | undefined): PendingActionType | null {
-  if (value === "subscribe" || value === "unsubscribe" || value === "set") {
+  if (value === "subscribe" || value === "unsubscribe" || value === "set" || value === "confirm-bulk") {
     return value;
+  }
+  return null;
+}
+
+function parseStoredConfirmBulkPayload(payload: Record<string, unknown>): ConfirmBulkPayload | null {
+  const kind = typeof payload.kind === "string" ? payload.kind : null;
+  if (kind === "subscribe") {
+    const depegWorseningBpsStep =
+      payload.depegWorseningBpsStep === 100 ||
+      payload.depegWorseningBpsStep === 250 ||
+      payload.depegWorseningBpsStep === 500 ||
+      payload.depegWorseningBpsStep === null
+        ? payload.depegWorseningBpsStep
+        : undefined;
+    return {
+      kind,
+      alertTypes: parseStringArray(payload.alertTypes),
+      presetIds: parseStringArray(payload.presetIds),
+      depegWorseningBpsStep,
+      coinIds: parseStringArray(payload.coinIds),
+      subscribeAll: payload.subscribeAll === true,
+    };
+  }
+  if (kind === "unsubscribe") {
+    return {
+      kind,
+      presetIds: parseStringArray(payload.presetIds),
+      coinIds: parseStringArray(payload.coinIds),
+      unsubscribeAll: payload.unsubscribeAll === true,
+    };
   }
   return null;
 }
@@ -143,6 +174,17 @@ export function parsePendingDisambiguation(pending: PendingDisambiguationRow): P
   const payload = parsePendingJsonField<Record<string, unknown>>(pending, "action_payload", {}, (value) =>
     value && typeof value === "object" ? (value as Record<string, unknown>) : {},
   );
+
+  if (actionType === "confirm-bulk") {
+    const bulkPayload = parseStoredConfirmBulkPayload(payload);
+    if (!bulkPayload) return null;
+    return {
+      actionType,
+      payload: bulkPayload,
+      initiatorUserId: pending.initiator_user_id ?? null,
+    };
+  }
+
   const legacyAlertTypes = new Set(parsePendingJsonField(pending, "alert_types", [], parseStringArray));
   const resolvedIds = parsePendingJsonField(pending, "resolved_ids", [], parseStringArray);
   const candidates = parsePendingJsonField(pending, "candidates", [], parseResolvedCoins);

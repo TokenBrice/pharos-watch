@@ -149,7 +149,9 @@ describe("parsePendingDisambiguation", () => {
       remainingTickers: ["USDC"],
       resolvedCoins: [],
     });
-    expect(parsed?.candidates).toHaveLength(2);
+    if (parsed && parsed.actionType !== "confirm-bulk") {
+      expect(parsed.candidates).toHaveLength(2);
+    }
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("field=resolved_ids"));
   });
 
@@ -178,5 +180,49 @@ describe("parsePendingDisambiguation", () => {
 
     expect(parsed).toBeNull();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("field=candidates"));
+  });
+
+  it("parses a confirm-bulk subscribe payload with empty candidates", () => {
+    const parsed = parsePendingDisambiguation(
+      makePendingRow({
+        action_type: "confirm-bulk",
+        action_payload: JSON.stringify({
+          kind: "subscribe",
+          alertTypes: ["dews"],
+          presetIds: ["usd-top25"],
+          depegWorseningBpsStep: 250,
+          coinIds: ["usdt-tether", "usdc-circle"],
+          subscribeAll: false,
+        }),
+        candidates: JSON.stringify([]),
+        ambiguous_ticker: "",
+      }),
+    );
+
+    expect(parsed).toEqual({
+      actionType: "confirm-bulk",
+      payload: {
+        kind: "subscribe",
+        alertTypes: ["dews"],
+        presetIds: ["usd-top25"],
+        depegWorseningBpsStep: 250,
+        coinIds: ["usdt-tether", "usdc-circle"],
+        subscribeAll: false,
+      },
+      initiatorUserId: "999",
+    });
+  });
+
+  it("returns null when a confirm-bulk payload has an unknown kind", () => {
+    const parsed = parsePendingDisambiguation(
+      makePendingRow({
+        action_type: "confirm-bulk",
+        action_payload: JSON.stringify({ kind: "bogus" }),
+        candidates: JSON.stringify([]),
+        ambiguous_ticker: "",
+      }),
+    );
+
+    expect(parsed).toBeNull();
   });
 });

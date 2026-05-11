@@ -1,5 +1,6 @@
 import type { ResolvedCoin } from "../lib/telegram-alerts";
 import type {
+  ConfirmBulkPayload,
   ParsedSetCommand,
   PendingActionType,
   PresetSubscriptionRow,
@@ -186,6 +187,61 @@ export async function persistPendingDisambiguation(
       input.ambiguousTicker,
       JSON.stringify(input.candidates),
       JSON.stringify(input.remainingTickers),
+      unixNow() + DISAMBIGUATION_TTL_SEC,
+      input.initiatorUserId,
+    )
+    .run();
+}
+
+/**
+ * Persist a "confirm-bulk" pending action. Uses the existing
+ * telegram_pending_disambiguation row so the standard 5-min TTL cleanup applies.
+ * `candidates` is stored as an empty array because no ticker disambiguation
+ * is in flight — the user must tap the inline Confirm/Cancel button instead.
+ */
+export async function persistPendingConfirmBulk(
+  db: D1Database,
+  input: {
+    chatId: string;
+    payload: ConfirmBulkPayload;
+    initiatorUserId: string | null;
+  },
+): Promise<void> {
+  await db
+    .prepare(`
+      INSERT INTO telegram_pending_disambiguation (
+        chat_id,
+        action_type,
+        action_payload,
+        alert_types,
+        resolved_ids,
+        ambiguous_ticker,
+        candidates,
+        remaining_tickers,
+        expires_at,
+        initiator_user_id
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(chat_id) DO UPDATE SET
+        action_type = excluded.action_type,
+        action_payload = excluded.action_payload,
+        alert_types = excluded.alert_types,
+        resolved_ids = excluded.resolved_ids,
+        ambiguous_ticker = excluded.ambiguous_ticker,
+        candidates = excluded.candidates,
+        remaining_tickers = excluded.remaining_tickers,
+        expires_at = excluded.expires_at,
+        initiator_user_id = excluded.initiator_user_id
+    `)
+    .bind(
+      input.chatId,
+      "confirm-bulk",
+      JSON.stringify(input.payload),
+      JSON.stringify([]),
+      JSON.stringify([]),
+      "",
+      JSON.stringify([]),
+      JSON.stringify([]),
       unixNow() + DISAMBIGUATION_TTL_SEC,
       input.initiatorUserId,
     )

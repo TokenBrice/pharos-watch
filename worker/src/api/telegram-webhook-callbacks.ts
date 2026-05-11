@@ -14,7 +14,15 @@
 
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { answerCallbackQuery, sendToChat } from "../lib/telegram";
-import { unixNow } from "./telegram-webhook-store";
+import {
+  clearPendingDisambiguation,
+  removePresetSubscriptions,
+  removeSubscriptions,
+  unixNow,
+  upsertGlobalAlertTypes,
+  upsertPresetSubscriptions,
+  upsertSubscriberAndSubscriptions,
+} from "./telegram-webhook-store";
 import { loadStatusForCoin } from "./telegram-webhook-status";
 import { buildStatusMessage } from "./telegram-webhook-messages";
 import {
@@ -26,7 +34,12 @@ import {
   handleSetupTypeToggle,
   parseSetupState,
 } from "./telegram-webhook-setup";
-import { SETUP_PENDING_ACTION_TYPE } from "./telegram-webhook-shared";
+import { parsePendingDisambiguation } from "./telegram-webhook-parsing";
+import {
+  SETUP_PENDING_ACTION_TYPE,
+  type ConfirmBulkPayload,
+  type PendingDisambiguationRow,
+} from "./telegram-webhook-shared";
 
 const SNOOZE_SECONDS = {
   "1h": 60 * 60,
@@ -209,5 +222,127 @@ export async function handleCallbackQuery(
     return;
   }
 
+  if ((action === "confirm" || action === "cancel") && arg === "bulk") {
+    await handleBulkConfirmCallback(db, botToken, cb, action);
+    return;
+  }
+
   await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+}
+
+async function handleBulkConfirmCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  action: "confirm" | "cancel",
+): Promise<void> {
+  const chatId = cb.message?.chat?.id?.toString();
+  if (!chatId) {
+    await answerCallbackQuery(cb.id, botToken);
+    return;
+  }
+
+  const pendingRow = await db
+    .prepare(
+      "SELECT action_type, action_payload, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
+    )
+    .bind(chatId)
+    .first<PendingDisambiguationRow>();
+
+  if (!pendingRow || unixNow() >= pendingRow.expires_at) {
+    if (pendingRow) {
+      await clearPendingDisambiguation(db, chatId);
+    }
+    await answerCallbackQuery(cb.id, botToken, { text: "This confirmation has expired. Re-run the command." });
+    return;
+  }
+
+  const pendingAction = parsePendingDisambiguation(pendingRow);
+  if (!pendingAction || pendingAction.actionType !== "confirm-bulk") {
+    await answerCallbackQuery(cb.id, botToken, { text: "No bulk confirmation is pending." });
+    return;
+  }
+
+  const actorUserId = cb.from?.id != null ? String(cb.from.id) : null;
+  if (pendingAction.initiatorUserId != null && pendingAction.initiatorUserId !== actorUserId) {
+    await answerCallbackQuery(cb.id, botToken, {
+      text: "Only the user who started this confirmation can complete it.",
+    });
+    return;
+  }
+
+  if (action === "cancel") {
+    await clearPendingDisambiguation(db, chatId);
+    await sendToChat(chatId, "Cancelled.", botToken, { disableWebPagePreview: true });
+    await answerCallbackQuery(cb.id, botToken, { text: "Cancelled." });
+    return;
+  }
+
+  // Confirm path: execute the deferred action, then clear pending.
+  const chatType = cb.message?.chat?.type ?? "private";
+  const username = chatType === "group" || chatType === "supergroup" ? null : cb.from?.username ?? null;
+  try {
+    await executeConfirmedBulk(db, chatId, username, pendingAction.payload);
+  } catch (err) {
+    console.error("[telegram-webhook] bulk confirm execution failed:", err);
+    await answerCallbackQuery(cb.id, botToken, { text: "Could not apply changes. Please try again." });
+    return;
+  }
+  await clearPendingDisambiguation(db, chatId);
+  await sendToChat(chatId, "Confirmed.", botToken, { disableWebPagePreview: true });
+  await answerCallbackQuery(cb.id, botToken, { text: "Applied." });
+}
+
+async function executeConfirmedBulk(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  payload: ConfirmBulkPayload,
+): Promise<void> {
+  if (payload.kind === "subscribe") {
+    const alertTypes = new Set(payload.alertTypes);
+    if (payload.subscribeAll) {
+      await upsertGlobalAlertTypes(db, chatId, username, alertTypes);
+      return;
+    }
+    await upsertSubscriberAndSubscriptions(db, chatId, username, alertTypes, payload.coinIds, {
+      depegWorseningBpsStep: payload.depegWorseningBpsStep,
+    });
+    if (payload.presetIds.length > 0) {
+      await upsertPresetSubscriptions(db, chatId, payload.presetIds, alertTypes, {
+        depegWorseningBpsStep: payload.depegWorseningBpsStep,
+      });
+    }
+    return;
+  }
+
+  // unsubscribe
+  if (payload.unsubscribeAll) {
+    const now = unixNow();
+    await db.batch([
+      db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
+      db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
+      db
+        .prepare(
+          `UPDATE telegram_subscribers
+            SET alert_dews = 0,
+                alert_depeg = 0,
+                alert_safety = 0,
+                alert_launch = 0,
+                global_alert_dews = 0,
+                global_alert_depeg = 0,
+                global_alert_safety = 0,
+                global_alert_launch = 0,
+                global_depeg_worsening_bps_step = NULL,
+                last_active_at = ?
+          WHERE chat_id = ?`,
+        )
+        .bind(now, chatId),
+    ]);
+    return;
+  }
+  await removeSubscriptions(db, chatId, payload.coinIds);
+  if (payload.presetIds.length > 0) {
+    await removePresetSubscriptions(db, chatId, payload.presetIds);
+  }
 }
