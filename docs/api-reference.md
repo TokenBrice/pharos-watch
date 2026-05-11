@@ -16,7 +16,7 @@ The runtime now uses three HTTP lanes:
 
 Static dataset exports are served from the public website, not from the Worker API, and do not require `X-API-Key`. The Stablecoin Cemetery export is available as JSON at `https://pharos.watch/datasets/stablecoin-cemetery.json` and CSV at `https://pharos.watch/datasets/stablecoin-cemetery.csv`.
 
-Machine-readable integration artifacts are also served from the public website for onboarding. The OpenAPI endpoint catalogue is available at `https://pharos.watch/openapi.json`, and Postman artifacts are available at `https://pharos.watch/postman/pharos-api.postman_collection.json` plus `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both Postman files, then replace the environment `apiKey` placeholder with a real `X-API-Key`. The public artifacts intentionally exclude Cloudflare-Access-gated admin routes; use the operator documentation for admin dry-runs.
+Machine-readable integration artifacts are also served from the public website for onboarding. The OpenAPI endpoint catalogue is available at `https://pharos.watch/openapi.json`, and Postman artifacts are available at `https://pharos.watch/postman/pharos-api.postman_collection.json` plus `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both Postman files, then replace the environment `apiKey` placeholder with a real `X-API-Key`. The public artifacts intentionally exclude Cloudflare-Access-gated admin routes and the self-serve key issuance POST endpoints; request keys through `https://pharos.watch/api/`.
 
 Browser consumers should use same-origin `/_site-data/*` via the frontend helpers in `src/lib/api.ts`. In production, that Pages proxy targets `https://site-api.pharos.watch` through `SITE_API_ORIGIN`. Direct integrations, CI smoke, and build-time sync scripts should target `https://api.pharos.watch`.
 
@@ -34,13 +34,17 @@ Public, non-admin routes on `https://api.pharos.watch` that do not require `X-AP
 - `GET /api/health`
 - `GET /api/og/*`
 - `POST /api/feedback`
+- `POST /api/api-key-requests`
+- `POST /api/api-key-requests/verify`
 - `POST /api/telegram-webhook`
 
 `POST /api/telegram-webhook` is externally reachable but not anonymous: it requires `X-Telegram-Bot-Api-Secret-Token` instead of `X-API-Key`.
 
 Admin/operator routes are also outside the public API-key gate, but they remain Cloudflare-Access-gated and are supported only through `ops-api.pharos.watch` or the `ops.pharos.watch/api/admin/*` Pages proxy.
 
-The worker stores only the key prefix plus a peppered HMAC of the secret portion. Admin callers create, rotate, and deactivate keys through the operator lane (`ops.pharos.watch` / `ops-api.pharos.watch`); plaintext tokens are returned only once at creation/rotation time.
+The public self-serve request form lives at `https://pharos.watch/api/`. It sends an email verification link, then exchanges that one-time token for a default key after verification. Default self-serve keys are `tier="self-serve"`, `trafficClass="external"`, limited to `30` requests per minute, expire after `60` days, and allow one active/pending self-serve claim per normalized email. Request details are available only in the private `ops.pharos.watch/admin-api/` UI.
+
+The worker stores only the key prefix plus a peppered HMAC of the secret portion. Admin callers create, rotate, and deactivate keys through the operator lane (`ops.pharos.watch` / `ops-api.pharos.watch`); plaintext tokens are returned only once at creation/rotation time. Self-serve issuance uses the same storage model and returns the plaintext token only once after verification.
 
 For protected cacheable `GET` routes, the worker keeps a bounded isolate-local verified-key cache and a bounded isolate-local fallback limiter. During a brief D1 auth/limiter outage, a recently verified key can continue to read those cached routes; unknown or not-yet-verified keys still fail closed.
 
@@ -131,7 +135,7 @@ These profiles apply while the dataset is within its generic freshness runway. O
 | archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                                                                                                                                     |
 | no-store | `no-store`                           | health plus all admin GET routes after router override (`status`, `status-history`, `request-source-stats`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `discovery-candidates`, `status-probe-history`) |
 
-`POST /api/feedback`, `POST /api/telegram-webhook`, and admin POST endpoints bypass edge caching because they are non-GET request paths. They are not part of a cacheable `Cache-Control` profile and do not currently rely on an emitted `Cache-Control: no-store` header.
+`POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The self-serve API-key endpoints explicitly return no-store responses so verification tokens and plaintext API keys are never cacheable.
 
 ---
 
@@ -158,7 +162,7 @@ Client best practices:
 
 ## Rate Limits
 
-Public API traffic enforces per-key rate limiting to ensure fair usage. Non-exempt `/api/*` requests require a valid `X-API-Key`; the no-key public exceptions are `GET /api/health`, `GET /api/og/*`, `POST /api/feedback`, and `POST /api/telegram-webhook`. The Telegram webhook is authenticated separately with `X-Telegram-Bot-Api-Secret-Token`.
+Public API traffic enforces per-key rate limiting to ensure fair usage. Non-exempt `/api/*` requests require a valid `X-API-Key`; the no-key public exceptions are `GET /api/health`, `GET /api/og/*`, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, and `POST /api/telegram-webhook`. The Telegram webhook is authenticated separately with `X-Telegram-Bot-Api-Secret-Token`.
 
 ### Per-key limit
 
@@ -167,6 +171,8 @@ Public API traffic enforces per-key rate limiting to ensure fair usage. Non-exem
 | Per API key | Varies (default 120) | 60 seconds |
 
 Per-key overrides are stored in `api_keys.rate_limit_per_minute`.
+
+Self-serve keys are issued with a fixed default of `30` requests per minute and a `60` day expiry. The request workflow has separate abuse limits: initial submissions are throttled by salted IP hash (`5/hour`) and private email hash (`3/day`), verification attempts are throttled by salted IP hash (`20/10 minutes`) and token hash (`5/10 minutes`), and successful issuance allows one self-serve key creation per salted IP hash per 24 hours.
 
 When the per-key limiter is exceeded, the API returns `429 Too Many Requests`:
 
@@ -214,7 +220,7 @@ JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` retu
 HTTP method allowance is defined centrally in `shared/lib/api-endpoints/` and enforced by `worker/src/router.ts` (`validateEndpointMethod`).
 
 - `GET` is accepted for read endpoints (plus admin debug/status endpoints, `GET /api/backfill-dews`, and dry-run repair previews for `GET /api/backfill-dews?repair=...&dry-run=true`).
-- `POST` is accepted for mutating admin endpoints, `POST /api/feedback`, and `POST /api/telegram-webhook`.
+- `POST` is accepted for mutating admin endpoints, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, and `POST /api/telegram-webhook`.
 - `GET, POST` is accepted on `/api/api-keys` so operators can list keys and create a new key through the same route.
 - `POST` is accepted on `/api/api-keys/:id/update`, `/api/api-keys/:id/deactivate`, and `/api/api-keys/:id/rotate`.
 - `/api/audit-depeg-history` allows `GET` only with `?dry-run=true`; otherwise it is `POST`-only.
@@ -2520,6 +2526,120 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
 
 ---
 
+### `POST /api/api-key-requests`
+
+Public self-serve API key request endpoint used by `https://pharos.watch/api/`. It records the request, reserves the normalized email claim, and sends an email verification link through Resend. It does not issue a key until the email verification endpoint succeeds.
+
+**Authentication:** exempt
+
+**Cache:** no-store
+
+**Default key policy after verification**
+
+- `tier`: `"self-serve"`
+- `trafficClass`: `"external"`
+- `rateLimitPerMinute`: `30`
+- `expiresAt`: 60 days after issuance
+- one active or pending self-serve key per normalized email
+
+**Request body**
+
+```json
+{
+  "email": "dev@example.com",
+  "requesterName": "Optional name",
+  "organization": "Optional organization",
+  "projectUrl": "https://example.com",
+  "useCase": "Required, 40-2000 characters",
+  "intendedEndpoints": ["/api/stablecoins", "/api/stablecoin/:id"],
+  "expectedCadence": "hourly",
+  "expectedVolume": "Optional free-form estimate",
+  "acceptedTerms": true,
+  "website": ""
+}
+```
+
+| Field               | Type                                                                                | Required | Notes |
+| ------------------- | ----------------------------------------------------------------------------------- | -------- | ----- |
+| `email`             | `string`                                                                            | Yes      | Normalized to lowercase for the one-key-per-email claim |
+| `requesterName`     | `string`                                                                            | No       | Private operator context only |
+| `organization`      | `string`                                                                            | No       | Private operator context only |
+| `projectUrl`        | `string`                                                                            | No       | Must start with `https://` when provided |
+| `useCase`           | `string`                                                                            | Yes      | 40-2000 characters |
+| `intendedEndpoints` | `string[]`                                                                          | No       | Public API paths, known dynamic patterns such as `/api/stablecoin/:id`, or `unknown`; admin/API-key/backfill paths are rejected |
+| `expectedCadence`   | `"hourly" \| "every_5_min" \| "every_1_min" \| "manual" \| "other"`                 | Yes      | Used for review context |
+| `expectedVolume`    | `string`                                                                            | No       | Private operator context only |
+| `acceptedTerms`     | `true`                                                                              | Yes      | Fair-use acknowledgement |
+| `website`           | `string`                                                                            | No       | Honeypot field; non-empty submissions are silently accepted without issuing work |
+
+**Success response:** `202 Accepted`
+
+```json
+{
+  "status": "pending_verification",
+  "requestId": "akr_...",
+  "message": "Verification email sent. Check your inbox to finish issuing the API key."
+}
+```
+
+**Error responses**
+
+- `400` invalid body, invalid email, invalid project URL, unknown/admin intended endpoint, or missing fair-use acknowledgement
+- `409` the normalized email already has an active or pending self-serve key claim
+- `429` request throttle exceeded
+- `503` self-serve env/email dependency unavailable (`Retry-After: 60`)
+
+### `POST /api/api-key-requests/verify`
+
+Public self-serve verification endpoint used by the email link. The browser removes the `verify` query parameter from the URL before posting the token. A successful response creates the key, marks the request issued, and returns the plaintext API token exactly once.
+
+**Authentication:** exempt
+
+**Cache:** no-store
+
+**Request body**
+
+```json
+{ "token": "akv_..." }
+```
+
+**Success response:** `201 Created`
+
+```json
+{
+  "status": "issued",
+  "requestId": "akr_...",
+  "key": {
+    "id": 7,
+    "keyPrefix": "0123456789abcdef",
+    "maskedToken": "ph_live_0123456789abcdef_...",
+    "name": "Self-serve: Example",
+    "ownerEmail": "dev@example.com",
+    "tier": "self-serve",
+    "trafficClass": "external",
+    "rateLimitPerMinute": 30,
+    "isActive": true,
+    "expiresAt": 1715686400,
+    "createdAt": 1710500000,
+    "updatedAt": 1710500000,
+    "lastUsedAt": null,
+    "lastUsedRoute": null
+  },
+  "token": "ph_live_...",
+  "usage": {
+    "baseUrl": "https://api.pharos.watch",
+    "headerName": "X-API-Key",
+    "retryGuidance": "Respect Retry-After on 429 responses and add jitter to polling intervals."
+  }
+}
+```
+
+**Error responses**
+
+- `400` invalid, expired, used, or no-longer-pending verification token
+- `429` verification attempt throttle exceeded or daily issuance limit for the salted IP hash reached
+- `503` self-serve dependency unavailable or issuance consistency compensation triggered (`Retry-After: 60`)
+
 ### `POST /api/feedback`
 
 Public feedback ingestion endpoint used by the in-app feedback modal. Validates payloads, applies IP-based rate limiting, and forwards submissions to GitHub Issues.
@@ -3093,6 +3213,31 @@ Admin-only hard deactivation for an existing API key. This sets `isActive=false`
 Admin-only secret rotation. The old token stops working immediately and a new plaintext token is returned once. Rotation does not accept expiry input and preserves the current `expiresAt`.
 
 **Response shape:** `ApiKeyRotateResponse`
+
+### `GET /api/api-key-requests-admin`
+
+Admin-only self-serve API key request list used by `ops.pharos.watch/admin-api/`. Returns requester details, risk context, intended endpoints, verification/issuance timestamps, linked key metadata, and claim state. It never returns plaintext API tokens.
+
+**Query params:**
+
+| Param    | Type      | Default | Max | Description |
+| -------- | --------- | ------- | --- | ----------- |
+| `status` | `string`  | n/a     | n/a | Optional filter: `pending_verification`, `issued`, `rejected`, `blocked`, or `expired` |
+| `limit`  | `integer` | `50`    | 100 | Number of request rows to return |
+
+**Response shape:** `ApiKeySelfServeRequestAdminListResponse` (defined in `shared/types/api-key-requests.ts`)
+
+### `POST /api/api-key-requests-admin/:requestId/reject`
+
+Admin-only rejection for a self-serve request. If a linked key exists, the handler deactivates it before marking the request rejected and releasing the email claim.
+
+**Response shape:** `ApiKeySelfServeAdminMutationResponse`
+
+### `POST /api/api-key-requests-admin/:requestId/release-claim`
+
+Admin-only claim release for a self-serve request that should no longer block the normalized email. The handler refuses to release a claim while the request still has an active, unexpired linked key.
+
+**Response shape:** `ApiKeySelfServeAdminMutationResponse`
 
 ### `POST /api/backfill-depegs`
 

@@ -24,7 +24,7 @@ const HERO_LANES = [
     icon: KeyRound,
     eyebrow: "For integrations",
     description:
-      "Call `https://api.pharos.watch` directly. Non-exempt `/api/*` requests require a valid `X-API-Key`; missing or invalid keys return `401`.",
+      "Call `https://api.pharos.watch` directly. Non-exempt `/api/*` requests require a valid `X-API-Key`; missing or invalid keys return `401`. Self-serve access starts at [/api/](/api/).",
   },
   {
     title: "Website lane",
@@ -46,12 +46,12 @@ const ABOUT_API_FAQ: FaqItem[] = [
   {
     question: "How do I get a Pharos API key?",
     answer:
-      "Join the Pharos Telegram channel (https://t.me/pharoswatch) and request one. Include your intended usage: what you are building, which endpoints you plan to call, approximate polling cadence, and expected request volume.",
+      "Use the self-serve request form at https://pharos.watch/api/. It sends an email verification link and reveals the API key once after verification.",
   },
   {
     question: "Do I need an API key for every endpoint?",
     answer:
-      "Almost every public data endpoint on https://api.pharos.watch requires X-API-Key. The no-key exceptions are health checks, OG images, feedback submission, and the Telegram webhook; Telegram still authenticates with its own secret. Admin routes use Cloudflare Access instead of public API keys.",
+      "Almost every public data endpoint on https://api.pharos.watch requires X-API-Key. The no-key exceptions are health checks, OG images, feedback submission, the Telegram webhook, and the self-serve API-key request and verification endpoints; Telegram still authenticates with its own secret. Admin routes use Cloudflare Access instead of public API keys.",
   },
   {
     question: "What is the difference between the public API lane and the website lane?",
@@ -354,7 +354,7 @@ export default async function AboutApiPage() {
                 <span className="font-semibold text-foreground">Public auth:</span> <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">X-API-Key</code>
               </li>
               <li>
-                <span className="font-semibold text-foreground">No-key public routes:</span> health, OG images, feedback, Telegram webhook (Telegram secret)
+                <span className="font-semibold text-foreground">No-key public routes:</span> health, OG images, feedback, self-serve key request, Telegram webhook (Telegram secret)
               </li>
               <li>
                 <span className="font-semibold text-foreground">Admin auth:</span> Cloudflare Access on the ops hosts
@@ -387,25 +387,21 @@ export default async function AboutApiPage() {
       <section className="rounded-[1.5rem] border border-amber-500/30 bg-amber-500/8 px-4 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:px-5 sm:py-6">
         <div className="space-y-2">
           <p className="pharos-kicker text-amber-700 dark:text-amber-400">Need A Key?</p>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Request API access on Telegram</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Request API access by email verification</h2>
         </div>
         <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
           <p>
-            If you want a public API key, join the{" "}
-            <a
-              href="https://t.me/pharoswatch"
-              target="_blank"
-              rel="noopener noreferrer"
+            If you want a public API key, use the{" "}
+            <Link
+              href="/api/"
               className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
             >
-              Pharos Telegram channel
-            </a>{" "}
-            and ask for one there.
+              self-serve API access form
+            </Link>
+            .
           </p>
           <p>
-            Include your intended usage in the request: what you are building, which endpoints you expect to call, your
-            approximate polling cadence, and the expected request volume. That makes it possible to issue the right key
-            and rate-limit profile up front.
+            The default self-serve key is email-verified, limited to 30 requests per minute, scoped to the public external API lane, and expires after 60 days.
           </p>
         </div>
       </section>

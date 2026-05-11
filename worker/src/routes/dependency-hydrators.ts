@@ -31,6 +31,18 @@ export const ROUTE_DEPENDENCY_HYDRATORS = {
   coingeckoApiKey(routeCtx, env) {
     routeCtx.coingeckoApiKey = normalizeCgApiKey(env.COINGECKO_API_KEY);
   },
+  apiKeySelfServeEnv(routeCtx, env) {
+    routeCtx.apiKeySelfServeEnv = {
+      API_KEY_SELF_SERVE_IP_SALT: env.API_KEY_SELF_SERVE_IP_SALT,
+      API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER: env.API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER,
+      API_KEY_SELF_SERVE_REQUEST_PEPPER: env.API_KEY_SELF_SERVE_REQUEST_PEPPER,
+      API_KEY_SELF_SERVE_EMAIL_FROM: env.API_KEY_SELF_SERVE_EMAIL_FROM,
+      API_KEY_SELF_SERVE_EMAIL_REPLY_TO: env.API_KEY_SELF_SERVE_EMAIL_REPLY_TO,
+      API_KEY_SELF_SERVE_PUBLIC_BASE_URL: env.API_KEY_SELF_SERVE_PUBLIC_BASE_URL,
+      RESEND_API_KEY: env.RESEND_API_KEY,
+      GITHUB_PAT: env.GITHUB_PAT,
+    };
+  },
   feedbackEnv(routeCtx, env) {
     routeCtx.feedbackEnv = {
       GITHUB_PAT: env.GITHUB_PAT,

@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { isOpsUiHost } from "@/lib/admin-access";
+import { useOpsUiHost } from "@/hooks/use-ops-ui-host";
 import { StatusDashboard } from "./status-dashboard";
 
 const ADMIN_SHELL_PROPS = {
@@ -14,10 +14,8 @@ const ADMIN_SHELL_PROPS = {
 };
 
 export default function StatusClient() {
-  // null on SSR (no window); resolved on first client render via lazy init.
-  const [opsUi] = useState<boolean | null>(() =>
-    typeof window === "undefined" ? null : isOpsUiHost(),
-  );
+  const opsUi = useOpsUiHost();
+
   const handleOpsSignOut = () => {
     window.location.assign("/cdn-cgi/access/logout");
   };

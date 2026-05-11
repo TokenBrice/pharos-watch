@@ -113,6 +113,7 @@ const methodologyLinks = [
 ] as const;
 
 const apiLinks = [
+  ["API Access", absolute("/api/"), "Email-verified self-serve API key request flow."],
   ["API Reference", absolute("/about/api/"), "Public and ops lanes, auth model, endpoint catalogue."],
   ["OpenAPI spec", absolute("/openapi.json"), "Machine-readable OpenAPI 3.1 endpoint catalogue for the Pharos API."],
   [

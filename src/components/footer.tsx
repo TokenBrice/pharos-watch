@@ -19,7 +19,7 @@ const FOOTER_PRIMARY_LINKS: readonly FooterLink[] = [
   { href: "/coverage/", label: "Coverage" },
   { href: "/methodology/", label: "Methodology" },
   { href: "/funding/", label: "Funding" },
-  { href: "/about/api/", label: "API" },
+  { href: "/api/", label: "API" },
   { href: "/about/", label: "About" },
   { href: "https://pharosville.pharos.watch/", label: "PharosVille", external: true },
 ];

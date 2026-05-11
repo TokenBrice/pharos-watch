@@ -11,6 +11,7 @@ import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import type { TelegramCreds } from "../lib/telegram";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { FeedbackEnv } from "../api/feedback";
+import type { ApiKeySelfServeEnv } from "../api/api-key-requests/types";
 
 /** Core context available to every route handler. */
 export interface RouteContext {
@@ -37,6 +38,10 @@ export interface DigestRouteFields {
 
 export interface FeedbackRouteFields {
   feedbackEnv: FeedbackEnv;
+}
+
+export interface ApiKeySelfServeRouteFields {
+  apiKeySelfServeEnv: ApiKeySelfServeEnv;
 }
 
 export interface MintBurnFreshnessRouteFields {
@@ -70,6 +75,7 @@ export interface RouteDependencyFieldMap {
   cloudflareD1StatusConfig: CloudflareD1StatusRouteFields;
   chainRpcs: ChainRpcRouteFields;
   coingeckoApiKey: CoingeckoRouteFields;
+  apiKeySelfServeEnv: ApiKeySelfServeRouteFields;
   feedbackEnv: FeedbackRouteFields;
   mintBurnFreshnessConfig: MintBurnFreshnessRouteFields;
   telegram: TelegramRouteFields;

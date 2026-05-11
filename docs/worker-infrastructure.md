@@ -44,7 +44,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 - `WORKER_RESERVED_ENV_KEYS`
 - `WORKER_ACTIVE_ENV_KEYS` (`required + optional`)
 
-The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `functions/lib/site-api-env.ts`, with the same `required` / `optional` / `reserved` / `active` shape derived from that shared manifest. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, when `SITE_API_SHARED_SECRET` is missing, when `GITHUB_PAT` / `FEEDBACK_IP_SALT` are missing for `POST /api/feedback`, or when `API_KEY_HASH_PEPPER` is missing. The Pages ops-proxy contract now actively requires `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD` for inbound UI JWT verification. The Pages `site-data` `DB` binding is optional: binding it enables same-origin demand telemetry for `/api/request-source-stats`; without `DB`, allowed proxy reads still work but site-data attribution is skipped.
+The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `functions/lib/site-api-env.ts`, with the same `required` / `optional` / `reserved` / `active` shape derived from that shared manifest. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, when `SITE_API_SHARED_SECRET` is missing, when `GITHUB_PAT` / `FEEDBACK_IP_SALT` are missing for `POST /api/feedback`, when `API_KEY_HASH_PEPPER` is missing, or when the self-serve API key email verification bindings are only partially configured. The Pages ops-proxy contract now actively requires `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD` for inbound UI JWT verification. The Pages `site-data` `DB` binding is optional: binding it enables same-origin demand telemetry for `/api/request-source-stats`; without `DB`, allowed proxy reads still work but site-data attribution is skipped.
 
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:BEGIN -->
 Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worker and Pages env modules derive their `required` / `optional` / `reserved` views from that manifest.
@@ -72,6 +72,13 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `COINGECKO_API_KEY` | `string` | optional | - | - | CoinGecko credential used for price enrichment and depeg confirmation. |
 | `GITHUB_PAT` | `string` | required | - | - | GitHub personal access token used by the feedback -> issue bridge; required to keep `POST /api/feedback` available. |
 | `FEEDBACK_IP_SALT` | `string` | required | - | - | Dedicated salt for hashed-IP feedback submission throttling; required to keep `POST /api/feedback` available. |
+| `API_KEY_SELF_SERVE_IP_SALT` | `string` | required | - | - | Dedicated salt for hashed-IP self-serve API key request throttling. |
+| `API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER` | `string` | required | - | - | HMAC pepper used for private self-serve API request email lookup and duplicate-claim keys. |
+| `API_KEY_SELF_SERVE_REQUEST_PEPPER` | `string` | required | - | - | HMAC pepper used to hash one-time self-serve API email verification tokens. |
+| `RESEND_API_KEY` | `string` | required | - | - | Resend API key used to send self-serve API verification emails. |
+| `API_KEY_SELF_SERVE_EMAIL_FROM` | `string` | required | - | - | Configured sender for self-serve API verification emails, e.g. `Pharos API <api@mail.pharos.watch>`. |
+| `API_KEY_SELF_SERVE_EMAIL_REPLY_TO` | `string` | required | - | - | Reply-to address for self-serve API verification emails. |
+| `API_KEY_SELF_SERVE_PUBLIC_BASE_URL` | `string` | required | - | - | Public website URL used to build self-serve API verification links; production value is `https://pharos.watch/api`. |
 | `TWITTER_API_KEY` | `string` | optional | - | - | Twitter/X digest delivery credential. |
 | `TWITTER_API_SECRET` | `string` | optional | - | - | Twitter/X digest delivery credential. |
 | `TWITTER_ACCESS_TOKEN` | `string` | optional | - | - | Twitter/X digest delivery credential. |
@@ -118,9 +125,11 @@ These are pure functions. `Env` bindings are only available inside handler funct
 
 Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`. Missing or invalid keys return `401 Unauthorized`.
 
-When a valid key is present, the worker uses the D1-backed `api_key_rate_limit` table with the per-key threshold stored in `api_keys.rate_limit_per_minute` (default `120/min`). API keys carry `api_keys.traffic_class` (`external` or `site`) so request attribution can treat website-owned automation separately from third-party consumers. API-key auth or limiter dependency failures fail closed with `503 Service Unavailable` and `Retry-After: 60`. `FEEDBACK_IP_SALT` remains scoped to feedback submission hashing only.
+When a valid key is present, the worker uses the D1-backed `api_key_rate_limit` table with the per-key threshold stored in `api_keys.rate_limit_per_minute` (default `120/min`; self-serve keys are issued at `30/min`). API keys carry `api_keys.traffic_class` (`external` or `site`) so request attribution can treat website-owned automation separately from third-party consumers. API-key auth or limiter dependency failures fail closed with `503 Service Unavailable` and `Retry-After: 60`. `FEEDBACK_IP_SALT` remains scoped to feedback submission hashing only.
 
-The no-key public exceptions are `GET /api/health`, `GET /api/og/*`, `POST /api/feedback`, and `POST /api/telegram-webhook`. The Telegram webhook is authenticated separately through `X-Telegram-Bot-Api-Secret-Token`.
+The no-key public exceptions are `GET /api/health`, `GET /api/og/*`, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, and `POST /api/telegram-webhook`. The Telegram webhook is authenticated separately through `X-Telegram-Bot-Api-Secret-Token`.
+
+Self-serve API key requests use `api_key_requests`, `api_key_request_rate_limit`, and `api_key_self_serve_email_claims`. Request intake hashes normalized email, IP, and user-agent values with dedicated self-serve secrets, sends a Resend verification email, and only creates a key after verification. Requester details are visible only through the Access-gated `ops.pharos.watch/admin-api/` UI and the admin endpoints it calls.
 
 ---
 
@@ -131,7 +140,7 @@ The no-key public exceptions are `GET /api/health`, `GET /api/og/*`, `POST /api/
 | Method    | Handling                                                                                                             |
 | --------- | -------------------------------------------------------------------------------------------------------------------- |
 | `OPTIONS` | Returns 204 with CORS headers (preflight)                                                                            |
-| `POST`    | `/api/feedback`, `/api/telegram-webhook`, and mutating admin endpoints from `shared/lib/api-endpoints/`            |
+| `POST`    | `/api/feedback`, `/api/api-key-requests`, `/api/api-key-requests/verify`, `/api/telegram-webhook`, and mutating admin endpoints from `shared/lib/api-endpoints/` |
 | `GET`     | Read endpoints + admin debug routes; mutating admin routes return 405 except dry-run previews such as `/api/audit-depeg-history?dry-run=true` and `/api/backfill-dews?repair=...&dry-run=true`, plus the read-only `GET /api/backfill-dews` backtest |
 | Other     | Known endpoint families with disallowed methods return 405 `{ error: "Method not allowed" }` with `Allow`; unregistered public `/api/*` paths can return auth errors first, then 404 after lane auth succeeds because no route dependencies can be hydrated |
 
@@ -139,11 +148,12 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 
 ### Public API Auth and Rate Limiting
 
-- `worker/src/handlers/http/gates.ts` checks the request lane in this order: `ops-api` Access auth, `site-api` shared-secret auth, then public `/api/*` key auth. There is no unauthenticated public lane.
+- `worker/src/handlers/http/gates.ts` checks the request lane in this order: `ops-api` Access auth, `site-api` shared-secret auth, then public `/api/*` key auth or explicit public exemptions.
 - Public `/api/*` routes accept `X-API-Key` tokens in the format `ph_live_<16 hex prefix>_<32 char base64url secret>`.
 - Valid keys are verified from the D1-backed `api_keys` table using `key_prefix` lookup plus an HMAC-SHA256 secret hash with `API_KEY_HASH_PEPPER`.
-- Valid keyed requests use the D1-backed `api_key_rate_limit` table with the per-key threshold stored in `api_keys.rate_limit_per_minute` (default `120/min`).
+- Valid keyed requests use the D1-backed `api_key_rate_limit` table with the per-key threshold stored in `api_keys.rate_limit_per_minute` (default `120/min`, self-serve `30/min`).
 - Requests already authorized for the `ops-api.pharos.watch` admin lane bypass the per-key limiter.
+- `/api/api-key-requests` and `/api/api-key-requests/verify` are exempt from `X-API-Key`, return no-store responses, and have their own request/verification throttles in `api_key_request_rate_limit`.
 - `/api/telegram-webhook` is exempt from the gate because Telegram authenticates separately with `X-Telegram-Bot-Api-Secret-Token`.
 - `site-api.pharos.watch` accepts only `GET` requests to allowlisted public-read paths and requires `X-Pharos-Site-Proxy-Secret`.
 - Website-only browser reads such as `public-status-history` and `telegram-pulse` must use same-origin `/_site-data/*`, which in turn proxies to the `site-api` lane.

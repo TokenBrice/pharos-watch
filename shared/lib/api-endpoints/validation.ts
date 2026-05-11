@@ -73,6 +73,27 @@ export function matchDynamicAdminEndpoint(path: string): DynamicAdminEndpointMat
     };
   }
 
+  if (
+    dynamicDescriptor.key === "api-key-request-reject"
+    || dynamicDescriptor.key === "api-key-request-release-claim"
+  ) {
+    let requestId: string;
+    try {
+      requestId = decodeURIComponent(match[1] ?? "");
+    } catch {
+      return null;
+    }
+    if (!/^[A-Za-z0-9_-]{8,80}$/.test(requestId)) {
+      return null;
+    }
+    return {
+      key: dynamicDescriptor.key,
+      path,
+      requestId,
+      methods: dynamicDescriptor.methods,
+    };
+  }
+
   const apiKeyId = Number.parseInt(match[1] ?? "", 10);
   if (!Number.isFinite(apiKeyId) || apiKeyId <= 0) {
     return null;

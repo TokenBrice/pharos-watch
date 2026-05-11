@@ -101,6 +101,7 @@ export type ApiKeyAuthenticationResult =
   | { kind: "valid"; key: AuthenticatedApiKey };
 
 type ApiKeyAuditAction = "created" | "updated" | "deactivated" | "rotated";
+type ApiKeyAuditActor = "admin" | "self-serve";
 
 const API_KEY_PUBLIC_PROJECTION = `
        id,
@@ -410,12 +411,13 @@ export async function recordApiKeyAudit(
   action: ApiKeyAuditAction,
   detail?: Record<string, unknown>,
   nowSec = getNowSec(),
+  actor: ApiKeyAuditActor = "admin",
 ): Promise<void> {
   await db.prepare(
     `INSERT INTO api_key_audit_log (api_key_id, action, actor, detail_json, created_at)
-     VALUES (?, ?, 'admin', ?, ?)`,
+     VALUES (?, ?, ?, ?, ?)`,
   )
-    .bind(apiKeyId, action, detail ? JSON.stringify(detail) : null, nowSec)
+    .bind(apiKeyId, action, actor, detail ? JSON.stringify(detail) : null, nowSec)
     .run();
 }
 

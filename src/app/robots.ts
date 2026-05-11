@@ -17,7 +17,7 @@ const AI_SEARCH_BOTS = [
   "Applebot-Extended",
 ] as const;
 
-const OPERATOR_DISALLOW = ["/admin", "/admin/", "/api/admin", "/api/admin/"];
+const OPERATOR_DISALLOW = ["/admin", "/admin/", "/admin-api", "/admin-api/", "/api/admin", "/api/admin/"];
 
 export default function robots(): MetadataRoute.Robots {
   return {

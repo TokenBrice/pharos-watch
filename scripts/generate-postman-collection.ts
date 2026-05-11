@@ -111,7 +111,7 @@ function renderCollection() {
     info: {
       name: "Pharos API",
       description:
-        "Postman collection for the Pharos stablecoin analytics API. Protected public routes require an X-API-Key on https://api.pharos.watch. Request a key in the Pharos Telegram channel and include intended endpoints, cadence, and volume. Static website datasets do not require a key.",
+        "Postman collection for the Pharos stablecoin analytics API. Protected public routes require an X-API-Key on https://api.pharos.watch. Request an email-verified key at https://pharos.watch/api/. Static website datasets do not require a key.",
       schema: COLLECTION_SCHEMA,
     },
     auth: {

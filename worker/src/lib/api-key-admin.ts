@@ -3,6 +3,7 @@ import type {
   ApiKeyListResponse,
   ApiKeyMutationResponse,
   ApiKeyRotateResponse,
+  ApiKeyTrafficClass,
 } from "@shared/types";
 import {
   buildApiKeyMaterial,
@@ -54,10 +55,47 @@ export async function createApiKey(
     return parsed;
   }
 
-  const material = await buildApiKeyMaterial(effectivePepper);
   const expiresAt = parsed.expiresAt === undefined
     ? nowSec + getApiKeyDefaultExpirySec()
     : parsed.expiresAt;
+  const created = await createTrustedApiKey(db, effectivePepper, {
+    name: parsed.name,
+    ownerEmail: parsed.ownerEmail ?? null,
+    tier: parsed.tier ?? "standard",
+    trafficClass: parsed.trafficClass ?? getApiKeyTrafficClassDefault(),
+    rateLimitPerMinute: parsed.rateLimitPerMinute ?? getApiKeyDefaultRateLimitPerMinute(),
+    expiresAt: expiresAt ?? null,
+  }, nowSec, {
+    actor: "admin",
+    action: "created",
+    detail: { name: parsed.name, tier: parsed.tier ?? "standard" },
+  });
+  return created;
+}
+
+export interface TrustedApiKeyCreateInput {
+  name: string;
+  ownerEmail: string | null;
+  tier: string;
+  trafficClass: ApiKeyTrafficClass;
+  rateLimitPerMinute: number;
+  expiresAt: number | null;
+}
+
+export interface TrustedApiKeyAuditInput {
+  actor: "admin" | "self-serve";
+  action: "created";
+  detail?: Record<string, unknown>;
+}
+
+export async function createTrustedApiKey(
+  db: ApiKeyDb,
+  pepper: string,
+  input: TrustedApiKeyCreateInput,
+  nowSec = getNowSec(),
+  audit: TrustedApiKeyAuditInput | null = null,
+): Promise<ApiKeyCreateResponse | Response> {
+  const material = await buildApiKeyMaterial(pepper);
   const createdRow = await db.prepare(
     `INSERT INTO api_keys (
        key_prefix,
@@ -78,12 +116,12 @@ export async function createApiKey(
     .bind(
       material.keyPrefix,
       material.secretHash,
-      parsed.name,
-      parsed.ownerEmail ?? null,
-      parsed.tier ?? "standard",
-      parsed.trafficClass ?? getApiKeyTrafficClassDefault(),
-      parsed.rateLimitPerMinute ?? getApiKeyDefaultRateLimitPerMinute(),
-      expiresAt ?? null,
+      input.name,
+      input.ownerEmail,
+      input.tier,
+      input.trafficClass,
+      input.rateLimitPerMinute,
+      input.expiresAt,
       nowSec,
       nowSec,
     )
@@ -94,7 +132,9 @@ export async function createApiKey(
   }
 
   clearApiKeyCache(material.keyPrefix);
-  await recordApiKeyAudit(db, createdRow.id, "created", { name: parsed.name, tier: parsed.tier ?? "standard" }, nowSec);
+  if (audit) {
+    await recordApiKeyAudit(db, createdRow.id, audit.action, audit.detail, nowSec, audit.actor);
+  }
   return {
     key: mapRowToSummary(createdRow),
     token: material.token,

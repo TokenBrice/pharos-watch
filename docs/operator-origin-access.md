@@ -1,6 +1,6 @@
 # Operator Origin Access Setup
 
-Runbook for the operator-origin split that now fronts `/admin/` and browser admin calls with Access-protected ops hosts while leaving `/status/` public and read-only.
+Runbook for the operator-origin split that now fronts `/admin/`, `/admin-api/`, and browser admin calls with Access-protected ops hosts while leaving `/status/` public and read-only.
 
 ---
 
@@ -10,7 +10,7 @@ Current repo-side state:
 
 - the Worker is attached to `api.pharos.watch`, `site-api.pharos.watch`, and `ops-api.pharos.watch`
 - browser CORS allows both `pharos.watch` and `ops.pharos.watch`
-- `/admin/` only serves the live operator panel on `ops.pharos.watch`; the public host is blocked by the Pages host-gate function and returns a non-indexed `404`
+- `/admin/` only serves the live operator panel on `ops.pharos.watch`; `/admin-api/` only serves private API management there. The public host is blocked by Pages host-gate functions and returns non-indexed `404` responses.
 - `/status/` is public and read-only on both the public and ops hosts
 - same-origin Pages Functions proxy `/api/admin/*` from `ops.pharos.watch` to `ops-api.pharos.watch` with Access service-token headers
 
@@ -291,7 +291,7 @@ Pages proxy code and smoke tooling continue emitting only the current secret thr
 
 ### 9. Maintain the WAF rate-limiting rule
 
-Zone-level rate-limiting rule `api-rate-limit-ip` deflects volumetric floods at the Cloudflare edge, before any Worker or D1 write happens. It complements — does not replace — the Worker `api_key_rate_limit` table for keyed public API traffic and the feedback-specific limiter. The old `public_api_rate_limit` table is schema-retained only; the keyed-only public API gate no longer writes to it.
+Zone-level rate-limiting rule `api-rate-limit-ip` deflects volumetric floods at the Cloudflare edge, before any Worker or D1 write happens. It complements, but does not replace, the Worker `api_key_rate_limit` table for keyed public API traffic plus the feedback and self-serve API-key request limiters. The old `public_api_rate_limit` table is schema-retained only; the keyed-only public API gate no longer writes to it.
 
 Parameters of record:
 
@@ -309,7 +309,7 @@ Parameters of record:
 
 Why the expression is tuned this way:
 
-- **Host scope** — `api.pharos.watch` only, not `site-api.pharos.watch` or `ops-api.pharos.watch`. Browser reads to `site-api` arrive via the same-origin Pages Functions proxy (`functions/_site-data/[[path]].ts`), which routes through Cloudflare's internal network; a single colo IP proxying many users could plausibly trip a per-IP limit under load. `site-api` is already gated by `SITE_API_SHARED_SECRET` and `ops-api` by Cloudflare Access, so neither benefits from an additional volumetric filter in front of its own auth layer. The keyed public surface — `api.pharos.watch` — still benefits from a zone-side floor on the exempt routes (`/api/health`, `/api/og/*`, `/api/feedback`, `/api/telegram-webhook`) and as a flood-control backstop in front of per-key auth.
+- **Host scope** — `api.pharos.watch` only, not `site-api.pharos.watch` or `ops-api.pharos.watch`. Browser reads to `site-api` arrive via the same-origin Pages Functions proxy (`functions/_site-data/[[path]].ts`), which routes through Cloudflare's internal network; a single colo IP proxying many users could plausibly trip a per-IP limit under load. `site-api` is already gated by `SITE_API_SHARED_SECRET` and `ops-api` by Cloudflare Access, so neither benefits from an additional volumetric filter in front of its own auth layer. The keyed public surface — `api.pharos.watch` — still benefits from a zone-side floor on the exempt routes (`/api/health`, `/api/og/*`, `/api/feedback`, `/api/api-key-requests`, `/api/api-key-requests/verify`, `/api/telegram-webhook`) and as a flood-control backstop in front of per-key auth.
 - **Path filter** — `starts_with(http.request.uri.path, "/api/")` narrows the match to the legitimate API surface; stray requests to other paths on the host are left to default handling.
 - **Verified bot carve-out** — `not cf.bot_management.verified_bot` exempts Cloudflare's verified-bot list (Google, Bing, Anthropic/ClaudeBot, etc.) so legitimate crawlers never trip the limit. The field is available on all plans.
 

@@ -53,6 +53,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0107     | `0107_telegram_pending_initiator.sql`           | Add nullable `initiator_user_id` to Telegram pending disambiguation state for group-chat ownership checks |
 | 0108     | `0108_blacklist_current_balance_identity.sql`   | Add blacklist current-balance identity and status metadata for scoped address snapshots        |
 | 0109     | `0109_telegram_global_depeg_step.sql`           | Add optional global Telegram depeg worsening threshold for all-stablecoin follows              |
+| 0110     | `0110_api_key_self_serve.sql`                   | Add email-verified self-serve API key request metadata, request throttles, and per-email claims |
 
 ## Retired Individual Migrations
 

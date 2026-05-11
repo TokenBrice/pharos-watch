@@ -8,6 +8,13 @@ export interface Env {
   SITE_API_SHARED_SECRET_PREVIOUS?: string;
   API_KEY_HASH_PEPPER?: string;
   API_KEY_HASH_PEPPER_PREVIOUS?: string;
+  API_KEY_SELF_SERVE_IP_SALT?: string;
+  API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER?: string;
+  API_KEY_SELF_SERVE_REQUEST_PEPPER?: string;
+  API_KEY_SELF_SERVE_EMAIL_FROM?: string;
+  API_KEY_SELF_SERVE_EMAIL_REPLY_TO?: string;
+  API_KEY_SELF_SERVE_PUBLIC_BASE_URL?: string;
+  RESEND_API_KEY?: string;
   CF_ACCESS_TEAM_DOMAIN?: string;
   CF_ACCESS_OPS_UI_AUD?: string;
   CF_ACCESS_OPS_API_AUD?: string;
@@ -50,6 +57,7 @@ export interface WorkerEnvIssue {
     | "d1-status-partial-config"
     | "site-api-secret-misconfigured"
     | "feedback-env-misconfigured"
+    | "api-key-self-serve-env-misconfigured"
     | "public-api-auth-pepper-missing"
     | "api-key-pepper-noop-rotation";
   message: string;
@@ -116,6 +124,13 @@ export function validateWorkerEnvContract(
     | "API_KEY_HASH_PEPPER_PREVIOUS"
     | "GITHUB_PAT"
     | "FEEDBACK_IP_SALT"
+    | "API_KEY_SELF_SERVE_IP_SALT"
+    | "API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER"
+    | "API_KEY_SELF_SERVE_REQUEST_PEPPER"
+    | "API_KEY_SELF_SERVE_EMAIL_FROM"
+    | "API_KEY_SELF_SERVE_EMAIL_REPLY_TO"
+    | "API_KEY_SELF_SERVE_PUBLIC_BASE_URL"
+    | "RESEND_API_KEY"
     | "CLOUDFLARE_ACCOUNT_ID"
     | "CLOUDFLARE_D1_STATUS_API_TOKEN"
     | "CLOUDFLARE_D1_DATABASE_ID"
@@ -152,6 +167,27 @@ export function validateWorkerEnvContract(
     issues.push({
       code: "feedback-env-misconfigured",
       message: "GITHUB_PAT and FEEDBACK_IP_SALT must be configured together; POST /api/feedback returns 503 until both are set.",
+    });
+  }
+
+  const hasSelfServeBinding = hasConfiguredValue(env.API_KEY_SELF_SERVE_IP_SALT)
+    || hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER)
+    || hasConfiguredValue(env.API_KEY_SELF_SERVE_REQUEST_PEPPER)
+    || hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_FROM)
+    || hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_REPLY_TO)
+    || hasConfiguredValue(env.API_KEY_SELF_SERVE_PUBLIC_BASE_URL)
+    || hasConfiguredValue(env.RESEND_API_KEY);
+  const hasSelfServeConfig = hasConfiguredValue(env.API_KEY_SELF_SERVE_IP_SALT)
+    && hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER)
+    && hasConfiguredValue(env.API_KEY_SELF_SERVE_REQUEST_PEPPER)
+    && hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_FROM)
+    && hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_REPLY_TO)
+    && hasConfiguredValue(env.API_KEY_SELF_SERVE_PUBLIC_BASE_URL)
+    && hasConfiguredValue(env.RESEND_API_KEY);
+  if (hasSelfServeBinding && !hasSelfServeConfig) {
+    issues.push({
+      code: "api-key-self-serve-env-misconfigured",
+      message: "Self-serve API key email verification bindings must be configured together; POST /api/api-key-requests returns 503 until they are complete.",
     });
   }
 

@@ -23,6 +23,9 @@ describe("api endpoint registry", () => {
   it("keeps every endpoint path, probe path, and status action path explicitly covered", () => {
     const expectedPaths = [
       "/api/admin-action-log",
+      "/api/api-key-requests",
+      "/api/api-key-requests-admin",
+      "/api/api-key-requests/verify",
       "/api/api-keys",
       "/api/api-keys/audit-log",
       "/api/audit-depeg-history",
@@ -182,6 +185,8 @@ describe("api endpoint registry", () => {
     expect(isCacheBypassPath("/api/status")).toBe(true);
     expect(isCacheBypassPath("/api/backfill-dews")).toBe(true);
     expect(isCacheBypassPath("/api/feedback")).toBe(true);
+    expect(isCacheBypassPath("/api/api-key-requests")).toBe(true);
+    expect(isCacheBypassPath("/api/api-key-requests/verify")).toBe(true);
     expect(isCacheBypassPath("/api/stablecoins")).toBe(false);
   });
 
@@ -198,12 +203,26 @@ describe("api endpoint registry", () => {
       apiKeyId: 7,
       methods: ["POST"],
     });
+    expect(matchDynamicAdminEndpoint("/api/api-key-requests-admin/akr_abc12345/reject")).toEqual({
+      key: "api-key-request-reject",
+      path: "/api/api-key-requests-admin/akr_abc12345/reject",
+      requestId: "akr_abc12345",
+      methods: ["POST"],
+    });
+    expect(matchDynamicAdminEndpoint("/api/api-key-requests-admin/akr_abc12345/release-claim")).toEqual({
+      key: "api-key-request-release-claim",
+      path: "/api/api-key-requests-admin/akr_abc12345/release-claim",
+      requestId: "akr_abc12345",
+      methods: ["POST"],
+    });
     expect(matchDynamicAdminEndpoint("/api/discovery-candidates/not-a-number/dismiss")).toBeNull();
     expect(matchDynamicAdminEndpoint("/api/discovery-candidates/0/dismiss")).toBeNull();
     expect(matchDynamicAdminEndpoint("/api/api-keys/0/update")).toBeNull();
     expect(isAdminPath("/api/status")).toBe(true);
     expect(isAdminPath("/api/api-keys")).toBe(true);
     expect(isAdminPath("/api/request-source-stats")).toBe(true);
+    expect(isAdminPath("/api/api-key-requests-admin")).toBe(true);
+    expect(isAdminPath("/api/api-key-requests-admin/akr_abc12345/reject")).toBe(true);
     expect(isAdminPath("/api/discovery-candidates/42/dismiss")).toBe(true);
     expect(isAdminPath("/api/discovery-candidates/0/dismiss")).toBe(false);
     expect(isAdminPath("/api/api-keys/0/update")).toBe(false);
@@ -211,7 +230,7 @@ describe("api endpoint registry", () => {
   });
 
   it("keeps the shared dynamic descriptor table aligned with current access and dependency policies", () => {
-    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(8);
+    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(10);
 
     expect(findDynamicEndpointDescriptor("/api/stablecoin/usdt-tether")).toMatchObject({
       key: "stablecoin-detail",
@@ -250,6 +269,12 @@ describe("api endpoint registry", () => {
       adminRequired: true,
       routeDependencies: ["apiKeyHashPepper"],
     });
+    expect(getDynamicEndpointDescriptorByKey("api-key-request-reject")).toMatchObject({
+      methods: ["POST"],
+      adminRequired: true,
+      routeDependencies: [],
+      siteDataAccess: "denied",
+    });
 
     expect(getPublicApiAccess("/api/stablecoin/usdt-tether")).toBe("protected");
     expect(getSiteDataAccess("/api/stablecoin/usdt-tether")).toBe("allowed");
@@ -265,6 +290,9 @@ describe("api endpoint registry", () => {
   it("validates endpoint methods from shared definitions", () => {
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/feedback"), "POST")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests"), "POST")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests/verify"), "POST")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests-admin"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/request-source-stats"), "GET")).toBeNull();
@@ -274,6 +302,7 @@ describe("api endpoint registry", () => {
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/update"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/deactivate"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/rotate"), "POST")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests-admin/akr_abc12345/reject"), "POST")).toBeNull();
     expect(
       validateEndpointMethod(new URL("https://api.pharos.watch/api/audit-depeg-history?dry-run=true"), "GET"),
     ).toBeNull();
@@ -305,6 +334,14 @@ describe("api endpoint registry", () => {
       message: "Method not allowed. Use POST for this endpoint.",
       allowedMethods: ["POST"],
     });
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests"), "GET")).toEqual({
+      message: "Method not allowed. Use POST for this endpoint.",
+      allowedMethods: ["POST"],
+    });
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests-admin"), "POST")).toEqual({
+      message: "Method not allowed",
+      allowedMethods: ["GET"],
+    });
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/discovery-candidates/1/dismiss"), "GET")).toEqual({
       message: "Method not allowed. Use POST for this endpoint.",
       allowedMethods: ["POST"],
@@ -326,6 +363,8 @@ describe("api endpoint registry", () => {
   it("keeps public-auth and site-data policies aligned", () => {
     expect(getPublicApiAccess("/api/stablecoins")).toBe("protected");
     expect(getPublicApiAccess("/api/health")).toBe("exempt");
+    expect(getPublicApiAccess("/api/api-key-requests")).toBe("exempt");
+    expect(getPublicApiAccess("/api/api-key-requests/verify")).toBe("exempt");
     expect(getPublicApiAccess("/api/public-status-history")).toBe("protected");
     expect(getPublicApiAccess("/api/telegram-pulse")).toBe("protected");
     expect(getPublicApiAccess("/api/og/stablecoin/usdt-tether")).toBe("exempt");
@@ -336,6 +375,9 @@ describe("api endpoint registry", () => {
     expect(getSiteDataAccess("/api/stablecoins")).toBe("allowed");
     expect(getSiteDataAccess("/api/public-status-history")).toBe("allowed");
     expect(getSiteDataAccess("/api/telegram-pulse")).toBe("allowed");
+    expect(getSiteDataAccess("/api/api-key-requests")).toBe("denied");
+    expect(getSiteDataAccess("/api/api-key-requests/verify")).toBe("denied");
+    expect(getSiteDataAccess("/api/api-key-requests-admin")).toBe("denied");
     expect(getSiteDataAccess("/api/stablecoin-summary/usdt-tether")).toBe("allowed");
     expect(isSiteDataAllowedPath("/api/stablecoins")).toBe(true);
     expect(isSiteDataAllowedPath("/api/stablecoin/usdt-tether")).toBe(true);

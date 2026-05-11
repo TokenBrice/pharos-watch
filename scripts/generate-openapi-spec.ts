@@ -69,10 +69,10 @@ function render() {
       title: "Pharos API",
       version: "1.0.0",
       description:
-        "Stablecoin analytics API for peg monitoring, liquidity, risk, blacklist events, mint/burn flows, yield, chains, and market-structure data. Protected public routes require X-API-Key. Request access in the Pharos Telegram channel with intended endpoints, cadence, and expected volume.",
+        "Stablecoin analytics API for peg monitoring, liquidity, risk, blacklist events, mint/burn flows, yield, chains, and market-structure data. Protected public routes require X-API-Key. Request email-verified access at https://pharos.watch/api/.",
       contact: {
         name: "Pharos",
-        url: "https://pharos.watch/about/api/",
+        url: "https://pharos.watch/api/",
         email: "admin@pharos.watch",
       },
       license: {

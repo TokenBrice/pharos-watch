@@ -13,6 +13,7 @@ export type EndpointDependency =
   | "feedbackEnv"
   | "mintBurnFreshnessConfig"
   | "coingeckoApiKey"
+  | "apiKeySelfServeEnv"
   | "telegram";
 
 interface EndpointStatusPageActionConfig {
@@ -72,6 +73,12 @@ export type DynamicAdminEndpointMatch =
     key: "api-key-update" | "api-key-deactivate" | "api-key-rotate";
     path: string;
     apiKeyId: number;
+    methods: readonly EndpointMethod[];
+  }
+  | {
+    key: "api-key-request-reject" | "api-key-request-release-claim";
+    path: string;
+    requestId: string;
     methods: readonly EndpointMethod[];
   };
 
@@ -387,6 +394,28 @@ const BASE_ENDPOINT_DEFINITIONS = [
     routeDependencies: ["feedbackEnv"],
   },
   {
+    key: "api-key-requests",
+    path: API_PATHS.apiKeyRequests(),
+    methods: ["POST"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: true,
+    publicApiAccess: "exempt",
+    siteDataAccess: "denied",
+    routeDependencies: ["apiKeySelfServeEnv"],
+  },
+  {
+    key: "api-key-request-verify",
+    path: API_PATHS.apiKeyRequestVerify(),
+    methods: ["POST"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: true,
+    publicApiAccess: "exempt",
+    siteDataAccess: "denied",
+    routeDependencies: ["apiKeyHashPepper", "apiKeySelfServeEnv"],
+  },
+  {
     key: "telegram-webhook",
     path: API_PATHS.telegramWebhook(),
     methods: ["POST"],
@@ -434,6 +463,15 @@ const BASE_ENDPOINT_DEFINITIONS = [
     mutatingAdmin: false,
     cacheBypass: true,
     routeDependencies: ["apiKeyHashPepper"],
+  },
+  {
+    key: "api-key-requests-admin",
+    path: API_PATHS.apiKeyRequestsAdmin(),
+    methods: ["GET"],
+    adminRequired: true,
+    mutatingAdmin: false,
+    cacheBypass: true,
+    siteDataAccess: "denied",
   },
   {
     key: "api-key-audit-log",

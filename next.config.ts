@@ -25,7 +25,7 @@ async function devRewrites() {
   const proxyPort = process.env.SITE_API_SHARED_SECRET?.trim() ? 3001 : 0;
   return [
     {
-      source: "/api/:path*",
+      source: "/api/:path+",
       destination: proxyPort
         ? `http://localhost:${proxyPort}/api/:path*`
         : "https://api.pharos.watch/api/:path*",

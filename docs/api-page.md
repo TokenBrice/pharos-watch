@@ -1,32 +1,45 @@
-# API Page Contract
+# API Access And Reference Pages
 
-Route contract for `/about/api/`, the public-facing API reference page for external Pharos integrations.
+Route contract for the public API access and reference surfaces for external Pharos integrations.
 
 ---
 
 ## Route Shape
 
-- **Route:** `/about/api/`
+- **Access route:** `/api/`
+- **Access route file:** `src/app/api/page.tsx`
+- **Access client form:** `src/components/api-key-request-form.tsx`
+- **Reference route:** `/about/api/`
 - **Server route:** `src/app/about/api/page.tsx`
 - **Error boundary:** `src/app/about/api/error.tsx`
 - **Build-time doc parser:** `src/lib/api-reference-doc.ts`
 - **Reference source of truth:** `docs/api-reference.md`
 - **Navigation rail:** `src/components/api-reference-layout.tsx` and `src/components/api-reference-sidebar.tsx`
 
-The route is a static build-time page. It reads the checked-in API reference markdown from `docs/api-reference.md`, parses the supported markdown subset (paragraphs, lists, tables, code fences, rules, H2/H3 headings), and renders that content inside the public site chrome.
+Both routes are static build-time pages. `/api/` renders the self-serve key request and verification flow. `/about/api/` reads the checked-in API reference markdown from `docs/api-reference.md`, parses the supported markdown subset (paragraphs, lists, tables, code fences, rules, H2/H3 headings), and renders that content inside the public site chrome.
 
 ---
 
 ## Purpose
 
-The page exists to give external integrators one public URL that explains:
+The access page exists to let external integrators request an email-verified default API key without exposing requester details outside private operator tooling. The reference page exists to give external integrators one public URL that explains:
 
 1. which Pharos host they should call
 2. when an API key is required
 3. how the public, internal site, and ops/admin lanes differ
 4. the public/reference endpoint contract already maintained in `docs/api-reference.md`
 
-This page is presentation and navigation around the canonical contract, not a second hand-maintained API spec. Admin sections remain in `docs/api-reference.md` for maintainers but are hidden from `/about/api/`.
+The `/api/` form posts to `POST /api/api-key-requests` and verifies email links through `POST /api/api-key-requests/verify`. Successful verification reveals the plaintext API token once and removes the verification token from the browser URL before calling the API. It does not persist tokens in local storage.
+
+The default self-serve key policy is:
+
+- email-verified before issuance
+- `30` requests per minute
+- `60` day expiry
+- one active or pending self-serve key claim per normalized email
+- request details visible only in the private `ops.pharos.watch/admin-api/` UI
+
+The reference page is presentation and navigation around the canonical contract, not a second hand-maintained API spec. Admin sections remain in `docs/api-reference.md` for maintainers but are hidden from `/about/api/`.
 
 ---
 
@@ -45,7 +58,7 @@ The route renders:
    - `External API`
    - `Website lane`
    - `Ops lane`
-4. A `Need A Key?` notice that sends users to the Pharos Telegram channel and tells them to include intended usage, endpoints, cadence, and expected volume when requesting a key
+4. A `Need A Key?` notice that links to `/api/` and summarizes the email-verified 30 rpm / 60 day default key
 5. Direct links to the static machine-readable integration artifacts:
    - `/openapi.json`
    - `/postman/pharos-api.postman_collection.json`
@@ -83,6 +96,6 @@ If `docs/api-reference.md` starts using additional markdown constructs that the 
 ## Update Rules
 
 - Treat `docs/api-reference.md` as the canonical HTTP contract.
-- Update `/about/api/` hero/auth copy when the lane split, key requirement, key-request workflow, or operator-access model changes.
+- Update `/api/` form copy and `/about/api/` hero/auth copy when the lane split, key requirement, key-request workflow, or operator-access model changes.
 - Update the parser only when the markdown source adds a new structure the page needs to support.
 - If the route path changes, also update `src/app/sitemap.ts`, `docs/README.md`, and `docs/architecture.md`.

@@ -893,6 +893,42 @@ describe("worker.fetch", () => {
     await expect(res.json()).resolves.toEqual({ error: "Invalid JSON body" });
   });
 
+  it("does not require a key on self-serve API key request submissions", async () => {
+    const env = makeEnv();
+    const { ctx, waits } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/api-key-requests", {
+        method: "POST",
+        body: "not-json",
+      }),
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid JSON body" });
+  });
+
+  it("does not require a key on self-serve API key verification", async () => {
+    const env = makeEnv();
+    const { ctx, waits } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/api-key-requests/verify", {
+        method: "POST",
+        body: "not-json",
+      }),
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid JSON body" });
+  });
+
   it("rejects /api/* with a malformed X-API-Key with 401", async () => {
     const env = makeEnv();
     const { ctx } = makeExecutionContext();

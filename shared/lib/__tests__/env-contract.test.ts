@@ -13,6 +13,13 @@ describe("env contract manifest", () => {
       "CORS_ORIGIN",
       "GITHUB_PAT",
       "FEEDBACK_IP_SALT",
+      "API_KEY_SELF_SERVE_IP_SALT",
+      "API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER",
+      "API_KEY_SELF_SERVE_REQUEST_PEPPER",
+      "RESEND_API_KEY",
+      "API_KEY_SELF_SERVE_EMAIL_FROM",
+      "API_KEY_SELF_SERVE_EMAIL_REPLY_TO",
+      "API_KEY_SELF_SERVE_PUBLIC_BASE_URL",
     ]);
   });
 
@@ -31,6 +38,7 @@ describe("env contract manifest", () => {
     expect(envExample).not.toContain("\nDB=");
     expect(envExample.match(/^SITE_API_SHARED_SECRET=/gm)).toHaveLength(1);
     expect(envExample).toContain("NEXT_PUBLIC_API_BASE=");
+    expect(envExample).toContain("API_KEY_SELF_SERVE_PUBLIC_BASE_URL=https://pharos.watch/api");
     expect(envExample).toContain("SITE_API_ORIGIN=https://site-api.pharos.watch");
   });
 

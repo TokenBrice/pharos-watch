@@ -1,6 +1,9 @@
 /admin/*
   X-Robots-Tag: noindex, nofollow
 
+/admin-api/*
+  X-Robots-Tag: noindex, nofollow
+
 /portfolio/*
   X-Robots-Tag: noindex, follow
 

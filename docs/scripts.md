@@ -188,7 +188,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 ### `serve-static-export.mjs`
 
 - Defaults to serving `out/` on `127.0.0.1:4173`.
-- Proxies `GET`/`HEAD` requests under `/api/*` to `STATIC_EXPORT_API_BASE` (default: `https://api.pharos.watch`).
+- Serves exported `/api/` page files first, including static RSC payloads such as `/api/__next.api.txt`; other nested `/api/*` paths proxy to `STATIC_EXPORT_API_BASE` (default: `https://api.pharos.watch`).
 - Proxies `GET`/`HEAD` requests under `/_site-data/*` to `STATIC_EXPORT_SITE_API_BASE` (required for site-data smoke) and forwards `STATIC_EXPORT_SITE_API_SHARED_SECRET` as `X-Pharos-Site-Proxy-Secret` when set.
 - Exists to keep browser smoke pre-deploy while still exercising the same API-backed UI code paths as production.
 

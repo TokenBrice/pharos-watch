@@ -100,7 +100,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/funding", label: "Funding", icon: Heart, description: "Running costs, supporter ledger, and public sustainability path" },
       { href: "/methodology", label: "Methodology", icon: BookOpen, description: "Reference manual for formulas, thresholds, and changelogs" },
       { href: "/coverage", label: "Coverage", icon: TableProperties, description: "Truth surface for what each route can show per coin" },
-      { href: "/about/api", label: "API Reference", icon: KeyRound, description: "Auth model, key requirement, and full endpoint reference" },
+      { href: "/api", label: "API Access", icon: KeyRound, description: "Request a public API key and open the endpoint reference" },
       { href: "/changelog", label: "Changelog", icon: ScrollText, description: "Weekly release notes and feature updates" },
     ],
   },

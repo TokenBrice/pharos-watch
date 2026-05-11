@@ -9,6 +9,7 @@ import { handleStablecoinReserves } from "../api/stablecoin-reserves";
 import { handleOg } from "../api/og";
 import { handleDiscoveryCandidateDismiss } from "../api/admin-actions";
 import { handleApiKeyDeactivate, handleApiKeyRotate, handleApiKeyUpdate } from "../api/api-keys";
+import { handleApiKeyRequestReject, handleApiKeyRequestReleaseClaim } from "../api/api-key-requests";
 import { errorResponse, resolveOrReject } from "../lib/api-utils";
 import { defineDynamicRoute, type DynamicRouteDefinition, type RouteDependency, type RouteMatch } from "./shared";
 
@@ -85,6 +86,8 @@ const DYNAMIC_ADMIN_ROUTE_DEPENDENCIES = {
   "api-key-update": requireDynamicEndpointDescriptor("api-key-update").routeDependencies,
   "api-key-deactivate": requireDynamicEndpointDescriptor("api-key-deactivate").routeDependencies,
   "api-key-rotate": requireDynamicEndpointDescriptor("api-key-rotate").routeDependencies,
+  "api-key-request-reject": requireDynamicEndpointDescriptor("api-key-request-reject").routeDependencies,
+  "api-key-request-release-claim": requireDynamicEndpointDescriptor("api-key-request-release-claim").routeDependencies,
 } as const satisfies Record<DynamicAdminEndpointMatch["key"], readonly RouteDependency[]>;
 
 export function getDynamicRouteMatch(path: string): RouteMatch | null {
@@ -116,6 +119,28 @@ export function getDynamicRouteMatch(path: string): RouteMatch | null {
         routeCtx.trustedAdmin,
         routeCtx.request,
         routeCtx.apiKeyHashPepper,
+      ),
+    };
+  }
+  if (dynamicAdminEndpoint?.key === "api-key-request-reject") {
+    return {
+      dependencies: DYNAMIC_ADMIN_ROUTE_DEPENDENCIES[dynamicAdminEndpoint.key],
+      handle: (routeCtx) => handleApiKeyRequestReject(
+        routeCtx.db,
+        dynamicAdminEndpoint.requestId,
+        routeCtx.trustedAdmin,
+        routeCtx.request,
+      ),
+    };
+  }
+  if (dynamicAdminEndpoint?.key === "api-key-request-release-claim") {
+    return {
+      dependencies: DYNAMIC_ADMIN_ROUTE_DEPENDENCIES[dynamicAdminEndpoint.key],
+      handle: (routeCtx) => handleApiKeyRequestReleaseClaim(
+        routeCtx.db,
+        dynamicAdminEndpoint.requestId,
+        routeCtx.trustedAdmin,
+        routeCtx.request,
       ),
     };
   }

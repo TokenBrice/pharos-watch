@@ -84,6 +84,27 @@ describe("validateWorkerEnvContract", () => {
       message: "GITHUB_PAT and FEEDBACK_IP_SALT must be configured together; POST /api/feedback returns 503 until both are set.",
     });
   });
+
+  it("flags partial self-serve API key email verification bindings", () => {
+    expect(validateWorkerEnvContract({
+      CF_ACCESS_OPS_API_AUD: undefined,
+      CF_ACCESS_TEAM_DOMAIN: undefined,
+      SITE_API_SHARED_SECRET: "site-secret",
+      API_KEY_HASH_PEPPER: "pepper",
+      GITHUB_PAT: "ghp_test_token",
+      FEEDBACK_IP_SALT: "feedback",
+      API_KEY_SELF_SERVE_IP_SALT: "ip",
+      API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER: "email",
+      API_KEY_SELF_SERVE_REQUEST_PEPPER: "request",
+      API_KEY_SELF_SERVE_EMAIL_FROM: "Pharos API <api@mail.pharos.watch>",
+      API_KEY_SELF_SERVE_EMAIL_REPLY_TO: undefined,
+      API_KEY_SELF_SERVE_PUBLIC_BASE_URL: "https://pharos.watch/api",
+      RESEND_API_KEY: "re_test",
+    })).toContainEqual({
+      code: "api-key-self-serve-env-misconfigured",
+      message: "Self-serve API key email verification bindings must be configured together; POST /api/api-key-requests returns 503 until they are complete.",
+    });
+  });
 });
 
 describe("worker env key groups", () => {

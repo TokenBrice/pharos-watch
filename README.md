@@ -35,7 +35,7 @@ Public-facing analytics dashboard tracking 273 stablecoins in repo metadata: 249
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
 - **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 202 configured assets
 - **Detail pages** — full analytics dossiers for tracked live assets plus dedicated pre-launch detail views, with conditional reserve, redemption backstop, liquidity, and safety surfaces when data exists
-- **Public status page + private operator admin** — read-only system health on `/status/`, plus Access-gated monitoring and recovery controls on `ops.pharos.watch/admin/`
+- **Public API access + private operator admin** — self-serve email-verified API keys on `/api/`, read-only system health on `/status/`, plus Access-gated monitoring and recovery controls on `ops.pharos.watch/admin/` and API management on `ops.pharos.watch/admin-api/`
 - **Backing type breakdown** — active public surfaces expose RWA-backed and crypto-backed cohorts; algorithmic remains a legacy metadata label only, with no generated algorithmic backing route because there are no active algorithmic assets
 - **Yield-bearing & NAV token filters** — identify tokens that accrue yield natively
 - **Research-grade data pipeline** — structural validation, concurrent write protection, depeg deduplication, and price validation guardrails
@@ -106,7 +106,7 @@ npm install
 NEXT_PUBLIC_API_BASE=http://localhost:8787 npm run dev
 ```
 
-`NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, browser reads on `pharos.watch`, `ops.pharos.watch`, and `*.stablecoin-dashboard.pages.dev` go through same-origin `/_site-data/*`. All Pages hosts require `SITE_API_ORIGIN` and proxy that lane with `SITE_API_SHARED_SECRET` to the dedicated `site-api` origin; when the binding is missing the proxy returns `500`. The `/_site-data/*` lane gates on the caller's `Origin` (or `Referer` fallback) and only accepts `pharos.watch`, `ops.pharos.watch`, or a Pages preview hostname. Direct browser calls still use `https://api.pharos.watch` only for exempt public routes such as feedback submission and OG image fetches; every other `/api/*` route requires a valid `X-API-Key`. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time.
+`NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, browser reads on `pharos.watch`, `ops.pharos.watch`, and `*.stablecoin-dashboard.pages.dev` go through same-origin `/_site-data/*`. All Pages hosts require `SITE_API_ORIGIN` and proxy that lane with `SITE_API_SHARED_SECRET` to the dedicated `site-api` origin; when the binding is missing the proxy returns `500`. The `/_site-data/*` lane gates on the caller's `Origin` (or `Referer` fallback) and only accepts `pharos.watch`, `ops.pharos.watch`, or a Pages preview hostname. Direct browser calls still use `https://api.pharos.watch` only for exempt public routes such as feedback submission, self-serve API key request/verification, and OG image fetches; every other `/api/*` route requires a valid `X-API-Key`. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time.
 
 ### Worker API
 
@@ -161,6 +161,7 @@ src/                              Frontend (Next.js static export)
 │   ├── docs/                     Public documentation archive (+ docs/[slug]/ pages)
 │   ├── flows/                    Mint/burn flow tracker
 │   ├── funding/                  Static public-good funding ledger
+│   ├── api/                      Public API access and self-serve key request flow
 │   ├── liquidity/                DEX liquidity scores and pool breakdown
 │   ├── methodology/              Detailed methodology + changelog routes
 │   ├── portfolio/                Portfolio stress testing & upstream exposure
@@ -175,6 +176,7 @@ src/                              Frontend (Next.js static export)
 │   ├── stablecoins/governance/[governance]/ Governance taxonomy landing pages
 │   ├── stablecoins/infrastructure/[infrastructure]/ Infrastructure landing pages
 │   ├── admin/                    Access-gated operator admin panel (ops.pharos.watch only)
+│   ├── admin-api/                Access-gated API key/request management panel (ops.pharos.watch only)
 │   ├── status/                   Public system-status dashboard (read-only, indexable)
 │   ├── telegram/                 Telegram alerts + digest landing page
 │   ├── yield/                    Yield intelligence leaderboard
@@ -188,6 +190,7 @@ functions/                        Cloudflare Pages Functions for same-origin web
 ├── _site-data/[[path]].ts        Same-origin website data proxy; requires `SITE_API_ORIGIN` and gates on the caller's `Origin`/`Referer`
 ├── admin/[[path]].ts             Host gate for `/admin/` on `ops.pharos.watch`
 ├── api/admin/[[path]].ts         Same-origin admin proxy from `ops.pharos.watch` to `ops-api.pharos.watch`
+├── admin-api/[[path]].ts         Host gate for the private API management route
 ├── lib/ops-env.ts                Shared Pages Functions env contract for ops-host gating and admin proxying
 ├── lib/ops-origin.ts             Shared ops-origin resolution helper
 ├── lib/proxy-utils.ts            Shared proxy request/response helpers
@@ -317,6 +320,9 @@ Cloudflare D1 (SQLite database)
   ├── api_keys             → API key registrations for authenticated public API access
   ├── api_key_rate_limit   → per-key rate-limit state for authenticated API consumers
   ├── api_key_audit_log    → audit trail for API key lifecycle events
+  ├── api_key_requests     → self-serve API key request and verification state
+  ├── api_key_request_rate_limit → throttles for self-serve request/verification attempts
+  ├── api_key_self_serve_email_claims → one-active-key-per-email self-serve claim state
   ├── api_key_request_stats → per-key request-volume tracking
   ├── api_request_source_stats → legacy/schema-retained source stats table; runtime attribution writes moved to consumer/key/site-data stats
   ├── api_request_consumer_stats → per-consumer API request attribution counters
@@ -370,7 +376,7 @@ Optional GitHub variables: `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLI
 
 Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `JUPITER_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `SITE_API_SHARED_SECRET`, `SITE_API_SHARED_SECRET_PREVIOUS`, `API_KEY_HASH_PEPPER`, `API_KEY_HASH_PEPPER_PREVIOUS`, `CLOUDFLARE_D1_STATUS_API_TOKEN`
 
-`API_KEY_HASH_PEPPER` is required: non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`, and the worker can't verify keys without the pepper. No-key public exceptions are health checks, OG images, feedback submission, and the Telegram webhook; Telegram still authenticates with its own secret.
+`API_KEY_HASH_PEPPER` is required: non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`, and the worker can't verify keys without the pepper. No-key public exceptions are health checks, OG images, feedback submission, self-serve API-key request/verification, and the Telegram webhook; Telegram still authenticates with its own secret. Self-serve default keys are email-verified, limited to 30 requests per minute, expire after 60 days, and are managed privately through `ops.pharos.watch/admin-api/`.
 
 Worker vars (see `.env.example` for the current surface): active worker bindings include `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_API_AUD`, `MAINTENANCE_MODE`, `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_D1_DATABASE_ID`. `OPS_UI_ORIGIN`, `OPS_API_ORIGIN`, and `CF_ACCESS_OPS_UI_AUD` remain reserved on the worker side for cross-runtime contract alignment; `CF_ACCESS_OPS_UI_AUD` is active and required on Pages Functions for `/api/admin/*` UI JWT verification.
 

@@ -90,6 +90,28 @@ async function proxyApiRequest(targetUrl, method, headers = {}) {
   });
 }
 
+async function readStaticExportFile(rootDir, requestPathname) {
+  const filePath = resolveStaticFilePath(rootDir, requestPathname);
+  const file = await readFile(filePath);
+  return { file, filePath };
+}
+
+function sendStaticExportFile(res, method, { file, filePath }) {
+  res.writeHead(200, {
+    "Content-Length": String(file.byteLength),
+    "Content-Type": buildContentType(filePath),
+  });
+  if (method === "HEAD") {
+    res.end();
+  } else {
+    res.end(file);
+  }
+}
+
+function isPathEscapeError(error) {
+  return error instanceof Error && error.message.startsWith("Path escapes static export root:");
+}
+
 export function createStaticExportServer({
   apiBaseUrl = getProxyBaseUrl(),
   siteApiBaseUrl = getSiteProxyBaseUrl(),
@@ -108,7 +130,25 @@ export function createStaticExportServer({
       return;
     }
 
-    if (requestUrl.pathname.startsWith("/api/") || requestUrl.pathname.startsWith("/_site-data/")) {
+    const isNestedApiPath = requestUrl.pathname.startsWith("/api/") && requestUrl.pathname !== "/api/";
+    if (isNestedApiPath) {
+      try {
+        const staticFile = await readStaticExportFile(normalizedRoot, requestUrl.pathname);
+        sendStaticExportFile(res, method, staticFile);
+        return;
+      } catch (error) {
+        if (isPathEscapeError(error)) {
+          res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+          res.end("Forbidden");
+          return;
+        }
+      }
+    }
+
+    if (
+      isNestedApiPath
+      || requestUrl.pathname.startsWith("/_site-data/")
+    ) {
       try {
         const isSiteDataRequest = requestUrl.pathname.startsWith("/_site-data/");
         const resolveSiteDataUpstreamPath = isSiteDataRequest
@@ -157,29 +197,19 @@ export function createStaticExportServer({
       return;
     }
 
-    let filePath;
     try {
-      filePath = resolveStaticFilePath(normalizedRoot, requestUrl.pathname);
-    } catch {
-      res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
-      res.end("Forbidden");
+      const staticFile = await readStaticExportFile(normalizedRoot, requestUrl.pathname);
+      sendStaticExportFile(res, method, staticFile);
       return;
-    }
-
-    try {
-      const file = await readFile(filePath);
-      res.writeHead(200, {
-        "Content-Length": String(file.byteLength),
-        "Content-Type": buildContentType(filePath),
-      });
-      if (method === "HEAD") {
-        res.end();
-      } else {
-        res.end(file);
+    } catch (error) {
+      if (isPathEscapeError(error)) {
+        res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end("Forbidden");
+        return;
       }
-    } catch {
       res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
       res.end("Not found");
+      return;
     }
   });
 

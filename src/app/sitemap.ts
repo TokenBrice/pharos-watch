@@ -231,6 +231,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.5,
     },
     {
+      url: `${SITE_URL}/api/`,
+      lastModified: lastEdited("/api/"),
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    {
       url: `${SITE_URL}/stablecoins/`,
       lastModified: lastEdited("/stablecoins/"),
       changeFrequency: "weekly",

@@ -3,6 +3,7 @@ import { handleStatusHistory } from "../api/status-history";
 import { handleRequestSourceStats } from "../api/request-source-stats";
 import { handleApiKeyAuditLog } from "../api/api-key-audit-log";
 import { handleApiKeys } from "../api/api-keys";
+import { handleApiKeyRequestsAdmin } from "../api/api-key-requests";
 import { handleDiscoveryCandidates } from "../api/discovery";
 import { handleAdminActionLog } from "../api/admin-action-log";
 import { handleDebugSyncState, handleResetBlacklistSync, handleTriggerDigest } from "../api/admin-actions";
@@ -19,6 +20,8 @@ export const OPS_STATIC_ROUTES = [
     handleApiKeys(db, trustedAdmin, request, apiKeyHashPepper)),
   defineStaticRoute("api-key-audit-log", ({ db, trustedAdmin, request }) =>
     handleApiKeyAuditLog(db, trustedAdmin, request)),
+  defineStaticRoute("api-key-requests-admin", ({ db, trustedAdmin, request }) =>
+    handleApiKeyRequestsAdmin(db, trustedAdmin, request)),
   defineStaticRoute("trigger-digest", handleTriggerDigest),
   defineStaticRoute("admin-action-log", handleAdminActionLog),
   defineStaticRoute("reset-blacklist-sync", handleResetBlacklistSync),

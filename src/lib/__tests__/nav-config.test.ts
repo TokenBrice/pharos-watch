@@ -63,9 +63,10 @@ describe("nav-config", () => {
       "/funding",
       "/methodology",
       "/coverage",
-      "/about/api",
+      "/api",
       "/changelog",
     ]);
+    expect(infoGroup?.items.find((item) => item.href === "/api")?.label).toBe("API Access");
   });
 
   it("exposes PharosVille as an external companion entry, not a primary or group route", () => {

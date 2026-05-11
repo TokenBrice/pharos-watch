@@ -219,6 +219,69 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "API_KEY_SELF_SERVE_IP_SALT",
+    valueType: "string",
+    description: "Dedicated salt for hashed-IP self-serve API key request throttling.",
+    example: { section: "workerRequired", value: "" },
+    runtimes: {
+      worker: { order: 20, status: "required" },
+    },
+  },
+  {
+    key: "API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER",
+    valueType: "string",
+    description: "HMAC pepper used for private self-serve API request email lookup and duplicate-claim keys.",
+    example: { section: "workerRequired", value: "" },
+    runtimes: {
+      worker: { order: 21, status: "required" },
+    },
+  },
+  {
+    key: "API_KEY_SELF_SERVE_REQUEST_PEPPER",
+    valueType: "string",
+    description: "HMAC pepper used to hash one-time self-serve API email verification tokens.",
+    example: { section: "workerRequired", value: "" },
+    runtimes: {
+      worker: { order: 22, status: "required" },
+    },
+  },
+  {
+    key: "RESEND_API_KEY",
+    valueType: "string",
+    description: "Resend API key used to send self-serve API verification emails.",
+    example: { section: "workerRequired", value: "" },
+    runtimes: {
+      worker: { order: 23, status: "required" },
+    },
+  },
+  {
+    key: "API_KEY_SELF_SERVE_EMAIL_FROM",
+    valueType: "string",
+    description: "Configured sender for self-serve API verification emails, e.g. `Pharos API <api@mail.pharos.watch>`.",
+    example: { section: "workerRequired", value: "Pharos API <api@mail.pharos.watch>" },
+    runtimes: {
+      worker: { order: 24, status: "required" },
+    },
+  },
+  {
+    key: "API_KEY_SELF_SERVE_EMAIL_REPLY_TO",
+    valueType: "string",
+    description: "Reply-to address for self-serve API verification emails.",
+    example: { section: "workerRequired", value: "api@mail.pharos.watch" },
+    runtimes: {
+      worker: { order: 25, status: "required" },
+    },
+  },
+  {
+    key: "API_KEY_SELF_SERVE_PUBLIC_BASE_URL",
+    valueType: "string",
+    description: "Public website URL used to build self-serve API verification links; production value is `https://pharos.watch/api`.",
+    example: { section: "workerRequired", value: "https://pharos.watch/api" },
+    runtimes: {
+      worker: { order: 26, status: "required" },
+    },
+  },
+  {
     key: "TWITTER_API_KEY",
     valueType: "string",
     description: "Twitter/X digest delivery credential.",

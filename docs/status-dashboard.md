@@ -21,12 +21,13 @@ The repo now ships two related surfaces:
 
 - `/status/`: public, read-only health board backed by `/api/health` plus public browser probes
 - `/admin/`: Access-protected operator dashboard backed by `/api/admin/*` proxy routes and the admin-only `/api/status` / `/api/status-history` worker endpoints
+- `/admin-api/`: Access-protected API management dashboard for API keys plus self-serve API key requests
 
 The active frontend operator mode is now:
 
 - `ops.pharos.watch`: Cloudflare Access-protected operator host. The browser uses same-origin Pages Functions routes under `/api/admin/*`, and those functions proxy to `ops-api.pharos.watch` with a service token.
 
-`/admin/` is hard-blocked outside `ops.pharos.watch` via a Pages host-gate function. `/status/` is now public and read-only.
+`/admin/` and `/admin-api/` are hard-blocked outside `ops.pharos.watch` via Pages host-gate functions. `/status/` is now public and read-only.
 
 ---
 

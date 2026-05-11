@@ -72,8 +72,8 @@
     "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 174,
-    "maxFunctionLines": 152,
+    "fileLines": 177,
+    "maxFunctionLines": 155,
     "branchCount": 8,
     "disposition": "stabilized",
     "targetBudget": {
@@ -300,7 +300,7 @@
     "notes": "Config execution and post-run completion logic now live in `mint-burn/*` helpers. Keep the cron shell as queue setup plus progress coordination instead of regrowing per-config or epilogue logic."
   },
   "worker/src/cron/sync-live-reserves.ts": {
-    "fileLines": 461,
+    "fileLines": 462,
     "maxFunctionLines": 118,
     "branchCount": 29,
     "disposition": "queued-p4",
@@ -324,8 +324,8 @@
     "notes": "Source loading, DEWS signal assembly, and persistence now live in `cron/dews/*` helpers. Keep the entrypoint as the coordinator instead of regrowing source-specific reads or writeback logic."
   },
   "worker/src/cron/sync-stablecoins/enrich-prices.ts": {
-    "fileLines": 110,
-    "maxFunctionLines": 73,
+    "fileLines": 112,
+    "maxFunctionLines": 75,
     "branchCount": 6,
     "disposition": "stabilized",
     "targetBudget": {

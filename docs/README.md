@@ -47,7 +47,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [start-page.md](./start-page.md) - `/start/` onboarding route, curated route map, and homepage integration contract
 - [upcoming-page.md](./upcoming-page.md) - `/upcoming/` pre-launch tracker, filter model, and crawlability contract
 - [about-page.md](./about-page.md) - `/about/` section contract and update rules
-- [api-page.md](./api-page.md) - `/about/api/` public API reference page, auth summary, and build-time docs rendering contract
+- [api-page.md](./api-page.md) - `/api/` self-serve API access page plus `/about/api/` public API reference page, auth summary, and build-time docs rendering contract
 - [methodology-page.md](./methodology-page.md) - `/methodology/` section-to-source mapping and changelog/update contract
 - [stablecoin-detail-page.md](./stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, view-model wiring, section order, and fallback/staleness rules
 - [chains-page.md](./chains-page.md) - `/chains/` leaderboard, `/chains/[chain]/` profile contract, and Chain Health Score wiring
@@ -69,6 +69,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/alt-pegs/`                                    | [alt-pegs-page.md](./alt-pegs-page.md)                                                                                                                |
 | `/about/`                                       | [about-page.md](./about-page.md)                                                                                                                      |
 | `/about/api/`                                   | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
+| `/api/`                                         | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
 | `/blacklist/`                                   | [blacklist-tracker.md](./blacklist-tracker.md)                                                                                                        |
 | `/cemetery/`                                    | [cemetery-and-compare.md](./cemetery-and-compare.md)                                                                                                  |
 | `/changelog/`                                   | [architecture.md](./architecture.md)                                                                                                                  |
@@ -112,7 +113,8 @@ These routes are not public product surfaces, but they are part of the maintaine
 
 | Route     | Primary doc(s)                                                                                                                                                 |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/admin/` | [status-dashboard.md](./status-dashboard.md), [operator-origin-access.md](./operator-origin-access.md), [api-reference.md](./api-reference.md#admin-endpoints) |
+| `/admin/`     | [status-dashboard.md](./status-dashboard.md), [operator-origin-access.md](./operator-origin-access.md), [api-reference.md](./api-reference.md#admin-endpoints) |
+| `/admin-api/` | [api-page.md](./api-page.md), [operator-origin-access.md](./operator-origin-access.md), [api-reference.md](./api-reference.md#admin-endpoints)                 |
 
 ## Route Contract Update Checklist
 

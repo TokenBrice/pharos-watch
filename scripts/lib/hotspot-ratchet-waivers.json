@@ -31,6 +31,10 @@
     "disposition": "queued-p4",
     "notes": "The API keys operator panel currently mixes create/edit form state, admin mutations, expiry/rate-limit validation, and token reveal rendering in one client component. Keep it explicitly waived until the next ops-UI decomposition pass splits the mutation helpers and per-key row editor out of the panel shell."
   },
+  "src/components/api-key-request-form.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The public self-serve request form intentionally ships as a single client workflow for intake, verification-token exchange, one-time token reveal, and copy actions. Split field groups, verification state, and issued-key rendering into focused subcomponents after the API access launch stabilizes."
+  },
   "shared/lib/format.ts": {
     "disposition": "deferred",
     "notes": "Shared formatting helpers are branchy but broadly reused. Defer any breakup until a dedicated shared-utility cleanup lane exists."
@@ -75,9 +79,9 @@
     "disposition": "queued-p4",
     "notes": "Mint/burn flow response shaping remains a large endpoint surface after the pending pricing and flow changes in this push batch. Keep explicitly waived until a dedicated flow API cleanup can separate request parsing, summary shaping, and response projection."
   },
-  "worker/src/api/backfill-depegs.ts": {
+  "worker/src/api/api-key-requests.ts": {
     "disposition": "queued-p4",
-    "notes": "Backfill depeg replay surfaced after methodology shell decompositions lowered larger JSX hotspots. The endpoint still combines request validation, replay planning, and mutation orchestration; split parser/planner/persistence helpers in a dedicated depeg-admin cleanup pass."
+    "notes": "The self-serve API key handler coordinates intake throttles, email-claim state, verification issuance, compensation, and private admin review in one new endpoint module. Split request lifecycle, verification exchange, and admin mutations into separate handler modules once the self-serve surface has production usage."
   },
   "src/app/compare/client.tsx": {
     "disposition": "queued-p4",

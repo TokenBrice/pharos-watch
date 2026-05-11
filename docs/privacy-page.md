@@ -29,7 +29,7 @@ The page renders through `FeaturePageShell` with:
 - `path = "/privacy/"`
 - `variant = "longform"`
 - `containerClassName = "max-w-2xl"`
-- lead copy: `Last updated: March 2026`
+- lead copy: `Last updated: May 2026`
 
 ---
 
@@ -38,13 +38,15 @@ The page renders through `FeaturePageShell` with:
 The current policy copy covers:
 
 1. optional GA4-based anonymized analytics when `NEXT_PUBLIC_GA_ID` is configured at build time
-2. no accounts or wallet connections
+2. no website accounts or wallet connections
 3. GA4 cookies only, and only when analytics is enabled
 4. 14-month GA4 retention when GA4 is enabled
 5. Cloudflare Pages / Workers hosting and Google Analytics as third-party services
 6. support contact via `@PharosWatch` and the About page
 7. optional Telegram/X handles submitted through the feedback form appear publicly on the GitHub issue created for your submission
 8. Telegram alert subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours, snooze state, and short-lived pending-command or pending-alert metadata
+9. self-serve API key requests store verified email plus optional requester/project/use-case metadata for private operator review; request throttling stores salted hashes of IP address and user-agent data
+10. Resend sends API verification emails, and optional GitHub issuance notifications deliberately exclude requester details and plaintext tokens
 
 Portfolio holdings are explicitly described as browser-local only, which matches the `/portfolio/` implementation. The page now also notes that any delegated feedback contact handle will be visible in the GitHub issues that Pharos creates.
 

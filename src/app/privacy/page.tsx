@@ -25,15 +25,15 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       variant="longform"
       containerClassName="max-w-2xl"
-      leadParagraphs={["Last updated: March 2026"]}
+      leadParagraphs={["Last updated: May 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <div className="rounded-[1.35rem] border border-border/60 bg-card/70 px-5 py-4 shadow-[0_14px_32px_oklch(0_0_0_/0.1)]">
           <p className="pharos-kicker">Policy Summary</p>
           <p className="mt-2 text-sm text-foreground">
             Pharos does not ask for accounts or wallet connections. Portfolio data is stored locally by default, share
-            links encode holdings in the URL, analytics are anonymized when enabled, and support requests route through
-            the feedback/contact channels listed below.
+            links encode holdings in the URL, analytics are anonymized when enabled, and support or API-access requests
+            route through the feedback/contact channels listed below.
           </p>
         </div>
 
@@ -45,16 +45,17 @@ export default function PrivacyPage() {
             browser type, and a small set of product-interaction events. If you choose to share a Telegram or X handle
             in the feedback form, that handle is included in the GitHub issue created for the submission. Telegram alert
             subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours, snooze state,
-            and short-lived pending-command or pending-alert metadata.
+            and short-lived pending-command or pending-alert metadata. If you request API access, Pharos stores the
+            email address you verify plus any name, organization, project URL, use-case, intended-endpoint, cadence, and
+            volume details you submit; request throttling stores salted hashes of IP address and user-agent data.
           </p>
         </section>
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-foreground">No Accounts or Wallet Connections</h2>
           <p>
-            Pharos does not require user accounts, logins, or wallet connections. There is no sign-up process, no email
-            collection, and no authentication of any kind. Optional feedback contact details are self-declared and are
-            not used as site accounts or persistent user identities.
+            Pharos does not require user accounts, logins, or wallet connections for the website. Optional feedback
+            contact details and self-serve API request emails are self-declared and are not used as site accounts.
           </p>
         </section>
 
@@ -75,7 +76,9 @@ export default function PrivacyPage() {
             maintain user-account databases. Feedback submissions are sent to GitHub Issues for product support and issue
             tracking; optional follow-up contact details are included there when you provide them. The worker stores
             rate-limit metadata for feedback abuse prevention. A legacy `feedback_submissions` table exists in the D1
-            schema, but the current submission path does not write to it.
+            schema, but the current submission path does not write to it. Self-serve API key requests are stored for
+            operator review and duplicate-claim enforcement; verification tokens are stored only as hashes and expire
+            after 30 minutes. Issued self-serve API keys expire after 60 days by default.
           </p>
         </section>
 
@@ -85,7 +88,9 @@ export default function PrivacyPage() {
             Pharos is hosted on Cloudflare Pages with API endpoints served by Cloudflare Workers. Analytics data is
             processed by Google (GA4) only when analytics is enabled for the current deployment. Feedback submissions
             are also forwarded to GitHub Issues for product triage; optional Telegram/X handles are
-            echoed publicly in those GitHub issues.
+            echoed publicly in those GitHub issues. API request verification emails are sent through Resend. API key
+            issuance notifications can create private operator GitHub issues, but those notifications include request ID,
+            key prefix, quota, expiry, and an ops link only, not requester details or plaintext tokens.
           </p>
         </section>
 

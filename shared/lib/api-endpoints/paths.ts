@@ -78,6 +78,13 @@ export const API_PATHS = {
     }),
   telegramPulse: () => "/api/telegram-pulse",
   feedback: () => "/api/feedback",
+  apiKeyRequests: () => "/api/api-key-requests",
+  apiKeyRequestVerify: () => "/api/api-key-requests/verify",
+  apiKeyRequestsAdmin: () => "/api/api-key-requests-admin",
+  apiKeyRequestAdminReject: (requestId: string) =>
+    `/api/api-key-requests-admin/${encodeURIComponent(requestId)}/reject`,
+  apiKeyRequestAdminReleaseClaim: (requestId: string) =>
+    `/api/api-key-requests-admin/${encodeURIComponent(requestId)}/release-claim`,
   telegramWebhook: () => "/api/telegram-webhook",
   status: () => "/api/status",
   statusHistoryBase: () => "/api/status-history",

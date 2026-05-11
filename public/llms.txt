@@ -36,6 +36,7 @@
 
 ## API
 
+- [API Access](https://pharos.watch/api/): Email-verified self-serve API key request flow.
 - [API Reference](https://pharos.watch/about/api/): Public and ops lanes, auth model, endpoint catalogue.
 - [OpenAPI spec](https://pharos.watch/openapi.json): Machine-readable OpenAPI 3.1 endpoint catalogue for the Pharos API.
 - [Postman collection](https://pharos.watch/postman/pharos-api.postman_collection.json): Importable Pharos API collection for external integrations.
