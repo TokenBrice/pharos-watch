@@ -102,6 +102,20 @@ describe("handleCallbackQuery", () => {
     expect(body.text).toBe("Action not recognized.");
   });
 
+  it("unknown action records zero INSERT or UPDATE calls on D1", async () => {
+    const db = mockD1([]);
+    await handleCallbackQuery(db, "fake-token", {
+      id: "cb-unknown",
+      data: "garbage:xyz",
+      from: { username: "mallory" },
+      message: { chat: { id: 42 }, message_id: 999 },
+    });
+
+    const history = db.getHistory();
+    expect(history.some((h) => /\bINSERT\b/i.test(h.sql))).toBe(false);
+    expect(history.some((h) => /\bUPDATE\b/i.test(h.sql))).toBe(false);
+  });
+
   it("silently acks a callback with no chat id", async () => {
     const db = mockD1([]);
     await handleCallbackQuery(db, "fake-token", {

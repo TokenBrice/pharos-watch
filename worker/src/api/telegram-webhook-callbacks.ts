@@ -47,6 +47,10 @@ const SNOOZE_SECONDS = {
   "24h": 24 * 60 * 60,
 } as const;
 
+// Allowlist of known callback action codes. Validated at the top of the
+// dispatcher so that an unknown action can never reach a D1 read/write.
+const KNOWN_ACTIONS = new Set(["snooze", "status", "depegstep", "safetydown"]);
+
 type SnoozeArg = keyof typeof SNOOZE_SECONDS;
 
 function isSnoozeArg(arg: string | undefined): arg is SnoozeArg {
@@ -120,6 +124,13 @@ export async function handleCallbackQuery(
     }
 
     await answerCallbackQuery(cb.id, botToken, { text: result.text });
+    return;
+  }
+
+  // Reject unknown actions before any handler can touch D1. Per-action arg
+  // validation (isSnoozeArg, isKnownStablecoinId, ...) still runs below.
+  if (!KNOWN_ACTIONS.has(action)) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
     return;
   }
 
