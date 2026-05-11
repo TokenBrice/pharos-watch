@@ -1,7 +1,7 @@
 import { API_PATHS } from "../../shared/lib/api-endpoints/paths";
 import { BLACKLIST_STABLECOINS } from "../../shared/types/market";
 
-export type QueryParamType = "string" | "integer" | "boolean";
+export type QueryParamType = "string" | "integer" | "number" | "boolean";
 
 export interface PublicApiArtifactParameter {
   name: string;
@@ -105,6 +105,14 @@ export const STABLECOIN_QUERY_PARAM = {
   description: "Optional canonical Pharos stablecoin ID filter.",
 } as const satisfies PublicApiArtifactParameter;
 
+export const REQUIRED_STABLECOIN_QUERY_PARAM = {
+  name: "stablecoin",
+  in: "query",
+  required: true,
+  schema: { type: "string" },
+  description: "Required canonical Pharos stablecoin ID.",
+} as const satisfies PublicApiArtifactParameter;
+
 export const BLACKLIST_STABLECOIN_SYMBOL_QUERY_PARAM = {
   name: "stablecoin",
   in: "query",
@@ -117,6 +125,27 @@ export const DAYS_PARAM = {
   in: "query",
   schema: { type: "integer", minimum: 1 },
   description: "Historical lookback window in days. Endpoint-specific bounds may apply.",
+} as const satisfies PublicApiArtifactParameter;
+
+export const DEX_LIQUIDITY_HISTORY_DAYS_PARAM = {
+  name: "days",
+  in: "query",
+  schema: { type: "integer", minimum: 1, maximum: 365 },
+  description: "Historical lookback window in days. Defaults to 90.",
+} as const satisfies PublicApiArtifactParameter;
+
+export const SUPPLY_HISTORY_DAYS_PARAM = {
+  name: "days",
+  in: "query",
+  schema: { type: "integer", minimum: 1, maximum: 1825 },
+  description: "Historical lookback window in days. Defaults to 365.",
+} as const satisfies PublicApiArtifactParameter;
+
+export const SAFETY_SCORE_HISTORY_DAYS_PARAM = {
+  name: "days",
+  in: "query",
+  schema: { type: "integer", minimum: 1, maximum: 3650 },
+  description: "Historical lookback window in days. Defaults to 365.",
 } as const satisfies PublicApiArtifactParameter;
 
 export const YIELD_HISTORY_STABLECOIN_QUERY_PARAM = {
@@ -303,7 +332,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     summary: "DEX liquidity history",
     description: "Historical liquidity-score data for a stablecoin.",
     tags: ["Liquidity", "History"],
-    parameters: [STABLECOIN_QUERY_PARAM, DAYS_PARAM],
+    parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, DEX_LIQUIDITY_HISTORY_DAYS_PARAM],
     postman: {
       folder: "Historical data",
       order: 1,
@@ -456,10 +485,63 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     summary: "Mint and burn events",
     description: "Individual mint/burn events for supported stablecoins.",
     tags: ["Flows"],
-    parameters: [STABLECOIN_QUERY_PARAM, LIMIT_PARAM],
+    parameters: [
+      REQUIRED_STABLECOIN_QUERY_PARAM,
+      {
+        name: "direction",
+        in: "query",
+        schema: { type: "string", enum: ["mint", "burn"] },
+        description: "Optional direction filter.",
+      },
+      {
+        name: "chain",
+        in: "query",
+        schema: { type: "string" },
+        description: "Optional chain ID within the stablecoin's configured issuance scope.",
+      },
+      {
+        name: "burnType",
+        in: "query",
+        schema: { type: "string", enum: ["effective_burn", "bridge_burn", "review_required"] },
+        description: "Optional burn classification filter.",
+      },
+      {
+        name: "scope",
+        in: "query",
+        schema: { type: "string", enum: ["all", "counted"] },
+        description: "`counted` returns only rows used in economic-flow aggregates. Defaults to `all`.",
+      },
+      {
+        name: "minAmount",
+        in: "query",
+        schema: { type: "number", minimum: 0 },
+        description: "Minimum USD amount; unpriced rows are excluded when this filter is used.",
+      },
+      {
+        name: "limit",
+        in: "query",
+        schema: { type: "integer", minimum: 1, maximum: 500 },
+        description: "Maximum number of records to return. Defaults to 50.",
+      },
+      {
+        name: "offset",
+        in: "query",
+        schema: { type: "integer", minimum: 0 },
+        description: "Pagination offset. Defaults to 0.",
+      },
+    ],
     postman: {
       folder: "Flows, blacklist, yield, and chains",
-      query: { stablecoin: "{{stablecoinId}}", limit: "{{limit}}" },
+      query: {
+        stablecoin: "{{stablecoinId}}",
+        direction: "",
+        chain: "ethereum",
+        burnType: "",
+        scope: "all",
+        minAmount: "0",
+        limit: "{{limit}}",
+        offset: "0",
+      },
     },
   },
   {
@@ -524,7 +606,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     summary: "Supply history",
     description: "Historical supply series for a stablecoin.",
     tags: ["History"],
-    parameters: [STABLECOIN_QUERY_PARAM, DAYS_PARAM],
+    parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, SUPPLY_HISTORY_DAYS_PARAM],
     postman: {
       folder: "Historical data",
       order: 0,
@@ -537,7 +619,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     summary: "Safety score history",
     description: "Long-range safety-score history for a stablecoin.",
     tags: ["Risk", "History"],
-    parameters: [STABLECOIN_QUERY_PARAM, DAYS_PARAM],
+    parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, SAFETY_SCORE_HISTORY_DAYS_PARAM],
     postman: {
       folder: "Historical data",
       order: 3,

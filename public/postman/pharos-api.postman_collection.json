@@ -503,7 +503,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{apiBaseUrl}}/api/mint-burn-events?stablecoin=%7B%7BstablecoinId%7D%7D&limit=%7B%7Blimit%7D%7D",
+              "raw": "{{apiBaseUrl}}/api/mint-burn-events?stablecoin=%7B%7BstablecoinId%7D%7D&direction=&chain=ethereum&burnType=&scope=all&minAmount=0&limit=%7B%7Blimit%7D%7D&offset=0",
               "host": [
                 "{{apiBaseUrl}}"
               ],
@@ -517,8 +517,32 @@
                   "value": "{{stablecoinId}}"
                 },
                 {
+                  "key": "direction",
+                  "value": ""
+                },
+                {
+                  "key": "chain",
+                  "value": "ethereum"
+                },
+                {
+                  "key": "burnType",
+                  "value": ""
+                },
+                {
+                  "key": "scope",
+                  "value": "all"
+                },
+                {
+                  "key": "minAmount",
+                  "value": "0"
+                },
+                {
                   "key": "limit",
                   "value": "{{limit}}"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
                 }
               ]
             },

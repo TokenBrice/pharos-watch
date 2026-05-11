@@ -7,6 +7,7 @@ Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`,
 - **Version source:** `shared/lib/chain-health-version.ts`
 - **API source:** `worker/src/api/chains.ts`
 - **Route contract:** [chains-page.md](./chains-page.md)
+- **Public changelog route:** `/methodology/chain-health-changelog/`
 - **Version timeline:** [chain-health-timeline.md](./chain-health-timeline.md)
 
 ## Inputs

@@ -28,7 +28,7 @@ Row shape for donations is defined in `shared/lib/funding/types.ts` (`Donation`)
 - **No ENS resolver module.** ENS reverse + forward-verify runs once per new address during the skill's run; results are frozen into `display` on the row.
 - **No spam filter module.** Unknown-token pricing requires a manual USD value from the user, which naturally gates out spoofed-ticker spam.
 
-If donation volume grows to the point where hand-curation becomes painful, promote the skill to a worker cron (daily Alchemy scan -> D1 -> `/api/funding-summary` endpoint). Everything the page renders is already derivable from what the skill writes, so the frontend does not need to change.
+If donation volume grows to the point where hand-curation becomes painful, promote the skill to a worker cron (daily Alchemy scan -> D1 -> proposed `/api/funding-summary` endpoint). Everything the page renders is already derivable from what the skill writes, so the frontend does not need to change.
 
 ## Ownership & cadence
 

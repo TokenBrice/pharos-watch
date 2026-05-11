@@ -2,6 +2,13 @@
 
 Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs every 15 minutes as part of the `sync-stablecoins` cron. Stage 2 (confirmation) runs immediately after, promoting or rejecting candidates that require multi-source agreement: large-cap coins, low-confidence primary-price inputs, and extreme moves.
 
+## Methodology Versioning
+
+- **Current methodology version:** `v5.97`
+- **Runtime/version source:** `shared/lib/depeg-dews-version.ts`
+- **Public changelog route:** `/methodology/depeg-changelog/`
+- **Version timeline:** [depeg-dews-timeline.md](./depeg-dews-timeline.md)
+
 ## Thresholds & Constants
 
 | Constant | Value | Purpose |
@@ -382,7 +389,7 @@ Cache: realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers use the
 ### Component: DepegHistory (`depeg-history.tsx`)
 
 - Stablecoin-detail depeg history table backed by the filtered infinite hook
-- Hero peg-score card now shows the full recorded-event count from `/api/depeg-events.total`; when that differs from the peg-score window count, the UI explicitly labels the 4-year score-window subset
+- Hero peg-score card now shows the full recorded-event count from the `GET /api/depeg-events` response field `total`; when that differs from the peg-score window count, the UI explicitly labels the 4-year score-window subset
 - Background-hydrates the full per-coin history, then paginates the rendered table client-side at 25 rows per page
 - Summary metrics: recorded event count, worst deviation, current streak (days at peg or "Depegged now")
 - Table columns: Date, Direction (badge), Peak Deviation (signed, colored), Duration (or "Ongoing"), Start Price, Peak Price, Recovery Price

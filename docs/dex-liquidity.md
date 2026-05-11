@@ -1,5 +1,12 @@
 # DEX Liquidity Score & Price Cross-Validation
 
+## Methodology Versioning
+
+- **Current methodology version:** `v5.6`
+- **Runtime/version source:** `shared/lib/liquidity-score-version.ts`
+- **Public changelog route:** `/methodology/liquidity-score-changelog/`
+- **Version timeline:** [liquidity-score-timeline.md](./liquidity-score-timeline.md)
+
 ## DEX Liquidity Score
 
 `syncDexLiquidity()` in `worker/src/cron/dex-liquidity/orchestrator.ts` runs every 30 minutes (on the `10,40 * * * *` cron schedule) and computes a composite liquidity score (0-100) per stablecoin from 5 components:

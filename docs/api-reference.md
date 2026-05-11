@@ -1639,7 +1639,7 @@ Public transition history for the read-only `/status/` page. Returns the current
 | Field           | Type                                | Description |
 | --------------- | ----------------------------------- | ----------- |
 | `timestamp`     | `number`                            | Unix seconds at time of response |
-| `currentStatus` | `"healthy" \| "degraded" \| "stale"` | Current public status, sourced from `assessPublicHealth` (matches `/api/health.status`) |
+| `currentStatus` | `"healthy" \| "degraded" \| "stale"` | Current public status, sourced from `assessPublicHealth` (matches the `status` field from `GET /api/health`) |
 | `lastChangedAt` | `number \| null`                    | Unix seconds for the latest admin status-machine change, if known |
 | `transitions`   | `PublicStatusTransition[]`          | Recent public-impact incident transitions, inside the requested window, newest first |
 

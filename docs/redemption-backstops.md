@@ -94,7 +94,7 @@ The redemption-backstop cron materializes raw `effectiveExitScore` on every reso
 
 Severe active depegs add a current-exercisability gate on top of the static route score. When an open `depeg_events` row has `abs(peak_deviation_bps) >= 2500`, a static, estimated, live-proxy, issuer/API, queue, or documented-bound redemption route is marked `impaired` unless it has live-direct dynamic permissionless redemption capacity with atomic or immediate settlement. For configured tracked wrappers whose metadata keeps `pegReferenceId === variantOf`, that impairment now also propagates from the parent stablecoin's open severe-depeg row. This prevents stale route documentation from producing a strong par-exit score while the market is indicating that broad redemption is not currently clearing.
 
-The effective exit model parameters are surfaced by `/api/redemption-backstops.methodology.effectiveExitModel` and reused by report cards.
+The effective exit model parameters are surfaced by the `methodology.effectiveExitModel` field on `GET /api/redemption-backstops` and reused by report cards.
 
 ---
 

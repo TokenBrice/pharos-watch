@@ -2,6 +2,13 @@
 
 Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 71 contract configurations on 9 chains (35 tracked symbols; additional BSC / Avalanche / Base deployments for some tier-1 coins are deferred pending explorer-API coverage). Runs every 6 hours, incrementally scanning from the last processed block or timestamp cursor.
 
+## Methodology Versioning
+
+- **Current methodology version:** `v3.991`
+- **Runtime/version source:** `shared/lib/blacklist-tracker-version.ts`
+- **Public changelog route:** `/methodology/blacklist-tracker-changelog/`
+- **Version timeline:** [blacklist-tracker-timeline.md](./blacklist-tracker-timeline.md)
+
 The tracker now has two distinct amount layers:
 
 - `blacklist_events` stores event-time amounts only when Pharos can justify them historically
