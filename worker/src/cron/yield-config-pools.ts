@@ -73,6 +73,8 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "msy-main-street": "8a28570f-2316-488a-94a7-67c87e76c1f1",
   // Yuzu USD -> syzUSD - yuzu-money native savings, Plasma, $28M TVL, ~7.3% APY
   "yzusd-yuzu": "6174b1d6-8212-4964-95bf-ca9c539864ba",
+  // Staked Yuzu USD (syzUSD) - shares the yuzu-money Plasma savings pool with parent yzusd-yuzu (DefiLlama tracks only the SYZUSD wrapper)
+  "syzusd-yuzu": "6174b1d6-8212-4964-95bf-ca9c539864ba",
   // Noon USN -> sUSN - morpho-v1 collateral, Ethereum, $10M TVL, APY via on-chain rate
   "usn-noon": "a18a761b-49cd-416d-8342-839cac722094",
   // Cap stcUSD - cap native staking, Ethereum, $90M+ TVL, ~5.9% APY
