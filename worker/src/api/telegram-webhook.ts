@@ -268,6 +268,7 @@ export const handleTelegramWebhook = withErrorHandler(
             await handleStatus(db, chatId, parsedCommand.args, botToken);
             return ok();
           case "/brief":
+          // @deprecated /market is an alias for /brief; remove in vN+1.
           case "/market":
             await handleBrief(db, chatId, botToken);
             return ok();
@@ -358,6 +359,7 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
           await handleStatus(db, chatId, parsedCommand.args, botToken);
           break;
         case "/brief":
+        // @deprecated /market is an alias for /brief; remove in vN+1.
         case "/market":
           await handleBrief(db, chatId, botToken);
           break;

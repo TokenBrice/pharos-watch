@@ -155,7 +155,7 @@ Wizard state is persisted as a row in `telegram_pending_disambiguation` with `ac
 | `/presets` | Returns the preset watchlist catalog plus subscribe and unsubscribe examples |
 | `/list` | Returns enabled alert types plus subscribed coins for the chat |
 | `/status <ticker>` | Returns a compact snapshot: current price freshness, supply, DEWS band, safety grade, active-depeg state, DEX liquidity, and best yield context for the given coin. No subscription required. |
-| `/brief` or `/market` | Returns the latest compact market brief from the daily digest inputs |
+| `/brief` | Returns the latest compact market brief from the daily digest inputs. `/market` is a deprecated alias kept for one release cycle. |
 | `/top <view>` | Returns ranked current views for `depeg`, `dews`, `yield`, `liquidity`, `chains`, or `safety` |
 | `/why <ticker>` | Explains the current Safety Score, weakest dimensions, and key risk notes for one coin |
 | `/coverage <ticker>` | Shows which Pharos data surfaces currently cover one coin |
