@@ -42,6 +42,22 @@
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",
   "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.hedgecore.io/docs/protocol/yield-generation"
+      },
+      {
+        "label": "Website",
+        "url": "https://hedgecore.io/"
+      }
+    ],
+    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "reserves": [
     {
       "name": "USDC / Venus Protocol lending strategy",

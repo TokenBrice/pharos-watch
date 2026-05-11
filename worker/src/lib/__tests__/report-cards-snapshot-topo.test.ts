@@ -163,7 +163,7 @@ describe("transitive blacklist inheritance", () => {
     expect(ids.has("downstream")).toBe(true);
   });
 
-  it("explicit canBeBlacklisted: false blocks transitivity", () => {
+  it("explicit canBeBlacklisted: false does not block upstream transitivity without reviewed rationale", () => {
     const metas = [
       makeMeta("root", []),
       makeMeta("middle", [{ coinId: "root", pct: 100, name: "X", risk: "low" }], {
@@ -176,8 +176,8 @@ describe("transitive blacklist inheritance", () => {
     ];
     const ids = buildTransitiveSet(metas);
     expect(ids.has("root")).toBe(true);
-    expect(ids.has("middle")).toBe(false);
-    expect(ids.has("leaf")).toBe(false);
+    expect(ids.has("middle")).toBe(true);
+    expect(ids.has("leaf")).toBe(true);
   });
 
   it("resolves cyclic dependencies to a fixed point instead of order-dependent false negatives", () => {

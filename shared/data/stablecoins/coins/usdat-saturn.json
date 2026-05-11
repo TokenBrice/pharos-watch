@@ -55,6 +55,22 @@
     }
   ],
   "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://saturncredit.gitbook.io/saturn-docs"
+      },
+      {
+        "label": "Audits",
+        "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits"
+      }
+    ],
+    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

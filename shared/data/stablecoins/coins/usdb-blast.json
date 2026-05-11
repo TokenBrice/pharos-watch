@@ -44,8 +44,7 @@
       "name": "DAI / sDAI (via MakerDAO DSR)",
       "pct": 60,
       "risk": "low",
-      "coinId": "dai-makerdao",
-      "blacklistable": true
+      "coinId": "dai-makerdao"
     },
     {
       "name": "USDC (bridged)",

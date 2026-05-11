@@ -28,6 +28,26 @@ function deterministicShuffle<T>(values: readonly T[]): T[] {
   return copy;
 }
 
+function makeMeta(
+  id: string,
+  overrides: Record<string, unknown> = {},
+): never {
+  return {
+    id,
+    name: id,
+    symbol: id.slice(0, 5).toUpperCase(),
+    flags: {
+      backing: "crypto-backed",
+      pegCurrency: "USD",
+      governance: "decentralized",
+      yieldBearing: false,
+      rwa: false,
+      navToken: false,
+    },
+    ...overrides,
+  } as never;
+}
+
 describe("report-card blacklist authority", () => {
   it("pins direct freeze and blacklist corrections from the unfreezable audit", () => {
     const resolved = resolveBlacklistStatuses(TRACKED_STABLECOINS);
@@ -131,5 +151,141 @@ describe("report-card blacklist authority", () => {
     for (const meta of TRACKED_STABLECOINS) {
       expect(resolveBlacklistStatus(meta, { context, reserveSlices: meta.reserves })).toBe(resolved.get(meta.id));
     }
+  });
+
+  it("propagates upstream exposure from any positive reserve share", () => {
+    const resolved = resolveBlacklistStatuses([
+      makeMeta("direct", {
+        flags: {
+          backing: "rwa-backed",
+          pegCurrency: "USD",
+          governance: "centralized",
+          yieldBearing: false,
+          rwa: true,
+          navToken: false,
+        },
+      }),
+      makeMeta("downstream", {
+        reserves: [
+          { name: "Direct stablecoin dust", pct: 0.1, risk: "low", coinId: "direct" },
+          { name: "ETH", pct: 99.9, risk: "very-low" },
+        ],
+      }),
+    ]);
+
+    expect(resolved.get("downstream")).toBe("inherited");
+  });
+
+  it("separates variant inheritance for possible, direct, dilutable, and upstream parents", () => {
+    const metas = [
+      makeMeta("possible-parent", { canBeBlacklisted: "possible" }),
+      makeMeta("possible-child", {
+        variantOf: "possible-parent",
+        variantKind: "savings-passthrough",
+        pegReferenceId: "possible-parent",
+        flags: {
+          backing: "crypto-backed",
+          pegCurrency: "USD",
+          governance: "centralized-dependent",
+          yieldBearing: true,
+          rwa: false,
+          navToken: true,
+        },
+      }),
+      makeMeta("direct-parent", {
+        flags: {
+          backing: "rwa-backed",
+          pegCurrency: "USD",
+          governance: "centralized",
+          yieldBearing: false,
+          rwa: true,
+          navToken: false,
+        },
+      }),
+      makeMeta("direct-child", {
+        variantOf: "direct-parent",
+        variantKind: "savings-passthrough",
+        pegReferenceId: "direct-parent",
+        flags: {
+          backing: "rwa-backed",
+          pegCurrency: "USD",
+          governance: "centralized-dependent",
+          yieldBearing: true,
+          rwa: true,
+          navToken: true,
+        },
+      }),
+      makeMeta("dilutable-parent", { canBeBlacklisted: "dilutable" }),
+      makeMeta("dilutable-child", {
+        variantOf: "dilutable-parent",
+        variantKind: "savings-passthrough",
+        pegReferenceId: "dilutable-parent",
+        flags: {
+          backing: "crypto-backed",
+          pegCurrency: "USD",
+          governance: "centralized-dependent",
+          yieldBearing: true,
+          rwa: false,
+          navToken: true,
+        },
+      }),
+      makeMeta("upstream-parent", {
+        reserves: [{ name: "USDC", pct: 1, risk: "low", coinId: "direct-parent" }],
+      }),
+      makeMeta("upstream-child", {
+        variantOf: "upstream-parent",
+        variantKind: "savings-passthrough",
+        pegReferenceId: "upstream-parent",
+        flags: {
+          backing: "crypto-backed",
+          pegCurrency: "USD",
+          governance: "centralized-dependent",
+          yieldBearing: true,
+          rwa: false,
+          navToken: true,
+        },
+      }),
+    ];
+
+    const resolved = resolveBlacklistStatuses(metas);
+
+    expect(resolved.get("possible-child")).toBe("possible");
+    expect(resolved.get("direct-child")).toBe("inherited");
+    expect(resolved.get("dilutable-child")).toBe("inherited");
+    expect(resolved.get("upstream-child")).toBe("inherited");
+  });
+
+  it("requires reviewed rationale before explicit false suppresses upstream exposure", () => {
+    const direct = makeMeta("direct", {
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: true,
+        navToken: false,
+      },
+    });
+    const withoutRationale = makeMeta("without-rationale", {
+      canBeBlacklisted: false,
+      reserves: [{ name: "Direct stablecoin", pct: 1, risk: "low", coinId: "direct" }],
+    });
+    const withRationale = makeMeta("with-rationale", {
+      canBeBlacklisted: false,
+      blacklistabilityReview: {
+        reviewedStatus: false,
+        sourceFreeRationale: "fixture",
+        evidence: "Fixture evidence for upstream suppression.",
+        reviewer: "Fixture",
+        reviewedAt: "2026-05-12",
+        upstreamSuppressionRationale: "Reviewed fixture suppression rationale.",
+      },
+      reserves: [{ name: "Direct stablecoin", pct: 1, risk: "low", coinId: "direct" }],
+    });
+
+    const resolved = resolveBlacklistStatuses([direct, withoutRationale, withRationale]);
+
+    expect(resolved.get("without-rationale")).toBe("inherited");
+    expect(resolved.get("with-rationale")).toBe(false);
   });
 });

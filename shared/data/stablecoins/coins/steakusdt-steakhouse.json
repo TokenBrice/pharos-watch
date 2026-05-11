@@ -18,6 +18,18 @@
   "detailProvider": "coingecko",
   "geckoId": "steakhouse-usdt",
   "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Website",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "links": [
     {
       "label": "Website",

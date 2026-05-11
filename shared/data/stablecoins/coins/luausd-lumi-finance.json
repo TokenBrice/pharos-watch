@@ -38,6 +38,18 @@
     "label": "Sourcify UtilityToken.sol",
     "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
   },
+  "blacklistabilityReview": {
+    "reviewedStatus": "dilutable",
+    "sources": [
+      {
+        "label": "Sourcify UtilityToken.sol",
+        "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
+      }
+    ],
+    "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "chainTier": "stage1-l2",
   "deploymentModel": "single-chain",
   "reserves": [

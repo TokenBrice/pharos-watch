@@ -1187,7 +1187,7 @@ describe("isBlacklistable", () => {
     expect(isBlacklistable(meta as never)).toBe("inherited");
   });
 
-  it("returns inherited for majority reserves in stablecoin plus custodial wrapper collateral", () => {
+  it("returns inherited for stablecoin plus custodial wrapper collateral", () => {
     const meta = {
       flags: { governance: "centralized-dependent" as const },
       canBeBlacklisted: undefined,
@@ -1200,7 +1200,7 @@ describe("isBlacklistable", () => {
     expect(isBlacklistable(meta as never)).toBe("inherited");
   });
 
-  it("returns inherited for majority reserves in custodied BTC wrappers and issuer-seizable tokenized collateral", () => {
+  it("returns inherited for custodied BTC wrappers and issuer-seizable tokenized collateral", () => {
     const meta = {
       flags: { governance: "decentralized" as const },
       canBeBlacklisted: undefined,

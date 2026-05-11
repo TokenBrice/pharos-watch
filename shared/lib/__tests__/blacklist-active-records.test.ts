@@ -199,6 +199,59 @@ describe("buildBlacklistActiveRecords", () => {
     expect(records.map((record) => record.contractAddress).sort()).toEqual(["0xlegacy", "0xupgraded"]);
   });
 
+  it("dedupes repeated blacklist events for the same scoped identity to the latest record", () => {
+    const older = makeEvent({
+      id: "1",
+      chainId: "optimism",
+      chainName: "Optimism",
+      address: "0xshared",
+      configKey: "optimism-0xcontract",
+      contractAddress: "0xcontract",
+      timestamp: 10,
+      txHash: "0xolder",
+    });
+    const newer = makeEvent({
+      id: "2",
+      chainId: "optimism",
+      chainName: "Optimism",
+      address: "0xshared",
+      configKey: "optimism-0xcontract",
+      contractAddress: "0xcontract",
+      timestamp: 11,
+      txHash: "0xnewer",
+    });
+
+    const records = buildBlacklistActiveRecords([newer, older]);
+
+    expect(records).toHaveLength(1);
+    expect(records[0]?.blacklistedAt).toBe(11);
+    expect(records[0]?.blacklistTxHash).toBe("0xnewer");
+  });
+
+  it("dedupes unblacklist lookup keys across scoped and legacy identities", () => {
+    const scopedBlacklist = makeEvent({
+      id: "1",
+      chainId: "optimism",
+      chainName: "Optimism",
+      address: "0xshared",
+      configKey: "optimism-0xcontract",
+      contractAddress: "0xcontract",
+      timestamp: 10,
+    });
+    const scopedUnblacklist = makeEvent({
+      id: "2",
+      eventType: "unblacklist",
+      chainId: "optimism",
+      chainName: "Optimism",
+      address: "0xshared",
+      configKey: "optimism-0xcontract",
+      contractAddress: "0xcontract",
+      timestamp: 11,
+    });
+
+    expect(buildBlacklistActiveRecords([scopedBlacklist, scopedUnblacklist])).toHaveLength(0);
+  });
+
   it("falls back to event-time EVM amounts when current balance refresh fails", () => {
     const events = [
       makeEvent({
@@ -366,6 +419,47 @@ describe("computeBlacklistTrackedSummaryStats", () => {
       trackedAddressCount: 2,
       trackedFrozenTotal: 100,
       trackedAmountGapCount: 1,
+    });
+  });
+
+  it("dedupes scoped and legacy snapshots that share a current-balance row id", () => {
+    const balances = new Map<string, BlacklistCurrentBalanceSnapshot>([
+      [
+        "USDT:optimism:0x1",
+        {
+          id: "snapshot-1",
+          stablecoin: "USDT",
+          chainId: "optimism",
+          address: "0x1",
+          amountNative: 100,
+          amountUsd: 100,
+          status: "resolved",
+          source: "current_balance",
+          observedAt: 10,
+        },
+      ],
+      [
+        "USDT:optimism:optimism-0xcontract:0xcontract:0x1",
+        {
+          id: "snapshot-1",
+          stablecoin: "USDT",
+          chainId: "optimism",
+          address: "0x1",
+          configKey: "optimism-0xcontract",
+          contractAddress: "0xcontract",
+          amountNative: 100,
+          amountUsd: 100,
+          status: "resolved",
+          source: "current_balance",
+          observedAt: 11,
+        },
+      ],
+    ]);
+
+    expect(computeBlacklistTrackedSummaryStats(balances)).toEqual({
+      trackedAddressCount: 1,
+      trackedFrozenTotal: 100,
+      trackedAmountGapCount: 0,
     });
   });
 });

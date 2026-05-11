@@ -45,6 +45,23 @@
     }
   ],
   "canBeBlacklisted": false,
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.inter.trade/"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/Agoric/agoric-sdk/tree/master/packages/inter-protocol"
+      }
+    ],
+    "evidence": "Explicit No retained: reviewed metadata describes on-chain or overcollateralized collateral mechanics and does not identify a direct holder-balance blacklist or freeze surface on the issued token.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12",
+    "upstreamSuppressionRationale": "The reviewed override is scoped to the IST holder-facing token. PSM assets are upstream IBC reserve collateral, so this override records no direct IST holder blacklist surface while documenting the deliberate reserve-side suppression."
+  },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",

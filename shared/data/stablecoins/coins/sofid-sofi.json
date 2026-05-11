@@ -13,6 +13,18 @@
   "collateral": "1:1 USD reserves held as cash or cash equivalents at SoFi Bank's Federal Reserve master account; reserves earn interest on reserve balances (IORB) retained by SoFi, not passed to holders",
   "pegMechanism": "1:1 mint and redeem via BitGo infrastructure; instant conversions between dollars and SOFID",
   "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Website",
+        "url": "https://www.sofi.com/crypto/sofiusd/"
+      }
+    ],
+    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "detailProvider": "coingecko",
   "geckoId": "sofiusd",
   "links": [

@@ -225,7 +225,24 @@ export function resolveBlacklistStatus(
   // "dilutable" describes an admin-mint surface that lets the issuer dilute
   // holders without bound, but does not let them freeze existing balances —
   // so it does not propagate as a symbol matcher to downstream wrappers.
-  if (meta.canBeBlacklisted !== undefined) return meta.canBeBlacklisted;
+  if (meta.canBeBlacklisted !== undefined && meta.canBeBlacklisted !== false) return meta.canBeBlacklisted;
+
+  const inferredStatus = resolveBlacklistStatusWithoutExplicitOverride(meta, options);
+  if (meta.canBeBlacklisted === false) {
+    const suppressesUpstream = inferredStatus === "inherited";
+    if (suppressesUpstream && !meta.blacklistabilityReview?.upstreamSuppressionRationale) {
+      return "inherited";
+    }
+    return false;
+  }
+
+  return inferredStatus;
+}
+
+function resolveBlacklistStatusWithoutExplicitOverride(
+  meta: StablecoinMeta,
+  options: ResolveBlacklistStatusOptions = {},
+): BlacklistStatus {
   if (meta.flags.governance === "centralized") return true;
 
   // Tracked parent variants inherit their parent's freeze surface: a sUSDS or

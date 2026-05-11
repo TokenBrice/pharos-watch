@@ -66,6 +66,22 @@
     }
   ],
   "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.blox.my"
+      },
+      {
+        "label": "Website",
+        "url": "https://www.blox.my"
+      }
+    ],
+    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",

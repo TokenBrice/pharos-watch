@@ -58,20 +58,17 @@
     {
       "name": "iBGT (Infrared liquid staked BGT)",
       "pct": 40,
-      "risk": "high",
-      "blacklistable": true
+      "risk": "high"
     },
     {
       "name": "iBERA / WBERA (Berachain native)",
       "pct": 25,
-      "risk": "high",
-      "blacklistable": true
+      "risk": "high"
     },
     {
       "name": "Wrapped BTC variants (pumpBTC, solvBTC, uniBTC)",
       "pct": 15,
-      "risk": "high",
-      "blacklistable": true
+      "risk": "high"
     },
     {
       "name": "ETH variants (beraETH, WETH, ylstETH, rsETH)",
@@ -81,8 +78,7 @@
     {
       "name": "Kodiak LP positions (WBTC-HONEY, WETH-HONEY, WETH-WBTC)",
       "pct": 10,
-      "risk": "high",
-      "blacklistable": true
+      "risk": "high"
     }
   ],
   "liveReservesConfig": {

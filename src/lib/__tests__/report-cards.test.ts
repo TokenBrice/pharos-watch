@@ -305,7 +305,7 @@ describe("isBlacklistable — inherited risk from reserves", () => {
     expect(isBlacklistable(meta)).toBe(false);
   });
 
-  it("returns inherited when a majority of reserves link to blacklistable coinIds", () => {
+  it("returns inherited when reserves link to blacklistable coinIds", () => {
     const meta = makeMeta({
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       reserves: [
@@ -340,7 +340,7 @@ describe("isBlacklistable — inherited risk from reserves", () => {
     expect(isBlacklistable(meta)).toBe("inherited");
   });
 
-  it("explicit canBeBlacklisted: false override wins even with heavy blacklistable reserves", () => {
+  it("explicit canBeBlacklisted: false needs reviewed rationale to suppress upstream reserves", () => {
     const meta = makeMeta({
       canBeBlacklisted: false,
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
@@ -349,7 +349,7 @@ describe("isBlacklistable — inherited risk from reserves", () => {
       ],
     });
     const blacklistableIds = new Set(["usdc-circle"]);
-    expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
+    expect(isBlacklistable(meta, blacklistableIds)).toBe("inherited");
   });
 
   it("returns inherited when reserve names imply upstream blacklist risk even without an indexed coinId", () => {

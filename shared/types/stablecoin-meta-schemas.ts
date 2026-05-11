@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type {
+  BlacklistabilityReview,
   CoinNotice,
   ContractDeployment,
   DateHistoryEntry,
@@ -35,6 +36,8 @@ import {
 
 const ContractDecimalsSchema = z.number().finite().int().min(0).max(255);
 const DependencyWeightNumberSchema = z.number().finite().positive().max(1);
+const BlacklistabilityStatusSchema = z.union([z.boolean(), z.literal("possible"), z.literal("dilutable")]);
+const ReviewDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 export const StablecoinFlagsSchema: z.ZodType<StablecoinFlags> = z.object({
   backing: z.enum(BACKING_TYPE_VALUES),
@@ -55,6 +58,26 @@ export const StablecoinLinkSchema: z.ZodType<StablecoinLink> = z.object({
   label: z.string(),
   url: z.string(),
 }).strict();
+
+export const BlacklistabilityReviewSchema: z.ZodType<BlacklistabilityReview> = z.object({
+  reviewedStatus: BlacklistabilityStatusSchema,
+  sources: z.array(StablecoinLinkSchema).min(1).optional(),
+  sourceFreeRationale: z.string().min(1).optional(),
+  evidence: z.string().min(12),
+  reviewer: z.string().min(1),
+  reviewedAt: ReviewDateSchema,
+  upstreamSuppressionRationale: z.string().min(1).optional(),
+}).strict().superRefine((review, ctx) => {
+  if ((review.sources?.length ?? 0) > 0 || review.sourceFreeRationale) {
+    return;
+  }
+
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    message: "blacklistabilityReview requires sources or sourceFreeRationale",
+    path: ["sources"],
+  });
+});
 
 export const JurisdictionSchema: z.ZodType<Jurisdiction> = z.object({
   country: z.string(),

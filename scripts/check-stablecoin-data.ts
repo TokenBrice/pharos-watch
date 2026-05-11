@@ -4,6 +4,7 @@ import { CanonicalOrderAssetSchema } from "../shared/lib/stablecoins/schema";
 import { validateVariantRelationships } from "../shared/lib/stablecoins/validate-variants";
 import { CHAIN_META } from "../shared/lib/chains";
 import type { StablecoinMeta } from "../shared/types";
+import { findBlacklistabilityReviewIssues } from "./lib/blacklistability-review";
 import {
   CANONICAL_ORDER_ASSET_FILE,
   findCanonicalOrderIssues,
@@ -265,6 +266,10 @@ if (errorCount === 0) {
 
   for (const error of validateVariantRelationships(allEntries.map((entry) => entry.coin))) {
     reportError(`${STABLECOIN_DATA_DIR}: ${error}`);
+  }
+
+  for (const issue of findBlacklistabilityReviewIssues(allEntries.map((entry) => entry.coin))) {
+    reportError(`${STABLECOIN_DATA_DIR}: ${issue.id}: ${issue.message}`);
   }
 }
 

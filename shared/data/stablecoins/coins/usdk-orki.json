@@ -15,6 +15,22 @@
   "llamaId": "265",
   "detailProvider": "defillama",
   "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://orki-finance.gitbook.io/orki-finance-docs/products/usdk"
+      },
+      {
+        "label": "Website",
+        "url": "https://app.orki.finance/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata or audit notes identify direct seizure, freeze, blacklist, privileged burn, proxy-upgrade, or chain-governance intervention authority despite decentralized governance labeling.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "links": [
     {
       "label": "Website",

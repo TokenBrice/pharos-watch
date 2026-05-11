@@ -38,6 +38,22 @@
     }
   ],
   "canBeBlacklisted": false,
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://cotinetwork.medium.com/djed-is-now-available-on-mainnet-9a2ac66daea4"
+      },
+      {
+        "label": "Dapp",
+        "url": "https://app.djed.xyz/"
+      }
+    ],
+    "evidence": "Explicit No retained: reviewed metadata describes on-chain or overcollateralized collateral mechanics and does not identify a direct holder-balance blacklist or freeze surface on the issued token.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "single-chain",
   "collateralQuality": "exotic",

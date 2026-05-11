@@ -44,6 +44,18 @@
     "label": "Etherscan contract source",
     "url": "https://etherscan.io/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e#code"
   },
+  "blacklistabilityReview": {
+    "reviewedStatus": "dilutable",
+    "sources": [
+      {
+        "label": "Etherscan contract source",
+        "url": "https://etherscan.io/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e#code"
+      }
+    ],
+    "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "reserves": [
     {
       "name": "FRAX stablecoin reserves",

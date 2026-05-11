@@ -13,6 +13,22 @@
     "navToken": false
   },
   "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://wiki.defillama.com/wiki/HomeCoin"
+      },
+      {
+        "label": "Website",
+        "url": "https://www.homecoin.finance/"
+      }
+    ],
+    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "collateral": "U.S. home-loan liens and property-backed receivables originated through the HomeCoin/Bacon lending process",
   "pegMechanism": "Users fund property-backed loans with stablecoins; loans are secured by recorded liens and nonpayment can lead to foreclosure or sale proceeds",
   "protocolSlug": "homecoin",

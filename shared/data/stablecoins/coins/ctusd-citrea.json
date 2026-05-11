@@ -53,6 +53,22 @@
     }
   ],
   "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd"
+      },
+      {
+        "label": "Website",
+        "url": "https://citrea.xyz/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "collateralQuality": "rwa",

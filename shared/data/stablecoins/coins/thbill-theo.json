@@ -54,6 +54,22 @@
     }
   ],
   "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.theo.xyz"
+      },
+      {
+        "label": "Website",
+        "url": "https://theo.xyz"
+      }
+    ],
+    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",

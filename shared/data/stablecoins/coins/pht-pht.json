@@ -48,6 +48,18 @@
     "label": "Etherscan contract source",
     "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
   },
+  "blacklistabilityReview": {
+    "reviewedStatus": "dilutable",
+    "sources": [
+      {
+        "label": "Etherscan contract source",
+        "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
+      }
+    ],
+    "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "reserves": [

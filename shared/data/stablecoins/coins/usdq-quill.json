@@ -16,6 +16,22 @@
   "detailProvider": "defillama",
   "geckoId": "quill-usdq",
   "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.quill.finance/faq/usdusdq"
+      },
+      {
+        "label": "Website",
+        "url": "https://app.quill.finance/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata or audit notes identify direct seizure, freeze, blacklist, privileged burn, proxy-upgrade, or chain-governance intervention authority despite decentralized governance labeling.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "links": [
     {
       "label": "Website",

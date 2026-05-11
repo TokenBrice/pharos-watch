@@ -34,6 +34,18 @@
     }
   ],
   "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Website",
+        "url": "https://sui.io/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "single-chain",
   "dependencies": [

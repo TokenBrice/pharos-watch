@@ -57,6 +57,22 @@
     }
   ],
   "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.nerona.xyz/"
+      },
+      {
+        "label": "Website",
+        "url": "https://www.nerona.xyz/"
+      }
+    ],
+    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

@@ -41,6 +41,23 @@
     }
   ],
   "canBeBlacklisted": false,
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/securesecrets/shade"
+      }
+    ],
+    "evidence": "Explicit No retained: reviewed metadata describes on-chain or overcollateralized collateral mechanics and does not identify a direct holder-balance blacklist or freeze surface on the issued token.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12",
+    "upstreamSuppressionRationale": "The reviewed override is scoped to the SILK holder-facing token. Stablecoin redemption-pool assets are upstream reserve collateral, so this override records no direct SILK holder blacklist surface while documenting the deliberate reserve-side suppression."
+  },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",
   "custodyModel": "onchain",

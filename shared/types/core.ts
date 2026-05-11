@@ -74,6 +74,18 @@ export interface StablecoinLink {
   url: string;
 }
 
+export type BlacklistabilityStatus = boolean | "possible" | "dilutable";
+
+export interface BlacklistabilityReview {
+  reviewedStatus: BlacklistabilityStatus;
+  sources?: StablecoinLink[];
+  sourceFreeRationale?: string;
+  evidence: string;
+  reviewer: string;
+  reviewedAt: string;
+  upstreamSuppressionRationale?: string;
+}
+
 export interface Jurisdiction {
   country: string;
   regulator?: string;
@@ -252,8 +264,9 @@ export interface StablecoinMeta {
   contracts?: ContractDeployment[];
   tradedContracts?: ContractDeployment[];
   dependencies?: DependencyWeight[];
-  canBeBlacklisted?: boolean | "possible" | "dilutable";
+  canBeBlacklisted?: BlacklistabilityStatus;
   canBeBlacklistedSource?: StablecoinLink;
+  blacklistabilityReview?: BlacklistabilityReview;
   chainTier?: ChainTier;
   deploymentModel?: DeploymentModel;
   collateralQuality?: CollateralQuality;

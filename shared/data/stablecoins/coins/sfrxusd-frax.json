@@ -48,6 +48,22 @@
     }
   ],
   "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd"
+      },
+      {
+        "label": "Website",
+        "url": "https://frax.com/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",

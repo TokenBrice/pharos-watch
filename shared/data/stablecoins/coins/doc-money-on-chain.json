@@ -42,6 +42,22 @@
     }
   ],
   "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+      },
+      {
+        "label": "Dapp",
+        "url": "https://dapp.moneyonchain.com/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata or audit notes identify direct seizure, freeze, blacklist, privileged burn, proxy-upgrade, or chain-governance intervention authority despite decentralized governance labeling.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "third-party-bridge",
   "reserves": [

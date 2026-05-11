@@ -41,10 +41,28 @@
     }
   ],
   "canBeBlacklisted": false,
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.yamato.fi/v/en"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/DeFiGeek-Community/yamato"
+      }
+    ],
+    "evidence": "Explicit No retained: reviewed metadata describes on-chain or overcollateralized collateral mechanics and does not identify a direct holder-balance blacklist or freeze surface on the issued token.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "deploymentModel": "single-chain",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",
-  "infrastructures": ["liquity-v1"],
+  "infrastructures": [
+    "liquity-v1"
+  ],
   "reserves": [
     {
       "name": "ETH",

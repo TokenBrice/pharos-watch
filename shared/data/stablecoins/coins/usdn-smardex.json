@@ -41,6 +41,18 @@
     "label": "Sourcify Usdn.sol",
     "url": "https://repo.sourcify.dev/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
   },
+  "blacklistabilityReview": {
+    "reviewedStatus": "dilutable",
+    "sources": [
+      {
+        "label": "Sourcify Usdn.sol",
+        "url": "https://repo.sourcify.dev/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
+      }
+    ],
+    "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "chainTier": "ethereum",
   "deploymentModel": "single-chain",
   "collateralQuality": "eth-lst",

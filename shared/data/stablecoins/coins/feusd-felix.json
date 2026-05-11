@@ -43,6 +43,22 @@
     }
   ],
   "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://usefelix.gitbook.io/docs"
+      },
+      {
+        "label": "Website",
+        "url": "https://usefelix.xyz/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata or audit notes identify direct seizure, freeze, blacklist, privileged burn, proxy-upgrade, or chain-governance intervention authority despite decentralized governance labeling.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "infrastructures": [

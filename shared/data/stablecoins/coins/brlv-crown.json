@@ -54,6 +54,22 @@
     }
   ],
   "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://crown-2b36dce9.mintlify.app/whitepaper"
+      },
+      {
+        "label": "Website",
+        "url": "https://www.crown-brlv.com/en/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "chainTier": "stage1-l2",
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",

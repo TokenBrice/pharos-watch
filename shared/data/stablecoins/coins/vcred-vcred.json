@@ -37,6 +37,18 @@
     "label": "Hemi contract source",
     "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
   },
+  "blacklistabilityReview": {
+    "reviewedStatus": "dilutable",
+    "sources": [
+      {
+        "label": "Hemi contract source",
+        "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
+      }
+    ],
+    "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",
   "reserves": [

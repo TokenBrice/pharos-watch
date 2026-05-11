@@ -46,6 +46,22 @@
     }
   ],
   "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.midas.app/"
+      },
+      {
+        "label": "Website",
+        "url": "https://midas.app/mre7yield"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",

@@ -45,6 +45,22 @@
     }
   ],
   "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.flyingtulip.com/"
+      },
+      {
+        "label": "Website",
+        "url": "https://flyingtulip.com/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",

@@ -44,6 +44,22 @@
     }
   ],
   "canBeBlacklisted": false,
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.juicedollar.com/"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/JuiceDollar"
+      }
+    ],
+    "evidence": "Explicit No retained: reviewed metadata describes on-chain or overcollateralized collateral mechanics and does not identify a direct holder-balance blacklist or freeze surface on the issued token.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",
   "collateralQuality": "native",

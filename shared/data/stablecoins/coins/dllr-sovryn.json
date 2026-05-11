@@ -38,6 +38,23 @@
     }
   ],
   "canBeBlacklisted": false,
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Explorer",
+        "url": "https://rootstock.blockscout.com/token/0xc1411567d2670e24d9c4daaa7cda95686e1250aa"
+      },
+      {
+        "label": "Dapp",
+        "url": "https://app.mynt.xyz/"
+      }
+    ],
+    "evidence": "Explicit No retained: reviewed metadata describes on-chain or overcollateralized collateral mechanics and does not identify a direct holder-balance blacklist or freeze surface on the issued token.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12",
+    "upstreamSuppressionRationale": "The reviewed override is scoped to the DLLR holder-facing token. The DOC reserve slice is de minimis reserve-side exposure and is intentionally not promoted to DLLR direct freezability in this metadata override."
+  },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",

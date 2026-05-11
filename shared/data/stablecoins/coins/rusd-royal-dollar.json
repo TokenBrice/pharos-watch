@@ -54,6 +54,22 @@
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-unregulated",
   "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://book.royalcc.world/books/RUSD_Whitepaper/"
+      },
+      {
+        "label": "Website",
+        "url": "https://www.rcoins.digital/"
+      }
+    ],
+    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "reserves": [
     {
       "name": "Issuer-managed cash and liquid reserve assets",

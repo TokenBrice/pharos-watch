@@ -14,6 +14,22 @@
   },
   "collateral": "Canadian dollar reserves held 1:1 in trust for token holders by Tetra Trust",
   "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://tetradg.com/supported-blockchains/"
+      },
+      {
+        "label": "Website",
+        "url": "https://tetradg.com/cadd-stablecoin/"
+      }
+    ],
+    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "collateralQuality": "rwa",
   "pegMechanism": "Direct 1:1 mint and redemption of CADD for CAD through CAD Digital's regulated issuance framework",
   "llamaId": "387",

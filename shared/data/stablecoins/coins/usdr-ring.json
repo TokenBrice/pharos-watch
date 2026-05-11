@@ -37,6 +37,22 @@
     }
   ],
   "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://ringprotocol.gitbook.io/ring-protocol/"
+      },
+      {
+        "label": "Website",
+        "url": "https://ring.exchange/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
   "chainTier": "ethereum",
   "deploymentModel": "single-chain",
   "reserves": [

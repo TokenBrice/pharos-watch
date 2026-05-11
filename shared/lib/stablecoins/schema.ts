@@ -8,6 +8,7 @@ import { CAUSE_OF_DEATH_VALUES } from "../../types/market";
 import { ReserveSliceSchema } from "../../types/reserves";
 import {
   CoinNoticeSchema,
+  BlacklistabilityReviewSchema,
   ContractDeploymentSchema,
   DateHistoryEntrySchema,
   DependencyWeightSchema,
@@ -89,6 +90,7 @@ export const StablecoinMetaAssetSchema = z.object({
   dependencies: z.array(DependencyWeightSchema).optional(),
   canBeBlacklisted: z.union([z.boolean(), z.literal("possible"), z.literal("dilutable")]).optional(),
   canBeBlacklistedSource: StablecoinLinkSchema.optional(),
+  blacklistabilityReview: BlacklistabilityReviewSchema.optional(),
   chainTier: StablecoinMetaEnumSchemas.chainTier.optional(),
   deploymentModel: StablecoinMetaEnumSchemas.deploymentModel.optional(),
   collateralQuality: StablecoinMetaEnumSchemas.collateralQuality.optional(),
@@ -114,6 +116,34 @@ export const StablecoinMetaAssetSchema = z.object({
   milestones: z.array(LaunchMilestoneSchema).optional(),
   dateHistory: z.array(DateHistoryEntrySchema).optional(),
 }).strict().superRefine((meta, ctx) => {
+  if (meta.canBeBlacklisted !== undefined && meta.blacklistabilityReview == null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "explicit canBeBlacklisted overrides require blacklistabilityReview",
+      path: ["blacklistabilityReview"],
+    });
+  }
+
+  if (meta.canBeBlacklisted === undefined && meta.blacklistabilityReview != null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "blacklistabilityReview is only allowed with canBeBlacklisted",
+      path: ["blacklistabilityReview"],
+    });
+  }
+
+  if (
+    meta.canBeBlacklisted !== undefined &&
+    meta.blacklistabilityReview?.reviewedStatus !== undefined &&
+    meta.blacklistabilityReview.reviewedStatus !== meta.canBeBlacklisted
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "blacklistabilityReview.reviewedStatus must match canBeBlacklisted",
+      path: ["blacklistabilityReview", "reviewedStatus"],
+    });
+  }
+
   if (meta.canBeBlacklisted === "dilutable" && meta.canBeBlacklistedSource == null) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
