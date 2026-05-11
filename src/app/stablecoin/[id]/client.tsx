@@ -40,6 +40,13 @@ const McapChart = dynamic(() => import("@/components/mcap-chart").then((mod) => 
   loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
 });
 
+const PegDeviationChart = dynamic(
+  () => import("@/components/peg-deviation-chart").then((mod) => mod.PegDeviationChart),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
+  },
+);
+
 const DepegHistory = dynamic(
   () => import("@/components/depeg-history").then((mod) => mod.DepegHistory),
   {
@@ -356,6 +363,16 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
           {frozenNote}
           <McapChart data={viewModel.supplyHistory} />
         </section>
+
+        {viewModel.coin.flags.pegCurrency === "USD" && !viewModel.isNavToken ? (
+          <section id="peg-deviation">
+            {frozenNote}
+            <PegDeviationChart
+              data={viewModel.supplyHistory}
+              pegCurrency={viewModel.coin.flags.pegCurrency}
+            />
+          </section>
+        ) : null}
 
         <section id="distribution">
           {frozenNote}
