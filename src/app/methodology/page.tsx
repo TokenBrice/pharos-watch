@@ -60,7 +60,7 @@ export default function MethodologyPage() {
             },
             {
               question: "What does the contagion stress test measure?",
-              answer: "The contagion stress test simulates a simultaneous 50% market-cap loss across the top 5 stablecoins and measures the correlated impact on every tracked coin. It uses rolling 90-day return correlations and applies a severity amplifier based on each coin's dependency-risk exposure. The result is a projected grade under stress, shown as a before/after comparison on each coin's detail page.",
+              answer: "The contagion stress test selects one target coin, overrides its overall score to grade D, then recomputes the Dependency Risk dimension for downstream coins that depend on that target. It models the direct dependency channel only, not second-order peg, liquidity, or market-confidence effects. The result is a projected grade under stress, shown as a before/after comparison on each coin's detail page.",
             },
             {
               question: "What is the Bank Run Gauge?",
