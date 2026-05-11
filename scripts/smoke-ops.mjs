@@ -314,6 +314,18 @@ export async function run() {
     console.log("[smoke-ops] OK ops UI access gate");
   }
   const uiCookieHeader = mergeCookieHeader(extractCookiePairs(ui.response));
+  const proxiedUrl = new URL("/api/admin/status", opsUiOrigin).toString();
+  const proxiedAttemptPromise = fetchOpsUiProxyStatusWithRetry(proxiedUrl, headers, {
+    initialCookieHeader: uiCookieHeader,
+    onRetry: ({ attemptNumber, retryCount, retryDelayMs, status }) => {
+      console.warn(
+        `[smoke-ops] /api/admin/status returned ${status}; retrying ${attemptNumber}/${retryCount} after ${retryDelayMs}ms to absorb post-deploy warmup`,
+      );
+    },
+  }).then(
+    (value) => ({ error: null, value }),
+    (error) => ({ error, value: null }),
+  );
 
   const adminApi = await adminApiPromise;
   if (adminApi.response.status === 200) {
@@ -342,15 +354,11 @@ export async function run() {
   assert(typeof status.body.overallStatus === "string", "Ops API /api/status missing overallStatus");
   console.log(`[smoke-ops] OK ops API /api/status (${status.body.overallStatus})`);
 
-  const proxiedUrl = new URL("/api/admin/status", opsUiOrigin).toString();
-  const proxiedAttempt = await fetchOpsUiProxyStatusWithRetry(proxiedUrl, headers, {
-    initialCookieHeader: uiCookieHeader,
-    onRetry: ({ attemptNumber, retryCount, retryDelayMs, status }) => {
-      console.warn(
-        `[smoke-ops] /api/admin/status returned ${status}; retrying ${attemptNumber}/${retryCount} after ${retryDelayMs}ms to absorb post-deploy warmup`,
-      );
-    },
-  });
+  const proxiedAttemptResult = await proxiedAttemptPromise;
+  if (proxiedAttemptResult.error) {
+    throw proxiedAttemptResult.error;
+  }
+  const proxiedAttempt = proxiedAttemptResult.value;
   const proxiedStatus = proxiedAttempt.proxiedStatus;
   if (shouldSkipOpsUiProxyAssertion(proxiedStatus.response, proxiedAttempt.cookieHeader)) {
     console.log(

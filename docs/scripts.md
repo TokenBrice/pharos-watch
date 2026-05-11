@@ -175,7 +175,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 ### `smoke-ui.mjs`
 
-- Uses Playwright CLI temporary sessions. Homepage data/analytics checks run once, then overflow route checks run through deterministic route chunks across `SMOKE_UI_OVERFLOW_WORKERS` sessions while preserving the same overflow assertions.
+- Uses the installed Playwright browser directly. Homepage data/analytics checks run once, then overflow route checks run through deterministic route chunks across `SMOKE_UI_OVERFLOW_WORKERS` browser contexts while preserving the same overflow assertions.
 - In CI deploys, the browser now targets a locally served `out/` export before Pages production deploy; `npm run serve:static-export` runs `scripts/serve-static-export.mjs`, which proxies direct `/api/*` calls to the configured public API base and `/_site-data/*` calls to the explicitly configured `STATIC_EXPORT_SITE_API_BASE` so the smoke still exercises the live website data path against the exact built frontend artifact.
 - On combined worker + Pages deploys, the Pages-prepare workflow points the local site-data proxy at the uploaded worker preview URL so the predeploy artifact rehearsal happens against the exact worker candidate before Worker production promotion.
 - The shared Pages publish workflow also runs the same smoke script against `https://pharos.watch` after `deploy-pages`, so the pipeline checks both the pre-publish artifact and the real public host. Production deploys skip live overflow because the full route sweep already ran against the exact local artifact.
@@ -192,7 +192,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - Validates the Access-protected operator UI shell plus direct operator API checks. The default `SMOKE_OPS_SCOPE=full` covers `status`, `status-history`, admin samples, and dry-run admin actions; `SMOKE_OPS_SCOPE=canary` keeps only shell/access plus direct and same-origin status checks for deploy-critical smoke.
 - Same-origin `ops.pharos.watch/api/admin/status` smoke first tries the service-token path, then replays a bootstrapped `CF_Authorization` cookie when the UI host yields one.
 - Retries up to two transient `502`/`504` gateway responses on that same-origin proxy assertion to absorb post-deploy warmup without masking persistent proxy failures.
-- Starts the independent direct ops API probes together with the ops UI shell fetch so the smoke does not serialize unrelated network waits.
+- Starts the independent direct ops API probes together with the ops UI shell fetch, and starts the same-origin status proxy check as soon as a UI Access cookie is available, so the smoke does not serialize unrelated network waits.
 
 ### `serve-static-export.mjs`
 
@@ -249,7 +249,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - Uses Cloudflare Access service-token headers (`OPS_SMOKE_CF_ACCESS_CLIENT_ID` / `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`) rather than the legacy single-token admin flow.
 - Defaults to `https://ops.pharos.watch/admin/` and `https://ops-api.pharos.watch`, with overrides via `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE`.
 - Verifies the operator UI shell plus `/api/status`, `/api/status-history?limit=5`, admin samples, and safe dry-run admin paths in the default full scope. Set `SMOKE_OPS_SCOPE=canary` for shell/access plus direct and same-origin status-only smoke.
-- Starts the independent direct ops API probes together with the ops UI shell fetch so the smoke does not serialize unrelated network waits.
+- Starts the independent direct ops API probes together with the ops UI shell fetch, and starts the same-origin status proxy check as soon as a UI Access cookie is available, so the smoke does not serialize unrelated network waits.
 - When the `ops.pharos.watch` flow returns a bootstrapped UI session cookie (for example `CF_Authorization`), the script reuses that browser-style session to smoke same-origin `/api/admin/status`.
 - If the service-token flow reaches the UI shell but still does not yield a bootstrapped UI session cookie, the script keeps the shell assertion and direct `ops-api` smoke but skips the same-origin proxy assertion instead of failing on a non-browser auth shape the Pages proxy cannot use.
 - If `ops.pharos.watch` only returns the interactive Cloudflare Access redirect, the script also skips the same-origin proxy assertion for the same reason.

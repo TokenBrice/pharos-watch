@@ -157,7 +157,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - runs in parallel with the public live UI smoke because it only depends on the production deployment being live
    - requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
    - UI check accepts either an Access redirect or a token-backed HTML response, so CI does not depend on the UI app also granting `Service Auth`
-   - same-origin `ops.pharos.watch/api/admin/status` retries transient `502`/`504` gateway responses up to twice to absorb operator-status warmup immediately after promotion, but persistent proxy failures still fail the deploy
+   - same-origin `ops.pharos.watch/api/admin/status` starts as soon as the UI Access cookie is available and retries transient `502`/`504` gateway responses up to twice to absorb operator-status warmup immediately after promotion, but persistent proxy failures still fail the deploy
    - production deploys use `SMOKE_OPS_SCOPE=canary` to keep ops shell/access plus direct and same-origin status checks on the critical path; the default full scope still covers slower status-history, admin-list, audit, and blacklist dry-run probes when run manually
 
 8. `smoke-transport`

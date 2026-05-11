@@ -1,15 +1,8 @@
 #!/usr/bin/env node
 
-import { execFile } from "child_process";
-import { rmSync } from "fs";
 import { pathToFileURL } from "url";
-import { promisify } from "util";
 
-const execFileAsync = promisify(execFile);
-const PLAYWRIGHT_CLI_PREFIX = ["--yes", "--package", "@playwright/cli", "playwright-cli"];
 const DEFAULT_URL = process.env.SMOKE_UI_URL ?? "https://pharos.watch";
-const MAX_BUFFER_BYTES = 10 * 1024 * 1024;
-const SESSION_PREFIX = "ui";
 const DEFAULT_MODE = process.env.SMOKE_UI_MODE ?? "local";
 const DEFAULT_UI_WAIT_TIMEOUT_MS = 30_000;
 const DEFAULT_UI_RETRY_COUNT = 1;
@@ -77,30 +70,15 @@ function ensureMode(input) {
   throw new Error(`Invalid mode "${input}". Expected "local" or "live".`);
 }
 
-async function runPlaywrightCli(sessionId, args) {
-  const { stdout, stderr } = await execFileAsync("npx", [...PLAYWRIGHT_CLI_PREFIX, `-s=${sessionId}`, ...args], {
-    maxBuffer: MAX_BUFFER_BYTES,
-  });
-  return `${stdout ?? ""}${stderr ?? ""}`;
-}
-
-function ensureNoCliError(step, output) {
-  if (output.includes("### Error")) {
-    throw new Error(`[smoke-ui] ${step} failed.\n${output}`);
+async function loadChromium() {
+  try {
+    const { chromium } = await import("playwright");
+    return chromium;
+  } catch (error) {
+    throw new Error(
+      `[smoke-ui] Failed to load Playwright from the installed workspace dependencies: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
-}
-
-function parseResultJson(output) {
-  const match =
-    output.match(/### Result\s*([\s\S]*?)\n### Ran Playwright code/m) ?? output.match(/### Result\s*([\s\S]*)$/m);
-  if (!match) {
-    throw new Error(`[smoke-ui] Could not parse Playwright result output.\n${output}`);
-  }
-  return JSON.parse(match[1].trim());
-}
-
-function removePlaywrightArtifacts() {
-  rmSync(".playwright-cli", { force: true, recursive: true });
 }
 
 function getUiWaitTimeoutMs() {
@@ -539,9 +517,6 @@ export async function run() {
   const { mode: rawMode, skipOverflow, url: rawUrl } = parseArgs(process.argv.slice(2));
   const url = ensureUrl(rawUrl);
   const mode = ensureMode(rawMode);
-  const sessionSeed = Date.now().toString(36);
-  const sessionIds = new Set();
-  const createSessionId = (label) => `${SESSION_PREFIX}-${sessionSeed}-${label}`;
   const waitTimeoutMs = getUiWaitTimeoutMs();
   const uiRetryCount = getUiRetryCount();
   const uiRetryDelayMs = getUiRetryDelayMs();
@@ -571,40 +546,32 @@ export async function run() {
   const overflowWorkerCount = getOverflowWorkerCount(mode, config.routes.length, skipOverflow);
   const overflowRouteChunks = chunkOverflowRoutes(config.routes, overflowWorkerCount);
 
-  const closeSession = async (sessionId) => {
-    if (!sessionIds.has(sessionId)) {
-      return;
-    }
-    try {
-      await runPlaywrightCli(sessionId, ["close"]);
-    } catch {
-      // Best-effort cleanup; stale sessions can be killed by playwright-cli kill-all if needed.
-    } finally {
-      sessionIds.delete(sessionId);
-    }
-  };
-
-  const runSmokeSession = async (sessionId, smokeConfig, stepLabel) => {
-    sessionIds.add(sessionId);
-    const openOutput = await runPlaywrightCli(sessionId, ["open", url]);
-    ensureNoCliError(`${stepLabel} open`, openOutput);
-
-    const smokeOutput = await runPlaywrightCli(sessionId, ["run-code", buildSmokeRunCode(smokeConfig)]);
-    ensureNoCliError(`${stepLabel} run-code`, smokeOutput);
-    return parseResultJson(smokeOutput);
-  };
-
   console.log(`[smoke-ui] Running ${mode} browser smoke checks against ${url}`);
 
+  let browser = null;
   try {
     await verifyAnalyticsSnippet(url, expectedGaId);
     if (expectedGaId) {
       console.log(`[smoke-ui] OK analytics snippet ${expectedGaId}`);
     }
 
-    const homepageSessionId = createSessionId("home");
+    const chromium = await loadChromium();
+    browser = await chromium.launch({ headless: true });
+
+    const runSmokeSession = async (smokeConfig, stepLabel) => {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+      try {
+        const smokeRunner = Function(`return (${buildSmokeRunCode(smokeConfig)});`)();
+        return await smokeRunner(page);
+      } catch (error) {
+        throw new Error(`[smoke-ui] ${stepLabel} failed: ${error instanceof Error ? error.message : String(error)}`);
+      } finally {
+        await context.close();
+      }
+    };
+
     const homepageResult = await runSmokeSession(
-      homepageSessionId,
       {
         ...config,
         runOverflow: false,
@@ -631,7 +598,6 @@ export async function run() {
     }
     console.log(`[smoke-ui] OK ${summary.title}`);
     console.log(`[smoke-ui] OK table rows=${summary.rows}, knownTicker=${summary.hasKnownTicker}`);
-    await closeSession(homepageSessionId);
 
     const overflowChecks = [];
     if (!skipOverflow && overflowRouteChunks.length > 0) {
@@ -642,25 +608,19 @@ export async function run() {
       const overflowResults = await Promise.allSettled(
         overflowRouteChunks.map(async (routes, index) => {
           const workerNumber = index + 1;
-          const sessionId = createSessionId(`overflow-${workerNumber}`);
-          try {
-            const result = await runSmokeSession(
-              sessionId,
-              {
-                ...config,
-                routes,
-                runHomepage: false,
-              },
-              `overflow worker ${workerNumber}`,
-            );
-            return {
-              checks: result.overflowChecks ?? [],
+          const result = await runSmokeSession(
+            {
+              ...config,
               routes,
-              workerNumber,
-            };
-          } finally {
-            await closeSession(sessionId);
-          }
+              runHomepage: false,
+            },
+            `overflow worker ${workerNumber}`,
+          );
+          return {
+            checks: result.overflowChecks ?? [],
+            routes,
+            workerNumber,
+          };
         }),
       );
 
@@ -696,17 +656,13 @@ export async function run() {
 
     console.log("[smoke-ui] All checks passed.");
   } finally {
-    for (const sessionId of Array.from(sessionIds)) {
-      await closeSession(sessionId);
-    }
-    removePlaywrightArtifacts();
+    await browser?.close();
   }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   run().catch((error) => {
     console.error(`[smoke-ui] FAILED: ${error instanceof Error ? error.message : String(error)}`);
-    removePlaywrightArtifacts();
     process.exit(1);
   });
 }
