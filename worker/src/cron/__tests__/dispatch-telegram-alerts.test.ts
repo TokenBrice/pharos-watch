@@ -1769,4 +1769,139 @@ describe("dispatchTelegramAlerts", () => {
     // the blocked-cleanup counter reports exactly one cleanup.
     expect(metadata.blockedUsersCleanedUp).toBe(1);
   });
+
+  it("aborts the run when the preset-subscribers query fails and surfaces the failure", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "telegram:preset-query-failure-count") {
+        return null;
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            score: 42,
+            band: "ALERT",
+            signals_json: JSON.stringify({ supply: { value: 45, available: true } }),
+          },
+        ],
+      },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      {
+        match: "sub.alert_dews = 1",
+        matchBinds: ["usdc-circle", now],
+        rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }],
+      },
+      // Preset query fails for every alert type.
+      { match: "FROM telegram_preset_subscriptions p", throwError: new Error("D1_ERROR: connection reset"), rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      presetQueryFailures: number;
+      presetResolutionFailures: number;
+      presetFailure: boolean;
+      snapshotSeeded: boolean;
+      subscribersNotified: number;
+      messagesSent: number;
+    };
+
+    expect(metadata.presetFailure).toBe(true);
+    expect(metadata.presetQueryFailures).toBeGreaterThanOrEqual(1);
+    expect(metadata.presetResolutionFailures).toBe(0);
+    expect(metadata.snapshotSeeded).toBe(false);
+    expect(metadata.subscribersNotified).toBe(0);
+    expect(metadata.messagesSent).toBe(0);
+    expect(mockSendToChat).not.toHaveBeenCalled();
+
+    // No snapshot writes when aborting.
+    const snapshotWrites = mockSetCache.mock.calls.filter(([_db, key]) =>
+      typeof key === "string" && key.startsWith("alert:"),
+    );
+    expect(snapshotWrites).toHaveLength(0);
+
+    // The failure counter is persisted.
+    const counterWrite = mockSetCache.mock.calls.find(
+      ([_db, key]) => key === "telegram:preset-query-failure-count",
+    );
+    expect(counterWrite).toBeTruthy();
+    expect(counterWrite?.[2]).toBe("1");
+
+    // Circuit outcome is recorded as a failure.
+    expect(mockRecordOutcome).toHaveBeenCalledWith(expect.anything(), expect.anything(), false);
+  });
+
+  it("clears the preset-failure counter on a successful run", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "telegram:preset-query-failure-count") {
+        return { value: "2", updatedAt: now - 60 };
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            score: 42,
+            band: "ALERT",
+            signals_json: JSON.stringify({ supply: { value: 45, available: true } }),
+          },
+        ],
+      },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      {
+        match: "sub.alert_dews = 1",
+        matchBinds: ["usdc-circle", now],
+        rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      presetFailure: boolean;
+      presetQueryFailures: number;
+    };
+
+    expect(metadata.presetFailure).toBe(false);
+    expect(metadata.presetQueryFailures).toBe(0);
+
+    const counterWrite = mockSetCache.mock.calls.find(
+      ([_db, key]) => key === "telegram:preset-query-failure-count",
+    );
+    expect(counterWrite?.[2]).toBe("0");
+  });
 });

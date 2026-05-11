@@ -77,6 +77,9 @@ describe("status-metadata", () => {
       safetyAlertSourceAgeSeconds: null,
       safetyAlertsSuppressed: false,
       safetyAlertSourceGeneration: null,
+      presetQueryFailures: null,
+      presetResolutionFailures: null,
+      presetFailure: false,
       eventsDetected: {
         dews: 2,
         depeg: 1,

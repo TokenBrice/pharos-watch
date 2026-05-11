@@ -199,5 +199,52 @@ describe("getTelegramBotStats", () => {
       symbol: "USDPT",
       subscribers: 2,
     });
+    expect(result.presetQueryFailures).toBeUndefined();
+  });
+
+  it("surfaces a positive preset-query failure counter", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_subscribers s",
+        first: {
+          total_chats: 1,
+          alert_enabled_chats: 1,
+          deliverable_chats: 1,
+          subscribed_chats: 1,
+          empty_alert_chats: 0,
+          muted_chats_with_subscriptions: 0,
+          dews_chats: 1,
+          depeg_chats: 0,
+          safety_chats: 0,
+          launch_chats: 0,
+          all_types_chats: 0,
+          total_subscriptions: 1,
+          avg_subscriptions_per_subscribed_chat: 1,
+          last_subscriber_activity_at: 1_710_000_000,
+          custom_preference_chats: 0,
+          quiet_hours_enabled_chats: 0,
+        },
+        rows: [],
+      },
+      { match: "FROM telegram_pending_disambiguation", first: { pending_count: 0 }, rows: [] },
+      {
+        match: "MIN(created_at) AS oldest_created_at",
+        first: { pending_count: 0, oldest_created_at: null, due_count: 0, deferred_count: 0, expired_count: 0 },
+        rows: [],
+      },
+      { match: "last_error_class AS error_class", rows: [] },
+      { match: "SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts", first: { pending_count: 0 }, rows: [] },
+      { match: "FROM telegram_subscriptions", rows: [] },
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["telegram:preset-query-failure-count"],
+        first: { value: "3" },
+        rows: [],
+      },
+    ]);
+
+    const result = await getTelegramBotStats(db, 1_710_000_100);
+
+    expect(result.presetQueryFailures).toBe(3);
   });
 });

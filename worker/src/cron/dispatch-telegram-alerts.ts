@@ -3,8 +3,9 @@ import { TRACKED_META_BY_ID, ACTIVE_IDS, PRE_LAUNCH_STABLECOINS } from "@shared/
 import type { TelegramDispatchCronResult } from "@shared/types";
 import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-utils";
-import { getCache } from "../lib/db-cache";
+import { getCache, setCache } from "../lib/db-cache";
 import { buildInClause } from "../lib/db";
+
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import {
@@ -49,6 +50,7 @@ type DispatchResult = TelegramDispatchCronResult;
 
 const MAX_MESSAGES_PER_RUN = 200;
 const GLOBAL_SAFETY_MIN_SCORE_DROP = 3;
+const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
 
 const ALERT_COLUMN_BY_TYPE = {
   dews: "alert_dews",
@@ -105,7 +107,32 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     safetyAlertSourceAgeSeconds: null,
     safetyAlertsSuppressed: true,
     safetyAlertSourceGeneration: null,
+    presetQueryFailures: 0,
+    presetResolutionFailures: 0,
+    presetFailure: false,
   };
+}
+
+async function readPresetFailureCount(db: D1Database): Promise<number> {
+  try {
+    const cached = await getCache(db, PRESET_QUERY_FAILURE_CACHE_KEY);
+    if (!cached) return 0;
+    const parsed = Number(cached.value);
+    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+async function writePresetFailureCount(db: D1Database, value: number): Promise<void> {
+  try {
+    await setCache(db, PRESET_QUERY_FAILURE_CACHE_KEY, String(Math.max(0, Math.floor(value))));
+  } catch (err) {
+    console.warn(
+      "[telegram-alerts] failed to persist preset failure count:",
+      err instanceof Error ? err.message : err,
+    );
+  }
 }
 
 function getSymbol(stablecoinId: string, fallback?: string): string {
@@ -259,34 +286,23 @@ function mergeSubscriberMaps(
   return base;
 }
 
+type PresetSubscriberLoadResult =
+  | { kind: "ok"; rows: Map<string, SubscriberRow[]> }
+  | { kind: "query-failed"; error: unknown }
+  | { kind: "resolution-failed" };
+
 async function loadPresetSubscriberRowsBatch(
   db: D1Database,
   stablecoinIds: string[],
   type: AlertType,
-): Promise<Map<string, SubscriberRow[]>> {
-  if (stablecoinIds.length === 0 || type === "launch") return new Map();
+): Promise<PresetSubscriberLoadResult> {
+  if (stablecoinIds.length === 0 || type === "launch") return { kind: "ok", rows: new Map() };
   const alertColumn = ALERT_COLUMN_BY_TYPE[type];
   if (!VALID_ALERT_COLUMNS.has(alertColumn)) {
     throw new Error(`Invalid preset alert subscription column for ${type}`);
   }
-  const result = await db
-    .prepare(
-      // SAFETY: alertColumn comes from ALERT_COLUMN_BY_TYPE and is validated
-      // against the hardcoded allowlist above before interpolation.
-      `SELECT p.chat_id,
-              p.preset_id,
-              u.last_active_at,
-              p.depeg_worsening_bps_step,
-              u.quiet_hours_enabled,
-              u.quiet_hours_start_utc,
-              u.quiet_hours_end_utc
-         FROM telegram_preset_subscriptions p
-         JOIN telegram_subscribers u ON u.chat_id = p.chat_id
-        WHERE p.${alertColumn} = 1
-          AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)`,
-    )
-    .bind(Math.floor(Date.now() / 1000))
-    .all<{
+  let result: {
+    results?: Array<{
       chat_id: string;
       preset_id: TelegramPresetId;
       last_active_at: number;
@@ -294,18 +310,46 @@ async function loadPresetSubscriberRowsBatch(
       quiet_hours_enabled: number | null;
       quiet_hours_start_utc: number | null;
       quiet_hours_end_utc: number | null;
-    }>()
-    .catch((err) => {
-      console.warn("[telegram-alerts] dynamic preset query failed:", err instanceof Error ? err.message : err);
-      return { results: [] };
-    });
+    }>;
+  };
+  try {
+    result = await db
+      .prepare(
+        // SAFETY: alertColumn comes from ALERT_COLUMN_BY_TYPE and is validated
+        // against the hardcoded allowlist above before interpolation.
+        `SELECT p.chat_id,
+                p.preset_id,
+                u.last_active_at,
+                p.depeg_worsening_bps_step,
+                u.quiet_hours_enabled,
+                u.quiet_hours_start_utc,
+                u.quiet_hours_end_utc
+           FROM telegram_preset_subscriptions p
+           JOIN telegram_subscribers u ON u.chat_id = p.chat_id
+          WHERE p.${alertColumn} = 1
+            AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)`,
+      )
+      .bind(Math.floor(Date.now() / 1000))
+      .all<{
+        chat_id: string;
+        preset_id: TelegramPresetId;
+        last_active_at: number;
+        depeg_worsening_bps_step: number | null;
+        quiet_hours_enabled: number | null;
+        quiet_hours_start_utc: number | null;
+        quiet_hours_end_utc: number | null;
+      }>();
+  } catch (err) {
+    console.warn("[telegram-alerts] dynamic preset query failed:", err instanceof Error ? err.message : err);
+    return { kind: "query-failed", error: err };
+  }
 
   const rows = result.results ?? [];
-  if (rows.length === 0) return new Map();
+  if (rows.length === 0) return { kind: "ok", rows: new Map() };
 
   const presetIds = Array.from(new Set(rows.map((row) => row.preset_id)));
   const resolved = await resolveTelegramPresetTargets(db, presetIds);
-  if (resolved.kind !== "ok") return new Map();
+  if (resolved.kind !== "ok") return { kind: "resolution-failed" };
   const idsByPreset = new Map(resolved.presets.map((preset) => [preset.definition.id, new Set(preset.stablecoinIds)]));
   const wantedIds = new Set(stablecoinIds);
   const map = new Map<string, SubscriberRow[]>();
@@ -329,7 +373,7 @@ async function loadPresetSubscriberRowsBatch(
       map.set(stablecoinId, existing);
     }
   }
-  return map;
+  return { kind: "ok", rows: map };
 }
 
 export async function dispatchTelegramAlerts(
@@ -529,9 +573,9 @@ export async function dispatchTelegramAlerts(
       directDepegSubs,
       directSafetySubs,
       launchSubs,
-      presetDewsSubs,
-      presetDepegSubs,
-      presetSafetySubs,
+      presetDewsResult,
+      presetDepegResult,
+      presetSafetyResult,
       globalDewsSubs,
       globalDepegSubs,
       globalSafetySubs,
@@ -549,6 +593,29 @@ export async function dispatchTelegramAlerts(
       loadGlobalSubscriberRows(db, "safety"),
       loadGlobalSubscriberRows(db, "launch"),
     ]);
+
+    const presetResults = [presetDewsResult, presetDepegResult, presetSafetyResult];
+    const presetQueryFailures = presetResults.filter((r) => r.kind === "query-failed").length;
+    const presetResolutionFailures = presetResults.filter((r) => r.kind === "resolution-failed").length;
+
+    if (presetQueryFailures > 0 || presetResolutionFailures > 0) {
+      const failureCount = (await readPresetFailureCount(db)) + 1;
+      await writePresetFailureCount(db, failureCount);
+      await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, false);
+      const aborted = emptyResult(false, chatsWithActiveSnooze);
+      aborted.safetyAlertSourceState = safetySourceAssessment.state;
+      aborted.safetyAlertSourceAgeSeconds = safetySourceAssessment.ageSeconds;
+      aborted.safetyAlertSourceGeneration = safetySourceAssessment.generation;
+      aborted.safetyAlertsSuppressed = safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed;
+      aborted.presetQueryFailures = presetQueryFailures;
+      aborted.presetResolutionFailures = presetResolutionFailures;
+      aborted.presetFailure = true;
+      return { itemCount: 0, metadata: JSON.stringify(aborted) };
+    }
+
+    const presetDewsSubs = (presetDewsResult as { kind: "ok"; rows: Map<string, SubscriberRow[]> }).rows;
+    const presetDepegSubs = (presetDepegResult as { kind: "ok"; rows: Map<string, SubscriberRow[]> }).rows;
+    const presetSafetySubs = (presetSafetyResult as { kind: "ok"; rows: Map<string, SubscriberRow[]> }).rows;
     const dewsSubs = mergeSubscriberMaps(directDewsSubs, presetDewsSubs);
     const depegSubs = mergeSubscriberMaps(directDepegSubs, presetDepegSubs);
     const safetySubs = mergeSubscriberMaps(directSafetySubs, presetSafetySubs);
@@ -643,6 +710,7 @@ export async function dispatchTelegramAlerts(
 
     await writeSnapshots(db, currentSnapshots);
     const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
+    await writePresetFailureCount(db, 0);
 
     const result: DispatchResult = {
       eventsDetected: {
@@ -679,6 +747,9 @@ export async function dispatchTelegramAlerts(
       safetyAlertSourceAgeSeconds: safetySourceAssessment.ageSeconds,
       safetyAlertsSuppressed: safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed,
       safetyAlertSourceGeneration: safetySourceAssessment.generation,
+      presetQueryFailures: 0,
+      presetResolutionFailures: 0,
+      presetFailure: false,
     };
 
     const attemptedMessages = result.pendingAttempted + result.freshAttempted;

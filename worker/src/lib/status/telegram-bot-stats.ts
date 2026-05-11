@@ -43,6 +43,7 @@ interface TelegramBotTopStablecoinRow {
 }
 
 const TELEGRAM_PENDING_ALERT_TTL_SEC = 3600;
+const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
 
 const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
   COUNT(*) AS total_chats,
@@ -233,6 +234,20 @@ async function loadTelegramTopStablecoins(db: D1Database): Promise<TelegramBotTo
   return result.results ?? [];
 }
 
+async function loadPresetQueryFailureCount(db: D1Database): Promise<number> {
+  try {
+    const row = await db
+      .prepare("SELECT value FROM cache WHERE key = ?")
+      .bind(PRESET_QUERY_FAILURE_CACHE_KEY)
+      .first<{ value: string }>();
+    if (!row) return 0;
+    const parsed = Number(row.value);
+    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+  } catch {
+    return 0;
+  }
+}
+
 export function mapTelegramBotStats(input: {
   now?: number;
   aggregate: TelegramBotAggregateRow | null;
@@ -241,6 +256,7 @@ export function mapTelegramBotStats(input: {
   pendingDeliveryTelemetry?: TelegramBotPendingDeliveryTelemetryRow | null;
   retryErrorClasses?: TelegramBotRetryErrorClassRow[] | null;
   topStablecoins: TelegramBotTopStablecoinRow[];
+  presetQueryFailures?: number;
 }): TelegramBotStats {
   const {
     aggregate,
@@ -249,6 +265,7 @@ export function mapTelegramBotStats(input: {
     pendingDeliveryTelemetry,
     retryErrorClasses,
     topStablecoins,
+    presetQueryFailures,
   } = input;
   const now = input.now ?? Math.floor(Date.now() / 1000);
 
@@ -304,6 +321,10 @@ export function mapTelegramBotStats(input: {
     stats.retryErrorClassCounts = retryErrorClassCounts;
   }
 
+  if (presetQueryFailures != null && presetQueryFailures > 0) {
+    stats.presetQueryFailures = coerceCount(presetQueryFailures);
+  }
+
   return stats;
 }
 
@@ -315,6 +336,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     pendingDeliveryTelemetry,
     retryErrorClasses,
     topStablecoins,
+    presetQueryFailures,
   ] = await Promise.all([
     loadTelegramBotAggregate(db),
     loadTelegramPendingCount(db, TELEGRAM_PENDING_DISAMBIGUATION_SQL, now),
@@ -322,6 +344,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     loadTelegramPendingDeliveryTelemetry(db, now),
     loadTelegramRetryErrorClasses(db),
     loadTelegramTopStablecoins(db),
+    loadPresetQueryFailureCount(db),
   ]);
 
   return mapTelegramBotStats({
@@ -332,5 +355,6 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     pendingDeliveryTelemetry,
     retryErrorClasses,
     topStablecoins,
+    presetQueryFailures,
   });
 }

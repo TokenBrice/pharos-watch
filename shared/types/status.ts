@@ -250,6 +250,7 @@ export interface TelegramBotStats {
   oldestPendingDeliveryAgeSec?: number | null;
   retryErrorClassCounts?: Record<string, number>;
   pendingDeliveryBacklog?: TelegramPendingDeliveryBacklog;
+  presetQueryFailures?: number;
 }
 
 /** Slim public-facing stats for the PharosWatchBot landing page. */
@@ -315,6 +316,9 @@ export interface TelegramDispatchCronResult {
   safetyAlertSourceAgeSeconds: number | null;
   safetyAlertsSuppressed: boolean;
   safetyAlertSourceGeneration: string | null;
+  presetQueryFailures: number;
+  presetResolutionFailures: number;
+  presetFailure: boolean;
   eventsDetected: TelegramDispatchEventsDetected;
 }
 
@@ -355,6 +359,9 @@ export interface TelegramDispatchCronMetadata {
   safetyAlertSourceAgeSeconds: number | null;
   safetyAlertsSuppressed: boolean;
   safetyAlertSourceGeneration: string | null;
+  presetQueryFailures: number | null;
+  presetResolutionFailures: number | null;
+  presetFailure: boolean;
   eventsDetected: ParsedTelegramDispatchEventsDetected | null;
 }
 

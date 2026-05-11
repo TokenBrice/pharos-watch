@@ -256,6 +256,10 @@ If the raw DEWS/depeg/safety snapshots are missing, unparsable, or older than 24
 
 This prevents a cold start from blasting subscribers with every current condition as if it were a new event.
 
+### Failure Modes
+
+If the `telegram_preset_subscriptions` query throws (transient D1 failure) or `resolveTelegramPresetTargets()` cannot read the stablecoins cache, the dispatch run **aborts** rather than producing a falsely-empty preset-subscriber list. The metadata flags the abort via `presetFailure: true`, increments `presetQueryFailures` or `presetResolutionFailures`, and no snapshots are written. A persistent `telegram:preset-query-failure-count` cache counter accumulates across consecutive failed runs and resets on the next successful run; the current value is exposed as `presetQueryFailures` in the Telegram bot status metrics.
+
 ### Alert Detection Rules
 
 `worker/src/cron/dispatch-telegram-alerts.ts` detects:
@@ -409,6 +413,7 @@ Additional Telegram bot status metrics now include:
 - `retryErrorClassCounts`
 - `customPreferenceChats`
 - `quietHoursEnabledChats`
+- `presetQueryFailures` (consecutive aborted dispatch runs since the last clean preset-subscriber load; only set when > 0)
 - dispatch breakdown fields such as `freshRetryQueued`, `freshPermanentFailures`, `pendingRetryQueued`, `pendingDeferred`, `pendingRateLimited`, `pendingRetryAfterSec`, and `pendingDropped`
 
 ### Circuit Breaker

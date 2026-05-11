@@ -77,6 +77,9 @@ export function parseTelegramDispatchCronMetadata(value: unknown): TelegramDispa
     safetyAlertSourceAgeSeconds: readMetadataNumber(record.safetyAlertSourceAgeSeconds),
     safetyAlertsSuppressed: readMetadataBoolean(record.safetyAlertsSuppressed) === true,
     safetyAlertSourceGeneration: readMetadataString(record.safetyAlertSourceGeneration),
+    presetQueryFailures: readMetadataNumber(record.presetQueryFailures),
+    presetResolutionFailures: readMetadataNumber(record.presetResolutionFailures),
+    presetFailure: readMetadataBoolean(record.presetFailure) === true,
     eventsDetected: eventsRecord
       ? {
           dews: readMetadataNumber(eventsRecord.dews),
