@@ -77,11 +77,13 @@ describe("ApiKeyRequestsPanel", () => {
   it("uses server-side status and limit query options", () => {
     renderPanel();
 
-    expect(useApiKeyRequestsMock).toHaveBeenLastCalledWith({ status: undefined, limit: 50 });
-
-    fireEvent.click(screen.getByRole("button", { name: "Pending" }));
-
     expect(useApiKeyRequestsMock).toHaveBeenLastCalledWith({ status: "pending_verification", limit: 50 });
+    expect(screen.getByRole("button", { name: "Pending" }).getAttribute("aria-pressed")).toBe("true");
+
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+
+    expect(useApiKeyRequestsMock).toHaveBeenLastCalledWith({ status: undefined, limit: 50 });
+    expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("does not render durable request ids in the admin cards or notices", async () => {
@@ -101,7 +103,7 @@ describe("ApiKeyRequestsPanel", () => {
 
     expect(screen.queryByText(request.requestId)).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Reject" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reject pending request" }));
 
     await waitFor(() => {
       expect(screen.getByText("Request marked rejected; claim released.")).toBeTruthy();
@@ -126,7 +128,7 @@ describe("ApiKeyRequestsPanel", () => {
     vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-test" });
 
     renderPanel([request]);
-    fireEvent.click(screen.getByRole("button", { name: "Reject" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reject pending request" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     const [, init] = fetchMock.mock.calls[0] ?? [];
@@ -134,5 +136,74 @@ describe("ApiKeyRequestsPanel", () => {
     expect(headers.get("X-Pharos-Admin")).toBe("1");
     expect(headers.get("Idempotency-Key")).toBe("api-key-request:reject:akr_mutation_target:uuid-for-test");
     expect(JSON.parse(String((init as RequestInit).body))).toEqual({ reason: "manual abuse review" });
+  });
+
+  it("labels issued-key rejection and stale claim release by their effect", async () => {
+    const request = makeRequest({
+      requestId: "akr_release_target",
+      status: "issued",
+      linkedKeyActive: true,
+      linkedKeyExpiresAt: GENERATED_AT + 3600,
+      claimStatus: "issued",
+    });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      ok: true,
+      requestId: request.requestId,
+      status: "issued",
+      claimStatus: "released",
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal("prompt", vi.fn(() => "inactive key cleanup"));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-release-test" });
+
+    renderPanel([request]);
+
+    expect(screen.getByRole("button", { name: "Reject + deactivate key" })).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Release stale claim" }) as HTMLButtonElement).disabled).toBe(true);
+
+    useApiKeyRequestsMock.mockReturnValue({
+      data: {
+        generatedAt: GENERATED_AT,
+        requests: [
+          {
+            ...request,
+            linkedKeyActive: false,
+          },
+        ],
+      },
+      error: null,
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+
+    cleanup();
+    render(<ApiKeyRequestsPanel />);
+    fireEvent.click(screen.getByRole("button", { name: "Release stale claim" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    const headers = new Headers((init as RequestInit).headers);
+    expect(String(url)).toContain("/api/admin/api-key-requests-admin/akr_release_target/release-claim");
+    expect(headers.get("Idempotency-Key")).toBe("api-key-request:release-claim:akr_release_target:uuid-for-release-test");
+    expect(JSON.parse(String((init as RequestInit).body))).toEqual({ reason: "inactive key cleanup" });
+  });
+
+  it("announces admin list fetch failures as alerts", () => {
+    useApiKeyRequestsMock.mockReturnValue({
+      data: null,
+      error: new Error("admin list failed"),
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+
+    render(<ApiKeyRequestsPanel />);
+
+    expect(screen.getByRole("alert").textContent).toContain("admin list failed");
   });
 });

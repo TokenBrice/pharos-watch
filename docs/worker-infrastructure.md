@@ -129,7 +129,7 @@ When a valid key is present, the worker uses the D1-backed `api_key_rate_limit` 
 
 The no-key public exceptions are `GET /api/health`, `GET /api/og/*`, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, and `POST /api/telegram-webhook`. The Telegram webhook is authenticated separately through `X-Telegram-Bot-Api-Secret-Token`.
 
-Self-serve API key requests use `api_key_requests`, `api_key_request_rate_limit`, and `api_key_self_serve_email_claims`. Request intake hashes normalized email, IP, and user-agent values with dedicated self-serve secrets, sends a Resend verification email, and only creates a key after verification. Requester details are visible only through the Access-gated `ops.pharos.watch/admin-api/` UI and the admin endpoints it calls.
+Self-serve API key requests use `api_key_requests`, `api_key_request_rate_limit_v2`, `api_key_self_serve_email_claims`, and `api_key_self_serve_issuance_limits`. Request intake hashes normalized email, IP, and user-agent values with dedicated self-serve secrets, sends a Resend verification email, and only creates a key after verification. Verification uses an issuance lock on the request row plus a fixed-window issued-key cap keyed by the salted submission IP hash. Requester details are visible only through the Access-gated `ops.pharos.watch/admin-api/` UI and the admin endpoints it calls.
 
 ---
 
@@ -154,7 +154,7 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 - Valid keys are verified from the D1-backed `api_keys` table using `key_prefix` lookup plus an HMAC-SHA256 secret hash with `API_KEY_HASH_PEPPER`.
 - Valid keyed requests use the D1-backed `api_key_rate_limit` table with the per-key threshold stored in `api_keys.rate_limit_per_minute` (default `120/min`, self-serve `30/min`).
 - Requests already authorized for the `ops-api.pharos.watch` admin lane bypass the per-key limiter.
-- `/api/api-key-requests` and `/api/api-key-requests/verify` are exempt from `X-API-Key`, return no-store responses, and have their own request/verification throttles in `api_key_request_rate_limit`.
+- `/api/api-key-requests` and `/api/api-key-requests/verify` are exempt from `X-API-Key`, return no-store responses, and have their own request/verification throttles in `api_key_request_rate_limit_v2`; successful issuance is additionally capped through `api_key_self_serve_issuance_limits`.
 - `/api/telegram-webhook` is exempt from the gate because Telegram authenticates separately with `X-Telegram-Bot-Api-Secret-Token`.
 - `site-api.pharos.watch` accepts only `GET` requests to allowlisted public-read paths and requires `X-Pharos-Site-Proxy-Secret`.
 - Website-only browser reads such as `public-status-history` and `telegram-pulse` must use same-origin `/_site-data/*`, which in turn proxies to the `site-api` lane.

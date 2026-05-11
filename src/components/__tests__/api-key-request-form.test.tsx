@@ -21,22 +21,13 @@ function issuedResponse(suffix: string, token: string) {
   const keyPrefix = `prefix-${suffix}`;
   return {
     status: "issued",
-    requestId: `akr_${suffix}`,
     key: {
-      id: 1,
       keyPrefix,
       maskedToken: `${keyPrefix}...`,
-      name: `self-serve-${suffix}`,
-      ownerEmail: `api-smoke-${suffix}@example.com`,
       tier: "self-serve",
       trafficClass: "external",
       rateLimitPerMinute: 30,
-      isActive: true,
       expiresAt: 1_788_888_888,
-      createdAt: 1_783_704_000,
-      updatedAt: 1_783_704_000,
-      lastUsedAt: null,
-      lastUsedRoute: null,
     },
     token,
     usage: {
@@ -197,6 +188,7 @@ describe("ApiKeyRequestForm", () => {
     await waitFor(() => {
       expect(screen.getByRole("alert").textContent).toContain("Copy failed");
     });
+    expect(screen.getByRole("button", { name: "Select Token" })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "I Saved This Key" }));
     await waitFor(() => {

@@ -97,6 +97,7 @@ interface ApiKeyRequestRow {
   verification_token_hash: string | null;
   verification_sent_at: number | null;
   verification_expires_at: number | null;
+  issuance_locked_at: number | null;
   issued_at: number | null;
   rejected_at: number | null;
   created_at: number;
@@ -116,6 +117,9 @@ const SELF_SERVE_BASE_URL = "https://api.pharos.watch" as const;
 const SELF_SERVE_RETRY_GUIDANCE = "Respect Retry-After on 429 responses and add jitter to polling intervals.";
 const SELF_SERVE_PENDING_MESSAGE = "If this address can receive verification email, check your inbox to continue.";
 const ORPHAN_CLAIM_GRACE_SEC = 10 * 60;
+const ISSUANCE_LOCK_STALE_SEC = 10 * 60;
+const ISSUANCE_IP_CAP_WINDOW_SEC = 24 * 60 * 60;
+const ISSUANCE_IP_CAP_SCOPE = "submission_ip_daily" as const;
 const ADMIN_STATUS_FILTERS = new Set<ApiKeySelfServeStatus>([
   "pending_verification",
   "issued",
@@ -350,17 +354,20 @@ export async function handleApiKeyRequestVerify(
       return selfServeError(400, "Invalid or expired verification token.");
     }
 
-    const previousIssued = await countIssuedRequestsForIp(db, row.ip_hash, nowSec - (24 * 60 * 60), nowSec);
-    if (previousIssued.count >= SELF_SERVE_MAX_CREATIONS_PER_IP_24H) {
+    const issuanceIpCap = await acquireIssuanceIpCap(db, row.ip_hash, nowSec);
+    if (!issuanceIpCap.allowed) {
       return selfServeError(
         429,
         "Too many issued self-serve keys from this network. Please wait before trying again.",
-        previousIssued.retryAfterSec,
+        issuanceIpCap.retryAfterSec,
       );
     }
 
     const locked = await lockVerificationForIssuance(db, row.request_id, tokenHash, nowSec);
     if (!locked) {
+      await releaseIssuanceIpCap(db, row.ip_hash, nowSec).catch((error) => {
+        console.error("[api-key-requests] failed to release issuance IP cap after lock denial:", error);
+      });
       return selfServeError(400, "Invalid or expired verification token.");
     }
 
@@ -374,14 +381,27 @@ export async function handleApiKeyRequestVerify(
       isActive: false,
     }, nowSec, null);
     if (created instanceof Response) {
+      await releaseIssuanceIpCap(db, row.ip_hash, nowSec).catch((error) => {
+        console.error("[api-key-requests] failed to release issuance IP cap after key-create failure:", error);
+      });
+      await releaseVerificationLock(db, row.request_id, nowSec).catch((error) => {
+        console.error("[api-key-requests] failed to release issuance lock after key-create failure:", error);
+      });
       return selfServeUnavailable();
     }
 
     let issuedKey = created.key;
     try {
-      const requestUpdated = await markRequestIssued(db, row.request_id, tokenHash, created.key.id, created.key.expiresAt, nowSec);
-      if (!requestUpdated) {
-        throw new Error("self-serve request was not pending during issuance update");
+      const requestLinked = await linkRequestForIssuance(
+        db,
+        row.request_id,
+        tokenHash,
+        created.key.id,
+        created.key.expiresAt,
+        nowSec,
+      );
+      if (!requestLinked) {
+        throw new Error("self-serve request was not pending during issuance link");
       }
       const claimUpdated = await markClaimIssued(db, row.email_hash, row.request_id, created.key.id, nowSec);
       if (!claimUpdated) {
@@ -402,8 +422,15 @@ export async function handleApiKeyRequestVerify(
         throw new Error("self-serve API key activation failed");
       }
       issuedKey = activated.key;
+      const requestIssued = await finalizeRequestIssued(db, row.request_id, tokenHash, created.key.id, nowSec);
+      if (!requestIssued) {
+        throw new Error("self-serve request was not pending during issuance finalize");
+      }
     } catch (error) {
       console.error("[api-key-requests] issuance consistency write failed:", error);
+      await releaseIssuanceIpCap(db, row.ip_hash, nowSec).catch((releaseError) => {
+        console.error("[api-key-requests] failed to release issuance IP cap after consistency failure:", releaseError);
+      });
       await compensateIssuedKeyFailure(db, created.key.id, created.key.keyPrefix, row, nowSec);
       return selfServeUnavailable();
     }
@@ -423,7 +450,6 @@ export async function handleApiKeyRequestVerify(
 
     const responseBody: ApiKeySelfServeIssueResponse = {
       status: "issued",
-      requestId: row.request_id,
       key: {
         keyPrefix: issuedKey.keyPrefix,
         maskedToken: issuedKey.maskedToken,
@@ -746,10 +772,13 @@ async function releaseInactiveIssuedClaim(db: ApiKeyRequestDb, emailHash: string
        AND EXISTS (
          SELECT 1 FROM api_keys
          WHERE api_keys.id = api_key_self_serve_email_claims.api_key_id
-           AND api_keys.is_active = 0
+           AND (
+             api_keys.is_active = 0
+             OR (api_keys.expires_at IS NOT NULL AND api_keys.expires_at <= ?)
+           )
        )`,
   )
-    .bind(nowSec, nowSec, emailHash)
+    .bind(nowSec, nowSec, emailHash, nowSec)
     .run();
 }
 
@@ -819,38 +848,76 @@ async function lockVerificationForIssuance(
   const result = await db.prepare(
     `UPDATE api_key_requests
      SET email_verified = 1,
+       issuance_locked_at = ?,
        updated_at = ?
      WHERE request_id = ?
        AND status = 'pending_verification'
        AND verification_token_hash = ?
        AND verification_expires_at >= ?
        AND api_key_id IS NULL
-       AND email_verified IN (0, 1)`,
+       AND (issuance_locked_at IS NULL OR issuance_locked_at < ?)`,
   )
-    .bind(nowSec, requestId, tokenHash, nowSec)
+    .bind(nowSec, nowSec, requestId, tokenHash, nowSec, nowSec - ISSUANCE_LOCK_STALE_SEC)
     .run();
   return (result.meta?.changes ?? 0) > 0;
 }
 
-async function countIssuedRequestsForIp(
+async function releaseVerificationLock(db: ApiKeyRequestDb, requestId: string, nowSec: number): Promise<void> {
+  await db.prepare(
+    `UPDATE api_key_requests
+     SET issuance_locked_at = NULL,
+       updated_at = ?
+     WHERE request_id = ?
+       AND status = 'pending_verification'
+       AND api_key_id IS NULL`,
+  )
+    .bind(nowSec, requestId)
+    .run();
+}
+
+async function acquireIssuanceIpCap(
   db: ApiKeyRequestDb,
   ipHash: string,
-  afterSec: number,
   nowSec: number,
-): Promise<{ count: number; retryAfterSec: number }> {
-  const row = await db.prepare(
-    "SELECT COUNT(*) AS count, MIN(issued_at) AS oldest_issued_at FROM api_key_requests WHERE ip_hash = ? AND status = 'issued' AND issued_at > ?",
+): Promise<{ allowed: boolean; retryAfterSec: number }> {
+  const bucketStart = Math.floor(nowSec / ISSUANCE_IP_CAP_WINDOW_SEC) * ISSUANCE_IP_CAP_WINDOW_SEC;
+  const result = await db.prepare(
+    `INSERT INTO api_key_self_serve_issuance_limits (
+       scope,
+       subject_hash,
+       bucket_start,
+       count,
+       updated_at
+     )
+     VALUES (?, ?, ?, 1, ?)
+     ON CONFLICT(scope, subject_hash, bucket_start) DO UPDATE SET
+       count = count + 1,
+       updated_at = excluded.updated_at
+     WHERE api_key_self_serve_issuance_limits.count < ?`,
   )
-    .bind(ipHash, afterSec)
-    .first<{ count: number; oldest_issued_at: number | null }>();
-  const oldestIssuedAt = row?.oldest_issued_at ?? nowSec;
+    .bind(ISSUANCE_IP_CAP_SCOPE, ipHash, bucketStart, nowSec, SELF_SERVE_MAX_CREATIONS_PER_IP_24H)
+    .run();
   return {
-    count: row?.count ?? 0,
-    retryAfterSec: Math.max(1, oldestIssuedAt + (24 * 60 * 60) - nowSec),
+    allowed: (result.meta?.changes ?? 0) > 0,
+    retryAfterSec: Math.max(1, bucketStart + ISSUANCE_IP_CAP_WINDOW_SEC - nowSec),
   };
 }
 
-async function markRequestIssued(
+async function releaseIssuanceIpCap(db: ApiKeyRequestDb, ipHash: string, nowSec: number): Promise<void> {
+  const bucketStart = Math.floor(nowSec / ISSUANCE_IP_CAP_WINDOW_SEC) * ISSUANCE_IP_CAP_WINDOW_SEC;
+  await db.prepare(
+    `UPDATE api_key_self_serve_issuance_limits
+     SET count = CASE WHEN count > 0 THEN count - 1 ELSE 0 END,
+       updated_at = ?
+     WHERE scope = ?
+       AND subject_hash = ?
+       AND bucket_start = ?`,
+  )
+    .bind(nowSec, ISSUANCE_IP_CAP_SCOPE, ipHash, bucketStart)
+    .run();
+}
+
+async function linkRequestForIssuance(
   db: ApiKeyRequestDb,
   requestId: string,
   tokenHash: string,
@@ -861,19 +928,43 @@ async function markRequestIssued(
   const result = await db.prepare(
     `UPDATE api_key_requests
      SET api_key_id = ?,
-       status = 'issued',
-       verification_token_hash = NULL,
        email_verified = 1,
        self_serve_expires_at = ?,
+       updated_at = ?
+     WHERE request_id = ?
+       AND status = 'pending_verification'
+       AND verification_token_hash = ?
+       AND email_verified = 1
+       AND api_key_id IS NULL
+       AND issuance_locked_at IS NOT NULL`,
+  )
+    .bind(apiKeyId, expiresAt, nowSec, requestId, tokenHash)
+    .run();
+  return (result.meta?.changes ?? 0) > 0;
+}
+
+async function finalizeRequestIssued(
+  db: ApiKeyRequestDb,
+  requestId: string,
+  tokenHash: string,
+  apiKeyId: number,
+  nowSec: number,
+): Promise<boolean> {
+  const result = await db.prepare(
+    `UPDATE api_key_requests
+     SET status = 'issued',
+       verification_token_hash = NULL,
+       issuance_locked_at = NULL,
        issued_at = ?,
        updated_at = ?
      WHERE request_id = ?
        AND status = 'pending_verification'
        AND verification_token_hash = ?
        AND email_verified = 1
-       AND api_key_id IS NULL`,
+       AND api_key_id = ?
+       AND issuance_locked_at IS NOT NULL`,
   )
-    .bind(apiKeyId, expiresAt, nowSec, nowSec, requestId, tokenHash)
+    .bind(nowSec, nowSec, requestId, tokenHash, apiKeyId)
     .run();
   return (result.meta?.changes ?? 0) > 0;
 }
@@ -916,16 +1007,20 @@ async function markRequestBlockedAndReleaseClaim(
   row: ApiKeyRequestRow,
   nowSec: number,
 ): Promise<void> {
-  await db.prepare(
+  const result = await db.prepare(
     `UPDATE api_key_requests
      SET status = 'blocked',
        verification_token_hash = NULL,
+       issuance_locked_at = NULL,
        updated_at = ?
-     WHERE request_id = ?`,
+     WHERE request_id = ?
+       AND status = 'pending_verification'`,
   )
     .bind(nowSec, row.request_id)
     .run();
-  await releaseEmailClaim(db, row.email_hash, row.request_id, nowSec);
+  if ((result.meta?.changes ?? 0) > 0) {
+    await releaseEmailClaim(db, row.email_hash, row.request_id, nowSec);
+  }
 }
 
 async function compensateIssuedKeyFailure(

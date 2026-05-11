@@ -137,6 +137,12 @@ function RequestCard({
     && (request.linkedKeyExpiresAt == null || request.linkedKeyExpiresAt > generatedAt);
   const canReleaseClaim = !hasActiveUnexpiredKey && request.claimStatus !== "released";
   const canReject = request.status === "pending_verification" || request.status === "issued";
+  const rejectLabel = request.status === "issued" && hasActiveUnexpiredKey
+    ? "Reject + deactivate key"
+    : request.status === "pending_verification"
+      ? "Reject pending request"
+      : "Reject request";
+  const releaseClaimLabel = "Release stale claim";
   const requesterLabel = describeRequester(request);
 
   return (
@@ -164,7 +170,7 @@ function RequestCard({
             onClick={() => onReject(request)}
           >
             <ShieldOff className="h-4 w-4" aria-hidden="true" />
-            Reject
+            {rejectLabel}
           </Button>
           <Button
             type="button"
@@ -174,7 +180,7 @@ function RequestCard({
             onClick={() => onReleaseClaim(request)}
           >
             <Unlock className="h-4 w-4" aria-hidden="true" />
-            Release Claim
+            {releaseClaimLabel}
           </Button>
         </div>
       </div>
@@ -247,7 +253,7 @@ function RequestCard({
 }
 
 export function ApiKeyRequestsPanel() {
-  const [statusFilter, setStatusFilter] = useState<"all" | ApiKeySelfServeStatus>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | ApiKeySelfServeStatus>("pending_verification");
   const { data, error, isLoading, refetch, isFetching } = useApiKeyRequests({
     status: statusFilter === "all" ? undefined : statusFilter,
     limit: REQUEST_LIST_LIMIT,
@@ -332,6 +338,7 @@ export function ApiKeyRequestsPanel() {
               type="button"
               size="sm"
               variant={statusFilter === status ? "default" : "outline"}
+              aria-pressed={statusFilter === status}
               onClick={() => setStatusFilter(status)}
             >
               {STATUS_LABELS[status]}
@@ -356,7 +363,7 @@ export function ApiKeyRequestsPanel() {
         {isLoading ? <div className="text-sm text-muted-foreground">Loading API key requests...</div> : null}
 
         {!isLoading && error ? (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/8 p-3 text-sm text-red-700 dark:text-red-300">
+          <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/8 p-3 text-sm text-red-700 dark:text-red-300">
             {error.message}
           </div>
         ) : null}

@@ -212,13 +212,16 @@ export async function run() {
   const opsUiUrl = ensureUrl(DEFAULT_OPS_UI_URL);
   const opsApiBase = ensureUrl(DEFAULT_OPS_API_BASE);
   const opsUiOrigin = new URL(opsUiUrl).origin;
+  const adminApiUrl = new URL("/admin-api/", opsUiOrigin).toString();
 
   console.log(`[smoke-ops] Running checks against ${opsUiUrl} and ${opsApiBase}`);
 
   const uiPromise = fetchText(opsUiUrl, headers);
+  const adminApiPromise = fetchText(adminApiUrl, headers);
   const directOpsPromise = Promise.all([
     fetchJson(new URL("/api/status", opsApiBase).toString(), headers),
     fetchJson(new URL("/api/status-history?limit=5", opsApiBase).toString(), headers),
+    fetchJson(new URL("/api/api-key-requests-admin?limit=1", opsApiBase).toString(), headers),
     fetchJson(new URL("/api/audit-depeg-history?dry-run=true&limit=1", opsApiBase).toString(), headers),
     fetchJson(
       new URL("/api/backfill-blacklist-current-balances?dryRun=true&stablecoin=USDT&limit=1", opsApiBase).toString(),
@@ -251,11 +254,26 @@ export async function run() {
   }
   const uiCookieHeader = mergeCookieHeader(extractCookiePairs(ui.response));
 
+  const adminApi = await adminApiPromise;
+  if (adminApi.response.status === 200) {
+    assert(adminApi.body.includes("API Management"), "Admin API UI did not render the API Management shell");
+    assert(
+      !adminApi.body.includes("API management is not available on the public host."),
+      "Admin API UI returned the public-host fallback shell",
+    );
+    console.log("[smoke-ops] OK /admin-api/ via service token");
+  } else {
+    const location = adminApi.response.headers.get("Location") ?? "";
+    assert(adminApi.response.status === 302, `Expected /admin-api/ 200 or 302, got ${adminApi.response.status}`);
+    assert(location.includes(".cloudflareaccess.com"), "/admin-api/ redirect did not point to Cloudflare Access");
+    console.log("[smoke-ops] OK /admin-api/ access gate");
+  }
+
   const directOps = await directOpsPromise;
   if (directOps.error) {
     throw directOps.error;
   }
-  const [status, history, audit, blacklistBackfill] = directOps.value;
+  const [status, history, apiKeyRequestsAdmin, audit, blacklistBackfill] = directOps.value;
   if (status.response.status !== 200) {
     console.error(
       `[smoke-ops] /api/status returned ${status.response.status}, body: ${status.bodyText?.slice(0, 500)}`,
@@ -301,6 +319,54 @@ export async function run() {
       proxiedAttempt.retriedWithCookie
         ? `[smoke-ops] OK ops UI /api/admin/status (${proxiedStatus.body.overallStatus}) via Access session cookie`
         : `[smoke-ops] OK ops UI /api/admin/status (${proxiedStatus.body.overallStatus})`,
+    );
+  }
+
+  assert(
+    apiKeyRequestsAdmin.response.status === 200,
+    `Expected ops API /api/api-key-requests-admin 200, got ${apiKeyRequestsAdmin.response.status}`,
+  );
+  assert(
+    apiKeyRequestsAdmin.body && Array.isArray(apiKeyRequestsAdmin.body.requests),
+    "Ops API /api/api-key-requests-admin missing requests array",
+  );
+  console.log(
+    `[smoke-ops] OK ops API /api/api-key-requests-admin (${apiKeyRequestsAdmin.body.requests.length} row sample)`,
+  );
+
+  const proxiedAdminUrl = new URL("/api/admin/api-key-requests-admin?limit=1", opsUiOrigin).toString();
+  const proxiedAdminAttempt = await fetchOpsUiProxyStatusWithRetry(proxiedAdminUrl, headers, {
+    initialCookieHeader: proxiedAttempt.cookieHeader,
+    onRetry: ({ attemptNumber, retryCount, retryDelayMs, status }) => {
+      console.warn(
+        `[smoke-ops] /api/admin/api-key-requests-admin returned ${status}; retrying ${attemptNumber}/${retryCount} after ${retryDelayMs}ms to absorb post-deploy warmup`,
+      );
+    },
+  });
+  const proxiedAdmin = proxiedAdminAttempt.proxiedStatus;
+  if (shouldSkipOpsUiProxyAssertion(proxiedAdmin.response, proxiedAdminAttempt.cookieHeader)) {
+    console.log(
+      "[smoke-ops] SKIP ops UI /api/admin/api-key-requests-admin (Pages proxy still unauthorized under CI Access flow; direct ops-api smoke already passed)",
+    );
+  } else {
+    if (proxiedAdmin.response.status !== 200) {
+      console.error(
+        `[smoke-ops] /api/admin/api-key-requests-admin returned ${proxiedAdmin.response.status}, body: ${proxiedAdmin.bodyText?.slice(0, 500)}`,
+      );
+      console.error(`[smoke-ops] Response headers:`, Object.fromEntries(proxiedAdmin.response.headers.entries()));
+    }
+    assert(
+      proxiedAdmin.response.status === 200,
+      `Expected ops UI /api/admin/api-key-requests-admin 200, got ${proxiedAdmin.response.status}`,
+    );
+    assert(
+      proxiedAdmin.body && Array.isArray(proxiedAdmin.body.requests),
+      "Ops UI /api/admin/api-key-requests-admin missing requests array",
+    );
+    console.log(
+      proxiedAdminAttempt.retriedWithCookie
+        ? `[smoke-ops] OK ops UI /api/admin/api-key-requests-admin (${proxiedAdmin.body.requests.length} row sample) via Access session cookie`
+        : `[smoke-ops] OK ops UI /api/admin/api-key-requests-admin (${proxiedAdmin.body.requests.length} row sample)`,
     );
   }
 

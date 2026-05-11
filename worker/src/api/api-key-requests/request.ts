@@ -21,6 +21,9 @@ const PUBLIC_ENDPOINT_PATHS = new Set(
     .filter((endpoint) => !endpoint.adminRequired && endpoint.path.startsWith("/api/"))
     .map((endpoint) => endpoint.path),
 );
+const PUBLIC_ENDPOINT_TEMPLATES = new Set([
+  "/api/stablecoin/:id",
+]);
 
 function hasConfiguredValue(value: string | undefined): value is string {
   return Boolean(value?.trim());
@@ -121,7 +124,7 @@ export function validateIntendedEndpoints(endpoints: string[] | undefined): stri
     if (endpoint.includes("admin") || endpoint.includes("api-key") || endpoint.includes("backfill")) {
       return errorResponse(400, "Admin API paths cannot be requested for self-serve access", { noStore: true });
     }
-    if (!PUBLIC_ENDPOINT_PATHS.has(endpoint)) {
+    if (!PUBLIC_ENDPOINT_PATHS.has(endpoint) && !PUBLIC_ENDPOINT_TEMPLATES.has(endpoint)) {
       return errorResponse(400, "Unknown intended endpoint", { noStore: true });
     }
     normalized.push(endpoint);

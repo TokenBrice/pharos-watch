@@ -33,6 +33,7 @@ const OVERFLOW_ROUTE_DEFAULTS = [
   "/blacklist/",
   "/stability-index/",
   "/safety-scores/",
+  "/api/",
 ];
 
 function parseArgs(argv) {
@@ -140,7 +141,7 @@ function normalizeRoute(input) {
   return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
 }
 
-function getOverflowRoutes(mode) {
+export function getOverflowRoutes(mode) {
   const fromEnv = (process.env.SMOKE_UI_OVERFLOW_ROUTES ?? "")
     .split(",")
     .map((route) => route.trim())

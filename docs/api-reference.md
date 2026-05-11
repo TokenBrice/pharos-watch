@@ -2594,21 +2594,20 @@ Public self-serve API key request endpoint used by `https://pharos.watch/api/`. 
 ```json
 {
   "status": "pending_verification",
-  "requestId": "akr_...",
-  "message": "Verification email sent. Check your inbox to finish issuing the API key."
+  "message": "If this address can receive verification email, check your inbox to continue."
 }
 ```
 
 **Error responses**
 
 - `400` invalid body, invalid email, invalid project URL, unknown/admin intended endpoint, or missing fair-use acknowledgement
-- `409` the normalized email already has an active or pending self-serve key claim
-- `429` request throttle exceeded
+- duplicate active or pending self-serve key claims receive the same `202` response shape as a new pending request and do not send a second verification link
+- `429` request throttle exceeded; responses include `Retry-After`
 - `503` self-serve env/email dependency unavailable (`Retry-After: 60`)
 
 ### `POST /api/api-key-requests/verify`
 
-Public self-serve verification endpoint used by the email link. The browser removes the `verify` query parameter from the URL before posting the token. A successful response creates the key, marks the request issued, and returns the plaintext API token exactly once.
+Public self-serve verification endpoint used by the email link. New links put the token in the URL fragment as `/api/#verify=...`, which is not sent to the server in the page request. The browser also accepts legacy `/api/?verify=...` links during transition, removes the token from the URL before posting, and then exchanges it here. A successful response creates the key, marks the request issued, and returns the plaintext API token exactly once.
 
 **Authentication:** exempt
 
@@ -2625,22 +2624,13 @@ Public self-serve verification endpoint used by the email link. The browser remo
 ```json
 {
   "status": "issued",
-  "requestId": "akr_...",
   "key": {
-    "id": 7,
     "keyPrefix": "0123456789abcdef",
     "maskedToken": "ph_live_0123456789abcdef_...",
-    "name": "Self-serve: Example",
-    "ownerEmail": "dev@example.com",
     "tier": "self-serve",
     "trafficClass": "external",
     "rateLimitPerMinute": 30,
-    "isActive": true,
-    "expiresAt": 1715686400,
-    "createdAt": 1710500000,
-    "updatedAt": 1710500000,
-    "lastUsedAt": null,
-    "lastUsedRoute": null
+    "expiresAt": 1715686400
   },
   "token": "ph_live_...",
   "usage": {
@@ -2654,7 +2644,7 @@ Public self-serve verification endpoint used by the email link. The browser remo
 **Error responses**
 
 - `400` invalid, expired, used, or no-longer-pending verification token
-- `429` verification attempt throttle exceeded or daily issuance limit for the salted IP hash reached
+- `429` verification attempt throttle exceeded or daily issuance limit for the salted IP hash reached; responses include `Retry-After`
 - `503` self-serve dependency unavailable or issuance consistency compensation triggered (`Retry-After: 60`)
 
 ### `POST /api/feedback`

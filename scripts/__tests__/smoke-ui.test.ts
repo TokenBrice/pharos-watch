@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getAnalyticsPayloadUrls, hasGaConfigInit, verifyAnalyticsSnippet } from "../smoke-ui.mjs";
+import { getAnalyticsPayloadUrls, getOverflowRoutes, hasGaConfigInit, verifyAnalyticsSnippet } from "../smoke-ui.mjs";
 
 describe("hasGaConfigInit", () => {
   it("accepts the single-quoted GA config emitted by older builds", () => {
@@ -27,6 +27,22 @@ describe("getAnalyticsPayloadUrls", () => {
       "https://pharos.watch/__next._index.txt",
       "https://pharos.watch/__next._full.txt",
     ]);
+  });
+});
+
+describe("getOverflowRoutes", () => {
+  it("includes the public API access page in local smoke coverage", () => {
+    const previousRoutes = process.env.SMOKE_UI_OVERFLOW_ROUTES;
+    delete process.env.SMOKE_UI_OVERFLOW_ROUTES;
+    try {
+      expect(getOverflowRoutes("local")).toContain("/api/");
+    } finally {
+      if (previousRoutes == null) {
+        delete process.env.SMOKE_UI_OVERFLOW_ROUTES;
+      } else {
+        process.env.SMOKE_UI_OVERFLOW_ROUTES = previousRoutes;
+      }
+    }
   });
 });
 

@@ -97,6 +97,31 @@ describe("worker.fetch", () => {
     expect(cachePut).not.toHaveBeenCalled();
   });
 
+  it("returns CORS preflight headers for the public self-serve request endpoint", async () => {
+    const env = makeEnv();
+    const { ctx } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/api-key-requests", {
+        method: "OPTIONS",
+        headers: {
+          Origin: "https://pharos.watch",
+          "Access-Control-Request-Method": "POST",
+          "Access-Control-Request-Headers": "content-type",
+        },
+      }),
+      env as never,
+      ctx,
+    );
+
+    expect(res.status).toBe(204);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://pharos.watch");
+    expect(res.headers.get("Access-Control-Allow-Methods")).toContain("POST");
+    expect(res.headers.get("Access-Control-Allow-Headers")).toContain("Content-Type");
+    expect(cacheMatch).not.toHaveBeenCalled();
+    expect(cachePut).not.toHaveBeenCalled();
+  });
+
   it("echoes an allowed operator origin from the CORS allowlist", async () => {
     const env = makeEnv({
       CORS_ORIGIN: "https://pharos.watch,https://ops.pharos.watch",
@@ -335,6 +360,23 @@ describe("worker.fetch", () => {
       && entry.binds[2] === "/api/stablecoins"
       && entry.binds[3] === "site-api"
       && entry.binds[4] === "site")).toBe(true);
+  });
+
+  it("denies site-api admin paths even when the site-proxy secret is valid", async () => {
+    const env = makeEnv();
+    const { ctx } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://site-api.pharos.watch/api/api-key-requests-admin?limit=1", {
+        method: "GET",
+        headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
+      }),
+      env as never,
+      ctx,
+    );
+
+    expect(res.status).toBe(404);
+    expect(cacheMatch).not.toHaveBeenCalled();
   });
 
   it("rejects an invalid API key with 401 on any /api/* route", async () => {

@@ -262,11 +262,86 @@ The public self-serve API-key form is not a production Pages proxy route. On `ph
 
 For an incident isolated to public self-serve key issuance:
 
-1. Enable or tighten the exact-path WAF rule for `POST /api/api-key-requests` and `POST /api/api-key-requests/verify`; do not block `/api/api-key-requests-admin*`.
+1. Enable or tighten the exact-path WAF rule `api-self-serve-key-intake-limit` for `POST /api/api-key-requests` and `POST /api/api-key-requests/verify`; do not block `/api/api-key-requests-admin*`.
 2. Hide or disable the `/api/` form in Pages if the incident is not resolved by edge blocking.
 3. Roll back Worker or Pages through the normal deployment rollback path as needed.
 4. Query self-serve keys created after the incident cutoff, deactivate incident or smoke keys, release associated claims through the Access-gated admin route, and verify matching audit rows.
 5. Check Worker logs, email-provider logs, and Cloudflare Security Events for plaintext API keys, raw verification tokens, raw IP addresses, or provider-echoed requester data.
+
+The WAF expression of record is:
+
+```text
+(http.host eq "api.pharos.watch"
+  and http.request.method eq "POST"
+  and (http.request.uri.path eq "/api/api-key-requests"
+    or http.request.uri.path eq "/api/api-key-requests/verify")
+  and not cf.bot_management.verified_bot)
+```
+
+Record the Cloudflare rule ID from Security -> WAF -> Rate limiting rules in the incident note when the rule is created or edited, then verify matches under Security -> Events filtered by that rule ID.
+
+Use these SQL templates from a trusted operator shell. Set `CUTOFF_EPOCH` to the first suspect issuance timestamp.
+
+```bash
+CUTOFF_EPOCH=1778500000
+DB_NAME=pharos-watch
+
+# Dry-run: list self-serve keys issued after cutoff.
+npx wrangler d1 execute "$DB_NAME" --remote --command "
+SELECT k.id, k.key_prefix, k.owner_email, k.is_active, k.expires_at, k.created_at, r.request_id, r.status
+FROM api_keys k
+LEFT JOIN api_key_requests r ON r.api_key_id = k.id
+WHERE k.tier = 'self-serve' AND k.created_at >= $CUTOFF_EPOCH
+ORDER BY k.created_at DESC;
+"
+
+# Deactivate post-cutoff self-serve keys.
+npx wrangler d1 execute "$DB_NAME" --remote --command "
+UPDATE api_keys
+SET is_active = 0, updated_at = strftime('%s','now')
+WHERE tier = 'self-serve' AND created_at >= $CUTOFF_EPOCH;
+"
+
+# Release claims only after their linked key is inactive or absent.
+npx wrangler d1 execute "$DB_NAME" --remote --command "
+UPDATE api_key_self_serve_email_claims
+SET status = 'released', released_at = strftime('%s','now'), updated_at = strftime('%s','now')
+WHERE status IN ('pending_verification', 'issued')
+  AND request_id IN (
+    SELECT r.request_id
+    FROM api_key_requests r
+    LEFT JOIN api_keys k ON k.id = r.api_key_id
+    WHERE r.created_at >= $CUTOFF_EPOCH
+      AND (k.id IS NULL OR k.is_active = 0)
+  );
+"
+
+# Mark affected request rows blocked for operator visibility.
+npx wrangler d1 execute "$DB_NAME" --remote --command "
+UPDATE api_key_requests
+SET status = 'blocked', verification_token_hash = NULL, issuance_locked_at = NULL, updated_at = strftime('%s','now')
+WHERE created_at >= $CUTOFF_EPOCH
+  AND status IN ('pending_verification', 'issued');
+"
+
+# Consistency check: active key linked to blocked/rejected/expired request.
+npx wrangler d1 execute "$DB_NAME" --remote --command "
+SELECT r.request_id, r.status, k.id, k.key_prefix, k.is_active
+FROM api_key_requests r
+JOIN api_keys k ON k.id = r.api_key_id
+WHERE k.tier = 'self-serve'
+  AND k.is_active = 1
+  AND r.status IN ('blocked', 'rejected', 'expired');
+"
+
+# Consistency check: pending claims without request rows.
+npx wrangler d1 execute "$DB_NAME" --remote --command "
+SELECT c.email_hash, c.request_id, c.status, c.claimed_at
+FROM api_key_self_serve_email_claims c
+LEFT JOIN api_key_requests r ON r.request_id = c.request_id
+WHERE c.status = 'pending_verification' AND r.request_id IS NULL;
+"
+```
 
 Production smoke for this surface should request a smoke key, receive the email, verify once, confirm verification-token reuse fails, confirm the admin queue/key/claim/audit state through `ops-api`, then deactivate the smoke key and release its claim.
 

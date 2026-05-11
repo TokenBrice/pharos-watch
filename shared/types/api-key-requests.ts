@@ -38,7 +38,6 @@ export interface ApiKeySelfServeVerifyRequest {
 
 export interface ApiKeySelfServeIssueResponse {
   status: "issued";
-  requestId: string;
   key: {
     keyPrefix: string;
     maskedToken: string;

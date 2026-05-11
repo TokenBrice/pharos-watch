@@ -195,6 +195,7 @@ export function ApiKeyRequestForm() {
   const [revealAcknowledged, setRevealAcknowledged] = useState(false);
   const consumedVerificationTokenRef = useRef<string | null>(null);
   const copyTokenButtonRef = useRef<HTMLButtonElement | null>(null);
+  const tokenCodeRef = useRef<HTMLElement | null>(null);
 
   const curlCommand = useMemo(() => issuedKey ? buildCurlCommand(issuedKey.token) : "", [issuedKey]);
   const trimmedUseCaseLength = useCase.trim().length;
@@ -238,6 +239,17 @@ export function ApiKeyRequestForm() {
       setCopied(null);
       setCopyError("Copy failed. Select the text and copy it manually before leaving this page.");
     }
+  }, []);
+
+  const selectTokenText = useCallback(() => {
+    const tokenNode = tokenCodeRef.current;
+    const selection = window.getSelection?.();
+    if (!tokenNode || !selection) return;
+    const range = document.createRange();
+    range.selectNodeContents(tokenNode);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    tokenNode.focus();
   }, []);
 
   const verifyToken = useCallback(async (token: string) => {
@@ -623,8 +635,11 @@ export function ApiKeyRequestForm() {
               </div>
 
               {copyError ? (
-                <div role="alert" className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
-                  {copyError}
+                <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
+                  <span>{copyError}</span>
+                  <Button type="button" size="xs" variant="outline" onClick={selectTokenText}>
+                    Select Token
+                  </Button>
                 </div>
               ) : null}
 
@@ -643,7 +658,7 @@ export function ApiKeyRequestForm() {
                     {copied === "token" ? "Copied" : "Copy"}
                   </Button>
                 </div>
-                <code className="block break-all px-4 py-4 font-mono text-sm leading-relaxed sm:text-[0.95rem]">{issuedKey.token}</code>
+                <code ref={tokenCodeRef} tabIndex={-1} className="block break-all px-4 py-4 font-mono text-sm leading-relaxed outline-none sm:text-[0.95rem]">{issuedKey.token}</code>
               </div>
 
               <div className="overflow-hidden rounded-xl border border-border/60 bg-zinc-950 text-zinc-100">

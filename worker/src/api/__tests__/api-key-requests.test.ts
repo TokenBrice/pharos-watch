@@ -116,6 +116,7 @@ function setupSqlite(): DatabaseSync {
       verification_token_hash TEXT,
       verification_sent_at INTEGER,
       verification_expires_at INTEGER,
+      issuance_locked_at INTEGER,
       email_provider_message_id TEXT,
       issued_at INTEGER,
       rejected_at INTEGER,
@@ -149,6 +150,15 @@ function setupSqlite(): DatabaseSync {
       request_id TEXT NOT NULL,
       reason TEXT NOT NULL,
       revoked_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE api_key_self_serve_issuance_limits (
+      scope TEXT NOT NULL CHECK (scope IN ('submission_ip_daily')),
+      subject_hash TEXT NOT NULL,
+      bucket_start INTEGER NOT NULL,
+      count INTEGER NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (scope, subject_hash, bucket_start)
     );
   `);
   return sqlite;
@@ -262,6 +272,18 @@ describe("api key self-serve request handlers", () => {
     expect(sentEmails).toHaveLength(1);
   });
 
+  it("accepts known dynamic endpoint templates from the public form", async () => {
+    const response = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody({
+      email: "template@example.com",
+      intendedEndpoints: ["/api/stablecoin/:id"],
+    })), env());
+
+    expect(response.status).toBe(202);
+    expect(sqlite.prepare("SELECT intended_endpoints_json FROM api_key_requests").get()).toEqual({
+      intended_endpoints_json: JSON.stringify(["/api/stablecoin/:id"]),
+    });
+  });
+
   it("issues a constrained self-serve key only after token verification", async () => {
     const pending = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
     expect(pending.status).toBe(202);
@@ -274,12 +296,14 @@ describe("api key self-serve request handlers", () => {
       "api-key-pepper",
     );
     const body = await response.json() as {
+      requestId?: string;
       token: string;
       key: Record<string, unknown> & { tier: string; rateLimitPerMinute: number; expiresAt: number };
     };
 
     expect(response.status).toBe(201);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(body.requestId).toBeUndefined();
     expect(body.token).toMatch(/^ph_live_[0-9a-f]{16}_[A-Za-z0-9_-]{32}$/);
     expect(body.key.tier).toBe("self-serve");
     expect(body.key.rateLimitPerMinute).toBe(30);
@@ -381,6 +405,61 @@ describe("api key self-serve request handlers", () => {
 
     expect(throttled.status).toBe(429);
     expect(throttled.headers.get("Retry-After")).toBe("1600");
+  });
+
+  it("denies the fixed-window issuance IP cap without burning the verification token", async () => {
+    await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody({
+      email: "first@example.com",
+    })), env());
+    const firstToken = extractVerificationToken(sentEmails[0]);
+    const firstIssued = await handleApiKeyRequestVerify(
+      db,
+      postRequest("/api/api-key-requests/verify", { token: firstToken }),
+      env(),
+      "api-key-pepper",
+    );
+    expect(firstIssued.status).toBe(201);
+
+    await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody({
+      email: "second@example.com",
+    })), env());
+    const secondToken = extractVerificationToken(sentEmails[1]);
+    const denied = await handleApiKeyRequestVerify(
+      db,
+      postRequest("/api/api-key-requests/verify", { token: secondToken }),
+      env(),
+      "api-key-pepper",
+    );
+
+    expect(denied.status).toBe(429);
+    expect(denied.headers.get("Retry-After")).toBe("73600");
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_keys").get()).toEqual({ count: 1 });
+    const secondRequest = sqlite.prepare(
+      "SELECT verification_token_hash, status FROM api_key_requests WHERE normalized_email = 'second@example.com'",
+    ).get() as { verification_token_hash: string | null; status: string };
+    expect(secondRequest.status).toBe("pending_verification");
+    expect(secondRequest.verification_token_hash).not.toBeNull();
+  });
+
+  it("releases active but expired issued claims before accepting a new same-email request", async () => {
+    await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
+    const token = extractVerificationToken(sentEmails[0]);
+    const issued = await handleApiKeyRequestVerify(
+      db,
+      postRequest("/api/api-key-requests/verify", { token }),
+      env(),
+      "api-key-pepper",
+    );
+    expect(issued.status).toBe(201);
+    sqlite.prepare("UPDATE api_keys SET expires_at = ? WHERE tier = 'self-serve'").run(2_000_000_000 - 1);
+
+    const next = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
+
+    expect(next.status).toBe(202);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_key_requests").get()).toEqual({ count: 2 });
+    expect(sqlite.prepare("SELECT status FROM api_key_self_serve_email_claims").get()).toEqual({
+      status: "pending_verification",
+    });
   });
 
   it("redacts sensitive provider error details before logging", () => {
