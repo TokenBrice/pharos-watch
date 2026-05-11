@@ -11,7 +11,7 @@ The subsystem has four moving parts:
 - `worker/src/cron/daily-digest.ts` appends pending cemetery additions and newly tracked coins to the next Telegram digest post after a deploy.
 - `worker/src/lib/telegram.ts`, `worker/src/lib/telegram-alerts.ts`, `worker/src/lib/telegram-presets.ts`, and `worker/src/lib/telegram-digest-appendices.ts` handle Bot API sends, ticker parsing, preset resolution, message formatting, diffing, and HTML escaping.
 
-The delivery system is worker-owned. The frontend exposes a static `/telegram/` landing page plus a lightweight public telemetry strip sourced from `GET /api/telegram-pulse`; it does not call any mutating bot APIs directly.
+The delivery system is worker-owned. The frontend exposes a static `/pharoswatchbot/` landing page plus a lightweight public telemetry strip sourced from `GET /api/telegram-pulse`; it does not call any mutating bot APIs directly.
 
 The safety-alert path now has an additional hard dependency: `publish-report-card-cache` writes a generation-aware live safety source snapshot into `cache["alert:safety-source-cache"]`, and the 5-minute Telegram lane will suppress only safety-grade alerts when that source is missing, corrupt, stale, or from the wrong generation.
 
@@ -28,8 +28,8 @@ The safety-alert path now has an additional hard dependency: `publish-report-car
 - `worker/src/lib/telegram-alerts.ts`
 - `worker/src/lib/telegram-presets.ts`
 - `worker/src/lib/telegram-digest-appendices.ts`
-- `src/app/telegram/page.tsx`
-- `src/app/telegram/telegram-pulse-strip.tsx`
+- `src/app/pharoswatchbot/page.tsx`
+- `src/app/pharoswatchbot/telegram-pulse-strip.tsx`
 - `src/hooks/use-telegram-pulse.ts`
 - `worker/src/api/telegram-pulse.ts`
 - `worker/migrations/0000_baseline.sql`
@@ -38,10 +38,10 @@ The safety-alert path now has an additional hard dependency: `publish-report-car
 
 ## Frontend Main Page
 
-`src/app/telegram/page.tsx` is the product-facing main page for the Telegram feature set. It is promoted into the
+`src/app/pharoswatchbot/page.tsx` is the product-facing main page for PharosWatchBot and the wider Telegram feature set. It is promoted into the
 primary navigation immediately after `/alt-pegs/`.
 
-- Route: `/telegram/`
+- Route: `/pharoswatchbot/`
 - Covers the public `@pharoswatch` digest channel, the `@pharoswatchers` community channel, and the `@PharosWatchBot` subscription bot
 - Reads `GET /api/telegram-pulse` for live watcher/subscription telemetry, including the hero pulse strip, adoption metrics board, and an all-time cumulative active-watcher chart
 - Does not call the webhook or any other mutating bot API; it links users to Telegram plus the on-site digest archive

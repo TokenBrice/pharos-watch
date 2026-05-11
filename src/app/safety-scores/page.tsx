@@ -73,7 +73,7 @@ export default createClientFeaturePage({
       <CalloutBanner icon={<Bell className="h-4 w-4" />} className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
         Get notified when a safety grade changes.{" "}
         <Link
-          href="/telegram#bot"
+          href="/pharoswatchbot#bot"
           className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
         >
           Set up alerts&nbsp;&rarr;

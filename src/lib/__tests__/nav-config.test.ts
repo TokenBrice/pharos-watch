@@ -9,17 +9,17 @@ describe("nav-config", () => {
       "/safety-scores",
       "/yield",
       "/alt-pegs",
-      "/telegram",
+      "/pharoswatchbot",
     ]);
     expect(PRIMARY_NAV_ITEMS.find((item) => item.href === "/alt-pegs")?.label).toBe("Non-USD Stables");
-    expect(PRIMARY_NAV_ITEMS.at(-1)).toMatchObject({ href: "/telegram", label: "Telegram" });
+    expect(PRIMARY_NAV_ITEMS.at(-1)).toMatchObject({ href: "/pharoswatchbot", label: "PharosWatchBot" });
 
-    // Telegram is a main route now, immediately after the Non-USD Stable
+    // PharosWatchBot is a main route now, immediately after the Non-USD Stable
     // market-structure page. Digest and Status stay in MONITOR.
     const dataGroup = NAV_GROUPS.find((group) => group.key === "data");
     const monitorGroup = NAV_GROUPS.find((group) => group.key === "monitor");
-    expect(dataGroup?.items.some((item) => item.href === "/telegram")).toBe(false);
-    expect(monitorGroup?.items.some((item) => item.href === "/telegram")).toBe(false);
+    expect(dataGroup?.items.some((item) => item.href === "/pharoswatchbot")).toBe(false);
+    expect(monitorGroup?.items.some((item) => item.href === "/pharoswatchbot")).toBe(false);
   });
 
   it("orders the sidebar groups and routes as requested while excluding legacy Risk Lab grouping", () => {

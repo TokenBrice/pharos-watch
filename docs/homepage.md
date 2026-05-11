@@ -167,7 +167,7 @@ Under the fold (`HomepageClient`):
 3. `MarketHighlights`
 4. `Key Stablecoin Data` section
 5. `DailyDigest` in `preview` mode (prefixed with a short orientation caption)
-6. `UpcomingStablecoinsSection` (includes a `Launch alerts` promo link to `/telegram/#getting-started` plus `View all` to `/upcoming`)
+6. `UpcomingStablecoinsSection` (includes a `Launch alerts` promo link to `/pharoswatchbot/#getting-started` plus `View all` to `/upcoming`)
 7. `Core Monitoring` band
 8. `Research Surfaces` band
 9. Bottom summary / last-updated footer copy

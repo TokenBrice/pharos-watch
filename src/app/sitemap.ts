@@ -147,8 +147,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     {
-      url: `${SITE_URL}/telegram/`,
-      lastModified: lastEdited("/telegram/"),
+      url: `${SITE_URL}/pharoswatchbot/`,
+      lastModified: lastEdited("/pharoswatchbot/"),
       changeFrequency: "weekly",
       priority: 0.7,
     },

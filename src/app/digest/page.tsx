@@ -76,7 +76,7 @@ export default function DigestArchivePage() {
       <CalloutBanner icon={<Send className="h-4 w-4" />} className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
         Wake up to the Pharos daily digest, straight in your feed.{" "}
         <Link
-          href="/telegram#channel"
+          href="/pharoswatchbot#channel"
           className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
         >
           Join the Pharos Telegram channel&nbsp;&rarr;

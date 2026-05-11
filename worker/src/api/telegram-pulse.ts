@@ -22,7 +22,7 @@ const ACTIVE_SUBSCRIPTION_COUNTS_SQL = `SELECT chat_id,
   GROUP BY chat_id`;
 
 /**
- * Lightweight public endpoint returning vanity metrics for the /telegram landing page.
+ * Lightweight public endpoint returning vanity metrics for the PharosWatchBot landing page.
  * No admin auth required. Safe subset of the full TelegramBotStats.
  */
 export const handleTelegramPulse = withErrorHandler(

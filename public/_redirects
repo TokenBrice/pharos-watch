@@ -6,6 +6,10 @@
 /lighthouse/ https://pharosville.pharos.watch/ 302
 /lighthouse https://pharosville.pharos.watch/ 302
 
+/telegram/* /pharoswatchbot/:splat 301
+/telegram/ /pharoswatchbot/ 301
+/telegram /pharoswatchbot/ 301
+
 /report-cards/* /safety-scores/:splat 301
 /report-cards /safety-scores 301
 /risk-lab/* /safety-scores/:splat 301

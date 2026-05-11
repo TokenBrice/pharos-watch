@@ -59,7 +59,7 @@ export default function ChangelogPage() {
       leadParagraphs={[
         <>
           Weekly release notes. Follow{" "}
-          <Link href="/telegram/" className="underline underline-offset-4 hover:text-foreground">
+          <Link href="/pharoswatchbot/" className="underline underline-offset-4 hover:text-foreground">
             @PharosWatch on Telegram
           </Link>{" "}
           for real-time alerts, or browse the{" "}

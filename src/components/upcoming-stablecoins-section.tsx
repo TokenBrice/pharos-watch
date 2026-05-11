@@ -195,7 +195,7 @@ export function UpcomingStablecoinsSection({ logos }: Props) {
             </h2>
             <div className="flex shrink-0 items-center gap-3 text-sm">
               <Link
-                href="/telegram/#getting-started"
+                href="/pharoswatchbot/#getting-started"
                 className="text-sky-600 transition-colors hover:text-sky-500 dark:text-sky-400 dark:hover:text-sky-300"
               >
                 Launch alerts

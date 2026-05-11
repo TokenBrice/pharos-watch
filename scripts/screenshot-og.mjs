@@ -36,7 +36,7 @@ const PAGES = [
   { path: '/portfolio?p=usdt-tether:10000,usdc-circle:5000,dai-makerdao:2000,usde-ethena:1000', file: 'og-portfolio.png' },
   { path: '/methodology',     file: 'og-methodology.png'    },
   { path: '/start',           file: 'og-start.png'          },
-  { path: '/telegram',        file: 'og-telegram.png'       },
+  { path: '/pharoswatchbot',  file: 'og-pharoswatchbot.png' },
 ];
 
 mkdirSync(OUT, { recursive: true });

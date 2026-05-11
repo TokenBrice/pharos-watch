@@ -90,7 +90,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/status/client.tsx` - default:StatusClient
 - `src/app/status/error.tsx`
 - `src/app/status/page.tsx` - route /status; default:StatusPage, metadata
-- `src/app/telegram/page.tsx` - route /telegram; default:TelegramPage, metadata
+- `src/app/pharoswatchbot/page.tsx` - route /pharoswatchbot; default:PharosWatchBotPage, metadata
 - `src/app/upcoming/page.tsx` - route /upcoming; default:UpcomingPage, metadata
 - `src/app/yield/client.tsx` - YieldClient
 - `src/app/yield/error.tsx`

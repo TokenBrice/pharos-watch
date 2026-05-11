@@ -277,7 +277,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
           <ExternalLink className="h-3 w-3" aria-hidden="true" />
         </a>
         <Link
-          href="/telegram/#getting-started"
+          href="/pharoswatchbot/#getting-started"
           className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
         >
           See all Telegram alert options

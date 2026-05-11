@@ -115,11 +115,11 @@ export const START_HERE_GOALS: readonly StartHereGoal[] = [
   {
     title: "Set up alerts",
     description:
-      "Use Telegram if you want Pharos to watch for price deviations, early warning shifts, and daily grade changes for you.",
-    mobileDescription: "Use Telegram for price alerts, early warnings, and daily grade changes.",
-    href: "/telegram/",
-    cta: "Set up Telegram alerts",
-    destinations: ["Telegram", "Depeg alerts", "Daily updates"],
+      "Use PharosWatchBot if you want Pharos to watch for price deviations, early warning shifts, and daily grade changes for you.",
+    mobileDescription: "Use PharosWatchBot for price alerts, early warnings, and daily grade changes.",
+    href: "/pharoswatchbot/",
+    cta: "Set up bot alerts",
+    destinations: ["PharosWatchBot", "Depeg alerts", "Daily updates"],
     icon: Send,
     tone: "violet",
   },
@@ -221,9 +221,9 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
         icon: Newspaper,
       },
       {
-        title: "Telegram Alerts",
+        title: "PharosWatchBot",
         description: "Push alerts for price deviations, early warning changes, and daily digest delivery.",
-        href: "/telegram/",
+        href: "/pharoswatchbot/",
         icon: Send,
       },
       {
@@ -378,9 +378,9 @@ export const START_HERE_SHORTCUTS: readonly StartHereShortcut[] = [
   {
     title: "Set and forget",
     kickerLabel: "Automation",
-    description: "Use Telegram when you want Pharos to keep watching after you leave the site.",
+    description: "Use PharosWatchBot when you want Pharos to keep watching after you leave the site.",
     detail: "Best for price deviation alerts, early warning changes, digest delivery, and daily safety-grade moves.",
-    href: "/telegram/",
+    href: "/pharoswatchbot/",
     cta: "Configure alerts",
     icon: Send,
   },

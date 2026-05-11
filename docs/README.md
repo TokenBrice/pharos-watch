@@ -103,7 +103,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/stablecoins/governance/[governance]/`         | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
 | `/stablecoins/infrastructure/`                  | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
 | `/stablecoins/infrastructure/[infrastructure]/` | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
-| `/telegram/`                                    | [telegram-alerts.md](./telegram-alerts.md)                                                                                                            |
+| `/pharoswatchbot/`                              | [telegram-alerts.md](./telegram-alerts.md)                                                                                                            |
 | `/upcoming/`                                    | [upcoming-page.md](./upcoming-page.md)                                                                                                                |
 | `/yield/`                                       | [yield-intelligence.md](./yield-intelligence.md)                                                                                                      |
 

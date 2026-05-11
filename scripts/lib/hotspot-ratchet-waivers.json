@@ -63,7 +63,7 @@
     "disposition": "queued-p4",
     "notes": "Transport entrypoint grew with the /status handler and callback_query branch added in the 2026-04-17 audit remediation. The file is a thin ingress coordinator — parsing, persistence, and message templates already live in adjacent telegram-webhook-* modules. Defer further extraction until the bot surface stabilizes."
   },
-  "src/app/telegram/page.tsx": {
+  "src/app/pharoswatchbot/page.tsx": {
     "disposition": "queued-p4",
     "notes": "Static product landing page grew with the How-It-Works section, DEWS bands explainer, and JSON-LD block added in the 2026-04-17 telegram bot comprehensive audit. All content is intentionally colocated. Defer decomposition until another product-page cleanup pass."
   },

@@ -241,7 +241,7 @@ export interface TelegramBotStats {
   topStablecoins: TelegramBotTopStablecoin[];
 }
 
-/** Slim public-facing stats for the /telegram landing page. */
+/** Slim public-facing stats for the PharosWatchBot landing page. */
 export interface TelegramWatcherHistoryPoint {
   /** YYYY-MM-DD UTC day bucket from telegram_subscribers.created_at. */
   date: string;

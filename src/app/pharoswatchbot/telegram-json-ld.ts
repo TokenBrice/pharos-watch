@@ -26,7 +26,7 @@ const TELEGRAM_FEATURE_LIST = [
 ] as const;
 
 export function buildTelegramPageJsonLd(siteUrl: string) {
-  const gettingStartedUrl = `${siteUrl}/telegram/#getting-started`;
+  const gettingStartedUrl = `${siteUrl}/pharoswatchbot/#getting-started`;
 
   return [
     {
@@ -50,7 +50,7 @@ export function buildTelegramPageJsonLd(siteUrl: string) {
       applicationCategory: "FinanceApplication",
       operatingSystem: "Telegram",
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-      url: `${siteUrl}/telegram/`,
+      url: `${siteUrl}/pharoswatchbot/`,
       installUrl: "https://t.me/PharosWatchBot",
       description: "Opt-in Telegram bot for stablecoin peg, DEWS, safety, and launch alerts.",
       featureList: TELEGRAM_FEATURE_LIST,

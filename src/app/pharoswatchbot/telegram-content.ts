@@ -1,12 +1,12 @@
 import type { FaqItem } from "@/lib/faq";
 
 export const TELEGRAM_PAGE_DESCRIPTION =
-  "Set up Telegram alerts for specific stablecoins, preset watchlists, or all tracked stablecoins by alert type: depeg events, depeg worsening, DEWS threat level changes, safety grade shifts, and launch promotions for pre-launch assets. Plus get the Pharos digest straight in Telegram.";
+  "Set up PharosWatchBot alerts for specific stablecoins, preset watchlists, or all tracked stablecoins by alert type: depeg events, depeg worsening, DEWS threat level changes, safety grade shifts, and launch promotions for pre-launch assets. Plus get the Pharos digest straight in Telegram.";
 
 export const TELEGRAM_ACTIONS = [
   {
     key: "bot",
-    title: "Alert Bot",
+    title: "PharosWatchBot",
     handle: "@PharosWatchBot",
     href: "https://t.me/PharosWatchBot",
     description:

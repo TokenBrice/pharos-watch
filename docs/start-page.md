@@ -119,7 +119,7 @@ Current primary goal routes:
 - `/stablecoins/usd/`
 - `/compare/`
 - `/yield/`
-- `/telegram/`
+- `/pharoswatchbot/`
 
 Support CTAs in the hero point to:
 

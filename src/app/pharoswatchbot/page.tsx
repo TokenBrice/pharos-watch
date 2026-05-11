@@ -41,10 +41,10 @@ import { buildTelegramPageJsonLd } from "./telegram-json-ld";
 import { TelegramPulseBoard, TelegramPulseStrip } from "./telegram-pulse-strip";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Stablecoin Telegram Alerts & Daily Digest",
+  title: "PharosWatchBot: Stablecoin Telegram Alerts",
   description: TELEGRAM_PAGE_DESCRIPTION,
-  canonical: "/telegram/",
-  ogImage: `${SITE_URL}/og-telegram.png`,
+  canonical: "/pharoswatchbot/",
+  ogImage: `${SITE_URL}/og-pharoswatchbot.png`,
 });
 
 const COIN_COUNT = ACTIVE_STABLECOINS.length;
@@ -308,12 +308,12 @@ function GrowthSupportCard({ item, index }: { item: (typeof GROWTH_SUPPORT)[numb
 /*  Page                                                                      */
 /* -------------------------------------------------------------------------- */
 
-export default function TelegramPage() {
+export default function PharosWatchBotPage() {
   return (
     <FeaturePageShell
-      breadcrumbName="Telegram"
-      path="/telegram/"
-      title="Telegram"
+      breadcrumbName="PharosWatchBot"
+      path="/pharoswatchbot/"
+      title="PharosWatchBot"
       containerClassName="mx-auto max-w-6xl"
       headerActions={
         <Button asChild size="sm" className="gap-2">

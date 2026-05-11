@@ -1653,7 +1653,7 @@ Browser consumers on `pharos.watch` and `ops.pharos.watch` should use same-origi
 
 ### `GET /api/telegram-pulse`
 
-Lightweight Telegram adoption metrics for the public `/telegram/` page. Returns aggregate watcher/subscription counts, the most subscribed coin symbols, and all-time cumulative watcher growth for the current active watcher base.
+Lightweight Telegram adoption metrics for the public `/pharoswatchbot/` page. Returns aggregate watcher/subscription counts, the most subscribed coin symbols, and all-time cumulative watcher growth for the current active watcher base.
 
 **Cache:** `public, max-age=300, s-maxage=300`
 
