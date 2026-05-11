@@ -88,33 +88,19 @@ const CHART: BlacklistSummaryResponse["chart"] = [
 
 describe("BlacklistInterventionLedger", () => {
   it("keeps exposure status copy separate from observed event history", () => {
-    render(
-      <BlacklistInterventionLedger
-        buckets={BUCKETS}
-        stats={makeStats()}
-        chart={CHART}
-        isLoading={false}
-      />,
-    );
+    render(<BlacklistInterventionLedger buckets={BUCKETS} stats={makeStats()} chart={CHART} isLoading={false} />);
 
     expect(screen.getByText("Resolved blacklist/freeze exposure buckets")).toBeTruthy();
     expect(screen.getByText("Stablecoin symbols with observed supported events")).toBeTruthy();
-    expect(screen.getByText("Direct possible token/vault control.")).toBeTruthy();
-    expect(screen.getByText("Reserve/custody/parent exposure.")).toBeTruthy();
-    expect(screen.getByText("No resolved exposure in current model.")).toBeTruthy();
+    expect(screen.getByText("Mutable or pause-capable admin surfaces indicate possible controls.")).toBeTruthy();
+    expect(screen.getByText("Exposure comes from freezable upstream collateral or parent assets.")).toBeTruthy();
+    expect(screen.getByText("No direct, upstream, possible, or dilutable exposure is resolved.")).toBeTruthy();
     expect(screen.getByText(/Event count is observed supported tracker history, not policy probability/u)).toBeTruthy();
     expect(screen.queryByText(/contract/i)).toBeNull();
   });
 
   it("renders exact count and USD values outside hover-only surfaces", () => {
-    render(
-      <BlacklistInterventionLedger
-        buckets={BUCKETS}
-        stats={makeStats()}
-        chart={CHART}
-        isLoading={false}
-      />,
-    );
+    render(<BlacklistInterventionLedger buckets={BUCKETS} stats={makeStats()} chart={CHART} isLoading={false} />);
 
     expect(screen.getByText("12 stablecoins · $210,000,000,000")).toBeTruthy();
     expect(screen.getByText("120")).toBeTruthy();
@@ -133,6 +119,36 @@ describe("BlacklistInterventionLedger", () => {
     });
 
     expect(model.eventRows.map((row) => row.symbol)).toEqual(["USDT", "USDC", "BUIDL"]);
+    expect(model.omittedEventRowCount).toBe(0);
     expect(model.contextRows.find((row) => row.key === "destroyed")?.amountUsd).toBe(419_752);
+  });
+
+  it("keeps all five exposure buckets visible and zero-fills missing bucket rows", () => {
+    const model = buildBlacklistInterventionLedgerModel({
+      buckets: BUCKETS,
+      stats: makeStats(),
+      chart: CHART,
+    });
+
+    expect(model.exposureRows.map((row) => row.key)).toEqual(["yes", "dilutable", "upstream", "possible", "no"]);
+    expect(model.exposureRows.find((row) => row.key === "dilutable")).toMatchObject({
+      count: 0,
+      marketCapUsd: 0,
+    });
+  });
+
+  it("discloses when observed supported event leaders overflow the visible list", () => {
+    const stats = makeStats();
+    stats.perCoinTotalEvents = {
+      ...stats.perCoinTotalEvents,
+      PAXG: 7,
+      XAUT: 6,
+      PYUSD: 5,
+      USD1: 4,
+    };
+
+    render(<BlacklistInterventionLedger buckets={BUCKETS} stats={stats} chart={CHART} isLoading={false} />);
+
+    expect(screen.getByText("+2 more symbols with observed supported events.")).toBeTruthy();
   });
 });

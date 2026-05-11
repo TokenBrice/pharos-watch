@@ -37,11 +37,12 @@ export const BLACKLIST_STATUS_BUCKET_LABELS: Record<BlacklistStatusBucketKey, st
 };
 
 export const BLACKLIST_STATUS_BUCKET_DESCRIPTIONS: Record<BlacklistStatusBucketKey, string> = {
-  yes: "Stablecoins with direct issuer blacklist or freeze controls.",
-  dilutable: "Stablecoins where an admin can mint without bound, diluting existing holders without freezing balances.",
-  upstream: "Stablecoins inheriting freeze exposure from upstream collateral dependencies.",
-  possible: "Stablecoins with possible blacklist exposure from mutable contracts or reserve rails.",
-  no: "Stablecoins without resolved blacklist or freeze controls in the current model.",
+  yes: "Direct token, vault, or issuer controls can freeze, block, seize, or destroy user balances.",
+  dilutable: "No direct address freeze is resolved, but an admin can mint without bound and dilute holders.",
+  upstream: "No direct control is resolved; exposure comes from freezable upstream collateral or parent assets.",
+  possible:
+    "Mutable or pause-capable admin surfaces indicate possible controls, but active address-level freezing is not confirmed.",
+  no: "No direct, upstream, possible, or dilutable freeze exposure is resolved in the current model.",
 };
 
 type ReportCardMap = Record<string, Pick<ReportCard, "rawInputs">>;

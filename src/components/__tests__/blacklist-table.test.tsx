@@ -67,9 +67,10 @@ describe("BlacklistTable", () => {
   it("exports provenance and contract metadata columns in CSV", () => {
     renderTable();
 
-    fireEvent.click(screen.getByRole("button", { name: /export csv/i }));
+    fireEvent.click(screen.getByRole("button", { name: /export current page csv/i }));
 
     expect(downloadCsvMock).toHaveBeenCalledTimes(1);
+    expect(downloadCsvMock.mock.calls[0][0]).toEqual([event]);
     const [, columns] = downloadCsvMock.mock.calls[0];
     expect(columns.map((column: { header: string }) => column.header)).toEqual(
       expect.arrayContaining([

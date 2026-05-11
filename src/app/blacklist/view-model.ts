@@ -47,7 +47,7 @@ export type BlacklistPageFilters = {
 export function parseBlacklistPageFilters(search: string): BlacklistPageFilters {
   const params = new URLSearchParams(search);
   const rawStablecoin = params.get("stablecoin") ?? "all";
-  const rawChain = params.get("chain") ?? "all";
+  const rawChain = params.get("chain") ?? params.get("chainId") ?? "all";
   const rawEventType = params.get("event") ?? "all";
   const rawSortBy = params.get("sortBy") ?? "date";
   const rawSortDirection = params.get("sortDirection") ?? "desc";

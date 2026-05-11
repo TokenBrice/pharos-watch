@@ -55,9 +55,11 @@ export function BlacklistStatusDrilldown({
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
-              <CardTitle as="h2" className="pharos-kicker">Status Drilldown</CardTitle>
+              <CardTitle as="h2" className="pharos-kicker">
+                Status Drilldown
+              </CardTitle>
               <p className="text-sm text-foreground">
-                Stablecoins with blacklistable status:{" "}
+                Stablecoins with Freezable status:{" "}
                 <span className="font-medium">{BLACKLIST_STATUS_BUCKET_LABELS[status]}</span>
               </p>
               <p className="text-sm text-muted-foreground">{BLACKLIST_STATUS_BUCKET_DESCRIPTIONS[status]}</p>

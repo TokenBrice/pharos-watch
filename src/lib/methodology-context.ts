@@ -14,14 +14,8 @@ import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/mint-burn-flow-version";
-import {
-  SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
-  SAFETY_SCORE_VERSION_LABEL,
-} from "@shared/lib/safety-score-version";
-import {
-  PSI_METHODOLOGY_CHANGELOG_PATH,
-  PSI_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/stability-index-version";
+import { SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH, SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import { PSI_METHODOLOGY_CHANGELOG_PATH, PSI_METHODOLOGY_VERSION_LABEL } from "@shared/lib/stability-index-version";
 import {
   REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
   REDEMPTION_BACKSTOP_VERSION_LABEL,
@@ -88,7 +82,8 @@ export type MethodologyContextKey =
 export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyContextItem> = {
   psi: {
     title: "PSI",
-    summary: "Pharos Stability Index: a 0-100 ecosystem health score combining active depeg damage, breadth, DEWS stress breadth, and market-cap trend.",
+    summary:
+      "Pharos Stability Index: a 0-100 ecosystem health score combining active depeg damage, breadth, DEWS stress breadth, and market-cap trend.",
     detail: "Higher is calmer. It updates every 30 minutes and maps into condition bands from BEDROCK to MELTDOWN.",
     methodologyPath: "/methodology/#stability-index-methodology",
     versionLabel: PSI_METHODOLOGY_VERSION_LABEL,
@@ -143,7 +138,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   freezable: {
     title: "Freezable",
     summary:
-      "The issuer can freeze tokens in any wallet via on-contract admin functions. This is a trust/centralization risk, not an instant harm.",
+      "The issuer or protocol admin can freeze, block, seize, or destroy user balances through resolved on-chain controls. This is a trust/centralization risk, not an instant harm.",
     methodologyPath: "/methodology/#safety-scores-methodology",
     versionLabel: SAFETY_SCORE_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
@@ -151,7 +146,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   freezableUpstream: {
     title: "Freezable",
     summary:
-      "While this stablecoin has no direct freeze function, it uses collateral which can be frozen by an upstream issuer: individual balances cannot be frozen, but protocol-held collateral balances could. This is a trust/centralization risk, not an instant harm.",
+      "No direct holder freeze is resolved for this stablecoin, but an upstream collateral or parent asset can be frozen. Protocol-held balances may be exposed even when individual holders are not directly blocked.",
     methodologyPath: "/methodology/#safety-scores-methodology",
     versionLabel: SAFETY_SCORE_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
@@ -159,7 +154,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   freezableNo: {
     title: "Freezable",
     summary:
-      "No admin function exists to freeze, seize or destroy user assets. This stablecoin is trustless.",
+      "No direct, upstream, possible, or dilutable freeze exposure is resolved in the current model. This does not prove the asset is risk-free.",
     methodologyPath: "/methodology/#safety-scores-methodology",
     versionLabel: SAFETY_SCORE_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
@@ -167,7 +162,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   freezablePossible: {
     title: "Freezable",
     summary:
-      "An admin function exists to enable an admin to freeze, seize or destroy assets, but the function has not yet been activated.",
+      "Mutable, pause-capable, or similar admin surfaces could enable freezing, seizure, or destruction, but active address-level freezing is not confirmed.",
     methodologyPath: "/methodology/#safety-scores-methodology",
     versionLabel: SAFETY_SCORE_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
@@ -175,14 +170,15 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   freezableDilutable: {
     title: "Freezable",
     summary:
-      "No admin function exists to freeze individual balances, but an admin can mint without bound. Existing holdings cannot be seized directly, yet uncapped issuance can dilute holders into a functionally equivalent loss of value.",
+      "No direct address freeze is resolved, but an admin can mint without bound. Existing holdings cannot be seized directly, yet uncapped issuance can dilute holders into a functionally equivalent loss of value.",
     methodologyPath: "/methodology/#safety-scores-methodology",
     versionLabel: SAFETY_SCORE_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   },
   dependencyRisk: {
     title: "Dependency Risk",
-    summary: "Models reserve and mechanism exposure to upstream stablecoins rather than treating each coin as fully standalone.",
+    summary:
+      "Models reserve and mechanism exposure to upstream stablecoins rather than treating each coin as fully standalone.",
     detail:
       "Wrapper and mechanism-critical dependencies can ceiling the final score to the upstream asset when that dependency is fundamental.",
     methodologyPath: "/methodology/#safety-scores-methodology",
@@ -191,7 +187,8 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   },
   redemptionBackstop: {
     title: "Redemption Backstop",
-    summary: "Modeled issuer or protocol exit path scored across access, settlement, execution certainty, capacity, output quality, and cost.",
+    summary:
+      "Modeled issuer or protocol exit path scored across access, settlement, execution certainty, capacity, output quality, and cost.",
     detail:
       "This is currently documented under the Safety Scores methodology because it feeds the Liquidity / Exit dimension rather than having a standalone public section.",
     methodologyPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
@@ -199,7 +196,8 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   },
   effectiveExit: {
     title: "Effective Exit",
-    summary: "Best-path exit score that preserves the strongest exit path while giving modest credit for a second viable route.",
+    summary:
+      "Best-path exit score that preserves the strongest exit path while giving modest credit for a second viable route.",
     detail:
       "When both DEX liquidity and redemption exist, report cards use min(100, max(dex, redemption) + min(dex, redemption)*0.10). If only one path exists, that score is used directly after route caps and freshness gates.",
     methodologyPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
@@ -208,7 +206,8 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   activeDepegs: {
     title: "Active Depegs",
     summary: "Open depeg events that have crossed Pharos thresholds and passed the live confirmation rules.",
-    detail: "Large-cap, low-confidence, and extreme moves can require secondary confirmation before they count as live events.",
+    detail:
+      "Large-cap, low-confidence, and extreme moves can require secondary confirmation before they count as live events.",
     methodologyPath: "/methodology/#pegscore-dews-methodology",
     versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -222,14 +221,16 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   },
   medianDeviation: {
     title: "Median Deviation",
-    summary: "Median current deviation in basis points across peg-monitored coins, used as a market-noise read rather than a score.",
+    summary:
+      "Median current deviation in basis points across peg-monitored coins, used as a market-noise read rather than a score.",
     methodologyPath: "/methodology/#pegscore-dews-methodology",
     versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   },
   worstCurrentDeviation: {
     title: "Worst Current",
-    summary: "Largest current live deviation among tracked coins, shown in basis points rather than as a normalized score.",
+    summary:
+      "Largest current live deviation among tracked coins, shown in basis points rather than as a normalized score.",
     methodologyPath: "/methodology/#pegscore-dews-methodology",
     versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -237,7 +238,8 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   pegScore: {
     title: "Peg Score",
     summary: "Historical 0-100 peg-behavior score built from time-at-peg, event severity, and active-depeg penalties.",
-    detail: "Requires at least 7 tracking days; 7-30 day scores are marked early. NAV tokens return NR because they are not meant to hold a fixed price.",
+    detail:
+      "Requires at least 7 tracking days; 7-30 day scores are marked early. NAV tokens return NR because they are not meant to hold a fixed price.",
     methodologyPath: "/methodology/#pegscore-dews-methodology",
     versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -251,7 +253,8 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   },
   dews: {
     title: "DEWS",
-    summary: "Forward-looking 0-100 stress score built from up to 8 signals and amplified when system-wide PSI is weak.",
+    summary:
+      "Forward-looking 0-100 stress score built from up to 8 signals and amplified when system-wide PSI is weak.",
     detail: "It is designed to warn before full depegs, not just describe the current price deviation.",
     methodologyPath: "/methodology/#pegscore-dews-methodology",
     versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
@@ -267,14 +270,16 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   },
   depegBps: {
     title: "Basis-Point Deviation",
-    summary: "bps = basis points. 100 bps = 1%. Values are the peak signed deviation from the target peg during the window.",
+    summary:
+      "bps = basis points. 100 bps = 1%. Values are the peak signed deviation from the target peg during the window.",
     methodologyPath: "/methodology/#pegscore-dews-methodology",
     versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   },
   liquidityScore: {
     title: "Liquidity Score",
-    summary: "0-100 DEX liquidity composite built from effective TVL, volume activity, pool quality, durability, and pair diversity.",
+    summary:
+      "0-100 DEX liquidity composite built from effective TVL, volume activity, pool quality, durability, and pair diversity.",
     detail:
       "This score stays purely market-based. Safety Scores use a separate exit-liquidity blend that can also incorporate redemption backstops.",
     methodologyPath: "/methodology/#liquidity-methodology",
@@ -283,7 +288,8 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   },
   effectiveTvl: {
     title: "Effective TVL",
-    summary: "TVL adjusted for mechanism quality, balance health, and pair quality to estimate usable exit depth under stress.",
+    summary:
+      "TVL adjusted for mechanism quality, balance health, and pair quality to estimate usable exit depth under stress.",
     methodologyPath: "/methodology/#liquidity-methodology",
     versionLabel: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
     changelogPath: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
@@ -316,13 +322,16 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   },
   netMintBurnFlow: {
     title: "Net Mint/Burn Flow",
-    summary: "Net on-chain mint/burn across tracked coins in the last 24h. Positive = expansion, negative = contraction. Excludes atomic round-trips.",
+    summary:
+      "Net on-chain mint/burn across tracked coins in the last 24h. Positive = expansion, negative = contraction. Excludes atomic round-trips.",
     methodologyPath: "/methodology/#mint-burn-flow-methodology",
   },
   pys: {
     title: "PYS",
-    summary: "Benchmark-aware risk-adjusted yield score that starts from APY, adds a weighted slice of benchmark spread, then discounts by stablecoin safety and yield consistency.",
-    detail: "High APY on weak safety still needs an exceptional edge because the safety penalty curve is deliberately steep, while stronger local-currency benchmark outperformance now gets explicit credit.",
+    summary:
+      "Benchmark-aware risk-adjusted yield score that starts from APY, adds a weighted slice of benchmark spread, then discounts by stablecoin safety and yield consistency.",
+    detail:
+      "High APY on weak safety still needs an exceptional edge because the safety penalty curve is deliberately steep, while stronger local-currency benchmark outperformance now gets explicit credit.",
     methodologyPath: "/methodology/#yield-intelligence-methodology",
     versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
     changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
@@ -336,7 +345,8 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   },
   yieldWarnings: {
     title: "Yield Warning Signals",
-    summary: "Anomaly flags from the yield pipeline such as spikes, divergence, TVL outflow, negative trend, and reward-heavy behavior.",
+    summary:
+      "Anomaly flags from the yield pipeline such as spikes, divergence, TVL outflow, negative trend, and reward-heavy behavior.",
     methodologyPath: "/methodology/#yield-intelligence-methodology",
     versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
     changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
@@ -351,15 +361,18 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   },
   pressureShift: {
     title: "Pressure Shift vs 30D",
-    summary: "Signed score comparing current 24h mint/burn pressure against the coin's last 30 fully closed daily baselines.",
-    detail: "Positive means stronger-than-normal mint pressure. Negative means stronger-than-normal redemption pressure.",
+    summary:
+      "Signed score comparing current 24h mint/burn pressure against the coin's last 30 fully closed daily baselines.",
+    detail:
+      "Positive means stronger-than-normal mint pressure. Negative means stronger-than-normal redemption pressure.",
     methodologyPath: "/methodology/#mint-burn-flow-methodology",
     versionLabel: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
     changelogPath: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
   },
   bankRunGauge: {
     title: "Bank Run Gauge",
-    summary: "Market-cap-weighted aggregate of per-coin pressure shift. It measures unusual redemption pressure, not literal net direction.",
+    summary:
+      "Market-cap-weighted aggregate of per-coin pressure shift. It measures unusual redemption pressure, not literal net direction.",
     methodologyPath: "/methodology/#mint-burn-flow-methodology",
     versionLabel: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
     changelogPath: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
@@ -367,7 +380,8 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   chainHealth: {
     title: "Chain Health Score",
     summary: "Composite 0-100 score rating a blockchain's stablecoin ecosystem quality across five weighted factors.",
-    detail: "Health bands: robust (80-100), healthy (60-79), mixed (40-59), fragile (20-39), concentrated (0-19). Chains with concentrated supply in few assets score lower.",
+    detail:
+      "Health bands: robust (80-100), healthy (60-79), mixed (40-59), fragile (20-39), concentrated (0-19). Chains with concentrated supply in few assets score lower.",
     methodologyPath: "/methodology/#chain-health-score",
     versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
     changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
@@ -375,7 +389,8 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   chainHealthQuality: {
     title: "Quality",
     summary: "Supply-weighted average of Pharos Safety Scores for stablecoins on this chain.",
-    detail: "Requires ≥50% of supply to have safety score coverage. Missing data penalizes the score rather than ignoring it.",
+    detail:
+      "Requires ≥50% of supply to have safety score coverage. Missing data penalizes the score rather than ignoring it.",
     methodologyPath: "/methodology/#chain-health-score",
     versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
     changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
@@ -383,7 +398,8 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   chainHealthEnvironment: {
     title: "Chain Environment",
     summary: "Infrastructure quality rating based on chain resilience tier.",
-    detail: "Tier 1 (e.g., Ethereum) = 100, Tier 2 = 60, Tier 3 = 20. Factors decentralization, uptime history, and economic security.",
+    detail:
+      "Tier 1 (e.g., Ethereum) = 100, Tier 2 = 60, Tier 3 = 20. Factors decentralization, uptime history, and economic security.",
     methodologyPath: "/methodology/#chain-health-score",
     versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
     changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
@@ -391,7 +407,8 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   chainHealthConcentration: {
     title: "Concentration",
     summary: "HHI-based metric measuring stablecoin supply diversity on the chain.",
-    detail: "100 = perfectly distributed, 0 = single coin dominates. Prevents unhealthy over-concentration in one stablecoin.",
+    detail:
+      "100 = perfectly distributed, 0 = single coin dominates. Prevents unhealthy over-concentration in one stablecoin.",
     methodologyPath: "/methodology/#chain-health-score",
     versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
     changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,

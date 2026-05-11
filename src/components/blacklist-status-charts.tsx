@@ -173,22 +173,22 @@ export function BlacklistStatusCharts({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
       <StatusBarChart
-        title="Blacklistable Status by Count"
-        subtitle="Distribution of tracked stablecoins by blacklist capability"
+        title="Freezable Status by Count"
+        subtitle="Distribution of tracked stablecoins by resolved freeze exposure"
         data={buckets}
         dataKey="count"
         formatter={(v) => String(v)}
-        ariaLabel="Bar chart showing stablecoin count by blacklistable status"
+        ariaLabel="Bar chart showing stablecoin count by Freezable status"
         selectedStatus={selectedStatus}
         onStatusSelect={onStatusSelect}
       />
       <StatusBarChart
-        title="Blacklistable Status by Market Cap"
-        subtitle="Circulating supply split by blacklist capability"
+        title="Freezable Status by Market Cap"
+        subtitle="Circulating supply split by resolved freeze exposure"
         data={buckets}
         dataKey="marketCap"
         formatter={(v) => formatCurrency(v, 0)}
-        ariaLabel="Bar chart showing market capitalization by blacklistable status"
+        ariaLabel="Bar chart showing market capitalization by Freezable status"
         selectedStatus={selectedStatus}
         onStatusSelect={onStatusSelect}
       />

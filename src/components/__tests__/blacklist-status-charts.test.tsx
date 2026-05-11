@@ -43,13 +43,7 @@ vi.mock("recharts", () => ({
   YAxis: () => null,
   CartesianGrid: () => null,
   Tooltip: () => null,
-  Cell: ({
-    onClick,
-    "aria-label": ariaLabel,
-  }: {
-    onClick?: () => void;
-    "aria-label"?: string;
-  }) => (
+  Cell: ({ onClick, "aria-label": ariaLabel }: { onClick?: () => void; "aria-label"?: string }) => (
     <button type="button" aria-label={ariaLabel} onClick={onClick}>
       {ariaLabel}
     </button>
@@ -57,6 +51,25 @@ vi.mock("recharts", () => ({
 }));
 
 describe("BlacklistStatusCharts", () => {
+  it("uses canonical Freezable status wording", () => {
+    render(
+      <BlacklistStatusCharts
+        buckets={[
+          { status: "Yes", key: "yes", count: 5, marketCap: 100 },
+          { status: "Dilutable", key: "dilutable", count: 3, marketCap: 60 },
+          { status: "Upstream", key: "upstream", count: 2, marketCap: 25 },
+          { status: "Possible", key: "possible", count: 3, marketCap: 50 },
+          { status: "No", key: "no", count: 1, marketCap: 10 },
+        ]}
+        isLoading={false}
+      />,
+    );
+
+    expect(screen.getByText("Freezable Status by Count")).toBeTruthy();
+    expect(screen.getByText("Freezable Status by Market Cap")).toBeTruthy();
+    expect(screen.queryByText(/Blacklistable Status/u)).toBeNull();
+  });
+
   it("calls back with the selected status bucket when a bar is clicked", () => {
     const onStatusSelect = vi.fn();
 

@@ -1,5 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { getResolvedBlacklistStatus, getResolvedBlacklistStatusLabel } from "@/lib/blacklist-status";
+
+vi.mock("@shared/lib/tracked-blacklist-status", () => ({
+  getTrackedBlacklistStatus: (id: string) => (id === "usdp-parallel" ? "inherited" : null),
+}));
+
+vi.mock("@shared/lib/report-cards", () => ({
+  getBlacklistStatusLabel: (status: boolean | "possible" | "inherited" | "dilutable") => {
+    if (status === true) return "Yes";
+    if (status === "dilutable") return "Dilutable";
+    if (status === "possible") return "Possible";
+    if (status === "inherited") return "Upstream";
+    return "No";
+  },
+}));
 
 describe("blacklist status helpers", () => {
   it("uses the fixed-point tracked fallback for inherited coins", () => {
@@ -8,8 +22,10 @@ describe("blacklist status helpers", () => {
   });
 
   it("prefers report-card status when present", () => {
-    expect(getResolvedBlacklistStatus("usdp-parallel", {
-      rawInputs: { canBeBlacklisted: "possible" },
-    } as never)).toBe("possible");
+    expect(
+      getResolvedBlacklistStatus("usdp-parallel", {
+        rawInputs: { canBeBlacklisted: "possible" },
+      } as never),
+    ).toBe("possible");
   });
 });

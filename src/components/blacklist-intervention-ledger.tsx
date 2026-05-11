@@ -23,11 +23,11 @@ const USD_FORMATTER = new Intl.NumberFormat("en-US", {
 });
 
 const EXPOSURE_COPY: Record<BlacklistStatusBucketKey, string> = {
-  yes: "Direct blacklist/freeze control resolved in the current model.",
-  dilutable: "Admin can mint without bound, diluting holders into a functional loss of value.",
-  possible: "Direct possible token/vault control.",
-  upstream: "Reserve/custody/parent exposure.",
-  no: "No resolved exposure in current model.",
+  yes: "Direct token, vault, or issuer controls can freeze, block, seize, or destroy balances.",
+  dilutable: "No direct address freeze is resolved, but admin mint authority can dilute holders.",
+  possible: "Mutable or pause-capable admin surfaces indicate possible controls.",
+  upstream: "Exposure comes from freezable upstream collateral or parent assets.",
+  no: "No direct, upstream, possible, or dilutable exposure is resolved.",
 };
 
 const EXPOSURE_LABELS: Record<BlacklistStatusBucketKey, string> = {
@@ -67,6 +67,7 @@ export interface BlacklistInterventionContextRow {
 export interface BlacklistInterventionLedgerModel {
   exposureRows: BlacklistInterventionExposureRow[];
   eventRows: BlacklistInterventionEventRow[];
+  omittedEventRowCount: number;
   contextRows: BlacklistInterventionContextRow[];
 }
 
@@ -123,8 +124,7 @@ function buildEventRows(stats: BlacklistSummaryResponse["stats"] | undefined): B
       const aUsd = a.frozenUsd + a.destroyedUsd;
       if (bUsd !== aUsd) return bUsd - aUsd;
       return a.symbol.localeCompare(b.symbol);
-    })
-    .slice(0, MAX_EVENT_ROWS);
+    });
 }
 
 function buildContextRows(
@@ -182,9 +182,12 @@ export function buildBlacklistInterventionLedgerModel({
   stats,
   chart,
 }: BuildBlacklistInterventionLedgerModelArgs): BlacklistInterventionLedgerModel {
+  const eventRows = buildEventRows(stats);
+
   return {
     exposureRows: buildExposureRows(buckets),
-    eventRows: buildEventRows(stats),
+    eventRows: eventRows.slice(0, MAX_EVENT_ROWS),
+    omittedEventRowCount: Math.max(0, eventRows.length - MAX_EVENT_ROWS),
     contextRows: buildContextRows(stats, chart),
   };
 }
@@ -259,6 +262,11 @@ export function BlacklistInterventionLedger({
               {model.eventRows.map((row) => (
                 <EventLedgerRow key={row.symbol} row={row} />
               ))}
+              {model.omittedEventRowCount > 0 ? (
+                <li>
+                  <EmptyLedgerRow>{`+${formatCount(model.omittedEventRowCount)} more symbols with observed supported events.`}</EmptyLedgerRow>
+                </li>
+              ) : null}
             </ul>
           ) : (
             <EmptyLedgerRow>No observed supported events in the current summary.</EmptyLedgerRow>

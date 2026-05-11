@@ -174,7 +174,7 @@ export function BlacklistTable({
           <span className="mr-auto text-xs text-muted-foreground sm:hidden">Swipe table for more</span>
           <Button variant="outline" size="sm" className="pharos-focus-ring min-h-11 sm:min-h-8" onClick={handleCsvExport} disabled={events.length === 0}>
             <Download className="h-3.5 w-3.5" />
-            Export CSV
+            Export current page CSV
           </Button>
         </div>
       }

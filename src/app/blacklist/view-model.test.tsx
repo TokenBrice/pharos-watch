@@ -74,6 +74,12 @@ describe("parseBlacklistPageFilters", () => {
     expect(filters.searchQuery).toBe("");
     expect(filters.statusBucket).toBeNull();
   });
+
+  it("accepts chainId as a URL alias for chain", () => {
+    const filters = parseBlacklistPageFilters("?chainId=ethereum");
+
+    expect(filters.chainFilter).toBe("ethereum");
+  });
 });
 
 describe("useBlacklistPageController", () => {
