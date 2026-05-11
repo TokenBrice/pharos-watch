@@ -199,6 +199,21 @@
       "chain": "plasma",
       "address": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
       "decimals": 6
+    },
+    {
+      "chain": "katana",
+      "address": "0x2dca96907fde857dd3d816880a0df407eeb2d2f2",
+      "decimals": 6
+    },
+    {
+      "chain": "stable",
+      "address": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+      "decimals": 6
+    },
+    {
+      "chain": "hyperliquid",
+      "address": "0x25faedc3f054130dbb4e4203aca63567",
+      "decimals": 8
     }
   ],
   "tradedContracts": [

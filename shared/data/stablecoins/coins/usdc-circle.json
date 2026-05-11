@@ -265,6 +265,21 @@
       "chain": "katana",
       "address": "0x203a662b0bd271a6ed5a60edfbd04bfce608fd36",
       "decimals": 6
+    },
+    {
+      "chain": "codex",
+      "address": "0xd996633a415985dbd7d6d12f4a4343e31f5037cf",
+      "decimals": 6
+    },
+    {
+      "chain": "edgechain",
+      "address": "0x98d2919b9a214e6fa5384ac81e6864ba686ad74c",
+      "decimals": 6
+    },
+    {
+      "chain": "hyperliquid",
+      "address": "0x6d1e7cde53ba9467b783cb7c530ce054",
+      "decimals": 8
     }
   ],
   "deploymentModel": "native-multichain",

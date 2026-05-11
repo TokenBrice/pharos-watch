@@ -173,6 +173,16 @@
       "chain": "fraxtal",
       "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
       "decimals": 18
+    },
+    {
+      "chain": "megaeth",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "hyperliquid",
+      "address": "0x2e6d84f2d7ca82e6581e03523e4389f7",
+      "decimals": 8
     }
   ],
   "deploymentModel": "third-party-bridge",

@@ -35,6 +35,11 @@
       "chain": "hyperevm",
       "address": "0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
       "decimals": 18
+    },
+    {
+      "chain": "hyperliquid",
+      "address": "0x88102bea0bbad5f301f6e9e4dacdf979",
+      "decimals": 8
     }
   ],
   "chainTier": "unproven",

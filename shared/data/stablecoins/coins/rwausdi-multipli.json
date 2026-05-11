@@ -45,6 +45,21 @@
       "chain": "ethereum",
       "address": "0xA39986F96B80d04e8d7AeAaF47175F47C23FD0f4",
       "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0xd74fb32112b1ef5b4c428fead8da8d85a0019009",
+      "decimals": 6
+    },
+    {
+      "chain": "monad",
+      "address": "0x650b616b46ff94000eb115926ab8393b90788d76",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
+      "decimals": 6
     }
   ],
   "deploymentModel": "native-multichain",

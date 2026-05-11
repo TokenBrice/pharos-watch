@@ -53,6 +53,11 @@
       "chain": "solana",
       "address": "4MmJVdwYN8LwvbGeCowYjSx7KoEi6BJWg8XXnW4fDDp6",
       "decimals": 6
+    },
+    {
+      "chain": "xrpl",
+      "address": "TBL.rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn",
+      "decimals": 0
     }
   ],
   "deploymentModel": "native-multichain",

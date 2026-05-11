@@ -6595,6 +6595,11 @@
         "chain": "hyperevm",
         "address": "0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
         "decimals": 18
+      },
+      {
+        "chain": "hyperliquid",
+        "address": "0x88102bea0bbad5f301f6e9e4dacdf979",
+        "decimals": 8
       }
     ],
     "chainTier": "unproven",
@@ -13129,6 +13134,11 @@
         "chain": "flow",
         "address": "0x99af3eea856556646c98c8b9b2548fe815240750",
         "decimals": 6
+      },
+      {
+        "chain": "polygon",
+        "address": "0x99af3eea856556646c98c8b9b2548fe815240750",
+        "decimals": 6
       }
     ],
     "deploymentModel": "third-party-bridge",
@@ -13813,6 +13823,21 @@
       {
         "chain": "ethereum",
         "address": "0xA39986F96B80d04e8d7AeAaF47175F47C23FD0f4",
+        "decimals": 6
+      },
+      {
+        "chain": "base",
+        "address": "0xd74fb32112b1ef5b4c428fead8da8d85a0019009",
+        "decimals": 6
+      },
+      {
+        "chain": "monad",
+        "address": "0x650b616b46ff94000eb115926ab8393b90788d76",
+        "decimals": 6
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
         "decimals": 6
       }
     ],
@@ -15938,6 +15963,11 @@
         "chain": "solana",
         "address": "4MmJVdwYN8LwvbGeCowYjSx7KoEi6BJWg8XXnW4fDDp6",
         "decimals": 6
+      },
+      {
+        "chain": "xrpl",
+        "address": "TBL.rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn",
+        "decimals": 0
       }
     ],
     "deploymentModel": "native-multichain",
@@ -16525,6 +16555,11 @@
       {
         "chain": "ethereum",
         "address": "0xce24439f2d9c6a2289f741120fe202248b666666",
+        "decimals": 18
+      },
+      {
+        "chain": "tron",
+        "address": "TFNirp6PbqYE1ZTtWuCMUKJWLNZkoCoeFJ",
         "decimals": 18
       }
     ],
@@ -18058,6 +18093,21 @@
         "chain": "katana",
         "address": "0x203a662b0bd271a6ed5a60edfbd04bfce608fd36",
         "decimals": 6
+      },
+      {
+        "chain": "codex",
+        "address": "0xd996633a415985dbd7d6d12f4a4343e31f5037cf",
+        "decimals": 6
+      },
+      {
+        "chain": "edgechain",
+        "address": "0x98d2919b9a214e6fa5384ac81e6864ba686ad74c",
+        "decimals": 6
+      },
+      {
+        "chain": "hyperliquid",
+        "address": "0x6d1e7cde53ba9467b783cb7c530ce054",
+        "decimals": 8
       }
     ],
     "deploymentModel": "native-multichain",
@@ -18483,6 +18533,16 @@
         "chain": "fraxtal",
         "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "decimals": 18
+      },
+      {
+        "chain": "megaeth",
+        "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "decimals": 18
+      },
+      {
+        "chain": "hyperliquid",
+        "address": "0x2e6d84f2d7ca82e6581e03523e4389f7",
+        "decimals": 8
       }
     ],
     "deploymentModel": "third-party-bridge",
@@ -19158,6 +19218,11 @@
         "chain": "hyperevm",
         "address": "0x111111a1a0667d36bd57c0a9f569b98057111111",
         "decimals": 6
+      },
+      {
+        "chain": "hyperliquid",
+        "address": "0x54e00a5988577cb0b0c9ab0cb6ef7f4b",
+        "decimals": 8
       }
     ],
     "custodyModel": "institutional-regulated",
@@ -21171,6 +21236,21 @@
         "chain": "plasma",
         "address": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
         "decimals": 6
+      },
+      {
+        "chain": "katana",
+        "address": "0x2dca96907fde857dd3d816880a0df407eeb2d2f2",
+        "decimals": 6
+      },
+      {
+        "chain": "stable",
+        "address": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+        "decimals": 6
+      },
+      {
+        "chain": "hyperliquid",
+        "address": "0x25faedc3f054130dbb4e4203aca63567",
+        "decimals": 8
       }
     ],
     "tradedContracts": [
@@ -21289,6 +21369,11 @@
         "chain": "base",
         "address": "0xc708b6887db46005da033501f8aebee72d191a5d",
         "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "8yXrtJ54jZtE84xEBzTESKuegjcAkAuDrdAhRd8i8n3T",
+        "decimals": 6
       }
     ],
     "deploymentModel": "third-party-bridge",
