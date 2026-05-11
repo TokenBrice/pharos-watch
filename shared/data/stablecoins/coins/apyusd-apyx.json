@@ -47,6 +47,7 @@
       "decimals": 18
     }
   ],
+  "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",

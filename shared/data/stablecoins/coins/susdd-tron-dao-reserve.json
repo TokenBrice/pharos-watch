@@ -39,6 +39,7 @@
       "decimals": 18
     }
   ],
+  "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",
   "custodyModel": "onchain",

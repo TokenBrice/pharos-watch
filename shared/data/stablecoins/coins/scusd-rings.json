@@ -50,6 +50,13 @@
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "multisig",
+  "notices": [
+    {
+      "type": "info",
+      "title": "On-chain reserve tracking pending",
+      "message": "Live reserve tracking for scUSD is pending Rings publishing canonical BoringVault and treasury backing addresses. Check https://docs.rings.money/backing for the latest published addresses."
+    }
+  ],
   "reserves": [
     {
       "name": "Accepted stablecoin collateral",

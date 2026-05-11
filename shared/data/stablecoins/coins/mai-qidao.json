@@ -87,6 +87,13 @@
       "risk": "high"
     }
   ],
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Soft depeg below $0.99",
+      "message": "MAI has been trading around $0.987 across all 9 supported chains; CDP redemption pressure is not currently restoring parity."
+    }
+  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

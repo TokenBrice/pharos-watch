@@ -46,6 +46,13 @@
       "blacklistable": true
     }
   ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "On-chain reserve tracking pending",
+      "message": "Live reserve tracking for hbUSDT is pending HyperEVM RPC integration in the worker. HyperEVM is recognized as a chain but has no public RPC entry in the reserve infrastructure; a public RPC endpoint must be added before an erc4626-single-asset adapter can be wired."
+    }
+  ],
   "yieldConfig": {
     "yieldSource": "Hyperbeat USDT vault",
     "yieldType": "lending-vault"

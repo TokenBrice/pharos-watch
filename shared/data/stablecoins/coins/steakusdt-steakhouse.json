@@ -35,6 +35,7 @@
       "decimals": 18
     }
   ],
+  "chainTier": "ethereum",
   "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
   "custodyModel": "onchain",

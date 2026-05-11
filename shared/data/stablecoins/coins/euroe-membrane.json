@@ -71,7 +71,9 @@
     }
   ],
   "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "reserves": [
     {
       "name": "Euro fiat reserves and euro-denominated assets",

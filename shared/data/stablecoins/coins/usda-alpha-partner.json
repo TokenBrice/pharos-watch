@@ -37,6 +37,7 @@
     }
   ],
   "canBeBlacklisted": true,
+  "chainTier": "mature-alt-l1",
   "deploymentModel": "single-chain",
   "reserves": [
     {

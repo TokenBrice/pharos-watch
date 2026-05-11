@@ -25,6 +25,8 @@
       "url": "https://x.com/XTexchange"
     }
   ],
+  "chainTier": "unproven",
+  "deploymentModel": "single-chain",
   "custodyModel": "cex",
   "reserves": [
     {
@@ -36,8 +38,8 @@
   "notices": [
     {
       "type": "info",
-      "title": "Unsupported issuance chain",
-      "message": "XTUSD primarily circulates on XSC, which is not a configured Pharos chain, so no contract is stored."
+      "title": "Non-indexed issuance chain",
+      "message": "XTUSD primarily circulates on XSC, which is not EVM-indexed by Pharos. No on-chain contract is stored; supply and metadata are supplemented by external sources only."
     },
     {
       "type": "info",

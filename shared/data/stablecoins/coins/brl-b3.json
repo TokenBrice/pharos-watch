@@ -25,7 +25,9 @@
   "jurisdiction": {
     "country": "Brazil"
   },
+  "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "status": "pre-launch",
   "announcedDate": "2025-12",
   "expectedLaunchDate": "2026-H1",

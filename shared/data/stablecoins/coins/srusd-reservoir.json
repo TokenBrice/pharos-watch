@@ -49,6 +49,7 @@
       "decimals": 18
     }
   ],
+  "chainTier": "ethereum",
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "multisig",

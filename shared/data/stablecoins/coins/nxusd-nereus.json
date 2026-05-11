@@ -46,6 +46,13 @@
       "risk": "high"
     }
   ],
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Sustained soft depeg",
+      "message": "NXUSD is trading near $0.982; the peg has been below 0.99 for an extended period. Treat collateral classification as advisory rather than live redemption assurance."
+    }
+  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

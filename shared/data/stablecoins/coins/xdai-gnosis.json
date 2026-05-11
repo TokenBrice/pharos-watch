@@ -37,6 +37,7 @@
     }
   ],
   "chainTier": "established-alt-l1",
+  "deploymentModel": "single-chain",
   "reserves": [
     {
       "name": "DAI backing through Gnosis bridge infrastructure",

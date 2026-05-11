@@ -29,6 +29,8 @@
       "url": "https://docs.wemix.com/"
     }
   ],
+  "chainTier": "unproven",
+  "deploymentModel": "single-chain",
   "reserves": [
     {
       "name": "WEMIX ecosystem reserve assets",
@@ -39,8 +41,8 @@
   "notices": [
     {
       "type": "info",
-      "title": "Unsupported issuance chain",
-      "message": "WEMIX Dollar primarily circulates on WEMIX chain, which is not a configured Pharos chain, so no contract is stored."
+      "title": "Non-indexed issuance chain",
+      "message": "WEMIX Dollar primarily circulates on WEMIX chain, which is not EVM-indexed by Pharos. No on-chain contract is stored; supply and metadata are supplemented by external sources only."
     }
   ]
 }

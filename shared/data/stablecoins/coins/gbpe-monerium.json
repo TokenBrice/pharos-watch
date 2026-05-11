@@ -66,6 +66,7 @@
     }
   ],
   "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "governanceQuality": "regulated-entity",
   "reserves": [
