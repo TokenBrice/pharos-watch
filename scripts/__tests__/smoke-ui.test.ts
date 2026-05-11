@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   chunkOverflowRoutes,
+  getBrowserLaunchOptions,
   getAnalyticsPayloadUrls,
   getOverflowRoutes,
   getOverflowWorkerCount,
@@ -57,6 +58,44 @@ describe("getAnalyticsPayloadUrls", () => {
       "https://pharos.watch/__next._index.txt",
       "https://pharos.watch/__next._full.txt",
     ]);
+  });
+});
+
+describe("getBrowserLaunchOptions", () => {
+  it("uses the Playwright-managed browser by default outside GitHub Actions", () => {
+    withEnv("GITHUB_ACTIONS", undefined, () => {
+      withEnv("SMOKE_UI_BROWSER_CHANNEL", undefined, () => {
+        withEnv("SMOKE_UI_BROWSER_EXECUTABLE_PATH", undefined, () => {
+          expect(getBrowserLaunchOptions()).toEqual({ headless: true });
+        });
+      });
+    });
+  });
+
+  it("uses the system Chrome channel on GitHub Actions", () => {
+    withEnv("GITHUB_ACTIONS", "true", () => {
+      withEnv("SMOKE_UI_BROWSER_CHANNEL", undefined, () => {
+        withEnv("SMOKE_UI_BROWSER_EXECUTABLE_PATH", undefined, () => {
+          expect(getBrowserLaunchOptions()).toEqual({ channel: "chrome", headless: true });
+        });
+      });
+    });
+  });
+
+  it("allows an explicit browser channel override", () => {
+    withEnv("GITHUB_ACTIONS", "true", () => {
+      withEnv("SMOKE_UI_BROWSER_CHANNEL", "msedge", () => {
+        expect(getBrowserLaunchOptions()).toEqual({ channel: "msedge", headless: true });
+      });
+    });
+  });
+
+  it("prefers an explicit executable path over browser channels", () => {
+    withEnv("SMOKE_UI_BROWSER_CHANNEL", "chrome", () => {
+      withEnv("SMOKE_UI_BROWSER_EXECUTABLE_PATH", "/usr/bin/chromium", () => {
+        expect(getBrowserLaunchOptions()).toEqual({ executablePath: "/usr/bin/chromium", headless: true });
+      });
+    });
   });
 });
 

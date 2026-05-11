@@ -81,6 +81,45 @@ async function loadChromium() {
   }
 }
 
+export function getBrowserLaunchOptions() {
+  const executablePath = (process.env.SMOKE_UI_BROWSER_EXECUTABLE_PATH ?? "").trim();
+  if (executablePath) {
+    return { executablePath, headless: true };
+  }
+
+  const channel = (process.env.SMOKE_UI_BROWSER_CHANNEL ?? "").trim();
+  if (channel) {
+    return { channel, headless: true };
+  }
+
+  if (process.env.GITHUB_ACTIONS === "true") {
+    return { channel: "chrome", headless: true };
+  }
+
+  return { headless: true };
+}
+
+function isMissingPlaywrightBrowserError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("Executable doesn't exist") || message.includes("Please run the following command");
+}
+
+async function launchChromiumBrowser(chromium) {
+  const launchOptions = getBrowserLaunchOptions();
+  try {
+    return await chromium.launch(launchOptions);
+  } catch (error) {
+    const hasExplicitBrowser =
+      Boolean(launchOptions.channel) || Boolean(launchOptions.executablePath);
+    if (hasExplicitBrowser || !isMissingPlaywrightBrowserError(error)) {
+      throw error;
+    }
+
+    console.log("[smoke-ui] WARN Playwright-managed Chromium missing; retrying with system Chrome");
+    return chromium.launch({ channel: "chrome", headless: true });
+  }
+}
+
 function getUiWaitTimeoutMs() {
   return readPositiveIntEnv("SMOKE_UI_WAIT_TIMEOUT_MS", DEFAULT_UI_WAIT_TIMEOUT_MS);
 }
@@ -556,7 +595,7 @@ export async function run() {
     }
 
     const chromium = await loadChromium();
-    browser = await chromium.launch({ headless: true });
+    browser = await launchChromiumBrowser(chromium);
 
     const runSmokeSession = async (smokeConfig, stepLabel) => {
       const context = await browser.newContext();

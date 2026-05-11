@@ -217,6 +217,7 @@ jobs:
           fi
         env:
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+          SMOKE_UI_BROWSER_CHANNEL: chrome
           SMOKE_OPS_UI_URL: ${{ vars.SMOKE_OPS_UI_URL || 'https://ops.pharos.watch/admin/' }}
           SMOKE_OPS_API_BASE: ${{ vars.SMOKE_OPS_API_BASE || 'https://ops-api.pharos.watch' }}
           SMOKE_OPS_SCOPE: "canary"
@@ -304,6 +305,7 @@ jobs:
       - run: npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local
         env:
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+          SMOKE_UI_BROWSER_CHANNEL: chrome
           SMOKE_UI_OVERFLOW_WORKERS: "6"
       - name: Dump local export smoke server log
         if: failure()
@@ -387,6 +389,7 @@ jobs:
           fi
         env:
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+          SMOKE_UI_BROWSER_CHANNEL: chrome
           SMOKE_OPS_UI_URL: ${{ vars.SMOKE_OPS_UI_URL || 'https://ops.pharos.watch/admin/' }}
           SMOKE_OPS_API_BASE: ${{ vars.SMOKE_OPS_API_BASE || 'https://ops-api.pharos.watch' }}
           SMOKE_OPS_SCOPE: "canary"
