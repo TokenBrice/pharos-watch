@@ -788,11 +788,28 @@ describe("splitMessage HTML safety", () => {
     const longContext = `<blockquote expandable>${"context ".repeat(900)}</blockquote>`;
     const chunks = splitMessage(longContext, 4000);
     expect(chunks.length).toBeGreaterThan(1);
+    const countBlockquoteOpen = (value: string): number => {
+      let count = 0;
+      let cursor = 0;
+      const openTag = "<blockquote";
+      while (true) {
+        const hit = value.indexOf(openTag, cursor);
+        if (hit === -1) break;
+        if (!value.startsWith("</blockquote", hit)) {
+          count++;
+        }
+        cursor = hit + openTag.length;
+      }
+      return count;
+    };
+
     for (const chunk of chunks) {
-      const opens = (chunk.match(/<blockquote(?:\s+expandable)?>/g) ?? []).length;
+      const opens = countBlockquoteOpen(chunk);
       const closes = (chunk.match(/<\/blockquote>/g) ?? []).length;
       expect(opens).toBe(closes);
-      expect(chunk).not.toMatch(/<blockquote[^>]*$/);
+      const lastOpen = chunk.lastIndexOf("<blockquote");
+      const hasDanglingOpen = lastOpen !== -1 ? chunk.indexOf(">", lastOpen) === -1 : false;
+      expect(hasDanglingOpen).toBe(false);
       expect(chunk).not.toMatch(/^expandable>/);
     }
   });

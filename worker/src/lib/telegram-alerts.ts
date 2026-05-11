@@ -621,15 +621,31 @@ function repairBrokenHtml(chunk: string): string {
   repaired = repaired.replace(/^[^<]*>/, "");
 
   // Balance simple tags: <b>, <i>, <code>, <pre>
-  const TAG_PATTERNS: Array<{ open: RegExp; close: RegExp; tag: string }> = [
-    { open: /<b[> ]/g, close: /<\/b>/g, tag: "b" },
-    { open: /<i[> ]/g, close: /<\/i>/g, tag: "i" },
-    { open: /<code[> ]/g, close: /<\/code>/g, tag: "code" },
-    { open: /<pre[> ]/g, close: /<\/pre>/g, tag: "pre" },
-    { open: /<blockquote(?:\s+expandable)?[> ]/g, close: /<\/blockquote>/g, tag: "blockquote" },
+  const countTagOpenings = (value: string, tagName: string): number => {
+    let count = 0;
+    let cursor = 0;
+    const needle = `<${tagName}`;
+    while (true) {
+      const hit = value.indexOf(needle, cursor);
+      if (hit === -1) break;
+      const charAfterTag = value[hit + needle.length];
+      if (charAfterTag === " " || charAfterTag === ">" || charAfterTag === "/") {
+        count++;
+      }
+      cursor = hit + needle.length;
+    }
+    return count;
+  };
+
+  const TAG_PATTERNS: Array<{ close: RegExp; tag: string }> = [
+    { close: /<\/b>/g, tag: "b" },
+    { close: /<\/i>/g, tag: "i" },
+    { close: /<\/code>/g, tag: "code" },
+    { close: /<\/pre>/g, tag: "pre" },
+    { close: /<\/blockquote>/g, tag: "blockquote" },
   ];
-  for (const { open, close, tag } of TAG_PATTERNS) {
-    const openCount = (repaired.match(open) ?? []).length;
+  for (const { close, tag } of TAG_PATTERNS) {
+    const openCount = countTagOpenings(repaired, tag);
     const closeCount = (repaired.match(close) ?? []).length;
     if (openCount > closeCount) {
       repaired += `</${tag}>`.repeat(openCount - closeCount);
