@@ -1,6 +1,20 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
-import { handleCallbackQuery } from "../telegram-webhook-callbacks";
+
+// Stub the insights module so /why callback tests do not need to drive the
+// full report-cards snapshot pipeline. Coverage callback uses buildCoverageMessage
+// which only reads StatusForCoin data, so it does not need stubbing.
+vi.mock("../telegram-webhook-insights", async (importOriginal) => {
+  const original = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...original,
+    buildWhyMessage: vi.fn(async (_db: unknown, stablecoinId: string) =>
+      `<b>${stablecoinId} Safety Score</b>\nOverall: A`,
+    ),
+  };
+});
+
+const { handleCallbackQuery } = await import("../telegram-webhook-callbacks");
 
 const fetchSpy = vi.fn();
 vi.stubGlobal("fetch", fetchSpy);
@@ -469,6 +483,163 @@ describe("handleCallbackQuery", () => {
     expect(ackCall).toBeDefined();
     const body = JSON.parse((ackCall?.[1] as RequestInit).body as string);
     expect(body.text).toMatch(/only the user who started/i);
+  });
+
+  describe("P1-U11 discoverability callbacks", () => {
+    it("why:<id> sends the safety Why explainer and acks", async () => {
+      const db = mockD1([]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-why",
+        data: "why:usdc-circle",
+        from: { id: 999, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 1 },
+      });
+
+      const sendCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("sendMessage"));
+      expect(sendCall).toBeDefined();
+      const sendBody = JSON.parse((sendCall?.[1] as RequestInit).body as string);
+      expect(sendBody.text).toContain("usdc-circle Safety Score");
+      const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+      expect(ackCall).toBeDefined();
+      const ackBody = JSON.parse((ackCall?.[1] as RequestInit).body as string);
+      expect(ackBody.text).toBe("Why sent.");
+      // No subscriber mutations on read-only Why.
+      expect(db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
+    });
+
+    it("coverage:<id> sends a coverage card with no subscription writes", async () => {
+      const db = mockD1([]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-cov",
+        data: "coverage:usdc-circle",
+        from: { id: 999, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 1 },
+      });
+
+      const sendCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("sendMessage"));
+      expect(sendCall).toBeDefined();
+      const body = JSON.parse((sendCall?.[1] as RequestInit).body as string);
+      expect(body.text).toContain("USDC coverage");
+      const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+      expect(JSON.parse((ackCall?.[1] as RequestInit).body as string).text).toBe("Coverage sent.");
+      expect(db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
+    });
+
+    it("quicksub:<id> in private chat enables DEWS+depeg for one coin", async () => {
+      const db = mockD1([]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-qs",
+        data: "quicksub:usdc-circle",
+        from: { id: 999, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 1 },
+      });
+
+      const history = db.getHistory();
+      const subscriberUpsert = history.find((h) =>
+        /INSERT INTO telegram_subscribers/.test(h.sql),
+      );
+      expect(subscriberUpsert).toBeDefined();
+      // Per-coin alert bumps for dews + depeg are set to 1.
+      expect(subscriberUpsert!.binds[2]).toBe(1); // alert_dews
+      expect(subscriberUpsert!.binds[3]).toBe(1); // alert_depeg
+      expect(subscriberUpsert!.binds[4]).toBe(0); // alert_safety
+      expect(subscriberUpsert!.binds[5]).toBe(0); // alert_launch
+
+      const subscriptionInsert = history.find((h) =>
+        /INSERT INTO telegram_subscriptions/.test(h.sql),
+      );
+      expect(subscriptionInsert).toBeDefined();
+      expect(subscriptionInsert!.binds[1]).toBe("usdc-circle");
+      expect(subscriptionInsert!.binds[2]).toBe(1); // alert_dews
+      expect(subscriptionInsert!.binds[3]).toBe(1); // alert_depeg
+
+      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/Subscribed/i);
+    });
+
+    it("quicksub:<id> in a group refuses non-admin without writing to D1", async () => {
+      const db = mockD1([
+        {
+          match: "FROM cache WHERE key = ?",
+          rows: [],
+          first: null,
+        },
+      ]);
+      // getCachedChatMember fetches getChatMember from Telegram when cache misses.
+      fetchSpy.mockImplementation(async (url) => {
+        if (String(url).includes("getChatMember")) {
+          return new Response(
+            JSON.stringify({ ok: true, result: { user: { id: 7, is_bot: false, first_name: "m" }, status: "member" } }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      });
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-qs-group",
+        data: "quicksub:usdc-circle",
+        from: { id: 7, username: "tapping_user" },
+        message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
+      });
+
+      const history = db.getHistory();
+      expect(history.some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
+      expect(history.some((h) => /INSERT INTO telegram_subscriptions/.test(h.sql))).toBe(false);
+      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/Only group admins/i);
+    });
+
+    it("quicksub:<id> in a group with admin tapping writes the subscription", async () => {
+      const db = mockD1([
+        {
+          match: "FROM cache WHERE key = ?",
+          rows: [],
+          first: null,
+        },
+      ]);
+      fetchSpy.mockImplementation(async (url) => {
+        if (String(url).includes("getChatMember")) {
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: { user: { id: 7, is_bot: false, first_name: "admin" }, status: "administrator" },
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      });
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-qs-admin",
+        data: "quicksub:usdc-circle",
+        from: { id: 7, username: "admin_user" },
+        message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
+      });
+
+      const history = db.getHistory();
+      const subscriberUpsert = history.find((h) =>
+        /INSERT INTO telegram_subscribers/.test(h.sql),
+      );
+      expect(subscriberUpsert).toBeDefined();
+      // Group chats must not persist the tapping admin's personal username.
+      expect(subscriberUpsert!.binds[1]).toBeNull();
+      expect(history.some((h) => /INSERT INTO telegram_subscriptions/.test(h.sql))).toBe(true);
+    });
+
+    it("unknown stablecoin id in why/coverage/quicksub callbacks falls through to a graceful ack", async () => {
+      const db = mockD1([]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-bad",
+        data: "quicksub:not-a-real-coin",
+        from: { id: 999, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 1 },
+      });
+
+      const history = db.getHistory();
+      expect(history.some((h) => /\bINSERT\b/i.test(h.sql))).toBe(false);
+      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toBe("Action not recognized.");
+    });
   });
 
   it("confirm:bulk replies with an expiry toast when pending TTL has elapsed", async () => {

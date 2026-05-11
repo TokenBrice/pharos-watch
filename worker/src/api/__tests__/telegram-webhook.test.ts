@@ -1599,12 +1599,27 @@ describe("handleTelegramWebhook", () => {
       "bot-token",
     );
     expect(res.status).toBe(200);
-    const body = sentMessageBody().text;
-    expect(body).toContain("USDC");
-    expect(body).toContain("CALM");
-    expect(body).toContain("Safety: A");
-    expect(body).toContain("Depeg: stable");
-    expect(body).toContain("Price: $0.9999");
+    const sent = sentMessageBody() as {
+      text: string;
+      reply_markup?: { inline_keyboard?: Array<Array<{ text: string; callback_data?: string }>> };
+    };
+    expect(sent.text).toContain("USDC");
+    expect(sent.text).toContain("CALM");
+    expect(sent.text).toContain("Safety: A");
+    expect(sent.text).toContain("Depeg: stable");
+    expect(sent.text).toContain("Price: $0.9999");
+    // P1-U11: discoverability buttons attached to the status card.
+    const buttons = (sent.reply_markup?.inline_keyboard ?? []).flat();
+    expect(buttons.map((b) => b.text)).toEqual(["Why?", "Coverage", "Subscribe"]);
+    expect(buttons.map((b) => b.callback_data)).toEqual([
+      "why:usdc-circle",
+      "coverage:usdc-circle",
+      "quicksub:usdc-circle",
+    ]);
+    // Bot API limit: callback_data must stay ≤64 bytes.
+    for (const button of buttons) {
+      expect((button.callback_data ?? "").length).toBeLessThanOrEqual(64);
+    }
   });
 
   it("/status ambiguous ticker asks for exact coin id instead of numeric reply", async () => {

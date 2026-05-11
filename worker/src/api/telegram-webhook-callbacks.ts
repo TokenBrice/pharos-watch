@@ -7,6 +7,9 @@
  *   - `status:<stablecoinId>` — sends the current one-coin status card
  *   - `depegstep:<stablecoinId>:250` — enables per-coin depeg worsening alerts
  *   - `safetydown:<stablecoinId>` — enables per-coin safety downgrade-only alerts
+ *   - `why:<stablecoinId>` — sends the safety Why explainer (P1-U11)
+ *   - `coverage:<stablecoinId>` — sends the coverage card (P1-U11)
+ *   - `quicksub:<stablecoinId>` — enables DEWS+depeg for one coin (P1-U11)
  *
  * Unknown action codes receive a silent ack so the bot stays forward-compatible
  * with future keyboard changes.
@@ -14,6 +17,7 @@
 
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { answerCallbackQuery, sendToChat } from "../lib/telegram";
+import { getCachedChatMember } from "../lib/telegram-chat-member";
 import {
   clearPendingDisambiguation,
   removePresetSubscriptions,
@@ -24,7 +28,11 @@ import {
   upsertSubscriberAndSubscriptions,
 } from "./telegram-webhook-store";
 import { loadStatusForCoin } from "./telegram-webhook-status";
-import { buildStatusMessage } from "./telegram-webhook-messages";
+import {
+  buildStatusDiscoveryKeyboard,
+  buildStatusMessage,
+} from "./telegram-webhook-messages";
+import { buildCoverageMessage, buildWhyMessage } from "./telegram-webhook-insights";
 import {
   handleSetupBranch,
   handleSetupCancel,
@@ -55,6 +63,9 @@ const KNOWN_ACTIONS = new Set([
   "status",
   "depegstep",
   "safetydown",
+  "why",
+  "coverage",
+  "quicksub",
   "confirm",
   "cancel",
 ]);
@@ -195,8 +206,67 @@ export async function handleCallbackQuery(
     const status = await loadStatusForCoin(db, arg);
     await sendToChat(chatId, buildStatusMessage(meta?.symbol ?? arg, status), botToken, {
       disableWebPagePreview: true,
+      replyMarkup: buildStatusDiscoveryKeyboard(arg),
     });
     await answerCallbackQuery(cb.id, botToken, { text: "Status sent." });
+    return;
+  }
+
+  if (action === "why" && isKnownStablecoinId(arg)) {
+    const message = await buildWhyMessage(db, arg);
+    await sendToChat(chatId, message, botToken, { disableWebPagePreview: true });
+    await answerCallbackQuery(cb.id, botToken, { text: "Why sent." });
+    return;
+  }
+
+  if (action === "coverage" && isKnownStablecoinId(arg)) {
+    const meta = TRACKED_META_BY_ID.get(arg);
+    const status = await loadStatusForCoin(db, arg);
+    await sendToChat(chatId, buildCoverageMessage(meta?.symbol ?? arg, status), botToken, {
+      disableWebPagePreview: true,
+    });
+    await answerCallbackQuery(cb.id, botToken, { text: "Coverage sent." });
+    return;
+  }
+
+  if (action === "quicksub" && isKnownStablecoinId(arg)) {
+    const chatType = cb.message?.chat?.type ?? "private";
+    const isGroup = chatType === "group" || chatType === "supergroup";
+    const actorUserId = cb.from?.id != null ? String(cb.from.id) : null;
+    // Group chats route through the same admin gate as the slash commands so
+    // a single member cannot rewrite the chat's subscription state.
+    if (isGroup) {
+      if (!actorUserId) {
+        await answerCallbackQuery(cb.id, botToken, { text: "Only group admins can subscribe." });
+        return;
+      }
+      const member = await getCachedChatMember(db, botToken, chatId, actorUserId);
+      const isAdmin = member?.status === "creator" || member?.status === "administrator";
+      if (!isAdmin) {
+        await answerCallbackQuery(cb.id, botToken, { text: "Only group admins can subscribe." });
+        return;
+      }
+    }
+    const username = isGroup ? null : cb.from?.username ?? null;
+    const meta = TRACKED_META_BY_ID.get(arg);
+    try {
+      await upsertSubscriberAndSubscriptions(
+        db,
+        chatId,
+        username,
+        new Set(["dews", "depeg"]),
+        [arg],
+      );
+    } catch (err) {
+      console.error("[telegram-webhook] quicksub write failed:", err);
+      await answerCallbackQuery(cb.id, botToken, {
+        text: "Could not save subscription. Please try again.",
+      });
+      return;
+    }
+    await answerCallbackQuery(cb.id, botToken, {
+      text: `Subscribed to DEWS + depeg for ${meta?.symbol ?? arg}.`,
+    });
     return;
   }
 

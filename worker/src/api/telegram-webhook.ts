@@ -45,6 +45,7 @@ import {
   buildPresetUnavailableMessage,
   buildPresetUnsubscribeSummaryMessage,
   buildStatusAmbiguousMessage,
+  buildStatusDiscoveryKeyboard,
   buildStatusMessage,
   buildSubscriptionSummaryMessage,
   buildUnsubscribeSuccessMessage,
@@ -505,7 +506,9 @@ async function handleStatus(
   }
   const coin = resolution.matches[0];
   const status = await loadStatusForCoin(db, coin.id);
-  await replyToChat(chatId, buildStatusMessage(coin.symbol, status), botToken);
+  await replyToChat(chatId, buildStatusMessage(coin.symbol, status), botToken, {
+    replyMarkup: buildStatusDiscoveryKeyboard(coin.id),
+  });
 }
 
 async function handleBrief(db: D1Database, chatId: string, botToken: string): Promise<void> {

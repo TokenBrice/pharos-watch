@@ -347,6 +347,20 @@ function formatUsdCompact(value: number | null | undefined): string | null {
   return `$${value.toFixed(0)}`;
 }
 
+export function buildStatusDiscoveryKeyboard(stablecoinId: string): {
+  inline_keyboard: Array<Array<{ text: string; callback_data: string }>>;
+} {
+  return {
+    inline_keyboard: [
+      [
+        { text: "Why?", callback_data: `why:${stablecoinId}` },
+        { text: "Coverage", callback_data: `coverage:${stablecoinId}` },
+        { text: "Subscribe", callback_data: `quicksub:${stablecoinId}` },
+      ],
+    ],
+  };
+}
+
 export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
   const nowSec = Math.floor(Date.now() / 1000);
   const priceLine =
