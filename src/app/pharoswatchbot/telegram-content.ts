@@ -1,7 +1,7 @@
 import type { FaqItem } from "@/lib/faq";
 
 export const TELEGRAM_PAGE_DESCRIPTION =
-  "PharosWatchBot delivers stablecoin alerts on Telegram: DEWS threat bands, depegs and worsening, safety-grade shifts, and pre-launch launches. Per-coin, preset, or all-stablecoin. Daily digest and community channels alongside.";
+  "PharosWatchBot delivers stablecoin alerts on Telegram: DEWS threat bands, depegs and worsening, safety-grade shifts, and pre-launch assets going live. Per-coin, preset, or all-stablecoin. Daily digest and community channels alongside.";
 
 export const TELEGRAM_ACTIONS = [
   {

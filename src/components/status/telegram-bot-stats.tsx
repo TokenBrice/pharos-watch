@@ -31,6 +31,15 @@ function renderDelta(label: string, value: number | null) {
   );
 }
 
+function renderMetric(label: string, value: string | number | null | undefined) {
+  return (
+    <div className="flex items-center justify-between gap-4 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-mono tabular-nums">{value ?? "—"}</span>
+    </div>
+  );
+}
+
 export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds }: TelegramBotStatsProps) {
   if (!telegramBot) {
     return (
@@ -53,6 +62,9 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
       : lastDispatch.status === "degraded"
         ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
         : "bg-red-500/15 text-red-700 dark:text-red-400";
+  const pendingBacklog = telegramBot.pendingDeliveryBacklog;
+  const retryErrorClasses = Object.entries(telegramBot.retryErrorClassCounts ?? {})
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 
   const summaryCards = [
     {
@@ -111,6 +123,37 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
               {renderDelta("Flags on, no coins", telegramBot.emptyAlertChats)}
               {renderDelta("Muted with saved coins", telegramBot.mutedChatsWithSubscriptions)}
             </div>
+            <div className="border-t pt-3">
+              <div className="mb-2 text-xs font-medium text-muted-foreground">
+                Pending delivery telemetry
+              </div>
+              {renderMetric(
+                "Oldest pending age",
+                telegramBot.oldestPendingDeliveryAgeSec != null
+                  ? formatElapsedSeconds(telegramBot.oldestPendingDeliveryAgeSec)
+                  : null,
+              )}
+              {renderMetric("Backlog due", pendingBacklog?.due)}
+              {renderMetric("Backlog deferred", pendingBacklog?.deferred)}
+              {renderMetric("Backlog expired", pendingBacklog?.expired)}
+              {renderMetric("Preset query failures", telegramBot.presetQueryFailures ?? 0)}
+              {renderMetric("Inactive cleaned 7d", telegramBot.inactiveSubscribersCleanedThisWeek)}
+            </div>
+            {retryErrorClasses.length > 0 ? (
+              <div className="border-t pt-3">
+                <div className="mb-2 text-xs font-medium text-muted-foreground">
+                  Pending retry classes
+                </div>
+                <div className="space-y-1.5">
+                  {retryErrorClasses.map(([errorClass, count]) => (
+                    <div key={errorClass} className="flex items-center justify-between gap-4 text-sm">
+                      <span className="text-muted-foreground">{errorClass}</span>
+                      <span className="font-mono tabular-nums">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 

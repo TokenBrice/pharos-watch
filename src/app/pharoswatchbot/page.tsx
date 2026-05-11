@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   TELEGRAM_ACTIONS,
   TELEGRAM_ALERT_EXAMPLES,
@@ -49,7 +49,7 @@ export const metadata: Metadata = buildPageMetadata({
   ogImage: `${SITE_URL}/og-pharoswatchbot.png`,
 });
 
-const COIN_COUNT = ACTIVE_STABLECOINS.length;
+const COIN_COUNT = TRACKED_STABLECOINS.length;
 
 const TELEGRAM_ACTION_ICONS = {
   bot: Bot,
@@ -391,7 +391,7 @@ export default function PharosWatchBotPage() {
                   {COIN_COUNT.toLocaleString("en-US")}
                 </p>
                 <p className="mt-3 max-w-[36ch] text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
-                  active stablecoins, all eligible for alerts
+                  tracked stablecoins across active, frozen, and pre-launch coverage
                 </p>
               </div>
               <div>

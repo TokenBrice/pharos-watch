@@ -6,6 +6,8 @@ import { useApiQuery } from "./use-api-query";
 
 const FIVE_MIN = 300_000;
 
+// Public /pharoswatchbot telemetry contract. Keep rendered fields and
+// docs/telegram-alerts.md in sync with worker/src/api/telegram-pulse.ts.
 export function useTelegramPulse() {
   return useApiQuery<TelegramPulse>(
     ["telegram-pulse"],

@@ -17,6 +17,12 @@ const MONTH_TICK_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
   year: "2-digit",
 });
+const PULSE_UPDATED_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
 
 function formatCount(value: number): string {
   return NUMBER_FORMATTER.format(value);
@@ -30,6 +36,11 @@ function formatMonthTick(value: unknown): string {
   const timestamp = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(timestamp)) return "";
   return MONTH_TICK_FORMATTER.format(new Date(timestamp));
+}
+
+function formatUpdatedAt(value: number | undefined): string {
+  if (!value) return "updated every 5m";
+  return `updated ${PULSE_UPDATED_FORMATTER.format(new Date(value * 1000))}`;
 }
 
 function TelegramWatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoint[] }) {
@@ -99,7 +110,9 @@ export function TelegramPulseStrip() {
         alert follows
       </span>
       <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
-      <span className="text-muted-foreground">updated every 5m</span>
+      <span className="text-muted-foreground">
+        updated every {Math.round((data.updatedEverySeconds ?? 300) / 60)}m
+      </span>
       {data.topCoins.length > 0 && (
         <>
           <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
@@ -156,6 +169,37 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
   const topCoins = data.topCoins.slice(0, 5);
   const watcherHistory = data.watcherHistory ?? [];
   const latestHistoryPoint = watcherHistory.at(-1) ?? null;
+  const alertTypeChats = data.alertTypeChats;
+  const telemetryItems = [
+    {
+      label: "DEWS chats",
+      value: alertTypeChats?.dews,
+    },
+    {
+      label: "Depeg chats",
+      value: alertTypeChats?.depeg,
+    },
+    {
+      label: "Safety chats",
+      value: alertTypeChats?.safety,
+    },
+    {
+      label: "Launch chats",
+      value: alertTypeChats?.launch,
+    },
+    {
+      label: "All alert families",
+      value: alertTypeChats?.allTypes,
+    },
+    {
+      label: "Quiet hours enabled",
+      value: data.quietHoursEnabledChats,
+    },
+    {
+      label: "Queued deliveries",
+      value: data.pendingDeliveries,
+    },
+  ].filter((item): item is { label: string; value: number } => typeof item.value === "number");
 
   return (
     <section className={cn("space-y-6", className)} aria-label="Live Telegram adoption metrics">
@@ -168,7 +212,7 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
           <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Telegram pulse</h2>
         </div>
         <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[11px]">
-          Updated every 5m
+          {formatUpdatedAt(data.updatedAt)}
         </span>
       </div>
 
@@ -218,6 +262,21 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
           )}
         </div>
       </div>
+
+      {telemetryItems.length > 0 ? (
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" aria-label="Telegram aggregate alert telemetry">
+          {telemetryItems.map((item) => (
+            <div key={item.label} className="rounded-lg border border-border/55 bg-muted/25 px-3 py-2.5">
+              <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.16em] text-muted-foreground">
+                {item.label}
+              </p>
+              <p className="mt-1.5 font-mono text-xl font-semibold tabular-nums text-foreground">
+                {formatCount(item.value)}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-4 sm:px-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
