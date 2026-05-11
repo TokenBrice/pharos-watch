@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
 import { handleBackfillSupplyHistory } from "../backfill-supply-history";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { fetchHistoricalFxRates } from "../backfill-fx";
 
 stubCryptoForAuth();
 
@@ -20,6 +21,15 @@ vi.mock("../backfill-price-sources", () => ({
     },
   })),
 }));
+
+vi.mock("../backfill-fx", async () => {
+  const actual = await vi.importActual<typeof import("../backfill-fx")>("../backfill-fx");
+  return {
+    ...actual,
+    fetchHistoricalFxRates: vi.fn(async () => ({})),
+    fetchHistoricalSecondaryFxRates: vi.fn(async () => ({})),
+  };
+});
 
 function makeDb(capturedStatements: Array<{ sql: string; args: unknown[] }> = []): D1Database {
   const stmt = (_sql: string) => ({
@@ -131,6 +141,76 @@ describe("handleBackfillSupplyHistory", () => {
       expect.objectContaining({
         headers: expect.objectContaining({ "User-Agent": expect.any(String) }),
       }),
+    );
+  });
+
+  it("uses fiat FX history for a non-USD DefiLlama coin without CoinGecko history", async () => {
+    const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const day1 = 1_700_006_400;
+    const day2 = 1_700_092_800;
+
+    vi.mocked(fetchHistoricalFxRates).mockResolvedValue({
+      EUR: [
+        { timestamp: Math.floor(day1 / 86400) * 86400, rate: 1.1 },
+        { timestamp: Math.floor(day2 / 86400) * 86400, rate: 1.2 },
+      ],
+    });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          price: 1,
+          tokens: [
+            {
+              date: day1,
+              circulating: { peggedEUR: 1_000_000 },
+            },
+            {
+              date: day2,
+              circulating: { peggedEUR: 2_000_000 },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const res = await handleBackfillSupplyHistory(
+      makeDb(capturedStatements),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=euroe-membrane"),
+      true,
+      makeApiRequest("/api/backfill-supply-history?stablecoin=euroe-membrane", { adminKey: "secret" }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      coinsProcessed: number;
+      rowsInserted: number;
+      errors?: string[];
+    };
+    expect(body.coinsProcessed).toBe(1);
+    expect(body.rowsInserted).toBe(2);
+    expect(body.errors).toBeUndefined();
+
+    const inserts = capturedStatements.filter((stmt) =>
+      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+    );
+    expect(inserts).toHaveLength(2);
+    expect(inserts[0].args).toEqual([
+      "euroe-membrane",
+      Math.floor(day1 / 86400) * 86400,
+      1_100_000,
+      1.1,
+    ]);
+    expect(inserts[1].args).toEqual([
+      "euroe-membrane",
+      Math.floor(day2 / 86400) * 86400,
+      2_400_000,
+      1.2,
+    ]);
+    expect(fetchHistoricalFxRates).toHaveBeenCalledWith(
+      ["EUR"],
+      new Date(day1 * 1000).toISOString().slice(0, 10),
+      new Date(day2 * 1000).toISOString().slice(0, 10),
     );
   });
 

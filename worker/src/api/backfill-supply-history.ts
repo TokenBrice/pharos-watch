@@ -16,6 +16,14 @@ import { fetchEvmUint256AtBlock } from "../lib/evm-rpc";
 import { TOTAL_SUPPLY_SELECTOR } from "../lib/evm-selectors";
 import { extractDefiLlamaCoinChartPrices } from "./stablecoin-detail/shared";
 import { fetchMarketBackfillPriceSeries } from "./backfill-price-sources";
+import { interpolateRateAtTimestamp, type TimestampedRatePoint } from "@shared/lib/rate-series";
+import {
+  fetchHistoricalFxRates,
+  fetchHistoricalSecondaryFxRates,
+  OTHER_COIN_FX,
+  PEG_TO_FX,
+  SECONDARY_PEG_TO_FX,
+} from "./backfill-fx";
 
 const DEFAULT_BATCH_SIZE = 10;
 
@@ -27,6 +35,42 @@ interface TokenEntry {
 interface StablecoinDetail {
   price?: number;
   tokens?: TokenEntry[];
+}
+
+function tokenHistoryDateRange(tokens: TokenEntry[]): { startDate: string; endDate: string } | null {
+  const dates = tokens
+    .map((entry) => entry.date)
+    .filter((date) => Number.isFinite(date) && date > 0)
+    .sort((a, b) => a - b);
+  if (dates.length === 0) return null;
+  return {
+    startDate: new Date(dates[0] * 1000).toISOString().slice(0, 10),
+    endDate: new Date(dates[dates.length - 1] * 1000).toISOString().slice(0, 10),
+  };
+}
+
+async function fetchHistoricalPegFxPrices(
+  db: D1Database,
+  meta: (typeof PSI_ELIGIBLE_STABLECOINS)[number],
+  tokens: TokenEntry[],
+): Promise<TimestampedRatePoint[]> {
+  const range = tokenHistoryDateRange(tokens);
+  if (!range) return [];
+
+  const peg = meta.flags.pegCurrency;
+  const primaryFx = PEG_TO_FX[peg] ?? OTHER_COIN_FX[meta.id];
+  if (primaryFx) {
+    const series = await fetchHistoricalFxRates([primaryFx], range.startDate, range.endDate);
+    return series[primaryFx] ?? [];
+  }
+
+  const secondaryFx = SECONDARY_PEG_TO_FX[peg];
+  if (secondaryFx) {
+    const series = await fetchHistoricalSecondaryFxRates(db, [secondaryFx], range.startDate, range.endDate);
+    return series[secondaryFx] ?? [];
+  }
+
+  return [];
 }
 
 // Commodity tokens: use CoinGecko market_chart (historical market caps) as primary source.
@@ -323,11 +367,18 @@ export async function handleBackfillSupplyHistory(
           continue;
         }
 
+        if (needsConversion && historicalPrices.length === 0) {
+          const fxPrices = await fetchHistoricalPegFxPrices(db, meta, tokens);
+          historicalPrices = fxPrices.map((point) => ({
+            timestamp: point.timestamp,
+            price: point.rate,
+          }));
+        }
+
         // For non-USD coins: require historical price data by default.
         // Optional emergency fallback can use current price for only a short recent window.
-        const hasHistoricalPrices = historicalPrices.length > 0;
         const fallbackPrice = needsConversion && detail?.price ? detail.price : null;
-        if (needsConversion && !hasHistoricalPrices) {
+        if (needsConversion && historicalPrices.length === 0) {
           if (!allowConstantPriceFallback) {
             errors.push(
               `${meta.symbol}: non-USD coin missing historical prices (set allow-constant-price-fallback=true for emergency short-window fallback)`,
@@ -345,13 +396,23 @@ export async function handleBackfillSupplyHistory(
         }
 
         const priceBySnapshotDate = new Map<number, number>();
+        const historicalRateSeries = historicalPrices.map((point) => ({
+          timestamp: point.timestamp,
+          rate: point.price,
+        }));
         for (const point of historicalPrices) {
           const snapshotDate = Math.floor(point.timestamp / DAY_SECONDS) * DAY_SECONDS;
           priceBySnapshotDate.set(snapshotDate, point.price);
         }
 
         function findHistoricalPrice(snapshotDate: number): number | null {
-          return priceBySnapshotDate.get(snapshotDate) ?? null;
+          const exact = priceBySnapshotDate.get(snapshotDate);
+          if (exact != null) return exact;
+          if (needsConversion && historicalPrices.length > 0) {
+            const interpolated = interpolateRateAtTimestamp(historicalRateSeries, snapshotDate);
+            return interpolated && interpolated > 0 ? interpolated : null;
+          }
+          return null;
         }
 
         const stmts: D1PreparedStatement[] = [];
