@@ -402,6 +402,45 @@ describe("handleTelegramWebhook", () => {
     expect(body).not.toContain("not found");
   });
 
+  it("handles direct /brief and deprecated /market commands", async () => {
+    const db = mockD1([{ match: "FROM daily_digest", rows: [] }]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/brief"), "test-secret", "bot-token");
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/market"), "test-secret", "bot-token");
+
+    expect(sentMessageBody(0).text).toContain("No digest brief is available yet");
+    expect(sentMessageBody(1).text).toContain("No digest brief is available yet");
+  });
+
+  it("handles direct /top usage without touching D1", async () => {
+    const db = mockD1([]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/top"), "test-secret", "bot-token");
+
+    expect(sentMessageBody().text).toBe("Usage: /top depeg|dews|yield|liquidity|chains|safety");
+    expect(db.getHistory()).toHaveLength(1);
+    expect(db.getHistory()[0]?.sql).toContain("FROM telegram_pending_disambiguation");
+  });
+
+  it("handles direct /why and /coverage commands", async () => {
+    const db = mockD1([
+      { match: "FROM price_cache WHERE asset_id = ?", rows: [] },
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "FROM depeg_events", rows: [] },
+      { match: "FROM dex_liquidity", rows: [] },
+      { match: "FROM yield_data", rows: [] },
+      { match: "FROM cache WHERE key = ?", rows: [] },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/why NOTACOIN"), "test-secret", "bot-token");
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/coverage USDC"), "test-secret", "bot-token");
+
+    expect(sentMessageBody(0).text).toContain("not found");
+    expect(sentMessageBody(1).text).toContain("USDC coverage");
+    expect(sentMessageBody(1).text).toContain("Open coin page");
+  });
+
   it("/start with an unknown payload falls back to the wizard intro", async () => {
     const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
     const res = await handleTelegramWebhook(
