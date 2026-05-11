@@ -345,8 +345,9 @@ export default function PharosWatchBotPage() {
             aria-hidden="true"
             className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,var(--brand-accent)_20%,var(--brand-accent)_60%,transparent)] opacity-70"
           />
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.18fr)_minmax(320px,0.82fr)] lg:items-start">
-            <div className="space-y-7">
+          <div className="space-y-8 sm:space-y-10">
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1.18fr)_minmax(320px,0.82fr)] lg:items-center">
+              <div className="space-y-6">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground sm:text-[11px]">
                 <span aria-hidden="true" className="relative flex h-1.5 w-1.5">
                   <span className="absolute inset-0 animate-ping rounded-full bg-[var(--brand-accent)]/70" />
@@ -375,77 +376,77 @@ export default function PharosWatchBotPage() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] gap-x-5 gap-y-4 border-y border-border/55 py-5 sm:gap-x-7 sm:py-6">
-                <div className="border-r border-border/55 pr-5 sm:pr-7">
-                  <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
-                    Tracked universe
-                  </p>
-                  <p className="mt-3 font-mono text-[3.25rem] font-semibold leading-[0.9] tabular-nums text-foreground sm:text-[4.25rem] lg:text-[5.5rem]">
-                    {COIN_COUNT.toLocaleString("en-US")}
-                  </p>
-                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
-                    active stablecoins watched by the same risk pipeline
-                  </p>
-                </div>
-                <div className="grid grid-rows-2 divide-y divide-border/55">
-                  <div className="pb-4">
-                    <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
-                      Alert lane
-                    </p>
-                    <p className="mt-1.5 font-mono text-2xl font-semibold tabular-nums text-foreground sm:text-3xl">
-                      5m
-                    </p>
-                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground sm:text-xs">
-                      Telegram dispatcher cadence
-                    </p>
-                  </div>
-                  <div className="pt-4">
-                    <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
-                      First action
-                    </p>
-                    <p className="mt-1.5 font-mono text-2xl font-semibold tabular-nums text-foreground sm:text-3xl">
-                      Paste
-                    </p>
-                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground sm:text-xs">
-                      starter command into the bot
-                    </p>
-                  </div>
-                </div>
               </div>
 
-              <div className="rounded-xl border border-frost-blue/30 bg-frost-blue/8 p-5 dark:bg-frost-blue/6">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0 flex-1 space-y-3">
-                    <p className="pharos-kicker text-sky-700 dark:text-sky-300">Recommended first command</p>
-                    <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border/60 bg-background/85 px-3 py-2.5 shadow-[inset_0_1px_0_oklch(1_0_0_/_0.04)]">
-                      <span aria-hidden="true" className="font-mono text-sm font-semibold text-sky-700 dark:text-sky-300">
-                        ▸
-                      </span>
-                      <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[13px] font-medium text-foreground sm:text-sm">
-                        {RECOMMENDED_FIRST_COMMAND}
-                      </code>
-                      <CopyButton
-                        text={RECOMMENDED_FIRST_COMMAND}
-                        className="size-8 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
-                      />
-                    </div>
-                    <TelegramPulseStrip />
-                  </div>
-                  <Button asChild size="lg" className="shrink-0 gap-2">
-                    <a href="https://t.me/PharosWatchBot" target="_blank" rel="noopener noreferrer">
-                      Open Bot
-                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                    </a>
-                  </Button>
-                </div>
-                <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                  Open the bot first, then paste the command above. It subscribes you to DEWS and depeg alerts for the
-                  top USD stablecoin preset.
+              <HeroPreview />
+            </div>
+
+            <div className="grid gap-x-6 gap-y-5 border-y border-border/55 py-6 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)] sm:gap-x-10 sm:py-7">
+              <div className="border-b border-border/55 pb-5 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-8">
+                <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
+                  Tracked universe
+                </p>
+                <p className="mt-3 font-mono text-[3.5rem] font-semibold leading-[0.9] tabular-nums text-foreground sm:text-[4.5rem] lg:text-[6rem]">
+                  {COIN_COUNT.toLocaleString("en-US")}
+                </p>
+                <p className="mt-3 max-w-[34ch] text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
+                  active stablecoins watched by the same risk pipeline
+                </p>
+              </div>
+              <div className="border-b border-border/55 pb-5 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-8">
+                <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
+                  Alert lane
+                </p>
+                <p className="mt-3 font-mono text-3xl font-semibold leading-[0.95] tabular-nums text-foreground sm:text-4xl lg:text-5xl">
+                  5m
+                </p>
+                <p className="mt-3 text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
+                  Telegram dispatcher cadence for DEWS, depeg, safety, and launch signals
+                </p>
+              </div>
+              <div>
+                <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
+                  First action
+                </p>
+                <p className="mt-3 font-mono text-3xl font-semibold leading-[0.95] tabular-nums text-foreground sm:text-4xl lg:text-5xl">
+                  Paste
+                </p>
+                <p className="mt-3 text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
+                  open the bot, then send the recommended starter command
                 </p>
               </div>
             </div>
 
-            <HeroPreview />
+            <div className="rounded-xl border border-frost-blue/30 bg-frost-blue/8 p-5 dark:bg-frost-blue/6 sm:p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 flex-1 space-y-3">
+                  <p className="pharos-kicker text-sky-700 dark:text-sky-300">Recommended first command</p>
+                  <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border/60 bg-background/85 px-3 py-2.5 shadow-[inset_0_1px_0_oklch(1_0_0_/_0.04)]">
+                    <span aria-hidden="true" className="font-mono text-sm font-semibold text-sky-700 dark:text-sky-300">
+                      ▸
+                    </span>
+                    <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[13px] font-medium text-foreground sm:text-sm">
+                      {RECOMMENDED_FIRST_COMMAND}
+                    </code>
+                    <CopyButton
+                      text={RECOMMENDED_FIRST_COMMAND}
+                      className="size-8 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    />
+                  </div>
+                  <TelegramPulseStrip />
+                </div>
+                <Button asChild size="lg" className="shrink-0 gap-2">
+                  <a href="https://t.me/PharosWatchBot" target="_blank" rel="noopener noreferrer">
+                    Open Bot
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </a>
+                </Button>
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                Open the bot first, then paste the command above. It subscribes you to DEWS and depeg alerts for the top
+                USD stablecoin preset.
+              </p>
+            </div>
           </div>
         </section>
 
