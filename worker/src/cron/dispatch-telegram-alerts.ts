@@ -36,6 +36,7 @@ import {
 import {
   drainPendingQueue,
   cleanupExpiredPendingAlerts,
+  loadChatsInBackoff,
 } from "./telegram-pending-queue";
 import {
   buildSubscriberQueue,
@@ -102,6 +103,7 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     freshSent: 0,
     freshRetryQueued: 0,
     freshPermanentFailures: 0,
+    freshDeferredPerChat: 0,
     chatsWithActiveSnooze,
     safetyAlertSourceState: "missing",
     safetyAlertSourceAgeSeconds: null,
@@ -688,6 +690,8 @@ export async function dispatchTelegramAlerts(
         ),
     );
 
+    const chatsInBackoff = await loadChatsInBackoff(db, nowSec);
+
     const {
       subscribersNotified,
       freshSent,
@@ -696,6 +700,7 @@ export async function dispatchTelegramAlerts(
       blockedUsersCleanupFailed,
       freshAttempted,
       freshRetryQueued,
+      freshDeferredPerChat,
       pendingEnqueued,
       cappedAtLimit,
     } = await deliverTelegramSubscriberQueue({
@@ -705,6 +710,7 @@ export async function dispatchTelegramAlerts(
       drainResult,
       maxMessagesPerRun: MAX_MESSAGES_PER_RUN,
       nowSec,
+      chatsInBackoff,
       signal,
     });
 
@@ -742,6 +748,7 @@ export async function dispatchTelegramAlerts(
       freshSent,
       freshRetryQueued,
       freshPermanentFailures,
+      freshDeferredPerChat,
       chatsWithActiveSnooze,
       safetyAlertSourceState: safetySourceAssessment.state,
       safetyAlertSourceAgeSeconds: safetySourceAssessment.ageSeconds,

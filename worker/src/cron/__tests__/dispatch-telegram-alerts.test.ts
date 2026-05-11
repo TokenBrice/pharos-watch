@@ -1240,9 +1240,10 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.messagesSent).toBe(0);
   });
 
-  it("defers fresh sends when pending queue hits a Telegram rate limit", async () => {
+  it("isolates rate-limit deferral to the affected chat and still sends fresh alerts for other chats", async () => {
     const now = Math.floor(Date.now() / 1000);
 
+    // Pending drain returns 429 for old-chat
     mockSendToChat.mockResolvedValueOnce({
       ok: false,
       blocked: false,
@@ -1270,8 +1271,9 @@ describe("dispatchTelegramAlerts", () => {
         rows: [{ id: 1, chat_id: "old-chat", message_html: "<b>Old</b>", disable_notification: 0, created_at: now - 60, attempts: 0 }],
       },
       { match: "sub.alert_dews = 1", rows: [{ stablecoin_id: "usdc-circle", chat_id: "fresh-chat", last_active_at: now }] },
-      { match: "UPDATE telegram_pending_alerts", rows: [] },
-      { match: "INSERT INTO telegram_pending_alerts", rows: [] },
+      { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
+      // loadChatsInBackoff query: old-chat is in backoff after the drain updates not_before_at
+      { match: "SELECT DISTINCT chat_id", rows: [{ chat_id: "old-chat" }] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
@@ -1280,19 +1282,69 @@ describe("dispatchTelegramAlerts", () => {
       pendingAttempted: number;
       pendingRetryQueued: number;
       freshAttempted: number;
+      freshSent: number;
+      freshDeferredPerChat: number;
       pendingEnqueued: number;
     };
 
+    // old-chat: rate-limited pending drain, retry-queued
     expect(metadata.pendingAttempted).toBe(1);
     expect(metadata.pendingRetryQueued).toBe(1);
-    expect(metadata.freshAttempted).toBe(0);
-    expect(metadata.pendingEnqueued).toBe(1);
-    expect(mockSendBatch).not.toHaveBeenCalled();
+    // fresh-chat: NOT in backoff (different chat), proceeds against fresh budget
+    expect(metadata.freshAttempted).toBe(1);
+    expect(metadata.freshSent).toBe(1);
+    expect(metadata.freshDeferredPerChat).toBe(0);
+    expect(mockSendBatch).toHaveBeenCalled();
+  });
 
-    const insertCall = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"));
-    expect(insertCall?.binds[4]).toBe(now + 45);
-    expect(insertCall?.binds[5]).toBe("rate_limit");
-    expect(insertCall?.binds[6]).toBe(45);
+  it("defers fresh alerts for chats already in per-chat backoff without sending", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      if (key === "alert:depeg-snapshot") return { value: "{}", updatedAt: now - 60 };
+      if (key === "alert:safety-snapshot") return { value: "{}", updatedAt: now - 60 };
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [{ stablecoin_id: "usdc-circle", score: 55, band: "WARNING", signals_json: "{}" }] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      {
+        match: "sub.alert_dews = 1",
+        rows: [
+          { stablecoin_id: "usdc-circle", chat_id: "chat-A", last_active_at: now },
+          { stablecoin_id: "usdc-circle", chat_id: "chat-B", last_active_at: now - 1 },
+        ],
+      },
+      // chat-A is in backoff from a previous run; chat-B is not
+      { match: "SELECT DISTINCT chat_id", rows: [{ chat_id: "chat-A" }] },
+      { match: "INSERT INTO telegram_pending_alerts", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      freshAttempted: number;
+      freshSent: number;
+      freshDeferredPerChat: number;
+      pendingEnqueued: number;
+    };
+
+    // chat-B fresh send proceeds, chat-A is deferred and not sent
+    expect(metadata.freshAttempted).toBe(1);
+    expect(metadata.freshSent).toBe(1);
+    expect(metadata.freshDeferredPerChat).toBe(1);
+    expect(metadata.pendingEnqueued).toBe(1);
+
+    // Only chat-B was sent in this run
+    const sendBatchCalls = mockSendBatch.mock.calls;
+    const sentChatIds = sendBatchCalls.flatMap(
+      (call) => (call[0] as Array<{ chatId: string }>).map((m) => m.chatId),
+    );
+    expect(sentChatIds).toEqual(["chat-B"]);
   });
 
   it("requeues the untouched fresh-send tail when batch sending stops on a rate limit", async () => {

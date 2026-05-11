@@ -8,8 +8,15 @@ vi.mock("../../lib/telegram", async (importOriginal) => {
   return { ...actual, sendToChat: mockSendToChat };
 });
 
-const { disableBlockedSubscriber, drainPendingQueue, enqueuePendingAlerts, cleanupExpiredPendingAlerts, PENDING_TTL_SEC, buildDedupeKey } =
-  await import("../telegram-pending-queue");
+const {
+  disableBlockedSubscriber,
+  drainPendingQueue,
+  enqueuePendingAlerts,
+  cleanupExpiredPendingAlerts,
+  loadChatsInBackoff,
+  PENDING_TTL_SEC,
+  buildDedupeKey,
+} = await import("../telegram-pending-queue");
 const { TELEGRAM_SPLIT_VERSION } = await import("../../lib/telegram-alerts");
 
 beforeEach(() => {
@@ -348,6 +355,34 @@ describe("buildDedupeKey", () => {
     const chunk1 = buildDedupeKey({ chatId: "100", html: "c1", canonicalHtml, disableNotification: false, chunkIndex: 1 });
     const chunk2 = buildDedupeKey({ chatId: "100", html: "c2", canonicalHtml, disableNotification: false, chunkIndex: 2 });
     expect(new Set([chunk0, chunk1, chunk2]).size).toBe(3);
+  });
+});
+
+describe("loadChatsInBackoff", () => {
+  it("returns the set of chat ids whose pending rows have not_before_at in the future", async () => {
+    const nowSec = 5000;
+    const db = mockD1([
+      {
+        match: "SELECT DISTINCT chat_id",
+        rows: [{ chat_id: "chat-A" }, { chat_id: "chat-B" }],
+      },
+    ]);
+
+    const result = await loadChatsInBackoff(db, nowSec);
+    expect(result).toEqual(new Set(["chat-A", "chat-B"]));
+
+    const history = db.getHistory();
+    const select = history.find((entry) => entry.sql.includes("SELECT DISTINCT chat_id"));
+    expect(select?.sql).toContain("not_before_at IS NOT NULL");
+    expect(select?.sql).toContain("not_before_at > ?");
+    expect(select?.binds).toEqual([nowSec]);
+  });
+
+  it("returns an empty set when no rows are in backoff", async () => {
+    const db = mockD1([
+      { match: "SELECT DISTINCT chat_id", rows: [] },
+    ]);
+    expect(await loadChatsInBackoff(db, 1000)).toEqual(new Set());
   });
 });
 

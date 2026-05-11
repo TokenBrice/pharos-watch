@@ -333,6 +333,21 @@ export async function enqueuePendingAlerts(
   await batchExecute(db, stmts);
 }
 
+export async function loadChatsInBackoff(
+  db: D1Database,
+  nowSec: number,
+): Promise<Set<string>> {
+  const rows = await db
+    .prepare(
+      `SELECT DISTINCT chat_id
+         FROM telegram_pending_alerts
+        WHERE not_before_at IS NOT NULL AND not_before_at > ?`,
+    )
+    .bind(nowSec)
+    .all<{ chat_id: string }>();
+  return new Set((rows.results ?? []).map((row) => row.chat_id));
+}
+
 export async function cleanupExpiredPendingAlerts(
   db: D1Database,
   nowSec: number,

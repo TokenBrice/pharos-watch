@@ -63,6 +63,7 @@ describe("status-metadata", () => {
       freshSent: 3,
       freshRetryQueued: 1,
       freshPermanentFailures: 0,
+      freshDeferredPerChat: null,
       pendingAttempted: 2,
       pendingDrained: 1,
       pendingRetryQueued: 0,

@@ -361,9 +361,13 @@ Retry and deferral metadata lives on the pending rows:
 
 The `dedupe_key` is hashed from the **pre-split canonical message body**, the chunk index, and the `TELEGRAM_SPLIT_VERSION` constant (`worker/src/lib/telegram-alerts.ts`). Hashing the canonical body — not the post-split chunk HTML — keeps the key stable when `splitMessage` is refactored, so in-flight pending rows survive unrelated code changes. Bump `TELEGRAM_SPLIT_VERSION` whenever the splitting algorithm changes in a way that should deterministically invalidate older queued chunks.
 
-If Telegram rate-limits a pending drain, fresh alerts are queued instead of sent in the
-same run. The queue stores Telegram's `retry_after` value when available; otherwise it
-uses a 60-second retry floor.
+Rate-limit isolation is per-chat. A 429 response stamps `not_before_at` on the affected
+chat's pending row and defers only that chat in subsequent runs; other chats continue
+to drain and to receive fresh alerts against the per-run budget. At the start of each
+fresh-send pass, the dispatcher loads `DISTINCT chat_id` for rows whose `not_before_at`
+is still in the future and routes their fresh chunks back to the queue
+(`freshDeferredPerChat` in the dispatch metadata). The queue stores Telegram's
+`retry_after` value when available; otherwise it uses a 60-second retry floor.
 
 This design ensures snapshots always stay current (events are never "held back") while
 guaranteeing delivery for large subscriber populations.

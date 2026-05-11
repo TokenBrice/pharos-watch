@@ -135,15 +135,23 @@ export function buildSubscriberQueue(
 export function splitFreshQueue(
   subscriberQueue: RoutedSubscriberAlert[],
   freshBudget: number,
+  deferredChats: ReadonlySet<string> = new Set(),
 ): {
   toSend: RoutedSubscriberAlert[];
   toEnqueue: RoutedSubscriberAlert[];
+  deferredPerChat: RoutedSubscriberAlert[];
 } {
   const toSend: RoutedSubscriberAlert[] = [];
   const toEnqueue: RoutedSubscriberAlert[] = [];
+  const deferredPerChat: RoutedSubscriberAlert[] = [];
   let allocatedFreshChunks = 0;
 
   for (const sub of subscriberQueue) {
+    if (deferredChats.has(sub.chatId)) {
+      deferredPerChat.push(sub);
+      toEnqueue.push(sub);
+      continue;
+    }
     if (allocatedFreshChunks + sub.chunks.length <= freshBudget) {
       toSend.push(sub);
       allocatedFreshChunks += sub.chunks.length;
@@ -152,7 +160,7 @@ export function splitFreshQueue(
     }
   }
 
-  return { toSend, toEnqueue };
+  return { toSend, toEnqueue, deferredPerChat };
 }
 
 export function expandSubscriberChunks(

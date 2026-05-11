@@ -302,6 +302,7 @@ export interface TelegramDispatchCronResult {
   freshSent: number;
   freshRetryQueued: number;
   freshPermanentFailures: number;
+  freshDeferredPerChat: number;
   pendingAttempted: number;
   pendingDrained: number;
   pendingRetryQueued: number;
@@ -345,6 +346,7 @@ export interface TelegramDispatchCronMetadata {
   freshSent: number | null;
   freshRetryQueued: number | null;
   freshPermanentFailures: number | null;
+  freshDeferredPerChat: number | null;
   pendingAttempted: number | null;
   pendingDrained: number | null;
   pendingRetryQueued: number | null;

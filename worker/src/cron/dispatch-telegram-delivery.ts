@@ -16,6 +16,7 @@ interface DeliverTelegramSubscriberQueueOptions {
   drainResult: PendingDrainResult;
   maxMessagesPerRun: number;
   nowSec: number;
+  chatsInBackoff: ReadonlySet<string>;
   signal?: AbortSignal;
 }
 
@@ -27,6 +28,7 @@ export interface DeliverTelegramSubscriberQueueResult {
   blockedUsersCleanupFailed: number;
   freshAttempted: number;
   freshRetryQueued: number;
+  freshDeferredPerChat: number;
   pendingEnqueued: number;
   cappedAtLimit: boolean;
 }
@@ -38,12 +40,15 @@ export async function deliverTelegramSubscriberQueue({
   drainResult,
   maxMessagesPerRun,
   nowSec,
+  chatsInBackoff,
   signal,
 }: DeliverTelegramSubscriberQueueOptions): Promise<DeliverTelegramSubscriberQueueResult> {
   const freshBudget = Math.max(0, maxMessagesPerRun - drainResult.attempted);
-  const { toSend, toEnqueue } = drainResult.rateLimited
-    ? { toSend: [], toEnqueue: subscriberQueue }
-    : splitFreshQueue(subscriberQueue, freshBudget);
+  const { toSend, toEnqueue, deferredPerChat } = splitFreshQueue(
+    subscriberQueue,
+    freshBudget,
+    chatsInBackoff,
+  );
   const sendList = expandSubscriberChunks(toSend);
   const {
     subscribersNotified,
@@ -65,14 +70,7 @@ export async function deliverTelegramSubscriberQueue({
   const overflowMessages = expandSubscriberChunks(toEnqueue, blockedChats);
 
   if (overflowMessages.length > 0) {
-    await enqueuePendingAlerts(
-      db,
-      overflowMessages,
-      nowSec,
-      drainResult.rateLimited
-        ? { notBeforeAt: drainResult.notBeforeAt, lastErrorClass: "rate_limit", retryAfterSec: drainResult.retryAfterSec }
-        : {},
-    );
+    await enqueuePendingAlerts(db, overflowMessages, nowSec, {});
   }
 
   for (const retry of retryableFreshMessages) {
@@ -85,6 +83,8 @@ export async function deliverTelegramSubscriberQueue({
     });
   }
 
+  const cappedOverflow = toEnqueue.length - deferredPerChat.length;
+
   return {
     subscribersNotified,
     freshSent,
@@ -93,7 +93,8 @@ export async function deliverTelegramSubscriberQueue({
     blockedUsersCleanupFailed,
     freshAttempted: sendList.length,
     freshRetryQueued: retryableFreshMessages.length,
+    freshDeferredPerChat: deferredPerChat.length,
     pendingEnqueued: overflowMessages.length + retryableFreshMessages.length,
-    cappedAtLimit: toEnqueue.length > 0,
+    cappedAtLimit: cappedOverflow > 0,
   };
 }

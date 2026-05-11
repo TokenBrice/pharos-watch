@@ -63,6 +63,7 @@ export function parseTelegramDispatchCronMetadata(value: unknown): TelegramDispa
     freshSent: readMetadataNumber(record.freshSent),
     freshRetryQueued: readMetadataNumber(record.freshRetryQueued),
     freshPermanentFailures: readMetadataNumber(record.freshPermanentFailures),
+    freshDeferredPerChat: readMetadataNumber(record.freshDeferredPerChat),
     pendingAttempted: readMetadataNumber(record.pendingAttempted),
     pendingDrained: readMetadataNumber(record.pendingDrained),
     pendingRetryQueued: readMetadataNumber(record.pendingRetryQueued),
