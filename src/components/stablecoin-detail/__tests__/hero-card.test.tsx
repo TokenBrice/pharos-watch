@@ -278,9 +278,9 @@ describe("HeroCard", () => {
   it("prefers resolved report-card blacklist status for inherited-risk coins", () => {
     const inheritedCoin: StablecoinMeta = {
       ...coin,
-      id: "usde-ethena",
-      name: "Ethena USDe",
-      symbol: "USDe",
+      id: "mock-inherited",
+      name: "Mock Inherited",
+      symbol: "MCK",
       canBeBlacklisted: undefined,
       flags: {
         ...coin.flags,
@@ -291,8 +291,8 @@ describe("HeroCard", () => {
     const html = renderToStaticMarkup(
       <HeroCard
         coin={inheritedCoin}
-        coinData={{ ...coinData, id: "usde-ethena", name: "Ethena USDe", symbol: "USDe" }}
-        logoSrc="/logos/usde.svg"
+        coinData={{ ...coinData, id: "mock-inherited", name: "Mock Inherited", symbol: "MCK" }}
+        logoSrc="/logos/mock.svg"
         isNavToken={false}
         mcap={1_000_000_000}
         supply={1_000_000_000}
@@ -308,7 +308,7 @@ describe("HeroCard", () => {
         liquidityData={liquidityData}
         yieldRanking={null}
         stressSignal={null}
-        reportCard={{ ...reportCardWithInheritedBlacklistRisk, id: "usde-ethena", name: "Ethena USDe", symbol: "USDe" }}
+        reportCard={{ ...reportCardWithInheritedBlacklistRisk, id: "mock-inherited", name: "Mock Inherited", symbol: "MCK" }}
         onOpenFeedback={() => {}}
       />,
     );

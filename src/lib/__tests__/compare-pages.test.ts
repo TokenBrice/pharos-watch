@@ -7,7 +7,7 @@ import {
 } from "@/lib/compare-pages";
 
 describe("compare page blacklist copy", () => {
-  it("uses resolved blacklist status instead of raw metadata flags", () => {
+  it("surfaces Dilutable status in static comparison copy", () => {
     const page = getPrimaryStaticComparisonPageForCoin("usde-ethena");
 
     expect(page).not.toBeNull();
@@ -16,7 +16,10 @@ describe("compare page blacklist copy", () => {
     const blacklistRow = rows.find((row) => row.label === "Blacklist controls");
 
     expect(blacklistRow).toBeDefined();
-    expect(blacklistRow?.left === "Upstream freeze exposure" || blacklistRow?.right === "Upstream freeze exposure").toBe(true);
+    expect(
+      blacklistRow?.left === "Admin can dilute holders via unbounded mint" ||
+        blacklistRow?.right === "Admin can dilute holders via unbounded mint",
+    ).toBe(true);
   });
 });
 
