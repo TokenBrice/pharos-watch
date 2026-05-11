@@ -146,6 +146,61 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       sourceRef("Circle USDC terms", "https://www.circle.com/legal/usdc-terms", ["route", "capacity", "access", "fees"]),
     ],
   },
+  "bfusd-binance": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
+    settlementModel: "days",
+    executionModel: "opaque",
+    routeStatus: "open",
+    costModel: documentedVariableFee(
+      "Binance terms allow variable fees, delays, limits, and suspension rights for BFUSD purchase and redemption",
+    ),
+    docs: [
+      sourceRef(
+        "Binance BFUSD FAQ",
+        "https://www.binance.com/en/support/faq/what-is-bfusd-and-how-to-get-started-with-bfusd-2bb2db6e81bd4958996307bb4b206d97",
+        ["route", "access"],
+      ),
+      sourceRef(
+        "Binance BFUSD product terms",
+        "https://bin.bnbstatic.com/static/cms/cg08ou2ak0tn7mcplvfg/file/c1dd5e9f6a6191ca85b3cd256bd831884372530e3b4204b9006bf273650c6f5b.pdf",
+        ["route", "capacity", "fees", "settlement"],
+      ),
+    ],
+    notes: [
+      "BFUSD is modeled as a Binance-account issuer route, not an on-chain token redemption path; Binance may delay or suspend redemption under its terms",
+    ],
+  },
+  "pathusd-bridge": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
+    settlementModel: "same-day",
+    routeStatus: "open",
+    costModel: documentedVariableFee(
+      "Bridge-supported pathUSD exchange/redemption uses Bridge rails; public materials reviewed do not publish one fixed pathUSD redemption fee",
+    ),
+    docs: [
+      sourceRef("Tempo pathUSD docs", "https://docs.tempo.xyz/protocol/exchange/quote-tokens#pathusd", ["route", "access", "fees"]),
+      sourceRef("Bridge FAQ", "https://bridge.xyz/faq", ["capacity", "settlement", "fees"]),
+    ],
+    notes: [
+      "Modeled as verified Bridge/Tempo primary-market redeemability into USDC rather than independently measured instant on-chain liquidity",
+    ],
+  },
+  "usp-pareto-credit": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
+    routeStatus: "open",
+    costModel: documentedVariableFee(
+      "Pareto docs describe verified-user USP mint/redeem flow; public materials reviewed do not publish a single fixed redemption fee",
+    ),
+    docs: [
+      sourceRef("Pareto USP docs", "https://docs.pareto.credit/product/usp", ["route", "access", "capacity", "fees", "settlement"]),
+    ],
+    notes: [
+      "Modeled for verified primary-market users; unverified secondary-market holders still depend on market liquidity or onboarding before direct redemption",
+    ],
+  },
   "pyusd-paypal": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,

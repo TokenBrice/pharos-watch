@@ -1,0 +1,53 @@
+{
+  "id": "djed-coti",
+  "name": "Djed Stablecoin",
+  "symbol": "DJED",
+  "llamaId": "93",
+  "detailProvider": "defillama",
+  "geckoId": "djed",
+  "cmcSlug": "djed",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "ADA reserves held by the Cardano Djed protocol, with SHEN reserve-coin holders absorbing surplus reserve volatility",
+  "pegMechanism": "Overcollateralized Cardano stablecoin where DJED can be minted and burned against ADA while SHEN maintains the reserve ratio band",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://djed.xyz/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://cotinetwork.medium.com/djed-is-now-available-on-mainnet-9a2ac66daea4"
+    },
+    {
+      "label": "Dapp",
+      "url": "https://app.djed.xyz/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "cardano",
+      "address": "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61446a65644d6963726f555344",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": false,
+  "chainTier": "mature-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "ADA reserves in the Cardano Djed contract",
+      "pct": 100,
+      "risk": "high"
+    }
+  ]
+}

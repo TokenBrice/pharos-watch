@@ -32,6 +32,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   hyperliquid:      { name: "Hyperliquid L1", explorerUrl: "https://app.hyperliquid.xyz/explorer", evmChainId: null,  type: "other", logoPath: "/chains/hyperliquid-l1.png" },
   megaeth:   { name: "MegaETH",   explorerUrl: "https://megaexplorer.xyz",          evmChainId: 6342,  type: "evm",  logoPath: "/chains/megaeth.png", darkInvert: true },
   monad:     { name: "Monad",     explorerUrl: "https://explorer.monad.xyz",       evmChainId: 143,   type: "evm",  logoPath: "/chains/monad.png"     },
+  tempo:     { name: "Tempo",     explorerUrl: "https://explorer.tempo.xyz",       evmChainId: 4217,  type: "evm",  logoPath: "/chains/tempo.svg"     },
   xdc:       { name: "XDC Network",explorerUrl: "https://xdcscan.io",             evmChainId: 50,    type: "evm",  logoPath: "/chains/xdc.png"       },
   redbelly:  { name: "Redbelly Network",explorerUrl: "https://redbelly.routescan.io", evmChainId: 151, type: "evm", logoPath: "/chains/redbelly.svg" },
   mantle:    { name: "Mantle",    explorerUrl: "https://mantlescan.xyz",           evmChainId: 5000,  type: "evm",  logoPath: "/chains/mantle.png"    },
@@ -142,6 +143,7 @@ export const CHAIN_RESILIENCE_TIER: Partial<Record<string, ChainResilienceTier>>
   songbird: 3,      // canary network
   moonriver: 3,     // canary network
   plasma: 3,        // very new, minimal validation
+  tempo: 3,         // new payment-focused L1
   viction: 3,       // low activity, centralized
 
   // Everything else defaults to tier 2 via getChainResilienceTier()

@@ -1,0 +1,71 @@
+{
+  "id": "xai-silo-finance",
+  "name": "XAI Silo Finance",
+  "symbol": "XAI",
+  "llamaId": "89",
+  "detailProvider": "defillama",
+  "cmcSlug": "xai-silo-finance",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Overcollateralized Silo credit-line collateral, initially ETH and USDC, governed through Silo DAO credit-line parameters",
+  "pegMechanism": "Users borrow XAI against approved Silo collateral and repay XAI to close debt; SiloDAO controls mint and burn capacity through credit-line parameters",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.silo.finance/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.silo.finance/"
+    },
+    {
+      "label": "Governance",
+      "url": "https://snapshot.org/#/silodao.eth"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "Silo ETH and USDC credit-line collateral",
+      "pct": 100,
+      "risk": "medium"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "xai-silo-finance",
+    "display": {
+      "url": "https://docs.silo.finance/",
+      "label": "Silo docs"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "fallbackRpcUrl": "https://eth.llamarpc.com"
+    }
+  }
+}

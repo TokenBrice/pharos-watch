@@ -1392,6 +1392,67 @@
     ]
   },
   {
+    "id": "bfusd-binance",
+    "detailProvider": "coingecko",
+    "name": "BFUSD",
+    "symbol": "BFUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Binance-owned BFUSD Collateral Pool assets, hedging portfolio positions, and a reserve fund described in Binance BFUSD terms",
+    "pegMechanism": "Binance account product purchased and redeemed 1:1 against supported USD stablecoins inside Binance, with Binance-controlled fees, limits, delays, and suspension rights",
+    "geckoId": "bfusd",
+    "cmcSlug": "bfusd",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.binance.com/en/support/faq/what-is-bfusd-and-how-to-get-started-with-bfusd-2bb2db6e81bd4958996307bb4b206d97",
+      "provider": "Binance BFUSD product disclosures"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.binance.com/en/bfusd"
+      },
+      {
+        "label": "Docs",
+        "url": "https://www.binance.com/en/support/faq/what-is-bfusd-and-how-to-get-started-with-bfusd-2bb2db6e81bd4958996307bb4b206d97"
+      },
+      {
+        "label": "Terms",
+        "url": "https://bin.bnbstatic.com/static/cms/cg08ou2ak0tn7mcplvfg/file/c1dd5e9f6a6191ca85b3cd256bd831884372530e3b4204b9006bf273650c6f5b.pdf"
+      }
+    ],
+    "canBeBlacklisted": true,
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "cex",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Binance BFUSD collateral pool, hedging portfolio, and reserve fund",
+        "pct": 100,
+        "risk": "very-high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Binance account product",
+        "message": "BFUSD is not a withdrawable on-chain token in Pharos metadata. Reserve and redemption claims depend on Binance product terms and account eligibility rather than independently verifiable collateral."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Binance BFUSD daily APR / rewards",
+      "yieldType": "governance-set"
+    }
+  },
+  {
     "id": "bold-liquity",
     "llamaId": "269",
     "detailProvider": "defillama",
@@ -4366,6 +4427,164 @@
     }
   },
   {
+    "id": "djed-coti",
+    "llamaId": "93",
+    "detailProvider": "defillama",
+    "name": "Djed Stablecoin",
+    "symbol": "DJED",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "ADA reserves held by the Cardano Djed protocol, with SHEN reserve-coin holders absorbing surplus reserve volatility",
+    "pegMechanism": "Overcollateralized Cardano stablecoin where DJED can be minted and burned against ADA while SHEN maintains the reserve ratio band",
+    "geckoId": "djed",
+    "cmcSlug": "djed",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://djed.xyz/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://cotinetwork.medium.com/djed-is-now-available-on-mainnet-9a2ac66daea4"
+      },
+      {
+        "label": "Dapp",
+        "url": "https://app.djed.xyz/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "cardano",
+        "address": "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61446a65644d6963726f555344",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": false,
+    "chainTier": "mature-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "ADA reserves in the Cardano Djed contract",
+        "pct": 100,
+        "risk": "high"
+      }
+    ]
+  },
+  {
+    "id": "dllr-sovryn",
+    "llamaId": "160",
+    "detailProvider": "defillama",
+    "name": "Sovryn Dollar",
+    "symbol": "DLLR",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Basket of BTC-backed Rootstock stablecoins, currently dominated by Sovryn Zero ZUSD with a small Dollar on Chain balance",
+    "pegMechanism": "Mynt mints and redeems DLLR 1:1 against accepted bAssets; current supported bAssets include ZUSD and DOC",
+    "geckoId": "sovryn-dollar",
+    "cmcSlug": "sovryn-dollar",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://sovryn.com/sovryn-dollar"
+      },
+      {
+        "label": "Dapp",
+        "url": "https://app.mynt.xyz/"
+      },
+      {
+        "label": "Explorer",
+        "url": "https://rootstock.blockscout.com/token/0xc1411567d2670e24d9c4daaa7cda95686e1250aa"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "rootstock",
+        "address": "0xc1411567d2670e24d9c4daaa7cda95686e1250aa",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": false,
+    "chainTier": "mature-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "Sovryn Zero ZUSD",
+        "pct": 99.998,
+        "risk": "medium"
+      },
+      {
+        "name": "Dollar on Chain DOC",
+        "pct": 0.002,
+        "risk": "medium",
+        "coinId": "doc-money-on-chain",
+        "depType": "collateral"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "dllr-sovryn",
+      "display": {
+        "url": "https://app.mynt.xyz/",
+        "label": "Mynt reserves"
+      },
+      "adapter": "evm-branch-balances",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "rootstock",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "rpcUrl": "https://public-node.rsk.co",
+        "branches": [
+          {
+            "name": "Sovryn Zero ZUSD",
+            "holder": "0x5f777270259e32f79589fe82269db6209f7b7582",
+            "token": {
+              "chain": "rootstock",
+              "address": "0xdb107fa69e33f05180a4c2ce9c2e7cb481645c2d",
+              "decimals": 18
+            },
+            "risk": "medium",
+            "priceUsd": 1
+          },
+          {
+            "name": "Dollar on Chain DOC",
+            "holder": "0x5f777270259e32f79589fe82269db6209f7b7582",
+            "token": {
+              "chain": "rootstock",
+              "address": "0xe700691da7b9851f2f35f8b8182c69c53ccad9db",
+              "decimals": 18
+            },
+            "risk": "medium",
+            "coinId": "doc-money-on-chain",
+            "depType": "collateral"
+          }
+        ]
+      }
+    }
+  },
+  {
     "id": "doc-money-on-chain",
     "llamaId": "30",
     "detailProvider": "defillama",
@@ -7181,6 +7400,58 @@
         "type": "info",
         "title": "Unsupported private chain",
         "message": "FUSD primarily circulates on Zano, which is not a configured Pharos chain, so no contract is stored."
+      }
+    ]
+  },
+  {
+    "id": "fxd-fathom",
+    "llamaId": "176",
+    "detailProvider": "defillama",
+    "name": "Fathom Dollar",
+    "symbol": "FXD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Overcollateralized XDC and protocol collateral-pool positions in Fathom Protocol",
+    "pegMechanism": "Users mint FXD from collateralized debt positions, repay and burn FXD to close positions, and rely on liquidations plus the StableSwap Module to support the dollar peg",
+    "geckoId": "fathom-dollar",
+    "cmcSlug": "fathom-protocol",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://fathom.fi/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.fathom.fi/"
+      },
+      {
+        "label": "Dapp",
+        "url": "https://app.fathom.fi/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "xdc",
+        "address": "0x49d3f7543335cf38fa10889ccff10207e22110b5",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "XDC and Fathom collateral-pool positions",
+        "pct": 100,
+        "risk": "high"
       }
     ]
   },
@@ -12033,6 +12304,74 @@
       "yieldSource": "Ondo Finance T-bill fund",
       "yieldType": "nav-appreciation"
     }
+  },
+  {
+    "id": "pathusd-bridge",
+    "llamaId": "385",
+    "detailProvider": "defillama",
+    "name": "PathUSD",
+    "symbol": "pathUSD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Bridge-managed reserve assets for Tempo pathUSD, including cash, short-dated Treasuries, overnight Treasury repo, and money-market-fund exposure",
+    "pegMechanism": "Tempo users mint pathUSD by depositing USDC.e through Bridge-supported exchange flows and redeem pathUSD back into USDC through Bridge rails",
+    "geckoId": "pathusd",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://bridge.xyz/faq",
+      "provider": "Bridge reserve disclosures"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://tempo.xyz/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.tempo.xyz/protocol/exchange/quote-tokens#pathusd"
+      },
+      {
+        "label": "Token List",
+        "url": "https://tokenlist.tempo.xyz/asset/4217/pathUSD"
+      },
+      {
+        "label": "Bridge FAQ",
+        "url": "https://bridge.xyz/faq"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "tempo",
+        "address": "0x20c0000000000000000000000000000000000000",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Bridge reserve portfolio",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Tempo-native issuer rail",
+        "message": "pathUSD is tracked as a Tempo quote token. Pharos models its Bridge redemption route, but there is no independent live reserve adapter for the Bridge reserve portfolio yet."
+      }
+    ]
   },
   {
     "id": "paxg-paxos",
@@ -21161,6 +21500,84 @@
     ]
   },
   {
+    "id": "usdv-solomon",
+    "llamaId": "261",
+    "detailProvider": "defillama",
+    "name": "Solomon USDv",
+    "symbol": "USDV",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Ceffu-custodied strategy assets and off-exchange delta-neutral margin used by Solomon Labs to back USDv",
+    "pegMechanism": "USDv targets $1 through Solomon-managed strategy collateral and market liquidity; public disclosures do not expose a permissionless holder redemption rail",
+    "geckoId": "solomon-usdv",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://docs.solomonlabs.org/transparency/asset-attestations",
+      "provider": "Solomon Labs and Ceffu attestations"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://solomonlabs.org/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.solomonlabs.org/"
+      },
+      {
+        "label": "Proof of Reserves",
+        "url": "https://docs.solomonlabs.org/transparency/asset-attestations"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "solana",
+        "address": "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C",
+        "decimals": 9
+      }
+    ],
+    "chainTier": "mature-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "cex",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Ceffu-custodied strategy assets and off-exchange delta-neutral margin",
+        "pct": 100,
+        "risk": "very-high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "usdv-solomon",
+      "display": {
+        "url": "https://docs.solomonlabs.org/transparency/asset-attestations",
+        "label": "Solomon attestations"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-solana"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Aggregate reserve disclosure",
+        "message": "USDv has on-chain supply validation, but public attestations are aggregate and do not expose a live composition API or a modeled primary redemption backstop."
+      }
+    ]
+  },
+  {
     "id": "usdx-hex-trust",
     "llamaId": "263",
     "detailProvider": "defillama",
@@ -21841,6 +22258,100 @@
       "sourceUrl": "https://x.com/NeriteOrg/status/2045635669775487192?s=20",
       "sourceLabel": "Nerite post-incident update"
     }
+  },
+  {
+    "id": "usp-pareto-credit",
+    "llamaId": "349",
+    "detailProvider": "defillama",
+    "name": "Pareto USP",
+    "symbol": "USP",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "USDC and USDS collateral deployed into Pareto credit vaults, liquid buffers, and a stability fund",
+    "pegMechanism": "Verified users mint and redeem USP 1:1 against stablecoin collateral through Pareto, while secondary-market holders rely on DEX liquidity",
+    "geckoId": "pareto-usp",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://pareto.credit/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.pareto.credit/product/usp"
+      },
+      {
+        "label": "App",
+        "url": "https://app.pareto.credit/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x97ccc1c046d067ab945d3cf3cc6920d3b1e54c88",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "multisig",
+    "reserves": [
+      {
+        "name": "Pareto credit vaults",
+        "pct": 95,
+        "risk": "high"
+      },
+      {
+        "name": "USDC liquid buffer",
+        "pct": 2.5,
+        "risk": "low",
+        "coinId": "usdc-circle",
+        "depType": "collateral",
+        "blacklistable": true
+      },
+      {
+        "name": "USDS liquid buffer",
+        "pct": 2.5,
+        "risk": "low",
+        "coinId": "usds-sky",
+        "depType": "collateral"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "usp-pareto-credit",
+      "display": {
+        "url": "https://docs.pareto.credit/product/usp",
+        "label": "Pareto USP docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "fallbackRpcUrl": "https://eth.llamarpc.com"
+      }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Permissioned primary market",
+        "message": "Pareto USP minting and redemption are modeled for verified users; public secondary-market holders may not have direct primary redemption access."
+      }
+    ]
   },
   {
     "id": "usp-pikudao",
@@ -23564,6 +24075,11 @@
         "decimals": 18
       },
       {
+        "chain": "monad",
+        "address": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "decimals": 18
+      },
+      {
         "chain": "solana",
         "address": "7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE",
         "decimals": 9
@@ -23574,50 +24090,38 @@
     "governanceQuality": "multisig",
     "reserves": [
       {
-        "name": "USDC positions",
-        "pct": 30,
-        "risk": "low",
-        "coinId": "usdc-circle",
+        "name": "RLUSD lending markets",
+        "pct": 56.4,
+        "risk": "medium",
+        "coinId": "rlusd-ripple",
         "depType": "wrapper"
-      },
-      {
-        "name": "USDT / USDT0 positions",
-        "pct": 25,
-        "risk": "low",
-        "coinId": "usdt-tether",
-        "depType": "wrapper"
-      },
-      {
-        "name": "rUSD strategy vaults",
-        "pct": 20,
-        "risk": "medium"
       },
       {
         "name": "PYUSD lending markets",
-        "pct": 10,
-        "risk": "low",
+        "pct": 21.6,
+        "risk": "medium",
         "coinId": "pyusd-paypal",
         "depType": "wrapper"
       },
       {
+        "name": "AUSD lending markets",
+        "pct": 10.5,
+        "risk": "medium",
+        "coinId": "ausd-agora",
+        "depType": "wrapper"
+      },
+      {
         "name": "GHO lending markets",
-        "pct": 5,
+        "pct": 5.7,
         "risk": "medium",
         "coinId": "gho-aave",
         "depType": "wrapper"
       },
       {
-        "name": "USD1 lending markets",
-        "pct": 5,
+        "name": "USDC lending/direct liquidity",
+        "pct": 5.8,
         "risk": "medium",
-        "coinId": "usd1-world-liberty-financial",
-        "depType": "wrapper"
-      },
-      {
-        "name": "RLUSD lending markets",
-        "pct": 5,
-        "risk": "low",
-        "coinId": "rlusd-ripple",
+        "coinId": "usdc-circle",
         "depType": "wrapper"
       }
     ],
@@ -23816,6 +24320,77 @@
         "message": "Matrixdock publishes an ozPerToken figure for XAGm, so the Pharos silver-ounce reference uses 1 oz while reserve review should watch the issuer's live metric."
       }
     ]
+  },
+  {
+    "id": "xai-silo-finance",
+    "llamaId": "89",
+    "detailProvider": "defillama",
+    "name": "XAI Silo Finance",
+    "symbol": "XAI",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Overcollateralized Silo credit-line collateral, initially ETH and USDC, governed through Silo DAO credit-line parameters",
+    "pegMechanism": "Users borrow XAI against approved Silo collateral and repay XAI to close debt; SiloDAO controls mint and burn capacity through credit-line parameters",
+    "cmcSlug": "xai-silo-finance",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.silo.finance/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.silo.finance/"
+      },
+      {
+        "label": "Governance",
+        "url": "https://snapshot.org/#/silodao.eth"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "Silo ETH and USDC credit-line collateral",
+        "pct": 100,
+        "risk": "medium"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "xai-silo-finance",
+      "display": {
+        "url": "https://docs.silo.finance/",
+        "label": "Silo docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "fallbackRpcUrl": "https://eth.llamarpc.com"
+      }
+    }
   },
   {
     "id": "xaum-matrixdock",
@@ -24274,6 +24849,173 @@
         "message": "XTUSD is tracked from market and issuer metadata, but Pharos has not source-reviewed a public holder redemption route for backstop scoring."
       }
     ]
+  },
+  {
+    "id": "xusd-babelfish",
+    "llamaId": "162",
+    "detailProvider": "defillama",
+    "name": "XUSD",
+    "symbol": "XUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Rootstock basket of accepted stablecoins, dominated by DLLR with bridged USDT, USDC, DAI variants, and small DOC exposure",
+    "pegMechanism": "BabelFish mints XUSD 1:1 from accepted stablecoins and allows redemption into accepted bAssets, subject to basket-balance constraints and balancing fees",
+    "geckoId": "xusd-babelfish",
+    "cmcSlug": "xusd-babelfish",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://babelfish.money/"
+      },
+      {
+        "label": "Explorer",
+        "url": "https://rootstock.blockscout.com/token/0xb5999795be0ebb5bab23144aa5fd6a02d080299f"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "rootstock",
+        "address": "0xb5999795be0ebb5bab23144aa5fd6a02d080299f",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": false,
+    "chainTier": "mature-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "multisig",
+    "reserves": [
+      {
+        "name": "Sovryn Dollar DLLR",
+        "pct": 42.8,
+        "risk": "medium",
+        "coinId": "dllr-sovryn",
+        "depType": "collateral"
+      },
+      {
+        "name": "USDT Rootstock bridge variants",
+        "pct": 31.99,
+        "risk": "low",
+        "coinId": "usdt-tether",
+        "depType": "collateral",
+        "blacklistable": true
+      },
+      {
+        "name": "USDC Rootstock bridge variants",
+        "pct": 14.21,
+        "risk": "low",
+        "coinId": "usdc-circle",
+        "depType": "collateral",
+        "blacklistable": true
+      },
+      {
+        "name": "DAI Rootstock bridge variants",
+        "pct": 10.91,
+        "risk": "low",
+        "coinId": "dai-makerdao",
+        "depType": "collateral"
+      },
+      {
+        "name": "DOC and other Rootstock stablecoin dust",
+        "pct": 0.09,
+        "risk": "medium",
+        "coinId": "doc-money-on-chain",
+        "depType": "collateral"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "xusd-babelfish",
+      "display": {
+        "url": "https://babelfish.money/",
+        "label": "BabelFish basket"
+      },
+      "adapter": "evm-branch-balances",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "rootstock",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "rpcUrl": "https://public-node.rsk.co",
+        "branches": [
+          {
+            "name": "Sovryn Dollar DLLR",
+            "holder": "0x1440d19436beaf8517896bffb957a88ec95a00f",
+            "token": {
+              "chain": "rootstock",
+              "address": "0xc1411567d2670e24d9c4daaa7cda95686e1250aa",
+              "decimals": 18
+            },
+            "risk": "medium",
+            "coinId": "dllr-sovryn",
+            "depType": "collateral",
+            "priceUsd": 1
+          },
+          {
+            "name": "Rootstock Bridged USDT",
+            "holder": "0x1440d19436beaf8517896bffb957a88ec95a00f",
+            "token": {
+              "chain": "rootstock",
+              "address": "0xef213441a85df4d7acbdae0cf78004e1e486bb96",
+              "decimals": 18
+            },
+            "risk": "low",
+            "coinId": "usdt-tether",
+            "depType": "collateral",
+            "priceUsd": 1
+          },
+          {
+            "name": "Stargate Bridged USDC.e",
+            "holder": "0x1440d19436beaf8517896bffb957a88ec95a00f",
+            "token": {
+              "chain": "rootstock",
+              "address": "0x74c9f2b00581f1b11aa7ff05aa9f608b7389de67",
+              "decimals": 6
+            },
+            "risk": "low",
+            "coinId": "usdc-circle",
+            "depType": "collateral",
+            "priceUsd": 1
+          },
+          {
+            "name": "DAI Rootstock bridge variants",
+            "holder": "0x1440d19436beaf8517896bffb957a88ec95a00f",
+            "token": {
+              "chain": "rootstock",
+              "address": "0x6b1a73d547f4009a26b8485b63d7015d248ad406",
+              "decimals": 18
+            },
+            "risk": "low",
+            "coinId": "dai-makerdao",
+            "depType": "collateral",
+            "priceUsd": 1
+          },
+          {
+            "name": "Dollar on Chain DOC",
+            "holder": "0x1440d19436beaf8517896bffb957a88ec95a00f",
+            "token": {
+              "chain": "rootstock",
+              "address": "0xe700691da7b9851f2f35f8b8182c69c53ccad9db",
+              "decimals": 18
+            },
+            "risk": "medium",
+            "coinId": "doc-money-on-chain",
+            "depType": "collateral"
+          }
+        ]
+      }
+    }
   },
   {
     "id": "xusd-straitsx",

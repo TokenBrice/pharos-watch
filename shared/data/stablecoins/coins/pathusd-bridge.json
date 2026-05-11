@@ -1,0 +1,68 @@
+{
+  "id": "pathusd-bridge",
+  "name": "PathUSD",
+  "symbol": "pathUSD",
+  "llamaId": "385",
+  "detailProvider": "defillama",
+  "geckoId": "pathusd",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Bridge-managed reserve assets for Tempo pathUSD, including cash, short-dated Treasuries, overnight Treasury repo, and money-market-fund exposure",
+  "pegMechanism": "Tempo users mint pathUSD by depositing USDC.e through Bridge-supported exchange flows and redeem pathUSD back into USDC through Bridge rails",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://bridge.xyz/faq",
+    "provider": "Bridge reserve disclosures"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://tempo.xyz/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.tempo.xyz/protocol/exchange/quote-tokens#pathusd"
+    },
+    {
+      "label": "Token List",
+      "url": "https://tokenlist.tempo.xyz/asset/4217/pathUSD"
+    },
+    {
+      "label": "Bridge FAQ",
+      "url": "https://bridge.xyz/faq"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "tempo",
+      "address": "0x20c0000000000000000000000000000000000000",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "chainTier": "unproven",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Bridge reserve portfolio",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Tempo-native issuer rail",
+      "message": "pathUSD is tracked as a Tempo quote token. Pharos models its Bridge redemption route, but there is no independent live reserve adapter for the Bridge reserve portfolio yet."
+    }
+  ]
+}

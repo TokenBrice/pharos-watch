@@ -1,0 +1,94 @@
+{
+  "id": "usp-pareto-credit",
+  "name": "Pareto USP",
+  "symbol": "USP",
+  "llamaId": "349",
+  "detailProvider": "defillama",
+  "geckoId": "pareto-usp",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "USDC and USDS collateral deployed into Pareto credit vaults, liquid buffers, and a stability fund",
+  "pegMechanism": "Verified users mint and redeem USP 1:1 against stablecoin collateral through Pareto, while secondary-market holders rely on DEX liquidity",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://pareto.credit/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.pareto.credit/product/usp"
+    },
+    {
+      "label": "App",
+      "url": "https://app.pareto.credit/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x97ccc1c046d067ab945d3cf3cc6920d3b1e54c88",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "multisig",
+  "reserves": [
+    {
+      "name": "Pareto credit vaults",
+      "pct": 95,
+      "risk": "high"
+    },
+    {
+      "name": "USDC liquid buffer",
+      "pct": 2.5,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true
+    },
+    {
+      "name": "USDS liquid buffer",
+      "pct": 2.5,
+      "risk": "low",
+      "coinId": "usds-sky",
+      "depType": "collateral"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usp-pareto-credit",
+    "display": {
+      "url": "https://docs.pareto.credit/product/usp",
+      "label": "Pareto USP docs"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "fallbackRpcUrl": "https://eth.llamarpc.com"
+    }
+  },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Permissioned primary market",
+      "message": "Pareto USP minting and redemption are modeled for verified users; public secondary-market holders may not have direct primary redemption access."
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "id": "dllr-sovryn",
+  "name": "Sovryn Dollar",
+  "symbol": "DLLR",
+  "llamaId": "160",
+  "detailProvider": "defillama",
+  "geckoId": "sovryn-dollar",
+  "cmcSlug": "sovryn-dollar",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Basket of BTC-backed Rootstock stablecoins, currently dominated by Sovryn Zero ZUSD with a small Dollar on Chain balance",
+  "pegMechanism": "Mynt mints and redeems DLLR 1:1 against accepted bAssets; current supported bAssets include ZUSD and DOC",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://sovryn.com/sovryn-dollar"
+    },
+    {
+      "label": "Dapp",
+      "url": "https://app.mynt.xyz/"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://rootstock.blockscout.com/token/0xc1411567d2670e24d9c4daaa7cda95686e1250aa"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "rootstock",
+      "address": "0xc1411567d2670e24d9c4daaa7cda95686e1250aa",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": false,
+  "chainTier": "mature-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "Sovryn Zero ZUSD",
+      "pct": 99.998,
+      "risk": "medium"
+    },
+    {
+      "name": "Dollar on Chain DOC",
+      "pct": 0.002,
+      "risk": "medium",
+      "coinId": "doc-money-on-chain",
+      "depType": "collateral"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "evm-branch-balances",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "dllr-sovryn",
+    "display": {
+      "url": "https://app.mynt.xyz/",
+      "label": "Mynt reserves"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "rootstock",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://public-node.rsk.co",
+      "branches": [
+        {
+          "name": "Sovryn Zero ZUSD",
+          "holder": "0x5f777270259e32f79589fe82269db6209f7b7582",
+          "token": {
+            "chain": "rootstock",
+            "address": "0xdb107fa69e33f05180a4c2ce9c2e7cb481645c2d",
+            "decimals": 18
+          },
+          "risk": "medium",
+          "priceUsd": 1
+        },
+        {
+          "name": "Dollar on Chain DOC",
+          "holder": "0x5f777270259e32f79589fe82269db6209f7b7582",
+          "token": {
+            "chain": "rootstock",
+            "address": "0xe700691da7b9851f2f35f8b8182c69c53ccad9db",
+            "decimals": 18
+          },
+          "risk": "medium",
+          "coinId": "doc-money-on-chain",
+          "depType": "collateral"
+        }
+      ]
+    }
+  }
+}

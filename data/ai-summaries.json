@@ -1363,5 +1363,50 @@
     "title": "Mento's CDP Franc",
     "text": "CHFm gives Pharos another Swiss-franc stablecoin, but with a very different risk profile from fiat-backed VCHF or Frankencoin. Its reserves are USDm collateral posted into Mento CDP troves, and the live Mento adapter now syncs those rows directly. The asset is small, but the data path is clean enough to track with minimal infrastructure changes. The residual risks are the Celo/Mento mechanism, USDm collateral path, and thin secondary liquidity.",
     "updatedAt": "2026-05-11"
+  },
+  "bfusd-binance": {
+    "title": "Binance's Account Dollar",
+    "text": "BFUSD is included because it has meaningful CoinGecko coverage and a large Binance user footprint, but it is not a normal on-chain stablecoin. The product lives inside Binance accounts, earns Binance-set rewards, and is redeemable only through Binance-controlled terms that allow limits, fees, delays, and suspension. Pharos therefore treats the reserve stack as very-high-risk opaque exchange collateral rather than independent proof. The entry is useful for market coverage, not for permissionless DeFi composability.",
+    "updatedAt": "2026-05-11"
+  },
+  "pathusd-bridge": {
+    "title": "Tempo's Bridge Dollar",
+    "text": "pathUSD is the Bridge-issued dollar quote token for Tempo, backed by a conventional reserve portfolio and redeemable back through Bridge-supported flows. The asset matters less because of current scale than because it is native to a payment-focused chain that may become an important stablecoin rail. The risk profile is straightforward: institutional reserve assets and issuer redemption on the strong side, new-chain execution and limited independent reserve telemetry on the weak side.",
+    "updatedAt": "2026-05-11"
+  },
+  "djed-coti": {
+    "title": "Cardano's Reserve-Band Stablecoin",
+    "text": "DJED is Cardano's overcollateralized ADA-backed stablecoin, with SHEN reserve holders absorbing reserve-ratio volatility. The design is more transparent than an issuer account product, but still depends on Cardano liquidity, COTI-run operational components, and a volatile native-asset reserve. Pharos tracks it as a strategic below-threshold asset because it is one of the better-known Cardano stablecoin systems, while leaving live reserves and redemption unmodeled until a cleaner adapter path exists.",
+    "updatedAt": "2026-05-11"
+  },
+  "usdv-solomon": {
+    "title": "The Ceffu Strategy Dollar",
+    "text": "Solomon USDv is a Solana stablecoin backed by Ceffu-custodied strategy assets and off-exchange delta-neutral margin. The public supply is easy to validate on-chain, but the reserve disclosure is aggregate and does not expose a live composition API. That keeps the Pharos entry conservative: useful for tracking a visible Solana dollar, but not a high-confidence reserve model. Without a documented holder redemption route, the backstop remains intentionally unmodeled.",
+    "updatedAt": "2026-05-11"
+  },
+  "xai-silo-finance": {
+    "title": "Silo's Credit-Line Dollar",
+    "text": "XAI is a Silo Finance credit-line stablecoin: users borrow it against approved Silo collateral and repay it to close debt, while SiloDAO controls the credit-line parameters. Pharos validates Ethereum supply and carries the reserve stack as curated Silo collateral rather than a full live vault decomposition. The risk is classic CDP risk in a narrow venue: governance parameters, collateral liquidation quality, and whether secondary liquidity can enforce the peg when borrow demand changes.",
+    "updatedAt": "2026-05-11"
+  },
+  "fxd-fathom": {
+    "title": "XDC's Native CDP Dollar",
+    "text": "Fathom Dollar gives the XDC ecosystem a native overcollateralized dollar backed by XDC and Fathom collateral-pool positions. It is tracked for chain coverage and DefiLlama visibility despite modest scale. The design is familiar CDP plumbing -- mint against collateral, burn to repay, liquidate weak positions, and use a stability module for peg support -- but the collateral base and chain liquidity make it materially riskier than larger Ethereum CDP systems.",
+    "updatedAt": "2026-05-11"
+  },
+  "usp-pareto-credit": {
+    "title": "Private Credit With a Dollar Wrapper",
+    "text": "Pareto USP is a dollar token backed mostly by Pareto credit vault exposure, with small liquid stablecoin buffers. Verified users can mint and redeem, but open-market holders still depend on liquidity or onboarding, so Pharos models the issuer route with that access caveat. The reserve profile is the main tradeoff: credit exposure may produce useful yield elsewhere in the system, but it is not the same as holding cash or T-bills behind a redeemable stablecoin.",
+    "updatedAt": "2026-05-11"
+  },
+  "dllr-sovryn": {
+    "title": "Rootstock's Mynt Basket",
+    "text": "DLLR is Sovryn's Rootstock dollar basket, currently dominated by ZUSD with a small DOC position. This is one of the cleaner additions in the batch because the reserve holder can be read on-chain with the existing branch-balances adapter, and the Mynt redemption route maps naturally to a basket backstop. The residual risk is not opaque custody, but concentration in Rootstock liquidity, Sovryn governance, and the quality of the underlying BTC-backed stablecoins.",
+    "updatedAt": "2026-05-11"
+  },
+  "xusd-babelfish": {
+    "title": "The Rootstock Stablecoin Basket",
+    "text": "XUSD is BabelFish's Rootstock basket stablecoin, backed by DLLR plus bridged USDT, USDC, DAI, DOC, and related bAssets. Pharos tracks live branch balances directly from the basket holder and links the largest dependency back to the newly tracked DLLR entry. The model is useful but recursive: XUSD inherits the risks of Rootstock bridge liquidity, DLLR's own basket, and BabelFish's balancing fees. It is a basket exit route, not a fiat issuer promise.",
+    "updatedAt": "2026-05-11"
   }
 }

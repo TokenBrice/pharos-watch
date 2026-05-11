@@ -108,7 +108,7 @@ describe("reserve adapter real-registry smoke", () => {
     ]));
 
     const attemptHistoryInsert = db.getHistory().find((entry) =>
-      entry.sql.includes("INSERT INTO reserve_sync_attempt_history (")
+      entry.sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history (")
     );
     expect(attemptHistoryInsert).toBeDefined();
     expect(attemptHistoryInsert!.binds[0]).toBe("ceur-celo");

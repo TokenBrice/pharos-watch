@@ -109,6 +109,11 @@
       "decimals": 18
     },
     {
+      "chain": "monad",
+      "address": "0x4809010926aec940b550d34a46a52739f996d75d",
+      "decimals": 18
+    },
+    {
       "chain": "solana",
       "address": "7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE",
       "decimals": 9
@@ -119,50 +124,38 @@
   "governanceQuality": "multisig",
   "reserves": [
     {
-      "name": "USDC positions",
-      "pct": 30,
-      "risk": "low",
-      "coinId": "usdc-circle",
+      "name": "RLUSD lending markets",
+      "pct": 56.4,
+      "risk": "medium",
+      "coinId": "rlusd-ripple",
       "depType": "wrapper"
-    },
-    {
-      "name": "USDT / USDT0 positions",
-      "pct": 25,
-      "risk": "low",
-      "coinId": "usdt-tether",
-      "depType": "wrapper"
-    },
-    {
-      "name": "rUSD strategy vaults",
-      "pct": 20,
-      "risk": "medium"
     },
     {
       "name": "PYUSD lending markets",
-      "pct": 10,
-      "risk": "low",
+      "pct": 21.6,
+      "risk": "medium",
       "coinId": "pyusd-paypal",
       "depType": "wrapper"
     },
     {
+      "name": "AUSD lending markets",
+      "pct": 10.5,
+      "risk": "medium",
+      "coinId": "ausd-agora",
+      "depType": "wrapper"
+    },
+    {
       "name": "GHO lending markets",
-      "pct": 5,
+      "pct": 5.7,
       "risk": "medium",
       "coinId": "gho-aave",
       "depType": "wrapper"
     },
     {
-      "name": "USD1 lending markets",
-      "pct": 5,
+      "name": "USDC lending/direct liquidity",
+      "pct": 5.8,
       "risk": "medium",
-      "coinId": "usd1-world-liberty-financial",
-      "depType": "wrapper"
-    },
-    {
-      "name": "RLUSD lending markets",
-      "pct": 5,
-      "risk": "low",
-      "coinId": "rlusd-ripple",
+      "coinId": "usdc-circle",
       "depType": "wrapper"
     }
   ],

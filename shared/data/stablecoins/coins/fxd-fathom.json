@@ -1,0 +1,52 @@
+{
+  "id": "fxd-fathom",
+  "name": "Fathom Dollar",
+  "symbol": "FXD",
+  "llamaId": "176",
+  "detailProvider": "defillama",
+  "geckoId": "fathom-dollar",
+  "cmcSlug": "fathom-protocol",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Overcollateralized XDC and protocol collateral-pool positions in Fathom Protocol",
+  "pegMechanism": "Users mint FXD from collateralized debt positions, repay and burn FXD to close positions, and rely on liquidations plus the StableSwap Module to support the dollar peg",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://fathom.fi/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.fathom.fi/"
+    },
+    {
+      "label": "Dapp",
+      "url": "https://app.fathom.fi/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "xdc",
+      "address": "0x49d3f7543335cf38fa10889ccff10207e22110b5",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "established-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "XDC and Fathom collateral-pool positions",
+      "pct": 100,
+      "risk": "high"
+    }
+  ]
+}

@@ -74,6 +74,33 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "USDS <-> USDC routes through LitePSMWrapper-USDS-USDC and the fee-free DAI <-> USDS converter, so it shares the same LitePSM liquidity path as DAI",
     ],
   },
+  "dllr-sovryn": {
+    ...basketRedeemBase,
+    ...documentedBoundSupplyFull("2026-05-11"),
+    costModel: fixedFee(0, "Mynt materials state redemption fees are currently disabled"),
+    reviewedAt: "2026-05-11",
+    docs: [
+      sourceRef("Sovryn Dollar", "https://sovryn.com/sovryn-dollar", ["route", "capacity", "access"]),
+      sourceRef("Mynt app", "https://app.mynt.xyz/", ["route", "capacity", "fees", "settlement"]),
+    ],
+    notes: [
+      "Fresh reserve sync reads the Mynt holder's ZUSD and DOC balances on Rootstock, but redemption capacity remains documented-bound because the adapter does not emit a dedicated route-capacity field",
+    ],
+  },
+  "xusd-babelfish": {
+    ...basketRedeemBase,
+    ...documentedBoundSupplyFull("2026-05-11"),
+    costModel: documentedVariableFee(
+      "BabelFish uses basket-balancing withdrawal fees rather than one fixed public redemption fee",
+    ),
+    reviewedAt: "2026-05-11",
+    docs: [
+      sourceRef("BabelFish", "https://babelfish.money/", ["route", "capacity", "fees", "access", "settlement"]),
+    ],
+    notes: [
+      "Fresh reserve sync reads the BabelFish holder's accepted bAsset balances on Rootstock, but redemption capacity remains documented-bound because the adapter does not emit a dedicated route-capacity field",
+    ],
+  },
   "gho-aave": {
     ...psmSwapBase,
     capacityModel: { kind: "reserve-sync-metadata" },

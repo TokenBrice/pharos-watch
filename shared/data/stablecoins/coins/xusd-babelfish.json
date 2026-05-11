@@ -1,0 +1,167 @@
+{
+  "id": "xusd-babelfish",
+  "name": "XUSD",
+  "symbol": "XUSD",
+  "llamaId": "162",
+  "detailProvider": "defillama",
+  "geckoId": "xusd-babelfish",
+  "cmcSlug": "xusd-babelfish",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Rootstock basket of accepted stablecoins, dominated by DLLR with bridged USDT, USDC, DAI variants, and small DOC exposure",
+  "pegMechanism": "BabelFish mints XUSD 1:1 from accepted stablecoins and allows redemption into accepted bAssets, subject to basket-balance constraints and balancing fees",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://babelfish.money/"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://rootstock.blockscout.com/token/0xb5999795be0ebb5bab23144aa5fd6a02d080299f"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "rootstock",
+      "address": "0xb5999795be0ebb5bab23144aa5fd6a02d080299f",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": false,
+  "chainTier": "mature-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
+  "reserves": [
+    {
+      "name": "Sovryn Dollar DLLR",
+      "pct": 42.8,
+      "risk": "medium",
+      "coinId": "dllr-sovryn",
+      "depType": "collateral"
+    },
+    {
+      "name": "USDT Rootstock bridge variants",
+      "pct": 31.99,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "blacklistable": true
+    },
+    {
+      "name": "USDC Rootstock bridge variants",
+      "pct": 14.21,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true
+    },
+    {
+      "name": "DAI Rootstock bridge variants",
+      "pct": 10.91,
+      "risk": "low",
+      "coinId": "dai-makerdao",
+      "depType": "collateral"
+    },
+    {
+      "name": "DOC and other Rootstock stablecoin dust",
+      "pct": 0.09,
+      "risk": "medium",
+      "coinId": "doc-money-on-chain",
+      "depType": "collateral"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "evm-branch-balances",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "xusd-babelfish",
+    "display": {
+      "url": "https://babelfish.money/",
+      "label": "BabelFish basket"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "rootstock",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://public-node.rsk.co",
+      "branches": [
+        {
+          "name": "Sovryn Dollar DLLR",
+          "holder": "0x1440d19436beaf8517896bffb957a88ec95a00f",
+          "token": {
+            "chain": "rootstock",
+            "address": "0xc1411567d2670e24d9c4daaa7cda95686e1250aa",
+            "decimals": 18
+          },
+          "risk": "medium",
+          "coinId": "dllr-sovryn",
+          "depType": "collateral",
+          "priceUsd": 1
+        },
+        {
+          "name": "Rootstock Bridged USDT",
+          "holder": "0x1440d19436beaf8517896bffb957a88ec95a00f",
+          "token": {
+            "chain": "rootstock",
+            "address": "0xef213441a85df4d7acbdae0cf78004e1e486bb96",
+            "decimals": 18
+          },
+          "risk": "low",
+          "coinId": "usdt-tether",
+          "depType": "collateral",
+          "priceUsd": 1
+        },
+        {
+          "name": "Stargate Bridged USDC.e",
+          "holder": "0x1440d19436beaf8517896bffb957a88ec95a00f",
+          "token": {
+            "chain": "rootstock",
+            "address": "0x74c9f2b00581f1b11aa7ff05aa9f608b7389de67",
+            "decimals": 6
+          },
+          "risk": "low",
+          "coinId": "usdc-circle",
+          "depType": "collateral",
+          "priceUsd": 1
+        },
+        {
+          "name": "DAI Rootstock bridge variants",
+          "holder": "0x1440d19436beaf8517896bffb957a88ec95a00f",
+          "token": {
+            "chain": "rootstock",
+            "address": "0x6b1a73d547f4009a26b8485b63d7015d248ad406",
+            "decimals": 18
+          },
+          "risk": "low",
+          "coinId": "dai-makerdao",
+          "depType": "collateral",
+          "priceUsd": 1
+        },
+        {
+          "name": "Dollar on Chain DOC",
+          "holder": "0x1440d19436beaf8517896bffb957a88ec95a00f",
+          "token": {
+            "chain": "rootstock",
+            "address": "0xe700691da7b9851f2f35f8b8182c69c53ccad9db",
+            "decimals": 18
+          },
+          "risk": "medium",
+          "coinId": "doc-money-on-chain",
+          "depType": "collateral"
+        }
+      ]
+    }
+  }
+}

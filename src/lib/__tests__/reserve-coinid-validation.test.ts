@@ -36,6 +36,10 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "dola-inverse-finance::Stablecoin collateral (sUSDe, sUSDS, scrvUSD)::crvUSD",
     "DOLA live reserves aggregate multiple stablecoin markets into one mixed collateral bucket, so no single coinId is representative.",
   ],
+  [
+    "xai-silo-finance::Silo ETH and USDC credit-line collateral::USDC",
+    "XAI reserve metadata describes a mixed Silo credit-line collateral bucket, so no single stablecoin coinId is representative.",
+  ],
 ]);
 
 describe("reserve coinId validation", () => {

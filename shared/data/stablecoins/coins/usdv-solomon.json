@@ -1,0 +1,78 @@
+{
+  "id": "usdv-solomon",
+  "name": "Solomon USDv",
+  "symbol": "USDV",
+  "llamaId": "261",
+  "detailProvider": "defillama",
+  "geckoId": "solomon-usdv",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Ceffu-custodied strategy assets and off-exchange delta-neutral margin used by Solomon Labs to back USDv",
+  "pegMechanism": "USDv targets $1 through Solomon-managed strategy collateral and market liquidity; public disclosures do not expose a permissionless holder redemption rail",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://docs.solomonlabs.org/transparency/asset-attestations",
+    "provider": "Solomon Labs and Ceffu attestations"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://solomonlabs.org/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.solomonlabs.org/"
+    },
+    {
+      "label": "Proof of Reserves",
+      "url": "https://docs.solomonlabs.org/transparency/asset-attestations"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C",
+      "decimals": 9
+    }
+  ],
+  "chainTier": "mature-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "cex",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Ceffu-custodied strategy assets and off-exchange delta-neutral margin",
+      "pct": 100,
+      "risk": "very-high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usdv-solomon",
+    "display": {
+      "url": "https://docs.solomonlabs.org/transparency/asset-attestations",
+      "label": "Solomon attestations"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-solana"
+      }
+    }
+  },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Aggregate reserve disclosure",
+      "message": "USDv has on-chain supply validation, but public attestations are aggregate and do not expose a live composition API or a modeled primary redemption backstop."
+    }
+  ]
+}

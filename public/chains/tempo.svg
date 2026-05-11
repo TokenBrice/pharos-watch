@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Tempo">
+  <rect width="64" height="64" rx="16" fill="#111827"/>
+  <path d="M16 18h32v8H36v20h-8V26H16z" fill="#ffffff"/>
+  <path d="M44 38h8v8h-8z" fill="#4ade80"/>
+</svg>
