@@ -339,6 +339,14 @@ export interface TelegramDispatchCronResult {
   presetQueryFailures: number;
   presetResolutionFailures: number;
   presetFailure: boolean;
+  /**
+   * Count of safety-grade changes that would have been emitted but were
+   * suppressed because the Telegram lane had to reseed its safety snapshot
+   * (e.g. methodology-version flip changed the source generation). A
+   * non-zero value signals real downgrades hidden by the seed and is a cue
+   * for operators to inspect the safety-grade history directly.
+   */
+  suppressedSafetyChangesAtSeed: number;
   eventsDetected: TelegramDispatchEventsDetected;
   perAlertType: PerAlertTypeDelivery;
 }
@@ -387,6 +395,7 @@ export interface TelegramDispatchCronMetadata {
   presetQueryFailures: number | null;
   presetResolutionFailures: number | null;
   presetFailure: boolean;
+  suppressedSafetyChangesAtSeed: number | null;
   eventsDetected: ParsedTelegramDispatchEventsDetected | null;
   perAlertType: PerAlertTypeDelivery | null;
 }

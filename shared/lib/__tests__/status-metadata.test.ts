@@ -42,6 +42,7 @@ describe("status-metadata", () => {
       pendingEnqueued: 5,
       pendingExpired: "2",
       skipped: "circuit-open",
+      suppressedSafetyChangesAtSeed: "2",
       eventsDetected: {
         dews: 2,
         depeg: "1",
@@ -87,6 +88,7 @@ describe("status-metadata", () => {
       presetQueryFailures: null,
       presetResolutionFailures: null,
       presetFailure: false,
+      suppressedSafetyChangesAtSeed: 2,
       eventsDetected: {
         dews: 2,
         depeg: 1,

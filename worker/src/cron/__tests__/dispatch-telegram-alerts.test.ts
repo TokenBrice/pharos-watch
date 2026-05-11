@@ -1550,6 +1550,58 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.messagesSent).toBe(0);
   });
 
+  it("reports suppressedSafetyChangesAtSeed when reseeding hides real safety changes", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") return { value: "{}", updatedAt: now - 60 };
+      if (key === "alert:depeg-snapshot") return { value: "{}", updatedAt: now - 60 };
+      if (key === "alert:safety-snapshot") {
+        // Prior snapshot stored under a stale generation forces a reseed even
+        // though the methodology version of the rows matches the live source.
+        return makeSafetySnapshotCache(
+          {
+            "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.10" },
+            "dai-makerdao": { grade: "B+", score: 80, methodologyVersion: "7.10" },
+          },
+          "legacy-generation",
+        );
+      }
+      if (key === "alert:safety-source-cache") {
+        return makeSafetySourceCache(
+          {
+            "usdc-circle": { grade: "C", score: 61, methodologyVersion: "7.10" },
+            "dai-makerdao": { grade: "C+", score: 65, methodologyVersion: "7.10" },
+          },
+          now - 60,
+        );
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventsDetected: { safety: number };
+      messagesSent: number;
+      safetyAlertsSuppressed: boolean;
+      suppressedSafetyChangesAtSeed: number;
+    };
+
+    expect(metadata.eventsDetected.safety).toBe(0);
+    expect(metadata.messagesSent).toBe(0);
+    expect(metadata.safetyAlertsSuppressed).toBe(true);
+    expect(metadata.suppressedSafetyChangesAtSeed).toBe(2);
+    expect(mockSendToChat).not.toHaveBeenCalled();
+  });
+
   it("clears launch alert flags when deactivating a blocked subscriber", async () => {
     const now = Math.floor(Date.now() / 1000);
 

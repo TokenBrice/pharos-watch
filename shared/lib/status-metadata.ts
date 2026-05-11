@@ -116,6 +116,7 @@ export function parseTelegramDispatchCronMetadata(value: unknown): TelegramDispa
     presetQueryFailures: readMetadataNumber(record.presetQueryFailures),
     presetResolutionFailures: readMetadataNumber(record.presetResolutionFailures),
     presetFailure: readMetadataBoolean(record.presetFailure) === true,
+    suppressedSafetyChangesAtSeed: readMetadataNumber(record.suppressedSafetyChangesAtSeed),
     eventsDetected: eventsRecord
       ? {
           dews: readMetadataNumber(eventsRecord.dews),

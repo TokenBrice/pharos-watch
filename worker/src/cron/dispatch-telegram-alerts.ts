@@ -117,6 +117,7 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     presetResolutionFailures: 0,
     presetFailure: false,
     perAlertType: emptyPerAlertTypeDelivery(),
+    suppressedSafetyChangesAtSeed: 0,
   };
 }
 
@@ -405,6 +406,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       currentSafetySnapshot,
       currentSnapshots,
       mustSeedSnapshots,
+      previousSafetySnapshot,
       safeDepegSnapshot,
       safeDewsAlertable,
       safeDewsSnapshot,
@@ -412,6 +414,14 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       safetySnapshotNeedsSeed,
       safetySourceAssessment,
     } = snapshotState;
+
+    // When the Telegram lane has to reseed its safety snapshot (e.g. methodology
+    // version flip changed the source generation), real downgrades against the
+    // last seen snapshot would silently disappear. Count them against the prior
+    // snapshot purely for operator visibility — they are not fanned out.
+    const suppressedSafetyChangesAtSeed = safetySnapshotNeedsSeed
+      ? buildSafetyChanges(currentSafetySnapshot, previousSafetySnapshot ?? {}, getSymbol).changes.length
+      : 0;
 
     if (mustSeedSnapshots) {
       await writeSnapshots(db, currentSnapshots);
@@ -421,6 +431,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       result.safetyAlertSourceAgeSeconds = safetySourceAssessment.ageSeconds;
       result.safetyAlertSourceGeneration = safetySourceAssessment.generation;
       result.safetyAlertsSuppressed = safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed;
+      result.suppressedSafetyChangesAtSeed = suppressedSafetyChangesAtSeed;
       return { itemCount: 0, metadata: JSON.stringify(result) };
     }
     const pendingBudget = Math.floor(MAX_MESSAGES_PER_RUN / 4);
@@ -748,6 +759,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       presetResolutionFailures: 0,
       presetFailure: false,
       perAlertType,
+      suppressedSafetyChangesAtSeed,
     };
 
     const attemptedMessages = result.pendingAttempted + result.freshAttempted;
