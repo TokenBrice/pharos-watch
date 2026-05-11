@@ -1,6 +1,7 @@
 import { parseStartPayload } from "../telegram-webhook-parsing";
 import { sendWizardIntro } from "../telegram-webhook-setup";
 import { START_MESSAGE } from "../telegram-webhook-shared";
+import { isGroupAdminActor, isGroupChatType } from "../telegram-webhook-auth";
 import type { WebhookCommandHandler } from "./context";
 import { handleSubscribe } from "./subscribe";
 import { handleStatus } from "./status";
@@ -28,7 +29,16 @@ export const handleStart: WebhookCommandHandler = async (ctx, args) => {
       return;
     case "setup":
     case "none":
-      // Empty payload or `?start=setup` both open the wizard.
+      if (
+        isGroupChatType(ctx.chatType) &&
+        !(await isGroupAdminActor(ctx.db, ctx.botToken, ctx.chatId, ctx.actorUserId))
+      ) {
+        await ctx.replyToChat(START_MESSAGE);
+        return;
+      }
+      // Empty payload or `?start=setup` both open the wizard in private chats
+      // and for group admins. Non-admin group members get the read-only start
+      // message above.
       await sendWizardIntro(ctx.db, ctx.botToken, ctx.chatId, ctx.actorUserId);
       return;
   }

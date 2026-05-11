@@ -4,6 +4,8 @@
  * No-op if no webhook URL is provided.
  */
 
+import { drainResponseBody } from "./response-body";
+
 const MAX_FAILURE_BODY_CHARS = 300;
 
 /** Normalize a raw env URL to a trimmed string or null. */
@@ -55,6 +57,7 @@ export async function sendAlert(webhookUrl: string | null | undefined, title: st
       return false;
     }
 
+    await drainResponseBody(response);
     return true;
   } catch (err) {
     // Never let alerting failures propagate

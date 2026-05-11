@@ -37,6 +37,7 @@ import {
   drainPendingQueue,
   cleanupExpiredPendingAlerts,
   loadChatsInBackoff,
+  readTelegramGlobalBackoff,
 } from "./telegram-pending-queue";
 import {
   buildSubscriberQueue,
@@ -752,7 +753,10 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
         ),
     );
 
-    const chatsInBackoff = await loadChatsInBackoff(db, nowSec);
+    const [chatsInBackoff, globalBackoffUntil] = await Promise.all([
+      loadChatsInBackoff(db, nowSec),
+      readTelegramGlobalBackoff(db, nowSec),
+    ]);
 
     const {
       subscribersNotified,
@@ -774,6 +778,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       maxMessagesPerRun: MAX_MESSAGES_PER_RUN,
       nowSec,
       chatsInBackoff,
+      globalBackoffUntil,
       dispatchStartedAtMs,
       signal,
     });

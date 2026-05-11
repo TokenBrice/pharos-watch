@@ -6,7 +6,7 @@ import {
   makeIdempotentAdminRoute,
 } from "../lib/route-wrappers";
 import { logAdminAction } from "../lib/admin-action-audit";
-import { sendToChat } from "../lib/telegram";
+import { sendToChat, type SendToChatResult } from "../lib/telegram";
 import {
   buildAlertReplyMarkup,
   formatConsolidatedMessage,
@@ -254,15 +254,27 @@ export const handleAdminTelegramResend = makeIdempotentAdminRoute<ResendContext>
 
     const canonicalHtml = formatConsolidatedMessage(alerts);
     const chunks = splitMessage(canonicalHtml);
-    const firstChunk = chunks[0] ?? canonicalHtml;
-    const result = await sendToChat(chatId, firstChunk, telegramBotToken, {
-      disableWebPagePreview: true,
-      disableNotification: false,
-      replyMarkup: buildAlertReplyMarkup(alerts, 0),
-    });
+    const sendResults: SendToChatResult[] = [];
+    for (const [chunkIndex, chunk] of chunks.entries()) {
+      const result = await sendToChat(chatId, chunk, telegramBotToken, {
+        disableWebPagePreview: true,
+        disableNotification: false,
+        replyMarkup: buildAlertReplyMarkup(alerts, chunkIndex),
+      });
+      sendResults.push(result);
+      if (!result.ok) break;
+    }
+    const firstFailure = sendResults.find((result) => !result.ok);
+    const result = firstFailure ?? sendResults[sendResults.length - 1];
+    if (!result) {
+      return adminErrorResponse(500, "Could not render Telegram alert chunks");
+    }
 
     const responseBody = {
       ok: result.ok,
+      mode: "synthetic_current_state",
+      chunkCount: chunks.length,
+      chunksAttempted: sendResults.length,
       statusCode: result.statusCode,
       errorClass: result.errorClass,
       retryAfterSec: result.retryAfterSec,
@@ -279,6 +291,9 @@ export const handleAdminTelegramResend = makeIdempotentAdminRoute<ResendContext>
           chatId,
           alertType,
           stablecoinId,
+          mode: "synthetic_current_state",
+          chunkCount: chunks.length,
+          chunksAttempted: sendResults.length,
           delivery: result.delivery,
           statusCode: result.statusCode,
           errorClass: result.errorClass,

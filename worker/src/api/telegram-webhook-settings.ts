@@ -109,6 +109,10 @@ export async function handleSettingsCallback(
   const target: RenderTarget = { mode: "edit", messageId };
 
   if (subAction === "home") {
+    if (subArg !== "") {
+      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
     await renderHome(db, chatId, botToken, target);
     await answerCallbackQuery(cb.id, botToken);
     return;
@@ -126,6 +130,10 @@ export async function handleSettingsCallback(
   }
 
   if (subAction === "q") {
+    if (subArg !== "0" && subArg !== "1") {
+      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
     const enabled = subArg === "1";
     await setQuietHours(db, chatId, username, enabled);
     await renderHome(db, chatId, botToken, target);
@@ -136,6 +144,10 @@ export async function handleSettingsCallback(
   }
 
   if (subAction === "sc") {
+    if (subArg !== "") {
+      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
     await clearSnoozeViaSettings(db, chatId, username);
     await renderHome(db, chatId, botToken, target);
     await answerCallbackQuery(cb.id, botToken, { text: "Snooze cleared." });
@@ -153,7 +165,12 @@ export async function handleSettingsCallback(
   }
 
   if (subAction === "c") {
-    const [coinId, setting, value] = subArg.split(":");
+    const settingParts = subArg.split(":");
+    if (settingParts.length !== 3) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Unknown setting." });
+      return;
+    }
+    const [coinId, setting, value] = settingParts;
     if (!isKnownStablecoinId(coinId) || !setting || value == null) {
       await answerCallbackQuery(cb.id, botToken, { text: "Unknown setting." });
       return;

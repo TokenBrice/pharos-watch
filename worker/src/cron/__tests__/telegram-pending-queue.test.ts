@@ -40,6 +40,7 @@ describe("disableBlockedSubscriber", () => {
     const db = mockD1([
       { match: "UPDATE telegram_subscribers", rows: [] },
       { match: "UPDATE telegram_subscriptions", rows: [] },
+      { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
     ]);
 
     const result = await disableBlockedSubscriber(db, "blocked-chat");
@@ -54,6 +55,10 @@ describe("disableBlockedSubscriber", () => {
     const subscriptionUpdate = history.find((e) => e.sql.includes("UPDATE telegram_subscriptions"));
     expect(subscriptionUpdate).toBeDefined();
     expect(subscriptionUpdate!.sql).toContain("alert_launch=0");
+
+    const presetDelete = history.find((e) => e.sql.includes("DELETE FROM telegram_preset_subscriptions"));
+    expect(presetDelete).toBeDefined();
+    expect(presetDelete!.binds).toEqual(["blocked-chat"]);
   });
 
   it("returns false and logs on D1 error", async () => {
@@ -544,7 +549,7 @@ describe("drainPendingQueue", () => {
     expect(resetCall!.binds).toEqual(["recovered"]);
   });
 
-  it("stops draining the queue when a 429 rate limit is received", async () => {
+  it("stops draining the queue when a global 429 rate limit is received", async () => {
     // SEND_BATCH_SIZE=4, so we need >4 messages to span multiple batches.
     // First batch (4 msgs): 3 ok + 1 rate_limit. Sets rateLimited=true.
     // Second batch (3 msgs): never attempted because rateLimited flag breaks the loop.
@@ -554,7 +559,7 @@ describe("drainPendingQueue", () => {
     };
     const rateLimitResult = {
       ok: false, blocked: false, retryable: true, permanentFailure: false,
-      statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 30,
+      statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 30, rateLimitScope: "global" as const,
     };
 
     // First 3 calls succeed, 4th returns 429 (within first batch of 4)
@@ -584,6 +589,43 @@ describe("drainPendingQueue", () => {
     expect(result.rateLimited).toBe(true);
     expect(result.retryAfterSec).toBe(30);
     expect(mockSendToChat).toHaveBeenCalledTimes(4);
+  });
+
+  it("continues draining other pending chats after a chat-scoped 429", async () => {
+    const okResult = {
+      ok: true, blocked: false, retryable: false, permanentFailure: false,
+      statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null,
+    };
+    const rateLimitResult = {
+      ok: false, blocked: false, retryable: true, permanentFailure: false,
+      statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 30, rateLimitScope: "chat" as const,
+    };
+
+    mockSendToChat
+      .mockResolvedValueOnce(okResult)
+      .mockResolvedValueOnce(okResult)
+      .mockResolvedValueOnce(okResult)
+      .mockResolvedValueOnce(rateLimitResult)
+      .mockResolvedValue(okResult);
+
+    const rows = Array.from({ length: 8 }, (_, i) => ({
+      id: i + 1, chat_id: `chat-${i}`, message_html: `msg${i}`, disable_notification: 0, created_at: 1000, attempts: 0,
+    }));
+
+    const db = mockD1([
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+      { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
+    ]);
+
+    const result = await drainPendingQueue(db, "bot-token", 20);
+
+    expect(result.attempted).toBe(8);
+    expect(result.sent).toBe(7);
+    expect(result.retryQueued).toBe(1);
+    expect(result.rateLimited).toBe(true);
+    expect(result.retryAfterSec).toBe(30);
+    expect(mockSendToChat).toHaveBeenCalledTimes(8);
   });
 
   it("does not select expired or not-yet-ready pending rows", async () => {
@@ -994,30 +1036,31 @@ describe("buildDedupeKey", () => {
 });
 
 describe("loadChatsInBackoff", () => {
-  it("returns the set of chat ids whose pending rows have not_before_at in the future", async () => {
+  it("returns the max not_before_at by chat for pending rows in backoff", async () => {
     const nowSec = 5000;
     const db = mockD1([
       {
-        match: "SELECT DISTINCT chat_id",
-        rows: [{ chat_id: "chat-A" }, { chat_id: "chat-B" }],
+        match: "SELECT chat_id, MAX(not_before_at)",
+        rows: [{ chat_id: "chat-A", not_before_at: 5100 }, { chat_id: "chat-B", not_before_at: 5300 }],
       },
     ]);
 
     const result = await loadChatsInBackoff(db, nowSec);
-    expect(result).toEqual(new Set(["chat-A", "chat-B"]));
+    expect(result).toEqual(new Map([["chat-A", 5100], ["chat-B", 5300]]));
 
     const history = db.getHistory();
-    const select = history.find((entry) => entry.sql.includes("SELECT DISTINCT chat_id"));
+    const select = history.find((entry) => entry.sql.includes("SELECT chat_id, MAX(not_before_at)"));
     expect(select?.sql).toContain("not_before_at IS NOT NULL");
     expect(select?.sql).toContain("not_before_at > ?");
+    expect(select?.sql).toContain("GROUP BY chat_id");
     expect(select?.binds).toEqual([nowSec]);
   });
 
   it("returns an empty set when no rows are in backoff", async () => {
     const db = mockD1([
-      { match: "SELECT DISTINCT chat_id", rows: [] },
+      { match: "SELECT chat_id, MAX(not_before_at)", rows: [] },
     ]);
-    expect(await loadChatsInBackoff(db, 1000)).toEqual(new Set());
+    expect(await loadChatsInBackoff(db, 1000)).toEqual(new Map());
   });
 });
 

@@ -83,11 +83,29 @@ describe("handleCallbackQuery", () => {
   });
 
   it("does not overwrite group subscriber username with the callback actor username", async () => {
-    const db = mockD1([]);
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
+    ]);
+    fetchSpy.mockImplementation(async (url) => {
+      if (String(url).includes("getChatMember")) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            result: { user: { id: 7, is_bot: false, first_name: "admin" }, status: "administrator" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
     await handleCallbackQuery(db, "fake-token", {
       id: "cb1-group",
       data: "snooze:1h",
-      from: { username: "tapping_user" },
+      from: { id: 7, username: "tapping_user" },
       message: { chat: { id: -42, type: "supergroup" }, message_id: 999 },
     });
 
@@ -496,7 +514,7 @@ describe("handleCallbackQuery", () => {
         id: "cb-other",
         data: "setup:branch:recommended",
         from: { id: 222 },
-        message: { chat: { id: -42, type: "supergroup" } },
+        message: { chat: { id: 42, type: "private" } },
       });
 
       // Should not have invoked the preset cache lookup or persisted any new state.
@@ -932,6 +950,136 @@ describe("handleCallbackQuery", () => {
       expect(insert!.binds[2]).toBe(1); // alert_dews
       expect(insert!.binds[3]).toBe("ALERT");
     });
+
+    it("settings mutating callbacks in groups refuse non-admins before D1 writes", async () => {
+      const db = mockD1([
+        {
+          match: "FROM cache WHERE key = ?",
+          rows: [],
+          first: null,
+        },
+      ]);
+      fetchSpy.mockImplementation(async (url) => {
+        if (String(url).includes("getChatMember")) {
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: { user: { id: 7, is_bot: false, first_name: "member" }, status: "member" },
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      });
+
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-settings-group",
+        data: "settings:gt:dews",
+        from: { id: 7, username: "member" },
+        message: { chat: { id: -42, type: "supergroup" }, message_id: 999 },
+      });
+
+      const history = db.getHistory();
+      expect(history.some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
+      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/Only group admins/i);
+    });
+
+    it("malformed settings callbacks do not write", async () => {
+      const db = mockD1([]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-settings-bad",
+        data: "settings:q:2",
+        from: { id: 1, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 999 },
+      });
+
+      expect(db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
+      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/not recognized/i);
+    });
+  });
+
+  it("depegstep in a group refuses non-admins without writing", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
+    ]);
+    fetchSpy.mockImplementation(async (url) => {
+      if (String(url).includes("getChatMember")) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            result: { user: { id: 7, is_bot: false, first_name: "member" }, status: "member" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+
+    await handleCallbackQuery(db, "fake-token", {
+      id: "cb-depegstep-group",
+      data: "depegstep:usdc-circle:250",
+      from: { id: 7, username: "member" },
+      message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
+    });
+
+    const history = db.getHistory();
+    expect(history.some((h) => /INSERT INTO telegram_subscriptions/.test(h.sql))).toBe(false);
+    const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+    expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/Only group admins/i);
+  });
+
+  it("setup confirm in a group refuses non-admins before loading setup state", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
+    ]);
+    fetchSpy.mockImplementation(async (url) => {
+      if (String(url).includes("getChatMember")) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            result: { user: { id: 7, is_bot: false, first_name: "member" }, status: "member" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+
+    await handleCallbackQuery(db, "fake-token", {
+      id: "cb-setup-confirm-group",
+      data: "setup:confirm",
+      from: { id: 7, username: "member" },
+      message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
+    });
+
+    const history = db.getHistory();
+    expect(history.some((h) => /telegram_pending_disambiguation/.test(h.sql))).toBe(false);
+    const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+    expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/Only group admins/i);
+  });
+
+  it("malformed bulk confirmation callbacks do not load pending state", async () => {
+    const db = mockD1([]);
+    await handleCallbackQuery(db, "fake-token", {
+      id: "cb-bad-confirm",
+      data: "confirm:bulk:extra",
+      from: { id: 1, username: "alice" },
+      message: { chat: { id: 42, type: "private" }, message_id: 1 },
+    });
+
+    expect(db.getHistory().some((h) => /telegram_pending_disambiguation/.test(h.sql))).toBe(false);
+    const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+    expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/not recognized/i);
   });
 
   describe("tz timezone callback", () => {

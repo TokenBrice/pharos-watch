@@ -120,9 +120,18 @@ export interface SendToChatResult {
   errorClass: TelegramSendErrorClass | null;
   delivery: "sent" | "blocked" | "retryable_failure" | "permanent_failure";
   retryAfterSec: number | null;
+  rateLimitScope?: "chat" | "global";
 }
 
-function buildResponseFailure(statusCode: number): SendToChatResult {
+function inferRateLimitScope(responseBody: string): "chat" | "global" {
+  const lower = responseBody.toLowerCase();
+  if (lower.includes("global") || lower.includes("bot-wide") || lower.includes("bot wide")) {
+    return "global";
+  }
+  return "chat";
+}
+
+function buildResponseFailure(statusCode: number, responseBody = ""): SendToChatResult {
   if (statusCode === 403) {
     return {
       ok: false,
@@ -145,6 +154,7 @@ function buildResponseFailure(statusCode: number): SendToChatResult {
       errorClass: "rate_limit",
       delivery: "retryable_failure",
       retryAfterSec: null,
+      rateLimitScope: inferRateLimitScope(responseBody),
     };
   }
   if (statusCode >= 500) {
@@ -255,8 +265,8 @@ export async function sendToChat(
     if (!res.ok) {
       const retryAfterRaw = res.headers.get("Retry-After");
       const retryAfterSec = retryAfterRaw ? parseInt(retryAfterRaw, 10) : null;
-      await drainResponseBody(res);
-      const failure = buildResponseFailure(res.status);
+      const body = await res.text().catch(() => "");
+      const failure = buildResponseFailure(res.status, body);
       return {
         ...failure,
         retryAfterSec: Number.isFinite(retryAfterSec) ? retryAfterSec : null,
@@ -318,6 +328,8 @@ export interface BatchResult {
   errorClass: TelegramSendErrorClass | null;
   delivery: "sent" | "blocked" | "retryable_failure" | "permanent_failure";
   retryAfterSec: number | null;
+  rateLimitScope?: "chat" | "global";
+  attempted?: boolean;
 }
 
 /**
@@ -326,7 +338,12 @@ export interface BatchResult {
  * Individual send failures are caught — a single 500 error does NOT abort the batch.
  * Returns one result per input message in the same order.
  */
-function buildUnsentRetryResult(message: BatchMessage, errorClass: TelegramSendErrorClass, retryAfterSec: number | null): BatchResult {
+function buildUnsentRetryResult(
+  message: BatchMessage,
+  errorClass: TelegramSendErrorClass,
+  retryAfterSec: number | null,
+  rateLimitScope?: "chat" | "global",
+): BatchResult {
   return {
     chatId: message.chatId,
     ok: false,
@@ -337,6 +354,8 @@ function buildUnsentRetryResult(message: BatchMessage, errorClass: TelegramSendE
     errorClass,
     delivery: "retryable_failure",
     retryAfterSec,
+    ...(rateLimitScope ? { rateLimitScope } : {}),
+    attempted: false,
   };
 }
 
@@ -365,16 +384,23 @@ export async function sendBatch(
           replyMarkup: msg.replyMarkup,
           signal,
         });
-        return { chatId: msg.chatId, ...result };
+        return { chatId: msg.chatId, ...result, attempted: true };
       }),
     );
     results.push(...batchResults);
-    // Stop sending further batches on rate limit — in-flight parallel sends
-    // within this batch have already completed via Promise.all above.
-    const rateLimitedResult = batchResults.find((r) => r.errorClass === "rate_limit");
-    if (rateLimitedResult) {
+    // Stop sending further batches only when the response context indicates a
+    // bot-wide limit. Single-chat 429s remain isolated to that chat.
+    const globalRateLimitedResult = batchResults.find(
+      (r) => r.errorClass === "rate_limit" && r.rateLimitScope === "global",
+    );
+    if (globalRateLimitedResult) {
       for (const skippedMessage of messages.slice(i + batchSize)) {
-        results.push(buildUnsentRetryResult(skippedMessage, "rate_limit", rateLimitedResult.retryAfterSec));
+        results.push(buildUnsentRetryResult(
+          skippedMessage,
+          "rate_limit",
+          globalRateLimitedResult.retryAfterSec,
+          "global",
+        ));
       }
       break;
     }

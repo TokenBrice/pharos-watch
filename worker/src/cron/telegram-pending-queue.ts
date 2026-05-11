@@ -1,5 +1,6 @@
 import { sendToChat, type BatchMessage, type TelegramSendErrorClass } from "../lib/telegram";
 import { batchExecute } from "../lib/db";
+import { getCache, setCache } from "../lib/db-cache";
 import { SNOOZE_REPLY_MARKUP } from "../lib/telegram-alerts";
 import {
   BLOCK_STRIKE_WINDOW_SEC,
@@ -26,6 +27,7 @@ export {
 };
 
 const PENDING_BACKOFF_CAP_SEC = PENDING_BACKOFF_SCHEDULE_SEC[PENDING_BACKOFF_SCHEDULE_SEC.length - 1];
+export const TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY = "telegram:global-send-backoff-until";
 
 // ---------- Types ----------
 
@@ -248,6 +250,9 @@ export async function disableBlockedSubscriber(db: D1Database, chatId: string): 
             WHERE chat_id=?`,
         )
         .bind(chatId),
+      db
+        .prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id=?")
+        .bind(chatId),
     ]);
     return true;
   } catch (error) {
@@ -264,6 +269,41 @@ export async function disableBlockedSubscriber(db: D1Database, chatId: string): 
 
 // ---------- Pending Queue Operations ----------
 
+export async function setTelegramGlobalBackoff(db: D1Database, notBeforeAt: number | null): Promise<void> {
+  if (notBeforeAt == null) return;
+  try {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const existing = await readTelegramGlobalBackoff(db, nowSec);
+    await setCache(db, TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY, String(Math.max(existing ?? 0, notBeforeAt)));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logTelegramEvent({
+      level: "warn",
+      message: `Failed to set global Telegram backoff: ${message}`,
+      action: "set-global-backoff",
+      module: "telegram-pending-queue",
+    });
+  }
+}
+
+export async function readTelegramGlobalBackoff(db: D1Database, nowSec: number): Promise<number | null> {
+  try {
+    const cached = await getCache(db, TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY);
+    if (!cached) return null;
+    const parsed = Number(cached.value);
+    return Number.isFinite(parsed) && parsed > nowSec ? Math.floor(parsed) : null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logTelegramEvent({
+      level: "warn",
+      message: `Failed to read global Telegram backoff: ${message}`,
+      action: "read-global-backoff",
+      module: "telegram-pending-queue",
+    });
+    return null;
+  }
+}
+
 export async function drainPendingQueue(
   db: D1Database,
   botToken: string,
@@ -271,6 +311,15 @@ export async function drainPendingQueue(
   signal?: AbortSignal,
 ): Promise<PendingDrainResult> {
   const nowSec = Math.floor(Date.now() / 1000);
+  const globalBackoffUntil = await readTelegramGlobalBackoff(db, nowSec);
+  if (globalBackoffUntil != null) {
+    return {
+      ...emptyDrainResult(),
+      rateLimited: true,
+      retryAfterSec: Math.max(1, globalBackoffUntil - nowSec),
+      notBeforeAt: globalBackoffUntil,
+    };
+  }
   const cutoff = nowSec - PENDING_TTL_SEC;
   const rows = await db
     .prepare(
@@ -302,14 +351,15 @@ export async function drainPendingQueue(
   let droppedMaxAttemptsFallback = 0;
   let deferred = 0;
   const idsToDelete: number[] = [];
-  const retryUpdates: Array<{ id: number; priorAttempts: number; retryAfterSec: number | null; errorClass: TelegramSendErrorClass | null }> = [];
+  const retryUpdates: Array<{ id: number; retryAfterSec: number | null; errorClass: TelegramSendErrorClass | null; notBeforeAt: number | null }> = [];
   const deferUpdates: Array<{ id: number; notBeforeAt: number }> = [];
   let rateLimited = false;
+  let globalRateLimited = false;
   let rateLimitRetryAfterSec: number | null = null;
   let rateLimitNotBeforeAt: number | null = null;
 
   for (let i = 0; i < pending.length; i += SEND_BATCH_SIZE) {
-    if (signal?.aborted || rateLimited) break;
+    if (signal?.aborted || globalRateLimited) break;
     const batch = pending.slice(i, i + SEND_BATCH_SIZE).filter((row) => {
       if (!isPendingRowSnoozed(row, nowSec)) return true;
       deferred++;
@@ -353,14 +403,20 @@ export async function drainPendingQueue(
         retryQueued++;
         retryUpdates.push({
           id: result.id,
-          priorAttempts: result.attempts,
           retryAfterSec: result.retryAfterSec,
           errorClass: result.errorClass,
+          notBeforeAt: result.errorClass === "rate_limit" && result.rateLimitScope === "global"
+            ? null
+            : nowSec + pendingRetryDelaySec(result.attempts, result.retryAfterSec),
         });
         if (result.errorClass === "rate_limit") {
           rateLimited = true;
           rateLimitRetryAfterSec = result.retryAfterSec;
           rateLimitNotBeforeAt = nowSec + pendingRetryDelaySec(result.attempts, result.retryAfterSec);
+          if (result.rateLimitScope === "global") {
+            globalRateLimited = true;
+            await setTelegramGlobalBackoff(db, rateLimitNotBeforeAt);
+          }
         }
       } else if (result.retryable) {
         // Hit the defensive attempts ceiling while still retryable.
@@ -394,7 +450,6 @@ export async function drainPendingQueue(
 
   if (retryUpdates.length > 0) {
     await batchExecute(db, retryUpdates.map((update) => {
-      const notBeforeAt = nowSec + pendingRetryDelaySec(update.priorAttempts, update.retryAfterSec);
       return db
         .prepare(
           `UPDATE telegram_pending_alerts
@@ -405,7 +460,7 @@ export async function drainPendingQueue(
                   updated_at = ?
             WHERE id = ?`,
         )
-        .bind(notBeforeAt, update.errorClass, update.retryAfterSec, nowSec, update.id);
+        .bind(update.notBeforeAt, update.errorClass, update.retryAfterSec, nowSec, update.id);
     }));
   }
 
@@ -484,16 +539,21 @@ export async function enqueuePendingAlerts(
 export async function loadChatsInBackoff(
   db: D1Database,
   nowSec: number,
-): Promise<Set<string>> {
+): Promise<Map<string, number>> {
   const rows = await db
     .prepare(
-      `SELECT DISTINCT chat_id
+      `SELECT chat_id, MAX(not_before_at) AS not_before_at
          FROM telegram_pending_alerts
-        WHERE not_before_at IS NOT NULL AND not_before_at > ?`,
+        WHERE not_before_at IS NOT NULL AND not_before_at > ?
+        GROUP BY chat_id`,
     )
     .bind(nowSec)
-    .all<{ chat_id: string }>();
-  return new Set((rows.results ?? []).map((row) => row.chat_id));
+    .all<{ chat_id: string; not_before_at: number | null }>();
+  return new Map(
+    (rows.results ?? [])
+      .filter((row): row is { chat_id: string; not_before_at: number } => row.not_before_at != null)
+      .map((row) => [row.chat_id, row.not_before_at]),
+  );
 }
 
 export async function cleanupExpiredPendingAlerts(

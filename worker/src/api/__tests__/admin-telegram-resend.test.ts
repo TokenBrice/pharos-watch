@@ -196,11 +196,22 @@ describe("handleAdminTelegramResend", () => {
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     const body = (await res.json()) as {
       ok: boolean;
+      mode: string;
+      chunkCount: number;
+      chunksAttempted: number;
       statusCode: number | null;
       errorClass: string | null;
       retryAfterSec: number | null;
     };
-    expect(body).toEqual({ ok: true, statusCode: 200, errorClass: null, retryAfterSec: null });
+    expect(body).toEqual({
+      ok: true,
+      mode: "synthetic_current_state",
+      chunkCount: 1,
+      chunksAttempted: 1,
+      statusCode: 200,
+      errorClass: null,
+      retryAfterSec: null,
+    });
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const [calledUrl, init] = fetchSpy.mock.calls[0] as [string, RequestInit];

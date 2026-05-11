@@ -32,6 +32,7 @@ import { logTelegramEvent } from "../lib/telegram-log";
 import { handleCallbackQuery } from "./telegram-webhook-callbacks";
 import { COMMAND_HANDLERS, type WebhookCommandContext } from "./webhook-commands";
 import { makeActionRunner } from "./webhook-commands/action-runner";
+import { isGroupChatType } from "./telegram-webhook-auth";
 
 /**
  * Group admin gating mode for group-wide mutating commands in
@@ -330,7 +331,7 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
 );
 
 function isGroupChat(chatType: string): boolean {
-  return chatType === "group" || chatType === "supergroup";
+  return isGroupChatType(chatType);
 }
 
 /**

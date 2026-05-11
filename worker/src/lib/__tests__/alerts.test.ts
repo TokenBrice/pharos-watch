@@ -33,6 +33,23 @@ describe("sendAlert", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("drains successful webhook response bodies", async () => {
+    let drained = false;
+    const body = new ReadableStream({
+      pull(controller) {
+        drained = true;
+        controller.close();
+      },
+    });
+    const fetchMock = vi.fn(async () => new Response(body, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const ok = await sendAlert(TEST_WEBHOOK, "Circuit closed", "Recovered");
+
+    expect(ok).toBe(true);
+    expect(drained).toBe(true);
+  });
+
   it("returns false on fetch error", async () => {
     const fetchMock = vi.fn(async () => {
       throw new Error("network down");

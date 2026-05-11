@@ -9,7 +9,7 @@ import { enqueuePendingAlerts } from "../cron/telegram-pending-queue";
 import { splitMessage } from "../lib/telegram-alerts";
 import type { BatchMessage } from "../lib/telegram";
 
-const SCOPES = ["all", "global-subscribers"] as const;
+const SCOPES = ["all", "deliverable-watchers", "global-subscribers"] as const;
 type BroadcastScope = (typeof SCOPES)[number];
 
 const SAMPLE_SIZE = 5;
@@ -56,6 +56,24 @@ async function loadTargetChatIds(db: D1Database, scope: BroadcastScope): Promise
            OR global_alert_safety = 1
            OR global_alert_launch = 1
         ORDER BY chat_id`
+    : scope === "deliverable-watchers"
+      ? `SELECT s.chat_id
+           FROM telegram_subscribers s
+          WHERE s.global_alert_dews = 1
+             OR s.global_alert_depeg = 1
+             OR s.global_alert_safety = 1
+             OR s.global_alert_launch = 1
+             OR EXISTS (
+               SELECT 1 FROM telegram_subscriptions ts
+                WHERE ts.chat_id = s.chat_id
+                  AND (ts.alert_dews = 1 OR ts.alert_depeg = 1 OR ts.alert_safety = 1 OR ts.alert_launch = 1)
+             )
+             OR EXISTS (
+               SELECT 1 FROM telegram_preset_subscriptions ps
+                WHERE ps.chat_id = s.chat_id
+                  AND (ps.alert_dews = 1 OR ps.alert_depeg = 1 OR ps.alert_safety = 1 OR ps.alert_launch = 1)
+             )
+          ORDER BY s.chat_id`
     : `SELECT chat_id FROM telegram_subscribers ORDER BY chat_id`;
   const rows = await db.prepare(sql).all<{ chat_id: string }>();
   return (rows.results ?? []).map((row) => row.chat_id);

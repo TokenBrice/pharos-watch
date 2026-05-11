@@ -27,6 +27,13 @@ function globalSubscriberRows(chatIds: string[]) {
   };
 }
 
+function deliverableWatcherRows(chatIds: string[]) {
+  return {
+    match: "FROM telegram_preset_subscriptions ps",
+    rows: chatIds.map((chat_id) => ({ chat_id })),
+  };
+}
+
 function pendingInsertRow() {
   return { match: "INSERT INTO telegram_pending_alerts", rows: [], runMeta: { changes: 1 } };
 }
@@ -119,6 +126,23 @@ describe("handleAdminTelegramBroadcast", () => {
     const history = db.getHistory();
     const select = history.find((entry) => entry.sql.includes("FROM telegram_subscribers"));
     expect(select?.sql).toContain("global_alert_dews = 1");
+  });
+
+  it("dry-run with deliverable-watchers scope includes active direct, preset, and global follows", async () => {
+    const db = mockD1([deliverableWatcherRows(["100", "200"])]);
+    const res = await handleAdminTelegramBroadcast({
+      db,
+      request: adminRequest({ messageHtml: "<b>x</b>", scope: "deliverable-watchers", dryRun: true }),
+      trustedAdmin: true,
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { targetChatCount: number; sample: string[] };
+    expect(body.targetChatCount).toBe(2);
+    expect(body.sample).toEqual(["100", "200"]);
+
+    const select = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_subscribers"));
+    expect(select?.sql).toContain("FROM telegram_subscriptions ts");
+    expect(select?.sql).toContain("FROM telegram_preset_subscriptions ps");
   });
 
   it("live mode enqueues one pending row per chat and audits the action", async () => {

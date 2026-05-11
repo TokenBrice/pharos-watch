@@ -20,8 +20,7 @@
  */
 
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { answerCallbackQuery, editMessageText, sendToChat } from "../lib/telegram";
-import { getCachedChatMember } from "../lib/telegram-chat-member";
+import { answerCallbackQuery, editMessage, sendToChat } from "../lib/telegram";
 import {
   clearPendingDisambiguation,
   removePresetSubscriptions,
@@ -61,6 +60,7 @@ import {
 } from "./telegram-webhook-shared";
 import { SNOOZE_SECONDS, isDepegStepValue } from "../lib/telegram-constants";
 import { logTelegramEvent } from "../lib/telegram-log";
+import { requireGroupAdminForCallback } from "./telegram-webhook-auth";
 
 // Re-export so any caller importing `SNOOZE_SECONDS` from this module keeps working.
 export { SNOOZE_SECONDS };
@@ -96,6 +96,40 @@ function isKnownStablecoinId(id: string | undefined): id is string {
   return typeof id === "string" && TRACKED_META_BY_ID.has(id);
 }
 
+function parseCallbackData(data: string): string[] {
+  return data.split(":");
+}
+
+function hasExactParts(parts: readonly string[], expected: number): boolean {
+  return parts.length === expected && parts.every((part) => part.length > 0);
+}
+
+function callbackActorUserId(cb: TelegramCallbackQuery): string | null {
+  return cb.from?.id != null ? String(cb.from.id) : null;
+}
+
+function callbackChatType(cb: TelegramCallbackQuery): string {
+  return cb.message?.chat?.type ?? "private";
+}
+
+async function requireAdminForMutatingCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  denialText: string = "Only group admins can change alert settings.",
+): Promise<boolean> {
+  return requireGroupAdminForCallback(
+    db,
+    botToken,
+    cb.id,
+    chatId,
+    callbackChatType(cb),
+    callbackActorUserId(cb),
+    denialText,
+  );
+}
+
 export interface TelegramCallbackQuery {
   id: string;
   data?: string;
@@ -115,14 +149,27 @@ export async function handleCallbackQuery(
   }
 
   const data = cb.data ?? "";
-  const [action, arg] = data.split(":");
+  const parts = parseCallbackData(data);
+  const [action, arg] = parts;
 
   if (action === "setup") {
     const subAction = arg ?? "";
-    const subArg = data.split(":").slice(2).join(":");
-    const chatType = cb.message?.chat?.type ?? "private";
+    const subArg = parts[2] ?? "";
+    const validSetupCallback =
+      (subAction === "branch" && hasExactParts(parts, 3) && (subArg === "recommended" || subArg === "custom" || subArg === "skip")) ||
+      (subAction === "type-toggle" && hasExactParts(parts, 3)) ||
+      (subAction === "target" && hasExactParts(parts, 3)) ||
+      ((subAction === "next" || subAction === "confirm" || subAction === "cancel") && parts.length === 2);
+    if (!validSetupCallback) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
+    if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
+      return;
+    }
+    const chatType = callbackChatType(cb);
     const username = chatType === "group" || chatType === "supergroup" ? null : cb.from?.username ?? null;
-    const actorUserId = cb.from?.id != null ? String(cb.from.id) : null;
+    const actorUserId = callbackActorUserId(cb);
     const stateRow = await db
       .prepare(
         "SELECT action_type, action_payload, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
@@ -164,7 +211,27 @@ export async function handleCallbackQuery(
 
   if (action === "settings") {
     const subAction = arg ?? "";
-    const subArg = data.split(":").slice(2).join(":");
+    const subArg = parts.slice(2).join(":");
+    const validSettingsCallback =
+      (subAction === "home" && parts.length === 2) ||
+      ((subAction === "gt" || subAction === "q" || subAction === "o") && parts.length === 3) ||
+      (subAction === "sc" && parts.length === 2) ||
+      (subAction === "c" && parts.length === 5);
+    if (!validSettingsCallback) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
+    const mutatingSettingsCallback =
+      subAction === "gt" ||
+      subAction === "q" ||
+      subAction === "sc" ||
+      subAction === "c";
+    if (
+      mutatingSettingsCallback &&
+      !(await requireAdminForMutatingCallback(db, botToken, cb, chatId))
+    ) {
+      return;
+    }
     await handleSettingsCallback(db, botToken, cb, subAction, subArg);
     return;
   }
@@ -176,10 +243,17 @@ export async function handleCallbackQuery(
     return;
   }
 
-  if (action === "snooze" && isSnoozeArg(arg)) {
+  if (action === "snooze") {
+    if (!hasExactParts(parts, 2) || !isSnoozeArg(arg)) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
+    if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
+      return;
+    }
     const now = unixNow();
     const until = now + SNOOZE_SECONDS[arg];
-    const chatType = cb.message?.chat?.type ?? "private";
+    const chatType = callbackChatType(cb);
     const username = chatType === "group" || chatType === "supergroup" ? null : cb.from?.username ?? null;
 
     // Sequence DB write BEFORE the ack so the toast reflects actual outcome.
@@ -224,10 +298,13 @@ export async function handleCallbackQuery(
     return;
   }
 
-  if (action === "coinsnooze" && isKnownStablecoinId(arg)) {
-    const durationToken = (cb.data ?? "").split(":")[2];
-    if (!isSnoozeArg(durationToken)) {
+  if (action === "coinsnooze") {
+    const durationToken = parts[2];
+    if (!hasExactParts(parts, 3) || !isKnownStablecoinId(arg) || !isSnoozeArg(durationToken)) {
       await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
+    if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
       return;
     }
     const now = unixNow();
@@ -275,7 +352,11 @@ export async function handleCallbackQuery(
     return;
   }
 
-  if (action === "status" && isKnownStablecoinId(arg)) {
+  if (action === "status") {
+    if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
     const meta = TRACKED_META_BY_ID.get(arg);
     const status = await loadStatusForCoin(db, arg);
     await sendToChat(chatId, buildStatusMessage(meta?.symbol ?? arg, status), botToken, {
@@ -286,14 +367,22 @@ export async function handleCallbackQuery(
     return;
   }
 
-  if (action === "why" && isKnownStablecoinId(arg)) {
+  if (action === "why") {
+    if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
     const message = await buildWhyMessage(db, arg);
     await sendToChat(chatId, message, botToken, { disableWebPagePreview: true });
     await answerCallbackQuery(cb.id, botToken, { text: "Why sent." });
     return;
   }
 
-  if (action === "coverage" && isKnownStablecoinId(arg)) {
+  if (action === "coverage") {
+    if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
     const meta = TRACKED_META_BY_ID.get(arg);
     const status = await loadStatusForCoin(db, arg);
     await sendToChat(chatId, buildCoverageMessage(meta?.symbol ?? arg, status), botToken, {
@@ -303,23 +392,26 @@ export async function handleCallbackQuery(
     return;
   }
 
-  if (action === "quicksub" && isKnownStablecoinId(arg)) {
-    const chatType = cb.message?.chat?.type ?? "private";
+  if (action === "quicksub") {
+    if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
+    const chatType = callbackChatType(cb);
     const isGroup = chatType === "group" || chatType === "supergroup";
-    const actorUserId = cb.from?.id != null ? String(cb.from.id) : null;
     // Group chats route through the same admin gate as the slash commands so
     // a single member cannot rewrite the chat's subscription state.
-    if (isGroup) {
-      if (!actorUserId) {
-        await answerCallbackQuery(cb.id, botToken, { text: "Only group admins can subscribe." });
-        return;
-      }
-      const member = await getCachedChatMember(db, botToken, chatId, actorUserId);
-      const isAdmin = member?.status === "creator" || member?.status === "administrator";
-      if (!isAdmin) {
-        await answerCallbackQuery(cb.id, botToken, { text: "Only group admins can subscribe." });
-        return;
-      }
+    if (
+      isGroup &&
+      !(await requireAdminForMutatingCallback(
+        db,
+        botToken,
+        cb,
+        chatId,
+        "Only group admins can subscribe.",
+      ))
+    ) {
+      return;
     }
     const username = isGroup ? null : cb.from?.username ?? null;
     const meta = TRACKED_META_BY_ID.get(arg);
@@ -344,9 +436,16 @@ export async function handleCallbackQuery(
     return;
   }
 
-  if (action === "depegstep" && isKnownStablecoinId(arg)) {
-    const step = Number((cb.data ?? "").split(":")[2]);
-    if (isDepegStepValue(step)) {
+  if (action === "depegstep") {
+    const step = Number(parts[2]);
+    if (!hasExactParts(parts, 3) || !isKnownStablecoinId(arg) || !isDepegStepValue(step)) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
+    if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
+      return;
+    }
+    try {
       const now = unixNow();
       await db
         .prepare(
@@ -365,11 +464,30 @@ export async function handleCallbackQuery(
         .bind(now, chatId)
         .run();
       await answerCallbackQuery(cb.id, botToken, { text: `Depeg worsening alerts set to ${step} bps.` });
-      return;
+    } catch (err) {
+      logTelegramEvent({
+        message: "depegstep callback write failed",
+        chatId,
+        userId: cb.from?.id ?? null,
+        action: "depegstep",
+        err: err instanceof Error ? err.message : String(err),
+      });
+      await answerCallbackQuery(cb.id, botToken, {
+        text: "Could not save setting. Please try again.",
+      });
     }
+    return;
   }
 
-  if (action === "safetydown" && isKnownStablecoinId(arg)) {
+  if (action === "safetydown") {
+    if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
+    if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
+      return;
+    }
+    try {
     const now = unixNow();
     await db
       .prepare(
@@ -388,20 +506,47 @@ export async function handleCallbackQuery(
       .bind(now, chatId)
       .run();
     await answerCallbackQuery(cb.id, botToken, { text: "Safety alerts set to downgrades only." });
+    } catch (err) {
+      logTelegramEvent({
+        message: "safetydown callback write failed",
+        chatId,
+        userId: cb.from?.id ?? null,
+        action: "safetydown",
+        err: err instanceof Error ? err.message : String(err),
+      });
+      await answerCallbackQuery(cb.id, botToken, {
+        text: "Could not save setting. Please try again.",
+      });
+    }
     return;
   }
 
-  if ((action === "confirm" || action === "cancel") && arg === "bulk") {
+  if (action === "confirm" || action === "cancel") {
+    if (!hasExactParts(parts, 2) || arg !== "bulk") {
+      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
+    if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
+      return;
+    }
     await handleBulkConfirmCallback(db, botToken, cb, action);
     return;
   }
 
-  if (action === "manage" && arg === "page") {
+  if (action === "manage") {
+    if (!hasExactParts(parts, 3) || arg !== "page") {
+      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
     await handleManagePage(db, botToken, cb);
     return;
   }
 
-  if (action === "unsub" && isKnownStablecoinId(arg)) {
+  if (action === "unsub") {
+    if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
     await handleManageUnsub(db, botToken, cb, arg);
     return;
   }
@@ -410,25 +555,24 @@ export async function handleCallbackQuery(
     // Zone strings never legitimately contain `:` (IANA names use `/`), but use
     // a slice instead of split to stay forgiving if Telegram ever introduces
     // multi-segment callback payloads.
-    const zone = data.slice(action.length + 1);
-    if (!zone || !isValidIanaTimezone(zone)) {
+    const zone = parts[1] ?? "";
+    if (!hasExactParts(parts, 2) || !isValidIanaTimezone(zone)) {
       await answerCallbackQuery(cb.id, botToken, { text: "Unknown timezone." });
       return;
     }
-    const chatType = cb.message?.chat?.type ?? "private";
+    const chatType = callbackChatType(cb);
     const isGroup = chatType === "group" || chatType === "supergroup";
-    if (isGroup) {
-      const actorUserId = cb.from?.id != null ? String(cb.from.id) : null;
-      if (!actorUserId) {
-        await answerCallbackQuery(cb.id, botToken, { text: "Only group admins can change timezone." });
-        return;
-      }
-      const member = await getCachedChatMember(db, botToken, chatId, actorUserId);
-      const isAdmin = member?.status === "creator" || member?.status === "administrator";
-      if (!isAdmin) {
-        await answerCallbackQuery(cb.id, botToken, { text: "Only group admins can change timezone." });
-        return;
-      }
+    if (
+      isGroup &&
+      !(await requireAdminForMutatingCallback(
+        db,
+        botToken,
+        cb,
+        chatId,
+        "Only group admins can change timezone.",
+      ))
+    ) {
+      return;
     }
     const username = isGroup ? null : cb.from?.username ?? null;
     try {
@@ -484,11 +628,16 @@ async function renderManagePage(
     subscriptions.length === 0 ? undefined : buildManageWatchlistKeyboard(subscriptions, page);
 
   if (messageId != null) {
-    await editMessageText(chatId, messageId, text, botToken, {
+    const edited = await editMessage(chatId, messageId, text, botToken, {
       disableWebPagePreview: true,
       replyMarkup,
     });
-  } else {
+    if (edited) {
+      await answerCallbackQuery(cb.id, botToken, { text: ackText });
+      return;
+    }
+  }
+  {
     await sendToChat(chatId, text, botToken, {
       disableWebPagePreview: true,
       replyMarkup,
@@ -530,20 +679,19 @@ async function handleManageUnsub(
 
   // Apply the same admin gate used by /unsubscribe so a single group member
   // cannot remove subscriptions out from under the rest of the chat.
-  const chatType = cb.message?.chat?.type ?? "private";
+  const chatType = callbackChatType(cb);
   const isGroup = chatType === "group" || chatType === "supergroup";
-  if (isGroup) {
-    const actorUserId = cb.from?.id != null ? String(cb.from.id) : null;
-    if (!actorUserId) {
-      await answerCallbackQuery(cb.id, botToken, { text: "Only group admins can unsubscribe." });
-      return;
-    }
-    const member = await getCachedChatMember(db, botToken, chatId, actorUserId);
-    const isAdmin = member?.status === "creator" || member?.status === "administrator";
-    if (!isAdmin) {
-      await answerCallbackQuery(cb.id, botToken, { text: "Only group admins can unsubscribe." });
-      return;
-    }
+  if (
+    isGroup &&
+    !(await requireAdminForMutatingCallback(
+      db,
+      botToken,
+      cb,
+      chatId,
+      "Only group admins can unsubscribe.",
+    ))
+  ) {
+    return;
   }
 
   // Determine the current page from the callback message keyboard so we can
@@ -583,11 +731,16 @@ async function handleManageUnsub(
       : buildManageWatchlistKeyboard(subscriptions, Math.max(0, nextPage));
 
   if (messageId != null) {
-    await editMessageText(chatId, messageId, text, botToken, {
+    const edited = await editMessage(chatId, messageId, text, botToken, {
       disableWebPagePreview: true,
       replyMarkup,
     });
-  } else {
+    if (edited) {
+      await answerCallbackQuery(cb.id, botToken, { text: ackText });
+      return;
+    }
+  }
+  {
     await sendToChat(chatId, text, botToken, {
       disableWebPagePreview: true,
       replyMarkup,

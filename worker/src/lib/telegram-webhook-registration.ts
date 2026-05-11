@@ -19,9 +19,9 @@ const TELEGRAM_PROFILE_CACHE_VERSION = 1;
 // reconciliation loop self-heals any drift introduced via BotFather.
 export const TELEGRAM_BOT_NAME = "Pharos Watch";
 export const TELEGRAM_BOT_SHORT_DESCRIPTION =
-  "Stablecoin alerts: DEWS stress, depeg events, safety grade changes, and launches. Track 305+ coins.";
+  "Stablecoin alerts: DEWS stress, depeg events, safety grade changes, and launches. Track 311 coins.";
 export const TELEGRAM_BOT_DESCRIPTION =
-  "Pharos Watch tracks 305+ stablecoins and pushes alerts when something matters: DEWS stress bands, depeg events, safety grade changes, and new launches. Subscribe to curated presets like usd-top25, or build a custom watchlist of any tracked coin. Learn more at https://pharos.watch/pharoswatchbot/";
+  "Pharos Watch tracks 311 stablecoins and pushes alerts when something matters: DEWS stress bands, depeg events, safety grade changes, and new launches. Subscribe to curated presets like usd-top25, or build a custom watchlist of any tracked coin. Learn more at https://pharos.watch/pharoswatchbot/";
 
 export const TELEGRAM_BOT_COMMANDS = [
   { command: "start", description: "Get started with Pharos alerts" },

@@ -783,6 +783,19 @@ describe("splitMessage HTML safety", () => {
       expect(opens).toBe(closes);
     }
   });
+
+  it("balances expandable blockquotes across hard chunk boundaries", () => {
+    const longContext = `<blockquote expandable>${"context ".repeat(900)}</blockquote>`;
+    const chunks = splitMessage(longContext, 4000);
+    expect(chunks.length).toBeGreaterThan(1);
+    for (const chunk of chunks) {
+      const opens = (chunk.match(/<blockquote(?:\s+expandable)?>/g) ?? []).length;
+      const closes = (chunk.match(/<\/blockquote>/g) ?? []).length;
+      expect(opens).toBe(closes);
+      expect(chunk).not.toMatch(/<blockquote[^>]*$/);
+      expect(chunk).not.toMatch(/^expandable>/);
+    }
+  });
 });
 
 describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
@@ -917,7 +930,12 @@ describe("resolveAlertLinkPreviewOptions", () => {
 
   it("enables a small preview on the first chunk of a single-coin alert", () => {
     const options = resolveAlertLinkPreviewOptions(singleCoinAlerts("usdc-circle"), 0);
-    expect(options).toEqual({ is_disabled: false, prefer_small_media: true, show_above_text: false });
+    expect(options).toEqual({
+      is_disabled: false,
+      url: "https://pharos.watch/stablecoin/usdc-circle",
+      prefer_small_media: true,
+      show_above_text: false,
+    });
   });
 
   it("returns null for chunks after the first chunk of a single-coin alert", () => {

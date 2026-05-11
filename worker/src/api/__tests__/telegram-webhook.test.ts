@@ -214,6 +214,47 @@ describe("handleTelegramWebhook", () => {
     expect(callbacks).toContain("setup:branch:recommended");
   });
 
+  it("/start in a group gives non-admins the read-only start message", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
+    ]);
+    fetchSpy.mockImplementation(async (url) => {
+      if (String(url).includes("getChatMember")) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            result: { user: { id: 7, is_bot: false, first_name: "member" }, status: "member" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(-123, "/start@PharosWatchBot", "test-secret", {
+        chatType: "supergroup",
+        fromId: 7,
+      }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    const sendCall = fetchSpy.mock.calls.find((call) => String(call[0]).includes("sendMessage"));
+    const body = JSON.parse((sendCall?.[1] as RequestInit).body as string) as { text: string };
+    expect(body.text).toContain("Quick start");
+    expect(body.text).not.toContain("Pick a path below");
+    expect(
+      db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation")),
+    ).toBe(false);
+  });
+
   it("/start sub_<types>_<targets> in a private chat dispatches into /subscribe", async () => {
     const db = mockD1([
       { match: "telegram_pending_disambiguation", rows: [] },

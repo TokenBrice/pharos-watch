@@ -595,11 +595,17 @@ export function buildAlertReplyMarkup(alerts: ConsolidatedAlerts, chunkIndex: nu
 export function resolveAlertLinkPreviewOptions(
   alerts: ConsolidatedAlerts,
   chunkIndex: number,
-): { is_disabled: boolean; prefer_small_media: boolean; show_above_text: boolean } | null {
+): { is_disabled: boolean; url: string; prefer_small_media: boolean; show_above_text: boolean } | null {
   if (!ALERT_LINK_PREVIEW_FOR_SINGLE_COIN) return null;
   if (chunkIndex !== 0) return null;
-  if (getSingleAlertStablecoinId(alerts) == null) return null;
-  return { is_disabled: false, prefer_small_media: true, show_above_text: false };
+  const stablecoinId = getSingleAlertStablecoinId(alerts);
+  if (stablecoinId == null) return null;
+  return {
+    is_disabled: false,
+    url: `https://pharos.watch/stablecoin/${stablecoinId}`,
+    prefer_small_media: true,
+    show_above_text: false,
+  };
 }
 
 /**
@@ -620,6 +626,7 @@ function repairBrokenHtml(chunk: string): string {
     { open: /<i[> ]/g, close: /<\/i>/g, tag: "i" },
     { open: /<code[> ]/g, close: /<\/code>/g, tag: "code" },
     { open: /<pre[> ]/g, close: /<\/pre>/g, tag: "pre" },
+    { open: /<blockquote(?:\s+expandable)?[> ]/g, close: /<\/blockquote>/g, tag: "blockquote" },
   ];
   for (const { open, close, tag } of TAG_PATTERNS) {
     const openCount = (repaired.match(open) ?? []).length;

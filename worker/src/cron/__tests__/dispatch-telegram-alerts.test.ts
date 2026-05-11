@@ -1273,7 +1273,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "sub.alert_dews = 1", rows: [{ stablecoin_id: "usdc-circle", chat_id: "fresh-chat", last_active_at: now }] },
       { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
       // loadChatsInBackoff query: old-chat is in backoff after the drain updates not_before_at
-      { match: "SELECT DISTINCT chat_id", rows: [{ chat_id: "old-chat" }] },
+      { match: "SELECT chat_id, MAX(not_before_at)", rows: [{ chat_id: "old-chat", not_before_at: now + 45 }] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
@@ -1320,7 +1320,7 @@ describe("dispatchTelegramAlerts", () => {
         ],
       },
       // chat-A is in backoff from a previous run; chat-B is not
-      { match: "SELECT DISTINCT chat_id", rows: [{ chat_id: "chat-A" }] },
+      { match: "SELECT chat_id, MAX(not_before_at)", rows: [{ chat_id: "chat-A", not_before_at: now + 300 }] },
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
@@ -1347,7 +1347,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(sentChatIds).toEqual(["chat-B"]);
   });
 
-  it("requeues the untouched fresh-send tail when batch sending stops on a rate limit", async () => {
+  it("requeues globally rate-limited fresh sends without per-chat not_before_at", async () => {
     const now = Math.floor(Date.now() / 1000);
 
     mockSendBatch.mockResolvedValue([
@@ -1355,10 +1355,10 @@ describe("dispatchTelegramAlerts", () => {
       { chatId: "chat-2", ok: true, blocked: false, retryable: false, permanentFailure: false, statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null },
       { chatId: "chat-3", ok: true, blocked: false, retryable: false, permanentFailure: false, statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null },
       { chatId: "chat-4", ok: true, blocked: false, retryable: false, permanentFailure: false, statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null },
-      { chatId: "chat-5", ok: false, blocked: false, retryable: true, permanentFailure: false, statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 45 },
-      { chatId: "chat-6", ok: false, blocked: false, retryable: true, permanentFailure: false, statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 45 },
-      { chatId: "chat-7", ok: false, blocked: false, retryable: true, permanentFailure: false, statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 45 },
-      { chatId: "chat-8", ok: false, blocked: false, retryable: true, permanentFailure: false, statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 45 },
+      { chatId: "chat-5", ok: false, blocked: false, retryable: true, permanentFailure: false, statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 45, rateLimitScope: "global", attempted: true },
+      { chatId: "chat-6", ok: false, blocked: false, retryable: true, permanentFailure: false, statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 45, rateLimitScope: "global", attempted: false },
+      { chatId: "chat-7", ok: false, blocked: false, retryable: true, permanentFailure: false, statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 45, rateLimitScope: "global", attempted: false },
+      { chatId: "chat-8", ok: false, blocked: false, retryable: true, permanentFailure: false, statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 45, rateLimitScope: "global", attempted: false },
     ]);
 
     mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
@@ -1396,6 +1396,14 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.freshRetryQueued).toBe(4);
     expect(metadata.pendingEnqueued).toBe(4);
     expect(metadata.messagesSent).toBe(4);
+    expect(mockSetCache).toHaveBeenCalledWith(
+      db,
+      "telegram:global-send-backoff-until",
+      String(now + 45),
+    );
+    const pendingInserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"));
+    expect(pendingInserts).toHaveLength(4);
+    expect(pendingInserts.every((entry) => entry.binds[4] == null)).toBe(true);
   });
 
   it("emits worsening depeg alerts when the configured bps step is crossed", async () => {
@@ -1804,10 +1812,11 @@ describe("dispatchTelegramAlerts", () => {
     const lastCall = mockSendBatch.mock.calls[mockSendBatch.mock.calls.length - 1];
     const messages = lastCall?.[0] as Array<{
       chunkIndex?: number;
-      linkPreviewOptions?: { is_disabled: boolean; prefer_small_media: boolean; show_above_text: boolean };
+      linkPreviewOptions?: { is_disabled: boolean; url: string; prefer_small_media: boolean; show_above_text: boolean };
     }>;
     expect(messages?.[0]?.linkPreviewOptions).toEqual({
       is_disabled: false,
+      url: "https://pharos.watch/stablecoin/usdc-circle",
       prefer_small_media: true,
       show_above_text: false,
     });

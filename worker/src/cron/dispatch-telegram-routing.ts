@@ -192,7 +192,7 @@ export function buildSubscriberQueue(
 export function splitFreshQueue(
   subscriberQueue: RoutedSubscriberAlert[],
   freshBudget: number,
-  deferredChats: ReadonlySet<string> = new Set(),
+  deferredChats: Pick<ReadonlyMap<string, number>, "has"> = new Map(),
 ): {
   toSend: RoutedSubscriberAlert[];
   toEnqueue: RoutedSubscriberAlert[];
