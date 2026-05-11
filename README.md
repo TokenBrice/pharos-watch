@@ -106,7 +106,7 @@ npm install
 NEXT_PUBLIC_API_BASE=http://localhost:8787 npm run dev
 ```
 
-`NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, browser reads on `pharos.watch`, `ops.pharos.watch`, and `*.stablecoin-dashboard.pages.dev` go through same-origin `/_site-data/*`. All Pages hosts require `SITE_API_ORIGIN` and proxy that lane with `SITE_API_SHARED_SECRET` to the dedicated `site-api` origin; when the binding is missing the proxy returns `500`. The `/_site-data/*` lane gates on the caller's `Origin` (or `Referer` fallback) and only accepts `pharos.watch`, `ops.pharos.watch`, or a Pages preview hostname. Direct browser calls still use `https://api.pharos.watch` only for exempt public routes such as feedback submission, self-serve API key request/verification, and OG image fetches; every other `/api/*` route requires a valid `X-API-Key`. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time.
+`NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, browser reads on `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and `*.stablecoin-dashboard.pages.dev` go through same-origin `/_site-data/*`. All Pages hosts require `SITE_API_ORIGIN` and proxy that lane with `SITE_API_SHARED_SECRET` to the dedicated `site-api` origin; when the binding is missing the proxy returns `500`. The `/_site-data/*` lane gates on the caller's `Origin` (or `Referer` fallback) and only accepts `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, or a subdomain of `stablecoin-dashboard.pages.dev`. Direct browser calls still use `https://api.pharos.watch` only for exempt public routes such as feedback submission, self-serve API key request/verification, and OG image fetches; every other `/api/*` route requires a valid `X-API-Key`. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time.
 
 ### Worker API
 
@@ -128,6 +128,7 @@ Use one of these paths:
 
 - Leave `NEXT_PUBLIC_API_BASE` empty and set `SITE_API_SHARED_SECRET` in `.env.local`; `npm run dev` starts `scripts/dev-api-proxy.mjs` so local same-origin `/api/*` reads are rewritten through the dev proxy and authenticate against the site-data lane.
 - Set `NEXT_PUBLIC_API_BASE=http://localhost:8787` when you are also running a configured local Worker with `cd worker && npx wrangler dev`.
+- `next dev` allows `ops.pharos.watch` as a development origin so the ops host can point at a local dev server during Access/proxy debugging.
 
 **Worker-only (`cd worker && npx wrangler dev`)**
 Requires D1 bindings and external API keys. See `worker/src/lib/env.ts` for the full binding contract and `.env.example` for all keys.
@@ -235,7 +236,7 @@ Current source-of-truth product docs live in `/docs/` and this README. Durable p
 Runtime host split:
 
 - website UI: `https://pharos.watch`
-- website data lane: same-origin `/_site-data/*` -> `SITE_API_ORIGIN` on every Pages host; origin-gated to `pharos.watch`, `ops.pharos.watch`, and Pages preview hostnames
+- website data lane: same-origin `/_site-data/*` -> `SITE_API_ORIGIN` on every Pages host; origin-gated to `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and subdomains of `stablecoin-dashboard.pages.dev`
 - external integration API: `https://api.pharos.watch`
 - operator UI/API: `https://ops.pharos.watch` / `https://ops-api.pharos.watch`
 

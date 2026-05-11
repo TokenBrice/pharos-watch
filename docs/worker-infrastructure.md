@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 19 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 31 `CRON_JOB_DEFINITIONS` jobs across 18 job-bearing slots; the separate `*/5 * * * *` digest-trigger poll slot is the 19th runner slot and executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 19 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 33 `CRON_JOB_DEFINITIONS` jobs across 18 job-bearing slots; the separate `*/5 * * * *` digest-trigger poll slot is the 19th runner slot and executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -13,6 +13,10 @@ Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trig
 Worker runtime safety and telemetry controls are declared in `worker/wrangler.toml` and should be managed in git (the CI deploy job now runs `wrangler versions upload`, preview smoke against the uploaded candidate, `wrangler versions deploy`, and then `wrangler triggers deploy`, so dashboard-only edits can be overwritten on the next deployment).
 
 ```toml
+compatibility_date = "2026-04-18"
+compatibility_flags = ["nodejs_compat"]
+preview_urls = true
+
 [limits]
 cpu_ms = 30000
 
@@ -26,6 +30,7 @@ invocation_logs = true
 ```
 
 - `cpu_ms = 30000`: hard cap on CPU time per invocation (not wall-clock runtime). This is independent from in-app wall-clock cron timeouts in `logCronRun()`. Raised from 5000 to give isolated cron triggers comfortable headroom; higher Cloudflare ceilings are vendor-plan details and are intentionally not treated as repo source of truth here.
+- `compatibility_date = "2026-04-18"` + `nodejs_compat`: top-level Wrangler runtime compatibility settings for the deployed Worker.
 - `observability.enabled`: enables Worker traces.
 - `head_sampling_rate = 0.1`: samples 10% of traces.
 - `observability.logs.enabled` + `invocation_logs = true`: enables Workers Logs in dashboard.
@@ -259,7 +264,7 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 
 **Files:** `functions/_site-data/[[path]].ts`, `worker/src/lib/auth.ts`, `worker/src/handlers/http/gates.ts`
 
-- Pages Functions on `pharos.watch`, `ops.pharos.watch`, and Pages preview hosts proxy same-origin `/_site-data/*` requests to the explicit `SITE_API_ORIGIN` target on every host (production and preview); when that binding is missing the proxy returns `500`. The lane also gates on the caller's `Origin` header (or `Referer` as a fallback); only `pharos.watch`, `ops.pharos.watch`, and `*.pages.dev` preview hostnames are accepted.
+- Pages Functions on `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and subdomains of `stablecoin-dashboard.pages.dev` proxy same-origin `/_site-data/*` requests to the explicit `SITE_API_ORIGIN` target on every host (production and preview); when that binding is missing the proxy returns `500`. The lane also gates on the caller's `Origin` header (or `Referer` as a fallback); only `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and subdomains of `stablecoin-dashboard.pages.dev` are accepted.
 - the proxy injects `X-Pharos-Site-Proxy-Secret` from `SITE_API_SHARED_SECRET` and continues to emit only the current secret during rotations
 - the worker accepts that header only on `site-api.pharos.watch` or Worker preview URLs during CI rehearsal; it accepts either `SITE_API_SHARED_SECRET` or `SITE_API_SHARED_SECRET_PREVIOUS` while both are configured
 - the worker allows only `GET` requests to allowlisted public-read routes from `shared/lib/site-data-routes.ts`
@@ -301,6 +306,9 @@ These router-dispatched admin routes honor an optional `Idempotency-Key` header:
 - `POST /api/reset-circuit-breaker`
 - `POST /api/kill-cron-in-flight`
 - `POST /api/bulk-dismiss-discovery-candidates`
+- `POST /api/telegram-pending`
+- `POST /api/admin-telegram-resend`
+- `POST /api/admin-telegram-broadcast`
 
 The worker fingerprints method + path + sorted query + body for a given action key. Replays return the stored response with `X-Idempotent-Replay: true`; conflicting reuse returns `409`. When handler execution throws, the worker first tries to clear the pending reservation so the same key can be retried normally. If that cleanup cannot be confirmed, it stores a deterministic failure replay for that key and subsequent repeats return a replayed `500` response until the reservation expires.
 
@@ -487,8 +495,9 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 | Job                        | Function                   | File                                          | Documentation                              |
 | -------------------------- | -------------------------- | --------------------------------------------- | ------------------------------------------ |
 | `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
+| `telegram-degradation-watchdog` | `runTelegramDegradationWatchdog()` | `worker/src/cron/telegram-degradation-watchdog.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
 
-Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out gets its own 6-connection pool and CPU budget. Subscriber fan-out uses up to 4 of 6 available connections for parallel `sendBatch()` sends. Up to 200 subscriber message attempts per run; overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` in D1 for subsequent runs.
+Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out gets its own 6-connection pool and CPU budget. Before status-tracked jobs run, the slot best-effort reconciles Telegram command suggestions, bot profile metadata, and webhook registration when a bot token is configured. Subscriber fan-out uses up to 4 of 6 available connections for parallel `sendBatch()` sends. Up to 200 subscriber message attempts per run; overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` in D1 for subsequent runs. After alert dispatch, the watchdog records Telegram degradation signals, and the slot also runs a non-status `telegram-disambiguation-cleanup` sidecar to prune expired mid-conversation state.
 
 Safety-grade fan-out on this lane is now gated by the generation-aware live source cache `cache["alert:safety-source-cache"]`, written only by `publish-report-card-cache`. If that source is missing, corrupt, stale, or from the wrong generation, only safety alerts are suppressed; DEWS/depeg/launch alerts continue.
 
@@ -544,8 +553,9 @@ Runs once a month on the 1st at 06:00 UTC. Scans unmatched high-TVL DeFiLlama po
 | ------------------------- | --------------------------- | ------------------------------------------------ | ------------------------ |
 | `prune-status-probe-runs` | `runPruneStatusProbeRuns()` | `worker/src/cron/prune-status-probe-runs.ts`     | [Status Dashboard](./status-dashboard.md) |
 | `prune-cron-history`      | `runPruneCronHistory()`     | `worker/src/cron/prune-cron-history.ts`          | This doc                 |
+| `telegram-inactive-cleanup` | `runTelegramInactiveCleanup()` | `worker/src/cron/telegram-inactive-cleanup.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
 
-DB-only housekeeping slot. `prune-status-probe-runs` enforces the status-probe retention window, while `prune-cron-history` deletes `cron_runs` rows older than 7 days and `cron_slot_executions` rows older than 14 days.
+DB-only housekeeping slot. `prune-status-probe-runs` enforces the status-probe retention window, `prune-cron-history` deletes `cron_runs` rows older than 7 days and `cron_slot_executions` rows older than 14 days, and `telegram-inactive-cleanup` trims inactive Telegram subscriber state.
 
 ### Cron Slot Capacity and Connection Pool Budget
 
@@ -1135,7 +1145,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 31 cron jobs across 18 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. The `*/5 * * * *` digest-trigger poll slot is not listed as a separate job because it runs work under the existing `daily-digest` lease only when a manual trigger flag is pending:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 33 cron jobs across 18 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. The `*/5 * * * *` digest-trigger poll slot is not listed as a separate job because it runs work under the existing `daily-digest` lease only when a manual trigger flag is pending:
 
 | Job                             | Interval         | Trigger                                           |
 | ------------------------------- | ---------------- | ------------------------------------------------- |
@@ -1146,6 +1156,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `compute-dews`                  | 1,800s (30min)   | `26,56 * * * *`                                   |
 | `status-self-check`             | 900s (15min)     | `9,24,39,54 * * * *`                              |
 | `dispatch-telegram-alerts`      | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`       |
+| `telegram-degradation-watchdog` | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`       |
 | `sync-blacklist`                | 21,600s (6h)     | `3 */6 * * *`                                     |
 | `sync-mint-burn`                | 1,800s (30min)   | `4,34 * * * *`                                    |
 | `sync-dex-discovery`            | 7,200s (2h)      | `6 */2 * * *`                                     |
@@ -1169,6 +1180,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `discovery-scan`                | 604,800s (7d)    | `10 8 * * *` (Monday-only)                        |
 | `prune-status-probe-runs`       | 86,400s (24h)    | `0 3 * * *`                                       |
 | `prune-cron-history`            | 86,400s (24h)    | `0 3 * * *`                                       |
+| `telegram-inactive-cleanup`     | 86,400s (24h)    | `0 3 * * *`                                       |
 | `yield-coverage-audit`          | 2,592,000s (30d) | `0 6 1 * *`                                       |
 
 A job is treated as healthy when cron telemetry is unavailable, when a fresh in-flight run exists, when the last run is fresh and `ok`/`degraded`, when a fresh `skipped_locked` run has another fresh `ok` run in recent history, or when a watch-tier job has no history yet. Otherwise it is unhealthy, including stale history or non-fresh errors. `/api/status` now also exposes `crons[*].inFlight` while a long-running leased job is active, including `stage`, `itemsDone/itemsTotal`, the last heartbeat timestamp, and a `stale` flag when the active-progress row stops updating. Only progress rows backed by a still-active matching lease are surfaced this way.

@@ -12,7 +12,7 @@ The runtime now uses three HTTP lanes:
 
 - `https://api.pharos.watch` is the external integration API. Protected public routes require `X-API-Key`.
 - `https://site-api.pharos.watch` is the website-internal Worker host. It accepts only allowlisted `GET` reads plus `X-Pharos-Site-Proxy-Secret`.
-- `/_site-data/*` is the same-origin Pages Functions proxy used by browsers on `pharos.watch`, `ops.pharos.watch`, and Pages preview hosts.
+- `/_site-data/*` is the same-origin Pages Functions proxy used by browsers on `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and subdomains of `stablecoin-dashboard.pages.dev`.
 
 Static dataset exports are served from the public website, not from the Worker API, and do not require `X-API-Key`. The Stablecoin Cemetery export is available as JSON at `https://pharos.watch/datasets/stablecoin-cemetery.json` and CSV at `https://pharos.watch/datasets/stablecoin-cemetery.csv`.
 
@@ -237,7 +237,7 @@ Admin endpoints are authenticated only on the `ops-api.pharos.watch` host. Cloud
 
 Mutating admin calls also require `X-Pharos-Admin: 1` after Cloudflare Access authentication. Browser proxy calls forward that header from the operator UI and additionally require same-origin `Origin`; direct `ops-api` automation must send the header along with the Access service-token credentials.
 
-The website-internal read lane is separate from Cloudflare Access. `site-api.pharos.watch` accepts only allowlisted `GET` public-read paths and requires `X-Pharos-Site-Proxy-Secret`, which the Pages `/_site-data/*` proxy injects server-to-server from `SITE_API_SHARED_SECRET`. All Pages hosts — production and preview — must configure `SITE_API_ORIGIN=https://site-api.pharos.watch` (or a Worker preview URL that accepts the site-data secret); the Pages proxy fails closed with `500` when that binding is missing. The `/_site-data/*` lane additionally accepts requests only when the browser `Origin` header (or `Referer` as a fallback) matches `pharos.watch`, `ops.pharos.watch`, or a Pages preview hostname. Public browser traffic must not call `site-api.pharos.watch` directly.
+The website-internal read lane is separate from Cloudflare Access. `site-api.pharos.watch` accepts only allowlisted `GET` public-read paths and requires `X-Pharos-Site-Proxy-Secret`, which the Pages `/_site-data/*` proxy injects server-to-server from `SITE_API_SHARED_SECRET`. All Pages hosts — production and preview — must configure `SITE_API_ORIGIN=https://site-api.pharos.watch` (or a Worker preview URL that accepts the site-data secret); the Pages proxy fails closed with `500` when that binding is missing. The `/_site-data/*` lane additionally accepts requests only when the browser `Origin` header (or `Referer` as a fallback) matches `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, or a subdomain of `stablecoin-dashboard.pages.dev`. Public browser traffic must not call `site-api.pharos.watch` directly.
 
 Many router-dispatched mutating admin endpoints also support optional `Idempotency-Key` handling. Current idempotent routes are:
 
@@ -654,7 +654,8 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 | Param        | Type      | Default | Description                                                    |
 | ------------ | --------- | ------- | -------------------------------------------------------------- |
 | `stablecoin` | `string`  | —       | Filter by uppercase blacklist-tracker symbol from the full `BLACKLIST_STABLECOINS` set in `shared/types/market.ts` (for example `USDT`, not `usdt-tether`) |
-| `chain`      | `string`  | —       | Filter by chain name (e.g. `Ethereum`, `Tron`)                 |
+| `chain`      | `string`  | —       | Filter by exact chain display name (e.g. `Ethereum`, `Tron`) |
+| `chainId`    | `string`  | —       | Filter by canonical chain-registry ID (e.g. `ethereum`, `tron`). When both `chain` and `chainId` are supplied, they must identify the same chain or the endpoint returns `400` |
 | `eventType`  | `string`  | —       | Filter by type: `blacklist`, `unblacklist`, `destroy`          |
 | `q`          | `string`  | —       | Case-insensitive address substring search                      |
 | `sortBy`     | `string`  | `date`  | Sort field: `date`, `stablecoin`, `chain`, `event`            |
@@ -686,7 +687,7 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 | -------------------- | ---------------- | --------------------------------------------------------------------------------------- |
 | `id`                 | `string`         | Composite ID: `{chainId}-{txHash}-{logIndex}`                                           |
 | `stablecoin`         | `string`         | Token symbol (`USDC`, `USDT`, etc.)                                                     |
-| `chainId`            | `string`         | Chain identifier (e.g. `"ethereum"`, `"tron"`)                                          |
+| `chainId`            | `string`         | Stable chain identifier from the shared chain registry (e.g. `"ethereum"`, `"tron"`). This is the preferred join key for integrations |
 | `chainName`          | `string`         | Human-readable chain name (e.g. `"Ethereum"`)                                           |
 | `eventType`          | `string`         | `"blacklist"`, `"unblacklist"`, or `"destroy"`                                          |
 | `address`            | `string`         | Affected address (EVM `0x…` or Tron `T…`)                                               |
@@ -2733,7 +2734,7 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 
 **Request body:** Telegram Update object (JSON, sent by Telegram servers).
 
-**Response:** Always `200 OK` with plain-text body `ok` (Telegram retries on non-2xx).
+**Response:** Normal authenticated, unauthenticated/ignored, and command-processing paths return `200 OK` with plain-text body `ok` so Telegram does not retry routine bot decisions. Uncaught handler errors still use the standard API error wrapper and can return `500`.
 
 **Commands handled:**
 

@@ -24,7 +24,7 @@
     {
       "name": "worker-cron",
       "sources": ["shared/lib/cron-jobs.ts", "shared/lib/scheduled-runner-registry.ts", "worker/wrangler.toml", "worker/src/handlers/scheduled/**", "worker/src/cron/**"],
-      "docs": ["docs/worker-infrastructure.md", "docs/worker-and-api-limits.md", "docs/data-flow-map.md", "docs/deployment-process.md", "docs/digest-pipeline.md", "docs/supply-snapshot.md"],
+      "docs": ["docs/worker-infrastructure.md", "docs/worker-and-api-limits.md", "docs/data-flow-map.md", "docs/deployment-process.md", "docs/digest-pipeline.md", "docs/supply-snapshot.md", "docs/telegram-alerts.md"],
       "notes": ["Trigger slots, connection budgets, and status tracking are coupled."]
     },
     {
