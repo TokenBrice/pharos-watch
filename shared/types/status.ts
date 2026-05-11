@@ -307,6 +307,12 @@ export interface TelegramDispatchCronResult {
   pendingDrained: number;
   pendingRetryQueued: number;
   pendingDropped: number;
+  /** Pending rows dropped because they aged past `PENDING_TTL_SEC` (end-of-run cleanup). */
+  pendingDroppedTtlExpired: number;
+  /** Pending rows dropped after Telegram returned a non-retryable, non-blocked error. */
+  pendingDroppedPermanentFailure: number;
+  /** Pending rows dropped after hitting the defensive `PENDING_MAX_ATTEMPTS` ceiling. */
+  pendingDroppedMaxAttemptsFallback: number;
   pendingDeferred: number;
   pendingRateLimited: boolean;
   pendingRetryAfterSec: number | null;
@@ -351,6 +357,9 @@ export interface TelegramDispatchCronMetadata {
   pendingDrained: number | null;
   pendingRetryQueued: number | null;
   pendingDropped: number | null;
+  pendingDroppedTtlExpired: number | null;
+  pendingDroppedPermanentFailure: number | null;
+  pendingDroppedMaxAttemptsFallback: number | null;
   pendingDeferred: number | null;
   pendingRateLimited: boolean;
   pendingRetryAfterSec: number | null;

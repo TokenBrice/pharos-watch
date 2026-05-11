@@ -1,5 +1,6 @@
 import {
   enqueuePendingAlerts,
+  pendingBackoffSec,
   type PendingDrainResult,
 } from "./telegram-pending-queue";
 import {
@@ -75,7 +76,8 @@ export async function deliverTelegramSubscriberQueue({
 
   for (const retry of retryableFreshMessages) {
     const retryAfterSec = retry.result.retryAfterSec;
-    const notBeforeAt = nowSec + (retryAfterSec != null && retryAfterSec > 0 ? retryAfterSec : 60);
+    // Fresh sends entering the pending queue start at attempts=0; honor Retry-After when provided.
+    const notBeforeAt = nowSec + pendingBackoffSec(0, retryAfterSec);
     await enqueuePendingAlerts(db, [retry.message], nowSec, {
       notBeforeAt,
       lastErrorClass: retry.result.errorClass,

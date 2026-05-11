@@ -16,7 +16,10 @@ const {
   loadChatsInBackoff,
   registerSubscriberBlockAndShouldDisable,
   resetSubscriberBlockCount,
+  pendingBackoffSec,
   PENDING_TTL_SEC,
+  PENDING_MAX_ATTEMPTS,
+  PENDING_BACKOFF_SCHEDULE_SEC,
   BLOCK_STRIKE_WINDOW_SEC,
   buildDedupeKey,
 } = await import("../telegram-pending-queue");
@@ -137,7 +140,7 @@ describe("resetSubscriberBlockCount", () => {
 });
 
 describe("drainPendingQueue", () => {
-  it("retries messages up to 5 attempts before dropping", async () => {
+  it("keeps retrying retryable rows past the legacy 5-attempt cap (age-based retry)", async () => {
     mockSendToChat.mockResolvedValue({
       ok: false,
       blocked: false,
@@ -154,8 +157,8 @@ describe("drainPendingQueue", () => {
         match: "SELECT p.id, p.chat_id, p.message_html",
         rows: [
           { id: 1, chat_id: "100", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: 2 },
-          { id: 2, chat_id: "200", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: 4 },
-          { id: 3, chat_id: "300", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: 5 },
+          { id: 2, chat_id: "200", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: 5 },
+          { id: 3, chat_id: "300", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: 10 },
         ],
       },
       { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
@@ -164,10 +167,191 @@ describe("drainPendingQueue", () => {
 
     const result = await drainPendingQueue(db, "bot-token", 10);
 
-    // id 1 (attempts=2) and id 2 (attempts=4) are below cap → retryQueued
-    // id 3 (attempts=5) hits cap → dropped
-    expect(result.retryQueued).toBe(2);
+    // All three rows are below PENDING_MAX_ATTEMPTS (20); TTL filter at SELECT time
+    // is what bounds retries, not the per-row attempts counter.
+    expect(result.retryQueued).toBe(3);
+    expect(result.dropped).toBe(0);
+    expect(result.droppedMaxAttemptsFallback).toBe(0);
+    expect(result.droppedPermanentFailure).toBe(0);
+  });
+
+  it("drops retryable rows when the defensive PENDING_MAX_ATTEMPTS ceiling is hit", async () => {
+    mockSendToChat.mockResolvedValue({
+      ok: false,
+      blocked: false,
+      retryable: true,
+      permanentFailure: false,
+      statusCode: 500,
+      errorClass: "server_error",
+      delivery: "retryable_failure",
+      retryAfterSec: null,
+    });
+
+    const db = mockD1([
+      {
+        match: "SELECT p.id, p.chat_id, p.message_html",
+        rows: [
+          { id: 1, chat_id: "100", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: PENDING_MAX_ATTEMPTS - 1 },
+          { id: 2, chat_id: "200", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: PENDING_MAX_ATTEMPTS },
+          { id: 3, chat_id: "300", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: PENDING_MAX_ATTEMPTS + 5 },
+        ],
+      },
+      { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+    ]);
+
+    const result = await drainPendingQueue(db, "bot-token", 10);
+
+    expect(result.retryQueued).toBe(1);
+    expect(result.dropped).toBe(2);
+    expect(result.droppedMaxAttemptsFallback).toBe(2);
+    expect(result.droppedPermanentFailure).toBe(0);
+  });
+
+  it("classifies non-retryable Telegram responses as permanent-failure", async () => {
+    mockSendToChat.mockResolvedValue({
+      ok: false,
+      blocked: false,
+      retryable: false,
+      permanentFailure: true,
+      statusCode: 400,
+      errorClass: "bad_request",
+      delivery: "permanent_failure",
+      retryAfterSec: null,
+    });
+
+    const db = mockD1([
+      {
+        match: "SELECT p.id, p.chat_id, p.message_html",
+        rows: [
+          { id: 50, chat_id: "100", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: 0 },
+        ],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+    ]);
+
+    const result = await drainPendingQueue(db, "bot-token", 10);
+
     expect(result.dropped).toBe(1);
+    expect(result.droppedPermanentFailure).toBe(1);
+    expect(result.droppedMaxAttemptsFallback).toBe(0);
+  });
+
+  it("respects the 60→120→240→480→600 backoff schedule when Retry-After is absent", () => {
+    expect(PENDING_BACKOFF_SCHEDULE_SEC).toEqual([60, 120, 240, 480, 600]);
+    expect(pendingBackoffSec(0, null)).toBe(60);
+    expect(pendingBackoffSec(1, null)).toBe(120);
+    expect(pendingBackoffSec(2, null)).toBe(240);
+    expect(pendingBackoffSec(3, null)).toBe(480);
+    expect(pendingBackoffSec(4, null)).toBe(600);
+    // Caps at 600 for any higher attempt count.
+    expect(pendingBackoffSec(5, null)).toBe(600);
+    expect(pendingBackoffSec(19, null)).toBe(600);
+  });
+
+  it("prefers Telegram Retry-After over the local backoff schedule", () => {
+    expect(pendingBackoffSec(0, 30)).toBe(30);
+    expect(pendingBackoffSec(4, 1800)).toBe(1800);
+  });
+
+  it("writes scheduled backoff into not_before_at on retry updates", async () => {
+    mockSendToChat.mockResolvedValue({
+      ok: false,
+      blocked: false,
+      retryable: true,
+      permanentFailure: false,
+      statusCode: 500,
+      errorClass: "server_error",
+      delivery: "retryable_failure",
+      retryAfterSec: null,
+    });
+
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT p.id, p.chat_id, p.message_html",
+        rows: [
+          { id: 401, chat_id: "100", message_html: "<b>Alert</b>", disable_notification: 0, created_at: now - 60, attempts: 0 },
+          { id: 402, chat_id: "200", message_html: "<b>Alert</b>", disable_notification: 0, created_at: now - 60, attempts: 2 },
+        ],
+      },
+      { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
+    ]);
+
+    await drainPendingQueue(db, "bot-token", 10);
+
+    const history = db.getHistory();
+    const updates = history.filter((e) => e.sql.includes("UPDATE telegram_pending_alerts") && e.sql.includes("SET attempts"));
+    expect(updates).toHaveLength(2);
+    // attempts=0 → backoff 60s; attempts=2 → backoff 240s.
+    const notBeforeForRow401 = updates.find((u) => u.binds[u.binds.length - 1] === 401)?.binds[0];
+    const notBeforeForRow402 = updates.find((u) => u.binds[u.binds.length - 1] === 402)?.binds[0];
+    expect(notBeforeForRow401).toBe(now + 60);
+    expect(notBeforeForRow402).toBe(now + 240);
+  });
+
+  it("sustains delivery across a 30 minute 429 storm by re-driving the queue", async () => {
+    // Simulate the operational scenario from the plan: a single row hammered by 429s
+    // for 30 minutes should eventually deliver (not expire). Each subsequent drain
+    // succeeds once the wall clock advances past not_before_at; the row's attempts
+    // counter rises but never trips the legacy 5-attempt cap.
+    const rateLimited = {
+      ok: false,
+      blocked: false,
+      retryable: true,
+      permanentFailure: false,
+      statusCode: 429,
+      errorClass: "rate_limit",
+      delivery: "retryable_failure",
+      retryAfterSec: 120,
+    };
+    const sent = {
+      ok: true,
+      blocked: false,
+      retryable: false,
+      permanentFailure: false,
+      statusCode: 200,
+      errorClass: null,
+      delivery: "sent",
+      retryAfterSec: null,
+    };
+
+    const created = Math.floor(Date.now() / 1000);
+    let attempts = 0;
+    let delivered = false;
+
+    // Drain loop: each iteration advances by 5 minutes (well over the 120s Retry-After)
+    // and reuses the same row id. The row stays inside PENDING_TTL_SEC for the full
+    // 30 minutes (1800s < 3600s).
+    for (let elapsedMin = 0; elapsedMin <= 30 && !delivered; elapsedMin += 5) {
+      vi.setSystemTime(new Date(Date.now() + (elapsedMin === 0 ? 0 : 5 * 60_000)));
+      // 5 of 7 iterations are 429; on the 6th iteration we let it succeed.
+      mockSendToChat.mockResolvedValueOnce(elapsedMin >= 25 ? sent : rateLimited);
+
+      const db = mockD1([
+        {
+          match: "SELECT p.id, p.chat_id, p.message_html",
+          rows: [
+            { id: 999, chat_id: "100", message_html: "<b>Alert</b>", disable_notification: 0, created_at: created, attempts },
+          ],
+        },
+        { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
+        { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+      ]);
+
+      const result = await drainPendingQueue(db, "bot-token", 10);
+      if (result.sent === 1) {
+        delivered = true;
+      } else {
+        expect(result.retryQueued).toBe(1);
+        expect(result.dropped).toBe(0);
+        attempts += 1;
+        // Each iteration the row stays under the defensive ceiling.
+        expect(attempts).toBeLessThan(PENDING_MAX_ATTEMPTS);
+      }
+    }
+
+    expect(delivered).toBe(true);
   });
 
   it("deletes successfully sent messages from the queue", async () => {
@@ -504,6 +688,8 @@ describe("drainPendingQueue", () => {
       blockedCleanupFailed: 0,
       retryQueued: 0,
       dropped: 0,
+      droppedPermanentFailure: 0,
+      droppedMaxAttemptsFallback: 0,
       deferred: 0,
       rateLimited: false,
       retryAfterSec: null,

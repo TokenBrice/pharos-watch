@@ -7,6 +7,15 @@ import { isQuietHoursActive } from "./telegram-quiet-hours";
 
 export const PENDING_TTL_SEC = 3600; // 1 hour — stale alerts are worse than no alert
 export const SEND_BATCH_SIZE = 4; // Parallel sends per batch (leave Workers connection headroom)
+/** Defensive ceiling so a pathological row cannot loop forever inside the TTL window. */
+export const PENDING_MAX_ATTEMPTS = 20;
+/**
+ * Exponential backoff schedule (seconds) indexed by prior attempt count, capped at 600s.
+ * Used when Telegram does not return a Retry-After header. Step 0 (no prior attempts) is
+ * unused in practice because the row only enters the schedule after the first failure.
+ */
+export const PENDING_BACKOFF_SCHEDULE_SEC = [60, 120, 240, 480, 600] as const;
+const PENDING_BACKOFF_CAP_SEC = PENDING_BACKOFF_SCHEDULE_SEC[PENDING_BACKOFF_SCHEDULE_SEC.length - 1];
 
 // ---------- Types ----------
 
@@ -31,6 +40,10 @@ export interface PendingDrainResult {
   blockedCleanupFailed: number;
   retryQueued: number;
   dropped: number;
+  /** Drained rows dropped because Telegram returned a non-retryable, non-blocked error. */
+  droppedPermanentFailure: number;
+  /** Drained rows dropped because the defensive attempts ceiling was hit inside the TTL window. */
+  droppedMaxAttemptsFallback: number;
   deferred: number;
   rateLimited: boolean;
   retryAfterSec: number | null;
@@ -43,7 +56,7 @@ export interface PendingEnqueueOptions {
   retryAfterSec?: number | null;
 }
 
-const DEFAULT_RETRY_DELAY_SEC = 60;
+const DEFAULT_RETRY_DELAY_SEC = PENDING_BACKOFF_SCHEDULE_SEC[0];
 
 // Two-strike rule: a single 403 is transient (user temporarily muted bot,
 // chat archived, etc.). Only after a second 403 within this window do we
@@ -58,11 +71,24 @@ function emptyDrainResult(): PendingDrainResult {
     blockedCleanupFailed: 0,
     retryQueued: 0,
     dropped: 0,
+    droppedPermanentFailure: 0,
+    droppedMaxAttemptsFallback: 0,
     deferred: 0,
     rateLimited: false,
     retryAfterSec: null,
     notBeforeAt: null,
   };
+}
+
+/**
+ * Backoff seconds for the *next* attempt given the prior attempt count.
+ * Honors Telegram's `Retry-After` when provided; otherwise indexes into
+ * `PENDING_BACKOFF_SCHEDULE_SEC` and caps at the schedule's last value.
+ */
+export function pendingBackoffSec(priorAttempts: number, retryAfterSec: number | null): number {
+  if (retryAfterSec != null && retryAfterSec > 0) return retryAfterSec;
+  const idx = Math.min(Math.max(priorAttempts, 0), PENDING_BACKOFF_SCHEDULE_SEC.length - 1);
+  return PENDING_BACKOFF_SCHEDULE_SEC[idx] ?? PENDING_BACKOFF_CAP_SEC;
 }
 
 function isPendingRowSnoozed(row: PendingAlertRow, nowSec: number): boolean {
@@ -78,8 +104,8 @@ function shouldSilencePendingRow(row: PendingAlertRow, nowSec: number): boolean 
   );
 }
 
-function retryDelaySec(retryAfterSec: number | null): number {
-  return retryAfterSec != null && retryAfterSec > 0 ? retryAfterSec : DEFAULT_RETRY_DELAY_SEC;
+function pendingRetryDelaySec(priorAttempts: number, retryAfterSec: number | null): number {
+  return pendingBackoffSec(priorAttempts, retryAfterSec);
 }
 
 function hashDedupePart(value: string): string {
@@ -247,9 +273,11 @@ export async function drainPendingQueue(
   let blockedCleanupFailed = 0;
   let retryQueued = 0;
   let dropped = 0;
+  let droppedPermanentFailure = 0;
+  let droppedMaxAttemptsFallback = 0;
   let deferred = 0;
   const idsToDelete: number[] = [];
-  const retryUpdates: Array<{ id: number; retryAfterSec: number | null; errorClass: TelegramSendErrorClass | null }> = [];
+  const retryUpdates: Array<{ id: number; priorAttempts: number; retryAfterSec: number | null; errorClass: TelegramSendErrorClass | null }> = [];
   const deferUpdates: Array<{ id: number; notBeforeAt: number }> = [];
   let rateLimited = false;
   let rateLimitRetryAfterSec: number | null = null;
@@ -293,16 +321,31 @@ export async function drainPendingQueue(
         if (shouldDisable && !(await disableBlockedSubscriber(db, result.chatId))) {
           blockedCleanupFailed++;
         }
-      } else if (result.retryable && result.attempts < 5) {
+      } else if (result.retryable && result.attempts < PENDING_MAX_ATTEMPTS) {
+        // Age-based retry: keep retrying inside the TTL window (enforced at SELECT time).
+        // The defensive PENDING_MAX_ATTEMPTS ceiling prevents a pathological row from looping
+        // forever with sub-second backoffs.
         retryQueued++;
-        retryUpdates.push({ id: result.id, retryAfterSec: result.retryAfterSec, errorClass: result.errorClass });
+        retryUpdates.push({
+          id: result.id,
+          priorAttempts: result.attempts,
+          retryAfterSec: result.retryAfterSec,
+          errorClass: result.errorClass,
+        });
         if (result.errorClass === "rate_limit") {
           rateLimited = true;
           rateLimitRetryAfterSec = result.retryAfterSec;
-          rateLimitNotBeforeAt = nowSec + retryDelaySec(result.retryAfterSec);
+          rateLimitNotBeforeAt = nowSec + pendingRetryDelaySec(result.attempts, result.retryAfterSec);
         }
-      } else {
+      } else if (result.retryable) {
+        // Hit the defensive attempts ceiling while still retryable.
         dropped++;
+        droppedMaxAttemptsFallback++;
+        idsToDelete.push(result.id);
+      } else {
+        // Non-retryable, non-blocked: classify as permanent failure (e.g. 400 bad_request, 401 auth_error).
+        dropped++;
+        droppedPermanentFailure++;
         idsToDelete.push(result.id);
       }
     }
@@ -326,7 +369,7 @@ export async function drainPendingQueue(
 
   if (retryUpdates.length > 0) {
     await batchExecute(db, retryUpdates.map((update) => {
-      const notBeforeAt = nowSec + retryDelaySec(update.retryAfterSec);
+      const notBeforeAt = nowSec + pendingRetryDelaySec(update.priorAttempts, update.retryAfterSec);
       return db
         .prepare(
           `UPDATE telegram_pending_alerts
@@ -348,6 +391,8 @@ export async function drainPendingQueue(
     blockedCleanupFailed,
     retryQueued,
     dropped,
+    droppedPermanentFailure,
+    droppedMaxAttemptsFallback,
     deferred,
     rateLimited,
     retryAfterSec: rateLimitRetryAfterSec,

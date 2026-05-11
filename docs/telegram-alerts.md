@@ -366,9 +366,24 @@ to `telegram_pending_alerts` in D1 as pre-split HTML chunks. Each subsequent dis
 drains up to 25% of its budget from the pending queue before processing fresh events,
 ensuring eventual delivery.
 
-Pending alerts have a 1-hour TTL. Rows older than the TTL are deleted at the end of each
-run. Retryable sends are queued while the stored `attempts` counter is below 5; rows that
-fail again at `attempts >= 5` are dropped.
+Pending alerts have a 1-hour TTL (`PENDING_TTL_SEC = 3600`). The TTL — not a per-row
+attempts cap — bounds how long the queue keeps retrying. Each drain re-selects rows whose
+`created_at` is within the TTL window and whose `not_before_at` has elapsed; rows that age
+past the TTL are deleted at the end of the run.
+
+Within the TTL window, retryable sends are re-queued with an exponential backoff
+(`60s → 120s → 240s → 480s → 600s`, capped at 600s) indexed by prior attempts. Telegram's
+`Retry-After` header overrides the schedule when present. A defensive
+`PENDING_MAX_ATTEMPTS = 20` ceiling guards against a pathological row looping forever.
+
+Dropped rows are classified in the dispatch metadata so operators can tell apart natural
+expiry from real failures:
+
+- `pendingDroppedTtlExpired` — row aged past `PENDING_TTL_SEC` and was cleaned up.
+- `pendingDroppedPermanentFailure` — Telegram returned a non-retryable, non-blocked error
+  (e.g. `400 bad_request`, `401 auth_error`).
+- `pendingDroppedMaxAttemptsFallback` — defensive `PENDING_MAX_ATTEMPTS` ceiling was hit
+  while the row was still retryable; expected to be 0 in normal operation.
 
 Retry and deferral metadata lives on the pending rows:
 
@@ -444,7 +459,7 @@ Additional Telegram bot status metrics now include:
 - `customPreferenceChats`
 - `quietHoursEnabledChats`
 - `presetQueryFailures` (consecutive aborted dispatch runs since the last clean preset-subscriber load; only set when > 0)
-- dispatch breakdown fields such as `freshRetryQueued`, `freshPermanentFailures`, `pendingRetryQueued`, `pendingDeferred`, `pendingRateLimited`, `pendingRetryAfterSec`, and `pendingDropped`
+- dispatch breakdown fields such as `freshRetryQueued`, `freshPermanentFailures`, `pendingRetryQueued`, `pendingDeferred`, `pendingRateLimited`, `pendingRetryAfterSec`, `pendingDropped`, `pendingDroppedTtlExpired`, `pendingDroppedPermanentFailure`, and `pendingDroppedMaxAttemptsFallback`
 
 ### Alerting on degraded delivery
 

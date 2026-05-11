@@ -94,6 +94,9 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     pendingDrained: 0,
     pendingRetryQueued: 0,
     pendingDropped: 0,
+    pendingDroppedTtlExpired: 0,
+    pendingDroppedPermanentFailure: 0,
+    pendingDroppedMaxAttemptsFallback: 0,
     pendingDeferred: 0,
     pendingRateLimited: false,
     pendingRetryAfterSec: null,
@@ -739,6 +742,12 @@ export async function dispatchTelegramAlerts(
       pendingDrained: drainResult.sent,
       pendingRetryQueued: drainResult.retryQueued,
       pendingDropped: drainResult.dropped,
+      // `pendingExpired` (below) accounts for TTL-expired rows deleted by the
+      // end-of-run cleanup; surface it here as well so operators reading
+      // `pendingDropped*` fields get the full disposition breakdown.
+      pendingDroppedTtlExpired: expiredCount,
+      pendingDroppedPermanentFailure: drainResult.droppedPermanentFailure,
+      pendingDroppedMaxAttemptsFallback: drainResult.droppedMaxAttemptsFallback,
       pendingDeferred: drainResult.deferred,
       pendingRateLimited: drainResult.rateLimited,
       pendingRetryAfterSec: drainResult.retryAfterSec,
