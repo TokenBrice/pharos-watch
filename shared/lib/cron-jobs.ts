@@ -452,6 +452,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     triggerMode: "isolated",
     maxConnections: 0, // DB-only DELETE of cron_runs + cron_slot_executions
   },
+  {
+    job: "telegram-inactive-cleanup",
+    label: "Telegram inactive subscriber cleanup",
+    group: "daily",
+    intervalSec: 7 * DAY_SECONDS,
+    scheduleKey: "daily0300Utc",
+    triggerMode: "isolated",
+    maxConnections: 0, // DB-only cascade DELETE per inactive chat
+  },
 ] as const;
 
 export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS_BASE.map((definition) => ({

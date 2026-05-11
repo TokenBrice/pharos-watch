@@ -65,6 +65,8 @@ The Telegram subscriber, disambiguation, and overflow-queue tables are part of `
 
 `worker/migrations/0117_telegram_global_alert_indexes.sql` adds partial indexes on each `telegram_subscribers.global_alert_*` flag (DEWS, depeg, safety, launch) plus `telegram_pending_alerts(chat_id)` so the dispatcher's global-subscriber fan-out queries and the pending drain JOIN avoid full scans.
 
+`telegram_subscribers` rows are auto-pruned after 180 days of inactivity. The `telegram-inactive-cleanup` job runs on the daily 03:00 UTC lane behind a 7-day cache guard (`cache` key `cron:telegram-inactive-cleanup:last-run`) and removes any subscriber whose `last_active_at` is older than 180 days and which has zero rows in `telegram_subscriptions`, `telegram_preset_subscriptions`, `telegram_pending_alerts`, and `telegram_pending_disambiguation`. Each eligible chat is removed via a batched cascade DELETE; the job caps at 100 deletions per run so a large backlog cannot push the daily slot past its per-statement budget. The most recent run's `item_count` in the trailing 7-day window is surfaced as `TelegramBotStats.inactiveSubscribersCleanedThisWeek`.
+
 The webhook also uses the generic `cache` table key `telegram:last-update-id` to deduplicate Telegram update re-delivery.
 
 ## Secrets and Bindings

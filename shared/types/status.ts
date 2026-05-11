@@ -251,6 +251,12 @@ export interface TelegramBotStats {
   retryErrorClassCounts?: Record<string, number>;
   pendingDeliveryBacklog?: TelegramPendingDeliveryBacklog;
   presetQueryFailures?: number;
+  /**
+   * Number of inactive subscribers cleaned up in the trailing 7-day window
+   * by the `telegram-inactive-cleanup` weekly cron. `null` when the cron has
+   * not produced a successful run within the window (e.g. fresh deploy).
+   */
+  inactiveSubscribersCleanedThisWeek?: number | null;
 }
 
 /** Slim public-facing stats for the PharosWatchBot landing page. */

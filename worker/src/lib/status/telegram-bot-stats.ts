@@ -44,6 +44,8 @@ interface TelegramBotTopStablecoinRow {
 
 const TELEGRAM_PENDING_ALERT_TTL_SEC = 3600;
 const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
+const INACTIVE_CLEANUP_WINDOW_SEC = 7 * 24 * 60 * 60;
+const INACTIVE_CLEANUP_JOB = "telegram-inactive-cleanup";
 
 const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
   COUNT(*) AS total_chats,
@@ -234,6 +236,26 @@ async function loadTelegramTopStablecoins(db: D1Database): Promise<TelegramBotTo
   return result.results ?? [];
 }
 
+async function loadInactiveSubscribersCleanedThisWeek(
+  db: D1Database,
+  now: number,
+): Promise<number | null> {
+  try {
+    const cutoff = now - INACTIVE_CLEANUP_WINDOW_SEC;
+    const row = await db
+      .prepare(
+        "SELECT item_count FROM cron_runs WHERE job = ? AND started_at >= ? ORDER BY started_at DESC LIMIT 1",
+      )
+      .bind(INACTIVE_CLEANUP_JOB, cutoff)
+      .first<{ item_count: number | string | null }>();
+    if (!row) return null;
+    const parsed = Number(row.item_count ?? 0);
+    return Number.isFinite(parsed) ? Math.max(0, parsed) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function loadPresetQueryFailureCount(db: D1Database): Promise<number> {
   try {
     const row = await db
@@ -257,6 +279,7 @@ export function mapTelegramBotStats(input: {
   retryErrorClasses?: TelegramBotRetryErrorClassRow[] | null;
   topStablecoins: TelegramBotTopStablecoinRow[];
   presetQueryFailures?: number;
+  inactiveSubscribersCleanedThisWeek?: number | null;
 }): TelegramBotStats {
   const {
     aggregate,
@@ -266,6 +289,7 @@ export function mapTelegramBotStats(input: {
     retryErrorClasses,
     topStablecoins,
     presetQueryFailures,
+    inactiveSubscribersCleanedThisWeek,
   } = input;
   const now = input.now ?? Math.floor(Date.now() / 1000);
 
@@ -325,6 +349,10 @@ export function mapTelegramBotStats(input: {
     stats.presetQueryFailures = coerceCount(presetQueryFailures);
   }
 
+  if (inactiveSubscribersCleanedThisWeek !== undefined) {
+    stats.inactiveSubscribersCleanedThisWeek = inactiveSubscribersCleanedThisWeek;
+  }
+
   return stats;
 }
 
@@ -337,6 +365,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     retryErrorClasses,
     topStablecoins,
     presetQueryFailures,
+    inactiveSubscribersCleanedThisWeek,
   ] = await Promise.all([
     loadTelegramBotAggregate(db),
     loadTelegramPendingCount(db, TELEGRAM_PENDING_DISAMBIGUATION_SQL, now),
@@ -345,6 +374,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     loadTelegramRetryErrorClasses(db),
     loadTelegramTopStablecoins(db),
     loadPresetQueryFailureCount(db),
+    loadInactiveSubscribersCleanedThisWeek(db, now),
   ]);
 
   return mapTelegramBotStats({
@@ -356,5 +386,6 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     retryErrorClasses,
     topStablecoins,
     presetQueryFailures,
+    inactiveSubscribersCleanedThisWeek,
   });
 }

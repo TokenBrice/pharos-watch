@@ -45,7 +45,8 @@ export default function PrivacyPage() {
             browser type, and a small set of product-interaction events. If you choose to share a Telegram or X handle
             in the feedback form, that handle is included in the GitHub issue created for the submission. Telegram alert
             subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours, snooze state,
-            and short-lived pending-command or pending-alert metadata. If you request API access, Pharos stores the
+            and short-lived pending-command or pending-alert metadata; subscriber rows with no follows or pending state
+            and no Telegram activity for 180 days are automatically purged by a weekly cleanup job. If you request API access, Pharos stores the
             email address you verify plus any name, organization, project URL, use-case, intended-endpoint, cadence, and
             volume details you submit; request throttling stores salted hashes of IP address and user-agent data.
           </p>
