@@ -46,7 +46,7 @@ jobs:
 
   pages-build:
     needs: validate-prebuild
-    if: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo && github.event_name == 'pull_request' }}
+    if: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -147,7 +147,7 @@ jobs:
       - name: Verify validate results
         env:
           COVERAGE_CRITICAL_RESULT: ${{ needs.coverage-critical.result }}
-          PAGES_BUILD_EXPECTED: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo && github.event_name == 'pull_request' }}
+          PAGES_BUILD_EXPECTED: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo }}
           PAGES_BUILD_RESULT: ${{ needs.pages-build.result }}
           TEST_NONCRITICAL_RESULT: ${{ needs.test-noncritical.result }}
           VALIDATE_PREBUILD_RESULT: ${{ needs.validate-prebuild.result }}

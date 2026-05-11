@@ -37,6 +37,7 @@ jobs:
     with:
       coverage-compare-ref: ${{ github.event.before }}
       pages_changed: ${{ needs.detect-changes.outputs.pages_changed == 'true' }}
+      run_pages_build_and_seo: false
       worker_changed: ${{ needs.detect-changes.outputs.worker_changed == 'true' }}
 
   no-deploy-required:
@@ -116,7 +117,17 @@ jobs:
     needs:
       - upload-worker-version
       - detect-changes
-    if: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.upload-worker-version.result == 'success' }}
+      - pages-prepare
+    if: >-
+      ${{
+        always()
+        && needs.detect-changes.outputs.worker_promotion_required == 'true'
+        && needs.upload-worker-version.result == 'success'
+        && (
+          needs.detect-changes.outputs.pages_changed != 'true'
+          || needs.pages-prepare.result == 'success'
+        )
+      }}
     runs-on: ubuntu-latest
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

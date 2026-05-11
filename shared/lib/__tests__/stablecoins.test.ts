@@ -56,8 +56,8 @@ describe("tracked stablecoin metadata", () => {
     expect(nonUsd).toHaveLength(0);
     expect(commodity).toHaveLength(0);
     expect(preLaunch).toHaveLength(0);
-    expect(perCoinGenerated).toHaveLength(282);
-    expect(canonicalOrder).toHaveLength(282);
+    expect(perCoinGenerated).toHaveLength(302);
+    expect(canonicalOrder).toHaveLength(302);
     expect(
       usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
     ).toBe(canonicalOrder.length);
@@ -89,8 +89,8 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
-    expect(TRACKED_STABLECOINS).toHaveLength(282);
-    expect(ACTIVE_STABLECOINS).toHaveLength(258);
+    expect(TRACKED_STABLECOINS).toHaveLength(302);
+    expect(ACTIVE_STABLECOINS).toHaveLength(278);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "cadd-cad-digital",
       "usdpt-western-union",
@@ -124,27 +124,37 @@ describe("tracked stablecoin metadata", () => {
     expect(algorithmicIds).toEqual([]);
   });
 
-  it("tracks the fifteen current implementation-scope variants", () => {
+  it("tracks the current implementation-scope variants", () => {
     const variantIds = ACTIVE_STABLECOINS
       .filter((coin) => isTrackedVariant(coin.id))
       .map((coin) => coin.id);
 
     expect(variantIds).toEqual([
+      "steakusdt-steakhouse",
+      "steakusdc-steakhouse",
+      "srusde-strata",
       "susde-ethena",
       "susds-sky",
       "stusds-sky",
       "sdai-sky",
+      "susdd-tron-dao-reserve",
       "susdai-usd-ai",
       "busd0-usual",
       "stkgho-umbrella-aave",
       "stcusd-cap",
       "scrvusd-curve",
       "sfrxusd-frax",
+      "savusd-avant",
       "cusdo-openeden",
       "syusd-aegis",
       "sbold-k3-capital",
+      "fxsave-f-x-protocol",
+      "susn-noon",
+      "syzusd-yuzu",
       "msy-main-street",
       "said-gaib",
+      "apyusd-apyx",
+      "hbusdt-hyperbeat",
     ]);
   });
 

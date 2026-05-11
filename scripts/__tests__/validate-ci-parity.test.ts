@@ -244,12 +244,18 @@ describe("validate-ci parity", () => {
     const validateJob = extractJobBlock(workflow, "validate");
 
     expect(workflow).toContain("run_pages_build_and_seo:");
-    expect(pagesBuildJob).toContain(
-      "if: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo && github.event_name == 'pull_request' }}",
-    );
+    expect(pagesBuildJob).toContain("if: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo }}");
     expect(validateJob).toContain(
-      "PAGES_BUILD_EXPECTED: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo && github.event_name == 'pull_request' }}",
+      "PAGES_BUILD_EXPECTED: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo }}",
     );
+
+    const deployWorkflow = readFileSync(resolve(process.cwd(), ".github/workflows/deploy-cloudflare.yml"), "utf8");
+    const deployValidateJob = extractJobBlock(deployWorkflow, "validate", "no-deploy-required");
+    expect(deployValidateJob).toContain("run_pages_build_and_seo: false");
+
+    const deployWorkerJob = extractJobBlock(deployWorkflow, "deploy-worker", "smoke-api");
+    expect(deployWorkerJob).toContain("- pages-prepare");
+    expect(deployWorkerJob).toContain("needs.pages-prepare.result == 'success'");
   });
 
   it("keeps the critical coverage baseline aligned with the ratchet target list", () => {

@@ -4,6 +4,7 @@ import { getCommandEnv } from "../test-merge-gate.mjs";
 import {
   buildCiValidateCommands,
   buildCiValidateStepPlan,
+  buildNoncriticalTestShardCommands,
   COMMON_VALIDATE_POSTBUILD_COMMANDS,
   COMMON_VALIDATE_PREBUILD_COMMANDS,
   PAGES_VALIDATE_COMMANDS,
@@ -192,7 +193,8 @@ describe("validate workflow command model", () => {
     expect(buildCiValidateCommands()).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...PAGES_VALIDATE_COMMANDS,
-      ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
+      ...buildNoncriticalTestShardCommands(),
+      "npm run coverage:critical",
       ...WORKER_VALIDATE_COMMANDS,
     ]);
   });
@@ -200,8 +202,9 @@ describe("validate workflow command model", () => {
   it("marks Pages and worker steps as conditional", () => {
     expect(buildCiValidateStepPlan()).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS.map((cmd) => ({ cmd, condition: null })),
-      ...PAGES_VALIDATE_COMMANDS.map((cmd) => ({ cmd, condition: "pages_changed" })),
-      ...COMMON_VALIDATE_POSTBUILD_COMMANDS.map((cmd) => ({ cmd, condition: null })),
+      ...PAGES_VALIDATE_COMMANDS.map((cmd) => ({ cmd, condition: "pages_changed && run_pages_build_and_seo" })),
+      ...buildNoncriticalTestShardCommands().map((cmd) => ({ cmd, condition: null })),
+      { cmd: "npm run coverage:critical", condition: null },
       ...WORKER_VALIDATE_COMMANDS.map((cmd) => ({ cmd, condition: "worker_changed" })),
     ]);
   });

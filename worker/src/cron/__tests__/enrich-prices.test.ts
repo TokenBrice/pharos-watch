@@ -910,7 +910,7 @@ describe("enrichMissingPrices", () => {
     expect(result.resolved).toBe(1);
     expect(assets[10].price).toBe(1.126);
     expect(assets[10].priceSource).toBe("dexscreener-search");
-    expect(fetchSpy).toHaveBeenCalledTimes(6);
+    expect(fetchSpy).toHaveBeenCalledTimes(5);
     expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("q=CHFAU"))).toBe(true);
   });
 

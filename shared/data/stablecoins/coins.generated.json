@@ -8709,6 +8709,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": true,
     "chainTier": "unproven",
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
@@ -15853,6 +15854,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": true,
     "deploymentModel": "single-chain",
     "collateralQuality": "rwa",
     "custodyModel": "onchain",
@@ -15933,6 +15935,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": true,
     "deploymentModel": "single-chain",
     "collateralQuality": "rwa",
     "custodyModel": "onchain",
@@ -25833,6 +25836,7 @@
     "liveReservesConfig": {
       "version": 1,
       "semantics": "protocol-reserve",
+      "breakerScope": "wsrusd-reservoir",
       "display": {
         "url": "https://app.reservoir.xyz/reserves",
         "label": "Proof of Reserves"

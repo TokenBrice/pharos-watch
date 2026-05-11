@@ -17,6 +17,7 @@
   "pegMechanism": "hbUSDT is a yield-bearing vault token over USDT strategy exposure; holders exit through Hyperbeat vault liquidity into USDT, while ultimate fiat par exit remains Tether's issuer route",
   "detailProvider": "coingecko",
   "geckoId": "hyperbeat-usdt",
+  "canBeBlacklisted": true,
   "links": [
     {
       "label": "Website",

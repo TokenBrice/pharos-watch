@@ -17,6 +17,7 @@
   "pegMechanism": "ERC-4626-style Morpho vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem vault shares for available USDC liquidity or wait for Morpho market liquidity to return",
   "detailProvider": "coingecko",
   "geckoId": "steakhouse-usdc",
+  "canBeBlacklisted": true,
   "links": [
     {
       "label": "Website",

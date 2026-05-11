@@ -163,6 +163,7 @@
     "adapter": "reservoir",
     "version": 1,
     "semantics": "protocol-reserve",
+    "breakerScope": "wsrusd-reservoir",
     "display": {
       "url": "https://app.reservoir.xyz/reserves",
       "label": "Proof of Reserves"

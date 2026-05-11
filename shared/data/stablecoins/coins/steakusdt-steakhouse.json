@@ -17,6 +17,7 @@
   "pegMechanism": "ERC-4626-style Morpho vault shares appreciate against USDT as borrower interest accrues; withdrawals redeem vault shares for available USDT liquidity or wait for Morpho market liquidity to return",
   "detailProvider": "coingecko",
   "geckoId": "steakhouse-usdt",
+  "canBeBlacklisted": true,
   "links": [
     {
       "label": "Website",

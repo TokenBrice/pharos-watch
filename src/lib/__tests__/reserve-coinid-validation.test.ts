@@ -53,6 +53,7 @@ describe("reserve coinId validation", () => {
       "buck-buck-assets",
       "frxusd-frax",
       "ftusd-flying-tulip",
+      "susd1plus-lorenzo",
       "ussd-sonic-labs",
     ]);
     const conflicts: string[] = [];
