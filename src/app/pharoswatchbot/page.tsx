@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { Fragment, type CSSProperties } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -30,12 +30,13 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   TELEGRAM_ACTIONS,
   TELEGRAM_ALERT_EXAMPLES,
-  TELEGRAM_COMMAND_REFERENCE_NOTE,
-  TELEGRAM_COMMANDS,
+  TELEGRAM_COMMAND_COUNT,
+  TELEGRAM_COMMAND_GROUPS,
+  TELEGRAM_COMMAND_REFERENCE_TIPS,
   TELEGRAM_FAQ,
-  TELEGRAM_GETTING_STARTED_OPTIONS,
   TELEGRAM_HOW_IT_WORKS_CARDS,
   TELEGRAM_PAGE_DESCRIPTION,
+  TELEGRAM_PARAM_LEGEND,
   type TelegramActionKey,
 } from "./telegram-content";
 import { buildTelegramPageJsonLd } from "./telegram-json-ld";
@@ -68,19 +69,19 @@ const RECOMMENDED_SETUPS = [
   {
     title: "First watcher setup",
     command: "/subscribe dews,depeg usd-top25",
-    description: "Top USD stablecoins with DEWS and depeg coverage. Best default for most new subscribers.",
+    description: "Top 25 USD stablecoins, DEWS plus depeg. The safe default if you're not sure where to start.",
     icon: Bell,
   },
   {
     title: "Research desk setup",
     command: "/subscribe safety mcap-ge-1b",
-    description: "Material safety-grade downgrades across larger coins without following every ticker manually.",
+    description: "Safety-grade downgrades only, on coins above $1B mcap. Material moves without per-ticker work.",
     icon: ShieldCheck,
   },
   {
     title: "Group setup",
     command: "/subscribe@PharosWatchBot dews usd-top25",
-    description: "Addressed commands let a Telegram group share one alert configuration without hijacking other bots.",
+    description: "Address commands to the bot so a shared Telegram group runs one watch desk without colliding with other bots.",
     icon: MessageSquareText,
   },
 ] as const satisfies readonly {
@@ -92,26 +93,26 @@ const RECOMMENDED_SETUPS = [
 
 const GROWTH_SUPPORT = [
   {
-    title: "Preset watchlists",
-    detail: "Top-N and market-cap cohorts keep setup short as the tracked universe grows.",
+    title: "Dynamic presets",
+    detail: "Top-N and market-cap cohorts subscribe to a moving list with one command. No re-subscribing as the universe changes.",
     signal: "/presets",
     icon: Terminal,
   },
   {
     title: "Noise controls",
-    detail: "DEWS floors, depeg worsening steps, safety modes, quiet hours, and alert snooze keep retention healthy.",
+    detail: "Raise the DEWS floor, set depeg milestones, mute upgrades, schedule UTC quiet hours, snooze on the fly.",
     signal: "/set, /mute",
     icon: SlidersHorizontal,
   },
   {
-    title: "Group-ready commands",
-    detail: "Addressed group commands turn one Telegram chat into a shared watch desk for teams and DAOs.",
+    title: "Shared group state",
+    detail: "One Telegram chat, one shared subscription. Pending ticker selections stay scoped to whoever started them.",
     signal: "@PharosWatchBot",
     icon: Users,
   },
   {
-    title: "Delivery backpressure",
-    detail: "Overflow sends are queued and drained by the Telegram lane instead of dropping subscriber alerts.",
+    title: "No dropped alerts",
+    detail: "Overflow gets queued, not silently dropped. Even when Telegram throttles, alerts arrive in order.",
     signal: "pending queue",
     icon: Radio,
   },
@@ -331,8 +332,8 @@ export default function PharosWatchBotPage() {
       }
       leadParagraphs={[
         <>
-          The Pharos alert layer for people who do not want to keep a stablecoin dashboard open all day: bot alerts,
-          daily digest posts, and a public watcher community in one Telegram surface.
+          The Pharos alert layer for people who don&rsquo;t want a stablecoin dashboard open all day. Bot alerts first;
+          daily digest and a watcher community when you want context.
         </>,
       ]}
     >
@@ -353,11 +354,11 @@ export default function PharosWatchBotPage() {
                   <span className="absolute inset-0 animate-ping rounded-full bg-[var(--brand-accent)]/70" />
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--brand-accent)]" />
                 </span>
-                <span>Alert layer</span>
+                <span>Telegram alert layer</span>
                 <span aria-hidden="true" className="text-border">·</span>
-                <span>5m latency</span>
+                <span>5m cadence</span>
                 <span aria-hidden="true" className="text-border">·</span>
-                <span>Dispatcher live</span>
+                <span>Live</span>
               </div>
 
               <div className="space-y-4">
@@ -381,38 +382,27 @@ export default function PharosWatchBotPage() {
               <HeroPreview />
             </div>
 
-            <div className="grid gap-x-6 gap-y-5 border-y border-border/55 py-6 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)] sm:gap-x-10 sm:py-7">
-              <div className="border-b border-border/55 pb-5 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-8">
+            <div className="grid gap-x-6 gap-y-5 border-y border-border/55 py-6 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] sm:gap-x-12 sm:py-7">
+              <div className="border-b border-border/55 pb-5 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-10">
                 <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
                   Tracked universe
                 </p>
                 <p className="mt-3 font-mono text-[3.5rem] font-semibold leading-[0.9] tabular-nums text-foreground sm:text-[4.5rem] lg:text-[6rem]">
                   {COIN_COUNT.toLocaleString("en-US")}
                 </p>
-                <p className="mt-3 max-w-[34ch] text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
-                  active stablecoins watched by the same risk pipeline
+                <p className="mt-3 max-w-[36ch] text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
+                  active stablecoins, all eligible for alerts
                 </p>
               </div>
-              <div className="border-b border-border/55 pb-5 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-8">
+              <div>
                 <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
                   Alert lane
                 </p>
                 <p className="mt-3 font-mono text-3xl font-semibold leading-[0.95] tabular-nums text-foreground sm:text-4xl lg:text-5xl">
                   5m
                 </p>
-                <p className="mt-3 text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
-                  Telegram dispatcher cadence for DEWS, depeg, safety, and launch signals
-                </p>
-              </div>
-              <div>
-                <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
-                  First action
-                </p>
-                <p className="mt-3 font-mono text-3xl font-semibold leading-[0.95] tabular-nums text-foreground sm:text-4xl lg:text-5xl">
-                  Paste
-                </p>
-                <p className="mt-3 text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
-                  open the bot, then send the recommended starter command
+                <p className="mt-3 max-w-[36ch] text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
+                  dispatcher cadence for all four alert families
                 </p>
               </div>
             </div>
@@ -443,8 +433,7 @@ export default function PharosWatchBotPage() {
                 </Button>
               </div>
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                Open the bot first, then paste the command above. It subscribes you to DEWS and depeg alerts for the top
-                USD stablecoin preset.
+                Subscribes you to DEWS and depeg alerts on the top 25 USD stablecoins. Tune later with /set.
               </p>
             </div>
           </div>
@@ -466,56 +455,6 @@ export default function PharosWatchBotPage() {
             {TELEGRAM_ACTIONS.map((action, index) => (
               <SurfaceCard key={action.key} action={action} index={index} />
             ))}
-          </div>
-        </section>
-
-        <section className="space-y-4" id="getting-started" aria-labelledby="growth-start-title">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="max-w-3xl space-y-2">
-              <h2 id="growth-start-title" className="pharos-section-title">
-                Give new watchers a quiet default
-              </h2>
-              <p className="pharos-lead">
-                Growth works when the first subscription is obvious and conservative. These setup paths keep the first
-                command simple before anyone needs the full manual.
-              </p>
-            </div>
-            <Link
-              href="#commands"
-              className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-md border border-border/65 bg-background/55 px-3 text-sm font-medium text-foreground hover:bg-muted/45 sm:min-h-0 sm:py-2"
-            >
-              Command reference
-              <ChevronDown className="h-4 w-4" aria-hidden="true" />
-            </Link>
-          </div>
-          <div className="pharos-stagger-entrance grid gap-4 lg:grid-cols-3">
-            {RECOMMENDED_SETUPS.map((setup, index) => (
-              <SetupCard key={setup.command} setup={setup} index={index} />
-            ))}
-          </div>
-        </section>
-
-        <section className="pharos-card-shell overflow-hidden" aria-labelledby="growth-support-title">
-          <div className="grid gap-0 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-            <div className="border-b border-border/60 p-5 lg:border-b-0 lg:border-r lg:p-6">
-              <p className="pharos-kicker">Growth posture</p>
-              <h2 id="growth-support-title" className="mt-2 text-xl font-semibold tracking-tight text-foreground">
-                Support more watchers without making the bot louder.
-              </h2>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                As the watcher base grows, the job is keeping setup short, making group use natural, and protecting
-                subscribers from repeated noise during volatile periods.
-              </p>
-              <div className="mt-5 flex items-center gap-2 text-xs text-muted-foreground">
-                <Clock3 className="h-4 w-4 text-sky-700 dark:text-sky-300" aria-hidden="true" />
-                Dedicated five-minute Telegram dispatcher with overflow queueing.
-              </div>
-            </div>
-            <div className="pharos-stagger-entrance grid gap-3 p-4 sm:grid-cols-2 lg:p-5">
-              {GROWTH_SUPPORT.map((item, index) => (
-                <GrowthSupportCard key={item.title} item={item} index={index} />
-              ))}
-            </div>
           </div>
         </section>
 
@@ -543,6 +482,55 @@ export default function PharosWatchBotPage() {
                 <AlertBubble content={alert.content} time={alert.time} />
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="space-y-4" id="getting-started" aria-labelledby="setup-title">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-3xl space-y-2">
+              <h2 id="setup-title" className="pharos-section-title">
+                Three setups to start with
+              </h2>
+              <p className="pharos-lead">
+                Pick the closest match, paste the command, tune later. Full command list is one click below.
+              </p>
+            </div>
+            <Link
+              href="#commands"
+              className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-md border border-border/65 bg-background/55 px-3 text-sm font-medium text-foreground hover:bg-muted/45 sm:min-h-0 sm:py-2"
+            >
+              Full command list
+              <ChevronDown className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+          <div className="pharos-stagger-entrance grid gap-4 lg:grid-cols-3">
+            {RECOMMENDED_SETUPS.map((setup, index) => (
+              <SetupCard key={setup.command} setup={setup} index={index} />
+            ))}
+          </div>
+        </section>
+
+        <section className="pharos-card-shell overflow-hidden" aria-labelledby="growth-support-title">
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+            <div className="border-b border-border/60 p-5 lg:border-b-0 lg:border-r lg:p-6">
+              <p className="pharos-kicker">Built-in defaults</p>
+              <h2 id="growth-support-title" className="mt-2 text-xl font-semibold tracking-tight text-foreground">
+                Noise stays low as your watchlist grows.
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                Presets shrink setup. Per-alert controls cap repeated pages. Group commands keep shared channels clean.
+                Volatility doesn&rsquo;t translate to spam.
+              </p>
+              <div className="mt-5 flex items-center gap-2 text-xs text-muted-foreground">
+                <Clock3 className="h-4 w-4 text-sky-700 dark:text-sky-300" aria-hidden="true" />
+                Dedicated five-minute Telegram dispatcher with overflow queueing.
+              </div>
+            </div>
+            <div className="pharos-stagger-entrance grid gap-3 p-4 sm:grid-cols-2 lg:p-5">
+              {GROWTH_SUPPORT.map((item, index) => (
+                <GrowthSupportCard key={item.title} item={item} index={index} />
+              ))}
+            </div>
           </div>
         </section>
 
@@ -581,7 +569,7 @@ export default function PharosWatchBotPage() {
                 <Zap className="h-4 w-4" aria-hidden="true" />
               </span>
               <div>
-                <h3 className="text-sm font-semibold text-foreground">DEWS bands</h3>
+                <h3 className="text-sm font-semibold text-foreground">Reading DEWS alerts</h3>
                 <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
                   Pharos scores each coin on five bands. Alerts fire when a coin enters{" "}
                   <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">ALERT</code>,{" "}
@@ -608,31 +596,22 @@ export default function PharosWatchBotPage() {
               <span className="flex items-center gap-2.5">
                 Command Reference
                 <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground tabular-nums">
-                  {TELEGRAM_COMMANDS.length}
+                  {TELEGRAM_COMMAND_COUNT}
                 </span>
               </span>
               <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
             </summary>
-            <div className="space-y-4 border-t border-border/60 px-5 py-4">
-              <div className="rounded-xl border border-border/60 bg-background/35 p-4">
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)]">
-                  <div className="space-y-2">
-                    <p className="pharos-kicker">Setup flow</p>
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      Open <TelegramLink href="https://t.me/PharosWatchBot">@PharosWatchBot</TelegramLink>, paste a
-                      command, then use <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">/list</code>{" "}
-                      to audit active subscriptions.
-                    </p>
-                  </div>
-                  <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
-                    {TELEGRAM_GETTING_STARTED_OPTIONS.map((option) => (
-                      <div key={option.command}>
-                        <CommandLine command={option.command} />
-                        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{option.description}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            <div className="space-y-5 border-t border-border/60 px-5 py-5">
+              <div className="rounded-xl border border-border/60 bg-background/35 p-4 sm:p-5">
+                <p className="pharos-kicker">Parameter syntax</p>
+                <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
+                  {TELEGRAM_PARAM_LEGEND.map((entry) => (
+                    <div key={entry.token} className="flex items-baseline gap-3">
+                      <dt className="shrink-0 font-mono text-xs font-semibold text-foreground">{entry.token}</dt>
+                      <dd className="text-xs leading-relaxed text-muted-foreground">{entry.meaning}</dd>
+                    </div>
+                  ))}
+                </dl>
               </div>
               <div className="-mx-5 overflow-x-auto px-5">
                 <table className="w-full text-sm">
@@ -652,42 +631,58 @@ export default function PharosWatchBotPage() {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/40">
-                    {TELEGRAM_COMMANDS.map((cmd) => (
-                      <tr key={cmd.command} className="group/row transition-colors hover:bg-muted/40">
-                        <td className="py-3 pr-4 align-top">
-                          <div className="inline-flex items-center gap-1 rounded bg-muted px-1 py-0.5">
-                            <code className="whitespace-nowrap px-1 text-xs font-mono text-foreground">
-                              {cmd.command}
-                            </code>
-                            <CopyButton
-                              text={cmd.command}
-                              className="size-6 text-muted-foreground hover:bg-background/70 hover:text-foreground"
-                            />
-                          </div>
-                        </td>
-                        <td className="py-3 pr-4 align-top text-muted-foreground">{cmd.description}</td>
-                        <td className="hidden py-3 align-top sm:table-cell">
-                          {cmd.example ? (
-                            <code className="whitespace-nowrap rounded bg-muted/70 px-2 py-1 text-xs font-mono text-foreground/80">
-                              {cmd.example}
-                            </code>
-                          ) : (
-                            <span className="text-muted-foreground/50">-</span>
-                          )}
-                        </td>
-                      </tr>
+                  <tbody>
+                    {TELEGRAM_COMMAND_GROUPS.map((group) => (
+                      <Fragment key={group.label}>
+                        <tr className="border-t border-border/60 first:border-t-0">
+                          <th
+                            scope="rowgroup"
+                            colSpan={3}
+                            className="pt-5 pb-2 text-left font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300"
+                          >
+                            {group.label}
+                          </th>
+                        </tr>
+                        {group.commands.map((cmd) => (
+                          <tr key={cmd.command} className="group/row border-t border-border/40 transition-colors hover:bg-muted/40">
+                            <td className="py-3 pr-4 align-top">
+                              <div className="inline-flex items-center gap-1 rounded bg-muted px-1 py-0.5">
+                                <code className="whitespace-nowrap px-1 text-xs font-mono text-foreground">
+                                  {cmd.command}
+                                </code>
+                                <CopyButton
+                                  text={cmd.command}
+                                  className="size-6 text-muted-foreground hover:bg-background/70 hover:text-foreground"
+                                />
+                              </div>
+                            </td>
+                            <td className="py-3 pr-4 align-top text-muted-foreground">{cmd.description}</td>
+                            <td className="hidden py-3 align-top sm:table-cell">
+                              {cmd.example ? (
+                                <code className="whitespace-nowrap rounded bg-muted/70 px-2 py-1 text-xs font-mono text-foreground/80">
+                                  {cmd.example}
+                                </code>
+                              ) : (
+                                <span className="text-muted-foreground/50">-</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">Pro tip:</span>{" "}
-                  {TELEGRAM_COMMAND_REFERENCE_NOTE.beforeAll}{" "}
-                  <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono text-foreground">all</code>{" "}
-                  {TELEGRAM_COMMAND_REFERENCE_NOTE.afterAll}
-                </p>
+              <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
+                <p className="pharos-kicker">Tips</p>
+                <ul className="mt-2.5 space-y-1.5 text-xs leading-relaxed text-muted-foreground">
+                  {TELEGRAM_COMMAND_REFERENCE_TIPS.map((tip) => (
+                    <li key={tip} className="flex gap-2">
+                      <span aria-hidden="true" className="text-muted-foreground/60">·</span>
+                      <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
           </details>
@@ -700,11 +695,10 @@ export default function PharosWatchBotPage() {
             <div className="max-w-3xl space-y-2">
               <p className="pharos-kicker">Start watching</p>
               <h2 id="start-bot-cta" className="text-xl font-semibold tracking-tight text-foreground">
-                One Telegram command gets you onto the live watchtower.
+                Open the bot, paste the command.
               </h2>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                Open @PharosWatchBot, paste the recommended command, then use digest and community links only if you
-                want slower context around the alerts.
+                Digest and community are right here if you want slower context after.
               </p>
             </div>
             <div className="space-y-3">
@@ -733,11 +727,11 @@ export default function PharosWatchBotPage() {
         </section>
 
         <p className="text-xs text-muted-foreground">
-          Want the methodology behind these alerts?{" "}
+          Methodology for DEWS, safety-grade, and depeg scoring lives on the{" "}
           <Link href="/methodology" className="rounded-sm underline underline-offset-4 transition-colors hover:text-foreground">
-            Read the methodology page
-          </Link>{" "}
-          for DEWS, safety-grade, and depeg scoring details.
+            methodology page
+          </Link>
+          .
         </p>
 
         <script
