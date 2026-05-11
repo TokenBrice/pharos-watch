@@ -192,6 +192,210 @@ describe("handleTelegramWebhook", () => {
     expect(callbacks).toContain("setup:branch:recommended");
   });
 
+  it("/start sub_<types>_<targets> in a private chat dispatches into /subscribe", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: {
+          value: makeStablecoinsCacheValue({
+            "usdt-tether": 100_000_000_000,
+            "usdc-circle": 90_000_000_000,
+            "dai-makerdao": 5_000_000_000,
+          }),
+          updated_at: 1_700_000_000,
+        },
+      },
+    ]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/start sub_dews-depeg_usd-top25"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    const history = db.getHistory();
+    // The subscribe path ran (preset cache was consulted); bulk-confirm gate caught the
+    // >10-coin preset and queued a confirmation rather than writing subscriptions directly.
+    expect(history.some((entry) => entry.sql.includes("FROM cache WHERE key = ?"))).toBe(true);
+    const confirmInsert = history.find((entry) =>
+      entry.sql.includes("INSERT INTO telegram_pending_disambiguation"),
+    );
+    expect(confirmInsert).toBeDefined();
+    expect(confirmInsert!.binds).toContain("confirm-bulk");
+    const payload = JSON.parse(confirmInsert!.binds[2] as string) as {
+      kind: string;
+      alertTypes: string[];
+      presetIds: string[];
+    };
+    expect(payload.kind).toBe("subscribe");
+    expect(payload.alertTypes.sort()).toEqual(["depeg", "dews"]);
+    expect(payload.presetIds).toEqual(["usd-top25"]);
+    expect(sentMessageBody().text).toContain("Confirm?");
+  });
+
+  it("/start sub_<types>_<targets> in a group chat falls back to START_MESSAGE", async () => {
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(-123, "/start@PharosWatchBot sub_dews_usd-top25", "test-secret", {
+        chatType: "supergroup",
+      }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    const history = db.getHistory();
+    // No subscribe machinery ran — no preset cache lookup, no confirm-bulk row.
+    expect(history.some((entry) => entry.sql.includes("FROM cache WHERE key = ?"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"))).toBe(false);
+    const body = sentMessageBody().text;
+    // The long-form START_MESSAGE (not the short wizard intro) is returned for groups.
+    expect(body).toContain("Alert types");
+    expect(body).toContain("Quick start");
+    expect(body).not.toContain("Pick a path below");
+  });
+
+  it("/start status_<coinId> dispatches into /status", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      { match: "FROM stress_signals", rows: [{ band: "CALM", score: 15, computed_at: 1_700_000_000 }] },
+      {
+        match: "FROM safety_grade_history",
+        rows: [{ grade: "A", score: 85, recorded_at: 1_700_000_000 }],
+      },
+      { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
+      {
+        match: "FROM price_cache WHERE asset_id = ?",
+        rows: [{ price: 0.9999, updated_at: 1_700_000_000 }],
+      },
+    ]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(1, "/start status_usdc-circle"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    const body = sentMessageBody().text;
+    expect(body).toContain("USDC");
+    expect(body).toContain("CALM");
+    expect(body).toContain("Safety: A");
+    expect(body).toContain("Price: $0.9999");
+  });
+
+  it("/start why_<coinId> dispatches into /why", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "FROM safety_grade_history",
+        rows: [{ grade: "A", score: 85, recorded_at: 1_700_000_000 }],
+      },
+    ]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(1, "/start why_usdc-circle"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    // /why renders the safety-grade explanation for USDC; no ticker-resolution error fires.
+    const body = sentMessageBody().text;
+    expect(body).not.toContain("not found");
+    expect(body).not.toContain("Re-run /status");
+  });
+
+  it("/start coverage_<coinId> dispatches into /coverage", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      { match: "FROM stress_signals", rows: [{ band: "CALM", score: 15, computed_at: 1_700_000_000 }] },
+      {
+        match: "FROM safety_grade_history",
+        rows: [{ grade: "A", score: 85, recorded_at: 1_700_000_000 }],
+      },
+      { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
+      {
+        match: "FROM price_cache WHERE asset_id = ?",
+        rows: [{ price: 0.9999, updated_at: 1_700_000_000 }],
+      },
+    ]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(1, "/start coverage_usdc-circle"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    const body = sentMessageBody().text;
+    expect(body).toContain("USDC");
+    expect(body).not.toContain("not found");
+  });
+
+  it("/start with an unknown payload falls back to the wizard intro", async () => {
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/start garbage_xyz"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [, init] = fetchSpy.mock.calls[0] ?? [];
+    const sent = JSON.parse((init?.body as string) ?? "{}") as {
+      text: string;
+      reply_markup?: { inline_keyboard?: Array<Array<{ callback_data?: string }>> };
+    };
+    expect(sent.text).toContain("Welcome to PharosWatchBot");
+    expect(sent.text).toContain("Pick a path below");
+    const callbacks = (sent.reply_markup?.inline_keyboard ?? []).flat().map((btn) => btn.callback_data);
+    expect(callbacks).toContain("setup:branch:recommended");
+  });
+
+  it("/start rejects payloads over 64 characters and falls back to the wizard intro", async () => {
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const longPayload = `status_${"a".repeat(60)}`; // 7 + 60 = 67 chars, well-formed otherwise
+    expect(longPayload.length).toBeGreaterThan(64);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, `/start ${longPayload}`),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    // Status handler did not run — no stress_signals/price_cache queries were issued.
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("FROM price_cache"))).toBe(false);
+    expect(sentMessageBody().text).toContain("Pick a path below");
+  });
+
+  it("/start rejects payloads containing disallowed characters and falls back to the wizard intro", async () => {
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/start status_usdc.circle"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
+    expect(sentMessageBody().text).toContain("Pick a path below");
+  });
+
   it("setup-step awaiting-ticker advances to confirm when a unique ticker is replied", async () => {
     const db = mockD1([
       {
