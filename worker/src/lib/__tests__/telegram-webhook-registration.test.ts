@@ -40,7 +40,7 @@ async function expectedWebhookCacheValue(
 
 function expectedCommandsCacheValue(): string {
   return JSON.stringify({
-    version: 3,
+    version: 4,
     scopes: {
       all_private_chats: TELEGRAM_BOT_COMMANDS,
       all_group_chats: TELEGRAM_BOT_GROUP_COMMANDS,
@@ -365,6 +365,7 @@ describe("reconcileTelegramCommandRegistration", () => {
       "set",
       "settings",
       "mute",
+      "timezone",
       "unsnooze",
       "unmutehours",
       "cancel",

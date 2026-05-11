@@ -41,6 +41,7 @@ export interface PendingAlertRow {
   quiet_hours_enabled: number | null;
   quiet_hours_start_utc: number | null;
   quiet_hours_end_utc: number | null;
+  timezone: string | null;
 }
 
 export interface PendingDrainResult {
@@ -109,6 +110,7 @@ function shouldSilencePendingRow(row: PendingAlertRow, nowSec: number): boolean 
     Boolean(row.quiet_hours_enabled),
     row.quiet_hours_start_utc,
     row.quiet_hours_end_utc,
+    row.timezone,
   );
 }
 
@@ -274,7 +276,7 @@ export async function drainPendingQueue(
     .prepare(
       `SELECT p.id, p.chat_id, p.message_html, p.disable_notification, p.created_at, p.attempts,
               p.not_before_at, u.alert_snooze_until_ts, u.quiet_hours_enabled,
-              u.quiet_hours_start_utc, u.quiet_hours_end_utc
+              u.quiet_hours_start_utc, u.quiet_hours_end_utc, u.timezone
          FROM telegram_pending_alerts p
          LEFT JOIN telegram_subscribers u ON u.chat_id = p.chat_id
         WHERE p.created_at >= ?

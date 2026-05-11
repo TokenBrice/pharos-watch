@@ -1037,6 +1037,82 @@ describe("handleTelegramWebhook", () => {
     expect(text).toContain("22:00–07:00 UTC");
   });
 
+  it("/timezone <zone> persists a valid IANA zone", async () => {
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/timezone Europe/Paris"),
+      "test-secret",
+      "bot-token",
+    );
+    expect(res.status).toBe(200);
+
+    const upsert = db.getHistory().find((h) =>
+      /INSERT INTO telegram_subscribers/.test(h.sql) && h.binds.includes("Europe/Paris"),
+    );
+    expect(upsert).toBeDefined();
+    expect(sentMessageBody().text).toContain("Timezone set to Europe/Paris");
+  });
+
+  it("/timezone rejects unknown zones without writing to D1", async () => {
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/timezone Mars/Olympus_Mons"),
+      "test-secret",
+      "bot-token",
+    );
+    expect(res.status).toBe(200);
+    const wrote = db.getHistory().some((h) =>
+      /INSERT INTO telegram_subscribers/.test(h.sql) && h.binds.includes("Mars/Olympus_Mons"),
+    );
+    expect(wrote).toBe(false);
+    expect(sentMessageBody().text).toContain("Unknown timezone");
+  });
+
+  it("/timezone with no argument shows current zone and an inline keyboard", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "FROM telegram_subscribers",
+        rows: [],
+        first: {
+          alert_dews: 0,
+          alert_depeg: 0,
+          alert_safety: 0,
+          alert_launch: 0,
+          global_alert_dews: 0,
+          global_alert_depeg: 0,
+          global_alert_safety: 0,
+          global_alert_launch: 0,
+          global_depeg_worsening_bps_step: null,
+          quiet_hours_enabled: 0,
+          quiet_hours_start_utc: null,
+          quiet_hours_end_utc: null,
+          timezone: "Europe/Paris",
+          alert_snooze_until_ts: null,
+          consecutive_block_count: 0,
+          consecutive_block_first_at: null,
+        },
+      },
+    ]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/timezone"),
+      "test-secret",
+      "bot-token",
+    );
+    expect(res.status).toBe(200);
+    const sent = sentMessageBody() as {
+      text: string;
+      reply_markup?: { inline_keyboard?: Array<Array<{ text: string; callback_data?: string }>> };
+    };
+    expect(sent.text).toContain("Current timezone: Europe/Paris");
+    const flat = (sent.reply_markup?.inline_keyboard ?? []).flat();
+    expect(flat.some((btn) => btn.callback_data === "tz:UTC")).toBe(true);
+    expect(flat.some((btn) => btn.callback_data === "tz:Europe/Paris")).toBe(true);
+  });
+
   it("finalizes pending disambiguation and continues remaining tickers", async () => {
     const ambiguous = resolveTicker("USDF");
     const usdc = resolveTicker("USDC");

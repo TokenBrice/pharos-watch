@@ -267,6 +267,7 @@ export async function loadSubscriberByChat(
          quiet_hours_enabled,
          quiet_hours_start_utc,
          quiet_hours_end_utc,
+         timezone,
          alert_snooze_until_ts,
          consecutive_block_count,
          consecutive_block_first_at
@@ -510,6 +511,38 @@ export async function applyGlobalSetting(
     nowSec: unixNow(),
     globalAlertOverrides: { [command.setting]: override },
   });
+}
+
+/**
+ * Replace the subscriber's IANA timezone (used to interpret quiet hours
+ * locally). `timezone = null` clears any prior value, reverting the chat to
+ * UTC. Initial-insert defaults match `clearAlertSnooze` so they stay in sync.
+ */
+export async function setSubscriberTimezone(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  timezone: string | null,
+): Promise<void> {
+  const now = unixNow();
+  await db
+    .prepare(
+      `INSERT INTO telegram_subscribers (
+         chat_id, username,
+         alert_dews, alert_depeg, alert_safety, alert_launch,
+         global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
+         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
+         timezone,
+         created_at, last_active_at
+       )
+       VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, ?, ?, ?)
+       ON CONFLICT(chat_id) DO UPDATE SET
+         username = COALESCE(excluded.username, telegram_subscribers.username),
+         timezone = excluded.timezone,
+         last_active_at = excluded.last_active_at`,
+    )
+    .bind(chatId, username, timezone, now, now)
+    .run();
 }
 
 export async function clearAlertSnooze(

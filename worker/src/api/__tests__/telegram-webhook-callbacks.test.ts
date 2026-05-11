@@ -871,4 +871,45 @@ describe("handleCallbackQuery", () => {
       expect(insert!.binds[3]).toBe("ALERT");
     });
   });
+
+  describe("tz timezone callback", () => {
+    it("tz:<zone> persists a valid IANA zone with timezone in the upsert", async () => {
+      const db = mockD1([]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-tz",
+        data: "tz:Europe/Paris",
+        from: { id: 1, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 999 },
+      });
+
+      const upsert = db.getHistory().find(
+        (h) =>
+          /INSERT INTO telegram_subscribers/.test(h.sql) &&
+          /timezone = excluded\.timezone/.test(h.sql),
+      );
+      expect(upsert).toBeDefined();
+      expect(upsert!.binds).toContain("Europe/Paris");
+
+      const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+      const body = JSON.parse((ackCall?.[1] as RequestInit).body as string);
+      expect(body.text).toContain("Europe/Paris");
+    });
+
+    it("tz:<unknown> rejects with a toast and does not write", async () => {
+      const db = mockD1([]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-tz-bad",
+        data: "tz:Mars/Olympus_Mons",
+        from: { id: 1, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 999 },
+      });
+
+      const wrote = db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql));
+      expect(wrote).toBe(false);
+
+      const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+      const body = JSON.parse((ackCall?.[1] as RequestInit).body as string);
+      expect(body.text).toMatch(/unknown timezone/i);
+    });
+  });
 });

@@ -149,7 +149,7 @@ In group and supergroup chats, commands must be addressed to the bot, for exampl
 
 ### Group Admin Gating
 
-`/subscribe`, `/unsubscribe`, `/set`, `/settings`, `/mute`, `/unmutehours`, and `/unsnooze` are gated to group administrators so a single member cannot rewrite the chat's subscription or quiet-hours state. The gating mode lives behind the `TELEGRAM_GROUP_ADMIN_GATING` toggle in `worker/src/api/telegram-webhook.ts`.
+`/subscribe`, `/unsubscribe`, `/set`, `/settings`, `/mute`, `/unmutehours`, `/unsnooze`, and `/timezone` are gated to group administrators so a single member cannot rewrite the chat's subscription, quiet-hours, or timezone state. The gating mode lives behind the `TELEGRAM_GROUP_ADMIN_GATING` toggle in `worker/src/api/telegram-webhook.ts`. The `tz:<zone>` callback handler enforces the same admin check before persisting.
 
 - **Hard gate (current default):** non-admin invocations receive a refusal reply that names the current administrators ("Only group admins can change alert settings (/subscribe). Admins here: @Alice, Bob.") and the command is short-circuited; the dispatch does not run. Admin display names come from `getChatAdministrators`, which is already visible to every member through the Telegram group member list.
 - **Soft (emergency rollback):** flipping the toggle to `"soft"` warns the non-admin with the same copy but still runs the command. Kept as an operator escape hatch if the hard gate is ever too aggressive in production.
@@ -191,7 +191,8 @@ Bulk `/subscribe` and `/unsubscribe` calls are gated behind an inline `[ Confirm
 | `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`, `launch`) or sets the global depeg worsening step |
 | `/settings` | Opens an inline-keyboard view of chat-level settings: quiet hours toggle, snooze clear, and global alert toggles for DEWS / depeg / safety / launch. Each tap edits the message in place via `editMessageText` so the user sees a single self-updating panel. |
 | `/settings <ticker>` | Opens a per-coin inline keyboard with DEWS min band (`ALERT/WARNING/DANGER/off`), safety mode (`all/downgrade-only/upgrade-only/off`), depeg worsening step (`100/250/500/off`), and launch on/off rows. A `← Back to chat settings` button returns to the chat-level view. |
-| `/mute <start>-<end>` | Enables quiet hours in UTC (messages still deliver, notifications are silenced) |
+| `/mute <start>-<end>` | Enables quiet hours interpreted in the chat's `/timezone` (defaults to UTC; messages still deliver, notifications are silenced) |
+| `/timezone <IANA-zone>` | Sets the chat's IANA timezone for resolving quiet hours locally (e.g. `Europe/Paris`). Sending `/timezone` with no argument shows the current zone and an inline keyboard of common zones. NULL = UTC, the historical behavior. |
 | `/unsnooze` | Clears active alert snooze immediately |
 | `/unmutehours` | Disables quiet hours |
 | `/cancel` | Cancels a pending disambiguation flow |
@@ -242,7 +243,7 @@ Additional alert controls:
 - `telegram_preset_subscriptions.depeg_worsening_bps_step`: optional dynamic preset worsening follow-up step (`100`, `250`, `500`)
 - `global_depeg_worsening_bps_step`: optional all-stablecoin depeg worsening follow-up step (`100`, `250`, `500`)
 - `global_alert_*`: subscriber-level flags that subscribe the chat to every tracked stablecoin for that alert type, including `launch`
-- quiet hours: subscriber-level UTC hour window that forces `disable_notification = true`
+- quiet hours: subscriber-level hour window that forces `disable_notification = true`, interpreted in the subscriber's `timezone` column (NULL = UTC)
 
 `launch` alerts have no additional per-coin tuning beyond on/off subscription state, and can now be toggled through `/set <ticker> launch on|off` and `/set all launch on|off`.
 

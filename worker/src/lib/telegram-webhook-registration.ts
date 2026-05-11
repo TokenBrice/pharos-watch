@@ -11,7 +11,7 @@ const TELEGRAM_COMMANDS_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_PROFILE_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_ALLOWED_UPDATES = ["message", "callback_query"] as const;
 const TELEGRAM_WEBHOOK_CACHE_VERSION = 2;
-const TELEGRAM_COMMANDS_CACHE_VERSION = 3;
+const TELEGRAM_COMMANDS_CACHE_VERSION = 4;
 const TELEGRAM_PROFILE_CACHE_VERSION = 1;
 
 // Profile metadata shown on the bot's About page, card preview, and chat
@@ -37,7 +37,8 @@ export const TELEGRAM_BOT_COMMANDS = [
   { command: "presets", description: "Browse preset watchlists like usd-top25 / usd-top-25" },
   { command: "set", description: "Tune per-coin or global thresholds (e.g. /set all depeg-step 250)" },
   { command: "settings", description: "Open the inline settings keyboard (e.g. /settings or /settings USDC)" },
-  { command: "mute", description: "Enable quiet hours in UTC (e.g. /mute 22-07)" },
+  { command: "mute", description: "Enable quiet hours (e.g. /mute 22-07; uses your /timezone)" },
+  { command: "timezone", description: "Set chat timezone for quiet hours (e.g. /timezone Europe/Paris)" },
   { command: "unsnooze", description: "Clear active alert snooze" },
   { command: "unmutehours", description: "Disable quiet hours" },
   { command: "cancel", description: "Cancel a pending ticker selection" },

@@ -214,7 +214,8 @@ async function loadSubscriberRowsBatch(
               sub.depeg_worsening_bps_step,
               u.quiet_hours_enabled,
               u.quiet_hours_start_utc,
-              u.quiet_hours_end_utc
+              u.quiet_hours_end_utc,
+              u.timezone
          FROM telegram_subscriptions sub
          JOIN telegram_subscribers u ON u.chat_id = sub.chat_id
         WHERE sub.stablecoin_id IN (${placeholders})
@@ -236,6 +237,7 @@ async function loadSubscriberRowsBatch(
       quiet_hours_enabled: row.quiet_hours_enabled ?? 0,
       quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
       quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
+      timezone: row.timezone ?? null,
       isGlobal: false,
     });
     map.set(row.stablecoin_id, existing);
@@ -260,7 +262,9 @@ async function loadGlobalSubscriberRows(
               last_active_at,
               quiet_hours_enabled,
               quiet_hours_start_utc,
-              quiet_hours_end_utc, global_depeg_worsening_bps_step
+              quiet_hours_end_utc,
+              timezone,
+              global_depeg_worsening_bps_step
          FROM telegram_subscribers
         WHERE ${alertColumn} = 1
           AND (alert_snooze_until_ts IS NULL OR alert_snooze_until_ts <= ?)`,
@@ -277,6 +281,7 @@ async function loadGlobalSubscriberRows(
     quiet_hours_enabled: row.quiet_hours_enabled ?? 0,
     quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
     quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
+    timezone: row.timezone ?? null,
     isGlobal: true,
   }));
 }
@@ -322,6 +327,7 @@ async function loadPresetSubscriberRowsBatch(
       quiet_hours_enabled: number | null;
       quiet_hours_start_utc: number | null;
       quiet_hours_end_utc: number | null;
+      timezone: string | null;
     }>;
   };
   try {
@@ -335,7 +341,8 @@ async function loadPresetSubscriberRowsBatch(
                 p.depeg_worsening_bps_step,
                 u.quiet_hours_enabled,
                 u.quiet_hours_start_utc,
-                u.quiet_hours_end_utc
+                u.quiet_hours_end_utc,
+                u.timezone
            FROM telegram_preset_subscriptions p
            JOIN telegram_subscribers u ON u.chat_id = p.chat_id
           WHERE p.${alertColumn} = 1
@@ -350,6 +357,7 @@ async function loadPresetSubscriberRowsBatch(
         quiet_hours_enabled: number | null;
         quiet_hours_start_utc: number | null;
         quiet_hours_end_utc: number | null;
+        timezone: string | null;
       }>();
   } catch (err) {
     logTelegramEvent({
@@ -386,6 +394,7 @@ async function loadPresetSubscriberRowsBatch(
         quiet_hours_enabled: row.quiet_hours_enabled ?? 0,
         quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
         quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
+        timezone: row.timezone ?? null,
         isGlobal: false,
       });
       map.set(stablecoinId, existing);
@@ -693,6 +702,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
           entry.quietHoursEnabled,
           entry.quietHoursStartUtc,
           entry.quietHoursEndUtc,
+          entry.timezone,
         ),
     );
 

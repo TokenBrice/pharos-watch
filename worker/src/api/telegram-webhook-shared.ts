@@ -37,7 +37,7 @@ Other useful setups:
 <b>Tune noise</b>
 <code>/set USDC depeg-step 250</code>
 <code>/set all depeg-step 250</code>
-<code>/mute 22-07</code>  ← quiet hours in UTC
+<code>/mute 22-07</code>  ← quiet hours (use /timezone first, defaults to UTC)
 
 <b>Also useful</b>
 <code>/status USDC</code> — one-shot peg + DEWS + safety snapshot
@@ -98,7 +98,10 @@ Explain the current Safety Score in plain language
 Show which Pharos data surfaces currently cover one coin
 
 <code>/mute 22-07</code>
-Quiet hours in UTC (notifications silenced, messages still delivered)
+Quiet hours in your <code>/timezone</code> (defaults to UTC; notifications silenced, messages still delivered)
+
+<code>/timezone Europe/Paris</code>
+Set chat timezone for quiet hours, or send <code>/timezone</code> alone to pick from common zones
 
 <code>/unsnooze</code>
 Clear an active alert snooze immediately
@@ -242,6 +245,7 @@ export interface SubscriberRow {
   quiet_hours_enabled: number | null;
   quiet_hours_start_utc: number | null;
   quiet_hours_end_utc: number | null;
+  timezone?: string | null;
   alert_snooze_until_ts?: number | null;
   consecutive_block_count?: number | null;
   consecutive_block_first_at?: number | null;

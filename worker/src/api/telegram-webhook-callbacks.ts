@@ -24,11 +24,13 @@ import {
   clearPendingDisambiguation,
   removePresetSubscriptions,
   removeSubscriptions,
+  setSubscriberTimezone,
   unixNow,
   upsertGlobalAlertTypes,
   upsertPresetSubscriptions,
   upsertSubscriberAndSubscriptions,
 } from "./telegram-webhook-store";
+import { isValidIanaTimezone } from "../cron/telegram-quiet-hours";
 import { loadStatusForCoin } from "./telegram-webhook-status";
 import {
   MANAGE_PAGE_SIZE,
@@ -78,6 +80,7 @@ const KNOWN_ACTIONS = new Set([
   "manage",
   "unsub",
   "settings",
+  "tz",
 ]);
 
 type SnoozeArg = keyof typeof SNOOZE_SECONDS;
@@ -346,6 +349,50 @@ export async function handleCallbackQuery(
 
   if (action === "unsub" && isKnownStablecoinId(arg)) {
     await handleManageUnsub(db, botToken, cb, arg);
+    return;
+  }
+
+  if (action === "tz") {
+    // Zone strings never legitimately contain `:` (IANA names use `/`), but use
+    // a slice instead of split to stay forgiving if Telegram ever introduces
+    // multi-segment callback payloads.
+    const zone = data.slice(action.length + 1);
+    if (!zone || !isValidIanaTimezone(zone)) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Unknown timezone." });
+      return;
+    }
+    const chatType = cb.message?.chat?.type ?? "private";
+    const isGroup = chatType === "group" || chatType === "supergroup";
+    if (isGroup) {
+      const actorUserId = cb.from?.id != null ? String(cb.from.id) : null;
+      if (!actorUserId) {
+        await answerCallbackQuery(cb.id, botToken, { text: "Only group admins can change timezone." });
+        return;
+      }
+      const member = await getCachedChatMember(db, botToken, chatId, actorUserId);
+      const isAdmin = member?.status === "creator" || member?.status === "administrator";
+      if (!isAdmin) {
+        await answerCallbackQuery(cb.id, botToken, { text: "Only group admins can change timezone." });
+        return;
+      }
+    }
+    const username = isGroup ? null : cb.from?.username ?? null;
+    try {
+      await setSubscriberTimezone(db, chatId, username, zone);
+    } catch (err) {
+      logTelegramEvent({
+        message: "timezone write failed",
+        chatId,
+        userId: cb.from?.id ?? null,
+        action: "tz",
+        err: err instanceof Error ? err.message : String(err),
+      });
+      await answerCallbackQuery(cb.id, botToken, {
+        text: "Could not save timezone. Please try again.",
+      });
+      return;
+    }
+    await answerCallbackQuery(cb.id, botToken, { text: `Timezone set to ${zone}.` });
     return;
   }
 

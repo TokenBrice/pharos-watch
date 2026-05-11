@@ -61,6 +61,7 @@ export interface SubscriberRow {
   quiet_hours_enabled: number | null;
   quiet_hours_start_utc: number | null;
   quiet_hours_end_utc: number | null;
+  timezone: string | null;
   isGlobal: boolean;
 }
 
@@ -70,6 +71,7 @@ export interface AlertsByChatEntry {
   quietHoursEnabled: boolean;
   quietHoursStartUtc: number | null;
   quietHoursEndUtc: number | null;
+  timezone: string | null;
 }
 
 export interface RoutedSubscriberAlert {
@@ -126,6 +128,7 @@ function addAlertToChat<T>(
     quietHoursEnabled: Boolean(sub.quiet_hours_enabled),
     quietHoursStartUtc: sub.quiet_hours_start_utc ?? null,
     quietHoursEndUtc: sub.quiet_hours_end_utc ?? null,
+    timezone: sub.timezone ?? null,
   });
 }
 

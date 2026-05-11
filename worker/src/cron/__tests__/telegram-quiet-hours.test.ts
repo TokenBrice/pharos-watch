@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DISAMBIGUATION_TTL_SEC } from "../../api/telegram-webhook-shared";
-import { cleanExpiredDisambiguations, isQuietHoursActive } from "../telegram-quiet-hours";
+import {
+  cleanExpiredDisambiguations,
+  isQuietHoursActive,
+  isValidIanaTimezone,
+} from "../telegram-quiet-hours";
 
 const hour = (hourUtc: number) => hourUtc * 3600;
 
@@ -25,6 +29,40 @@ describe("isQuietHoursActive", () => {
     expect(isQuietHoursActive(hour(2), true, 22, 6)).toBe(true);
     expect(isQuietHoursActive(hour(6), true, 22, 6)).toBe(false);
     expect(isQuietHoursActive(hour(12), true, 22, 6)).toBe(false);
+  });
+
+  it("resolves the local hour in the provided IANA timezone", () => {
+    // 2026-01-15 12:00:00 UTC. In Europe/Paris (UTC+1 in winter) the local
+    // hour is 13; in America/Los_Angeles (UTC-8) it is 04.
+    const noonUtcWinter = Date.UTC(2026, 0, 15, 12, 0, 0) / 1000;
+    expect(isQuietHoursActive(noonUtcWinter, true, 13, 14, "Europe/Paris")).toBe(true);
+    expect(isQuietHoursActive(noonUtcWinter, true, 4, 5, "America/Los_Angeles")).toBe(true);
+    // Same instant, UTC interpretation only matches 12.
+    expect(isQuietHoursActive(noonUtcWinter, true, 13, 14, null)).toBe(false);
+    expect(isQuietHoursActive(noonUtcWinter, true, 12, 13, null)).toBe(true);
+  });
+
+  it("falls back to UTC when the timezone is rejected by ICU", () => {
+    // 2026-01-15 12:00:00 UTC. Bogus zone -> falls back to UTC, so hour=12.
+    const noonUtcWinter = Date.UTC(2026, 0, 15, 12, 0, 0) / 1000;
+    expect(isQuietHoursActive(noonUtcWinter, true, 12, 13, "Mars/Olympus_Mons")).toBe(true);
+    expect(isQuietHoursActive(noonUtcWinter, true, 13, 14, "Mars/Olympus_Mons")).toBe(false);
+  });
+});
+
+describe("isValidIanaTimezone", () => {
+  it("accepts common IANA zones", () => {
+    expect(isValidIanaTimezone("UTC")).toBe(true);
+    expect(isValidIanaTimezone("Europe/Paris")).toBe(true);
+    expect(isValidIanaTimezone("America/New_York")).toBe(true);
+    expect(isValidIanaTimezone("Asia/Singapore")).toBe(true);
+  });
+
+  it("rejects empty, too-long, or unrecognized inputs", () => {
+    expect(isValidIanaTimezone("")).toBe(false);
+    expect(isValidIanaTimezone("not a zone")).toBe(false);
+    expect(isValidIanaTimezone("Mars/Olympus_Mons")).toBe(false);
+    expect(isValidIanaTimezone("a".repeat(65))).toBe(false);
   });
 });
 
