@@ -8,12 +8,11 @@ import {
   BreakdownLegend,
   type BreakdownEntry,
 } from "@/components/liquidity-breakdown";
+import { buildProtocolBreakdown } from "@/components/liquidity-stats-model";
 import { MetricStatCard } from "@/components/metric-stat-card";
 import { formatCurrency } from "@shared/lib/format";
 import {
-  PROTOCOL_COLORS,
   PROTOCOL_LOGOS,
-  EXTRA_COLORS,
   CHAIN_COLORS,
   prettifyProtocol,
   normalizeChain,
@@ -30,27 +29,6 @@ interface LiquidityStatsProps {
   stats: LiquidityStatsData;
   liquidityMap: Record<string, DexLiquidityData>;
 }
-
-const MAX_PROTOCOL_LEGEND_ITEMS = 10;
-const MAX_VISIBLE_PROTOCOLS = MAX_PROTOCOL_LEGEND_ITEMS - 1;
-
-
-export function buildProtocolBreakdown(protocolTvl: Record<string, number>) {
-  const { entries, total } = buildBreakdownEntries(protocolTvl, {
-    maxVisibleItems: MAX_VISIBLE_PROTOCOLS,
-    labelForKey: prettifyProtocol,
-    colorForKey: (protocol, index) => PROTOCOL_COLORS[protocol] ?? EXTRA_COLORS[index % EXTRA_COLORS.length],
-    logoForKey: (protocol) => {
-      const path = PROTOCOL_LOGOS[protocol];
-      return path ? { path } : null;
-    },
-  });
-  const displayEntries = entries.map((entry) => [entry.key, entry.value] as [string, number]);
-  const colorMap = Object.fromEntries(entries.map((entry) => [entry.key, entry.colorClass]));
-
-  return { displayEntries, colorMap, total };
-}
-
 
 function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> }) {
   const globalData = data[DEX_GLOBAL_KEY];
