@@ -190,7 +190,7 @@ function HeroPreview() {
             <span className="absolute inset-0 animate-ping rounded-full bg-green-500/70" />
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500" />
           </span>
-          armed
+          live
         </span>
       </div>
       <AlertBubble content={featuredAlert.content} time={featuredAlert.time} />
@@ -357,7 +357,7 @@ export default function PharosWatchBotPage() {
                 <span aria-hidden="true" className="text-border">·</span>
                 <span>5m latency</span>
                 <span aria-hidden="true" className="text-border">·</span>
-                <span>Dispatcher armed</span>
+                <span>Dispatcher live</span>
               </div>
 
               <div className="space-y-4">
