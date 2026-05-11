@@ -169,7 +169,7 @@ describe("api key helpers", () => {
         expiresAt: 111 + (90 * 24 * 60 * 60),
       },
     });
-    expect(db.getHistory()[0]?.binds[7]).toBe(111 + (90 * 24 * 60 * 60));
+    expect(db.getHistory()[0]?.binds[8]).toBe(111 + (90 * 24 * 60 * 60));
     expect(parseApiKeyToken((created as Exclude<typeof created, Response>).token)).not.toBeNull();
   });
 
@@ -221,7 +221,7 @@ describe("api key helpers", () => {
 
     expect(created).not.toBeInstanceOf(Response);
     expect((created as Exclude<typeof created, Response>).key.expiresAt).toBeNull();
-    expect(db.getHistory()[0]?.binds[7]).toBeNull();
+    expect(db.getHistory()[0]?.binds[8]).toBeNull();
   });
 
   it("updates expiry metadata and preserves explicit null on update", async () => {
@@ -573,6 +573,63 @@ describe("api key helpers", () => {
     expect(dbUnavailable.getHistory().filter((entry) => entry.sql.includes("FROM api_keys"))).toHaveLength(1);
 
     vi.advanceTimersByTime(getApiKeyAuthCacheStaleTtlMs() - getApiKeyAuthCacheTtlMs());
+
+    await expect(
+      authenticateApiKey(dbUnavailable, `ph_live_${prefix}_${secret}`, pepper),
+    ).resolves.toEqual({ kind: "unavailable" });
+  });
+
+  it("fails closed instead of using stale cache for self-serve keys when D1 is unavailable", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-11T10:00:00.000Z"));
+
+    const pepper = "pepper";
+    const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
+    const secretHash = await hmacSha256Hex(pepper, secret);
+    const prefix = "1122334455667788";
+    const cachedRow = {
+      id: 17,
+      key_prefix: prefix,
+      secret_hash: secretHash,
+      name: "Self Serve",
+      owner_email: "builder@example.com",
+      tier: "self-serve",
+      traffic_class: "external",
+      rate_limit_per_minute: 30,
+      is_active: 1,
+      expires_at: null,
+      created_at: 1,
+      updated_at: 1,
+      last_used_at: null,
+      last_used_route: null,
+    };
+    const dbHit = mockD1([
+      {
+        match: "FROM api_keys",
+        matchBinds: [prefix],
+        rows: [cachedRow],
+      },
+      {
+        match: "FROM api_key_self_serve_revocations",
+        matchBinds: [prefix],
+        rows: [],
+        first: null,
+      },
+    ], { requireMatch: true });
+    const dbUnavailable = mockD1([
+      {
+        match: "FROM api_keys",
+        matchBinds: [prefix],
+        rows: [],
+        throwError: new Error("lookup failed"),
+      },
+    ], { requireMatch: true });
+
+    await expect(
+      authenticateApiKey(dbHit, `ph_live_${prefix}_${secret}`, pepper),
+    ).resolves.toMatchObject({ kind: "valid" });
+
+    vi.advanceTimersByTime(getApiKeyAuthCacheTtlMs() + 1);
 
     await expect(
       authenticateApiKey(dbUnavailable, `ph_live_${prefix}_${secret}`, pepper),

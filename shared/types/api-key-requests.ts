@@ -1,5 +1,3 @@
-import type { ApiKeySummary } from "./api-keys";
-
 export type ApiKeySelfServeStatus =
   | "pending_verification"
   | "issued"
@@ -31,7 +29,6 @@ export interface ApiKeySelfServeRequest {
 
 export interface ApiKeySelfServePendingResponse {
   status: "pending_verification";
-  requestId: string;
   message: string;
 }
 
@@ -42,10 +39,13 @@ export interface ApiKeySelfServeVerifyRequest {
 export interface ApiKeySelfServeIssueResponse {
   status: "issued";
   requestId: string;
-  key: ApiKeySummary & {
+  key: {
+    keyPrefix: string;
+    maskedToken: string;
     tier: "self-serve";
     trafficClass: "external";
     rateLimitPerMinute: 30;
+    expiresAt: number | null;
   };
   token: string;
   usage: {

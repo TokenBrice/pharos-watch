@@ -6,6 +6,7 @@ import {
   handleApiKeyRequestsAdmin,
   handleApiKeyRequestVerify,
 } from "../api-key-requests";
+import { redactProviderBody } from "../api-key-requests/email";
 import type { ApiKeySelfServeEnv } from "../api-key-requests/types";
 
 interface SqliteD1Statement {
@@ -55,7 +56,8 @@ function setupSqlite(): DatabaseSync {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       last_used_at INTEGER,
-      last_used_route TEXT
+      last_used_route TEXT,
+      pepper_version INTEGER NOT NULL DEFAULT 1
     );
 
     CREATE TABLE api_key_audit_log (
@@ -65,6 +67,27 @@ function setupSqlite(): DatabaseSync {
       actor TEXT NOT NULL,
       detail_json TEXT,
       created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE admin_action_audit (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      created_at INTEGER NOT NULL,
+      actor TEXT NOT NULL,
+      action TEXT NOT NULL,
+      target TEXT,
+      result TEXT NOT NULL CHECK (result IN ('ok', 'error')),
+      http_status INTEGER,
+      details_json TEXT
+    );
+
+    CREATE TABLE admin_idempotency_keys (
+      action TEXT NOT NULL,
+      idempotency_key TEXT NOT NULL,
+      request_hash TEXT NOT NULL,
+      response_status INTEGER NOT NULL,
+      response_body TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY (action, idempotency_key)
     );
 
     CREATE TABLE api_key_requests (
@@ -100,8 +123,8 @@ function setupSqlite(): DatabaseSync {
       updated_at INTEGER NOT NULL
     );
 
-    CREATE TABLE api_key_request_rate_limit (
-      scope TEXT NOT NULL CHECK (scope IN ('ip', 'email', 'token')),
+    CREATE TABLE api_key_request_rate_limit_v2 (
+      scope TEXT NOT NULL CHECK (scope IN ('ip', 'email', 'token', 'submission_ip', 'submission_email', 'verification_ip', 'verification_token')),
       subject_hash TEXT NOT NULL,
       bucket_start INTEGER NOT NULL,
       count INTEGER NOT NULL DEFAULT 0,
@@ -118,6 +141,14 @@ function setupSqlite(): DatabaseSync {
       claimed_at INTEGER NOT NULL,
       released_at INTEGER,
       updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE api_key_self_serve_revocations (
+      key_prefix TEXT PRIMARY KEY,
+      api_key_id INTEGER NOT NULL,
+      request_id TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      revoked_at INTEGER NOT NULL
     );
   `);
   return sqlite;
@@ -166,7 +197,7 @@ function postRequest(path: string, body: unknown, headers: Record<string, string
 
 function extractVerificationToken(sentBody: unknown): string {
   const text = (sentBody as { text: string }).text;
-  const match = text.match(/https:\/\/pharos\.watch\/api\/\?verify=([A-Za-z0-9_-]+)/);
+  const match = text.match(/https:\/\/pharos\.watch\/api\/#verify=([A-Za-z0-9_-]+)/);
   if (!match?.[1]) throw new Error(`verification URL missing from email body: ${text}`);
   return match[1];
 }
@@ -199,12 +230,12 @@ describe("api key self-serve request handlers", () => {
 
   it("creates only a pending verification request and email claim on initial request", async () => {
     const response = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
-    const body = await response.json() as { status: string; requestId: string };
+    const body = await response.json() as { status: string; requestId?: string };
 
     expect(response.status).toBe(202);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body.status).toBe("pending_verification");
-    expect(body.requestId).toMatch(/^akr_/);
+    expect(body.requestId).toBeUndefined();
     expect(sentEmails).toHaveLength(1);
 
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_keys").get()).toEqual({ count: 0 });
@@ -217,6 +248,7 @@ describe("api key self-serve request handlers", () => {
     expect(sqlite.prepare("SELECT status FROM api_key_self_serve_email_claims").get()).toEqual({
       status: "pending_verification",
     });
+    expect((sentEmails[0] as { text: string }).text).toContain("https://pharos.watch/api/#verify=akv_");
   });
 
   it("accepts concise human-readable use cases", async () => {
@@ -241,7 +273,10 @@ describe("api key self-serve request handlers", () => {
       env(),
       "api-key-pepper",
     );
-    const body = await response.json() as { token: string; key: { tier: string; rateLimitPerMinute: number; expiresAt: number } };
+    const body = await response.json() as {
+      token: string;
+      key: Record<string, unknown> & { tier: string; rateLimitPerMinute: number; expiresAt: number };
+    };
 
     expect(response.status).toBe(201);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
@@ -249,6 +284,14 @@ describe("api key self-serve request handlers", () => {
     expect(body.key.tier).toBe("self-serve");
     expect(body.key.rateLimitPerMinute).toBe(30);
     expect(body.key.expiresAt).toBe(2_000_000_000 + (60 * 24 * 60 * 60));
+    expect(body.key).not.toHaveProperty("id");
+    expect(body.key).not.toHaveProperty("name");
+    expect(body.key).not.toHaveProperty("ownerEmail");
+    expect(body.key).not.toHaveProperty("isActive");
+    expect(body.key).not.toHaveProperty("createdAt");
+    expect(body.key).not.toHaveProperty("updatedAt");
+    expect(body.key).not.toHaveProperty("lastUsedAt");
+    expect(body.key).not.toHaveProperty("lastUsedRoute");
 
     expect(sqlite.prepare("SELECT tier, traffic_class, rate_limit_per_minute, is_active FROM api_keys").get()).toEqual({
       tier: "self-serve",
@@ -265,7 +308,7 @@ describe("api key self-serve request handlers", () => {
     expect(sqlite.prepare("SELECT actor FROM api_key_audit_log").get()).toEqual({ actor: "self-serve" });
   });
 
-  it("prevents duplicate pending or active keys for the same normalized email", async () => {
+  it("returns a non-enumerating pending response for duplicate pending emails", async () => {
     const first = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
     expect(first.status).toBe(202);
 
@@ -273,10 +316,13 @@ describe("api key self-serve request handlers", () => {
       email: "builder@example.com",
     })), env());
 
-    expect(second.status).toBe(409);
+    expect(second.status).toBe(202);
     await expect(second.json()).resolves.toEqual({
-      error: "An active or pending self-serve key already exists for this email.",
+      status: "pending_verification",
+      message: "If this address can receive verification email, check your inbox to continue.",
     });
+    expect(sentEmails).toHaveLength(1);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_key_requests").get()).toEqual({ count: 1 });
   });
 
   it("returns honeypot success without creating a request", async () => {
@@ -289,6 +335,28 @@ describe("api key self-serve request handlers", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_key_requests").get()).toEqual({ count: 0 });
   });
 
+  it("releases stale orphan pending claims before acquiring a new claim", async () => {
+    sqlite.prepare(
+      `INSERT INTO api_key_self_serve_email_claims (
+        email_hash,
+        normalized_email,
+        api_key_id,
+        request_id,
+        status,
+        claimed_at,
+        released_at,
+        updated_at
+      ) VALUES (?, ?, NULL, ?, 'pending_verification', ?, NULL, ?)`,
+    ).run("orphan-hash", "orphan@example.com", "akr_orphan", 2_000_000_000 - 601, 2_000_000_000 - 601);
+
+    const response = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
+
+    expect(response.status).toBe(202);
+    expect(sqlite.prepare("SELECT status FROM api_key_self_serve_email_claims WHERE request_id = 'akr_orphan'").get()).toEqual({
+      status: "released",
+    });
+  });
+
   it("fails closed when required email provider config is missing", async () => {
     const response = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env({
       RESEND_API_KEY: undefined,
@@ -299,7 +367,29 @@ describe("api key self-serve request handlers", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_key_requests").get()).toEqual({ count: 0 });
   });
 
-  it("does not return a token and deactivates the created key on post-insert consistency failure", async () => {
+  it("adds Retry-After on submission throttles", async () => {
+    for (let index = 0; index < 5; index += 1) {
+      const response = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody({
+        email: `builder-${index}@example.com`,
+      })), env());
+      expect(response.status).toBe(202);
+    }
+
+    const throttled = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody({
+      email: "builder-over-limit@example.com",
+    })), env());
+
+    expect(throttled.status).toBe(429);
+    expect(throttled.headers.get("Retry-After")).toBe("1600");
+  });
+
+  it("redacts sensitive provider error details before logging", () => {
+    expect(redactProviderBody(
+      "builder@example.com https://pharos.watch/api/#verify=akv_secret ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF",
+    )).toBe("[redacted-email] [redacted-url] [redacted-api-key]");
+  });
+
+  it("does not create or return a token when claim validation storage fails", async () => {
     await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
     const token = extractVerificationToken(sentEmails[0]);
     sqlite.exec("DROP TABLE api_key_self_serve_email_claims");
@@ -314,8 +404,8 @@ describe("api key self-serve request handlers", () => {
 
     expect(response.status).toBe(503);
     expect(body.token).toBeUndefined();
-    expect(sqlite.prepare("SELECT is_active FROM api_keys").get()).toEqual({ is_active: 0 });
-    expect(sqlite.prepare("SELECT status FROM api_key_requests").get()).toEqual({ status: "blocked" });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_keys").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT status FROM api_key_requests").get()).toEqual({ status: "pending_verification" });
   });
 
   it("lists private request rows through the admin handler without plaintext tokens", async () => {
@@ -337,7 +427,8 @@ describe("api key self-serve request handlers", () => {
 
   it("lets admins reject a pending request and releases its claim", async () => {
     const pending = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
-    const { requestId } = await pending.json() as { requestId: string };
+    expect(pending.status).toBe(202);
+    const { request_id: requestId } = sqlite.prepare("SELECT request_id FROM api_key_requests").get() as { request_id: string };
 
     const response = await handleApiKeyRequestReject(
       db,
@@ -348,6 +439,59 @@ describe("api key self-serve request handlers", () => {
 
     expect(response.status).toBe(200);
     expect(sqlite.prepare("SELECT status FROM api_key_requests").get()).toEqual({ status: "rejected" });
+    expect(sqlite.prepare("SELECT status FROM api_key_self_serve_email_claims").get()).toEqual({ status: "released" });
+    const audit = sqlite.prepare("SELECT action, target, details_json FROM admin_action_audit").get() as {
+      action: string;
+      target: string;
+      details_json: string;
+    };
+    expect(audit.action).toBe("api_key_request_reject");
+    expect(audit.target).toBe(requestId);
+    expect(JSON.parse(audit.details_json)).toMatchObject({ status: "rejected", claimStatus: "released" });
+  });
+
+  it("replays admin reject through the idempotency layer", async () => {
+    const pending = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
+    expect(pending.status).toBe(202);
+    const { request_id: requestId } = sqlite.prepare("SELECT request_id FROM api_key_requests").get() as { request_id: string };
+    const rejectRequest = () => postRequest(
+      `/api/api-key-requests-admin/${requestId}/reject`,
+      { reason: "duplicate submission" },
+      { "X-Pharos-Admin": "1", "Idempotency-Key": "reject-once" },
+    );
+
+    const first = await handleApiKeyRequestReject(db, requestId, true, rejectRequest());
+    const second = await handleApiKeyRequestReject(db, requestId, true, rejectRequest());
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(second.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM admin_action_audit").get()).toEqual({ count: 1 });
+  });
+
+  it("deactivates and records a revocation marker when admins reject an issued self-serve request", async () => {
+    await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
+    const token = extractVerificationToken(sentEmails[0]);
+    const issued = await handleApiKeyRequestVerify(
+      db,
+      postRequest("/api/api-key-requests/verify", { token }),
+      env(),
+      "api-key-pepper",
+    );
+    expect(issued.status).toBe(201);
+    const { request_id: requestId } = sqlite.prepare("SELECT request_id FROM api_key_requests").get() as { request_id: string };
+
+    const response = await handleApiKeyRequestReject(
+      db,
+      requestId,
+      true,
+      postRequest(`/api/api-key-requests-admin/${requestId}/reject`, {}, { "X-Pharos-Admin": "1" }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(sqlite.prepare("SELECT status FROM api_key_requests").get()).toEqual({ status: "rejected" });
+    expect(sqlite.prepare("SELECT is_active FROM api_keys").get()).toEqual({ is_active: 0 });
+    expect(sqlite.prepare("SELECT reason FROM api_key_self_serve_revocations").get()).toEqual({ reason: "admin_reject" });
     expect(sqlite.prepare("SELECT status FROM api_key_self_serve_email_claims").get()).toEqual({ status: "released" });
   });
 });

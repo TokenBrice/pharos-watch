@@ -17,9 +17,10 @@ import {
   SELF_SERVE_VERIFICATION_TOKEN_TTL_SEC,
 } from "@shared/lib/ops-limits";
 import { createGitHubIssue } from "./feedback/github";
-import { createTrustedApiKey } from "../lib/api-key-admin";
+import { activateTrustedApiKey, createTrustedApiKey } from "../lib/api-key-admin";
 import {
   clearApiKeyCache,
+  getApiKeyRuntimeState,
   getNowSec,
   recordApiKeyAudit,
 } from "../lib/api-key-core";
@@ -28,6 +29,7 @@ import {
   jsonResponse,
   parseOptionalPositiveIntegerParam,
   parseOptionalEnumParam,
+  parseOptionalRequestJsonObject,
 } from "../lib/api-utils";
 import { adminErrorResponse, adminJsonResponse, runAdminRoute } from "../lib/route-wrappers";
 import { sendVerificationEmail } from "./api-key-requests/email";
@@ -103,13 +105,17 @@ interface ApiKeyRequestRow {
 
 interface ApiKeyRequestAdminRow extends ApiKeyRequestRow {
   claim_status: "pending_verification" | "issued" | "released" | null;
+  linked_key_owner_email: string | null;
   linked_key_prefix: string | null;
+  linked_key_tier: string | null;
   linked_key_active: number | null;
   linked_key_expires_at: number | null;
 }
 
 const SELF_SERVE_BASE_URL = "https://api.pharos.watch" as const;
 const SELF_SERVE_RETRY_GUIDANCE = "Respect Retry-After on 429 responses and add jitter to polling intervals.";
+const SELF_SERVE_PENDING_MESSAGE = "If this address can receive verification email, check your inbox to continue.";
+const ORPHAN_CLAIM_GRACE_SEC = 10 * 60;
 const ADMIN_STATUS_FILTERS = new Set<ApiKeySelfServeStatus>([
   "pending_verification",
   "issued",
@@ -159,28 +165,20 @@ export async function handleApiKeyRequest(
 
     const allowedByIp = await checkApiKeyRequestRateLimit(
       db,
-      "ip",
+      "submission_ip",
       ipHash,
       3600,
       SELF_SERVE_SUBMISSION_RATE_LIMIT_PER_IP_PER_HOUR,
       nowSec,
     );
-    if (!allowedByIp) {
-      return selfServeError(429, "Too many API key requests. Please wait before trying again.");
-    }
-    const allowedByEmail = await checkApiKeyRequestRateLimit(
-      db,
-      "email",
-      emailHash,
-      24 * 60 * 60,
-      SELF_SERVE_SUBMISSION_RATE_LIMIT_PER_EMAIL_PER_DAY,
-      nowSec,
-    );
-    if (!allowedByEmail) {
-      return selfServeError(429, "Too many API key requests for this email. Please wait before trying again.");
+    if (!allowedByIp.allowed) {
+      return selfServeError(429, "Too many API key requests. Please wait before trying again.", allowedByIp.retryAfterSec);
     }
 
     execCtx?.waitUntil(pruneOldApiKeyRequestRateLimits(db, nowSec - (2 * 24 * 60 * 60)));
+    await releaseOrphanPendingClaims(db, nowSec).catch((error) => {
+      console.error("[api-key-requests] orphan claim cleanup failed:", error);
+    });
 
     await releaseExpiredPendingClaim(db, emailHash, nowSec);
     await releaseInactiveIssuedClaim(db, emailHash, nowSec);
@@ -198,7 +196,22 @@ export async function handleApiKeyRequest(
       nowSec,
     });
     if (!claimAcquired) {
-      return selfServeError(409, "An active or pending self-serve key already exists for this email.");
+      return pendingPublicResponse();
+    }
+
+    const allowedByEmail = await checkApiKeyRequestRateLimit(
+      db,
+      "submission_email",
+      emailHash,
+      24 * 60 * 60,
+      SELF_SERVE_SUBMISSION_RATE_LIMIT_PER_EMAIL_PER_DAY,
+      nowSec,
+    );
+    if (!allowedByEmail.allowed) {
+      await releaseEmailClaim(db, emailHash, requestId, nowSec).catch((releaseError) => {
+        console.error("[api-key-requests] failed to release claim after email rate limit:", releaseError);
+      });
+      return selfServeError(429, "Too many API key requests. Please wait before trying again.", allowedByEmail.retryAfterSec);
     }
 
     try {
@@ -232,9 +245,21 @@ export async function handleApiKeyRequest(
         expiresInMinutes: Math.floor(SELF_SERVE_VERIFICATION_TOKEN_TTL_SEC / 60),
       });
       if (sent.providerMessageId) {
-        await db.prepare("UPDATE api_key_requests SET email_provider_message_id = ?, updated_at = ? WHERE request_id = ?")
-          .bind(sent.providerMessageId, nowSec, requestId)
-          .run();
+        await db.prepare(
+          "UPDATE api_key_requests SET email_provider_message_id = ?, verification_sent_at = ?, updated_at = ? WHERE request_id = ?",
+        )
+          .bind(sent.providerMessageId, nowSec, nowSec, requestId)
+          .run()
+          .catch((error) => {
+            console.error("[api-key-requests] failed to persist email provider metadata:", error);
+          });
+      } else {
+        await db.prepare("UPDATE api_key_requests SET verification_sent_at = ?, updated_at = ? WHERE request_id = ?")
+          .bind(nowSec, nowSec, requestId)
+          .run()
+          .catch((error) => {
+            console.error("[api-key-requests] failed to persist verification sent timestamp:", error);
+          });
       }
     } catch (error) {
       console.error("[api-key-requests] verification email send failed:", error);
@@ -247,11 +272,7 @@ export async function handleApiKeyRequest(
       return selfServeUnavailable();
     }
 
-    return jsonResponse({
-      status: "pending_verification",
-      requestId,
-      message: "Check your email to verify this request and reveal your API key.",
-    }, { status: 202, noStore: true });
+    return pendingPublicResponse();
   } catch (error) {
     console.error("[api-key-requests] request handler failed:", error);
     return selfServeUnavailable();
@@ -284,7 +305,7 @@ export async function handleApiKeyRequestVerify(
 
     const allowedByIp = await checkApiKeyRequestRateLimit(
       db,
-      "ip",
+      "verification_ip",
       ipHash,
       10 * 60,
       SELF_SERVE_VERIFICATION_ATTEMPT_LIMIT_PER_IP_10M,
@@ -292,14 +313,18 @@ export async function handleApiKeyRequestVerify(
     );
     const allowedByToken = await checkApiKeyRequestRateLimit(
       db,
-      "token",
+      "verification_token",
       tokenHash,
       10 * 60,
       SELF_SERVE_VERIFICATION_ATTEMPT_LIMIT_PER_TOKEN_10M,
       nowSec,
     );
-    if (!allowedByIp || !allowedByToken) {
-      return selfServeError(429, "Too many verification attempts. Please wait before trying again.");
+    if (!allowedByIp.allowed || !allowedByToken.allowed) {
+      return selfServeError(
+        429,
+        "Too many verification attempts. Please wait before trying again.",
+        Math.max(allowedByIp.retryAfterSec, allowedByToken.retryAfterSec),
+      );
     }
     execCtx?.waitUntil(pruneOldApiKeyRequestRateLimits(db, nowSec - (2 * 24 * 60 * 60)));
 
@@ -317,13 +342,25 @@ export async function handleApiKeyRequestVerify(
       return selfServeError(400, "Invalid or expired verification token.");
     }
 
-    const previousIssuedCount = await countIssuedRequestsForIp(db, row.ip_hash, nowSec - (24 * 60 * 60));
-    if (previousIssuedCount >= SELF_SERVE_MAX_CREATIONS_PER_IP_24H) {
-      return selfServeError(429, "Too many issued self-serve keys from this network. Please wait before trying again.");
+    const activeClaim = await selectCurrentPendingClaim(db, row.email_hash, row.request_id);
+    if (!activeClaim) {
+      await markRequestBlockedAndReleaseClaim(db, row, nowSec).catch((error) => {
+        console.error("[api-key-requests] failed to block request with missing pending claim:", error);
+      });
+      return selfServeError(400, "Invalid or expired verification token.");
     }
 
-    const consumed = await consumeVerificationToken(db, row.request_id, tokenHash, nowSec);
-    if (!consumed) {
+    const previousIssued = await countIssuedRequestsForIp(db, row.ip_hash, nowSec - (24 * 60 * 60), nowSec);
+    if (previousIssued.count >= SELF_SERVE_MAX_CREATIONS_PER_IP_24H) {
+      return selfServeError(
+        429,
+        "Too many issued self-serve keys from this network. Please wait before trying again.",
+        previousIssued.retryAfterSec,
+      );
+    }
+
+    const locked = await lockVerificationForIssuance(db, row.request_id, tokenHash, nowSec);
+    if (!locked) {
       return selfServeError(400, "Invalid or expired verification token.");
     }
 
@@ -334,14 +371,15 @@ export async function handleApiKeyRequestVerify(
       trafficClass: "external",
       rateLimitPerMinute: SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
       expiresAt: nowSec + SELF_SERVE_API_KEY_EXPIRY_SEC,
+      isActive: false,
     }, nowSec, null);
     if (created instanceof Response) {
-      await markRequestBlockedAndReleaseClaim(db, row, nowSec);
       return selfServeUnavailable();
     }
 
+    let issuedKey = created.key;
     try {
-      const requestUpdated = await markRequestIssued(db, row.request_id, created.key.id, created.key.expiresAt, nowSec);
+      const requestUpdated = await markRequestIssued(db, row.request_id, tokenHash, created.key.id, created.key.expiresAt, nowSec);
       if (!requestUpdated) {
         throw new Error("self-serve request was not pending during issuance update");
       }
@@ -351,7 +389,6 @@ export async function handleApiKeyRequestVerify(
       }
       await recordApiKeyAudit(db, created.key.id, "created", {
         requestId: row.request_id,
-        normalizedEmail: row.normalized_email,
         intendedEndpoints: parseJsonStringArray(row.intended_endpoints_json),
         expectedCadence: row.expected_cadence,
         expectedVolume: row.expected_volume,
@@ -360,6 +397,11 @@ export async function handleApiKeyRequestVerify(
         riskScore: row.risk_score,
         riskReasons: parseJsonStringArray(row.risk_reasons_json),
       }, nowSec, "self-serve");
+      const activated = await activateTrustedApiKey(db, created.key.id, created.key.keyPrefix, nowSec);
+      if (activated instanceof Response) {
+        throw new Error("self-serve API key activation failed");
+      }
+      issuedKey = activated.key;
     } catch (error) {
       console.error("[api-key-requests] issuance consistency write failed:", error);
       await compensateIssuedKeyFailure(db, created.key.id, created.key.keyPrefix, row, nowSec);
@@ -383,10 +425,12 @@ export async function handleApiKeyRequestVerify(
       status: "issued",
       requestId: row.request_id,
       key: {
-        ...created.key,
+        keyPrefix: issuedKey.keyPrefix,
+        maskedToken: issuedKey.maskedToken,
         tier: "self-serve",
         trafficClass: "external",
         rateLimitPerMinute: SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
+        expiresAt: issuedKey.expiresAt,
       },
       token: created.token,
       usage: {
@@ -440,23 +484,61 @@ export function handleApiKeyRequestReject(
       endpoint: "api-key-request-reject",
       request,
       trustedAdmin,
+      db,
+      action: "api-key-request-reject",
     },
     async () => {
-      const row = await selectRequestByRequestId(db, requestId);
+      const parsedBody = await parseAdminMutationBody(request);
+      if (parsedBody instanceof Response) return parsedBody;
+      const row = await selectRequestWithKeyStateByRequestId(db, requestId);
       if (!row) return adminErrorResponse(404, "API key request not found");
       const nowSec = getNowSec();
-      if (row.api_key_id != null) {
-        await db.prepare("UPDATE api_keys SET is_active = 0, updated_at = ? WHERE id = ?")
-          .bind(nowSec, row.api_key_id)
-          .run();
-        await recordApiKeyAudit(db, row.api_key_id, "deactivated", { requestId, reason: "self-serve request rejected" }, nowSec);
+      if (row.status === "rejected") {
+        return adminJsonResponse(buildAdminMutationResponse(requestId, "rejected", "released"));
       }
-      await db.prepare(
-        "UPDATE api_key_requests SET status = 'rejected', rejected_at = ?, updated_at = ? WHERE request_id = ?",
+      if (row.status !== "pending_verification" && row.status !== "issued") {
+        return adminErrorResponse(409, "Only pending or issued self-serve requests can be rejected");
+      }
+      if (row.api_key_id != null) {
+        const linkedKeyPrefix = row.linked_key_prefix;
+        const mismatch = row.linked_key_tier !== "self-serve"
+          || row.linked_key_owner_email !== row.normalized_email
+          || !linkedKeyPrefix;
+        if (mismatch) {
+          return adminErrorResponse(409, "Linked API key does not match the self-serve request");
+        }
+        await recordSelfServeRevocation(db, {
+          apiKeyId: row.api_key_id,
+          keyPrefix: linkedKeyPrefix,
+          requestId,
+          nowSec,
+          reason: "admin_reject",
+        });
+        await deactivateLinkedSelfServeKey(db, {
+          apiKeyId: row.api_key_id,
+          keyPrefix: linkedKeyPrefix,
+          requestId,
+          nowSec,
+        });
+      }
+      const updated = await db.prepare(
+        "UPDATE api_key_requests SET status = 'rejected', rejected_at = ?, updated_at = ? WHERE request_id = ? AND status IN ('pending_verification', 'issued')",
       )
         .bind(nowSec, nowSec, requestId)
         .run();
+      if ((updated.meta?.changes ?? 0) === 0) {
+        return adminErrorResponse(409, "API key request state changed before rejection");
+      }
       await releaseEmailClaim(db, row.email_hash, requestId, nowSec);
+      await recordRequestAdminAction(db, {
+        action: "api_key_request_reject",
+        requestId,
+        status: 200,
+        resultStatus: "rejected",
+        claimStatus: "released",
+        reason: parsedBody.reason,
+        nowSec,
+      });
       return adminJsonResponse(buildAdminMutationResponse(requestId, "rejected", "released"));
     },
   );
@@ -473,8 +555,12 @@ export function handleApiKeyRequestReleaseClaim(
       endpoint: "api-key-request-release-claim",
       request,
       trustedAdmin,
+      db,
+      action: "api-key-request-release-claim",
     },
     async () => {
+      const parsedBody = await parseAdminMutationBody(request);
+      if (parsedBody instanceof Response) return parsedBody;
       const row = await selectRequestWithKeyStateByRequestId(db, requestId);
       if (!row) return adminErrorResponse(404, "API key request not found");
       const nowSec = getNowSec();
@@ -485,13 +571,30 @@ export function handleApiKeyRequestReleaseClaim(
       if (row.status === "pending_verification") {
         await markRequestExpired(db, requestId, nowSec);
       }
+      const resultStatus = row.status === "pending_verification" ? "expired" : row.status;
+      await recordRequestAdminAction(db, {
+        action: "api_key_request_release_claim",
+        requestId,
+        status: 200,
+        resultStatus,
+        claimStatus: "released",
+        reason: parsedBody.reason,
+        nowSec,
+      });
       return adminJsonResponse(buildAdminMutationResponse(
         requestId,
-        row.status === "pending_verification" ? "expired" : row.status,
+        resultStatus,
         "released",
       ));
     },
   );
+}
+
+async function parseAdminMutationBody(request: Request): Promise<{ reason: string | null } | Response> {
+  const body = await parseOptionalRequestJsonObject(request);
+  if (body instanceof Response) return body;
+  const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+  return { reason: reason ? reason.slice(0, 500) : null };
 }
 
 async function insertPendingRequest(
@@ -537,7 +640,7 @@ async function insertPendingRequest(
        created_at,
        updated_at
      )
-     VALUES (?, 'pending_verification', ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, 'pending_verification', ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 0, ?, ?, NULL, ?, ?, ?)`,
   )
     .bind(
       input.requestId,
@@ -556,7 +659,6 @@ async function insertPendingRequest(
       input.userAgentHash,
       JSON.stringify([]),
       input.tokenHash,
-      input.nowSec,
       input.verificationExpiresAt,
       input.nowSec,
       input.nowSec,
@@ -616,6 +718,25 @@ async function releaseExpiredPendingClaim(db: ApiKeyRequestDb, emailHash: string
     .run();
 }
 
+async function releaseOrphanPendingClaims(db: ApiKeyRequestDb, nowSec: number): Promise<void> {
+  const result = await db.prepare(
+    `UPDATE api_key_self_serve_email_claims
+     SET status = 'released', released_at = ?, updated_at = ?
+     WHERE status = 'pending_verification'
+       AND claimed_at < ?
+       AND NOT EXISTS (
+         SELECT 1 FROM api_key_requests
+         WHERE api_key_requests.request_id = api_key_self_serve_email_claims.request_id
+       )`,
+  )
+    .bind(nowSec, nowSec, nowSec - ORPHAN_CLAIM_GRACE_SEC)
+    .run();
+  const released = result.meta?.changes ?? 0;
+  if (released > 0) {
+    console.warn(`[api-key-requests] released ${released} orphan pending self-serve email claim(s)`);
+  }
+}
+
 async function releaseInactiveIssuedClaim(db: ApiKeyRequestDb, emailHash: string, nowSec: number): Promise<void> {
   await db.prepare(
     `UPDATE api_key_self_serve_email_claims
@@ -653,18 +774,14 @@ async function selectPendingRequestByTokenHash(db: ApiKeyRequestDb, tokenHash: s
     .first<ApiKeyRequestRow>();
 }
 
-async function selectRequestByRequestId(db: ApiKeyRequestDb, requestId: string): Promise<ApiKeyRequestRow | null> {
-  return db.prepare("SELECT * FROM api_key_requests WHERE request_id = ?")
-    .bind(requestId)
-    .first<ApiKeyRequestRow>();
-}
-
 async function selectRequestWithKeyStateByRequestId(db: ApiKeyRequestDb, requestId: string): Promise<ApiKeyRequestAdminRow | null> {
   return db.prepare(
     `SELECT
        r.*,
        c.status AS claim_status,
+       k.owner_email AS linked_key_owner_email,
        k.key_prefix AS linked_key_prefix,
+       k.tier AS linked_key_tier,
        k.is_active AS linked_key_active,
        k.expires_at AS linked_key_expires_at
      FROM api_key_requests r
@@ -676,7 +793,24 @@ async function selectRequestWithKeyStateByRequestId(db: ApiKeyRequestDb, request
     .first<ApiKeyRequestAdminRow>();
 }
 
-async function consumeVerificationToken(
+async function selectCurrentPendingClaim(
+  db: ApiKeyRequestDb,
+  emailHash: string,
+  requestId: string,
+): Promise<{ email_hash: string } | null> {
+  return db.prepare(
+    `SELECT email_hash
+     FROM api_key_self_serve_email_claims
+     WHERE email_hash = ?
+       AND request_id = ?
+       AND status = 'pending_verification'
+     LIMIT 1`,
+  )
+    .bind(emailHash, requestId)
+    .first<{ email_hash: string }>();
+}
+
+async function lockVerificationForIssuance(
   db: ApiKeyRequestDb,
   requestId: string,
   tokenHash: string,
@@ -684,32 +818,42 @@ async function consumeVerificationToken(
 ): Promise<boolean> {
   const result = await db.prepare(
     `UPDATE api_key_requests
-     SET verification_token_hash = NULL,
-       email_verified = 1,
+     SET email_verified = 1,
        updated_at = ?
      WHERE request_id = ?
        AND status = 'pending_verification'
        AND verification_token_hash = ?
        AND verification_expires_at >= ?
-       AND api_key_id IS NULL`,
+       AND api_key_id IS NULL
+       AND email_verified IN (0, 1)`,
   )
     .bind(nowSec, requestId, tokenHash, nowSec)
     .run();
   return (result.meta?.changes ?? 0) > 0;
 }
 
-async function countIssuedRequestsForIp(db: ApiKeyRequestDb, ipHash: string, afterSec: number): Promise<number> {
+async function countIssuedRequestsForIp(
+  db: ApiKeyRequestDb,
+  ipHash: string,
+  afterSec: number,
+  nowSec: number,
+): Promise<{ count: number; retryAfterSec: number }> {
   const row = await db.prepare(
-    "SELECT COUNT(*) AS count FROM api_key_requests WHERE ip_hash = ? AND status = 'issued' AND issued_at > ?",
+    "SELECT COUNT(*) AS count, MIN(issued_at) AS oldest_issued_at FROM api_key_requests WHERE ip_hash = ? AND status = 'issued' AND issued_at > ?",
   )
     .bind(ipHash, afterSec)
-    .first<{ count: number }>();
-  return row?.count ?? 0;
+    .first<{ count: number; oldest_issued_at: number | null }>();
+  const oldestIssuedAt = row?.oldest_issued_at ?? nowSec;
+  return {
+    count: row?.count ?? 0,
+    retryAfterSec: Math.max(1, oldestIssuedAt + (24 * 60 * 60) - nowSec),
+  };
 }
 
 async function markRequestIssued(
   db: ApiKeyRequestDb,
   requestId: string,
+  tokenHash: string,
   apiKeyId: number,
   expiresAt: number | null,
   nowSec: number,
@@ -718,12 +862,18 @@ async function markRequestIssued(
     `UPDATE api_key_requests
      SET api_key_id = ?,
        status = 'issued',
+       verification_token_hash = NULL,
+       email_verified = 1,
        self_serve_expires_at = ?,
        issued_at = ?,
        updated_at = ?
-     WHERE request_id = ? AND status = 'pending_verification'`,
+     WHERE request_id = ?
+       AND status = 'pending_verification'
+       AND verification_token_hash = ?
+       AND email_verified = 1
+       AND api_key_id IS NULL`,
   )
-    .bind(apiKeyId, expiresAt, nowSec, nowSec, requestId)
+    .bind(apiKeyId, expiresAt, nowSec, nowSec, requestId, tokenHash)
     .run();
   return (result.meta?.changes ?? 0) > 0;
 }
@@ -810,7 +960,9 @@ async function listAdminRequests(
     `SELECT
        r.*,
        c.status AS claim_status,
+       k.owner_email AS linked_key_owner_email,
        k.key_prefix AS linked_key_prefix,
+       k.tier AS linked_key_tier,
        k.is_active AS linked_key_active,
        k.expires_at AS linked_key_expires_at
      FROM api_key_requests r
@@ -873,6 +1025,13 @@ function buildSelfServeKeyName(row: ApiKeyRequestRow): string {
   return `Self-serve: ${owner}`.slice(0, 80);
 }
 
+function pendingPublicResponse(): Response {
+  return jsonResponse({
+    status: "pending_verification",
+    message: SELF_SERVE_PENDING_MESSAGE,
+  }, { status: 202, noStore: true });
+}
+
 function buildAdminMutationResponse(
   requestId: string,
   status: ApiKeySelfServeStatus,
@@ -884,6 +1043,102 @@ function buildAdminMutationResponse(
     status,
     claimStatus,
   };
+}
+
+async function recordSelfServeRevocation(
+  db: ApiKeyRequestDb,
+  input: {
+    apiKeyId: number;
+    keyPrefix: string;
+    requestId: string;
+    nowSec: number;
+    reason: string;
+  },
+): Promise<void> {
+  await db.prepare(
+    `INSERT INTO api_key_self_serve_revocations (
+       key_prefix,
+       api_key_id,
+       request_id,
+       reason,
+       revoked_at
+     )
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(key_prefix) DO UPDATE SET
+       api_key_id = excluded.api_key_id,
+       request_id = excluded.request_id,
+       reason = excluded.reason,
+       revoked_at = excluded.revoked_at`,
+  )
+    .bind(input.keyPrefix, input.apiKeyId, input.requestId, input.reason, input.nowSec)
+    .run();
+}
+
+async function deactivateLinkedSelfServeKey(
+  db: ApiKeyRequestDb,
+  input: {
+    apiKeyId: number;
+    keyPrefix: string;
+    requestId: string;
+    nowSec: number;
+  },
+): Promise<void> {
+  await db.prepare(
+    "UPDATE api_keys SET is_active = 0, updated_at = ? WHERE id = ? AND tier = 'self-serve'",
+  )
+    .bind(input.nowSec, input.apiKeyId)
+    .run();
+  clearApiKeyCache(input.keyPrefix);
+  getApiKeyRuntimeState().apiKeyLastUsageUpdateById.delete(input.apiKeyId);
+  await recordApiKeyAudit(
+    db,
+    input.apiKeyId,
+    "deactivated",
+    { requestId: input.requestId, reason: "self-serve request rejected" },
+    input.nowSec,
+  );
+}
+
+async function recordRequestAdminAction(
+  db: ApiKeyRequestDb,
+  input: {
+    action: string;
+    requestId: string;
+    status: number;
+    resultStatus: ApiKeySelfServeStatus;
+    claimStatus: "pending_verification" | "issued" | "released" | null;
+    reason: string | null;
+    nowSec: number;
+  },
+): Promise<void> {
+  await db.prepare(
+    `INSERT INTO admin_action_audit (
+       created_at,
+       actor,
+       action,
+       target,
+       result,
+       http_status,
+       details_json
+     )
+     VALUES (?, 'admin', ?, ?, 'ok', ?, ?)`,
+  )
+    .bind(
+      input.nowSec,
+      input.action,
+      input.requestId,
+      input.status,
+      JSON.stringify({
+        requestId: input.requestId,
+        status: input.resultStatus,
+        claimStatus: input.claimStatus,
+        reason: input.reason,
+      }),
+    )
+    .run()
+    .catch((error) => {
+      console.error("[api-key-requests] failed to record request admin action:", error);
+    });
 }
 
 function notifySelfServeIssued(

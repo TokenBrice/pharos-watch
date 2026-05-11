@@ -11,6 +11,8 @@ interface ResendSendResponse {
   id?: string;
 }
 
+const RESEND_SEND_TIMEOUT_MS = 8_000;
+
 export async function sendVerificationEmail(
   env: RequiredInitialSelfServeEnv,
   input: SendVerificationEmailInput,
@@ -39,6 +41,7 @@ export async function sendVerificationEmail(
       Authorization: `Bearer ${env.RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
+    signal: AbortSignal.timeout(RESEND_SEND_TIMEOUT_MS),
     body: JSON.stringify({
       from: env.API_KEY_SELF_SERVE_EMAIL_FROM,
       to: [input.to],
@@ -55,11 +58,19 @@ export async function sendVerificationEmail(
 
   if (!response.ok) {
     const body = await response.text().catch(() => "");
-    throw new Error(`Resend email send failed: ${response.status} ${body.slice(0, 200)}`);
+    throw new Error(`Resend email send failed: ${response.status} ${redactProviderBody(body).slice(0, 200)}`);
   }
 
   const body = await response.json().catch(() => ({})) as ResendSendResponse;
   return { providerMessageId: body.id ?? null };
+}
+
+export function redactProviderBody(value: string): string {
+  return value
+    .replace(/https?:\/\/[^\s"'<>]+/gi, "[redacted-url]")
+    .replace(/\bakv_[A-Za-z0-9_-]+\b/g, "[redacted-verification-token]")
+    .replace(/\bph_live_[0-9a-f]{16}_[A-Za-z0-9_-]{32}\b/g, "[redacted-api-key]")
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[redacted-email]");
 }
 
 function escapeHtml(value: string): string {

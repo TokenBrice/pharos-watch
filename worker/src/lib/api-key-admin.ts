@@ -80,6 +80,7 @@ export interface TrustedApiKeyCreateInput {
   trafficClass: ApiKeyTrafficClass;
   rateLimitPerMinute: number;
   expiresAt: number | null;
+  isActive?: boolean;
 }
 
 export interface TrustedApiKeyAuditInput {
@@ -110,7 +111,7 @@ export async function createTrustedApiKey(
        created_at,
        updated_at
      )
-     VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ${buildPublicApiKeyReturningClause()}`,
   )
     .bind(
@@ -121,6 +122,7 @@ export async function createTrustedApiKey(
       input.tier,
       input.trafficClass,
       input.rateLimitPerMinute,
+      input.isActive === false ? 0 : 1,
       input.expiresAt,
       nowSec,
       nowSec,
@@ -139,6 +141,30 @@ export async function createTrustedApiKey(
     key: mapRowToSummary(createdRow),
     token: material.token,
   };
+}
+
+export async function activateTrustedApiKey(
+  db: ApiKeyDb,
+  id: number,
+  keyPrefix: string,
+  nowSec = getNowSec(),
+): Promise<ApiKeyMutationResponse | Response> {
+  const result = await db.prepare(
+    "UPDATE api_keys SET is_active = 1, updated_at = ? WHERE id = ? AND is_active = 0",
+  )
+    .bind(nowSec, id)
+    .run();
+  if ((result.meta?.changes ?? 0) === 0) {
+    return errorResponse(409, "API key could not be activated");
+  }
+
+  clearApiKeyCache(keyPrefix);
+  getApiKeyRuntimeState().apiKeyLastUsageUpdateById.delete(id);
+  const updated = await selectPublicApiKeyById(db, id);
+  if (!updated) {
+    return errorResponse(500, "Failed to activate API key");
+  }
+  return { key: mapRowToSummary(updated) };
 }
 
 export async function updateApiKey(

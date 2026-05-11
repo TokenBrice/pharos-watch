@@ -84,6 +84,18 @@ async function authenticateLoadedApiKey(
   };
 }
 
+async function hasSelfServeRevocation(db: ApiKeyDb, row: ApiKeyRow): Promise<boolean> {
+  if (row.tier !== "self-serve") {
+    return false;
+  }
+  const marker = await db.prepare(
+    "SELECT 1 AS revoked FROM api_key_self_serve_revocations WHERE key_prefix = ? LIMIT 1",
+  )
+    .bind(row.key_prefix)
+    .first<{ revoked: number }>();
+  return Boolean(marker);
+}
+
 export async function authenticateApiKey(
   db: ApiKeyDb,
   apiKeyHeader: string | null,
@@ -103,6 +115,10 @@ export async function authenticateApiKey(
 
   try {
     const row = await lookupApiKeyByPrefix(db, parsed.prefix);
+    if (row && await hasSelfServeRevocation(db, row)) {
+      clearApiKeyCache(parsed.prefix);
+      return { kind: "invalid" };
+    }
     return authenticateLoadedApiKey(
       row,
       parsed,
@@ -115,6 +131,11 @@ export async function authenticateApiKey(
   } catch (err) {
     const staleRow = getCachedApiKeyByPrefix(parsed.prefix, { allowStale: true });
     if (staleRow) {
+      if (staleRow.tier === "self-serve") {
+        clearApiKeyCache(parsed.prefix);
+        console.warn("[api-keys] API key lookup unavailable; refusing stale self-serve key cache:", err);
+        return { kind: "unavailable" };
+      }
       console.warn("[api-keys] API key lookup unavailable; using stale verified key cache:", err);
       return authenticateLoadedApiKey(
         staleRow,

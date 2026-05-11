@@ -36,7 +36,15 @@ export const ApiKeySelfServeRequestSchema = z.object({
   requesterName: z.string().trim().max(80, "Name must be 80 characters or fewer").optional(),
   organization: z.string().trim().max(120, "Organization must be 120 characters or fewer").optional(),
   projectUrl: z.string().trim().max(300, "Project URL must be 300 characters or fewer")
-    .refine((value) => !value || value.startsWith("https://"), "Project URL must use https://")
+    .refine((value) => {
+      if (!value) return true;
+      try {
+        const url = new URL(value);
+        return url.protocol === "https:" && Boolean(url.hostname);
+      } catch {
+        return false;
+      }
+    }, "Project URL must be a valid https:// URL")
     .optional(),
   useCase: z.string().trim()
     .min(SELF_SERVE_USE_CASE_MIN_LENGTH, `Use case must be ${SELF_SERVE_USE_CASE_MIN_LENGTH}-${SELF_SERVE_USE_CASE_MAX_LENGTH} characters`)

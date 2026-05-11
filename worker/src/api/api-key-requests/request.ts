@@ -121,7 +121,7 @@ export function validateIntendedEndpoints(endpoints: string[] | undefined): stri
     if (endpoint.includes("admin") || endpoint.includes("api-key") || endpoint.includes("backfill")) {
       return errorResponse(400, "Admin API paths cannot be requested for self-serve access", { noStore: true });
     }
-    if (!PUBLIC_ENDPOINT_PATHS.has(endpoint) && !endpoint.includes(":") && !endpoint.includes("*")) {
+    if (!PUBLIC_ENDPOINT_PATHS.has(endpoint)) {
       return errorResponse(400, "Unknown intended endpoint", { noStore: true });
     }
     normalized.push(endpoint);
@@ -171,6 +171,6 @@ export function createVerificationToken(): string {
 
 export function buildVerificationUrl(publicBaseUrl: string, token: string): string {
   const url = new URL(publicBaseUrl.endsWith("/") ? publicBaseUrl : `${publicBaseUrl}/`);
-  url.searchParams.set("verify", token);
+  url.hash = `verify=${encodeURIComponent(token)}`;
   return url.toString();
 }
