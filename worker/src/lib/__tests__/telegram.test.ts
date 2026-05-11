@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
 
-const { postDigestToTelegram, sendToChat, sendBatch } = await import("../telegram");
+const { buildTelegramMessage, postDigestToTelegram, sendToChat, sendBatch } = await import("../telegram");
 
 const digestCreds = {
   botToken: "bot-token",
@@ -48,6 +48,16 @@ describe("sendToChat", () => {
     const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
     expect(body.chat_id).toBe("12345");
     expect(body.parse_mode).toBe("HTML");
+  });
+
+  it("builds Telegram digest links with a trailing slash", () => {
+    const body = buildTelegramMessage("Daily Digest", "PSI held steady.", "2026-03-21", null);
+    expect(body).toContain(`<a href="https://pharos.watch/digest/2026-03-21/">Read on Pharos →</a>`);
+  });
+
+  it("builds weekly Telegram digest links with a trailing slash", () => {
+    const body = buildTelegramMessage("Weekly Recap", "PSI held steady.", "2026-03-21-weekly", 1);
+    expect(body).toContain(`<a href="https://pharos.watch/digest/2026-03-21-weekly/">Read on Pharos →</a>`);
   });
 
   it("returns blocked: true on 403", async () => {

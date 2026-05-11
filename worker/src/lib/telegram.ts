@@ -25,7 +25,7 @@ export function buildTelegramMessage(
     `${kicker}<b>${escapeHtml(title)}</b>`,
     body,
     appendixHtml ?? "",
-    `<a href="https://pharos.watch/digest/${date}">Read on Pharos →</a>`,
+    `<a href="https://pharos.watch/digest/${date}/">Read on Pharos →</a>`,
   ].filter((section) => section.trim().length > 0);
   return sections.join("\n\n");
 }
