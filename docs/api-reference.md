@@ -3982,13 +3982,16 @@ Force-resends a single Telegram alert to one chat, bypassing the pending queue. 
 ```json
 {
   "ok": true,
+  "mode": "synthetic_current_state",
+  "chunkCount": 1,
+  "chunksAttempted": 1,
   "statusCode": 200,
   "errorClass": null,
   "retryAfterSec": null
 }
 ```
 
-`errorClass` is one of `blocked`, `rate_limit`, `server_error`, `bad_request`, `auth_error`, `timeout`, `network`, `unknown`, or `null` on success. `retryAfterSec` is populated only when Telegram returned `429` with a `Retry-After` header.
+`mode` is always `synthetic_current_state`: the endpoint rebuilds the alert from current source data and does not replay exact historical message HTML. `chunkCount` is the number of rendered Telegram chunks, and `chunksAttempted` stops at the first failed chunk. `errorClass` is one of `blocked`, `rate_limit`, `server_error`, `bad_request`, `auth_error`, `timeout`, `network`, `unknown`, or `null` on success. `retryAfterSec` is populated only when Telegram returned `429` with a `Retry-After` header.
 
 **Error responses:** `400` for invalid body, unknown `alertType`, or unknown `stablecoinId`. `404` when no `telegram_subscribers` row matches `chatId`. `422` when no source data exists to build the requested alert. `500` when `TELEGRAM_BOT_TOKEN` is not configured.
 
@@ -4008,7 +4011,7 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
 }
 ```
 
-`scope` is either `all` (every row in `telegram_subscribers`) or `global-subscribers` (rows where at least one `global_alert_*` flag is set). `dryRun` is required and must be a boolean. `messageHtml` must be a non-empty string and uses Telegram HTML formatting; long bodies are split via the same chunking pipeline as alerts.
+`scope` is `all` (every row in `telegram_subscribers`), `deliverable-watchers` (rows with at least one active global, per-coin, or preset alert follow), or `global-subscribers` (rows where at least one `global_alert_*` flag is set). `dryRun` is required and must be a boolean. `messageHtml` must be a non-empty string and uses Telegram HTML formatting; long bodies are split via the same chunking pipeline as alerts.
 
 **Dry-run response (`dryRun: true`)**
 

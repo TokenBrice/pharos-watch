@@ -14,7 +14,7 @@ The Worker accepts `TELEGRAM_BOT_TOKEN_PREVIOUS` as an optional rotation marker 
 
 ### Gotcha: Pending Queue Stranding
 
-`telegram_pending_alerts` rows are pre-formatted HTML payloads queued for delivery on subsequent dispatch runs. They have a 1-hour TTL. If the old token is invalidated at BotFather (or the new token replaces the old at BotFather without grace) before the queue drains, in-flight pending rows will fail with `401 unauthorized` and be retried with the new token automatically — but any send attempted before the new token is staged in the Worker will return `permanent_failure`.
+`telegram_pending_alerts` rows are pre-formatted HTML payloads queued for delivery on subsequent dispatch runs. They have a 1-hour TTL. If the old token is invalidated at BotFather (or the new token replaces the old at BotFather without grace) before the queue drains, in-flight pending rows attempted with an invalid token fail with `401 auth_error`. The pending-queue drain treats `auth_error` as a permanent failure and deletes those rows; it does not retry them automatically after the Worker is updated.
 
 **Coordinate the rotation so the new token is staged in the Worker before the old token is revoked at BotFather.**
 
@@ -35,7 +35,7 @@ The Worker accepts `TELEGRAM_BOT_TOKEN_PREVIOUS` as an optional rotation marker 
    # paste the new BotFather token when prompted
    ```
 4. **Wait one dispatch slot.** The 5-minute Telegram lane will start using the new token on the next run. Confirm via `/api/status` -> `telegramBot` that `messagesSent` continues to advance.
-5. **Drain the pending queue.** Inspect `pendingDeliveries` and `oldestPendingDeliveryAgeSec`. Wait until both reach zero before revoking the old token at BotFather. If the queue is stuck, follow [`../runbooks/telegram-rate-limit-storm.md`](../runbooks/telegram-rate-limit-storm.md).
+5. **Drain the pending queue.** Inspect `pendingDeliveries` and `oldestPendingDeliveryAgeSec`. Wait until both reach zero before revoking the old token at BotFather. If the queue is stuck, follow [`../runbooks/telegram-rate-limit-storm.md`](../runbooks/telegram-rate-limit-storm.md). Do not assume rows that hit `auth_error` will recover; replay required sends with the admin resend or broadcast tools after the token is known good.
 6. **Revoke the old token at BotFather.** Only after step 5.
 7. **Remove the previous token from the Worker.**
 
@@ -47,16 +47,17 @@ The Worker accepts `TELEGRAM_BOT_TOKEN_PREVIOUS` as an optional rotation marker 
 
 - `/api/status` -> `telegramBot.messagesSent` continues to advance after step 4.
 - Test command in a sandbox chat (`/help`) replies successfully.
-- `retryErrorClassCounts.unauthorized` does not spike.
+- `retryErrorClassCounts.auth_error` does not spike.
 - Webhook registration reconciliation succeeds on the next 5-minute slot (logged by `worker/src/lib/telegram-webhook-registration.ts`).
 
 ## Rollback
 
-If outbound sends start failing with `401 unauthorized` after step 3:
+If outbound sends start failing with `401 auth_error` after step 3:
 
 1. Re-set `TELEGRAM_BOT_TOKEN` to the prior value (preserved in `TELEGRAM_BOT_TOKEN_PREVIOUS`).
 2. Confirm dispatch resumes within one 5-minute slot.
-3. Do not revoke the old token at BotFather until the discrepancy is understood.
+3. Inspect `pendingDroppedPermanentFailure` and `retryErrorClassCounts.auth_error` in admin status. Any pending rows already attempted during the bad-token window were deleted as permanent failures; replay the affected alert with `POST /api/admin-telegram-resend` for one chat or `POST /api/admin-telegram-broadcast` for operator-wide recovery messaging as needed.
+4. Do not revoke the old token at BotFather until the discrepancy is understood.
 
 ## Cross-References
 

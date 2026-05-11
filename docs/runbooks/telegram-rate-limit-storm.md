@@ -2,12 +2,12 @@
 
 ## Symptom
 
-The pending delivery queue is growing run-over-run, and a large share of the dispatcher's retry classes is `rate_limited` (HTTP 429).
+The pending delivery queue is growing run-over-run, and a large share of the dispatcher's retry classes is `rate_limit` (HTTP 429).
 
 Detection signals:
 
 - `/api/status` -> `telegramBot.pendingDeliveries` trends upward across consecutive runs.
-- `telegramBot.retryErrorClassCounts.rate_limited` dominates.
+- `telegramBot.retryErrorClassCounts.rate_limit` dominates.
 - Watchdog alert from P0-O4: `pendingDeliveries > 500` sustained for >20 min triggers an operator alert on the standard `sendAlert()` rail.
 - `oldestPendingDeliveryAgeSec` approaching `PENDING_TTL_SEC` (3600).
 
@@ -28,26 +28,30 @@ Detection signals:
 ## Remediation
 
 1. **Wait one drain cycle.** Each dispatch run drains up to 25% of its budget from the pending queue. If `pendingDeliveries` is decreasing run-over-run, no action.
-2. **Clear pending queue for a specific chat.** Use the admin pending endpoint, filtered:
+2. **Clear pending queue for a specific chat.** Use the admin pending endpoint, filtered. This is an idempotent admin mutation; include Cloudflare Access service-token headers, `X-Pharos-Admin: 1`, and an `Idempotency-Key`.
 
    ```bash
-   curl -X DELETE \
+   curl -X POST \
         -H "CF-Access-Client-Id: $CF_ID" \
         -H "CF-Access-Client-Secret: $CF_SECRET" \
         -H "X-Pharos-Admin: 1" \
-        "https://ops-api.pharos.watch/api/admin-telegram-pending?chat_id=<chatId>"
+        -H "Idempotency-Key: clear-telegram-pending-<chatId>-$(date +%s)" \
+        "https://ops-api.pharos.watch/api/telegram-pending?chat_id=<chatId>"
    ```
+
+   Expected response: `{ "ok": true, "deleted": <number> }`. Repeating the same filtered clear after rows are gone is safe and returns `deleted: 0`.
 3. **Clear stale rows past TTL.** Filtered by age:
 
    ```bash
-   curl -X DELETE \
+   curl -X POST \
         -H "CF-Access-Client-Id: $CF_ID" \
         -H "CF-Access-Client-Secret: $CF_SECRET" \
         -H "X-Pharos-Admin: 1" \
-        "https://ops-api.pharos.watch/api/admin-telegram-pending?older_than_sec=3600"
+        -H "Idempotency-Key: clear-telegram-pending-older-than-3600-$(date +%s)" \
+        "https://ops-api.pharos.watch/api/telegram-pending?older_than_sec=3600"
    ```
 
-   The endpoint refuses unfiltered requests by design.
+   The endpoint accepts exactly one query filter: `chat_id` or `older_than_sec`. It refuses unfiltered requests and requests with both filters by design.
 4. **Investigate root cause.** If 429 is sustained without an obvious driver, check Cloudflare logs for outbound Telegram POSTs and confirm no client is replaying historical events through a non-production dispatcher.
 5. **Last resort: pause the dispatcher.** Open the `telegram_api` circuit breaker via the admin reset-circuit-breaker endpoint (used inverted to skip fan-out) only after coordinating with operators — this stops all alert delivery, not just retries.
 

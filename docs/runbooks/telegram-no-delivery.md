@@ -8,7 +8,7 @@ Detection signals:
 
 - Admin `/api/status` `telegramBot` block shows zero `messagesSent` while `eventsDetected > 0`.
 - `crons["dispatch-telegram-alerts"].lastRun.metadata` reports `snapshotSeeded: true` repeatedly.
-- `retryErrorClassCounts` dominated by a single class (`rate_limited`, `forbidden`, `bad_request`).
+- `retryErrorClassCounts` dominated by a single runtime class (`rate_limit`, `blocked`, `bad_request`, `auth_error`, `server_error`, `timeout`, `network`, or `unknown`).
 - A specific user reports silence: pull their per-chat state via the admin endpoint below.
 
 ## Quick Diagnostic Checklist
@@ -40,10 +40,10 @@ Detection signals:
 3. **Single user blocked.** If `consecutive_block_count >= 2`, the user must `/start` again. The flag resets on the next successful send. Confirm they have not blocked the bot in Telegram itself.
 4. **Single user snoozed/quiet-hours.** Advise `/unsnooze` or `/unmutehours`. No operator action.
 5. **Pending queue full / overflow.** Follow [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).
-6. **No subscribers for the alert type.** Verify `/api/status` -> `telegramBot.alertTypeEnabledChats` is non-zero for the affected alert type.
+6. **No subscribers for the alert type.** Verify `/api/status` -> `telegramBot.alertTypeChats.<type>` is non-zero for the affected alert type.
 7. **Webhook drift.** The 5-minute Telegram lane reconciles the webhook automatically. Force a manual reset with `scripts/register-telegram-webhook.sh` only if reconciliation is also failing.
-8. **Force a single resend.** After the underlying cause is fixed, re-fire a specific alert to one chat via `POST https://ops-api.pharos.watch/api/admin-telegram-resend` with body `{ "chatId": "<id>", "alertType": "dews|depeg|safety|launch", "stablecoinId": "<id>" }`. The endpoint reuses the same formatter and `sendToChat` path as the dispatch cron, bypassing the pending queue. See [`docs/api-reference.md`](../api-reference.md) section `POST /api/admin-telegram-resend`.
-9. **Announce a maintenance window or recovery to all subscribers.** Use `POST https://ops-api.pharos.watch/api/admin-telegram-broadcast` with body `{ "messageHtml": "<b>...</b>", "scope": "all" | "global-subscribers", "dryRun": true | false }`. Run a `dryRun: true` first to confirm `targetChatCount` matches expectations; then send the live call. The endpoint enqueues into `telegram_pending_alerts` so the standard dispatch pipeline handles fan-out, rate-limit isolation, and retries. See [`docs/api-reference.md`](../api-reference.md) section `POST /api/admin-telegram-broadcast`.
+8. **Force a single resend.** After the underlying cause is fixed, re-fire a specific alert to one chat via `POST https://ops-api.pharos.watch/api/admin-telegram-resend` with body `{ "chatId": "<id>", "alertType": "dews|depeg|safety|launch", "stablecoinId": "<id>" }`. The endpoint rebuilds a `synthetic_current_state` alert from current data, uses the same formatter and `sendToChat` path as the dispatch cron, and bypasses the pending queue. It is not exact historical replay. See [`docs/api-reference.md`](../api-reference.md) section `POST /api/admin-telegram-resend`.
+9. **Announce a maintenance window or recovery to subscribers.** Use `POST https://ops-api.pharos.watch/api/admin-telegram-broadcast` with body `{ "messageHtml": "<b>...</b>", "scope": "all" | "deliverable-watchers" | "global-subscribers", "dryRun": true | false }`. Prefer `deliverable-watchers` for ordinary recovery notices; use `all` only when intentionally targeting every subscriber row. Run a `dryRun: true` first to confirm `targetChatCount` matches expectations; then send the live call. The endpoint enqueues into `telegram_pending_alerts` so the standard dispatch pipeline handles fan-out, rate-limit isolation, and retries. See [`docs/api-reference.md`](../api-reference.md) section `POST /api/admin-telegram-broadcast`.
 
 ## Cross-References
 
