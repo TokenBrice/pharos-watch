@@ -558,3 +558,12 @@ Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs store
 - The webhook intentionally returns `200` on most malformed or unauthorized cases so Telegram does not keep retrying noisy payloads.
 - The dedicated 5-minute Telegram trigger runs registration reconciliation first, then subscriber alert fan-out through `dispatch-telegram-alerts`.
 - The dispatcher consumes Bot API response bodies before returning, which matters under the Workers per-trigger connection cap.
+
+## Runbooks
+
+Operator-facing playbooks for Telegram incidents:
+
+- [`runbooks/telegram-no-delivery.md`](./runbooks/telegram-no-delivery.md) — users report missing alerts; diagnostic checklist and remediation for snapshot, snooze, blocked-subscriber, and webhook-secret causes.
+- [`runbooks/telegram-rate-limit-storm.md`](./runbooks/telegram-rate-limit-storm.md) — pending queue growing, 429 dominates retry classes; per-chat backoff vs. global throttling, manual pending-queue clearance.
+- [`incident-response/telegram-secret-rotation.md`](./incident-response/telegram-secret-rotation.md) — rotating `TELEGRAM_WEBHOOK_SECRET` with the 24-hour overlap window.
+- [`incident-response/telegram-token-rotation.md`](./incident-response/telegram-token-rotation.md) — rotating `TELEGRAM_BOT_TOKEN` while keeping the pending queue drainable.

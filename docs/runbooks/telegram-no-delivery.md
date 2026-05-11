@@ -1,0 +1,52 @@
+# Runbook: Telegram Alerts Not Delivering
+
+## Symptom
+
+Users report missing alerts despite a recent DEWS/depeg/safety/launch event, or admin status shows `eventsDetected > 0` but `messagesSent == 0` across consecutive dispatch runs.
+
+Detection signals:
+
+- Admin `/api/status` `telegramBot` block shows zero `messagesSent` while `eventsDetected > 0`.
+- `crons["dispatch-telegram-alerts"].lastRun.metadata` reports `snapshotSeeded: true` repeatedly.
+- `retryErrorClassCounts` dominated by a single class (`rate_limited`, `forbidden`, `bad_request`).
+- A specific user reports silence: pull their per-chat state via the admin endpoint below.
+
+## Quick Diagnostic Checklist
+
+1. **Circuit breaker open?** `/api/status` -> `circuits` -> `telegram_api`. An open breaker skips fan-out entirely.
+2. **D1 healthy?** Cross-check with [`db-connectivity.md`](./db-connectivity.md). The dispatcher aborts the run on preset-query failures (see [`docs/telegram-alerts.md`](../telegram-alerts.md) section Dispatch Cron).
+3. **Pending queue draining?** `/api/status` -> `telegramBot.pendingDeliveries` and `oldestPendingDeliveryAgeSec`. A growing backlog points to a rate-limit storm — see [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).
+4. **Snapshot seeded?** `snapshotSeeded: true` for the last run means no alerts will be sent (24h staleness gate; see [`docs/telegram-alerts.md`](../telegram-alerts.md) section First-Run / Stale-Snapshot Behavior).
+5. **Single chat affected?** Inspect the chat's full state:
+
+   ```bash
+   curl -H "CF-Access-Client-Id: $CF_ID" \
+        -H "CF-Access-Client-Secret: $CF_SECRET" \
+        -H "X-Pharos-Admin: 1" \
+        https://ops-api.pharos.watch/api/admin-telegram-chat/<chatId>
+   ```
+
+   Check the returned payload for:
+   - `alert_snooze_until_ts > now` (user snoozed)
+   - `quiet_hours_enabled = 1` AND current UTC hour inside the window
+   - `consecutive_block_count >= 2` (subscriber auto-disabled after two 403s within 24h)
+   - empty subscriptions / global flags all 0
+6. **Webhook secret valid?** Failed validations return `200 ok` silently. Check Cloudflare logs for `telegram-webhook` requests against the configured `TELEGRAM_WEBHOOK_SECRET`. See [`telegram-secret-rotation.md`](../incident-response/telegram-secret-rotation.md) if mid-rotation.
+
+## Remediation
+
+1. **Circuit breaker open.** Reset via `POST https://ops-api.pharos.watch/api/reset-circuit-breaker?circuit=telegram_api` with Access service-token headers, `X-Pharos-Admin: 1`, and an `Idempotency-Key`.
+2. **Snapshot stale loop.** Confirm the dispatch cron has run successfully at least once after the stale-snapshot reseed. If `snapshotSeeded: true` persists across three runs, inspect the snapshot cache keys (`alert:dews-snapshot`, `alert:depeg-snapshot`, `alert:safety-snapshot`) for malformed values.
+3. **Single user blocked.** If `consecutive_block_count >= 2`, the user must `/start` again. The flag resets on the next successful send. Confirm they have not blocked the bot in Telegram itself.
+4. **Single user snoozed/quiet-hours.** Advise `/unsnooze` or `/unmutehours`. No operator action.
+5. **Pending queue full / overflow.** Follow [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).
+6. **No subscribers for the alert type.** Verify `/api/status` -> `telegramBot.alertTypeEnabledChats` is non-zero for the affected alert type.
+7. **Webhook drift.** The 5-minute Telegram lane reconciles the webhook automatically. Force a manual reset with `scripts/register-telegram-webhook.sh` only if reconciliation is also failing.
+
+## Cross-References
+
+- [`docs/telegram-alerts.md`](../telegram-alerts.md) — full subsystem behavior, snapshot semantics, dispatch cron contract.
+- [`docs/worker-and-api-limits.md`](../worker-and-api-limits.md) — per-trigger 6-connection cap and rate-limit context.
+- [`docs/architecture.md`](../architecture.md) — Worker/D1 topology.
+- [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md) — when the backlog is growing fast.
+- [`db-connectivity.md`](./db-connectivity.md) — when the dispatcher's D1 reads fail.
