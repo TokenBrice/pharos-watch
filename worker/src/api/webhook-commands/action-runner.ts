@@ -54,7 +54,7 @@ export type ActionPayloadMap = {
   set: ParsedSetCommand;
 };
 
-export const TELEGRAM_PRESET_LABEL_BY_ID = new Map(
+const TELEGRAM_PRESET_LABEL_BY_ID = new Map(
   listTelegramPresets().map((definition) => [definition.id, definition.label] as const),
 );
 
@@ -330,7 +330,7 @@ export function makeActionRunner(
  * the helper in telegram-webhook.ts so that the action runner can send
  * messages without needing the chat-scoped helpers from the dispatch context.
  */
-export async function replyToChat(
+async function replyToChat(
   chatId: string,
   message: string,
   botToken: string,

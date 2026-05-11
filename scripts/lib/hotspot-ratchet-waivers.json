@@ -51,9 +51,9 @@
     "disposition": "queued-p4",
     "notes": "Weekly recap input assembly grew with week-over-week deltas, weekly signal leaderboards, and split parse-row plumbing. Keep waived until the digest prompt rewrite stabilizes; a follow-up pass should extract aggregation vs. prompt rendering into separate modules."
   },
-  "worker/src/api/telegram-webhook.ts": {
+  "worker/src/api/telegram-webhook-callbacks.ts": {
     "disposition": "queued-p4",
-    "notes": "Transport entrypoint grew with the /status handler and callback_query branch added in the 2026-04-17 audit remediation. The file is a thin ingress coordinator — parsing, persistence, and message templates already live in adjacent telegram-webhook-* modules. Defer further extraction until the bot surface stabilizes."
+    "notes": "Callback routing now owns setup, settings, status, discovery, watchlist management, snooze, and per-coin alert toggles. Keep it waived after the command dispatcher split; the next Telegram decomposition pass should extract action-specific callback handlers."
   },
   "src/app/pharoswatchbot/page.tsx": {
     "disposition": "queued-p4",
@@ -66,10 +66,6 @@
   "worker/src/cron/confirm-pending-depegs.ts": {
     "disposition": "queued-p4",
     "notes": "Grew during the 2026-04-18 depeg+DEWS hardening wave with pool-status count classification, circuit-breaker guards, offchainSourceLabel tracking, and composite pending-reason parsing. The main confirmPendingDepegs function is now the obvious split candidate — per-row evaluation (primary/native/off-chain/DEX/CEX/pool collection) should extract into buildConfirmationPlan; the decision matrix should extract into evaluatePromotionDecision. Follow-up in the next /simplify pass."
-  },
-  "src/components/pre-launch-detail.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The pre-launch detail component is unrelated to the PharosVille host decommission and still combines page copy, eligibility tables, and linked-surface guidance. Keep waived until a frontend route-section cleanup can split it into smaller panels."
   },
   "worker/src/cron/blacklist/amount-recovery.ts": {
     "disposition": "queued-p4",
