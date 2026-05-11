@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   chunkOverflowRoutes,
+  getBrowserLaunchOptions,
   getAnalyticsPayloadUrls,
   getOverflowRoutes,
   getOverflowWorkerCount,
@@ -38,9 +39,7 @@ describe("hasGaConfigInit", () => {
   });
 
   it("accepts GA config calls with options", () => {
-    expect(hasGaConfigInit("gtag('config', \"G-6TS0KG8H04\", { send_page_view: false });", "G-6TS0KG8H04")).toBe(
-      true,
-    );
+    expect(hasGaConfigInit("gtag('config', \"G-6TS0KG8H04\", { send_page_view: false });", "G-6TS0KG8H04")).toBe(true);
   });
 
   it("accepts the JSON-escaped GA config emitted in static RSC payloads", () => {
@@ -59,6 +58,44 @@ describe("getAnalyticsPayloadUrls", () => {
       "https://pharos.watch/__next._index.txt",
       "https://pharos.watch/__next._full.txt",
     ]);
+  });
+});
+
+describe("getBrowserLaunchOptions", () => {
+  it("uses the Playwright-managed browser by default outside GitHub Actions", () => {
+    withEnv("GITHUB_ACTIONS", undefined, () => {
+      withEnv("SMOKE_UI_BROWSER_CHANNEL", undefined, () => {
+        withEnv("SMOKE_UI_BROWSER_EXECUTABLE_PATH", undefined, () => {
+          expect(getBrowserLaunchOptions()).toEqual({ headless: true });
+        });
+      });
+    });
+  });
+
+  it("uses the system Chrome channel on GitHub Actions", () => {
+    withEnv("GITHUB_ACTIONS", "true", () => {
+      withEnv("SMOKE_UI_BROWSER_CHANNEL", undefined, () => {
+        withEnv("SMOKE_UI_BROWSER_EXECUTABLE_PATH", undefined, () => {
+          expect(getBrowserLaunchOptions()).toEqual({ channel: "chrome", headless: true });
+        });
+      });
+    });
+  });
+
+  it("allows an explicit browser channel override", () => {
+    withEnv("GITHUB_ACTIONS", "true", () => {
+      withEnv("SMOKE_UI_BROWSER_CHANNEL", "msedge", () => {
+        expect(getBrowserLaunchOptions()).toEqual({ channel: "msedge", headless: true });
+      });
+    });
+  });
+
+  it("prefers an explicit executable path over browser channels", () => {
+    withEnv("SMOKE_UI_BROWSER_CHANNEL", "chrome", () => {
+      withEnv("SMOKE_UI_BROWSER_EXECUTABLE_PATH", "/usr/bin/chromium", () => {
+        expect(getBrowserLaunchOptions()).toEqual({ executablePath: "/usr/bin/chromium", headless: true });
+      });
+    });
   });
 });
 
@@ -91,9 +128,9 @@ describe("getOverflowWorkerCount", () => {
     });
   });
 
-  it("allows env overrides while capping workers to three and route count", () => {
+  it("allows env overrides while capping workers to six and route count", () => {
     withEnv("SMOKE_UI_OVERFLOW_WORKERS", "8", () => {
-      expect(getOverflowWorkerCount("local", 11)).toBe(3);
+      expect(getOverflowWorkerCount("local", 11)).toBe(6);
       expect(getOverflowWorkerCount("local", 2)).toBe(2);
     });
   });
@@ -129,7 +166,9 @@ describe("verifyAnalyticsSnippet", () => {
   it("accepts GA config init from the root static RSC payload", async () => {
     const fetchMock = async (url: string) => {
       if (url === "https://pharos.watch/") {
-        return new Response('<link rel="preload" href="https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04" as="script"/>');
+        return new Response(
+          '<link rel="preload" href="https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04" as="script"/>',
+        );
       }
       if (url === "https://pharos.watch/index.txt") {
         return new Response("gtag('config', \\\"G-6TS0KG8H04\\\");");

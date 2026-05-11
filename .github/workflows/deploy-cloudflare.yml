@@ -197,7 +197,7 @@ jobs:
         run: |
           set +e
 
-          npm run test:smoke-ui -- --url https://pharos.watch --mode live &
+          npm run test:smoke-ui -- --url https://pharos.watch --mode live --skip-overflow &
           ui_pid=$!
           npm run test:smoke-ops &
           ops_pid=$!
@@ -217,8 +217,10 @@ jobs:
           fi
         env:
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+          SMOKE_UI_BROWSER_CHANNEL: chrome
           SMOKE_OPS_UI_URL: ${{ vars.SMOKE_OPS_UI_URL || 'https://ops.pharos.watch/admin/' }}
           SMOKE_OPS_API_BASE: ${{ vars.SMOKE_OPS_API_BASE || 'https://ops-api.pharos.watch' }}
+          SMOKE_OPS_SCOPE: "canary"
           OPS_SMOKE_CF_ACCESS_CLIENT_ID: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}
           OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}
 
@@ -303,7 +305,8 @@ jobs:
       - run: npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local
         env:
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
-          SMOKE_UI_OVERFLOW_WORKERS: "3"
+          SMOKE_UI_BROWSER_CHANNEL: chrome
+          SMOKE_UI_OVERFLOW_WORKERS: "6"
       - name: Dump local export smoke server log
         if: failure()
         run: cat /tmp/pages-smoke-server.log
@@ -362,7 +365,7 @@ jobs:
         run: |
           set +e
 
-          npm run test:smoke-ui -- --url https://pharos.watch --mode live &
+          npm run test:smoke-ui -- --url https://pharos.watch --mode live --skip-overflow &
           ui_pid=$!
           npm run test:smoke-ops &
           ops_pid=$!
@@ -386,8 +389,10 @@ jobs:
           fi
         env:
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+          SMOKE_UI_BROWSER_CHANNEL: chrome
           SMOKE_OPS_UI_URL: ${{ vars.SMOKE_OPS_UI_URL || 'https://ops.pharos.watch/admin/' }}
           SMOKE_OPS_API_BASE: ${{ vars.SMOKE_OPS_API_BASE || 'https://ops-api.pharos.watch' }}
+          SMOKE_OPS_SCOPE: "canary"
           OPS_SMOKE_CF_ACCESS_CLIENT_ID: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}
           OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}
       - name: Roll back Pages production to previous successful deployment

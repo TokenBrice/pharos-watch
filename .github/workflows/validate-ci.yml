@@ -45,7 +45,6 @@ jobs:
       - run: npm run validate:prebuild
 
   pages-build:
-    needs: validate-prebuild
     if: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo }}
     runs-on: ubuntu-latest
     permissions:
@@ -63,7 +62,6 @@ jobs:
 
   test-noncritical:
     name: Noncritical Vitest (${{ matrix.shard }}/3)
-    needs: validate-prebuild
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -82,7 +80,6 @@ jobs:
       - run: npm run test:noncritical -- --shard=${{ matrix.shard }}/3
 
   coverage-critical:
-    needs: validate-prebuild
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -100,7 +97,6 @@ jobs:
       - run: npm run coverage:critical
 
   typecheck-worker:
-    needs: validate-prebuild
     if: ${{ inputs.worker_changed }}
     runs-on: ubuntu-latest
     permissions:
@@ -116,7 +112,6 @@ jobs:
       - run: npm run typecheck:worker
 
   typecheck-worker-scripts:
-    needs: validate-prebuild
     if: ${{ inputs.worker_changed }}
     runs-on: ubuntu-latest
     permissions:

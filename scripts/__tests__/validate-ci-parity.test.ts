@@ -233,6 +233,25 @@ describe("validate-ci parity", () => {
     expect(validateJob).toContain('["test-noncritical", process.env.TEST_NONCRITICAL_RESULT]');
   });
 
+  it("starts non-mutating validate leaf jobs without waiting for validate-prebuild", () => {
+    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
+
+    for (const [jobName, nextJobName] of [
+      ["pages-build", "test-noncritical"],
+      ["test-noncritical", "coverage-critical"],
+      ["coverage-critical", "typecheck-worker"],
+      ["typecheck-worker", "typecheck-worker-scripts"],
+      ["typecheck-worker-scripts", "validate"],
+    ] as const) {
+      expect(extractJobBlock(workflow, jobName, nextJobName)).not.toContain("needs: validate-prebuild");
+    }
+
+    const validateJob = extractJobBlock(workflow, "validate");
+    expect(validateJob).toContain("- validate-prebuild");
+    expect(validateJob).toContain("- test-noncritical");
+    expect(validateJob).toContain("- coverage-critical");
+  });
+
   it("keeps PR Pages build validation but lets production deploy overlap safe prep with validation", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
     const pagesBuildJob = extractJobBlock(workflow, "pages-build", "test-noncritical");
@@ -265,10 +284,12 @@ describe("validate-ci parity", () => {
 
     const pagesReleaseJob = extractJobBlock(deployWorkflow, "pages-release");
     expect(pagesReleaseJob).toContain("Start local export smoke server");
-    expect(pagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "3"');
+    expect(pagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "6"');
     expect(pagesReleaseJob).toContain("Wait for validation gate");
     expect(pagesReleaseJob).toContain("Deploy Pages with retry");
     expect(pagesReleaseJob).toContain("Run post-publish smokes");
+    expect(pagesReleaseJob).toContain("--mode live --skip-overflow");
+    expect(pagesReleaseJob).toContain('SMOKE_OPS_SCOPE: "canary"');
 
     expect(deployWorkflow).not.toContain("  pages-prepare:");
     expect(deployWorkflow).not.toContain("  pages-publish:");
