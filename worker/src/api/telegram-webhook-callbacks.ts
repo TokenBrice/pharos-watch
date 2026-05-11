@@ -49,7 +49,16 @@ const SNOOZE_SECONDS = {
 
 // Allowlist of known callback action codes. Validated at the top of the
 // dispatcher so that an unknown action can never reach a D1 read/write.
-const KNOWN_ACTIONS = new Set(["snooze", "status", "depegstep", "safetydown"]);
+// `setup` is handled separately above. `confirm`/`cancel` are used by the
+// P0-C1 bulk-confirmation gate (action data `confirm:bulk` / `cancel:bulk`).
+const KNOWN_ACTIONS = new Set([
+  "snooze",
+  "status",
+  "depegstep",
+  "safetydown",
+  "confirm",
+  "cancel",
+]);
 
 type SnoozeArg = keyof typeof SNOOZE_SECONDS;
 
