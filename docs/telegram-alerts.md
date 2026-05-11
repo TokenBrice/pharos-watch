@@ -160,6 +160,23 @@ Membership lookups go through `worker/src/lib/telegram-chat-member.ts`. `getCach
 | `/unmutehours` | Disables quiet hours |
 | `/cancel` | Cancels a pending disambiguation flow |
 
+### /start Deep-Link Payloads
+
+Telegram supports `https://t.me/PharosWatchBot?start=<payload>` deep links. The payload arrives as the `/start` argument string and is dispatched through `parseStartPayload` in `worker/src/api/telegram-webhook-parsing.ts`.
+
+Supported payload schemes (lowercase, no spaces, max 64 characters, characters `[A-Za-z0-9_-]` only):
+
+| Payload | Behavior |
+|---------|----------|
+| `sub_<types>_<targets>` (e.g. `sub_dews-depeg_usd-top25`) | Translates to `/subscribe <types> <targets>` and dispatches the existing subscribe path. Multiple alert types are joined by `-`. Only fires in private chats — group deep-links fall back to the standard onboarding reply with no mutation. |
+| `status_<id>` | Runs the existing `/status` handler against the supplied Pharos coin id. Allowed in any chat. |
+| `why_<id>` | Runs the existing `/why` handler. Allowed in any chat. |
+| `coverage_<id>` | Runs the existing `/coverage` handler. Allowed in any chat. |
+| `setup` | Falls through to the standard onboarding reply. The setup wizard work that consumes this payload arrives with P0-U2. |
+| Unknown or malformed | Falls back to the standard `/start` reply; the user never sees an error. |
+
+Telegram only delivers `?start=` deep links in private chats, but the dispatcher still defensively checks `chat.type === "private"` before running mutating `sub_*` payloads.
+
 ### Alert Types
 
 - `dews`

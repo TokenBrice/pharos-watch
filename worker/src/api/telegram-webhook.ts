@@ -54,6 +54,7 @@ import {
   parsePendingDisambiguation,
   parseQuietHours,
   parseSetCommand,
+  parseStartPayload,
 } from "./telegram-webhook-parsing";
 import {
   applyGlobalSetting,
@@ -275,7 +276,15 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
 
       switch (parsedCommand.command) {
         case "/start":
-          await reply(START_MESSAGE);
+          await handleStart(
+            db,
+            chatId,
+            chatType,
+            username,
+            actorUserId,
+            parsedCommand.args,
+            botToken,
+          );
           break;
         case "/presets":
           await reply(buildPresetCatalogMessage(listTelegramPresets()));
@@ -334,6 +343,40 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
     return ok();
   },
 );
+
+async function handleStart(
+  db: D1Database,
+  chatId: string,
+  chatType: string,
+  username: string | null,
+  actorUserId: string | null,
+  args: string,
+  botToken: string,
+): Promise<void> {
+  const payload = parseStartPayload(args);
+  switch (payload.kind) {
+    case "subscribe":
+      if (chatType !== "private") {
+        await replyToChat(chatId, START_MESSAGE, botToken);
+        return;
+      }
+      await handleSubscribe(db, chatId, username, actorUserId, payload.args, botToken);
+      return;
+    case "status":
+      await handleStatus(db, chatId, payload.coinId, botToken);
+      return;
+    case "why":
+      await handleWhy(db, chatId, payload.coinId, botToken);
+      return;
+    case "coverage":
+      await handleCoverage(db, chatId, payload.coinId, botToken);
+      return;
+    case "setup":
+    case "none":
+      await replyToChat(chatId, START_MESSAGE, botToken);
+      return;
+  }
+}
 
 async function handleList(db: D1Database, chatId: string, botToken: string): Promise<void> {
   const subscriber = await loadSubscriberByChat(db, chatId);

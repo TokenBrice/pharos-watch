@@ -272,6 +272,57 @@ export function parseSetCommand(args: string): ParsedSetCommand | { error: strin
   }
 }
 
+export type ParsedStartPayload =
+  | { kind: "none" }
+  | { kind: "setup" }
+  | { kind: "subscribe"; args: string }
+  | { kind: "status"; coinId: string }
+  | { kind: "why"; coinId: string }
+  | { kind: "coverage"; coinId: string };
+
+const START_PAYLOAD_MAX_LENGTH = 64;
+const START_PAYLOAD_PATTERN = /^[A-Za-z0-9_-]+$/;
+
+/**
+ * Parse a Telegram `/start <payload>` deep-link payload into a typed action.
+ * Payload schemes (all lowercase, no spaces):
+ * - `sub_<types>_<targets>` (e.g. `sub_dews-depeg_usd-top25`) → subscribe
+ * - `status_<id>` / `why_<id>` / `coverage_<id>` → read-only insights
+ * - `setup` → setup wizard placeholder
+ * Unknown or malformed payloads return `{ kind: "none" }`.
+ */
+export function parseStartPayload(args: string): ParsedStartPayload {
+  const payload = args.trim();
+  if (!payload) return { kind: "none" };
+  if (payload.length > START_PAYLOAD_MAX_LENGTH) return { kind: "none" };
+  if (!START_PAYLOAD_PATTERN.test(payload)) return { kind: "none" };
+
+  const lower = payload.toLowerCase();
+  if (lower === "setup") return { kind: "setup" };
+
+  const firstSep = lower.indexOf("_");
+  if (firstSep === -1) return { kind: "none" };
+  const prefix = lower.slice(0, firstSep);
+  const rest = lower.slice(firstSep + 1);
+  if (!rest) return { kind: "none" };
+
+  if (prefix === "sub") {
+    const typesSep = rest.indexOf("_");
+    if (typesSep === -1) return { kind: "none" };
+    const types = rest.slice(0, typesSep);
+    const targets = rest.slice(typesSep + 1);
+    if (!types || !targets) return { kind: "none" };
+    const subscribeArgs = `${types.split("-").join(" ")} ${targets}`.trim();
+    return { kind: "subscribe", args: subscribeArgs };
+  }
+
+  if (prefix === "status" || prefix === "why" || prefix === "coverage") {
+    return { kind: prefix, coinId: rest };
+  }
+
+  return { kind: "none" };
+}
+
 export function parseQuietHours(args: string): { startHourUtc: number; endHourUtc: number } | { error: string } {
   const match = args.trim().match(/^(\d{1,2})-(\d{1,2})$/);
   if (!match) {
