@@ -2,8 +2,10 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { ReserveSlice } from "@shared/types/core";
 import type { LiveReserveAdapterKey, LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { OnchainRateProbe } from "./helpers";
 import type { AdapterContext, AdapterResult } from "./types";
+import { getCachedRequest } from "./request";
 import {
   fetchDefiLlamaPrices,
   fetchErc20Balance,
@@ -15,6 +17,8 @@ import {
 } from "./helpers";
 
 export type BranchBalanceAdapterKey = Extract<LiveReserveAdapterKey, "evm-branch-balances" | "liquity-v2-branches" | "lista">;
+
+const STABLECOINS_CACHE_BRANCH_PRICE_MAX_AGE_SEC = 2 * 60 * 60;
 
 export interface BranchConfig {
   name: string;
@@ -81,6 +85,57 @@ function findUnderlyingContract(
   if (sameChain) return { chain: sameChain.chain, address: sameChain.address };
   const first = meta.contracts[0];
   return first ? { chain: first.chain, address: first.address } : null;
+}
+
+async function loadCachedStablecoinPricesById(ctx?: AdapterContext): Promise<Map<string, number>> {
+  if (!ctx?.db) return new Map();
+
+  return getCachedRequest("stablecoins-cache:branch-prices", async () => {
+    const loaded = await loadStablecoinsCache(ctx.db!, {
+      mode: "lenient",
+      contract: "critical-fields",
+      allowLegacyArray: true,
+    });
+    if (!hasUsableStablecoinsPayload(loaded)) return new Map<string, number>();
+
+    const now = ctx.nowSec ?? Math.floor(Date.now() / 1000);
+    if (loaded.updatedAt == null || loaded.updatedAt <= 0 || now - loaded.updatedAt > STABLECOINS_CACHE_BRANCH_PRICE_MAX_AGE_SEC) {
+      return new Map<string, number>();
+    }
+
+    const prices = new Map<string, number>();
+    for (const asset of loaded.payload.peggedAssets) {
+      if (typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0) {
+        prices.set(asset.id, asset.price);
+      }
+    }
+    return prices;
+  }, ctx);
+}
+
+async function fetchCachedTrackedBranchPrices(
+  branches: BranchBalanceEntry[],
+  priceMap: Map<string, number>,
+  ctx?: AdapterContext,
+): Promise<Map<string, number>> {
+  const branchesNeedingCachedPrices = branches.filter(({ branch, balanceRaw }) =>
+    balanceRaw != null
+    && balanceRaw > 0n
+    && branch.priceUsd == null
+    && branch.coinId != null
+    && !priceMap.has(branch.name)
+  );
+  if (branchesNeedingCachedPrices.length === 0) return new Map();
+
+  const cachedPricesById = await loadCachedStablecoinPricesById(ctx);
+  const cachedBranchPrices = new Map<string, number>();
+  for (const { branch } of branchesNeedingCachedPrices) {
+    const price = branch.coinId ? cachedPricesById.get(branch.coinId) : undefined;
+    if (typeof price === "number" && Number.isFinite(price) && price > 0) {
+      cachedBranchPrices.set(branch.name, price);
+    }
+  }
+  return cachedBranchPrices;
 }
 
 export async function fetchBranchBalances(
@@ -151,6 +206,13 @@ export async function fetchBranchPriceMap(
       if (!wrapperPriceMap.has(name)) {
         wrapperPriceMap.set(name, price);
       }
+    }
+  }
+
+  const cachedTrackedPrices = await fetchCachedTrackedBranchPrices(branchesNeedingPrices, wrapperPriceMap, ctx);
+  for (const [name, price] of cachedTrackedPrices) {
+    if (!wrapperPriceMap.has(name)) {
+      wrapperPriceMap.set(name, price);
     }
   }
 

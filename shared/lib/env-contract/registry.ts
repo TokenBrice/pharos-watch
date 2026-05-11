@@ -183,12 +183,21 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "JUPITER_API_KEY",
+    valueType: "string",
+    description: "Jupiter credential used by the Solana price-fallback pass against `api.jup.ag`.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 17, status: "optional" },
+    },
+  },
+  {
     key: "COINGECKO_API_KEY",
     valueType: "string",
     description: "CoinGecko credential used for price enrichment and depeg confirmation.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 17, status: "optional" },
+      worker: { order: 18, status: "optional" },
     },
   },
   {

@@ -69,6 +69,7 @@ export interface FallbackFxOutput {
 export interface FallbackPriceEnrichmentInput extends FallbackPhaseContext, FallbackAbortHandlers {
   assets: PeggedAsset[];
   cmcApiKey?: string;
+  jupiterApiKey?: string | null;
   coingeckoApiKey?: string | null;
   fxFallbackRates?: Record<string, number>;
   validationReferences?: PriceValidationReferences;

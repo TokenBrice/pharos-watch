@@ -27,6 +27,7 @@ export async function syncStablecoins(
   coingeckoApiKey?: string | null,
   chainRpcs?: Map<string, ChainRpcConfig>,
   reportProgress?: CronProgressReporter,
+  jupiterApiKey?: string | null,
 ): Promise<CronResult> {
   const startAbort = returnIfAborted(signal, "start");
   if (startAbort) return startAbort;
@@ -35,6 +36,7 @@ export async function syncStablecoins(
     db,
     syncStartSec,
     cmcApiKey,
+    jupiterApiKey,
     signal,
     alertWebhookUrl,
     coingeckoApiKey,
@@ -63,6 +65,7 @@ export async function syncStablecoins(
     fxFallbackRates: intake.fxFallbackRates,
     validationReferences: intake.validationReferences,
     cmcApiKey,
+    jupiterApiKey,
     signal,
     coingeckoApiKey,
     chainRpcs,

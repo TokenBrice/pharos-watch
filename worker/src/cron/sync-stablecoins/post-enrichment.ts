@@ -93,6 +93,7 @@ export interface MissingPriceEnrichmentInput {
   syncStartSec: number;
   signal?: AbortSignal;
   cmcApiKey?: string;
+  jupiterApiKey?: string | null;
   returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
 }
 
@@ -393,7 +394,13 @@ export async function runMissingPriceEnrichmentPhase(
 
   const enrichAbort = input.returnIfAborted(input.signal, `${abortStagePrefix}enrich-prices`);
   if (enrichAbort) return enrichAbort;
-  const enrichStats = await enrichMissingPrices(input.assets, input.cmcApiKey, input.db, input.signal);
+  const enrichStats = await enrichMissingPrices(
+    input.assets,
+    input.cmcApiKey,
+    input.db,
+    input.signal,
+    input.jupiterApiKey,
+  );
 
   for (const asset of input.assets) {
     if (missingBefore.has(asset.id) && !hasMissingPrice(asset) && !asset.priceConfidence) {

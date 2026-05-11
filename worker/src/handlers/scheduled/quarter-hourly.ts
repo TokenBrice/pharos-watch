@@ -41,6 +41,7 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
       runtime.coingeckoApiKey,
       runtime.chainRpcs,
       reportProgress,
+      runtime.env.JUPITER_API_KEY,
     ),
   );
   const stablecoinsCapabilities = parseStablecoinsCapabilities(stablecoinsResult);

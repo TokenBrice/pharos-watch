@@ -415,6 +415,7 @@ export async function syncLiveReserves(
   const orderedCoins = rotateConfiguredCoins(CONFIGURED_COINS, cursorState?.nextStablecoinId ?? null);
   const syncStates = await loadReserveSyncStateMap(db, CONFIGURED_COINS.map((coin) => coin.id));
   const effectiveAdapterCtx: AdapterContext = {
+    db,
     ...(adapterCtx ?? {}),
     nowSec: runStartedAt,
     requestCache: adapterCtx?.requestCache ?? new Map<string, Promise<unknown>>(),

@@ -44,6 +44,7 @@ interface StablecoinsIntakeStageOptions extends CronStageContext {
   db: D1Database;
   syncStartSec: number;
   cmcApiKey?: string;
+  jupiterApiKey?: string | null;
   alertWebhookUrl?: string | null;
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
@@ -95,6 +96,7 @@ export async function runStablecoinsIntakeStage(
         options.alertWebhookUrl,
         options.coingeckoApiKey,
         options.reportProgress,
+        options.jupiterApiKey,
       ),
   });
 
@@ -138,6 +140,7 @@ interface StablecoinsPricingStageOptions extends CronStageContext {
   fxFallbackRates: Awaited<ReturnType<typeof loadFreshFxRates>>["fxFallbackRates"];
   validationReferences: Awaited<ReturnType<typeof loadFreshFxRates>>["validationReferences"];
   cmcApiKey?: string;
+  jupiterApiKey?: string | null;
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
 }
@@ -219,6 +222,7 @@ export async function runStablecoinsPricingStage(
     syncStartSec: options.syncStartSec,
     signal: options.signal,
     cmcApiKey: options.cmcApiKey,
+    jupiterApiKey: options.jupiterApiKey,
     returnIfAborted,
   }, "");
   if (isAbortResult(enrichmentPhase)) return enrichmentPhase;

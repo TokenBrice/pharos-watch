@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.04` (2026-02-01 -> 2026-05-10).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.05` (2026-02-01 -> 2026-05-11).
+
+---
+
+## v5.05 - Authenticated Jupiter gateway support (May 11, 2026)
+
+**Commit:** `unreleased`
+
+- `sync-stablecoins` can now pass `JUPITER_API_KEY` through the Solana fallback pass so official Jupiter Price API V3 requests include the `x-api-key` header
+- The change does not promote Jupiter in source ordering: it remains a bounded fallback for tracked Solana mints that are still missing after primary consensus, authoritative overrides, DefiLlama contract lookup, and CoinMarketCap enrichment
+- Jupiter responses still require the documented V3 quote fields, a fresh Solana block reference, and peg-aware validation before any fallback price is accepted
 
 ---
 

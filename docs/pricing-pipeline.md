@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v5.04`
+- **Current methodology version:** `v5.05`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -241,7 +241,7 @@ Assets still missing prices after primary consensus run through `enrichMissingPr
 1. **Pass 1:** DefiLlama `coins.llama.fi` by canonical tracked contract identity, using the upstream row address when present and falling back to curated tracked `contracts` metadata when the upstream row is addressless. Accepted quotes must carry a fresh upstream timestamp, confidence, and matching symbol, then pass shared peg-aware bounds before they can resolve the asset. Schema-invalid OK responses record `dl-coins` breaker failures instead of being treated as healthy empty coverage.
 2. **Pass 1b:** alternate tracked deployment fallback via DefiLlama; only known tracked deployments are probed, never synthetic same-address cross-chain identities. The same timestamp, confidence, symbol, and peg-aware gates apply.
 3. **Pass 2:** CoinMarketCap stablecoins category batch (`v1/cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=300&convert=USD`) — prefers `cmcSlug`-based matching over symbol, and symbol fallback is only allowed when the tracked symbol is unique. Each accepted quote preserves `quote.USD.last_updated` as upstream provenance and must be fresh; schema-invalid OK responses, malformed JSON, non-OK responses, and apparent category truncation record CMC breaker failures. Rate-limited to 1 call/hour via D1 cache (see data-pipeline.md)
-4. **Pass 3:** Jupiter Price API for tracked Solana mints — schema-validates V3 responses, accepts documented payloads without `liquidity`, checks `blockId` freshness against Solana current slot, applies optional liquidity gating only when liquidity is present, and remains subject to peg-aware validation
+4. **Pass 3:** Jupiter Price API for tracked Solana mints — calls the official V3 gateway with `JUPITER_API_KEY` when configured, schema-validates V3 responses, accepts documented payloads without `liquidity`, checks `blockId` freshness against Solana current slot, applies optional liquidity gating only when liquidity is present, and remains subject to peg-aware validation
 5. **Pass 4:** DexScreener exact token-address pool lookup when chain+address are available. Exact-address recoveries publish `dexscreener-exact`; last-resort symbol-search recoveries publish `dexscreener-search`. Unique-symbol search is reserved for addressless assets with configured chain coverage and only accepts USD-like quote tokens on allowed chains with minimum liquidity, 24h volume, and pair age. If an exact target exists and fails, Pharos does not downgrade to symbol-only identity under the same request budget. The pass walks the full sorted missing set and stops after 10 actual DexScreener requests, so skipped high-rank non-unique rows cannot crowd out later exact-target or unique-symbol candidates. The exact token lookup lane and the symbol-search lane keep separate circuit-breaker state: `dexscreener-prices` tracks `/tokens/v1/{chain}/{address}`, while `dexscreener-search` tracks the last-resort `/latest/dex/search` path so a flaky search endpoint cannot suppress otherwise healthy exact-address recovery.
 
 The DefiLlama `/coins` contract-address fallback and the DexScreener lookups used outside primary consensus (the `dex-liquidity` and `dex-discovery` crawls) now gate on and record against their own circuit breakers. `CIRCUIT_SOURCE.DL_COINS` wraps the `coins.llama.fi/prices/current/...` path so a DL regional outage opens the breaker instead of hammering the host, and the same `dexscreener-prices` / `dexscreener-search` breakers are consulted from the liquidity and discovery paths so a persistent DexScreener failure cannot keep retrying across cron surfaces.
@@ -250,7 +250,7 @@ Operationally, missing-price enrichment runs before the slower GeckoTerminal sof
 
 Provider attempt diagnostics for fallback providers are persisted into `sync-stablecoins` cron metadata. Those diagnostics include the sanitized endpoint, HTTP status when available, candidate/response/match counts, parse or rejection reason counts, and short non-OK snippets so operators can distinguish provider transport failures from schema drift, rejected quotes, and successful responses that simply carry no usable tracked prices.
 
-Jupiter fallback uses the official `https://api.jup.ag/price/v3` gateway. The previous Lite gateway is no longer used after Worker egress received repeated Cloudflare 403 block pages from that host.
+Jupiter fallback uses the official `https://api.jup.ag/price/v3` gateway and sends `x-api-key` when `JUPITER_API_KEY` is configured. The previous Lite gateway is no longer used after Worker egress received repeated Cloudflare 403 block pages from that host.
 
 Binance ticker fetches try the market-data mirror first (`data-api.binance.vision`) and then fall back to the main public API host (`api.binance.com`) before recording the source as failed. Both hosts use the same tracked `USDTUSD` / `USDCUSD` market mapping.
 

@@ -979,6 +979,37 @@ describe("enrichMissingPrices", () => {
     expect(stats.finalMissing).toBe(0);
   });
 
+  it("sends the configured Jupiter API key on V3 price requests", async () => {
+    const currentSlot = 418_913_760;
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    const fetchSpy = mockFetch([
+      { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
+      {
+        match: "api.jup.ag/price/v3",
+        body: {
+          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
+            usdPrice: 1.0002,
+            decimals: 6,
+            blockId: currentSlot - 20,
+          },
+        },
+      },
+    ]);
+
+    await runJupiterPass(assets, undefined, undefined, undefined, "jup-test-key");
+
+    const jupiterCall = fetchSpy.mock.calls.find(([input]) => String(input).includes("api.jup.ag/price/v3"));
+    expect(jupiterCall?.[1]).toMatchObject({
+      headers: expect.objectContaining({ "x-api-key": "jup-test-key" }),
+    });
+  });
+
   it("does not reject Jupiter V3 quotes solely because createdAt is old", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [

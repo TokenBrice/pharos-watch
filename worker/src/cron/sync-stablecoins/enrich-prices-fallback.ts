@@ -19,6 +19,7 @@ interface EnrichmentPassResult {
 interface EnrichmentPassContext {
   assets: PeggedAsset[];
   cmcApiKey?: string;
+  jupiterApiKey?: string | null;
   db?: D1Database;
   fxRates?: Record<string, number>;
   signal?: AbortSignal;
@@ -61,8 +62,8 @@ const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
   {
     label: "Jupiter",
     failureLabel: "jupiter",
-    run: async ({ assets, fxRates, db, signal }) => {
-      const result = await runJupiterPass(assets, fxRates, db, signal);
+    run: async ({ assets, fxRates, db, signal, jupiterApiKey }) => {
+      const result = await runJupiterPass(assets, fxRates, db, signal, jupiterApiKey);
       return {
         counts: {
           passJupiter: result.resolved,

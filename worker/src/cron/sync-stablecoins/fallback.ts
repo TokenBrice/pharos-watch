@@ -32,6 +32,7 @@ export async function syncViaCoingeckoFallback(
   alertWebhookUrl?: string | null,
   coingeckoApiKey?: string | null,
   reportProgress?: CronProgressReporter,
+  jupiterApiKey?: string | null,
 ): Promise<CronResult> {
   const aborted = returnIfAborted(signal, "fallback-start");
   if (aborted) return aborted;
@@ -64,6 +65,7 @@ export async function syncViaCoingeckoFallback(
     signal,
     reportProgress,
     cmcApiKey,
+    jupiterApiKey,
     coingeckoApiKey,
     fxFallbackRates,
     validationReferences,

@@ -19,6 +19,7 @@ export interface Env {
   ALERT_WEBHOOK_URL?: string;
   ANTHROPIC_API_KEY?: string;
   CMC_API_KEY?: string;
+  JUPITER_API_KEY?: string;
   COINGECKO_API_KEY?: string;
   GITHUB_PAT?: string;
   FEEDBACK_IP_SALT?: string;

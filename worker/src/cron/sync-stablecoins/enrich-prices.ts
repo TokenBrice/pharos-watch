@@ -39,6 +39,7 @@ export async function enrichMissingPrices(
   cmcApiKey?: string,
   db?: D1Database,
   signal?: AbortSignal,
+  jupiterApiKey?: string | null,
 ): Promise<EnrichmentStats> {
   throwIfAborted(signal);
   const totalMissing = assets.filter(hasMissingPrice).length;
@@ -77,6 +78,7 @@ export async function enrichMissingPrices(
   } = await runEnrichmentPasses({
     assets,
     cmcApiKey,
+    jupiterApiKey,
     db,
     fxRates,
     signal,

@@ -50,6 +50,7 @@ export async function runJupiterPass(
   fxRates: Record<string, number> | undefined,
   db: D1Database | undefined,
   signal?: AbortSignal,
+  jupiterApiKey?: string | null,
 ): Promise<EnrichPassResult> {
   let resolved = 0;
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
@@ -98,7 +99,7 @@ export async function runJupiterPass(
     const batch = candidates.slice(index, index + JUPITER_MAX_IDS_PER_REQUEST);
     const ids = batch.map((entry) => entry.mint);
 
-    const { data, diagnostic } = await fetchJupiterPrices(ids, "fallback", signal);
+    const { data, diagnostic } = await fetchJupiterPrices(ids, "fallback", signal, jupiterApiKey);
     diagnostics.push(diagnostic);
     if (!diagnostic.success || !data) {
       console.warn(`[enrich] Jupiter returned ${diagnostic.status ?? "no response"} for batch of ${ids.length}`);
@@ -144,6 +145,7 @@ async function fetchJupiterPrices(
   ids: string[],
   stage: PricingProviderAttemptDiagnostic["stage"],
   signal?: AbortSignal,
+  jupiterApiKey?: string | null,
 ): Promise<{
   data: Record<string, JupiterPriceEntry> | null;
   diagnostic: PricingProviderAttemptDiagnostic;
@@ -162,7 +164,14 @@ async function fetchJupiterPrices(
 
   const res = await fetchWithRetry(
     url,
-    { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal },
+    {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": USER_AGENT,
+        ...(jupiterApiKey ? { "x-api-key": jupiterApiKey } : {}),
+      },
+      signal,
+    },
     JUPITER_MAX_RETRIES,
     {
       timeoutMs: JUPITER_REQUEST_TIMEOUT_MS,

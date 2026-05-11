@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -379,6 +380,62 @@ describe("fetchEvmBranchBalancesReserves", () => {
       { name: "USDC branch", pct: 100, risk: "low", coinId: "usdc-circle" },
     ]);
     expect(result.warnings).toBeUndefined();
+  });
+
+  it("falls back to the stablecoins cache price for tracked branches missing DefiLlama address prices", async () => {
+    vi.mocked(fetchErc20Balance).mockResolvedValue(1_000_000n);
+    vi.mocked(fetchDefiLlamaPrices)
+      .mockResolvedValueOnce(new Map())
+      .mockResolvedValueOnce(new Map());
+    const now = 1_700_000_000;
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [
+          {
+            key: "stablecoins",
+            value: JSON.stringify({
+              peggedAssets: [
+                {
+                  id: "usyc-hashnote",
+                  name: "Hashnote USYC",
+                  symbol: "USYC",
+                  price: 1.1245,
+                },
+              ],
+            }),
+            updated_at: now - 60,
+          },
+        ],
+      },
+    ]);
+
+    const config: LiveReservesConfig = {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        branches: [
+          {
+            name: "Hashnote USYC",
+            holder: "0xAAA",
+            token: { chain: "ethereum", address: "0xBBB", decimals: 6 },
+            risk: "low",
+            coinId: "usyc-hashnote",
+          },
+        ],
+      },
+    };
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal, { db, nowSec: now });
+    expect(result.slices).toEqual([
+      { name: "Hashnote USYC", pct: 100, risk: "low", coinId: "usyc-hashnote" },
+    ]);
+    expect(fetchDefiLlamaPrices).toHaveBeenCalledTimes(2);
   });
 
   it("emits degraded warning when a USD-pegged wrapper price is outside 5% but within 20% of peg", async () => {

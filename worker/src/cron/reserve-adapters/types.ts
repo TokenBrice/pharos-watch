@@ -14,6 +14,7 @@ import type { AdapterIoLimiter } from "./concurrency";
 
 /** Context passed from the cron to adapters that need worker infrastructure. */
 export interface AdapterContext {
+  db?: D1Database;
   etherscanApiKey?: string;
   alchemyApiKey?: string;
   chainRpcs?: Map<string, ChainRpcConfig>;

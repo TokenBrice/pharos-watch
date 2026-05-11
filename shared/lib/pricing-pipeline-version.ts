@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.04",
+  currentVersion: "5.05",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.05",
+      title: "Authenticated Jupiter gateway support",
+      date: "2026-05-11",
+      effectiveAt: 1778495571,
+      summary:
+        "The Solana fallback pass can now send a configured Jupiter API key to the official Price API V3 gateway while preserving the same response validation and downstream peg checks.",
+      impact: [
+        "Operators can set `JUPITER_API_KEY` so Worker-side Jupiter fallback requests include the required `x-api-key` header for `api.jup.ag`",
+        "The fallback still only applies to tracked Solana mints that remain missing after primary consensus, authoritative overrides, DefiLlama contract lookup, and CoinMarketCap enrichment",
+        "Jupiter responses continue to require documented V3 quote fields, fresh block context, and peg-aware plausibility validation before a price is accepted",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.04",
       title: "Source freshness and independent corroboration hardening",
