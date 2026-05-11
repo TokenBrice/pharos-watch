@@ -346,6 +346,8 @@ Retry and deferral metadata lives on the pending rows:
 - `last_error_class` and `retry_after_sec` preserve the last retryable Telegram result for observability and backoff.
 - `dedupe_key` and `chunk_index` prevent duplicate queued chunks for the same chat/message while still preserving split-message order.
 
+The `dedupe_key` is hashed from the **pre-split canonical message body**, the chunk index, and the `TELEGRAM_SPLIT_VERSION` constant (`worker/src/lib/telegram-alerts.ts`). Hashing the canonical body — not the post-split chunk HTML — keeps the key stable when `splitMessage` is refactored, so in-flight pending rows survive unrelated code changes. Bump `TELEGRAM_SPLIT_VERSION` whenever the splitting algorithm changes in a way that should deterministically invalidate older queued chunks.
+
 If Telegram rate-limits a pending drain, fresh alerts are queued instead of sent in the
 same run. The queue stores Telegram's `retry_after` value when available; otherwise it
 uses a 60-second retry floor.

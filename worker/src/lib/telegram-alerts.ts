@@ -552,6 +552,15 @@ function repairBrokenHtml(chunk: string): string {
   return repaired;
 }
 
+/**
+ * Stable version tag for {@link splitMessage}'s chunking algorithm. Bump this
+ * constant whenever the splitting logic (boundaries, repair, ordering) changes
+ * in a way that would alter the chunks produced from the same canonical body.
+ * The pending-queue dedupe key incorporates this so a logic change predictably
+ * invalidates in-flight pending rows instead of orphaning them silently.
+ */
+export const TELEGRAM_SPLIT_VERSION = 1;
+
 /** Split a message into chunks under the given character limit. */
 export function splitMessage(html: string, limit = 4000): string[] {
   if (html.length <= limit) return [html];

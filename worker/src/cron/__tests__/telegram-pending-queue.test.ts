@@ -8,8 +8,9 @@ vi.mock("../../lib/telegram", async (importOriginal) => {
   return { ...actual, sendToChat: mockSendToChat };
 });
 
-const { disableBlockedSubscriber, drainPendingQueue, enqueuePendingAlerts, cleanupExpiredPendingAlerts, PENDING_TTL_SEC } =
+const { disableBlockedSubscriber, drainPendingQueue, enqueuePendingAlerts, cleanupExpiredPendingAlerts, PENDING_TTL_SEC, buildDedupeKey } =
   await import("../telegram-pending-queue");
+const { TELEGRAM_SPLIT_VERSION } = await import("../../lib/telegram-alerts");
 
 beforeEach(() => {
   mockSendToChat.mockReset();
@@ -316,6 +317,37 @@ describe("enqueuePendingAlerts", () => {
     const db = mockD1([]);
     await enqueuePendingAlerts(db, [], 1000);
     expect(db.getHistory()).toHaveLength(0);
+  });
+});
+
+describe("buildDedupeKey", () => {
+  const canonicalHtml = "<b>Pharos Alerts</b>\n\nDEWS\nUSDC: ALERT → WATCH";
+
+  it("produces the same key across runs for the same canonical body", () => {
+    const a = buildDedupeKey({ chatId: "100", html: "post-split-chunk-A", canonicalHtml, disableNotification: false, chunkIndex: 0 });
+    const b = buildDedupeKey({ chatId: "100", html: "different-post-split-chunk", canonicalHtml, disableNotification: false, chunkIndex: 0 });
+    // Same canonical body + chunk index + split version => same key, regardless
+    // of how splitMessage chopped the chunk html.
+    expect(a).toBe(b);
+  });
+
+  it("produces a new key when the split version is bumped", () => {
+    const v1 = buildDedupeKey(
+      { chatId: "100", html: "chunk", canonicalHtml, disableNotification: false, chunkIndex: 0 },
+      TELEGRAM_SPLIT_VERSION,
+    );
+    const v2 = buildDedupeKey(
+      { chatId: "100", html: "chunk", canonicalHtml, disableNotification: false, chunkIndex: 0 },
+      TELEGRAM_SPLIT_VERSION + 1,
+    );
+    expect(v1).not.toBe(v2);
+  });
+
+  it("produces a different key for each chunk index of the same canonical body", () => {
+    const chunk0 = buildDedupeKey({ chatId: "100", html: "c0", canonicalHtml, disableNotification: false, chunkIndex: 0 });
+    const chunk1 = buildDedupeKey({ chatId: "100", html: "c1", canonicalHtml, disableNotification: false, chunkIndex: 1 });
+    const chunk2 = buildDedupeKey({ chatId: "100", html: "c2", canonicalHtml, disableNotification: false, chunkIndex: 2 });
+    expect(new Set([chunk0, chunk1, chunk2]).size).toBe(3);
   });
 });
 

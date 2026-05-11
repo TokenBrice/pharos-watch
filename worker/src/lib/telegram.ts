@@ -254,6 +254,13 @@ export interface BatchMessage {
   disableNotification: boolean;
   replyMarkup?: unknown;
   chunkIndex?: number;
+  /**
+   * Pre-split canonical message body used to derive a stable dedupe key for the
+   * pending queue. Optional because send-only paths (e.g. raw `sendBatch` tests)
+   * do not need it, but production routing populates it for every chunk so the
+   * key survives unrelated changes to `splitMessage`.
+   */
+  canonicalHtml?: string;
 }
 
 export interface BatchResult {

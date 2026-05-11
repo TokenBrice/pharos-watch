@@ -37,6 +37,8 @@ export interface RoutedSubscriberAlert {
   chatId: string;
   lastActiveAt: number;
   alerts: ConsolidatedAlerts;
+  /** Pre-split message body; chunks below are derived from this. */
+  canonicalHtml: string;
   chunks: string[];
   disableNotification: boolean;
 }
@@ -116,13 +118,17 @@ export function buildSubscriberQueue(
   resolveDisableNotification: (entry: AlertsByChatEntry) => boolean,
 ): RoutedSubscriberAlert[] {
   return [...alertsByChat.entries()]
-    .map(([chatId, entry]) => ({
-      chatId,
-      lastActiveAt: entry.lastActiveAt,
-      alerts: entry.alerts,
-      chunks: splitMessage(formatConsolidatedMessage(entry.alerts)),
-      disableNotification: resolveDisableNotification(entry),
-    }))
+    .map(([chatId, entry]) => {
+      const canonicalHtml = formatConsolidatedMessage(entry.alerts);
+      return {
+        chatId,
+        lastActiveAt: entry.lastActiveAt,
+        alerts: entry.alerts,
+        canonicalHtml,
+        chunks: splitMessage(canonicalHtml),
+        disableNotification: resolveDisableNotification(entry),
+      };
+    })
     .sort((a, b) => b.lastActiveAt - a.lastActiveAt);
 }
 
@@ -160,6 +166,7 @@ export function expandSubscriberChunks(
       messages.push({
         chatId: sub.chatId,
         html: chunk,
+        canonicalHtml: sub.canonicalHtml,
         disableNotification: sub.disableNotification,
         replyMarkup: buildAlertReplyMarkup(sub.alerts, chunkIndex),
         chunkIndex,
