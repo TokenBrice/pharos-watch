@@ -62,24 +62,6 @@ const ACTION_ANCHORS = {
   community: "community",
 } as const satisfies Record<TelegramActionKey, string>;
 
-const HERO_STATS = [
-  {
-    label: "Tracked universe",
-    value: COIN_COUNT.toLocaleString("en-US"),
-    detail: "active stablecoins watched by the same risk pipeline",
-  },
-  {
-    label: "Alert lane",
-    value: "5m",
-    detail: "Telegram dispatcher cadence for DEWS, depeg, safety, and launch signals",
-  },
-  {
-    label: "First action",
-    value: "Paste",
-    detail: "open the bot, then send the recommended starter command",
-  },
-] as const;
-
 const RECOMMENDED_FIRST_COMMAND = "/subscribe dews,depeg usd-top25";
 
 const RECOMMENDED_SETUPS = [
@@ -192,7 +174,7 @@ function HeroPreview() {
   const featuredAlert = TELEGRAM_ALERT_EXAMPLES[0];
 
   return (
-    <div className="rounded-[1.25rem] border border-border/70 bg-card/86 p-3 shadow-[0_18px_44px_oklch(0_0_0_/0.18)]">
+    <div className="relative rounded-[1.25rem] border border-border/70 bg-card/86 p-3 shadow-[0_24px_60px_oklch(0_0_0_/0.22)]">
       <div className="mb-3 flex items-center justify-between rounded-xl border border-border/60 bg-background/55 px-3 py-2">
         <div className="flex items-center gap-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-frost-blue/15 text-sky-700 dark:text-sky-200">
@@ -203,7 +185,11 @@ function HeroPreview() {
             <p className="text-[11px] text-muted-foreground">live alert preview</p>
           </div>
         </div>
-        <span className="rounded-md border border-green-500/25 bg-green-500/10 px-2 py-1 font-mono text-[10px] font-semibold text-green-700 dark:text-green-300">
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-green-500/30 bg-green-500/10 px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-green-700 dark:text-green-300">
+          <span aria-hidden="true" className="relative flex h-1.5 w-1.5">
+            <span className="absolute inset-0 animate-ping rounded-full bg-green-500/70" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500" />
+          </span>
           armed
         </span>
       </div>
@@ -350,50 +336,102 @@ export default function PharosWatchBotPage() {
         </>,
       ]}
     >
-      <div className="space-y-12">
+      <div className="space-y-14">
         <section
-          className="relative overflow-hidden rounded-[1.5rem] border border-border/70 bg-[linear-gradient(135deg,oklch(0.98_0.006_248_/_0.96),oklch(0.94_0.014_248_/_0.92))] px-4 py-5 shadow-sm dark:bg-[linear-gradient(135deg,oklch(0.17_0.024_248_/_0.96),oklch(0.105_0.018_248_/_0.98))] sm:px-6 sm:py-7 lg:px-7"
+          className="relative overflow-hidden rounded-[1.5rem] border border-border/70 bg-[linear-gradient(135deg,oklch(0.98_0.006_248_/_0.96),oklch(0.94_0.014_248_/_0.92))] px-5 py-7 shadow-sm dark:bg-[linear-gradient(135deg,oklch(0.17_0.024_248_/_0.96),oklch(0.105_0.018_248_/_0.98))] sm:px-7 sm:py-9 lg:px-9 lg:py-11"
           aria-labelledby="telegram-hero-title"
         >
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.85fr)] lg:items-center">
-            <div className="space-y-5">
-              <div className="max-w-2xl space-y-3">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,var(--brand-accent)_20%,var(--brand-accent)_60%,transparent)] opacity-70"
+          />
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.18fr)_minmax(320px,0.82fr)] lg:items-start">
+            <div className="space-y-7">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground sm:text-[11px]">
+                <span aria-hidden="true" className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inset-0 animate-ping rounded-full bg-[var(--brand-accent)]/70" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--brand-accent)]" />
+                </span>
+                <span>Alert layer</span>
+                <span aria-hidden="true" className="text-border">·</span>
+                <span>5m latency</span>
+                <span aria-hidden="true" className="text-border">·</span>
+                <span>Dispatcher armed</span>
+              </div>
+
+              <div className="space-y-4">
                 <h2
                   id="telegram-hero-title"
-                  className="max-w-[16rem] text-2xl font-black leading-[1.05] tracking-tight sm:max-w-none sm:text-3xl"
+                  className="text-balance text-4xl font-black leading-[0.98] tracking-[-0.02em] text-foreground sm:text-5xl lg:text-[3.5rem] xl:text-[3.875rem]"
                 >
-                  <span className="block sm:inline">Risk signals should find you</span>{" "}
-                  <span className="block sm:inline">before the timeline does.</span>
+                  Risk signals should find you before{" "}
+                  <em className="font-serif font-medium italic tracking-normal text-foreground/85">the timeline</em>{" "}
+                  does.
                 </h2>
-                <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
-                  <TelegramLink href="https://t.me/PharosWatchBot">@PharosWatchBot</TelegramLink> watches depegs,
-                  DEWS threat bands, safety-grade changes, and launch promotions across the tracked universe. Start
-                  with one low-noise preset, then tune thresholds as your watchlist grows.
+                <p className="max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-[17px]">
+                  <TelegramLink href="https://t.me/PharosWatchBot">@PharosWatchBot</TelegramLink> watches depegs, DEWS
+                  threat bands, safety-grade changes, and launch promotions across the tracked universe. Start with one
+                  low-noise preset, then tune thresholds as your watchlist grows.
                 </p>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                {HERO_STATS.map((stat) => (
-                  <div key={stat.label} className="rounded-xl border border-border/60 bg-background/55 px-2 py-2.5 sm:px-3 sm:py-3">
-                    <p className="text-[9px] font-semibold uppercase leading-tight tracking-[0.04em] text-muted-foreground sm:text-[11px] sm:tracking-[0.12em]">
-                      {stat.label}
+              <div className="grid grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] gap-x-5 gap-y-4 border-y border-border/55 py-5 sm:gap-x-7 sm:py-6">
+                <div className="border-r border-border/55 pr-5 sm:pr-7">
+                  <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
+                    Tracked universe
+                  </p>
+                  <p className="mt-3 font-mono text-[3.25rem] font-semibold leading-[0.9] tabular-nums text-foreground sm:text-[4.25rem] lg:text-[5.5rem]">
+                    {COIN_COUNT.toLocaleString("en-US")}
+                  </p>
+                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
+                    active stablecoins watched by the same risk pipeline
+                  </p>
+                </div>
+                <div className="grid grid-rows-2 divide-y divide-border/55">
+                  <div className="pb-4">
+                    <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
+                      Alert lane
                     </p>
-                    <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground sm:text-2xl">
-                      {stat.value}
+                    <p className="mt-1.5 font-mono text-2xl font-semibold tabular-nums text-foreground sm:text-3xl">
+                      5m
                     </p>
-                    <p className="mt-1 hidden text-xs leading-relaxed text-muted-foreground sm:block">{stat.detail}</p>
+                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground sm:text-xs">
+                      Telegram dispatcher cadence
+                    </p>
                   </div>
-                ))}
+                  <div className="pt-4">
+                    <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
+                      First action
+                    </p>
+                    <p className="mt-1.5 font-mono text-2xl font-semibold tabular-nums text-foreground sm:text-3xl">
+                      Paste
+                    </p>
+                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground sm:text-xs">
+                      starter command into the bot
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="rounded-xl border border-frost-blue/25 bg-frost-blue/8 p-4 dark:bg-frost-blue/6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0 space-y-2">
+              <div className="rounded-xl border border-frost-blue/30 bg-frost-blue/8 p-5 dark:bg-frost-blue/6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 flex-1 space-y-3">
                     <p className="pharos-kicker text-sky-700 dark:text-sky-300">Recommended first command</p>
-                    <CommandLine command={RECOMMENDED_FIRST_COMMAND} />
+                    <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border/60 bg-background/85 px-3 py-2.5 shadow-[inset_0_1px_0_oklch(1_0_0_/_0.04)]">
+                      <span aria-hidden="true" className="font-mono text-sm font-semibold text-sky-700 dark:text-sky-300">
+                        ▸
+                      </span>
+                      <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[13px] font-medium text-foreground sm:text-sm">
+                        {RECOMMENDED_FIRST_COMMAND}
+                      </code>
+                      <CopyButton
+                        text={RECOMMENDED_FIRST_COMMAND}
+                        className="size-8 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      />
+                    </div>
                     <TelegramPulseStrip />
                   </div>
-                  <Button asChild className="shrink-0 gap-2">
+                  <Button asChild size="lg" className="shrink-0 gap-2">
                     <a href="https://t.me/PharosWatchBot" target="_blank" rel="noopener noreferrer">
                       Open Bot
                       <ArrowRight className="h-4 w-4" aria-hidden="true" />

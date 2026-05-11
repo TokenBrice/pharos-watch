@@ -118,25 +118,38 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
 
   if (isLoading) {
     return (
-      <div
-        className={cn("grid grid-cols-3 gap-2 sm:gap-3", className)}
+      <section
+        className={cn("space-y-6", className)}
         aria-label="Loading Telegram adoption metrics"
       >
-        <Skeleton className="h-14 rounded-xl sm:h-[86px]" />
-        <Skeleton className="h-14 rounded-xl sm:h-[86px]" />
-        <Skeleton className="h-14 rounded-xl sm:h-[86px]" />
-      </div>
+        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-border/55 pb-4">
+          <div className="flex items-center gap-3">
+            <span className="h-2 w-2 rounded-full bg-border" aria-hidden="true" />
+            <Skeleton className="h-6 w-32 sm:h-7 sm:w-40" />
+          </div>
+          <Skeleton className="h-3 w-28" />
+        </div>
+        <div className="grid gap-x-6 gap-y-5 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.2fr)] sm:gap-x-8">
+          <Skeleton className="h-24 sm:h-28" />
+          <Skeleton className="h-24 sm:h-28" />
+          <Skeleton className="h-24 sm:h-28" />
+        </div>
+      </section>
     );
   }
 
   if (!data || isError) {
     return (
-      <div className={cn("rounded-xl border border-border/60 bg-muted/25 px-4 py-3", className)}>
+      <section className={cn("space-y-3", className)} aria-label="Telegram adoption metrics unavailable">
+        <div className="flex items-center gap-3 border-b border-border/55 pb-4">
+          <span aria-hidden="true" className="h-2 w-2 rounded-full bg-muted-foreground/40" />
+          <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Telegram pulse</h2>
+        </div>
         <p className="text-xs text-muted-foreground">
           Live Telegram adoption metrics are temporarily unavailable. They retry automatically; bot links and setup
           commands still work.
         </p>
-      </div>
+      </section>
     );
   }
 
@@ -145,50 +158,74 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
   const latestHistoryPoint = watcherHistory.at(-1) ?? null;
 
   return (
-    <section className={cn("space-y-3", className)} aria-label="Live Telegram adoption metrics">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="pharos-kicker">Telegram pulse</p>
-        <p className="text-xs text-muted-foreground">Updated every 5m</p>
+    <section className={cn("space-y-6", className)} aria-label="Live Telegram adoption metrics">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-border/55 pb-4">
+        <div className="flex items-center gap-3">
+          <span aria-hidden="true" className="relative flex h-2 w-2">
+            <span className="absolute inset-0 animate-ping rounded-full bg-[var(--brand-accent)]/70" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--brand-accent)]" />
+          </span>
+          <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Telegram pulse</h2>
+        </div>
+        <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[11px]">
+          Updated every 5m
+        </span>
       </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3">
-          <p className="pharos-kicker">Active Telegram chats</p>
-          <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
+
+      <div className="grid gap-x-6 gap-y-5 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.2fr)] sm:gap-x-8">
+        <div className="border-b border-border/55 pb-5 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-6">
+          <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
+            Active Telegram chats
+          </p>
+          <p className="mt-3 font-mono text-[3.25rem] font-semibold leading-[0.9] tabular-nums text-foreground sm:text-[4rem] lg:text-[4.75rem]">
             {formatCount(data.activeWatchers)}
           </p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">chats with at least one alert enabled</p>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
+            chats with at least one alert enabled
+          </p>
         </div>
-        <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3">
-          <p className="pharos-kicker">Per-coin alert follows</p>
-          <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
+        <div className="border-b border-border/55 pb-5 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-6">
+          <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
+            Per-coin alert follows
+          </p>
+          <p className="mt-3 font-mono text-4xl font-semibold leading-[0.95] tabular-nums text-foreground sm:text-5xl lg:text-[3.5rem]">
             {formatCount(data.coinSubscriptions)}
           </p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">explicit coin-level follows across chats</p>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
+            explicit coin-level follows across chats
+          </p>
         </div>
-        <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3">
-          <p className="pharos-kicker">Most followed</p>
+        <div>
+          <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
+            Most followed
+          </p>
           {topCoins.length > 0 ? (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {topCoins.map((coin) => (
-                <span
+            <ol className="mt-3 flex flex-wrap items-center gap-1.5">
+              {topCoins.map((coin, index) => (
+                <li
                   key={coin}
-                  className="rounded-md border border-frost-blue/25 bg-frost-blue/10 px-2 py-1 font-mono text-xs font-semibold text-sky-800 dark:text-sky-200"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-frost-blue/30 bg-frost-blue/10 px-2.5 py-1.5 font-mono text-[13px] font-semibold tabular-nums text-sky-800 dark:text-sky-200"
                 >
+                  <span aria-hidden="true" className="text-[10px] font-medium text-sky-700/60 dark:text-sky-300/60">
+                    {index + 1}
+                  </span>
                   {coin}
-                </span>
+                </li>
               ))}
-            </div>
+            </ol>
           ) : (
-            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">No ranked follows yet.</p>
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">No ranked follows yet.</p>
           )}
         </div>
       </div>
 
-      <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-4">
+      <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-4 sm:px-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="pharos-kicker">All-time Telegram chat growth</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
+              All-time Telegram chat growth
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
               Cumulative current active chats by the day each chat first subscribed.
             </p>
           </div>
