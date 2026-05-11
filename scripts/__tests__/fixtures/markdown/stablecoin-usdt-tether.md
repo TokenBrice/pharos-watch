@@ -70,6 +70,9 @@ Direct 1:1 redemption through Tether. Supply figures include USDT0 (omnichain va
 | corn | `0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb` | 6 |
 | megaeth | `0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb` | 6 |
 | plasma | `0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb` | 6 |
+| katana | `0x2dca96907fde857dd3d816880a0df407eeb2d2f2` | 6 |
+| stable | `0x779ded0c9e1022225f8e0630b35a9b54be713736` | 6 |
+| hyperliquid | `0x25faedc3f054130dbb4e4203aca63567` | 8 |
 
 ## Live Data
 
