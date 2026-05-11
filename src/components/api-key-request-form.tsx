@@ -25,6 +25,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { buildApiUrl } from "@/lib/api";
 
+declare global {
+  interface Window {
+    __PHAROS_API_KEY_VERIFY_TOKEN__?: string;
+    __PHAROS_SANITIZED_PATH__?: string;
+  }
+}
+
 const ENDPOINT_OPTIONS = [
   { path: "/api/stablecoins", label: "Stablecoin list" },
   { path: "/api/stablecoin/:id", label: "Stablecoin detail" },
@@ -50,6 +57,11 @@ const SAMPLE_PATH = "/api/stablecoins";
 const OWNERSHIP_LIMIT_LABEL = SELF_SERVE_MAX_ACTIVE_KEYS_PER_EMAIL === 1
   ? "One active key per email"
   : `${SELF_SERVE_MAX_ACTIVE_KEYS_PER_EMAIL} active keys per email`;
+const EMAIL_MAX_LENGTH = 200;
+const NAME_MAX_LENGTH = 80;
+const ORGANIZATION_MAX_LENGTH = 120;
+const PROJECT_URL_MAX_LENGTH = 300;
+const EXPECTED_VOLUME_MAX_LENGTH = 300;
 
 type RequestStatus = "idle" | "submitting" | "pending" | "error";
 type VerificationStatus = "idle" | "verifying" | "issued" | "error";
@@ -73,14 +85,74 @@ function resolveErrorMessage(status: number, payload: ApiErrorPayload | null): s
   return payload?.error ?? payload?.message ?? `Request failed with status ${status}`;
 }
 
+function parseHashVerificationToken(hash: string): string | null {
+  const rawHash = hash.startsWith("#") ? hash.slice(1) : hash;
+  if (!rawHash) return null;
+
+  if (rawHash.startsWith("verify=") || rawHash.startsWith("token=")) {
+    return new URLSearchParams(rawHash).get("verify")?.trim()
+      ?? new URLSearchParams(rawHash).get("token")?.trim()
+      ?? null;
+  }
+
+  const queryStart = rawHash.indexOf("?");
+  if (queryStart >= 0) {
+    return new URLSearchParams(rawHash.slice(queryStart + 1)).get("verify")?.trim() ?? null;
+  }
+
+  return null;
+}
+
+function scrubHashVerificationToken(hash: string): string {
+  const rawHash = hash.startsWith("#") ? hash.slice(1) : hash;
+  if (!rawHash) return "";
+
+  if (rawHash.startsWith("verify=") || rawHash.startsWith("token=")) {
+    const params = new URLSearchParams(rawHash);
+    params.delete("verify");
+    params.delete("token");
+    const next = params.toString();
+    return next ? `#${next}` : "";
+  }
+
+  const queryStart = rawHash.indexOf("?");
+  if (queryStart < 0) return hash;
+
+  const path = rawHash.slice(0, queryStart);
+  const params = new URLSearchParams(rawHash.slice(queryStart + 1));
+  params.delete("verify");
+  const next = params.toString();
+  return `#${path}${next ? `?${next}` : ""}`;
+}
+
+function readVerificationTokenFromUrl(): string | null {
+  if (typeof window === "undefined") return null;
+  const url = new URL(window.location.href);
+  return url.searchParams.get("verify")?.trim() || parseHashVerificationToken(url.hash);
+}
+
 function stripVerificationTokenFromUrl(): void {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
-  if (!url.searchParams.has("verify")) return;
+  const hasLegacyQueryToken = url.searchParams.has("verify");
+  const nextHash = scrubHashVerificationToken(url.hash);
+  const hashChanged = nextHash !== url.hash;
+  if (!hasLegacyQueryToken && !hashChanged) return;
+
   url.searchParams.delete("verify");
   const search = url.searchParams.toString();
-  const nextUrl = `${url.pathname}${search ? `?${search}` : ""}${url.hash}`;
+  const nextUrl = `${url.pathname}${search ? `?${search}` : ""}${nextHash}`;
   window.history.replaceState(null, "", nextUrl);
+}
+
+function takePreSanitizedVerificationToken(): string | null {
+  if (typeof window === "undefined") return null;
+  const token = window.__PHAROS_API_KEY_VERIFY_TOKEN__?.trim();
+  if (token) {
+    delete window.__PHAROS_API_KEY_VERIFY_TOKEN__;
+    return token;
+  }
+  return null;
 }
 
 function endpointId(path: string): string {
@@ -118,23 +190,53 @@ export function ApiKeyRequestForm() {
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [issuedKey, setIssuedKey] = useState<ApiKeySelfServeIssueResponse | null>(null);
   const [copied, setCopied] = useState<"token" | "curl" | null>(null);
+  const [copyError, setCopyError] = useState<string | null>(null);
+  const [tokenCopied, setTokenCopied] = useState(false);
+  const [revealAcknowledged, setRevealAcknowledged] = useState(false);
   const consumedVerificationTokenRef = useRef<string | null>(null);
+  const copyTokenButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const curlCommand = useMemo(() => issuedKey ? buildCurlCommand(issuedKey.token) : "", [issuedKey]);
+  const trimmedUseCaseLength = useCase.trim().length;
+  const projectUrlValue = projectUrl.trim();
+  const projectUrlValid = !projectUrlValue || (() => {
+    try {
+      const parsed = new URL(projectUrlValue);
+      return parsed.protocol === "https:" && parsed.hostname.length > 0;
+    } catch {
+      return false;
+    }
+  })();
+  const tokenSecured = tokenCopied || revealAcknowledged;
 
   const canSubmit =
     requestStatus !== "submitting"
     && email.trim().length > 3
-    && useCase.trim().length >= SELF_SERVE_USE_CASE_MIN_LENGTH
+    && email.trim().length <= EMAIL_MAX_LENGTH
+    && requesterName.trim().length <= NAME_MAX_LENGTH
+    && organization.trim().length <= ORGANIZATION_MAX_LENGTH
+    && projectUrlValue.length <= PROJECT_URL_MAX_LENGTH
+    && projectUrlValid
+    && expectedVolume.trim().length <= EXPECTED_VOLUME_MAX_LENGTH
+    && trimmedUseCaseLength >= SELF_SERVE_USE_CASE_MIN_LENGTH
+    && trimmedUseCaseLength <= SELF_SERVE_USE_CASE_MAX_LENGTH
     && acceptedTerms;
 
   const copyText = useCallback(async (kind: "token" | "curl", value: string) => {
     try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("Clipboard API unavailable");
+      }
       await navigator.clipboard.writeText(value);
       setCopied(kind);
+      setCopyError(null);
+      if (kind === "token") {
+        setTokenCopied(true);
+      }
       window.setTimeout(() => setCopied(null), 1800);
     } catch {
       setCopied(null);
+      setCopyError("Copy failed. Select the text and copy it manually before leaving this page.");
     }
   }, []);
 
@@ -156,6 +258,10 @@ export function ApiKeyRequestForm() {
       if (!response.ok || !payload || !("status" in payload) || payload.status !== "issued") {
         throw new Error(resolveErrorMessage(response.status, payload && !("status" in payload) ? payload : null));
       }
+      setCopied(null);
+      setCopyError(null);
+      setTokenCopied(false);
+      setRevealAcknowledged(false);
       setIssuedKey(payload);
       setVerificationStatus("issued");
     } catch (error) {
@@ -166,12 +272,28 @@ export function ApiKeyRequestForm() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const token = new URLSearchParams(window.location.search).get("verify")?.trim();
+    const token = takePreSanitizedVerificationToken() ?? readVerificationTokenFromUrl();
     if (!token || consumedVerificationTokenRef.current === token) return;
     consumedVerificationTokenRef.current = token;
     stripVerificationTokenFromUrl();
     void verifyToken(token);
   }, [verifyToken]);
+
+  useEffect(() => {
+    if (!issuedKey) return;
+    copyTokenButtonRef.current?.focus();
+  }, [issuedKey]);
+
+  useEffect(() => {
+    if (!issuedKey || tokenSecured) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+      return "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [issuedKey, tokenSecured]);
 
   function toggleEndpoint(path: string): void {
     setSelectedEndpoints((current) => {
@@ -252,6 +374,7 @@ export function ApiKeyRequestForm() {
               id="api-email"
               type="email"
               autoComplete="email"
+              maxLength={EMAIL_MAX_LENGTH}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               disabled={requestStatus === "submitting"}
@@ -263,6 +386,7 @@ export function ApiKeyRequestForm() {
             <Input
               id="api-name"
               autoComplete="name"
+              maxLength={NAME_MAX_LENGTH}
               value={requesterName}
               onChange={(event) => setRequesterName(event.target.value)}
               disabled={requestStatus === "submitting"}
@@ -273,6 +397,7 @@ export function ApiKeyRequestForm() {
             <Input
               id="api-org"
               autoComplete="organization"
+              maxLength={ORGANIZATION_MAX_LENGTH}
               value={organization}
               onChange={(event) => setOrganization(event.target.value)}
               disabled={requestStatus === "submitting"}
@@ -284,10 +409,14 @@ export function ApiKeyRequestForm() {
               id="api-url"
               type="url"
               placeholder="https://"
+              maxLength={PROJECT_URL_MAX_LENGTH}
+              aria-describedby="api-url-help"
+              aria-invalid={projectUrlValue.length > 0 && !projectUrlValid}
               value={projectUrl}
               onChange={(event) => setProjectUrl(event.target.value)}
               disabled={requestStatus === "submitting"}
             />
+            <p id="api-url-help" className="text-xs text-muted-foreground">Optional. HTTPS URLs only.</p>
           </div>
         </div>
 
@@ -299,11 +428,14 @@ export function ApiKeyRequestForm() {
             onChange={(event) => setUseCase(event.target.value)}
             rows={5}
             maxLength={SELF_SERVE_USE_CASE_MAX_LENGTH}
+            aria-describedby="api-use-case-help"
             disabled={requestStatus === "submitting"}
             className="resize-none"
             required
           />
-          <p className="text-xs text-muted-foreground">{useCase.length}/{SELF_SERVE_USE_CASE_MAX_LENGTH}</p>
+          <p id="api-use-case-help" className="text-xs text-muted-foreground">
+            {trimmedUseCaseLength}/{SELF_SERVE_USE_CASE_MAX_LENGTH}. Minimum {SELF_SERVE_USE_CASE_MIN_LENGTH} characters.
+          </p>
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -328,10 +460,13 @@ export function ApiKeyRequestForm() {
             <Input
               id="api-volume"
               placeholder="e.g. 2,000 requests/day"
+              maxLength={EXPECTED_VOLUME_MAX_LENGTH}
+              aria-describedby="api-volume-help"
               value={expectedVolume}
               onChange={(event) => setExpectedVolume(event.target.value)}
               disabled={requestStatus === "submitting"}
             />
+            <p id="api-volume-help" className="text-xs text-muted-foreground">Optional. {EXPECTED_VOLUME_MAX_LENGTH} characters max.</p>
           </div>
         </div>
 
@@ -390,18 +525,18 @@ export function ApiKeyRequestForm() {
         </label>
 
         {requestError ? (
-          <div className="mt-4 flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/8 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+          <div role="alert" className="mt-4 flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/8 px-3 py-2 text-sm text-red-700 dark:text-red-300">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <p>{requestError}</p>
           </div>
         ) : null}
 
         {pendingRequest ? (
-          <div className="mt-4 flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-300">
+          <div role="status" aria-live="polite" className="mt-4 flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-300">
             <MailCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <div>
               <p className="font-medium">Check your inbox to verify this request.</p>
-              <p className="mt-1 text-xs opacity-90">Request ID: {pendingRequest.requestId}</p>
+              <p className="mt-1 text-xs opacity-90">If this address can receive verification email, the link will arrive shortly.</p>
             </div>
           </div>
         ) : null}
@@ -465,7 +600,7 @@ export function ApiKeyRequestForm() {
           ) : null}
 
           {verificationError ? (
-            <div className="mt-4 rounded-md border border-red-500/30 bg-red-500/8 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+            <div role="alert" className="mt-4 rounded-md border border-red-500/30 bg-red-500/8 px-3 py-2 text-sm text-red-700 dark:text-red-300">
               {verificationError}
             </div>
           ) : null}
@@ -480,12 +615,24 @@ export function ApiKeyRequestForm() {
                 <p className="mt-2 text-xs opacity-90">
                   Prefix {issuedKey.key.keyPrefix} - Expires {formatExpiry(issuedKey.key.expiresAt)}
                 </p>
+                {!tokenSecured ? (
+                  <p className="mt-2 text-xs font-medium opacity-95">
+                    This page will warn before closing until the token is copied or marked saved.
+                  </p>
+                ) : null}
               </div>
+
+              {copyError ? (
+                <div role="alert" className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
+                  {copyError}
+                </div>
+              ) : null}
 
               <div className="overflow-hidden rounded-2xl border border-emerald-500/35 bg-zinc-950 text-zinc-100 shadow-inner">
                 <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                   <span className="text-xs font-semibold uppercase text-zinc-400">Token</span>
                   <Button
+                    ref={copyTokenButtonRef}
                     type="button"
                     size="xs"
                     variant="ghost"
@@ -520,6 +667,18 @@ export function ApiKeyRequestForm() {
                   <code>{curlCommand}</code>
                 </pre>
               </div>
+
+              <Button
+                type="button"
+                variant={tokenSecured ? "outline" : "default"}
+                className="w-full"
+                onClick={() => {
+                  setRevealAcknowledged(true);
+                  setCopyError(null);
+                }}
+              >
+                {tokenSecured ? "Key Saved" : "I Saved This Key"}
+              </Button>
             </div>
           ) : null}
         </section>

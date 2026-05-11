@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import type {
   ApiKeySelfServeAdminMutationResponse,
@@ -34,6 +34,11 @@ const STATUS_LABELS: Record<"all" | ApiKeySelfServeStatus, string> = {
 };
 
 const EMPTY_REQUESTS: readonly ApiKeySelfServeRequestAdminSummary[] = [];
+const REQUEST_LIST_LIMIT = 50;
+const ACTION_LABELS = {
+  reject: "reject",
+  "release-claim": "release claim",
+} as const;
 
 function statusClassName(status: ApiKeySelfServeStatus): string {
   switch (status) {
@@ -70,13 +75,19 @@ function formatRelative(epochSeconds: number | null, nowSeconds: number): string
   return delta >= 0 ? `in ${days}d` : `${days}d ago`;
 }
 
-async function postAdminJson<T>(path: string): Promise<T> {
+async function postAdminJson<T>(
+  path: string,
+  body: { reason: string },
+  idempotencyKey: string,
+): Promise<T> {
   const response = await fetch(buildRequestUrl(buildAdminApiPath(path)), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Pharos-Admin": "1",
+      "Idempotency-Key": idempotencyKey,
     },
+    body: JSON.stringify(body),
   });
   const text = await response.text();
   let parsed: unknown = null;
@@ -95,6 +106,18 @@ async function postAdminJson<T>(path: string): Promise<T> {
   return parsed as T;
 }
 
+function describeRequester(request: ApiKeySelfServeRequestAdminSummary): string {
+  return request.organization || request.requesterName || "Unlabeled requester";
+}
+
+function createIdempotencyKey(action: "reject" | "release-claim", requestId: string): string {
+  const randomPart =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `api-key-request:${action}:${requestId}:${randomPart}`;
+}
+
 function RequestCard({
   request,
   generatedAt,
@@ -105,15 +128,16 @@ function RequestCard({
   request: ApiKeySelfServeRequestAdminSummary;
   generatedAt: number;
   busyRequestId: string | null;
-  onReject: (requestId: string) => void;
-  onReleaseClaim: (requestId: string) => void;
+  onReject: (request: ApiKeySelfServeRequestAdminSummary) => void;
+  onReleaseClaim: (request: ApiKeySelfServeRequestAdminSummary) => void;
 }) {
   const busy = busyRequestId === request.requestId;
   const hasActiveUnexpiredKey =
     request.linkedKeyActive === true
     && (request.linkedKeyExpiresAt == null || request.linkedKeyExpiresAt > generatedAt);
   const canReleaseClaim = !hasActiveUnexpiredKey && request.claimStatus !== "released";
-  const canReject = request.status !== "rejected";
+  const canReject = request.status === "pending_verification" || request.status === "issued";
+  const requesterLabel = describeRequester(request);
 
   return (
     <article className="space-y-4 rounded-lg border border-border/60 bg-background/35 p-4">
@@ -123,12 +147,13 @@ function RequestCard({
             <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-semibold", statusClassName(request.status))}>
               {STATUS_LABELS[request.status]}
             </span>
-            <span className="font-mono text-xs text-muted-foreground">{request.requestId}</span>
           </div>
           <h3 className="text-base font-semibold tracking-tight text-foreground">
-            {request.organization || request.requesterName || request.email}
+            {requesterLabel}
           </h3>
-          <p className="break-all text-sm text-muted-foreground">{request.email}</p>
+          <p className="text-sm text-muted-foreground">
+            Created {formatRelative(request.createdAt, generatedAt)} - Claim {request.claimStatus ?? "none"}
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -136,7 +161,7 @@ function RequestCard({
             size="sm"
             variant="outline"
             disabled={busy || !canReject}
-            onClick={() => onReject(request.requestId)}
+            onClick={() => onReject(request)}
           >
             <ShieldOff className="h-4 w-4" aria-hidden="true" />
             Reject
@@ -146,7 +171,7 @@ function RequestCard({
             size="sm"
             variant="outline"
             disabled={busy || !canReleaseClaim}
-            onClick={() => onReleaseClaim(request.requestId)}
+            onClick={() => onReleaseClaim(request)}
           >
             <Unlock className="h-4 w-4" aria-hidden="true" />
             Release Claim
@@ -169,20 +194,21 @@ function RequestCard({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <div className="text-xs uppercase text-muted-foreground">Use Case</div>
-        <p className="text-sm leading-relaxed text-muted-foreground">{request.useCase}</p>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {request.intendedEndpoints.length > 0 ? request.intendedEndpoints.map((endpoint) => (
-          <span key={endpoint} className="rounded-md border border-border/60 bg-background px-2 py-1 font-mono text-xs text-muted-foreground">
-            {endpoint}
-          </span>
-        )) : (
-          <span className="text-xs text-muted-foreground">No endpoint list provided</span>
-        )}
-      </div>
+      <details className="rounded-md border border-border/60 bg-background/40 px-3 py-2">
+        <summary className="cursor-pointer text-sm font-medium text-foreground">Use case and endpoints</summary>
+        <div className="mt-3 space-y-3">
+          <p className="text-sm leading-relaxed text-muted-foreground">{request.useCase}</p>
+          <div className="flex flex-wrap gap-2">
+            {request.intendedEndpoints.length > 0 ? request.intendedEndpoints.map((endpoint) => (
+              <span key={endpoint} className="rounded-md border border-border/60 bg-background px-2 py-1 font-mono text-xs text-muted-foreground">
+                {endpoint}
+              </span>
+            )) : (
+              <span className="text-xs text-muted-foreground">No endpoint list provided</span>
+            )}
+          </div>
+        </div>
+      </details>
 
       {request.riskReasons.length > 0 ? (
         <div className="flex flex-wrap gap-2">
@@ -194,6 +220,18 @@ function RequestCard({
         </div>
       ) : null}
 
+      <details className="rounded-md border border-border/60 bg-background/40 px-3 py-2">
+        <summary className="cursor-pointer text-sm font-medium text-foreground">Requester details</summary>
+        <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-2">
+          <div>Email: <span className="break-all">{request.email}</span></div>
+          <div>Name: {request.requesterName ?? "not provided"}</div>
+          <div>Organization: {request.organization ?? "not provided"}</div>
+          <div>Project: {request.projectUrl ?? "not provided"}</div>
+          <div>Terms: {request.acceptedTerms ? "accepted" : "missing"}</div>
+          <div>Email verified: {request.emailVerified ? "yes" : "no"}</div>
+        </div>
+      </details>
+
       <div className="grid gap-2 border-t border-border/50 pt-3 text-xs text-muted-foreground md:grid-cols-2 xl:grid-cols-4">
         <div>Created: {formatTime(request.createdAt)} ({formatRelative(request.createdAt, generatedAt)})</div>
         <div>Verification expires: {formatTime(request.verificationExpiresAt)}</div>
@@ -201,43 +239,78 @@ function RequestCard({
         <div>Key: {request.linkedKeyPrefix ?? "none"}</div>
         <div>Claim: {request.claimStatus ?? "none"}</div>
         <div>Self-serve expiry: {formatTime(request.selfServeExpiresAt)}</div>
-        <div>Project: {request.projectUrl ?? "not provided"}</div>
-        <div>Terms: {request.acceptedTerms ? "accepted" : "missing"}</div>
+        <div>Updated: {formatTime(request.updatedAt)}</div>
+        <div>Rejected: {formatTime(request.rejectedAt)}</div>
       </div>
     </article>
   );
 }
 
 export function ApiKeyRequestsPanel() {
-  const { data, error, isLoading, refetch, isFetching } = useApiKeyRequests();
   const [statusFilter, setStatusFilter] = useState<"all" | ApiKeySelfServeStatus>("all");
+  const { data, error, isLoading, refetch, isFetching } = useApiKeyRequests({
+    status: statusFilter === "all" ? undefined : statusFilter,
+    limit: REQUEST_LIST_LIMIT,
+  });
   const [busyRequestId, setBusyRequestId] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [mutationNotice, setMutationNotice] = useState<string | null>(null);
 
   const requests = data?.requests ?? EMPTY_REQUESTS;
   const generatedAt = data?.generatedAt ?? Math.floor(Date.now() / 1000);
-  const filteredRequests = useMemo(
-    () => statusFilter === "all" ? requests : requests.filter((request) => request.status === statusFilter),
-    [requests, statusFilter],
-  );
 
-  async function runMutation(requestId: string, action: "reject" | "release-claim") {
-    setBusyRequestId(requestId);
+  function collectMutationReason(
+    request: ApiKeySelfServeRequestAdminSummary,
+    action: "reject" | "release-claim",
+  ): string | null {
+    const label = ACTION_LABELS[action];
+    const confirmed = window.confirm(
+      `Confirm ${label} for ${describeRequester(request)}. This changes self-serve API access state.`,
+    );
+    if (!confirmed) return null;
+
+    const reason = window.prompt(`Reason for ${label}:`);
+    if (reason == null) return null;
+
+    const trimmed = reason.trim();
+    if (trimmed.length < 4) {
+      setMutationError("Action cancelled. Enter a reason with at least 4 characters.");
+      return null;
+    }
+    return trimmed.slice(0, 300);
+  }
+
+  async function runMutation(
+    request: ApiKeySelfServeRequestAdminSummary,
+    action: "reject" | "release-claim",
+    reason: string,
+  ) {
+    setBusyRequestId(request.requestId);
     setMutationError(null);
     setMutationNotice(null);
     try {
       const path = action === "reject"
-        ? API_PATHS.apiKeyRequestAdminReject(requestId)
-        : API_PATHS.apiKeyRequestAdminReleaseClaim(requestId);
-      const result = await postAdminJson<ApiKeySelfServeAdminMutationResponse>(path);
-      setMutationNotice(`${STATUS_LABELS[result.status]} request ${result.requestId}`);
+        ? API_PATHS.apiKeyRequestAdminReject(request.requestId)
+        : API_PATHS.apiKeyRequestAdminReleaseClaim(request.requestId);
+      const result = await postAdminJson<ApiKeySelfServeAdminMutationResponse>(
+        path,
+        { reason },
+        createIdempotencyKey(action, request.requestId),
+      );
+      setMutationNotice(`Request marked ${STATUS_LABELS[result.status].toLowerCase()}; claim ${result.claimStatus ?? "none"}.`);
       await refetch();
     } catch (err) {
       setMutationError(err instanceof Error ? err.message : "API key request action failed");
     } finally {
       setBusyRequestId(null);
     }
+  }
+
+  function requestMutation(request: ApiKeySelfServeRequestAdminSummary, action: "reject" | "release-claim") {
+    setMutationError(null);
+    const reason = collectMutationReason(request, action);
+    if (!reason) return;
+    void runMutation(request, action, reason);
   }
 
   return (
@@ -267,14 +340,14 @@ export function ApiKeyRequestsPanel() {
         </div>
 
         {mutationNotice ? (
-          <div className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-800 dark:text-emerald-300">
+          <div role="status" aria-live="polite" className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-800 dark:text-emerald-300">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <p>{mutationNotice}</p>
           </div>
         ) : null}
 
         {mutationError ? (
-          <div className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/8 p-3 text-sm text-red-700 dark:text-red-300">
+          <div role="alert" className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/8 p-3 text-sm text-red-700 dark:text-red-300">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <p>{mutationError}</p>
           </div>
@@ -288,22 +361,22 @@ export function ApiKeyRequestsPanel() {
           </div>
         ) : null}
 
-        {!isLoading && !error && filteredRequests.length === 0 ? (
+        {!isLoading && !error && requests.length === 0 ? (
           <div className="rounded-lg border border-border/60 p-4 text-sm text-muted-foreground">
             No self-serve API key requests match this filter.
           </div>
         ) : null}
 
-        {!isLoading && !error && filteredRequests.length > 0 ? (
+        {!isLoading && !error && requests.length > 0 ? (
           <div className="space-y-3">
-            {filteredRequests.map((request) => (
+            {requests.map((request) => (
               <RequestCard
                 key={request.requestId}
                 request={request}
                 generatedAt={generatedAt}
                 busyRequestId={busyRequestId}
-                onReject={(requestId) => void runMutation(requestId, "reject")}
-                onReleaseClaim={(requestId) => void runMutation(requestId, "release-claim")}
+                onReject={(selectedRequest) => requestMutation(selectedRequest, "reject")}
+                onReleaseClaim={(selectedRequest) => requestMutation(selectedRequest, "release-claim")}
               />
             ))}
           </div>

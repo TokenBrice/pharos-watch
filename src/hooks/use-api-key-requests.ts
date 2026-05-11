@@ -1,15 +1,28 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import { API_PATHS } from "@shared/lib/api-endpoints";
-import type { ApiKeySelfServeRequestAdminListResponse } from "@shared/types";
+import { API_PATHS, buildQueryPath } from "@shared/lib/api-endpoints";
+import type { ApiKeySelfServeRequestAdminListResponse, ApiKeySelfServeStatus } from "@shared/types";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import { useAdminPollingQuery } from "./use-admin-polling-query";
 
-export function useApiKeyRequests(): UseQueryResult<ApiKeySelfServeRequestAdminListResponse, Error> {
+interface ApiKeyRequestsOptions {
+  status?: ApiKeySelfServeStatus;
+  limit?: number;
+}
+
+export function useApiKeyRequests(
+  options: ApiKeyRequestsOptions = {},
+): UseQueryResult<ApiKeySelfServeRequestAdminListResponse, Error> {
+  const limit = options.limit ?? 50;
+  const path = buildQueryPath(API_PATHS.apiKeyRequestsAdmin(), {
+    status: options.status,
+    limit,
+  });
+
   return useAdminPollingQuery<ApiKeySelfServeRequestAdminListResponse>(
-    ["api-key-requests"],
-    API_PATHS.apiKeyRequestsAdmin(),
+    ["api-key-requests", options.status ?? "all", limit],
+    path,
     CRON_1MIN,
   );
 }

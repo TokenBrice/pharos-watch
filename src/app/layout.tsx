@@ -83,6 +83,53 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href={API_URL} />
+        <Script id="api-key-verify-url-sanitizer" strategy="beforeInteractive">
+          {`(function(){
+            try {
+              var url = new URL(window.location.href);
+              var token = url.searchParams.get('verify');
+              function tokenFromHash(hash) {
+                var raw = hash && hash.charAt(0) === '#' ? hash.slice(1) : hash;
+                if (!raw) return null;
+                if (raw.indexOf('verify=') === 0 || raw.indexOf('token=') === 0) {
+                  var params = new URLSearchParams(raw);
+                  return params.get('verify') || params.get('token');
+                }
+                var queryStart = raw.indexOf('?');
+                return queryStart >= 0 ? new URLSearchParams(raw.slice(queryStart + 1)).get('verify') : null;
+              }
+              function scrubHash(hash) {
+                var raw = hash && hash.charAt(0) === '#' ? hash.slice(1) : hash;
+                if (!raw) return '';
+                if (raw.indexOf('verify=') === 0 || raw.indexOf('token=') === 0) {
+                  var params = new URLSearchParams(raw);
+                  params.delete('verify');
+                  params.delete('token');
+                  var next = params.toString();
+                  return next ? '#' + next : '';
+                }
+                var queryStart = raw.indexOf('?');
+                if (queryStart < 0) return hash || '';
+                var path = raw.slice(0, queryStart);
+                var params = new URLSearchParams(raw.slice(queryStart + 1));
+                params.delete('verify');
+                var next = params.toString();
+                return '#' + path + (next ? '?' + next : '');
+              }
+              token = token || tokenFromHash(url.hash);
+              var nextHash = scrubHash(url.hash);
+              var changed = url.searchParams.has('verify') || nextHash !== url.hash;
+              if (token) window.__PHAROS_API_KEY_VERIFY_TOKEN__ = String(token).trim();
+              if (url.searchParams.has('verify')) url.searchParams.delete('verify');
+              var search = url.searchParams.toString();
+              var sanitizedPath = url.pathname + (search ? '?' + search : '');
+              window.__PHAROS_SANITIZED_PATH__ = sanitizedPath;
+              if (changed) window.history.replaceState(null, '', sanitizedPath + nextHash);
+            } catch (_) {
+              window.__PHAROS_SANITIZED_PATH__ = window.location.pathname + window.location.search;
+            }
+          })();`}
+        </Script>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {gaId && (
@@ -92,7 +139,13 @@ export default function RootLayout({
               {`window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());
-                gtag('config', ${JSON.stringify(gaId)});`}
+                var pharosPagePath = window.__PHAROS_SANITIZED_PATH__ || (window.location.pathname + window.location.search);
+                gtag('config', ${JSON.stringify(gaId)}, { send_page_view: false });
+                gtag('event', 'page_view', {
+                  page_path: pharosPagePath,
+                  page_location: window.location.origin + pharosPagePath,
+                  page_title: document.title
+                });`}
             </Script>
           </>
         )}
