@@ -1,5 +1,9 @@
 import type { CoverageFeatureKey, CoverageFeatureSummary } from "@/lib/coverage";
-import { FEATURE_ACCENT_CLASSES, FEATURE_ICON } from "@/lib/coverage-page-config";
+import {
+  BLACKLIST_BREAKDOWN_CHIP_CLASS,
+  FEATURE_ACCENT_CLASSES,
+  FEATURE_ICON,
+} from "@/lib/coverage-page-config";
 import { cn } from "@/lib/utils";
 import { CoverageFeatureLink } from "./coverage-feature-link";
 
@@ -76,17 +80,23 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
       <div className="rounded-xl border border-border/60 bg-background/40 px-3 py-3">
         <div className="pharos-kicker">Breakdown</div>
         <div className="mt-2 flex flex-wrap gap-2">
-          {breakdownItems.map((item, index) => (
-            <span
-              key={`${summary.feature.key}-${item}`}
-              className={cn(
-                "rounded-full border px-2.5 py-1 text-[11px] font-medium",
-                index === 0 ? accent.chip : "border-border/60 bg-background/45 text-muted-foreground",
-              )}
-            >
-              {item}
-            </span>
-          ))}
+          {breakdownItems.map((item, index) => {
+            const statusKey = item.split(/\s+/)[0]?.toLowerCase() ?? "";
+            const blacklistChip =
+              summary.feature.key === "blacklist" ? BLACKLIST_BREAKDOWN_CHIP_CLASS[statusKey] : undefined;
+            return (
+              <span
+                key={`${summary.feature.key}-${item}`}
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-[11px] font-medium",
+                  blacklistChip ??
+                    (index === 0 ? accent.chip : "border-border/60 bg-background/45 text-muted-foreground"),
+                )}
+              >
+                {item}
+              </span>
+            );
+          })}
         </div>
       </div>
     </li>

@@ -232,10 +232,14 @@ describe("coverage helpers", () => {
     expect(resolveFlowCoverage(null).available).toBe(false);
   });
 
-  it("matches blacklist tracker symbols case-insensitively while respecting resolved status", () => {
-    expect(resolveBlacklistCoverage(makeCoin({ symbol: "tGBP" }), true).available).toBe(true);
-    expect(resolveBlacklistCoverage(makeCoin({ symbol: "USDT" }), "possible").available).toBe(false);
-    expect(resolveBlacklistCoverage(makeCoin({ symbol: "USDQ" }), false).available).toBe(false);
+  it("emits live tracker, blacklistable, and resolved status kinds", () => {
+    expect(resolveBlacklistCoverage(makeCoin({ symbol: "tGBP" }), true).kind).toBe("live");
+    expect(resolveBlacklistCoverage(makeCoin({ symbol: "YES" }), true).kind).toBe("yes");
+    expect(resolveBlacklistCoverage(makeCoin({ symbol: "USDT" }), "possible").kind).toBe("possible");
+    expect(resolveBlacklistCoverage(makeCoin({ symbol: "DAI" }), "inherited").kind).toBe("upstream");
+    expect(resolveBlacklistCoverage(makeCoin({ symbol: "USDS" }), "dilutable").kind).toBe("dilutable");
+    expect(resolveBlacklistCoverage(makeCoin({ symbol: "USDQ" }), false).kind).toBe("no");
+    expect(resolveBlacklistCoverage(makeCoin({ symbol: "TBD" }), null).kind).toBe("data-unavailable");
   });
 
   it("counts only available features when building rows", () => {
@@ -557,7 +561,7 @@ describe("coverage helpers", () => {
     );
   });
 
-  it("scopes blacklist snapshot summaries to directly blacklistable coins", () => {
+  it("summarizes blacklist status across every coin and surfaces live tracker coverage", () => {
     const rows = [
       buildCoverageRow({
         coin: makeCoin({ id: "tracked", symbol: "USDC" }),
@@ -615,13 +619,13 @@ describe("coverage helpers", () => {
       1_500,
     );
 
-    expect(summary.countLabel).toBe("Blacklistable coins");
-    expect(summary.availableCount).toBe(1);
-    expect(summary.totalCount).toBe(2);
-    expect(summary.coveragePct).toBe(50);
-    expect(summary.mcapSharePct).toBeCloseTo((700 / 900) * 100);
-    expect(summary.coverageLabel).toBe("50% of blacklistable coins");
-    expect(summary.shareLabel).toBe("Blacklistable market-cap reach");
-    expect(summary.breakdown).toBe("1 covered · 1 uncovered");
+    expect(summary.countLabel).toBe("Statuses resolved");
+    expect(summary.availableCount).toBe(4);
+    expect(summary.totalCount).toBe(4);
+    expect(summary.coveragePct).toBe(100);
+    expect(summary.mcapSharePct).toBe(100);
+    expect(summary.coverageLabel).toBe("100% with resolved blacklist status");
+    expect(summary.shareLabel).toBe("Resolved status market-cap reach");
+    expect(summary.breakdown).toBe("live 1 · yes 1 · dilutable 0 · upstream 0 · possible 1 · no 1");
   });
 });

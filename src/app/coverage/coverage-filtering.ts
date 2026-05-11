@@ -9,7 +9,7 @@ const FILTER_MATCHERS: Record<CoverageFilterKey, (row: CoverageRow) => boolean> 
   "live-reserves": (row) => row.statuses.reserves.kind === "live",
   yield: (row) => row.statuses.yield.available,
   flows: (row) => row.statuses.flows.available,
-  blacklist: (row) => row.statuses.blacklist.available,
+  blacklist: (row) => row.statuses.blacklist.kind === "live",
   "weak-price": (row) => row.statuses.price.kind !== "price-only" && (row.statuses.price.sourceCount ?? 0) < 3,
   "missing-safety": (row) => !row.statuses.safety.available,
   "missing-dex": (row) => !row.statuses.dex.available,

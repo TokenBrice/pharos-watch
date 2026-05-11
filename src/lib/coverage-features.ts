@@ -63,13 +63,13 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
   },
   {
     key: "blacklist",
-    label: "Blacklist",
+    label: "Blacklist Status",
     shortLabel: "Blacklist",
-    description: "Freeze / blacklist event tracking for issuers with supported event coverage.",
-    scopeFilter: (row) => row.blacklistStatus === true,
-    headlineCountLabel: "Blacklistable coins",
-    headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% of blacklistable coins`,
-    headlineShareLabel: "Blacklistable market-cap reach",
+    description:
+      "Resolved freeze / blacklist status across every tracked stablecoin. Coins covered by the live blacklist event tracker are called out separately.",
+    headlineCountLabel: "Statuses resolved",
+    headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with resolved blacklist status`,
+    headlineShareLabel: "Resolved status market-cap reach",
     href: "/blacklist/",
   },
   {

@@ -150,6 +150,15 @@ export const FEATURE_ACCENT_CLASSES: Record<
   },
 };
 
+export const BLACKLIST_BREAKDOWN_CHIP_CLASS: Record<string, string> = {
+  live: "border-blue-500/30 bg-blue-500/12 text-blue-800 dark:text-blue-200",
+  yes: "border-red-500/30 bg-red-500/12 text-red-800 dark:text-red-200",
+  dilutable: "border-purple-500/30 bg-purple-500/12 text-purple-800 dark:text-purple-200",
+  upstream: "border-orange-500/30 bg-orange-500/12 text-orange-800 dark:text-orange-200",
+  possible: "border-amber-500/30 bg-amber-500/12 text-amber-800 dark:text-amber-200",
+  no: "border-emerald-500/30 bg-emerald-500/12 text-emerald-800 dark:text-emerald-200",
+};
+
 export const AUTHORITATIVE_ACCENT = {
   container: "border-violet-500/25 bg-violet-500/[0.03]",
   badge: "border-violet-500/25 bg-violet-500/10 text-violet-700 dark:text-violet-300",
@@ -228,7 +237,15 @@ export const MOBILE_PREVIEW_FEATURES: readonly CoverageFeatureKey[] = [
   "flows",
 ] as const;
 
-export type LegendCategory = "general" | "price" | "dex" | "reserves" | "redemption" | "flows" | "dependency";
+export type LegendCategory =
+  | "general"
+  | "price"
+  | "dex"
+  | "reserves"
+  | "redemption"
+  | "flows"
+  | "blacklist"
+  | "dependency";
 
 const LEGEND_ITEMS = [
   {
@@ -321,6 +338,38 @@ const LEGEND_ITEMS = [
     description: "Tracking is configured, but the history window is still building.",
   },
   {
+    term: "Live",
+    category: "blacklist",
+    description:
+      "Direct freeze controls are confirmed and live blacklist event tracking is published for this issuer.",
+  },
+  {
+    term: "Yes",
+    category: "blacklist",
+    description: "Direct token, vault, or issuer controls can freeze, block, seize, or destroy user balances.",
+  },
+  {
+    term: "Dilutable",
+    category: "blacklist",
+    description: "No direct address freeze is resolved, but an admin can mint without bound and dilute holders.",
+  },
+  {
+    term: "Upstream",
+    category: "blacklist",
+    description: "No direct control is resolved; exposure comes from freezable upstream collateral or parent assets.",
+  },
+  {
+    term: "Possible",
+    category: "blacklist",
+    description:
+      "Mutable or pause-capable admin surfaces indicate possible controls, but active address-level freezing is not confirmed.",
+  },
+  {
+    term: "No",
+    category: "blacklist",
+    description: "No direct, upstream, possible, or dilutable freeze exposure is resolved in the current model.",
+  },
+  {
     term: "Node",
     category: "dependency",
     description: "The asset participates in the report-card dependency graph.",
@@ -334,6 +383,7 @@ const LEGEND_CATEGORY_LABELS: Record<LegendCategory, string> = {
   reserves: "Reserves",
   redemption: "Redemption",
   flows: "Flows",
+  blacklist: "Blacklist Status",
   dependency: "Dependency",
 };
 
@@ -344,6 +394,7 @@ const LEGEND_CATEGORY_ORDER: readonly LegendCategory[] = [
   "reserves",
   "redemption",
   "flows",
+  "blacklist",
   "dependency",
 ] as const;
 

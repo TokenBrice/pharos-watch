@@ -588,25 +588,75 @@ export function resolveBlacklistCoverage(
   coin: StablecoinMeta,
   blacklistStatus: BlacklistStatus | null = null,
 ): CoverageStatus {
-  return resolveBooleanCoverageStatus(
-    hasBlacklistTrackerCoverage(coin, blacklistStatus),
-    {
-      kind: "tracked",
-      label: "Tracked",
-      tone: "amber",
-      available: true,
-      sortRank: 1,
-      detail: "Freeze / blacklist events are tracked for this issuer contract family.",
-    },
-    {
-      kind: "none",
-      label: "—",
-      tone: "slate",
-      available: false,
-      sortRank: 0,
-      detail: "No dedicated blacklist / freeze tracker coverage is configured for this asset.",
-      spokenLabel: "Not tracked",
-    },
+  if (blacklistStatus === null) {
+    return createDataUnavailableStatus("Blacklist status");
+  }
+
+  if (hasBlacklistTrackerCoverage(coin, blacklistStatus)) {
+    return createStatus(
+      "live",
+      "Live",
+      "amber",
+      true,
+      6,
+      "Direct freeze controls are confirmed and live blacklist event tracking is published for this issuer.",
+      "Live tracked blacklistable",
+    );
+  }
+
+  if (blacklistStatus === true) {
+    return createStatus(
+      "yes",
+      "Yes",
+      "rose",
+      true,
+      5,
+      "Direct token, vault, or issuer controls can freeze, block, seize, or destroy user balances.",
+      "Blacklistable",
+    );
+  }
+
+  if (blacklistStatus === "dilutable") {
+    return createStatus(
+      "dilutable",
+      "Dilutable",
+      "violet",
+      true,
+      4,
+      "No direct address freeze is resolved, but an admin can mint without bound and dilute holders.",
+    );
+  }
+
+  if (blacklistStatus === "inherited") {
+    return createStatus(
+      "upstream",
+      "Upstream",
+      "amber",
+      true,
+      3,
+      "No direct control is resolved; exposure comes from freezable upstream collateral or parent assets.",
+    );
+  }
+
+  if (blacklistStatus === "possible") {
+    return createStatus(
+      "possible",
+      "Possible",
+      "sky",
+      true,
+      2,
+      "Mutable or pause-capable admin surfaces indicate possible controls, but active address-level freezing is not confirmed.",
+    );
+  }
+
+  return createStatus(
+    "no",
+    "No",
+    "emerald",
+    true,
+    1,
+    "No direct, upstream, possible, or dilutable freeze exposure is resolved in the current model.",
+    "Not blacklistable",
   );
 }
 
@@ -680,6 +730,17 @@ function buildCoverageBreakdown(
   }
   if (featureKey === "safety") {
     return `rated ${breakdownMap.get("rated") ?? 0} · NR ${breakdownMap.get("nr") ?? 0} · data n/a ${breakdownMap.get("data-unavailable") ?? 0}`;
+  }
+  if (featureKey === "blacklist") {
+    const live = breakdownMap.get("live") ?? 0;
+    const yes = breakdownMap.get("yes") ?? 0;
+    const dilutable = breakdownMap.get("dilutable") ?? 0;
+    const upstream = breakdownMap.get("upstream") ?? 0;
+    const possible = breakdownMap.get("possible") ?? 0;
+    const no = breakdownMap.get("no") ?? 0;
+    const unavailable = breakdownMap.get("data-unavailable") ?? 0;
+    const base = `live ${live} · yes ${yes} · dilutable ${dilutable} · upstream ${upstream} · possible ${possible} · no ${no}`;
+    return unavailable > 0 ? `${base} · data n/a ${unavailable}` : base;
   }
 
   return `${availableCount} covered · ${totalCount - availableCount} uncovered`;

@@ -81,7 +81,7 @@ const rows: CoverageRow[] = [
       redemption: status("configured", true),
       yield: status("available", true),
       flows: status("none", false),
-      blacklist: status("available", true),
+      blacklist: status("live", true),
       dependency: status("tracked", true),
     },
   }),
