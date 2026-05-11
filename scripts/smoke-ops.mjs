@@ -7,6 +7,9 @@ const DEFAULT_OPS_API_BASE = process.env.SMOKE_OPS_API_BASE ?? "https://ops-api.
 const OPS_UI_PROXY_RETRY_STATUSES = new Set([502, 504]);
 const OPS_UI_PROXY_RETRY_COUNT = 2;
 const OPS_UI_PROXY_RETRY_DELAY_MS = 2_000;
+const DIRECT_OPS_JSON_RETRY_STATUSES = new Set([500, 502, 503, 504]);
+const DIRECT_OPS_JSON_RETRY_COUNT = 2;
+const DIRECT_OPS_JSON_RETRY_DELAY_MS = 2_000;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -60,6 +63,39 @@ export async function fetchJson(url, headers, fetchImpl = fetch, requestInit = {
     body = null;
   }
   return { response, body, bodyText };
+}
+
+export function shouldRetryDirectOpsJson(response) {
+  return DIRECT_OPS_JSON_RETRY_STATUSES.has(response.status);
+}
+
+export async function fetchJsonWithRetry(url, headers, options = {}) {
+  const {
+    fetchImpl = fetch,
+    requestInit = {},
+    retryCount = DIRECT_OPS_JSON_RETRY_COUNT,
+    retryDelayMs = DIRECT_OPS_JSON_RETRY_DELAY_MS,
+    sleepImpl = sleep,
+    onRetry = null,
+  } = options;
+
+  let result = await fetchJson(url, headers, fetchImpl, requestInit);
+  for (let retryIndex = 0; retryIndex < retryCount; retryIndex++) {
+    if (!shouldRetryDirectOpsJson(result.response)) {
+      return result;
+    }
+    if (typeof onRetry === "function") {
+      onRetry({
+        attemptNumber: retryIndex + 1,
+        retryCount,
+        retryDelayMs,
+        status: result.response.status,
+      });
+    }
+    await sleepImpl(retryDelayMs);
+    result = await fetchJson(url, headers, fetchImpl, requestInit);
+  }
+  return result;
 }
 
 function splitSetCookieHeader(value) {
@@ -223,15 +259,21 @@ export async function run() {
     fetchJson(new URL("/api/status-history?limit=5", opsApiBase).toString(), headers),
     fetchJson(new URL("/api/api-key-requests-admin?limit=1", opsApiBase).toString(), headers),
     fetchJson(new URL("/api/audit-depeg-history?dry-run=true&limit=1", opsApiBase).toString(), headers),
-    fetchJson(
+    fetchJsonWithRetry(
       new URL("/api/backfill-blacklist-current-balances?dryRun=true&stablecoin=USDT&limit=1", opsApiBase).toString(),
       {
         ...headers,
         "Content-Type": "application/json",
         "X-Pharos-Admin": "1",
       },
-      fetch,
-      { method: "POST", body: "{}" },
+      {
+        requestInit: { method: "POST", body: "{}" },
+        onRetry: ({ attemptNumber, retryCount, retryDelayMs, status }) => {
+          console.warn(
+            `[smoke-ops] blacklist balance dry-run returned ${status}; retrying ${attemptNumber}/${retryCount} after ${retryDelayMs}ms to absorb post-deploy backend warmup`,
+          );
+        },
+      },
     ),
   ]).then(
     (value) => ({ error: null, value }),
@@ -381,10 +423,13 @@ export async function run() {
   assert(audit.body && audit.body.dryRun === true, "Dry-run audit response missing dryRun=true");
   console.log("[smoke-ops] OK ops API dry-run action");
 
-  assert(
-    blacklistBackfill.response.status === 200,
-    `Expected blacklist balance dry-run 200, got ${blacklistBackfill.response.status}`,
-  );
+  if (blacklistBackfill.response.status !== 200) {
+    console.error(
+      `[smoke-ops] blacklist balance dry-run returned ${blacklistBackfill.response.status}, body: ${blacklistBackfill.bodyText?.slice(0, 500)}`,
+    );
+    console.error(`[smoke-ops] Response headers:`, Object.fromEntries(blacklistBackfill.response.headers.entries()));
+  }
+  assert(blacklistBackfill.response.status === 200, `Expected blacklist balance dry-run 200, got ${blacklistBackfill.response.status}`);
   assert(
     blacklistBackfill.body && blacklistBackfill.body.dryRun === true,
     "Blacklist balance dry-run response missing dryRun=true",

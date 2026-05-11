@@ -2,10 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   extractCookiePairs,
+  fetchJsonWithRetry,
   fetchOpsUiProxyStatus,
   fetchOpsUiProxyStatusWithRetry,
   hasOpsUiAccessSessionCookie,
   mergeCookieHeader,
+  shouldRetryDirectOpsJson,
   shouldSkipOpsUiProxyAssertion,
   shouldRetryOpsUiProxyStatus,
 } from "../smoke-ops.mjs";
@@ -217,6 +219,71 @@ describe("fetchOpsUiProxyStatusWithRetry", () => {
   });
 });
 
+describe("fetchJsonWithRetry", () => {
+  it("retries transient direct ops 500 responses before returning success", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: "warming" }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ dryRun: true }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }));
+    const sleepMock = vi.fn().mockResolvedValue(undefined);
+    const onRetry = vi.fn();
+
+    const result = await fetchJsonWithRetry(
+      "https://ops-api.pharos.watch/api/backfill-blacklist-current-balances?dryRun=true",
+      { "CF-Access-Client-Id": "id" },
+      {
+        fetchImpl: fetchMock,
+        requestInit: { method: "POST", body: "{}" },
+        retryCount: 1,
+        retryDelayMs: 2_000,
+        sleepImpl: sleepMock,
+        onRetry,
+      },
+    );
+
+    expect(result.response.status).toBe(200);
+    expect(result.body).toEqual({ dryRun: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: "POST",
+      body: "{}",
+      headers: { "CF-Access-Client-Id": "id" },
+      redirect: "manual",
+    });
+    expect(sleepMock).toHaveBeenCalledWith(2_000);
+    expect(onRetry).toHaveBeenCalledWith({
+      attemptNumber: 1,
+      retryCount: 1,
+      retryDelayMs: 2_000,
+      status: 500,
+    });
+  });
+
+  it("does not retry direct ops authorization failures", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "content-type": "application/json" },
+      }));
+    const sleepMock = vi.fn().mockResolvedValue(undefined);
+
+    const result = await fetchJsonWithRetry(
+      "https://ops-api.pharos.watch/api/status",
+      { "CF-Access-Client-Id": "id" },
+      { fetchImpl: fetchMock, sleepImpl: sleepMock },
+    );
+
+    expect(result.response.status).toBe(401);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(sleepMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("hasOpsUiAccessSessionCookie", () => {
   it("only treats CF_Authorization as a bootstrapped Access session", () => {
     expect(hasOpsUiAccessSessionCookie("cf_clearance=bot-cookie")).toBe(false);
@@ -263,6 +330,23 @@ describe("shouldRetryOpsUiProxyStatus", () => {
     }))).toBe(false);
     expect(shouldRetryOpsUiProxyStatus(new Response(JSON.stringify({ error: "upstream failed" }), {
       status: 500,
+      headers: { "content-type": "application/json" },
+    }))).toBe(false);
+  });
+});
+
+describe("shouldRetryDirectOpsJson", () => {
+  it("retries only transient direct ops server failures", () => {
+    expect(shouldRetryDirectOpsJson(new Response("internal error", { status: 500 }))).toBe(true);
+    expect(shouldRetryDirectOpsJson(new Response("bad gateway", { status: 502 }))).toBe(true);
+    expect(shouldRetryDirectOpsJson(new Response("unavailable", { status: 503 }))).toBe(true);
+    expect(shouldRetryDirectOpsJson(new Response("gateway timeout", { status: 504 }))).toBe(true);
+    expect(shouldRetryDirectOpsJson(new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "content-type": "application/json" },
+    }))).toBe(false);
+    expect(shouldRetryDirectOpsJson(new Response(JSON.stringify({ dryRun: true }), {
+      status: 200,
       headers: { "content-type": "application/json" },
     }))).toBe(false);
   });
