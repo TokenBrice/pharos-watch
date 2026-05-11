@@ -856,7 +856,7 @@ async function persistAndPromptBulkConfirm(
   return GATED_SENTINEL;
 }
 
-const GATED_SENTINEL = " __gated__";
+const GATED_SENTINEL = "\0__gated__";
 
 function makeActionRunner(
   context: TelegramActionContext,
