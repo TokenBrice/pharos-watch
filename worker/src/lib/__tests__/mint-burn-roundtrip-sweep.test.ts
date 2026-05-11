@@ -38,9 +38,8 @@ describe("sweepRecentRoundtrips", () => {
       all: mockAll,
       run: vi.fn().mockResolvedValue({ meta: { changes: 2 } }),
     });
-    const db = {
-      prepare: vi.fn().mockReturnValue({ bind: mockBind }),
-    } as unknown as D1Database;
+    const prepare = vi.fn().mockReturnValue({ bind: mockBind });
+    const db = { prepare } as unknown as D1Database;
 
     // Mock batchExecute to return the number of changes
     const { batchExecute } = await import("../db");
@@ -49,6 +48,12 @@ describe("sweepRecentRoundtrips", () => {
     const result = await sweepRecentRoundtrips(db, 1700001000);
     expect(result.reclassified).toBe(2);
     expect(result.affectedHours.size).toBe(1);
+
+    const updateSql = prepare.mock.calls
+      .map((call) => call[0] as string)
+      .find((sql) => sql.includes("UPDATE mint_burn_events"));
+    expect(updateSql).toContain("chain_id = ?");
+    expect(mockBind).toHaveBeenCalledWith("0xaaa", "usdc-circle", "ethereum");
   });
 
   it("selects roundtrip candidates in deterministic oldest-first order", async () => {

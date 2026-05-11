@@ -125,10 +125,19 @@ describe("integer query helpers", () => {
     expect(parseClampedIntegerParam("0", 1825, 30, 1825, { zeroAsDefault: true })).toBe(1825);
   });
 
-  it("parses optional non-negative integer params with a fallback default", () => {
+  it("parses optional non-negative integer params and defaults missing values", () => {
     expect(parseOptionalNonNegativeIntegerParam("0", 90)).toBe(0);
-    expect(parseOptionalNonNegativeIntegerParam("-1", 90)).toBe(90);
     expect(parseOptionalNonNegativeIntegerParam(null, 90)).toBe(90);
+    expect(parseOptionalNonNegativeIntegerParam("   ", 90)).toBe(90);
+  });
+
+  it.each(["-1", "0foo", "9".repeat(400)])("rejects malformed optional non-negative integer param %s", async (value) => {
+    const result = parseOptionalNonNegativeIntegerParam(value, 90, "since");
+    expect(result).toBeInstanceOf(Response);
+    if (result instanceof Response) {
+      expect(result.status).toBe(400);
+      await expect(result.json()).resolves.toEqual({ error: "Invalid since: must be a non-negative integer" });
+    }
   });
 
   it("returns null for missing or blank optional positive integer params", () => {

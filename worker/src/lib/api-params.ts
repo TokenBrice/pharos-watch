@@ -104,12 +104,18 @@ export function parseClampedIntegerParam(
 export function parseOptionalNonNegativeIntegerParam(
   value: string | null | undefined,
   defaultVal: number,
-): number {
-  if (value != null) {
-    const parsed = Number.parseInt(value, 10);
-    if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+  fieldName = "parameter",
+): number | Response {
+  if (value == null || value.trim().length === 0) return defaultVal;
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    return errorResponse(400, `Invalid ${fieldName}: must be a non-negative integer`);
   }
-  return defaultVal;
+  const parsed = Number.parseInt(trimmed, 10);
+  if (!Number.isSafeInteger(parsed)) {
+    return errorResponse(400, `Invalid ${fieldName}: must be a non-negative integer`);
+  }
+  return parsed;
 }
 
 export function parseOptionalPositiveIntegerParam(

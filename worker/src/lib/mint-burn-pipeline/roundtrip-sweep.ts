@@ -14,7 +14,7 @@ export interface RoundtripSweepResult {
 
 /**
  * Lightweight post-cron sweep for cross-run atomic roundtrips.
- * Finds (tx_hash, stablecoin_id) groups within the recent window where
+ * Finds (tx_hash, stablecoin_id, chain_id) groups within the recent window where
  * both directions exist but flow_type is still 'standard'. Reclassifies
  * and recalculates affected hourly buckets.
  */
@@ -54,10 +54,10 @@ export async function sweepRecentRoundtrips(
 
   const updateStmts = candidates.map((row) =>
     db.prepare(
-      `UPDATE mint_burn_events
+     `UPDATE mint_burn_events
        SET flow_type = 'atomic_roundtrip'
-       WHERE tx_hash = ? AND stablecoin_id = ? AND flow_type = 'standard'`,
-    ).bind(row.tx_hash, row.stablecoin_id),
+       WHERE tx_hash = ? AND stablecoin_id = ? AND chain_id = ? AND flow_type = 'standard'`,
+    ).bind(row.tx_hash, row.stablecoin_id, row.chain_id),
   );
   const reclassified = await batchExecute(db, updateStmts);
 

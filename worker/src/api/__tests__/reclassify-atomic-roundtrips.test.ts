@@ -145,7 +145,7 @@ describe("reclassify-atomic-roundtrips", () => {
     // Hour bucket for the legacy group should be scheduled for recalc.
     expect(body.hoursRecalculated).toBeGreaterThanOrEqual(1);
 
-    // Reverse UPDATE should bind the tolerance-violating tx_hash + stablecoin_id.
+    // Reverse UPDATE should bind the tolerance-violating tx_hash + stablecoin_id + chain_id.
     const history = db.getHistory();
     const reverseUpdate = history.find(
       (entry) =>
@@ -154,12 +154,70 @@ describe("reclassify-atomic-roundtrips", () => {
         entry.sql.includes("flow_type = 'atomic_roundtrip'"),
     );
     expect(reverseUpdate).toBeDefined();
-    expect(reverseUpdate?.binds).toEqual(["0xmismatch", "usdc-circle"]);
+    expect(reverseUpdate?.binds).toEqual(["0xmismatch", "usdc-circle", "ethereum"]);
 
     // recalcAffectedHours should be called with the affected hour bucket.
     const recalcCalls = vi.mocked(recalcAffectedHours).mock.calls;
     expect(recalcCalls.length).toBeGreaterThanOrEqual(1);
     const recalcArg = recalcCalls[recalcCalls.length - 1]?.[1];
     expect(recalcArg?.size).toBeGreaterThanOrEqual(1);
+  });
+
+  it("scopes update predicates by chain_id for same hash and stablecoin on different chains", async () => {
+    const db = mockD1([
+      {
+        match: "WHERE flow_type = 'standard'",
+        rows: [
+          {
+            tx_hash: "0xshared",
+            stablecoin_id: "usdc-circle",
+            chain_id: "ethereum",
+            timestamp: 1_700_000_000,
+          },
+          {
+            tx_hash: "0xshared",
+            stablecoin_id: "usdc-circle",
+            chain_id: "arbitrum",
+            timestamp: 1_700_003_600,
+          },
+        ],
+      },
+      { match: "WHERE flow_type = 'atomic_roundtrip'", rows: [] },
+      { match: "UPDATE mint_burn_events", rows: [], runMeta: { changes: 1 } },
+    ]);
+
+    const res = await handleReclassifyAtomicRoundtrips(
+      db,
+      new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips"),
+      true,
+    );
+
+    expect(res.status).toBe(200);
+    const updates = db.getHistory().filter((entry) =>
+      entry.sql.includes("UPDATE mint_burn_events") &&
+      entry.sql.includes("flow_type = 'atomic_roundtrip'") &&
+      entry.sql.includes("flow_type = 'standard'"),
+    );
+    expect(updates).toHaveLength(2);
+    for (const update of updates) {
+      expect(update.sql).toContain("chain_id = ?");
+    }
+    expect(updates.map((update) => update.binds)).toEqual([
+      ["0xshared", "usdc-circle", "ethereum"],
+      ["0xshared", "usdc-circle", "arbitrum"],
+    ]);
+  });
+
+  it("rejects malformed since values", async () => {
+    const db = mockD1([]);
+    const res = await handleReclassifyAtomicRoundtrips(
+      db,
+      new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips?since=0foo"),
+      true,
+    );
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid since: must be a non-negative integer" });
+    expect(db.getHistory()).toHaveLength(0);
   });
 });

@@ -27,8 +27,8 @@ export const ROUNDTRIP_TOLERANCE_HAVING_SQL = `
 `;
 
 /**
- * Detect atomic roundtrips: transactions whose mint and burn totals (per stablecoin)
- * round-trip within `ROUNDTRIP_AMOUNT_TOLERANCE`. Mutates rows in place to set
+ * Detect atomic roundtrips: transactions whose mint and burn totals (per stablecoin,
+ * per chain) round-trip within `ROUNDTRIP_AMOUNT_TOLERANCE`. Mutates rows in place to set
  * `flow_type = "atomic_roundtrip"`. Rows missing tx_hash are skipped (defensive
  * guard against malformed input). Returns count of rows flagged.
  */
@@ -36,7 +36,7 @@ export function detectAtomicRoundtrips(rows: MintBurnRow[]): number {
   const groups = new Map<string, MintBurnRow[]>();
   for (const row of rows) {
     if (!row.tx_hash) continue;
-    const key = `${row.tx_hash}-${row.stablecoin_id}`;
+    const key = `${row.tx_hash}-${row.stablecoin_id}-${row.chain_id}`;
     const group = groups.get(key);
     if (group) group.push(row);
     else groups.set(key, [row]);

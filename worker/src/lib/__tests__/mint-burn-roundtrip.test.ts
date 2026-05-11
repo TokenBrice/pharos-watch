@@ -108,6 +108,28 @@ describe("detectAtomicRoundtrips", () => {
     expect(flagged).toBe(0);
   });
 
+  it("handles different chains in same tx independently", () => {
+    const rows = [
+      makeRow({
+        id: "eth-0xabc-0",
+        tx_hash: "0xabc",
+        chain_id: "ethereum",
+        direction: "mint",
+      }),
+      makeRow({
+        id: "arb-0xabc-1",
+        tx_hash: "0xabc",
+        chain_id: "arbitrum",
+        direction: "burn",
+      }),
+    ];
+
+    const flagged = detectAtomicRoundtrips(rows);
+
+    expect(flagged).toBe(0);
+    expect(rows.every((r) => r.flow_type === "standard")).toBe(true);
+  });
+
   it("returns 0 for empty array", () => {
     expect(detectAtomicRoundtrips([])).toBe(0);
   });

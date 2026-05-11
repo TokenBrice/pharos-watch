@@ -22,9 +22,9 @@ interface RoundtripDiscoveryRow {
   timestamp: number;
 }
 
-function resolveSince(url: URL): number {
+function resolveSince(url: URL): number | Response {
   const defaultSince = Math.floor(Date.now() / 1000) - DEFAULT_SINCE_LOOKBACK_SEC;
-  return parseOptionalNonNegativeIntegerParam(url.searchParams.get("since"), defaultSince);
+  return parseOptionalNonNegativeIntegerParam(url.searchParams.get("since"), defaultSince, "since");
 }
 
 function resolveStablecoinId(url: URL): string | null {
@@ -62,6 +62,7 @@ export async function handleReclassifyAtomicRoundtrips(
   if (authErr) return authErr;
 
   const since = resolveSince(url);
+  if (since instanceof Response) return since;
   const stablecoinId = resolveStablecoinId(url);
   const coinFilterSql = stablecoinId ? " AND stablecoin_id = ?" : "";
   const buildBindArgs = (base: (string | number)[]): (string | number)[] =>
@@ -90,9 +91,9 @@ export async function handleReclassifyAtomicRoundtrips(
         .prepare(
           `UPDATE mint_burn_events
            SET flow_type = 'atomic_roundtrip'
-           WHERE tx_hash = ? AND stablecoin_id = ? AND flow_type = 'standard'`,
+           WHERE tx_hash = ? AND stablecoin_id = ? AND chain_id = ? AND flow_type = 'standard'`,
         )
-        .bind(row.tx_hash, row.stablecoin_id),
+        .bind(row.tx_hash, row.stablecoin_id, row.chain_id),
     );
     toRoundtrip = await batchExecute(db, forwardStmts);
   }
@@ -124,9 +125,9 @@ export async function handleReclassifyAtomicRoundtrips(
         .prepare(
           `UPDATE mint_burn_events
            SET flow_type = 'standard'
-           WHERE tx_hash = ? AND stablecoin_id = ? AND flow_type = 'atomic_roundtrip'`,
+           WHERE tx_hash = ? AND stablecoin_id = ? AND chain_id = ? AND flow_type = 'atomic_roundtrip'`,
         )
-        .bind(row.tx_hash, row.stablecoin_id),
+        .bind(row.tx_hash, row.stablecoin_id, row.chain_id),
     );
     toStandard = await batchExecute(db, reverseStmts);
   }
