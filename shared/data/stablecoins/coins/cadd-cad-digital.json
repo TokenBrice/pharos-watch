@@ -2,9 +2,8 @@
   "id": "cadd-cad-digital",
   "name": "CAD Digital",
   "symbol": "CADD",
-  "status": "pre-launch",
-  "launchPhase": "launching-soon",
-  "launchPhaseDetail": "LAUNCHED May 4 — Canada's first CAD-backed stablecoin issued by a financial institution; ~530K CADD circulating on Ethereum + Base; now also deployed on Tempo (contract address TBA); backers include Shopify, National Bank of Canada, ATB Financial, Wealthsimple, Shakepay; Baker Tilly monthly attestations live; CoinGecko still zero price/supply, DefiLlama detail endpoint has data but aggregate list does not; PROMOTION CANDIDATE pending aggregator coverage",
+  "status": "active",
+  "launchDate": "2026-05-04",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "CAD",

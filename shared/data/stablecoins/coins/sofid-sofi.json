@@ -13,7 +13,7 @@
   "collateral": "1:1 USD reserves held as cash or cash equivalents at SoFi Bank's Federal Reserve master account; reserves earn interest on reserve balances (IORB) retained by SoFi, not passed to holders",
   "pegMechanism": "1:1 mint and redeem via BitGo infrastructure; instant conversions between dollars and SOFID",
   "canBeBlacklisted": "possible",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "geckoId": "sofiusd",
   "links": [
     {
@@ -37,11 +37,16 @@
     }
   ],
   "custodyModel": "institutional-regulated",
-  "status": "pre-launch",
+  "status": "active",
   "announcedDate": "2025-12",
-  "expectedLaunchDate": "2026",
-  "launchPhase": "launching-soon",
-  "launchPhaseDetail": "LIVE on Ethereum since Dec 2025 — ~100M SOFID minted, 3 holders, 73 transactions; first nationally chartered FDIC-insured U.S. bank stablecoin on public blockchain; Mastercard settlement partnership (Mar 2026); BitGo Mint infrastructure (Apr 2026); Solana expansion announced May 5 at Solana Accelerate Miami; CoinGecko preview listing (no trades); not on DefiLlama; retail rollout to 13.7M SoFi members 'in coming months'; PROMOTION CANDIDATE pending aggregator data and public trading",
+  "launchDate": "2025-12-18",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Market data preview-only",
+      "message": "Coin is live but CoinGecko market data is preview-only pending retail rollout; price may report null until market activates."
+    }
+  ],
   "featuredContent": [
     {
       "type": "article",
