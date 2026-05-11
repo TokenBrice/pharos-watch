@@ -4,7 +4,7 @@ import type {
   TelegramPresetDefinition,
   TelegramPresetId,
 } from "../lib/telegram-presets";
-import type { SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
+import type { PresetSubscriptionRow, SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
 import { STABLECOIN_BY_ID } from "./telegram-webhook-shared";
 import type { StatusForCoin } from "./telegram-webhook-status";
 
@@ -123,10 +123,18 @@ export function buildGlobalAlertSummaryMessage(
 export function buildListMessage(
   subscriber: SubscriberRow | null,
   subscriptions: SubscriptionRow[],
+  presetSubscriptions: PresetSubscriptionRow[] = [],
+  nowSec = Math.floor(Date.now() / 1000),
 ): string {
-  if (!subscriber && subscriptions.length === 0) {
+  if (!subscriber && subscriptions.length === 0 && presetSubscriptions.length === 0) {
     return "No active subscriptions. Use /subscribe to get started, or try /presets for preset watchlists.";
   }
+
+  const snoozeUntil = subscriber?.alert_snooze_until_ts ?? null;
+  const snoozeLine =
+    snoozeUntil != null && snoozeUntil > nowSec
+      ? `Snooze: Active until ${new Date(snoozeUntil * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC`
+      : "Snooze: Off";
 
   const lines = [
     `All stablecoins: ${describeGlobalAlertSettings(subscriber)}`,
@@ -135,8 +143,21 @@ export function buildListMessage(
         ? formatQuietHours(subscriber.quiet_hours_start_utc, subscriber.quiet_hours_end_utc)
         : "Off"
     }`,
-    `Coins (${subscriptions.length}):`,
+    snoozeLine,
+    `Dynamic presets (${presetSubscriptions.length}):`,
   ];
+
+  if (presetSubscriptions.length === 0) {
+    lines.push("None");
+  } else {
+    for (const row of presetSubscriptions) {
+      lines.push(`- ${row.preset_id}: ${describePresetSubscriptionSettings(row)}`);
+    }
+  }
+
+  lines.push(
+    `Coins (${subscriptions.length}):`,
+  );
 
   if (subscriptions.length === 0) {
     lines.push("None");
@@ -147,7 +168,7 @@ export function buildListMessage(
     }
   }
 
-  lines.push("Tip: use /presets to browse preset watchlists.");
+  lines.push("Tip: use /presets to browse dynamic watchlists, or /unsnooze to clear alert snooze.");
   return escapeHtml(lines.join("\n"));
 }
 
@@ -240,6 +261,20 @@ export function describeSubscriptionSettings(row: SubscriptionRow): string {
   return labels.join(", ") || "Muted";
 }
 
+function describePresetSubscriptionSettings(row: PresetSubscriptionRow): string {
+  const labels: string[] = [];
+  if (row.alert_dews) labels.push("DEWS");
+  if (row.alert_depeg) {
+    labels.push(
+      row.depeg_worsening_bps_step != null
+        ? `Depeg +${row.depeg_worsening_bps_step}bps`
+        : "Depeg",
+    );
+  }
+  if (row.alert_safety) labels.push("Safety");
+  return labels.join(", ") || "Muted";
+}
+
 export function describeGlobalAlertSettings(subscriber: SubscriberRow | null): string {
   if (!subscriber) return "None";
   const labels: string[] = [];
@@ -274,28 +309,64 @@ export function formatQuietHours(startHourUtc: number | null | undefined, endHou
   return `${pad(startHourUtc)}:00–${pad(endHourUtc)}:00 UTC`;
 }
 
+function formatAge(ts: number | null | undefined, nowSec = Math.floor(Date.now() / 1000)): string {
+  if (ts == null || !Number.isFinite(ts)) return "";
+  const ageSec = Math.max(0, nowSec - ts);
+  if (ageSec < 90) return "fresh";
+  if (ageSec < 3600) return `${Math.round(ageSec / 60)}m old`;
+  if (ageSec < 172800) return `${Math.round(ageSec / 3600)}h old`;
+  return `${Math.round(ageSec / 86400)}d old`;
+}
+
+function formatElapsed(ts: number | null | undefined, nowSec = Math.floor(Date.now() / 1000)): string {
+  const age = formatAge(ts, nowSec);
+  return age === "fresh" ? "just now" : age.replace(/ old$/, " ago");
+}
+
+function formatUsdCompact(value: number | null | undefined): string | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
+  if (abs >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
+  return `$${value.toFixed(0)}`;
+}
+
 export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
+  const nowSec = Math.floor(Date.now() / 1000);
   const priceLine =
     s.priceUsd != null
-      ? `Price: $${s.priceUsd.toFixed(4)}`
+      ? `Price: $${s.priceUsd.toFixed(4)}${s.priceUpdatedAt ? ` (${formatAge(s.priceUpdatedAt, nowSec)})` : ""}`
       : "Price: no recent quote";
   const dewsLine = s.dews
-    ? `DEWS: ${s.dews.band} (score ${s.dews.score})`
+    ? `DEWS: ${s.dews.band} (score ${s.dews.score}, ${formatAge(s.dews.computedAt, nowSec)})`
     : "DEWS: no recent signal";
   const safetyLine = s.safety
-    ? `Safety: ${s.safety.grade}${s.safety.score != null ? ` (${s.safety.score})` : ""}`
+    ? `Safety: ${s.safety.grade}${s.safety.score != null ? ` (${s.safety.score})` : ""}, ${formatAge(s.safety.recordedAt, nowSec)}`
     : "Safety: UNKNOWN";
   const depegLine =
     s.depeg.status === "active"
-      ? `Depeg: ACTIVE — ${s.depeg.direction} peg, peak ${(s.depeg.peakDeviationBps / 100).toFixed(1)}%`
+      ? `Depeg: ACTIVE — ${s.depeg.direction} peg, peak ${(s.depeg.peakDeviationBps / 100).toFixed(1)}%, started ${formatElapsed(s.depeg.startedAt, nowSec)}`
       : "Depeg: stable";
+  const supply = formatUsdCompact(s.supplyUsd);
+  const supplyLine = supply ? `Supply: ${supply}${s.stablecoinsUpdatedAt ? ` (${formatAge(s.stablecoinsUpdatedAt, nowSec)})` : ""}` : null;
+  const liquidityTvl = formatUsdCompact(s.liquidity?.totalTvlUsd);
+  const liquidityLine = s.liquidity
+    ? `Liquidity: ${s.liquidity.score ?? "NR"}${liquidityTvl ? `, TVL ${liquidityTvl}` : ""} (${formatAge(s.liquidity.updatedAt, nowSec)})`
+    : null;
+  const yieldLine = s.yield
+    ? `Yield: ${s.yield.apy30d.toFixed(2)}% 30d at ${s.yield.source}${s.yield.pharosYieldScore != null ? `, PYS ${Math.round(s.yield.pharosYieldScore)}` : ""}`
+    : null;
   const lines = [
     `<b>${escapeHtml(symbol)}</b>`,
     priceLine,
+    supplyLine,
     dewsLine,
     safetyLine,
     depegLine,
+    liquidityLine,
+    yieldLine,
     `<a href="https://pharos.watch/stablecoin/${s.stablecoinId}">View on Pharos</a>`,
-  ];
+  ].filter((line): line is string => Boolean(line));
   return lines.join("\n");
 }

@@ -1,3 +1,6 @@
+import { getCirculatingRaw } from "@shared/lib/supply";
+import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+
 /**
  * Data loader for the `/status <ticker>` command.
  *
@@ -15,8 +18,22 @@ export interface StatusForCoin {
   stablecoinId: string;
   priceUsd: number | null;
   priceUpdatedAt: number | null;
+  supplyUsd: number | null;
+  stablecoinsUpdatedAt: number | null;
   dews: { band: string; score: number; computedAt: number } | null;
   safety: { grade: string; score: number | null; recordedAt: number } | null;
+  liquidity: {
+    score: number | null;
+    totalTvlUsd: number;
+    updatedAt: number;
+  } | null;
+  yield: {
+    currentApy: number;
+    apy30d: number;
+    source: string;
+    pharosYieldScore: number | null;
+    updatedAt: number;
+  } | null;
   depeg:
     | { status: "stable" }
     | {
@@ -32,7 +49,7 @@ export async function loadStatusForCoin(
   db: D1Database,
   stablecoinId: string,
 ): Promise<StatusForCoin> {
-  const [dewsRow, safetyRow, depegRow, priceRow] = await Promise.all([
+  const [dewsRow, safetyRow, depegRow, priceRow, liquidityRow, yieldRow, stablecoinsCache] = await Promise.all([
     db
       .prepare(
         "SELECT band, score, computed_at FROM stress_signals WHERE stablecoin_id = ? ORDER BY computed_at DESC LIMIT 1",
@@ -60,17 +77,64 @@ export async function loadStatusForCoin(
       .prepare("SELECT price, updated_at FROM price_cache WHERE asset_id = ?")
       .bind(stablecoinId)
       .first<{ price: number; updated_at: number }>(),
+    db
+      .prepare("SELECT liquidity_score, total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = ?")
+      .bind(stablecoinId)
+      .first<{ liquidity_score: number | null; total_tvl_usd: number; updated_at: number }>(),
+    db
+      .prepare(
+        `SELECT current_apy, apy_30d, yield_source, pharos_yield_score, updated_at
+           FROM yield_data
+          WHERE stablecoin_id = ? AND is_best = 1
+          ORDER BY pharos_yield_score DESC, apy_30d DESC
+          LIMIT 1`,
+      )
+      .bind(stablecoinId)
+      .first<{
+        current_apy: number;
+        apy_30d: number;
+        yield_source: string;
+        pharos_yield_score: number | null;
+        updated_at: number;
+      }>(),
+    loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true }).catch(() => null),
   ]);
+
+  let supplyUsd: number | null = null;
+  let stablecoinsUpdatedAt: number | null = null;
+  if (stablecoinsCache?.kind === "ok") {
+    const asset = stablecoinsCache.payload.peggedAssets.find((candidate) => candidate.id === stablecoinId);
+    supplyUsd = asset ? getCirculatingRaw(asset) : null;
+    stablecoinsUpdatedAt = stablecoinsCache.updatedAt;
+  }
 
   return {
     stablecoinId,
     priceUsd: priceRow?.price ?? null,
     priceUpdatedAt: priceRow?.updated_at ?? null,
+    supplyUsd,
+    stablecoinsUpdatedAt,
     dews: dewsRow
       ? { band: dewsRow.band, score: dewsRow.score, computedAt: dewsRow.computed_at }
       : null,
     safety: safetyRow
       ? { grade: safetyRow.grade, score: safetyRow.score, recordedAt: safetyRow.recorded_at }
+      : null,
+    liquidity: liquidityRow
+      ? {
+          score: liquidityRow.liquidity_score,
+          totalTvlUsd: liquidityRow.total_tvl_usd,
+          updatedAt: liquidityRow.updated_at,
+        }
+      : null,
+    yield: yieldRow
+      ? {
+          currentApy: yieldRow.current_apy,
+          apy30d: yieldRow.apy_30d,
+          source: yieldRow.yield_source,
+          pharosYieldScore: yieldRow.pharos_yield_score,
+          updatedAt: yieldRow.updated_at,
+        }
       : null,
     depeg: depegRow
       ? {

@@ -1,7 +1,7 @@
 import {
   formatConsolidatedMessage,
+  buildAlertReplyMarkup,
   splitMessage,
-  SNOOZE_REPLY_MARKUP,
   type ConsolidatedAlerts,
 } from "../lib/telegram-alerts";
 import { sendBatch, type BatchMessage, type BatchResult } from "../lib/telegram";
@@ -161,7 +161,7 @@ export function expandSubscriberChunks(
         chatId: sub.chatId,
         html: chunk,
         disableNotification: sub.disableNotification,
-        replyMarkup: SNOOZE_REPLY_MARKUP,
+        replyMarkup: buildAlertReplyMarkup(sub.alerts, chunkIndex),
         chunkIndex,
       });
     }

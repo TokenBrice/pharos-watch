@@ -53,12 +53,16 @@ import {
 import {
   applyGlobalSetting,
   applySettingToSubscriptions,
+  clearAlertSnooze,
   clearPendingDisambiguation,
+  loadPresetSubscriptions,
   loadSubscriberByChat,
   loadSubscriptionsByIds,
+  removePresetSubscriptions,
   removeSubscriptions,
   unixNow,
   upsertGlobalAlertTypes,
+  upsertPresetSubscriptions,
   upsertSubscriberAndSubscriptions,
   upsertSubscriberRow,
   validateGlobalSetCommand,
@@ -66,6 +70,12 @@ import {
 import { withErrorHandler } from "../lib/api-utils";
 import { handleCallbackQuery } from "./telegram-webhook-callbacks";
 import { runCoinResolutionFlow } from "./telegram-webhook-resolution";
+import {
+  buildBriefMessage,
+  buildCoverageMessage,
+  buildTopMessage,
+  buildWhyMessage,
+} from "./telegram-webhook-insights";
 
 export const handleTelegramWebhook = withErrorHandler(
   "telegram-webhook",
@@ -200,6 +210,19 @@ export const handleTelegramWebhook = withErrorHandler(
           case "/status":
             await handleStatus(db, chatId, parsedCommand.args, botToken);
             return ok();
+          case "/brief":
+          case "/market":
+            await handleBrief(db, chatId, botToken);
+            return ok();
+          case "/top":
+            await handleTop(db, chatId, parsedCommand.args, botToken);
+            return ok();
+          case "/why":
+            await handleWhy(db, chatId, parsedCommand.args, botToken);
+            return ok();
+          case "/coverage":
+            await handleCoverage(db, chatId, parsedCommand.args, botToken);
+            return ok();
           case "/start":
             await reply(START_MESSAGE);
             return ok();
@@ -208,6 +231,7 @@ export const handleTelegramWebhook = withErrorHandler(
           case "/set":
           case "/mute":
           case "/unmutehours":
+          case "/unsnooze":
             if (!canActOnPending(pendingAction, actorUserId)) {
               await reply("Another user has a pending ticker selection in this chat. Ask them to finish or /cancel it first.");
               return ok();
@@ -240,6 +264,19 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
         case "/status":
           await handleStatus(db, chatId, parsedCommand.args, botToken);
           break;
+        case "/brief":
+        case "/market":
+          await handleBrief(db, chatId, botToken);
+          break;
+        case "/top":
+          await handleTop(db, chatId, parsedCommand.args, botToken);
+          break;
+        case "/why":
+          await handleWhy(db, chatId, parsedCommand.args, botToken);
+          break;
+        case "/coverage":
+          await handleCoverage(db, chatId, parsedCommand.args, botToken);
+          break;
         case "/subscribe":
           await handleSubscribe(db, chatId, username, actorUserId, parsedCommand.args, botToken);
           break;
@@ -254,6 +291,9 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
           break;
         case "/unmutehours":
           await handleUnmuteHours(db, chatId, username, botToken);
+          break;
+        case "/unsnooze":
+          await handleUnsnooze(db, chatId, username, botToken);
           break;
         case "/cancel":
           await reply("No pending selection to cancel.");
@@ -273,23 +313,26 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
 async function handleList(db: D1Database, chatId: string, botToken: string): Promise<void> {
   const subscriber = await loadSubscriberByChat(db, chatId);
 
-  const subscriptions = await db
-    .prepare(
-      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, dews_min_band, safety_mode, depeg_worsening_bps_step
-         FROM telegram_subscriptions
-        WHERE chat_id = ?
-        ORDER BY stablecoin_id`,
-    )
-    .bind(chatId)
-    .all<SubscriptionRow>();
+  const [subscriptions, presetSubscriptions] = await Promise.all([
+    db
+      .prepare(
+        `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, dews_min_band, safety_mode, depeg_worsening_bps_step
+           FROM telegram_subscriptions
+          WHERE chat_id = ?
+          ORDER BY stablecoin_id`,
+      )
+      .bind(chatId)
+      .all<SubscriptionRow>(),
+    loadPresetSubscriptions(db, chatId),
+  ]);
 
   const rows = subscriptions.results ?? [];
-  if (!subscriber && rows.length === 0) {
+  if (!subscriber && rows.length === 0 && presetSubscriptions.length === 0) {
     await replyToChat(chatId, "No active subscriptions. Use /subscribe to get started, or try /presets for preset watchlists.", botToken);
     return;
   }
 
-  const message = buildListMessage(subscriber, rows);
+  const message = buildListMessage(subscriber, rows, presetSubscriptions);
   await replyToChat(chatId, message, botToken);
 }
 
@@ -316,6 +359,70 @@ async function handleStatus(
   const coin = resolution.matches[0];
   const status = await loadStatusForCoin(db, coin.id);
   await replyToChat(chatId, buildStatusMessage(coin.symbol, status), botToken);
+}
+
+async function handleBrief(db: D1Database, chatId: string, botToken: string): Promise<void> {
+  await replyToChat(chatId, await buildBriefMessage(db), botToken);
+}
+
+async function handleTop(
+  db: D1Database,
+  chatId: string,
+  args: string,
+  botToken: string,
+): Promise<void> {
+  const view = args.trim();
+  if (!view) {
+    await replyToChat(chatId, "Usage: /top depeg|dews|yield|liquidity|chains|safety", botToken);
+    return;
+  }
+  await replyToChat(chatId, await buildTopMessage(db, view), botToken);
+}
+
+async function resolveSingleStatusTarget(
+  chatId: string,
+  args: string,
+  botToken: string,
+  commandName = "/why",
+): Promise<ResolvedCoin | null> {
+  const trimmed = args.trim();
+  if (!trimmed) {
+    await replyToChat(chatId, `Usage: ${commandName} &lt;ticker&gt;`, botToken);
+    return null;
+  }
+  const resolution = resolveTicker(trimmed, "tracked");
+  if (resolution.status === "not_found") {
+    await replyToChat(chatId, buildNotFoundMessage(trimmed, resolution.suggestion), botToken);
+    return null;
+  }
+  if (resolution.status === "ambiguous") {
+    await replyToChat(chatId, buildStatusAmbiguousMessage(trimmed, resolution.matches), botToken);
+    return null;
+  }
+  return resolution.matches[0] ?? null;
+}
+
+async function handleWhy(
+  db: D1Database,
+  chatId: string,
+  args: string,
+  botToken: string,
+): Promise<void> {
+  const coin = await resolveSingleStatusTarget(chatId, args, botToken, "/why");
+  if (!coin) return;
+  await replyToChat(chatId, await buildWhyMessage(db, coin.id), botToken);
+}
+
+async function handleCoverage(
+  db: D1Database,
+  chatId: string,
+  args: string,
+  botToken: string,
+): Promise<void> {
+  const coin = await resolveSingleStatusTarget(chatId, args, botToken, "/coverage");
+  if (!coin) return;
+  const status = await loadStatusForCoin(db, coin.id);
+  await replyToChat(chatId, buildCoverageMessage(coin.symbol, status), botToken);
 }
 
 interface TelegramActionContext {
@@ -406,6 +513,11 @@ const completionHandlers: CompletionHandlerMap = {
         depegWorseningBpsStep: payload.depegWorseningBpsStep,
       },
     );
+    if (presetIds.length > 0) {
+      await upsertPresetSubscriptions(context.db, context.chatId, presetIds, alertTypes, {
+        depegWorseningBpsStep: payload.depegWorseningBpsStep,
+      });
+    }
     const subscriptions = await loadSubscriptionsByIds(
       context.db,
       context.chatId,
@@ -429,6 +541,9 @@ const completionHandlers: CompletionHandlerMap = {
       context.chatId,
       coins.map((coin) => coin.id),
     );
+    if (presetIds.length > 0) {
+      await removePresetSubscriptions(context.db, context.chatId, presetIds);
+    }
     if (presetIds.length > 0) {
       return buildPresetUnsubscribeSummaryMessage(coins, {
         presetIds,
@@ -576,6 +691,7 @@ async function handleUnsubscribe(
     const now = unixNow();
     await db.batch([
       db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
+      db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
       db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
       db
         .prepare(
@@ -690,6 +806,16 @@ async function handleUnmuteHours(
     quietHours: { enabled: false },
   });
   await replyToChat(chatId, "Quiet hours disabled.", botToken);
+}
+
+async function handleUnsnooze(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  botToken: string,
+): Promise<void> {
+  await clearAlertSnooze(db, chatId, username);
+  await replyToChat(chatId, "Alert snooze cleared.", botToken);
 }
 
 async function handleDisambiguationReply(

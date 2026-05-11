@@ -285,6 +285,7 @@ export interface DewsChange {
   newBand: string;
   score: number;
   topSignals: { name: string; value: number }[];
+  contextLine?: string;
 }
 
 export interface DepegAlertPayload {
@@ -294,6 +295,7 @@ export interface DepegAlertPayload {
   deviationBps: number;
   price: number;
   pegReference: number;
+  contextLine?: string;
 }
 
 export interface DepegResolved {
@@ -302,6 +304,7 @@ export interface DepegResolved {
   durationMinutes: number;
   peakDeviationBps: number;
   recoveryPrice: number;
+  contextLine?: string;
 }
 
 export interface DepegWorsening {
@@ -312,6 +315,7 @@ export interface DepegWorsening {
   currentDeviationBps: number;
   price: number;
   pegReference: number;
+  contextLine?: string;
 }
 
 export interface SafetyChange {
@@ -321,6 +325,7 @@ export interface SafetyChange {
   newGrade: string;
   oldScore: number | null;
   newScore: number | null;
+  contextLine?: string;
 }
 
 export const SNOOZE_REPLY_MARKUP = {
@@ -337,19 +342,19 @@ export function formatDewsLine(e: DewsChange): string {
     .slice(0, 2)
     .map((s) => `${s.name} (${Math.round(s.value)}%)`)
     .join(", ");
-  return `<b>${escapeHtml(e.symbol)}</b> — ${e.oldBand} → ${e.newBand} (score: ${e.score})${signals ? `\nTop signals: ${signals}` : ""}`;
+  return `<b>${escapeHtml(e.symbol)}</b> — ${e.oldBand} → ${e.newBand} (score: ${e.score})${signals ? `\nTop signals: ${signals}` : ""}${e.contextLine ? `\n${escapeHtml(e.contextLine)}` : ""}`;
 }
 
 export function formatDepegTriggeredLine(e: DepegAlertPayload): string {
   const pct = (e.deviationBps / 100).toFixed(1);
-  return `<b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg by ${pct}% (${e.deviationBps} bps)\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})`;
+  return `<b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg by ${pct}% (${e.deviationBps} bps)\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})${e.contextLine ? `\n${escapeHtml(e.contextLine)}` : ""}`;
 }
 
 export function formatDepegResolvedLine(e: DepegResolved): string {
   const hours = Math.floor(e.durationMinutes / 60);
   const mins = e.durationMinutes % 60;
   const duration = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-  return `<b>${escapeHtml(e.symbol)}</b>\nDuration: ${duration}\nPeak deviation: ${(e.peakDeviationBps / 100).toFixed(1)}%\nRecovery price: $${e.recoveryPrice.toFixed(4)}`;
+  return `<b>${escapeHtml(e.symbol)}</b>\nDuration: ${duration}\nPeak deviation: ${(e.peakDeviationBps / 100).toFixed(1)}%\nRecovery price: $${e.recoveryPrice.toFixed(4)}${e.contextLine ? `\n${escapeHtml(e.contextLine)}` : ""}`;
 }
 
 export function formatDepegWorseningLine(e: DepegWorsening): string {
@@ -358,12 +363,12 @@ export function formatDepegWorseningLine(e: DepegWorsening): string {
   const deltaBps = e.currentDeviationBps - e.previousDeviationBps;
   const deltaPct = (deltaBps / 100).toFixed(1);
   const deltaStr = deltaBps >= 0 ? `+${deltaPct}%` : `${deltaPct}%`;
-  return `<b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg worsening\nDeviation: ${prev}% → ${curr}% (${deltaStr})\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})`;
+  return `<b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg worsening\nDeviation: ${prev}% → ${curr}% (${deltaStr})\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})${e.contextLine ? `\n${escapeHtml(e.contextLine)}` : ""}`;
 }
 
 export function formatSafetyLine(e: SafetyChange): string {
   const scores = e.oldScore != null && e.newScore != null ? `\nScore: ${e.oldScore} → ${e.newScore}` : "";
-  return `<b>${escapeHtml(e.symbol)}</b> — ${e.oldGrade} → ${e.newGrade}${scores}`;
+  return `<b>${escapeHtml(e.symbol)}</b> — ${e.oldGrade} → ${e.newGrade}${scores}${e.contextLine ? `\n${escapeHtml(e.contextLine)}` : ""}`;
 }
 
 export interface LaunchAlert {
@@ -424,6 +429,36 @@ export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
       ? `https://pharos.watch/stablecoin/${[...uniqueIds][0]}`
       : "https://pharos.watch";
   return `<b>Pharos Alerts</b>\n\n${body}\n\n<a href="${url}">View on Pharos</a>`;
+}
+
+export function getSingleAlertStablecoinId(alerts: ConsolidatedAlerts): string | null {
+  const ids = [
+    ...alerts.dews.map((e) => e.stablecoinId),
+    ...alerts.depegTriggered.map((e) => e.stablecoinId),
+    ...alerts.depegResolved.map((e) => e.stablecoinId),
+    ...alerts.depegWorsening.map((e) => e.stablecoinId),
+    ...alerts.safety.map((e) => e.stablecoinId),
+    ...alerts.launch.map((e) => e.stablecoinId),
+  ];
+  const unique = new Set(ids);
+  return unique.size === 1 ? ids[0] ?? null : null;
+}
+
+export function buildAlertReplyMarkup(alerts: ConsolidatedAlerts, chunkIndex: number) {
+  const stablecoinId = chunkIndex === 0 ? getSingleAlertStablecoinId(alerts) : null;
+  if (!stablecoinId) return SNOOZE_REPLY_MARKUP;
+  return {
+    inline_keyboard: [
+      [
+        { text: "Status", callback_data: `status:${stablecoinId}` },
+        { text: "Depeg +250", callback_data: `depegstep:${stablecoinId}:250` },
+      ],
+      [
+        { text: "Safety downgrades", callback_data: `safetydown:${stablecoinId}` },
+      ],
+      SNOOZE_REPLY_MARKUP.inline_keyboard[0],
+    ],
+  } as const;
 }
 
 /**

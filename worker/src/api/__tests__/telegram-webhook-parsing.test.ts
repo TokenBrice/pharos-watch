@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { parseCommand, parsePendingDisambiguation } from "../telegram-webhook-parsing";
+import { parseCommand, parsePendingDisambiguation, parseSetCommand } from "../telegram-webhook-parsing";
 import type { PendingDisambiguationRow } from "../telegram-webhook-shared";
 
 function makePendingRow(overrides: Partial<PendingDisambiguationRow> = {}): PendingDisambiguationRow {
@@ -34,6 +34,21 @@ describe("parseCommand", () => {
       command: "/help",
       args: "",
       botMention: null,
+    });
+  });
+});
+
+describe("parseSetCommand", () => {
+  it("parses launch toggles", () => {
+    expect(parseSetCommand("USDPT launch on")).toEqual({
+      ticker: "USDPT",
+      setting: "launch",
+      enabled: true,
+    });
+    expect(parseSetCommand("all launch off")).toEqual({
+      ticker: "all",
+      setting: "launch",
+      enabled: false,
     });
   });
 });

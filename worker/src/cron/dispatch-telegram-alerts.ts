@@ -16,6 +16,8 @@ import {
   type DepegWorsening,
   type SafetyChange,
 } from "../lib/telegram-alerts";
+import { resolveTelegramPresetTargets, type TelegramPresetId } from "../lib/telegram-presets";
+import { buildAlertContextLines } from "../api/telegram-webhook-insights";
 import {
   SNAPSHOT_KEYS,
   isSafetyDeescalation,
@@ -263,6 +265,96 @@ async function loadGlobalSubscriberRows(
   }));
 }
 
+function mergeSubscriberMaps(
+  base: Map<string, SubscriberRow[]>,
+  additional: Map<string, SubscriberRow[]>,
+): Map<string, SubscriberRow[]> {
+  for (const [stablecoinId, rows] of additional) {
+    const existing = base.get(stablecoinId) ?? [];
+    const seenChats = new Set(existing.map((row) => row.chat_id));
+    for (const row of rows) {
+      if (seenChats.has(row.chat_id)) continue;
+      seenChats.add(row.chat_id);
+      existing.push(row);
+    }
+    base.set(stablecoinId, existing);
+  }
+  return base;
+}
+
+async function loadPresetSubscriberRowsBatch(
+  db: D1Database,
+  stablecoinIds: string[],
+  type: AlertType,
+): Promise<Map<string, SubscriberRow[]>> {
+  if (stablecoinIds.length === 0 || type === "launch") return new Map();
+  const alertColumn = ALERT_COLUMN_BY_TYPE[type];
+  if (!VALID_ALERT_COLUMNS.has(alertColumn)) {
+    throw new Error(`Invalid preset alert subscription column for ${type}`);
+  }
+  const result = await db
+    .prepare(
+      // SAFETY: alertColumn comes from ALERT_COLUMN_BY_TYPE and is validated
+      // against the hardcoded allowlist above before interpolation.
+      `SELECT p.chat_id,
+              p.preset_id,
+              u.last_active_at,
+              p.depeg_worsening_bps_step,
+              u.quiet_hours_enabled,
+              u.quiet_hours_start_utc,
+              u.quiet_hours_end_utc
+         FROM telegram_preset_subscriptions p
+         JOIN telegram_subscribers u ON u.chat_id = p.chat_id
+        WHERE p.${alertColumn} = 1
+          AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)`,
+    )
+    .bind(Math.floor(Date.now() / 1000))
+    .all<{
+      chat_id: string;
+      preset_id: TelegramPresetId;
+      last_active_at: number;
+      depeg_worsening_bps_step: number | null;
+      quiet_hours_enabled: number | null;
+      quiet_hours_start_utc: number | null;
+      quiet_hours_end_utc: number | null;
+    }>()
+    .catch((err) => {
+      console.warn("[telegram-alerts] dynamic preset query failed:", err instanceof Error ? err.message : err);
+      return { results: [] };
+    });
+
+  const rows = result.results ?? [];
+  if (rows.length === 0) return new Map();
+
+  const presetIds = Array.from(new Set(rows.map((row) => row.preset_id)));
+  const resolved = await resolveTelegramPresetTargets(db, presetIds);
+  if (resolved.kind !== "ok") return new Map();
+  const idsByPreset = new Map(resolved.presets.map((preset) => [preset.definition.id, new Set(preset.stablecoinIds)]));
+  const wantedIds = new Set(stablecoinIds);
+  const map = new Map<string, SubscriberRow[]>();
+  for (const row of rows) {
+    const presetIdsForRow = idsByPreset.get(row.preset_id);
+    if (!presetIdsForRow) continue;
+    for (const stablecoinId of presetIdsForRow) {
+      if (!wantedIds.has(stablecoinId)) continue;
+      const existing = map.get(stablecoinId) ?? [];
+      existing.push({
+        chat_id: row.chat_id,
+        last_active_at: row.last_active_at,
+        dews_min_band: null,
+        safety_mode: null,
+        depeg_worsening_bps_step: row.depeg_worsening_bps_step ?? null,
+        quiet_hours_enabled: row.quiet_hours_enabled ?? 0,
+        quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
+        quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
+        isGlobal: false,
+      });
+      map.set(stablecoinId, existing);
+    }
+  }
+  return map;
+}
+
 export async function dispatchTelegramAlerts(
   db: D1Database,
   botToken: string,
@@ -436,16 +528,53 @@ export async function dispatchTelegramAlerts(
     const safetyIds = safetyChanges.map((c) => c.stablecoinId);
     const launchIds = launchPromoted.map((e) => e.stablecoinId);
 
-    const [dewsSubs, depegSubs, safetySubs, launchSubs, globalDewsSubs, globalDepegSubs, globalSafetySubs, globalLaunchSubs] = await Promise.all([
+    const contextLines = await buildAlertContextLines(db, [
+      ...dewsIds,
+      ...depegIds,
+      ...safetyIds,
+      ...launchIds,
+    ]);
+    for (const event of [
+      ...dewsChanges,
+      ...depegTriggered,
+      ...depegResolved,
+      ...depegWorsening,
+      ...safetyChanges,
+    ]) {
+      const contextLine = contextLines.get(event.stablecoinId);
+      if (contextLine) {
+        event.contextLine = contextLine;
+      }
+    }
+
+    const [
+      directDewsSubs,
+      directDepegSubs,
+      directSafetySubs,
+      launchSubs,
+      presetDewsSubs,
+      presetDepegSubs,
+      presetSafetySubs,
+      globalDewsSubs,
+      globalDepegSubs,
+      globalSafetySubs,
+      globalLaunchSubs,
+    ] = await Promise.all([
       loadSubscriberRowsBatch(db, dewsIds, "dews"),
       loadSubscriberRowsBatch(db, depegIds, "depeg"),
       loadSubscriberRowsBatch(db, safetyIds, "safety"),
       loadSubscriberRowsBatch(db, launchIds, "launch"),
+      loadPresetSubscriberRowsBatch(db, dewsIds, "dews"),
+      loadPresetSubscriberRowsBatch(db, depegIds, "depeg"),
+      loadPresetSubscriberRowsBatch(db, safetyIds, "safety"),
       loadGlobalSubscriberRows(db, "dews"),
       loadGlobalSubscriberRows(db, "depeg"),
       loadGlobalSubscriberRows(db, "safety"),
       loadGlobalSubscriberRows(db, "launch"),
     ]);
+    const dewsSubs = mergeSubscriberMaps(directDewsSubs, presetDewsSubs);
+    const depegSubs = mergeSubscriberMaps(directDepegSubs, presetDepegSubs);
+    const safetySubs = mergeSubscriberMaps(directSafetySubs, presetSafetySubs);
 
     throwIfAborted(signal);
 

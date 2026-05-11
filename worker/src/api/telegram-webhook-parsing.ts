@@ -74,6 +74,12 @@ export function parseStoredSetCommand(payload: Record<string, unknown>): ParsedS
         enabled: payload.enabled !== false,
         mode: payload.mode === "downgrade-only" || payload.mode === "upgrade-only" ? payload.mode : null,
       };
+    case "launch":
+      return {
+        ticker,
+        setting,
+        enabled: payload.enabled !== false,
+      };
     case "depeg":
       return {
         ticker,
@@ -242,6 +248,15 @@ export function parseSetCommand(args: string): ParsedSetCommand | { error: strin
       }
       return { error: "Depeg values: on, off" };
     }
+    case "launch": {
+      if (value === "on") {
+        return { ticker, setting: "launch", enabled: true };
+      }
+      if (value === "off") {
+        return { ticker, setting: "launch", enabled: false };
+      }
+      return { error: "Launch values: on, off" };
+    }
     case "depeg-step": {
       if (value === "off") {
         return { ticker, setting: "depeg-step", enabled: true, step: null };
@@ -253,7 +268,7 @@ export function parseSetCommand(args: string): ParsedSetCommand | { error: strin
       return { error: "Depeg-step values: off, 100, 250, 500" };
     }
     default:
-      return { error: "Supported settings: dews, safety, depeg, depeg-step" };
+      return { error: "Supported settings: dews, safety, depeg, depeg-step, launch" };
   }
 }
 

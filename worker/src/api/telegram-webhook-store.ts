@@ -2,6 +2,7 @@ import type { ResolvedCoin } from "../lib/telegram-alerts";
 import type {
   ParsedSetCommand,
   PendingActionType,
+  PresetSubscriptionRow,
   SubscriberRow,
   SubscriptionRow,
 } from "./telegram-webhook-shared";
@@ -322,6 +323,7 @@ export async function applySettingToSubscriptions(
   if (command.setting === "depeg" && command.enabled) perCoinAlertBumps.depeg = 1;
   if (command.setting === "depeg-step") perCoinAlertBumps.depeg = 1;
   if (command.setting === "safety" && command.enabled) perCoinAlertBumps.safety = 1;
+  if (command.setting === "launch" && command.enabled) perCoinAlertBumps.launch = 1;
 
   await upsertSubscriberRow(db, {
     chatId,
@@ -358,6 +360,18 @@ export async function applySettingToSubscriptions(
               alert_safety = excluded.alert_safety,
               safety_mode = excluded.safety_mode
           `).bind(chatId, coin.id, command.enabled ? 1 : 0, command.mode),
+        );
+        break;
+      case "launch":
+        statements.push(
+          db.prepare(`
+            INSERT INTO telegram_subscriptions (
+              chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch
+            )
+            VALUES (?, ?, 0, 0, 0, ?)
+            ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+              alert_launch = excluded.alert_launch
+          `).bind(chatId, coin.id, command.enabled ? 1 : 0),
         );
         break;
       case "depeg":
@@ -399,6 +413,9 @@ export function validateGlobalSetCommand(command: ParsedSetCommand): string | nu
   if (command.setting === "safety" && command.enabled && command.mode != null) {
     return "Global safety alerts support all/off only. Upgrade-only and downgrade-only remain per-coin settings.";
   }
+  if (command.setting === "launch") {
+    return null;
+  }
   return null;
 }
 
@@ -435,6 +452,109 @@ export async function applyGlobalSetting(
     nowSec: unixNow(),
     globalAlertOverrides: { [command.setting]: override },
   });
+}
+
+export async function clearAlertSnooze(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+): Promise<void> {
+  const now = unixNow();
+  await db
+    .prepare(
+      `INSERT INTO telegram_subscribers (
+         chat_id, username,
+         alert_dews, alert_depeg, alert_safety, alert_launch,
+         global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
+         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
+         alert_snooze_until_ts,
+         created_at, last_active_at
+       )
+       VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, ?, ?)
+       ON CONFLICT(chat_id) DO UPDATE SET
+         username = COALESCE(excluded.username, telegram_subscribers.username),
+         alert_snooze_until_ts = NULL,
+         last_active_at = excluded.last_active_at`,
+    )
+    .bind(chatId, username, now, now)
+    .run();
+}
+
+export async function upsertPresetSubscriptions(
+  db: D1Database,
+  chatId: string,
+  presetIds: readonly string[],
+  alertTypes: Set<string>,
+  options?: { depegWorseningBpsStep?: 100 | 250 | 500 | null },
+): Promise<void> {
+  const uniquePresetIds = Array.from(new Set(presetIds));
+  if (uniquePresetIds.length === 0) return;
+  const now = unixNow();
+  const statements = uniquePresetIds.map((presetId) => {
+    const depegStepUpdate =
+      options?.depegWorseningBpsStep === undefined
+        ? "depeg_worsening_bps_step = telegram_preset_subscriptions.depeg_worsening_bps_step"
+        : "depeg_worsening_bps_step = excluded.depeg_worsening_bps_step";
+    return db.prepare(`
+      INSERT INTO telegram_preset_subscriptions (
+        chat_id,
+        preset_id,
+        alert_dews,
+        alert_depeg,
+        alert_safety,
+        depeg_worsening_bps_step,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(chat_id, preset_id) DO UPDATE SET
+        alert_dews = MAX(telegram_preset_subscriptions.alert_dews, excluded.alert_dews),
+        alert_depeg = MAX(telegram_preset_subscriptions.alert_depeg, excluded.alert_depeg),
+        alert_safety = MAX(telegram_preset_subscriptions.alert_safety, excluded.alert_safety),
+        ${depegStepUpdate},
+        updated_at = excluded.updated_at
+    `).bind(
+      chatId,
+      presetId,
+      alertTypes.has("dews") ? 1 : 0,
+      alertTypes.has("depeg") || options?.depegWorseningBpsStep !== undefined ? 1 : 0,
+      alertTypes.has("safety") ? 1 : 0,
+      options?.depegWorseningBpsStep ?? null,
+      now,
+      now,
+    );
+  });
+  await db.batch(statements);
+}
+
+export async function removePresetSubscriptions(
+  db: D1Database,
+  chatId: string,
+  presetIds: readonly string[],
+): Promise<void> {
+  const uniquePresetIds = Array.from(new Set(presetIds));
+  if (uniquePresetIds.length === 0) return;
+  const placeholders = uniquePresetIds.map(() => "?").join(", ");
+  await db
+    .prepare(`DELETE FROM telegram_preset_subscriptions WHERE chat_id = ? AND preset_id IN (${placeholders})`)
+    .bind(chatId, ...uniquePresetIds)
+    .run();
+}
+
+export async function loadPresetSubscriptions(
+  db: D1Database,
+  chatId: string,
+): Promise<PresetSubscriptionRow[]> {
+  const result = await db
+    .prepare(
+      `SELECT preset_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
+         FROM telegram_preset_subscriptions
+        WHERE chat_id = ?
+        ORDER BY preset_id`,
+    )
+    .bind(chatId)
+    .all<PresetSubscriptionRow>();
+  return result.results ?? [];
 }
 
 export async function removeSubscriptions(

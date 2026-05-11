@@ -1645,7 +1645,9 @@ describe("dispatchTelegramAlerts", () => {
     const calls = mockSendBatch.mock.calls;
     const lastCall = calls[calls.length - 1];
     const messages = lastCall?.[0] as Array<{ replyMarkup?: { inline_keyboard?: Array<Array<{ callback_data?: string }>> } }>;
-    expect(messages?.[0]?.replyMarkup?.inline_keyboard?.[0]?.[0]?.callback_data).toBe("snooze:1h");
+    const callbackData = messages?.[0]?.replyMarkup?.inline_keyboard?.flat().map((button) => button.callback_data);
+    expect(callbackData).toContain("status:usdc-circle");
+    expect(callbackData).toContain("snooze:1h");
   });
 
   it("skips a chat whose alert_snooze_until_ts is in the future and reports chatsWithActiveSnooze", async () => {

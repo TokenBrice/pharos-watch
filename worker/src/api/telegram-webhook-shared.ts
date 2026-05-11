@@ -31,6 +31,9 @@ Other useful setups:
 
 <b>Also useful</b>
 <code>/status USDC</code> — one-shot peg + DEWS + safety snapshot
+<code>/brief</code> — latest market brief from the Pharos digest
+<code>/top depeg</code> — ranked live risk views
+<code>/why USDC</code> — short safety-grade explanation
 <code>/set all dews on</code> — global alerts across every tracked coin
 Inline buttons on each alert let you snooze 1h / 4h / 24h.
 
@@ -72,8 +75,23 @@ Examples:
 <code>/status &lt;ticker&gt;</code>
 Current peg, DEWS band, and safety grade for one coin — no subscription needed
 
+<code>/brief</code>
+Latest market brief from the daily digest inputs
+
+<code>/top &lt;view&gt;</code>
+Rank current views: depeg, dews, yield, liquidity, chains, or safety
+
+<code>/why &lt;ticker&gt;</code>
+Explain the current Safety Score in plain language
+
+<code>/coverage &lt;ticker&gt;</code>
+Show which Pharos data surfaces currently cover one coin
+
 <code>/mute 22-07</code>
 Quiet hours in UTC (notifications silenced, messages still delivered)
+
+<code>/unsnooze</code>
+Clear an active alert snooze immediately
 
 <code>/unmutehours</code>
 Disable quiet hours
@@ -96,8 +114,17 @@ export type PendingActionType = "subscribe" | "unsubscribe" | "set";
 export type ParsedSetCommand =
   | { ticker: string; setting: "dews"; enabled: boolean; minBand: "WARNING" | "DANGER" | null }
   | { ticker: string; setting: "safety"; enabled: boolean; mode: "downgrade-only" | "upgrade-only" | null }
+  | { ticker: string; setting: "launch"; enabled: boolean }
   | { ticker: string; setting: "depeg"; enabled: boolean }
   | { ticker: string; setting: "depeg-step"; enabled: true; step: 100 | 250 | 500 | null };
+
+export interface PresetSubscriptionRow {
+  preset_id: string;
+  alert_dews: number;
+  alert_depeg: number;
+  alert_safety: number;
+  depeg_worsening_bps_step: number | null;
+}
 
 export interface TelegramWebhookUpdate {
   update_id?: number;

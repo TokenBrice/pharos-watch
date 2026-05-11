@@ -4,13 +4,19 @@
  * Data format: `action:arg` (≤64 bytes per the Bot API limit).
  * Currently supported:
  *   - `snooze:1h | 4h | 24h` — sets alert_snooze_until_ts on telegram_subscribers
+ *   - `status:<stablecoinId>` — sends the current one-coin status card
+ *   - `depegstep:<stablecoinId>:250` — enables per-coin depeg worsening alerts
+ *   - `safetydown:<stablecoinId>` — enables per-coin safety downgrade-only alerts
  *
  * Unknown action codes receive a silent ack so the bot stays forward-compatible
  * with future keyboard changes.
  */
 
-import { answerCallbackQuery } from "../lib/telegram";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { answerCallbackQuery, sendToChat } from "../lib/telegram";
 import { unixNow } from "./telegram-webhook-store";
+import { loadStatusForCoin } from "./telegram-webhook-status";
+import { buildStatusMessage } from "./telegram-webhook-messages";
 
 const SNOOZE_SECONDS = {
   "1h": 60 * 60,
@@ -22,6 +28,10 @@ type SnoozeArg = keyof typeof SNOOZE_SECONDS;
 
 function isSnoozeArg(arg: string | undefined): arg is SnoozeArg {
   return arg === "1h" || arg === "4h" || arg === "24h";
+}
+
+function isKnownStablecoinId(id: string | undefined): id is string {
+  return typeof id === "string" && TRACKED_META_BY_ID.has(id);
 }
 
 export interface TelegramCallbackQuery {
@@ -83,6 +93,63 @@ export async function handleCallbackQuery(
     await answerCallbackQuery(cb.id, botToken, {
       text: `Snoozed for ${arg}. Use /list to verify or tap a longer window.`,
     });
+    return;
+  }
+
+  if (action === "status" && isKnownStablecoinId(arg)) {
+    const meta = TRACKED_META_BY_ID.get(arg);
+    const status = await loadStatusForCoin(db, arg);
+    await sendToChat(chatId, buildStatusMessage(meta?.symbol ?? arg, status), botToken, {
+      disableWebPagePreview: true,
+    });
+    await answerCallbackQuery(cb.id, botToken, { text: "Status sent." });
+    return;
+  }
+
+  if (action === "depegstep" && isKnownStablecoinId(arg)) {
+    const step = Number((cb.data ?? "").split(":")[2]);
+    if (step === 100 || step === 250 || step === 500) {
+      const now = unixNow();
+      await db
+        .prepare(
+          `INSERT INTO telegram_subscriptions (
+             chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, depeg_worsening_bps_step
+           )
+           VALUES (?, ?, 0, 1, 0, 0, ?)
+           ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+             alert_depeg = 1,
+             depeg_worsening_bps_step = excluded.depeg_worsening_bps_step`,
+        )
+        .bind(chatId, arg, step)
+        .run();
+      await db
+        .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
+        .bind(now, chatId)
+        .run();
+      await answerCallbackQuery(cb.id, botToken, { text: `Depeg worsening alerts set to ${step} bps.` });
+      return;
+    }
+  }
+
+  if (action === "safetydown" && isKnownStablecoinId(arg)) {
+    const now = unixNow();
+    await db
+      .prepare(
+        `INSERT INTO telegram_subscriptions (
+           chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, safety_mode
+         )
+         VALUES (?, ?, 0, 0, 1, 0, 'downgrade-only')
+         ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+           alert_safety = 1,
+           safety_mode = 'downgrade-only'`,
+      )
+      .bind(chatId, arg)
+      .run();
+    await db
+      .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
+      .bind(now, chatId)
+      .run();
+    await answerCallbackQuery(cb.id, botToken, { text: "Safety alerts set to downgrades only." });
     return;
   }
 
