@@ -7,6 +7,8 @@ import {
   SELF_SERVE_API_KEY_EXPIRY_SEC,
   SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
   SELF_SERVE_MAX_ACTIVE_KEYS_PER_EMAIL,
+  SELF_SERVE_USE_CASE_MAX_LENGTH,
+  SELF_SERVE_USE_CASE_MIN_LENGTH,
 } from "@shared/lib/ops-limits";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import type {
@@ -123,7 +125,7 @@ export function ApiKeyRequestForm() {
   const canSubmit =
     requestStatus !== "submitting"
     && email.trim().length > 3
-    && useCase.trim().length >= 40
+    && useCase.trim().length >= SELF_SERVE_USE_CASE_MIN_LENGTH
     && acceptedTerms;
 
   const copyText = useCallback(async (kind: "token" | "curl", value: string) => {
@@ -289,12 +291,12 @@ export function ApiKeyRequestForm() {
             value={useCase}
             onChange={(event) => setUseCase(event.target.value)}
             rows={5}
-            maxLength={1200}
+            maxLength={SELF_SERVE_USE_CASE_MAX_LENGTH}
             disabled={requestStatus === "submitting"}
             className="resize-none"
             required
           />
-          <p className="text-xs text-muted-foreground">{useCase.length}/1200</p>
+          <p className="text-xs text-muted-foreground">{useCase.length}/{SELF_SERVE_USE_CASE_MAX_LENGTH}</p>
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">

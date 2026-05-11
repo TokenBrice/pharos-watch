@@ -2550,7 +2550,7 @@ Public self-serve API key request endpoint used by `https://pharos.watch/api/`. 
   "requesterName": "Optional name",
   "organization": "Optional organization",
   "projectUrl": "https://example.com",
-  "useCase": "Required, 40-2000 characters",
+  "useCase": "Required, 10-1200 characters",
   "intendedEndpoints": ["/api/stablecoins", "/api/stablecoin/:id"],
   "expectedCadence": "hourly",
   "expectedVolume": "Optional free-form estimate",
@@ -2565,7 +2565,7 @@ Public self-serve API key request endpoint used by `https://pharos.watch/api/`. 
 | `requesterName`     | `string`                                                                            | No       | Private operator context only |
 | `organization`      | `string`                                                                            | No       | Private operator context only |
 | `projectUrl`        | `string`                                                                            | No       | Must start with `https://` when provided |
-| `useCase`           | `string`                                                                            | Yes      | 40-2000 characters |
+| `useCase`           | `string`                                                                            | Yes      | 10-1200 characters |
 | `intendedEndpoints` | `string[]`                                                                          | No       | Public API paths, known dynamic patterns such as `/api/stablecoin/:id`, or `unknown`; admin/API-key/backfill paths are rejected |
 | `expectedCadence`   | `"hourly" \| "every_5_min" \| "every_1_min" \| "manual" \| "other"`                 | Yes      | Used for review context |
 | `expectedVolume`    | `string`                                                                            | No       | Private operator context only |

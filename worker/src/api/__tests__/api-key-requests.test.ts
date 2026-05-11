@@ -219,6 +219,17 @@ describe("api key self-serve request handlers", () => {
     });
   });
 
+  it("accepts concise human-readable use cases", async () => {
+    const suffix = Math.random().toString(36).slice(2, 10);
+    const response = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody({
+      email: `concise-${suffix}@example.com`,
+      useCase: `index QA workflow ${suffix}`,
+    })), env());
+
+    expect(response.status).toBe(202);
+    expect(sentEmails).toHaveLength(1);
+  });
+
   it("issues a constrained self-serve key only after token verification", async () => {
     const pending = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
     expect(pending.status).toBe(202);

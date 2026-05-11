@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  SELF_SERVE_USE_CASE_MAX_LENGTH,
+  SELF_SERVE_USE_CASE_MIN_LENGTH,
+} from "@shared/lib/ops-limits";
 
 export interface ApiKeySelfServeEnv {
   API_KEY_SELF_SERVE_IP_SALT?: string;
@@ -34,7 +38,9 @@ export const ApiKeySelfServeRequestSchema = z.object({
   projectUrl: z.string().trim().max(300, "Project URL must be 300 characters or fewer")
     .refine((value) => !value || value.startsWith("https://"), "Project URL must use https://")
     .optional(),
-  useCase: z.string().trim().min(40, "Use case must be 40-2000 characters").max(2000, "Use case must be 40-2000 characters"),
+  useCase: z.string().trim()
+    .min(SELF_SERVE_USE_CASE_MIN_LENGTH, `Use case must be ${SELF_SERVE_USE_CASE_MIN_LENGTH}-${SELF_SERVE_USE_CASE_MAX_LENGTH} characters`)
+    .max(SELF_SERVE_USE_CASE_MAX_LENGTH, `Use case must be ${SELF_SERVE_USE_CASE_MIN_LENGTH}-${SELF_SERVE_USE_CASE_MAX_LENGTH} characters`),
   intendedEndpoints: z.array(z.string().trim().max(160)).max(20).optional(),
   expectedCadence: z.enum(["hourly", "every_5_min", "every_1_min", "manual", "other"], {
     message: "Expected cadence is required",
