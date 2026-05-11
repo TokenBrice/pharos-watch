@@ -54,6 +54,15 @@ export const COMMON_VALIDATE_POSTBUILD_COMMANDS = [
   "npm run coverage:critical",
 ];
 
+export const NONCRITICAL_TEST_SHARD_COUNT = 3;
+
+export function buildNoncriticalTestShardCommands(shardCount = NONCRITICAL_TEST_SHARD_COUNT) {
+  return Array.from({ length: shardCount }, (_value, index) => {
+    const shard = index + 1;
+    return `npm run test:noncritical -- --shard=${shard}/${shardCount}`;
+  });
+}
+
 export const WORKER_VALIDATE_COMMANDS = [
   "npm run typecheck:worker",
   "npm run typecheck:worker-scripts",
@@ -73,15 +82,17 @@ export function buildValidateCommandPlan({
 
 export function buildCiValidateStepPlan({
   pagesChanged = true,
+  runPagesBuild = true,
   workerChanged = true,
 } = {}) {
   return [
     ...COMMON_VALIDATE_PREBUILD_COMMANDS.map((cmd) => ({ cmd, condition: null })),
     ...PAGES_VALIDATE_COMMANDS.map((cmd) => ({
       cmd,
-      condition: pagesChanged ? "pages_changed" : null,
+      condition: pagesChanged && runPagesBuild ? "pages_changed && run_pages_build_and_seo" : null,
     })),
-    ...COMMON_VALIDATE_POSTBUILD_COMMANDS.map((cmd) => ({ cmd, condition: null })),
+    ...buildNoncriticalTestShardCommands().map((cmd) => ({ cmd, condition: null })),
+    { cmd: "npm run coverage:critical", condition: null },
     ...WORKER_VALIDATE_COMMANDS.map((cmd) => ({
       cmd,
       condition: workerChanged ? "worker_changed" : null,
@@ -90,7 +101,13 @@ export function buildCiValidateStepPlan({
 }
 
 export function buildCiValidateCommands() {
-  return buildValidateCommandPlan();
+  return [
+    ...COMMON_VALIDATE_PREBUILD_COMMANDS,
+    ...PAGES_VALIDATE_COMMANDS,
+    ...buildNoncriticalTestShardCommands(),
+    "npm run coverage:critical",
+    ...WORKER_VALIDATE_COMMANDS,
+  ];
 }
 
 export function buildValidatePrebuildRunnerArgs({ continueOnError = false } = {}) {

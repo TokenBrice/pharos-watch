@@ -1,0 +1,96 @@
+{
+  "id": "qcad-stablecorp",
+  "name": "Stablecorp QCAD",
+  "symbol": "QCAD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "CAD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Canadian dollars held 1:1 in regulated Canadian financial institutions under the QCAD Digital Trust reserve framework",
+  "pegMechanism": "Qualified holders can mint and redeem QCAD at 1 CAD through Stablecorp or authorized partners; issuer APIs publish live supply and fiat reserve totals.",
+  "detailProvider": "coingecko",
+  "geckoId": "stablecorp-qcad",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json",
+    "provider": "Stablecorp balances API"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://stablecorp.ca/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Stablecorp"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://stablecorp.ca/transparency"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Canada",
+    "regulator": "Canadian Securities Administrators / FINTRAC",
+    "license": "FINTRAC MSB M22234558; QCAD Digital Trust VRCA framework"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x3fa142dd3f384414e05e71ad0939274edc82ec0a",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0xa15705e6fc8b3e08e7253f3758de1a754baa0761",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "CAD fiat reserves",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "qcad-stablecorp",
+    "display": {
+      "url": "https://stablecorp.ca/transparency",
+      "label": "Stablecorp"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json"
+      }
+    },
+    "params": {
+      "label": "CAD fiat reserves",
+      "risk": "very-low",
+      "reserveProbe": {
+        "kind": "json-path",
+        "path": [
+          "totalFiatReserves"
+        ]
+      },
+      "supplyProbe": {
+        "kind": "json-path",
+        "path": [
+          "totalSupply"
+        ]
+      },
+      "reserveSourceLabel": "Stablecorp balances API"
+    }
+  }
+}

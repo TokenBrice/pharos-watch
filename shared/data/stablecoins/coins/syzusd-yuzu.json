@@ -1,0 +1,69 @@
+{
+  "id": "syzusd-yuzu",
+  "name": "Staked Yuzu USD",
+  "symbol": "syzUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "yzusd-yuzu",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "yzusd-yuzu",
+  "collateral": "Staked wrapper over Yuzu USD, backed by yzUSD reserve assets deployed into curated DeFi yield strategies and overcollateralized by protocol risk tranching",
+  "pegMechanism": "Users stake yzUSD for syzUSD; syzUSD appreciates against yzUSD as strategy yield accrues, and final exits inherit Yuzu's KYC-gated primary redemption and liquidity-buffer constraints",
+  "detailProvider": "coingecko",
+  "geckoId": "staked-yuzu-usd",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://yuzu.accountable.capital/",
+    "provider": "Accountable"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://yuzu.money/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/YuzuMoneyX"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://yuzu.accountable.capital/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "plasma",
+      "address": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
+      "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "unproven",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "Yuzu USD staking vault shares",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "yzusd-yuzu",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Yuzu staking (syzUSD)",
+    "yieldType": "nav-appreciation"
+  }
+}

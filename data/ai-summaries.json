@@ -1408,5 +1408,105 @@
     "title": "The Rootstock Stablecoin Basket",
     "text": "XUSD is BabelFish's Rootstock basket stablecoin, backed by DLLR plus bridged USDT, USDC, DAI, DOC, and related bAssets. Pharos tracks live branch balances directly from the basket holder and links the largest dependency back to the newly tracked DLLR entry. The model is useful but recursive: XUSD inherits the risks of Rootstock bridge liquidity, DLLR's own basket, and BabelFish's balancing fees. It is a basket exit route, not a fiat issuer promise.",
     "updatedAt": "2026-05-11"
+  },
+  "susdd-tron-dao-reserve": {
+    "title": "Savings USDD Wrapper",
+    "text": "sUSDD brings USDD into the yield-bearing wrapper set as an ERC-4626 style savings token on Ethereum and BNB Chain. The useful distinction is that the wrapper can be proven on-chain while ultimate reserve risk still follows USDD itself, so Pharos models it as a savings passthrough rather than a fresh reserve stack.",
+    "updatedAt": "2026-05-11"
+  },
+  "onyc-onre": {
+    "title": "Reinsurance NAV Token",
+    "text": "ONYC expands Pharos coverage into a small but distinct RWA/NAV design: a Solana yield token tied to OnRe underwriting and collateral returns rather than a simple fiat cash reserve. The entry treats the product as high-touch and queued, with transparency links but no score-grade composition adapter yet.",
+    "updatedAt": "2026-05-11"
+  },
+  "apyusd-apyx": {
+    "title": "Apyx Savings Share",
+    "text": "apyUSD is the value-accruing wrapper over apxUSD, whose collateral base is unusual: preferred equity and a Treasury buffer rather than standard cash-only reserves. Pharos tracks the wrapper with ERC-4626 reserve proof and keeps the underlying Apyx collateral risk visible through the parent dependency.",
+    "updatedAt": "2026-05-11"
+  },
+  "susd1plus-lorenzo": {
+    "title": "Lorenzo Strategy Dollar",
+    "text": "sUSD1+ adds Lorenzo Protocol exposure to the USD1-linked strategy-dollar family. Public data supports metadata and supply tracking, but the reserve and redemption mechanics are less transparent than the cleaner ERC-4626 wrappers, so the entry carries exotic collateral and CEX-strategy risk.",
+    "updatedAt": "2026-05-11"
+  },
+  "savusd-avant": {
+    "title": "Avant Staked Dollar",
+    "text": "savUSD is the staked, yield-accruing form of Avant USD. The dashboard models it as a wrapper on avUSD with a short cooldown, preserving the parent strategy risk while separately tracking the savings-token supply and contract footprint.",
+    "updatedAt": "2026-05-11"
+  },
+  "steakusdc-steakhouse": {
+    "title": "Prime Instant USDC",
+    "text": "Steakhouse USDC is a Morpho Prime Instant vault share over USDC, making it a DeFi lending wrapper rather than a new fiat issuer. Pharos uses ERC-4626 proof to validate the vault asset and classifies the risk around lending liquidity rather than around Circle reserve quality alone.",
+    "updatedAt": "2026-05-11"
+  },
+  "srusde-strata": {
+    "title": "Senior Ethena Tranche",
+    "text": "Strata Senior USDe turns Ethena exposure into a senior tranche with junior capital absorbing first-loss risk. Pharos models the token as a risk-absorption variant of USDe: better structured than a plain loop, but still dependent on Ethena, sUSDe yield, and Strata redemption terms.",
+    "updatedAt": "2026-05-11"
+  },
+  "syzusd-yuzu": {
+    "title": "Yuzu Staked Wrapper",
+    "text": "syzUSD is the staked wrapper for Yuzu USD, carrying the yield and strategy exposure of the Yuzu system onto newer chains. The tracked entry separates wrapper-level identity from the parent Accountable reserve feed so aggregate supply can be monitored without double-counting the underlying risk.",
+    "updatedAt": "2026-05-11"
+  },
+  "fxsave-f-x-protocol": {
+    "title": "f(x) Stability Vault",
+    "text": "fxSAVE packages f(x) Protocol Stability Pool exposure into a value-accruing vault share. It is not a plain fxUSD balance: the reserve path runs through fxSP, so Pharos treats it as a high-risk strategy vault while keeping the fxUSD parent dependency explicit.",
+    "updatedAt": "2026-05-11"
+  },
+  "steakusdt-steakhouse": {
+    "title": "Prime Instant USDT",
+    "text": "Steakhouse USDT mirrors the Steakhouse USDC setup on top of USDT: an ERC-4626 Morpho lending vault with NAV appreciation and liquidity-dependent exit capacity. The entry gives Pharos separate visibility into the vault while preserving the Tether dependency.",
+    "updatedAt": "2026-05-11"
+  },
+  "susn-noon": {
+    "title": "Noon Savings Share",
+    "text": "sUSN is the staked savings form of Noon USN. The token is useful to track separately because its NAV appreciates and its supply can diverge from liquid USN, while final redemption still inherits Noon whitelisting and USN reserve constraints.",
+    "updatedAt": "2026-05-11"
+  },
+  "mre7yield-midas": {
+    "title": "Midas Re7 Yield Token",
+    "text": "mRe7YIELD adds a Midas managed-yield product with a public NAV oracle but without a granular strategy-composition adapter. Pharos treats it as a USD-referenced NAV token with exotic strategy risk, not as a cash-backed dollar issuer.",
+    "updatedAt": "2026-05-11"
+  },
+  "hbusdt-hyperbeat": {
+    "title": "Hyperbeat USDT Vault",
+    "text": "hbUSDT is a HyperEVM vault share built around USDT0, USDe, USR, and Hyperbeat strategy liquidity. Metadata and contract tracking are ready, but live reserve sync remains intentionally conservative until a product-scoped Hyperbeat adapter can separate hbUSDT from aggregate Accountable data.",
+    "updatedAt": "2026-05-11"
+  },
+  "witry-brix": {
+    "title": "Wrapped Turkish Lira Yield",
+    "text": "wiTRY brings a TRY-pegged yield wrapper into the catalog. The Ethereum wrapper can be verified on-chain, while the underlying iTRY reserve and redemption process remain more issuer-dependent than the mature fiat stablecoin set.",
+    "updatedAt": "2026-05-11"
+  },
+  "srusd-reservoir": {
+    "title": "Reservoir Savings Token",
+    "text": "srUSD tracks Reservoir savings exposure directly instead of only through the wrapped wsrUSD token. The protocol has a live reserve endpoint and a documented savings path, but the reserve stack is diversified lending and RWA exposure rather than a single cash account.",
+    "updatedAt": "2026-05-11"
+  },
+  "usdn-smardex": {
+    "title": "Delta-Neutral USDN",
+    "text": "SMARDEX USDN is unrelated to Noble USDN and the old Neutrino USDN. It is an Ethereum synthetic dollar backed by the USDN vault and wstETH-centered delta-neutral mechanics, with rebasing yield and protocol-state redemption constraints.",
+    "updatedAt": "2026-05-11"
+  },
+  "scusd-rings": {
+    "title": "Rings Stable Collateral",
+    "text": "Rings scUSD adds Sonic/Ethereum scAsset coverage with Veda-backed strategy exposure. The liquid token is not the main yield wrapper, so Pharos treats it as a stablecoin backed by stablecoin collateral plus DeFi strategy risk rather than as a savings token.",
+    "updatedAt": "2026-05-11"
+  },
+  "weusd-picwe": {
+    "title": "PicWe USDC Wrapper",
+    "text": "WEUSD is tracked under PicWe, not WEMIX, because the current documentation and contracts describe PicWe WEUSD. The reserve model is simple today - USDC backing with on-chain redeem rails - while future RWA/yield collateral stays outside the current scoring assumptions.",
+    "updatedAt": "2026-05-11"
+  },
+  "gbpe-monerium": {
+    "title": "GBP E-Money Rail",
+    "text": "Monerium GBPe extends the Monerium e-money model to British pounds across several EVM chains. Pharos uses the official Monerium token API addresses where they diverge from older CoinGecko metadata and treats redemption as regulated bank-transfer e-money rails.",
+    "updatedAt": "2026-05-11"
+  },
+  "qcad-stablecorp": {
+    "title": "Regulated CAD Stablecoin",
+    "text": "Stablecorp QCAD adds a live Canadian-dollar reserve feed with official supply and fiat reserve totals. The product is small, but the Canadian VRCA framework, FINTRAC registration, and issuer API make it a useful non-USD fiat stablecoin to track.",
+    "updatedAt": "2026-05-11"
   }
 }

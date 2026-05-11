@@ -1,0 +1,80 @@
+{
+  "id": "mre7yield-midas",
+  "name": "Midas mRe7YIELD",
+  "symbol": "mRe7YIELD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "collateral": "Liquid Yield Token managed by Midas and Re7 Capital, allocating across institutional-grade DeFi yield strategies including lending, liquidity provisioning, restaking, funding-rate arbitrage, and options arbitrage",
+  "pegMechanism": "mRe7YIELD is a NAV-accreting liquid yield token rather than a fixed $1 stablecoin; primary-market mint/redeem occurs through Midas rails while secondary-market holders rely on token liquidity and strategy NAV",
+  "detailProvider": "coingecko",
+  "geckoId": "midas-mre7yield",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://midas.app/mre7yield"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/midasrwa"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.midas.app/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf",
+      "decimals": 18
+    },
+    {
+      "chain": "etherlink",
+      "address": "0x733d504435a49fc8c4e9759e756c2846c92f0160",
+      "decimals": 18
+    },
+    {
+      "chain": "starknet",
+      "address": "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Re7-managed DeFi lending, liquidity, restaking, funding-rate, and options strategies",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Midas mRe7YIELD strategy",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "mre7yield-midas",
+    "display": {
+      "url": "https://midas.app/mre7yield",
+      "label": "Midas mRe7YIELD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    }
+  }
+}

@@ -14,6 +14,7 @@ const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const REVIEWED_ZCHF_BRIDGE_AT = "2026-04-06";
 const REVIEWED_WRAPPER_REDEMPTION_AT = "2026-04-21";
 const REVIEWED_STABLECOIN_BATCH_AT = "2026-05-05";
+const REVIEWED_YIELD_EXPANSION_AT = "2026-05-11";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
@@ -563,6 +564,98 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     ),
     notes: [
       "Modeled as a bridge-backed stablecoin redemption route into DAI rather than an independent fiat issuer rail",
+    ],
+  },
+  "susdd-tron-dao-reserve": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+    executionModel: "rules-based-nav",
+    costModel: fixedFee(0, "USDD docs describe sUSDD withdrawals to USDD with no lock-up or protocol fee"),
+    docs: [
+      sourceRef("USDD sUSDD mechanism", "https://docs.usdd.io/susdd-mechanism", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("USDD savings guide", "https://docs.usdd.io/user-guide/usdd-savings", ["route"]),
+    ],
+    notes: [
+      "sUSDD exits to USDD at the savings-vault exchange rate; downstream USDD par exit remains governed by the parent USDD route",
+    ],
+  },
+  "srusd-reservoir": {
+    ...stablecoinRedeemBase,
+    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.0025 },
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee("srUSD exits to rUSD, then Reservoir PSM liquidity provides stablecoin redemption when available"),
+    reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
+    docs: [
+      sourceRef("Reservoir Savings (srUSD)", "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Reservoir Proof of Reserves", "https://docs.reservoir.xyz/products/proof-of-reserves", ["capacity"]),
+    ],
+    notes: [
+      "Fresh reserve telemetry uses Reservoir's balance-sheet feed; the fallback mirrors the reviewed wsrUSD PSM-buffer bound",
+    ],
+  },
+  "steakusdc-steakhouse": {
+    ...stablecoinRedeemBase,
+    capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "heuristic", basis: "strategy-buffer" },
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee("ERC-4626/Morpho vault withdrawals redeem to USDC when vault liquidity is available"),
+    reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
+    docs: [
+      sourceRef("Steakhouse Prime Instant", "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Morpho vault integration", "https://legacy.docs.morpho.org/morpho-vaults/tutorials/integrate-vaults/", ["route"]),
+    ],
+  },
+  "steakusdt-steakhouse": {
+    ...stablecoinRedeemBase,
+    capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "heuristic", basis: "strategy-buffer" },
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee("ERC-4626/Morpho vault withdrawals redeem to USDT when vault liquidity is available"),
+    reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
+    docs: [
+      sourceRef("Steakhouse Prime Instant", "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Morpho vault integration", "https://legacy.docs.morpho.org/morpho-vaults/tutorials/integrate-vaults/", ["route"]),
+    ],
+  },
+  "syzusd-yuzu": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+    executionModel: "rules-based-nav",
+    totalScoreCap: 65,
+    costModel: documentedVariableFee("syzUSD unwraps to yzUSD; final yzUSD primary redemption is KYC-gated through Yuzu rails"),
+    docs: [
+      sourceRef("Yuzu syzUSD docs", "https://yuzu-money.gitbook.io/yuzu-money/defi-suite/staked-yzusd-syzusd", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Yuzu yzUSD docs", "https://yuzu-money.gitbook.io/yuzu-money/defi-suite/yuzu-stablecoin-yzusd", ["route", "access"]),
+    ],
+  },
+  "fxsave-f-x-protocol": {
+    ...stablecoinRedeemBase,
+    capacityModel: { kind: "supply-ratio", ratio: 0.2, confidence: "heuristic", basis: "strategy-buffer" },
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee("fxSAVE can exit through fxSP/router routes into fxUSD, USDC, or both depending on available liquidity"),
+    reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
+    docs: [
+      sourceRef("f(x) Stability Pool", "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Integrating fxSAVE", "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave", ["route"]),
+    ],
+  },
+  "susn-noon": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+    accessModel: "whitelisted-onchain",
+    executionModel: "rules-based-nav",
+    totalScoreCap: 65,
+    costModel: documentedVariableFee("sUSN exits to USN; final USN mint/redeem routes are whitelisted and depend on supported stablecoin liquidity"),
+    docs: [
+      sourceRef("Noon USN and sUSN", "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Noon minting and redemption", "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/minting-and-redemption", ["route", "access"]),
+    ],
+  },
+  "weusd-picwe": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+    costModel: fixedFee(100, "PicWe docs describe a 1% WEUSD redemption fee"),
+    docs: [
+      sourceRef("PicWe WEUSD", "https://docs.picwe.org/what-is-weusd", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("PicWe mint and redeem", "https://docs.picwe.org/mint-and-redeem", ["route", "fees"]),
     ],
   },
 };

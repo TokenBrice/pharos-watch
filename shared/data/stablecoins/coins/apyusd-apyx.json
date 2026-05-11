@@ -1,0 +1,93 @@
+{
+  "id": "apyusd-apyx",
+  "name": "apyUSD",
+  "symbol": "apyUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "variantOf": "apxusd-apyx",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "apxusd-apyx",
+  "collateral": "apxUSD deposited into the Apyx ERC-4626 yield vault; apxUSD itself is backed by preferred equity shares from Digital Asset Treasury companies and liquidity buffers",
+  "pegMechanism": "Users deposit apxUSD to mint apyUSD; cash dividends and preferred-equity yield accrue inside the vault, increasing apyUSD's exchange rate against apxUSD over time",
+  "detailProvider": "coingecko",
+  "geckoId": "apyusd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://apyx.fi"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/apyx_fi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.apyx.fi"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/apyx-labs"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "apxUSD yield vault shares",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "apxusd-apyx",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Apyx apyUSD vault",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "apyusd-apyx",
+    "display": {
+      "url": "https://docs.apyx.fi",
+      "label": "Apyx apyUSD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "apxUSD yield vault shares",
+        "risk": "high",
+        "coinId": "apxusd-apyx",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x98a878b1cd98131b271883b390f68d2c90674665"
+      }
+    }
+  }
+}

@@ -201,6 +201,26 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "Modeled for verified primary-market users; unverified secondary-market holders still depend on market liquidity or onboarding before direct redemption",
     ],
   },
+  "gbpe-monerium": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
+    costModel: documentedVariableFee("Monerium fee schedule and terms govern bank-transfer redemption; public materials reviewed do not publish a single fixed GBPe redemption fee"),
+    docs: [
+      sourceRef("Monerium financial information", "https://monerium.com/financial-information/", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Monerium fee schedule", "https://monerium.com/fee-schedule/", ["fees"]),
+    ],
+    notes: ["Modeled as regulated e-money redemption for onboarded Monerium customers through bank-transfer rails"],
+  },
+  "qcad-stablecorp": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
+    costModel: documentedVariableFee("Stablecorp/authorized-partner redemption terms govern QCAD redemption; public materials reviewed do not publish one fixed redemption fee"),
+    docs: [
+      sourceRef("Stablecorp transparency", "https://stablecorp.ca/transparency", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Stablecorp balances API", "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json", ["capacity"]),
+    ],
+    notes: ["Modeled as issuer redemption for qualified holders under QCAD Digital Trust and authorized partner rails"],
+  },
   "pyusd-paypal": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,

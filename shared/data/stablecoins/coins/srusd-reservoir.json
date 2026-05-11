@@ -1,0 +1,83 @@
+{
+  "id": "srusd-reservoir",
+  "name": "Savings rUSD",
+  "symbol": "srUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Yield-bearing Reservoir savings token backed by the Reservoir balance sheet: stablecoin PSM liquidity, RWA allocations, Morpho/Euler lending vaults, and governance-approved credit strategies monitored through Reservoir's on-chain proof-of-reserves endpoint",
+  "pegMechanism": "srUSD accrues protocol yield against rUSD. Holders can exit srUSD to rUSD, while rUSD is minted and redeemed through Reservoir's PSM against supported stablecoins subject to protocol liquidity and risk controls.",
+  "detailProvider": "coingecko",
+  "geckoId": "reservoir-srusd",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://app.reservoir.xyz/reserves",
+    "provider": "Reservoir Protocol"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://reservoir.xyz"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/reservoir_xyz"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.reservoir.xyz"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://app.reservoir.xyz/reserves"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x738d1115b90efa71ae468f1287fc864775e23a31",
+      "decimals": 18
+    },
+    {
+      "chain": "berachain",
+      "address": "0x5475611dffb8ef4d697ae39df9395513b6e947d7",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "multisig",
+  "reserves": [
+    {
+      "name": "Reservoir rUSD protocol balance sheet",
+      "pct": 100,
+      "risk": "medium",
+      "depType": "wrapper"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "reservoir",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "srusd-reservoir",
+    "display": {
+      "url": "https://app.reservoir.xyz/reserves",
+      "label": "Proof of Reserves"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://app.reservoir.xyz/api/reserves/raw"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Reservoir savings vault",
+    "yieldType": "nav-appreciation"
+  }
+}

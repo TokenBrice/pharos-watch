@@ -3,6 +3,7 @@
 import { spawnSync } from "node:child_process";
 import { buildCriticalCoverageArgs } from "./lib/critical-test-files.mjs";
 import { localBin } from "./lib/local-bin.mjs";
+import { withCiVitestArgs } from "./lib/vitest-ci-args.mjs";
 
 function run(cmd, args) {
   const result = spawnSync(cmd, args, {
@@ -18,5 +19,5 @@ function run(cmd, args) {
   }
 }
 
-run(localBin("vitest"), buildCriticalCoverageArgs(process.argv.slice(2)));
+run(localBin("vitest"), withCiVitestArgs(buildCriticalCoverageArgs(process.argv.slice(2))));
 run("node", ["scripts/check-critical-coverage.mjs"]);

@@ -12,6 +12,11 @@ on:
         required: false
         default: true
         type: boolean
+      run_pages_build_and_seo:
+        description: Whether validation should run Pages build and SEO checks when Pages changed.
+        required: false
+        default: true
+        type: boolean
       worker_changed:
         description: Whether the changed diff touches worker deploy surfaces.
         required: false
@@ -21,13 +26,14 @@ on:
 permissions:
   contents: read
 
+env:
+  NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+
 jobs:
-  validate:
+  validate-prebuild:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -37,6 +43,154 @@ jobs:
           node-version: 24.x
           tooling-cache: "true"
       - run: npm run validate:prebuild
-      - run: node scripts/run-validate-postbuild.mjs --pages-changed=${{ inputs.pages_changed }} --worker-changed=${{ inputs.worker_changed }} --coverage-compare-ref=${{ inputs.coverage-compare-ref }}
+
+  pages-build:
+    needs: validate-prebuild
+    if: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+        with:
+          node-version: 24.x
+          tooling-cache: "true"
+      - run: npm run build
+      - run: npm run seo:check
+
+  test-noncritical:
+    name: Noncritical Vitest (${{ matrix.shard }}/3)
+    needs: validate-prebuild
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+        with:
+          node-version: 24.x
+          tooling-cache: "true"
+      - run: npm run test:noncritical -- --shard=${{ matrix.shard }}/3
+
+  coverage-critical:
+    needs: validate-prebuild
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CRITICAL_COVERAGE_COMPARE_REF: ${{ inputs.coverage-compare-ref }}
+      CRITICAL_COVERAGE_THRESHOLD: "40"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+        with:
+          node-version: 24.x
+          tooling-cache: "true"
+      - run: npm run coverage:critical
+
+  typecheck-worker:
+    needs: validate-prebuild
+    if: ${{ inputs.worker_changed }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+        with:
+          node-version: 24.x
+          tooling-cache: "true"
+      - run: npm run typecheck:worker
+
+  typecheck-worker-scripts:
+    needs: validate-prebuild
+    if: ${{ inputs.worker_changed }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+        with:
+          node-version: 24.x
+          tooling-cache: "true"
+      - run: npm run typecheck:worker-scripts
+
+  validate:
+    needs:
+      - validate-prebuild
+      - pages-build
+      - test-noncritical
+      - coverage-critical
+      - typecheck-worker
+      - typecheck-worker-scripts
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Verify validate results
         env:
-          CRITICAL_COVERAGE_THRESHOLD: "40"
+          COVERAGE_CRITICAL_RESULT: ${{ needs.coverage-critical.result }}
+          PAGES_BUILD_EXPECTED: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo && github.event_name == 'pull_request' }}
+          PAGES_BUILD_RESULT: ${{ needs.pages-build.result }}
+          TEST_NONCRITICAL_RESULT: ${{ needs.test-noncritical.result }}
+          VALIDATE_PREBUILD_RESULT: ${{ needs.validate-prebuild.result }}
+          WORKER_CHANGED: ${{ inputs.worker_changed }}
+          TYPECHECK_WORKER_RESULT: ${{ needs.typecheck-worker.result }}
+          TYPECHECK_WORKER_SCRIPTS_RESULT: ${{ needs.typecheck-worker-scripts.result }}
+        run: |
+          node <<'NODE'
+          const required = [
+            ["validate-prebuild", process.env.VALIDATE_PREBUILD_RESULT],
+            ["test-noncritical", process.env.TEST_NONCRITICAL_RESULT],
+            ["coverage-critical", process.env.COVERAGE_CRITICAL_RESULT],
+          ];
+
+          const optional = [];
+          if (process.env.PAGES_BUILD_EXPECTED === "true") {
+            required.push(["pages-build", process.env.PAGES_BUILD_RESULT]);
+          } else {
+            optional.push(["pages-build", process.env.PAGES_BUILD_RESULT]);
+          }
+
+          if (process.env.WORKER_CHANGED === "true") {
+            required.push(["typecheck-worker", process.env.TYPECHECK_WORKER_RESULT]);
+            required.push(["typecheck-worker-scripts", process.env.TYPECHECK_WORKER_SCRIPTS_RESULT]);
+          } else {
+            optional.push(["typecheck-worker", process.env.TYPECHECK_WORKER_RESULT]);
+            optional.push(["typecheck-worker-scripts", process.env.TYPECHECK_WORKER_SCRIPTS_RESULT]);
+          }
+
+          let failed = false;
+          for (const [job, result] of required) {
+            if (result !== "success") {
+              console.error(`${job} result was ${result}; expected success.`);
+              failed = true;
+            }
+          }
+
+          for (const [job, result] of optional) {
+            if (result !== "success" && result !== "skipped") {
+              console.error(`${job} result was ${result}; expected success or skipped.`);
+              failed = true;
+            }
+          }
+
+          process.exit(failed ? 1 : 0);
+          NODE

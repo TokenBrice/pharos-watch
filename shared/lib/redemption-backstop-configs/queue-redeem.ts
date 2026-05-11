@@ -13,6 +13,7 @@ const REVIEWED_QUEUE_REDEMPTION_AT = "2026-03-23";
 const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const REVIEWED_WRAPPER_QUEUE_AT = "2026-04-21";
 const REVIEWED_PHASE_4_COVERAGE_AT = "2026-05-10";
+const REVIEWED_YIELD_EXPANSION_AT = "2026-05-11";
 const reviewedQueueRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_QUEUE_REDEMPTION_AT);
 
 export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
@@ -441,6 +442,77 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ],
     notes: [
       "Neutrl docs establish a dual-path redemption system with instant execution when AssetReserve liquidity is available and an onchain queued fallback when it is not; current model scores eventual redeemability rather than a separately measured live instant buffer",
+    ],
+  },
+  "onyc-onre": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+    accessModel: "issuer-api",
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    outputAssetType: "mixed-collateral",
+    costModel: documentedVariableFee("OnRe docs describe quarterly redemptions with notice and possible pro-rata fulfillment"),
+    docs: [
+      sourceRef("OnRe liquidity and redemption", "https://docs.onre.finance/getting-started/the-onchain-yield-coin-onyc/liquidity-and-redemption", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("OnRe transparency", "https://app.onre.finance/earn/transparency", ["capacity"]),
+    ],
+  },
+  "apyusd-apyx": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+    accessModel: "whitelisted-onchain",
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    totalScoreCap: 65,
+    costModel: documentedVariableFee("apyUSD unlocks to apxUSD over roughly 30 days, then apxUSD primary redemption depends on eligible participants"),
+    docs: [
+      sourceRef("apyUSD overview", "https://docs.apyx.fi/product-overview/apyusd-overview", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Apyx smart contract addresses", "https://docs.apyx.fi/resources/smart-contract-addresses", ["route"]),
+    ],
+  },
+  "savusd-avant": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee("Avant docs describe savAsset unstaking with a one-day cooldown before receiving the underlying avAsset"),
+    docs: [
+      sourceRef("Avant staking avAssets", "https://docs.avantprotocol.com/overview/using-the-avant-protocol/staking-avtokens-avusd-avbtc", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Avant unstaking savAssets", "https://docs.avantprotocol.com/overview/using-the-avant-protocol/unstaking-savassets", ["settlement", "capacity"]),
+    ],
+  },
+  "srusde-strata": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+    accessModel: "whitelisted-onchain",
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    totalScoreCap: 65,
+    costModel: fixedFee(2.5, "Strata docs list a 2.5 bps senior redemption fee"),
+    docs: [
+      sourceRef("Strata Ethena USDe market", "https://docs.strata.markets/markets/ethena-usde", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Strata FAQ", "https://docs.strata.markets/resources/faqs", ["settlement"]),
+    ],
+  },
+  "scusd-rings": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+    settlementModel: "days",
+    costModel: documentedVariableFee("Rings docs describe scAsset redemption after a three-day cooldown"),
+    docs: [
+      sourceRef("Rings backing", "https://docs.rings.money/backing", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Rings docs", "https://docs.rings.money/", ["route", "settlement"]),
+    ],
+  },
+  "hbusdt-hyperbeat": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee("Hyperbeat docs describe instant redemption to USDT0 with a 0.5% fee when liquidity exists, or classic redemption within 48 hours with no fee"),
+    docs: [
+      sourceRef("Hyperbeat USDT vault", "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Hyperbeat addresses", "https://docs.hyperbeat.org/resources/addresses", ["route"]),
     ],
   },
 };

@@ -1,0 +1,74 @@
+{
+  "id": "witry-brix",
+  "name": "Wrapped iTRY",
+  "symbol": "wiTRY",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "TRY",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "iTRY deposited into the Brix staking wrapper, backed by a BVI-regulated Turkish-lira money-market fund and related TRY cash/liquidity instruments",
+  "pegMechanism": "wiTRY appreciates against iTRY as fund yield is minted into the staking contract and vests over time; users can unstake through a cooldown or use Fast Redeem for a fee, while final TRY exposure inherits iTRY issuer and local-currency risk",
+  "detailProvider": "coingecko",
+  "geckoId": "wrapped-itry",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.brix.money/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/brix_money"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xe346c29b5b60ef870b9724c57ccfbbc631e47dee",
+      "decimals": 18
+    },
+    {
+      "chain": "megaeth",
+      "address": "0x15b271d9012b5820fc42b1c495b4c1e206547de5",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "Brix iTRY staking wrapper backed by TRY money-market fund exposure",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Brix iTRY staking",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "witry-brix",
+    "display": {
+      "url": "https://www.brix.money/",
+      "label": "Brix wiTRY"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    }
+  }
+}

@@ -1,0 +1,52 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+
+const action = readFileSync(resolve(process.cwd(), ".github/actions/setup-workspace/action.yml"), "utf8");
+
+function extractStepByNeedle(needle: string): string {
+  const start = action.indexOf(needle);
+  if (start === -1) {
+    throw new Error(`Missing setup-workspace step containing ${needle}`);
+  }
+
+  const nextStep = action.indexOf("\n    - ", start + needle.length);
+  return nextStep === -1 ? action.slice(start) : action.slice(start, nextStep);
+}
+
+describe("setup-workspace tooling cache", () => {
+  it("keeps the cache action pinned while caching generated tooling artifacts", () => {
+    const cacheStep = extractStepByNeedle("actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809");
+
+    expect(cacheStep).toContain("# v4.2.4");
+    expect(cacheStep).toContain(".next/cache");
+    expect(cacheStep).toContain(".cache/eslint");
+    expect(cacheStep).toContain("*.tsbuildinfo");
+    expect(cacheStep).toContain("worker/*.tsbuildinfo");
+  });
+
+  it("uses a fresh primary key per job run so restored tooling caches can be saved after builds", () => {
+    const cacheStep = extractStepByNeedle("actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809");
+
+    expect(cacheStep).toContain("${{ github.job }}");
+    expect(cacheStep).toContain("${{ github.run_id }}");
+    expect(cacheStep).toContain("${{ github.run_attempt }}");
+
+    const restoreKeys = cacheStep.slice(cacheStep.indexOf("restore-keys:"));
+    expect(restoreKeys).toContain("${{ github.job }}-");
+    expect(restoreKeys).not.toContain("${{ github.run_id }}");
+    expect(restoreKeys).not.toContain("${{ github.run_attempt }}");
+  });
+
+  it("normalizes numeric Node inputs before keying the tooling cache", () => {
+    const keyStep = extractStepByNeedle("id: tooling-cache-key");
+    const cacheStep = extractStepByNeedle("actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809");
+
+    expect(keyStep).toContain("RAW_NODE_VERSION: ${{ inputs.node-version }}");
+    expect(keyStep).toContain('raw_node_version="${RAW_NODE_VERSION}"');
+    expect(keyStep).toContain('^v?([0-9]+)(\\..*)?$');
+    expect(keyStep).toContain('echo "node-key=${node_key}" >> "${GITHUB_OUTPUT}"');
+    expect(cacheStep).toContain("${{ steps.tooling-cache-key.outputs.node-key }}");
+    expect(cacheStep).not.toContain("inputs.node-version");
+  });
+});

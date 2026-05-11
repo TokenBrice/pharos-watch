@@ -234,7 +234,7 @@ describe("fetchJsonWithRetry", () => {
     const onRetry = vi.fn();
 
     const result = await fetchJsonWithRetry(
-      "https://ops-api.pharos.watch/api/backfill-blacklist-current-balances?dryRun=true",
+      "https://ops-api.pharos.watch/api/backfill-blacklist-current-balances?dryRun=true&stablecoin=USDT&chainId=optimism&limit=1",
       { "CF-Access-Client-Id": "id" },
       {
         fetchImpl: fetchMock,

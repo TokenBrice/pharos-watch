@@ -1,0 +1,81 @@
+{
+  "id": "susd1plus-lorenzo",
+  "name": "staked USD1+",
+  "symbol": "sUSD1+",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "pegReferenceId": "usd1-world-liberty-financial",
+  "collateral": "Staked receipt over Lorenzo USD1+, a synthetic dollar strategy ultimately settled into WLFI USD1 and designed to combine USD1 reserve yield with delta-neutral strategy returns",
+  "pegMechanism": "sUSD1+ accrues yield from the Lorenzo USD1+ vault while final exit depends on unstaking back into USD1+ and settlement into USD1-supported stable liquidity",
+  "detailProvider": "coingecko",
+  "geckoId": "staked-usd1",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.lorenzo-protocol.xyz/otf/vault"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/LorenzoProtocol"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/Lorenzo-Protocol/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "bsc",
+      "address": "0x4f2760b32720f013e900dc92f65480137391199b",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "established-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "wrapper",
+  "dependencies": [
+    {
+      "id": "usd1-world-liberty-financial",
+      "weight": 1,
+      "type": "wrapper"
+    }
+  ],
+  "reserves": [
+    {
+      "name": "Lorenzo USD1+ strategy shares backed by WLFI USD1 and delta-neutral yield strategies",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usd1-world-liberty-financial",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Lorenzo USD1+ staking",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "susd1plus-lorenzo",
+    "display": {
+      "url": "https://app.lorenzo-protocol.xyz/otf/vault",
+      "label": "Lorenzo Vault"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "bsc",
+        "rpcMode": "alchemy"
+      }
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "id": "susdd-tron-dao-reserve",
+  "name": "Savings USDD",
+  "symbol": "sUSDD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "usdd-tron-dao-reserve",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "usdd-tron-dao-reserve",
+  "collateral": "USDD deposited into the USDD savings system; sUSDD remains economically backed by USDD while savings yield accrues through the wrapper exchange rate",
+  "pegMechanism": "Users deposit USDD to receive sUSDD, whose value appreciates versus USDD as savings yield accrues; final par exit inherits USDD's PSM and reserve mechanics",
+  "detailProvider": "coingecko",
+  "geckoId": "savings-usdd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://usdd.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/usddio"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USDD savings wrapper shares",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usdd-tron-dao-reserve",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "USDD savings (sUSDD)",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "susdd-tron-dao-reserve",
+    "display": {
+      "url": "https://usdd.io/",
+      "label": "USDD Savings"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    }
+  }
+}

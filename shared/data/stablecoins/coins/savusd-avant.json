@@ -1,0 +1,80 @@
+{
+  "id": "savusd-avant",
+  "name": "Avant Staked USD",
+  "symbol": "savUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "avusd-avant",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "avusd-avant",
+  "collateral": "avUSD staked into Avant's savings vault, with yield sourced from Avant's actively managed market-neutral and DeFi strategy framework",
+  "pegMechanism": "Stake avUSD to receive savUSD; savUSD appreciates against avUSD as strategy yield accrues, while final USDC exit inherits Avant's 1:1 avUSD redemption process and settlement window",
+  "detailProvider": "coingecko",
+  "geckoId": "avant-staked-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.avantprotocol.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/avantprotocol"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.avantprotocol.com/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/Avant-Protocol"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "avalanche",
+      "address": "0x06d47f3fb376649c3a9dafe069b3d6e35572219e",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "established-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "avUSD savings vault shares",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "avusd-avant",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Avant savings (savUSD)",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "savusd-avant",
+    "display": {
+      "url": "https://docs.avantprotocol.com/",
+      "label": "Avant savUSD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "avalanche",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

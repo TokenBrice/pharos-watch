@@ -1,0 +1,95 @@
+{
+  "id": "gbpe-monerium",
+  "name": "Monerium GBP emoney",
+  "symbol": "GBPe",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GBP",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "British pound e-money claim backed by safeguarded client funds and permitted EMI reserve assets under Monerium's regulated e-money framework",
+  "pegMechanism": "Mint-and-burn through Monerium after onboarding/KYC: GBPe is issued when users deposit GBP through supported bank rails and burned when redeemed back to a bank account.",
+  "detailProvider": "coingecko",
+  "geckoId": "monerium-gbp-emoney",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://monerium.com/financial-information/",
+    "provider": "Monerium financial information"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://monerium.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/monerium"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.monerium.com/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Iceland",
+    "regulator": "Financial Supervisory Authority of the Central Bank of Iceland",
+    "license": "Electronic Money Institution (EMI)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x7ba92741bf2a568abc6f1d3413c58c6e0244f8fd",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0x8e34bfec4f6eb781f9743d9b4af99cd23f9b7053",
+      "decimals": 18
+    },
+    {
+      "chain": "linea",
+      "address": "0x3bce82cf1a2bc357f956dd494713fe11dc54780f",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x2d80dbf04d0802abd7a342dafa5d7cb42bfbb52f",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xc4759ed641da77cbdc9fa2f37e9260a29bf7cc52",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-top",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "GBP safeguarded funds and permitted EMI reserve assets",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "gbpe-monerium",
+    "display": {
+      "url": "https://monerium.com/financial-information/",
+      "label": "Monerium"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

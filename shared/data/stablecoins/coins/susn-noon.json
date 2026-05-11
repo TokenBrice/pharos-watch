@@ -1,0 +1,89 @@
+{
+  "id": "susn-noon",
+  "name": "Staked USN",
+  "symbol": "sUSN",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "usn-noon",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "usn-noon",
+  "collateral": "USN deposited into Noon's staking wrapper; backing inherits Noon's Accountable-disclosed private credit, CLO, DeFi lending, principal-token, and Treasury-bill reserve mix",
+  "pegMechanism": "Stake USN to receive sUSN; sUSN appreciates against USN as Noon strategy yield accrues, while final exits inherit Noon's 1:1 USN mint/redeem and reserve-liquidity constraints",
+  "detailProvider": "coingecko",
+  "geckoId": "staked-usn",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://noon.accountable.capital/",
+    "provider": "Accountable"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.noon.capital/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/noon_capital"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.noon.capital/"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://noon.accountable.capital/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xe24a3dc889621612422a64e6388927901608b91d",
+      "decimals": 18
+    },
+    {
+      "chain": "zksync",
+      "address": "0xb6a09d426861c63722aa0b333a9ce5d5a9b04c4f",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USN staking wrapper shares",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usn-noon",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Noon staking (sUSN)",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "susn-noon",
+    "display": {
+      "url": "https://noon.accountable.capital/",
+      "label": "Noon Accountable Dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    }
+  }
+}

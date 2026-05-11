@@ -35,6 +35,22 @@ runs:
         node-version: ${{ inputs.node-version }}
 
     - if: ${{ inputs.tooling-cache == 'true' }}
+      id: tooling-cache-key
+      shell: bash
+      env:
+        RAW_NODE_VERSION: ${{ inputs.node-version }}
+      run: |
+        raw_node_version="${RAW_NODE_VERSION}"
+        node_key="${raw_node_version}"
+
+        if [[ "${raw_node_version}" =~ ^v?([0-9]+)(\..*)?$ ]]; then
+          node_key="${BASH_REMATCH[1]}"
+        fi
+
+        node_key="${node_key//[^A-Za-z0-9_.-]/-}"
+        echo "node-key=${node_key}" >> "${GITHUB_OUTPUT}"
+
+    - if: ${{ inputs.tooling-cache == 'true' }}
       uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
       with:
         path: |
@@ -42,9 +58,11 @@ runs:
           .cache/eslint
           *.tsbuildinfo
           worker/*.tsbuildinfo
-        key: tooling-cache-${{ runner.os }}-${{ inputs.node-version }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}
+        key: tooling-cache-${{ runner.os }}-${{ steps.tooling-cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
         restore-keys: |
-          tooling-cache-${{ runner.os }}-${{ inputs.node-version }}-
+          tooling-cache-${{ runner.os }}-${{ steps.tooling-cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-${{ github.job }}-
+          tooling-cache-${{ runner.os }}-${{ steps.tooling-cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-
+          tooling-cache-${{ runner.os }}-${{ steps.tooling-cache-key.outputs.node-key }}-
 
     - if: ${{ inputs.install-deps == 'true' }}
       shell: bash

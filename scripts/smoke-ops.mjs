@@ -4,6 +4,8 @@ import { pathToFileURL } from "node:url";
 
 const DEFAULT_OPS_UI_URL = process.env.SMOKE_OPS_UI_URL ?? "https://ops.pharos.watch/admin/";
 const DEFAULT_OPS_API_BASE = process.env.SMOKE_OPS_API_BASE ?? "https://ops-api.pharos.watch";
+const DEFAULT_BLACKLIST_BACKFILL_STABLECOIN = process.env.SMOKE_OPS_BLACKLIST_BACKFILL_STABLECOIN ?? "USDT";
+const DEFAULT_BLACKLIST_BACKFILL_CHAIN_ID = process.env.SMOKE_OPS_BLACKLIST_BACKFILL_CHAIN_ID ?? "optimism";
 const OPS_UI_PROXY_RETRY_STATUSES = new Set([502, 504]);
 const OPS_UI_PROXY_RETRY_COUNT = 2;
 const OPS_UI_PROXY_RETRY_DELAY_MS = 2_000;
@@ -249,6 +251,11 @@ export async function run() {
   const opsApiBase = ensureUrl(DEFAULT_OPS_API_BASE);
   const opsUiOrigin = new URL(opsUiUrl).origin;
   const adminApiUrl = new URL("/admin-api/", opsUiOrigin).toString();
+  const blacklistBackfillUrl = new URL("/api/backfill-blacklist-current-balances", opsApiBase);
+  blacklistBackfillUrl.searchParams.set("dryRun", "true");
+  blacklistBackfillUrl.searchParams.set("stablecoin", DEFAULT_BLACKLIST_BACKFILL_STABLECOIN);
+  blacklistBackfillUrl.searchParams.set("chainId", DEFAULT_BLACKLIST_BACKFILL_CHAIN_ID);
+  blacklistBackfillUrl.searchParams.set("limit", "1");
 
   console.log(`[smoke-ops] Running checks against ${opsUiUrl} and ${opsApiBase}`);
 
@@ -260,7 +267,7 @@ export async function run() {
     fetchJson(new URL("/api/api-key-requests-admin?limit=1", opsApiBase).toString(), headers),
     fetchJson(new URL("/api/audit-depeg-history?dry-run=true&limit=1", opsApiBase).toString(), headers),
     fetchJsonWithRetry(
-      new URL("/api/backfill-blacklist-current-balances?dryRun=true&stablecoin=USDT&limit=1", opsApiBase).toString(),
+      blacklistBackfillUrl.toString(),
       {
         ...headers,
         "Content-Type": "application/json",

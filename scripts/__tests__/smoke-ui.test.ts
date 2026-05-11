@@ -1,6 +1,32 @@
 import { describe, expect, it } from "vitest";
 
-import { getAnalyticsPayloadUrls, getOverflowRoutes, hasGaConfigInit, verifyAnalyticsSnippet } from "../smoke-ui.mjs";
+import {
+  chunkOverflowRoutes,
+  getAnalyticsPayloadUrls,
+  getOverflowRoutes,
+  getOverflowWorkerCount,
+  hasGaConfigInit,
+  verifyAnalyticsSnippet,
+} from "../smoke-ui.mjs";
+
+function withEnv(key: string, value: string | undefined, fn: () => void) {
+  const previous = process.env[key];
+  if (value == null) {
+    delete process.env[key];
+  } else {
+    process.env[key] = value;
+  }
+
+  try {
+    fn();
+  } finally {
+    if (previous == null) {
+      delete process.env[key];
+    } else {
+      process.env[key] = previous;
+    }
+  }
+}
 
 describe("hasGaConfigInit", () => {
   it("accepts the single-quoted GA config emitted by older builds", () => {
@@ -49,6 +75,53 @@ describe("getOverflowRoutes", () => {
         process.env.SMOKE_UI_OVERFLOW_ROUTES = previousRoutes;
       }
     }
+  });
+});
+
+describe("getOverflowWorkerCount", () => {
+  it("defaults local overflow sweeps to two workers", () => {
+    withEnv("SMOKE_UI_OVERFLOW_WORKERS", undefined, () => {
+      expect(getOverflowWorkerCount("local", 11)).toBe(2);
+    });
+  });
+
+  it("keeps live overflow sweeps single-session by default", () => {
+    withEnv("SMOKE_UI_OVERFLOW_WORKERS", undefined, () => {
+      expect(getOverflowWorkerCount("live", 4)).toBe(1);
+    });
+  });
+
+  it("allows env overrides while capping workers to three and route count", () => {
+    withEnv("SMOKE_UI_OVERFLOW_WORKERS", "8", () => {
+      expect(getOverflowWorkerCount("local", 11)).toBe(3);
+      expect(getOverflowWorkerCount("local", 2)).toBe(2);
+    });
+  });
+
+  it("falls back for invalid env values and disables workers when overflow is skipped", () => {
+    withEnv("SMOKE_UI_OVERFLOW_WORKERS", "nope", () => {
+      expect(getOverflowWorkerCount("local", 11)).toBe(2);
+      expect(getOverflowWorkerCount("local", 11, true)).toBe(0);
+      expect(getOverflowWorkerCount("local", 0)).toBe(0);
+    });
+  });
+});
+
+describe("chunkOverflowRoutes", () => {
+  it("splits routes into deterministic contiguous chunks", () => {
+    expect(chunkOverflowRoutes(["/", "/alt-pegs/", "/flows/", "/yield/", "/api/"], 2)).toEqual([
+      ["/", "/alt-pegs/", "/flows/"],
+      ["/yield/", "/api/"],
+    ]);
+  });
+
+  it("caps chunks to the number of routes", () => {
+    expect(chunkOverflowRoutes(["/", "/api/"], 3)).toEqual([["/"], ["/api/"]]);
+  });
+
+  it("returns no chunks for empty input or disabled workers", () => {
+    expect(chunkOverflowRoutes([], 2)).toEqual([]);
+    expect(chunkOverflowRoutes(["/"], 0)).toEqual([]);
   });
 });
 

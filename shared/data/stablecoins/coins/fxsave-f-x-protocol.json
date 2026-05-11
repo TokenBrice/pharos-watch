@@ -1,0 +1,75 @@
+{
+  "id": "fxsave-f-x-protocol",
+  "name": "f(x) USD Saving",
+  "symbol": "fxSAVE",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "fxusd-f-x-protocol",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "fxusd-f-x-protocol",
+  "collateral": "fxUSD deposited into f(x) Protocol's saving/stability strategy; backing inherits fxUSD's WBTC and wstETH collateral base plus strategy execution risk",
+  "pegMechanism": "fxSAVE is a yield-bearing vault receipt over fxUSD strategy exposure; holders exit through the vault back into fxUSD, then inherit the underlying f(x) Protocol redemption and liquidation mechanics",
+  "detailProvider": "coingecko",
+  "geckoId": "fx-usd-saving",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://fx.aladdin.club/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/protocol_fx"
+    },
+    {
+      "label": "Docs",
+      "url": "https://fxprotocol.gitbook.io/fx-docs"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "single-chain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "fxUSD saving strategy shares",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "fxusd-f-x-protocol",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "f(x) USD Saving",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "fxsave-f-x-protocol",
+    "display": {
+      "url": "https://fx.aladdin.club/",
+      "label": "f(x) USD Saving"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    }
+  }
+}

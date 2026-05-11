@@ -1,0 +1,69 @@
+{
+  "id": "onyc-onre",
+  "name": "Onchain Yield Coin",
+  "symbol": "ONYC",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Tokenized exposure to OnRe-managed structured insurance and reinsurance yield products, designed to hold stable value while distributing real-world insurance-market returns through NAV appreciation",
+  "pegMechanism": "ONYC is a yield-bearing stable-value token rather than a fixed $1 wrapper; the token value accrues yield from OnRe's structured insurance collateral strategies, with primary-market access governed by OnRe's platform terms",
+  "detailProvider": "coingecko",
+  "geckoId": "onyc",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://onre.finance"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/onrefinance"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/onre-finance"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5",
+      "decimals": 9
+    }
+  ],
+  "chainTier": "mature-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "OnRe structured insurance and reinsurance yield portfolio",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "OnRe insurance collateral yield",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "onyc-onre",
+    "display": {
+      "url": "https://onre.finance",
+      "label": "OnRe"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-solana"
+      }
+    }
+  }
+}

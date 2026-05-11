@@ -1,0 +1,67 @@
+{
+  "id": "weusd-picwe",
+  "name": "WEUSD",
+  "symbol": "WEUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "100% USDC-backed omni-chain stablecoin according to PicWe documentation; future RWA/yield collateral is described as roadmap rather than current backing",
+  "pegMechanism": "PicWe mint/redeem flow issues WEUSD against USDC and supports on-chain redemption back to USDC with a documented redemption fee.",
+  "llamaId": "278",
+  "detailProvider": "defillama",
+  "geckoId": "weusd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://picwe.org/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/PicWeGlobal"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.picwe.org/what-is-weusd"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "bsc",
+      "address": "0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
+      "decimals": 6
+    },
+    {
+      "chain": "movement",
+      "address": "0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "multisig",
+  "reserves": [
+    {
+      "name": "USDC reserves",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral"
+    }
+  ]
+}

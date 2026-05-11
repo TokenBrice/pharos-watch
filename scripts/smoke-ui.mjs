@@ -21,6 +21,9 @@ const DEFAULT_OVERFLOW_SETTLE_SAMPLES = 4;
 const DEFAULT_OVERFLOW_SAMPLE_INTERVAL_MS = 350;
 const DEFAULT_STYLE_READY_TIMEOUT_MS = 4000;
 const DEFAULT_OVERFLOW_RETRY_EXTRA_WAIT_MS = 2000;
+const DEFAULT_LOCAL_OVERFLOW_WORKERS = 2;
+const DEFAULT_LIVE_OVERFLOW_WORKERS = 1;
+const MAX_OVERFLOW_WORKERS = 3;
 const DEFAULT_LIVE_CANARY_ROUTES = ["/yield/", "/alt-pegs/", "/blacklist/", "/stability-index/"];
 const OVERFLOW_ROUTE_DEFAULTS = [
   "/",
@@ -131,6 +134,30 @@ function readNonNegativeIntEnv(key, fallback) {
     return parsed;
   }
   return fallback;
+}
+
+export function getOverflowWorkerCount(mode, routeCount, skipOverflow = false) {
+  if (skipOverflow || routeCount <= 0) {
+    return 0;
+  }
+
+  const fallback = mode === "live" ? DEFAULT_LIVE_OVERFLOW_WORKERS : DEFAULT_LOCAL_OVERFLOW_WORKERS;
+  const requested = readPositiveIntEnv("SMOKE_UI_OVERFLOW_WORKERS", fallback);
+  return Math.min(MAX_OVERFLOW_WORKERS, routeCount, requested);
+}
+
+export function chunkOverflowRoutes(routes, workerCount) {
+  if (!Array.isArray(routes) || routes.length === 0 || workerCount <= 0) {
+    return [];
+  }
+
+  const chunkCount = Math.min(routes.length, workerCount);
+  const chunkSize = Math.ceil(routes.length / chunkCount);
+  const chunks = [];
+  for (let i = 0; i < routes.length; i += chunkSize) {
+    chunks.push(routes.slice(i, i + chunkSize));
+  }
+  return chunks;
 }
 
 function normalizeRoute(input) {
@@ -352,22 +379,24 @@ function buildSmokeRunCode(config) {
     );
   }
 
-  await page.goto(config.baseUrl, { timeout: config.waitTimeoutMs, waitUntil: "domcontentloaded" });
-
   let homepage = null;
-  for (let attempt = 0; attempt <= config.uiRetryCount; attempt += 1) {
-    homepage = await captureHomepageSummary();
-    if (!homepage.timedOut) {
-      break;
-    }
-    if (attempt < config.uiRetryCount) {
-      await waitForRetryDelay(config.uiRetryDelayMs);
-      await page.goto(config.baseUrl, { timeout: config.waitTimeoutMs, waitUntil: "domcontentloaded" });
+  if (config.runHomepage !== false) {
+    await page.goto(config.baseUrl, { timeout: config.waitTimeoutMs, waitUntil: "domcontentloaded" });
+
+    for (let attempt = 0; attempt <= config.uiRetryCount; attempt += 1) {
+      homepage = await captureHomepageSummary();
+      if (!homepage.timedOut) {
+        break;
+      }
+      if (attempt < config.uiRetryCount) {
+        await waitForRetryDelay(config.uiRetryDelayMs);
+        await page.goto(config.baseUrl, { timeout: config.waitTimeoutMs, waitUntil: "domcontentloaded" });
+      }
     }
   }
 
   const overflowChecks = [];
-  if (!config.skipOverflow && config.routes.length > 0) {
+  if (config.runOverflow !== false && !config.skipOverflow && config.routes.length > 0) {
     await page.setViewportSize({ height: config.mobileHeight, width: config.mobileWidth });
 
     for (const route of config.routes) {
@@ -510,7 +539,9 @@ export async function run() {
   const { mode: rawMode, skipOverflow, url: rawUrl } = parseArgs(process.argv.slice(2));
   const url = ensureUrl(rawUrl);
   const mode = ensureMode(rawMode);
-  const sessionId = `${SESSION_PREFIX}-${Date.now().toString(36)}`;
+  const sessionSeed = Date.now().toString(36);
+  const sessionIds = new Set();
+  const createSessionId = (label) => `${SESSION_PREFIX}-${sessionSeed}-${label}`;
   const waitTimeoutMs = getUiWaitTimeoutMs();
   const uiRetryCount = getUiRetryCount();
   const uiRetryDelayMs = getUiRetryDelayMs();
@@ -537,6 +568,31 @@ export async function run() {
     uiRetryDelayMs,
     waitTimeoutMs,
   };
+  const overflowWorkerCount = getOverflowWorkerCount(mode, config.routes.length, skipOverflow);
+  const overflowRouteChunks = chunkOverflowRoutes(config.routes, overflowWorkerCount);
+
+  const closeSession = async (sessionId) => {
+    if (!sessionIds.has(sessionId)) {
+      return;
+    }
+    try {
+      await runPlaywrightCli(sessionId, ["close"]);
+    } catch {
+      // Best-effort cleanup; stale sessions can be killed by playwright-cli kill-all if needed.
+    } finally {
+      sessionIds.delete(sessionId);
+    }
+  };
+
+  const runSmokeSession = async (sessionId, smokeConfig, stepLabel) => {
+    sessionIds.add(sessionId);
+    const openOutput = await runPlaywrightCli(sessionId, ["open", url]);
+    ensureNoCliError(`${stepLabel} open`, openOutput);
+
+    const smokeOutput = await runPlaywrightCli(sessionId, ["run-code", buildSmokeRunCode(smokeConfig)]);
+    ensureNoCliError(`${stepLabel} run-code`, smokeOutput);
+    return parseResultJson(smokeOutput);
+  };
 
   console.log(`[smoke-ui] Running ${mode} browser smoke checks against ${url}`);
 
@@ -546,13 +602,16 @@ export async function run() {
       console.log(`[smoke-ui] OK analytics snippet ${expectedGaId}`);
     }
 
-    const openOutput = await runPlaywrightCli(sessionId, ["open", url]);
-    ensureNoCliError("open", openOutput);
-
-    const smokeOutput = await runPlaywrightCli(sessionId, ["run-code", buildSmokeRunCode(config)]);
-    ensureNoCliError("run-code", smokeOutput);
-    const result = parseResultJson(smokeOutput);
-    const summary = result.homepage;
+    const homepageSessionId = createSessionId("home");
+    const homepageResult = await runSmokeSession(
+      homepageSessionId,
+      {
+        ...config,
+        runOverflow: false,
+      },
+      "homepage",
+    );
+    const summary = homepageResult.homepage;
 
     assert(summary, "Homepage smoke check did not produce a summary result");
     assert(
@@ -572,8 +631,55 @@ export async function run() {
     }
     console.log(`[smoke-ui] OK ${summary.title}`);
     console.log(`[smoke-ui] OK table rows=${summary.rows}, knownTicker=${summary.hasKnownTicker}`);
+    await closeSession(homepageSessionId);
 
-    for (const check of result.overflowChecks ?? []) {
+    const overflowChecks = [];
+    if (!skipOverflow && overflowRouteChunks.length > 0) {
+      console.log(
+        `[smoke-ui] Running overflow sweep for ${config.routes.length} route(s) across ${overflowRouteChunks.length} worker(s)`,
+      );
+
+      const overflowResults = await Promise.allSettled(
+        overflowRouteChunks.map(async (routes, index) => {
+          const workerNumber = index + 1;
+          const sessionId = createSessionId(`overflow-${workerNumber}`);
+          try {
+            const result = await runSmokeSession(
+              sessionId,
+              {
+                ...config,
+                routes,
+                runHomepage: false,
+              },
+              `overflow worker ${workerNumber}`,
+            );
+            return {
+              checks: result.overflowChecks ?? [],
+              routes,
+              workerNumber,
+            };
+          } finally {
+            await closeSession(sessionId);
+          }
+        }),
+      );
+
+      const failedWorker = overflowResults.find((result) => result.status === "rejected");
+      if (failedWorker?.status === "rejected") {
+        throw failedWorker.reason;
+      }
+
+      for (const result of overflowResults) {
+        if (result.status === "fulfilled") {
+          console.log(
+            `[smoke-ui] OK overflow worker ${result.value.workerNumber}/${overflowRouteChunks.length} routes=${result.value.routes.join(", ")}`,
+          );
+          overflowChecks.push(...result.value.checks);
+        }
+      }
+    }
+
+    for (const check of overflowChecks) {
       const finalSummary = check.retry ?? check.initial;
       if (check.initial?.hasOverflow && check.retry?.hasOverflow) {
         throw new Error(formatOverflowFailure(check.retry));
@@ -590,10 +696,8 @@ export async function run() {
 
     console.log("[smoke-ui] All checks passed.");
   } finally {
-    try {
-      await runPlaywrightCli(sessionId, ["close"]);
-    } catch {
-      // Best-effort cleanup; stale sessions can be killed by playwright-cli kill-all if needed.
+    for (const sessionId of Array.from(sessionIds)) {
+      await closeSession(sessionId);
     }
     removePlaywrightArtifacts();
   }

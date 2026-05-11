@@ -332,8 +332,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Stablecoin data
 
-- `shared/data/stablecoins/canonical-order.json` - 282 entries
-- `shared/data/stablecoins/coins.generated.json` - 282 entries
+- `shared/data/stablecoins/canonical-order.json` - 302 entries
+- `shared/data/stablecoins/coins.generated.json` - 302 entries
 - `shared/data/stablecoins/coins/a7a5-old-vector.json` - 15 keys
 - `shared/data/stablecoins/coins/aeur-anchored-coins.json` - 17 keys
 - `shared/data/stablecoins/coins/aid-gaib.json` - 17 keys

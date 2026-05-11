@@ -1,0 +1,81 @@
+{
+  "id": "steakusdt-steakhouse",
+  "name": "Steakhouse USDT V2",
+  "symbol": "steakUSDT",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "usdt-tether",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdt-tether",
+  "collateral": "USDT deposited into a Steakhouse-curated Morpho vault that allocates across Morpho lending markets backed by blue-chip crypto and real-world asset collateral",
+  "pegMechanism": "ERC-4626-style Morpho vault shares appreciate against USDT as borrower interest accrues; withdrawals redeem vault shares for available USDT liquidity or wait for Morpho market liquidity to return",
+  "detailProvider": "coingecko",
+  "geckoId": "steakhouse-usdt",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/SteakhouseFi"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USDT deposited into Steakhouse-curated Morpho lending markets",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usdt-tether",
+      "depType": "wrapper",
+      "blacklistable": true
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Steakhouse Morpho USDT vault",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "steakusdt-steakhouse",
+    "display": {
+      "url": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant",
+      "label": "Morpho Steakhouse USDT"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDT deposited into Steakhouse-curated Morpho lending markets",
+        "risk": "medium",
+        "coinId": "usdt-tether",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+      }
+    }
+  }
+}

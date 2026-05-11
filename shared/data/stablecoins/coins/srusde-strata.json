@@ -1,0 +1,75 @@
+{
+  "id": "srusde-strata",
+  "name": "Strata Senior USDe",
+  "symbol": "srUSDe",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "usde-ethena",
+  "variantKind": "risk-absorption",
+  "pegReferenceId": "usde-ethena",
+  "collateral": "Senior tranche token over a Strata risk-tranched USDe yield strategy; junior tranche capital absorbs first-loss or underperformance before senior holders",
+  "pegMechanism": "srUSDe targets a stable senior NAV backed by USDe strategy collateral and junior-tranche subordination; exits depend on Strata tranche liquidity and settlement rules rather than a simple 1:1 stablecoin redemption",
+  "detailProvider": "coingecko",
+  "geckoId": "strata-senior-usde",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://strata.markets"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/strata_markets"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/strata-money"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "cex",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "Senior tranche exposure to USDe yield strategy",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usde-ethena",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Strata senior USDe tranche",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "srusde-strata",
+    "display": {
+      "url": "https://strata.markets",
+      "label": "Strata"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    }
+  }
+}

@@ -3,9 +3,10 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildCiValidateStepPlan,
+  buildNoncriticalTestShardCommands,
   buildValidatePrebuildRunnerArgs,
-  COMMON_VALIDATE_POSTBUILD_COMMANDS,
   PAGES_VALIDATE_COMMANDS,
+  NONCRITICAL_TEST_SHARD_COUNT,
   VALIDATE_PREBUILD_MAX_PARALLEL,
   VALIDATE_PREBUILD_COMMANDS,
   VALIDATE_PREBUILD_TASK_NAMES,
@@ -29,7 +30,7 @@ function extractRunSteps(yaml) {
   let current = null;
 
   function flushCurrent() {
-    if (current?.cmd) {
+    if (current?.cmd && current.cmd !== "|") {
       steps.push(current);
     }
     current = null;
@@ -94,16 +95,26 @@ describe("validate-ci parity", () => {
       resolve(process.cwd(), ".github/actions/setup-workspace/action.yml"),
       "utf8",
     );
-    const validateJob = extractJobBlock(workflow, "validate");
-    const setupWorkspaceRunSteps = extractRunSteps(setupWorkspaceAction);
+    const validatePrebuildJob = extractJobBlock(workflow, "validate-prebuild", "pages-build");
+    const pagesBuildJob = extractJobBlock(workflow, "pages-build", "test-noncritical");
+    const testNoncriticalJob = extractJobBlock(workflow, "test-noncritical", "coverage-critical");
+    const coverageCriticalJob = extractJobBlock(workflow, "coverage-critical", "typecheck-worker");
+    const typecheckWorkerJob = extractJobBlock(workflow, "typecheck-worker", "typecheck-worker-scripts");
+    const typecheckWorkerScriptsJob = extractJobBlock(workflow, "typecheck-worker-scripts", "validate");
+    const setupWorkspaceRunSteps = extractRunSteps(setupWorkspaceAction).filter((step) => step.cmd === "npm ci");
 
-    expect([...setupWorkspaceRunSteps, ...extractRunSteps(validateJob)]).toEqual([
+    expect([...setupWorkspaceRunSteps, ...extractRunSteps(validatePrebuildJob)]).toEqual([
       { cmd: "npm ci", condition: null },
       { cmd: "npm run validate:prebuild", condition: null },
-      {
-        cmd: "node scripts/run-validate-postbuild.mjs --pages-changed=${{ inputs.pages_changed }} --worker-changed=${{ inputs.worker_changed }} --coverage-compare-ref=${{ inputs.coverage-compare-ref }}",
-        condition: null,
-      },
+    ]);
+    expect(extractRunSteps(pagesBuildJob)).toEqual(PAGES_VALIDATE_COMMANDS.map((cmd) => ({ cmd, condition: null })));
+    expect(extractRunSteps(testNoncriticalJob)).toEqual([
+      { cmd: "npm run test:noncritical -- --shard=${{ matrix.shard }}/3", condition: null },
+    ]);
+    expect(extractRunSteps(coverageCriticalJob)).toEqual([{ cmd: "npm run coverage:critical", condition: null }]);
+    expect(extractRunSteps(typecheckWorkerJob)).toEqual([{ cmd: "npm run typecheck:worker", condition: null }]);
+    expect(extractRunSteps(typecheckWorkerScriptsJob)).toEqual([
+      { cmd: "npm run typecheck:worker-scripts", condition: null },
     ]);
   });
 
@@ -121,7 +132,7 @@ describe("validate-ci parity", () => {
       "utf8",
     );
 
-    expect(extractJobBlock(workflow, "validate")).toContain("node-version: 24.x");
+    expect(extractJobBlock(workflow, "validate-prebuild", "pages-build")).toContain("node-version: 24.x");
     expect(setupWorkspaceAction).toContain('default: "24"');
     expect(workflow).not.toContain("node-version: 25");
     expect(setupWorkspaceAction).not.toContain('default: "25"');
@@ -202,10 +213,43 @@ describe("validate-ci parity", () => {
   it("keeps the expanded validate contract model available for local planning", () => {
     expect(buildCiValidateStepPlan()).toEqual([
       { cmd: "npm run validate:prebuild", condition: null },
-      ...PAGES_VALIDATE_COMMANDS.map((cmd) => ({ cmd, condition: "pages_changed" })),
-      ...COMMON_VALIDATE_POSTBUILD_COMMANDS.map((cmd) => ({ cmd, condition: null })),
+      ...PAGES_VALIDATE_COMMANDS.map((cmd) => ({ cmd, condition: "pages_changed && run_pages_build_and_seo" })),
+      ...buildNoncriticalTestShardCommands().map((cmd) => ({ cmd, condition: null })),
+      { cmd: "npm run coverage:critical", condition: null },
       ...WORKER_VALIDATE_COMMANDS.map((cmd) => ({ cmd, condition: "worker_changed" })),
     ]);
+  });
+
+  it("requires all non-critical Vitest shards in the reusable validate workflow", () => {
+    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
+    const testNoncriticalJob = extractJobBlock(workflow, "test-noncritical", "coverage-critical");
+    const validateJob = extractJobBlock(workflow, "validate");
+
+    expect(NONCRITICAL_TEST_SHARD_COUNT).toBe(3);
+    expect(buildNoncriticalTestShardCommands()).toEqual([
+      "npm run test:noncritical -- --shard=1/3",
+      "npm run test:noncritical -- --shard=2/3",
+      "npm run test:noncritical -- --shard=3/3",
+    ]);
+    expect(testNoncriticalJob).toContain("shard: [1, 2, 3]");
+    expect(testNoncriticalJob).toContain("fail-fast: false");
+    expect(testNoncriticalJob).toContain("npm run test:noncritical -- --shard=${{ matrix.shard }}/3");
+    expect(validateJob).toContain("- test-noncritical");
+    expect(validateJob).toContain('["test-noncritical", process.env.TEST_NONCRITICAL_RESULT]');
+  });
+
+  it("keeps PR Pages build validation but lets deploy callers skip duplicate Pages build and SEO work", () => {
+    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
+    const pagesBuildJob = extractJobBlock(workflow, "pages-build", "test-noncritical");
+    const validateJob = extractJobBlock(workflow, "validate");
+
+    expect(workflow).toContain("run_pages_build_and_seo:");
+    expect(pagesBuildJob).toContain(
+      "if: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo && github.event_name == 'pull_request' }}",
+    );
+    expect(validateJob).toContain(
+      "PAGES_BUILD_EXPECTED: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo && github.event_name == 'pull_request' }}",
+    );
   });
 
   it("keeps the critical coverage baseline aligned with the ratchet target list", () => {

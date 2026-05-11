@@ -1,0 +1,52 @@
+{
+  "id": "hbusdt-hyperbeat",
+  "name": "Hyperbeat USDT",
+  "symbol": "hbUSDT",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "usdt-tether",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdt-tether",
+  "collateral": "USDT deposited into Hyperbeat's HyperEVM yield vault, with returns sourced from HyperEVM DeFi lending and strategy allocation",
+  "pegMechanism": "hbUSDT is a yield-bearing vault token over USDT strategy exposure; holders exit through Hyperbeat vault liquidity into USDT, while ultimate fiat par exit remains Tether's issuer route",
+  "detailProvider": "coingecko",
+  "geckoId": "hyperbeat-usdt",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://hyperbeat.org/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "hyperevm",
+      "address": "0x5e105266db42f78fa814322bce7f388b4c2e61eb",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "unproven",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USDT deployed into Hyperbeat HyperEVM yield strategies",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usdt-tether",
+      "depType": "wrapper",
+      "blacklistable": true
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Hyperbeat USDT vault",
+    "yieldType": "lending-vault"
+  }
+}

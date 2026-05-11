@@ -415,6 +415,99 @@
     }
   },
   {
+    "id": "apyusd-apyx",
+    "detailProvider": "coingecko",
+    "name": "apyUSD",
+    "symbol": "apyUSD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "pegReferenceId": "apxusd-apyx",
+    "collateral": "apxUSD deposited into the Apyx ERC-4626 yield vault; apxUSD itself is backed by preferred equity shares from Digital Asset Treasury companies and liquidity buffers",
+    "pegMechanism": "Users deposit apxUSD to mint apyUSD; cash dividends and preferred-equity yield accrue inside the vault, increasing apyUSD's exchange rate against apxUSD over time",
+    "geckoId": "apyusd",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://apyx.fi"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/apyx_fi"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.apyx.fi"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/apyx-labs"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "wrapper",
+    "variantOf": "apxusd-apyx",
+    "variantKind": "strategy-vault",
+    "reserves": [
+      {
+        "name": "apxUSD yield vault shares",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "apxusd-apyx",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "apyusd-apyx",
+      "display": {
+        "url": "https://docs.apyx.fi",
+        "label": "Apyx apyUSD"
+      },
+      "adapter": "erc4626-single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "apxUSD yield vault shares",
+          "risk": "high",
+          "coinId": "apxusd-apyx",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0x98a878b1cd98131b271883b390f68d2c90674665"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Apyx apyUSD vault",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "arc-anq",
     "detailProvider": "defillama",
     "name": "ARC",
@@ -7501,6 +7594,81 @@
     ]
   },
   {
+    "id": "fxsave-f-x-protocol",
+    "detailProvider": "coingecko",
+    "name": "f(x) USD Saving",
+    "symbol": "fxSAVE",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "fxusd-f-x-protocol",
+    "collateral": "fxUSD deposited into f(x) Protocol's saving/stability strategy; backing inherits fxUSD's WBTC and wstETH collateral base plus strategy execution risk",
+    "pegMechanism": "fxSAVE is a yield-bearing vault receipt over fxUSD strategy exposure; holders exit through the vault back into fxUSD, then inherit the underlying f(x) Protocol redemption and liquidation mechanics",
+    "geckoId": "fx-usd-saving",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://fx.aladdin.club/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/protocol_fx"
+      },
+      {
+        "label": "Docs",
+        "url": "https://fxprotocol.gitbook.io/fx-docs"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "variantOf": "fxusd-f-x-protocol",
+    "variantKind": "strategy-vault",
+    "reserves": [
+      {
+        "name": "fxUSD saving strategy shares",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "fxusd-f-x-protocol",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "fxsave-f-x-protocol",
+      "display": {
+        "url": "https://fx.aladdin.club/",
+        "label": "f(x) USD Saving"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "f(x) USD Saving",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "fxusd-f-x-protocol",
     "llamaId": "168",
     "detailProvider": "defillama",
@@ -7575,6 +7743,101 @@
     "yieldConfig": {
       "yieldSource": "f(x) Protocol Stability Pool",
       "yieldType": "lending-vault"
+    }
+  },
+  {
+    "id": "gbpe-monerium",
+    "detailProvider": "coingecko",
+    "name": "Monerium GBP emoney",
+    "symbol": "GBPe",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "GBP",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "British pound e-money claim backed by safeguarded client funds and permitted EMI reserve assets under Monerium's regulated e-money framework",
+    "pegMechanism": "Mint-and-burn through Monerium after onboarding/KYC: GBPe is issued when users deposit GBP through supported bank rails and burned when redeemed back to a bank account.",
+    "geckoId": "monerium-gbp-emoney",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://monerium.com/financial-information/",
+      "provider": "Monerium financial information"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://monerium.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/monerium"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.monerium.com/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Iceland",
+      "regulator": "Financial Supervisory Authority of the Central Bank of Iceland",
+      "license": "Electronic Money Institution (EMI)"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x7ba92741bf2a568abc6f1d3413c58c6e0244f8fd",
+        "decimals": 18
+      },
+      {
+        "chain": "gnosis",
+        "address": "0x8e34bfec4f6eb781f9743d9b4af99cd23f9b7053",
+        "decimals": 18
+      },
+      {
+        "chain": "linea",
+        "address": "0x3bce82cf1a2bc357f956dd494713fe11dc54780f",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x2d80dbf04d0802abd7a342dafa5d7cb42bfbb52f",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0xc4759ed641da77cbdc9fa2f37e9260a29bf7cc52",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-top",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "GBP safeguarded funds and permitted EMI reserve assets",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "attestation-mix",
+      "breakerScope": "gbpe-monerium",
+      "display": {
+        "url": "https://monerium.com/financial-information/",
+        "label": "Monerium"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
     }
   },
   {
@@ -8415,6 +8678,58 @@
         "message": "HBD redemptions depend on Hive protocol conversion rules and can be haircut when system debt is above configured thresholds."
       }
     ]
+  },
+  {
+    "id": "hbusdt-hyperbeat",
+    "detailProvider": "coingecko",
+    "name": "Hyperbeat USDT",
+    "symbol": "hbUSDT",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usdt-tether",
+    "collateral": "USDT deposited into Hyperbeat's HyperEVM yield vault, with returns sourced from HyperEVM DeFi lending and strategy allocation",
+    "pegMechanism": "hbUSDT is a yield-bearing vault token over USDT strategy exposure; holders exit through Hyperbeat vault liquidity into USDT, while ultimate fiat par exit remains Tether's issuer route",
+    "geckoId": "hyperbeat-usdt",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://hyperbeat.org/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "hyperevm",
+        "address": "0x5e105266db42f78fa814322bce7f388b4c2e61eb",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "variantOf": "usdt-tether",
+    "variantKind": "strategy-vault",
+    "reserves": [
+      {
+        "name": "USDT deployed into Hyperbeat HyperEVM yield strategies",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "usdt-tether",
+        "depType": "wrapper",
+        "blacklistable": true
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Hyperbeat USDT vault",
+      "yieldType": "lending-vault"
+    }
   },
   {
     "id": "hkd-hsbc",
@@ -11241,6 +11556,86 @@
     }
   },
   {
+    "id": "mre7yield-midas",
+    "detailProvider": "coingecko",
+    "name": "Midas mRe7YIELD",
+    "symbol": "mRe7YIELD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "collateral": "Liquid Yield Token managed by Midas and Re7 Capital, allocating across institutional-grade DeFi yield strategies including lending, liquidity provisioning, restaking, funding-rate arbitrage, and options arbitrage",
+    "pegMechanism": "mRe7YIELD is a NAV-accreting liquid yield token rather than a fixed $1 stablecoin; primary-market mint/redeem occurs through Midas rails while secondary-market holders rely on token liquidity and strategy NAV",
+    "geckoId": "midas-mre7yield",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://midas.app/mre7yield"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/midasrwa"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.midas.app/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf",
+        "decimals": 18
+      },
+      {
+        "chain": "etherlink",
+        "address": "0x733d504435a49fc8c4e9759e756c2846c92f0160",
+        "decimals": 18
+      },
+      {
+        "chain": "starknet",
+        "address": "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Re7-managed DeFi lending, liquidity, restaking, funding-rate, and options strategies",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "mre7yield-midas",
+      "display": {
+        "url": "https://midas.app/mre7yield",
+        "label": "Midas mRe7YIELD"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Midas mRe7YIELD strategy",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "msusd-main-street",
     "llamaId": "297",
     "detailProvider": "defillama",
@@ -12177,6 +12572,75 @@
         "sourceUrl": "https://www.benzinga.com/pressreleases/26/05/52366344/hashed-open-finance-launch-testnet-of-maroo-first-sovereign-l1-blockchain-for-krw-stablecoins-and-a"
       }
     ]
+  },
+  {
+    "id": "onyc-onre",
+    "detailProvider": "coingecko",
+    "name": "Onchain Yield Coin",
+    "symbol": "ONYC",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Tokenized exposure to OnRe-managed structured insurance and reinsurance yield products, designed to hold stable value while distributing real-world insurance-market returns through NAV appreciation",
+    "pegMechanism": "ONYC is a yield-bearing stable-value token rather than a fixed $1 wrapper; the token value accrues yield from OnRe's structured insurance collateral strategies, with primary-market access governed by OnRe's platform terms",
+    "geckoId": "onyc",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://onre.finance"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/onrefinance"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/onre-finance"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "solana",
+        "address": "5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5",
+        "decimals": 9
+      }
+    ],
+    "chainTier": "mature-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "OnRe structured insurance and reinsurance yield portfolio",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "onyc-onre",
+      "display": {
+        "url": "https://onre.finance",
+        "label": "OnRe"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-solana"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "OnRe insurance collateral yield",
+      "yieldType": "nav-appreciation"
+    }
   },
   {
     "id": "ousd-origin-protocol",
@@ -13243,6 +13707,102 @@
     }
   },
   {
+    "id": "qcad-stablecorp",
+    "detailProvider": "coingecko",
+    "name": "Stablecorp QCAD",
+    "symbol": "QCAD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "CAD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Canadian dollars held 1:1 in regulated Canadian financial institutions under the QCAD Digital Trust reserve framework",
+    "pegMechanism": "Qualified holders can mint and redeem QCAD at 1 CAD through Stablecorp or authorized partners; issuer APIs publish live supply and fiat reserve totals.",
+    "geckoId": "stablecorp-qcad",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json",
+      "provider": "Stablecorp balances API"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://stablecorp.ca/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Stablecorp"
+      },
+      {
+        "label": "Transparency",
+        "url": "https://stablecorp.ca/transparency"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Canada",
+      "regulator": "Canadian Securities Administrators / FINTRAC",
+      "license": "FINTRAC MSB M22234558; QCAD Digital Trust VRCA framework"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x3fa142dd3f384414e05e71ad0939274edc82ec0a",
+        "decimals": 6
+      },
+      {
+        "chain": "base",
+        "address": "0xa15705e6fc8b3e08e7253f3758de1a754baa0761",
+        "decimals": 6
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "CAD fiat reserves",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "qcad-stablecorp",
+      "display": {
+        "url": "https://stablecorp.ca/transparency",
+        "label": "Stablecorp"
+      },
+      "adapter": "single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json"
+        }
+      },
+      "params": {
+        "label": "CAD fiat reserves",
+        "risk": "very-low",
+        "reserveProbe": {
+          "kind": "json-path",
+          "path": [
+            "totalFiatReserves"
+          ]
+        },
+        "supplyProbe": {
+          "kind": "json-path",
+          "path": [
+            "totalSupply"
+          ]
+        },
+        "reserveSourceLabel": "Stablecorp balances API"
+      }
+    }
+  },
+  {
     "id": "reur-royal-euro",
     "detailProvider": "coingecko",
     "name": "Royal Euro",
@@ -14155,6 +14715,86 @@
     }
   },
   {
+    "id": "savusd-avant",
+    "detailProvider": "coingecko",
+    "name": "Avant Staked USD",
+    "symbol": "savUSD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "avusd-avant",
+    "collateral": "avUSD staked into Avant's savings vault, with yield sourced from Avant's actively managed market-neutral and DeFi strategy framework",
+    "pegMechanism": "Stake avUSD to receive savUSD; savUSD appreciates against avUSD as strategy yield accrues, while final USDC exit inherits Avant's 1:1 avUSD redemption process and settlement window",
+    "geckoId": "avant-staked-usd",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.avantprotocol.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/avantprotocol"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.avantprotocol.com/"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/Avant-Protocol"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "avalanche",
+        "address": "0x06d47f3fb376649c3a9dafe069b3d6e35572219e",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "wrapper",
+    "variantOf": "avusd-avant",
+    "variantKind": "strategy-vault",
+    "reserves": [
+      {
+        "name": "avUSD savings vault shares",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "avusd-avant",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "savusd-avant",
+      "display": {
+        "url": "https://docs.avantprotocol.com/",
+        "label": "Avant savUSD"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "avalanche",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Avant savings (savUSD)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "sbc-brale",
     "llamaId": "324",
     "detailProvider": "defillama",
@@ -14451,6 +15091,71 @@
       "yieldSource": "Curve savings (scrvUSD)",
       "yieldType": "nav-appreciation"
     }
+  },
+  {
+    "id": "scusd-rings",
+    "llamaId": "238",
+    "detailProvider": "defillama",
+    "name": "Rings scUSD",
+    "symbol": "scUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Stablecoin deposits routed through Rings/Veda BoringVault infrastructure into curated DeFi strategies; supported collateral includes USDC, USDT, DAI, GHO, and Sonic USDC.e",
+    "pegMechanism": "Users deposit supported stablecoins to mint scUSD and redeem scAssets after a documented cooldown period; yield is primarily activated by staking scUSD into stkscUSD rather than by holding liquid scUSD itself.",
+    "geckoId": "rings-scusd",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://docs.rings.money/backing",
+      "provider": "Rings / Veda backing addresses"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://rings.money/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/rings_protocol"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.rings.money/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+        "decimals": 6
+      },
+      {
+        "chain": "sonic",
+        "address": "0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+        "decimals": 6
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "multisig",
+    "reserves": [
+      {
+        "name": "Accepted stablecoin collateral",
+        "pct": 70,
+        "risk": "low"
+      },
+      {
+        "name": "Veda/Rings DeFi strategy exposure",
+        "pct": 30,
+        "risk": "high"
+      }
+    ]
   },
   {
     "id": "sdai-sky",
@@ -14868,6 +15573,164 @@
     ]
   },
   {
+    "id": "srusd-reservoir",
+    "detailProvider": "coingecko",
+    "name": "Savings rUSD",
+    "symbol": "srUSD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Yield-bearing Reservoir savings token backed by the Reservoir balance sheet: stablecoin PSM liquidity, RWA allocations, Morpho/Euler lending vaults, and governance-approved credit strategies monitored through Reservoir's on-chain proof-of-reserves endpoint",
+    "pegMechanism": "srUSD accrues protocol yield against rUSD. Holders can exit srUSD to rUSD, while rUSD is minted and redeemed through Reservoir's PSM against supported stablecoins subject to protocol liquidity and risk controls.",
+    "geckoId": "reservoir-srusd",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://app.reservoir.xyz/reserves",
+      "provider": "Reservoir Protocol"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://reservoir.xyz"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/reservoir_xyz"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.reservoir.xyz"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://app.reservoir.xyz/reserves"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x738d1115b90efa71ae468f1287fc864775e23a31",
+        "decimals": 18
+      },
+      {
+        "chain": "berachain",
+        "address": "0x5475611dffb8ef4d697ae39df9395513b6e947d7",
+        "decimals": 18
+      }
+    ],
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "multisig",
+    "reserves": [
+      {
+        "name": "Reservoir rUSD protocol balance sheet",
+        "pct": 100,
+        "risk": "medium",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "protocol-reserve",
+      "breakerScope": "srusd-reservoir",
+      "display": {
+        "url": "https://app.reservoir.xyz/reserves",
+        "label": "Proof of Reserves"
+      },
+      "adapter": "reservoir",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://app.reservoir.xyz/api/reserves/raw"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Reservoir savings vault",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "srusde-strata",
+    "detailProvider": "coingecko",
+    "name": "Strata Senior USDe",
+    "symbol": "srUSDe",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usde-ethena",
+    "collateral": "Senior tranche token over a Strata risk-tranched USDe yield strategy; junior tranche capital absorbs first-loss or underperformance before senior holders",
+    "pegMechanism": "srUSDe targets a stable senior NAV backed by USDe strategy collateral and junior-tranche subordination; exits depend on Strata tranche liquidity and settlement rules rather than a simple 1:1 stablecoin redemption",
+    "geckoId": "strata-senior-usde",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://strata.markets"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/strata_markets"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/strata-money"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "cex",
+    "governanceQuality": "wrapper",
+    "variantOf": "usde-ethena",
+    "variantKind": "risk-absorption",
+    "reserves": [
+      {
+        "name": "Senior tranche exposure to USDe yield strategy",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "usde-ethena",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "srusde-strata",
+      "display": {
+        "url": "https://strata.markets",
+        "label": "Strata"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Strata senior USDe tranche",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "stcusd-cap",
     "detailProvider": "coingecko",
     "name": "Staked Cap USD",
@@ -14953,6 +15816,167 @@
     "yieldConfig": {
       "defiLlamaPoolId": "bf6ca887-e357-49ec-8031-0d1a6141c455",
       "yieldSource": "Cap savings (stcUSD)",
+      "yieldType": "lending-vault"
+    }
+  },
+  {
+    "id": "steakusdc-steakhouse",
+    "detailProvider": "coingecko",
+    "name": "Steakhouse USDC V2",
+    "symbol": "steakUSDC",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usdc-circle",
+    "collateral": "USDC deposited into a Steakhouse-curated Morpho vault that allocates across Morpho lending markets backed by blue-chip crypto and real-world asset collateral",
+    "pegMechanism": "ERC-4626-style Morpho vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem vault shares for available USDC liquidity or wait for Morpho market liquidity to return",
+    "geckoId": "steakhouse-usdc",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/SteakhouseFi"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xbeef088055857739c12cd3765f20b7679def0f51",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "variantOf": "usdc-circle",
+    "variantKind": "strategy-vault",
+    "reserves": [
+      {
+        "name": "USDC deposited into Steakhouse-curated Morpho lending markets",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "steakusdc-steakhouse",
+      "display": {
+        "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant",
+        "label": "Morpho Steakhouse USDC"
+      },
+      "adapter": "erc4626-single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "USDC deposited into Steakhouse-curated Morpho lending markets",
+          "risk": "medium",
+          "coinId": "usdc-circle",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Steakhouse Morpho USDC vault",
+      "yieldType": "lending-vault"
+    }
+  },
+  {
+    "id": "steakusdt-steakhouse",
+    "detailProvider": "coingecko",
+    "name": "Steakhouse USDT V2",
+    "symbol": "steakUSDT",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usdt-tether",
+    "collateral": "USDT deposited into a Steakhouse-curated Morpho vault that allocates across Morpho lending markets backed by blue-chip crypto and real-world asset collateral",
+    "pegMechanism": "ERC-4626-style Morpho vault shares appreciate against USDT as borrower interest accrues; withdrawals redeem vault shares for available USDT liquidity or wait for Morpho market liquidity to return",
+    "geckoId": "steakhouse-usdt",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/SteakhouseFi"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "variantOf": "usdt-tether",
+    "variantKind": "strategy-vault",
+    "reserves": [
+      {
+        "name": "USDT deposited into Steakhouse-curated Morpho lending markets",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "usdt-tether",
+        "depType": "wrapper",
+        "blacklistable": true
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "steakusdt-steakhouse",
+      "display": {
+        "url": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant",
+        "label": "Morpho Steakhouse USDT"
+      },
+      "adapter": "erc4626-single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "USDT deposited into Steakhouse-curated Morpho lending markets",
+          "risk": "medium",
+          "coinId": "usdt-tether",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Steakhouse Morpho USDT vault",
       "yieldType": "lending-vault"
     }
   },
@@ -15421,6 +16445,87 @@
     ]
   },
   {
+    "id": "susd1plus-lorenzo",
+    "detailProvider": "coingecko",
+    "name": "staked USD1+",
+    "symbol": "sUSD1+",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "pegReferenceId": "usd1-world-liberty-financial",
+    "collateral": "Staked receipt over Lorenzo USD1+, a synthetic dollar strategy ultimately settled into WLFI USD1 and designed to combine USD1 reserve yield with delta-neutral strategy returns",
+    "pegMechanism": "sUSD1+ accrues yield from the Lorenzo USD1+ vault while final exit depends on unstaking back into USD1+ and settlement into USD1-supported stable liquidity",
+    "geckoId": "staked-usd1",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://app.lorenzo-protocol.xyz/otf/vault"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/LorenzoProtocol"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/Lorenzo-Protocol/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "bsc",
+        "address": "0x4f2760b32720f013e900dc92f65480137391199b",
+        "decimals": 18
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "usd1-world-liberty-financial",
+        "weight": 1,
+        "type": "wrapper"
+      }
+    ],
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "wrapper",
+    "reserves": [
+      {
+        "name": "Lorenzo USD1+ strategy shares backed by WLFI USD1 and delta-neutral yield strategies",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "usd1-world-liberty-financial",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "susd1plus-lorenzo",
+      "display": {
+        "url": "https://app.lorenzo-protocol.xyz/otf/vault",
+        "label": "Lorenzo Vault"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "bsc",
+          "rpcMode": "alchemy"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Lorenzo USD1+ staking",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "susdai-usd-ai",
     "detailProvider": "coingecko",
     "name": "Staked USDai",
@@ -15512,6 +16617,82 @@
     },
     "yieldConfig": {
       "yieldSource": "USD.AI savings (sUSDai)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "susdd-tron-dao-reserve",
+    "detailProvider": "coingecko",
+    "name": "Savings USDD",
+    "symbol": "sUSDD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usdd-tron-dao-reserve",
+    "collateral": "USDD deposited into the USDD savings system; sUSDD remains economically backed by USDD while savings yield accrues through the wrapper exchange rate",
+    "pegMechanism": "Users deposit USDD to receive sUSDD, whose value appreciates versus USDD as savings yield accrues; final par exit inherits USDD's PSM and reserve mechanics",
+    "geckoId": "savings-usdd",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://usdd.io/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/usddio"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "variantOf": "usdd-tron-dao-reserve",
+    "variantKind": "savings-passthrough",
+    "reserves": [
+      {
+        "name": "USDD savings wrapper shares",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "usdd-tron-dao-reserve",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "susdd-tron-dao-reserve",
+      "display": {
+        "url": "https://usdd.io/",
+        "label": "USDD Savings"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "USDD savings (sUSDD)",
       "yieldType": "nav-appreciation"
     }
   },
@@ -15695,6 +16876,95 @@
     },
     "yieldConfig": {
       "yieldSource": "Sky Savings Rate (sUSDS)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "susn-noon",
+    "detailProvider": "coingecko",
+    "name": "Staked USN",
+    "symbol": "sUSN",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usn-noon",
+    "collateral": "USN deposited into Noon's staking wrapper; backing inherits Noon's Accountable-disclosed private credit, CLO, DeFi lending, principal-token, and Treasury-bill reserve mix",
+    "pegMechanism": "Stake USN to receive sUSN; sUSN appreciates against USN as Noon strategy yield accrues, while final exits inherit Noon's 1:1 USN mint/redeem and reserve-liquidity constraints",
+    "geckoId": "staked-usn",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://noon.accountable.capital/",
+      "provider": "Accountable"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.noon.capital/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/noon_capital"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.noon.capital/"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://noon.accountable.capital/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xe24a3dc889621612422a64e6388927901608b91d",
+        "decimals": 18
+      },
+      {
+        "chain": "zksync",
+        "address": "0xb6a09d426861c63722aa0b333a9ce5d5a9b04c4f",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "wrapper",
+    "variantOf": "usn-noon",
+    "variantKind": "savings-passthrough",
+    "reserves": [
+      {
+        "name": "USN staking wrapper shares",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "usn-noon",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "susn-noon",
+      "display": {
+        "url": "https://noon.accountable.capital/",
+        "label": "Noon Accountable Dashboard"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Noon staking (sUSN)",
       "yieldType": "nav-appreciation"
     }
   },
@@ -15970,6 +17240,75 @@
     },
     "yieldConfig": {
       "yieldSource": "Aegis staking (sYUSD)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "syzusd-yuzu",
+    "detailProvider": "coingecko",
+    "name": "Staked Yuzu USD",
+    "symbol": "syzUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "yzusd-yuzu",
+    "collateral": "Staked wrapper over Yuzu USD, backed by yzUSD reserve assets deployed into curated DeFi yield strategies and overcollateralized by protocol risk tranching",
+    "pegMechanism": "Users stake yzUSD for syzUSD; syzUSD appreciates against yzUSD as strategy yield accrues, and final exits inherit Yuzu's KYC-gated primary redemption and liquidity-buffer constraints",
+    "geckoId": "staked-yuzu-usd",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://yuzu.accountable.capital/",
+      "provider": "Accountable"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://yuzu.money/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/YuzuMoneyX"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://yuzu.accountable.capital/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "plasma",
+        "address": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
+        "decimals": 18
+      },
+      {
+        "chain": "monad",
+        "address": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "unproven",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "wrapper",
+    "variantOf": "yzusd-yuzu",
+    "variantKind": "strategy-vault",
+    "reserves": [
+      {
+        "name": "Yuzu USD staking vault shares",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "yzusd-yuzu",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Yuzu staking (syzUSD)",
       "yieldType": "nav-appreciation"
     }
   },
@@ -19813,6 +21152,61 @@
           "url": "https://protocol-api.m0.org/graphql"
         }
       }
+    }
+  },
+  {
+    "id": "usdn-smardex",
+    "llamaId": "277",
+    "detailProvider": "defillama",
+    "name": "SMARDEX USDN",
+    "symbol": "USDN",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "collateral": "Synthetic dollar backed by the SMARDEX USDN vault, initially using wstETH as the underlying asset and protocol long-side mechanics to target delta-neutral exposure",
+    "pegMechanism": "Users mint USDN by depositing supported underlying assets into the USDN vault and redeem by burning USDN for the corresponding underlying asset value. Mint and redemption flows can be temporarily restricted by protocol imbalance and use a two-step oracle validation flow.",
+    "geckoId": "smardex-usdn",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://smardex.io/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/SmarDex"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xde17a000ba631c5d7c2bd9fb692efea52d90dee2",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "eth-lst",
+    "custodyModel": "onchain",
+    "governanceQuality": "multisig",
+    "reserves": [
+      {
+        "name": "wstETH-backed USDN vault",
+        "pct": 100,
+        "risk": "medium"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "SMARDEX USDN rebasing vault",
+      "yieldType": "rebase"
     }
   },
   {
@@ -24030,6 +25424,147 @@
         "message": "WEMIX Dollar primarily circulates on WEMIX chain, which is not a configured Pharos chain, so no contract is stored."
       }
     ]
+  },
+  {
+    "id": "weusd-picwe",
+    "llamaId": "278",
+    "detailProvider": "defillama",
+    "name": "WEUSD",
+    "symbol": "WEUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "100% USDC-backed omni-chain stablecoin according to PicWe documentation; future RWA/yield collateral is described as roadmap rather than current backing",
+    "pegMechanism": "PicWe mint/redeem flow issues WEUSD against USDC and supports on-chain redemption back to USDC with a documented redemption fee.",
+    "geckoId": "weusd",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://picwe.org/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/PicWeGlobal"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.picwe.org/what-is-weusd"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "bsc",
+        "address": "0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
+        "decimals": 6
+      },
+      {
+        "chain": "base",
+        "address": "0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
+        "decimals": 6
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
+        "decimals": 6
+      },
+      {
+        "chain": "movement",
+        "address": "0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6",
+        "decimals": 6
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "multisig",
+    "reserves": [
+      {
+        "name": "USDC reserves",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "usdc-circle",
+        "depType": "collateral"
+      }
+    ]
+  },
+  {
+    "id": "witry-brix",
+    "detailProvider": "coingecko",
+    "name": "Wrapped iTRY",
+    "symbol": "wiTRY",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "TRY",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "iTRY deposited into the Brix staking wrapper, backed by a BVI-regulated Turkish-lira money-market fund and related TRY cash/liquidity instruments",
+    "pegMechanism": "wiTRY appreciates against iTRY as fund yield is minted into the staking contract and vests over time; users can unstake through a cooldown or use Fast Redeem for a fee, while final TRY exposure inherits iTRY issuer and local-currency risk",
+    "geckoId": "wrapped-itry",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.brix.money/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/brix_money"
+      }
+    ],
+    "jurisdiction": {
+      "country": "British Virgin Islands"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xe346c29b5b60ef870b9724c57ccfbbc631e47dee",
+        "decimals": 18
+      },
+      {
+        "chain": "megaeth",
+        "address": "0x15b271d9012b5820fc42b1c495b4c1e206547de5",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "wrapper",
+    "reserves": [
+      {
+        "name": "Brix iTRY staking wrapper backed by TRY money-market fund exposure",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "witry-brix",
+      "display": {
+        "url": "https://www.brix.money/",
+        "label": "Brix wiTRY"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Brix iTRY staking",
+      "yieldType": "nav-appreciation"
+    }
   },
   {
     "id": "wm-m0",

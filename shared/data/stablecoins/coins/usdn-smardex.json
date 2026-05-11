@@ -1,0 +1,55 @@
+{
+  "id": "usdn-smardex",
+  "name": "SMARDEX USDN",
+  "symbol": "USDN",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "collateral": "Synthetic dollar backed by the SMARDEX USDN vault, initially using wstETH as the underlying asset and protocol long-side mechanics to target delta-neutral exposure",
+  "pegMechanism": "Users mint USDN by depositing supported underlying assets into the USDN vault and redeem by burning USDN for the corresponding underlying asset value. Mint and redemption flows can be temporarily restricted by protocol imbalance and use a two-step oracle validation flow.",
+  "llamaId": "277",
+  "detailProvider": "defillama",
+  "geckoId": "smardex-usdn",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://smardex.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/SmarDex"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xde17a000ba631c5d7c2bd9fb692efea52d90dee2",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "eth-lst",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
+  "reserves": [
+    {
+      "name": "wstETH-backed USDN vault",
+      "pct": 100,
+      "risk": "medium"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "SMARDEX USDN rebasing vault",
+    "yieldType": "rebase"
+  }
+}
