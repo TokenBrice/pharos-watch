@@ -439,7 +439,10 @@
     "logo": "busd.png",
     "llamaId": "4",
     "geckoId": "binance-usd",
-    "aliases": ["153", "binance-peg-busd"],
+    "aliases": [
+      "153",
+      "binance-peg-busd"
+    ],
     "pegCurrency": "USD",
     "causeOfDeath": "regulatory",
     "deathDate": "2023-02",
@@ -1777,5 +1780,19 @@
         "address": "0xca5d8f8a8d49439357d3cf46ca2e720702f132b8"
       }
     ]
+  },
+  {
+    "id": "fusd-fedz-2026-05",
+    "name": "The Fedz FUSD",
+    "symbol": "FUSD",
+    "geckoId": "fusd-by-the-fedz",
+    "pegCurrency": "USD",
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-05",
+    "peakMcap": 1700000,
+    "epitaph": "Quiet exit on Arbitrum: protocol site offline, no on-chain activity",
+    "obituary": "The Fedz launched FUSD as a synthetic dollar on Arbitrum (contract 0x894341be568eae3697408c420f1d0acfce6e55f9) and traded near peg through late 2025. By May 2026 the protocol's homepage no longer resolved, no DefiLlama TVL was indexed, and 24h on-DEX volume had collapsed to ~$100 against ~$1.5M circulating. No exploit or formal wind-down announcement was made — Pharos categorizes this as abandonment based on the loss of project infrastructure and the ~7% sustained depeg with no redemption path.",
+    "sourceUrl": "https://www.coingecko.com/en/coins/fusd-by-the-fedz",
+    "sourceLabel": "CoinGecko (issuer site offline)"
   }
 ]

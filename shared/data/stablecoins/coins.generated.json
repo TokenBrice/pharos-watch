@@ -5867,7 +5867,7 @@
     },
     "collateral": "Euro deposits held in segregated accounts with credit institutions and high-quality liquid assets (HQLA) denominated in EUR, separated from Monerium's own funds; over 100% backing maintained as required under MiCA",
     "pegMechanism": "Mint-and-burn: EURe is minted when users deposit EUR via SEPA bank transfer after KYC/AML verification, and burned upon redemption back to EUR; peg maintained by licensed EMI with 1:1 backing",
-    "geckoId": "monerium-eur-money-2",
+    "geckoId": "monerium-eur-money",
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://monerium.com/financial-information/"
@@ -10099,7 +10099,7 @@
     },
     "collateral": "Japanese yen deposits and Japanese government bonds (100% backed)",
     "pegMechanism": "Direct 1:1 redemption for JPY through JPYC Inc. via the JPYC EX platform; issuance and redemption via bank transfer after KYC; JPYC Inc. holds a Type II Funds Transfer Service Provider license under Japan's Payment Services Act",
-    "geckoId": "jpycoin",
+    "geckoId": "jpy-coin",
     "links": [
       {
         "label": "Website",
@@ -10122,17 +10122,27 @@
     "contracts": [
       {
         "chain": "ethereum",
-        "address": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "address": "0x431d5dff03120afa4bdf332c61a6e1766ef37bdb",
         "decimals": 18
       },
       {
         "chain": "polygon",
-        "address": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "address": "0x431d5dff03120afa4bdf332c61a6e1766ef37bdb",
         "decimals": 18
       },
       {
         "chain": "avalanche",
-        "address": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "address": "0x431d5dff03120afa4bdf332c61a6e1766ef37bdb",
+        "decimals": 18
+      },
+      {
+        "chain": "gnosis",
+        "address": "0x431d5dff03120afa4bdf332c61a6e1766ef37bdb",
+        "decimals": 18
+      },
+      {
+        "chain": "astar",
+        "address": "0x431d5dff03120afa4bdf332c61a6e1766ef37bdb",
         "decimals": 18
       }
     ],

@@ -7,9 +7,9 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/data/dead-stablecoins.json",
-  "sourceChecksum": "sha256:07a23ae0c6245eff8becaecf3b17776338a0ba09f053c8ceebe83024ed323269",
+  "sourceChecksum": "sha256:c61d7be1cfef33611513e9236ba5764143712ee6be8f12ec75d60c5df4cd3d05",
   "recordsOrderedBy": "deathDate descending, then peakMcapUsd descending, then symbol ascending",
-  "rowCount": 92,
+  "rowCount": 93,
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
@@ -36,6 +36,26 @@
     "pharosUrl": "Canonical Pharos URL: the frozen detail page when archived data is available, otherwise the cemetery anchor."
   },
   "rows": [
+    {
+      "id": "fusd-fedz-2026-05",
+      "name": "The Fedz FUSD",
+      "symbol": "FUSD",
+      "llamaId": null,
+      "logoUrl": null,
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-05",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 1700000,
+      "epitaph": "Quiet exit on Arbitrum: protocol site offline, no on-chain activity",
+      "obituary": "The Fedz launched FUSD as a synthetic dollar on Arbitrum (contract 0x894341be568eae3697408c420f1d0acfce6e55f9) and traded near peg through late 2025. By May 2026 the protocol's homepage no longer resolved, no DefiLlama TVL was indexed, and 24h on-DEX volume had collapsed to ~$100 against ~$1.5M circulating. No exploit or formal wind-down announcement was made — Pharos categorizes this as abandonment based on the loss of project infrastructure and the ~7% sustained depeg with no redemption path.",
+      "sourceUrl": "https://www.coingecko.com/en/coins/fusd-by-the-fedz",
+      "sourceLabel": "CoinGecko (issuer site offline)",
+      "archivedDataAvailable": false,
+      "contracts": [],
+      "pharosUrl": "https://pharos.watch/cemetery/#fusd-fedz-2026-05"
+    },
     {
       "id": "buck-buck-assets",
       "name": "Buck",
