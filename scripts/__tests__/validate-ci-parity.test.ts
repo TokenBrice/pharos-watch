@@ -233,7 +233,7 @@ describe("validate-ci parity", () => {
     expect(validateJob).toContain('["test-noncritical", process.env.TEST_NONCRITICAL_RESULT]');
   });
 
-  it("keeps PR Pages build validation but lets deploy callers skip duplicate Pages build and SEO work", () => {
+  it("keeps PR Pages build validation but lets production deploy overlap safe prep with validation", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
     const pagesBuildJob = extractJobBlock(workflow, "pages-build", "test-noncritical");
     const validateJob = extractJobBlock(workflow, "validate");
@@ -248,9 +248,32 @@ describe("validate-ci parity", () => {
     const deployValidateJob = extractJobBlock(deployWorkflow, "validate", "no-deploy-required");
     expect(deployValidateJob).toContain("run_pages_build_and_seo: false");
 
-    const deployWorkerJob = extractJobBlock(deployWorkflow, "deploy-worker", "smoke-api");
-    expect(deployWorkerJob).toContain("- pages-prepare");
-    expect(deployWorkerJob).toContain("needs.pages-prepare.result == 'success'");
+    const uploadWorkerJob = extractJobBlock(deployWorkflow, "upload-worker-version", "deploy-worker");
+    expect(uploadWorkerJob).not.toContain("- validate");
+    expect(uploadWorkerJob).not.toContain("Apply production D1 migrations");
+    expect(uploadWorkerJob).not.toContain("Smoke uploaded preview worker");
+
+    const deployWorkerJob = extractJobBlock(deployWorkflow, "deploy-worker", "pages-release");
+    expect(deployWorkerJob).toContain("Wait for validation gate");
+    expect(deployWorkerJob).toContain("Rehearse D1 migrations locally");
+    expect(deployWorkerJob).toContain("Apply production D1 migrations");
+    expect(deployWorkerJob).toContain("Smoke uploaded preview worker");
+    expect(deployWorkerJob).toContain("Smoke production worker");
+    expect(deployWorkerJob).toContain("Run worker-only live smokes");
+    expect(deployWorkerJob).not.toContain("- pages-prepare");
+    expect(deployWorkerJob).not.toContain("needs.pages-prepare.result == 'success'");
+
+    const pagesReleaseJob = extractJobBlock(deployWorkflow, "pages-release");
+    expect(pagesReleaseJob).toContain("Start local export smoke server");
+    expect(pagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "3"');
+    expect(pagesReleaseJob).toContain("Wait for validation gate");
+    expect(pagesReleaseJob).toContain("Deploy Pages with retry");
+    expect(pagesReleaseJob).toContain("Run post-publish smokes");
+
+    expect(deployWorkflow).not.toContain("  pages-prepare:");
+    expect(deployWorkflow).not.toContain("  pages-publish:");
+    expect(deployWorkflow).not.toContain("  smoke-api:");
+    expect(deployWorkflow).not.toContain("  rollback-worker:");
   });
 
   it("keeps the critical coverage baseline aligned with the ratchet target list", () => {

@@ -9,6 +9,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -50,7 +51,6 @@ jobs:
   upload-worker-version:
     needs:
       - detect-changes
-      - validate
     if: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' }}
     runs-on: ubuntu-latest
     outputs:
@@ -77,8 +77,6 @@ jobs:
             status?.versions?.find((entry) => entry?.percentage === 100)?.version_id ?? "";
           process.stdout.write(`previous_version_id=${previousVersionId}\n`);
           NODE
-      - name: Rehearse D1 migrations locally
-        run: npm run check:migrations
       - name: Upload candidate worker version
         id: upload-version
         env:
@@ -104,29 +102,16 @@ jobs:
           process.stdout.write(`version_id=${uploadEvent.version_id}\n`);
           process.stdout.write(`preview_url=${uploadEvent.preview_url}\n`);
           NODE
-      - name: Apply production D1 migrations
-        run: cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote
-      - name: Smoke uploaded preview worker
-        run: npm run test:smoke-api
-        env:
-          SMOKE_API_BASE: ${{ steps.upload-version.outputs.preview_url }}
-          SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
-          SMOKE_API_REQUIRE_KEY: "true"
 
   deploy-worker:
     needs:
       - upload-worker-version
       - detect-changes
-      - pages-prepare
     if: >-
       ${{
         always()
         && needs.detect-changes.outputs.worker_promotion_required == 'true'
         && needs.upload-worker-version.result == 'success'
-        && (
-          needs.detect-changes.outputs.pages_changed != 'true'
-          || needs.pages-prepare.result == 'success'
-        )
       }}
     runs-on: ubuntu-latest
     env:
@@ -137,6 +122,46 @@ jobs:
       - uses: ./.github/actions/setup-workspace
         with:
           node-version: 24
+      - name: Wait for validation gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 120); do
+            result="$(
+              gh run view "$GITHUB_RUN_ID" \
+                --repo "$GITHUB_REPOSITORY" \
+                --json jobs \
+                --jq '.jobs[] | select(.name == "validate / validate") | (.conclusion // .status)' \
+                2>/tmp/validate-gate-gh.err \
+                | tail -n 1
+            )"
+
+            case "$result" in
+              success)
+                exit 0
+                ;;
+              failure|cancelled|timed_out|action_required)
+                echo "validate / validate result was ${result}; stopping production Worker deployment."
+                exit 1
+                ;;
+            esac
+
+            sleep 5
+          done
+
+          cat /tmp/validate-gate-gh.err 2>/dev/null || true
+          echo "Timed out waiting for validate / validate to finish."
+          exit 1
+      - name: Rehearse D1 migrations locally
+        run: npm run check:migrations
+      - name: Apply production D1 migrations
+        run: cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote
+      - name: Smoke uploaded preview worker
+        run: npm run test:smoke-api
+        env:
+          SMOKE_API_BASE: ${{ needs.upload-worker-version.outputs.preview_url }}
+          SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
+          SMOKE_API_REQUIRE_KEY: "true"
       - name: Promote uploaded worker version to production
         env:
           WRANGLER_OUTPUT_FILE_PATH: /tmp/wrangler-output.jsonl
@@ -146,21 +171,10 @@ jobs:
           npx --no-install wrangler versions deploy "${{ needs.upload-worker-version.outputs.version_id }}@100" --message "GitHub Actions deploy ${GITHUB_SHA}" --yes
       - name: Sync worker triggers
         run: cd worker && npx --no-install wrangler triggers deploy
-
-  smoke-api:
-    needs:
-      - deploy-worker
-      - detect-changes
-    if: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.deploy-worker.result == 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: ./.github/actions/setup-workspace
-        with:
-          node-version: 24
-          cache-npm: "false"
-          install-deps: "false"
-      - run: npm run test:smoke-api
+      - name: Smoke production worker
+        id: production-smoke-api
+        continue-on-error: true
+        run: npm run test:smoke-api
         env:
           SMOKE_API_BASE: ${{ vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
           SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
@@ -168,139 +182,225 @@ jobs:
           SMOKE_API_RETRY_COUNT: "3"
           SMOKE_API_RETRY_DELAY_MS: "5000"
           SMOKE_API_TIMEOUT_MS: "15000"
-
-  rollback-worker:
-    needs:
-      - detect-changes
-      - upload-worker-version
-      - deploy-worker
-      - smoke-api
-    if: >-
-      ${{
-        always()
-        && needs.detect-changes.outputs.worker_promotion_required == 'true'
-        && needs.deploy-worker.result == 'success'
-        && needs.smoke-api.result == 'failure'
-        && needs.upload-worker-version.outputs.previous_version_id != ''
-      }}
-    runs-on: ubuntu-latest
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: ./.github/actions/setup-workspace
-        with:
-          node-version: 24
       - name: Roll back production worker to previous stable version
+        if: ${{ steps.production-smoke-api.outcome == 'failure' && needs.upload-worker-version.outputs.previous_version_id != '' }}
         run: >-
           cd worker
           && npx --no-install wrangler rollback "${{ needs.upload-worker-version.outputs.previous_version_id }}"
           --message "Auto rollback after smoke-api failure for ${GITHUB_SHA}"
           --yes
+      - name: Fail after production worker smoke failure
+        if: ${{ steps.production-smoke-api.outcome == 'failure' }}
+        run: exit 1
+      - name: Run worker-only live smokes
+        if: ${{ needs.detect-changes.outputs.pages_changed != 'true' }}
+        run: |
+          set +e
 
-  pages-prepare:
+          npm run test:smoke-ui -- --url https://pharos.watch --mode live &
+          ui_pid=$!
+          npm run test:smoke-ops &
+          ops_pid=$!
+          npm run test:smoke-transport &
+          transport_pid=$!
+
+          wait "$ui_pid"
+          ui_status=$?
+          wait "$ops_pid"
+          ops_status=$?
+          wait "$transport_pid"
+          transport_status=$?
+
+          if [ "$ui_status" -ne 0 ] || [ "$ops_status" -ne 0 ] || [ "$transport_status" -ne 0 ]; then
+            echo "worker-only smoke statuses: ui=${ui_status}, ops=${ops_status}, transport=${transport_status}"
+            exit 1
+          fi
+        env:
+          SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+          SMOKE_OPS_UI_URL: ${{ vars.SMOKE_OPS_UI_URL || 'https://ops.pharos.watch/admin/' }}
+          SMOKE_OPS_API_BASE: ${{ vars.SMOKE_OPS_API_BASE || 'https://ops-api.pharos.watch' }}
+          OPS_SMOKE_CF_ACCESS_CLIENT_ID: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}
+          OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}
+
+  pages-release:
     needs:
       - detect-changes
-      - validate
       - upload-worker-version
     if: >-
       ${{
         always()
         && needs.detect-changes.result == 'success'
-        && needs.validate.result == 'success'
         && needs.detect-changes.outputs.pages_changed == 'true'
         && (
           needs.detect-changes.outputs.worker_promotion_required != 'true'
           || needs.upload-worker-version.result == 'success'
         )
       }}
-    uses: ./.github/workflows/pages-prepare.yml
-    with:
-      api_base_url: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.upload-worker-version.outputs.preview_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
-    secrets: inherit
-
-  pages-publish:
-    needs:
-      - detect-changes
-      - pages-prepare
-      - smoke-api
-    if: >-
-      ${{
-        always()
-        && needs.detect-changes.result == 'success'
-        && needs.detect-changes.outputs.pages_changed == 'true'
-        && needs.pages-prepare.result == 'success'
-        && (
-          needs.detect-changes.outputs.worker_promotion_required != 'true'
-          || needs.smoke-api.result == 'success'
-        )
-      }}
-    uses: ./.github/workflows/pages-publish.yml
-    secrets: inherit
-
-  smoke-ui-live:
-    needs:
-      - detect-changes
-      - smoke-api
-    if: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.detect-changes.outputs.pages_changed != 'true' && needs.smoke-api.result == 'success' }}
     runs-on: ubuntu-latest
     env:
-      SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      DIGEST_API_URL: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.upload-worker-version.outputs.preview_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+      DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}
+      NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
         with:
           node-version: 24
-          cache-npm: "false"
-          install-deps: "false"
-      - run: npm run test:smoke-ui -- --url https://pharos.watch --mode live
-
-  smoke-ops:
-    needs:
-      - detect-changes
-      - smoke-api
-    if: >-
-      ${{
-        always()
-        && needs.detect-changes.result == 'success'
-        && needs.detect-changes.outputs.pages_changed != 'true'
-        && needs.detect-changes.outputs.worker_promotion_required == 'true'
-        && needs.smoke-api.result == 'success'
-      }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: ./.github/actions/setup-workspace
-        with:
-          node-version: 24
-          cache-npm: "false"
-          install-deps: "false"
-      - run: npm run test:smoke-ops
+          tooling-cache: "true"
+      - name: Fetch digests from the target API environment
+        run: npx tsx scripts/sync-digests.ts --output data/digests.json
+      - run: npm run build
+      - run: npm run seo:check
+      - id: capture-pages
+        name: Capture current production Pages deployment id (best effort)
+        continue-on-error: true
+        run: |
+          cd worker
+          npx --no-install wrangler pages deployment list --project-name=stablecoin-dashboard --environment=production --json > /tmp/wrangler-pages-deployments.json
+          node <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs = require("node:fs");
+          const entries = JSON.parse(fs.readFileSync("/tmp/wrangler-pages-deployments.json", "utf8"));
+          const current = Array.isArray(entries) && entries.length > 0 ? entries[0] : null;
+          const rawId = current?.Id ?? current?.id ?? current?.deployment_id ?? "";
+          const id = typeof rawId === "string" ? rawId : "";
+          if (!id && current) {
+            console.warn("[capture] wrangler entry lacked a recognized deployment id field; keys:", Object.keys(current).join(","));
+          }
+          process.stdout.write(`deployment_id=${id}\n`);
+          NODE
+      - if: ${{ steps.capture-pages.outcome == 'failure' || steps.capture-pages.outputs.deployment_id == '' }}
+        name: Warn that automated Pages rollback is disabled for this deploy
+        run: |
+          {
+            echo "## Automated Pages rollback disabled for this deploy"
+            echo ""
+            echo "The \`capture-pages\` step could not record the previous production Pages deployment id."
+            echo "If post-deploy smoke fails, roll back manually via the Cloudflare Pages dashboard."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Start local export smoke server
         env:
+          STATIC_EXPORT_API_BASE: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.upload-worker-version.outputs.preview_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+          STATIC_EXPORT_SITE_API_BASE: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.upload-worker-version.outputs.preview_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+          STATIC_EXPORT_SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
+          STATIC_EXPORT_API_KEY: ${{ secrets.SMOKE_API_KEY }}
+          STATIC_EXPORT_HOST: 127.0.0.1
+          STATIC_EXPORT_PORT: "4173"
+        run: |
+          npm run serve:static-export > /tmp/pages-smoke-server.log 2>&1 &
+          echo $! > /tmp/pages-smoke-server.pid
+          for attempt in $(seq 1 30); do
+            if node -e "fetch('http://127.0.0.1:4173/').then((res) => process.exit(res.ok ? 0 : 1)).catch(() => process.exit(1));"; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/pages-smoke-server.log
+          exit 1
+      - run: npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local
+        env:
+          SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+          SMOKE_UI_OVERFLOW_WORKERS: "3"
+      - name: Dump local export smoke server log
+        if: failure()
+        run: cat /tmp/pages-smoke-server.log
+      - name: Stop local export smoke server
+        if: always()
+        run: |
+          if [ -f /tmp/pages-smoke-server.pid ]; then
+            kill "$(cat /tmp/pages-smoke-server.pid)" || true
+          fi
+      - name: Wait for validation gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 120); do
+            result="$(
+              gh run view "$GITHUB_RUN_ID" \
+                --repo "$GITHUB_REPOSITORY" \
+                --json jobs \
+                --jq '.jobs[] | select(.name == "validate / validate") | (.conclusion // .status)' \
+                2>/tmp/validate-gate-gh.err \
+                | tail -n 1
+            )"
+
+            case "$result" in
+              success)
+                exit 0
+                ;;
+              failure|cancelled|timed_out|action_required)
+                echo "validate / validate result was ${result}; stopping production Pages deployment."
+                exit 1
+                ;;
+            esac
+
+            sleep 5
+          done
+
+          cat /tmp/validate-gate-gh.err 2>/dev/null || true
+          echo "Timed out waiting for validate / validate to finish."
+          exit 1
+      - name: Deploy Pages with retry
+        run: |
+          for attempt in 1 2 3; do
+            echo "[deploy-pages] Attempt ${attempt}/3"
+            if npx --no-install wrangler pages deploy out --project-name=stablecoin-dashboard --commit-dirty=true --commit-message="${{ github.sha }}"; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "[deploy-pages] Exhausted retries"
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done
+      - name: Run post-publish smokes
+        id: post-publish-smokes
+        continue-on-error: true
+        run: |
+          set +e
+
+          npm run test:smoke-ui -- --url https://pharos.watch --mode live &
+          ui_pid=$!
+          npm run test:smoke-ops &
+          ops_pid=$!
+          npm run test:smoke-transport &
+          transport_pid=$!
+
+          wait "$ui_pid"
+          ui_status=$?
+          wait "$ops_pid"
+          ops_status=$?
+          wait "$transport_pid"
+          transport_status=$?
+
+          echo "ui_status=${ui_status}" >> "$GITHUB_OUTPUT"
+          echo "ops_status=${ops_status}" >> "$GITHUB_OUTPUT"
+          echo "transport_status=${transport_status}" >> "$GITHUB_OUTPUT"
+
+          if [ "$ui_status" -ne 0 ] || [ "$ops_status" -ne 0 ] || [ "$transport_status" -ne 0 ]; then
+            echo "post-publish smoke statuses: ui=${ui_status}, ops=${ops_status}, transport=${transport_status}"
+            exit 1
+          fi
+        env:
+          SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
           SMOKE_OPS_UI_URL: ${{ vars.SMOKE_OPS_UI_URL || 'https://ops.pharos.watch/admin/' }}
           SMOKE_OPS_API_BASE: ${{ vars.SMOKE_OPS_API_BASE || 'https://ops-api.pharos.watch' }}
           OPS_SMOKE_CF_ACCESS_CLIENT_ID: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}
           OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}
-
-  smoke-transport:
-    needs:
-      - detect-changes
-      - smoke-api
-    if: >-
-      ${{
-        always()
-        && needs.detect-changes.result == 'success'
-        && needs.detect-changes.outputs.pages_changed != 'true'
-        && needs.detect-changes.outputs.worker_promotion_required == 'true'
-        && needs.smoke-api.result == 'success'
-      }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: ./.github/actions/setup-workspace
-        with:
-          node-version: 24
-          cache-npm: "false"
-          install-deps: "false"
-      - run: npm run test:smoke-transport
+      - name: Roll back Pages production to previous successful deployment
+        if: >-
+          ${{
+            steps.post-publish-smokes.outcome == 'failure'
+            && steps.post-publish-smokes.outputs.ui_status != '0'
+            && steps.capture-pages.outputs.deployment_id != ''
+          }}
+        env:
+          CF_PAGES_PROJECT_NAME: stablecoin-dashboard
+          CF_PAGES_DEPLOYMENT_ID: ${{ steps.capture-pages.outputs.deployment_id }}
+        run: node scripts/rollback-pages-deployment.mjs
+      - name: Fail after post-publish smoke failure
+        if: ${{ steps.post-publish-smokes.outcome == 'failure' }}
+        run: exit 1

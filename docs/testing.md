@@ -79,7 +79,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - keeps `npm run coverage:critical` unchanged and passes the compare ref into the critical coverage ratchet
    - runs `npm run typecheck:worker` and `npm run typecheck:worker-scripts` only when `worker_changed=true`
    - runs `npm run build` + `npm run seo:check` in PR validation when `pages_changed=true` and `run_pages_build_and_seo=true`
-   - production deploy calls set `run_pages_build_and_seo=false`; Pages deploys still prove the exact publish artifact in `pages-prepare` with build, SEO, artifact upload, local serve, and local browser smoke before `pages-publish`
+   - production deploy calls set `run_pages_build_and_seo=false`; the deploy workflow performs the Pages build, SEO, local artifact smoke, publish, and live smokes in the production `pages-release` job so it avoids a second runner setup and artifact transfer
 3. `detect-changes` (push/manual deploy workflow; same classifier also runs in pull-request checks):
    - Diffs `github.event.before...github.sha` on `push`
    - Emits `deploy_required`, `worker_changed`, `worker_promotion_required`, and `pages_changed`
@@ -88,89 +88,60 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - Marks Pages deploy work as required when the diff touches Pages runtime paths, package/deploy infra, `.github/actions/`, `scripts/lib/`, shared guardrail scripts, Pages workflow files, or selected build/static-export scripts
    - Skips the heavy deploy workflow entirely when neither Pages nor worker deploy surfaces changed
    - Forces the full path on `workflow_dispatch`
-4. `upload-worker-version` (needs `validate` and `detect-changes`):
+4. `upload-worker-version` (needs `detect-changes`):
    - Capture the currently live production Worker version ID with `wrangler deployments status --json`
-   - Re-run `npm run check:migrations` on the release runner immediately before any remote D1 change so the exact deploy environment replays the full migration tree and enforces rollout-safety guardrails again
-   - Upload a candidate Worker version with `wrangler versions upload` before touching production D1 so the preview-smoke target is already prepared when the schema change lands
-   - Apply D1 migrations with the local worker-pinned Wrangler CLI
-   - Run `npm run test:smoke-api` against that preview URL inside the same job before the candidate is considered promotable
-   - Pass `SMOKE_API_KEY` from GitHub repository secrets so protected public routes can be rehearsed before promotion
+   - Upload a candidate Worker version with `wrangler versions upload` before validation completes; this is non-mutating preparation and exposes the preview URL early for Pages build/local smoke work
    - Skipped on Pages-only, validation-only, or non-deploy `push` events where `worker_promotion_required=false`
 5. `deploy-worker` (needs `upload-worker-version` when Worker promotion is required):
-   - Promote the already-smoked candidate version with `wrangler versions deploy <version-id>@100`
+   - Waits for the aggregate `validate / validate` job before any production D1 mutation or Worker promotion
+   - Re-runs `npm run check:migrations` on the release runner immediately before remote D1 changes
+   - Applies D1 migrations with the local worker-pinned Wrangler CLI, then runs `npm run test:smoke-api` against the uploaded preview URL before the candidate is considered promotable
+   - Promotes the preview-smoked candidate version with `wrangler versions deploy <version-id>@100`
    - Sync routes/domains/cron triggers with `wrangler triggers deploy`
-   - On combined Worker + Pages deploys, waits for `pages-prepare` to build, SEO-check, upload, serve, and local-smoke the Pages artifact before production Worker promotion
+   - Runs the post-promotion production `smoke-api` in the same job and automatically rolls back to the previous Worker version if that production API smoke fails
+   - On worker-only deploys, runs live public UI, ops, and transport smokes in parallel inside the same job
    - Skipped on Pages-only, validation-only, or non-deploy `push` events
-6. `smoke-api` (needs `deploy-worker` when Worker promotion is required):
-   - sets up Node without reinstalling dependencies because the smoke script runs on plain Node
-   - Run `npm run test:smoke-api`
-   - Uses `SMOKE_API_BASE` from `vars.SMOKE_API_BASE_URL` (preferred) or `vars.API_BASE_URL`
-   - Passes `SMOKE_API_KEY` from GitHub repository secrets
-   - Acts as the post-promotion production canary after traffic is shifted
-   - Runs strict API checks sequentially with bounded transient retry behavior; the script defaults remain `SMOKE_API_RETRY_COUNT=1` and `SMOKE_API_TIMEOUT_MS=12000`, while the production post-promotion job uses `SMOKE_API_RETRY_COUNT=3`, `SMOKE_API_RETRY_DELAY_MS=5000`, and `SMOKE_API_TIMEOUT_MS=15000` to absorb custom-domain cutover warmup before rollback
-   - Skipped on Pages-only or docs-only `push` events alongside `deploy-worker`
-7. `rollback-worker`:
-   - Runs only when `deploy-worker` succeeded but the post-promotion `smoke-api` failed
-   - Uses the previously captured production version ID and `wrangler rollback --yes` to restore the last live Worker version automatically
-   - Does not roll back D1 schema or data; use the D1 time-travel runbook in `worker/migrations/MANIFEST.md` when a migration itself must be undone
-   - Leaves the workflow failed so the production incident is still visible in CI
-8. `pages-prepare`:
-   - reusable workflow in `.github/workflows/pages-prepare.yml`
+6. `pages-release`:
+   - production deploy job in `.github/workflows/deploy-cloudflare.yml`
    - runs only when `pages_changed=true`
-   - waits for preview-smoked `upload-worker-version` only when Worker promotion was also required for that push
-   - executes `build-pages`, which also runs the local artifact `smoke-ui` before the reusable workflow can succeed
-   - on combined worker + Pages deploys, uses the uploaded Worker's preview URL for digest sync and for the local `/_site-data/*` smoke lane so the static export is rehearsed against the exact candidate API before Worker production promotion
-   - `build-pages` fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, forwarding `DIGEST_API_KEY` from GitHub repository secrets and `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, uploads `out/`, serves that exact artifact locally, proxies direct `/api/*` calls to the selected public API base, proxies `/_site-data/*` to the selected `site-api` base, injects `SITE_API_SHARED_SECRET` for the site-data proxy hop, and runs `npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local`
-   - local artifact `smoke-ui` keeps the full overflow route set but splits route checks across two browser sessions by default; set `SMOKE_UI_OVERFLOW_WORKERS=1` to force serial overflow checks or up to `3` for more parallelism
+   - starts after `upload-worker-version` when Worker promotion is also required, so digest sync and local `/_site-data/*` smoke can use the uploaded preview URL
+   - fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, forwarding `DIGEST_API_KEY` from GitHub repository secrets and `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`
+   - serves the just-built `out/` export locally, proxies direct `/api/*` and `/_site-data/*` calls to the selected API base, injects `SITE_API_SHARED_SECRET` for the site-data proxy hop, and runs `npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local`
+   - local artifact `smoke-ui` keeps the full overflow route set and uses `SMOKE_UI_OVERFLOW_WORKERS=3` in production deploys to keep that coverage while reducing wall time
+   - waits for the aggregate `validate / validate` job before publishing to Cloudflare Pages production
+   - captures the current production Pages deployment id best-effort, publishes the verified local artifact with the Wrangler retry loop, and then runs live public UI, ops, and transport smokes in parallel inside the same job
+   - rolls Pages production back to the captured previous deployment when the live public UI smoke fails and a previous deployment id was available
    - when `SMOKE_UI_EXPECT_GA_ID` is configured, that smoke step also verifies the built homepage artifact still contains the expected GA snippet
-9. `pages-publish`:
-
-- reusable workflow in `.github/workflows/pages-publish.yml`
-- runs only when `pages_changed=true`
-- waits for `pages-prepare`
-- also waits for post-promotion `smoke-api` only when Worker promotion was required for that push
-- executes `deploy-pages`, then starts the live public, ops, and transport smokes
-- `deploy-pages` still publishes the verified artifact with the Wrangler retry loop
-- `smoke-ui-live` then verifies the real public host with `npm run test:smoke-ui -- --url https://pharos.watch --mode live`
-- `smoke-ops` and `smoke-transport` also start after `deploy-pages`, in parallel with `smoke-ui-live`, so Pages deploys keep all post-publish checks without serializing independent smokes
-
-10. `smoke-ui-live` (worker-only push path):
-
-- Runs only when `worker_changed=true` and `pages_changed=false`
-- Runs `npm run test:smoke-ui -- --url https://pharos.watch --mode live`
-- when `SMOKE_UI_EXPECT_GA_ID` is configured, also verifies the live homepage artifact still contains the expected GA snippet
-- Verifies that the unchanged live Pages frontend still works against the newly deployed worker/API without repeating the full local overflow sweep
-
-11. `smoke-ops`:
+7. `smoke-ops`:
 
 - Run `npm run test:smoke-ops`
 - Uses `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` (defaults: `https://ops.pharos.watch/admin/`, `https://ops-api.pharos.watch`)
 - Requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
-- Runs inside `pages-publish` after `deploy-pages` on Pages-including deploys, or after `smoke-api` on worker-only deploys
+- Runs inside `pages-release` after `deploy-pages` on Pages-including deploys, or inside `deploy-worker` on worker-only deploys
 - Runs in parallel with the public live UI smoke because it only depends on the production deployment being live
 - Verifies the ops UI host is Access-gated (or service-token-accessible, if configured) plus `status`, `status-history`, and a safe dry-run admin path on the operator API host
 
-12. `smoke-transport`:
+8. `smoke-transport`:
 
 - Run `npm run test:smoke-transport`
 - Verifies `http://api.pharos.watch/...` and `http://site-api.pharos.watch/...` return `308` before application auth or worker logic responds
 - Runs after the same production-changing gate as `smoke-ops`
 - Fails the workflow on redirect regressions once the zone-level redirect rule is in place
 
-13. `Rebuild Pages`:
+9. `Rebuild Pages`:
 
 - defined in `.github/workflows/rebuild-pages.yml`
 - runs on the daily schedule and on manual dispatch
-- skips `validate`, `deploy-worker`, and `smoke-api`
+- skips `validate` and Worker promotion
 - runs the shared `pages-release` wrapper workflow, whose publish phase includes `smoke-ui-live`, `smoke-ops`, and `smoke-transport`
 
-14. `CodeQL`:
+10. `CodeQL`:
 
 - defined in `.github/workflows/codeql.yml`
 - runs on pushes to `main`, pull requests to `main`, and a weekly Monday schedule
 - analyzes the JavaScript/TypeScript codebase separately from the deploy pipeline
 
-15. `Dependency Audit`:
+11. `Dependency Audit`:
 
 - defined in `.github/workflows/dependency-audit.yml`
 - runs on a weekly Monday schedule and on manual dispatch
@@ -182,7 +153,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
   - scheduled dependency-audit findings must get a tracked triage note or remediation issue the same business day
   - do not leave a new high/critical finding unowned between audit detection and the next production deploy
 
-16. `Secret Scan`:
+12. `Secret Scan`:
 
 - defined in `.github/workflows/secret-scan.yml`
 - runs on a weekly Monday schedule and on manual dispatch
@@ -190,7 +161,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 - uses the root `.gitleaksignore` to suppress reviewed historical false positives by exact fingerprint
 - scans commit history for accidentally committed secrets and fails on any non-allowlisted finding
 
-This arrangement keeps pull-request validation full-strength, makes deploy-path validation conditional on the surfaces that actually changed, skips the production workflow entirely for non-deploy pushes, proves the static export build and SEO gate before merge and on Pages-impacting deploys, fetches digest data once inside the Pages build job so the build itself is network-independent with respect to digest data, forwards the configured GA measurement ID into CI builds so the static artifact matches production analytics posture, smokes the exact candidate Worker version on its preview URL before production traffic is shifted, overlaps the Pages build + local smoke path with worker promotion and production API smoke when both surfaces changed, keeps the broad overflow sweep on the local artifact smoke before Pages production deploy, verifies the real `pharos.watch` host after each Pages publish with a narrower live canary route set, keeps the scheduled digest rebuild off the worker deploy path, still runs the post-deploy ops-surface plus transport smoke after each production-changing workflow, runs independent live smokes in parallel after the relevant production deployment is live, and adds separate weekly/manual lanes for dependency auditing and history-aware secret scanning.
+This arrangement keeps pull-request validation full-strength, makes deploy-path validation conditional on the surfaces that actually changed, skips the production workflow entirely for non-deploy pushes, proves the static export build and SEO gate before merge and on Pages-impacting deploys, fetches digest data once inside the Pages release job so the build itself is network-independent with respect to digest data, forwards the configured GA measurement ID into CI builds so the static artifact matches production analytics posture, uploads the Worker candidate early, waits for the aggregate validate result before D1 mutation or production publish, smokes the exact candidate Worker version on its preview URL before production traffic is shifted, keeps the broad overflow sweep on the local artifact smoke before Pages production deploy, verifies the real `pharos.watch` host after each Pages publish with a narrower live canary route set, keeps the scheduled digest rebuild off the worker deploy path, still runs the post-deploy ops-surface plus transport smoke after each production-changing workflow, runs independent live smokes in parallel after the relevant production deployment is live, and adds separate weekly/manual lanes for dependency auditing and history-aware secret scanning.
 
 Current GitHub repository secrets required by the deploy path:
 
