@@ -258,6 +258,23 @@ If every attempted Binance host returns a Worker-side 403/451 block, Pharos reco
 
 When authoritative pricing removes every Jupiter fallback candidate, the run closes stale-open `jupiter-prices` breaker state without making a provider health request. Future eligible Solana fallback candidates still use the normal circuit breaker and diagnostics path.
 
+### CoinGecko low-volume lane
+
+Some tracked stablecoins are CoinGecko-only (`detailProvider: "coingecko"` with no DefiLlama `llamaId`) and trade at low enough volume that CoinGecko's upstream `last_updated_at` for the ticker sits hours-to-days behind real time. The strict 15-minute freshness gates used elsewhere reject these prices, leaving the assets with `priceSource: "missing"` even though CoinGecko has a valid USD quote.
+
+`fetchFiatCoinGeckoTokens` in `worker/src/cron/sync-stablecoins/supplemental-assets.ts` runs a relaxed fallback only for these CG-only assets:
+
+1. Try `resolveSupplementalPrice` first (the standard 15-minute gate).
+2. If that returns null but `cgData[geckoId].usd` is a positive finite number, build a resolution with `source: "coingecko-low-volume"`, `priceConfidence: "fallback"`, and `priceObservedAtMode: "upstream"` when CG returned `last_updated_at` (otherwise `"local_fetch"`).
+
+The lane is registered in `shared/lib/pricing-source-registry-aggregators.ts` with a 7-day `maxTrustedAgeSec` and `defaultWeight: 0.5`. Downstream treatment is intentionally weaker than primary `coingecko`:
+
+- `priceConfidence: "fallback"` flows into `priceValidationModeForAsset → "fallback_enrichment"` and `classifyPrimaryDepegTrust → "confirm_required"`, so the low-volume lane publishes for display but cannot single-handedly open, extend, or confirm a depeg alert.
+- The new source belongs to the same CG lineage family in `worker/src/lib/price-publish-policy.ts` and `worker/src/lib/depeg-trust-policy.ts`, so severe-downside corroboration still requires an independent non-CG source.
+- The cache TTL flows from the registry entry through `getPriceCacheMaxAgeSec` automatically; no separate cache-policy code path.
+
+The lane is gated to the `fetchFiatCoinGeckoTokens` path. Strict CoinGecko admission everywhere else is untouched.
+
 The enrichment path is intentionally narrower than primary pricing:
 
 - it exists to fill holes, not overrule good consensus
