@@ -516,7 +516,9 @@ export async function dispatchTelegramAlerts(
     );
 
     const freshBudget = Math.max(0, MAX_MESSAGES_PER_RUN - drainResult.attempted);
-    const { toSend, toEnqueue } = splitFreshQueue(subscriberQueue, freshBudget);
+    const { toSend, toEnqueue } = drainResult.rateLimited
+      ? { toSend: [], toEnqueue: subscriberQueue }
+      : splitFreshQueue(subscriberQueue, freshBudget);
     const sendList = expandSubscriberChunks(toSend);
     const {
       subscribersNotified,
@@ -533,13 +535,30 @@ export async function dispatchTelegramAlerts(
       botToken,
       drainResult.blocked - drainResult.blockedCleanupFailed,
       drainResult.blockedCleanupFailed,
+      signal,
     );
     const overflowMessages = expandSubscriberChunks(toEnqueue, blockedChats);
 
     const freshRetryQueued = retryableFreshMessages.length;
     const pendingEnqueued = overflowMessages.length + retryableFreshMessages.length;
-    if (pendingEnqueued > 0) {
-      await enqueuePendingAlerts(db, [...overflowMessages, ...retryableFreshMessages], nowSec);
+    if (overflowMessages.length > 0) {
+      await enqueuePendingAlerts(
+        db,
+        overflowMessages,
+        nowSec,
+        drainResult.rateLimited
+          ? { notBeforeAt: drainResult.notBeforeAt, lastErrorClass: "rate_limit", retryAfterSec: drainResult.retryAfterSec }
+          : {},
+      );
+    }
+    for (const retry of retryableFreshMessages) {
+      const retryAfterSec = retry.result.retryAfterSec;
+      const notBeforeAt = nowSec + (retryAfterSec != null && retryAfterSec > 0 ? retryAfterSec : 60);
+      await enqueuePendingAlerts(db, [retry.message], nowSec, {
+        notBeforeAt,
+        lastErrorClass: retry.result.errorClass,
+        retryAfterSec,
+      });
     }
 
     await writeSnapshots(db, currentSnapshots);
@@ -566,6 +585,9 @@ export async function dispatchTelegramAlerts(
       pendingDrained: drainResult.sent,
       pendingRetryQueued: drainResult.retryQueued,
       pendingDropped: drainResult.dropped,
+      pendingDeferred: drainResult.deferred,
+      pendingRateLimited: drainResult.rateLimited,
+      pendingRetryAfterSec: drainResult.retryAfterSec,
       pendingEnqueued,
       pendingExpired: expiredCount,
       freshAttempted: sendList.length,

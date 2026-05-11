@@ -105,6 +105,72 @@ describe("validateWorkerEnvContract", () => {
       message: "Self-serve API key email verification bindings must be configured together; POST /api/api-key-requests returns 503 until they are complete.",
     });
   });
+
+  it("flags a Telegram bot token without a webhook secret", () => {
+    expect(validateWorkerEnvContract({
+      CF_ACCESS_OPS_API_AUD: undefined,
+      CF_ACCESS_TEAM_DOMAIN: undefined,
+      SITE_API_SHARED_SECRET: "site-secret",
+      API_KEY_HASH_PEPPER: "pepper",
+      GITHUB_PAT: "ghp_test_token",
+      FEEDBACK_IP_SALT: "feedback",
+      TELEGRAM_BOT_TOKEN: "bot-token",
+      TELEGRAM_WEBHOOK_SECRET: undefined,
+    })).toContainEqual({
+      code: "telegram-env-misconfigured",
+      message: "TELEGRAM_BOT_TOKEN is configured without TELEGRAM_WEBHOOK_SECRET; Telegram webhook registration is skipped until both are set.",
+    });
+  });
+
+  it("flags a Telegram webhook secret without a bot token", () => {
+    expect(validateWorkerEnvContract({
+      CF_ACCESS_OPS_API_AUD: undefined,
+      CF_ACCESS_TEAM_DOMAIN: undefined,
+      SITE_API_SHARED_SECRET: "site-secret",
+      API_KEY_HASH_PEPPER: "pepper",
+      GITHUB_PAT: "ghp_test_token",
+      FEEDBACK_IP_SALT: "feedback",
+      TELEGRAM_BOT_TOKEN: undefined,
+      TELEGRAM_WEBHOOK_SECRET: "webhook-secret",
+    })).toContainEqual({
+      code: "telegram-env-misconfigured",
+      message: "TELEGRAM_WEBHOOK_SECRET is configured without TELEGRAM_BOT_TOKEN; Telegram webhook requests cannot be reconciled until both are set.",
+    });
+  });
+
+  it("flags a previous Telegram bot token without the current bot token", () => {
+    expect(validateWorkerEnvContract({
+      CF_ACCESS_OPS_API_AUD: undefined,
+      CF_ACCESS_TEAM_DOMAIN: undefined,
+      SITE_API_SHARED_SECRET: "site-secret",
+      API_KEY_HASH_PEPPER: "pepper",
+      GITHUB_PAT: "ghp_test_token",
+      FEEDBACK_IP_SALT: "feedback",
+      TELEGRAM_BOT_TOKEN: undefined,
+      TELEGRAM_BOT_TOKEN_PREVIOUS: "previous-bot-token",
+      TELEGRAM_WEBHOOK_SECRET: "webhook-secret",
+    })).toContainEqual({
+      code: "telegram-env-misconfigured",
+      message: "TELEGRAM_BOT_TOKEN_PREVIOUS is configured without TELEGRAM_BOT_TOKEN; remove the previous token or restore the current Telegram bot token.",
+    });
+  });
+
+  it("flags a previous Telegram webhook secret without the current webhook secret", () => {
+    expect(validateWorkerEnvContract({
+      CF_ACCESS_OPS_API_AUD: undefined,
+      CF_ACCESS_TEAM_DOMAIN: undefined,
+      SITE_API_SHARED_SECRET: "site-secret",
+      API_KEY_HASH_PEPPER: "pepper",
+      GITHUB_PAT: "ghp_test_token",
+      FEEDBACK_IP_SALT: "feedback",
+      TELEGRAM_BOT_TOKEN: "bot-token",
+      TELEGRAM_WEBHOOK_SECRET: undefined,
+      TELEGRAM_WEBHOOK_SECRET_PREVIOUS: "previous-webhook-secret",
+    })).toContainEqual({
+      code: "telegram-env-misconfigured",
+      message: "TELEGRAM_WEBHOOK_SECRET_PREVIOUS is configured without TELEGRAM_WEBHOOK_SECRET; remove the previous secret or restore the current Telegram webhook secret.",
+    });
+  });
 });
 
 describe("worker env key groups", () => {

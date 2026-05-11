@@ -5,6 +5,7 @@ import {
   parseTargetArgs,
   resolveTicker,
   parseSubscribeArgs,
+  splitMessage,
   validateSubscribeArgs,
   parseDisambiguationReply,
   type ResolvedCoin,
@@ -168,6 +169,9 @@ export const handleTelegramWebhook = withErrorHandler(
       if (pendingActive && pendingAction) {
         if (!parsedCommand) {
           if (!canActOnPending(pendingAction, actorUserId)) {
+            if (isGroupChat(chatType) && !looksLikeDisambiguationSelection(text)) {
+              return ok();
+            }
             await reply("Only the user who started this pending selection can complete it.");
             return ok();
           }
@@ -331,7 +335,7 @@ const TELEGRAM_PRESET_LABEL_BY_ID = new Map(
   listTelegramPresets().map((definition) => [definition.id, definition.label] as const),
 );
 
-const PHAROS_BOT_USERNAMES = new Set(["pharoswatchbot", "pharoswatch"]);
+const PHAROS_BOT_USERNAMES = new Set(["pharoswatchbot"]);
 
 function isGroupChat(chatType: string): boolean {
   return chatType === "group" || chatType === "supergroup";
@@ -343,6 +347,29 @@ function isAddressedToPharosBot(botMention: string | null): boolean {
 
 function canActOnPending(pending: PendingAction, actorUserId: string | null): boolean {
   return pending.initiatorUserId == null || pending.initiatorUserId === actorUserId;
+}
+
+function looksLikeDisambiguationSelection(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+
+  let hasDigit = false;
+  let pendingSeparator = false;
+  for (const char of trimmed) {
+    if (char >= "0" && char <= "9") {
+      hasDigit = true;
+      pendingSeparator = false;
+      continue;
+    }
+    if (char === "," || char.trim() === "") {
+      if (!hasDigit) return false;
+      pendingSeparator = true;
+      continue;
+    }
+    return false;
+  }
+
+  return hasDigit && !pendingSeparator;
 }
 
 function dedupePresetIds(presetIds: readonly string[]): TelegramPresetId[] {
@@ -561,6 +588,7 @@ async function handleUnsubscribe(
                 global_alert_depeg = 0,
                 global_alert_safety = 0,
                 global_alert_launch = 0,
+                global_depeg_worsening_bps_step = NULL,
                 last_active_at = ?
           WHERE chat_id = ?`,
         )
@@ -696,7 +724,11 @@ async function handleDisambiguationReply(
       await runAction({
         ...sharedOpts,
         actionType: "subscribe",
-        actionPayload: { alertTypes: [...pending.alertTypes], presetIds: pending.presetIds },
+        actionPayload: {
+          alertTypes: [...pending.alertTypes],
+          presetIds: pending.presetIds,
+          depegWorseningBpsStep: pending.depegWorseningBpsStep,
+        },
         alertTypes: pending.alertTypes,
       });
       return;
@@ -720,8 +752,11 @@ async function handleDisambiguationReply(
 }
 
 async function replyToChat(chatId: string, message: string, botToken: string): Promise<void> {
-  const result = await sendToChat(chatId, message, botToken, { disableWebPagePreview: true });
-  if (!result.ok) {
-    console.warn(`[telegram-webhook] Reply to ${chatId} failed: ${result.errorClass ?? "unknown"} (${result.statusCode})`);
+  for (const chunk of splitMessage(message)) {
+    const result = await sendToChat(chatId, chunk, botToken, { disableWebPagePreview: true });
+    if (!result.ok) {
+      console.warn(`[telegram-webhook] Reply to ${chatId} failed: ${result.errorClass ?? "unknown"} (${result.statusCode})`);
+      if (result.errorClass === "rate_limit") return;
+    }
   }
 }

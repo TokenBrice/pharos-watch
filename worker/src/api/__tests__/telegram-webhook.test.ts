@@ -125,6 +125,7 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("Welcome");
     expect(sentMessageBody().text).toContain("@pharoswatch");
     expect(sentMessageBody().text).toContain("@pharoswatchers");
+    expect(sentMessageBody().text).toContain("/subscribe dews,depeg usd-top25");
     expect(sentMessageBody().text).toContain("/presets");
   });
 
@@ -167,6 +168,20 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("In groups");
   });
 
+  it("ignores commands addressed to the channel handle in group chats", async () => {
+    const db = mockD1([]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(-123, "/help@pharoswatch", "test-secret", { chatType: "supergroup" }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(db.getHistory()).toEqual([]);
+  });
+
   it("handles /subscribe validation: no tickers", async () => {
     const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews"), "test-secret", "bot-token");
@@ -190,6 +205,45 @@ describe("handleTelegramWebhook", () => {
 
     expect(sentMessageBody().text).toContain("No active subscriptions");
     expect(sentMessageBody().text).toContain("/presets");
+  });
+
+  it("splits long /list replies into Telegram-safe chunks", async () => {
+    const subscriptions = Array.from({ length: 220 }, (_, index) => ({
+      stablecoin_id: `synthetic-stablecoin-${String(index).padStart(3, "0")}-with-a-long-portfolio-label`,
+      alert_dews: 1,
+      alert_depeg: 1,
+      alert_safety: 1,
+      alert_launch: 1,
+      dews_min_band: "WARNING",
+      safety_mode: "downgrade-only",
+      depeg_worsening_bps_step: 250,
+    }));
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "FROM telegram_subscribers",
+        rows: [],
+        first: {
+          global_alert_dews: 1,
+          global_alert_depeg: 1,
+          global_alert_safety: 1,
+          global_alert_launch: 0,
+          global_depeg_worsening_bps_step: 250,
+          quiet_hours_enabled: 0,
+          quiet_hours_start_utc: null,
+          quiet_hours_end_utc: null,
+        },
+      },
+      { match: "FROM telegram_subscriptions", rows: subscriptions },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/list"), "test-secret", "bot-token");
+
+    expect(fetchSpy.mock.calls.length).toBeGreaterThan(1);
+    for (const [, init] of fetchSpy.mock.calls) {
+      const body = JSON.parse(init?.body as string) as { text: string };
+      expect(body.text.length).toBeLessThanOrEqual(4000);
+    }
   });
 
   it("shows launch follows in /list and reads alert_launch from the subscription query", async () => {
@@ -698,6 +752,56 @@ describe("handleTelegramWebhook", () => {
     expect(text).toContain(usdc.matches[0].id);
   });
 
+  it("preserves depeg-step when completing a pending subscribe disambiguation", async () => {
+    const ambiguous = resolveTicker("USDF");
+    if (ambiguous.status !== "ambiguous") {
+      throw new Error("Expected USDF to be ambiguous for depeg-step disambiguation flow test");
+    }
+
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: {
+          action_type: "subscribe",
+          action_payload: JSON.stringify({
+            alertTypes: ["depeg"],
+            presetIds: [],
+            depegWorseningBpsStep: 250,
+          }),
+          alert_types: JSON.stringify(["depeg"]),
+          resolved_ids: JSON.stringify([]),
+          ambiguous_ticker: "USDF",
+          candidates: JSON.stringify(ambiguous.matches),
+          remaining_tickers: JSON.stringify([]),
+          expires_at: Math.floor(Date.now() / 1000) + 60,
+          initiator_user_id: "999",
+        },
+      },
+      {
+        match: "FROM telegram_subscriptions",
+        rows: [
+          {
+            stablecoin_id: ambiguous.matches[0].id,
+            alert_dews: 0,
+            alert_depeg: 1,
+            alert_safety: 0,
+            alert_launch: 0,
+            dews_min_band: null,
+            safety_mode: null,
+            depeg_worsening_bps_step: 250,
+          },
+        ],
+      },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "1"), "test-secret", "bot-token");
+
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"));
+    expect(insert?.binds).toContain(250);
+    expect(sentMessageBody().text).toContain("Depeg +250bps");
+  });
+
   it("blocks another group member from completing a pending selection", async () => {
     const ambiguous = resolveTicker("USDF");
     if (ambiguous.status !== "ambiguous") {
@@ -733,6 +837,43 @@ describe("handleTelegramWebhook", () => {
     expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
     expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
     expect(sentMessageBody().text).toContain("Only the user who started this pending selection can complete it");
+  });
+
+  it("ignores unrelated group text from non-initiators while a pending selection exists", async () => {
+    const ambiguous = resolveTicker("USDF");
+    if (ambiguous.status !== "ambiguous") {
+      throw new Error("Expected USDF to be ambiguous for group ownership noise test");
+    }
+
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: {
+          action_type: "subscribe",
+          action_payload: JSON.stringify({ alertTypes: ["dews"] }),
+          alert_types: JSON.stringify(["dews"]),
+          resolved_ids: JSON.stringify([]),
+          ambiguous_ticker: "USDF",
+          candidates: JSON.stringify(ambiguous.matches),
+          remaining_tickers: JSON.stringify([]),
+          expires_at: Math.floor(Date.now() / 1000) + 60,
+          initiator_user_id: "111",
+        },
+      },
+    ]);
+
+    await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(-123, "thanks, looks good", "test-secret", { chatType: "supergroup", fromId: 222 }),
+      "test-secret",
+      "bot-token",
+    );
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("allows the initiating group member to complete a pending selection", async () => {
@@ -1077,6 +1218,7 @@ describe("handleTelegramWebhook", () => {
     expect(updateSql).toBeDefined();
     expect(updateSql!.sql).toContain("alert_launch = 0");
     expect(updateSql!.sql).toContain("global_alert_launch = 0");
+    expect(updateSql!.sql).toContain("global_depeg_worsening_bps_step = NULL");
   });
 
   it("handles D1 error gracefully", async () => {

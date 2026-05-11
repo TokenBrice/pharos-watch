@@ -101,6 +101,15 @@ describe("sendToChat", () => {
     expect(body.disable_notification).toBe(true);
   });
 
+  it("passes caller abort signal through chat sends", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const controller = new AbortController();
+
+    await sendToChat("12345", "test", "bot-token", { signal: controller.signal });
+
+    expect(fetchSpy.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
   it("returns rate_limit with retryAfterSec on 429", async () => {
     fetchSpy.mockResolvedValueOnce(
       new Response("Too Many Requests", {
@@ -250,5 +259,19 @@ describe("sendBatch", () => {
     const results = await sendBatch([], "bot-token", 5);
     expect(results).toEqual([]);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("marks all messages retryable without fetching when the batch signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    const results = await sendBatch([
+      { chatId: "a", html: "hi", disableNotification: false },
+      { chatId: "b", html: "hi", disableNotification: false },
+    ], "bot-token", 2, controller.signal);
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(results).toHaveLength(2);
+    expect(results.every((result) => result.retryable && result.errorClass === "timeout")).toBe(true);
   });
 });

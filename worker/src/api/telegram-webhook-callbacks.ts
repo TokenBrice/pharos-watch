@@ -28,7 +28,7 @@ export interface TelegramCallbackQuery {
   id: string;
   data?: string;
   from?: { username?: string };
-  message?: { chat?: { id?: number }; message_id?: number };
+  message?: { chat?: { id?: number; type?: string }; message_id?: number };
 }
 
 export async function handleCallbackQuery(
@@ -47,7 +47,8 @@ export async function handleCallbackQuery(
   if (action === "snooze" && isSnoozeArg(arg)) {
     const now = unixNow();
     const until = now + SNOOZE_SECONDS[arg];
-    const username = cb.from?.username ?? null;
+    const chatType = cb.message?.chat?.type ?? "private";
+    const username = chatType === "group" || chatType === "supergroup" ? null : cb.from?.username ?? null;
 
     // Sequence DB write BEFORE the ack so the toast reflects actual outcome.
     // A concurrent Promise.all would leave the ack in-flight if the write

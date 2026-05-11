@@ -54,6 +54,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0108     | `0108_blacklist_current_balance_identity.sql`   | Add blacklist current-balance identity and status metadata for scoped address snapshots        |
 | 0109     | `0109_telegram_global_depeg_step.sql`           | Add optional global Telegram depeg worsening threshold for all-stablecoin follows              |
 | 0110     | `0110_api_key_self_serve.sql`                   | Add email-verified self-serve API key request metadata, request throttles, and per-email claims |
+| 0111     | `0111_telegram_pending_alert_retry_metadata.sql` | Add retry deferral, error, dedupe, and chunk metadata to Telegram pending alerts                |
 
 ## Retired Individual Migrations
 

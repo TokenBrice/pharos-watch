@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 
 const mockSendToChat = vi.fn();
@@ -13,6 +13,12 @@ const { disableBlockedSubscriber, drainPendingQueue, enqueuePendingAlerts, clean
 
 beforeEach(() => {
   mockSendToChat.mockReset();
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-04-23T12:00:00Z"));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("disableBlockedSubscriber", () => {
@@ -64,7 +70,7 @@ describe("drainPendingQueue", () => {
 
     const db = mockD1([
       {
-        match: "SELECT id, chat_id, message_html",
+        match: "SELECT p.id, p.chat_id, p.message_html",
         rows: [
           { id: 1, chat_id: "100", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: 2 },
           { id: 2, chat_id: "200", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: 4 },
@@ -91,7 +97,7 @@ describe("drainPendingQueue", () => {
 
     const db = mockD1([
       {
-        match: "SELECT id, chat_id, message_html",
+        match: "SELECT p.id, p.chat_id, p.message_html",
         rows: [
           { id: 10, chat_id: "100", message_html: "<b>Sent</b>", disable_notification: 0, created_at: 1000, attempts: 0 },
         ],
@@ -117,7 +123,7 @@ describe("drainPendingQueue", () => {
 
     const db = mockD1([
       {
-        match: "SELECT id, chat_id, message_html",
+        match: "SELECT p.id, p.chat_id, p.message_html",
         rows: [
           { id: 20, chat_id: "blocked-chat", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: 0 },
         ],
@@ -158,7 +164,7 @@ describe("drainPendingQueue", () => {
     }));
 
     const db = mockD1([
-      { match: "SELECT id, chat_id, message_html", rows },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows },
       { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
       { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
     ]);
@@ -169,16 +175,118 @@ describe("drainPendingQueue", () => {
     expect(result.attempted).toBe(4);
     expect(result.sent).toBe(3);
     expect(result.retryQueued).toBe(1);
+    expect(result.rateLimited).toBe(true);
+    expect(result.retryAfterSec).toBe(30);
     expect(mockSendToChat).toHaveBeenCalledTimes(4);
+  });
+
+  it("does not select expired or not-yet-ready pending rows", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+    ]);
+
+    await drainPendingQueue(db, "bot-token", 10);
+
+    expect(mockSendToChat).not.toHaveBeenCalled();
+    const selectCall = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_pending_alerts p"));
+    expect(selectCall?.sql).toContain("p.created_at >= ?");
+    expect(selectCall?.sql).toContain("p.not_before_at IS NULL OR p.not_before_at <= ?");
+    expect(selectCall?.binds).toEqual([now - PENDING_TTL_SEC, now, 10]);
+  });
+
+  it("defers currently snoozed pending rows without sending", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT p.id, p.chat_id, p.message_html",
+        rows: [
+          {
+            id: 30,
+            chat_id: "snoozed",
+            message_html: "<b>Alert</b>",
+            disable_notification: 0,
+            created_at: now - 60,
+            attempts: 0,
+            not_before_at: null,
+            alert_snooze_until_ts: now + 900,
+            quiet_hours_enabled: 0,
+            quiet_hours_start_utc: null,
+            quiet_hours_end_utc: null,
+          },
+        ],
+      },
+      { match: "UPDATE telegram_pending_alerts SET not_before_at", rows: [] },
+    ]);
+
+    const result = await drainPendingQueue(db, "bot-token", 10);
+
+    expect(result.deferred).toBe(1);
+    expect(result.attempted).toBe(0);
+    expect(mockSendToChat).not.toHaveBeenCalled();
+    const updateCall = db.getHistory().find((entry) => entry.sql.includes("SET not_before_at"));
+    expect(updateCall?.binds).toEqual([now + 900, now, 30]);
+  });
+
+  it("sends pending rows during current quiet hours with notifications silenced", async () => {
+    mockSendToChat.mockResolvedValue({
+      ok: true, blocked: false, retryable: false, permanentFailure: false,
+      statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null,
+    });
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT p.id, p.chat_id, p.message_html",
+        rows: [
+          {
+            id: 31,
+            chat_id: "quiet",
+            message_html: "<b>Alert</b>",
+            disable_notification: 0,
+            created_at: now - 60,
+            attempts: 0,
+            not_before_at: null,
+            alert_snooze_until_ts: null,
+            quiet_hours_enabled: 1,
+            quiet_hours_start_utc: 0,
+            quiet_hours_end_utc: 23,
+          },
+        ],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+    ]);
+
+    const result = await drainPendingQueue(db, "bot-token", 10);
+
+    expect(result.deferred).toBe(0);
+    expect(result.attempted).toBe(1);
+    expect(result.sent).toBe(1);
+    expect(mockSendToChat).toHaveBeenCalledWith(
+      "quiet",
+      "<b>Alert</b>",
+      "bot-token",
+      expect.objectContaining({ disableNotification: true }),
+    );
   });
 
   it("returns zeros when queue is empty", async () => {
     const db = mockD1([
-      { match: "SELECT id, chat_id, message_html", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
     ]);
 
     const result = await drainPendingQueue(db, "bot-token", 10);
-    expect(result).toEqual({ attempted: 0, sent: 0, blocked: 0, blockedCleanupFailed: 0, retryQueued: 0, dropped: 0 });
+    expect(result).toEqual({
+      attempted: 0,
+      sent: 0,
+      blocked: 0,
+      blockedCleanupFailed: 0,
+      retryQueued: 0,
+      dropped: 0,
+      deferred: 0,
+      rateLimited: false,
+      retryAfterSec: null,
+      notBeforeAt: null,
+    });
   });
 });
 
@@ -200,6 +308,8 @@ describe("enqueuePendingAlerts", () => {
     const history = db.getHistory();
     const inserts = history.filter((e) => e.sql.includes("INSERT INTO telegram_pending_alerts"));
     expect(inserts.length).toBeGreaterThan(0);
+    expect(inserts[0]?.sql).toContain("dedupe_key");
+    expect(inserts[0]?.sql).toContain("ON CONFLICT(dedupe_key) DO UPDATE");
   });
 
   it("does nothing for empty message list", async () => {

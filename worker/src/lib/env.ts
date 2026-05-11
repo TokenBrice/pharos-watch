@@ -35,6 +35,7 @@ export interface Env {
   TWITTER_ACCESS_TOKEN?: string;
   TWITTER_ACCESS_TOKEN_SECRET?: string;
   TELEGRAM_BOT_TOKEN?: string;
+  TELEGRAM_BOT_TOKEN_PREVIOUS?: string;
   TELEGRAM_CHAT_ID?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
   TELEGRAM_WEBHOOK_SECRET_PREVIOUS?: string;
@@ -59,7 +60,8 @@ export interface WorkerEnvIssue {
     | "feedback-env-misconfigured"
     | "api-key-self-serve-env-misconfigured"
     | "public-api-auth-pepper-missing"
-    | "api-key-pepper-noop-rotation";
+    | "api-key-pepper-noop-rotation"
+    | "telegram-env-misconfigured";
   message: string;
 }
 
@@ -134,6 +136,10 @@ export function validateWorkerEnvContract(
     | "CLOUDFLARE_ACCOUNT_ID"
     | "CLOUDFLARE_D1_STATUS_API_TOKEN"
     | "CLOUDFLARE_D1_DATABASE_ID"
+    | "TELEGRAM_BOT_TOKEN"
+    | "TELEGRAM_BOT_TOKEN_PREVIOUS"
+    | "TELEGRAM_WEBHOOK_SECRET"
+    | "TELEGRAM_WEBHOOK_SECRET_PREVIOUS"
   >,
 ): WorkerEnvIssue[] {
   const issues: WorkerEnvIssue[] = [];
@@ -206,6 +212,39 @@ export function validateWorkerEnvContract(
     issues.push({
       code: "api-key-pepper-noop-rotation",
       message: "API_KEY_HASH_PEPPER_PREVIOUS is identical to API_KEY_HASH_PEPPER — this is a no-op rotation.",
+    });
+  }
+
+  const hasTelegramBotToken = hasConfiguredValue(env.TELEGRAM_BOT_TOKEN);
+  const hasTelegramBotTokenPrevious = hasConfiguredValue(env.TELEGRAM_BOT_TOKEN_PREVIOUS);
+  const hasTelegramWebhookSecret = hasConfiguredValue(env.TELEGRAM_WEBHOOK_SECRET);
+  const hasTelegramWebhookSecretPrevious = hasConfiguredValue(env.TELEGRAM_WEBHOOK_SECRET_PREVIOUS);
+
+  if (hasTelegramBotToken && !hasTelegramWebhookSecret) {
+    issues.push({
+      code: "telegram-env-misconfigured",
+      message: "TELEGRAM_BOT_TOKEN is configured without TELEGRAM_WEBHOOK_SECRET; Telegram webhook registration is skipped until both are set.",
+    });
+  }
+
+  if (hasTelegramWebhookSecret && !hasTelegramBotToken) {
+    issues.push({
+      code: "telegram-env-misconfigured",
+      message: "TELEGRAM_WEBHOOK_SECRET is configured without TELEGRAM_BOT_TOKEN; Telegram webhook requests cannot be reconciled until both are set.",
+    });
+  }
+
+  if (hasTelegramBotTokenPrevious && !hasTelegramBotToken) {
+    issues.push({
+      code: "telegram-env-misconfigured",
+      message: "TELEGRAM_BOT_TOKEN_PREVIOUS is configured without TELEGRAM_BOT_TOKEN; remove the previous token or restore the current Telegram bot token.",
+    });
+  }
+
+  if (hasTelegramWebhookSecretPrevious && !hasTelegramWebhookSecret) {
+    issues.push({
+      code: "telegram-env-misconfigured",
+      message: "TELEGRAM_WEBHOOK_SECRET_PREVIOUS is configured without TELEGRAM_WEBHOOK_SECRET; remove the previous secret or restore the current Telegram webhook secret.",
     });
   }
 

@@ -48,7 +48,7 @@ export interface FreshSendOutcome {
   blockedUsersCleanedUp: number;
   blockedUsersCleanupFailed: number;
   blockedChats: Set<string>;
-  retryableFreshMessages: BatchMessage[];
+  retryableFreshMessages: Array<{ message: BatchMessage; result: BatchResult }>;
 }
 
 function emptyAlerts(): ConsolidatedAlerts {
@@ -156,12 +156,13 @@ export function expandSubscriberChunks(
   const messages: BatchMessage[] = [];
   for (const sub of subscribers) {
     if (blockedChats.has(sub.chatId)) continue;
-    for (const chunk of sub.chunks) {
+    for (const [chunkIndex, chunk] of sub.chunks.entries()) {
       messages.push({
         chatId: sub.chatId,
         html: chunk,
         disableNotification: sub.disableNotification,
         replyMarkup: SNOOZE_REPLY_MARKUP,
+        chunkIndex,
       });
     }
   }
@@ -175,10 +176,13 @@ export async function deliverFreshAlerts(
   botToken: string,
   blockedUsersCleanedUpSeed: number,
   blockedUsersCleanupFailedSeed: number,
+  signal?: AbortSignal,
 ): Promise<FreshSendOutcome> {
-  const sendResults = await sendBatch(sendList, botToken, SEND_BATCH_SIZE);
+  const sendResults = sendList.length > 0
+    ? await sendBatch(sendList, botToken, SEND_BATCH_SIZE, signal)
+    : [];
   const blockedChats = new Set<string>();
-  const retryableFreshMessages: BatchMessage[] = [];
+  const retryableFreshMessages: Array<{ message: BatchMessage; result: BatchResult }> = [];
   const resultsByChat = new Map<string, BatchResult[]>();
   let subscribersNotified = 0;
   let freshSent = 0;
@@ -213,7 +217,7 @@ export async function deliverFreshAlerts(
     }
 
     if (result.retryable) {
-      retryableFreshMessages.push(sendPlan);
+      retryableFreshMessages.push({ message: sendPlan, result });
     } else {
       freshPermanentFailures++;
     }

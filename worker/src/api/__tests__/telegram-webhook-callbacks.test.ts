@@ -38,6 +38,22 @@ describe("handleCallbackQuery", () => {
     expect(ackCall).toBeDefined();
   });
 
+  it("does not overwrite group subscriber username with the callback actor username", async () => {
+    const db = mockD1([]);
+    await handleCallbackQuery(db, "fake-token", {
+      id: "cb1-group",
+      data: "snooze:1h",
+      from: { username: "tapping_user" },
+      message: { chat: { id: -42, type: "supergroup" }, message_id: 999 },
+    });
+
+    const upsert = db
+      .getHistory()
+      .find((h) => /INSERT INTO telegram_subscribers/.test(h.sql));
+    expect(upsert).toBeDefined();
+    expect(upsert!.binds[1]).toBeNull();
+  });
+
   it("unknown callback data returns a graceful ack", async () => {
     const db = mockD1([]);
     await handleCallbackQuery(db, "fake-token", {

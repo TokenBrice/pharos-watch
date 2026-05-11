@@ -73,6 +73,7 @@ export interface SendToChatOpts {
   disableWebPagePreview?: boolean;
   disableNotification?: boolean;
   replyMarkup?: unknown;
+  signal?: AbortSignal;
 }
 
 export type TelegramSendErrorClass =
@@ -204,6 +205,9 @@ export async function sendToChat(
 ): Promise<SendToChatResult> {
   try {
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+    const signal = opts?.signal
+      ? AbortSignal.any([opts.signal, AbortSignal.timeout(10_000)])
+      : AbortSignal.timeout(10_000);
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -215,7 +219,7 @@ export async function sendToChat(
         ...(opts?.disableNotification && { disable_notification: true }),
         ...(opts?.replyMarkup != null && { reply_markup: opts.replyMarkup }),
       }),
-      signal: AbortSignal.timeout(10_000),
+      signal,
     });
 
     if (!res.ok) {
@@ -249,6 +253,7 @@ export interface BatchMessage {
   html: string;
   disableNotification: boolean;
   replyMarkup?: unknown;
+  chunkIndex?: number;
 }
 
 export interface BatchResult {
@@ -269,9 +274,32 @@ export interface BatchResult {
  * Individual send failures are caught — a single 500 error does NOT abort the batch.
  * Returns one result per input message in the same order.
  */
-export async function sendBatch(messages: BatchMessage[], botToken: string, batchSize: number): Promise<BatchResult[]> {
+function buildUnsentRetryResult(message: BatchMessage, errorClass: TelegramSendErrorClass, retryAfterSec: number | null): BatchResult {
+  return {
+    chatId: message.chatId,
+    ok: false,
+    blocked: false,
+    retryable: true,
+    permanentFailure: false,
+    statusCode: errorClass === "rate_limit" ? 429 : null,
+    errorClass,
+    delivery: "retryable_failure",
+    retryAfterSec,
+  };
+}
+
+export async function sendBatch(
+  messages: BatchMessage[],
+  botToken: string,
+  batchSize: number,
+  signal?: AbortSignal,
+): Promise<BatchResult[]> {
   const results: BatchResult[] = [];
   for (let i = 0; i < messages.length; i += batchSize) {
+    if (signal?.aborted) {
+      results.push(...messages.slice(i).map((message) => buildUnsentRetryResult(message, "timeout", null)));
+      break;
+    }
     const batch = messages.slice(i, i + batchSize);
     const batchResults = await Promise.all(
       batch.map(async (msg) => {
@@ -279,6 +307,7 @@ export async function sendBatch(messages: BatchMessage[], botToken: string, batc
           disableWebPagePreview: true,
           disableNotification: msg.disableNotification,
           replyMarkup: msg.replyMarkup,
+          signal,
         });
         return { chatId: msg.chatId, ...result };
       }),
@@ -289,17 +318,7 @@ export async function sendBatch(messages: BatchMessage[], botToken: string, batc
     const rateLimitedResult = batchResults.find((r) => r.errorClass === "rate_limit");
     if (rateLimitedResult) {
       for (const skippedMessage of messages.slice(i + batchSize)) {
-        results.push({
-          chatId: skippedMessage.chatId,
-          ok: false,
-          blocked: false,
-          retryable: true,
-          permanentFailure: false,
-          statusCode: rateLimitedResult.statusCode ?? 429,
-          errorClass: "rate_limit",
-          delivery: "retryable_failure",
-          retryAfterSec: rateLimitedResult.retryAfterSec,
-        });
+        results.push(buildUnsentRetryResult(skippedMessage, "rate_limit", rateLimitedResult.retryAfterSec));
       }
       break;
     }

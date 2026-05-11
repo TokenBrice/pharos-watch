@@ -3,7 +3,7 @@ import type { ResolvedCoin } from "../lib/telegram-alerts";
 
 export const START_MESSAGE = `<b>Welcome to PharosWatchBot</b>
 
-I send opt-in alerts for the stablecoins you follow, preset watchlists, or all tracked stablecoins by alert type.
+I send opt-in stablecoin alerts into this chat. Start with a quiet preset, then tune thresholds only where you need more detail.
 
 Join <a href="https://t.me/pharoswatch">@pharoswatch</a> for Pharos updates and <a href="https://t.me/pharoswatchers">@pharoswatchers</a> for community discussion about Pharos.
 
@@ -15,16 +15,16 @@ Join <a href="https://t.me/pharoswatch">@pharoswatch</a> for Pharos updates and 
 
 <b>Quick start</b>
 Recommended first setup:
-<code>/subscribe dews depeg usd-top25</code>
+<code>/subscribe dews,depeg usd-top25</code>
 
-Then customize:
-<code>/subscribe dews depeg USDC BOLD</code>
-<code>/subscribe dews usd-top25</code>
-<code>/subscribe dews usd-top-25</code>  ← dashed alias also works
-<code>/subscribe usd-top-50 depeg-step 250</code>
-<code>/subscribe safety mcap-ge-1b</code>
+Other useful setups:
+<code>/subscribe safety mcap-ge-1b</code>  ← larger coins, safety downgrades
+<code>/subscribe dews,depeg USDC BOLD</code>  ← explicit coins
+<code>/subscribe usd-top-50 depeg-step 250</code>  ← worsening milestones
 <code>/subscribe launch USDPT</code>  ← pre-launch watch
 <code>/subscribe safety all</code>  ← downgrades across all tracked coins (3-point drop when scored)
+
+<b>Tune noise</b>
 <code>/set USDC depeg-step 250</code>
 <code>/set all depeg-step 250</code>
 <code>/mute 22-07</code>  ← quiet hours in UTC
