@@ -18,5 +18,5 @@ function run(cmd, args) {
   }
 }
 
-run(localBin("vitest"), buildCriticalCoverageArgs());
+run(localBin("vitest"), buildCriticalCoverageArgs(process.argv.slice(2)));
 run("node", ["scripts/check-critical-coverage.mjs"]);

@@ -8,6 +8,7 @@ The project uses **Vitest** for unit tests and **ESLint** (via `eslint-config-ne
 
 ```bash
 npm test              # Run all tests once (CI mode)
+npm run test:profile -- --output /tmp/pharos-vitest-profile.json # Run Vitest once and write a runtime profile summary
 npm run test:watch    # Watch mode — re-runs on file changes
 npm run lint          # ESLint across frontend + worker code
 npm run typecheck     # Type-check frontend, shared, Pages Functions, and root scripts
@@ -231,6 +232,24 @@ The workflows pin `actions/checkout@v6`, `actions/setup-node@v6`, and `actions/c
 `npm run check:cron-sync` is part of the shared CI validate gate. Run it locally whenever you change `worker/wrangler.toml` cron expressions, `shared/lib/cron-jobs.ts`, or the scheduled-runner registry so you catch schedule/dispatch drift before pushing.
 
 `npm run seo:check` is the static-export SEO gate. It inspects the built `out/` HTML for missing title/description/canonical/OpenGraph/Twitter tags, duplicate or missing `h1`s on indexable pages, CSR bailout markers, sitemap omissions, orphan pages, and indexable routes that are more than three clicks away from `/`.
+
+## Vitest Runtime Profiling
+
+`npm run test:profile -- --output /tmp/pharos-vitest-profile.json` runs Vitest once with the JSON reporter, stores the raw Vitest report beside the requested output as `*.vitest.json`, and writes a durable summary to the requested `/tmp` path. The summary prints total files/tests, wall time, summed file/test time, node/jsdom split, top files, top individual tests, files above 10s, and tests above 1s.
+
+Pass Vitest filters or options after `--` when narrowing or validating runner behavior:
+
+```bash
+npm run test:profile -- --output /tmp/pharos-src-profile.json -- --dir src
+npm run test:profile -- --output /tmp/pharos-vitest-threads.json --baseline /tmp/pharos-vitest-profile.json -- --pool=threads
+```
+
+`npm run coverage:critical` also forwards trailing Vitest options to the critical suite. Use this to validate candidate pool behavior before any global `vitest.config.ts` change:
+
+```bash
+npm run coverage:critical -- --pool=threads
+CRITICAL_COVERAGE_RATCHET_ALL=1 npm run coverage:critical -- --pool=threads
+```
 
 ## Test Setup
 

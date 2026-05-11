@@ -27,12 +27,13 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/cron/__tests__/sync-dex-liquidity.test.ts",
 ];
 
-export function buildCriticalCoverageArgs() {
+export function buildCriticalCoverageArgs(extraArgs = []) {
   return [
     "run",
     "--coverage",
     "--coverage.thresholds.lines=0",
     ...CRITICAL_TEST_FILES,
+    ...extraArgs,
   ];
 }
 
