@@ -95,10 +95,6 @@
     "disposition": "queued-p4",
     "notes": "Surfaced after merging the local yield coverage and publication-health tranche. Yield cache validation now covers rankings publication state, benchmark caches, supplemental source caches, and deterministic on-chain health; split schema parsing by cache family in a dedicated yield cleanup pass."
   },
-  "worker/src/cron/yield-sync/sources-optional-protocols-supplemental.ts": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after merging the local yield coverage and publication-health tranche. Supplemental optional protocol adapters still colocate Morpho, Pendle, Kong, and Beefy source collection; split provider adapters once the new yield publication guardrails settle."
-  },
   "src/app/yield/client.tsx": {
     "disposition": "queued-p4",
     "notes": "Surfaced after Phase 6 reduced larger hotspots. The yield client still combines filter state, table shaping, and interaction handling in one route shell; split view-model and table controls in the next yield UI cleanup pass."

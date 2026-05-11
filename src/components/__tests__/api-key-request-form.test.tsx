@@ -95,6 +95,26 @@ describe("ApiKeyRequestForm", () => {
     expect(screen.getByText("Issued Key Policy")).toBeTruthy();
   });
 
+  it("does not show a blank success state when verification omits the plaintext key", async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const bodyWithoutToken = { ...issuedResponse(suffix, `ph_test_${suffix}_token`) };
+    delete (bodyWithoutToken as Partial<ReturnType<typeof issuedResponse>>).token;
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(bodyWithoutToken), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    })));
+
+    window.history.replaceState(null, "", `/api/#verify=verify-${suffix}`);
+    render(<ApiKeyRequestForm />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toContain("API key was not returned");
+    });
+
+    expect(screen.queryByRole("heading", { name: "Your API Key Is Ready" })).toBeNull();
+    expect(screen.queryByText("Copy this token now.")).toBeNull();
+  });
+
   it("keeps legacy query verification working and scrubs the token before posting", async () => {
     const suffix = randomUUID().slice(0, 8);
     const fetchMock = vi.fn(async () => new Response(JSON.stringify(issuedResponse(suffix, `ph_test_${suffix}_token`)), {

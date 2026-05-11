@@ -61,9 +61,10 @@ afterEach(() => {
 
 describe("ApiKeysPanel", () => {
   it("represents the default create expiry as omitted expiresAt", async () => {
+    const token = "ph_live_aaaaaaaaaaaaaaaa_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     const fetchMock = vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
       key: makeKey({ id: 2, name: "Digest Key" }),
-      token: "ph_live_aaaaaaaaaaaaaaaa_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      token,
     }), {
       status: 201,
       headers: { "Content-Type": "application/json" },
@@ -79,7 +80,26 @@ describe("ApiKeysPanel", () => {
     const body = JSON.parse(String((init as RequestInit).body));
 
     expect(body).not.toHaveProperty("expiresAt");
+    expect(await screen.findByText(token)).toBeTruthy();
     await waitFor(() => expect(refetch).toHaveBeenCalledOnce());
+  });
+
+  it("does not render a blank created-token panel when the create response omits the token", async () => {
+    const fetchMock = vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
+      key: makeKey({ id: 2, name: "Digest Key" }),
+    }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    }));
+    const { refetch } = renderPanel([]);
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Digest Key" } });
+    fireEvent.click(screen.getByRole("button", { name: /create key/i }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(await screen.findByText(/plaintext token was not returned/i)).toBeTruthy();
+    expect(screen.queryByText("Created Digest Key")).toBeNull();
+    expect(refetch).not.toHaveBeenCalled();
   });
 
   it("sends explicit null for a non-expiring create exception", async () => {

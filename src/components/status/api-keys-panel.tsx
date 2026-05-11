@@ -118,6 +118,13 @@ function formatExpirySummary(key: ApiKeySummary, nowSeconds: number): string {
   return `Expires ${absolute} (${formatElapsedSeconds(key.expiresAt - nowSeconds)} remaining)`;
 }
 
+function requirePlaintextToken<T extends { token?: unknown }>(response: T, action: "created" | "rotated"): string {
+  if (typeof response.token === "string" && response.token.trim().length > 0) {
+    return response.token;
+  }
+  throw new Error(`The key was ${action}, but the plaintext token was not returned. Rotate the key before using it.`);
+}
+
 async function postAdminJson<T>(
   path: string,
   body?: Record<string, unknown>,
@@ -213,7 +220,7 @@ export function ApiKeysPanel() {
       const response = await postAdminJson<ApiKeyCreateResponse>("/api/api-keys", {
         ...createPayload,
       });
-      setRevealedToken({ label: `Created ${response.key.name}`, token: response.token });
+      setRevealedToken({ label: `Created ${response.key.name}`, token: requirePlaintextToken(response, "created") });
       setCreateName("");
       setCreateOwnerEmail("");
       setCreateTier("standard");
@@ -500,7 +507,7 @@ export function ApiKeysPanel() {
                       disabled={isBusy}
                       onClick={() => runKeyAction(async () => {
                         const response = await postAdminJson<ApiKeyRotateResponse>(`/api/api-keys/${key.id}/rotate`);
-                        setRevealedToken({ label: `Rotated ${response.key.name}`, token: response.token });
+                        setRevealedToken({ label: `Rotated ${response.key.name}`, token: requirePlaintextToken(response, "rotated") });
                       }, key.id)}
                     >
                       Rotate

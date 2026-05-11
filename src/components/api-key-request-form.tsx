@@ -71,6 +71,25 @@ interface ApiErrorPayload {
   message?: string;
 }
 
+function isApiKeySelfServeIssueResponse(payload: unknown): payload is ApiKeySelfServeIssueResponse {
+  if (!payload || typeof payload !== "object") return false;
+  const candidate = payload as Partial<ApiKeySelfServeIssueResponse>;
+  const key = candidate.key;
+  return candidate.status === "issued"
+    && typeof candidate.token === "string"
+    && candidate.token.trim().length > 0
+    && !!key
+    && typeof key === "object"
+    && typeof key.keyPrefix === "string"
+    && key.keyPrefix.trim().length > 0
+    && typeof key.maskedToken === "string"
+    && key.maskedToken.trim().length > 0
+    && key.tier === "self-serve"
+    && key.trafficClass === "external"
+    && key.rateLimitPerMinute === SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE
+    && (typeof key.expiresAt === "number" || key.expiresAt === null);
+}
+
 async function readJson<T>(response: Response): Promise<T | null> {
   const text = await response.text();
   if (!text) return null;
@@ -266,9 +285,15 @@ export function ApiKeyRequestForm() {
         },
         body: JSON.stringify({ token }),
       });
-      const payload = await readJson<ApiKeySelfServeIssueResponse | ApiErrorPayload>(response);
-      if (!response.ok || !payload || !("status" in payload) || payload.status !== "issued") {
-        throw new Error(resolveErrorMessage(response.status, payload && !("status" in payload) ? payload : null));
+      const payload = await readJson<unknown>(response);
+      if (!response.ok) {
+        const errorPayload = payload && typeof payload === "object" && !("status" in payload)
+          ? payload as ApiErrorPayload
+          : null;
+        throw new Error(resolveErrorMessage(response.status, errorPayload));
+      }
+      if (!isApiKeySelfServeIssueResponse(payload)) {
+        throw new Error("Verification succeeded, but the API key was not returned. Please contact me@tokenbrice.com before leaving this page.");
       }
       setCopied(null);
       setCopyError(null);
