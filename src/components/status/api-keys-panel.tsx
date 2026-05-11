@@ -17,6 +17,7 @@ import type {
 } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/copy-button";
 import { buildAdminApiPath } from "@/lib/admin-access";
 import { buildRequestUrl } from "@/lib/api";
 import { useApiKeys } from "@/hooks/use-api-keys";
@@ -173,6 +174,20 @@ export function ApiKeysPanel() {
 
   const keys = data?.keys ?? EMPTY_KEYS;
   const nowSeconds = data?.generatedAt ?? Math.floor(Date.now() / 1000);
+  const keySummary = useMemo(() => {
+    const active = keys.filter((key) => key.isActive).length;
+    const inactive = keys.length - active;
+    const expiringSoon = keys.filter((key) => isExpiringSoon(key, nowSeconds)).length;
+    const expired = keys.filter((key) => key.expiresAt != null && key.expiresAt <= nowSeconds).length;
+    const nonExpiring = keys.filter((key) => key.expiresAt == null).length;
+
+    return [
+      { label: "Total keys", value: String(keys.length), detail: `${active} active / ${inactive} inactive` },
+      { label: "Expiring soon", value: String(expiringSoon), detail: "active keys inside 7 days" },
+      { label: "Expired", value: String(expired), detail: "needs rotation or deactivation" },
+      { label: "Non-expiring", value: String(nonExpiring), detail: "explicit exceptions" },
+    ];
+  }, [keys, nowSeconds]);
   const draftState = useMemo(() => {
     const next: Record<number, EditableKeyState> = {};
     for (const key of keys) {
@@ -242,6 +257,18 @@ export function ApiKeysPanel() {
         <CardTitle className="text-base">API Keys</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
+        {!isLoading && !error ? (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" aria-label="API key inventory summary">
+            {keySummary.map((item) => (
+              <div key={item.label} className="rounded-lg border border-border/60 bg-background/35 px-3 py-2">
+                <div className="text-xs uppercase text-muted-foreground">{item.label}</div>
+                <div className="mt-1 font-mono text-xl font-semibold text-foreground">{item.value}</div>
+                <div className="text-[11px] text-muted-foreground">{item.detail}</div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         <div className="space-y-3 rounded-lg border border-border/60 p-4">
           <div>
             <h3 className="text-sm font-medium">Create read key</h3>
@@ -318,8 +345,18 @@ export function ApiKeysPanel() {
 
         {revealedToken && (
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/8 p-4">
-            <div className="text-sm font-medium text-foreground">{revealedToken.label}</div>
-            <div className="mt-1 text-xs text-muted-foreground">This token will not be shown again.</div>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-medium text-foreground">{revealedToken.label}</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Copy this token now. It will not be shown again after this page state is lost.
+                </div>
+              </div>
+              <CopyButton
+                text={revealedToken.token}
+                className="border border-amber-500/30 bg-background/70 text-foreground hover:bg-background hover:text-foreground"
+              />
+            </div>
             <pre className="mt-3 overflow-auto rounded bg-background/80 p-3 text-xs">{revealedToken.token}</pre>
           </div>
         )}
@@ -483,7 +520,7 @@ export function ApiKeysPanel() {
                           ownerEmail: draft.ownerEmail || null,
                           tier: draft.tier,
                           trafficClass: draft.trafficClass,
-	                          rateLimitPerMinute: parseRateLimitInput(draft.rateLimitPerMinute),
+                          rateLimitPerMinute: parseRateLimitInput(draft.rateLimitPerMinute),
                           expiresAt,
                         });
                         setDrafts((prev) => ({ ...prev, [key.id]: buildEditableState(response.key) }));

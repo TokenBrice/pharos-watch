@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ApiKeyListResponse, ApiKeySummary } from "@shared/types";
 
 const { useApiKeysMock } = vi.hoisted(() => ({
@@ -56,6 +56,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
@@ -72,7 +73,7 @@ describe("ApiKeysPanel", () => {
     const { refetch } = renderPanel([]);
 
     expect(screen.getByText(/Default 90 days from creation/i)).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Digest Key" } });
+    fireEvent.change(screen.getAllByLabelText("Name")[0], { target: { value: "Digest Key" } });
     fireEvent.click(screen.getByRole("button", { name: /create key/i }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
@@ -82,6 +83,38 @@ describe("ApiKeysPanel", () => {
     expect(body).not.toHaveProperty("expiresAt");
     expect(await screen.findByText(token)).toBeTruthy();
     await waitFor(() => expect(refetch).toHaveBeenCalledOnce());
+  });
+
+  it("renders inventory summary and copy action for one-time tokens", async () => {
+    const token = "ph_live_aaaaaaaaaaaaaaaa_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
+      key: makeKey({ id: 2, name: "Digest Key" }),
+      token,
+    }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    }));
+
+    renderPanel([
+      makeKey({ id: 1, name: "Expired", expiresAt: GENERATED_AT - 3600 }),
+      makeKey({ id: 2, name: "Soon", expiresAt: GENERATED_AT + (2 * 24 * 60 * 60) }),
+      makeKey({ id: 3, name: "Permanent", expiresAt: null }),
+    ]);
+
+    const summary = screen.getByLabelText("API key inventory summary");
+    expect(within(summary).getByText("Total keys")).toBeTruthy();
+    expect(within(summary).getByText("Expiring soon")).toBeTruthy();
+    expect(within(summary).getByText("Non-expiring")).toBeTruthy();
+
+    fireEvent.change(screen.getAllByLabelText("Name")[0], { target: { value: "Digest Key" } });
+    fireEvent.click(screen.getByRole("button", { name: /create key/i }));
+
+    expect(await screen.findByText(token)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Copy to clipboard" }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(token));
   });
 
   it("does not render a blank created-token panel when the create response omits the token", async () => {

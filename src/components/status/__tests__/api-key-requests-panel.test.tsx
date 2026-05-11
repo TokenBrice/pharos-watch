@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ApiKeySelfServeRequestAdminListResponse, ApiKeySelfServeRequestAdminSummary } from "@shared/types";
 
@@ -84,6 +84,33 @@ describe("ApiKeyRequestsPanel", () => {
 
     expect(useApiKeyRequestsMock).toHaveBeenLastCalledWith({ status: undefined, limit: 50 });
     expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("renders triage summary and request-level next action guidance", () => {
+    renderPanel([
+      makeRequest({
+        riskScore: 70,
+        riskReasons: ["high requested volume"],
+      }),
+      makeRequest({
+        requestId: "akr_issued_cleanup",
+        status: "issued",
+        claimStatus: "issued",
+        linkedKeyActive: false,
+        linkedKeyExpiresAt: GENERATED_AT - 60,
+        issuedAt: GENERATED_AT - 30,
+      }),
+    ]);
+
+    const summary = screen.getByLabelText("Request triage summary");
+    expect(within(summary).getByText("Displayed")).toBeTruthy();
+    expect(within(summary).getByText("Risk flags")).toBeTruthy();
+    expect(within(summary).getByText("Claim cleanup")).toBeTruthy();
+    expect(within(summary).getByText("safe to release")).toBeTruthy();
+    expect(screen.getByText(/Waiting on email verification/i)).toBeTruthy();
+    expect(screen.getByText(/Release the stale claim to unblock a future self-serve request/i)).toBeTruthy();
+    expect((screen.getAllByRole("button", { name: "Release stale claim" })[0] as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getAllByRole("button", { name: "Release stale claim" })[1] as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("does not render durable request ids in the admin cards or notices", async () => {

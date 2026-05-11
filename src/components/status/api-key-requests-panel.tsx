@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import type {
   ApiKeySelfServeAdminMutationResponse,
@@ -118,6 +118,77 @@ function createIdempotencyKey(action: "reject" | "release-claim", requestId: str
   return `api-key-request:${action}:${requestId}:${randomPart}`;
 }
 
+function hasActiveUnexpiredLinkedKey(
+  request: ApiKeySelfServeRequestAdminSummary,
+  generatedAt: number,
+): boolean {
+  return request.linkedKeyActive === true
+    && (request.linkedKeyExpiresAt == null || request.linkedKeyExpiresAt > generatedAt);
+}
+
+function canReleaseRequestClaim(
+  request: ApiKeySelfServeRequestAdminSummary,
+  generatedAt: number,
+): boolean {
+  return request.status !== "pending_verification"
+    && !hasActiveUnexpiredLinkedKey(request, generatedAt)
+    && request.claimStatus !== "released";
+}
+
+function describeNextAction(
+  request: ApiKeySelfServeRequestAdminSummary,
+  generatedAt: number,
+): string {
+  const hasLiveKey = hasActiveUnexpiredLinkedKey(request, generatedAt);
+  const canReleaseClaim = canReleaseRequestClaim(request, generatedAt);
+
+  if (request.status === "pending_verification") {
+    return request.emailVerified
+      ? "Email is verified; review risk context, then let issuance complete or reject if the requester should not receive access."
+      : "Waiting on email verification. Reject only when the requester or risk context is disqualifying.";
+  }
+
+  if (request.status === "issued") {
+    if (hasLiveKey) {
+      return "Live key is active. Rejecting this request also deactivates the linked key and releases the email claim.";
+    }
+    if (canReleaseClaim) {
+      return "Linked key is inactive or expired. Release the stale claim to unblock a future self-serve request.";
+    }
+    return "Issued request is settled. Review linked-key usage before rotating or deactivating from the key panel.";
+  }
+
+  if (request.status === "expired") {
+    return canReleaseClaim
+      ? "Verification expired with a retained claim. Release the stale claim if no manual follow-up is needed."
+      : "Verification expired and the claim is already clear.";
+  }
+
+  if (request.status === "blocked") {
+    return "Blocked by consistency or policy safeguards. Check risk reasons and linked key state before any manual follow-up.";
+  }
+
+  return canReleaseClaim
+    ? "Rejected request still has a retained claim. Release it if the email should be allowed to request again."
+    : "Rejected request is closed and the claim is clear.";
+}
+
+function describeReleaseClaimTitle(
+  request: ApiKeySelfServeRequestAdminSummary,
+  hasActiveUnexpiredKey: boolean,
+): string {
+  if (hasActiveUnexpiredKey) {
+    return "Release is blocked while the linked key is active and unexpired.";
+  }
+  if (request.status === "pending_verification") {
+    return "Pending verification claims should be rejected or allowed to expire.";
+  }
+  if (request.claimStatus === "released") {
+    return "Claim is already released.";
+  }
+  return "Release the retained email claim.";
+}
+
 function RequestCard({
   request,
   generatedAt,
@@ -132,10 +203,8 @@ function RequestCard({
   onReleaseClaim: (request: ApiKeySelfServeRequestAdminSummary) => void;
 }) {
   const busy = busyRequestId === request.requestId;
-  const hasActiveUnexpiredKey =
-    request.linkedKeyActive === true
-    && (request.linkedKeyExpiresAt == null || request.linkedKeyExpiresAt > generatedAt);
-  const canReleaseClaim = !hasActiveUnexpiredKey && request.claimStatus !== "released";
+  const hasActiveUnexpiredKey = hasActiveUnexpiredLinkedKey(request, generatedAt);
+  const canReleaseClaim = canReleaseRequestClaim(request, generatedAt);
   const canReject = request.status === "pending_verification" || request.status === "issued";
   const rejectLabel = request.status === "issued" && hasActiveUnexpiredKey
     ? "Reject + deactivate key"
@@ -144,6 +213,7 @@ function RequestCard({
       : "Reject request";
   const releaseClaimLabel = "Release stale claim";
   const requesterLabel = describeRequester(request);
+  const releaseClaimTitle = describeReleaseClaimTitle(request, hasActiveUnexpiredKey);
 
   return (
     <article className="space-y-4 rounded-lg border border-border/60 bg-background/35 p-4">
@@ -167,6 +237,7 @@ function RequestCard({
             size="sm"
             variant="outline"
             disabled={busy || !canReject}
+            title={canReject ? rejectLabel : "Only pending or issued requests can be rejected."}
             onClick={() => onReject(request)}
           >
             <ShieldOff className="h-4 w-4" aria-hidden="true" />
@@ -177,12 +248,18 @@ function RequestCard({
             size="sm"
             variant="outline"
             disabled={busy || !canReleaseClaim}
+            title={releaseClaimTitle}
             onClick={() => onReleaseClaim(request)}
           >
             <Unlock className="h-4 w-4" aria-hidden="true" />
             {releaseClaimLabel}
           </Button>
         </div>
+      </div>
+
+      <div className="rounded-md border border-border/60 bg-background/40 px-3 py-2">
+        <div className="text-xs uppercase text-muted-foreground">Next action</div>
+        <p className="mt-1 text-sm leading-relaxed text-foreground">{describeNextAction(request, generatedAt)}</p>
       </div>
 
       <div className="grid gap-3 text-sm md:grid-cols-3">
@@ -264,6 +341,20 @@ export function ApiKeyRequestsPanel() {
 
   const requests = data?.requests ?? EMPTY_REQUESTS;
   const generatedAt = data?.generatedAt ?? Math.floor(Date.now() / 1000);
+  const requestSummary = useMemo(() => {
+    const needsReview = requests.filter((request) => request.status === "pending_verification").length;
+    const risky = requests.filter((request) => request.riskScore >= 50 || request.riskReasons.length > 0).length;
+    const claimCleanup = requests.filter((request) => canReleaseRequestClaim(request, generatedAt)).length;
+    const activeKeys = requests.filter((request) => hasActiveUnexpiredLinkedKey(request, generatedAt)).length;
+
+    return [
+      { label: "Displayed", value: String(requests.length), detail: `up to ${REQUEST_LIST_LIMIT} ${STATUS_LABELS[statusFilter].toLowerCase()}` },
+      { label: "Needs review", value: String(needsReview), detail: "pending verification" },
+      { label: "Risk flags", value: String(risky), detail: "score >= 50 or reasons" },
+      { label: "Claim cleanup", value: String(claimCleanup), detail: "safe to release" },
+      { label: "Live linked keys", value: String(activeKeys), detail: "active and unexpired" },
+    ];
+  }, [generatedAt, requests, statusFilter]);
 
   function collectMutationReason(
     request: ApiKeySelfServeRequestAdminSummary,
@@ -331,6 +422,18 @@ export function ApiKeyRequestsPanel() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!isLoading && !error ? (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5" aria-label="Request triage summary">
+            {requestSummary.map((item) => (
+              <div key={item.label} className="rounded-lg border border-border/60 bg-background/35 px-3 py-2">
+                <div className="text-xs uppercase text-muted-foreground">{item.label}</div>
+                <div className="mt-1 font-mono text-xl font-semibold text-foreground">{item.value}</div>
+                <div className="text-[11px] text-muted-foreground">{item.detail}</div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap gap-2" role="group" aria-label="Request status filter">
           {STATUS_FILTERS.map((status) => (
             <Button
