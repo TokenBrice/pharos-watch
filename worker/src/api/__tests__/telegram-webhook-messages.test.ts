@@ -141,6 +141,11 @@ describe("formatQuietHours", () => {
 });
 
 describe("buildListMessage", () => {
+  // Pin "now" to noon UTC on 2024-01-15 so quiet-hours/snooze rendering is deterministic.
+  const NOON_UTC_SEC = Math.floor(Date.UTC(2024, 0, 15, 12, 0, 0) / 1000);
+  // 02:30 UTC on the same date — inside a 22:00–07:00 quiet window.
+  const NIGHT_UTC_SEC = Math.floor(Date.UTC(2024, 0, 15, 2, 30, 0) / 1000);
+
   it("shows no subscriptions message when empty", () => {
     expect(buildListMessage(null, [])).toContain("No active subscriptions");
   });
@@ -151,9 +156,46 @@ describe("buildListMessage", () => {
       global_alert_dews: 1, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0,
       quiet_hours_enabled: 1, quiet_hours_start_utc: 22, quiet_hours_end_utc: 7,
     };
-    const msg = buildListMessage(sub, []);
+    const msg = buildListMessage(sub, [], [], NOON_UTC_SEC);
     expect(msg).toContain("DEWS");
     expect(msg).toContain("22:00–07:00 UTC");
     expect(msg).toContain("Coins (0)");
+  });
+
+  it("renders an active snooze with relative remaining time", () => {
+    const sub: SubscriberRow = {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      global_alert_dews: 0, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0,
+      quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null,
+      alert_snooze_until_ts: NOON_UTC_SEC + 38 * 60,
+    };
+    const msg = buildListMessage(sub, [], [], NOON_UTC_SEC);
+    expect(msg).toContain("Snoozed for 38 min");
+    expect(msg).not.toContain("Snooze: Off");
+    expect(msg).toContain("Quiet hours: Off");
+  });
+
+  it("renders quiet hours as active when inside the window", () => {
+    const sub: SubscriberRow = {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      global_alert_dews: 1, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0,
+      quiet_hours_enabled: 1, quiet_hours_start_utc: 22, quiet_hours_end_utc: 7,
+    };
+    const msg = buildListMessage(sub, [], [], NIGHT_UTC_SEC);
+    expect(msg).toContain("Quiet hours: active until 07:00 UTC");
+    expect(msg).not.toContain("22:00–07:00 UTC");
+    expect(msg).toContain("Snooze: Off");
+  });
+
+  it("renders quiet hours as a window when outside it", () => {
+    const sub: SubscriberRow = {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      global_alert_dews: 1, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0,
+      quiet_hours_enabled: 1, quiet_hours_start_utc: 22, quiet_hours_end_utc: 7,
+    };
+    const msg = buildListMessage(sub, [], [], NOON_UTC_SEC);
+    expect(msg).toContain("Quiet hours: 22:00–07:00 UTC");
+    expect(msg).not.toContain("active until");
+    expect(msg).toContain("Snooze: Off");
   });
 });

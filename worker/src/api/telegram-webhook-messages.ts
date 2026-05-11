@@ -4,6 +4,7 @@ import type {
   TelegramPresetDefinition,
   TelegramPresetId,
 } from "../lib/telegram-presets";
+import { isQuietHoursActive } from "../cron/telegram-quiet-hours";
 import type { PresetSubscriptionRow, SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
 import { STABLECOIN_BY_ID } from "./telegram-webhook-shared";
 import type { StatusForCoin } from "./telegram-webhook-status";
@@ -130,20 +131,10 @@ export function buildListMessage(
     return "No active subscriptions. Use /subscribe to get started, or try /presets for preset watchlists.";
   }
 
-  const snoozeUntil = subscriber?.alert_snooze_until_ts ?? null;
-  const snoozeLine =
-    snoozeUntil != null && snoozeUntil > nowSec
-      ? `Snooze: Active until ${new Date(snoozeUntil * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC`
-      : "Snooze: Off";
-
   const lines = [
     `All stablecoins: ${describeGlobalAlertSettings(subscriber)}`,
-    `Quiet hours: ${
-      subscriber?.quiet_hours_enabled
-        ? formatQuietHours(subscriber.quiet_hours_start_utc, subscriber.quiet_hours_end_utc)
-        : "Off"
-    }`,
-    snoozeLine,
+    `Quiet hours: ${formatQuietHoursStatus(subscriber, nowSec)}`,
+    formatSnoozeLine(subscriber?.alert_snooze_until_ts ?? null, nowSec),
     `Dynamic presets (${presetSubscriptions.length}):`,
   ];
 
@@ -307,6 +298,30 @@ export function formatQuietHours(startHourUtc: number | null | undefined, endHou
   if (startHourUtc == null || endHourUtc == null) return "Off";
   const pad = (h: number) => String(h).padStart(2, "0");
   return `${pad(startHourUtc)}:00–${pad(endHourUtc)}:00 UTC`;
+}
+
+export function formatQuietHoursStatus(subscriber: SubscriberRow | null, nowSec: number): string {
+  if (!subscriber?.quiet_hours_enabled) return "Off";
+  const start = subscriber.quiet_hours_start_utc;
+  const end = subscriber.quiet_hours_end_utc;
+  if (start == null || end == null) return "Off";
+  const pad = (h: number) => String(h).padStart(2, "0");
+  if (isQuietHoursActive(nowSec, true, start, end)) {
+    return `active until ${pad(end)}:00 UTC`;
+  }
+  return `${pad(start)}:00–${pad(end)}:00 UTC`;
+}
+
+export function formatSnoozeLine(snoozeUntilSec: number | null, nowSec: number): string {
+  if (snoozeUntilSec == null || snoozeUntilSec <= nowSec) return "Snooze: Off";
+  return `Snoozed for ${formatRelativeDuration(snoozeUntilSec - nowSec)}`;
+}
+
+function formatRelativeDuration(seconds: number): string {
+  if (seconds < 60) return "less than 1 min";
+  if (seconds < 90 * 60) return `${Math.round(seconds / 60)} min`;
+  if (seconds < 48 * 3600) return `${Math.round(seconds / 3600)} h`;
+  return `${Math.round(seconds / 86400)} d`;
 }
 
 function formatAge(ts: number | null | undefined, nowSec = Math.floor(Date.now() / 1000)): string {
