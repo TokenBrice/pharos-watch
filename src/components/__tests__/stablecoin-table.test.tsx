@@ -65,6 +65,14 @@ const susds = {
   circulating: { peggedUSD: 75_000_000 },
 } as unknown as StablecoinData;
 
+const dai = {
+  ...coin,
+  id: "dai-makerdao",
+  name: "Dai",
+  symbol: "DAI",
+  circulating: { peggedUSD: 90_000_000 },
+} as unknown as StablecoinData;
+
 const reportCard = {
   id: "usdt-tether",
   name: "Tether",
@@ -167,6 +175,25 @@ describe("StablecoinTable", () => {
 
     expect(screen.getAllByText("Blacklistable").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Yes").length).toBeGreaterThan(0);
+  });
+
+  it("links Dilutable table status to its source", () => {
+    localStorage.setItem("pharos-table-columns", JSON.stringify(["name", "blacklistable"]));
+
+    render(
+      <StablecoinTable
+        data={[dai]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+      />,
+    );
+
+    const sourceLink = screen.getByRole("link", { name: "Dilutable source: Etherscan contract source" });
+    expect(sourceLink.textContent).toContain("Dilutable");
+    expect(sourceLink.getAttribute("href")).toBe(
+      "https://etherscan.io/address/0x6b175474e89094c44da98b954eedeac495271d0f#code",
+    );
   });
 
   it("renders a star control when pinning is enabled", () => {

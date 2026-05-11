@@ -9,6 +9,7 @@ import {
 describe("blacklist status buckets", () => {
   it("maps resolved blacklist statuses into chart bucket keys", () => {
     expect(resolveBlacklistStatusBucket(true)).toBe("yes");
+    expect(resolveBlacklistStatusBucket("dilutable")).toBe("dilutable");
     expect(resolveBlacklistStatusBucket("possible")).toBe("possible");
     expect(resolveBlacklistStatusBucket("inherited")).toBe("upstream");
     expect(resolveBlacklistStatusBucket(false)).toBe("no");
