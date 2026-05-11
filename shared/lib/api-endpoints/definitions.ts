@@ -772,6 +772,15 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "manual",
   },
   {
+    key: "admin-telegram-broadcast",
+    path: API_PATHS.adminTelegramBroadcast(),
+    methods: ["POST"],
+    adminRequired: true,
+    mutatingAdmin: true,
+    cacheBypass: true,
+    probeGroup: "manual",
+  },
+  {
     key: "status-probe-history",
     path: API_PATHS.statusProbeHistory(),
     probePath: API_PATHS.statusProbeHistory({ path: API_PATHS.health() }),

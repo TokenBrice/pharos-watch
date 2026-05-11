@@ -133,6 +133,7 @@ export const API_PATHS = {
       older_than_sec: params?.olderThanSec,
     }),
   adminTelegramResend: () => "/api/admin-telegram-resend",
+  adminTelegramBroadcast: () => "/api/admin-telegram-broadcast",
   statusProbeHistory: (params?: { path?: string; days?: number }) =>
     buildQueryPath("/api/status-probe-history", { path: params?.path, days: params?.days }),
   adminTelegramChat: (chatId: string) => `/api/admin-telegram-chat/${encodeURIComponent(chatId)}`,

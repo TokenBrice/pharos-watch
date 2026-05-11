@@ -15,6 +15,7 @@ import { handleKillCronInFlight } from "../api/admin-kill-cron-in-flight";
 import { handleBulkDismissDiscoveryCandidates } from "../api/admin-bulk-dismiss-discovery-candidates";
 import { handleClearTelegramPending } from "../api/admin-telegram-pending";
 import { handleAdminTelegramResend } from "../api/admin-telegram-resend";
+import { handleAdminTelegramBroadcast } from "../api/admin-telegram-broadcast";
 import { handleStatusProbeHistory } from "../api/status-probe-history";
 import { makeConditionalIdempotentAdminRoute, makeIdempotentAdminRoute } from "../lib/route-wrappers";
 import { defineStaticRoute, type StaticRouteDefinition } from "./shared";
@@ -90,5 +91,6 @@ export const ADMIN_STATIC_ROUTES = [
   defineStaticRoute("clear-telegram-pending", handleClearTelegramPending),
   defineStaticRoute("admin-telegram-resend", ({ db, request, trustedAdmin, telegramBotToken }) =>
     handleAdminTelegramResend({ db, request, trustedAdmin, telegramBotToken })),
+  defineStaticRoute("admin-telegram-broadcast", handleAdminTelegramBroadcast),
   defineStaticRoute("status-probe-history", handleStatusProbeHistory),
 ] as const satisfies readonly StaticRouteDefinition[];

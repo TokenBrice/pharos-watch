@@ -260,6 +260,7 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/bulk-dismiss-discovery-candidates`
 - `POST /api/telegram-pending`
 - `POST /api/admin-telegram-resend`
+- `POST /api/admin-telegram-broadcast`
 
 When an `Idempotency-Key` is supplied on one of those routes, successful responses echo `Idempotency-Key` plus `X-Idempotent-Replay`, and conflicting reuse returns `409`. If a handler throws and the worker can clear the pending reservation cleanly, the same key may be retried normally. If cleanup cannot be confirmed, the worker downgrades that key to a stored failure replay and repeats with the same key return a deterministic `500` replay with `X-Idempotent-Replay: true` until the reservation expires.
 
@@ -3990,3 +3991,44 @@ Force-resends a single Telegram alert to one chat, bypassing the pending queue. 
 `errorClass` is one of `blocked`, `rate_limit`, `server_error`, `bad_request`, `auth_error`, `timeout`, `network`, `unknown`, or `null` on success. `retryAfterSec` is populated only when Telegram returned `429` with a `Retry-After` header.
 
 **Error responses:** `400` for invalid body, unknown `alertType`, or unknown `stablecoinId`. `404` when no `telegram_subscribers` row matches `chatId`. `422` when no source data exists to build the requested alert. `500` when `TELEGRAM_BOT_TOKEN` is not configured.
+
+### `POST /api/admin-telegram-broadcast`
+
+Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via the standard pending-queue fan-out. Used for maintenance windows or outage notices. Live calls enqueue one `telegram_pending_alerts` row per target chat per message chunk; the existing dispatch cron delivers them with the same per-chat rate-limit isolation and wall-clock retry semantics as regular alerts. Every live call writes one row to `admin_action_audit`.
+
+**Authentication:** admin (`X-Pharos-Admin: 1` header required).
+
+**Body**
+
+```json
+{
+  "messageHtml": "<b>Pharos maintenance</b>\nThe bot will be offline 10:00-10:15 UTC.",
+  "scope": "all",
+  "dryRun": true
+}
+```
+
+`scope` is either `all` (every row in `telegram_subscribers`) or `global-subscribers` (rows where at least one `global_alert_*` flag is set). `dryRun` is required and must be a boolean. `messageHtml` must be a non-empty string and uses Telegram HTML formatting; long bodies are split via the same chunking pipeline as alerts.
+
+**Dry-run response (`dryRun: true`)**
+
+```json
+{
+  "targetChatCount": 1247,
+  "sample": ["100", "200", "300", "400", "500"]
+}
+```
+
+`sample` lists up to the first 5 target chat IDs (sorted ascending) — useful for sanity-checking the scope filter before going live. No rows are enqueued and no audit entry is written.
+
+**Live response (`dryRun: false`)**
+
+```json
+{
+  "enqueued": 1247
+}
+```
+
+`enqueued` equals `targetChatCount * chunkCount`. The dispatch cron drains the queue on its normal cadence.
+
+**Error responses:** `400` for invalid JSON, empty `messageHtml`, unknown `scope`, or non-boolean `dryRun`.

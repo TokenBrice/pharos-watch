@@ -43,6 +43,7 @@ Detection signals:
 6. **No subscribers for the alert type.** Verify `/api/status` -> `telegramBot.alertTypeEnabledChats` is non-zero for the affected alert type.
 7. **Webhook drift.** The 5-minute Telegram lane reconciles the webhook automatically. Force a manual reset with `scripts/register-telegram-webhook.sh` only if reconciliation is also failing.
 8. **Force a single resend.** After the underlying cause is fixed, re-fire a specific alert to one chat via `POST https://ops-api.pharos.watch/api/admin-telegram-resend` with body `{ "chatId": "<id>", "alertType": "dews|depeg|safety|launch", "stablecoinId": "<id>" }`. The endpoint reuses the same formatter and `sendToChat` path as the dispatch cron, bypassing the pending queue. See [`docs/api-reference.md`](../api-reference.md) section `POST /api/admin-telegram-resend`.
+9. **Announce a maintenance window or recovery to all subscribers.** Use `POST https://ops-api.pharos.watch/api/admin-telegram-broadcast` with body `{ "messageHtml": "<b>...</b>", "scope": "all" | "global-subscribers", "dryRun": true | false }`. Run a `dryRun: true` first to confirm `targetChatCount` matches expectations; then send the live call. The endpoint enqueues into `telegram_pending_alerts` so the standard dispatch pipeline handles fan-out, rate-limit isolation, and retries. See [`docs/api-reference.md`](../api-reference.md) section `POST /api/admin-telegram-broadcast`.
 
 ## Cross-References
 
