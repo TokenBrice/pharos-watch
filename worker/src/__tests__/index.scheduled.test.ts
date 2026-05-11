@@ -608,7 +608,27 @@ describe("worker.scheduled", () => {
       accessTokenSecret: "tw-token-secret",
     });
     expect(cronMocks.generateWeeklyRecap).toHaveBeenCalledTimes(1);
+    expect(cronMocks.runDiscoveryScan).not.toHaveBeenCalled();
+  });
+
+  it("runs coverage discovery on the isolated daily 08:10 trigger", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      COINGECKO_API_KEY: "coingecko",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "10 8 * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
     expect(cronMocks.runDiscoveryScan).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncBluechip).not.toHaveBeenCalled();
+    expect(cronMocks.generateDailyDigest).not.toHaveBeenCalled();
   });
 
   it("runs live reserve sync on the dedicated 4-hourly trigger", async () => {

@@ -71,7 +71,7 @@ export interface SupplementalSourceAccounting {
 }
 
 const SUPPLEMENTAL_SOURCE_KEY_EXAMPLE_LIMIT = 5;
-export const SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY = 2;
+export const SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY = 1;
 
 const SUPPLEMENTAL_SOURCE_FAMILY_KEYS: SupplementalSourceFamilyKey[] = [
   "morpho",

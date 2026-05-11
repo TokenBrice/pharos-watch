@@ -266,7 +266,7 @@ This is intentional — do not mix these values across chain types.
 Coverage discovery has two ingestion paths:
 
 - quarter-hourly DefiLlama residual upserts inside `worker/src/cron/sync-stablecoins/intake.ts`
-- weekly CoinGecko category scan inside `worker/src/cron/discovery-scan.ts` (Mondays on the `5 8 * * *` trigger)
+- weekly CoinGecko category scan inside `worker/src/cron/discovery-scan.ts` (Mondays on the `10 8 * * *` trigger)
 
 ### Source A: DL Residuals (free)
 

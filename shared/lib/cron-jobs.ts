@@ -27,6 +27,7 @@ export const CRON_SCHEDULES = {
   daily0300Utc: "0 3 * * *",
   daily0800Utc: "0 8 * * *",
   daily0805Utc: "5 8 * * *",
+  daily0810Utc: "10 8 * * *",
   monthlyYieldAudit: "0 6 1 * *",
 } as const;
 
@@ -59,6 +60,7 @@ const CRON_SCHEDULE_BUCKETS = {
   daily0300Utc: { intervalSec: DAY_SECONDS, offsetSec: 3 * 3600 },
   daily0800Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 },
   daily0805Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 + 5 * 60 },
+  daily0810Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 + 10 * 60 },
   monthlyYieldAudit: { intervalSec: 30 * 86400, offsetSec: 6 * 3600 },
 } as const satisfies Record<CronScheduleKey, { intervalSec: number; offsetSec: number }>;
 
@@ -134,7 +136,7 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     key: "daily",
     title: "Daily slot",
     badge: "daily",
-    description: "03:00 retention pruning plus 08:00 snapshots/monitors and 08:05 digest, Bluechip, recap, and coverage discovery lanes.",
+    description: "03:00 retention pruning plus 08:00 snapshots/monitors, 08:05 digest/Bluechip/recap, and 08:10 coverage discovery lanes.",
   },
   {
     key: "other",
@@ -210,7 +212,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 300,
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
-    maxConnections: 5, // Headroom-full slot: Telegram sendMessage batches run with SEND_BATCH_SIZE=5
+    maxConnections: 4, // Telegram sendMessage batches run with SEND_BATCH_SIZE=4
   },
   {
     job: "sync-blacklist",
@@ -273,7 +275,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 4 * 3600,
     scheduleKey: "fourHourlyYieldSupplemental",
     triggerMode: "isolated",
-    maxConnections: 5, // Headroom-full slot: Morpho/Pendle/Yearn/Beefy run in parallel (peak 5), then Compound/Aave consume the isolated lane
+    maxConnections: 3, // Supplemental families run serially; Beefy is the peak with 3 parallel API reads
   },
   {
     // Runs on the quarter-hourly trigger after a safe stablecoins cache write.
@@ -377,8 +379,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     connectionGroup: "reserve-sync-chain",
   },
   {
-    // daily0805Utc is a headroom-full shared slot: Bluechip peak 3 plus
-    // digest-chain peak 1 plus coverage discovery peak 1 totals 5/6.
     job: "sync-bluechip",
     label: "Bluechip sync",
     group: "daily",
@@ -412,8 +412,8 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     label: "Coverage discovery",
     group: "daily",
     intervalSec: 604800,
-    scheduleKey: "daily0805Utc",
-    triggerMode: "shared",
+    scheduleKey: "daily0810Utc",
+    triggerMode: "isolated",
     maxConnections: 1, // CoinGecko stablecoins market list fetch
   },
   {

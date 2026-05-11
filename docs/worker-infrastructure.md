@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 18 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 31 `CRON_JOB_DEFINITIONS` jobs across 17 job-bearing slots; the separate `*/5 * * * *` digest-trigger poll slot is the 18th runner slot and executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 19 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 31 `CRON_JOB_DEFINITIONS` jobs across 18 job-bearing slots; the separate `*/5 * * * *` digest-trigger poll slot is the 19th runner slot and executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -327,7 +327,7 @@ Most module-level mutable state was eliminated in the parameter-passing refactor
 
 ## Cron Scheduling
 
-This worker declares 18 cron expressions in `worker/wrangler.toml`. Fetch-heavy lanes are split across separate trigger slots so they do not compete with the quarter-hourly core pipeline for the Workers per-trigger 6-connection fetch pool or share CPU budget with DB-only availability jobs.
+This worker declares 19 cron expressions in `worker/wrangler.toml`. Fetch-heavy lanes are split across separate trigger slots so they do not compete with the quarter-hourly core pipeline for the Workers per-trigger 6-connection fetch pool or share CPU budget with DB-only availability jobs.
 
 ### `worker/wrangler.toml` Triggers
 
@@ -350,6 +350,7 @@ crons = [
   "*/5 * * * *",
   "0 8 * * *",
   "5 8 * * *",
+  "10 8 * * *",
   "0 6 1 * *",
   "0 3 * * *",
 ]
@@ -498,18 +499,25 @@ This slot polls the `digest:force-run-request` cache key written by `POST /api/t
 
 **Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (ECB/FRED/Treasury/SIX benchmark fetches, still serialized inside one job) and `sync-usds-status` (Etherscan) are chained sequentially on the external-fetch branch to keep this trigger conservative on connection use. A failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`; peak external usage is 1 connection.
 
-### Trigger 16: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
+### Trigger 16: `5 8 * * *` (daily at 08:05 UTC — digest and Bluechip fetchers)
 
 | Job              | Function                | File                                | Documentation                           |
 | ---------------- | ----------------------- | ----------------------------------- | --------------------------------------- |
 | `sync-bluechip`  | `syncBluechip()`        | `worker/src/cron/sync-bluechip.ts`  | This doc (below)                        |
 | `daily-digest`   | `generateDailyDigest()` | `worker/src/cron/daily-digest.ts`   | [Digest Pipeline](./digest-pipeline.md) |
 | `weekly-recap`   | `generateWeeklyRecap()` | `worker/src/cron/weekly-recap.ts`   | [Digest Pipeline](./digest-pipeline.md) |
-| `discovery-scan` | `runDiscoveryScan()`    | `worker/src/cron/discovery-scan.ts` | [Data Pipeline](./data-pipeline.md)     |
 
-**Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` / `weekly-recap` (1 long-lived Anthropic API call at a time because the recap is chained after the daily digest), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 14 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency. `weekly-recap` and `discovery-scan` both run Monday-only and return immediately on other days. Reliability is now failure-contained at the job level for this slot: a thrown `sync-bluechip`, `daily-digest`, `weekly-recap`, or `discovery-scan` run is recorded independently and no longer aborts the rest of the 08:05 lane before the remaining jobs can settle.
+**Connection budget:** `sync-bluechip` (3 parallel batch connections) and `daily-digest` / `weekly-recap` (1 long-lived Anthropic API call at a time because the recap is chained after the daily digest) use <=4 concurrent external connections. The 5-minute offset from Trigger 14 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency. `weekly-recap` runs Monday-only and returns immediately on other days. Reliability is failure-contained at the job level for this slot: a thrown `sync-bluechip`, `daily-digest`, or `weekly-recap` run is recorded independently and no longer aborts the rest of the 08:05 lane before the remaining jobs can settle.
 
-### Trigger 17: `0 6 1 * *` (monthly at 06:00 UTC on the 1st)
+### Trigger 17: `10 8 * * *` (daily at 08:10 UTC — coverage discovery)
+
+| Job              | Function             | File                                | Documentation                       |
+| ---------------- | -------------------- | ----------------------------------- | ----------------------------------- |
+| `discovery-scan` | `runDiscoveryScan()` | `worker/src/cron/discovery-scan.ts` | [Data Pipeline](./data-pipeline.md) |
+
+**Connection budget:** isolated daily trigger for the weekly CoinGecko stablecoin category scan. The job runs Monday-only and returns immediately on other days; isolating it keeps the 08:05 digest/Bluechip lane at 4/6 peak connections.
+
+### Trigger 18: `0 6 1 * *` (monthly at 06:00 UTC on the 1st)
 
 | Job                    | Function                  | File                                      | Documentation                                 |
 | ---------------------- | ------------------------- | ----------------------------------------- | --------------------------------------------- |
@@ -517,7 +525,7 @@ This slot polls the `digest:force-run-request` cache key written by `POST /api/t
 
 Runs once a month on the 1st at 06:00 UTC. Scans unmatched high-TVL DeFiLlama pools and flags missing protocols as high-confidence or review-needed expansion candidates.
 
-### Trigger 18: `0 3 * * *` (daily at 03:00 UTC — TTL pruning)
+### Trigger 19: `0 3 * * *` (daily at 03:00 UTC — TTL pruning)
 
 | Job                       | Function                    | File                                             | Documentation            |
 | ------------------------- | --------------------------- | ------------------------------------------------ | ------------------------ |
@@ -545,12 +553,13 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | 9       | `26,56 * * * *`    |                                  0 (DEWS -> PSI; both DB-only)                                     |    6     |
 | 10      | `11 */4 * * *`     |                2 (reserve adapters + Kinesis are sequential; redemption is DB-only)                |    4     |
 | 11      | `20 * * * *`       |                                      1 (core yield publisher)                                      |    5     |
-| 12      | `25 */4 * * *`     |                                  5 (supplemental yield families)                                   |    1     |
-| 13      | `2,7,...,57 * * * *` |                        5 (Telegram alert dispatcher batches sends in groups of 5)                  |    1     |
+| 12      | `25 */4 * * *`     |                                  3 (supplemental yield families; Beefy is the peak)                 |    3     |
+| 13      | `2,7,...,57 * * * *` |                        4 (Telegram alert dispatcher batches sends in groups of 4)                  |    2     |
 | 14      | `0 8 * * *`        |                 1 (benchmark feeds -> USDS Etherscan reads are chained serially)                   |    5     |
-| 15      | `5 8 * * *`        |                     5 (Bluechip batch of 3 + Anthropic + CoinGecko; digest/recap chained)          |    1     |
-| 16      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
-| 17      | `0 3 * * *`        |                     0 (prune-status-probe-runs + prune-cron-history; both DB-only)                 |    6     |
+| 15      | `5 8 * * *`        |                         4 (Bluechip batch of 3 + Anthropic; digest/recap chained)                  |    2     |
+| 16      | `10 8 * * *`       |                                  1 (weekly CoinGecko discovery scan)                               |    5     |
+| 17      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
+| 18      | `0 3 * * *`        |                     0 (prune-status-probe-runs + prune-cron-history; both DB-only)                 |    6     |
 
 The `*/5 * * * *` digest-trigger poll slot exists in the scheduled runner registry, but it is not represented in `CRON_JOB_DEFINITIONS` and is not part of the enforced `check:cron-connections` budget table today. It performs a lightweight D1 poll and, when a manual trigger is pending, executes `generateDailyDigest(...)` directly under the existing `daily-digest` lease.
 
@@ -558,7 +567,7 @@ The `*/5 * * * *` digest-trigger poll slot exists in the scheduled runner regist
 
 - Jobs requiring <=1 external connection may share any slot with headroom >=2.
 - Jobs requiring >2 concurrent connections should get a dedicated trigger slot.
-- Never add a fetching job to a slot with headroom <=1 (budget rows 12, 13, and 15 are effectively full).
+- Never add a fetching job to a slot with headroom <=1.
 
 ### Cron Error Handling Policy
 
@@ -1113,7 +1122,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 31 cron jobs across 17 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. The `*/5 * * * *` digest-trigger poll slot is not listed as a separate job because it runs work under the existing `daily-digest` lease only when a manual trigger flag is pending:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 31 cron jobs across 18 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. The `*/5 * * * *` digest-trigger poll slot is not listed as a separate job because it runs work under the existing `daily-digest` lease only when a manual trigger flag is pending:
 
 | Job                             | Interval         | Trigger                                           |
 | ------------------------------- | ---------------- | ------------------------------------------------- |
@@ -1144,7 +1153,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `sync-bluechip`                 | 86,400s (24h)    | `5 8 * * *`                                       |
 | `daily-digest`                  | 86,400s (24h)    | `5 8 * * *`                                       |
 | `weekly-recap`                  | 604,800s (7d)    | `5 8 * * *`                                       |
-| `discovery-scan`                | 604,800s (7d)    | `5 8 * * *` (Monday-only)                         |
+| `discovery-scan`                | 604,800s (7d)    | `10 8 * * *` (Monday-only)                        |
 | `prune-status-probe-runs`       | 86,400s (24h)    | `0 3 * * *`                                       |
 | `prune-cron-history`            | 86,400s (24h)    | `0 3 * * *`                                       |
 | `yield-coverage-audit`          | 2,592,000s (30d) | `0 6 1 * *`                                       |

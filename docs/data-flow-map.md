@@ -49,7 +49,8 @@ Cron schedules are declared in `worker/wrangler.toml`, mirrored in `shared/lib/c
 - `*/5 * * * *`: manual digest trigger poll (`POST /api/trigger-digest` flag consumer)
 - `0 3 * * *`: status-probe TTL prune + cron-history TTL prune (daily housekeeping)
 - `0 8 * * *`: snapshot-supply fallback, safety-grade snapshot, T-bill rate, PSI daily snapshot, USDS status
-- `5 8 * * *`: bluechip sync, daily digest, weekly recap (Mondays), discovery scan (Mondays)
+- `5 8 * * *`: bluechip sync, daily digest, weekly recap (Mondays)
+- `10 8 * * *`: discovery scan (Mondays)
 - `0 6 1 * *`: monthly yield coverage audit
 
 ## Freshness Contract (Frontend)

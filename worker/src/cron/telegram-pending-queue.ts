@@ -4,7 +4,7 @@ import { SNOOZE_REPLY_MARKUP } from "../lib/telegram-alerts";
 // ---------- Constants ----------
 
 export const PENDING_TTL_SEC = 3600; // 1 hour — stale alerts are worse than no alert
-export const SEND_BATCH_SIZE = 5; // Parallel sends per batch (stay under Workers 6-conn limit)
+export const SEND_BATCH_SIZE = 4; // Parallel sends per batch (leave Workers connection headroom)
 
 // ---------- Types ----------
 

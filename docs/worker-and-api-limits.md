@@ -58,13 +58,7 @@ The scheduler is deliberately structured around the repo's six-connection-per-tr
 
 Treat any new fetch-heavy work added to an existing trigger slot as competing for the same trigger-wide outbound connection budget. A trigger at `5/6` must be treated as full for new fetch-heavy work unless the change also reduces existing peak usage or moves work to a different slot.
 
-Current `5/6` headroom-full owners:
-
-| Trigger slot | Current ownership | Why it is full for new fetch-heavy work |
-| --- | --- | --- |
-| `fiveMinuteTelegramAlerts` | `dispatch-telegram-alerts` | Telegram `sendMessage` batches can use `5` concurrent outbound requests. |
-| `fourHourlyYieldSupplemental` | `sync-yield-supplemental` | Morpho/Pendle/Yearn/Beefy run in a parallel provider wave with peak `5`. |
-| `daily0805Utc` | `sync-bluechip`, digest chain (`daily-digest` / `weekly-recap`), `discovery-scan` | Bluechip peak `3` plus digest-chain peak `1` plus coverage discovery peak `1` totals `5/6`. |
+Current state: no job-bearing trigger is intentionally operated at `5/6`. The former full slots were given headroom by reducing Telegram send batches to 4, running supplemental yield source families serially, and moving `discovery-scan` from the 08:05 daily lane to its own 08:10 trigger.
 
 For `sync-stablecoins`, failed upstream responses must be consumed or canceled before later passes start. Leaving non-OK bodies unread can strand the same trigger-local connection slots and starve the late fallback phase (`CoinMarketCap` -> `Jupiter` -> `DexScreener`).
 

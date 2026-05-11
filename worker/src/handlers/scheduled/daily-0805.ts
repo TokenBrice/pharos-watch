@@ -2,16 +2,14 @@
  * Daily 08:05 UTC trigger (5 8 * * *):
  *   sync-bluechip (3)          ← parallel waitUntil
  *   daily-digest (1) → weekly-digest (1)  ← chained to share connection pool
- *   discovery-scan (1)         ← parallel waitUntil
  *
- * Digests are chained; bluechip and discovery run as independent waitUntil
- * promises. Worst case peak is bluechip batch (3) + digest chain (1) + discovery (1).
- * Connection budget: 5/6 peak.
+ * Digests are chained; bluechip runs as an independent waitUntil promise.
+ * Worst case peak is bluechip batch (3) + digest chain (1).
+ * Connection budget: 4/6 peak.
  */
 import { syncBluechip } from "../../cron/sync-bluechip";
 import { generateDailyDigest } from "../../cron/daily-digest";
 import { generateWeeklyRecap } from "../../cron/weekly-recap";
-import { runDiscoveryScan } from "../../cron/discovery-scan";
 import { buildTelegramCreds, buildTwitterCreds } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
 import { runBestEffortScheduledJob } from "./run-best-effort-job";
@@ -39,6 +37,5 @@ export async function runDaily0805Slot(runtime: ScheduledRuntimeContext): Promis
         );
       });
     })(),
-    runBestEffortScheduledJob(runtime, "daily 08:05 slot", "discovery-scan", (signal) => runDiscoveryScan(runtime.db, signal, runtime.coingeckoApiKey)),
   ]);
 }
