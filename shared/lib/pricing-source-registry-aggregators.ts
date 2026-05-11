@@ -16,6 +16,24 @@ export const PRICING_SOURCE_REGISTRY_AGGREGATORS = [
       hasUpstreamTimestamp: true,
     },
   }),
+  // Relaxed-freshness CoinGecko lane for low-volume CG-only stablecoins
+  // (detailProvider="coingecko" with no DefiLlama listing). The standard
+  // `coingecko` 15-min gate rejects their legitimate but slow-updating
+  // upstream timestamps; this source preserves attribution while accepting
+  // older quotes inside `fetchFiatCoinGeckoTokens` only.
+  definePricingSource(PRICING_SOURCE_PRESETS.softAggregator, {
+    key: "coingecko-low-volume",
+    label: "CoinGecko (low volume)",
+    shortLabel: "CG-lv",
+    freshnessKind: "upstream",
+    maxTrustedAgeSec: 7 * 24 * 60 * 60,
+    defaultWeight: 0.5,
+    isListAggregator: true,
+    supportsUpstreamObservedAt: true,
+    capabilities: {
+      hasUpstreamTimestamp: true,
+    },
+  }),
   definePricingSource(PRICING_SOURCE_PRESETS.softAggregator, {
     key: "coingecko-native-implied",
     label: "CoinGecko native+FX",

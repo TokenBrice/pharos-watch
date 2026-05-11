@@ -10,6 +10,7 @@ describe("pricing source registry", () => {
   it("keeps registry order stable", () => {
     expect(PRICING_SOURCE_REGISTRY.map((entry) => entry.key)).toEqual([
       "coingecko",
+      "coingecko-low-volume",
       "coingecko-native-implied",
       "defillama",
       "defillama-list",

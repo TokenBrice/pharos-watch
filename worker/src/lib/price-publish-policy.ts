@@ -70,7 +70,13 @@ function sourceLineageFamily(source: string): string | null {
   const entry = getPricingSourceRegistryEntry(source);
   if (!entry) return null;
 
-  if (source === "coingecko" || source === "coingecko-native-implied" || source === "coingecko-mirror" || source === "cg-ticker") {
+  if (
+    source === "coingecko" ||
+    source === "coingecko-native-implied" ||
+    source === "coingecko-mirror" ||
+    source === "coingecko-low-volume" ||
+    source === "cg-ticker"
+  ) {
     return "coingecko";
   }
   if (source === "defillama" || source === "defillama-list" || source === "defillama-contract") {

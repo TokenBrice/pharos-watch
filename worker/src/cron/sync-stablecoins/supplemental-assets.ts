@@ -31,7 +31,7 @@ export type CoinGeckoMcapData = Record<string, { usd?: number; usd_market_cap?: 
 
 interface SupplementalPriceResolution {
   price: number;
-  source: "coingecko-mirror" | "coingecko";
+  source: "coingecko-mirror" | "coingecko" | "coingecko-low-volume";
   observedAt: number | null;
   observedAtMode: PriceObservedAtMode | null;
 }
@@ -458,7 +458,25 @@ async function fetchFiatCoinGeckoTokens(
       FIAT_CG_METAS.map(async (meta) => {
         const nowSec = Math.floor(Date.now() / 1000);
         const pKey = pegTypeKey(meta);
-        const priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
+        // Strict path first (15-min freshness gate). If that rejects but CG returned
+        // a valid price, fall back to the relaxed `coingecko-low-volume` lane so
+        // CG-only stablecoins with slow upstream tickers don't surface as
+        // `priceSource: missing`. Diagnosis pattern: detailProvider="coingecko"
+        // with llamaId=null + low volume → upstream last_updated_at exceeds 15min.
+        let priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
+        if (!priceResolution && meta.geckoId) {
+          const cgEntry = cgData[meta.geckoId];
+          const cgPrice = toPositiveFiniteNumber(cgEntry?.usd);
+          if (cgPrice != null) {
+            const observedAt = toPositiveFiniteNumber(cgEntry?.last_updated_at) ?? null;
+            priceResolution = {
+              price: cgPrice,
+              source: "coingecko-low-volume",
+              observedAt,
+              observedAtMode: observedAt != null ? "upstream" : "local_fetch",
+            };
+          }
+        }
         const pegReferencePrice = toPositiveFiniteNumber(fxFallbackRates?.[pKey]);
         // USD is the base currency; fxFallbackRates omits peggedUSD. Default to 1.0 for
         // USD-pegged coins with no CG/DL price source so the on-chain fallback can compute mcap.
@@ -483,6 +501,11 @@ async function fetchFiatCoinGeckoTokens(
           return null;
         }
 
+        const priceConfidence: PeggedAsset["priceConfidence"] = priceResolution
+          ? priceResolution.source === "coingecko-low-volume"
+            ? "fallback"
+            : "single-source"
+          : null;
         return {
           id: meta.id,
           name: meta.name,
@@ -492,7 +515,7 @@ async function fetchFiatCoinGeckoTokens(
           pegMechanism: meta.flags.backing,
           price: priceResolution?.price ?? null,
           priceSource: priceResolution?.source,
-          priceConfidence: priceResolution ? "single-source" : null,
+          priceConfidence,
           priceUpdatedAt: priceResolution ? priceResolution.observedAt ?? nowSec : null,
           priceObservedAt: priceResolution ? priceResolution.observedAt ?? nowSec : null,
           priceObservedAtMode: priceResolution ? priceResolution.observedAtMode ?? "local_fetch" : null,

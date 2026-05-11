@@ -35,6 +35,10 @@ function cache(notes: string): PricingCircuitMetadata {
 export const PRICING_SOURCE_CIRCUIT_METADATA: Record<string, PricingCircuitMetadata> = {
   // aggregators
   "coingecko": direct(CIRCUIT_SOURCE.CG_PRICES, "CoinGecko simple-price fetch is directly circuit-gated."),
+  "coingecko-low-volume": direct(
+    CIRCUIT_SOURCE.CG_PRICES,
+    "Relaxed-freshness CoinGecko simple-price lane for low-volume CG-only stablecoins; same upstream breaker as `coingecko`.",
+  ),
   "coingecko-native-implied": synthesized(
     "Derived from native CoinGecko simple-price quotes plus FX validation references; native quote availability is reported through provider diagnostics rather than the primary CG simple-price breaker.",
   ),
