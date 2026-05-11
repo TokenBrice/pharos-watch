@@ -1,0 +1,106 @@
+{
+  "id": "vnxau-vnx",
+  "name": "VNX Gold",
+  "symbol": "VNXAU",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GOLD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Allocated physical gold bars stored in Liechtenstein vaults, with VNX materials describing token-holder ownership and segregated custody",
+  "pegMechanism": "Each VNXAU represents one gram of gold; verified VNX platform users can sell tokens through the platform and request physical collection or delivery from one-kilogram bar denominations",
+  "commodityOunces": 0.0321507466,
+  "detailProvider": "commodity",
+  "geckoId": "vnx-gold",
+  "protocolSlug": "vnx",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
+    "provider": "AREVA General Auditing and Trust Company Limited"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://vnx.li/vnx-gold/"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/VNX_Platform"
+    },
+    {
+      "label": "Docs",
+      "url": "https://vnx.gitbook.io/vnx-platform/vnx-gold/executive-summary"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Liechtenstein",
+    "regulator": "FMA",
+    "license": "TVTG (Blockchain Act)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x6d57b2e05f26c26b549231c866bdd39779e4a488",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xac3fe22294beaed9d1fd752323a6d06d12ff3098",
+      "decimals": 18
+    },
+    {
+      "chain": "etherlink",
+      "address": "0x93f5475da60143c50e8be3fed10c143b0cf8b9e9",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "9TPL8droGJ7jThsq4momaoz6uhTcvX2SeMqipoPmNa8R",
+      "decimals": 9
+    },
+    {
+      "chain": "tezos",
+      "address": "KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Allocated physical gold bars (Liechtenstein vault custody)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "vnxau-vnx",
+    "display": {
+      "url": "https://vnx.li/transparency/",
+      "label": "VNX Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Allocated physical gold bars",
+      "risk": "very-low"
+    }
+  }
+}

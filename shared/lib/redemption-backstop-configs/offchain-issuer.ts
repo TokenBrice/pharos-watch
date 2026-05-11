@@ -16,6 +16,7 @@ const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const REVIEWED_ISSUER_API_EXPANSION_AT = "2026-04-03";
 const REVIEWED_MAJOR_ISSUER_REDEMPTION_AT = "2026-04-16";
 const REVIEWED_NON_USD_BATCH_AT = "2026-05-05";
+const REVIEWED_COVERAGE_EXPANSION_AT = "2026-05-11";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
@@ -924,6 +925,92 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
     ],
     notes: [
       "Primary minting and redemption into USDC or USD fiat require KYC, settle within T+3 days, and physical gold redemption currently starts at one 1 kg LBMA bar (32.148 XAUm)",
+    ],
+  },
+  "gldy-streamex": {
+    ...commodityIssuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
+    costModel: fixedFee(
+      200,
+      "RWA.xyz primary-market terms list a 2% redemption fee; physical gold delivery can involve additional fabrication, shipping, or custody costs",
+    ),
+    docs: [
+      sourceRef("Streamex GLDY", "https://www.streamex.com/GLDY", ["route", "capacity", "access"]),
+      sourceRef("RWA.xyz GLDY", "https://app.rwa.xyz/assets/GLDY", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Chainlink GLDY Reserves", "https://data.chain.link/feeds/base/base/gldy-reserves", ["capacity"]),
+    ],
+    notes: [
+      "Modeled route is the source-reviewed eligible-investor primary-market redemption path, not ordinary secondary-market sale liquidity",
+      "GLDY distributes gold-leasing yield, so redemption quality depends on both gold backing and the issuer's leasing/custody program staying current",
+    ],
+  },
+  "vnxau-vnx": {
+    ...commodityIssuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
+    costModel: documentedVariableFee(
+      "VNX platform supports sell/redemption and physical collection or delivery from one-kilogram gold bars; public materials reviewed do not expose one fixed VNXAU redemption fee",
+    ),
+    docs: [
+      sourceRef(
+        "VNX Gold executive summary",
+        "https://vnx.gitbook.io/vnx-platform/vnx-gold/executive-summary",
+        ["route", "capacity", "access"],
+      ),
+      sourceRef(
+        "VNX Gold token details",
+        "https://vnx.gitbook.io/vnx-platform/vnx-gold/token-details",
+        ["route", "capacity", "fees"],
+      ),
+      sourceRef(
+        "VNX Gold operations",
+        "https://vnx.gitbook.io/vnx-platform/vnx-gold/operations-with-vnx-gold-on-vnx-platform",
+        ["route", "fees", "access", "settlement"],
+      ),
+      sourceRef(
+        "VNXAU AREVA report",
+        "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
+        ["capacity"],
+      ),
+    ],
+    notes: [
+      "Primary route is VNX platform redemption or physical gold collection/delivery for verified users; physical delivery minimums make the backstop operationally slower than spot exchange liquidity",
+    ],
+  },
+  "xagm-matrixdock": {
+    ...commodityIssuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
+    costModel: documentedVariableFee(
+      "Matrixdock mint/redeem route is available for KYC users and follows the issuer's XAGm silver-per-token framework; public materials reviewed do not expose one global fixed XAGm redemption fee",
+    ),
+    docs: [
+      sourceRef("Matrixdock XAGm", "https://www.matrixdock.com/xagm", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef(
+        "Matrixdock XAGm announcement",
+        "https://www.matrixdock.com/blog/announcements/matrixdock-launches-xagm-bringing-lbma-good-delivery-silver-on-chain",
+        ["route", "capacity", "access"],
+      ),
+    ],
+    notes: [
+      "XAGm redemption value follows Matrixdock's published silver-per-token mechanics, so Pharos treats the route as documented but not a fixed-fee public commodity exit",
+    ],
+  },
+  "euroe-membrane": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
+    costModel: documentedVariableFee(
+      "EUROe is redeemable 1:1 through Membrane's verified-customer platform; public materials reviewed do not expose one global fixed redemption fee",
+    ),
+    docs: [
+      sourceRef("EUROe transparency", "https://www.euroe.com/transparency-and-regulation", ["capacity", "access"]),
+      sourceRef(
+        "Terms of Membrane Platform",
+        "https://www.euroe.com/legal/terms-of-membrane-platform",
+        ["route", "capacity", "fees", "access", "settlement"],
+      ),
+      sourceRef("Get EUROe", "https://www.euroe.com/get-euroe", ["route", "access", "settlement"]),
+    ],
+    notes: [
+      "Modeled route is Membrane's account-gated EUR issue/redeem platform, not secondary-market euro liquidity",
     ],
   },
   ...expandIds(

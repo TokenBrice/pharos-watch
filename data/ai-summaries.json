@@ -1318,5 +1318,50 @@
     "title": "Quantum-Resistant Won",
     "text": "iM Bank's KRW stablecoin proof-of-concept has a feature that most stablecoins won't need for a decade but makes excellent press releases: quantum-resistant post-quantum cryptography via BTQ Technologies on the Kaia blockchain. Set aside the security theater angle, and the actual significance is that a Korean commercial bank is building a KRW stablecoin at all — South Korea's regulatory stance on private stablecoins has been cautious to the point of paralysis, and a bank-led PoC signals that the regulatory ice may be thawing. The Finger partnership handles the wallet and DeFi integration layer, while iM Bank brings the banking license and the KRW reserves. Whether this moves beyond proof-of-concept depends entirely on whether Korean regulators want to compete with Hashed's OKRW for the title of first regulated KRW stablecoin — or whether they'd prefer neither existed.",
     "updatedAt": "2026-05-10"
+  },
+  "gldy-streamex": {
+    "title": "The Yield-Bearing Gold Ounce",
+    "text": "Streamex GLDY tracks one troy ounce of gold while passing gold-leasing yield back to token holders. The entry is stronger than most new commodity tokens because it has a Chainlink proof-of-reserves feed on Base and a source-reviewed primary-market redemption route for eligible investors. The main caveat is that the yield comes from issuer-managed gold leasing rather than passive vault storage, so Pharos separates the live reserve feed from the still-unwired APY source. GLDY is tracked as a commodity stablecoin, not as a generic RWA fund.",
+    "updatedAt": "2026-05-11"
+  },
+  "vnxau-vnx": {
+    "title": "The Liechtenstein Gram-Gold Token",
+    "text": "VNX Gold represents one gram of physical gold and fits the same regulated-issuer pattern as VNX's fiat stablecoins. AREVA reserve reports and VNX documentation give enough backing detail to track the token, while the Ethereum supply probe provides lightweight live sync until a stronger public reserve API is available. Redemption is meaningful but operationally constrained: verified platform users can sell or request physical delivery from larger bar denominations. The risk is less the gold unit and more the issuer, custody, and platform access path.",
+    "updatedAt": "2026-05-11"
+  },
+  "xagm-matrixdock": {
+    "title": "Matrixdock's Silver Ounce",
+    "text": "Matrixdock Silver brings the XAUm model to silver, with LBMA Good Delivery bars and public issuer pages showing supply and bullion metrics. Pharos uses one troy ounce as the silver reference, but the metadata flags Matrixdock's ozPerToken metric because the issuer can report slight dynamic drift. The current live sync validates on-chain supply; a dedicated Matrixdock reserves adapter would be needed for higher-grade live bullion reconciliation. Redemption is available through Matrixdock for KYC-approved users, but public fee and capacity terms remain issuer-process dependent.",
+    "updatedAt": "2026-05-11"
+  },
+  "gramg-token-teknoloji": {
+    "title": "Turkey's Gram-Gold Token",
+    "text": "Token Teknoloji's GRAMG is a one-gram gold stablecoin with reserve materials pointing to Turkish bank custody. The Avalanche deployment has meaningful live supply, so Pharos tracks that chain first and uses CoinGecko commodity admission for runtime coverage. The reserve proof is weaker than a machine-readable attestation, but stronger than a pure marketing claim because the issuer publishes bank-backed proof materials. Pharos does not add a redemption backstop yet because public direct-holder redemption terms are not specific enough.",
+    "updatedAt": "2026-05-11"
+  },
+  "grams-token-teknoloji": {
+    "title": "Turkey's Gram-Silver Token",
+    "text": "GRAMS mirrors Token Teknoloji's gold product for silver, with one token representing one gram of physical silver. The research packet found enough issuer reserve material and live Avalanche supply to add the asset, but no clean public reserve API. Pharos therefore treats the live feed as supply liveness over curated reserves rather than independent reserve reconciliation. Redemption remains unmodeled until direct holder terms, limits, and capacity are documented.",
+    "updatedAt": "2026-05-11"
+  },
+  "euroe-membrane": {
+    "title": "The Small Regulated Euro",
+    "text": "EUROe is a Finnish-issued euro stablecoin with DefiLlama supply coverage and public Membrane transparency materials. Its circulating supply is small, but it improves non-USD euro coverage and has a clear verified-user issue and redeem path. Pharos uses Solana on-chain supply liveness against curated euro reserves because the reserve attestations are not exposed as a clean public API. The entry is regulated-issuer coverage, not a high-liquidity market signal.",
+    "updatedAt": "2026-05-11"
+  },
+  "gbpm-mento": {
+    "title": "Mento's CDP Pound",
+    "text": "GBPm extends Mento's Celo FX stablecoin set into sterling using USDm-collateralized CDP rows rather than the older shared reserve basket alone. The new Mento adapter mode reads the dashboard API's GBPm troves and turns live collateral and debt into Pharos reserve metadata. That makes the entry useful despite a modest supply footprint because the backing path is visible and cheap to maintain. The primary risk is dependency on Mento oracles, Celo execution, and USDm collateral quality.",
+    "updatedAt": "2026-05-11"
+  },
+  "jpym-mento": {
+    "title": "Mento's CDP Yen",
+    "text": "JPYm is a small but active yen stablecoin on Celo, backed by USDm collateral in Mento CDP troves. Pharos deliberately uses CoinGecko admission because DefiLlama's JPYm supply row was zero during review, while the Mento API still exposes live CDP collateral. The new adapter path keeps reserve sync aligned with GBPm and CHFm without adding a separate infrastructure family. JPYm is tracked for strategic non-USD coverage, with liquidity and oracle dependency as the main caveats.",
+    "updatedAt": "2026-05-11"
+  },
+  "chfm-mento": {
+    "title": "Mento's CDP Franc",
+    "text": "CHFm gives Pharos another Swiss-franc stablecoin, but with a very different risk profile from fiat-backed VCHF or Frankencoin. Its reserves are USDm collateral posted into Mento CDP troves, and the live Mento adapter now syncs those rows directly. The asset is small, but the data path is clean enough to track with minimal infrastructure changes. The residual risks are the Celo/Mento mechanism, USDm collateral path, and thin secondary liquidity.",
+    "updatedAt": "2026-05-11"
   }
 }

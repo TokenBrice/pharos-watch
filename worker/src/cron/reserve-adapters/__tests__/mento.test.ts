@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { adaptMentoReserveComposition, parseMentoReserveComposition } from "../mento";
+import {
+  adaptMentoCdpComposition,
+  adaptMentoReserveComposition,
+  parseMentoCdpComposition,
+  parseMentoReserveComposition,
+} from "../mento";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 
@@ -17,6 +22,50 @@ const SAMPLE_PAYLOAD = {
       { symbol: "axlUSDC", percentage: 1 },
       { symbol: "AUSD", percentage: 4 },
       { symbol: "WETH", percentage: 1 },
+    ],
+  },
+  cdp_troves: {
+    troves: [
+      {
+        stablecoin: "GBPm",
+        collateral_token: "USDm",
+        collateral_usd: 173_427.5,
+        debt_usd: 82_821.25,
+        ratio: 2.09,
+        status: "active",
+      },
+      {
+        stablecoin: "GBPm",
+        collateral_token: "USDm",
+        collateral_usd: 40_000,
+        debt_usd: 20_000,
+        ratio: 2,
+        status: "active",
+      },
+      {
+        stablecoin: "JPYm",
+        collateral_token: "USDm",
+        collateral_usd: 171_960.48,
+        debt_usd: 105_336.2,
+        ratio: 1.63,
+        status: "active",
+      },
+      {
+        stablecoin: "CHFm",
+        collateral_token: "USDm",
+        collateral_usd: 143_361.85,
+        debt_usd: 90_307.02,
+        ratio: 1.59,
+        status: "active",
+      },
+      {
+        stablecoin: "GBPm",
+        collateral_token: "USDm",
+        collateral_usd: 1_000,
+        debt_usd: 500,
+        ratio: 2,
+        status: "closed",
+      },
     ],
   },
 };
@@ -96,6 +145,64 @@ describe("mento adapter", () => {
     })).toThrow("layout-changed");
   });
 
+  it("parses active CDP troves for a requested Mento stablecoin", () => {
+    const entries = parseMentoCdpComposition(SAMPLE_PAYLOAD, "GBPm");
+    expect(entries).toEqual([
+      {
+        stablecoin: "GBPm",
+        collateralToken: "USDm",
+        collateralUsd: 173_427.5,
+        debtUsd: 82_821.25,
+        ratio: 2.09,
+      },
+      {
+        stablecoin: "GBPm",
+        collateralToken: "USDm",
+        collateralUsd: 40_000,
+        debtUsd: 20_000,
+        ratio: 2,
+      },
+    ]);
+  });
+
+  it("maps CDP troves into USDm reserve slices and collateralization metadata", () => {
+    const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "GBPm");
+    expect(result.slices).toEqual([
+      {
+        name: "USDm (Mento Dollar) CDP collateral",
+        pct: 100,
+        risk: "low",
+        coinId: "cusd-celo",
+        depType: "collateral",
+      },
+    ]);
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      cdpStablecoin: "GBPm",
+      cdpActiveTroves: 2,
+      totalCollateralUsd: 213_427.5,
+      totalDebtUsd: 102_821.25,
+      collateralizationRatio: 213_427.5 / 102_821.25,
+      freshnessMode: "unverified",
+    });
+  });
+
+  it("throws when the requested CDP stablecoin has no active troves", () => {
+    expect(() => parseMentoCdpComposition({
+      cdp_troves: {
+        troves: [
+          {
+            stablecoin: "GBPm",
+            collateral_token: "USDm",
+            collateral_usd: 10,
+            debt_usd: 5,
+            status: "closed",
+          },
+        ],
+      },
+    }, "GBPm")).toThrow("no active GBPm entries");
+  });
+
   it("annotates freshness as explicitly unverified with reason metadata", () => {
     const result = adaptMentoReserveComposition(SAMPLE_PAYLOAD);
     expect(result.metadata).toMatchObject({
@@ -125,6 +232,11 @@ describe("mento adapter", () => {
 
   it("produces reserve output that passes adapter validation", () => {
     const result = adaptMentoReserveComposition(SAMPLE_PAYLOAD);
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("mento") ?? undefined }).valid).toBe(true);
+  });
+
+  it("produces CDP reserve output that passes adapter validation", () => {
+    const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "JPYm");
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter("mento") ?? undefined }).valid).toBe(true);
   });
 });

@@ -1,0 +1,86 @@
+{
+  "id": "xagm-matrixdock",
+  "name": "Matrixdock Silver",
+  "symbol": "XAGm",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "SILVER",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "LBMA-accredited 99.9% Good Delivery silver bars held in Asian vaults under Matrixdock's fractional-reserve-safeguard framework",
+  "pegMechanism": "Silver-backed commodity token redeemable through Matrixdock for KYC-approved users; issuer materials expose supply, bullion weight, and an oz-per-token metric that may drift slightly from exactly one ounce",
+  "commodityOunces": 1,
+  "detailProvider": "commodity",
+  "geckoId": "matrixdock-silver",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.matrixdock.com/xagm",
+    "provider": "Matrixdock transparency page and audit links"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.matrixdock.com/xagm"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/matrixdock"
+    },
+    {
+      "label": "Announcement",
+      "url": "https://www.matrixdock.com/blog/announcements/matrixdock-launches-xagm-bringing-lbma-good-delivery-silver-on-chain"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Singapore"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x123ffe0a3c62878dcbee2742227dc8990058d9e1",
+      "decimals": 9
+    }
+  ],
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Physical silver bars (LBMA Good Delivery, Asian vault custody)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "xagm-matrixdock",
+    "display": {
+      "url": "https://www.matrixdock.com/xagm",
+      "label": "Matrixdock XAGm"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Physical silver bars",
+      "risk": "very-low"
+    }
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Dynamic silver-per-token metric",
+      "message": "Matrixdock publishes an ozPerToken figure for XAGm, so the Pharos silver-ounce reference uses 1 oz while reserve review should watch the issuer's live metric."
+    }
+  ]
+}

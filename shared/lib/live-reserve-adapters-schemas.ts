@@ -300,6 +300,10 @@ const jupusdParamsSchema = z.object({
   oracleUrl: AbsoluteUrlSchema.optional(),
 }).strict();
 
+const mentoParamsSchema = z.object({
+  cdpStablecoin: z.enum(["GBPm", "JPYm", "CHFm"]).optional(),
+}).strict();
+
 const sgForgeCoinvertibleParamsSchema = z.object({
   coinType: z.enum(["eur", "usd"]).optional(),
 }).strict();
@@ -377,7 +381,7 @@ export const adapterParamsSchemas = {
   "liquity-v1": liquityV1ParamsSchema,
   "liquity-v2-branches": liquityV2BranchesParamsSchema,
   m0: noParamsSchema,
-  mento: noParamsSchema,
+  mento: mentoParamsSchema,
   "openeden-usdo": noParamsSchema,
   "re-metrics": noParamsSchema,
   "reserve-protocol-dtf": reserveProtocolDtfParamsSchema,

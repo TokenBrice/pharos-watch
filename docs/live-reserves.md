@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
 - **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 192 active live-enabled stablecoins across 45 registered adapters; 193 tracked metadata entries have live reserve configs, including pre-launch CADD. These counts are active/configured stablecoin entries, not raw source JSON files. 43 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
+- **Current coverage:** 201 active live-enabled stablecoins across 45 registered adapters; 202 tracked metadata entries have live reserve configs, including pre-launch CADD. These counts are active/configured stablecoin entries, not raw source JSON files. 43 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -381,11 +381,11 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `btcfi`                    | `http-json`                 | `collateral-mix`                     | 1                |
 | `cap-vault`                | `onchain-evm`               | `protocol-reserve`                   | 1                |
 | `chainlink-nav`            | `onchain-evm`               | `single-asset`                       | 6                |
-| `chainlink-por`            | `onchain-evm`               | `attestation-mix`                    | 1                |
+| `chainlink-por`            | `onchain-evm`               | `attestation-mix`                    | 2                |
 | `circle-transparency`      | `http-html`                 | `attestation-mix`                    | 2                |
 | `collateral-positions-api` | `http-json`                 | `collateral-mix`                     | 2                |
 | `crvusd`                   | `http-json`                 | `collateral-mix`                     | 1                |
-| `curated-validated`        | `onchain-evm` / `onchain-solana` | `attestation-mix` / `collateral-mix` / `single-asset` | 55 |
+| `curated-validated`        | `onchain-evm` / `onchain-solana` | `attestation-mix` / `collateral-mix` / `single-asset` | 56 |
 | `dola-inverse`             | `http-json`                 | `collateral-mix`                     | 1                |
 | `erc4626-single-asset`     | `onchain-evm`               | `single-asset`                       | 16               |
 | `ethena`                   | `http-json`                 | `collateral-mix`                     | 1                |
@@ -401,14 +401,14 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `liquity-v2-branches`      | `onchain-evm`               | `collateral-mix`                     | 6                |
 | `lista`                    | `onchain-evm`               | `collateral-mix`                     | 1                |
 | `m0`                       | `http-json`                 | `protocol-reserve`                   | 10               |
-| `mento`                    | `http-json`                 | `collateral-mix`                     | 2                |
+| `mento`                    | `http-json`                 | `collateral-mix`                     | 5                |
 | `openeden-usdo`            | `http-json`                 | `collateral-mix`                     | 1                |
 | `re-metrics`               | `http-html`                 | `collateral-mix`                     | 1                |
 | `reserve-protocol-dtf`     | `http-json`                 | `collateral-mix`                     | 1                |
 | `reservoir`                | `http-json`                 | `protocol-reserve`                   | 1                |
 | `river-protocol-info`      | `http-json`                 | `protocol-reserve`                   | 1                |
 | `sgforge-coinvertible`     | `http-html`                 | `attestation-mix`                    | 1                |
-| `single-asset`             | `http-json` / `onchain-evm` | `single-asset`                       | 48               |
+| `single-asset`             | `http-json` / `onchain-evm` | `single-asset`                       | 52               |
 | `sky-makercore`            | `http-json`                 | `collateral-mix`                     | 2                |
 | `solstice-attestation`     | `http-json`                 | `protocol-reserve`                   | 1                |
 | `superstate-liquidity`     | `onchain-evm` primary; `params.liquidityUrl` API | `single-asset`                       | 1                |
@@ -438,7 +438,7 @@ Current unbound registered adapters are explicit:
 
 `cap-vault` reads Cap cUSD's Ethereum vault state directly. Reserve slices are based on each supported asset's total supplied balance, while redemption-capacity telemetry uses unpaused available balances after borrows so the route does not treat borrowed or paused collateral as immediate exit capacity. The adapter emits nested `metadata.redemption` with `capacityKind = "live-direct-bounded"` and `freshnessKind = "same-run-onchain"`.
 
-`circle-transparency` and `m0` preserve source freshness when their upstream pages/API expose usable reserve disclosure or update timestamps: Circle uses the public reserve `As of` date, and M0 uses the latest collateral/update timestamp exposed by its GraphQL schema. `mento` now reads reserve composition from the server-side analytics API behind `reserve.mento.org`; that API is usable from the Worker even though the public site currently trips browser CORS errors, but it does not expose a trustworthy payload update timestamp, so Mento snapshots currently persist with `freshnessMode = "unverified"` and remain detail-visible without report-card collateral passthrough.
+`circle-transparency` and `m0` preserve source freshness when their upstream pages/API expose usable reserve disclosure or update timestamps: Circle uses the public reserve `As of` date, and M0 uses the latest collateral/update timestamp exposed by its GraphQL schema. `mento` now reads reserve composition from the server-side analytics API behind `reserve.mento.org`; that API is usable from the Worker even though the public site currently trips browser CORS errors. Plain Mento configs parse the protocol reserve basket, while configs with `params.cdpStablecoin` parse active CDP troves for GBPm, JPYm, and CHFm into USDm collateral slices plus live collateral/debt metadata. The API does not expose a trustworthy payload update timestamp, so Mento snapshots currently persist with `freshnessMode = "unverified"` and remain detail-visible without report-card collateral passthrough.
 
 `sgforge-coinvertible` treats SG Forge slash-form `Last update` dates as European day/month/year by default, but falls back to month/day/year when the European parse would put the disclosure timestamp in the future. This keeps the future-timestamp validator strict while tolerating SG Forge edge/localization variants that can reverse ambiguous dates.
 

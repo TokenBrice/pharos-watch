@@ -1,0 +1,97 @@
+{
+  "id": "euroe-membrane",
+  "name": "EUROe",
+  "symbol": "EUROe",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Euro fiat reserves and euro-denominated assets held by Membrane Finance for issued EUROe",
+  "pegMechanism": "Direct 1:1 euro issuance and redemption through Membrane's verified-customer platform, with public transparency and regulation pages describing reserve attestations",
+  "llamaId": "98",
+  "detailProvider": "defillama",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.euroe.com/transparency-and-regulation",
+    "provider": "Membrane Finance attestations"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.euroe.com/"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://www.euroe.com/transparency-and-regulation"
+    },
+    {
+      "label": "Terms",
+      "url": "https://www.euroe.com/legal/terms-of-membrane-platform"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Finland",
+    "regulator": "FIN-FSA",
+    "license": "Electronic Money Institution"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+      "decimals": 6
+    },
+    {
+      "chain": "optimism",
+      "address": "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xcf985aba4647a432e60efceeb8054bbd64244305",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "2VhjJ9WxaGC3EZFwJG9BDUs9KxKCAjQY4vgd1qxgYWVg",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Euro fiat reserves and euro-denominated assets",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "euroe-membrane",
+    "display": {
+      "url": "https://www.euroe.com/transparency-and-regulation",
+      "label": "EUROe Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-solana"
+      }
+    }
+  }
+}

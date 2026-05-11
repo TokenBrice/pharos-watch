@@ -14,15 +14,42 @@ import {
 const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
 const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const REVIEWED_HIVE_HBD_AT = "2026-05-05";
+const REVIEWED_MENTO_CDP_AT = "2026-05-11";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
+
+const mentoCdpRedeemConfig: RedemptionBackstopConfig = {
+  ...collateralRedeemBase,
+  ...documentedBoundSupplyFull(REVIEWED_MENTO_CDP_AT),
+  outputAssetType: "stable-single",
+  costModel: documentedVariableFee(
+    "Mento CDP redemption/repayment path burns the FX stablecoin against USDm collateral at oracle value; public docs reviewed do not publish one global fixed redemption fee",
+  ),
+  docs: [
+    sourceRef(
+      "Mento V3 reserve docs",
+      "https://docs.mento.org/mento-v3/dive-deeper/the-reserve",
+      ["route", "capacity", "access"],
+    ),
+    sourceRef(
+      "Getting Mento stables on Celo",
+      "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo",
+      ["route", "fees", "settlement", "access"],
+    ),
+    sourceRef("Mento reserve dashboard", "https://reserve.mento.org/", ["capacity", "fees", "settlement"]),
+  ],
+  notes: [
+    "Mento CDP-backed FX stables are modeled as on-chain collateral redemptions into USDm collateral rather than issuer fiat redemption; live reserve sync reads the corresponding Mento dashboard CDP rows",
+  ],
+};
 
 export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   ...expandIds(
     ["bold-liquity", "lusd-liquity", "feusd-felix", "meusd-mezo", "nect-beraborrow", "fxusd-f-x-protocol", "usdq-quill", "usdk-orki"],
     collateralRedeemBase,
   ),
+  ...expandIds(["gbpm-mento", "jpym-mento", "chfm-mento"], mentoCdpRedeemConfig),
   "bold-liquity": {
     ...collateralRedeemBase,
     capacityModel: { kind: "reserve-sync-metadata" },

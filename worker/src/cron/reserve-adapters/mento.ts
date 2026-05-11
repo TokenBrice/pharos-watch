@@ -1,5 +1,6 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -7,13 +8,24 @@ import {
   reserveDegradedWarning,
   reserveInfoWarning,
   slicesFromPercentages,
+  slicesFromValues,
   unverifiedFreshnessMetadata,
 } from "./helpers";
 import { requireJsonInput } from "./input-guards";
 
+type MentoCdpStablecoin = "GBPm" | "JPYm" | "CHFm";
+
 interface MentoReserveEntry {
   symbol: string;
   percent: number;
+}
+
+interface MentoCdpTroveEntry {
+  stablecoin: MentoCdpStablecoin;
+  collateralToken: string;
+  collateralUsd: number;
+  debtUsd: number;
+  ratio?: number;
 }
 
 interface MentoReserveApiAsset {
@@ -21,9 +33,21 @@ interface MentoReserveApiAsset {
   percentage?: unknown;
 }
 
+interface MentoCdpTroveApiEntry {
+  stablecoin?: unknown;
+  collateral_token?: unknown;
+  collateral_usd?: unknown;
+  debt_usd?: unknown;
+  ratio?: unknown;
+  status?: unknown;
+}
+
 interface MentoReserveApiResponse {
   collateral?: {
     assets?: MentoReserveApiAsset[];
+  };
+  cdp_troves?: {
+    troves?: MentoCdpTroveApiEntry[];
   };
 }
 
@@ -104,6 +128,24 @@ const TOKEN_CONFIG: Record<string, TokenConfig> = {
     name: "WBTC",
     risk: getCanonicalReserveAssetRisk("WBTC") ?? "medium",
   },
+  USDm: {
+    key: "USDm",
+    name: "USDm (Mento Dollar)",
+    risk: "low",
+    coinId: "cusd-celo",
+    stableLike: true,
+  },
+};
+
+const CDP_COLLATERAL_CONFIG: Record<string, TokenConfig & { depType: ReserveSlice["depType"] }> = {
+  USDm: {
+    key: "USDm",
+    name: "USDm (Mento Dollar) CDP collateral",
+    risk: "low",
+    coinId: "cusd-celo",
+    stableLike: true,
+    depType: "collateral",
+  },
 };
 
 function getCollateralAssets(payload: unknown): MentoReserveApiAsset[] {
@@ -130,6 +172,57 @@ export function parseMentoReserveComposition(payload: unknown): MentoReserveEntr
 
   if (entries.length === 0) {
     throw new Error("mento: layout-changed: collateral.assets contained no usable entries");
+  }
+
+  return entries;
+}
+
+function getCdpTroves(payload: unknown): MentoCdpTroveApiEntry[] {
+  if (!payload || typeof payload !== "object") {
+    throw new Error("mento: layout-changed: response was not an object");
+  }
+
+  const response = payload as MentoReserveApiResponse;
+  const troves = response.cdp_troves?.troves;
+  if (!Array.isArray(troves)) {
+    throw new Error("mento: layout-changed: missing cdp_troves.troves");
+  }
+
+  return troves;
+}
+
+function parseFiniteUsd(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return null;
+  }
+
+  return value;
+}
+
+export function parseMentoCdpComposition(payload: unknown, cdpStablecoin: MentoCdpStablecoin): MentoCdpTroveEntry[] {
+  const troves = getCdpTroves(payload);
+  const entries = troves.flatMap((trove) => {
+    if (trove.stablecoin !== cdpStablecoin || trove.status !== "active" || typeof trove.collateral_token !== "string") {
+      return [];
+    }
+
+    const collateralUsd = parseFiniteUsd(trove.collateral_usd);
+    const debtUsd = parseFiniteUsd(trove.debt_usd);
+    if (collateralUsd == null || collateralUsd <= 0 || debtUsd == null) {
+      return [];
+    }
+
+    return [{
+      stablecoin: cdpStablecoin,
+      collateralToken: trove.collateral_token,
+      collateralUsd,
+      debtUsd,
+      ...(typeof trove.ratio === "number" && Number.isFinite(trove.ratio) ? { ratio: trove.ratio } : {}),
+    }];
+  });
+
+  if (entries.length === 0) {
+    throw new Error(`mento: layout-changed: cdp_troves.troves contained no active ${cdpStablecoin} entries`);
   }
 
   return entries;
@@ -217,6 +310,71 @@ export function adaptMentoReserveComposition(payload: unknown): AdapterResult {
   };
 }
 
+export function adaptMentoCdpComposition(payload: unknown, cdpStablecoin: MentoCdpStablecoin): AdapterResult {
+  const entries = parseMentoCdpComposition(payload, cdpStablecoin);
+  const warnings: LiveReserveWarning[] = [];
+
+  const grouped = new Map<string, {
+    name: string;
+    risk: ReserveSlice["risk"];
+    coinId?: string;
+    depType?: ReserveSlice["depType"];
+    value: number;
+  }>();
+
+  for (const entry of entries) {
+    const config = CDP_COLLATERAL_CONFIG[entry.collateralToken];
+    if (!config) {
+      warnings.push(reserveDegradedWarning(
+        "unknown-cdp-collateral",
+        `Unmapped Mento CDP collateral token for ${cdpStablecoin}: ${entry.collateralToken}`,
+      ));
+    }
+
+    const key = config?.key ?? entry.collateralToken;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.value += entry.collateralUsd;
+    } else {
+      grouped.set(key, {
+        name: config?.name ?? entry.collateralToken,
+        risk: config?.risk ?? "medium",
+        ...(config?.coinId ? { coinId: config.coinId } : {}),
+        ...(config?.depType ? { depType: config.depType } : {}),
+        value: entry.collateralUsd,
+      });
+    }
+  }
+
+  const totalCollateralUsd = entries.reduce((sum, entry) => sum + entry.collateralUsd, 0);
+  const totalDebtUsd = entries.reduce((sum, entry) => sum + entry.debtUsd, 0);
+  const collateralizationRatio = totalDebtUsd > 0 ? totalCollateralUsd / totalDebtUsd : undefined;
+
+  return {
+    slices: slicesFromValues(
+      Array.from(grouped.values(), (group) => ({
+        name: group.name,
+        value: group.value,
+        risk: group.risk,
+        ...(group.coinId ? { coinId: group.coinId } : {}),
+        ...(group.depType ? { depType: group.depType } : {}),
+      })),
+    ),
+    ...(warnings.length > 0 ? { warnings } : {}),
+    metadata: {
+      cdpStablecoin,
+      cdpActiveTroves: entries.length,
+      totalCollateralUsd,
+      totalDebtUsd,
+      ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
+      ...unverifiedFreshnessMetadata(
+        "mento-analytics-api",
+        "Mento analytics API exposes CDP collateral and debt but not a trustworthy payload update timestamp",
+      ),
+    },
+  };
+}
+
 export async function fetchMentoReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
@@ -225,5 +383,10 @@ export async function fetchMentoReserves(
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "mento");
   const payload = await fetchJsonWithRetry<MentoReserveApiResponse>(input.url, signal, 12_000, ctx);
+  const params = parseLiveReserveAdapterParams("mento", config.params);
+  if (params.cdpStablecoin) {
+    return adaptMentoCdpComposition(payload, params.cdpStablecoin);
+  }
+
   return adaptMentoReserveComposition(payload);
 }

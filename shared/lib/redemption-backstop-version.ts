@@ -1,9 +1,24 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.994",
+  currentVersion: "3.995",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.995",
+      title: "Non-USD and commodity coverage expansion",
+      date: "2026-05-11",
+      effectiveAt: 1778457600,
+      summary:
+        "Seven newly tracked non-USD and commodity stablecoins now publish source-reviewed redemption routes, including Mento CDP collateral exits for GBPm, JPYm, and CHFm.",
+      impact: [
+        "GLDY, VNXAU, XAGm, and EUROe now carry documented-bound offchain issuer redemption routes with reviewed source links and access, fee, settlement, and capacity caveats",
+        "GBPm, JPYm, and CHFm now carry collateral-redeem routes into USDm-backed Mento CDP collateral, aligned with the new Mento CDP reserve-sync mode",
+        "Coverage rises to 202 configured redemption routes, with route-family totals now at 106 offchain-issuer and 26 collateral-redeem",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.994",
       title: "Conservative queued coverage for stkGHO and USDRIF",

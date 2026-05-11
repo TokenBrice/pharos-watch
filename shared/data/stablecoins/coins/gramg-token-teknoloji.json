@@ -1,0 +1,79 @@
+{
+  "id": "gramg-token-teknoloji",
+  "name": "Gram Gold",
+  "symbol": "GRAMG",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GOLD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "One gram of physical gold per GRAMG, with Token Teknoloji proof pages listing Turkish bank custody at Kuveyt Türk, Ziraat Participation, and central-bank FATSI routes",
+  "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram gold claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
+  "commodityOunces": 0.0321507466,
+  "detailProvider": "commodity",
+  "geckoId": "gram-gold",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/",
+    "provider": "Token Teknoloji reserve proof page"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/tokenteknoloji"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Turkey"
+  },
+  "contracts": [
+    {
+      "chain": "avalanche",
+      "address": "0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "Physical gold in Turkish bank custody",
+      "pct": 100,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "gramg-token-teknoloji",
+    "display": {
+      "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/",
+      "label": "Token Teknoloji"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "avalanche",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Physical gold reserves",
+      "risk": "low"
+    }
+  }
+}

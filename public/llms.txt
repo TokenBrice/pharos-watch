@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 240 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 249 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -272,14 +272,23 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [BiLira (TRYB)](https://pharos.watch/stablecoin/tryb-bilira/): centralized stablecoin backed by real-world assets pegged to Turkish Lira.
 - [Tether Gold (XAUT)](https://pharos.watch/stablecoin/xaut-tether/): centralized stablecoin backed by real-world assets pegged to Gold.
 - [PAX Gold (PAXG)](https://pharos.watch/stablecoin/paxg-paxos/): centralized stablecoin backed by real-world assets pegged to Gold.
+- [Streamex Gold Yield (GLDY)](https://pharos.watch/stablecoin/gldy-streamex/): centralized stablecoin backed by real-world assets pegged to Gold.
 - [Kinesis Gold (KAU)](https://pharos.watch/stablecoin/kau-kinesis/): centralized stablecoin backed by real-world assets pegged to Gold.
 - [Matrixdock Gold (XAUm)](https://pharos.watch/stablecoin/xaum-matrixdock/): centralized stablecoin backed by real-world assets pegged to Gold.
+- [Matrixdock Silver (XAGm)](https://pharos.watch/stablecoin/xagm-matrixdock/): centralized stablecoin backed by real-world assets pegged to Silver.
+- [VNX Gold (VNXAU)](https://pharos.watch/stablecoin/vnxau-vnx/): centralized stablecoin backed by real-world assets pegged to Gold.
+- [Gram Gold (GRAMG)](https://pharos.watch/stablecoin/gramg-token-teknoloji/): centralized stablecoin backed by real-world assets pegged to Gold.
+- [Gram Silver (GRAMS)](https://pharos.watch/stablecoin/grams-token-teknoloji/): centralized stablecoin backed by real-world assets pegged to Silver.
 - [Comtech Gold (CGO)](https://pharos.watch/stablecoin/cgo-comtech/): centralized stablecoin backed by real-world assets pegged to Gold.
 - [DGLD Tokenized Gold (DGLD)](https://pharos.watch/stablecoin/dgld-gold-token-sa/): centralized stablecoin backed by real-world assets pegged to Gold.
 - [Pleasing Gold (PGOLD)](https://pharos.watch/stablecoin/pgold-pleasing/): centralized stablecoin backed by real-world assets pegged to Gold.
 - [Goldfish Gold (GGBR)](https://pharos.watch/stablecoin/ggbr-goldfish-gold/): centralized stablecoin backed by real-world assets pegged to Gold.
 - [Kinesis Silver (KAG)](https://pharos.watch/stablecoin/kag-kinesis/): centralized stablecoin backed by real-world assets pegged to Silver.
 - [Celo Euro (CEUR)](https://pharos.watch/stablecoin/ceur-celo/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Euro.
+- [EUROe (EUROe)](https://pharos.watch/stablecoin/euroe-membrane/): centralized stablecoin backed by real-world assets pegged to Euro.
+- [Mento British Pound (GBPm)](https://pharos.watch/stablecoin/gbpm-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to British Pound.
+- [Mento Japanese Yen (JPYm)](https://pharos.watch/stablecoin/jpym-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Japanese Yen.
+- [Mento Swiss Franc (CHFm)](https://pharos.watch/stablecoin/chfm-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Swiss Franc.
 - [VNX EURO (VEUR)](https://pharos.watch/stablecoin/veur-vnx/): centralized stablecoin backed by real-world assets pegged to Euro.
 - [StablR Euro (EURR)](https://pharos.watch/stablecoin/eurr-stablr/): centralized stablecoin backed by real-world assets pegged to Euro.
 - [Schuman EUROP (EUROP)](https://pharos.watch/stablecoin/europ-schuman/): centralized stablecoin backed by real-world assets pegged to Euro.

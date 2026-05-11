@@ -470,15 +470,15 @@ describe("syncYieldSupplemental", () => {
     const loadPromise = loadSupplementalSourceFamilies({ startSec: 1 });
     await flushMicrotasks();
 
-    expect(started).toEqual(["morpho", "pendle"]);
+    expect(started).toEqual(["morpho"]);
 
     pending.get("morpho")?.();
     await flushMicrotasks();
-    expect(started).toEqual(["morpho", "pendle", "yearnKong"]);
+    expect(started).toEqual(["morpho", "pendle"]);
 
     pending.get("pendle")?.();
     await flushMicrotasks();
-    expect(started).toEqual(["morpho", "pendle", "yearnKong", "beefy"]);
+    expect(started).toEqual(["morpho", "pendle", "yearnKong"]);
 
     while (pending.size > 0) {
       const resolveNext = pending.values().next().value;

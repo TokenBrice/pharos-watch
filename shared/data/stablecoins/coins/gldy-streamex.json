@@ -1,0 +1,84 @@
+{
+  "id": "gldy-streamex",
+  "name": "Streamex Gold Yield",
+  "symbol": "GLDY",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GOLD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Physical gold bullion backing with issuer-managed gold leasing through Monetary Metals; Streamex presents one GLDY as one troy ounce of gold exposure with yield paid in additional gold",
+  "pegMechanism": "Commodity-backed gold token with Chainlink proof-of-reserves on Base; eligible primary-market investors can redeem through the issuer process, while secondary markets price the gold-ounce claim plus accrued yield mechanics",
+  "commodityOunces": 1,
+  "detailProvider": "commodity",
+  "geckoId": "streamex-gldy",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://data.chain.link/feeds/base/base/gldy-reserves",
+    "provider": "Chainlink Proof of Reserve"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.streamex.com/GLDY"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/StreamexCorp"
+    },
+    {
+      "label": "RWA.xyz",
+      "url": "https://app.rwa.xyz/assets/GLDY"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Cayman Islands"
+  },
+  "contracts": [
+    {
+      "chain": "base",
+      "address": "0x632db1aaace73401a5dc8cde6e9062b8ec0fd819",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "stage1-l2",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "Physical gold bullion and gold leasing receivables",
+      "pct": 100,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "chainlink-por",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "gldy-streamex",
+    "display": {
+      "url": "https://data.chain.link/feeds/base/base/gldy-reserves",
+      "label": "Chainlink PoR"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "base",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "porFeedAddress": "0xf488FA1B4Ac8210bf0b2d212176ca28c48F86708",
+      "assetLabel": "Physical gold reserves",
+      "assetRisk": "low"
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Streamex gold leasing yield",
+    "yieldType": "fee-sharing"
+  }
+}

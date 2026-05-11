@@ -1,0 +1,76 @@
+{
+  "id": "gbpm-mento",
+  "name": "Mento British Pound",
+  "symbol": "GBPm",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "GBP",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Mento CDP debt backed by USDm collateral, with live collateral and debt rows exposed by the Mento reserve dashboard API",
+  "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint GBPm against USDm collateral, while repayment/redemption mechanics and oracle pricing route value back through the Mento system",
+  "llamaId": "358",
+  "detailProvider": "defillama",
+  "geckoId": "celo-british-pound",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://reserve.mento.org/",
+    "provider": "Mento Reserve dashboard"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.mento.org/"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/MentoLabs"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "celo",
+      "address": "0xccf663b1ff11028f0b19058d0f7b674004a40746",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "established-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "reserves": [
+    {
+      "name": "USDm (Mento Dollar) CDP collateral",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "cusd-celo",
+      "depType": "collateral"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "mento",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "mento-cdp-gbpm",
+    "display": {
+      "url": "https://reserve.mento.org/",
+      "label": "Mento Reserve"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      }
+    },
+    "params": {
+      "cdpStablecoin": "GBPm"
+    }
+  }
+}

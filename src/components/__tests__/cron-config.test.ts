@@ -79,8 +79,8 @@ describe("status cron config", () => {
     expect(getStatusCronDisplay("discovery-scan")).toEqual({
       group: "daily",
       label: "Coverage discovery",
-      schedule: "5 8 * * *",
-      triggerMode: "shared",
+      schedule: "10 8 * * *",
+      triggerMode: "isolated",
     });
   });
 

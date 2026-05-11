@@ -3210,6 +3210,82 @@
     }
   },
   {
+    "id": "chfm-mento",
+    "llamaId": "370",
+    "detailProvider": "defillama",
+    "name": "Mento Swiss Franc",
+    "symbol": "CHFm",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "CHF",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Mento CDP debt backed by USDm collateral, with live collateral and debt rows exposed by the Mento reserve dashboard API",
+    "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint CHFm against USDm collateral, while repayment/redemption mechanics and oracle pricing route value back through the Mento system",
+    "geckoId": "cchf",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://reserve.mento.org/",
+      "provider": "Mento Reserve dashboard"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.mento.org/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/MentoLabs"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "celo",
+        "address": "0xb55a79f398e759e43c95b979163f30ec87ee131d",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "reserves": [
+      {
+        "name": "USDm (Mento Dollar) CDP collateral",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "cusd-celo",
+        "depType": "collateral"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "mento-cdp-chfm",
+      "display": {
+        "url": "https://reserve.mento.org/",
+        "label": "Mento Reserve"
+      },
+      "adapter": "mento",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      },
+      "params": {
+        "cdpStablecoin": "CHFm"
+      }
+    }
+  },
+  {
     "id": "cjpy-yamato",
     "llamaId": "179",
     "detailProvider": "defillama",
@@ -5479,6 +5555,103 @@
     }
   },
   {
+    "id": "euroe-membrane",
+    "llamaId": "98",
+    "detailProvider": "defillama",
+    "name": "EUROe",
+    "symbol": "EUROe",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "EUR",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Euro fiat reserves and euro-denominated assets held by Membrane Finance for issued EUROe",
+    "pegMechanism": "Direct 1:1 euro issuance and redemption through Membrane's verified-customer platform, with public transparency and regulation pages describing reserve attestations",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://www.euroe.com/transparency-and-regulation",
+      "provider": "Membrane Finance attestations"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.euroe.com/"
+      },
+      {
+        "label": "Transparency",
+        "url": "https://www.euroe.com/transparency-and-regulation"
+      },
+      {
+        "label": "Terms",
+        "url": "https://www.euroe.com/legal/terms-of-membrane-platform"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Finland",
+      "regulator": "FIN-FSA",
+      "license": "Electronic Money Institution"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "decimals": 6
+      },
+      {
+        "chain": "polygon",
+        "address": "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "decimals": 6
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "decimals": 6
+      },
+      {
+        "chain": "optimism",
+        "address": "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "decimals": 6
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xcf985aba4647a432e60efceeb8054bbd64244305",
+        "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "2VhjJ9WxaGC3EZFwJG9BDUs9KxKCAjQY4vgd1qxgYWVg",
+        "decimals": 6
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-regulated",
+    "reserves": [
+      {
+        "name": "Euro fiat reserves and euro-denominated assets",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "euroe-membrane",
+      "display": {
+        "url": "https://www.euroe.com/transparency-and-regulation",
+        "label": "EUROe Transparency"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-solana"
+        }
+      }
+    }
+  },
+  {
     "id": "europ-schuman",
     "llamaId": "247",
     "detailProvider": "defillama",
@@ -7089,6 +7262,82 @@
     }
   },
   {
+    "id": "gbpm-mento",
+    "llamaId": "358",
+    "detailProvider": "defillama",
+    "name": "Mento British Pound",
+    "symbol": "GBPm",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "GBP",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Mento CDP debt backed by USDm collateral, with live collateral and debt rows exposed by the Mento reserve dashboard API",
+    "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint GBPm against USDm collateral, while repayment/redemption mechanics and oracle pricing route value back through the Mento system",
+    "geckoId": "celo-british-pound",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://reserve.mento.org/",
+      "provider": "Mento Reserve dashboard"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.mento.org/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/MentoLabs"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "celo",
+        "address": "0xccf663b1ff11028f0b19058d0f7b674004a40746",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "reserves": [
+      {
+        "name": "USDm (Mento Dollar) CDP collateral",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "cusd-celo",
+        "depType": "collateral"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "mento-cdp-gbpm",
+      "display": {
+        "url": "https://reserve.mento.org/",
+        "label": "Mento Reserve"
+      },
+      "adapter": "mento",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      },
+      "params": {
+        "cdpStablecoin": "GBPm"
+      }
+    }
+  },
+  {
     "id": "ggbr-goldfish-gold",
     "detailProvider": "commodity",
     "name": "Goldfish Gold",
@@ -7305,6 +7554,248 @@
     "yieldConfig": {
       "yieldSource": "Aave Safety Module (sGHO)",
       "yieldType": "lending-vault"
+    }
+  },
+  {
+    "id": "gldy-streamex",
+    "detailProvider": "commodity",
+    "name": "Streamex Gold Yield",
+    "symbol": "GLDY",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "GOLD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Physical gold bullion backing with issuer-managed gold leasing through Monetary Metals; Streamex presents one GLDY as one troy ounce of gold exposure with yield paid in additional gold",
+    "pegMechanism": "Commodity-backed gold token with Chainlink proof-of-reserves on Base; eligible primary-market investors can redeem through the issuer process, while secondary markets price the gold-ounce claim plus accrued yield mechanics",
+    "commodityOunces": 1,
+    "geckoId": "streamex-gldy",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://data.chain.link/feeds/base/base/gldy-reserves",
+      "provider": "Chainlink Proof of Reserve"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.streamex.com/GLDY"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/StreamexCorp"
+      },
+      {
+        "label": "RWA.xyz",
+        "url": "https://app.rwa.xyz/assets/GLDY"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Cayman Islands"
+    },
+    "contracts": [
+      {
+        "chain": "base",
+        "address": "0x632db1aaace73401a5dc8cde6e9062b8ec0fd819",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "stage1-l2",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "reserves": [
+      {
+        "name": "Physical gold bullion and gold leasing receivables",
+        "pct": 100,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "attestation-mix",
+      "breakerScope": "gldy-streamex",
+      "display": {
+        "url": "https://data.chain.link/feeds/base/base/gldy-reserves",
+        "label": "Chainlink PoR"
+      },
+      "adapter": "chainlink-por",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "base",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "porFeedAddress": "0xf488FA1B4Ac8210bf0b2d212176ca28c48F86708",
+        "assetLabel": "Physical gold reserves",
+        "assetRisk": "low"
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Streamex gold leasing yield",
+      "yieldType": "fee-sharing"
+    }
+  },
+  {
+    "id": "gramg-token-teknoloji",
+    "detailProvider": "commodity",
+    "name": "Gram Gold",
+    "symbol": "GRAMG",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "GOLD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "One gram of physical gold per GRAMG, with Token Teknoloji proof pages listing Turkish bank custody at Kuveyt Türk, Ziraat Participation, and central-bank FATSI routes",
+    "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram gold claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
+    "commodityOunces": 0.0321507466,
+    "geckoId": "gram-gold",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/",
+      "provider": "Token Teknoloji reserve proof page"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/tokenteknoloji"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Turkey"
+    },
+    "contracts": [
+      {
+        "chain": "avalanche",
+        "address": "0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "reserves": [
+      {
+        "name": "Physical gold in Turkish bank custody",
+        "pct": 100,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "gramg-token-teknoloji",
+      "display": {
+        "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/",
+        "label": "Token Teknoloji"
+      },
+      "adapter": "single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "avalanche",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Physical gold reserves",
+        "risk": "low"
+      }
+    }
+  },
+  {
+    "id": "grams-token-teknoloji",
+    "detailProvider": "commodity",
+    "name": "Gram Silver",
+    "symbol": "GRAMS",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "SILVER",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "One gram of physical silver per GRAMS, with Token Teknoloji proof pages listing silver held at Kuveyt Türk, VakıfBank, Ziraat Participation, and Akbank",
+    "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram silver claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
+    "commodityOunces": 0.0321507466,
+    "geckoId": "gram-silver",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/",
+      "provider": "Token Teknoloji reserve proof page"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/tokenteknoloji"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Turkey"
+    },
+    "contracts": [
+      {
+        "chain": "avalanche",
+        "address": "0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "reserves": [
+      {
+        "name": "Physical silver in Turkish bank custody",
+        "pct": 100,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "grams-token-teknoloji",
+      "display": {
+        "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/",
+        "label": "Token Teknoloji"
+      },
+      "adapter": "single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "avalanche",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Physical silver reserves",
+        "risk": "low"
+      }
     }
   },
   {
@@ -8738,6 +9229,81 @@
       "params": {
         "label": "JPY reserves",
         "risk": "very-low"
+      }
+    }
+  },
+  {
+    "id": "jpym-mento",
+    "detailProvider": "coingecko",
+    "name": "Mento Japanese Yen",
+    "symbol": "JPYm",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "JPY",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Mento CDP debt backed by USDm collateral, with live collateral and debt rows exposed by the Mento reserve dashboard API",
+    "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint JPYm against USDm collateral, while repayment/redemption mechanics and oracle pricing route value back through the Mento system",
+    "geckoId": "celo-japanese-yen",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://reserve.mento.org/",
+      "provider": "Mento Reserve dashboard"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.mento.org/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/MentoLabs"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "celo",
+        "address": "0xc45ecf20f3cd864b32d9794d6f76814ae8892e20",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "reserves": [
+      {
+        "name": "USDm (Mento Dollar) CDP collateral",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "cusd-celo",
+        "depType": "collateral"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "mento-cdp-jpym",
+      "display": {
+        "url": "https://reserve.mento.org/",
+        "label": "Mento Reserve"
+      },
+      "adapter": "mento",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      },
+      "params": {
+        "cdpStablecoin": "JPYm"
       }
     }
   },
@@ -22532,6 +23098,112 @@
     }
   },
   {
+    "id": "vnxau-vnx",
+    "detailProvider": "commodity",
+    "name": "VNX Gold",
+    "symbol": "VNXAU",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "GOLD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Allocated physical gold bars stored in Liechtenstein vaults, with VNX materials describing token-holder ownership and segregated custody",
+    "pegMechanism": "Each VNXAU represents one gram of gold; verified VNX platform users can sell tokens through the platform and request physical collection or delivery from one-kilogram bar denominations",
+    "commodityOunces": 0.0321507466,
+    "geckoId": "vnx-gold",
+    "protocolSlug": "vnx",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
+      "provider": "AREVA General Auditing and Trust Company Limited"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://vnx.li/vnx-gold/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/VNX_Platform"
+      },
+      {
+        "label": "Docs",
+        "url": "https://vnx.gitbook.io/vnx-platform/vnx-gold/executive-summary"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Liechtenstein",
+      "regulator": "FMA",
+      "license": "TVTG (Blockchain Act)"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x6d57b2e05f26c26b549231c866bdd39779e4a488",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0xac3fe22294beaed9d1fd752323a6d06d12ff3098",
+        "decimals": 18
+      },
+      {
+        "chain": "etherlink",
+        "address": "0x93f5475da60143c50e8be3fed10c143b0cf8b9e9",
+        "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "9TPL8droGJ7jThsq4momaoz6uhTcvX2SeMqipoPmNa8R",
+        "decimals": 9
+      },
+      {
+        "chain": "tezos",
+        "address": "KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "reserves": [
+      {
+        "name": "Allocated physical gold bars (Liechtenstein vault custody)",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "vnxau-vnx",
+      "display": {
+        "url": "https://vnx.li/transparency/",
+        "label": "VNX Transparency"
+      },
+      "adapter": "single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Allocated physical gold bars",
+        "risk": "very-low"
+      }
+    }
+  },
+  {
     "id": "wars-argentine-peso",
     "llamaId": "379",
     "detailProvider": "defillama",
@@ -23058,6 +23730,92 @@
         }
       }
     }
+  },
+  {
+    "id": "xagm-matrixdock",
+    "detailProvider": "commodity",
+    "name": "Matrixdock Silver",
+    "symbol": "XAGm",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "SILVER",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "LBMA-accredited 99.9% Good Delivery silver bars held in Asian vaults under Matrixdock's fractional-reserve-safeguard framework",
+    "pegMechanism": "Silver-backed commodity token redeemable through Matrixdock for KYC-approved users; issuer materials expose supply, bullion weight, and an oz-per-token metric that may drift slightly from exactly one ounce",
+    "commodityOunces": 1,
+    "geckoId": "matrixdock-silver",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.matrixdock.com/xagm",
+      "provider": "Matrixdock transparency page and audit links"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.matrixdock.com/xagm"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/matrixdock"
+      },
+      {
+        "label": "Announcement",
+        "url": "https://www.matrixdock.com/blog/announcements/matrixdock-launches-xagm-bringing-lbma-good-delivery-silver-on-chain"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Singapore"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x123ffe0a3c62878dcbee2742227dc8990058d9e1",
+        "decimals": 9
+      }
+    ],
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "reserves": [
+      {
+        "name": "Physical silver bars (LBMA Good Delivery, Asian vault custody)",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "xagm-matrixdock",
+      "display": {
+        "url": "https://www.matrixdock.com/xagm",
+        "label": "Matrixdock XAGm"
+      },
+      "adapter": "single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Physical silver bars",
+        "risk": "very-low"
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Dynamic silver-per-token metric",
+        "message": "Matrixdock publishes an ozPerToken figure for XAGm, so the Pharos silver-ounce reference uses 1 oz while reserve review should watch the issuer's live metric."
+      }
+    ]
   },
   {
     "id": "xaum-matrixdock",
