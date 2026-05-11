@@ -155,7 +155,7 @@ export function buildListMessage(
   } else {
     const sorted = sortSubscriptions(subscriptions);
     for (const row of sorted) {
-      lines.push(`- ${formatCoinLabel(row.stablecoin_id)}: ${describeSubscriptionSettings(row)}`);
+      lines.push(`- ${formatCoinLabel(row.stablecoin_id)}: ${describeSubscriptionSettings(row, nowSec)}`);
     }
   }
 
@@ -223,7 +223,10 @@ export function buildPresetUnsubscribeSummaryMessage(
   return escapeHtml(lines.join("\n"));
 }
 
-export function describeSubscriptionSettings(row: SubscriptionRow): string {
+export function describeSubscriptionSettings(
+  row: SubscriptionRow,
+  nowSec: number = Math.floor(Date.now() / 1000),
+): string {
   const labels: string[] = [];
 
   if (row.alert_dews) {
@@ -249,7 +252,16 @@ export function describeSubscriptionSettings(row: SubscriptionRow): string {
     labels.push("Launch");
   }
 
-  return labels.join(", ") || "Muted";
+  const base = labels.join(", ") || "Muted";
+
+  // Per-coin snooze countdown (P1-U10): shown alongside the alert list so
+  // /list surfaces an active per-coin snooze without forcing the user to
+  // open the settings keyboard.
+  const snoozeUntil = row.alert_snooze_until_ts;
+  if (snoozeUntil != null && snoozeUntil > nowSec) {
+    return `${base} — snoozed for ${formatRelativeDuration(snoozeUntil - nowSec)}`;
+  }
+  return base;
 }
 
 function describePresetSubscriptionSettings(row: PresetSubscriptionRow): string {

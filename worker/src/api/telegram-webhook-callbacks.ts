@@ -4,6 +4,8 @@
  * Data format: `action:arg` (≤64 bytes per the Bot API limit).
  * Currently supported:
  *   - `snooze:1h | 4h | 24h` — sets alert_snooze_until_ts on telegram_subscribers
+ *   - `coinsnooze:<stablecoinId>:1h | 4h | 24h` — sets alert_snooze_until_ts
+ *     on the matching telegram_subscriptions row for per-coin snooze (P1-U10)
  *   - `status:<stablecoinId>` — sends the current one-coin status card
  *   - `depegstep:<stablecoinId>:250` — enables per-coin depeg worsening alerts
  *   - `safetydown:<stablecoinId>` — enables per-coin safety downgrade-only alerts
@@ -69,6 +71,7 @@ export { SNOOZE_SECONDS };
 // P0-C1 bulk-confirmation gate (action data `confirm:bulk` / `cancel:bulk`).
 const KNOWN_ACTIONS = new Set([
   "snooze",
+  "coinsnooze",
   "status",
   "depegstep",
   "safetydown",
@@ -217,6 +220,57 @@ export async function handleCallbackQuery(
     }
     await answerCallbackQuery(cb.id, botToken, {
       text: `Snoozed for ${arg}. Use /list to verify or tap a longer window.`,
+    });
+    return;
+  }
+
+  if (action === "coinsnooze" && isKnownStablecoinId(arg)) {
+    const durationToken = (cb.data ?? "").split(":")[2];
+    if (!isSnoozeArg(durationToken)) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+      return;
+    }
+    const now = unixNow();
+    const until = now + SNOOZE_SECONDS[durationToken];
+    try {
+      // Upsert: if the chat has no per-coin subscription row yet (e.g. they
+      // are a global subscriber), create one with all alert flags = 0 so the
+      // snooze takes effect without enabling per-coin alerts. The dispatcher
+      // only honors `alert_snooze_until_ts` on existing subscription rows,
+      // and the per-coin snooze map (P1-U10) uses the row to filter out
+      // global fan-out for this (chat, stablecoin) pair.
+      await db
+        .prepare(
+          `INSERT INTO telegram_subscriptions (
+             chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch,
+             alert_snooze_until_ts
+           )
+           VALUES (?, ?, 0, 0, 0, 0, ?)
+           ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+             alert_snooze_until_ts = excluded.alert_snooze_until_ts`,
+        )
+        .bind(chatId, arg, until)
+        .run();
+      await db
+        .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
+        .bind(now, chatId)
+        .run();
+    } catch (err) {
+      logTelegramEvent({
+        message: "coinsnooze write failed",
+        chatId,
+        userId: cb.from?.id ?? null,
+        action: "coinsnooze",
+        err: err instanceof Error ? err.message : String(err),
+      });
+      await answerCallbackQuery(cb.id, botToken, {
+        text: "Could not save snooze. Please try again.",
+      });
+      return;
+    }
+    const meta = TRACKED_META_BY_ID.get(arg);
+    await answerCallbackQuery(cb.id, botToken, {
+      text: `Snoozed ${meta?.symbol ?? arg} for ${durationToken}.`,
     });
     return;
   }
@@ -403,7 +457,7 @@ async function loadChatSubscriptions(db: D1Database, chatId: string): Promise<Su
   const result = await db
     .prepare(
       `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch,
-              dews_min_band, safety_mode, depeg_worsening_bps_step
+              dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
          FROM telegram_subscriptions
         WHERE chat_id = ?
         ORDER BY stablecoin_id`,

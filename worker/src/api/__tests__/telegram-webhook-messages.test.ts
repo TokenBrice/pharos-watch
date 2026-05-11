@@ -118,6 +118,26 @@ describe("describeSubscriptionSettings", () => {
     };
     expect(describeSubscriptionSettings(row)).toBe("Depeg +250bps");
   });
+
+  it("appends a snooze countdown when alert_snooze_until_ts is in the future (P1-U10)", () => {
+    const nowSec = 1_700_000_000;
+    const row: SubscriptionRow = {
+      stablecoin_id: "x", alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+      alert_snooze_until_ts: nowSec + 38 * 60,
+    };
+    expect(describeSubscriptionSettings(row, nowSec)).toBe("DEWS — snoozed for 38 min");
+  });
+
+  it("ignores an expired alert_snooze_until_ts", () => {
+    const nowSec = 1_700_000_000;
+    const row: SubscriptionRow = {
+      stablecoin_id: "x", alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+      alert_snooze_until_ts: nowSec - 60,
+    };
+    expect(describeSubscriptionSettings(row, nowSec)).toBe("DEWS");
+  });
 });
 
 describe("describeGlobalAlertSettings", () => {
@@ -214,6 +234,22 @@ describe("buildListMessage", () => {
     expect(msg).toContain("Quiet hours: 22:00–07:00 UTC");
     expect(msg).not.toContain("active until");
     expect(msg).toContain("Snooze: Off");
+  });
+
+  it("shows a per-coin snooze countdown next to each affected coin (P1-U10)", () => {
+    const sub: SubscriberRow = {
+      alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      global_alert_dews: 0, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0,
+      quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null,
+    };
+    const subscription: SubscriptionRow = {
+      stablecoin_id: "usdc-circle",
+      alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+      alert_snooze_until_ts: NOON_UTC_SEC + 2 * 3600,
+    };
+    const msg = buildListMessage(sub, [subscription], [], NOON_UTC_SEC);
+    expect(msg).toContain("snoozed for 2 h");
   });
 });
 

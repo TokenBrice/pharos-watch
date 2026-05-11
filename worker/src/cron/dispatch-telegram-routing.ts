@@ -139,18 +139,30 @@ export function routeAlertEvents<T extends { stablecoinId: string }>(
   alertsByChat: Map<string, AlertsByChatEntry>,
   append: AlertAppender<T>,
   shouldInclude: (sub: SubscriberRow, event: T) => boolean = () => true,
+  /**
+   * Per-coin snooze map keyed by stablecoinId. Each chat in the inner set has
+   * an active `telegram_subscriptions.alert_snooze_until_ts > now` for that
+   * stablecoin and must be skipped for both the specific and the global pass
+   * (P1-U10). Specific rows with active snooze are already filtered out by
+   * the dispatcher's subscriber-row query; this map ensures a parallel global
+   * subscription does not bypass the snooze.
+   */
+  perCoinSnoozedByStablecoin?: ReadonlyMap<string, ReadonlySet<string>>,
 ): void {
   for (const event of events) {
     const specificSubscribers = specificSubsByStablecoin.get(event.stablecoinId) ?? [];
     const specificChatIds = new Set(specificSubscribers.map((sub) => sub.chat_id));
+    const snoozedForEvent = perCoinSnoozedByStablecoin?.get(event.stablecoinId);
 
     for (const sub of specificSubscribers) {
+      if (snoozedForEvent?.has(sub.chat_id)) continue;
       if (!shouldInclude(sub, event)) continue;
       addAlertToChat(alertsByChat, sub, append, event);
     }
 
     for (const sub of globalSubscribers) {
       if (specificChatIds.has(sub.chat_id)) continue;
+      if (snoozedForEvent?.has(sub.chat_id)) continue;
       if (!shouldInclude(sub, event)) continue;
       addAlertToChat(alertsByChat, sub, append, event);
     }

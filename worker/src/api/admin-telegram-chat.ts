@@ -95,7 +95,7 @@ export function handleAdminTelegramChat(
       const subscriptionsResult = await db
         .prepare(
           `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch,
-                  dews_min_band, safety_mode, depeg_worsening_bps_step
+                  dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
              FROM telegram_subscriptions
              WHERE chat_id = ?
              ORDER BY stablecoin_id`,

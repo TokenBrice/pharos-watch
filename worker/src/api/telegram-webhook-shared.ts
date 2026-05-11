@@ -260,6 +260,7 @@ export interface SubscriptionRow {
   dews_min_band: string | null;
   safety_mode: string | null;
   depeg_worsening_bps_step: number | null;
+  alert_snooze_until_ts?: number | null;
 }
 
 export type CoinResolution =

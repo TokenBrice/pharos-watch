@@ -220,9 +220,10 @@ async function loadSubscriberRowsBatch(
          JOIN telegram_subscribers u ON u.chat_id = sub.chat_id
         WHERE sub.stablecoin_id IN (${placeholders})
           AND sub.${alertColumn} = 1
-          AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)`,
+          AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)
+          AND (sub.alert_snooze_until_ts IS NULL OR sub.alert_snooze_until_ts <= ?)`,
     )
-    .bind(...stablecoinIds, nowSec)
+    .bind(...stablecoinIds, nowSec, nowSec)
     .all<LoadedSubscriberRow>();
 
   const map = new Map<string, SubscriberRow[]>();
@@ -284,6 +285,40 @@ async function loadGlobalSubscriberRows(
     timezone: row.timezone ?? null,
     isGlobal: true,
   }));
+}
+
+/**
+ * Load active per-coin snoozes for the supplied stablecoins. Returns
+ * `Map<stablecoinId, Set<chatId>>` so the routing pass can suppress global
+ * subscriptions for any coin a chat has already snoozed locally (P1-U10).
+ * Specific subscription rows are already filtered out by the per-type
+ * subscriber-row query.
+ */
+async function loadPerCoinSnoozeMap(
+  db: D1Database,
+  stablecoinIds: readonly string[],
+): Promise<Map<string, Set<string>>> {
+  const map = new Map<string, Set<string>>();
+  const unique = Array.from(new Set(stablecoinIds));
+  if (unique.length === 0) return map;
+  const placeholders = unique.map(() => "?").join(",");
+  const nowSec = Math.floor(Date.now() / 1000);
+  const result = await db
+    .prepare(
+      `SELECT stablecoin_id, chat_id
+         FROM telegram_subscriptions
+        WHERE stablecoin_id IN (${placeholders})
+          AND alert_snooze_until_ts IS NOT NULL
+          AND alert_snooze_until_ts > ?`,
+    )
+    .bind(...unique, nowSec)
+    .all<{ stablecoin_id: string; chat_id: string }>();
+  for (const row of result.results ?? []) {
+    const existing = map.get(row.stablecoin_id) ?? new Set<string>();
+    existing.add(row.chat_id);
+    map.set(row.stablecoin_id, existing);
+  }
+  return map;
 }
 
 function mergeSubscriberMaps(
@@ -597,6 +632,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       globalDepegSubs,
       globalSafetySubs,
       globalLaunchSubs,
+      perCoinSnoozeMap,
     ] = await Promise.all([
       loadSubscriberRowsBatch(db, dewsIds, "dews"),
       loadSubscriberRowsBatch(db, depegIds, "depeg"),
@@ -609,6 +645,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       loadGlobalSubscriberRows(db, "depeg"),
       loadGlobalSubscriberRows(db, "safety"),
       loadGlobalSubscriberRows(db, "launch"),
+      loadPerCoinSnoozeMap(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds]),
     ]);
 
     const presetResults = [presetDewsResult, presetDepegResult, presetSafetyResult];
@@ -647,6 +684,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       alertsByChat,
       (alerts) => alerts.dews,
       (sub, change) => meetsDewsThreshold(change.newBand, sub.dews_min_band),
+      perCoinSnoozeMap,
     );
     routeAlertEvents(
       depegTriggered,
@@ -654,6 +692,8 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       globalDepegSubs,
       alertsByChat,
       (alerts) => alerts.depegTriggered,
+      undefined,
+      perCoinSnoozeMap,
     );
     routeAlertEvents(
       depegResolved,
@@ -661,6 +701,8 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       globalDepegSubs,
       alertsByChat,
       (alerts) => alerts.depegResolved,
+      undefined,
+      perCoinSnoozeMap,
     );
     routeAlertEvents(
       depegWorsening,
@@ -673,6 +715,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
         event.currentDeviationBps,
         sub.depeg_worsening_bps_step,
       ),
+      perCoinSnoozeMap,
     );
     routeAlertEvents(
       safetyChanges,
@@ -684,6 +727,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
         sub.isGlobal
           ? isMaterialSafetyDowngrade(change)
           : shouldIncludeSafetyChange(change, sub.safety_mode),
+      perCoinSnoozeMap,
     );
     routeAlertEvents(
       launchPromoted,
@@ -691,6 +735,8 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       globalLaunchSubs,
       alertsByChat,
       (alerts) => alerts.launch,
+      undefined,
+      perCoinSnoozeMap,
     );
 
     const subscriberQueue = buildSubscriberQueue(

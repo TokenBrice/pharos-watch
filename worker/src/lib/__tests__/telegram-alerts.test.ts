@@ -848,6 +848,36 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
       expect(Buffer.byteLength(data, "utf8")).toBeLessThanOrEqual(TELEGRAM_CALLBACK_DATA_MAX_BYTES);
     }
   });
+
+  it("emits per-coin snooze callbacks alongside the chat-level snooze row (P1-U10)", () => {
+    const markup = buildAlertReplyMarkup(singleCoinAlerts("usdc-circle"), 0);
+    const callbacks = collectCallbackData(markup);
+    expect(callbacks).toContain("coinsnooze:usdc-circle:1h");
+    expect(callbacks).toContain("coinsnooze:usdc-circle:4h");
+    expect(callbacks).toContain("coinsnooze:usdc-circle:24h");
+    // Chat-level snooze row must still be present.
+    expect(callbacks).toContain("snooze:1h");
+    expect(callbacks).toContain("snooze:4h");
+    expect(callbacks).toContain("snooze:24h");
+  });
+
+  it("omits the per-coin snooze row on multi-coin alerts", () => {
+    const multiCoin: ConsolidatedAlerts = {
+      dews: [
+        { stablecoinId: "usdc-circle", symbol: "USDC", oldBand: "CALM", newBand: "ALERT", score: 42, topSignals: [] },
+        { stablecoinId: "usdt-tether", symbol: "USDT", oldBand: "CALM", newBand: "ALERT", score: 50, topSignals: [] },
+      ],
+      depegTriggered: [],
+      depegResolved: [],
+      depegWorsening: [],
+      safety: [],
+      launch: [],
+    };
+    const markup = buildAlertReplyMarkup(multiCoin, 0);
+    const callbacks = collectCallbackData(markup);
+    expect(callbacks.some((c) => c.startsWith("coinsnooze:"))).toBe(false);
+    expect(callbacks).toContain("snooze:1h");
+  });
 });
 
 describe("resolveAlertLinkPreviewOptions", () => {

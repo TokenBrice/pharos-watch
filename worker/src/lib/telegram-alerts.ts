@@ -559,6 +559,10 @@ export function getSingleAlertStablecoinId(alerts: ConsolidatedAlerts): string |
 export function buildAlertReplyMarkup(alerts: ConsolidatedAlerts, chunkIndex: number) {
   const stablecoinId = chunkIndex === 0 ? getSingleAlertStablecoinId(alerts) : null;
   if (!stablecoinId) return SNOOZE_REPLY_MARKUP;
+  // Per-coin snooze row (P1-U10): lets the user mute just this coin without
+  // touching the chat-level snooze. callback_data stays within Telegram's
+  // 64-byte limit even for the longest tracked stablecoin id; the property
+  // test in `telegram-alerts.test.ts` enforces this invariant.
   return {
     inline_keyboard: [
       [
@@ -567,6 +571,11 @@ export function buildAlertReplyMarkup(alerts: ConsolidatedAlerts, chunkIndex: nu
       ],
       [
         { text: "Safety downgrades", callback_data: `safetydown:${stablecoinId}` },
+      ],
+      [
+        { text: "Snooze coin 1h", callback_data: `coinsnooze:${stablecoinId}:1h` },
+        { text: "4h", callback_data: `coinsnooze:${stablecoinId}:4h` },
+        { text: "24h", callback_data: `coinsnooze:${stablecoinId}:24h` },
       ],
       SNOOZE_REPLY_MARKUP.inline_keyboard[0],
     ],

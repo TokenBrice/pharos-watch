@@ -62,6 +62,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0116     | `0116_telegram_subscriber_block_count.sql`      | Add consecutive-block counter and first-strike timestamp to gate Telegram 403 cascade behind a two-strike-within-24h rule |
 | 0117     | `0117_telegram_global_alert_indexes.sql`        | Partial indexes on `telegram_subscribers.global_alert_*` flags plus `telegram_pending_alerts(chat_id)` for dispatcher fan-out and drain JOIN |
 | 0118     | `0118_telegram_subscriber_timezone.sql`         | Add nullable `timezone` IANA zone to `telegram_subscribers` for resolving quiet hours locally (NULL = UTC) |
+| 0119     | `0119_telegram_subscription_snooze.sql`         | Add `alert_snooze_until_ts` to `telegram_subscriptions` so per-coin snooze can suppress fan-out for a single coin without muting the whole chat |
 
 ## Retired Individual Migrations
 

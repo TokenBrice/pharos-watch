@@ -196,15 +196,15 @@ describe("dispatchTelegramAlerts", () => {
       // Phase 1: pending queue drain (empty)
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
       // Phase 3: batched subscriber lookups
-      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now], rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }] },
+      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now, now], rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }] },
       {
         match: "sub.alert_depeg = 1",
-        matchBinds: ["usdc-circle", now],
+        matchBinds: ["usdc-circle", now, now],
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }],
       },
       {
         match: "sub.alert_safety = 1",
-        matchBinds: ["usdc-circle", now],
+        matchBinds: ["usdc-circle", now, now],
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }],
       },
       // Phase 6: cleanup expired pending
@@ -339,7 +339,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
-      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now], rows: [] },
+      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now, now], rows: [] },
       {
         match: "WHERE global_alert_dews = 1",
         rows: [{ chat_id: "777", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null }],
@@ -391,7 +391,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
-      { match: "sub.alert_safety = 1", matchBinds: ["usdc-circle", now], rows: [] },
+      { match: "sub.alert_safety = 1", matchBinds: ["usdc-circle", now, now], rows: [] },
       {
         match: "WHERE global_alert_safety = 1",
         rows: [{ chat_id: "777", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null }],
@@ -441,7 +441,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
-      { match: "sub.alert_safety = 1", matchBinds: ["usdc-circle", now], rows: [] },
+      { match: "sub.alert_safety = 1", matchBinds: ["usdc-circle", now, now], rows: [] },
       {
         match: "WHERE global_alert_safety = 1",
         rows: [{ chat_id: "777", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null }],
@@ -491,7 +491,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
-      { match: "sub.alert_safety = 1", matchBinds: ["usdc-circle", now], rows: [] },
+      { match: "sub.alert_safety = 1", matchBinds: ["usdc-circle", now, now], rows: [] },
       {
         match: "WHERE global_alert_safety = 1",
         rows: [{ chat_id: "777", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null }],
@@ -621,7 +621,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
       {
         match: "sub.alert_dews = 1",
-        matchBinds: ["usdc-circle", now],
+        matchBinds: ["usdc-circle", now, now],
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "777", last_active_at: now, dews_min_band: "WARNING" }],
       },
       {
@@ -674,7 +674,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
       {
         match: "sub.alert_safety = 1",
-        matchBinds: ["usdc-circle", now],
+        matchBinds: ["usdc-circle", now, now],
         rows: [{
           stablecoin_id: "usdc-circle",
           chat_id: "777",
@@ -733,7 +733,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
       {
         match: "sub.alert_safety = 1",
-        matchBinds: ["usdc-circle", now],
+        matchBinds: ["usdc-circle", now, now],
         rows: [{
           stablecoin_id: "usdc-circle",
           chat_id: "777",
@@ -1035,7 +1035,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
       {
         match: "sub.alert_dews = 1",
-        matchBinds: ["usdc-circle", now],
+        matchBinds: ["usdc-circle", now, now],
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "99999", last_active_at: now }],
       },
       { match: "UPDATE telegram_subscribers", rows: [] },
@@ -1623,7 +1623,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
-      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now], rows: [{ stablecoin_id: "usdc-circle", chat_id: "99999", last_active_at: now }] },
+      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now, now], rows: [{ stablecoin_id: "usdc-circle", chat_id: "99999", last_active_at: now }] },
       { match: "UPDATE telegram_subscribers", rows: [] },
       { match: "UPDATE telegram_subscriptions", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
@@ -1752,6 +1752,10 @@ describe("dispatchTelegramAlerts", () => {
     const callbackData = messages?.[0]?.replyMarkup?.inline_keyboard?.flat().map((button) => button.callback_data);
     expect(callbackData).toContain("status:usdc-circle");
     expect(callbackData).toContain("snooze:1h");
+    // P1-U10: per-coin snooze row on single-coin alerts.
+    expect(callbackData).toContain("coinsnooze:usdc-circle:1h");
+    expect(callbackData).toContain("coinsnooze:usdc-circle:4h");
+    expect(callbackData).toContain("coinsnooze:usdc-circle:24h");
   });
 
   it("attaches link_preview_options to the first chunk of single-coin alerts", async () => {
@@ -1845,7 +1849,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
-      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now], rows: [] },
+      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now, now], rows: [] },
       {
         match: "WHERE global_alert_dews = 1",
         rows: [
@@ -1865,6 +1869,64 @@ describe("dispatchTelegramAlerts", () => {
 
     expect(metadata.messagesSent).toBe(1);
     expect(metadata.chatsWithActiveSnooze).toBe(1);
+  });
+
+  it("skips a global subscriber for a coin with an active per-coin snooze (P1-U10)", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      return null;
+    });
+
+    // Chat C is a global DEWS subscriber AND has a per-coin snooze on usdc-circle.
+    // The dispatcher must respect the per-coin snooze and skip the alert for C.
+    const db = mockD1([
+      { match: "WHERE alert_snooze_until_ts IS NOT NULL", rows: [] },
+      {
+        match: "FROM stress_signals",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            score: 42,
+            band: "ALERT",
+            signals_json: JSON.stringify({ supply: { value: 45, available: true } }),
+          },
+        ],
+      },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now, now], rows: [] },
+      // Per-coin snooze map query (loadPerCoinSnoozeMap): chat C is snoozed for usdc-circle.
+      {
+        match: "SELECT stablecoin_id, chat_id\n         FROM telegram_subscriptions",
+        rows: [{ stablecoin_id: "usdc-circle", chat_id: "C" }],
+      },
+      {
+        match: "WHERE global_alert_dews = 1",
+        rows: [
+          { chat_id: "C", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null },
+        ],
+      },
+      { match: "WHERE global_alert_depeg = 1", rows: [] },
+      { match: "WHERE global_alert_safety = 1", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as { messagesSent: number };
+
+    expect(metadata.messagesSent).toBe(0);
+    expect(mockSendToChat).not.toHaveBeenCalled();
   });
 
   it("deduplicates 403 cleanup for a chat hit across multiple alert types", async () => {
@@ -1911,7 +1973,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
-      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now], rows: [] },
+      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now, now], rows: [] },
       {
         match: "WHERE global_alert_dews = 1",
         rows: [{ chat_id: "42", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null }],
@@ -1965,7 +2027,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
       {
         match: "sub.alert_dews = 1",
-        matchBinds: ["usdc-circle", now],
+        matchBinds: ["usdc-circle", now, now],
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }],
       },
       // Preset query fails for every alert type.
@@ -2043,7 +2105,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
       {
         match: "sub.alert_dews = 1",
-        matchBinds: ["usdc-circle", now],
+        matchBinds: ["usdc-circle", now, now],
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }],
       },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
