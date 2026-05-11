@@ -28,10 +28,11 @@ describe("classification invariants", () => {
       }
     }
 
-    expect(warnings).toEqual(
-      Array.from(EXPECTED_CENTRALIZED_CUSTODY_MAJORITIES).map((id) =>
-        expect.stringMatching(new RegExp(`^${id}: classified "decentralized"`)),
-      ),
-    );
+    expect(warnings).toHaveLength(EXPECTED_CENTRALIZED_CUSTODY_MAJORITIES.size);
+    for (const id of EXPECTED_CENTRALIZED_CUSTODY_MAJORITIES) {
+      expect(
+        warnings.some((warning) => warning.startsWith(`${id}: classified "decentralized"`)),
+      ).toBe(true);
+    }
   });
 });
