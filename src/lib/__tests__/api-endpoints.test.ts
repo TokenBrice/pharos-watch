@@ -24,6 +24,7 @@ describe("api endpoint registry", () => {
   it("keeps every endpoint path, probe path, and status action path explicitly covered", () => {
     const expectedPaths = [
       "/api/admin-action-log",
+      "/api/admin-telegram-resend",
       "/api/api-key-requests",
       "/api/api-key-requests-admin",
       "/api/api-key-requests/verify",
@@ -168,6 +169,7 @@ describe("api endpoint registry", () => {
       "/api/kill-cron-in-flight",
       "/api/bulk-dismiss-discovery-candidates",
       "/api/telegram-pending",
+      "/api/admin-telegram-resend",
     ]);
   });
 

@@ -259,6 +259,7 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/kill-cron-in-flight`
 - `POST /api/bulk-dismiss-discovery-candidates`
 - `POST /api/telegram-pending`
+- `POST /api/admin-telegram-resend`
 
 When an `Idempotency-Key` is supplied on one of those routes, successful responses echo `Idempotency-Key` plus `X-Idempotent-Replay`, and conflicting reuse returns `409`. If a handler throws and the worker can clear the pending reservation cleanly, the same key may be retried normally. If cleanup cannot be confirmed, the worker downgrades that key to a stored failure replay and repeats with the same key return a deterministic `500` replay with `X-Idempotent-Replay: true` until the reservation expires.
 
@@ -3956,3 +3957,36 @@ Returns `404` with `{ "error": "Not found", "chatId": "<id>" }` when no `telegra
 ```
 
 `pendingDisambiguation` is `null` when no pending row exists. `pendingAlerts.count` is `0` and the timestamp fields are `null` when the queue is empty for the chat.
+
+### `POST /api/admin-telegram-resend`
+
+Force-resends a single Telegram alert to one chat, bypassing the pending queue. Used for incident triage when a known alert did not reach a subscriber. The handler validates the chat exists, builds a synthetic `ConsolidatedAlerts` from current source data (`stress_signals` for dews, `depeg_events` for depeg, `safety_grade_history` for safety, tracked metadata for launch), and invokes the same `sendToChat` path as the dispatch cron. Every call — success or failure — is recorded in `admin_action_audit`.
+
+**Authentication:** admin (`X-Pharos-Admin: 1` header required).
+
+**Body**
+
+```json
+{
+  "chatId": "12345",
+  "alertType": "dews",
+  "stablecoinId": "usdc-circle"
+}
+```
+
+`alertType` must be one of `dews`, `depeg`, `safety`, `launch`. `stablecoinId` must match a tracked stablecoin ID. `chatId` is a signed integer string.
+
+**Response**
+
+```json
+{
+  "ok": true,
+  "statusCode": 200,
+  "errorClass": null,
+  "retryAfterSec": null
+}
+```
+
+`errorClass` is one of `blocked`, `rate_limit`, `server_error`, `bad_request`, `auth_error`, `timeout`, `network`, `unknown`, or `null` on success. `retryAfterSec` is populated only when Telegram returned `429` with a `Retry-After` header.
+
+**Error responses:** `400` for invalid body, unknown `alertType`, or unknown `stablecoinId`. `404` when no `telegram_subscribers` row matches `chatId`. `422` when no source data exists to build the requested alert. `500` when `TELEGRAM_BOT_TOKEN` is not configured.

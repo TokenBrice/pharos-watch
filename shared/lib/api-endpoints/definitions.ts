@@ -762,6 +762,16 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "manual",
   },
   {
+    key: "admin-telegram-resend",
+    path: API_PATHS.adminTelegramResend(),
+    methods: ["POST"],
+    adminRequired: true,
+    mutatingAdmin: true,
+    cacheBypass: true,
+    routeDependencies: ["telegram"],
+    probeGroup: "manual",
+  },
+  {
     key: "status-probe-history",
     path: API_PATHS.statusProbeHistory(),
     probePath: API_PATHS.statusProbeHistory({ path: API_PATHS.health() }),
