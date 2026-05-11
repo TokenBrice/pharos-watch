@@ -383,11 +383,7 @@ async function loadPresetSubscriberRowsBatch(
   return { kind: "ok", rows: map };
 }
 
-export async function dispatchTelegramAlerts(
-  db: D1Database,
-  botToken: string,
-  signal?: AbortSignal,
-): Promise<{ itemCount: number; metadata: string }> {
+export async function dispatchTelegramAlerts(db: D1Database, botToken: string, signal?: AbortSignal): Promise<{ itemCount: number; metadata: string }> {
   const allowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TELEGRAM_API);
   if (!allowed) {
     return { itemCount: 0, metadata: JSON.stringify({ skipped: "circuit-open" }) };
@@ -515,23 +511,15 @@ export async function dispatchTelegramAlerts(
           symbol: resolved.symbol ?? previous?.symbol ?? getSymbol(stablecoinId),
           durationMinutes: Math.max(1, Math.round(durationSeconds / 60)),
           peakDeviationBps: Math.abs(Number(resolved.peak_deviation_bps ?? 0)),
-          recoveryPrice:
-            resolved.recovery_price ??
-            previous?.price ??
-            previous?.pegReference ??
-            1,
+          recoveryPrice: resolved.recovery_price ?? previous?.price ?? previous?.pegReference ?? 1,
         });
       }
     }
 
-    const {
-      changes: safetyChanges,
-      suppressedMethodologyChanges,
-    } = !safetySnapshotNeedsSeed
+    const { changes: safetyChanges, suppressedMethodologyChanges } = !safetySnapshotNeedsSeed
       ? buildSafetyChanges(currentSafetySnapshot, safeSafetySnapshot, getSymbol)
       : { changes: [], suppressedMethodologyChanges: 0 };
 
-    // -- Detect launch promotions (pre-launch coins that moved to active) -----
     const previousLaunchSnapshot = readCachedJson<string[]>(
       "dispatch-telegram-alerts",
       SNAPSHOT_KEYS.launch,
@@ -542,12 +530,7 @@ export async function dispatchTelegramAlerts(
       : new Set<string>();
     const currentLaunchIds = new Set(PRE_LAUNCH_STABLECOINS.map((c) => c.id));
 
-    const launchPromoted = buildLaunchPromotions(
-      prevLaunchIds,
-      currentLaunchIds,
-      ACTIVE_IDS,
-      TRACKED_META_BY_ID,
-    );
+    const launchPromoted = buildLaunchPromotions(prevLaunchIds, currentLaunchIds, ACTIVE_IDS, TRACKED_META_BY_ID);
 
     const dewsIds = dewsChanges.map((c) => c.stablecoinId);
     const depegIds = [
@@ -558,12 +541,7 @@ export async function dispatchTelegramAlerts(
     const safetyIds = safetyChanges.map((c) => c.stablecoinId);
     const launchIds = launchPromoted.map((e) => e.stablecoinId);
 
-    const contextLines = await buildAlertContextLines(db, [
-      ...dewsIds,
-      ...depegIds,
-      ...safetyIds,
-      ...launchIds,
-    ]);
+    const contextLines = await buildAlertContextLines(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds]);
     for (const event of [
       ...dewsChanges,
       ...depegTriggered,
@@ -748,9 +726,6 @@ export async function dispatchTelegramAlerts(
       pendingDrained: drainResult.sent,
       pendingRetryQueued: drainResult.retryQueued,
       pendingDropped: drainResult.dropped,
-      // `pendingExpired` (below) accounts for TTL-expired rows deleted by the
-      // end-of-run cleanup; surface it here as well so operators reading
-      // `pendingDropped*` fields get the full disposition breakdown.
       pendingDroppedTtlExpired: expiredCount,
       pendingDroppedPermanentFailure: drainResult.droppedPermanentFailure,
       pendingDroppedMaxAttemptsFallback: drainResult.droppedMaxAttemptsFallback,

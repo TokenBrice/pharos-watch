@@ -25,8 +25,6 @@ type AlertAppender<T> = (alerts: ConsolidatedAlerts) => T[];
  */
 const ALERT_TYPE_PRIORITY: readonly TelegramAlertType[] = ["depeg", "dews", "safety", "launch"];
 
-export const TELEGRAM_ALERT_TYPES: readonly TelegramAlertType[] = ["dews", "depeg", "safety", "launch"];
-
 function emptyPerAlertTypeStats(): PerAlertTypeDeliveryStats {
   return { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null };
 }
@@ -40,7 +38,7 @@ export function emptyPerAlertTypeDelivery(): PerAlertTypeDelivery {
   };
 }
 
-export function dominantAlertType(alerts: ConsolidatedAlerts): TelegramAlertType {
+function dominantAlertType(alerts: ConsolidatedAlerts): TelegramAlertType {
   if (alerts.depegTriggered.length + alerts.depegResolved.length + alerts.depegWorsening.length > 0) {
     return "depeg";
   }

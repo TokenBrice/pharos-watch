@@ -87,7 +87,7 @@ import {
 } from "./telegram-webhook-insights";
 
 /**
- * Group admin gating mode for `/subscribe`, `/unsubscribe`, `/set` in
+ * Group admin gating mode for group-wide mutating commands in
  * group/supergroup chats. "hard" refuses the command for non-admins (default).
  * "soft" is kept as an emergency rollback path for operators: it warns the
  * non-admin and still runs the command. The exported wrapper is mutable so
@@ -99,7 +99,14 @@ export const TELEGRAM_GROUP_ADMIN_GATING: { mode: TelegramGroupAdminGating } = {
   mode: "hard",
 };
 
-const GROUP_ADMIN_GATED_COMMANDS = new Set(["/subscribe", "/unsubscribe", "/set"]);
+const GROUP_ADMIN_GATED_COMMANDS = new Set([
+  "/subscribe",
+  "/unsubscribe",
+  "/set",
+  "/mute",
+  "/unmutehours",
+  "/unsnooze",
+]);
 
 export const handleTelegramWebhook = withErrorHandler(
   "telegram-webhook",
@@ -274,7 +281,15 @@ export const handleTelegramWebhook = withErrorHandler(
             await handleCoverage(db, chatId, parsedCommand.args, botToken);
             return ok();
           case "/start":
-            await handleStart(db, chatId, actorUserId, parsedCommand.args, botToken);
+            await handleStart(
+              db,
+              chatId,
+              chatType,
+              username,
+              actorUserId,
+              parsedCommand.args,
+              botToken,
+            );
             return ok();
           case "/subscribe":
           case "/unsubscribe":
@@ -633,7 +648,7 @@ async function maybeGateNonAdminGroupActor(
   const adminLine = mentions ? ` Admins here: ${mentions}.` : "";
   await reply(
     escapeHtml(
-      `Only group admins can change subscriptions (${command}).${adminLine}`,
+      `Only group admins can change alert settings (${command}).${adminLine}`,
     ),
   );
   return TELEGRAM_GROUP_ADMIN_GATING.mode !== "hard";

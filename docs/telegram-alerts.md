@@ -128,12 +128,12 @@ In group and supergroup chats, commands must be addressed to the bot, for exampl
 
 ### Group Admin Gating
 
-`/subscribe`, `/unsubscribe`, and `/set` are gated to group administrators so a single member cannot rewrite the chat's subscription state. The gating mode lives behind the `TELEGRAM_GROUP_ADMIN_GATING` toggle in `worker/src/api/telegram-webhook.ts`.
+`/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/unmutehours`, and `/unsnooze` are gated to group administrators so a single member cannot rewrite the chat's subscription or quiet-hours state. The gating mode lives behind the `TELEGRAM_GROUP_ADMIN_GATING` toggle in `worker/src/api/telegram-webhook.ts`.
 
-- **Hard gate (current default):** non-admin invocations receive a refusal reply that names the current administrators ("Only group admins can change subscriptions (/subscribe). Admins here: @Alice, Bob.") and the command is short-circuited; the dispatch does not run. Admin display names come from `getChatAdministrators`, which is already visible to every member through the Telegram group member list.
+- **Hard gate (current default):** non-admin invocations receive a refusal reply that names the current administrators ("Only group admins can change alert settings (/subscribe). Admins here: @Alice, Bob.") and the command is short-circuited; the dispatch does not run. Admin display names come from `getChatAdministrators`, which is already visible to every member through the Telegram group member list.
 - **Soft (emergency rollback):** flipping the toggle to `"soft"` warns the non-admin with the same copy but still runs the command. Kept as an operator escape hatch if the hard gate is ever too aggressive in production.
 
-Membership lookups go through `worker/src/lib/telegram-chat-member.ts`. `getCachedChatMember` and `getCachedChatAdministrators` cache results for 5 minutes in the `cache` D1 table under `telegram:chat-member:<chat_id>:<user_id>` and `telegram:chat-admins:<chat_id>` so a burst of group commands does not amplify the webhook-path Telegram API cost. Private chats, `/mute`, and snooze callbacks remain open to every chat member.
+Membership lookups go through `worker/src/lib/telegram-chat-member.ts`. `getCachedChatMember` and `getCachedChatAdministrators` cache results for 5 minutes in the `cache` D1 table under `telegram:chat-member:<chat_id>:<user_id>` and `telegram:chat-admins:<chat_id>` so a burst of group commands does not amplify the webhook-path Telegram API cost. Private chats and snooze callbacks remain open to every chat member.
 
 ### Setup Wizard
 
