@@ -11,7 +11,7 @@ const TELEGRAM_COMMANDS_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_PROFILE_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_ALLOWED_UPDATES = ["message", "callback_query"] as const;
 const TELEGRAM_WEBHOOK_CACHE_VERSION = 2;
-const TELEGRAM_COMMANDS_CACHE_VERSION = 1;
+const TELEGRAM_COMMANDS_CACHE_VERSION = 2;
 const TELEGRAM_PROFILE_CACHE_VERSION = 1;
 
 // Profile metadata shown on the bot's About page, card preview, and chat
@@ -41,6 +41,18 @@ export const TELEGRAM_BOT_COMMANDS = [
   { command: "unmutehours", description: "Disable quiet hours" },
   { command: "cancel", description: "Cancel a pending ticker selection" },
 ] as const;
+
+export const TELEGRAM_BOT_GROUP_COMMANDS = [
+  { command: "subscribe", description: "Subscribe to alerts (e.g. /subscribe usd-top-50 depeg-step 250)" },
+  { command: "unsubscribe", description: "Remove coin subscriptions" },
+  { command: "list", description: "Show your current subscriptions and settings" },
+  { command: "status", description: "Current peg, DEWS, and safety for one coin (e.g. /status USDC)" },
+  { command: "mute", description: "Enable quiet hours in UTC (e.g. /mute 22-07)" },
+  { command: "help", description: "Command reference" },
+] as const;
+
+const TELEGRAM_PRIVATE_COMMAND_SCOPE = { type: "all_private_chats" } as const;
+const TELEGRAM_GROUP_COMMAND_SCOPE = { type: "all_group_chats" } as const;
 
 interface TelegramApiResponse {
   ok?: boolean;
@@ -97,7 +109,10 @@ async function buildExpectedWebhookCacheValue(expectedUrl: string, webhookSecret
 function buildExpectedCommandsCacheValue(): string {
   return JSON.stringify({
     version: TELEGRAM_COMMANDS_CACHE_VERSION,
-    commands: TELEGRAM_BOT_COMMANDS,
+    scopes: {
+      all_private_chats: TELEGRAM_BOT_COMMANDS,
+      all_group_chats: TELEGRAM_BOT_GROUP_COMMANDS,
+    },
   });
 }
 
@@ -222,6 +237,39 @@ export async function reconcileTelegramWebhookRegistration(
   return { attempted: true, skipped: false, expectedUrl };
 }
 
+async function setMyCommandsForScope(
+  botToken: string,
+  commands: ReadonlyArray<{ command: string; description: string }>,
+  scope: { type: string },
+): Promise<void> {
+  const response = await fetch(`https://api.telegram.org/bot${botToken}/setMyCommands`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ commands, scope }),
+    signal: AbortSignal.timeout(10_000),
+  });
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(
+      `Telegram setMyCommands HTTP ${response.status} (scope=${scope.type}): ${responseText.slice(0, 300)}`,
+    );
+  }
+
+  let parsed: TelegramApiResponse | null = null;
+  try {
+    parsed = JSON.parse(responseText) as TelegramApiResponse;
+  } catch {
+    parsed = null;
+  }
+
+  if (parsed?.ok !== true) {
+    throw new Error(
+      `Telegram setMyCommands rejected registration (scope=${scope.type}): ${(parsed?.description ?? responseText).slice(0, 300)}`,
+    );
+  }
+}
+
 export async function reconcileTelegramCommandRegistration(
   db: D1Database,
   options: {
@@ -238,30 +286,8 @@ export async function reconcileTelegramCommandRegistration(
     return { attempted: false, skipped: true, reason: "fresh-cache" };
   }
 
-  const response = await fetch(`https://api.telegram.org/bot${botToken}/setMyCommands`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      commands: TELEGRAM_BOT_COMMANDS,
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
-
-  const responseText = await response.text();
-  if (!response.ok) {
-    throw new Error(`Telegram setMyCommands HTTP ${response.status}: ${responseText.slice(0, 300)}`);
-  }
-
-  let parsed: TelegramApiResponse | null = null;
-  try {
-    parsed = JSON.parse(responseText) as TelegramApiResponse;
-  } catch {
-    parsed = null;
-  }
-
-  if (parsed?.ok !== true) {
-    throw new Error(`Telegram setMyCommands rejected registration: ${(parsed?.description ?? responseText).slice(0, 300)}`);
-  }
+  await setMyCommandsForScope(botToken, TELEGRAM_BOT_COMMANDS, TELEGRAM_PRIVATE_COMMAND_SCOPE);
+  await setMyCommandsForScope(botToken, TELEGRAM_BOT_GROUP_COMMANDS, TELEGRAM_GROUP_COMMAND_SCOPE);
 
   await setCache(db, TELEGRAM_COMMANDS_RECONCILED_CACHE_KEY, expectedCacheValue);
   return { attempted: true, skipped: false };
