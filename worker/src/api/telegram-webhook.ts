@@ -39,6 +39,7 @@ import { handleSetupTickerInput, parseSetupState, sendWizardIntro } from "./tele
 import {
   buildGlobalAlertSummaryMessage,
   buildListMessage,
+  buildManageEntryKeyboard,
   buildNotFoundMessage,
   buildPresetCatalogMessage,
   buildPresetSubscriptionSummaryMessage,
@@ -481,7 +482,11 @@ async function handleList(db: D1Database, chatId: string, botToken: string): Pro
   }
 
   const message = buildListMessage(subscriber, rows, presetSubscriptions);
-  await replyToChat(chatId, message, botToken);
+  // Only attach the [Manage] keyboard when there is at least one explicit
+  // coin subscription — preset-only or quiet-hours-only chats have nothing
+  // to manage from this surface.
+  const replyMarkup = rows.length > 0 ? buildManageEntryKeyboard() : undefined;
+  await replyToChat(chatId, message, botToken, replyMarkup ? { replyMarkup } : {});
 }
 
 async function handleStatus(

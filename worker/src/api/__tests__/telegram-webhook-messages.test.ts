@@ -1,14 +1,31 @@
 import { describe, it, expect } from "vitest";
 import {
-  buildNotFoundMessage,
-  buildUnsubscribeSuccessMessage,
-  buildSubscriptionSummaryMessage,
+  MANAGE_PAGE_SIZE,
   buildListMessage,
-  describeSubscriptionSettings,
+  buildManageEntryKeyboard,
+  buildManageWatchlistKeyboard,
+  buildManageWatchlistMessage,
+  buildNotFoundMessage,
+  buildSubscriptionSummaryMessage,
+  buildUnsubscribeSuccessMessage,
   describeGlobalAlertSettings,
+  describeSubscriptionSettings,
   formatQuietHours,
 } from "../telegram-webhook-messages";
 import type { SubscriberRow, SubscriptionRow } from "../telegram-webhook-shared";
+
+function makeSubscriptionRow(stablecoinId: string): SubscriptionRow {
+  return {
+    stablecoin_id: stablecoinId,
+    alert_dews: 1,
+    alert_depeg: 0,
+    alert_safety: 0,
+    alert_launch: 0,
+    dews_min_band: null,
+    safety_mode: null,
+    depeg_worsening_bps_step: null,
+  };
+}
 
 describe("buildNotFoundMessage", () => {
   it("includes the unknown ticker", () => {
@@ -197,5 +214,75 @@ describe("buildListMessage", () => {
     expect(msg).toContain("Quiet hours: 22:00–07:00 UTC");
     expect(msg).not.toContain("active until");
     expect(msg).toContain("Snooze: Off");
+  });
+});
+
+describe("buildManageEntryKeyboard", () => {
+  it("emits a single Manage button starting at page 0", () => {
+    const kb = buildManageEntryKeyboard();
+    expect(kb.inline_keyboard).toEqual([[{ text: "Manage", callback_data: "manage:page:0" }]]);
+  });
+});
+
+describe("buildManageWatchlistKeyboard", () => {
+  it("renders one row per coin with a ❌ + symbol label and unsub callback", () => {
+    const subs = [makeSubscriptionRow("usdc-circle"), makeSubscriptionRow("dai-makerdao")];
+    const kb = buildManageWatchlistKeyboard(subs, 0);
+    // Sorted alphabetically by symbol: DAI then USDC.
+    expect(kb.inline_keyboard[0]).toEqual([{ text: "❌ DAI", callback_data: "unsub:dai-makerdao" }]);
+    expect(kb.inline_keyboard[1]).toEqual([{ text: "❌ USDC", callback_data: "unsub:usdc-circle" }]);
+    // No nav row when everything fits on one page.
+    expect(kb.inline_keyboard).toHaveLength(2);
+  });
+
+  it("paginates at MANAGE_PAGE_SIZE per page and adds Prev/Next nav", () => {
+    // Pick 7 known tracked ids so MANAGE_PAGE_SIZE=5 yields two pages.
+    const ids = [
+      "usdc-circle",
+      "usdt-tether",
+      "dai-makerdao",
+      "frax-frax",
+      "tusd-trueusd",
+      "lusd-liquity",
+      "susd-synthetix",
+    ];
+    const subs = ids.map(makeSubscriptionRow);
+
+    const page0 = buildManageWatchlistKeyboard(subs, 0);
+    const coinRows0 = page0.inline_keyboard.slice(0, MANAGE_PAGE_SIZE);
+    expect(coinRows0).toHaveLength(MANAGE_PAGE_SIZE);
+    // Page 0 has only a Next button.
+    const navRow0 = page0.inline_keyboard[page0.inline_keyboard.length - 1];
+    expect(navRow0.some((b) => b.callback_data === "manage:page:1" && b.text.includes("Next"))).toBe(true);
+    expect(navRow0.some((b) => b.text.includes("Prev"))).toBe(false);
+
+    const page1 = buildManageWatchlistKeyboard(subs, 1);
+    // Last page: only Prev nav.
+    const navRow1 = page1.inline_keyboard[page1.inline_keyboard.length - 1];
+    expect(navRow1.some((b) => b.callback_data === "manage:page:0" && b.text.includes("Prev"))).toBe(true);
+    expect(navRow1.some((b) => b.text.includes("Next"))).toBe(false);
+  });
+
+  it("clamps an out-of-range page index to the last valid page", () => {
+    const subs = [makeSubscriptionRow("usdc-circle"), makeSubscriptionRow("dai-makerdao")];
+    const kb = buildManageWatchlistKeyboard(subs, 99);
+    // Two coins, one page — no nav row, both rows present.
+    expect(kb.inline_keyboard).toHaveLength(2);
+  });
+});
+
+describe("buildManageWatchlistMessage", () => {
+  it("returns an empty-state message when there are no subscriptions", () => {
+    const msg = buildManageWatchlistMessage([], 0);
+    expect(msg).toContain("No coin subscriptions to manage");
+  });
+
+  it("includes the count and page indicator", () => {
+    const subs = Array.from({ length: 7 }, (_, i) =>
+      makeSubscriptionRow(["usdc-circle", "usdt-tether", "dai-makerdao", "frax-frax", "tusd-trueusd", "lusd-liquity", "susd-synthetix"][i]),
+    );
+    const msg = buildManageWatchlistMessage(subs, 0);
+    expect(msg).toContain("7 coins");
+    expect(msg).toContain("Page 1/2");
   });
 });

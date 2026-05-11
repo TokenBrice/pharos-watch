@@ -10,13 +10,15 @@
  *   - `why:<stablecoinId>` — sends the safety Why explainer (P1-U11)
  *   - `coverage:<stablecoinId>` — sends the coverage card (P1-U11)
  *   - `quicksub:<stablecoinId>` — enables DEWS+depeg for one coin (P1-U11)
+ *   - `manage:page:N` — re-renders the /list management keyboard at page N (P1-U8)
+ *   - `unsub:<stablecoinId>` — removes one coin from the chat's subscriptions (P1-U8)
  *
  * Unknown action codes receive a silent ack so the bot stays forward-compatible
  * with future keyboard changes.
  */
 
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { answerCallbackQuery, sendToChat } from "../lib/telegram";
+import { answerCallbackQuery, editMessageText, sendToChat } from "../lib/telegram";
 import { getCachedChatMember } from "../lib/telegram-chat-member";
 import {
   clearPendingDisambiguation,
@@ -29,9 +31,13 @@ import {
 } from "./telegram-webhook-store";
 import { loadStatusForCoin } from "./telegram-webhook-status";
 import {
+  MANAGE_PAGE_SIZE,
+  buildManageWatchlistKeyboard,
+  buildManageWatchlistMessage,
   buildStatusDiscoveryKeyboard,
   buildStatusMessage,
 } from "./telegram-webhook-messages";
+import type { SubscriptionRow } from "./telegram-webhook-shared";
 import { buildCoverageMessage, buildWhyMessage } from "./telegram-webhook-insights";
 import {
   handleSetupBranch,
@@ -68,6 +74,8 @@ const KNOWN_ACTIONS = new Set([
   "quicksub",
   "confirm",
   "cancel",
+  "manage",
+  "unsub",
 ]);
 
 type SnoozeArg = keyof typeof SNOOZE_SECONDS;
@@ -322,7 +330,187 @@ export async function handleCallbackQuery(
     return;
   }
 
+  if (action === "manage" && arg === "page") {
+    await handleManagePage(db, botToken, cb);
+    return;
+  }
+
+  if (action === "unsub" && isKnownStablecoinId(arg)) {
+    await handleManageUnsub(db, botToken, cb, arg);
+    return;
+  }
+
   await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+}
+
+async function loadChatSubscriptions(db: D1Database, chatId: string): Promise<SubscriptionRow[]> {
+  const result = await db
+    .prepare(
+      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch,
+              dews_min_band, safety_mode, depeg_worsening_bps_step
+         FROM telegram_subscriptions
+        WHERE chat_id = ?
+        ORDER BY stablecoin_id`,
+    )
+    .bind(chatId)
+    .all<SubscriptionRow>();
+  return result.results ?? [];
+}
+
+async function renderManagePage(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  requestedPage: number,
+  ackText: string,
+): Promise<void> {
+  const subscriptions = await loadChatSubscriptions(db, chatId);
+  const totalPages = Math.max(1, Math.ceil(subscriptions.length / MANAGE_PAGE_SIZE));
+  const page = Math.max(0, Math.min(requestedPage, totalPages - 1));
+  const messageId = cb.message?.message_id;
+  const text = buildManageWatchlistMessage(subscriptions, page);
+  const replyMarkup =
+    subscriptions.length === 0 ? undefined : buildManageWatchlistKeyboard(subscriptions, page);
+
+  if (messageId != null) {
+    await editMessageText(chatId, messageId, text, botToken, {
+      disableWebPagePreview: true,
+      replyMarkup,
+    });
+  } else {
+    await sendToChat(chatId, text, botToken, {
+      disableWebPagePreview: true,
+      replyMarkup,
+    });
+  }
+  await answerCallbackQuery(cb.id, botToken, { text: ackText });
+}
+
+async function handleManagePage(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+): Promise<void> {
+  const chatId = cb.message?.chat?.id?.toString();
+  if (!chatId) {
+    await answerCallbackQuery(cb.id, botToken);
+    return;
+  }
+  const pageRaw = (cb.data ?? "").split(":")[2];
+  const page = Number(pageRaw);
+  if (!Number.isFinite(page) || page < 0) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    return;
+  }
+  await renderManagePage(db, botToken, cb, chatId, page, "");
+}
+
+async function handleManageUnsub(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  stablecoinId: string,
+): Promise<void> {
+  const chatId = cb.message?.chat?.id?.toString();
+  if (!chatId) {
+    await answerCallbackQuery(cb.id, botToken);
+    return;
+  }
+
+  // Apply the same admin gate used by /unsubscribe so a single group member
+  // cannot remove subscriptions out from under the rest of the chat.
+  const chatType = cb.message?.chat?.type ?? "private";
+  const isGroup = chatType === "group" || chatType === "supergroup";
+  if (isGroup) {
+    const actorUserId = cb.from?.id != null ? String(cb.from.id) : null;
+    if (!actorUserId) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Only group admins can unsubscribe." });
+      return;
+    }
+    const member = await getCachedChatMember(db, botToken, chatId, actorUserId);
+    const isAdmin = member?.status === "creator" || member?.status === "administrator";
+    if (!isAdmin) {
+      await answerCallbackQuery(cb.id, botToken, { text: "Only group admins can unsubscribe." });
+      return;
+    }
+  }
+
+  // Determine the current page from the callback message keyboard so we can
+  // re-render at the same page after deletion. Fall back to page 0 if we
+  // cannot infer it (e.g. message context missing).
+  const currentPage = inferCurrentManagePage(cb);
+
+  try {
+    await removeSubscriptions(db, chatId, [stablecoinId]);
+  } catch (err) {
+    logTelegramEvent({
+      message: "unsub callback write failed",
+      chatId,
+      userId: cb.from?.id ?? null,
+      action: "unsub",
+      err: err instanceof Error ? err.message : String(err),
+    });
+    await answerCallbackQuery(cb.id, botToken, {
+      text: "Could not remove subscription. Please try again.",
+    });
+    return;
+  }
+
+  const subscriptions = await loadChatSubscriptions(db, chatId);
+  const totalPages = Math.max(1, Math.ceil(subscriptions.length / MANAGE_PAGE_SIZE));
+  // If the page we were viewing is now empty (the last row on a tail page was
+  // removed), shift one page up so the user sees the remaining items.
+  const nextPage = Math.min(currentPage, totalPages - 1);
+  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  const ackText = `Removed ${meta?.symbol ?? stablecoinId}.`;
+
+  const messageId = cb.message?.message_id;
+  const text = buildManageWatchlistMessage(subscriptions, Math.max(0, nextPage));
+  const replyMarkup =
+    subscriptions.length === 0
+      ? undefined
+      : buildManageWatchlistKeyboard(subscriptions, Math.max(0, nextPage));
+
+  if (messageId != null) {
+    await editMessageText(chatId, messageId, text, botToken, {
+      disableWebPagePreview: true,
+      replyMarkup,
+    });
+  } else {
+    await sendToChat(chatId, text, botToken, {
+      disableWebPagePreview: true,
+      replyMarkup,
+    });
+  }
+  await answerCallbackQuery(cb.id, botToken, { text: ackText });
+}
+
+// Best-effort: scan the current message's inline keyboard for the latest
+// `manage:page:N` callback (Prev/Next buttons) and infer the active page. The
+// active page sits between Prev (N-1) and Next (N+1) when both are present;
+// at the edges only one nav button exists. Returns 0 when the message has no
+// nav row (single-page state).
+function inferCurrentManagePage(cb: TelegramCallbackQuery): number {
+  const message = cb.message as
+    | { reply_markup?: { inline_keyboard?: Array<Array<{ callback_data?: string; text?: string }>> } }
+    | undefined;
+  const rows = message?.reply_markup?.inline_keyboard ?? [];
+  let prev: number | null = null;
+  let next: number | null = null;
+  for (const row of rows) {
+    for (const button of row) {
+      const data = button.callback_data;
+      if (!data || !data.startsWith("manage:page:")) continue;
+      const pageNum = Number(data.split(":")[2]);
+      if (!Number.isFinite(pageNum)) continue;
+      if (button.text?.includes("Prev")) prev = pageNum;
+      else if (button.text?.includes("Next")) next = pageNum;
+    }
+  }
+  if (prev != null) return prev + 1;
+  if (next != null) return next - 1;
+  return 0;
 }
 
 async function handleBulkConfirmCallback(

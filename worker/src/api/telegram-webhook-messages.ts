@@ -361,6 +361,76 @@ export function buildStatusDiscoveryKeyboard(stablecoinId: string): {
   };
 }
 
+/** Page size for the /list `[ Manage ]` keyboard. */
+export const MANAGE_PAGE_SIZE = 5;
+
+/** Inline keyboard with a single `[ Manage ]` entry button, attached to /list. */
+export function buildManageEntryKeyboard(): {
+  inline_keyboard: Array<Array<{ text: string; callback_data: string }>>;
+} {
+  return {
+    inline_keyboard: [[{ text: "Manage", callback_data: "manage:page:0" }]],
+  };
+}
+
+/**
+ * Paginated keyboard for watchlist management. Renders up to `MANAGE_PAGE_SIZE`
+ * rows of `[ ❌ <SYMBOL> ]` buttons followed by a Prev/Next nav row when needed.
+ * Caller clamps `page` to a valid range; this helper trusts the input.
+ */
+export function buildManageWatchlistKeyboard(
+  subscriptions: SubscriptionRow[],
+  page: number,
+): {
+  inline_keyboard: Array<Array<{ text: string; callback_data: string }>>;
+} {
+  const sorted = sortSubscriptions(subscriptions);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / MANAGE_PAGE_SIZE));
+  const clampedPage = Math.max(0, Math.min(page, totalPages - 1));
+  const start = clampedPage * MANAGE_PAGE_SIZE;
+  const slice = sorted.slice(start, start + MANAGE_PAGE_SIZE);
+
+  const rows: Array<Array<{ text: string; callback_data: string }>> = slice.map((row) => {
+    const coin = STABLECOIN_BY_ID.get(row.stablecoin_id);
+    const symbol = coin?.symbol ?? row.stablecoin_id;
+    return [
+      {
+        text: `❌ ${symbol}`,
+        callback_data: `unsub:${row.stablecoin_id}`,
+      },
+    ];
+  });
+
+  if (totalPages > 1) {
+    const nav: Array<{ text: string; callback_data: string }> = [];
+    if (clampedPage > 0) {
+      nav.push({ text: "◀ Prev", callback_data: `manage:page:${clampedPage - 1}` });
+    }
+    if (clampedPage < totalPages - 1) {
+      nav.push({ text: "Next ▶", callback_data: `manage:page:${clampedPage + 1}` });
+    }
+    if (nav.length > 0) rows.push(nav);
+  }
+
+  return { inline_keyboard: rows };
+}
+
+/** Header text rendered above the manage keyboard. */
+export function buildManageWatchlistMessage(
+  subscriptions: SubscriptionRow[],
+  page: number,
+): string {
+  if (subscriptions.length === 0) {
+    return escapeHtml("No coin subscriptions to manage. Use /subscribe to add some.");
+  }
+  const totalPages = Math.max(1, Math.ceil(subscriptions.length / MANAGE_PAGE_SIZE));
+  const clampedPage = Math.max(0, Math.min(page, totalPages - 1));
+  const pageLine = totalPages > 1 ? ` Page ${clampedPage + 1}/${totalPages}.` : "";
+  return escapeHtml(
+    `Manage watchlist (${subscriptions.length} coin${subscriptions.length === 1 ? "" : "s"}).${pageLine} Tap a row to remove that coin.`,
+  );
+}
+
 export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
   const nowSec = Math.floor(Date.now() / 1000);
   const priceLine =

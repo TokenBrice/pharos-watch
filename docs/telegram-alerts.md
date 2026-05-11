@@ -117,6 +117,8 @@ Current actions:
 - `why:<stablecoinId>` (re-sends the `/why` explainer)
 - `coverage:<stablecoinId>` (re-sends the `/coverage` card)
 - `quicksub:<stablecoinId>` (enables DEWS + depeg for that one coin; group chats require admin)
+- `manage:page:<N>` (paginates the `/list` `[ Manage ]` keyboard, edits the message in place)
+- `unsub:<stablecoinId>` (removes one coin from the chat's subscriptions; group chats require admin, gated identically to `/unsubscribe`)
 
 Unknown action codes receive a visible callback toast but are not treated as
 errors, so the bot stays forward-compatible with future keyboards.
@@ -160,7 +162,7 @@ Wizard state is persisted as a row in `telegram_pending_disambiguation` with `ac
 | `/start` | Opens the two-branch setup wizard (Recommended / Custom / Type commands myself). Deep-link payload `?start=setup` also opens the wizard. Unknown payloads fall back to the long-form start message. |
 | `/help` | Sends command reference |
 | `/presets` | Returns the preset watchlist catalog plus subscribe and unsubscribe examples |
-| `/list` | Returns enabled alert types plus subscribed coins for the chat |
+| `/list` | Returns enabled alert types plus subscribed coins for the chat. When the chat has at least one explicit coin subscription the reply carries a `[ Manage ]` inline button that opens a paginated keyboard (5 coins per page) where each row is a one-tap `[ ❌ <SYMBOL> ]` removal. The keyboard edits the same message in place via `editMessageText`. Group chats apply the same admin gate as `/unsubscribe`. |
 | `/status <ticker>` | Returns a compact snapshot: current price freshness, supply, DEWS band, safety grade, active-depeg state, DEX liquidity, and best yield context for the given coin. No subscription required. The reply carries a `[ Why? ] [ Coverage ] [ Subscribe ]` inline keyboard so users can drill down or quick-subscribe (DEWS + depeg) without retyping a command. The `Subscribe` button is gated by the same group admin check as `/subscribe`. |
 | `/brief` | Returns the latest compact market brief from the daily digest inputs. `/market` is a deprecated alias kept for one release cycle. |
 | `/top <view>` | Returns ranked current views for `depeg`, `dews`, `yield`, `liquidity`, `chains`, or `safety` |

@@ -578,6 +578,59 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("USDPT");
   });
 
+  it("attaches a [Manage] inline button to /list when subscriptions exist", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      { match: "FROM telegram_subscribers", rows: [], first: null },
+      {
+        match: "FROM telegram_subscriptions",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            alert_dews: 1,
+            alert_depeg: 0,
+            alert_safety: 0,
+            alert_launch: 0,
+            dews_min_band: null,
+            safety_mode: null,
+            depeg_worsening_bps_step: null,
+          },
+        ],
+      },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/list"), "test-secret", "bot-token");
+
+    const body = sentMessageBody() as { text: string; reply_markup?: { inline_keyboard?: Array<Array<{ text: string; callback_data: string }>> } };
+    const callbacks = (body.reply_markup?.inline_keyboard ?? []).flat().map((b) => b.callback_data);
+    expect(callbacks).toContain("manage:page:0");
+  });
+
+  it("omits the [Manage] button when /list has no explicit coin subscriptions", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "FROM telegram_subscribers",
+        rows: [],
+        first: {
+          global_alert_dews: 1,
+          global_alert_depeg: 0,
+          global_alert_safety: 0,
+          global_alert_launch: 0,
+          quiet_hours_enabled: 0,
+          quiet_hours_start_utc: null,
+          quiet_hours_end_utc: null,
+        },
+      },
+      { match: "FROM telegram_subscriptions", rows: [] },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/list"), "test-secret", "bot-token");
+
+    const body = sentMessageBody() as { text: string; reply_markup?: unknown };
+    expect(body.reply_markup).toBeUndefined();
+  });
+
   it("replies to /presets with the preset catalog", async () => {
     const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/presets"), "test-secret", "bot-token");
