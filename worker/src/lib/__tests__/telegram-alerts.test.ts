@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins";
+import { FROZEN_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import {
   resolveTicker,
   parseTargetArgs,
@@ -17,6 +17,9 @@ import {
   isDewsAlertable,
   isDewsDeescalation,
   suggestClosestToken,
+  buildAlertReplyMarkup,
+  SNOOZE_REPLY_MARKUP,
+  type ConsolidatedAlerts,
 } from "../telegram-alerts";
 
 describe("resolveTicker", () => {
@@ -683,6 +686,71 @@ describe("splitMessage HTML safety", () => {
       const opens = (chunk.match(/<b>/g) ?? []).length;
       const closes = (chunk.match(/<\/b>/g) ?? []).length;
       expect(opens).toBe(closes);
+    }
+  });
+});
+
+describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
+  const TELEGRAM_CALLBACK_DATA_MAX_BYTES = 64;
+
+  function collectCallbackData(markup: { inline_keyboard: ReadonlyArray<ReadonlyArray<{ callback_data: string }>> }): string[] {
+    return markup.inline_keyboard.flatMap((row) => row.map((btn) => btn.callback_data));
+  }
+
+  function singleCoinAlerts(stablecoinId: string): ConsolidatedAlerts {
+    return {
+      dews: [
+        {
+          stablecoinId,
+          symbol: "XXX",
+          oldBand: "CALM",
+          newBand: "ALERT",
+          score: 42,
+          topSignals: [],
+        },
+      ],
+      depegTriggered: [],
+      depegResolved: [],
+      depegWorsening: [],
+      safety: [],
+      launch: [],
+    };
+  }
+
+  it("keeps every snooze callback_data within Telegram's 64-byte limit", () => {
+    for (const data of collectCallbackData(SNOOZE_REPLY_MARKUP)) {
+      expect(Buffer.byteLength(data, "utf8")).toBeLessThanOrEqual(TELEGRAM_CALLBACK_DATA_MAX_BYTES);
+    }
+  });
+
+  it("keeps callback_data within 64 bytes for the longest tracked stablecoin id", () => {
+    const ids = Array.from(TRACKED_META_BY_ID.keys());
+    expect(ids.length).toBeGreaterThan(0);
+    const longestId = ids.reduce((a, b) => (b.length > a.length ? b : a));
+    const markup = buildAlertReplyMarkup(singleCoinAlerts(longestId), 0);
+    const callbacks = collectCallbackData(markup);
+    // Sanity: longest id should have produced the per-coin markup, not just the snooze row.
+    expect(callbacks.some((c) => c.startsWith("status:"))).toBe(true);
+    for (const data of callbacks) {
+      expect(Buffer.byteLength(data, "utf8")).toBeLessThanOrEqual(TELEGRAM_CALLBACK_DATA_MAX_BYTES);
+    }
+  });
+
+  it("keeps callback_data within 64 bytes for every tracked stablecoin id", () => {
+    for (const id of TRACKED_META_BY_ID.keys()) {
+      const markup = buildAlertReplyMarkup(singleCoinAlerts(id), 0);
+      for (const data of collectCallbackData(markup)) {
+        expect(Buffer.byteLength(data, "utf8")).toBeLessThanOrEqual(TELEGRAM_CALLBACK_DATA_MAX_BYTES);
+      }
+    }
+  });
+
+  it("returns the snooze-only markup for non-first chunks and stays within the limit", () => {
+    const ids = Array.from(TRACKED_META_BY_ID.keys());
+    const longestId = ids.reduce((a, b) => (b.length > a.length ? b : a));
+    const markup = buildAlertReplyMarkup(singleCoinAlerts(longestId), 1);
+    for (const data of collectCallbackData(markup)) {
+      expect(Buffer.byteLength(data, "utf8")).toBeLessThanOrEqual(TELEGRAM_CALLBACK_DATA_MAX_BYTES);
     }
   });
 });
