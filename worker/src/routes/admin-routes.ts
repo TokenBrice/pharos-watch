@@ -13,6 +13,7 @@ import { handleResetCronLease } from "../api/admin-reset-cron-lease";
 import { handleResetCircuitBreaker } from "../api/admin-reset-circuit-breaker";
 import { handleKillCronInFlight } from "../api/admin-kill-cron-in-flight";
 import { handleBulkDismissDiscoveryCandidates } from "../api/admin-bulk-dismiss-discovery-candidates";
+import { handleClearTelegramPending } from "../api/admin-telegram-pending";
 import { handleStatusProbeHistory } from "../api/status-probe-history";
 import { makeConditionalIdempotentAdminRoute, makeIdempotentAdminRoute } from "../lib/route-wrappers";
 import { defineStaticRoute, type StaticRouteDefinition } from "./shared";
@@ -85,5 +86,6 @@ export const ADMIN_STATIC_ROUTES = [
   defineStaticRoute("reset-circuit-breaker", handleResetCircuitBreaker),
   defineStaticRoute("kill-cron-in-flight", handleKillCronInFlight),
   defineStaticRoute("bulk-dismiss-discovery-candidates", handleBulkDismissDiscoveryCandidates),
+  defineStaticRoute("clear-telegram-pending", handleClearTelegramPending),
   defineStaticRoute("status-probe-history", handleStatusProbeHistory),
 ] as const satisfies readonly StaticRouteDefinition[];

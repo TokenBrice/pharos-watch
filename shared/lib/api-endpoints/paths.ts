@@ -127,6 +127,11 @@ export const API_PATHS = {
     buildQueryPath("/api/kill-cron-in-flight", { job: params?.job, leaseOwner: params?.leaseOwner }),
   bulkDismissDiscoveryCandidates: (params?: { all?: boolean; ids?: string }) =>
     buildQueryPath("/api/bulk-dismiss-discovery-candidates", { all: params?.all, ids: params?.ids }),
+  clearTelegramPending: (params?: { chatId?: string; olderThanSec?: number }) =>
+    buildQueryPath("/api/telegram-pending", {
+      chat_id: params?.chatId,
+      older_than_sec: params?.olderThanSec,
+    }),
   statusProbeHistory: (params?: { path?: string; days?: number }) =>
     buildQueryPath("/api/status-probe-history", { path: params?.path, days: params?.days }),
 } as const;

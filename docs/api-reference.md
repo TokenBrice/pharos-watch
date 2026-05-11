@@ -258,6 +258,7 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/reset-circuit-breaker`
 - `POST /api/kill-cron-in-flight`
 - `POST /api/bulk-dismiss-discovery-candidates`
+- `POST /api/telegram-pending`
 
 When an `Idempotency-Key` is supplied on one of those routes, successful responses echo `Idempotency-Key` plus `X-Idempotent-Replay`, and conflicting reuse returns `409`. If a handler throws and the worker can clear the pending reservation cleanly, the same key may be retried normally. If cleanup cannot be confirmed, the worker downgrades that key to a stored failure replay and repeats with the same key return a deterministic `500` replay with `X-Idempotent-Replay: true` until the reservation expires.
 
@@ -3772,6 +3773,20 @@ Bulk-dismisses discovery candidates. Requires either `?all=true` or `?ids=<csv>`
 ```json
 { "ok": true, "dismissed": 2 }
 ```
+
+### `POST /api/telegram-pending`
+
+Clears rows from `telegram_pending_alerts`. Safe by default: refuses unfiltered requests. Operators must supply exactly one of `?chat_id=<id>` (drop all pending alerts for a specific subscriber) or `?older_than_sec=<positive-integer>` (drop alerts older than the supplied window). Returns the count of rows deleted; the action is recorded in `admin_action_audit`.
+
+**Authentication:** admin (`X-Pharos-Admin: 1` header required for mutations).
+
+**Response**
+
+```json
+{ "ok": true, "deleted": 3 }
+```
+
+**Error responses:** `400` when neither filter is supplied, when both are supplied, or when `older_than_sec` is not a positive integer.
 
 ### `POST /api/reset-cron-lease`
 

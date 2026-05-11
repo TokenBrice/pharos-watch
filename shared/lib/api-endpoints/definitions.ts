@@ -747,6 +747,15 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "manual",
   },
   {
+    key: "clear-telegram-pending",
+    path: API_PATHS.clearTelegramPending(),
+    methods: ["POST"],
+    adminRequired: true,
+    mutatingAdmin: true,
+    cacheBypass: true,
+    probeGroup: "manual",
+  },
+  {
     key: "status-probe-history",
     path: API_PATHS.statusProbeHistory(),
     probePath: API_PATHS.statusProbeHistory({ path: API_PATHS.health() }),
