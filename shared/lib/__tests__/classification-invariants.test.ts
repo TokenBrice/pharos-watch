@@ -3,9 +3,13 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { computeCentralizedCustodyFraction } from "@shared/lib/centralized-custody";
 
 const MAJORITY_THRESHOLD = 0.50;
+const EXPECTED_CENTRALIZED_CUSTODY_MAJORITIES = new Set([
+  "zchf-frankencoin",
+  "deuro-deuro",
+]);
 
 describe("classification invariants", () => {
-  it("warns when decentralized coins have >50% centralized-custody exposure", () => {
+  it("only allows known decentralized coins with >50% centralized-custody exposure", () => {
     const warnings: string[] = [];
 
     const defiCoins = TRACKED_STABLECOINS.filter(
@@ -24,14 +28,10 @@ describe("classification invariants", () => {
       }
     }
 
-    if (warnings.length > 0) {
-      console.warn(
-        `\n[classification-invariants] ${warnings.length} governance classification warnings:\n` +
-        warnings.map((w) => `  - ${w}`).join("\n") + "\n",
-      );
-    }
-
-    // WARNING MODE: log warnings but do not fail the test.
-    expect(true).toBe(true);
+    expect(warnings).toEqual(
+      Array.from(EXPECTED_CENTRALIZED_CUSTODY_MAJORITIES).map((id) =>
+        expect.stringMatching(new RegExp(`^${id}: classified "decentralized"`)),
+      ),
+    );
   });
 });
