@@ -22,12 +22,6 @@ function formatUsdCompact(value: number | null | undefined): string {
   return `$${value.toFixed(0)}`;
 }
 
-function formatSignedUsd(value: number | null | undefined): string {
-  if (value == null || !Number.isFinite(value)) return "n/a";
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${formatUsdCompact(value)}`;
-}
-
 function formatAge(ts: number | null | undefined, nowSec = Math.floor(Date.now() / 1000)): string {
   if (ts == null || !Number.isFinite(ts)) return "unknown age";
   const ageSec = Math.max(0, nowSec - ts);
@@ -363,5 +357,3 @@ async function loadLiquidityRows(
     { score: row.liquidity_score, tvl: row.total_tvl_usd },
   ]));
 }
-
-export { formatSignedUsd };
