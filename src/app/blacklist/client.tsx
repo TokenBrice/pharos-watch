@@ -98,6 +98,7 @@ export default function BlacklistClient() {
         isLoading={summaryLoading}
         blacklistStatusBuckets={blacklistStatusBuckets}
         supportDataLoading={supportDataLoading}
+        onUnfreezableSelect={() => handleStatusBucketChange("no")}
       />
 
       <BlacklistInterventionLedger

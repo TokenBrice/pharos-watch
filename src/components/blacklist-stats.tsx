@@ -15,6 +15,7 @@ interface BlacklistStatsProps {
   isLoading: boolean;
   blacklistStatusBuckets: BlacklistStatusBucket[] | null;
   supportDataLoading: boolean;
+  onUnfreezableSelect?: () => void;
 }
 
 interface BlacklistFreezeLedgerMeta {
@@ -100,6 +101,7 @@ export function BlacklistStats({
   isLoading,
   blacklistStatusBuckets,
   supportDataLoading,
+  onUnfreezableSelect,
 }: BlacklistStatsProps) {
   const trackedFrozenTotal = stats?.trackedFrozenTotal ?? stats?.activeFrozenTotal ?? 0;
   const quality = summary as BlacklistSummaryWithQuality | undefined;
@@ -148,10 +150,15 @@ export function BlacklistStats({
   const isUnfreezableShareLoading = supportDataLoading;
   const unfreezableMarketShareValue = isUnfreezableShareLoading ? "—" : formatMarketSharePercentage(unfreezableMarketSharePct);
   const unfreezableCount = isUnfreezableShareLoading ? "syncing" : `${unfreezableBucket?.count ?? 0} stablecoins`;
-  const unfreezableMarketShareSubtext =
+  const baseUnfreezableSubtext =
     unfreezableBucket && totalTrackedMarketCap > 0
       ? `${unfreezableCount} · ${formatCurrency(unfreezableBucket.marketCap)} of ${formatCurrency(totalTrackedMarketCap)} total`
       : "blacklist status: no / total market cap";
+  const canDrillIntoUnfreezable =
+    typeof onUnfreezableSelect === "function" && !isUnfreezableShareLoading && (unfreezableBucket?.count ?? 0) > 0;
+  const unfreezableMarketShareSubtext = canDrillIntoUnfreezable
+    ? `${baseUnfreezableSubtext} · View list →`
+    : baseUnfreezableSubtext;
 
   if (isLoading) {
     return (
@@ -183,6 +190,8 @@ export function BlacklistStats({
           contentClassName="pt-1"
           valueClassName="text-4xl font-black leading-none sm:text-5xl"
           subtextClassName="mt-2 text-sm text-muted-foreground"
+          onClick={canDrillIntoUnfreezable ? onUnfreezableSelect : undefined}
+          actionLabel="Show unfreezable stablecoins"
         />
         <MetricStatCard
           borderColorClass="border-l-amber-500"
