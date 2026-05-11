@@ -126,6 +126,15 @@ The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Toke
 
 In group and supergroup chats, commands must be addressed to the bot, for example `/subscribe@PharosWatchBot dews usd-top25`. Unaddressed slash commands and commands addressed to the public channel handle are ignored so Pharos does not intercept another bot's group command surface. Plain numeric replies for an active disambiguation prompt do not need a bot mention, but the reply must come from the same Telegram user who started the pending selection when `initiator_user_id` is available; unrelated group text from other users is ignored.
 
+### Group Admin Gating
+
+`/subscribe`, `/unsubscribe`, and `/set` are gated to group administrators so a single member cannot rewrite the chat's subscription state. The gating mode lives behind the `TELEGRAM_GROUP_ADMIN_GATING` constant in `worker/src/api/telegram-webhook.ts`.
+
+- **Soft launch (current default):** non-admin invocations receive a warning reply that names the current administrators ("Only group admins can change subscriptions (/subscribe). Admins here: @Alice, Bob."), but the command still runs. Admin display names come from `getChatAdministrators`, which is already visible to every member through the Telegram group member list.
+- **Hard gate (future PR):** flipping the flag to `"hard"` will short-circuit the command and refuse the dispatch for non-admins.
+
+Membership lookups go through `worker/src/lib/telegram-chat-member.ts`. `getCachedChatMember` and `getCachedChatAdministrators` cache results for 5 minutes in the `cache` D1 table under `telegram:chat-member:<chat_id>:<user_id>` and `telegram:chat-admins:<chat_id>` so a burst of group commands does not amplify the webhook-path Telegram API cost. Private chats, `/mute`, and snooze callbacks remain open to every chat member.
+
 ### Supported Commands
 
 | Command | Behavior |

@@ -1,6 +1,11 @@
 import { timingSafeCompare } from "../lib/auth";
 import { escapeHtml, sendToChat } from "../lib/telegram";
 import {
+  formatAdministratorMentions,
+  getCachedChatAdministrators,
+  getCachedChatMember,
+} from "../lib/telegram-chat-member";
+import {
   formatDisambiguation,
   parseTargetArgs,
   resolveTicker,
@@ -76,6 +81,18 @@ import {
   buildTopMessage,
   buildWhyMessage,
 } from "./telegram-webhook-insights";
+
+/**
+ * Group admin gating mode for `/subscribe`, `/unsubscribe`, `/set` in
+ * group/supergroup chats. "soft" warns non-admins but still runs the command.
+ * A future PR will introduce a "hard" mode that refuses the command for
+ * non-admins; flip this flag (and update `maybeWarnNonAdminGroupActor`) when
+ * that handler lands.
+ */
+type TelegramGroupAdminGating = "soft" | "hard";
+const TELEGRAM_GROUP_ADMIN_GATING: TelegramGroupAdminGating = "soft";
+
+const GROUP_ADMIN_GATED_COMMANDS = new Set(["/subscribe", "/unsubscribe", "/set"]);
 
 export const handleTelegramWebhook = withErrorHandler(
   "telegram-webhook",
@@ -247,6 +264,14 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
       }
 
       if (!parsedCommand) return ok();
+
+      if (
+        isGroupChat(chatType) &&
+        GROUP_ADMIN_GATED_COMMANDS.has(parsedCommand.command) &&
+        actorUserId != null
+      ) {
+        await maybeWarnNonAdminGroupActor(db, botToken, chatId, actorUserId, parsedCommand.command, reply);
+      }
 
       switch (parsedCommand.command) {
         case "/start":
@@ -446,6 +471,33 @@ const PHAROS_BOT_USERNAMES = new Set(["pharoswatchbot"]);
 
 function isGroupChat(chatType: string): boolean {
   return chatType === "group" || chatType === "supergroup";
+}
+
+async function maybeWarnNonAdminGroupActor(
+  db: D1Database,
+  botToken: string,
+  chatId: string,
+  actorUserId: string,
+  command: string,
+  reply: (message: string) => Promise<void>,
+): Promise<void> {
+  const member = await getCachedChatMember(db, botToken, chatId, actorUserId);
+  if (member && (member.status === "creator" || member.status === "administrator")) {
+    return;
+  }
+  // Soft launch: warn the non-admin but still let the command run. A future PR
+  // will introduce TELEGRAM_GROUP_ADMIN_GATING === "hard" and short-circuit
+  // the dispatch here.
+  if (TELEGRAM_GROUP_ADMIN_GATING !== "soft") return;
+
+  const admins = await getCachedChatAdministrators(db, botToken, chatId);
+  const mentions = admins ? formatAdministratorMentions(admins) : "";
+  const adminLine = mentions ? ` Admins here: ${mentions}.` : "";
+  await reply(
+    escapeHtml(
+      `Only group admins can change subscriptions (${command}).${adminLine}`,
+    ),
+  );
 }
 
 function isAddressedToPharosBot(botMention: string | null): boolean {

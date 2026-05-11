@@ -1321,4 +1321,202 @@ describe("handleTelegramWebhook", () => {
     expect(res.status).toBe(200);
     expect(sentMessageBody().text).toContain("temporarily unavailable");
   });
+
+  describe("group admin gating (soft launch)", () => {
+    function routeFetch(handlers: {
+      getChatMember?: () => Response;
+      getChatAdministrators?: () => Response;
+    }) {
+      fetchSpy.mockImplementation(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith("/getChatMember") && handlers.getChatMember) {
+          return handlers.getChatMember();
+        }
+        if (url.endsWith("/getChatAdministrators") && handlers.getChatAdministrators) {
+          return handlers.getChatAdministrators();
+        }
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      });
+    }
+
+    function adminFetchCalls(): Array<{ url: string }> {
+      return fetchSpy.mock.calls
+        .map(([input]) => ({ url: String(input) }))
+        .filter(
+          (entry) =>
+            entry.url.endsWith("/getChatMember") ||
+            entry.url.endsWith("/getChatAdministrators"),
+        );
+    }
+
+    function sentMessageBodies(): string[] {
+      return fetchSpy.mock.calls
+        .filter(([input]) => String(input).endsWith("/sendMessage"))
+        .map(([, init]) => JSON.parse((init?.body as string) ?? "{}") as { text: string })
+        .map((body) => body.text);
+    }
+
+    it("passes through when the actor is a group administrator", async () => {
+      routeFetch({
+        getChatMember: () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { status: "administrator", user: { id: 999, username: "requester" } },
+            }),
+            { status: 200 },
+          ),
+      });
+
+      const db = mockD1([
+        { match: "FROM cache WHERE key = ?", matchBinds: ["telegram:chat-member:-123:999"], rows: [], first: null },
+        { match: "telegram_pending_disambiguation", rows: [] },
+        {
+          match: "FROM telegram_subscriptions",
+          rows: [
+            {
+              stablecoin_id: "usdc-circle",
+              alert_dews: 1,
+              alert_depeg: 0,
+              alert_safety: 0,
+              dews_min_band: null,
+              safety_mode: null,
+              depeg_worsening_bps_step: null,
+            },
+          ],
+        },
+      ]);
+
+      await handleTelegramWebhook(
+        db,
+        makeWebhookRequest(-123, "/subscribe@PharosWatchBot dews USDC", "test-secret", {
+          chatType: "supergroup",
+        }),
+        "test-secret",
+        "bot-token",
+      );
+
+      const calls = adminFetchCalls();
+      expect(calls.some((c) => c.url.endsWith("/getChatMember"))).toBe(true);
+      expect(calls.some((c) => c.url.endsWith("/getChatAdministrators"))).toBe(false);
+      const messages = sentMessageBodies();
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("Updated subscriptions");
+      expect(messages[0]).not.toContain("Only group admins");
+    });
+
+    it("warns a non-admin and still runs /subscribe (soft launch)", async () => {
+      routeFetch({
+        getChatMember: () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { status: "member", user: { id: 999, username: "requester" } },
+            }),
+            { status: 200 },
+          ),
+        getChatAdministrators: () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: [
+                { status: "creator", user: { id: 1, username: "alice", first_name: "Alice" } },
+                { status: "administrator", user: { id: 2, first_name: "Bob" } },
+              ],
+            }),
+            { status: 200 },
+          ),
+      });
+
+      const db = mockD1([
+        { match: "FROM cache WHERE key = ?", matchBinds: ["telegram:chat-member:-123:999"], rows: [], first: null },
+        { match: "FROM cache WHERE key = ?", matchBinds: ["telegram:chat-admins:-123"], rows: [], first: null },
+        { match: "telegram_pending_disambiguation", rows: [] },
+        {
+          match: "FROM telegram_subscriptions",
+          rows: [
+            {
+              stablecoin_id: "usdc-circle",
+              alert_dews: 1,
+              alert_depeg: 0,
+              alert_safety: 0,
+              dews_min_band: null,
+              safety_mode: null,
+              depeg_worsening_bps_step: null,
+            },
+          ],
+        },
+      ]);
+
+      await handleTelegramWebhook(
+        db,
+        makeWebhookRequest(-123, "/subscribe@PharosWatchBot dews USDC", "test-secret", {
+          chatType: "supergroup",
+        }),
+        "test-secret",
+        "bot-token",
+      );
+
+      const calls = adminFetchCalls();
+      expect(calls.some((c) => c.url.endsWith("/getChatMember"))).toBe(true);
+      expect(calls.some((c) => c.url.endsWith("/getChatAdministrators"))).toBe(true);
+
+      const messages = sentMessageBodies();
+      expect(messages).toHaveLength(2);
+      expect(messages[0]).toContain("Only group admins can change subscriptions");
+      expect(messages[0]).toContain("/subscribe");
+      expect(messages[0]).toContain("@alice");
+      expect(messages[0]).toContain("Bob");
+      expect(messages[1]).toContain("Updated subscriptions");
+    });
+
+    it("does not gate /subscribe in private chats", async () => {
+      const db = mockD1([
+        { match: "telegram_pending_disambiguation", rows: [] },
+        {
+          match: "FROM telegram_subscriptions",
+          rows: [
+            {
+              stablecoin_id: "usdc-circle",
+              alert_dews: 1,
+              alert_depeg: 0,
+              alert_safety: 0,
+              dews_min_band: null,
+              safety_mode: null,
+              depeg_worsening_bps_step: null,
+            },
+          ],
+        },
+      ]);
+
+      await handleTelegramWebhook(
+        db,
+        makeWebhookRequest(123, "/subscribe dews USDC"),
+        "test-secret",
+        "bot-token",
+      );
+
+      expect(adminFetchCalls()).toEqual([]);
+      const messages = sentMessageBodies();
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("Updated subscriptions");
+    });
+
+    it("does not gate /mute in group chats", async () => {
+      const db = mockD1([{ match: "SELECT action_type, action_payload", rows: [], first: null }]);
+
+      await handleTelegramWebhook(
+        db,
+        makeWebhookRequest(-123, "/mute@PharosWatchBot 22-07", "test-secret", {
+          chatType: "supergroup",
+        }),
+        "test-secret",
+        "bot-token",
+      );
+
+      expect(adminFetchCalls()).toEqual([]);
+      const messages = sentMessageBodies();
+      expect(messages[0]).toContain("Quiet hours enabled");
+    });
+  });
 });
