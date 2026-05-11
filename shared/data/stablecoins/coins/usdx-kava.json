@@ -32,6 +32,7 @@
     }
   ],
   "chainTier": "established-alt-l1",
+  "deploymentModel": "single-chain",
   "reserves": [
     {
       "name": "Kava CDP collateral and protocol liquidity",
@@ -43,7 +44,7 @@
     {
       "type": "warning",
       "title": "Legacy depeg risk",
-      "message": "USDX has a long-lived discount to its dollar peg; Pharos tracks the active provider entry separately from the historical cemetery incident."
+      "message": "USDX is trading at roughly a 45% discount to its dollar peg, sustained by legacy debt positions on Kava Mint CDPs. Pharos tracks the active provider entry separately from the historical cemetery incident."
     }
   ]
 }

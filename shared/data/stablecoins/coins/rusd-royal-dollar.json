@@ -7,7 +7,7 @@
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "Issuer-managed fiat reserve assets and short-term liquid instruments disclosed by Royal/R Coins materials",
@@ -15,6 +15,11 @@
   "detailProvider": "coingecko",
   "geckoId": "royal-dollar",
   "protocolSlug": "rcoins",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://book.royalcc.world/books/RUSD_Whitepaper/",
+    "provider": "Royal Coin / RUSD Whitepaper"
+  },
   "links": [
     {
       "label": "Website",

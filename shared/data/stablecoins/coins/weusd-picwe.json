@@ -52,7 +52,7 @@
     }
   ],
   "deploymentModel": "native-multichain",
-  "collateralQuality": "rwa",
+  "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "multisig",
   "reserves": [
@@ -62,6 +62,13 @@
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral"
+    }
+  ],
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Active depeg",
+      "message": "WEUSD has been trading near $0.91 despite documented 1:1 USDC backing; redemption pipeline may be impaired."
     }
   ]
 }

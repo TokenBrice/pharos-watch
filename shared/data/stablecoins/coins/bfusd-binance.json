@@ -3,7 +3,7 @@
   "name": "BFUSD",
   "symbol": "BFUSD",
   "flags": {
-    "backing": "crypto-backed",
+    "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,

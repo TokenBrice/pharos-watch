@@ -72,7 +72,7 @@
     {
       "type": "warning",
       "title": "Aggregate reserve disclosure",
-      "message": "USDv has on-chain supply validation, but public attestations are aggregate and do not expose a live composition API or a modeled primary redemption backstop."
+      "message": "USDv has on-chain supply validation, but public attestations are aggregate and do not expose a live composition API or a modeled primary redemption backstop. The live feed validates Solana token supply only; reserve composition is Ceffu-custodied off-exchange and is not on-chain verifiable."
     }
   ]
 }
