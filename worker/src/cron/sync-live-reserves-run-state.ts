@@ -14,6 +14,10 @@ interface LiveReserveCursorState {
   deferredCount: number;
   deferredAt: number;
   reason: "run-budget-exhausted";
+  tailState?: "recording" | "incomplete" | "complete";
+  cursorRecordedAt?: number;
+  tailCompletedAt?: number;
+  tailError?: string;
 }
 
 export function rotateConfiguredCoins(
@@ -27,21 +31,48 @@ export async function loadLiveReserveCursorState(db: D1Database): Promise<{
   nextStablecoinId: string | null;
   deferredCount: number;
   deferredAt: number;
+  tailState: "recording" | "incomplete" | "complete" | null;
+  cursorRecordedAt: number | null;
+  tailCompletedAt: number | null;
 } | null> {
   const cached = await getCache(db, RESERVE_SYNC_CURSOR_CACHE_KEY);
   if (!cached) return null;
   try {
     const parsed = JSON.parse(cached.value) as Partial<LiveReserveCursorState>;
+    const tailState =
+      parsed.tailState === "recording" || parsed.tailState === "incomplete" || parsed.tailState === "complete"
+        ? parsed.tailState
+        : null;
     return parsed.reason === "run-budget-exhausted" && typeof parsed.deferredAt === "number"
       ? {
           nextStablecoinId: typeof parsed.nextStablecoinId === "string" ? parsed.nextStablecoinId : null,
           deferredCount: typeof parsed.deferredCount === "number" ? parsed.deferredCount : 0,
           deferredAt: parsed.deferredAt,
+          tailState,
+          cursorRecordedAt: typeof parsed.cursorRecordedAt === "number" ? parsed.cursorRecordedAt : null,
+          tailCompletedAt: typeof parsed.tailCompletedAt === "number" ? parsed.tailCompletedAt : null,
         }
       : null;
   } catch {
     return null;
   }
+}
+
+async function writeLiveReserveCursorState(
+  db: D1Database,
+  state: LiveReserveCursorState,
+  updatedAt: number,
+): Promise<void> {
+  await db
+    .prepare(
+      "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+    )
+    .bind(
+      RESERVE_SYNC_CURSOR_CACHE_KEY,
+      JSON.stringify(state),
+      updatedAt,
+    )
+    .run();
 }
 
 export async function recordDeferredTail(
@@ -57,6 +88,26 @@ export async function recordDeferredTail(
     failureCategory: "run-budget-exhausted",
     deferredTail: true,
   };
+  const cursorBaseState = nextCursorStablecoinId
+    ? {
+        nextStablecoinId: nextCursorStablecoinId,
+        deferredCount: deferredCoins,
+        deferredAt: attemptedAt,
+        reason: "run-budget-exhausted" as const,
+        cursorRecordedAt: attemptedAt,
+      }
+    : null;
+
+  if (cursorBaseState) {
+    await writeLiveReserveCursorState(
+      db,
+      {
+        ...cursorBaseState,
+        tailState: "recording",
+      },
+      attemptedAt,
+    );
+  }
 
   for (const remaining of remainingCoins) {
     const remainingConfig = remaining.liveReservesConfig!;
@@ -85,32 +136,40 @@ export async function recordDeferredTail(
     );
   }
 
-  if (deferredCoins > 0 && nextCursorStablecoinId) {
-    statements.push(
-      db
-        .prepare(
-          "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
-        )
-        .bind(
-          RESERVE_SYNC_CURSOR_CACHE_KEY,
-          JSON.stringify({
-            nextStablecoinId: nextCursorStablecoinId,
-            deferredCount: deferredCoins,
-            deferredAt: attemptedAt,
-            reason: "run-budget-exhausted",
-          } satisfies LiveReserveCursorState),
-          attemptedAt,
-        ),
-    );
-  }
-
   if (statements.length > 0) {
     try {
       await batchExecute(db, statements);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      if (cursorBaseState) {
+        try {
+          await writeLiveReserveCursorState(
+            db,
+            {
+              ...cursorBaseState,
+              tailState: "incomplete",
+              tailError: message,
+            },
+            Math.floor(Date.now() / 1000),
+          );
+        } catch (cursorError) {
+          console.warn("[sync-live-reserves] Failed to mark deferred cursor incomplete:", cursorError);
+        }
+      }
       throw new Error(`Failed to record deferred reserve tail state: ${message}`);
     }
+  }
+
+  if (cursorBaseState) {
+    await writeLiveReserveCursorState(
+      db,
+      {
+        ...cursorBaseState,
+        tailState: "complete",
+        tailCompletedAt: Math.floor(Date.now() / 1000),
+      },
+      Math.floor(Date.now() / 1000),
+    );
   }
 
   return {

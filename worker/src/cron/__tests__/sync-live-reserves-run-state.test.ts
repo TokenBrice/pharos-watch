@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ConfiguredCoin } from "../sync-live-reserves-shared";
-import { recordDeferredTail } from "../sync-live-reserves-run-state";
+import { loadLiveReserveCursorState, recordDeferredTail } from "../sync-live-reserves-run-state";
 
 function makeCoin(id: string): ConfiguredCoin {
   return {
@@ -17,18 +17,37 @@ function makeCoin(id: string): ConfiguredCoin {
   } as unknown as ConfiguredCoin;
 }
 
-function makeBatchRecordingDb(batchSizes: number[]): D1Database {
+function makeBatchRecordingDb(batchSizes: number[], history: Array<{ sql: string; binds: unknown[] }> = []): D1Database {
   return {
     prepare: (sql: string) => ({
-      bind: (...binds: unknown[]) => ({ sql, binds }),
+      bind: (...binds: unknown[]) => ({
+        sql,
+        binds,
+        run: async () => {
+          history.push({ sql, binds });
+          return { success: true, meta: { changes: 1 } };
+        },
+        first: async () => {
+          history.push({ sql, binds });
+          return null;
+        },
+      }),
     }),
     batch: async (statements: D1PreparedStatement[]) => {
       batchSizes.push(statements.length);
+      for (const statement of statements as unknown as Array<{ sql: string; binds: unknown[] }>) {
+        history.push({ sql: statement.sql, binds: statement.binds });
+      }
       return statements.map(() => ({ success: true, meta: { changes: 1 } }));
     },
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
   } as unknown as D1Database;
+}
+
+function parseCursorWrite(entry: { binds: unknown[] } | undefined): Record<string, unknown> | null {
+  const value = entry?.binds[1];
+  return typeof value === "string" ? JSON.parse(value) as Record<string, unknown> : null;
 }
 
 describe("recordDeferredTail", () => {
@@ -43,6 +62,115 @@ describe("recordDeferredTail", () => {
       deferredCoins: 61,
       nextCursorStablecoinId: "coin-0",
     });
-    expect(batchSizes).toEqual([100, 23]);
+    expect(batchSizes).toEqual([100, 22]);
+  });
+
+  it("persists the cursor before deferred row batches and marks it complete after rows record", async () => {
+    const batchSizes: number[] = [];
+    const history: Array<{ sql: string; binds: unknown[] }> = [];
+    const db = makeBatchRecordingDb(batchSizes, history);
+
+    await recordDeferredTail(db, [makeCoin("coin-a"), makeCoin("coin-b")], new Set(), 1_700_000_000);
+
+    const cursorWrites = history.filter((entry) => (
+      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      && entry.binds[0] === "live-reserves:run-cursor"
+    ));
+    const firstDeferredRowIndex = history.findIndex((entry) => (
+      entry.sql.includes("INSERT INTO reserve_sync_state")
+      && entry.binds[0] === "coin-a"
+    ));
+    const firstCursorIndex = history.indexOf(cursorWrites[0]!);
+    const lastCursorIndex = history.indexOf(cursorWrites[cursorWrites.length - 1]!);
+
+    expect(cursorWrites).toHaveLength(2);
+    expect(firstCursorIndex).toBeGreaterThanOrEqual(0);
+    expect(firstCursorIndex).toBeLessThan(firstDeferredRowIndex);
+    expect(lastCursorIndex).toBeGreaterThan(firstDeferredRowIndex);
+    expect(parseCursorWrite(cursorWrites[0])).toMatchObject({
+      nextStablecoinId: "coin-a",
+      deferredCount: 2,
+      deferredAt: 1_700_000_000,
+      reason: "run-budget-exhausted",
+      cursorRecordedAt: 1_700_000_000,
+      tailState: "recording",
+    });
+    expect(parseCursorWrite(cursorWrites[1])).toMatchObject({
+      nextStablecoinId: "coin-a",
+      deferredCount: 2,
+      tailState: "complete",
+    });
+    expect(typeof parseCursorWrite(cursorWrites[1])?.tailCompletedAt).toBe("number");
+  });
+
+  it("keeps the cursor advanced and marks it incomplete when deferred row batching fails", async () => {
+    const history: Array<{ sql: string; binds: unknown[] }> = [];
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...binds: unknown[]) => ({
+          sql,
+          binds,
+          run: async () => {
+            history.push({ sql, binds });
+            return { success: true, meta: { changes: 1 } };
+          },
+        }),
+      }),
+      batch: async (statements: D1PreparedStatement[]) => {
+        for (const statement of statements as unknown as Array<{ sql: string; binds: unknown[] }>) {
+          history.push({ sql: statement.sql, binds: statement.binds });
+        }
+        throw new Error("batch unavailable");
+      },
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    await expect(recordDeferredTail(db, [makeCoin("coin-a")], new Set(), 1_700_000_000))
+      .rejects.toThrow("Failed to record deferred reserve tail state: batch unavailable");
+
+    const cursorWrites = history.filter((entry) => (
+      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      && entry.binds[0] === "live-reserves:run-cursor"
+    ));
+    expect(cursorWrites).toHaveLength(2);
+    expect(parseCursorWrite(cursorWrites[0])).toMatchObject({
+      nextStablecoinId: "coin-a",
+      tailState: "recording",
+    });
+    expect(parseCursorWrite(cursorWrites[1])).toMatchObject({
+      nextStablecoinId: "coin-a",
+      tailState: "incomplete",
+      tailError: "batch unavailable",
+    });
+  });
+});
+
+describe("loadLiveReserveCursorState", () => {
+  it("loads legacy cursor JSON without tail metadata", async () => {
+    const db = {
+      prepare: (_sql: string) => ({
+        bind: (..._binds: unknown[]) => ({
+          first: async () => ({
+            value: JSON.stringify({
+              nextStablecoinId: "legacy-coin",
+              deferredCount: 3,
+              deferredAt: 1_700_000_000,
+              reason: "run-budget-exhausted",
+            }),
+            updated_at: 1_700_000_000,
+          }),
+        }),
+      }),
+    } as unknown as D1Database;
+
+    await expect(loadLiveReserveCursorState(db)).resolves.toEqual({
+      nextStablecoinId: "legacy-coin",
+      deferredCount: 3,
+      deferredAt: 1_700_000_000,
+      tailState: null,
+      cursorRecordedAt: null,
+      tailCompletedAt: null,
+    });
   });
 });

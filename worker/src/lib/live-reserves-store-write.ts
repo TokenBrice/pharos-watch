@@ -13,6 +13,7 @@ import {
   buildReserveCompositionHistoryInsertStatement,
   buildReserveCompositionFinalizeSuccessStatement,
   buildReserveCompositionUpsertStatement,
+  buildReserveSuccessAuthoritativeReadbackStatement,
   buildReserveSyncAttemptHistoryInsertStatement,
   buildReserveSyncAttemptStartStatement,
   buildReserveSyncFinalizeAttemptStatement,
@@ -50,23 +51,64 @@ export async function recordReserveSyncDeferred(
   await runWithOverloadRetry(() => buildReserveSyncRecordDeferredStatement(db, record).run());
 }
 
+export async function didReserveSyncSuccessBecomeAuthoritative(
+  db: D1Database,
+  stablecoinId: string,
+  fetchedAt: number,
+  attemptId: string | null | undefined,
+): Promise<boolean> {
+  if (!attemptId) return false;
+  const row = await runWithOverloadRetry(() =>
+    buildReserveSuccessAuthoritativeReadbackStatement(db, stablecoinId, fetchedAt, attemptId)
+      .first<{ finalized: number }>(),
+  );
+  return row?.finalized === 1;
+}
+
 export async function finalizeReserveSyncSuccess(
   db: D1Database,
   composition: ReserveCompositionRecord,
   syncState: ReserveSyncStateRecord,
   finalizeDeadlineMs: number,
 ): Promise<{ finalized: boolean; historyRecorded: boolean; historyError?: string }> {
-  const [compositionRes, finalizeRes] = await runWithOverloadRetry(() =>
-    db.batch<unknown>([
-      buildReserveCompositionFinalizeSuccessStatement(db, composition),
-      buildReserveSyncFinalizeSuccessStatement(db, syncState, finalizeDeadlineMs),
-    ]),
-  );
-  const compositionApplied = ((compositionRes as D1Result).meta.changes ?? 0) > 0;
-  const finalized = ((finalizeRes as D1Result).meta.changes ?? 0) > 0;
+  let compositionApplied = false;
+  let finalized = false;
+
+  try {
+    const [compositionRes, finalizeRes] = await runWithOverloadRetry(() =>
+      db.batch<unknown>([
+        buildReserveCompositionFinalizeSuccessStatement(db, composition),
+        buildReserveSyncFinalizeSuccessStatement(db, syncState, finalizeDeadlineMs),
+      ]),
+    );
+    compositionApplied = ((compositionRes as D1Result).meta.changes ?? 0) > 0;
+    finalized = ((finalizeRes as D1Result).meta.changes ?? 0) > 0;
+  } catch (error) {
+    if (
+      await didReserveSyncSuccessBecomeAuthoritative(
+        db,
+        composition.stablecoinId,
+        composition.fetchedAt,
+        composition.attemptId,
+      )
+    ) {
+      compositionApplied = true;
+      finalized = true;
+    } else {
+      throw error;
+    }
+  }
 
   if (!finalized || !compositionApplied) {
-    return { finalized: false, historyRecorded: false };
+    const authoritative = await didReserveSyncSuccessBecomeAuthoritative(
+      db,
+      composition.stablecoinId,
+      composition.fetchedAt,
+      composition.attemptId,
+    );
+    if (!authoritative) {
+      return { finalized: false, historyRecorded: false };
+    }
   }
 
   try {

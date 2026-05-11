@@ -414,9 +414,9 @@ describe("live-reserves-store", () => {
     expect(historyRecorded).toBe(true);
     const history = db.getHistory().map((entry) => entry.sql);
     expect(history.some((sql) => sql.includes("INSERT INTO reserve_composition ("))).toBe(true);
-    expect(history.some((sql) => sql.includes("INSERT INTO reserve_composition_history"))).toBe(true);
+    expect(history.some((sql) => sql.includes("INSERT OR IGNORE INTO reserve_composition_history"))).toBe(true);
     expect(history.some((sql) => sql.includes("UPDATE reserve_sync_state"))).toBe(true);
-    expect(history.some((sql) => sql.includes("INSERT INTO reserve_sync_attempt_history"))).toBe(true);
+    expect(history.some((sql) => sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history"))).toBe(true);
   });
 
   it("fences the composition upsert so a late attempt cannot overwrite a newer row", async () => {
@@ -507,8 +507,125 @@ describe("live-reserves-store", () => {
     expect(result.finalized).toBe(false);
     expect(result.historyRecorded).toBe(false);
     const history = db.getHistory().map((entry) => entry.sql);
-    expect(history.some((sql) => sql.includes("INSERT INTO reserve_composition_history"))).toBe(false);
-    expect(history.some((sql) => sql.includes("INSERT INTO reserve_sync_attempt_history"))).toBe(false);
+    expect(history.some((sql) => sql.includes("INSERT OR IGNORE INTO reserve_composition_history"))).toBe(false);
+    expect(history.some((sql) => sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history"))).toBe(false);
+    expect(history.some((sql) => sql.includes("JOIN reserve_sync_state"))).toBe(true);
+  });
+
+  it("treats a success finalization batch no-op as finalized when authoritative readback matches the attempt", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT INTO reserve_composition (",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      {
+        match: "UPDATE reserve_sync_state",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      {
+        match: "JOIN reserve_sync_state",
+        rows: [],
+        first: { finalized: 1 },
+      },
+    ]);
+    const attemptId = "attempt-readback-no-op";
+
+    const result = await finalizeReserveSyncSuccess(
+      db,
+      {
+        stablecoinId: "iusd-infinifi",
+        slices: LIVE_SLICES,
+        fetchedAt: 1_000,
+        source: "infinifi",
+        attemptId,
+        metadata: {},
+        warningCount: 0,
+        warnings: [],
+        adapterSourceModel: "dynamic-mix",
+        adapterEvidenceClass: "independent",
+      },
+      {
+        stablecoinId: "iusd-infinifi",
+        adapterKey: "infinifi",
+        breakerKey: "live-reserves:infinifi",
+        lastAttemptedAt: 1_000,
+        lastSuccessAt: 1_000,
+        lastStatus: "ok",
+        warningCount: 0,
+        warnings: [],
+        lastError: null,
+        metadata: {},
+        lastAttemptId: attemptId,
+        pendingAttemptId: attemptId,
+        lastSuccessAttemptId: attemptId,
+      },
+      Date.now() + 30_000,
+    );
+
+    expect(result.finalized).toBe(true);
+    expect(result.historyRecorded).toBe(true);
+    const history = db.getHistory();
+    const readback = history.find((entry) => entry.sql.includes("JOIN reserve_sync_state"));
+    expect(readback?.binds).toEqual(["iusd-infinifi", 1_000, attemptId]);
+    expect(history.some((entry) => entry.sql.includes("INSERT OR IGNORE INTO reserve_composition_history"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history"))).toBe(true);
+  });
+
+  it("treats an ambiguous success finalization batch error as finalized when authoritative readback matches the attempt", async () => {
+    const db = mockD1([
+      {
+        match: "UPDATE reserve_sync_state",
+        rows: [],
+        throwError: new Error("D1_ERROR: exceeded maximum duration"),
+      },
+      {
+        match: "JOIN reserve_sync_state",
+        rows: [],
+        first: { finalized: 1 },
+      },
+    ]);
+    const attemptId = "attempt-readback-error";
+
+    const result = await finalizeReserveSyncSuccess(
+      db,
+      {
+        stablecoinId: "iusd-infinifi",
+        slices: LIVE_SLICES,
+        fetchedAt: 1_000,
+        source: "infinifi",
+        attemptId,
+        metadata: {},
+        warningCount: 0,
+        warnings: [],
+        adapterSourceModel: "dynamic-mix",
+        adapterEvidenceClass: "independent",
+      },
+      {
+        stablecoinId: "iusd-infinifi",
+        adapterKey: "infinifi",
+        breakerKey: "live-reserves:infinifi",
+        lastAttemptedAt: 1_000,
+        lastSuccessAt: 1_000,
+        lastStatus: "ok",
+        warningCount: 0,
+        warnings: [],
+        lastError: null,
+        metadata: {},
+        lastAttemptId: attemptId,
+        pendingAttemptId: attemptId,
+        lastSuccessAttemptId: attemptId,
+      },
+      Date.now() + 30_000,
+    );
+
+    expect(result.finalized).toBe(true);
+    expect(result.historyRecorded).toBe(true);
+    const history = db.getHistory().map((entry) => entry.sql);
+    expect(history.some((sql) => sql.includes("JOIN reserve_sync_state"))).toBe(true);
+    expect(history.some((sql) => sql.includes("INSERT OR IGNORE INTO reserve_composition_history"))).toBe(true);
+    expect(history.some((sql) => sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history"))).toBe(true);
   });
 
   it("inserts both history rows only when composition and finalize both apply", async () => {
@@ -550,8 +667,57 @@ describe("live-reserves-store", () => {
     expect(result.finalized).toBe(true);
     expect(result.historyRecorded).toBe(true);
     const historySqls = db.getHistory().map((entry) => entry.sql);
-    expect(historySqls.some((sql) => sql.includes("INSERT INTO reserve_composition_history"))).toBe(true);
-    expect(historySqls.some((sql) => sql.includes("INSERT INTO reserve_sync_attempt_history"))).toBe(true);
+    expect(historySqls.some((sql) => sql.includes("INSERT OR IGNORE INTO reserve_composition_history"))).toBe(true);
+    expect(historySqls.some((sql) => sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history"))).toBe(true);
+  });
+
+  it("uses idempotent INSERT OR IGNORE statements for attempt-stamped reserve history", async () => {
+    const db = mockD1();
+    const attemptId = "attempt-idempotent-history";
+
+    await finalizeReserveSyncSuccess(
+      db,
+      {
+        stablecoinId: "iusd-infinifi",
+        slices: LIVE_SLICES,
+        fetchedAt: 1_000,
+        source: "infinifi",
+        attemptId,
+        metadata: {},
+        warningCount: 0,
+        warnings: [],
+        adapterSourceModel: "dynamic-mix",
+        adapterEvidenceClass: "independent",
+      },
+      {
+        stablecoinId: "iusd-infinifi",
+        adapterKey: "infinifi",
+        breakerKey: "live-reserves:infinifi",
+        lastAttemptedAt: 1_000,
+        lastSuccessAt: 1_000,
+        lastStatus: "ok",
+        warningCount: 0,
+        warnings: [],
+        lastError: null,
+        metadata: {},
+        lastAttemptId: attemptId,
+        pendingAttemptId: attemptId,
+        lastSuccessAttemptId: attemptId,
+      },
+      Date.now() + 30_000,
+    );
+
+    const history = db.getHistory();
+    const compositionHistory = history.find((entry) =>
+      entry.sql.includes("INSERT OR IGNORE INTO reserve_composition_history")
+    );
+    const attemptHistory = history.find((entry) =>
+      entry.sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history")
+    );
+    expect(compositionHistory).toBeDefined();
+    expect(attemptHistory).toBeDefined();
+    expect(compositionHistory?.binds).toContain(attemptId);
+    expect(attemptHistory?.binds).toContain(attemptId);
   });
 
   it("clears active attempt fencing when recording a deferred tail row", async () => {
@@ -574,7 +740,7 @@ describe("live-reserves-store", () => {
   it("keeps authoritative success when non-authoritative history writes fail", async () => {
     const db = mockD1([
       {
-        match: "INSERT INTO reserve_composition_history",
+        match: "INSERT OR IGNORE INTO reserve_composition_history",
         rows: [],
         throwError: new Error("history unavailable"),
       },

@@ -13,6 +13,7 @@ import {
 import {
   beginReserveSyncAttempt,
   createReserveSyncAttemptId,
+  didReserveSyncSuccessBecomeAuthoritative,
   finalizeReserveSyncAttempt,
   finalizeReserveSyncSuccess,
   type ReserveCompositionRecord,
@@ -206,12 +207,27 @@ export async function syncReserveCoin(args: {
         throw error;
       }
 
-      console.warn(`[sync-live-reserves] ${timeoutMessage}; clearing pending attempt authority`);
-      await recordFailure("error", timeoutMessage, "storage-write-timeout", warnings, {
-        uncertainWrite: true,
-        durationMs,
-      });
-      failureAlreadyRecorded = true;
+      if (
+        await didReserveSyncSuccessBecomeAuthoritative(
+          db,
+          compositionRecord.stablecoinId,
+          compositionRecord.fetchedAt,
+          compositionRecord.attemptId,
+        )
+      ) {
+        console.warn(`[sync-live-reserves] ${timeoutMessage}; authoritative success confirmed by readback`);
+        finalizeSucceeded = true;
+        historyWriteFailed = "D1 write timed out after authoritative success readback";
+      }
+
+      if (!finalizeSucceeded) {
+        console.warn(`[sync-live-reserves] ${timeoutMessage}; clearing pending attempt authority`);
+        await recordFailure("error", timeoutMessage, "storage-write-timeout", warnings, {
+          uncertainWrite: true,
+          durationMs,
+        });
+        failureAlreadyRecorded = true;
+      }
     }
 
     if (!finalizeSucceeded) {

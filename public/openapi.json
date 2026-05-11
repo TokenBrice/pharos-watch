@@ -242,7 +242,7 @@
           "Reserves"
         ],
         "summary": "Stablecoin reserves",
-        "description": "Live or fallback reserve composition where Pharos has reserve coverage.",
+        "description": "Live or fallback reserve composition for live-reserve-enabled assets.",
         "operationId": "stablecoinReservesStablecoinId",
         "parameters": [
           {

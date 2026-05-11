@@ -303,7 +303,7 @@ describe("syncLiveReserves", () => {
       deferredCoins?: number;
       nextCursorStablecoinId?: string | null;
     };
-    const cursorWrite = db.getHistory().find((entry) =>
+    const cursorWrites = db.getHistory().filter((entry) =>
       entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "live-reserves:run-cursor"
     );
 
@@ -311,11 +311,21 @@ describe("syncLiveReserves", () => {
       deferredCoins: configuredCoinCount - 1,
       nextCursorStablecoinId: configuredIds[1],
     });
-    expect(cursorWrite).toBeDefined();
+    expect(cursorWrites).toHaveLength(2);
+    expect(JSON.parse(cursorWrites[0]?.binds[1] as string)).toMatchObject({
+      nextStablecoinId: configuredIds[1],
+      deferredCount: configuredCoinCount - 1,
+      tailState: "recording",
+    });
+    expect(JSON.parse(cursorWrites[1]?.binds[1] as string)).toMatchObject({
+      nextStablecoinId: configuredIds[1],
+      deferredCount: configuredCoinCount - 1,
+      tailState: "complete",
+    });
 
     activeRun = 2;
     nowMs = 0;
-    const cursorValue = cursorWrite?.binds[1];
+    const cursorValue = cursorWrites[1]?.binds[1];
     const resumedDb = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
@@ -388,16 +398,112 @@ describe("syncLiveReserves", () => {
     // for the timed-out coin, not a second success-finalize-rejected row on top.
     const timedOutCoinId = timeoutAttempt!.binds[0];
     const attemptsForTimedOutCoin = db.getHistory().filter((entry) => (
-      entry.sql.includes("INSERT INTO reserve_sync_attempt_history")
+      entry.sql.includes("reserve_sync_attempt_history")
       && entry.binds[0] === timedOutCoinId
     ));
     expect(attemptsForTimedOutCoin).toHaveLength(1);
     const duplicateFinalizeRejected = db.getHistory().find((entry) => (
-      entry.sql.includes("INSERT INTO reserve_sync_attempt_history")
+      entry.sql.includes("reserve_sync_attempt_history")
       && entry.binds[0] === timedOutCoinId
       && entry.binds.some((bind) => typeof bind === "string" && bind.includes("success-finalize-rejected"))
     ));
     expect(duplicateFinalizeRejected).toBeUndefined();
+  });
+
+  it("accepts a timed out write finalization when authoritative readback proves success", async () => {
+    vi.useFakeTimers();
+    mockAdapterRegistry(
+      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
+    );
+
+    const actualStore = await vi.importActual<typeof import("../../lib/live-reserves-store")>("../../lib/live-reserves-store");
+    vi.doMock("../../lib/live-reserves-store", async () => ({
+      ...actualStore,
+      finalizeReserveSyncSuccess: vi.fn(async () => (
+        await new Promise<Awaited<ReturnType<typeof actualStore.finalizeReserveSyncSuccess>>>(() => undefined)
+      )),
+      didReserveSyncSuccessBecomeAuthoritative: vi.fn(async () => true),
+    }));
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    const runPromise = syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      {
+        runBudgetMs: 12,
+        adapterTimeoutMs: 1,
+        d1FinalizeTimeoutMs: 10,
+        finalizationMarginMs: 1,
+      },
+    );
+
+    await vi.advanceTimersByTimeAsync(11);
+    const result = await runPromise;
+    const metadata = JSON.parse(result?.metadata ?? "{}") as {
+      synced?: number;
+      failed?: number;
+      warningCount?: number;
+      warnings?: string[];
+    };
+
+    expect(result?.itemCount).toBe(1);
+    expect(metadata).toMatchObject({
+      synced: 1,
+      failed: 0,
+      warningCount: 1,
+    });
+    expect(metadata.warnings).toContain("usdt-tether:history-write-failed");
+    const storageTimeoutAttempt = db.getHistory().find((entry) => (
+      entry.sql.includes("reserve_sync_attempt_history")
+      && entry.binds.some((bind) => typeof bind === "string" && bind.includes("storage-write-timeout"))
+    ));
+    expect(storageTimeoutAttempt).toBeUndefined();
+  });
+
+  it("hard-times out a non-cooperative adapter attempt", async () => {
+    vi.useFakeTimers();
+    const adapterFetch = mockAdapterRegistry(
+      async () => await new Promise<never>(() => undefined),
+    );
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    const runPromise = syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      {
+        runBudgetMs: 20,
+        adapterTimeoutMs: 10,
+        d1FinalizeTimeoutMs: 1,
+        finalizationMarginMs: 1,
+      },
+    );
+
+    await vi.advanceTimersByTimeAsync(11);
+    const result = await runPromise;
+    const metadata = JSON.parse(result?.metadata ?? "{}") as {
+      failed?: number;
+      deferredCoins?: number;
+      runBudgetTruncated?: boolean;
+    };
+
+    expect(adapterFetch).toHaveBeenCalledTimes(1);
+    expect(result?.status).toBe("error");
+    expect(metadata).toMatchObject({
+      failed: 1,
+      deferredCoins: configuredCoinCount - 1,
+      runBudgetTruncated: true,
+    });
+    const timeoutAttempt = db.getHistory().find((entry) => (
+      entry.sql.includes("reserve_sync_attempt_history")
+      && entry.binds.some((bind) => typeof bind === "string" && bind.includes("adapter-timeout"))
+    ));
+    expect(timeoutAttempt).toBeDefined();
   });
 
   it("emits durationMs in reserve_composition metadata for successful syncs", async () => {
@@ -630,7 +736,7 @@ describe("syncLiveReserves", () => {
     await syncLiveReserves(db, new AbortController().signal, {});
 
     const successAttempt = db.getHistory().find((entry) => (
-      entry.sql.includes("INSERT INTO reserve_composition_history")
+      entry.sql.includes("reserve_composition_history")
       && entry.binds[0] === fallbackCoin!.id
     ));
     expect(successAttempt).toBeDefined();

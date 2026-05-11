@@ -58,4 +58,33 @@ describe("reserve adapter I/O limiter", () => {
     await expect(second).resolves.toBe("ok");
     expect(order).toEqual(["first", "second"]);
   });
+
+  it("rejects queued work when the adapter attempt aborts", async () => {
+    const limiter = createAdapterIoLimiter(1);
+    const controller = new AbortController();
+    const order: string[] = [];
+    let releaseFirst: (() => void) | undefined;
+
+    const first = runAdapterIo({ ioLimiter: limiter }, "first", async () => {
+      order.push("first");
+      await new Promise<void>((resolve) => {
+        releaseFirst = resolve;
+      });
+      return "first";
+    });
+    const second = runAdapterIo({ ioLimiter: limiter, abortSignal: controller.signal }, "second", async () => {
+      order.push("second");
+      return "second";
+    });
+
+    await tick();
+    controller.abort(new Error("adapter-timeout"));
+
+    await expect(second).rejects.toThrow("adapter-timeout");
+    expect(order).toEqual(["first"]);
+
+    releaseFirst?.();
+    await expect(first).resolves.toBe("first");
+    expect(order).toEqual(["first"]);
+  });
 });

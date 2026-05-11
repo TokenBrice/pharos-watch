@@ -126,7 +126,7 @@ export function buildReserveCompositionHistoryInsertStatement(
 ): D1PreparedStatement {
   return db
     .prepare(
-      `INSERT INTO reserve_composition_history (
+      `INSERT OR IGNORE INTO reserve_composition_history (
          stablecoin_id,
          fetched_at,
          adapter_key,
@@ -159,7 +159,7 @@ export function buildReserveSyncAttemptHistoryInsertStatement(
 ): D1PreparedStatement {
   return db
     .prepare(
-      `INSERT INTO reserve_sync_attempt_history (
+      `INSERT OR IGNORE INTO reserve_sync_attempt_history (
          stablecoin_id,
          attempted_at,
          adapter_key,
@@ -184,6 +184,30 @@ export function buildReserveSyncAttemptHistoryInsertStatement(
       record.lastError,
       JSON.stringify(record.metadata),
     );
+}
+
+export function buildReserveSuccessAuthoritativeReadbackStatement(
+  db: D1Database,
+  stablecoinId: string,
+  fetchedAt: number,
+  attemptId: string,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `SELECT 1 AS finalized
+         FROM reserve_composition c
+         JOIN reserve_sync_state s
+           ON s.stablecoin_id = c.stablecoin_id
+        WHERE c.stablecoin_id = ?
+          AND c.fetched_at = ?
+          AND c.attempt_id = ?
+          AND s.last_success_at = c.fetched_at
+          AND s.last_attempt_id = c.attempt_id
+          AND s.last_success_attempt_id = c.attempt_id
+          AND s.pending_attempt_id IS NULL
+        LIMIT 1`,
+    )
+    .bind(stablecoinId, fetchedAt, attemptId);
 }
 
 export function buildReserveSyncAttemptStartStatement(

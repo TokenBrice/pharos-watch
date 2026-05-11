@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { StatusResponse } from "@shared/types/status";
+import type { DataQuality, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../public-health-assessment";
+import { buildDataQualityCauses } from "../status/evaluation-causes";
 import { deriveAvailabilityStatus, deriveReserveCompositionStatus } from "../status/evaluation-state";
 
 function makeReserveComposition(
@@ -81,6 +82,36 @@ function makePublicHealth(
   };
 }
 
+function makeDataQuality(overrides?: Partial<DataQuality>): DataQuality {
+  return {
+    stablecoinsCacheStatus: "ok",
+    stablecoinsCacheReason: null,
+    blacklistGapStatus: "ok",
+    activeDepegStatus: "ok",
+    onchainSupplyQueryStatus: "ok",
+    sourceFailures: [],
+    totalStablecoins: 10,
+    missingPrices: 0,
+    blacklistMissingAmounts: 0,
+    blacklistRecentMissingAmounts: 0,
+    blacklistRecentWindowSec: 86400,
+    blacklistMissingRatio: 0,
+    blacklistTotal: 0,
+    blacklistOldestRecoverableAgeSec: null,
+    blacklistNeverAttemptedCount: 0,
+    blacklistRepeatedFailureCount: 0,
+    onchainSupplyDivergences: 0,
+    onchainDivergenceRatio: 0,
+    onchainSupplyMonitoring: "active",
+    onchainSupplyLatestAt: null,
+    onchainSupplyTrackedCoins: 0,
+    activeDepegs: 0,
+    staleOnchainSupply: 0,
+    onchainStaleRatio: 0,
+    ...overrides,
+  };
+}
+
 describe("status evaluation policy", () => {
   it("keeps reserve status healthy for low-count issues when fresh coverage remains high", () => {
     const assessment = deriveReserveCompositionStatus(makeReserveComposition({
@@ -114,6 +145,18 @@ describe("status evaluation policy", () => {
     expect(assessment.authoritativeFreshCoverageRatio).toBe(0.4);
   });
 
+  it("degrades reserve status when independent feeds are persistently stale despite high coverage", () => {
+    const assessment = deriveReserveCompositionStatus(makeReserveComposition({
+      persistentlyStaleIndependentCoins: [
+        { stablecoinId: "coin-a", ageSec: 1_300_000 },
+      ],
+    }));
+
+    expect(assessment.status).toBe("degraded");
+    expect(assessment.freshCoverageRatio).toBe(1);
+    expect(assessment.authoritativeFreshCoverageRatio).toBe(0.8);
+  });
+
   it("marks reserve status stale only when no fresh coverage remains", () => {
     const assessment = deriveReserveCompositionStatus(makeReserveComposition({
       freshCoins: 0,
@@ -141,6 +184,35 @@ describe("status evaluation policy", () => {
     });
 
     expect(availability).toBe("healthy");
+  });
+});
+
+describe("status cause text", () => {
+  it("includes persistent stale independent feed details in degraded reserve sync causes", () => {
+    const reserveComposition = makeReserveComposition({
+      status: "degraded",
+      persistentlyStaleIndependentCoins: [
+        { stablecoinId: "coin-a", ageSec: 1_500_000 },
+        { stablecoinId: "coin-b", ageSec: 1_400_000 },
+        { stablecoinId: "coin-c", ageSec: 1_300_000 },
+        { stablecoinId: "coin-d", ageSec: 1_200_000 },
+      ],
+    });
+
+    const causes = buildDataQualityCauses({
+      dataQuality: makeDataQuality(),
+      missingPriceRatio: 0,
+      blacklistMissingRatio: 0,
+      blacklistRecentMissing: 0,
+      onchainAssessmentCauses: [],
+      reserveCompositionQueryFailed: false,
+      reserveComposition,
+    });
+
+    expect(causes).toContainEqual(expect.objectContaining({
+      code: "reserve_sync_degraded",
+      message: expect.stringContaining("4 persistently stale independent feed(s) (coin-a, coin-b, coin-c, +1 more)."),
+    }));
   });
 });
 

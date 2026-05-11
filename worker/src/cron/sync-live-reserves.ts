@@ -63,6 +63,34 @@ function createAbortableAttemptSignal(
   return { signal: timeout.signal, cleanup };
 }
 
+function abortReason(signal: AbortSignal, fallback: string): Error | DOMException {
+  const reason = signal.reason;
+  if (reason instanceof Error || reason instanceof DOMException) return reason;
+  if (typeof reason === "string") return new Error(reason);
+  return new Error(fallback);
+}
+
+async function raceWithAbortSignal<T>(
+  operation: Promise<T>,
+  signal: AbortSignal,
+  fallbackReason: string,
+): Promise<T> {
+  if (signal.aborted) throw abortReason(signal, fallbackReason);
+
+  let cleanup = () => {};
+  const abortPromise = new Promise<T>((_resolve, reject) => {
+    const abort = () => reject(abortReason(signal, fallbackReason));
+    cleanup = () => signal.removeEventListener("abort", abort);
+    signal.addEventListener("abort", abort, { once: true });
+  });
+
+  try {
+    return await Promise.race([operation, abortPromise]);
+  } finally {
+    cleanup();
+  }
+}
+
 async function reportLiveReserveProgress(
   reportProgress: CronProgressReporter | undefined,
   update: {
@@ -104,7 +132,14 @@ async function runAdapterAttempt(
 ): Promise<AdapterResult> {
   const { signal: attemptSignal, cleanup } = createAbortableAttemptSignal(signal, adapterTimeoutMs);
   try {
-    return await adapter.fetch(coin, config, attemptSignal, Object.assign({}, adapterCtx, { ioLimiter: createAdapterIoLimiter(RESERVE_ADAPTER_MAX_PARALLEL_IO) }));
+    return await raceWithAbortSignal(
+      adapter.fetch(coin, config, attemptSignal, Object.assign({}, adapterCtx, {
+        abortSignal: attemptSignal,
+        ioLimiter: createAdapterIoLimiter(RESERVE_ADAPTER_MAX_PARALLEL_IO),
+      })),
+      attemptSignal,
+      "adapter-timeout",
+    );
   } finally {
     cleanup();
   }

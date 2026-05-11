@@ -21,6 +21,7 @@ export interface AdapterContext {
   nowSec?: number;
   requestCache?: Map<string, Promise<unknown>>;
   ioLimiter?: AdapterIoLimiter;
+  abortSignal?: AbortSignal;
 }
 
 export interface AdapterResult {

@@ -14,6 +14,14 @@ function formatRatio(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
 }
 
+function formatPersistentStaleIndependentFeeds(
+  coins: StatusResponse["reserveComposition"]["persistentlyStaleIndependentCoins"],
+): string {
+  const examples = coins.slice(0, 3).map((coin) => coin.stablecoinId).join(", ");
+  const suffix = coins.length > 3 ? `, +${coins.length - 3} more` : "";
+  return `${coins.length} persistently stale independent feed(s)${examples ? ` (${examples}${suffix})` : ""}`;
+}
+
 /**
  * Operator-facing runbook URLs, keyed by StatusCause.code. Populated only
  * for the codes that have a documented runbook — the rest are deliberately
@@ -453,6 +461,10 @@ export function buildDataQualityCauses(input: {
     pushCause(dataQualityCauses, cause);
   }
 
+  const persistentStaleIndependentFeedText = formatPersistentStaleIndependentFeeds(
+    input.reserveComposition.persistentlyStaleIndependentCoins,
+  );
+
   if (input.reserveComposition.status === "stale") {
     pushCause(dataQualityCauses, {
       code: "reserve_sync_stale",
@@ -460,6 +472,9 @@ export function buildDataQualityCauses(input: {
       severity: "critical",
       message:
         "All configured live reserve feeds are missing, stale, or degraded." +
+        (input.reserveComposition.persistentlyStaleIndependentCoins.length > 0
+          ? ` ${persistentStaleIndependentFeedText}.`
+          : "") +
         (input.reserveComposition.runBudgetTruncated
           ? ` Last run was truncated by budget with ${input.reserveComposition.deferredCoins} deferred coin(s)${input.reserveComposition.nextCursorStablecoinId ? `; next cursor ${input.reserveComposition.nextCursorStablecoinId}` : ""}.`
           : "") +
@@ -478,6 +493,9 @@ export function buildDataQualityCauses(input: {
         `${input.reserveComposition.errorCoins} error, ${input.reserveComposition.missingCoins} missing, ` +
         `${input.reserveComposition.staleCoins} stale, ${input.reserveComposition.degradedCoins} degraded, ` +
         `${input.reserveComposition.corruptCoins} corrupt live reserve feed(s).` +
+        (input.reserveComposition.persistentlyStaleIndependentCoins.length > 0
+          ? ` ${persistentStaleIndependentFeedText}.`
+          : "") +
         (input.reserveComposition.runBudgetTruncated
           ? ` Last run was truncated by budget with ${input.reserveComposition.deferredCoins} deferred coin(s)${input.reserveComposition.nextCursorStablecoinId ? `; next cursor ${input.reserveComposition.nextCursorStablecoinId}` : ""}.`
           : "") +

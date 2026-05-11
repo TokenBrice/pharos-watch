@@ -12,6 +12,14 @@ function formatLastSuccess(lastSuccessAt: number | null, nowSeconds: number): st
   return `${new Date(lastSuccessAt * 1000).toLocaleString()} (${formatElapsedSeconds(Math.max(0, nowSeconds - lastSuccessAt))} ago)`;
 }
 
+function formatPersistentStaleIndependentFeeds(
+  coins: StatusResponse["reserveComposition"]["persistentlyStaleIndependentCoins"],
+): string {
+  const examples = coins.slice(0, 3).map((coin) => coin.stablecoinId).join(", ");
+  const suffix = coins.length > 3 ? `, +${coins.length - 3} more` : "";
+  return examples ? `${coins.length} (${examples}${suffix})` : String(coins.length);
+}
+
 export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthCardProps) {
   const statusTone =
     health.status === "stale"
@@ -108,6 +116,12 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
               <div className="font-mono text-base text-red-600 dark:text-red-400">{health.writeTimeoutUncertain}</div>
             </div>
           </div>
+          {health.persistentlyStaleIndependentCoins.length > 0 ? (
+            <div className="text-xs text-amber-700 dark:text-amber-300">
+              Persistently stale independent feeds:{" "}
+              {formatPersistentStaleIndependentFeeds(health.persistentlyStaleIndependentCoins)}
+            </div>
+          ) : null}
         </div>
       </CardContent>
     </Card>

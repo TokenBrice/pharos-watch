@@ -57,6 +57,8 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0111     | `0111_telegram_pending_alert_retry_metadata.sql` | Add retry deferral, error, dedupe, and chunk metadata to Telegram pending alerts                |
 | 0112     | `0112_api_key_self_serve_hardening.sql`         | Expand self-serve limiter scopes, add unique integrity indexes, and record self-serve revocations |
 | 0113     | `0113_api_key_self_serve_issuance_fencing.sql`  | Add self-serve issuance lock metadata and fixed-window issuance caps                            |
+| 0114     | `0114_telegram_dynamic_presets.sql`             | Add persistent Telegram preset subscriptions for dynamic stablecoin cohorts                     |
+| 0115     | `0115_live_reserve_history_attempt_idempotency.sql` | Add partial unique indexes for idempotent live-reserve history writes by non-null attempt ID |
 
 ## Retired Individual Migrations
 

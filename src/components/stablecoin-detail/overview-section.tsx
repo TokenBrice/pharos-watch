@@ -382,11 +382,6 @@ export function OverviewSection({
                     </div>
                   </div>
                 ) : null}
-                {reserves.sync?.warnings && reserves.sync.warnings.length > 0 && (
-                  <div className="mt-2 text-center text-xs text-amber-700 dark:text-amber-300">
-                    Operator note: {reserves.sync.warnings.join("; ")}
-                  </div>
-                )}
               </section>
             )}
             {redemptionBackstop ? (

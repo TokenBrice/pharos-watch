@@ -40,6 +40,7 @@ export function deriveReserveCompositionStatus(
     reserveComposition.configuredCoins > 0 ? reserveComposition.freshCoins / reserveComposition.configuredCoins : 0;
   const authoritativeFreshCoverageRatio =
     reserveComposition.configuredCoins > 0 ? authoritativeFreshCoins / reserveComposition.configuredCoins : 0;
+  const hasPersistentlyStaleIndependentFeeds = reserveComposition.persistentlyStaleIndependentCoins.length > 0;
   const status: StatusResponse["reserveComposition"]["status"] =
     bootstrap || reserveComposition.configuredCoins === 0
       ? "healthy"
@@ -47,6 +48,7 @@ export function deriveReserveCompositionStatus(
         ? "stale"
         : freshCoverageRatio < STATUS_RESERVE_COMPOSITION_THRESHOLDS.degradedFreshCoverageRatio
             || authoritativeFreshCoverageRatio < STATUS_RESERVE_COMPOSITION_THRESHOLDS.degradedAuthoritativeCoverageRatio
+            || hasPersistentlyStaleIndependentFeeds
           ? "degraded"
           : "healthy";
 

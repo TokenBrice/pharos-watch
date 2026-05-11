@@ -212,7 +212,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     key: "stablecoin-reserves-canary",
     path: stablecoinPathTemplate(API_PATHS.stablecoinReserves(STABLECOIN_ID_TOKEN)),
     summary: "Stablecoin reserves",
-    description: "Live or fallback reserve composition where Pharos has reserve coverage.",
+    description: "Live or fallback reserve composition for live-reserve-enabled assets.",
     tags: ["Stablecoins", "Reserves"],
     parameters: [STABLECOIN_ID_PARAM],
     postman: {
