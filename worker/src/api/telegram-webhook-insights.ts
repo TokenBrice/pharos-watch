@@ -9,9 +9,11 @@ import { safeJsonParse } from "../lib/api-utils";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../lib/report-card-cache";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
+import { suggestClosestToken } from "../lib/telegram-alerts";
 import type { StatusForCoin } from "./telegram-webhook-status";
 
 const TOP_LIMIT = 5;
+const TOP_VIEWS = ["depeg", "dews", "yield", "liquidity", "chains", "safety"] as const;
 
 function formatUsdCompact(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "n/a";
@@ -238,8 +240,12 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
         `${i}. ${card.symbol} — ${card.overallGrade} (${card.overallScore ?? "NR"})`,
       );
     }
-    default:
-      return "Usage: /top depeg|dews|yield|liquidity|chains|safety";
+    default: {
+      const usage = "Usage: /top depeg|dews|yield|liquidity|chains|safety";
+      if (!normalized) return usage;
+      const suggestion = suggestClosestToken(normalized, TOP_VIEWS);
+      return suggestion ? `Did you mean /top ${suggestion}?\n${usage}` : usage;
+    }
   }
 }
 

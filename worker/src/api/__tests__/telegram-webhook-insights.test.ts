@@ -46,4 +46,16 @@ describe("buildTopMessage", () => {
     await expect(buildTopMessage(db, "unknown")).resolves.toBe("Usage: /top depeg|dews|yield|liquidity|chains|safety");
     expect(db.getHistory()).toEqual([]);
   });
+
+  it("suggests the closest /top view for one-character typos", async () => {
+    const db = mockD1([], { requireMatch: true });
+
+    await expect(buildTopMessage(db, "dewz")).resolves.toBe(
+      "Did you mean /top dews?\nUsage: /top depeg|dews|yield|liquidity|chains|safety",
+    );
+    await expect(buildTopMessage(db, "safty")).resolves.toBe(
+      "Did you mean /top safety?\nUsage: /top depeg|dews|yield|liquidity|chains|safety",
+    );
+    expect(db.getHistory()).toEqual([]);
+  });
 });

@@ -52,6 +52,48 @@ const ALERT_TYPES = new Set(["dews", "depeg", "safety", "launch"]);
 const GLOBAL_SUBSCRIBE_TOKEN = "all";
 const DEPEG_STEP_TOKEN = "depeg-step";
 
+/**
+ * Returns the closest candidate to `input` within Levenshtein distance 1
+ * (case-insensitive), or null if no candidate qualifies. Comparison is on
+ * lowercased strings; the original candidate string is returned unchanged.
+ */
+export function suggestClosestToken(input: string, candidates: readonly string[]): string | null {
+  const needle = input.trim().toLowerCase();
+  if (needle.length === 0) return null;
+  let best: { value: string; distance: number } | null = null;
+  for (const candidate of candidates) {
+    const distance = levenshteinDistance(needle, candidate.toLowerCase());
+    if (distance > 1) continue;
+    if (distance === 0) return candidate;
+    if (!best || distance < best.distance) {
+      best = { value: candidate, distance };
+    }
+  }
+  return best?.value ?? null;
+}
+
+function levenshteinDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  let previous = new Array<number>(b.length + 1);
+  let current = new Array<number>(b.length + 1);
+  for (let j = 0; j <= b.length; j += 1) previous[j] = j;
+  for (let i = 1; i <= a.length; i += 1) {
+    current[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
+      current[j] = Math.min(
+        current[j - 1] + 1,
+        previous[j] + 1,
+        previous[j - 1] + cost,
+      );
+    }
+    [previous, current] = [current, previous];
+  }
+  return previous[b.length];
+}
+
 // ---------- Ticker Resolution ----------
 
 function buildSymbolIndex(coins: readonly typeof TRACKED_STABLECOINS[number][]): Map<string, ResolvedCoin[]> {
@@ -225,7 +267,12 @@ export function validateSubscribeArgs(parsed: ParsedSubscribeArgs): string | nul
   if (parsed.invalidTargets.length > 0) {
     const unknown = parsed.invalidTargets.join(", ");
     if (parsed.alertTypes.size === 0) {
-      return `Unknown alert type: ${unknown}. Valid types: dews, depeg, safety, launch.`;
+      const suggestion =
+        parsed.invalidTargets.length === 1
+          ? suggestClosestToken(parsed.invalidTargets[0], ["dews", "depeg", "safety", "launch"])
+          : null;
+      const hint = suggestion ? ` Did you mean "${suggestion}"?` : "";
+      return `Unknown alert type: ${unknown}.${hint} Valid types: dews, depeg, safety, launch.`;
     }
     return `Unknown ticker or preset: ${unknown}. Check spelling, use the coin's symbol, or try /presets.`;
   }

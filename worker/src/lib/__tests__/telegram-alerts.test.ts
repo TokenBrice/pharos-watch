@@ -13,6 +13,7 @@ import {
   formatListOutput,
   isDewsAlertable,
   isDewsDeescalation,
+  suggestClosestToken,
 } from "../telegram-alerts";
 
 describe("resolveTicker", () => {
@@ -255,6 +256,30 @@ describe("validateSubscribeArgs", () => {
     expect(result).toContain("Valid types");
   });
 
+  it("suggests the closest alert type for a single-token typo", () => {
+    const result = validateSubscribeArgs({
+      alertTypes: new Set(),
+      subscribeAll: false,
+      presetIds: [],
+      tickers: ["USDC"],
+      invalidTargets: ["dewz"],
+    });
+    expect(result).toContain("Unknown alert type: dewz");
+    expect(result).toContain('Did you mean "dews"?');
+  });
+
+  it("omits the suggestion when no alert type is within edit distance 1", () => {
+    const result = validateSubscribeArgs({
+      alertTypes: new Set(),
+      subscribeAll: false,
+      presetIds: [],
+      tickers: ["USDC"],
+      invalidTargets: ["xyzzy"],
+    });
+    expect(result).toContain("Unknown alert type: xyzzy");
+    expect(result).not.toContain("Did you mean");
+  });
+
   it("returns unknown ticker error when types present and invalidTypes present", () => {
     const result = validateSubscribeArgs({
       alertTypes: new Set(["dews"]),
@@ -286,6 +311,31 @@ describe("validateSubscribeArgs", () => {
       invalidTargets: [],
     });
     expect(result).toContain("Preset watchlists support dews, depeg, and safety only");
+  });
+});
+
+describe("suggestClosestToken", () => {
+  const candidates = ["dews", "depeg", "safety", "launch"];
+
+  it("returns an exact match", () => {
+    expect(suggestClosestToken("dews", candidates)).toBe("dews");
+  });
+
+  it("is case-insensitive", () => {
+    expect(suggestClosestToken("Dews", candidates)).toBe("dews");
+  });
+
+  it("returns the candidate within edit distance 1", () => {
+    expect(suggestClosestToken("dewz", candidates)).toBe("dews");
+    expect(suggestClosestToken("depig", candidates)).toBe("depeg");
+  });
+
+  it("returns null when no candidate is within edit distance 1", () => {
+    expect(suggestClosestToken("xyzzy", candidates)).toBeNull();
+  });
+
+  it("returns null for empty input", () => {
+    expect(suggestClosestToken("", candidates)).toBeNull();
   });
 });
 
