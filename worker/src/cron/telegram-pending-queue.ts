@@ -50,6 +50,7 @@ export interface PendingDrainResult {
   attempted: number;
   sent: number;
   blocked: number;
+  blockedCleanedUp: number;
   blockedCleanupFailed: number;
   retryQueued: number;
   dropped: number;
@@ -79,6 +80,7 @@ function emptyDrainResult(): PendingDrainResult {
     attempted: 0,
     sent: 0,
     blocked: 0,
+    blockedCleanedUp: 0,
     blockedCleanupFailed: 0,
     retryQueued: 0,
     dropped: 0,
@@ -344,6 +346,7 @@ export async function drainPendingQueue(
   let attempted = 0;
   let sent = 0;
   let blocked = 0;
+  let blockedCleanedUp = 0;
   let blockedCleanupFailed = 0;
   let retryQueued = 0;
   let dropped = 0;
@@ -393,8 +396,12 @@ export async function drainPendingQueue(
         blocked++;
         idsToDelete.push(result.id);
         const shouldDisable = await registerSubscriberBlockAndShouldDisable(db, result.chatId, nowSec);
-        if (shouldDisable && !(await disableBlockedSubscriber(db, result.chatId))) {
-          blockedCleanupFailed++;
+        if (shouldDisable) {
+          if (await disableBlockedSubscriber(db, result.chatId)) {
+            blockedCleanedUp++;
+          } else {
+            blockedCleanupFailed++;
+          }
         }
       } else if (result.retryable && result.attempts < PENDING_MAX_ATTEMPTS) {
         // Age-based retry: keep retrying inside the TTL window (enforced at SELECT time).
@@ -468,6 +475,7 @@ export async function drainPendingQueue(
     attempted,
     sent,
     blocked,
+    blockedCleanedUp,
     blockedCleanupFailed,
     retryQueued,
     dropped,
@@ -544,10 +552,12 @@ export async function loadChatsInBackoff(
     .prepare(
       `SELECT chat_id, MAX(not_before_at) AS not_before_at
          FROM telegram_pending_alerts
-        WHERE not_before_at IS NOT NULL AND not_before_at > ?
+        WHERE created_at >= ?
+          AND not_before_at IS NOT NULL
+          AND not_before_at > ?
         GROUP BY chat_id`,
     )
-    .bind(nowSec)
+    .bind(nowSec - PENDING_TTL_SEC, nowSec)
     .all<{ chat_id: string; not_before_at: number | null }>();
   return new Map(
     (rows.results ?? [])

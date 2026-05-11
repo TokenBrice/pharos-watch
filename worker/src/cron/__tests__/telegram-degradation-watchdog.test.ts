@@ -142,6 +142,25 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     expect(result.status).toBe("degraded");
   });
 
+  it("does not mark a pending backlog episode alerted when the alert webhook fails", async () => {
+    const store = installCacheStore();
+    const nowSec = Math.floor(Date.now() / 1000);
+    mockSendAlert.mockResolvedValueOnce(false);
+    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
+    store.values.set(WATCHDOG_KEYS.pendingSince, {
+      value: String(nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30),
+      updatedAt: nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30,
+    });
+    const db = makeDb({ pendingCount: PENDING_BACKLOG_THRESHOLD + 50 });
+
+    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const meta = JSON.parse(result.metadata ?? "{}");
+
+    expect(meta.pendingBacklog.triggered).toBe(true);
+    expect(meta.pendingBacklog.alertSent).toBe(false);
+    expect(store.values.has(WATCHDOG_KEYS.pendingAlerted)).toBe(false);
+  });
+
   it("emits recovery alert and clears flag when backlog drains", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);

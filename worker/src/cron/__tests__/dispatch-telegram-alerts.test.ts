@@ -1331,6 +1331,7 @@ describe("dispatchTelegramAlerts", () => {
       freshSent: number;
       freshDeferredPerChat: number;
       pendingEnqueued: number;
+      perAlertType: Record<string, { enqueued: number }>;
     };
 
     // chat-B fresh send proceeds, chat-A is deferred and not sent
@@ -1338,6 +1339,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.freshSent).toBe(1);
     expect(metadata.freshDeferredPerChat).toBe(1);
     expect(metadata.pendingEnqueued).toBe(1);
+    expect(metadata.perAlertType.dews.enqueued).toBe(1);
 
     // Only chat-B was sent in this run
     const sendBatchCalls = mockSendBatch.mock.calls;
@@ -2138,7 +2140,6 @@ describe("dispatchTelegramAlerts", () => {
     const now = Math.floor(Date.now() / 1000);
 
     // Subscriber A receives only a DEWS change → dominant = dews.
-    // Subscriber B receives only a launch promotion → dominant = launch.
     // Subscriber C receives only a depeg trigger → dominant = depeg.
     mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
       if (key === "alert:dews-snapshot") {

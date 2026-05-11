@@ -162,6 +162,25 @@ describe("sendToChat", () => {
     expect(result.retryAfterSec).toBeNull();
   });
 
+  it("uses Telegram JSON retry_after when the Retry-After header is absent", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          ok: false,
+          error_code: 429,
+          description: "Too Many Requests: retry after 38",
+          parameters: { retry_after: 38 },
+        }),
+        { status: 429 },
+      ),
+    );
+
+    const result = await sendToChat("12345", "test", "bot-token");
+
+    expect(result.retryAfterSec).toBe(38);
+    expect(result.rateLimitScope).toBe("global");
+  });
+
   it("returns retryAfterSec null for non-429 errors", async () => {
     fetchSpy.mockResolvedValueOnce(new Response("Server Error", { status: 500 }));
     const result = await sendToChat("12345", "test", "bot-token");
@@ -228,7 +247,7 @@ describe("sendBatch", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
       .mockResolvedValueOnce(
-        new Response("Too Many Requests", {
+        new Response("Too Many Requests: chat retry after 45", {
           status: 429,
           headers: { "Retry-After": "45" },
         }),

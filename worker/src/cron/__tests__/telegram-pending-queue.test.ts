@@ -407,6 +407,7 @@ describe("drainPendingQueue", () => {
 
     const result = await drainPendingQueue(db, "bot-token", 10);
     expect(result.blocked).toBe(1);
+    expect(result.blockedCleanedUp).toBe(0);
     expect(result.sent).toBe(0);
 
     const history = db.getHistory();
@@ -450,6 +451,7 @@ describe("drainPendingQueue", () => {
 
     const result = await drainPendingQueue(db, "bot-token", 10);
     expect(result.blocked).toBe(1);
+    expect(result.blockedCleanedUp).toBe(1);
 
     const history = db.getHistory();
     // Counter update goes first, then the aggressive cascade flips all alert flags.
@@ -727,6 +729,7 @@ describe("drainPendingQueue", () => {
       attempted: 0,
       sent: 0,
       blocked: 0,
+      blockedCleanedUp: 0,
       blockedCleanupFailed: 0,
       retryQueued: 0,
       dropped: 0,
@@ -1051,9 +1054,10 @@ describe("loadChatsInBackoff", () => {
     const history = db.getHistory();
     const select = history.find((entry) => entry.sql.includes("SELECT chat_id, MAX(not_before_at)"));
     expect(select?.sql).toContain("not_before_at IS NOT NULL");
+    expect(select?.sql).toContain("created_at >= ?");
     expect(select?.sql).toContain("not_before_at > ?");
     expect(select?.sql).toContain("GROUP BY chat_id");
-    expect(select?.binds).toEqual([nowSec]);
+    expect(select?.binds).toEqual([nowSec - PENDING_TTL_SEC, nowSec]);
   });
 
   it("returns an empty set when no rows are in backoff", async () => {

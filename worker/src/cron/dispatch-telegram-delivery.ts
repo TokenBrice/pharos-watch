@@ -65,7 +65,7 @@ export async function deliverTelegramSubscriberQueue({
       subscribersNotified: 0,
       freshSent: 0,
       freshPermanentFailures: 0,
-      blockedUsersCleanedUp: drainResult.blocked - drainResult.blockedCleanupFailed,
+      blockedUsersCleanedUp: drainResult.blockedCleanedUp,
       blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
       freshAttempted: 0,
       freshRetryQueued: 0,
@@ -97,7 +97,7 @@ export async function deliverTelegramSubscriberQueue({
     sendList,
     toSend,
     botToken,
-    drainResult.blocked - drainResult.blockedCleanupFailed,
+    drainResult.blockedCleanedUp,
     drainResult.blockedCleanupFailed,
     dispatchStartedAtMs,
     signal,
@@ -120,6 +120,7 @@ export async function deliverTelegramSubscriberQueue({
 
   for (const deferred of deferredPerChat) {
     if (blockedChats.has(deferred.chatId)) continue;
+    perAlertType[deferred.alertType].enqueued += deferred.chunks.length;
     const deferredMessages = expandSubscriberChunks([deferred], blockedChats);
     await enqueuePendingAlerts(db, deferredMessages, nowSec, {
       notBeforeAt: chatsInBackoff.get(deferred.chatId) ?? null,

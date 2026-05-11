@@ -133,7 +133,9 @@ async function evaluatePendingBacklog(
           "Telegram pending backlog sustained",
           `pending=${count} > ${PENDING_BACKLOG_THRESHOLD} for ${Math.round(ageSec / 60)}min`,
         );
-        await setCache(db, WATCHDOG_KEYS.pendingAlerted, "1");
+        if (outcome.alertSent) {
+          await setCache(db, WATCHDOG_KEYS.pendingAlerted, "1");
+        }
       }
       outcome.detail = `pending=${count}, sustainedSec=${ageSec}`;
     } else {
@@ -143,15 +145,19 @@ async function evaluatePendingBacklog(
   }
 
   if (flagSince != null) {
-    await deleteCache(db, WATCHDOG_KEYS.pendingSince);
-    await deleteCache(db, WATCHDOG_KEYS.pendingAlerted);
     outcome.recovered = true;
+    let canClearEpisode = true;
     if (alreadyAlerted) {
       outcome.alertSent = await sendAlert(
         alertWebhookUrl,
         "Telegram pending backlog recovered",
         `pending=${count} (cleared after sustained breach)`,
       );
+      canClearEpisode = outcome.alertSent;
+    }
+    if (canClearEpisode) {
+      await deleteCache(db, WATCHDOG_KEYS.pendingSince);
+      await deleteCache(db, WATCHDOG_KEYS.pendingAlerted);
     }
     outcome.detail = `pending=${count}, recovered`;
   }
@@ -187,7 +193,9 @@ async function evaluateSafetySource(
           `state=${assessment.state} for ${Math.round(ageSec / 60)}min ` +
             `(>${Math.round(sustainedSec / 60)}min, ageSeconds=${assessment.ageSeconds ?? "n/a"})`,
         );
-        await setCache(db, WATCHDOG_KEYS.safetySourceAlerted, "1");
+        if (outcome.alertSent) {
+          await setCache(db, WATCHDOG_KEYS.safetySourceAlerted, "1");
+        }
       }
       outcome.detail = `state=${assessment.state}, sustainedSec=${ageSec}`;
     } else {
@@ -197,15 +205,19 @@ async function evaluateSafetySource(
   }
 
   if (flagSince != null) {
-    await deleteCache(db, WATCHDOG_KEYS.safetySourceSince);
-    await deleteCache(db, WATCHDOG_KEYS.safetySourceAlerted);
     outcome.recovered = true;
+    let canClearEpisode = true;
     if (alreadyAlerted) {
       outcome.alertSent = await sendAlert(
         alertWebhookUrl,
         "Telegram safety-source cache recovered",
         "state=ok",
       );
+      canClearEpisode = outcome.alertSent;
+    }
+    if (canClearEpisode) {
+      await deleteCache(db, WATCHDOG_KEYS.safetySourceSince);
+      await deleteCache(db, WATCHDOG_KEYS.safetySourceAlerted);
     }
     outcome.detail = "state=ok, recovered";
   }
@@ -252,7 +264,9 @@ async function evaluateZeroSendStreak(
           "Telegram dispatch sent zero messages with pending events",
           `eventsDetected=${events}, messagesSent=0, consecutiveZeroSendRuns=${nextStreak}`,
         );
-        await setCache(db, WATCHDOG_KEYS.zeroSendAlerted, "1");
+        if (outcome.alertSent) {
+          await setCache(db, WATCHDOG_KEYS.zeroSendAlerted, "1");
+        }
       }
       outcome.detail = `eventsDetected=${events}, streak=${nextStreak}`;
     } else {
@@ -262,16 +276,20 @@ async function evaluateZeroSendStreak(
   }
 
   if (priorStreak >= ZERO_SEND_STREAK_THRESHOLD) {
-    await deleteCache(db, WATCHDOG_KEYS.zeroSendStreak);
-    await deleteCache(db, WATCHDOG_KEYS.zeroSendAlerted);
     outcome.streak = 0;
     outcome.recovered = true;
+    let canClearEpisode = true;
     if (alreadyAlerted) {
       outcome.alertSent = await sendAlert(
         alertWebhookUrl,
         "Telegram dispatch zero-send streak recovered",
         `messagesSent=${messagesSent}, eventsDetected=${events}`,
       );
+      canClearEpisode = outcome.alertSent;
+    }
+    if (canClearEpisode) {
+      await deleteCache(db, WATCHDOG_KEYS.zeroSendStreak);
+      await deleteCache(db, WATCHDOG_KEYS.zeroSendAlerted);
     }
     outcome.detail = `recovered after streak=${priorStreak}`;
     return outcome;

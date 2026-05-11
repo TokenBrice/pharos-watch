@@ -128,7 +128,28 @@ function inferRateLimitScope(responseBody: string): "chat" | "global" {
   if (lower.includes("global") || lower.includes("bot-wide") || lower.includes("bot wide")) {
     return "global";
   }
+  if (lower.includes("chat") || lower.includes("group") || lower.includes("user")) {
+    return "chat";
+  }
+  if (parseTelegramRetryAfter(responseBody) != null) {
+    return "global";
+  }
   return "chat";
+}
+
+function parseTelegramRetryAfter(responseBody: string): number | null {
+  if (!responseBody.trim()) return null;
+  try {
+    const parsed = JSON.parse(responseBody) as {
+      parameters?: { retry_after?: unknown };
+      response_parameters?: { retry_after?: unknown };
+    };
+    const raw = parsed.parameters?.retry_after ?? parsed.response_parameters?.retry_after;
+    const value = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : null;
+    return value != null && Number.isFinite(value) && value >= 0 ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 function buildResponseFailure(statusCode: number, responseBody = ""): SendToChatResult {
@@ -266,10 +287,11 @@ export async function sendToChat(
       const retryAfterRaw = res.headers.get("Retry-After");
       const retryAfterSec = retryAfterRaw ? parseInt(retryAfterRaw, 10) : null;
       const body = await res.text().catch(() => "");
+      const telegramRetryAfterSec = parseTelegramRetryAfter(body);
       const failure = buildResponseFailure(res.status, body);
       return {
         ...failure,
-        retryAfterSec: Number.isFinite(retryAfterSec) ? retryAfterSec : null,
+        retryAfterSec: telegramRetryAfterSec ?? (Number.isFinite(retryAfterSec) ? retryAfterSec : null),
       };
     }
     await drainResponseBody(res);
