@@ -59,6 +59,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0113     | `0113_api_key_self_serve_issuance_fencing.sql`  | Add self-serve issuance lock metadata and fixed-window issuance caps                            |
 | 0114     | `0114_telegram_dynamic_presets.sql`             | Add persistent Telegram preset subscriptions for dynamic stablecoin cohorts                     |
 | 0115     | `0115_live_reserve_history_attempt_idempotency.sql` | Add partial unique indexes for idempotent live-reserve history writes by non-null attempt ID |
+| 0116     | `0116_telegram_subscriber_block_count.sql`      | Add consecutive-block counter and first-strike timestamp to gate Telegram 403 cascade behind a two-strike-within-24h rule |
 
 ## Retired Individual Migrations
 

@@ -45,6 +45,11 @@ export interface PendingEnqueueOptions {
 
 const DEFAULT_RETRY_DELAY_SEC = 60;
 
+// Two-strike rule: a single 403 is transient (user temporarily muted bot,
+// chat archived, etc.). Only after a second 403 within this window do we
+// zero all alert flags. Successful sends reset the counter to 0.
+export const BLOCK_STRIKE_WINDOW_SEC = 24 * 3600;
+
 function emptyDrainResult(): PendingDrainResult {
   return {
     attempted: 0,
@@ -101,6 +106,73 @@ export function buildDedupeKey(message: BatchMessage, splitVersion: number = TEL
 }
 
 // ---------- Subscriber Lifecycle ----------
+
+/**
+ * Two-strike gate for 403 responses. Increments the per-subscriber consecutive
+ * block counter and reports whether the aggressive cascade should run.
+ *
+ * Rules:
+ * - First strike: record `consecutive_block_first_at = nowSec`, count = 1, return false.
+ * - Subsequent strike within `BLOCK_STRIKE_WINDOW_SEC` of first strike: count >= 2, return true.
+ * - Stale first strike (older than window): reset to fresh first strike, return false.
+ *
+ * On D1 error this returns false so we never call `disableBlockedSubscriber`
+ * with stale strike state.
+ */
+export async function registerSubscriberBlockAndShouldDisable(
+  db: D1Database,
+  chatId: string,
+  nowSec: number,
+): Promise<boolean> {
+  try {
+    const row = await db
+      .prepare(
+        `SELECT consecutive_block_count, consecutive_block_first_at
+           FROM telegram_subscribers
+          WHERE chat_id = ?`,
+      )
+      .bind(chatId)
+      .first<{ consecutive_block_count: number | null; consecutive_block_first_at: number | null }>();
+    const priorCount = row?.consecutive_block_count ?? 0;
+    const priorFirstAt = row?.consecutive_block_first_at ?? null;
+    const withinWindow = priorFirstAt != null && nowSec - priorFirstAt <= BLOCK_STRIKE_WINDOW_SEC;
+    const nextCount = withinWindow ? priorCount + 1 : 1;
+    const nextFirstAt = withinWindow ? priorFirstAt : nowSec;
+    await db
+      .prepare(
+        `UPDATE telegram_subscribers
+            SET consecutive_block_count = ?,
+                consecutive_block_first_at = ?
+          WHERE chat_id = ?`,
+      )
+      .bind(nextCount, nextFirstAt, chatId)
+      .run();
+    return nextCount >= 2;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[telegram-pending-queue] Failed to register block strike for ${chatId}: ${message}`);
+    return false;
+  }
+}
+
+/** Reset the consecutive-block counter on any successful send. */
+export async function resetSubscriberBlockCount(db: D1Database, chatId: string): Promise<void> {
+  try {
+    await db
+      .prepare(
+        `UPDATE telegram_subscribers
+            SET consecutive_block_count = 0,
+                consecutive_block_first_at = NULL
+          WHERE chat_id = ?
+            AND (consecutive_block_count <> 0 OR consecutive_block_first_at IS NOT NULL)`,
+      )
+      .bind(chatId)
+      .run();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[telegram-pending-queue] Failed to reset block count for ${chatId}: ${message}`);
+  }
+}
 
 export async function disableBlockedSubscriber(db: D1Database, chatId: string): Promise<boolean> {
   try {
@@ -204,15 +276,21 @@ export async function drainPendingQueue(
       }),
     );
 
+    const chatsResetThisLoop = new Set<string>();
     for (const result of results) {
       attempted++;
       if (result.ok) {
         sent++;
         idsToDelete.push(result.id);
+        if (!chatsResetThisLoop.has(result.chatId)) {
+          chatsResetThisLoop.add(result.chatId);
+          await resetSubscriberBlockCount(db, result.chatId);
+        }
       } else if (result.blocked) {
         blocked++;
         idsToDelete.push(result.id);
-        if (!(await disableBlockedSubscriber(db, result.chatId))) {
+        const shouldDisable = await registerSubscriberBlockAndShouldDisable(db, result.chatId, nowSec);
+        if (shouldDisable && !(await disableBlockedSubscriber(db, result.chatId))) {
           blockedCleanupFailed++;
         }
       } else if (result.retryable && result.attempts < 5) {

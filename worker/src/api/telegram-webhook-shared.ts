@@ -184,6 +184,8 @@ export interface SubscriberRow {
   quiet_hours_start_utc: number | null;
   quiet_hours_end_utc: number | null;
   alert_snooze_until_ts?: number | null;
+  consecutive_block_count?: number | null;
+  consecutive_block_first_at?: number | null;
 }
 
 export interface SubscriptionRow {

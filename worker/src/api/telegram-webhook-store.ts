@@ -211,7 +211,9 @@ export async function loadSubscriberByChat(
          quiet_hours_enabled,
          quiet_hours_start_utc,
          quiet_hours_end_utc,
-         alert_snooze_until_ts
+         alert_snooze_until_ts,
+         consecutive_block_count,
+         consecutive_block_first_at
        FROM telegram_subscribers
       WHERE chat_id = ?`,
     )

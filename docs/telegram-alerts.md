@@ -357,7 +357,7 @@ Delivery semantics are explicit:
 - `permanent_failure`
 
 Fresh retryable failures are enqueued into `telegram_pending_alerts` instead of being dropped.
-`403` responses disable both the subscriber's global flags and all per-coin alert booleans to stop repeated failures.
+`403` responses from the pending-queue dispatcher follow a two-strike rule: the first 403 stamps `consecutive_block_first_at` on `telegram_subscribers` and increments `consecutive_block_count` but leaves alert flags untouched; a second 403 within 24 hours of the first strike disables the subscriber's global flags and all per-coin alert booleans. Any successful send resets both counters. A first strike older than 24 hours is treated as fresh.
 
 ### Pending Delivery Queue
 

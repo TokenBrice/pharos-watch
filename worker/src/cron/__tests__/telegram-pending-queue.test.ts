@@ -14,7 +14,10 @@ const {
   enqueuePendingAlerts,
   cleanupExpiredPendingAlerts,
   loadChatsInBackoff,
+  registerSubscriberBlockAndShouldDisable,
+  resetSubscriberBlockCount,
   PENDING_TTL_SEC,
+  BLOCK_STRIKE_WINDOW_SEC,
   buildDedupeKey,
 } = await import("../telegram-pending-queue");
 const { TELEGRAM_SPLIT_VERSION } = await import("../../lib/telegram-alerts");
@@ -60,6 +63,76 @@ describe("disableBlockedSubscriber", () => {
     expect(result).toBe(false);
     expect(consoleSpy).toHaveBeenCalled();
     consoleSpy.mockRestore();
+  });
+});
+
+describe("registerSubscriberBlockAndShouldDisable", () => {
+  it("returns false on the first strike and stamps the window", async () => {
+    const now = 1_700_000_000;
+    const db = mockD1([
+      { match: "SELECT consecutive_block_count", rows: [] },
+      { match: "UPDATE telegram_subscribers", rows: [] },
+    ]);
+    const shouldDisable = await registerSubscriberBlockAndShouldDisable(db, "chat-1", now);
+    expect(shouldDisable).toBe(false);
+    const updateCall = db.getHistory().find((entry) => entry.sql.includes("UPDATE telegram_subscribers"));
+    expect(updateCall!.binds).toEqual([1, now, "chat-1"]);
+  });
+
+  it("returns true on the second strike within the window", async () => {
+    const now = 1_700_000_000;
+    const db = mockD1([
+      {
+        match: "SELECT consecutive_block_count",
+        rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - 60 }],
+      },
+      { match: "UPDATE telegram_subscribers", rows: [] },
+    ]);
+    const shouldDisable = await registerSubscriberBlockAndShouldDisable(db, "chat-2", now);
+    expect(shouldDisable).toBe(true);
+    const updateCall = db.getHistory().find((entry) => entry.sql.includes("UPDATE telegram_subscribers"));
+    // Count increments to 2 and first_at is preserved.
+    expect(updateCall!.binds).toEqual([2, now - 60, "chat-2"]);
+  });
+
+  it("returns false when the prior strike falls outside the 24h window", async () => {
+    const now = 1_700_000_000;
+    const db = mockD1([
+      {
+        match: "SELECT consecutive_block_count",
+        rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - (BLOCK_STRIKE_WINDOW_SEC + 1) }],
+      },
+      { match: "UPDATE telegram_subscribers", rows: [] },
+    ]);
+    const shouldDisable = await registerSubscriberBlockAndShouldDisable(db, "chat-3", now);
+    expect(shouldDisable).toBe(false);
+    const updateCall = db.getHistory().find((entry) => entry.sql.includes("UPDATE telegram_subscribers"));
+    expect(updateCall!.binds).toEqual([1, now, "chat-3"]);
+  });
+
+  it("returns false and logs on D1 SELECT error to avoid disabling on stale state", async () => {
+    const db = mockD1([
+      { match: "SELECT consecutive_block_count", rows: [], throwError: new Error("D1 overload") },
+    ]);
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const shouldDisable = await registerSubscriberBlockAndShouldDisable(db, "chat-4", 1_700_000_000);
+    expect(shouldDisable).toBe(false);
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+});
+
+describe("resetSubscriberBlockCount", () => {
+  it("issues an UPDATE clearing both counters", async () => {
+    const db = mockD1([
+      { match: "UPDATE telegram_subscribers", rows: [] },
+    ]);
+    await resetSubscriberBlockCount(db, "chat-reset");
+    const updateCall = db.getHistory().find((entry) => entry.sql.includes("UPDATE telegram_subscribers"));
+    expect(updateCall).toBeDefined();
+    expect(updateCall!.sql).toContain("consecutive_block_count = 0");
+    expect(updateCall!.sql).toContain("consecutive_block_first_at = NULL");
+    expect(updateCall!.binds).toEqual(["chat-reset"]);
   });
 });
 
@@ -123,7 +196,7 @@ describe("drainPendingQueue", () => {
     expect(deleteCall!.binds).toContain(10);
   });
 
-  it("disables blocked subscribers and deletes their pending messages", async () => {
+  it("records a first-strike 403 without zeroing alert flags and deletes the pending message", async () => {
     mockSendToChat.mockResolvedValue({
       ok: false, blocked: true, retryable: false, permanentFailure: true,
       statusCode: 403, errorClass: "blocked", delivery: "blocked", retryAfterSec: null,
@@ -136,6 +209,51 @@ describe("drainPendingQueue", () => {
           { id: 20, chat_id: "blocked-chat", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: 0 },
         ],
       },
+      // Two-strike SELECT: no prior strike on file.
+      { match: "SELECT consecutive_block_count", rows: [] },
+      // Counter UPDATE writes count=1, first_at=now.
+      { match: "UPDATE telegram_subscribers", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+    ]);
+
+    const result = await drainPendingQueue(db, "bot-token", 10);
+    expect(result.blocked).toBe(1);
+    expect(result.sent).toBe(0);
+
+    const history = db.getHistory();
+    // First strike must increment the counter, not zero out alert flags.
+    const counterUpdate = history.find(
+      (entry) =>
+        entry.sql.includes("UPDATE telegram_subscribers") && entry.sql.includes("consecutive_block_count"),
+    );
+    expect(counterUpdate).toBeDefined();
+    expect(counterUpdate!.binds[0]).toBe(1);
+    // No aggressive cascade on first strike.
+    const flagCascade = history.find(
+      (entry) => entry.sql.includes("UPDATE telegram_subscribers") && entry.sql.includes("alert_dews=0"),
+    );
+    expect(flagCascade).toBeUndefined();
+  });
+
+  it("disables the subscriber on a second 403 within the 24h window", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    mockSendToChat.mockResolvedValue({
+      ok: false, blocked: true, retryable: false, permanentFailure: true,
+      statusCode: 403, errorClass: "blocked", delivery: "blocked", retryAfterSec: null,
+    });
+
+    const db = mockD1([
+      {
+        match: "SELECT p.id, p.chat_id, p.message_html",
+        rows: [
+          { id: 21, chat_id: "double-strike", message_html: "<b>Alert</b>", disable_notification: 0, created_at: now - 60, attempts: 0 },
+        ],
+      },
+      // Prior strike recorded ~1h ago, still within 24h window.
+      {
+        match: "SELECT consecutive_block_count",
+        rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - 3600 }],
+      },
       { match: "UPDATE telegram_subscribers", rows: [] },
       { match: "UPDATE telegram_subscriptions", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
@@ -143,7 +261,103 @@ describe("drainPendingQueue", () => {
 
     const result = await drainPendingQueue(db, "bot-token", 10);
     expect(result.blocked).toBe(1);
-    expect(result.sent).toBe(0);
+
+    const history = db.getHistory();
+    // Counter update goes first, then the aggressive cascade flips all alert flags.
+    const counterUpdate = history.find(
+      (entry) =>
+        entry.sql.includes("UPDATE telegram_subscribers") && entry.sql.includes("consecutive_block_count = ?"),
+    );
+    expect(counterUpdate).toBeDefined();
+    expect(counterUpdate!.binds[0]).toBe(2);
+
+    const flagCascade = history.find(
+      (entry) => entry.sql.includes("UPDATE telegram_subscribers") && entry.sql.includes("alert_launch=0"),
+    );
+    expect(flagCascade).toBeDefined();
+    expect(flagCascade!.sql).toContain("global_alert_launch=0");
+    const subscriptionsCascade = history.find(
+      (entry) => entry.sql.includes("UPDATE telegram_subscriptions") && entry.sql.includes("alert_launch=0"),
+    );
+    expect(subscriptionsCascade).toBeDefined();
+  });
+
+  it("treats a stale first strike (older than 24h) as a fresh first strike", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    mockSendToChat.mockResolvedValue({
+      ok: false, blocked: true, retryable: false, permanentFailure: true,
+      statusCode: 403, errorClass: "blocked", delivery: "blocked", retryAfterSec: null,
+    });
+
+    const db = mockD1([
+      {
+        match: "SELECT p.id, p.chat_id, p.message_html",
+        rows: [
+          { id: 22, chat_id: "stale-strike", message_html: "<b>Alert</b>", disable_notification: 0, created_at: now - 60, attempts: 0 },
+        ],
+      },
+      // Prior strike recorded >24h ago: window expired, treat as fresh.
+      {
+        match: "SELECT consecutive_block_count",
+        rows: [
+          {
+            consecutive_block_count: 1,
+            consecutive_block_first_at: now - (BLOCK_STRIKE_WINDOW_SEC + 60),
+          },
+        ],
+      },
+      { match: "UPDATE telegram_subscribers", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+    ]);
+
+    await drainPendingQueue(db, "bot-token", 10);
+
+    const history = db.getHistory();
+    const counterUpdate = history.find(
+      (entry) =>
+        entry.sql.includes("UPDATE telegram_subscribers") && entry.sql.includes("consecutive_block_count = ?"),
+    );
+    expect(counterUpdate).toBeDefined();
+    // Stale strike re-stamps count=1 and first_at=now (not count=2).
+    expect(counterUpdate!.binds[0]).toBe(1);
+    expect(counterUpdate!.binds[1]).toBe(now);
+
+    // No flag cascade because we are back at first strike.
+    const flagCascade = history.find(
+      (entry) => entry.sql.includes("UPDATE telegram_subscribers") && entry.sql.includes("alert_launch=0"),
+    );
+    expect(flagCascade).toBeUndefined();
+  });
+
+  it("resets the consecutive_block_count on a successful send", async () => {
+    mockSendToChat.mockResolvedValue({
+      ok: true, blocked: false, retryable: false, permanentFailure: false,
+      statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null,
+    });
+
+    const db = mockD1([
+      {
+        match: "SELECT p.id, p.chat_id, p.message_html",
+        rows: [
+          { id: 23, chat_id: "recovered", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: 0 },
+        ],
+      },
+      { match: "UPDATE telegram_subscribers", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+    ]);
+
+    const result = await drainPendingQueue(db, "bot-token", 10);
+    expect(result.sent).toBe(1);
+
+    const history = db.getHistory();
+    const resetCall = history.find(
+      (entry) =>
+        entry.sql.includes("UPDATE telegram_subscribers") &&
+        entry.sql.includes("consecutive_block_count = 0") &&
+        entry.sql.includes("consecutive_block_first_at = NULL"),
+    );
+    expect(resetCall).toBeDefined();
+    expect(resetCall!.binds).toEqual(["recovered"]);
   });
 
   it("stops draining the queue when a 429 rate limit is received", async () => {
