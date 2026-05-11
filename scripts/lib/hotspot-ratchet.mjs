@@ -4,6 +4,7 @@ import ts from "typescript";
 
 export const TARGET_FILES = [
   "shared/lib/report-cards.ts",
+  "shared/lib/format.ts",
   "worker/src/api/stablecoin-detail.ts",
   "worker/src/api/feedback.ts",
   "worker/src/handlers/http.ts",
@@ -21,6 +22,11 @@ export const TARGET_FILES = [
   "src/app/methodology/scoring-changelog/content-legacy.tsx",
   "src/app/methodology/scoring-changelog/content-summary.tsx",
   "src/app/coverage/client.tsx",
+  "src/components/api-key-request-form.tsx",
+  "src/hooks/use-api-key-request-form-state.ts",
+  "worker/src/api/api-key-requests.ts",
+  "worker/src/api/api-key-requests/admin.ts",
+  "worker/src/api/reclassify-atomic-roundtrips.ts",
   "worker/src/cron/daily-digest/collectors.ts",
   "worker/src/cron/daily-digest.ts",
   "worker/src/cron/dispatch-telegram-alerts.ts",
@@ -28,6 +34,8 @@ export const TARGET_FILES = [
   "worker/src/cron/dex-liquidity/orchestrator.ts",
   "worker/src/cron/dex-liquidity/orchestrator-analysis.ts",
   "worker/src/cron/sync-mint-burn.ts",
+  "worker/src/lib/mint-burn-pipeline/roundtrip-detection.ts",
+  "worker/src/lib/mint-burn-pipeline/roundtrip-sweep.ts",
   "worker/src/cron/sync-live-reserves.ts",
   "worker/src/cron/compute-dews.ts",
   "worker/src/cron/sync-stablecoins/enrich-prices.ts",

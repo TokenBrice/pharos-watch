@@ -212,6 +212,10 @@ Reminder: Tailwind classes must be static strings -- never construct class names
 
 The worker codebase deliberately uses `!= null` (loose equality) as the standard null/undefined guard for D1 query results. D1 can return either `null` or `undefined` for absent column values depending on the query path and column type, and `value != null` catches both in a single check. This is intentional -- do not "fix" these to `!== null` or `!== undefined`.
 
+### Worker import boundary waiver
+
+`npm run check:worker-boundary` enforces the worker/frontend/shared import boundary. The only named non-test waiver is `frozen-invariants-lifecycle-registry-check` for `scripts/check-frozen-invariants.ts`, which imports worker and frontend registries to prove frozen stablecoin IDs were removed from lifecycle surfaces. Keep that waiver documented in the script header and guarded by `scripts/__tests__/worker-boundary-waivers.test.ts`; new cross-layer checks should move runtime-neutral metadata into `shared/` instead of expanding the waiver set.
+
 ---
 
 ## TypeScript Target Constraints

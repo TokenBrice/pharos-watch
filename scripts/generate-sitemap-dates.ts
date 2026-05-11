@@ -1,6 +1,6 @@
 /* eslint-disable security/detect-non-literal-fs-filename -- repo-local build script reads checked-in page files under the repository root only. */
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { readdirSync, statSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,7 +11,7 @@ const OUTPUT = join(__dirname, "../src/generated/sitemap-dates.json");
 
 function getLastModified(pagePath: string): string {
   try {
-    return execSync(`git log -1 --format=%aI -- "${pagePath}"`, { encoding: "utf-8" }).trim() || new Date().toISOString();
+    return execFileSync("git", ["log", "-1", "--format=%aI", "--", pagePath], { encoding: "utf-8" }).trim() || new Date().toISOString();
   } catch {
     return new Date().toISOString();
   }

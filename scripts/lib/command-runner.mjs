@@ -176,3 +176,62 @@ export async function runCommandBatches(
 
   return { status: 0, failedCmd: null, aborted: false };
 }
+
+export async function runParallelExecutionUnits(
+  units,
+  {
+    continueOnError = false,
+    exit = process.exit,
+    getCommandEnv = () => ({}),
+    getCommandText: getUnitCommandText = getCommandText,
+    label,
+    maxParallel = units.length,
+    runCommandImpl = runShellCommand,
+  } = {},
+) {
+  const concurrency = Math.max(1, Math.min(maxParallel, units.length));
+  const controllers = new Set();
+  const failures = [];
+  let nextIndex = 0;
+  let aborting = false;
+
+  async function runNext() {
+    while (nextIndex < units.length && (continueOnError || !aborting)) {
+      const unit = units[nextIndex];
+      nextIndex += 1;
+      const controller = new AbortController();
+      controllers.add(controller);
+      const result = await runExecutionUnit(unit, {
+        getCommandEnv,
+        getCommandText: getUnitCommandText,
+        label,
+        runCommandImpl,
+        signal: controller.signal,
+      });
+      controllers.delete(controller);
+
+      if (result.status !== 0) {
+        failures.push(result);
+        reportFailedCommand(result, label);
+        if (!continueOnError) {
+          aborting = true;
+          for (const activeController of controllers) {
+            activeController.abort();
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  console.log(`[${label}] Running ${units.length} command groups with max parallel ${concurrency}.`);
+  await Promise.all(Array.from({ length: concurrency }, () => runNext()));
+
+  if (failures.length > 0) {
+    const first = failures[0];
+    exit(first.status);
+    return first;
+  }
+
+  return { status: 0, failedCmd: null, aborted: false };
+}

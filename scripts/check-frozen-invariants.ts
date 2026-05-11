@@ -6,6 +6,10 @@
  * Failures here usually indicate a half-applied freeze procedure — fix
  * before pushing. See `docs/freezing-stablecoins.md` (when present) for
  * the full runbook.
+ *
+ * Boundary waiver: frozen-invariants-lifecycle-registry-check. This script is
+ * the only approved non-test cross-layer validator that imports worker and
+ * frontend registries to prove frozen IDs were removed from lifecycle surfaces.
  */
 import {
   ACTIVE_IDS,

@@ -11,6 +11,18 @@
     },
     "notes": "Report-card scoring and projection logic are still concentrated here. The next pass should separate scoring families, blacklist/live-slice enrichment, and presentation-oriented shaping."
   },
+  "shared/lib/format.ts": {
+    "fileLines": 306,
+    "maxFunctionLines": 29,
+    "branchCount": 73,
+    "disposition": "stabilized",
+    "targetBudget": {
+      "fileLines": 306,
+      "maxFunctionLines": 29,
+      "branchCount": 73
+    },
+    "notes": "Shared formatting intentionally centralizes many small branchy display helpers. Keep new formatting families covered by focused helper tests or split them into narrower modules if this file grows."
+  },
   "worker/src/api/stablecoin-detail.ts": {
     "fileLines": 36,
     "maxFunctionLines": 22,
@@ -215,6 +227,66 @@
     },
     "notes": "Coverage page orchestration now lives behind a page-model hook plus section components. Keep this file as a route shell that composes the sections."
   },
+  "src/components/api-key-request-form.tsx": {
+    "fileLines": 474,
+    "maxFunctionLines": 413,
+    "branchCount": 29,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 420,
+      "maxFunctionLines": 340,
+      "branchCount": 25
+    },
+    "notes": "The public self-serve form now delegates request, verification, copy, and one-time reveal state to `use-api-key-request-form-state`. Keep future behavior in the hook or focused subcomponents instead of regrowing the presentation shell."
+  },
+  "src/hooks/use-api-key-request-form-state.ts": {
+    "fileLines": 264,
+    "maxFunctionLines": 224,
+    "branchCount": 20,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 240,
+      "maxFunctionLines": 180,
+      "branchCount": 18
+    },
+    "notes": "Self-serve API-key intake, verification, copy-state, and one-time reveal protection now live in this hook. Split field-state and issued-key reveal helpers if the workflow grows again."
+  },
+  "worker/src/api/api-key-requests.ts": {
+    "fileLines": 981,
+    "maxFunctionLines": 171,
+    "branchCount": 49,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 900,
+      "maxFunctionLines": 140,
+      "branchCount": 45
+    },
+    "notes": "The self-serve API key route now delegates public response assembly and admin-review helpers to adjacent modules. Continue splitting request persistence and verification issuance before adding more lifecycle branches."
+  },
+  "worker/src/api/api-key-requests/admin.ts": {
+    "fileLines": 225,
+    "maxFunctionLines": 41,
+    "branchCount": 9,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 200,
+      "maxFunctionLines": 40,
+      "branchCount": 8
+    },
+    "notes": "Admin list/mutation support is isolated from the public issuance route. Keep rejection, claim-release, audit, and row mapping helpers here rather than leaking them back into the route shell."
+  },
+  "worker/src/api/reclassify-atomic-roundtrips.ts": {
+    "fileLines": 149,
+    "maxFunctionLines": 94,
+    "branchCount": 7,
+    "disposition": "stabilized",
+    "targetBudget": {
+      "fileLines": 150,
+      "maxFunctionLines": 95,
+      "branchCount": 8
+    },
+    "notes": "Admin mint/burn reclassification now scopes updates by chain and rejects malformed non-negative query params. Keep future repair policy changes covered by focused endpoint tests."
+  },
   "worker/src/cron/daily-digest/collectors.ts": {
     "fileLines": 26,
     "maxFunctionLines": 0,
@@ -298,6 +370,30 @@
       "branchCount": 16
     },
     "notes": "Config execution and post-run completion logic now live in `mint-burn/*` helpers. Keep the cron shell as queue setup plus progress coordination instead of regrowing per-config or epilogue logic."
+  },
+  "worker/src/lib/mint-burn-pipeline/roundtrip-detection.ts": {
+    "fileLines": 63,
+    "maxFunctionLines": 28,
+    "branchCount": 9,
+    "disposition": "stabilized",
+    "targetBudget": {
+      "fileLines": 70,
+      "maxFunctionLines": 35,
+      "branchCount": 10
+    },
+    "notes": "Roundtrip detection is now chain-scoped in memory. Keep classification grouping changes small and covered by cross-chain same-hash regression tests."
+  },
+  "worker/src/lib/mint-burn-pipeline/roundtrip-sweep.ts": {
+    "fileLines": 70,
+    "maxFunctionLines": 49,
+    "branchCount": 3,
+    "disposition": "stabilized",
+    "targetBudget": {
+      "fileLines": 80,
+      "maxFunctionLines": 55,
+      "branchCount": 5
+    },
+    "notes": "Atomic roundtrip sweep updates now include chain predicates. Keep D1 mutation shape changes paired with SQL-bind regression coverage."
   },
   "worker/src/cron/sync-live-reserves.ts": {
     "fileLines": 497,

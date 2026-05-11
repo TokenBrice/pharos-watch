@@ -33,12 +33,17 @@ function formatMatches(matches) {
   }
 }
 
-// Cross-boundary validators that intentionally import worker sources to
-// assert invariants. Keep this list minimal and document why each entry
-// exists in the file's header comment.
-const BOUNDARY_EXEMPT_FILES = new Set([
-  "scripts/check-frozen-invariants.ts",
-]);
+// Named cross-boundary validators that intentionally import worker sources to
+// assert invariants. Keep this list minimal and document why each entry exists
+// in the file's header comment.
+const BOUNDARY_WAIVERS = [
+  {
+    id: "frozen-invariants-lifecycle-registry-check",
+    file: "scripts/check-frozen-invariants.ts",
+    reason: "Freeze validation must assert frozen IDs are absent from worker registries and frontend compare fixtures.",
+  },
+];
+const BOUNDARY_EXEMPT_FILES = new Set(BOUNDARY_WAIVERS.map((waiver) => waiver.file));
 
 function runBoundaryCheck(label, { excludeTests, rootDir, forbiddenPattern }) {
   try {

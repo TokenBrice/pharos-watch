@@ -4,6 +4,7 @@ export const VALIDATE_PREBUILD_COMMANDS = [
   "npm run lint",
   "npm run typecheck",
   "npm run check:cemetery-dataset",
+  "npm run check:agent-doc-sync",
   "npm run check:cron-abort-contract",
   "npm run check:cron-connections",
   "npm run check:cron-sync",
@@ -22,6 +23,7 @@ export const VALIDATE_PREBUILD_COMMANDS = [
   "npm run check:shared-cycles",
   "npm run check:sql-safety",
   "npm run check:stablecoin-data",
+  "npm run check:supply-helper-usage",
   "npm run check:unused-code",
   "npm run check:verified-doc-links",
   "npm run check:world-map",
@@ -29,14 +31,6 @@ export const VALIDATE_PREBUILD_COMMANDS = [
 ];
 
 export const VALIDATE_PREBUILD_MAX_PARALLEL = 8;
-
-export const VALIDATE_PREBUILD_TASK_NAMES = VALIDATE_PREBUILD_COMMANDS.map((cmd) => {
-  const prefix = "npm run ";
-  if (!cmd.startsWith(prefix)) {
-    throw new Error(`validate:prebuild only supports npm-script commands. Received: ${cmd}`);
-  }
-  return cmd.slice(prefix.length);
-});
 
 // Keep the top-level CI/merge-gate contract as the umbrella script while the
 // package-level implementation delegates to the shared registry above.
@@ -108,20 +102,4 @@ export function buildCiValidateCommands() {
     "npm run coverage:critical",
     ...WORKER_VALIDATE_COMMANDS,
   ];
-}
-
-export function buildValidatePrebuildRunnerArgs({ continueOnError = false } = {}) {
-  const args = [
-    "-l",
-    "--aggregate-output",
-    "--max-parallel",
-    String(VALIDATE_PREBUILD_MAX_PARALLEL),
-    ...VALIDATE_PREBUILD_TASK_NAMES,
-  ];
-
-  if (continueOnError) {
-    args.splice(2, 0, "--continue-on-error");
-  }
-
-  return args;
 }

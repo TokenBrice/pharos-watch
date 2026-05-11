@@ -31,10 +31,6 @@
     "disposition": "queued-p4",
     "notes": "The API keys operator panel currently mixes create/edit form state, admin mutations, expiry/rate-limit validation, and token reveal rendering in one client component. Keep it explicitly waived until the next ops-UI decomposition pass splits the mutation helpers and per-key row editor out of the panel shell."
   },
-  "src/components/api-key-request-form.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The public self-serve request form intentionally ships as a single client workflow for intake, verification-token exchange, one-time token reveal, and copy actions. Split field groups, verification state, and issued-key rendering into focused subcomponents after the API access launch stabilizes."
-  },
   "worker/src/cron/sync-fx-rates-helpers.ts": {
     "disposition": "deferred",
     "notes": "FX-rate helper orchestration remains a large policy surface after earlier trims. Defer another split until the next FX-state/runtime cleanup tranche."
@@ -70,10 +66,6 @@
   "worker/src/cron/confirm-pending-depegs.ts": {
     "disposition": "queued-p4",
     "notes": "Grew during the 2026-04-18 depeg+DEWS hardening wave with pool-status count classification, circuit-breaker guards, offchainSourceLabel tracking, and composite pending-reason parsing. The main confirmPendingDepegs function is now the obvious split candidate — per-row evaluation (primary/native/off-chain/DEX/CEX/pool collection) should extract into buildConfirmationPlan; the decision matrix should extract into evaluatePromotionDecision. Follow-up in the next /simplify pass."
-  },
-  "worker/src/api/api-key-requests.ts": {
-    "disposition": "queued-p4",
-    "notes": "The self-serve API key handler coordinates intake throttles, email-claim state, verification issuance, compensation, and private admin review in one new endpoint module. Split request lifecycle, verification exchange, and admin mutations into separate handler modules once the self-serve surface has production usage."
   },
   "src/components/pre-launch-detail.tsx": {
     "disposition": "queued-p4",

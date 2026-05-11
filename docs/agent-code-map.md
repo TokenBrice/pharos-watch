@@ -104,6 +104,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/api-hooks.ts` - NonUsdSharePoint, dexLiquidityHistoryQueryOptions, safetyScoreHistoryQueryOptions, useBluechipRatings, useDailyDigest, useDexLiquidity
 - `src/hooks/homepage-filter-model.ts` - FILTER_GROUPS, parseHomepageParams
 - `src/hooks/use-admin-polling-query.ts` - useAdminPollingQuery
+- `src/hooks/use-api-key-request-form-state.ts` - EMAIL_MAX_LENGTH, EXPECTED_VOLUME_MAX_LENGTH, NAME_MAX_LENGTH, ORGANIZATION_MAX_LENGTH, PROJECT_URL_MAX_LENGTH, RequestStatus
 - `src/hooks/use-api-key-requests.ts` - useApiKeyRequests
 - `src/hooks/use-api-keys.ts` - useApiKeys
 - `src/hooks/use-api-query.ts` - ApiQueryWithMetaResult, PollingWindow, createApiPollingQueryOptions, createApiPollingQueryOptionsWithMeta, createApiQueryFn, createApiQueryFnWithMeta
@@ -150,12 +151,11 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-status-history.ts` - StatusHistoryWindow, useStatusHistory
 - `src/hooks/use-status.ts` - useStatus
 - `src/hooks/use-stress-test.ts` - StressTestState, parseStressSelectionFromSearch, useStressTest
-- `src/hooks/use-table-density.ts` - DENSITY_CONFIGS, TableDensity, useTableDensity
-- ... 7 more files omitted; use `rg --files src/hooks` for the full list.
+- ... 8 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
 
-- `src/lib/admin-access.ts` - buildAdminApiPath, isOpsUiHost
+- `src/lib/admin-access.ts` - AdminMutationOptions, AdminMutationResult, adminMutation, buildAdminApiPath, isOpsUiHost, postAdminJson
 - `src/lib/alt-peg-emblems.ts` - PEG_ANCHORS
 - `src/lib/alt-peg-geography.ts` - CountryFill, Iso2, PEG_COUNTRY_MAP, buildCountryColorMap
 - `src/lib/alt-peg-hero.ts` - HeroCoin, PegCluster, PegDiversityHero, PlacedCoin, SkyCohort, SkyCohortKind
@@ -163,6 +163,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/alt-peg-packing.ts` - PackedCoin, PackingInput, arrangeClusterCoins, resolvePackedCoinOverlaps
 - `src/lib/alt-peg-sizing.ts` - FIAT_MAP_SIZE_CAP_MARKET_CAP, FIAT_MAP_SIZE_CEIL, SIZE_CEIL, SIZE_FLOOR, SKY_COHORT_SIZE_CEIL, coinEmblemSize
 - `src/lib/analytics.ts` - trackEvent, trackSearch
+- `src/lib/api-key-self-serve.ts` - readVerificationTokenFromUrl, stripVerificationTokenFromUrl, submitApiKeyRequest, takePreSanitizedVerificationToken, verifyApiKeyRequestToken
 - `src/lib/api-reference-doc.ts` - ApiReferenceDocument, ApiReferenceSection, MarkdownBlock, MarkdownCodeBlock, MarkdownListBlock, MarkdownParagraphBlock
 - `src/lib/api.ts` - API_BASE, ApiContractMode, ApiFetchError, ApiFetchOptions, ApiRequestOptions, DEFAULT_API_REQUEST_TIMEOUT_MS
 - `src/lib/blacklist-api.ts` - FetchBlacklistEventsParams, buildBlacklistEventsPath, fetchBlacklistEvents, fetchBlacklistSummary
@@ -204,8 +205,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/flow-intensity.ts` - FlowIntensitySemantics, getPressureShiftDisplay, normalizeToSignedFlowIntensity
 - `src/lib/flow-pressure-receipt-model.ts` - FlowPressureReceiptCoverageRow, FlowPressureReceiptLeader, FlowPressureReceiptModel, FlowPressureReceiptRow, FlowReceiptTone, buildFlowPressureReceiptModel
 - `src/lib/flow-signal-ui.ts` - FlowDirectionUi, FlowPressureUi, buildFlowOverviewDescription, buildFlowOverviewHeadline, buildFlowSummaryNarrative, getFlowDirectionUi
-- `src/lib/fonts.ts` - digestDisplay, geistMono, geistSans
-- ... 47 more files omitted; use `rg --files src/lib` for the full list.
+- ... 48 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -249,7 +249,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/contagion-graph-model.ts` - TYPE_COLORS, TYPE_DASH, gradeColor
 - `src/components/contagion-graph-tooltips.tsx` - buildEdgeTooltipElement, buildNodeTooltipElement, buildTooltipAnnouncement
 - `src/components/contagion-graph.tsx` - ContagionGraph
-- ... 228 more files omitted; use `rg --files src/components` for the full list.
+- ... 229 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -302,7 +302,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-dews-version.ts` - DEPEG_DEWS_METHODOLOGY_CHANGELOG, DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH, DEPEG_DEWS_METHODOLOGY_VERSION, DEPEG_DEWS_METHODOLOGY_VERSION_LABEL, getDepegDewsMethodologyVersionAt
 - `shared/lib/dependency-derivation.ts` - deriveDependencies, deriveEffectiveDependencies
 - `shared/lib/dependency-graph.ts` - DependencyGraphEdge, buildDependencyGraphEdges, buildDependencyGraphEdgesFromDependencies, collectDependencyGraphIds, filterDependencyGraphEdgesToLive
-- `shared/lib/dews-config.ts` - DEWS_SIGNAL_WEIGHTS, DEWS_THREAT_BANDS
+- `shared/lib/dews-config.ts` - DEWS_SIGNAL_DESCRIPTIONS, DEWS_SIGNAL_LABELS, DEWS_SIGNAL_SHORT_LABELS, DEWS_SIGNAL_WEIGHTS, DEWS_THREAT_BANDS, DewsSignalKey
 - `shared/lib/digest-risk.ts` - ACTIVE_DEPEG_PROMPT_LIMIT, getDepegEditorialImpactScore, getDepegMarketImpactScore, isCriticalDepegRisk
 - `shared/lib/env-contract.ts` - renderEnvExample
 - `shared/lib/env-contract/registry.ts` - ENV_BINDINGS, EnvBindingKey, compareRuntimeOrder, getAllEnvBindingKeys, getRuntimeActiveEnvKeys, getRuntimeEnvKeys
@@ -339,6 +339,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/aid-gaib.json` - 17 keys
 - `shared/data/stablecoins/coins/alusd-alchemix.json` - 14 keys
 - `shared/data/stablecoins/coins/apxusd-apyx.json` - 16 keys
+- `shared/data/stablecoins/coins/apyusd-apyx.json` - 20 keys
 - `shared/data/stablecoins/coins/arc-anq.json` - 16 keys
 - `shared/data/stablecoins/coins/audd-novatti.json` - 17 keys
 - `shared/data/stablecoins/coins/audf-forte.json` - 15 keys
@@ -371,8 +372,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/ceur-celo.json` - 16 keys
 - `shared/data/stablecoins/coins/cgo-comtech.json` - 14 keys
 - `shared/data/stablecoins/coins/cgusd-cygnus-finance.json` - 14 keys
-- `shared/data/stablecoins/coins/chfau-allunity.json` - 16 keys
-- ... 250 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
+- ... 273 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
 
 ## Worker routing
 
@@ -429,10 +429,13 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/admin-reset-cron-lease.ts` - handleResetCronLease
 - `worker/src/api/api-key-audit-log.ts` - handleApiKeyAuditLog
 - `worker/src/api/api-key-requests.ts` - handleApiKeyRequest, handleApiKeyRequestReject, handleApiKeyRequestReleaseClaim, handleApiKeyRequestVerify, handleApiKeyRequestsAdmin
+- `worker/src/api/api-key-requests/admin.ts` - buildAdminMutationResponse, deactivateLinkedSelfServeKey, listAdminRequests, mapAdminRow, parseAdminMutationBody, recordRequestAdminAction
 - `worker/src/api/api-key-requests/email.ts` - redactProviderBody, sendVerificationEmail
 - `worker/src/api/api-key-requests/rate-limit.ts` - ApiKeyRequestRateLimitResult, ApiKeyRequestRateLimitScope, checkApiKeyRequestRateLimit, pruneOldApiKeyRequestRateLimits
 - `worker/src/api/api-key-requests/request.ts` - buildVerificationUrl, createRequestId, createVerificationToken, hashClientIp, hashForLookup, hashUserAgent
-- `worker/src/api/api-key-requests/types.ts` - ApiKeySelfServeEnv, ApiKeySelfServeRequestSchema, ApiKeySelfServeVerifySchema, ParsedApiKeySelfServeRequest, ParsedApiKeySelfServeVerify, RequiredInitialSelfServeEnv
+- `worker/src/api/api-key-requests/responses.ts` - IssuedSelfServeKeySummary, SelfServeKeyNameSource, buildSelfServeKeyName, issuedPublicResponse, pendingPublicResponse
+- `worker/src/api/api-key-requests/serialization.ts` - parseJsonStringArray
+- `worker/src/api/api-key-requests/types.ts` - ApiKeyRequestAdminRow, ApiKeyRequestDb, ApiKeyRequestRow, ApiKeyRequestStatement, ApiKeySelfServeEnv, ApiKeySelfServeRequestSchema
 - `worker/src/api/api-keys.ts` - handleApiKeyDeactivate, handleApiKeyRotate, handleApiKeyUpdate, handleApiKeys
 - `worker/src/api/audit-depeg-history.ts` - AuditEventsOptions, auditEvents, handleAuditDepegHistory
 - `worker/src/api/backfill-blacklist-current-balances.ts` - handleBackfillBlacklistCurrentBalances
@@ -478,10 +481,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/og.tsx` - deriveStablecoinOgCardData, handleOg
 - `worker/src/api/peg-summary.ts` - handlePegSummary
 - `worker/src/api/public-status-history.ts` - handlePublicStatusHistory
-- `worker/src/api/reclassify-atomic-roundtrips.ts` - handleReclassifyAtomicRoundtrips
-- `worker/src/api/redemption-backstops.ts` - handleRedemptionBackstops
-- `worker/src/api/remediate-blacklist-amount-gaps.ts` - handleRemediateBlacklistAmountGaps
-- ... 30 more files omitted; use `rg --files worker/src/api` for the full list.
+- ... 33 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 
@@ -565,7 +565,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/fetch-slipstream.ts` - fetchSlipstreamPools, getSlipstreamPoolFeeBps, sqrtRatioToSpotPrice
 - `worker/src/cron/dex-liquidity/geckoterminal-shared.ts` - fetchGtTokenPools, getGtPoolKind, getGtPoolType, parseGtPool
 - `worker/src/cron/dex-liquidity/index.ts` - syncDexLiquidity
-- ... 222 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 223 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -651,15 +651,20 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/remote-d1.test.ts`
 - `scripts/__tests__/rollback-pages-deployment.test.ts`
 - `scripts/__tests__/serve-static-export.test.ts`
+- `scripts/__tests__/setup-workspace-cache.test.ts`
 - `scripts/__tests__/smoke-api.test.ts`
 - `scripts/__tests__/smoke-ops.test.ts`
 - `scripts/__tests__/smoke-ui.test.ts`
 - `scripts/__tests__/sql-interpolation-safety.test.ts`
 - `scripts/__tests__/stablecoin-catalog-sources.test.ts`
+- `scripts/__tests__/supply-helper-usage.test.ts`
 - `scripts/__tests__/test-merge-gate.test.ts`
 - `scripts/__tests__/validate-ci-parity.test.ts`
+- `scripts/__tests__/vitest-ci-args.test.ts`
+- `scripts/__tests__/worker-boundary-waivers.test.ts`
 - `scripts/audit-pricing-provider-config.ts` - AuditSection, auditBinance, auditBitstamp, auditCoinbase, auditKraken, auditOptionalSourceShapes
 - `scripts/build-world-map-svg.ts`
+- `scripts/check-agent-doc-sync.mjs`
 - `scripts/check-critical-coverage.mjs` - getChangedFilesFromGit, isAllZeroSha, parseChangedFilesFromEnv, runCriticalCoverageCheck
 - `scripts/check-cron-abort-contract.mjs` - main, scanCronAbortContract
 - `scripts/check-cron-connection-budget.ts`
@@ -676,6 +681,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/check-shared-cycles.mjs`
 - `scripts/check-sql-interpolation-safety.mjs` - DEFAULT_SQL_SAFETY_ROOTS, SQL_INTERPOLATION_PATTERN, SQL_SAFETY_EXTENSIONS, SQL_SAFETY_PATTERN, main, parseSqlSafetyRoots
 - `scripts/check-stablecoin-data.ts`
+- `scripts/check-supply-helper-usage.mjs` - DEFAULT_SUPPLY_HELPER_ROOTS, SUPPLY_HELPER_WAIVERS, main, printSupplyHelperUsageReport, scanSupplyHelperUsage
 - `scripts/check-unused-code.mjs`
 - `scripts/check-verified-doc-links.mjs`
 - `scripts/check-worker-import-boundary.mjs`
@@ -687,10 +693,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/fix-commodity-depeg-median.ts`
 - `scripts/fix-non-usd-depeg-fx.ts`
 - `scripts/freeze-stablecoin.ts` - FreezePlan, buildFreezePlan
-- `scripts/generate-agent-code-map.mjs`
-- `scripts/generate-cemetery-dataset.ts`
-- `scripts/generate-docs-metadata.ts`
-- `scripts/generate-llms-txt.ts`
-- `scripts/generate-markdown-exports.ts` - main, writeMarkdownRoute
-- `scripts/generate-openapi-spec.ts`
-- ... 37 more files omitted; use `rg --files scripts` for the full list.
+- ... 44 more files omitted; use `rg --files scripts` for the full list.

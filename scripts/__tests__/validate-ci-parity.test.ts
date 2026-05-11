@@ -4,12 +4,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildCiValidateStepPlan,
   buildNoncriticalTestShardCommands,
-  buildValidatePrebuildRunnerArgs,
   PAGES_VALIDATE_COMMANDS,
   NONCRITICAL_TEST_SHARD_COUNT,
   VALIDATE_PREBUILD_MAX_PARALLEL,
   VALIDATE_PREBUILD_COMMANDS,
-  VALIDATE_PREBUILD_TASK_NAMES,
   WORKER_VALIDATE_COMMANDS,
 } from "../lib/validate-contract.mjs";
 import {
@@ -152,6 +150,7 @@ describe("validate-ci parity", () => {
       "npm run lint",
       "npm run typecheck",
       "npm run check:cemetery-dataset",
+      "npm run check:agent-doc-sync",
       "npm run check:cron-abort-contract",
       "npm run check:cron-connections",
       "npm run check:cron-sync",
@@ -170,6 +169,7 @@ describe("validate-ci parity", () => {
       "npm run check:shared-cycles",
       "npm run check:sql-safety",
       "npm run check:stablecoin-data",
+      "npm run check:supply-helper-usage",
       "npm run check:unused-code",
       "npm run check:verified-doc-links",
       "npm run check:world-map",
@@ -178,22 +178,17 @@ describe("validate-ci parity", () => {
   });
 
   it("keeps the prebuild runner bounded while preserving the shared command set", () => {
-    expect(VALIDATE_PREBUILD_TASK_NAMES).toEqual(VALIDATE_PREBUILD_COMMANDS.map((cmd) => cmd.slice("npm run ".length)));
-    expect(buildValidatePrebuildRunnerArgs()).toEqual([
-      "-l",
-      "--aggregate-output",
-      "--max-parallel",
-      String(VALIDATE_PREBUILD_MAX_PARALLEL),
-      ...VALIDATE_PREBUILD_TASK_NAMES,
-    ]);
-    expect(buildValidatePrebuildRunnerArgs({ continueOnError: true })).toEqual([
-      "-l",
-      "--aggregate-output",
-      "--continue-on-error",
-      "--max-parallel",
-      String(VALIDATE_PREBUILD_MAX_PARALLEL),
-      ...VALIDATE_PREBUILD_TASK_NAMES,
-    ]);
+    const packageJson = JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8")) as {
+      devDependencies: Record<string, string>;
+    };
+    const runner = readFileSync(resolve(process.cwd(), "scripts/run-validate-prebuild.mjs"), "utf8");
+
+    expect(packageJson.devDependencies).not.toHaveProperty("npm-run-all2");
+    expect(runner).toContain("runParallelExecutionUnits");
+    expect(runner).toContain("VALIDATE_PREBUILD_COMMANDS");
+    expect(runner).toContain("VALIDATE_PREBUILD_MAX_PARALLEL");
+    expect(runner).not.toContain("run-p");
+    expect(VALIDATE_PREBUILD_MAX_PARALLEL).toBe(8);
   });
 
   it("keeps critical and non-critical test runners derived from one critical test list", () => {

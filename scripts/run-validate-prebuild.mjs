@@ -1,17 +1,16 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
-import { localBin } from "./lib/local-bin.mjs";
-import { buildValidatePrebuildRunnerArgs } from "./lib/validate-contract.mjs";
+import { createExecutionUnit, runParallelExecutionUnits } from "./lib/command-runner.mjs";
+import {
+  VALIDATE_PREBUILD_COMMANDS,
+  VALIDATE_PREBUILD_MAX_PARALLEL,
+} from "./lib/validate-contract.mjs";
 
-const result = spawnSync(localBin("run-p"), buildValidatePrebuildRunnerArgs({
-  continueOnError: process.env.VALIDATE_PREBUILD_CONTINUE_ON_ERROR === "1",
-}), {
-  stdio: "inherit",
-});
-
-if (result.error) {
-  throw result.error;
-}
-
-process.exit(result.status ?? 1);
+await runParallelExecutionUnits(
+  VALIDATE_PREBUILD_COMMANDS.map((cmd) => createExecutionUnit([cmd])),
+  {
+    continueOnError: process.env.VALIDATE_PREBUILD_CONTINUE_ON_ERROR === "1",
+    label: "validate:prebuild",
+    maxParallel: VALIDATE_PREBUILD_MAX_PARALLEL,
+  },
+);
