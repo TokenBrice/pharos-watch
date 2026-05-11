@@ -280,30 +280,30 @@ The WAF expression of record is:
 
 Record the Cloudflare rule ID from Security -> WAF -> Rate limiting rules in the incident note when the rule is created or edited, then verify matches under Security -> Events filtered by that rule ID.
 
-Use these SQL templates from a trusted operator shell. Set `CUTOFF_EPOCH` to the first suspect issuance timestamp.
+Use these SQL templates from a trusted operator shell. Set `cutoff_epoch` to the first suspect issuance timestamp.
 
 ```bash
-CUTOFF_EPOCH=1778500000
-DB_NAME=pharos-watch
+cutoff_epoch=1778500000
+db_name=pharos-watch
 
 # Dry-run: list self-serve keys issued after cutoff.
-npx wrangler d1 execute "$DB_NAME" --remote --command "
+npx wrangler d1 execute "$db_name" --remote --command "
 SELECT k.id, k.key_prefix, k.owner_email, k.is_active, k.expires_at, k.created_at, r.request_id, r.status
 FROM api_keys k
 LEFT JOIN api_key_requests r ON r.api_key_id = k.id
-WHERE k.tier = 'self-serve' AND k.created_at >= $CUTOFF_EPOCH
+WHERE k.tier = 'self-serve' AND k.created_at >= $cutoff_epoch
 ORDER BY k.created_at DESC;
 "
 
 # Deactivate post-cutoff self-serve keys.
-npx wrangler d1 execute "$DB_NAME" --remote --command "
+npx wrangler d1 execute "$db_name" --remote --command "
 UPDATE api_keys
 SET is_active = 0, updated_at = strftime('%s','now')
-WHERE tier = 'self-serve' AND created_at >= $CUTOFF_EPOCH;
+WHERE tier = 'self-serve' AND created_at >= $cutoff_epoch;
 "
 
 # Release claims only after their linked key is inactive or absent.
-npx wrangler d1 execute "$DB_NAME" --remote --command "
+npx wrangler d1 execute "$db_name" --remote --command "
 UPDATE api_key_self_serve_email_claims
 SET status = 'released', released_at = strftime('%s','now'), updated_at = strftime('%s','now')
 WHERE status IN ('pending_verification', 'issued')
@@ -311,21 +311,21 @@ WHERE status IN ('pending_verification', 'issued')
     SELECT r.request_id
     FROM api_key_requests r
     LEFT JOIN api_keys k ON k.id = r.api_key_id
-    WHERE r.created_at >= $CUTOFF_EPOCH
+    WHERE r.created_at >= $cutoff_epoch
       AND (k.id IS NULL OR k.is_active = 0)
   );
 "
 
 # Mark affected request rows blocked for operator visibility.
-npx wrangler d1 execute "$DB_NAME" --remote --command "
+npx wrangler d1 execute "$db_name" --remote --command "
 UPDATE api_key_requests
 SET status = 'blocked', verification_token_hash = NULL, issuance_locked_at = NULL, updated_at = strftime('%s','now')
-WHERE created_at >= $CUTOFF_EPOCH
+WHERE created_at >= $cutoff_epoch
   AND status IN ('pending_verification', 'issued');
 "
 
 # Consistency check: active key linked to blocked/rejected/expired request.
-npx wrangler d1 execute "$DB_NAME" --remote --command "
+npx wrangler d1 execute "$db_name" --remote --command "
 SELECT r.request_id, r.status, k.id, k.key_prefix, k.is_active
 FROM api_key_requests r
 JOIN api_keys k ON k.id = r.api_key_id
@@ -335,7 +335,7 @@ WHERE k.tier = 'self-serve'
 "
 
 # Consistency check: pending claims without request rows.
-npx wrangler d1 execute "$DB_NAME" --remote --command "
+npx wrangler d1 execute "$db_name" --remote --command "
 SELECT c.email_hash, c.request_id, c.status, c.claimed_at
 FROM api_key_self_serve_email_claims c
 LEFT JOIN api_key_requests r ON r.request_id = c.request_id
