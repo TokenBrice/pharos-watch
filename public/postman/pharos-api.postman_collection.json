@@ -445,7 +445,7 @@
                 }
               ]
             },
-            "description": "Freeze and blacklist events with optional symbol, chain, event type, search, sort, and pagination filters."
+            "description": "Freeze and blacklist events with optional uppercase symbol, chain display-name, event type, search, sort, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based."
           },
           "response": []
         },
@@ -464,7 +464,7 @@
                 "blacklist-summary"
               ]
             },
-            "description": "Blacklist summary statistics, chart data, and chain options."
+            "description": "Blacklist summary statistics, chart data, chain options, manifest-derived coverage metadata, and freeze-ledger data-quality context. Prefer tracked freeze-ledger fields over legacy active-state fields for public frozen exposure."
           },
           "response": []
         },

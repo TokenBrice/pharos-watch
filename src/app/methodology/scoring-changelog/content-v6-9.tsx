@@ -18,8 +18,9 @@ export function ScoringChangelogV69Entry() {
           Reserve-heavy downstream freeze exposure now surfaces as <code className="text-xs bg-muted px-1 py-0.5 rounded">inherited</code>, which is distinct from mutable-contract risk.
         </li>
         <li>
-          Inherited status now requires majority reserve exposure and can use curated reserve-slice <code className="text-xs bg-muted px-1 py-0.5 rounded">blacklistable</code>{" "}
-          markers in addition to upstream stablecoin links.
+          Inherited status became an explicit upstream-freeze category that can use curated reserve-slice{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">blacklistable</code> markers in addition to
+          upstream stablecoin links; v7.13 later removed the reserve-weight gate.
         </li>
       </ul>
     </VersionCard>

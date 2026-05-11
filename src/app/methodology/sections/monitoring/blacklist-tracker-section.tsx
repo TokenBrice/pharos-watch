@@ -41,6 +41,11 @@ export function BlacklistTrackerMethodologySection() {
                 snapshot identities are contract/config scoped, while older rows can use legacy symbol/chain/address
                 fallback until remediation catches them up.
               </p>
+              <p>
+                Blacklistability uses the report-card five-status model: Yes, Dilutable, Upstream, Possible, and No.
+                Any reserve, custody, backing, parent-asset, or CEX/custody-rail exposure resolves as Upstream; Possible
+                is reserved for curated direct token or vault controls that are not confirmed direct blacklist controls.
+              </p>
               <MethodologyFacts
                 facts={[
                   { label: "Data sources", value: "Etherscan v2, chain RPC / dRPC log scans, and TronGrid" },
@@ -70,7 +75,7 @@ export function BlacklistTrackerMethodologySection() {
                 <div className="space-y-3">
                   <p>The blacklist tracker stores event-time rows separately from a persistent freeze-ledger snapshot. Each cron run processes new events since the last indexed block; new blacklist rows refresh last-known snapshots, while later unblacklist events do not delete historical ledger rows.</p>
                   <p>Backlog sync handles gaps from missed cron runs or RPC failures by replaying events from the last confirmed cursor. Tron events use a separate ingestion path due to the TRC-20 event format differences, and missing Tron account/token-balance data remains provider-missing rather than being converted to zero.</p>
-                  <p>The public-facing freeze totals combine per-chain counts into a single figure. Destroy/seize events can overwrite the stored amount when they provide better seized-value evidence, and the public summary reads the persistent ledger rather than treating unfreeze rows as historical deletion.</p>
+                  <p>The public-facing freeze totals combine per-chain counts into a single figure. Destroy/seize events can overwrite the stored amount when they provide better seized-value evidence, and the public summary reads the persistent ledger rather than treating unfreeze rows as historical deletion. The legacy active fields remain available for the local net-active state machine, but public freeze exposure should use the tracked ledger fields.</p>
                 </div>
               </MethodologyDetails>
           </MethodologySectionShell>

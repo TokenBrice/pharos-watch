@@ -1,9 +1,26 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.991",
+  currentVersion: "3.992",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.992",
+    title: "Public contract clarification",
+    date: "2026-05-11",
+    effectiveAt: 1778457600, // 2026-05-11T00:00:00Z
+    summary:
+      "Clarifies the public blacklist contract without changing event ingestion: `/blacklist` status charts use the five-status model, CSV export covers the currently loaded table page, `/api/blacklist-summary` distinguishes legacy active-state fields from tracked freeze-ledger fields, coverage counts are manifest-derived, and chain identifiers are documented as `chainId` response/join fields rather than the `chain` display-name filter.",
+    impact: [
+      "The blacklist exposure model is documented as Yes, Dilutable, Upstream, Possible, and No",
+      "Reserve, backing, custody, parent-asset, and CEX/custody-rail exposure resolve to Upstream through the any-reserve policy instead of Possible",
+      "`/blacklist` CSV export is documented as the current server-returned page after filters, sorting, search, and pagination",
+      "`/api/blacklist-summary` consumers are directed to `trackedAddressCount`, `trackedFrozenTotal`, and `trackedAmountGapCount`; legacy `active*` fields remain for local net-active state-machine compatibility",
+      "Coverage docs now treat deferred config counts as runtime-manifest-derived and document the required coverage fields, including `chainId`",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.991",
     title: "Public transparency and snapshot semantics",

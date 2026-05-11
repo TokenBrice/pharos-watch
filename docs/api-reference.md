@@ -672,8 +672,8 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
   "methodology": {
     "version": "3.99",
     "versionLabel": "v3.99",
-    "currentVersion": "3.991",
-    "currentVersionLabel": "v3.991",
+    "currentVersion": "3.992",
+    "currentVersionLabel": "v3.992",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1776729600,
     "isCurrent": false
@@ -725,7 +725,7 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 
 Server-side aggregates for the Blacklist Tracker overview cards, chart, and filter options. This lets the frontend render summary state without hydrating the full blacklist history first.
 
-`stats.destroyedTotal` remains an event-history total. `stats.activeFrozenTotal` reflects Pharos' local active blacklist state machine. `stats.trackedFrozenTotal` is the persistent freeze-ledger total sourced from `blacklist_current_balances`, including reconciled historical bootstrap rows where later seizures or unblacklists would otherwise hide the frozen amount. These current-balance totals are last-known successful snapshots, not a live guarantee; provider refresh failures preserve the last successful amount and should be interpreted through freshness, status, and provenance metadata when present. New snapshot rows are contract/config-scoped; older rows can still fall back to the legacy symbol/chain/address identity until remediated. `stats.recentCount` covers the last 30 days, while `stats.recentCount24h` is the last-24-hours subset used by chrome-level monitoring surfaces. The `chart` now uses that same freeze ledger and attributes each tracked balance back to its latest recorded blacklist quarter, so the quarterly buckets explain the `trackedFrozenTotal` headline rather than raw event-time intake.
+`stats.destroyedTotal` remains an event-history total. `stats.activeAddressCount`, `stats.activeFrozenTotal`, and `stats.activeAmountGapCount` are legacy wire-compatible fields for Pharos' local net-active blacklist state machine. `stats.trackedFrozenTotal` is the persistent freeze-ledger total sourced from `blacklist_current_balances`, including reconciled historical bootstrap rows where later seizures or unblacklists would otherwise hide the frozen amount. New consumers should prefer `trackedAddressCount`, `trackedFrozenTotal`, and `trackedAmountGapCount` for public freeze-ledger exposure, and use the active fields only when they specifically need the current local net-frozen state. These current-balance totals are last-known successful snapshots, not a live guarantee; provider refresh failures preserve the last successful amount and should be interpreted through freshness, status, and provenance metadata when present. New snapshot rows are contract/config-scoped; older rows can still fall back to the legacy symbol/chain/address identity until remediated. `stats.recentCount` covers the last 30 days, while `stats.recentCount24h` is the last-24-hours subset used by chrome-level monitoring surfaces. The `chart` now uses that same freeze ledger and attributes each tracked balance back to its latest recorded blacklist quarter, so the quarterly buckets explain the `trackedFrozenTotal` headline rather than raw event-time intake.
 
 The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stablecoin detail pages. `perCoinFrozenAddressCount` counts addresses whose latest event is `blacklist` (net-frozen). `perCoinFrozenTotal` sums last-known successful `blacklist_current_balances.balance_usd` snapshots per coin. `perCoinDestroyedTotal` sums `amount_usd_at_event` over `destroy` events per coin. `perCoinQuarterlyEventTypes` contains each coin's quarterly breakdown of event-type counts, zero-filled between the coin's first and last event quarters so bars render contiguously. All per-coin aggregations exclude rows where `suppression_reason` is set (e.g. EURC mirror zero-balance entries).
 
@@ -782,10 +782,10 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
         "eventTypes": ["blacklist", "unblacklist", "destroy"]
       }
     ],
-    "unsupportedDeferred": [{ "symbol": "TUSD", "chainId": "bsc", "reason": "pending explorer coverage" }],
+    "unsupportedDeferred": [{ "symbol": "TUSD", "chainId": "bsc", "reason": "deferred_contract_creation_verification" }],
     "counts": {
       "supportedConfigs": 71,
-      "unsupportedDeferredConfigs": 6,
+      "unsupportedDeferredConfigs": 10,
       "bySymbol": { "USDT": 8 },
       "byChain": { "ethereum": 35 },
       "byProviderSource": { "evm-logs": 70, "trongrid": 1 }
@@ -802,6 +802,7 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
     "statusDistribution": { "resolved": 9466 },
     "sourceDistribution": { "current_balance": 240, "bootstrap_kyc_rip": 9226 },
     "freshnessDistribution": { "fresh": 9450, "degraded": 10, "stale": 6 },
+    "currentFreshnessDistribution": { "fresh": 240, "degraded": 0, "stale": 0 },
     "providerFailedCount": 0,
     "lastErrorClassDistribution": {},
     "sourceCategoryCounts": { "bootstrap": 9226, "current": 240, "destroy": 0, "other": 0 },
@@ -830,19 +831,19 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
     },
     "freezeLedger": {
       "providerFailedCount": 0,
-      "staleSnapshotCount": 6,
+      "staleSnapshotCount": 0,
       "trackedGapCount": 0,
       "scopedRows": 240,
       "legacyRows": 9226
     },
-    "coverage": { "supportedConfigs": 71, "unsupportedDeferredConfigs": 6 }
+    "coverage": { "supportedConfigs": 71, "unsupportedDeferredConfigs": 10 }
   },
   "totalEvents": 13422,
   "methodology": {
-    "version": "3.991",
-    "versionLabel": "v3.991",
-    "currentVersion": "3.991",
-    "currentVersionLabel": "v3.991",
+    "version": "3.992",
+    "versionLabel": "v3.992",
+    "currentVersion": "3.992",
+    "currentVersionLabel": "v3.992",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1776729600,
     "isCurrent": true
@@ -850,7 +851,7 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
 }
 ```
 
-`coverage` is the machine-readable tracker coverage inventory. `supported` entries are contract/config-level rows, while `unsupportedDeferred` identifies known deferred deployments and the reason they are not live. `freezeLedgerMeta` describes the last-known snapshot ledger used by `trackedFrozenTotal`, including scoped-vs-legacy row counts, observed-age bounds, source/status distributions, provider failures, and amount-gap distributions. `dataQuality.status` summarizes those coverage, gap, and snapshot signals into `ok`, `degraded`, or `stale`; clients should display or alert on `warnings` rather than inferring quality from null amount fields alone.
+`coverage` is the machine-readable tracker coverage inventory. `supported` entries are contract/config-level rows; each row includes the required tracked fields `symbol`, `stablecoinId`, `chainId`, `chainName`, `contractAddress`, `configKey`, `providerSource`, `eventFamilies`, and `eventTypes`. `unsupportedDeferred` identifies known deferred or explicitly de-scoped deployments from the runtime manifest and the reason they are not live; current examples use `chainId` values from the same shared chain registry as event rows. `freezeLedgerMeta` describes the last-known snapshot ledger used by `trackedFrozenTotal`, including scoped-vs-legacy row counts, observed-age bounds, source/status distributions, provider failures, and amount-gap distributions. `freshnessDistribution` covers every historical ledger row; `currentFreshnessDistribution` isolates rows produced by the current-balance provider when present and is what current API versions use for `dataQuality.freezeLedger.staleSnapshotCount`. `dataQuality.status` summarizes those coverage, gap, and current-provider snapshot signals into `ok`, `degraded`, or `stale`; clients should display or alert on `warnings` rather than inferring quality from null amount fields alone.
 
 ---
 
@@ -1898,7 +1899,7 @@ For peg handling, `rawInputs.pegScore` is the effective peg input used by report
 | `navToken`                         | `boolean`                                       |
 | `collateralFromLive`               | `boolean`                                       |
 
-`rawInputs.canBeBlacklisted` is the canonical resolved blacklist status used by report-card-backed product surfaces. It can therefore differ from the raw `StablecoinMeta.canBeBlacklisted` override field, which only carries manual metadata and never stores computed `"inherited"` values. Raw metadata accepts `"dilutable"` for uncapped admin-mint cases; those entries must include `canBeBlacklistedSource` for source provenance.
+`rawInputs.canBeBlacklisted` is the canonical resolved blacklist status used by report-card-backed product surfaces. It can therefore differ from the raw `StablecoinMeta.canBeBlacklisted` override field, which only carries manual metadata and never stores computed `"inherited"` values. Product labels map the wire values to the five-status model: `true` -> `Yes`, `"dilutable"` -> `Dilutable`, `"inherited"` -> `Upstream`, `"possible"` -> `Possible`, and `false` -> `No`. Raw metadata accepts `"dilutable"` for uncapped admin-mint cases; those entries must include `canBeBlacklistedSource` for source provenance. `"inherited"` / Upstream can be produced by any reserve, backing, custody, parent-asset, or CEX/custody-rail exposure; it does not require a majority reserve weight.
 
 `rawInputs.collateralFromLive` is true when score-grade live reserve data drove collateral scoring for the card.
 

@@ -399,7 +399,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       impact: [
         "Shared isBlacklistable() logic now counts centralized-custody BTC wrappers such as WBTC and cbBTC as direct reserve-side freeze exposure instead of only possible exposure",
         "Issuer-seizable tokenized collateral such as tokenized gold and reviewed tokenized share symbols now also counts as direct inherited freeze risk when present in reserve labels",
-        "Coins whose reserve mix crosses the >50% inherited threshold because of these assets now resolve to inherited instead of possible on report-card and table surfaces",
+        "Coins with these reviewed collateral assets gained inherited-freeze treatment in this phase; v7.13 later superseded the reserve-weight gate with the current any-reserve Upstream policy",
       ],
       commits: [],
       reconstructed: false,
@@ -455,10 +455,10 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       date: "2026-03-30",
       effectiveAt: 1774832400,
       summary:
-        "Blacklistability attribution now scans curated and live reserve labels plus reserve-rail text for stablecoin, wrapper, and CEX custody clues, so sub-majority reserve exposure resolves to possible instead of incorrectly falling through to no.",
+        "Blacklistability attribution began scanning curated and live reserve labels plus reserve-rail text for stablecoin, wrapper, and CEX custody clues; v7.13 later promoted any matched reserve path to Upstream.",
       impact: [
-        "Shared isBlacklistable() logic now returns possible when reserve slices or reserve-rail text imply blacklist or custodial-freeze exposure below the inherited threshold",
-        "Inherited status still requires majority direct reserve exposure, but curated and live reserve names now share the same direct blacklist clue detection instead of relying only on coinId or explicit blacklistable flags",
+        "Shared isBlacklistable() logic started surfacing reserve-side blacklist and custodial-freeze clues instead of falling through to no",
+        "Curated and live reserve names started sharing the same direct blacklist clue detection instead of relying only on coinId or explicit blacklistable flags; v7.13 later removed the reserve-weight gate",
         "Only coins with no explicit blacklist function, no reserve-side blacklist clues, and no CEX custody signal remain in the no bucket unless an explicit false override applies",
       ],
       commits: [],
@@ -474,7 +474,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       impact: [
         "Shared isBlacklistable() logic no longer defaults centralized-dependent governance to possible",
         "Reserve-heavy downstream freeze exposure now resolves to inherited instead of possible-inherited",
-        "Inherited detection now requires majority reserve exposure and can use curated reserve-slice blacklistable markers alongside upstream stablecoin coinId links",
+        "Inherited detection became an explicit upstream-freeze category using curated reserve-slice blacklistable markers and upstream stablecoin coinId links; v7.13 later removed the reserve-weight gate",
       ],
       commits: [],
       reconstructed: false,

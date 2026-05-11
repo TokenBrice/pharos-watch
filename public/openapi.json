@@ -766,14 +766,14 @@
           "Blacklist"
         ],
         "summary": "Blacklist events",
-        "description": "Freeze and blacklist events with optional symbol, chain, event type, search, sort, and pagination filters.",
+        "description": "Freeze and blacklist events with optional uppercase symbol, chain display-name, event type, search, sort, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based.",
         "operationId": "blacklist",
         "parameters": [
           {
             "name": "stablecoin",
             "in": "query",
             "required": false,
-            "description": "Optional blacklist-tracker stablecoin symbol filter, for example `USDT` or `USDC`.",
+            "description": "Optional uppercase blacklist-tracker stablecoin symbol filter, for example `USDT` or `USDC`.",
             "schema": {
               "type": "string",
               "enum": [
@@ -819,7 +819,7 @@
             "name": "chain",
             "in": "query",
             "required": false,
-            "description": "Optional exact chain-name filter, for example `Ethereum` or `Tron`.",
+            "description": "Optional exact chain display-name filter, for example `Ethereum` or `Tron`. Use response `chainId` fields for programmatic joins.",
             "schema": {
               "type": "string"
             }
@@ -929,7 +929,7 @@
           "Blacklist"
         ],
         "summary": "Blacklist summary",
-        "description": "Blacklist summary statistics, chart data, and chain options.",
+        "description": "Blacklist summary statistics, chart data, chain options, manifest-derived coverage metadata, and freeze-ledger data-quality context. Prefer tracked freeze-ledger fields over legacy active-state fields for public frozen exposure.",
         "operationId": "blacklistSummary",
         "parameters": [],
         "responses": {

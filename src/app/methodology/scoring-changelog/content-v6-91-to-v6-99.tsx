@@ -158,10 +158,11 @@ export function ScoringChangelogV695Entry() {
           <code className="text-xs bg-muted px-1 py-0.5 rounded">PAXG</code>,{" "}
           <code className="text-xs bg-muted px-1 py-0.5 rounded">XAUT</code>, and reviewed tokenized
           share symbols such as <code className="text-xs bg-muted px-1 py-0.5 rounded">BOSS</code>{" "}
-          now counts toward the same direct inherited threshold.
+          joined the direct inherited-freeze signal set introduced in this phase.
         </li>
         <li>
-          Coins whose reserve mix crosses the majority threshold because of these assets now resolve to{" "}
+          Coins with these reviewed collateral assets gained inherited-freeze treatment in this phase; v7.13 later
+          superseded the reserve-weight gate with the current any-reserve{" "}
           <code className="text-xs bg-muted px-1 py-0.5 rounded">inherited</code> instead of{" "}
           <code className="text-xs bg-muted px-1 py-0.5 rounded">possible</code>.
         </li>

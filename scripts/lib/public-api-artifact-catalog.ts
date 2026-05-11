@@ -117,7 +117,7 @@ export const BLACKLIST_STABLECOIN_SYMBOL_QUERY_PARAM = {
   name: "stablecoin",
   in: "query",
   schema: { type: "string", enum: [...BLACKLIST_STABLECOINS] },
-  description: "Optional blacklist-tracker stablecoin symbol filter, for example `USDT` or `USDC`.",
+  description: "Optional uppercase blacklist-tracker stablecoin symbol filter, for example `USDT` or `USDC`.",
 } as const satisfies PublicApiArtifactParameter;
 
 export const DAYS_PARAM = {
@@ -396,7 +396,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     key: "blacklist",
     path: API_PATHS.blacklist(),
     summary: "Blacklist events",
-    description: "Freeze and blacklist events with optional symbol, chain, event type, search, sort, and pagination filters.",
+    description: "Freeze and blacklist events with optional uppercase symbol, chain display-name, event type, search, sort, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based.",
     tags: ["Blacklist"],
     parameters: [
       BLACKLIST_STABLECOIN_SYMBOL_QUERY_PARAM,
@@ -404,7 +404,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
         name: "chain",
         in: "query",
         schema: { type: "string" },
-        description: "Optional exact chain-name filter, for example `Ethereum` or `Tron`.",
+        description: "Optional exact chain display-name filter, for example `Ethereum` or `Tron`. Use response `chainId` fields for programmatic joins.",
       },
       {
         name: "eventType",
@@ -461,7 +461,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     key: "blacklist-summary",
     path: API_PATHS.blacklistSummary(),
     summary: "Blacklist summary",
-    description: "Blacklist summary statistics, chart data, and chain options.",
+    description: "Blacklist summary statistics, chart data, chain options, manifest-derived coverage metadata, and freeze-ledger data-quality context. Prefer tracked freeze-ledger fields over legacy active-state fields for public frozen exposure.",
     tags: ["Blacklist"],
     postman: {
       folder: "Flows, blacklist, yield, and chains",

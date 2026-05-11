@@ -98,7 +98,7 @@ Blacklist capability is reported descriptively only and does not affect the Resi
 | Upstream | Any reserve, backing, custody, or parent-asset path that can freeze or block redemptions upstream of the token itself |
 | No       | None of the above                                                                                                     |
 
-`"inherited"` is a **computed** value only — it never appears as a manual override in stablecoin metadata. The `canBeBlacklisted` field in `StablecoinMeta` accepts `boolean | "possible" | "dilutable"`; `canBeBlacklistedSource` is required when the value is `"dilutable"`. The inherited tier now covers reserve-side stablecoins, custodied wrappers, issuer-seizable tokenized collateral, custody/CEX rails, and tracked parent-asset exposures regardless of weight. `"possible"` is reserved for curated direct token/vault controls whose freeze surface exists at the holder-facing asset rather than only in upstream collateral.
+`"inherited"` is a **computed** value only — it never appears as a manual override in stablecoin metadata. The `canBeBlacklisted` field in `StablecoinMeta` accepts `boolean | "possible" | "dilutable"`; `canBeBlacklistedSource` is required when the value is `"dilutable"`. The inherited tier is displayed as `Upstream` and covers reserve-side stablecoins, custodied wrappers, issuer-seizable tokenized collateral, custody/CEX rails, and tracked parent-asset exposures regardless of weight. This is an any-reserve policy: once a reserve/backing/custody/parent path resolves to a freezeable upstream asset, it is classified as Upstream rather than Possible even if the matched slice is small. `"possible"` is reserved for curated direct token/vault controls whose freeze surface exists at the holder-facing asset rather than only in upstream collateral.
 
 #### Collateral Quality: Reserve-Derived Scoring (v3.3)
 
@@ -158,7 +158,9 @@ known blacklistable coin symbols (e.g., "sUSDe" matches USDe, "stataUSDC"
 matches USDC) plus direct stablecoin/custody clues such as named USDC baskets
 or explicit CEX/custodian descriptors. This ensures that composition shifts
 detected by live adapters are reflected in blacklist status without waiting for
-curated data updates.
+curated data updates. Any matched live or curated reserve exposure maps to
+Upstream; reserve-driven freeze risk is not routed through Possible and no
+majority-weight threshold is applied.
 
 The resolver now converges to a fixed point across the tracked coin set rather
 than relying on a single order-sensitive pass, so cyclic reserve graphs do not

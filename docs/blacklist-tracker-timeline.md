@@ -1,6 +1,16 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.991` (2026-02-09 -> 2026-05-05).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.992` (2026-02-09 -> 2026-05-11).
+
+---
+
+## v3.992 — Public contract clarification (2026-05-11)
+
+- **Five-status exposure model** — `/blacklist` status charts and report-card-backed surfaces are documented as `Yes`, `Dilutable`, `Upstream`, `Possible`, and `No`
+- **Any-reserve Upstream policy** — reserve, backing, custody, parent-asset, and CEX/custody-rail exposure resolves to `Upstream` without a majority-weight threshold; `Possible` stays reserved for curated direct holder-facing controls
+- **CSV scope clarified** — `/blacklist` CSV export covers the currently loaded server-returned table page after filters, sorting, search, and pagination, not the entire matching history
+- **Summary field semantics clarified** — `trackedAddressCount`, `trackedFrozenTotal`, and `trackedAmountGapCount` are the preferred freeze-ledger fields, while legacy `active*` fields remain for local net-active state-machine compatibility
+- **Coverage/API wording** — deferred coverage counts are manifest-derived, required coverage fields are documented, and `chainId` is explicitly described as the response/join field while the `/api/blacklist` `chain` filter remains display-name based
 
 ---
 

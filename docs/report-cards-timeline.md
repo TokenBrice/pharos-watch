@@ -52,7 +52,7 @@ Internal changelog reconstructed from git history plus the live version metadata
 ## v7.13 — Reserve-driven blacklist risk moves to Upstream (2026-04-22)
 
 - Shared blacklist resolution now reserves `possible` for curated direct token/vault pause, freeze, or blacklist controls
-- Reserve-side stablecoins, wrapped/custodied collateral, custody/CEX rails, and tracked parent-asset exposures now resolve to `inherited` / `Upstream` regardless of reserve weight
+- Reserve-side stablecoins, wrapped/custodied collateral, custody/CEX rails, and tracked parent-asset exposures now resolve to `inherited` / `Upstream` regardless of reserve weight; any matched reserve path is enough and does not route through `Possible`
 - This re-buckets reserve-driven freeze risk without changing the existing tracked-variant dependency ceilings or parent-overall cap behavior
 
 ## v7.12 — sBOLD joins tracked risk-absorption variants (2026-04-22)
@@ -205,7 +205,7 @@ Blacklistability attribution now treats centralized-custody BTC wrappers, tokeni
 
 - Shared `isBlacklistable()` logic now counts centralized-custody BTC wrappers such as WBTC and cbBTC as direct reserve-side freeze exposure instead of only possible exposure
 - Issuer-seizable tokenized collateral such as tokenized gold and reviewed tokenized share symbols now also counts as direct inherited freeze risk when present in reserve labels
-- Coins whose reserve mix crosses the >50% inherited threshold because of these assets now resolve to `inherited` instead of `possible` on report-card and table surfaces
+- Coins with these reviewed collateral assets gained inherited-freeze treatment in this phase; v7.13 later superseded the reserve-weight gate with the current any-reserve `Upstream` policy
 
 ---
 
@@ -546,8 +546,8 @@ Weights and grade thresholds are unchanged from v5.8.
 
 Safety Score structure is unchanged, but blacklistability attribution now scans curated and live reserve labels plus reserve-rail text for stablecoin, wrapper, and CEX custody clues:
 
-- `isBlacklistable()` returns `possible` when reserve slices or reserve-rail text imply blacklist or custodial-freeze exposure below the inherited threshold
-- Inherited status still requires majority direct reserve exposure, but curated and live reserve names now share the same direct blacklist clue detection instead of relying only on `coinId` or explicit `blacklistable` flags
+- `isBlacklistable()` returned `possible` for reserve slices or reserve-rail text that implied blacklist or custodial-freeze exposure below the then-active inherited gate
+- Curated and live reserve names began sharing the same direct blacklist clue detection instead of relying only on `coinId` or explicit `blacklistable` flags; v7.13 later promoted any matched reserve path to `Upstream`
 - Only coins with no explicit blacklist function, no reserve-side blacklist clues, and no CEX custody signal remain in the `no` bucket unless an explicit `false` override applies
 - The collateral passthrough gate itself is unchanged: `static-validated`, `weak-live-probe`, and `freshnessMode=unverified` reserve feeds remain detail-visible only and do not override curated collateral scoring
 
@@ -559,7 +559,7 @@ Safety Score structure is unchanged, but blacklistability attribution is now mor
 
 - `isBlacklistable()` no longer treats `centralized-dependent` governance as `possible` by default
 - Computed inherited blacklistability now resolves to `inherited`, separating upstream freeze risk from mutable-contract risk
-- Inherited status now requires majority reserve exposure and can be driven by curated reserve-slice `blacklistable` markers in addition to upstream stablecoin `coinId` links
+- Inherited status became an explicit upstream-freeze category driven by curated reserve-slice `blacklistable` markers and upstream stablecoin `coinId` links; v7.13 later removed the reserve-weight gate
 - The shared resolver now converges to a fixed point across the tracked graph, and enriched live reserve names can contribute to blacklist attribution when report cards have live reserve input
 
 Weights and grade thresholds are unchanged from v6.8.

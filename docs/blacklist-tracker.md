@@ -1,10 +1,10 @@
 # Blacklist Tracker
 
-Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 71 contract configurations on 9 chains (35 tracked symbols; additional BSC / Avalanche / Base deployments for some tier-1 coins are deferred pending explorer-API coverage). Runs every 6 hours, incrementally scanning from the last processed block or timestamp cursor.
+Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 71 contract configurations on 9 chains (35 tracked symbols; deferred coverage is reported from the runtime coverage manifest and is currently 10 known configs). Runs every 6 hours, incrementally scanning from the last processed block or timestamp cursor.
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.991`
+- **Current methodology version:** `v3.992`
 - **Runtime/version source:** `shared/lib/blacklist-tracker-version.ts`
 - **Public changelog route:** `/methodology/blacklist-tracker-changelog/`
 - **Version timeline:** [blacklist-tracker-timeline.md](./blacklist-tracker-timeline.md)
@@ -34,10 +34,12 @@ The public `/blacklist` page renders `BlacklistInterventionLedger` directly belo
 - `summary.stats.perCoinFrozenTotal` and `summary.stats.perCoinDestroyedTotal` for exact symbol-level USD context
 - `summary.chart` for peak and latest tracked frozen-quarter context
 
-The exposure block is the resolved status model:
+The exposure block uses the same five-status resolved model as report-card-backed product surfaces:
 
-- `possible` means direct possible token/vault control.
-- `upstream` means reserve/custody/parent exposure.
+- `yes` means direct issuer blacklist, freeze, seizure, or equivalent holder-facing control.
+- `dilutable` means no holder-balance freeze control is known, but an admin can mint without bound and dilute holders.
+- `upstream` means any reserve, backing, custody, parent-asset, or CEX/custody-rail exposure can freeze or block value upstream of the token. This is an any-reserve policy: a matched reserve path does not need to be majority-weighted to resolve as Upstream.
+- `possible` is reserved for curated direct token/vault pause, freeze, blacklist, or mutable holder-facing control surfaces that are not confirmed active direct blacklist controls.
 - `no` means no resolved exposure in the current model.
 
 The observed-event block is separate from those exposure buckets. Event counts are observed supported tracker history, not policy probability, and the current summary payload is symbol-level only; the UI must not label those rows as contract-level event totals. Count and USD values must be visible in the ledger rows themselves, with hover states treated as supplemental only.
@@ -638,6 +640,8 @@ Use it for:
 
 Do **not** treat it as raw event history. New snapshot rows are keyed to contract/config-scoped blacklist/freeze identities so same-symbol/same-chain deployments cannot overwrite each other. Legacy rows can still fall back to the older symbol/chain/address identity until remediated. Rows are preserved across later unblacklist events so seized or later-burned balances do not disappear from the public freeze totals. Destroy events can overwrite the stored amount with the seized burn amount when that event emits a better value than the original snapshot.
 
+Legacy `activeAddressCount`, `activeFrozenTotal`, and `activeAmountGapCount` remain in `/api/blacklist-summary` for wire compatibility. They describe Pharos' local net-active event-state view and should not be used as the public frozen-total source. New consumers should prefer the tracked freeze-ledger fields above for historical freeze exposure and use the active fields only when they specifically need the current local net-frozen state machine.
+
 Provider refresh failures preserve the last successful amount and update status/provenance metadata instead of reducing the public frozen total to zero or null. Treat `status='provider_failed'`, stale `observed_at`, and `last_error_class` as data-quality signals around the last-known value, not as proof that funds were unfrozen.
 
 ### blacklist_sync_state table
@@ -802,8 +806,8 @@ The handler now exposes only unsuppressed rows for the live-supported symbols: U
   "methodology": {
     "version": "3.9",
     "versionLabel": "v3.9",
-    "currentVersion": "3.991",
-    "currentVersionLabel": "v3.991",
+    "currentVersion": "3.992",
+    "currentVersionLabel": "v3.992",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1704067200,
     "isCurrent": false
@@ -816,7 +820,7 @@ The handler now exposes only unsuppressed rows for the live-supported symbols: U
 **File:** `worker/src/api/blacklist-summary.ts`
 **Cache:** realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers follow the 6-hourly `sync-blacklist` writer timestamp.
 
-Returns server-side aggregate stats, quarterly chart buckets, supported chain filters, and total event count for the blacklist UI.
+Returns server-side aggregate stats, quarterly chart buckets, supported chain filters, coverage metadata, and total event count for the blacklist UI.
 
 The summary now mixes two intentionally distinct lenses:
 
@@ -824,8 +828,10 @@ The summary now mixes two intentionally distinct lenses:
 - recent activity stats such as `recentCount` (30d) and `recentCount24h`
 - local event-state stats such as `activeFrozenTotal`, sourced from Pharos' active blacklist state machine
 - tracked freeze-ledger stats such as `trackedFrozenTotal`, sourced from last-known successful `blacklist_current_balances` snapshots
-- data-quality metadata when available, including snapshot age, source/status distributions, provider failures, and deferred coverage
+- data-quality metadata when available, including snapshot age, source/status distributions, provider failures, and manifest-derived deferred coverage
 - quarterly chart buckets sourced from the tracked freeze ledger and attributed to each row's latest recorded blacklist quarter
+
+Coverage entries are contract/config-level records. Every supported row is expected to carry the required tracked fields `symbol`, `stablecoinId`, `chainId`, `chainName`, `contractAddress`, `configKey`, `providerSource`, `eventFamilies`, and `eventTypes`; deferred rows carry `symbol`, `chainId`, and `reason`.
 
 ---
 
@@ -888,7 +894,7 @@ Both endpoints now emit freshness headers from the same 6-hourly `sync-blacklist
 | BlacklistTable   | `src/components/blacklist-table.tsx`   | Server-sorted, 50 rows per page                                                                 |
 | BlacklistStats   | `src/components/blacklist-stats.tsx`   | Unfreezable market share, last-known freeze-ledger totals, destroyed funds, and snapshot/data-quality callouts |
 | BlacklistChart   | `src/components/blacklist-chart.tsx`   | Quarterly stacked bar chart of tracked freeze-ledger balances by stablecoin, attributed to blacklist quarter |
-| CSV export       | (inline)                               | Download filtered events as CSV                                                                 |
+| CSV export       | (inline)                               | Download the currently loaded table page as CSV, after server-side filters/sort/search/pagination |
 
 ### Amount Display Logic
 
