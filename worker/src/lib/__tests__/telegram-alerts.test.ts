@@ -18,6 +18,7 @@ import {
   isDewsDeescalation,
   suggestClosestToken,
   buildAlertReplyMarkup,
+  resolveAlertLinkPreviewOptions,
   SNOOZE_REPLY_MARKUP,
   type ConsolidatedAlerts,
 } from "../telegram-alerts";
@@ -846,5 +847,55 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
     for (const data of collectCallbackData(markup)) {
       expect(Buffer.byteLength(data, "utf8")).toBeLessThanOrEqual(TELEGRAM_CALLBACK_DATA_MAX_BYTES);
     }
+  });
+});
+
+describe("resolveAlertLinkPreviewOptions", () => {
+  function singleCoinAlerts(stablecoinId: string): ConsolidatedAlerts {
+    return {
+      dews: [
+        {
+          stablecoinId,
+          symbol: "USDC",
+          oldBand: "CALM",
+          newBand: "ALERT",
+          score: 42,
+          topSignals: [],
+        },
+      ],
+      depegTriggered: [],
+      depegResolved: [],
+      depegWorsening: [],
+      safety: [],
+      launch: [],
+    };
+  }
+
+  function multiCoinAlerts(): ConsolidatedAlerts {
+    return {
+      dews: [
+        { stablecoinId: "usdc-circle", symbol: "USDC", oldBand: "CALM", newBand: "ALERT", score: 42, topSignals: [] },
+        { stablecoinId: "usdt-tether", symbol: "USDT", oldBand: "CALM", newBand: "ALERT", score: 50, topSignals: [] },
+      ],
+      depegTriggered: [],
+      depegResolved: [],
+      depegWorsening: [],
+      safety: [],
+      launch: [],
+    };
+  }
+
+  it("enables a small preview on the first chunk of a single-coin alert", () => {
+    const options = resolveAlertLinkPreviewOptions(singleCoinAlerts("usdc-circle"), 0);
+    expect(options).toEqual({ is_disabled: false, prefer_small_media: true, show_above_text: false });
+  });
+
+  it("returns null for chunks after the first chunk of a single-coin alert", () => {
+    expect(resolveAlertLinkPreviewOptions(singleCoinAlerts("usdc-circle"), 1)).toBeNull();
+    expect(resolveAlertLinkPreviewOptions(singleCoinAlerts("usdc-circle"), 2)).toBeNull();
+  });
+
+  it("returns null for multi-coin alerts even on the first chunk", () => {
+    expect(resolveAlertLinkPreviewOptions(multiCoinAlerts(), 0)).toBeNull();
   });
 });

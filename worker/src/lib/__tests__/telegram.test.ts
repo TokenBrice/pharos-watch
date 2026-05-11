@@ -94,6 +94,31 @@ describe("sendToChat", () => {
     expect(body.disable_web_page_preview).toBe(true);
   });
 
+  it("passes link_preview_options when provided", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    await sendToChat("12345", "test", "bot-token", {
+      linkPreviewOptions: { is_disabled: false, prefer_small_media: true, show_above_text: false },
+    });
+    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
+    expect(body.link_preview_options).toEqual({
+      is_disabled: false,
+      prefer_small_media: true,
+      show_above_text: false,
+    });
+    expect(body.disable_web_page_preview).toBeUndefined();
+  });
+
+  it("prefers link_preview_options over disable_web_page_preview when both are set", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    await sendToChat("12345", "test", "bot-token", {
+      disableWebPagePreview: true,
+      linkPreviewOptions: { is_disabled: false, prefer_small_media: true },
+    });
+    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
+    expect(body.link_preview_options).toEqual({ is_disabled: false, prefer_small_media: true });
+    expect(body.disable_web_page_preview).toBeUndefined();
+  });
+
   it("passes disable_notification when set", async () => {
     fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     await sendToChat("12345", "test", "bot-token", { disableNotification: true });
@@ -259,6 +284,40 @@ describe("sendBatch", () => {
     const results = await sendBatch([], "bot-token", 5);
     expect(results).toEqual([]);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("forwards per-message linkPreviewOptions instead of the default disable flag", async () => {
+    fetchSpy
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const messages = [
+      {
+        chatId: "single-coin",
+        html: "<b>USDC</b> alert",
+        disableNotification: false,
+        linkPreviewOptions: { is_disabled: false, prefer_small_media: true, show_above_text: false },
+      },
+      {
+        chatId: "multi-coin",
+        html: "<b>USDC</b> + <b>USDT</b>",
+        disableNotification: false,
+      },
+    ];
+
+    await sendBatch(messages, "bot-token", 2);
+
+    const firstBody = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
+    expect(firstBody.link_preview_options).toEqual({
+      is_disabled: false,
+      prefer_small_media: true,
+      show_above_text: false,
+    });
+    expect(firstBody.disable_web_page_preview).toBeUndefined();
+
+    const secondBody = JSON.parse(fetchSpy.mock.calls[1][1]!.body as string);
+    expect(secondBody.disable_web_page_preview).toBe(true);
+    expect(secondBody.link_preview_options).toBeUndefined();
   });
 
   it("marks all messages retryable without fetching when the batch signal is already aborted", async () => {

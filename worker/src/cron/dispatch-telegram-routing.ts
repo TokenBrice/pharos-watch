@@ -1,6 +1,7 @@
 import {
   formatConsolidatedMessage,
   buildAlertReplyMarkup,
+  resolveAlertLinkPreviewOptions,
   splitMessage,
   type ConsolidatedAlerts,
 } from "../lib/telegram-alerts";
@@ -212,6 +213,10 @@ export function expandSubscriberChunks(
   for (const sub of subscribers) {
     if (blockedChats.has(sub.chatId)) continue;
     for (const [chunkIndex, chunk] of sub.chunks.entries()) {
+      // Single-coin alerts get a small link-preview card on the first chunk
+      // (Bot API 7.0+). Multi-coin and overflow chunks fall back to the
+      // batch-wide `disable_web_page_preview: true` default.
+      const linkPreviewOptions = resolveAlertLinkPreviewOptions(sub.alerts, chunkIndex) ?? undefined;
       messages.push({
         chatId: sub.chatId,
         html: chunk,
@@ -220,6 +225,7 @@ export function expandSubscriberChunks(
         replyMarkup: buildAlertReplyMarkup(sub.alerts, chunkIndex),
         chunkIndex,
         alertType: sub.alertType,
+        ...(linkPreviewOptions ? { linkPreviewOptions } : {}),
       });
     }
   }

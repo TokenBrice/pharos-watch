@@ -1754,6 +1754,61 @@ describe("dispatchTelegramAlerts", () => {
     expect(callbackData).toContain("snooze:1h");
   });
 
+  it("attaches link_preview_options to the first chunk of single-coin alerts", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "WHERE alert_snooze_until_ts IS NOT NULL", rows: [] },
+      {
+        match: "FROM stress_signals",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            score: 42,
+            band: "ALERT",
+            signals_json: JSON.stringify({ supply: { value: 45, available: true } }),
+          },
+        ],
+      },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "sub.alert_dews = 1", rows: [
+        { stablecoin_id: "usdc-circle", chat_id: "42", last_active_at: now },
+      ] },
+      { match: "WHERE global_alert_dews = 1", rows: [] },
+      { match: "WHERE global_alert_depeg = 1", rows: [] },
+      { match: "WHERE global_alert_safety = 1", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    await dispatchTelegramAlerts(db, "bot-token");
+
+    const lastCall = mockSendBatch.mock.calls[mockSendBatch.mock.calls.length - 1];
+    const messages = lastCall?.[0] as Array<{
+      chunkIndex?: number;
+      linkPreviewOptions?: { is_disabled: boolean; prefer_small_media: boolean; show_above_text: boolean };
+    }>;
+    expect(messages?.[0]?.linkPreviewOptions).toEqual({
+      is_disabled: false,
+      prefer_small_media: true,
+      show_above_text: false,
+    });
+  });
+
   it("skips a chat whose alert_snooze_until_ts is in the future and reports chatsWithActiveSnooze", async () => {
     const now = Math.floor(Date.now() / 1000);
 

@@ -417,6 +417,21 @@ const LAUNCH_GLYPH = "✦";
  */
 const ALERT_BLOCKQUOTE_CONTEXT: boolean = true;
 
+/**
+ * Feature flag: enable a small Telegram link-preview card for the
+ * "View on Pharos" link on the first chunk of single-coin consolidated alerts.
+ * Multi-coin alerts (which link to the dashboard root) and overflow chunks
+ * keep previews disabled to stay dense on mobile.
+ *
+ * Requires Telegram Bot API 7.0+ (Mar 2024) for `link_preview_options`.
+ * Older Bot API versions ignore the field and fall back to default link
+ * preview behavior (which is harmless because the link is always present).
+ *
+ * The resolver helper lives below `getSingleAlertStablecoinId`; see
+ * `resolveAlertLinkPreviewOptions`.
+ */
+export const ALERT_LINK_PREVIEW_FOR_SINGLE_COIN: boolean = true;
+
 function dewsGlyphFor(band: string): string {
   return DEWS_SEVERITY_GLYPH[band] ?? "";
 }
@@ -556,6 +571,26 @@ export function buildAlertReplyMarkup(alerts: ConsolidatedAlerts, chunkIndex: nu
       SNOOZE_REPLY_MARKUP.inline_keyboard[0],
     ],
   } as const;
+}
+
+/**
+ * Resolve the Bot API 7.0+ `link_preview_options` payload for a single chunk
+ * of a consolidated alert. Returns `null` when the existing
+ * `disable_web_page_preview: true` default should keep applying — that path
+ * still covers multi-coin alerts, overflow chunks, and pending-queue replays.
+ *
+ * Emits a small, below-text preview card only on the first chunk of a
+ * single-coin alert (the one that carries the per-coin inline keyboard) so
+ * the "View on Pharos" link renders a thumbnail instead of bare text.
+ */
+export function resolveAlertLinkPreviewOptions(
+  alerts: ConsolidatedAlerts,
+  chunkIndex: number,
+): { is_disabled: boolean; prefer_small_media: boolean; show_above_text: boolean } | null {
+  if (!ALERT_LINK_PREVIEW_FOR_SINGLE_COIN) return null;
+  if (chunkIndex !== 0) return null;
+  if (getSingleAlertStablecoinId(alerts) == null) return null;
+  return { is_disabled: false, prefer_small_media: true, show_above_text: false };
 }
 
 /**

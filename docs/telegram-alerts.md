@@ -547,6 +547,8 @@ Subscriber alert messages no longer carry a top-level `Pharos Alerts` header —
 
 Subscriber alert messages end with a `View on Pharos` link. Telegram digest posts end with `Read on Pharos →`, even when cemetery or tracking appendices are present.
 
+For single-coin alerts the first chunk is sent with `link_preview_options: { is_disabled: false, prefer_small_media: true, show_above_text: false }` so the "View on Pharos" link renders a compact preview card below the message body. Multi-coin alerts, overflow chunks, and pending-queue replays continue to use the batch-wide `disable_web_page_preview: true` default. Behavior is gated by the `ALERT_LINK_PREVIEW_FOR_SINGLE_COIN` flag in `telegram-alerts.ts` and requires Telegram Bot API 7.0+ (Mar 2024); older Bot API versions ignore the field and fall back to default link-preview rendering.
+
 ## Digest vs Subscriber Alerts
 
 The same bot token can be used for both:

@@ -69,8 +69,33 @@ export async function postDigestToTelegram(
   console.log(`[telegram] Posted digest (${text.length} chars)`);
 }
 
+/**
+ * Telegram `link_preview_options` payload (Bot API 7.0+, Mar 2024).
+ * Replaces the older `disable_web_page_preview` flag with a richer object.
+ * When both are provided to `sendToChat`, `linkPreviewOptions` wins because
+ * the Bot API ignores `disable_web_page_preview` whenever `link_preview_options`
+ * is present.
+ */
+export interface LinkPreviewOptions {
+  /** `true` disables previews entirely. */
+  is_disabled?: boolean;
+  /** Optional URL to preview instead of the first link in the message. */
+  url?: string;
+  /** Force a small preview thumbnail (mobile-friendly for inline keyboards). */
+  prefer_small_media?: boolean;
+  /** Force a large preview thumbnail. */
+  prefer_large_media?: boolean;
+  /** Render the preview above the message text. Defaults to below. */
+  show_above_text?: boolean;
+}
+
 export interface SendToChatOpts {
   disableWebPagePreview?: boolean;
+  /**
+   * Bot API 7.0+ link-preview controls. Takes precedence over
+   * `disableWebPagePreview` when both are set.
+   */
+  linkPreviewOptions?: LinkPreviewOptions;
   disableNotification?: boolean;
   replyMarkup?: unknown;
   signal?: AbortSignal;
@@ -215,7 +240,12 @@ export async function sendToChat(
         chat_id: chatId,
         text,
         parse_mode: "HTML",
-        ...(opts?.disableWebPagePreview && { disable_web_page_preview: true }),
+        // `link_preview_options` (Bot API 7.0+) takes precedence over the legacy
+        // boolean. We only emit the legacy field when the richer object is absent
+        // so older callers keep their existing behavior.
+        ...(opts?.linkPreviewOptions
+          ? { link_preview_options: opts.linkPreviewOptions }
+          : opts?.disableWebPagePreview && { disable_web_page_preview: true }),
         ...(opts?.disableNotification && { disable_notification: true }),
         ...(opts?.replyMarkup != null && { reply_markup: opts.replyMarkup }),
       }),
@@ -268,6 +298,14 @@ export interface BatchMessage {
    * a type because the persisted row only stores the rendered HTML.
    */
   alertType?: import("@shared/types/status").TelegramAlertType;
+  /**
+   * Per-chunk Bot API 7.0+ link-preview override. When set, `sendBatch` forwards
+   * it to `sendToChat`, which takes precedence over the batch-wide
+   * `disable_web_page_preview: true` default. Used by the dispatch router to
+   * enable a small preview card for the "View on Pharos" link on the first
+   * chunk of single-coin alerts.
+   */
+  linkPreviewOptions?: LinkPreviewOptions;
 }
 
 export interface BatchResult {
@@ -318,7 +356,11 @@ export async function sendBatch(
     const batchResults = await Promise.all(
       batch.map(async (msg) => {
         const result = await sendToChat(msg.chatId, msg.html, botToken, {
-          disableWebPagePreview: true,
+          // Caller-supplied preview options win; otherwise default to no preview
+          // for batch alert sends to keep the message dense on mobile.
+          ...(msg.linkPreviewOptions
+            ? { linkPreviewOptions: msg.linkPreviewOptions }
+            : { disableWebPagePreview: true }),
           disableNotification: msg.disableNotification,
           replyMarkup: msg.replyMarkup,
           signal,
@@ -338,6 +380,42 @@ export async function sendBatch(
     }
   }
   return results;
+}
+
+/**
+ * Edit an existing chat message's text in place. Used by inline-keyboard
+ * flows that want to re-render the same message rather than send a new one
+ * (e.g. /list watchlist management pagination).
+ *
+ * Returns `true` on a 200 response. Body is drained to stay under the
+ * Workers 6-connection cap. Callers should treat a `false` return as a hint
+ * to fall back to sending a fresh message.
+ */
+export async function editMessageText(
+  chatId: string,
+  messageId: number,
+  text: string,
+  botToken: string,
+  options: { replyMarkup?: unknown; disableWebPagePreview?: boolean } = {},
+): Promise<boolean> {
+  const res = await fetch(
+    `https://api.telegram.org/bot${botToken}/editMessageText`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        text,
+        parse_mode: "HTML",
+        ...(options.disableWebPagePreview && { disable_web_page_preview: true }),
+        ...(options.replyMarkup != null && { reply_markup: options.replyMarkup }),
+      }),
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  await drainResponseBody(res);
+  return res.ok;
 }
 
 /**
