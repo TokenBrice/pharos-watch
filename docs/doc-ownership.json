@@ -17,7 +17,7 @@
     },
     {
       "name": "api-surface",
-      "sources": ["shared/lib/api-endpoints/**", "worker/src/routes/**", "worker/src/router.ts", "worker/src/api/**", "src/hooks/api-hooks.ts", "src/lib/api.ts"],
+      "sources": ["shared/lib/api-endpoints/**", "worker/src/routes/**", "worker/src/router.ts", "worker/src/api/**", "worker/src/handlers/http/**", "src/hooks/api-hooks.ts", "src/lib/api.ts"],
       "docs": ["docs/api-endpoint-authoring.md", "docs/api-reference.md", "docs/architecture.md", "docs/data-flow-map.md", "docs/worker-infrastructure.md", "docs/digest-pipeline.md", "docs/supply-snapshot.md"],
       "notes": ["Route flags, auth lanes, cache profiles, and site-data allowlists should stay in sync with endpoint behavior."]
     },
@@ -41,7 +41,7 @@
     },
     {
       "name": "frontend-routes",
-      "sources": ["src/app/**", "src/components/**", "src/hooks/**", "src/lib/page-metadata.ts", "src/app/sitemap.ts", "src/app/robots.ts"],
+      "sources": ["src/app/**", "src/components/**", "src/hooks/**", "src/lib/page-metadata.ts", "src/app/sitemap.ts", "src/app/robots.ts", "next.config.ts"],
       "docs": ["docs/README.md", "docs/architecture.md", "docs/homepage.md", "docs/start-page.md", "docs/stablecoin-detail-page.md", "docs/chains-page.md", "docs/coverage-page.md", "docs/status-dashboard.md"],
       "notes": ["Start with docs/README.md Public Route Coverage to select the route-specific contract; the listed docs are high-churn examples, not the full route-doc set."]
     },
@@ -59,7 +59,7 @@
     },
     {
       "name": "pages-functions-hosting",
-      "sources": ["functions/**", "shared/lib/site-data-routes.ts", "shared/lib/runtime-origins.ts", "src/lib/api.ts", "scripts/serve-static-export.mjs"],
+      "sources": ["functions/**", "shared/lib/site-data-routes.ts", "shared/lib/runtime-origins.ts", "src/lib/api.ts", "scripts/serve-static-export.mjs", "next.config.ts"],
       "docs": ["docs/architecture.md", "docs/worker-infrastructure.md", "docs/deployment-process.md", "docs/operator-origin-access.md"],
       "notes": ["Same-origin site-data proxy behavior and internal host lanes are coupled."]
     },

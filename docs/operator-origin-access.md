@@ -73,7 +73,7 @@ Current origin/access binding ownership derived from `shared/lib/env-contract.ts
 | `OPS_API_SERVICE_TOKEN_ID` | - | required | - | Pages-managed Access service-token client ID used on the server-to-server hop to `ops-api.pharos.watch`. |
 | `OPS_API_SERVICE_TOKEN_SECRET` | - | required | - | Pages-managed Access service-token client secret used on the server-to-server hop to `ops-api.pharos.watch`. |
 | `SITE_ORIGIN` | - | - | optional | Site origin override used by the Pages `/_site-data/*` proxy when classifying production hosts. |
-| `SITE_API_ORIGIN` | - | - | optional | Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`. |
+| `SITE_API_ORIGIN` | - | - | required | Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`. |
 <!-- ENV-CONTRACT:OPERATOR-ORIGIN-ACCESS:END -->
 
 Use the derived runtime exports in `worker/src/lib/env.ts`, `functions/lib/ops-env.ts`, and `functions/lib/site-api-env.ts` when auditing Cloudflare bindings before deploy. The same binding name can be reserved on one runtime and active on the other; for example `OPS_API_ORIGIN` and `CF_ACCESS_OPS_UI_AUD` are worker-reserved but Pages-active.

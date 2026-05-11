@@ -178,7 +178,7 @@ src/                              Frontend (Next.js static export)
 │   ├── admin/                    Access-gated operator admin panel (ops.pharos.watch only)
 │   ├── admin-api/                Access-gated API key/request management panel (ops.pharos.watch only)
 │   ├── status/                   Public system-status dashboard (read-only, indexable)
-│   ├── telegram/                 Telegram alerts + digest landing page
+│   ├── pharoswatchbot/           Telegram alerts + digest landing page
 │   ├── yield/                    Yield intelligence leaderboard
 │   ├── changelog/                Weekly release notes
 │   └── about/                    About / product overview (+ about/api/ reference)
@@ -257,7 +257,8 @@ Cloudflare Worker (API layer)
   ├── Cron: */5 * * * *                         → manual digest trigger poll
   ├── Cron: 0 3 * * *                           → status-probe TTL prune + cron-history TTL prune
   ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + USDS status
-  ├── Cron: 5 8 * * *                           → Bluechip sync + daily digest + weekly recap (Mondays) + discovery scan (Mondays)
+  ├── Cron: 5 8 * * *                           → Bluechip sync + daily digest + weekly recap (Mondays)
+  ├── Cron: 10 8 * * *                          → discovery scan (Mondays)
   └── Cron: 0 6 1 * *                           → monthly yield coverage audit
 
 Cloudflare D1 (SQLite database)
@@ -360,7 +361,7 @@ For the full Worker, Pages Functions, and frontend runtime binding table, see [.
 For mint/burn ingestion diagnostics and recovery, use [docs/runbooks/mint-burn-integrity.md](./docs/runbooks/mint-burn-integrity.md) for operator remediation and [docs/mint-burn-flows.md](./docs/mint-burn-flows.md) for pipeline details; historical notes are not runbooks.
 
 1. **Validate gate:** `npm run validate:prebuild` (runs the audit, lint/typecheck, doc, data, route, cron, unused-code, world-map, and worker-boundary guardrails) → `npm run build` + `npm run seo:check` when Pages-impacting files changed → `npm run test:noncritical` → `npm run coverage:critical` → `npm run typecheck:worker` + `npm run typecheck:worker-scripts` when worker-impacting files changed
-2. **Worker candidate upload + preview smoke:** `npm ci` → capture the currently live Worker version ID → `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote` → `cd worker && npx --no-install wrangler versions upload` → `npm run test:smoke-api` against that uploaded preview URL
+2. **Worker candidate upload + preview smoke:** `npm ci` → capture the currently live Worker version ID → `cd worker && npx --no-install wrangler versions upload` → `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote` → `npm run test:smoke-api` against that uploaded preview URL
 3. **Worker promotion:** `cd worker && npx --no-install wrangler versions deploy <uploaded-version>@100` → `cd worker && npx --no-install wrangler triggers deploy`
 4. **Production API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`); if this fails after promotion, CI auto-rolls the Worker back to the previously live version
 5. **Pages prepare path:** `npm ci` → fetch `/api/digest-archive` once into `data/digests.json` → `npm run build` → `npm run seo:check` → serve `out/` locally through `npm run serve:static-export` → `npm run test:smoke-ui -- --url http://127.0.0.1:4173`; when both worker and Pages changed, this stage runs against the uploaded worker preview URL in parallel with worker promotion and production API smoke
@@ -374,7 +375,7 @@ Required GitHub variable: `API_BASE_URL`
 Optional GitHub variable: `SMOKE_API_BASE_URL` (recommended when smoke-testing a dedicated API host)
 Optional GitHub variables: `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`
 
-Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `JUPITER_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `SITE_API_SHARED_SECRET`, `SITE_API_SHARED_SECRET_PREVIOUS`, `API_KEY_HASH_PEPPER`, `API_KEY_HASH_PEPPER_PREVIOUS`, `CLOUDFLARE_D1_STATUS_API_TOKEN`
+Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `JUPITER_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_TOKEN_PREVIOUS`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `SITE_API_SHARED_SECRET`, `SITE_API_SHARED_SECRET_PREVIOUS`, `API_KEY_HASH_PEPPER`, `API_KEY_HASH_PEPPER_PREVIOUS`, `API_KEY_SELF_SERVE_IP_SALT`, `API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER`, `API_KEY_SELF_SERVE_REQUEST_PEPPER`, `API_KEY_SELF_SERVE_EMAIL_FROM`, `API_KEY_SELF_SERVE_EMAIL_REPLY_TO`, `API_KEY_SELF_SERVE_PUBLIC_BASE_URL`, `RESEND_API_KEY`, `CLOUDFLARE_D1_STATUS_API_TOKEN`
 
 `API_KEY_HASH_PEPPER` is required: non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`, and the worker can't verify keys without the pepper. No-key public exceptions are health checks, OG images, feedback submission, self-serve API-key request/verification, and the Telegram webhook; Telegram still authenticates with its own secret. Self-serve default keys are email-verified, limited to 30 requests per minute, expire after 60 days, and are managed privately through `ops.pharos.watch/admin-api/`.
 

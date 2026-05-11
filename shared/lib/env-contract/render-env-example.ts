@@ -53,6 +53,14 @@ const ENV_EXAMPLE_SECTION_ORDER: readonly {
     ],
   },
   {
+    key: "pagesSiteDataRequired",
+    comments: [
+      "# Pages Functions required active bindings for the site-data proxy.",
+      "# Production and preview Pages hosts fail closed for `/_site-data/*` when",
+      "# this upstream origin is missing.",
+    ],
+  },
+  {
     key: "pagesOpsRequired",
     comments: [
       "# Pages Functions required active bindings for the ops admin proxy.",

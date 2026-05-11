@@ -8,6 +8,7 @@ export type EnvExampleSection =
   | "workerOptional"
   | "workerReserved"
   | "sharedSiteApiSecret"
+  | "pagesSiteDataRequired"
   | "pagesOpsRequired"
   | "pagesOptional";
 

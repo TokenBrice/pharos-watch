@@ -327,12 +327,21 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "TELEGRAM_BOT_TOKEN_PREVIOUS",
+    valueType: "string",
+    description: "Optional previous Telegram bot token marker used for rotation consistency checks.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 26, status: "optional" },
+    },
+  },
+  {
     key: "TELEGRAM_CHAT_ID",
     valueType: "string",
     description: "Telegram target chat/channel for digest posts and announcements.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 26, status: "optional" },
+      worker: { order: 27, status: "optional" },
     },
   },
   {
@@ -341,7 +350,7 @@ export const ENV_BINDINGS = [
     description: "Telegram webhook secret used to authenticate the webhook lane.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 27, status: "optional" },
+      worker: { order: 28, status: "optional" },
     },
   },
   {
@@ -350,7 +359,7 @@ export const ENV_BINDINGS = [
     description: "Optional overlap Telegram webhook secret accepted during secret rotation.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 28, status: "optional" },
+      worker: { order: 29, status: "optional" },
     },
   },
   {
@@ -359,7 +368,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn runtime disable list by stablecoin ID (CSV).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 29, status: "optional" },
+      worker: { order: 30, status: "optional" },
     },
   },
   {
@@ -368,7 +377,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn runtime disable list by symbol (CSV).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 30, status: "optional" },
+      worker: { order: 31, status: "optional" },
     },
   },
   {
@@ -377,7 +386,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn health-check major-symbols override (CSV).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 31, status: "optional" },
+      worker: { order: 32, status: "optional" },
     },
   },
   {
@@ -386,7 +395,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn stale-warning threshold override (seconds).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 32, status: "optional" },
+      worker: { order: 33, status: "optional" },
     },
   },
   {
@@ -395,7 +404,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn stale-critical threshold override (seconds).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 33, status: "optional" },
+      worker: { order: 34, status: "optional" },
     },
   },
   {
@@ -404,7 +413,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn stale-alert dedupe cooldown override (seconds).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 34, status: "optional" },
+      worker: { order: 35, status: "optional" },
     },
   },
   {
@@ -413,7 +422,7 @@ export const ENV_BINDINGS = [
     description: "Open Exchange Rates credential used for FX cross-validation.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 35, status: "optional" },
+      worker: { order: 36, status: "optional" },
     },
   },
   {
@@ -422,7 +431,7 @@ export const ENV_BINDINGS = [
     description: "Cloudflare account scope used by admin D1 status metrics.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 36, status: "optional" },
+      worker: { order: 37, status: "optional" },
     },
   },
   {
@@ -431,7 +440,7 @@ export const ENV_BINDINGS = [
     description: "Cloudflare API token with D1 status/analytics read access for admin metrics.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 37, status: "optional" },
+      worker: { order: 38, status: "optional" },
     },
   },
   {
@@ -440,7 +449,7 @@ export const ENV_BINDINGS = [
     description: "Target D1 database ID used by admin D1 status metrics.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 38, status: "optional" },
+      worker: { order: 39, status: "optional" },
     },
   },
   {
@@ -449,7 +458,7 @@ export const ENV_BINDINGS = [
     description: "Global worker kill switch; when `true`, non-`OPTIONS` traffic returns `503` maintenance responses.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 39, status: "optional" },
+      worker: { order: 40, status: "optional" },
     },
   },
   {
@@ -521,9 +530,9 @@ export const ENV_BINDINGS = [
     valueType: "string",
     description: "Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`.",
     docs: { includeInOperatorOriginAccess: true },
-    example: { section: "pagesOptional", value: "https://site-api.pharos.watch" },
+    example: { section: "pagesSiteDataRequired", value: "https://site-api.pharos.watch" },
     runtimes: {
-      pagesSiteData: { order: 4, status: "optional" },
+      pagesSiteData: { order: 3, status: "required" },
     },
   },
 ] satisfies readonly EnvBindingDefinition[];

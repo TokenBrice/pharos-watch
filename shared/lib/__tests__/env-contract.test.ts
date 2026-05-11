@@ -47,8 +47,10 @@ describe("env contract manifest", () => {
     const operatorBlock = renderOperatorOriginAccessEnvBlock();
 
     expect(workerBlock).toContain("| `CF_ACCESS_TEAM_DOMAIN` | `string` | optional | required | - |");
+    expect(workerBlock).toContain("| `TELEGRAM_BOT_TOKEN_PREVIOUS` | `string` | optional | - | - |");
     expect(workerBlock).toContain("| `OPS_UI_ORIGIN` | `string` | reserved | optional | optional |");
     expect(operatorBlock).toContain("| `SITE_API_SHARED_SECRET` | optional | - | required |");
+    expect(operatorBlock).toContain("| `SITE_API_ORIGIN` | - | - | required |");
     expect(operatorBlock).toContain("| `OPS_API_SERVICE_TOKEN_SECRET` | - | required | - |");
   });
 });

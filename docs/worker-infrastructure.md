@@ -84,6 +84,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `TWITTER_ACCESS_TOKEN` | `string` | optional | - | - | Twitter/X digest delivery credential. |
 | `TWITTER_ACCESS_TOKEN_SECRET` | `string` | optional | - | - | Twitter/X digest delivery credential. |
 | `TELEGRAM_BOT_TOKEN` | `string` | optional | - | - | Telegram bot credential used for digest delivery and alert dispatch. |
+| `TELEGRAM_BOT_TOKEN_PREVIOUS` | `string` | optional | - | - | Optional previous Telegram bot token marker used for rotation consistency checks. |
 | `TELEGRAM_CHAT_ID` | `string` | optional | - | - | Telegram target chat/channel for digest posts and announcements. |
 | `TELEGRAM_WEBHOOK_SECRET` | `string` | optional | - | - | Telegram webhook secret used to authenticate the webhook lane. |
 | `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` | `string` | optional | - | - | Optional overlap Telegram webhook secret accepted during secret rotation. |
@@ -104,7 +105,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `OPS_API_SERVICE_TOKEN_ID` | `string` | - | required | - | Pages-managed Access service-token client ID used on the server-to-server hop to `ops-api.pharos.watch`. |
 | `OPS_API_SERVICE_TOKEN_SECRET` | `string` | - | required | - | Pages-managed Access service-token client secret used on the server-to-server hop to `ops-api.pharos.watch`. |
 | `SITE_ORIGIN` | `string` | - | - | optional | Site origin override used by the Pages `/_site-data/*` proxy when classifying production hosts. |
-| `SITE_API_ORIGIN` | `string` | - | - | optional | Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`. |
+| `SITE_API_ORIGIN` | `string` | - | - | required | Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`. |
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:END -->
 
 ---
