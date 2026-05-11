@@ -62,6 +62,13 @@
       "decimals": 18
     }
   ],
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: LUSD resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
   "deploymentModel": "canonical-bridge",
   "governanceQuality": "immutable-code",
   "infrastructures": [

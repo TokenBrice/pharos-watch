@@ -36,6 +36,15 @@
       "decimals": 6
     }
   ],
+  "canBeBlacklisted": false,
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sourceFreeRationale": "Reviewed local metadata suppression: ISC's \"Cash reserves\" slice describes generic off-chain cash, not the unrelated CASH token tracked elsewhere.",
+    "evidence": "Explicit No retained: the apparent Upstream signal is a text match on a generic cash reserve label, with no coinId, blacklistable reserve flag, variant parent, CEX custody, or direct stablecoin reserve reference.",
+    "reviewer": "Codex inferred-status backfill audit",
+    "reviewedAt": "2026-05-12",
+    "upstreamSuppressionRationale": "Suppresses a resolver text false-positive where the generic reserve phrase \"Cash reserves\" matches the tracked CASH symbol. ISC metadata does not identify CASH token exposure or another upstream freezable asset."
+  },
   "reserves": [
     {
       "name": "Physical gold holdings",

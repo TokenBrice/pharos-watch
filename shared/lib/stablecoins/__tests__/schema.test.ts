@@ -134,6 +134,25 @@ describe("StablecoinMeta schema — blacklistability review", () => {
     expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/canBeBlacklisted/);
   });
 
+  it("accepts inferred blacklistability review metadata without an override", () => {
+    const json = [
+      {
+        id: "fixture-blacklist-inferred",
+        name: "Fixture",
+        symbol: "FXT",
+        flags: baseFlags,
+        blacklistabilityReview: {
+          reviewedStatus: "inherited",
+          sourceFreeRationale: "Resolved from Pharos stablecoin metadata.",
+          evidence: "Fixture evidence for inferred upstream exposure.",
+          reviewer: "Fixture",
+          reviewedAt: "2026-05-12",
+        },
+      },
+    ];
+    expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
+  });
+
   it("requires review status to match the override and include a source or rationale", () => {
     const base = {
       id: "fixture-blacklist-review",

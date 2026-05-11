@@ -124,14 +124,6 @@ export const StablecoinMetaAssetSchema = z.object({
     });
   }
 
-  if (meta.canBeBlacklisted === undefined && meta.blacklistabilityReview != null) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "blacklistabilityReview is only allowed with canBeBlacklisted",
-      path: ["blacklistabilityReview"],
-    });
-  }
-
   if (
     meta.canBeBlacklisted !== undefined &&
     meta.blacklistabilityReview?.reviewedStatus !== undefined &&

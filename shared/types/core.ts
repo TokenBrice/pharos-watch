@@ -75,9 +75,10 @@ export interface StablecoinLink {
 }
 
 export type BlacklistabilityStatus = boolean | "possible" | "dilutable";
+export type BlacklistabilityReviewStatus = BlacklistabilityStatus | "inherited";
 
 export interface BlacklistabilityReview {
-  reviewedStatus: BlacklistabilityStatus;
+  reviewedStatus: BlacklistabilityReviewStatus;
   sources?: StablecoinLink[];
   sourceFreeRationale?: string;
   evidence: string;

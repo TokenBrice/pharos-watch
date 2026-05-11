@@ -10,6 +10,13 @@
     "rwa": false,
     "navToken": true
   },
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as possible admin-control exposure; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: stUSDS resolves to Possible because existing metadata indicates a mutable or pause-capable control surface without a confirmed direct freeze or arbitrary-burn surface.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
   "variantOf": "usds-sky",
   "variantKind": "risk-absorption",
   "pegReferenceId": "usds-sky",

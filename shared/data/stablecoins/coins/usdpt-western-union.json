@@ -25,11 +25,21 @@
     "country": "United States"
   },
   "geckoId": "usdpt-western-union",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: USDPT resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
   "status": "pre-launch",
   "announcedDate": "2025-10",
   "expectedLaunchDate": "2026-05",
   "dateHistory": [
-    { "date": "2026-Q2", "setOn": "2026-05-03" }
+    {
+      "date": "2026-Q2",
+      "setOn": "2026-05-03"
+    }
   ],
   "launchPhase": "launching-soon",
   "launchPhaseDetail": "LAUNCHED May 4 on Solana — Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian; CoinGecko listing remains zero-supply (B2B settlement, not exchange-traded yet); PROMOTION CANDIDATE pending aggregator data",

@@ -24,24 +24,22 @@ export function findBlacklistabilityReviewIssues(
     coin.canBeBlacklisted === false ? cloneWithoutBlacklistOverride(coin) : coin
   ));
   const statusesWithoutFalseSuppression = resolveBlacklistStatuses(withoutExplicitFalse);
+  const resolvedStatuses = resolveBlacklistStatuses(coins);
 
   for (const coin of coins) {
-    if (coin.canBeBlacklisted === undefined) {
-      continue;
-    }
-
     if (!coin.blacklistabilityReview) {
       issues.push({
         id: coin.id,
-        message: "explicit canBeBlacklisted override requires blacklistabilityReview",
+        message: "stablecoin requires blacklistabilityReview",
       });
       continue;
     }
 
-    if (coin.blacklistabilityReview.reviewedStatus !== coin.canBeBlacklisted) {
+    const expectedStatus = coin.canBeBlacklisted ?? resolvedStatuses.get(coin.id);
+    if (coin.blacklistabilityReview.reviewedStatus !== expectedStatus) {
       issues.push({
         id: coin.id,
-        message: "blacklistabilityReview.reviewedStatus must match canBeBlacklisted",
+        message: "blacklistabilityReview.reviewedStatus must match resolved canBeBlacklisted status",
       });
     }
 
