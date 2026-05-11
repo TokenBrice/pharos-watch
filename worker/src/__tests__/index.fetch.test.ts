@@ -378,10 +378,15 @@ describe("worker.fetch", () => {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ activeWatchers: 10, coinSubscriptions: 20, topCoins: [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }));
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ activeWatchers: 10, coinSubscriptions: 20, topCoins: [], watcherHistory: [] }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      );
 
     const env = makeEnv();
     const { ctx } = makeExecutionContext();
@@ -406,7 +411,7 @@ describe("worker.fetch", () => {
     expect(historyRes.status).toBe(200);
     expect(await historyRes.json()).toEqual({ currentStatus: "healthy", transitions: [] });
     expect(pulseRes.status).toBe(200);
-    expect(await pulseRes.json()).toEqual({ activeWatchers: 10, coinSubscriptions: 20, topCoins: [] });
+    expect(await pulseRes.json()).toEqual({ activeWatchers: 10, coinSubscriptions: 20, topCoins: [], watcherHistory: [] });
   });
 
   it("accepts a valid API key on /api/* routes", async () => {

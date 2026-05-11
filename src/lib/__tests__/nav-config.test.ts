@@ -9,16 +9,17 @@ describe("nav-config", () => {
       "/safety-scores",
       "/yield",
       "/alt-pegs",
+      "/telegram",
     ]);
     expect(PRIMARY_NAV_ITEMS.find((item) => item.href === "/alt-pegs")?.label).toBe("Non-USD Stables");
+    expect(PRIMARY_NAV_ITEMS.at(-1)).toMatchObject({ href: "/telegram", label: "Telegram" });
 
-    // Telegram moved out of the primary block; it lives in the TRACK data
-    // group, while Digest and Status now live in the separate MONITOR group.
-    expect(PRIMARY_NAV_ITEMS.find((item) => item.href === "/telegram")).toBeUndefined();
+    // Telegram is a main route now, immediately after the Non-USD Stable
+    // market-structure page. Digest and Status stay in MONITOR.
     const dataGroup = NAV_GROUPS.find((group) => group.key === "data");
     const monitorGroup = NAV_GROUPS.find((group) => group.key === "monitor");
     expect(dataGroup?.items.some((item) => item.href === "/telegram")).toBe(false);
-    expect(monitorGroup?.items.some((item) => item.href === "/telegram")).toBe(true);
+    expect(monitorGroup?.items.some((item) => item.href === "/telegram")).toBe(false);
   });
 
   it("orders the sidebar groups and routes as requested while excluding legacy Risk Lab grouping", () => {
@@ -49,7 +50,6 @@ describe("nav-config", () => {
 
     expect(monitorGroup?.label).toBe("MONITOR");
     expect(monitorGroup?.items.map((item) => ({ href: item.href, label: item.label }))).toEqual([
-      { href: "/telegram", label: "Telegram" },
       { href: "/upcoming", label: "Upcoming" },
       { href: "/digest", label: "Digest" },
       { href: "/status", label: "Pharos Status" },

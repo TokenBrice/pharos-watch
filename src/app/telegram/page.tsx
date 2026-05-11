@@ -1,11 +1,26 @@
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import Image from "next/image";
-import { ExternalLink, Bot, Users, Megaphone, ChevronDown } from "lucide-react";
+import Link from "next/link";
+import {
+  ArrowRight,
+  Bell,
+  Bot,
+  ChevronDown,
+  Clock3,
+  ExternalLink,
+  Megaphone,
+  MessageSquareText,
+  Radio,
+  ShieldCheck,
+  SlidersHorizontal,
+  Terminal,
+  Users,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { FaqSection } from "@/components/faq-section";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -23,7 +38,7 @@ import {
   type TelegramActionKey,
 } from "./telegram-content";
 import { buildTelegramPageJsonLd } from "./telegram-json-ld";
-import { TelegramPulseStrip } from "./telegram-pulse-strip";
+import { TelegramPulseBoard, TelegramPulseStrip } from "./telegram-pulse-strip";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Telegram Alerts & Daily Digest",
@@ -33,11 +48,94 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 const COIN_COUNT = ACTIVE_STABLECOINS.length;
+
 const TELEGRAM_ACTION_ICONS = {
   bot: Bot,
   digest: Megaphone,
   community: Users,
 } as const satisfies Record<TelegramActionKey, typeof Bot>;
+
+const ACTION_ANCHORS = {
+  bot: "bot",
+  digest: "channel",
+  community: "community",
+} as const satisfies Record<TelegramActionKey, string>;
+
+const HERO_STATS = [
+  {
+    label: "Tracked universe",
+    value: COIN_COUNT.toLocaleString("en-US"),
+    detail: "active stablecoins watched by the same risk pipeline",
+  },
+  {
+    label: "Alert lane",
+    value: "5m",
+    detail: "dedicated dispatch cadence for DEWS, depeg, safety, and launch signals",
+  },
+  {
+    label: "Default setup",
+    value: "1",
+    detail: "starter command before users fine-tune thresholds and quiet hours",
+  },
+] as const;
+
+const RECOMMENDED_SETUPS = [
+  {
+    title: "First watcher setup",
+    command: "/subscribe dews,depeg usd-top25",
+    description: "Top USD stablecoins with DEWS and depeg coverage. Best default for most new subscribers.",
+    icon: Bell,
+  },
+  {
+    title: "Research desk setup",
+    command: "/subscribe safety mcap-ge-1b",
+    description: "Material safety-grade downgrades across larger coins without following every ticker manually.",
+    icon: ShieldCheck,
+  },
+  {
+    title: "Group setup",
+    command: "/subscribe@PharosWatchBot dews usd-top25",
+    description: "Addressed commands let a Telegram group share one alert configuration without hijacking other bots.",
+    icon: MessageSquareText,
+  },
+] as const satisfies readonly {
+  title: string;
+  command: string;
+  description: string;
+  icon: LucideIcon;
+}[];
+
+const GROWTH_SUPPORT = [
+  {
+    title: "Preset watchlists",
+    detail: "Top-N and market-cap cohorts keep setup short as the tracked universe grows.",
+    signal: "/presets",
+    icon: Terminal,
+  },
+  {
+    title: "Noise controls",
+    detail: "DEWS floors, depeg worsening steps, safety modes, quiet hours, and alert snooze keep retention healthy.",
+    signal: "/set, /mute",
+    icon: SlidersHorizontal,
+  },
+  {
+    title: "Group-ready commands",
+    detail: "Addressed group commands turn one Telegram chat into a shared watch desk for teams and DAOs.",
+    signal: "@PharosWatchBot",
+    icon: Users,
+  },
+  {
+    title: "Delivery backpressure",
+    detail: "Overflow sends are queued and drained by the Telegram lane instead of dropping subscriber alerts.",
+    signal: "pending queue",
+    icon: Radio,
+  },
+] as const satisfies readonly {
+  title: string;
+  detail: string;
+  signal: string;
+  icon: LucideIcon;
+}[];
 
 /* -------------------------------------------------------------------------- */
 /*  Subcomponents                                                             */
@@ -45,8 +143,8 @@ const TELEGRAM_ACTION_ICONS = {
 
 function AlertBubble({ content, time }: { content: string; time: string }) {
   return (
-    <div className="relative rounded-2xl rounded-tl-sm p-3 bg-[#1e3a5f] text-white shadow-md dark:bg-[#2b5278]">
-      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/10">
+    <div className="relative rounded-2xl rounded-tl-sm bg-[#1e3a5f] p-3 text-white shadow-md dark:bg-[#2b5278]">
+      <div className="mb-2 flex items-center gap-2 border-b border-white/10 pb-2">
         <Image src="/pharos-icon.png" alt="Pharos bot avatar" width={20} height={20} className="rounded-full" />
         <span className="text-xs font-medium text-white/90">PharosWatchBot</span>
       </div>
@@ -64,7 +162,7 @@ function TelegramLink({ href, children }: { href: string; children: React.ReactN
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 text-foreground underline underline-offset-4 hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
+      className="inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-sky-600 dark:hover:text-sky-400"
     >
       {children}
       <ExternalLink className="h-3 w-3" aria-hidden="true" />
@@ -73,139 +171,310 @@ function TelegramLink({ href, children }: { href: string; children: React.ReactN
   );
 }
 
+function CommandLine({ command }: { command: string }) {
+  return (
+    <code className="block overflow-x-auto whitespace-nowrap rounded-lg border border-border/60 bg-background/80 px-3 py-2 font-mono text-xs text-foreground">
+      {command}
+    </code>
+  );
+}
+
+function HeroPreview() {
+  const featuredAlert = TELEGRAM_ALERT_EXAMPLES[0];
+
+  return (
+    <div className="rounded-[1.25rem] border border-border/70 bg-card/86 p-3 shadow-[0_18px_44px_oklch(0_0_0_/0.18)]">
+      <div className="mb-3 flex items-center justify-between rounded-xl border border-border/60 bg-background/55 px-3 py-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-frost-blue/15 text-sky-700 dark:text-sky-200">
+            <Bot className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold leading-tight text-foreground">@PharosWatchBot</p>
+            <p className="text-[11px] text-muted-foreground">live alert preview</p>
+          </div>
+        </div>
+        <span className="rounded-md border border-green-500/25 bg-green-500/10 px-2 py-1 font-mono text-[10px] font-semibold text-green-700 dark:text-green-300">
+          armed
+        </span>
+      </div>
+      <AlertBubble content={featuredAlert.content} time={featuredAlert.time} />
+      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+        {["Snooze 1h", "4h", "24h"].map((label) => (
+          <span
+            key={label}
+            className="rounded-md border border-white/10 bg-[#2b5278]/15 px-2 py-1.5 text-[11px] font-medium text-muted-foreground dark:bg-white/5"
+          >
+            {label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SurfaceCard({ action, index }: { action: (typeof TELEGRAM_ACTIONS)[number]; index: number }) {
+  const Icon = TELEGRAM_ACTION_ICONS[action.key];
+  const anchorId = ACTION_ANCHORS[action.key];
+  const cardClassName = action.isPrimary
+    ? "border-frost-blue/35 bg-frost-blue/8 dark:bg-frost-blue/6"
+    : "border-border/65 bg-card/78";
+
+  return (
+    <section
+      id={anchorId}
+      className={`pharos-card-shell pharos-interactive-card flex h-full scroll-mt-24 flex-col p-5 ${cardClassName}`}
+      style={{ "--stagger-index": index } as CSSProperties}
+    >
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/60 text-sky-700 dark:text-sky-300">
+          <Icon className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold leading-tight text-foreground">{action.title}</h2>
+          <p className="mt-1 font-mono text-xs text-muted-foreground">{action.handle}</p>
+        </div>
+      </div>
+      <p className="mt-4 flex-1 text-sm leading-relaxed text-muted-foreground">
+        {action.description}
+        {action.showArchiveLink ? (
+          <>
+            {" "}
+            <Link
+              href="/digest"
+              className="rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
+            >
+              Browse archive
+            </Link>
+            .
+          </>
+        ) : null}
+      </p>
+      <Button variant={action.isPrimary ? "default" : "outline"} size="sm" asChild className="mt-4 w-full gap-2">
+        <a href={action.href} target="_blank" rel="noopener noreferrer">
+          {action.cardButtonLabel}
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+        </a>
+      </Button>
+    </section>
+  );
+}
+
+function SetupCard({ setup, index }: { setup: (typeof RECOMMENDED_SETUPS)[number]; index: number }) {
+  const Icon = setup.icon;
+
+  return (
+    <div
+      className="rounded-xl border border-border/65 bg-card/78 p-4"
+      style={{ "--stagger-index": index } as CSSProperties}
+    >
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/55 text-sky-700 dark:text-sky-300">
+          <Icon className="h-4 w-4" />
+        </span>
+        <p className="text-sm font-semibold text-foreground">{setup.title}</p>
+      </div>
+      <div className="mt-3">
+        <CommandLine command={setup.command} />
+      </div>
+      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{setup.description}</p>
+    </div>
+  );
+}
+
+function GrowthSupportCard({ item, index }: { item: (typeof GROWTH_SUPPORT)[number]; index: number }) {
+  const Icon = item.icon;
+
+  return (
+    <div
+      className="rounded-xl border border-border/65 bg-background/36 p-4"
+      style={{ "--stagger-index": index } as CSSProperties}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-card text-sky-700 dark:text-sky-300">
+          <Icon className="h-4 w-4" />
+        </span>
+        <span className="rounded-md border border-border/55 bg-muted/35 px-2 py-1 font-mono text-[10px] font-semibold text-muted-foreground">
+          {item.signal}
+        </span>
+      </div>
+      <h3 className="mt-4 text-sm font-semibold text-foreground">{item.title}</h3>
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{item.detail}</p>
+    </div>
+  );
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Page                                                                      */
 /* -------------------------------------------------------------------------- */
 
 export default function TelegramPage() {
-  const featuredAlert = TELEGRAM_ALERT_EXAMPLES[0];
-
   return (
     <FeaturePageShell
-      breadcrumbName="Telegram Alerts"
+      breadcrumbName="Telegram"
       path="/telegram/"
-      title="Telegram Alerts & Digest"
-      containerClassName="mx-auto max-w-4xl"
-      leadParagraphs={[]}
+      title="Telegram"
+      containerClassName="mx-auto max-w-6xl"
+      headerActions={
+        <Button asChild size="sm" className="gap-2">
+          <a href="https://t.me/PharosWatchBot" target="_blank" rel="noopener noreferrer">
+            Start Bot
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+          </a>
+        </Button>
+      }
+      leadParagraphs={[
+        <>
+          The Pharos alert layer for people who do not want to keep a stablecoin dashboard open all day: bot alerts,
+          daily digest posts, and a public watcher community in one Telegram surface.
+        </>,
+      ]}
     >
-      <div>
-        {/* ================================================================= */}
-        {/*  HERO: Featured alert + value prop                                */}
-        {/* ================================================================= */}
-        <section className="pharos-stagger-entrance flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
-          {/* Left: copy + CTA */}
-          <div className="flex-1 space-y-4 md:py-2" style={{ "--stagger-index": 0 } as CSSProperties}>
-            <p className="text-lg font-semibold leading-snug tracking-tight text-foreground sm:text-xl">
-              {COIN_COUNT} stablecoins watched.{" "}
-              <span className="text-sky-600 dark:text-sky-400">You&rsquo;ll know first.</span>
-            </p>
-            <p className="pharos-lead max-w-lg">
-              When a peg breaks, risk spikes, a safety grade shifts, or a pre-launch asset goes live,{" "}
-              <TelegramLink href="https://t.me/PharosWatchBot">@PharosWatchBot</TelegramLink> messages you within the
-              cron cycle &mdash; before you check Twitter. Free, configurable, no account needed.
-            </p>
-            <TelegramPulseStrip />
-            <div className="flex flex-wrap gap-3 pt-1">
-              {TELEGRAM_ACTIONS.map((action) => {
-                const Icon = TELEGRAM_ACTION_ICONS[action.key];
-                return (
-                  <Button
-                    key={action.key}
-                    variant={action.isPrimary ? "default" : "outline"}
-                    size="sm"
-                    asChild
-                    className="gap-2"
-                  >
-                    <a href={action.href} target="_blank" rel="noopener noreferrer">
-                      <Icon className="h-4 w-4" />
-                      {action.heroButtonLabel}
+      <div className="space-y-12">
+        <section
+          className="relative overflow-hidden rounded-[1.5rem] border border-border/70 bg-[linear-gradient(135deg,oklch(0.98_0.006_248_/_0.96),oklch(0.94_0.014_248_/_0.92))] px-4 py-5 shadow-sm dark:bg-[linear-gradient(135deg,oklch(0.17_0.024_248_/_0.96),oklch(0.105_0.018_248_/_0.98))] sm:px-6 sm:py-7 lg:px-7"
+          aria-labelledby="telegram-hero-title"
+        >
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.85fr)] lg:items-center">
+            <div className="space-y-5">
+              <div className="max-w-2xl space-y-3">
+                <h2
+                  id="telegram-hero-title"
+                  className="max-w-[16rem] text-2xl font-black leading-[1.05] tracking-tight sm:max-w-none sm:text-3xl"
+                >
+                  <span className="block sm:inline">Risk signals should find you</span>{" "}
+                  <span className="block sm:inline">before the timeline does.</span>
+                </h2>
+                <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
+                  <TelegramLink href="https://t.me/PharosWatchBot">@PharosWatchBot</TelegramLink> watches depegs,
+                  DEWS threat bands, safety-grade changes, and launch promotions across the tracked universe. Start
+                  with one low-noise preset, then tune thresholds as your watchlist grows.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                {HERO_STATS.map((stat) => (
+                  <div key={stat.label} className="rounded-xl border border-border/60 bg-background/55 px-2 py-2.5 sm:px-3 sm:py-3">
+                    <p className="text-[9px] font-semibold uppercase leading-tight tracking-[0.04em] text-muted-foreground sm:text-[11px] sm:tracking-[0.12em]">
+                      {stat.label}
+                    </p>
+                    <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground sm:text-2xl">
+                      {stat.value}
+                    </p>
+                    <p className="mt-1 hidden text-xs leading-relaxed text-muted-foreground sm:block">{stat.detail}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-xl border border-frost-blue/25 bg-frost-blue/8 p-4 dark:bg-frost-blue/6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 space-y-2">
+                    <p className="pharos-kicker text-sky-700 dark:text-sky-300">Recommended first command</p>
+                    <CommandLine command="/subscribe dews,depeg usd-top25" />
+                    <TelegramPulseStrip />
+                  </div>
+                  <Button asChild className="shrink-0 gap-2">
+                    <a href="https://t.me/PharosWatchBot" target="_blank" rel="noopener noreferrer">
+                      Start Bot
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
                     </a>
                   </Button>
-                );
-              })}
+                </div>
+              </div>
+            </div>
+
+            <HeroPreview />
+          </div>
+        </section>
+
+        <TelegramPulseBoard />
+
+        <section className="space-y-4" aria-labelledby="telegram-surfaces-title">
+          <div className="max-w-3xl space-y-2">
+            <h2 id="telegram-surfaces-title" className="pharos-section-title">
+              Three Telegram surfaces, one monitoring loop
+            </h2>
+            <p className="pharos-lead">
+              The bot is the alert product. The digest and community give slower context around the same market signals.
+            </p>
+          </div>
+          <div className="pharos-stagger-entrance grid gap-4 md:grid-cols-3">
+            {TELEGRAM_ACTIONS.map((action, index) => (
+              <SurfaceCard key={action.key} action={action} index={index} />
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-4" id="getting-started" aria-labelledby="growth-start-title">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-3xl space-y-2">
+              <h2 id="growth-start-title" className="pharos-section-title">
+                Give new watchers a quiet default
+              </h2>
+              <p className="pharos-lead">
+                Growth works when the first subscription is obvious and conservative. These setup paths keep the first
+                command simple before anyone needs the full manual.
+              </p>
+            </div>
+            <Link
+              href="#commands"
+              className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-md border border-border/65 bg-background/55 px-3 text-sm font-medium text-foreground hover:bg-muted/45 sm:min-h-0 sm:py-2"
+            >
+              Command reference
+              <ChevronDown className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+          <div className="pharos-stagger-entrance grid gap-4 lg:grid-cols-3">
+            {RECOMMENDED_SETUPS.map((setup, index) => (
+              <SetupCard key={setup.command} setup={setup} index={index} />
+            ))}
+          </div>
+        </section>
+
+        <section className="pharos-card-shell overflow-hidden" aria-labelledby="growth-support-title">
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+            <div className="border-b border-border/60 p-5 lg:border-b-0 lg:border-r lg:p-6">
+              <p className="pharos-kicker">Growth posture</p>
+              <h2 id="growth-support-title" className="mt-2 text-xl font-semibold tracking-tight text-foreground">
+                Support more watchers without making the bot louder.
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                As the watcher base grows, the job is keeping setup short, making group use natural, and protecting
+                subscribers from repeated noise during volatile periods.
+              </p>
+              <div className="mt-5 flex items-center gap-2 text-xs text-muted-foreground">
+                <Clock3 className="h-4 w-4 text-sky-700 dark:text-sky-300" aria-hidden="true" />
+                Dedicated five-minute Telegram dispatcher with overflow queueing.
+              </div>
+            </div>
+            <div className="pharos-stagger-entrance grid gap-3 p-4 sm:grid-cols-2 lg:p-5">
+              {GROWTH_SUPPORT.map((item, index) => (
+                <GrowthSupportCard key={item.title} item={item} index={index} />
+              ))}
             </div>
           </div>
+        </section>
 
-          {/* Right: featured alert bubble */}
-          <div className="w-full max-w-xs shrink-0 md:w-72 md:py-2" style={{ "--stagger-index": 1 } as CSSProperties}>
-            <p className="pharos-kicker mb-2.5">DEWS escalation &mdash; bot-style preview</p>
-            <AlertBubble content={featuredAlert.content} time={featuredAlert.time} />
+        <section className="space-y-4" id="alerts" aria-labelledby="alert-types-title">
+          <div className="max-w-3xl space-y-2">
+            <h2 id="alert-types-title" className="pharos-section-title">
+              What the bot actually sends
+            </h2>
+            <p className="pharos-lead">
+              Four alert families, each tied to a stablecoin signal Pharos already computes.
+            </p>
           </div>
-        </section>
-
-        {/* ================================================================= */}
-        {/*  THREE PRODUCT TILES                                              */}
-        {/* ================================================================= */}
-        <section className="pharos-stagger-entrance mt-12 grid grid-cols-1 gap-4 sm:grid-cols-3" id="products">
-          {TELEGRAM_ACTIONS.map((action, index) => {
-            const Icon = TELEGRAM_ACTION_ICONS[action.key];
-            const cardClassName = action.isPrimary
-              ? "rounded-xl border-sky-500/30 bg-sky-500/[0.04] py-0 dark:border-sky-400/20 dark:bg-sky-400/[0.04]"
-              : "rounded-xl py-0";
-            const iconWrapperClassName = action.isPrimary
-              ? "flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/10 text-sky-500 dark:text-sky-400"
-              : "flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground";
-
-            return (
-              <Card key={action.key} className={cardClassName} style={{ "--stagger-index": index } as CSSProperties}>
-                <CardContent className="flex h-full flex-col p-5">
-                  <div className="flex items-center gap-2.5">
-                    <span className={iconWrapperClassName}>
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold leading-tight">{action.title}</p>
-                      <p className="text-[11px] text-muted-foreground">{action.handle}</p>
-                    </div>
-                  </div>
-                  <p className="mt-3 flex-1 text-xs text-muted-foreground leading-relaxed">
-                    {action.description}
-                    {action.showArchiveLink ? (
-                      <>
-                        {" "}
-                        <Link
-                          href="/digest"
-                          className="underline underline-offset-4 hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
-                        >
-                          Browse archive &rarr;
-                        </Link>
-                      </>
-                    ) : null}
-                  </p>
-                  <Button
-                    variant={action.isPrimary ? "default" : "outline"}
-                    size="sm"
-                    asChild
-                    className="mt-3 w-full gap-2"
-                  >
-                    <a href={action.href} target="_blank" rel="noopener noreferrer">
-                      {action.cardButtonLabel}
-                      <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                    </a>
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </section>
-
-        {/* ================================================================= */}
-        {/*  ALERT TYPES + EXAMPLE BUBBLES                                    */}
-        {/* ================================================================= */}
-        <section className="mt-12" id="alerts">
-          <h2 className="pharos-section-title">What You Get</h2>
-          <p className="mt-1.5 pharos-lead">Four alert types, each shown in the bot&apos;s current message style.</p>
-          <div className="pharos-stagger-entrance mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="pharos-stagger-entrance grid gap-5 md:grid-cols-2">
             {TELEGRAM_ALERT_EXAMPLES.map((alert, i) => (
               <div key={alert.key} className="space-y-2.5" style={{ "--stagger-index": i } as CSSProperties}>
                 <div>
-                  <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
                     {alert.label}
                     <code className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono font-medium uppercase text-muted-foreground">
                       {alert.key}
                     </code>
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">{alert.tagline}</p>
+                  </h3>
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{alert.tagline}</p>
                 </div>
                 <AlertBubble content={alert.content} time={alert.time} />
               </div>
@@ -213,60 +482,72 @@ export default function TelegramPage() {
           </div>
         </section>
 
-        {/* ================================================================= */}
-        {/*  HOW IT WORKS (cadence, volume, privacy)                          */}
-        {/* ================================================================= */}
-        <section className="mt-12" id="how-it-works">
-          <h2 className="pharos-section-title">How It Works</h2>
-          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <section className="space-y-4" id="how-it-works" aria-labelledby="how-it-works-title">
+          <div className="max-w-3xl space-y-2">
+            <h2 id="how-it-works-title" className="pharos-section-title">
+              Operating model
+            </h2>
+            <p className="pharos-lead">
+              The Telegram lane is designed around predictable cadence, low daily volume, and explicit privacy scope.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
             {TELEGRAM_HOW_IT_WORKS_CARDS.map((item) => (
-              <Card key={item.title} className="rounded-xl py-0">
-                <CardContent className="p-5">
-                  <p className="text-sm font-semibold">{item.title}</p>
-                  <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                    {item.description}
-                    {item.unsubscribeCommand ? (
-                      <>
-                        {" "}
-                        Run{" "}
-                        <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">
-                          {item.unsubscribeCommand}
-                        </code>{" "}
-                        {item.descriptionAfterCommand}
-                      </>
-                    ) : null}
-                  </p>
-                </CardContent>
-              </Card>
+              <div key={item.title} className="rounded-xl border border-border/65 bg-card/78 p-5">
+                <h3 className="text-sm font-semibold text-foreground">{item.title}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  {item.description}
+                  {item.unsubscribeCommand ? (
+                    <>
+                      {" "}
+                      Run{" "}
+                      <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">
+                        {item.unsubscribeCommand}
+                      </code>{" "}
+                      {item.descriptionAfterCommand}
+                    </>
+                  ) : null}
+                </p>
+              </div>
             ))}
           </div>
-
-          <div className="mt-5 rounded-lg border border-border/60 bg-muted/30 p-4">
-            <p className="text-sm font-semibold">DEWS bands</p>
-            <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-              Pharos scores each coin on five bands. Alerts fire when a coin enters{" "}
-              <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">ALERT</code>,{" "}
-              <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">WARNING</code>, or{" "}
-              <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">DANGER</code>. Use{" "}
-              <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">/set USDT dews WARNING</code> to
-              raise the floor. See{" "}
-              <Link
-                href="/methodology#pegscore-dews-methodology"
-                className="underline underline-offset-4 hover:text-foreground transition-colors"
-              >
-                the DEWS methodology
-              </Link>{" "}
-              for scoring details.
-            </p>
+          <div className="rounded-xl border border-border/60 bg-muted/25 p-4">
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                <Zap className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">DEWS bands</h3>
+                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                  Pharos scores each coin on five bands. Alerts fire when a coin enters{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">ALERT</code>,{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">WARNING</code>, or{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">DANGER</code>. Use{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">/set USDT dews WARNING</code>{" "}
+                  to raise the floor. See{" "}
+                  <Link
+                    href="/methodology#pegscore-dews-methodology"
+                    className="rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
+                  >
+                    the DEWS methodology
+                  </Link>{" "}
+                  for scoring details.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* ================================================================= */}
-        {/*  GETTING STARTED                                                  */}
-        {/* ================================================================= */}
-        <section className="mt-12" id="getting-started">
-          <h2 className="pharos-section-title">Getting Started</h2>
-          <ol className="mt-5 list-none space-y-5 text-sm text-muted-foreground leading-relaxed">
+        <section className="space-y-4" aria-labelledby="setup-details-title">
+          <div className="max-w-3xl space-y-2">
+            <h2 id="setup-details-title" className="pharos-section-title">
+              Setup recipes
+            </h2>
+            <p className="pharos-lead">
+              Start with a preset, then tune only the coins or alert types that deserve a custom threshold.
+            </p>
+          </div>
+          <ol className="space-y-5 text-sm leading-relaxed text-muted-foreground">
             <li className="flex items-start gap-3">
               <span
                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-foreground"
@@ -286,12 +567,12 @@ export default function TelegramPage() {
               >
                 2
               </span>
-              <div className="space-y-3 flex-1">
-                <p>Subscribe and tune:</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+              <div className="min-w-0 flex-1 space-y-3">
+                <p>Pick one path:</p>
+                <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
                   {TELEGRAM_GETTING_STARTED_OPTIONS.map((option) => (
                     <div key={option.command}>
-                      <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">{option.command}</code>
+                      <CommandLine command={option.command} />
                       <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
                     </div>
                   ))}
@@ -306,22 +587,18 @@ export default function TelegramPage() {
                 3
               </span>
               <p>
-                Done &mdash; alerts arrive automatically when conditions change. Use{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">/list</code> at any time to check
-                your active subscriptions, and{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">/presets</code> to discover preset
-                watchlists from inside Telegram.
+                Use <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">/list</code> to audit active
+                subscriptions, <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">/presets</code> to
+                discover cohorts, and <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">/mute</code>{" "}
+                or inline snooze buttons to keep alerts quiet during off-hours.
               </p>
             </li>
           </ol>
         </section>
 
-        {/* ================================================================= */}
-        {/*  COMMAND REFERENCE (collapsible)                                  */}
-        {/* ================================================================= */}
-        <section className="mt-12" id="commands">
-          <details className="pharos-card-shell overflow-hidden group" open>
-            <summary className="flex cursor-pointer items-center justify-between px-5 py-4 text-sm font-semibold select-none hover:bg-muted/30 transition-colors [&::-webkit-details-marker]:hidden list-none">
+        <section id="commands" className="scroll-mt-24">
+          <details className="pharos-card-shell overflow-hidden group">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-semibold transition-colors hover:bg-muted/30 [&::-webkit-details-marker]:hidden">
               <span className="flex items-center gap-2.5">
                 Command Reference
                 <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground tabular-nums">
@@ -330,26 +607,20 @@ export default function TelegramPage() {
               </span>
               <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
             </summary>
-            <div className="border-t border-border/60 px-5 py-4 space-y-4">
-              <div className="overflow-x-auto -mx-5 px-5">
+            <div className="space-y-4 border-t border-border/60 px-5 py-4">
+              <div className="-mx-5 overflow-x-auto px-5">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border/60 text-left">
-                      <th
-                        scope="col"
-                        className="pb-3 pr-4 font-medium text-xs text-muted-foreground uppercase tracking-wider"
-                      >
+                      <th scope="col" className="pb-3 pr-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         Command
                       </th>
-                      <th
-                        scope="col"
-                        className="pb-3 pr-4 font-medium text-xs text-muted-foreground uppercase tracking-wider"
-                      >
+                      <th scope="col" className="pb-3 pr-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         Description
                       </th>
                       <th
                         scope="col"
-                        className="hidden pb-3 font-medium text-xs text-muted-foreground uppercase tracking-wider sm:table-cell"
+                        className="hidden pb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground sm:table-cell"
                       >
                         Example
                       </th>
@@ -357,20 +628,20 @@ export default function TelegramPage() {
                   </thead>
                   <tbody className="divide-y divide-border/40">
                     {TELEGRAM_COMMANDS.map((cmd) => (
-                      <tr key={cmd.command} className="group/row hover:bg-muted/40 transition-colors">
+                      <tr key={cmd.command} className="group/row transition-colors hover:bg-muted/40">
                         <td className="py-3 pr-4 align-top">
-                          <code className="inline-flex items-center rounded bg-muted px-2 py-1 text-xs font-mono text-foreground whitespace-nowrap">
+                          <code className="inline-flex whitespace-nowrap rounded bg-muted px-2 py-1 text-xs font-mono text-foreground">
                             {cmd.command}
                           </code>
                         </td>
                         <td className="py-3 pr-4 align-top text-muted-foreground">{cmd.description}</td>
                         <td className="hidden py-3 align-top sm:table-cell">
                           {cmd.example ? (
-                            <code className="rounded bg-muted/70 px-2 py-1 text-xs font-mono text-foreground/80 whitespace-nowrap">
+                            <code className="whitespace-nowrap rounded bg-muted/70 px-2 py-1 text-xs font-mono text-foreground/80">
                               {cmd.example}
                             </code>
                           ) : (
-                            <span className="text-muted-foreground/50">&mdash;</span>
+                            <span className="text-muted-foreground/50">-</span>
                           )}
                         </td>
                       </tr>
@@ -390,28 +661,21 @@ export default function TelegramPage() {
           </details>
         </section>
 
-        {/* ================================================================= */}
-        {/*  FAQ                                                              */}
-        {/* ================================================================= */}
-        <div className="mt-12">
-          <FaqSection items={TELEGRAM_FAQ} includeJsonLd />
-        </div>
+        <FaqSection items={TELEGRAM_FAQ} includeJsonLd />
 
-        {/* ================================================================= */}
-        {/*  FINAL CTA                                                        */}
-        {/* ================================================================= */}
-        <div className="mt-12 pharos-card-shell border-t-2 border-t-sky-500/40 p-6 dark:border-t-sky-400/30 sm:p-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="space-y-1">
-              <h2 id="start-bot-cta" className="text-lg font-semibold">
-                {COIN_COUNT} pegs. Zero blind spots.
+        <section className="pharos-card-shell border-t-2 border-t-sky-500/40 p-6 dark:border-t-sky-400/30 sm:p-8">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-3xl space-y-2">
+              <p className="pharos-kicker">Start watching</p>
+              <h2 id="start-bot-cta" className="text-xl font-semibold tracking-tight text-foreground">
+                One Telegram command gets you onto the live watchtower.
               </h2>
-              <p className="text-sm text-muted-foreground">
-                Start @PharosWatchBot for instant alerts and launch notices, join @pharoswatch for the daily digest, or
-                drop into @pharoswatchers for the live community feed.
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Start @PharosWatchBot for alert routing, join @pharoswatch for the digest, or use @pharoswatchers when
+                you want the market conversation around the signals.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3 shrink-0">
+            <div className="flex shrink-0 flex-wrap gap-3">
               {TELEGRAM_ACTIONS.map((action) => {
                 const Icon = TELEGRAM_ACTION_ICONS[action.key];
                 return (
@@ -431,11 +695,11 @@ export default function TelegramPage() {
               })}
             </div>
           </div>
-        </div>
+        </section>
 
-        <p className="mt-8 text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Want the methodology behind these alerts?{" "}
-          <Link href="/methodology" className="underline underline-offset-4 hover:text-foreground transition-colors">
+          <Link href="/methodology" className="rounded-sm underline underline-offset-4 transition-colors hover:text-foreground">
             Read the methodology page
           </Link>{" "}
           for DEWS, safety-grade, and depeg scoring details.

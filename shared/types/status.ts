@@ -242,10 +242,22 @@ export interface TelegramBotStats {
 }
 
 /** Slim public-facing stats for the /telegram landing page. */
+export interface TelegramWatcherHistoryPoint {
+  /** YYYY-MM-DD UTC day bucket from telegram_subscribers.created_at. */
+  date: string;
+  /** UTC day timestamp in milliseconds, for frontend time-axis charts. */
+  timestamp: number;
+  /** New currently active watchers first seen on this day. */
+  newWatchers: number;
+  /** Cumulative currently active watcher count through this day. */
+  activeWatchers: number;
+}
+
 export interface TelegramPulse {
   activeWatchers: number;
   coinSubscriptions: number;
   topCoins: string[];
+  watcherHistory: TelegramWatcherHistoryPoint[];
 }
 
 export interface TelegramDispatchEventsDetected {
@@ -277,6 +289,9 @@ export interface TelegramDispatchCronResult {
   pendingDrained: number;
   pendingRetryQueued: number;
   pendingDropped: number;
+  pendingDeferred: number;
+  pendingRateLimited: boolean;
+  pendingRetryAfterSec: number | null;
   pendingEnqueued: number;
   pendingExpired: number;
   chatsWithActiveSnooze: number;
@@ -314,6 +329,9 @@ export interface TelegramDispatchCronMetadata {
   pendingDrained: number | null;
   pendingRetryQueued: number | null;
   pendingDropped: number | null;
+  pendingDeferred: number | null;
+  pendingRateLimited: boolean;
+  pendingRetryAfterSec: number | null;
   pendingEnqueued: number | null;
   pendingExpired: number | null;
   chatsWithActiveSnooze: number | null;

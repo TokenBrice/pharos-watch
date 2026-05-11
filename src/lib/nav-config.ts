@@ -58,6 +58,7 @@ export const PRIMARY_NAV_ITEMS: NavItem[] = [
   { href: "/safety-scores", label: "Safety Scores", icon: FlaskConical, description: "Cross-market safety grades and contagion scenarios" },
   { href: "/yield", label: "Risk-Adjusted Yield", icon: TrendingUp, description: "Yield ranked after adjusting for stablecoin risk" },
   { href: "/alt-pegs", label: "Non-USD Stables", icon: Globe, description: "Market structure and cohort growth beyond dollar pegs" },
+  { href: "/telegram", label: "Telegram", icon: Send, description: "Push alerts for depegs, DEWS shifts, launches, and the daily digest" },
 ];
 
 export const NAV_GROUPS: NavGroup[] = [
@@ -86,7 +87,6 @@ export const NAV_GROUPS: NavGroup[] = [
     key: "monitor",
     label: "MONITOR",
     items: [
-      { href: "/telegram", label: "Telegram", icon: Send, description: "Push alerts for depegs, DEWS shifts, and the daily digest" },
       { href: "/upcoming", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch-watch context" },
       { href: "/digest", label: "Digest", icon: Newspaper, description: "Daily editorial recap of the stablecoin market" },
       { href: "/status", label: "Pharos Status", icon: Activity, description: "Live health of every data pipeline and cron sync" },

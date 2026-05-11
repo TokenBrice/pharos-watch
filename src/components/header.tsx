@@ -8,6 +8,7 @@ import {
   Sheet,
   SheetTrigger,
   SheetContent,
+  SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -108,6 +109,9 @@ export function Header() {
                 <PharosLogo size={28} />
                 <SheetTitle className="text-lg font-mono uppercase tracking-[0.18em]">PHAROS</SheetTitle>
               </Link>
+              <SheetDescription className="sr-only">
+                Main navigation for Pharos dashboard routes, monitoring tools, references, and companion experiences.
+              </SheetDescription>
               <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setOpen(false)}>
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close menu</span>

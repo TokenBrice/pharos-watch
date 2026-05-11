@@ -1651,7 +1651,7 @@ Browser consumers on `pharos.watch` and `ops.pharos.watch` should use same-origi
 
 ### `GET /api/telegram-pulse`
 
-Lightweight Telegram adoption metrics for the public `/telegram/` landing page. Returns only aggregate watcher/subscription counts plus the most subscribed coin symbols.
+Lightweight Telegram adoption metrics for the public `/telegram/` page. Returns aggregate watcher/subscription counts, the most subscribed coin symbols, and all-time cumulative watcher growth for the current active watcher base.
 
 **Cache:** `public, max-age=300, s-maxage=300`
 
@@ -1661,7 +1661,21 @@ Lightweight Telegram adoption metrics for the public `/telegram/` landing page. 
 {
   "activeWatchers": 1842,
   "coinSubscriptions": 5621,
-  "topCoins": ["USDT", "USDC", "USDe"]
+  "topCoins": ["USDT", "USDC", "USDe"],
+  "watcherHistory": [
+    {
+      "date": "2026-04-01",
+      "timestamp": 1775001600000,
+      "newWatchers": 12,
+      "activeWatchers": 12
+    },
+    {
+      "date": "2026-04-02",
+      "timestamp": 1775088000000,
+      "newWatchers": 9,
+      "activeWatchers": 21
+    }
+  ]
 }
 ```
 
@@ -1670,6 +1684,7 @@ Lightweight Telegram adoption metrics for the public `/telegram/` landing page. 
 | `activeWatchers`    | `number`   | Subscribers with at least one active alert type or per-coin alert |
 | `coinSubscriptions` | `number`   | Total active per-coin subscription rows |
 | `topCoins`          | `string[]` | Up to five most subscribed coin tickers, ordered by subscription count |
+| `watcherHistory`    | `array`    | UTC day buckets for the current active watcher base, grouped by `telegram_subscribers.created_at`; each point includes `date`, millisecond `timestamp`, `newWatchers`, and cumulative `activeWatchers` |
 
 Browser consumers on `pharos.watch` and `ops.pharos.watch` should use same-origin `/_site-data/telegram-pulse`, which proxies onto the internal website lane instead of calling the external API host directly.
 
