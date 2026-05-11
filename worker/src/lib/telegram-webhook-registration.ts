@@ -5,11 +5,23 @@ const DEFAULT_SELF_URL = API_ORIGIN;
 const TELEGRAM_WEBHOOK_PATH = "/api/telegram-webhook";
 const TELEGRAM_WEBHOOK_RECONCILED_CACHE_KEY = "telegram:webhook-reconciled";
 const TELEGRAM_COMMANDS_RECONCILED_CACHE_KEY = "telegram:commands-reconciled";
+const TELEGRAM_PROFILE_RECONCILED_CACHE_KEY = "telegram:profile-reconciled";
 const TELEGRAM_WEBHOOK_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_COMMANDS_RECONCILE_TTL_SEC = 15 * 60;
+const TELEGRAM_PROFILE_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_ALLOWED_UPDATES = ["message", "callback_query"] as const;
 const TELEGRAM_WEBHOOK_CACHE_VERSION = 2;
 const TELEGRAM_COMMANDS_CACHE_VERSION = 1;
+const TELEGRAM_PROFILE_CACHE_VERSION = 1;
+
+// Profile metadata shown on the bot's About page, card preview, and chat
+// header. Kept in code so changes flow through git review and the 15-minute
+// reconciliation loop self-heals any drift introduced via BotFather.
+export const TELEGRAM_BOT_NAME = "Pharos Watch";
+export const TELEGRAM_BOT_SHORT_DESCRIPTION =
+  "Stablecoin alerts: DEWS stress, depeg events, safety grade changes, and launches. Track 305+ coins.";
+export const TELEGRAM_BOT_DESCRIPTION =
+  "Pharos Watch tracks 305+ stablecoins and pushes alerts when something matters: DEWS stress bands, depeg events, safety grade changes, and new launches. Subscribe to curated presets like usd-top25, or build a custom watchlist of any tracked coin. Learn more at https://pharos.watch/pharoswatchbot/";
 
 export const TELEGRAM_BOT_COMMANDS = [
   { command: "start", description: "Get started with Pharos alerts" },
@@ -43,6 +55,12 @@ export interface ReconcileTelegramWebhookResult {
 }
 
 export interface ReconcileTelegramCommandResult {
+  attempted: boolean;
+  skipped: boolean;
+  reason?: "missing-bot-token" | "fresh-cache";
+}
+
+export interface ReconcileTelegramProfileResult {
   attempted: boolean;
   skipped: boolean;
   reason?: "missing-bot-token" | "fresh-cache";
@@ -83,6 +101,15 @@ function buildExpectedCommandsCacheValue(): string {
   });
 }
 
+function buildExpectedProfileCacheValue(): string {
+  return JSON.stringify({
+    version: TELEGRAM_PROFILE_CACHE_VERSION,
+    name: TELEGRAM_BOT_NAME,
+    short_description: TELEGRAM_BOT_SHORT_DESCRIPTION,
+    description: TELEGRAM_BOT_DESCRIPTION,
+  });
+}
+
 async function shouldSkipFreshMatchingWebhookCache(db: D1Database, expectedValue: string): Promise<boolean> {
   const cached = await getCache(db, TELEGRAM_WEBHOOK_RECONCILED_CACHE_KEY);
   if (!cached) return false;
@@ -95,6 +122,50 @@ async function shouldSkipFreshMatchingCommandCache(db: D1Database, expectedValue
   if (!cached) return false;
   if (Date.now() / 1000 - cached.updatedAt >= TELEGRAM_COMMANDS_RECONCILE_TTL_SEC) return false;
   return cached.value === expectedValue;
+}
+
+async function shouldSkipFreshMatchingProfileCache(db: D1Database, expectedValue: string): Promise<boolean> {
+  const cached = await getCache(db, TELEGRAM_PROFILE_RECONCILED_CACHE_KEY);
+  if (!cached) return false;
+  if (Date.now() / 1000 - cached.updatedAt >= TELEGRAM_PROFILE_RECONCILE_TTL_SEC) return false;
+  return cached.value === expectedValue;
+}
+
+// Telegram returns 400 "Bad Request: <field> is not modified" when the
+// submitted value matches the current value. That's the documented idempotent
+// success path; treat it like ok=true so we still update the cache marker.
+function isNotModifiedDescription(description: string | null | undefined): boolean {
+  if (!description) return false;
+  return /is not modified/i.test(description);
+}
+
+async function applyProfileField(
+  botToken: string,
+  method: "setMyName" | "setMyDescription" | "setMyShortDescription",
+  payload: Record<string, string>,
+): Promise<void> {
+  const response = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(10_000),
+  });
+
+  const responseText = await response.text();
+  let parsed: TelegramApiResponse | null = null;
+  try {
+    parsed = JSON.parse(responseText) as TelegramApiResponse;
+  } catch {
+    parsed = null;
+  }
+
+  if (parsed?.ok === true) return;
+  if (isNotModifiedDescription(parsed?.description)) return;
+
+  if (!response.ok) {
+    throw new Error(`Telegram ${method} HTTP ${response.status}: ${responseText.slice(0, 300)}`);
+  }
+  throw new Error(`Telegram ${method} rejected registration: ${(parsed?.description ?? responseText).slice(0, 300)}`);
 }
 
 export async function reconcileTelegramWebhookRegistration(
@@ -193,5 +264,31 @@ export async function reconcileTelegramCommandRegistration(
   }
 
   await setCache(db, TELEGRAM_COMMANDS_RECONCILED_CACHE_KEY, expectedCacheValue);
+  return { attempted: true, skipped: false };
+}
+
+export async function reconcileTelegramProfileRegistration(
+  db: D1Database,
+  options: {
+    botToken?: string | null;
+  },
+): Promise<ReconcileTelegramProfileResult> {
+  const botToken = options.botToken?.trim();
+  if (!botToken) {
+    return { attempted: false, skipped: true, reason: "missing-bot-token" };
+  }
+
+  const expectedCacheValue = buildExpectedProfileCacheValue();
+  if (await shouldSkipFreshMatchingProfileCache(db, expectedCacheValue)) {
+    return { attempted: false, skipped: true, reason: "fresh-cache" };
+  }
+
+  await applyProfileField(botToken, "setMyName", { name: TELEGRAM_BOT_NAME });
+  await applyProfileField(botToken, "setMyShortDescription", {
+    short_description: TELEGRAM_BOT_SHORT_DESCRIPTION,
+  });
+  await applyProfileField(botToken, "setMyDescription", { description: TELEGRAM_BOT_DESCRIPTION });
+
+  await setCache(db, TELEGRAM_PROFILE_RECONCILED_CACHE_KEY, expectedCacheValue);
   return { attempted: true, skipped: false };
 }

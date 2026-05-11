@@ -8,6 +8,7 @@
 import { dispatchTelegramAlerts } from "../../cron/dispatch-telegram-alerts";
 import {
   reconcileTelegramCommandRegistration,
+  reconcileTelegramProfileRegistration,
   reconcileTelegramWebhookRegistration,
 } from "../../lib/telegram-webhook-registration";
 import type { ScheduledRuntimeContext } from "./context";
@@ -24,6 +25,13 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     });
     if (commandsResult.attempted) {
       console.log("[cron] Reconciled Telegram command suggestions");
+    }
+
+    const profileResult = await reconcileTelegramProfileRegistration(runtime.db, {
+      botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+    });
+    if (profileResult.attempted) {
+      console.log("[cron] Reconciled Telegram bot profile metadata");
     }
 
     const result = await reconcileTelegramWebhookRegistration(runtime.db, {

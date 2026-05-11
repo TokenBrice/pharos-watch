@@ -3,8 +3,12 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import {
   buildTelegramWebhookUrl,
   reconcileTelegramCommandRegistration,
+  reconcileTelegramProfileRegistration,
   reconcileTelegramWebhookRegistration,
   TELEGRAM_BOT_COMMANDS,
+  TELEGRAM_BOT_DESCRIPTION,
+  TELEGRAM_BOT_NAME,
+  TELEGRAM_BOT_SHORT_DESCRIPTION,
 } from "../telegram-webhook-registration";
 
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
@@ -37,6 +41,15 @@ function expectedCommandsCacheValue(): string {
   return JSON.stringify({
     version: 1,
     commands: TELEGRAM_BOT_COMMANDS,
+  });
+}
+
+function expectedProfileCacheValue(): string {
+  return JSON.stringify({
+    version: 1,
+    name: TELEGRAM_BOT_NAME,
+    short_description: TELEGRAM_BOT_SHORT_DESCRIPTION,
+    description: TELEGRAM_BOT_DESCRIPTION,
   });
 }
 
@@ -375,5 +388,132 @@ describe("reconcileTelegramCommandRegistration", () => {
         botToken: "bot-token",
       }),
     ).rejects.toThrow("Telegram setMyCommands rejected registration");
+  });
+});
+
+describe("reconcileTelegramProfileRegistration", () => {
+  beforeEach(() => {
+    fetchSpy.mockReset();
+  });
+
+  it("skips the Telegram API call when the profile reconciliation cache is still fresh", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:profile-reconciled"],
+        rows: [{ value: expectedProfileCacheValue(), updated_at: nowSec }],
+      },
+    ], { requireMatch: true });
+
+    const result = await reconcileTelegramProfileRegistration(db, {
+      botToken: "bot-token",
+    });
+
+    expect(result).toEqual({
+      attempted: false,
+      skipped: true,
+      reason: "fresh-cache",
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("registers name, short description, and description and records the cache marker", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:profile-reconciled"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+        rows: [],
+      },
+    ], { requireMatch: true });
+    fetchSpy.mockImplementation(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const result = await reconcileTelegramProfileRegistration(db, {
+      botToken: "bot-token",
+    });
+
+    expect(result).toEqual({ attempted: true, skipped: false });
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe("https://api.telegram.org/botbot-token/setMyName");
+    expect(JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string)).toEqual({ name: TELEGRAM_BOT_NAME });
+    expect(fetchSpy.mock.calls[1]?.[0]).toBe("https://api.telegram.org/botbot-token/setMyShortDescription");
+    expect(JSON.parse(fetchSpy.mock.calls[1]?.[1]?.body as string)).toEqual({
+      short_description: TELEGRAM_BOT_SHORT_DESCRIPTION,
+    });
+    expect(fetchSpy.mock.calls[2]?.[0]).toBe("https://api.telegram.org/botbot-token/setMyDescription");
+    expect(JSON.parse(fetchSpy.mock.calls[2]?.[1]?.body as string)).toEqual({
+      description: TELEGRAM_BOT_DESCRIPTION,
+    });
+
+    const writes = db.getHistory().filter((entry) =>
+      entry.sql.includes("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)"),
+    );
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.binds[0]).toBe("telegram:profile-reconciled");
+    expect(writes[0]?.binds[1]).toBe(expectedProfileCacheValue());
+  });
+
+  it('treats Telegram "is not modified" 400 as success and still refreshes the cache marker', async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:profile-reconciled"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+        rows: [],
+      },
+    ], { requireMatch: true });
+    fetchSpy.mockImplementation(async () =>
+      new Response(
+        JSON.stringify({ ok: false, description: "Bad Request: bot description is not modified" }),
+        { status: 400 },
+      ),
+    );
+
+    const result = await reconcileTelegramProfileRegistration(db, {
+      botToken: "bot-token",
+    });
+
+    expect(result).toEqual({ attempted: true, skipped: false });
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    const writes = db.getHistory().filter((entry) =>
+      entry.sql.includes("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)"),
+    );
+    expect(writes).toHaveLength(1);
+  });
+
+  it("throws when Telegram rejects with a non-idempotent error", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:profile-reconciled"],
+        rows: [],
+        first: null,
+      },
+    ], { requireMatch: true });
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: false, description: "Bad Request: NAME_TOO_LONG" }), { status: 400 }),
+    );
+
+    await expect(
+      reconcileTelegramProfileRegistration(db, {
+        botToken: "bot-token",
+      }),
+    ).rejects.toThrow("Telegram setMyName");
+  });
+
+  it("returns missing-bot-token when no token is configured", async () => {
+    const db = mockD1([], { requireMatch: true });
+    const result = await reconcileTelegramProfileRegistration(db, { botToken: "" });
+    expect(result).toEqual({ attempted: false, skipped: true, reason: "missing-bot-token" });
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
