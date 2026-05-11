@@ -25,8 +25,10 @@ export const PEG_CURRENCY_VALUES = [
   "JPY",
   "KRW",
   "IDR",
+  "INR",
   "MYR",
   "SGD",
+  "HKD",
   "TRY",
   "AUD",
   "ZAR",
@@ -292,8 +294,10 @@ export type FilterTag =
   | "jpy-peg"
   | "krw-peg"
   | "idr-peg"
+  | "inr-peg"
   | "myr-peg"
   | "sgd-peg"
+  | "hkd-peg"
   | "try-peg"
   | "aud-peg"
   | "zar-peg"

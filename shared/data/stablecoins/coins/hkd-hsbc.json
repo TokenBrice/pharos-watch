@@ -4,7 +4,7 @@
   "symbol": "HKD-HSBC",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "OTHER",
+    "pegCurrency": "HKD",
     "governance": "centralized",
     "yieldBearing": false,
     "rwa": false,

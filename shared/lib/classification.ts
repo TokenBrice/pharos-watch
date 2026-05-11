@@ -205,6 +205,17 @@ export const PEG_METADATA = {
     },
     chart: { label: "Rupiah", textColor: "text-amber-700 dark:text-amber-400", bgColor: "bg-amber-500", hex: "#f59e0b" },
   },
+  INR: {
+    label: "the Indian Rupee",
+    shortLabel: "Indian Rupee",
+    filterTag: "inr-peg",
+    filterLabel: "INR",
+    badge: {
+      label: "INR Peg",
+      cls: "bg-emerald-600/10 text-emerald-700 dark:text-emerald-400 border-emerald-600/20",
+    },
+    chart: { label: "Rupee", textColor: "text-emerald-700 dark:text-emerald-400", bgColor: "bg-emerald-600", hex: "#059669" },
+  },
   MYR: {
     label: "the Malaysian Ringgit",
     shortLabel: "Malaysian Ringgit",
@@ -226,6 +237,17 @@ export const PEG_METADATA = {
       cls: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/20",
     },
     chart: { label: "SGD", textColor: "text-teal-700 dark:text-teal-400", bgColor: "bg-teal-500", hex: "#14b8a6" },
+  },
+  HKD: {
+    label: "the Hong Kong Dollar",
+    shortLabel: "Hong Kong Dollar",
+    filterTag: "hkd-peg",
+    filterLabel: "HKD",
+    badge: {
+      label: "HKD Peg",
+      cls: "bg-blue-600/10 text-blue-700 dark:text-blue-400 border-blue-600/20",
+    },
+    chart: { label: "HKD", textColor: "text-blue-700 dark:text-blue-400", bgColor: "bg-blue-600", hex: "#2563eb" },
   },
   TRY: {
     label: "the Turkish Lira",

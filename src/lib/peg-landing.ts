@@ -30,6 +30,8 @@ const ALL_SLUGS: Record<PegCurrency, string> = {
   KGS: "kgs",
   NGN: "ngn",
   IDR: "idr",
+  INR: "inr",
+  HKD: "hkd",
   GOLD: "gold",
   SILVER: "silver",
   VAR: "cpi",
