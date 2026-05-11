@@ -59,11 +59,19 @@ describe("resolveChainId", () => {
   it("deduplicates the Hyperliquid alias to the canonical key", () => {
     expect(resolveChainId("hyperliquid")).toBe("hyperliquid");
     expect(resolveChainId("hyperliquid-l1")).toBe("hyperliquid");
+    expect(resolveChainId("Hyperliquid L1")).toBe("hyperliquid");
   });
 
   it("resolves the newly tracked citrea chain", () => {
     expect(resolveChainId("citrea")).toBe("citrea");
     expect(CHAIN_META.citrea).toBeDefined();
+  });
+
+  it("resolves DefiLlama chain names that differ from local metadata names", () => {
+    expect(resolveChainId("XDC")).toBe("xdc");
+    expect(resolveChainId("ZKsync Era")).toBe("zksync");
+    expect(resolveChainId("Abcore")).toBe("abcore");
+    expect(resolveChainId("edgeX L1")).toBe("edgechain");
   });
 });
 

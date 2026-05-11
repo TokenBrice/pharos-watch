@@ -19,6 +19,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   fantom:    { name: "Fantom",    explorerUrl: "https://ftmscan.com",               evmChainId: 250,   type: "evm",  logoPath: "/chains/fantom.png"    },
   celo:      { name: "Celo",      explorerUrl: "https://celoscan.io",               evmChainId: 42220, type: "evm",  logoPath: "/chains/celo.png"      },
   citrea:    { name: "Citrea Mainnet", explorerUrl: "https://explorer.mainnet.citrea.xyz", evmChainId: 4114, type: "evm", logoPath: "/chains/citrea.svg" },
+  codex:     { name: "Codex",     explorerUrl: "https://explorer.codex.xyz",        evmChainId: 81224, type: "evm",  logoPath: "/chains/codex.png"     },
   zksync:    { name: "zkSync",    explorerUrl: "https://explorer.zksync.io",       evmChainId: 324,   type: "evm",  logoPath: "/chains/zksync.png"    },
   sonic:     { name: "Sonic",     explorerUrl: "https://sonicscan.org",            evmChainId: 146,   type: "evm",  logoPath: "/chains/sonic.png"     },
   sei:       { name: "Sei",       explorerUrl: "https://seitrace.com",             evmChainId: 1329,  type: "evm",  logoPath: "/chains/sei.png"       },
@@ -30,7 +31,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   plume:     { name: "Plume",     explorerUrl: "https://explorer.plumenetwork.xyz",evmChainId: 98866, type: "evm",  logoPath: "/chains/plume.png"     },
   hyperevm:       { name: "HyperEVM",       explorerUrl: "https://purrsec.com",                    evmChainId: 999,   type: "evm",   logoPath: "/chains/hyperevm.png"       },
   hyperliquid:      { name: "Hyperliquid L1", explorerUrl: "https://app.hyperliquid.xyz/explorer", evmChainId: null,  type: "other", logoPath: "/chains/hyperliquid-l1.png" },
-  megaeth:   { name: "MegaETH",   explorerUrl: "https://megaexplorer.xyz",          evmChainId: 6342,  type: "evm",  logoPath: "/chains/megaeth.png", darkInvert: true },
+  megaeth:   { name: "MegaETH",   explorerUrl: "https://mega.etherscan.io",         evmChainId: 4326,  type: "evm",  logoPath: "/chains/megaeth.png", darkInvert: true },
   monad:     { name: "Monad",     explorerUrl: "https://explorer.monad.xyz",       evmChainId: 143,   type: "evm",  logoPath: "/chains/monad.png"     },
   tempo:     { name: "Tempo",     explorerUrl: "https://explorer.tempo.xyz",       evmChainId: 4217,  type: "evm",  logoPath: "/chains/tempo.svg"     },
   xdc:       { name: "XDC Network",explorerUrl: "https://xdcscan.io",             evmChainId: 50,    type: "evm",  logoPath: "/chains/xdc.png"       },
@@ -70,6 +71,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   corn:           { name: "Corn",            explorerUrl: "https://cornscan.io",                          evmChainId: 21000000, type: "evm",   logoPath: "/chains/corn.png"           },
   cronos:         { name: "Cronos",          explorerUrl: "https://cronoscan.com",                        evmChainId: 25,       type: "evm",   logoPath: "/chains/cronos.png"         },
   conflux:        { name: "Conflux",         explorerUrl: "https://evm.confluxscan.org",                  evmChainId: 1030,     type: "evm",   logoPath: "/chains/conflux.svg"        },
+  edgechain:      { name: "EDGE Chain",      explorerUrl: "https://edge-mainnet.explorer.alchemy.com",    evmChainId: 3343,     type: "evm",   logoPath: "/chains/edgechain.png"      },
   etherlink:      { name: "Etherlink",       explorerUrl: "https://explorer.etherlink.com",               evmChainId: 42793,    type: "evm",   logoPath: "/chains/etherlink.png"      },
   flow:           { name: "Flow",            explorerUrl: "https://evm.flowscan.io",                      evmChainId: 747,      type: "evm",   logoPath: "/chains/flow.png"           },
   harmony:        { name: "Harmony",         explorerUrl: "https://explorer.harmony.one",                 evmChainId: 1666600000, type: "evm", logoPath: "/chains/harmony.svg"        },
@@ -80,6 +82,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   nibiru:         { name: "Nibiru",          explorerUrl: "https://explorer.nibiru.fi",                   evmChainId: 6700,     type: "evm",   logoPath: "/chains/nibiru.png"         },
   pulsechain:     { name: "PulseChain",      explorerUrl: "https://scan.pulsechain.com",                  evmChainId: 369,      type: "evm",   logoPath: "/chains/pulsechain.png"     },
   sophon:         { name: "Sophon",          explorerUrl: "https://explorer.sophon.xyz",                  evmChainId: 50104,    type: "evm",   logoPath: "/chains/sophon.png"         },
+  stable:         { name: "Stable",          explorerUrl: "https://stablescan.xyz",                       evmChainId: 988,      type: "evm",   logoPath: "/chains/stable.png"         },
   tron:      { name: "Tron",      explorerUrl: "https://tronscan.org",              evmChainId: null,  type: "tron",  logoPath: "/chains/tron.png"      },
   aptos:     { name: "Aptos",     explorerUrl: "https://explorer.aptoslabs.com",   evmChainId: null,  type: "other", logoPath: "/chains/aptos.png",     darkInvert: true },
   sui:       { name: "Sui",       explorerUrl: "https://suiscan.xyz",              evmChainId: null,  type: "other", logoPath: "/chains/sui.png"       },
@@ -115,9 +118,13 @@ const CHAIN_ALIASES: Record<string, string> = {
   "OP Mainnet": "optimism",
   "Plume Mainnet": "plume",
   "zkSync Era": "zksync",
+  "ZKsync Era": "zksync",
   "XRPL": "xrpl",
   "Bsquared": "bsquared",
+  "Abcore": "abcore",
   "Kaia": "klaytn",  // Klaytn rebranded to Kaia
+  "XDC": "xdc",
+  "edgeX L1": "edgechain",
   "Secret": "secret",
   "Redbelly": "redbelly",
 };
@@ -145,6 +152,9 @@ export const CHAIN_RESILIENCE_TIER: Partial<Record<string, ChainResilienceTier>>
   plasma: 3,        // very new, minimal validation
   tempo: 3,         // new payment-focused L1
   viction: 3,       // low activity, centralized
+  codex: 3,         // new payment-focused L1
+  edgechain: 3,     // exchange-adjacent financial chain
+  stable: 3,        // new USDT-focused chain
 
   // Everything else defaults to tier 2 via getChainResilienceTier()
 };

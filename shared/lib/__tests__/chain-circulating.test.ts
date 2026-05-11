@@ -68,6 +68,40 @@ describe("chain-circulating", () => {
     });
   });
 
+  it("keeps DefiLlama casing variants in canonical chain buckets", () => {
+    const canonical = canonicalizeChainCirculating({
+      XDC: {
+        current: 10,
+        circulatingPrevDay: 9,
+        circulatingPrevWeek: 8,
+        circulatingPrevMonth: 7,
+      },
+      "ZKsync Era": {
+        current: 20,
+        circulatingPrevDay: 19,
+        circulatingPrevWeek: 18,
+        circulatingPrevMonth: 17,
+      },
+      Abcore: {
+        current: 30,
+        circulatingPrevDay: 29,
+        circulatingPrevWeek: 28,
+        circulatingPrevMonth: 27,
+      },
+      "edgeX L1": {
+        current: 40,
+        circulatingPrevDay: 39,
+        circulatingPrevWeek: 38,
+        circulatingPrevMonth: 37,
+      },
+    });
+
+    expect(canonical.get("xdc")?.current).toBe(10);
+    expect(canonical.get("zksync")?.current).toBe(20);
+    expect(canonical.get("abcore")?.current).toBe(30);
+    expect(canonical.get("edgechain")?.current).toBe(40);
+  });
+
   it("drops unknown chain keys", () => {
     const chainCirculating: RawChainCirculating = {
       "totally-unknown-chain": {
