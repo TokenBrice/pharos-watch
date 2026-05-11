@@ -6,12 +6,12 @@ The stablecoin registry currently contains 311 tracked metadata entries. Report-
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.18`
+- **Current methodology version:** `v7.19`
 - **Runtime/version source:** `shared/lib/safety-score-version-data.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
-## Overall Grade (v7.18)
+## Overall Grade (v7.19)
 
 Four-step computation:
 
@@ -22,7 +22,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.18 tightens redemption-backed Liquidity / Exit eligibility. Nested live redemption freshness marked `unverified` is excluded unless a route-specific lower-bound allowlist permits it, live daily limits cap usable redemption capacity for scoring, and severe active-depeg survivability now requires direct live capacity-kind evidence.
+Current-version note: v7.19 introduces a `Dilutable` freezability tier for tokens whose admin can mint without bound (vCRED, LUAUSD, srUSD) and flips HBD, mRe7YIELD, FEUSD (Felix), USDQ (Quill), and USDK (Orki) to direct `Freezable: Yes` after the upgradeable-proxy / admin-mint audit. BabelFish XUSD's explicit `canBeBlacklisted: false` override is removed so its bridged USDT/USDC reserves now resolve to `Upstream` by default.
 
 ## Dimensions
 

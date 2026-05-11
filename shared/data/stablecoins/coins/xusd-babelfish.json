@@ -33,7 +33,6 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "chainTier": "mature-alt-l1",
   "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",

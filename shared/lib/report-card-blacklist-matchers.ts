@@ -1,7 +1,7 @@
 import { CENTRALIZED_CUSTODY_CRYPTO } from "./centralized-custody";
 import type { ReserveSlice, StablecoinMeta } from "../types";
 
-export type BlacklistStatus = boolean | "possible" | "inherited";
+export type BlacklistStatus = boolean | "possible" | "inherited" | "dilutable";
 const MIN_SYMBOL_LENGTH_FOR_DETECTION = 3;
 const SYMBOL_MATCHER_PREFIX_GROUP = "(?:s|stata|vb|syrup\\s*)?";
 const SYMBOL_MATCHER_SUFFIX_GROUP = "(?:0)?";
@@ -208,8 +208,11 @@ export function enrichLiveSlicesForBlacklist(
   );
 }
 
-export function getBlacklistStatusLabel(status: BlacklistStatus): "Yes" | "Possible" | "Upstream" | "No" {
+export function getBlacklistStatusLabel(
+  status: BlacklistStatus,
+): "Yes" | "Dilutable" | "Possible" | "Upstream" | "No" {
   if (status === true) return "Yes";
+  if (status === "dilutable") return "Dilutable";
   if (status === "possible") return "Possible";
   if (status === "inherited") return "Upstream";
   return "No";
@@ -219,6 +222,9 @@ export function resolveBlacklistStatus(
   meta: StablecoinMeta,
   options: ResolveBlacklistStatusOptions = {},
 ): BlacklistStatus {
+  // "dilutable" describes an admin-mint surface that lets the issuer dilute
+  // holders without bound, but does not let them freeze existing balances —
+  // so it does not propagate as a symbol matcher to downstream wrappers.
   if (meta.canBeBlacklisted !== undefined) return meta.canBeBlacklisted;
   if (meta.flags.governance === "centralized") return true;
 
@@ -233,6 +239,10 @@ export function resolveBlacklistStatus(
     if (parentMeta) {
       const parentStatus = resolveBlacklistStatus(parentMeta, options);
       if (parentStatus === true || parentStatus === "inherited") return "inherited";
+      // A variant of a dilutable parent inherits the dilution risk: the
+      // parent's admin can mint without bound, devaluing the variant's
+      // backing per-unit. Treat as upstream exposure for the variant.
+      if (parentStatus === "dilutable") return "inherited";
       if (parentStatus === "possible") return "possible";
     }
   }

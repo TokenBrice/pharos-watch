@@ -9,7 +9,14 @@ export function getResolvedBlacklistStatus(
   stablecoinId: string,
   reportCard?: Pick<ReportCard, "rawInputs"> | null,
 ): BlacklistStatus | null {
-  return reportCard?.rawInputs.canBeBlacklisted ?? getTrackedBlacklistStatus(stablecoinId);
+  const localValue = getTrackedBlacklistStatus(stablecoinId);
+  // canBeBlacklisted is an authored governance field — the API snapshot just
+  // echoes the worker's view of the meta. During tier rollouts the worker may
+  // be behind the local meta (e.g. the report-card schema didn't yet emit
+  // "dilutable"), so let the local meta win when it explicitly asserts the
+  // new tier. Once the snapshot catches up, both sources agree.
+  if (localValue === "dilutable") return "dilutable";
+  return reportCard?.rawInputs.canBeBlacklisted ?? localValue;
 }
 
 export function getResolvedBlacklistStatusLabel(

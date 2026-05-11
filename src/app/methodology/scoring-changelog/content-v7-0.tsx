@@ -1,5 +1,51 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV719Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.19")}
+      accent="border-l-rose-500"
+    >
+      <p>
+        A re-audit of 22 stablecoins marked{" "}
+        <code className="text-xs bg-muted px-1 py-0.5 rounded">Freezable: No</code> introduces a new{" "}
+        <code className="text-xs bg-muted px-1 py-0.5 rounded">Dilutable</code> tier and reclassifies five coins to{" "}
+        <code className="text-xs bg-muted px-1 py-0.5 rounded">Yes</code> after finding upgradeable proxies, admin
+        freeze mixins, or chain-native seizure precedent.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          The new <code className="text-xs bg-muted px-1 py-0.5 rounded">Dilutable</code> tier sits between{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">No</code> and direct{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">Yes</code>: the token has no transfer freeze or
+          blacklist, but the issuer can mint unbounded supply and effectively seize value through dilution.
+        </li>
+        <li>
+          vCRED, LUAUSD, and srUSD now resolve as{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">Dilutable</code> because their token contracts expose{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">Ownable</code> mint or{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">AccessControl</code> minter-grant authority without
+          supply caps.
+        </li>
+        <li>
+          HBD, mRe7YIELD, FEUSD (Felix), USDQ (Quill), and USDK (Orki) move to direct{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">Yes</code> after confirming transparent upgradeable
+          proxies, Midas{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">Blacklistable</code>/
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">Pausable</code> mixins, or Hive Hardfork 23 chain-level
+          balance seizure precedent.
+        </li>
+        <li>
+          BabelFish XUSD&apos;s explicit{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">canBeBlacklisted: false</code> override is removed so
+          its bridged USDT/USDC reserve exposure now resolves to{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">Upstream</code> by default.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV718Entry() {
   return (
     <VersionCard

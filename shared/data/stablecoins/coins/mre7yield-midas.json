@@ -45,6 +45,7 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",

@@ -24,6 +24,7 @@ const USD_FORMATTER = new Intl.NumberFormat("en-US", {
 
 const EXPOSURE_COPY: Record<BlacklistStatusBucketKey, string> = {
   yes: "Direct blacklist/freeze control resolved in the current model.",
+  dilutable: "Admin can mint without bound, diluting holders into a functional loss of value.",
   possible: "Direct possible token/vault control.",
   upstream: "Reserve/custody/parent exposure.",
   no: "No resolved exposure in current model.",
@@ -31,6 +32,7 @@ const EXPOSURE_COPY: Record<BlacklistStatusBucketKey, string> = {
 
 const EXPOSURE_LABELS: Record<BlacklistStatusBucketKey, string> = {
   yes: "Direct",
+  dilutable: BLACKLIST_STATUS_BUCKET_LABELS.dilutable,
   possible: BLACKLIST_STATUS_BUCKET_LABELS.possible,
   upstream: BLACKLIST_STATUS_BUCKET_LABELS.upstream,
   no: BLACKLIST_STATUS_BUCKET_LABELS.no,

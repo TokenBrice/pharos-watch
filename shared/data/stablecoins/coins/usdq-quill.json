@@ -15,7 +15,7 @@
   "llamaId": "228",
   "detailProvider": "defillama",
   "geckoId": "quill-usdq",
-  "canBeBlacklisted": false,
+  "canBeBlacklisted": true,
   "links": [
     {
       "label": "Website",

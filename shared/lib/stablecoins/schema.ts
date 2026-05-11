@@ -87,7 +87,7 @@ export const StablecoinMetaAssetSchema = z.object({
   contracts: z.array(ContractDeploymentSchema).optional(),
   tradedContracts: z.array(ContractDeploymentSchema).optional(),
   dependencies: z.array(DependencyWeightSchema).optional(),
-  canBeBlacklisted: z.union([z.boolean(), z.literal("possible")]).optional(),
+  canBeBlacklisted: z.union([z.boolean(), z.literal("possible"), z.literal("dilutable")]).optional(),
   chainTier: StablecoinMetaEnumSchemas.chainTier.optional(),
   deploymentModel: StablecoinMetaEnumSchemas.deploymentModel.optional(),
   collateralQuality: StablecoinMetaEnumSchemas.collateralQuality.optional(),

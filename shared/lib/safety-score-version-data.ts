@@ -1,9 +1,26 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.18",
+  currentVersion: "7.19",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.19",
+      title: "Dilutable freezability tier and upgradeable-proxy / admin-mint audit",
+      date: "2026-05-11",
+      effectiveAt: 1778457600,
+      summary:
+        "A re-audit of 22 stablecoins marked `Freezable: No` introduces a new `Dilutable` tier for tokens whose admin can mint without bound, and reclassifies five coins to `Yes` after finding upgradeable proxies or active admin freeze surfaces.",
+      impact: [
+        "New `Dilutable` tier sits between `No` and direct `Yes`: the token has no transfer freeze or blacklist, but the issuer can mint unbounded supply and effectively seize value through dilution",
+        "vCRED, LUAUSD, and srUSD now resolve as `Dilutable` because their token contracts expose `Ownable` mint or `AccessControl` minter-grant authority without supply caps",
+        "HBD, mRe7YIELD, FEUSD (Felix), USDQ (Quill), and USDK (Orki) now resolve as direct `Freezable: Yes` after the audit confirmed transparent upgradeable proxies, `Blacklistable`/`Pausable` mixins, or chain-native witness-seizure precedent (HF23)",
+        "BabelFish XUSD's explicit `canBeBlacklisted: false` override is removed so reserve-based inheritance from its bridged USDT/USDC basket now flows through to `Freezable: Upstream`",
+        "DJED, IUSD (Indigo), HYUSD, FXD, FUSD (Zano), NXUSD, SILK, DLLR, USG, LUSD, BOLD, CJPY, and JUSD (Juicedollar) keep their defensible `Freezable: No` after token-contract or chain-level review",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.18",
       title: "Redemption freshness and daily-limit eligibility gates",

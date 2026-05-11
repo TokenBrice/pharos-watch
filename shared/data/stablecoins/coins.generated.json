@@ -6872,6 +6872,7 @@
         "decimals": 8
       }
     ],
+    "canBeBlacklisted": true,
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "infrastructures": [
@@ -8818,6 +8819,7 @@
         "url": "https://developers.hive.io/"
       }
     ],
+    "canBeBlacklisted": true,
     "chainTier": "established-alt-l1",
     "governanceQuality": "dao-governance",
     "reserves": [
@@ -11173,6 +11175,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "dilutable",
     "chainTier": "stage1-l2",
     "deploymentModel": "single-chain",
     "reserves": [
@@ -11982,6 +11985,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": true,
     "chainTier": "ethereum",
     "deploymentModel": "native-multichain",
     "collateralQuality": "exotic",
@@ -16029,6 +16033,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "dilutable",
     "chainTier": "ethereum",
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
@@ -21330,7 +21335,7 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": false,
+    "canBeBlacklisted": true,
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
     "infrastructures": [
@@ -22550,7 +22555,7 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": false,
+    "canBeBlacklisted": true,
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
@@ -25616,6 +25621,7 @@
         "decimals": 6
       }
     ],
+    "canBeBlacklisted": "dilutable",
     "chainTier": "unproven",
     "deploymentModel": "single-chain",
     "reserves": [
@@ -27284,7 +27290,6 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": false,
     "chainTier": "mature-alt-l1",
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",

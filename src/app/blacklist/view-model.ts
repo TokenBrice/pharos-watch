@@ -25,7 +25,13 @@ const VALID_STABLECOINS = new Set<BlacklistStablecoin | "all">(["all", ...BLACKL
 const VALID_EVENT_TYPES = new Set(["all", "blacklist", "unblacklist", "destroy"]);
 const VALID_SORT_KEYS = new Set<BlacklistSortKey>(["date", "stablecoin", "chain", "event"]);
 const VALID_SORT_DIRECTIONS = new Set<BlacklistSortDirection>(["asc", "desc"]);
-const VALID_STATUS_BUCKETS = new Set<BlacklistStatusBucketKey>(["yes", "possible", "upstream", "no"]);
+const VALID_STATUS_BUCKETS = new Set<BlacklistStatusBucketKey>([
+  "yes",
+  "dilutable",
+  "upstream",
+  "possible",
+  "no",
+]);
 
 export type BlacklistPageFilters = {
   stablecoinFilter: BlacklistStablecoin | "all";

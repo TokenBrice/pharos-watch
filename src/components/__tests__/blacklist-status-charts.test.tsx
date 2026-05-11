@@ -21,17 +21,19 @@ vi.mock("@/hooks/use-chart-container-ready", () => ({
 vi.mock("@/lib/blacklist-status-buckets", () => ({
   BLACKLIST_STATUS_BUCKET_COLORS: {
     yes: "#ef4444",
-    possible: "#f59e0b",
+    dilutable: "#a855f7",
     upstream: "#f97316",
+    possible: "#f59e0b",
     no: "#22c55e",
   },
   BLACKLIST_STATUS_BUCKET_LABELS: {
     yes: "Yes",
-    possible: "Possible",
+    dilutable: "Dilutable",
     upstream: "Upstream",
+    possible: "Possible",
     no: "No",
   },
-  BLACKLIST_STATUS_BUCKET_ORDER: ["yes", "possible", "upstream", "no"],
+  BLACKLIST_STATUS_BUCKET_ORDER: ["yes", "dilutable", "upstream", "possible", "no"],
 }));
 
 vi.mock("recharts", () => ({
@@ -62,8 +64,9 @@ describe("BlacklistStatusCharts", () => {
       <BlacklistStatusCharts
         buckets={[
           { status: "Yes", key: "yes", count: 5, marketCap: 100 },
-          { status: "Possible", key: "possible", count: 3, marketCap: 50 },
+          { status: "Dilutable", key: "dilutable", count: 3, marketCap: 60 },
           { status: "Upstream", key: "upstream", count: 2, marketCap: 25 },
+          { status: "Possible", key: "possible", count: 3, marketCap: 50 },
           { status: "No", key: "no", count: 1, marketCap: 10 },
         ]}
         isLoading={false}

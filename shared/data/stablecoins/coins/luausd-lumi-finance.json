@@ -33,6 +33,7 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": "dilutable",
   "chainTier": "stage1-l2",
   "deploymentModel": "single-chain",
   "reserves": [

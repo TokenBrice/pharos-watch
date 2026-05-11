@@ -183,6 +183,12 @@ export function HeroCard({
           sub: undefined,
           color: "text-red-700 dark:text-red-400",
         };
+      case "dilutable":
+        return {
+          value: "Dilutable",
+          sub: undefined,
+          color: "text-purple-700 dark:text-purple-400",
+        };
       case "possible":
         return {
           value: "Possible",
@@ -302,7 +308,7 @@ export function HeroCard({
     },
     {
       key: "blacklistable",
-      label: <MethodologyLabel topic={blacklistStatus === "inherited" ? "freezableUpstream" : blacklistStatus === false ? "freezableNo" : blacklistStatus === "possible" ? "freezablePossible" : "freezable"}>Freezable</MethodologyLabel>,
+      label: <MethodologyLabel topic={blacklistStatus === "inherited" ? "freezableUpstream" : blacklistStatus === false ? "freezableNo" : blacklistStatus === "possible" ? "freezablePossible" : blacklistStatus === "dilutable" ? "freezableDilutable" : "freezable"}>Freezable</MethodologyLabel>,
       value: blacklistDisplay.value,
       subValue: blacklistDisplay.sub,
       colorClass: blacklistDisplay.color,

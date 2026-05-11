@@ -29,6 +29,7 @@
       "url": "https://developers.hive.io/"
     }
   ],
+  "canBeBlacklisted": true,
   "chainTier": "established-alt-l1",
   "governanceQuality": "dao-governance",
   "reserves": [

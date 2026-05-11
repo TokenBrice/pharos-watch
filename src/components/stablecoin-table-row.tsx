@@ -330,6 +330,8 @@ function StablecoinVirtualRowBase({
             <span className="text-red-700 dark:text-red-400">Yes</span>
           ) : blacklistStatus === false ? (
             <span className="text-green-700 dark:text-green-400">No</span>
+          ) : blacklistStatus === "dilutable" ? (
+            <span className="text-purple-700 dark:text-purple-400">Dilutable</span>
           ) : blacklistStatus === "possible" ? (
             <span className="text-amber-700 dark:text-amber-400">Possible</span>
           ) : blacklistStatus === "inherited" ? (

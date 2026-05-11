@@ -42,6 +42,7 @@
       "decimals": 8
     }
   ],
+  "canBeBlacklisted": true,
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "infrastructures": [

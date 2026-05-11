@@ -52,6 +52,7 @@ export type MethodologyContextKey =
   | "freezableUpstream"
   | "freezableNo"
   | "freezablePossible"
+  | "freezableDilutable"
   | "dependencyRisk"
   | "redemptionBackstop"
   | "effectiveExit"
@@ -167,6 +168,14 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     title: "Freezable",
     summary:
       "An admin function exists to enable an admin to freeze, seize or destroy assets, but the function has not yet been activated.",
+    methodologyPath: "/methodology/#safety-scores-methodology",
+    versionLabel: SAFETY_SCORE_VERSION_LABEL,
+    changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+  },
+  freezableDilutable: {
+    title: "Freezable",
+    summary:
+      "No admin function exists to freeze individual balances, but an admin can mint without bound. Existing holdings cannot be seized directly, yet uncapped issuance can dilute holders into a functionally equivalent loss of value.",
     methodologyPath: "/methodology/#safety-scores-methodology",
     versionLabel: SAFETY_SCORE_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,

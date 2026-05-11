@@ -59,6 +59,7 @@ const ReportCardBlacklistStatusSchema = z.union([
   z.boolean(),
   z.literal("possible"),
   z.literal("inherited"),
+  z.literal("dilutable"),
   z.literal("possible-inherited").transform((): "inherited" => "inherited"),
 ]);
 

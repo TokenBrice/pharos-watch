@@ -3,7 +3,7 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { ReportCard, StablecoinData } from "@shared/types";
 
-export type BlacklistStatusBucketKey = "yes" | "possible" | "upstream" | "no";
+export type BlacklistStatusBucketKey = "yes" | "dilutable" | "upstream" | "possible" | "no";
 
 export interface BlacklistStatusBucket {
   status: string;
@@ -14,38 +14,43 @@ export interface BlacklistStatusBucket {
 
 export const BLACKLIST_STATUS_BUCKET_ORDER: readonly BlacklistStatusBucketKey[] = [
   "yes",
-  "possible",
+  "dilutable",
   "upstream",
+  "possible",
   "no",
 ];
 
 export const BLACKLIST_STATUS_BUCKET_COLORS: Record<BlacklistStatusBucketKey, string> = {
   yes: "#ef4444",
-  possible: "#f59e0b",
+  dilutable: "#a855f7",
   upstream: "#f97316",
+  possible: "#f59e0b",
   no: "#22c55e",
 };
 
 export const BLACKLIST_STATUS_BUCKET_LABELS: Record<BlacklistStatusBucketKey, string> = {
   yes: "Yes",
-  possible: "Possible",
+  dilutable: "Dilutable",
   upstream: "Upstream",
+  possible: "Possible",
   no: "No",
 };
 
 export const BLACKLIST_STATUS_BUCKET_DESCRIPTIONS: Record<BlacklistStatusBucketKey, string> = {
   yes: "Stablecoins with direct issuer blacklist or freeze controls.",
-  possible: "Stablecoins with possible blacklist exposure from mutable contracts or reserve rails.",
+  dilutable: "Stablecoins where an admin can mint without bound, diluting existing holders without freezing balances.",
   upstream: "Stablecoins inheriting freeze exposure from upstream collateral dependencies.",
+  possible: "Stablecoins with possible blacklist exposure from mutable contracts or reserve rails.",
   no: "Stablecoins without resolved blacklist or freeze controls in the current model.",
 };
 
 type ReportCardMap = Record<string, Pick<ReportCard, "rawInputs">>;
 
 export function resolveBlacklistStatusBucket(
-  value: boolean | "possible" | "inherited",
+  value: boolean | "possible" | "inherited" | "dilutable",
 ): BlacklistStatusBucketKey {
   if (value === true) return "yes";
+  if (value === "dilutable") return "dilutable";
   if (value === "possible") return "possible";
   if (value === "inherited") return "upstream";
   return "no";
@@ -66,8 +71,9 @@ export function buildBlacklistStatusBuckets(
   const supplyById = new Map((stablecoins ?? []).map((coin) => [coin.id, getCirculatingRaw(coin)]));
   const counts: Record<BlacklistStatusBucketKey, { count: number; marketCap: number }> = {
     yes: { count: 0, marketCap: 0 },
-    possible: { count: 0, marketCap: 0 },
+    dilutable: { count: 0, marketCap: 0 },
     upstream: { count: 0, marketCap: 0 },
+    possible: { count: 0, marketCap: 0 },
     no: { count: 0, marketCap: 0 },
   };
 

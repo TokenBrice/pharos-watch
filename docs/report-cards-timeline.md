@@ -1,6 +1,14 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.18 (2026-02-25 → 2026-05-10). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.19 (2026-02-25 → 2026-05-11). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.19 — Dilutable freezability tier and upgradeable-proxy / admin-mint audit (2026-05-11)
+
+- Introduces a new `Dilutable` freezability tier between `No` and direct `Yes` for tokens whose admin can mint without bound but cannot freeze existing balances
+- vCRED, LUAUSD, and srUSD now resolve as `Dilutable` because their token contracts expose `Ownable` mint or `AccessControl` minter-grant authority without supply caps
+- HBD, mRe7YIELD, FEUSD (Felix), USDQ (Quill), and USDK (Orki) now resolve as direct `Freezable: Yes` after the audit confirmed transparent upgradeable proxies, Midas `Blacklistable`/`Pausable` mixins, or chain-native witness-seizure precedent (Hive Hardfork 23)
+- BabelFish XUSD's explicit `canBeBlacklisted: false` override is removed so its bridged USDT/USDC reserve exposure now resolves to `Upstream` by default
+- DJED, IUSD (Indigo), HYUSD, FXD, FUSD (Zano), NXUSD, SILK, DLLR, USG, LUSD, BOLD, CJPY, and JUSD (Juicedollar) keep their `Freezable: No` after token-contract or chain-level review
 
 ## v7.18 — Redemption freshness and daily-limit eligibility gates (2026-05-10)
 

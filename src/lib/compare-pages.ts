@@ -52,6 +52,7 @@ function buildComparisonSlug(left: StablecoinMeta, right: StablecoinMeta): strin
 function describeBlacklistability(coin: StablecoinMeta): string {
   const status = getResolvedBlacklistStatus(coin.id);
   if (status === true) return "Issuer blacklist controls";
+  if (status === "dilutable") return "Admin can dilute holders via unbounded mint";
   if (status === "inherited") return "Upstream freeze exposure";
   if (status === "possible") return "Blacklist or freeze exposure possible";
   return "No clear blacklist signal";
