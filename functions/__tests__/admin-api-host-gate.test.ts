@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { onRequest } from "../admin-api/[[path]].ts";
+import routes from "../../public/_routes.json";
 
 describe("admin-api host gate", () => {
+  it("is included in Pages function routing so static exports cannot bypass the gate", () => {
+    expect(routes.include).toEqual(expect.arrayContaining(["/admin-api", "/admin-api/*"]));
+  });
+
   it("returns 404 outside the configured ops host", async () => {
     const response = await onRequest({
       request: new Request("https://pharos.watch/admin-api/"),

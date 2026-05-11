@@ -12,6 +12,8 @@
     "/_site-data/*",
     "/admin",
     "/admin/*",
+    "/admin-api",
+    "/admin-api/*",
     "/api/admin/*"
   ],
   "exclude": [
