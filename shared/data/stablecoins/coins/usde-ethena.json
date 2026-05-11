@@ -185,6 +185,11 @@
       "decimals": 8
     }
   ],
+  "canBeBlacklisted": "dilutable",
+  "canBeBlacklistedSource": {
+    "label": "Sourcify USDe.sol",
+    "url": "https://repo.sourcify.dev/contracts/full_match/1/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3/sources/contracts/USDe.sol"
+  },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
   "custodyModel": "cex",

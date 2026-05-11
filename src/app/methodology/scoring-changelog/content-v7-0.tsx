@@ -1,5 +1,32 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV720Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.20")}
+      accent="border-l-purple-500"
+    >
+      <p>
+        The follow-up admin-mint sweep expands the{" "}
+        <code className="text-xs bg-muted px-1 py-0.5 rounded">Dilutable</code> tier and records source provenance for
+        every Dilutable override.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          DAI, DOLA, FPI, PHT, USDD, USDe, USDN (SMARDEX), crvUSD, REUSD, USDU, and XAI now resolve as{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">Dilutable</code>.
+        </li>
+        <li>
+          Each <code className="text-xs bg-muted px-1 py-0.5 rounded">canBeBlacklisted: &quot;dilutable&quot;</code>{" "}
+          entry now carries a contract-source link via{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">canBeBlacklistedSource</code>.
+        </li>
+        <li>The homepage table and stablecoin detail hero link the Dilutable label directly to that source.</li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV719Entry() {
   return (
     <VersionCard

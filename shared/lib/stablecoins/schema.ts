@@ -88,6 +88,7 @@ export const StablecoinMetaAssetSchema = z.object({
   tradedContracts: z.array(ContractDeploymentSchema).optional(),
   dependencies: z.array(DependencyWeightSchema).optional(),
   canBeBlacklisted: z.union([z.boolean(), z.literal("possible"), z.literal("dilutable")]).optional(),
+  canBeBlacklistedSource: StablecoinLinkSchema.optional(),
   chainTier: StablecoinMetaEnumSchemas.chainTier.optional(),
   deploymentModel: StablecoinMetaEnumSchemas.deploymentModel.optional(),
   collateralQuality: StablecoinMetaEnumSchemas.collateralQuality.optional(),
@@ -113,6 +114,14 @@ export const StablecoinMetaAssetSchema = z.object({
   milestones: z.array(LaunchMilestoneSchema).optional(),
   dateHistory: z.array(DateHistoryEntrySchema).optional(),
 }).strict().superRefine((meta, ctx) => {
+  if (meta.canBeBlacklisted === "dilutable" && meta.canBeBlacklistedSource == null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "dilutable blacklist overrides require canBeBlacklistedSource",
+      path: ["canBeBlacklistedSource"],
+    });
+  }
+}).superRefine((meta, ctx) => {
   if ((meta.variantOf == null) === (meta.variantKind == null)) {
     return;
   }

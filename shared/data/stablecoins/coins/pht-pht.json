@@ -43,6 +43,11 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": "dilutable",
+  "canBeBlacklistedSource": {
+    "label": "Etherscan contract source",
+    "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
+  },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "reserves": [

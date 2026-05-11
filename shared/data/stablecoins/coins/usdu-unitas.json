@@ -50,6 +50,11 @@
       "decimals": 6
     }
   ],
+  "canBeBlacklisted": "dilutable",
+  "canBeBlacklistedSource": {
+    "label": "BscScan contract source",
+    "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+  },
   "dependencies": [
     {
       "id": "usdc-circle",

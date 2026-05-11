@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MethodologyLabel } from "@/components/methodology-hint";
+import { ExternalLink } from "lucide-react";
 import {
   DEPEG_THRESHOLD_BPS,
   DEPEG_THRESHOLD_BPS_NON_USD,
@@ -95,6 +96,7 @@ export function HeroCard({
   const infrastructures: Infrastructure[] = coin.infrastructures ?? [];
   const chainCount = coinData?.chains?.length ?? 0;
   const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCard);
+  const blacklistSource = blacklistStatus === "dilutable" ? coin.canBeBlacklistedSource : undefined;
   const primaryComparisonPage = getPrimaryStaticComparisonPageForCoin(coin.id);
   const compareHref = primaryComparisonPage?.href ?? buildLiveCompareUrl([coin.id]);
   const benchmarkSymbol = primaryComparisonPage
@@ -185,7 +187,19 @@ export function HeroCard({
         };
       case "dilutable":
         return {
-          value: "Dilutable",
+          value: blacklistSource ? (
+            <a
+              href={blacklistSource.url}
+              target="_blank"
+              rel="noreferrer"
+              className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm underline-offset-2 hover:underline"
+              title={blacklistSource.label}
+              aria-label={`Dilutable source: ${blacklistSource.label}`}
+            >
+              Dilutable
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+            </a>
+          ) : "Dilutable",
           sub: undefined,
           color: "text-purple-700 dark:text-purple-400",
         };

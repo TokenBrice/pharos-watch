@@ -34,6 +34,10 @@
     }
   ],
   "canBeBlacklisted": "dilutable",
+  "canBeBlacklistedSource": {
+    "label": "Sourcify UtilityToken.sol",
+    "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
+  },
   "chainTier": "stage1-l2",
   "deploymentModel": "single-chain",
   "reserves": [

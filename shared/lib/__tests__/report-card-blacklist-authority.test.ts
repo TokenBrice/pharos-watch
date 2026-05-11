@@ -2,6 +2,23 @@ import { describe, expect, it } from "vitest";
 import { TRACKED_STABLECOINS } from "../stablecoins";
 import { createBlacklistResolutionContext, resolveBlacklistStatus, resolveBlacklistStatuses } from "../report-cards";
 
+const EXPECTED_DILUTABLE_IDS = [
+  "crvusd-curve",
+  "dai-makerdao",
+  "dola-inverse-finance",
+  "fpi-frax",
+  "luausd-lumi-finance",
+  "pht-pht",
+  "reusd-resupply",
+  "srusd-reservoir",
+  "usdd-tron-dao-reserve",
+  "usde-ethena",
+  "usdn-smardex",
+  "usdu-unitas",
+  "vcred-vcred",
+  "xai-silo-finance",
+] as const;
+
 function deterministicShuffle<T>(values: readonly T[]): T[] {
   const copy = [...values];
   for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -70,6 +87,26 @@ describe("report-card blacklist authority", () => {
     // explicit `false` override removed so reserve inheritance (32% bridged
     // USDT, 14% bridged USDC) now flows through.
     expect(resolved.get("xusd-babelfish")).toBe("inherited");
+  });
+
+  it("pins the tracked-universe Dilutable admin-mint sweep with source provenance", () => {
+    const resolved = resolveBlacklistStatuses(TRACKED_STABLECOINS);
+
+    for (const id of EXPECTED_DILUTABLE_IDS) {
+      expect(resolved.get(id)).toBe("dilutable");
+    }
+
+    const dilutableMeta = TRACKED_STABLECOINS
+      .filter((meta) => meta.canBeBlacklisted === "dilutable")
+      .map((meta) => meta.id)
+      .sort();
+    expect(dilutableMeta).toEqual([...EXPECTED_DILUTABLE_IDS].sort());
+
+    for (const meta of TRACKED_STABLECOINS) {
+      if (meta.canBeBlacklisted !== "dilutable") continue;
+      expect(meta.canBeBlacklistedSource?.label).toBeTruthy();
+      expect(meta.canBeBlacklistedSource?.url).toMatch(/^https:\/\//);
+    }
   });
 
   it("keeps blacklist resolution stable across full-registry ordering changes", () => {

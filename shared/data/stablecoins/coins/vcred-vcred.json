@@ -33,6 +33,10 @@
     }
   ],
   "canBeBlacklisted": "dilutable",
+  "canBeBlacklistedSource": {
+    "label": "Hemi contract source",
+    "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
+  },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",
   "reserves": [

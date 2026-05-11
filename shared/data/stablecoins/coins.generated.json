@@ -3798,6 +3798,11 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
+    },
     "deploymentModel": "canonical-bridge",
     "governanceQuality": "dao-governance",
     "reserves": [
@@ -4377,6 +4382,11 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0x6b175474e89094c44da98b954eedeac495271d0f#code"
+    },
     "deploymentModel": "canonical-bridge",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-top",
@@ -4916,6 +4926,11 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+    },
     "deploymentModel": "third-party-bridge",
     "governanceQuality": "dao-governance",
     "reserves": [
@@ -7184,6 +7199,11 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e#code"
+    },
     "collateralQuality": "rwa",
     "governanceQuality": "wrapper",
     "reserves": [
@@ -11176,6 +11196,10 @@
       }
     ],
     "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Sourcify UtilityToken.sol",
+      "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
+    },
     "chainTier": "stage1-l2",
     "deploymentModel": "single-chain",
     "reserves": [
@@ -13586,6 +13610,11 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
+    },
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
     "reserves": [
@@ -14438,6 +14467,11 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0x57ab1e0003f623289cd798b1824be09a793e4bec#code"
+    },
     "collateralQuality": "exotic",
     "reserves": [
       {
@@ -16034,6 +16068,10 @@
       }
     ],
     "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0x738d1115b90efa71ae468f1287fc864775e23a31#code"
+    },
     "chainTier": "ethereum",
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
@@ -20190,6 +20228,11 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
+    },
     "chainTier": "established-alt-l1",
     "deploymentModel": "native-multichain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
@@ -20426,6 +20469,11 @@
         "decimals": 8
       }
     ],
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Sourcify USDe.sol",
+      "url": "https://repo.sourcify.dev/contracts/full_match/1/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3/sources/contracts/USDe.sol"
+    },
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "exotic",
     "custodyModel": "cex",
@@ -21731,6 +21779,11 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Sourcify Usdn.sol",
+      "url": "https://repo.sourcify.dev/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
+    },
     "chainTier": "ethereum",
     "deploymentModel": "single-chain",
     "collateralQuality": "eth-lst",
@@ -23562,6 +23615,11 @@
         "weight": 0.8
       }
     ],
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "BscScan contract source",
+      "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+    },
     "deploymentModel": "native-multichain",
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
@@ -25622,6 +25680,10 @@
       }
     ],
     "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Hemi contract source",
+      "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
+    },
     "chainTier": "unproven",
     "deploymentModel": "single-chain",
     "reserves": [
@@ -26757,6 +26819,11 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac#code"
+    },
     "chainTier": "ethereum",
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",

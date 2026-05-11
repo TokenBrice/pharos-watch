@@ -253,6 +253,7 @@ export interface StablecoinMeta {
   tradedContracts?: ContractDeployment[];
   dependencies?: DependencyWeight[];
   canBeBlacklisted?: boolean | "possible" | "dilutable";
+  canBeBlacklistedSource?: StablecoinLink;
   chainTier?: ChainTier;
   deploymentModel?: DeploymentModel;
   collateralQuality?: CollateralQuality;

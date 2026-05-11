@@ -39,6 +39,11 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": "dilutable",
+  "canBeBlacklistedSource": {
+    "label": "Etherscan contract source",
+    "url": "https://etherscan.io/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e#code"
+  },
   "reserves": [
     {
       "name": "FRAX stablecoin reserves",

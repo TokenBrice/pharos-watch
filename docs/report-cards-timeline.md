@@ -1,6 +1,13 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.19 (2026-02-25 → 2026-05-11). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.20 (2026-02-25 → 2026-05-11). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.20 — Expanded Dilutable admin-mint classification with source provenance (2026-05-11)
+
+- Expands the `Dilutable` freezability tier after a full tracked-universe sweep for explicit uncapped admin mint authority
+- DAI, DOLA, FPI, PHT, USDD, USDe, USDN (SMARDEX), crvUSD, REUSD, USDU, and XAI now resolve as `Dilutable`
+- Every `canBeBlacklisted: "dilutable"` metadata override now carries a `canBeBlacklistedSource` contract-source link, and the asset schema rejects Dilutable entries without one
+- The homepage table and stablecoin detail hero expose the source link directly from the Dilutable status label
 
 ## v7.19 — Dilutable freezability tier and upgradeable-proxy / admin-mint audit (2026-05-11)
 

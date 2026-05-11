@@ -74,6 +74,11 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": "dilutable",
+  "canBeBlacklistedSource": {
+    "label": "Etherscan contract source",
+    "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
+  },
   "chainTier": "established-alt-l1",
   "deploymentModel": "native-multichain",
   "collateralQuality": "alt-lst-bridged-or-mixed",

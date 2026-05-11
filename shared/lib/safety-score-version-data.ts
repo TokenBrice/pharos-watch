@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.19",
+  currentVersion: "7.20",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.20",
+      title: "Expanded Dilutable admin-mint classification with source provenance",
+      date: "2026-05-11",
+      effectiveAt: 1778500800,
+      summary:
+        "A full tracked-universe follow-up to the Dilutable rollout expands the tier to strong uncapped admin-mint candidates and records a contract-source link for every Dilutable override.",
+      impact: [
+        "DAI, DOLA, FPI, PHT, USDD, USDe, USDN (SMARDEX), crvUSD, REUSD, USDU, and XAI now resolve as `Dilutable` after verified token-source review found explicit uncapped admin mint authority",
+        "Every `canBeBlacklisted: \"dilutable\"` metadata override now carries `canBeBlacklistedSource`, and the asset schema rejects Dilutable entries without a source link",
+        "The homepage table and stablecoin detail hero expose the Dilutable source link directly on the status label",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.19",
       title: "Dilutable freezability tier and upgradeable-proxy / admin-mint audit",

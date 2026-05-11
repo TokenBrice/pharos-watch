@@ -1882,7 +1882,7 @@ For peg handling, `rawInputs.pegScore` is the effective peg input used by report
 | `redemptionImmediateCapacityRatio` | `number \| null`                                |
 | `concentrationHhi`                 | `number \| null`                                |
 | `bluechipGrade`                    | `BluechipGrade \| null`                         |
-| `canBeBlacklisted`                 | `boolean \| "possible" \| "inherited"` |
+| `canBeBlacklisted`                 | `boolean \| "dilutable" \| "possible" \| "inherited"` |
 | `chainTier`                        | `ChainTier`                                     |
 | `deploymentModel`                  | `DeploymentModel`                               |
 | `collateralQuality`                | `CollateralQuality`                             |
@@ -1895,7 +1895,7 @@ For peg handling, `rawInputs.pegScore` is the effective peg input used by report
 | `navToken`                         | `boolean`                                       |
 | `collateralFromLive`               | `boolean`                                       |
 
-`rawInputs.canBeBlacklisted` is the canonical resolved blacklist status used by report-card-backed product surfaces. It can therefore differ from the raw `StablecoinMeta.canBeBlacklisted` override field, which only carries manual metadata and never stores computed `"inherited"` values.
+`rawInputs.canBeBlacklisted` is the canonical resolved blacklist status used by report-card-backed product surfaces. It can therefore differ from the raw `StablecoinMeta.canBeBlacklisted` override field, which only carries manual metadata and never stores computed `"inherited"` values. Raw metadata accepts `"dilutable"` for uncapped admin-mint cases; those entries must include `canBeBlacklistedSource` for source provenance.
 
 `rawInputs.collateralFromLive` is true when score-grade live reserve data drove collateral scoring for the card.
 

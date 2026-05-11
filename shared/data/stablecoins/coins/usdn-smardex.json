@@ -36,6 +36,11 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": "dilutable",
+  "canBeBlacklistedSource": {
+    "label": "Sourcify Usdn.sol",
+    "url": "https://repo.sourcify.dev/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
+  },
   "chainTier": "ethereum",
   "deploymentModel": "single-chain",
   "collateralQuality": "eth-lst",

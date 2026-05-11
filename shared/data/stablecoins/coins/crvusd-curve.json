@@ -87,6 +87,11 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": "dilutable",
+  "canBeBlacklistedSource": {
+    "label": "Etherscan contract source",
+    "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
+  },
   "deploymentModel": "canonical-bridge",
   "governanceQuality": "dao-governance",
   "reserves": [

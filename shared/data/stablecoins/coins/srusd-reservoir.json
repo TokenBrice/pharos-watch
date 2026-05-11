@@ -50,6 +50,10 @@
     }
   ],
   "canBeBlacklisted": "dilutable",
+  "canBeBlacklistedSource": {
+    "label": "Etherscan contract source",
+    "url": "https://etherscan.io/address/0x738d1115b90efa71ae468f1287fc864775e23a31#code"
+  },
   "chainTier": "ethereum",
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
