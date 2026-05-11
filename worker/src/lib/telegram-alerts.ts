@@ -5,6 +5,16 @@ import {
   type TelegramPresetId,
 } from "./telegram-presets";
 import { escapeHtml } from "./telegram";
+import {
+  TELEGRAM_MESSAGE_CHUNK_LIMIT,
+  TELEGRAM_SPLIT_VERSION,
+  isDepegStepValue,
+  type DepegStepValue,
+} from "./telegram-constants";
+
+// Re-export the chunking constants so existing callers that import them from
+// this module (and any downstream tests) keep working.
+export { TELEGRAM_MESSAGE_CHUNK_LIMIT, TELEGRAM_SPLIT_VERSION };
 
 // Frozen coins are no longer subscribable for new alerts (no fresh data is being collected),
 // but pre-launch coins remain subscribable so users can opt into launch alerts.
@@ -244,13 +254,13 @@ export function parseSubscribeArgs(argsText: string): ParsedSubscribeArgs {
   };
 }
 
-function parseDepegWorseningStep(value: string): { valid: true; value: 100 | 250 | 500 | null } | { valid: false } {
+function parseDepegWorseningStep(value: string): { valid: true; value: DepegStepValue | null } | { valid: false } {
   const normalized = value.toLowerCase();
   if (normalized === "off") {
     return { valid: true, value: null };
   }
   const step = Number(normalized);
-  if (step === 100 || step === 250 || step === 500) {
+  if (isDepegStepValue(step)) {
     return { valid: true, value: step };
   }
   return { valid: false };
@@ -575,16 +585,14 @@ function repairBrokenHtml(chunk: string): string {
 }
 
 /**
- * Stable version tag for {@link splitMessage}'s chunking algorithm. Bump this
- * constant whenever the splitting logic (boundaries, repair, ordering) changes
- * in a way that would alter the chunks produced from the same canonical body.
- * The pending-queue dedupe key incorporates this so a logic change predictably
- * invalidates in-flight pending rows instead of orphaning them silently.
+ * `TELEGRAM_SPLIT_VERSION` lives in `./telegram-constants` and is re-exported
+ * from the top of this module. The pending-queue dedupe key incorporates it
+ * so a logic change here predictably invalidates in-flight pending rows
+ * instead of orphaning them silently.
  */
-export const TELEGRAM_SPLIT_VERSION = 1;
 
 /** Split a message into chunks under the given character limit. */
-export function splitMessage(html: string, limit = 4000): string[] {
+export function splitMessage(html: string, limit = TELEGRAM_MESSAGE_CHUNK_LIMIT): string[] {
   if (html.length <= limit) return [html];
 
   const splitOversizedSection = (section: string): string[] => {

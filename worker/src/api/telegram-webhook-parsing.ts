@@ -1,4 +1,5 @@
 import type { ResolvedCoin } from "../lib/telegram-alerts";
+import { isDepegStepValue } from "../lib/telegram-constants";
 import type {
   ConfirmBulkPayload,
   ParsedSetCommand,
@@ -27,11 +28,9 @@ function parseStoredConfirmBulkPayload(payload: Record<string, unknown>): Confir
   const kind = typeof payload.kind === "string" ? payload.kind : null;
   if (kind === "subscribe") {
     const depegWorseningBpsStep =
-      payload.depegWorseningBpsStep === 100 ||
-      payload.depegWorseningBpsStep === 250 ||
-      payload.depegWorseningBpsStep === 500 ||
+      isDepegStepValue(payload.depegWorseningBpsStep) ||
       payload.depegWorseningBpsStep === null
-        ? payload.depegWorseningBpsStep
+        ? (payload.depegWorseningBpsStep as 100 | 250 | 500 | null)
         : undefined;
     return {
       kind,
@@ -122,7 +121,7 @@ export function parseStoredSetCommand(payload: Record<string, unknown>): ParsedS
         ticker,
         setting,
         enabled: true,
-        step: payload.step === 100 || payload.step === 250 || payload.step === 500 ? payload.step : null,
+        step: isDepegStepValue(payload.step) ? (payload.step as 100 | 250 | 500) : null,
       };
     default:
       return null;
@@ -199,11 +198,9 @@ export function parsePendingDisambiguation(pending: PendingDisambiguationRow): P
       Array.isArray(payload.alertTypes) ? parseStringArray(payload.alertTypes) : Array.from(legacyAlertTypes),
     );
     const depegWorseningBpsStep =
-      payload.depegWorseningBpsStep === 100 ||
-      payload.depegWorseningBpsStep === 250 ||
-      payload.depegWorseningBpsStep === 500 ||
+      isDepegStepValue(payload.depegWorseningBpsStep) ||
       payload.depegWorseningBpsStep === null
-        ? payload.depegWorseningBpsStep
+        ? (payload.depegWorseningBpsStep as 100 | 250 | 500 | null)
         : undefined;
     return {
       actionType,
@@ -304,7 +301,7 @@ export function parseSetCommand(args: string): ParsedSetCommand | { error: strin
         return { ticker, setting: "depeg-step", enabled: true, step: null };
       }
       const step = Number(value);
-      if (step === 100 || step === 250 || step === 500) {
+      if (isDepegStepValue(step)) {
         return { ticker, setting: "depeg-step", enabled: true, step };
       }
       return { error: "Depeg-step values: off, 100, 250, 500" };

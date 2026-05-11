@@ -1,20 +1,29 @@
 import { sendToChat, type BatchMessage, type TelegramSendErrorClass } from "../lib/telegram";
 import { batchExecute } from "../lib/db";
-import { SNOOZE_REPLY_MARKUP, TELEGRAM_SPLIT_VERSION } from "../lib/telegram-alerts";
+import { SNOOZE_REPLY_MARKUP } from "../lib/telegram-alerts";
+import {
+  BLOCK_STRIKE_WINDOW_SEC,
+  PENDING_BACKOFF_SCHEDULE_SEC,
+  PENDING_MAX_ATTEMPTS,
+  PENDING_TTL_SEC,
+  SEND_BATCH_SIZE,
+  TELEGRAM_SPLIT_VERSION,
+} from "../lib/telegram-constants";
 import { isQuietHoursActive } from "./telegram-quiet-hours";
 
 // ---------- Constants ----------
 
-export const PENDING_TTL_SEC = 3600; // 1 hour — stale alerts are worse than no alert
-export const SEND_BATCH_SIZE = 4; // Parallel sends per batch (leave Workers connection headroom)
-/** Defensive ceiling so a pathological row cannot loop forever inside the TTL window. */
-export const PENDING_MAX_ATTEMPTS = 20;
-/**
- * Exponential backoff schedule (seconds) indexed by prior attempt count, capped at 600s.
- * Used when Telegram does not return a Retry-After header. Step 0 (no prior attempts) is
- * unused in practice because the row only enters the schedule after the first failure.
- */
-export const PENDING_BACKOFF_SCHEDULE_SEC = [60, 120, 240, 480, 600] as const;
+// Re-export Telegram-related constants from the centralized module so existing
+// import paths (e.g. `import { PENDING_TTL_SEC } from "./telegram-pending-queue"`)
+// keep working without churn.
+export {
+  BLOCK_STRIKE_WINDOW_SEC,
+  PENDING_BACKOFF_SCHEDULE_SEC,
+  PENDING_MAX_ATTEMPTS,
+  PENDING_TTL_SEC,
+  SEND_BATCH_SIZE,
+};
+
 const PENDING_BACKOFF_CAP_SEC = PENDING_BACKOFF_SCHEDULE_SEC[PENDING_BACKOFF_SCHEDULE_SEC.length - 1];
 
 // ---------- Types ----------
@@ -58,10 +67,8 @@ export interface PendingEnqueueOptions {
 
 const DEFAULT_RETRY_DELAY_SEC = PENDING_BACKOFF_SCHEDULE_SEC[0];
 
-// Two-strike rule: a single 403 is transient (user temporarily muted bot,
-// chat archived, etc.). Only after a second 403 within this window do we
-// zero all alert flags. Successful sends reset the counter to 0.
-export const BLOCK_STRIKE_WINDOW_SEC = 24 * 3600;
+// Two-strike rule for 403 (block) handling — see BLOCK_STRIKE_WINDOW_SEC in
+// `telegram-constants.ts`. Imported + re-exported at the top of this file.
 
 function emptyDrainResult(): PendingDrainResult {
   return {

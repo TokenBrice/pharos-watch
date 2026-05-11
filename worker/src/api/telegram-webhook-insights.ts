@@ -10,10 +10,11 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../lib/report-card-cache";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { suggestClosestToken } from "../lib/telegram-alerts";
+import { TOP_VIEW_NAMES } from "../lib/telegram-constants";
 import type { StatusForCoin } from "./telegram-webhook-status";
 
 const TOP_LIMIT = 5;
-const TOP_VIEWS = ["depeg", "dews", "yield", "liquidity", "chains", "safety"] as const;
+const TOP_VIEWS = TOP_VIEW_NAMES;
 
 function formatUsdCompact(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "n/a";

@@ -40,12 +40,10 @@ import {
   type ConfirmBulkPayload,
   type PendingDisambiguationRow,
 } from "./telegram-webhook-shared";
+import { SNOOZE_SECONDS, isDepegStepValue } from "../lib/telegram-constants";
 
-const SNOOZE_SECONDS = {
-  "1h": 60 * 60,
-  "4h": 4 * 60 * 60,
-  "24h": 24 * 60 * 60,
-} as const;
+// Re-export so any caller importing `SNOOZE_SECONDS` from this module keeps working.
+export { SNOOZE_SECONDS };
 
 // Allowlist of known callback action codes. Validated at the top of the
 // dispatcher so that an unknown action can never reach a D1 read/write.
@@ -197,7 +195,7 @@ export async function handleCallbackQuery(
 
   if (action === "depegstep" && isKnownStablecoinId(arg)) {
     const step = Number((cb.data ?? "").split(":")[2]);
-    if (step === 100 || step === 250 || step === 500) {
+    if (isDepegStepValue(step)) {
       const now = unixNow();
       await db
         .prepare(

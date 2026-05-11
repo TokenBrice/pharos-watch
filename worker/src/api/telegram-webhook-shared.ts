@@ -1,5 +1,9 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
+import { DISAMBIGUATION_TTL_SEC } from "../lib/telegram-constants";
+
+// Re-export so existing callers importing this constant from this module keep working.
+export { DISAMBIGUATION_TTL_SEC };
 
 export const WIZARD_INTRO_MESSAGE = `<b>Welcome to PharosWatchBot</b>
 
@@ -113,7 +117,8 @@ Preset aliases accept compact or dashed top-N spelling, e.g. <code>usd-top25</co
 
 In groups, use addressed commands like <code>/subscribe@PharosWatchBot dews usd-top25</code>. Settings apply to the current chat, and pending ticker selections can only be completed by the user who started them.`;
 
-export const DISAMBIGUATION_TTL_SEC = 5 * 60;
+// `DISAMBIGUATION_TTL_SEC` is defined in `../lib/telegram-constants` and
+// re-exported from the top of this module.
 
 export type PendingActionType = "subscribe" | "unsubscribe" | "set" | "confirm-bulk";
 
