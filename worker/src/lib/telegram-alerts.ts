@@ -407,8 +407,26 @@ const DEWS_SEVERITY_GLYPH: Record<string, string> = {
 };
 const LAUNCH_GLYPH = "✦";
 
+/**
+ * Feature flag: wrap alert context lines in `<blockquote expandable>` so the
+ * supplementary safety/liquidity/supply line collapses by default on mobile
+ * Telegram clients. Flip to `false` to fall back to a plain extra line.
+ *
+ * Requires Telegram Bot API 7.0+ (Mar 2024) for the `expandable` attribute.
+ * Older clients render the content as a regular blockquote (still readable).
+ */
+const ALERT_BLOCKQUOTE_CONTEXT: boolean = true;
+
 function dewsGlyphFor(band: string): string {
   return DEWS_SEVERITY_GLYPH[band] ?? "";
+}
+
+function formatContextLine(contextLine?: string): string {
+  if (!contextLine) return "";
+  const escaped = escapeHtml(contextLine);
+  return ALERT_BLOCKQUOTE_CONTEXT
+    ? `\n<blockquote expandable>${escaped}</blockquote>`
+    : `\n${escaped}`;
 }
 
 export function formatDewsLine(e: DewsChange): string {
@@ -419,20 +437,20 @@ export function formatDewsLine(e: DewsChange): string {
     .join(", ");
   const glyph = dewsGlyphFor(e.newBand);
   const prefix = glyph ? `${glyph} ` : "";
-  return `${prefix}<b>${escapeHtml(e.symbol)}</b> — ${e.oldBand} → ${e.newBand} (score: ${e.score})${signals ? `\nTop signals: ${signals}` : ""}${e.contextLine ? `\n${escapeHtml(e.contextLine)}` : ""}`;
+  return `${prefix}<b>${escapeHtml(e.symbol)}</b> — ${e.oldBand} → ${e.newBand} (score: ${e.score})${signals ? `\nTop signals: ${signals}` : ""}${formatContextLine(e.contextLine)}`;
 }
 
 export function formatDepegTriggeredLine(e: DepegAlertPayload): string {
   const pct = (e.deviationBps / 100).toFixed(1);
   const glyph = DEPEG_DIRECTION_GLYPH[e.direction];
-  return `${glyph} <b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg by ${pct}% (${e.deviationBps} bps)\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})${e.contextLine ? `\n${escapeHtml(e.contextLine)}` : ""}`;
+  return `${glyph} <b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg by ${pct}% (${e.deviationBps} bps)\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})${formatContextLine(e.contextLine)}`;
 }
 
 export function formatDepegResolvedLine(e: DepegResolved): string {
   const hours = Math.floor(e.durationMinutes / 60);
   const mins = e.durationMinutes % 60;
   const duration = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-  return `<b>${escapeHtml(e.symbol)}</b>\nDuration: ${duration}\nPeak deviation: ${(e.peakDeviationBps / 100).toFixed(1)}%\nRecovery price: $${e.recoveryPrice.toFixed(4)}${e.contextLine ? `\n${escapeHtml(e.contextLine)}` : ""}`;
+  return `<b>${escapeHtml(e.symbol)}</b>\nDuration: ${duration}\nPeak deviation: ${(e.peakDeviationBps / 100).toFixed(1)}%\nRecovery price: $${e.recoveryPrice.toFixed(4)}${formatContextLine(e.contextLine)}`;
 }
 
 export function formatDepegWorseningLine(e: DepegWorsening): string {
@@ -442,12 +460,12 @@ export function formatDepegWorseningLine(e: DepegWorsening): string {
   const deltaPct = (deltaBps / 100).toFixed(1);
   const deltaStr = deltaBps >= 0 ? `+${deltaPct}%` : `${deltaPct}%`;
   const glyph = DEPEG_DIRECTION_GLYPH[e.direction];
-  return `${glyph} <b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg worsening\nDeviation: ${prev}% → ${curr}% (${deltaStr})\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})${e.contextLine ? `\n${escapeHtml(e.contextLine)}` : ""}`;
+  return `${glyph} <b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg worsening\nDeviation: ${prev}% → ${curr}% (${deltaStr})\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})${formatContextLine(e.contextLine)}`;
 }
 
 export function formatSafetyLine(e: SafetyChange): string {
   const scores = e.oldScore != null && e.newScore != null ? `\nScore: ${e.oldScore} → ${e.newScore}` : "";
-  return `<b>${escapeHtml(e.symbol)}</b> — ${e.oldGrade} → ${e.newGrade}${scores}${e.contextLine ? `\n${escapeHtml(e.contextLine)}` : ""}`;
+  return `<b>${escapeHtml(e.symbol)}</b> — ${e.oldGrade} → ${e.newGrade}${scores}${formatContextLine(e.contextLine)}`;
 }
 
 export interface LaunchAlert {

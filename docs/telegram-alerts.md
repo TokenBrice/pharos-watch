@@ -528,7 +528,7 @@ Formatting helpers in `worker/src/lib/telegram-alerts.ts` emit:
 - Depeg-worsening messages with previous vs current deviation
 - Depeg-resolved messages with duration, peak deviation, and recovery price
 - Safety-grade changes with old/new grade and score when present
-- One contextual line when cached report-card, liquidity, or supply data is available for the affected coin
+- One contextual line when cached report-card, liquidity, or supply data is available for the affected coin. Rendered as an expandable Telegram blockquote (`<blockquote expandable>…</blockquote>`) so it collapses by default on mobile; gated by the `ALERT_BLOCKQUOTE_CONTEXT` flag in `telegram-alerts.ts` and requires Telegram Bot API 7.0+ (Mar 2024) — older clients render it as a regular blockquote.
 
 Subscriber alert messages no longer carry a top-level `Pharos Alerts` header — the alert body starts directly with the first section. Each alert line is prefixed with a data-tied glyph so a subscriber can triage at a glance. These glyphs are a sanctioned exception to the repo's no-emoji rule because each one encodes a specific data dimension; **any future addition to the glyph set requires a separate review**.
 

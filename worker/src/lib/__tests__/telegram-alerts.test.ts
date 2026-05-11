@@ -603,6 +603,100 @@ describe("formatLaunchLine", () => {
   });
 });
 
+describe("context line blockquote (P1-U13)", () => {
+  const context = "Context: Safety A 85 · Liquidity 90, DEX TVL $12M · Supply $1.2B";
+
+  it("wraps DEWS contextLine in <blockquote expandable>", () => {
+    const line = formatDewsLine({
+      stablecoinId: "usdc-circle",
+      symbol: "USDC",
+      oldBand: "WATCH",
+      newBand: "ALERT",
+      score: 42,
+      topSignals: [],
+      contextLine: context,
+    });
+    expect(line).toContain(`<blockquote expandable>${context}</blockquote>`);
+    expect(line).not.toContain(`\n${context}\n`);
+  });
+
+  it("wraps depeg-triggered contextLine in <blockquote expandable>", () => {
+    const line = formatDepegTriggeredLine({
+      stablecoinId: "bold-liquity",
+      symbol: "BOLD",
+      direction: "below",
+      deviationBps: 230,
+      price: 0.977,
+      pegReference: 1.0,
+      contextLine: context,
+    });
+    expect(line).toContain(`<blockquote expandable>${context}</blockquote>`);
+  });
+
+  it("wraps depeg-worsening contextLine in <blockquote expandable>", () => {
+    const line = formatDepegWorseningLine({
+      stablecoinId: "usdc-circle",
+      symbol: "USDC",
+      direction: "below",
+      previousDeviationBps: 120,
+      currentDeviationBps: 260,
+      price: 0.974,
+      pegReference: 1,
+      contextLine: context,
+    });
+    expect(line).toContain(`<blockquote expandable>${context}</blockquote>`);
+  });
+
+  it("escapes HTML inside the blockquote", () => {
+    const malicious = "Context: <script>alert(1)</script>";
+    const line = formatDewsLine({
+      stablecoinId: "usdc-circle",
+      symbol: "USDC",
+      oldBand: "WATCH",
+      newBand: "ALERT",
+      score: 42,
+      topSignals: [],
+      contextLine: malicious,
+    });
+    expect(line).toContain(
+      "<blockquote expandable>Context: &lt;script&gt;alert(1)&lt;/script&gt;</blockquote>",
+    );
+    expect(line).not.toContain("<script>");
+  });
+
+  it("omits the blockquote entirely when no contextLine is provided", () => {
+    const line = formatDewsLine({
+      stablecoinId: "usdc-circle",
+      symbol: "USDC",
+      oldBand: "WATCH",
+      newBand: "ALERT",
+      score: 42,
+      topSignals: [],
+    });
+    expect(line).not.toContain("<blockquote");
+  });
+
+  it("threads through formatConsolidatedMessage for a single DEWS alert", () => {
+    const msg = formatConsolidatedMessage({
+      dews: [{
+        stablecoinId: "usdc-circle",
+        symbol: "USDC",
+        oldBand: "WATCH",
+        newBand: "ALERT",
+        score: 42,
+        topSignals: [],
+        contextLine: context,
+      }],
+      depegTriggered: [],
+      depegResolved: [],
+      depegWorsening: [],
+      safety: [],
+      launch: [],
+    });
+    expect(msg).toContain(`<blockquote expandable>${context}</blockquote>`);
+  });
+});
+
 describe("splitMessage", () => {
   it("returns single chunk for short messages", () => {
     expect(splitMessage("short")).toEqual(["short"]);
