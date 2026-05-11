@@ -17,6 +17,16 @@ import { answerCallbackQuery, sendToChat } from "../lib/telegram";
 import { unixNow } from "./telegram-webhook-store";
 import { loadStatusForCoin } from "./telegram-webhook-status";
 import { buildStatusMessage } from "./telegram-webhook-messages";
+import {
+  handleSetupBranch,
+  handleSetupCancel,
+  handleSetupConfirm,
+  handleSetupNext,
+  handleSetupTarget,
+  handleSetupTypeToggle,
+  parseSetupState,
+} from "./telegram-webhook-setup";
+import { SETUP_PENDING_ACTION_TYPE } from "./telegram-webhook-shared";
 
 const SNOOZE_SECONDS = {
   "1h": 60 * 60,
@@ -37,7 +47,7 @@ function isKnownStablecoinId(id: string | undefined): id is string {
 export interface TelegramCallbackQuery {
   id: string;
   data?: string;
-  from?: { username?: string };
+  from?: { id?: number; username?: string };
   message?: { chat?: { id?: number; type?: string }; message_id?: number };
 }
 
@@ -52,7 +62,53 @@ export async function handleCallbackQuery(
     return;
   }
 
-  const [action, arg] = (cb.data ?? "").split(":");
+  const data = cb.data ?? "";
+  const [action, arg] = data.split(":");
+
+  if (action === "setup") {
+    const subAction = arg ?? "";
+    const subArg = data.split(":").slice(2).join(":");
+    const chatType = cb.message?.chat?.type ?? "private";
+    const username = chatType === "group" || chatType === "supergroup" ? null : cb.from?.username ?? null;
+    const actorUserId = cb.from?.id != null ? String(cb.from.id) : null;
+    const stateRow = await db
+      .prepare(
+        "SELECT action_type, action_payload, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
+      )
+      .bind(chatId)
+      .first<{
+        action_type: string | null;
+        action_payload: string | null;
+        expires_at: number;
+        initiator_user_id: string | null;
+      }>();
+    const isActiveSetup =
+      stateRow?.action_type === SETUP_PENDING_ACTION_TYPE && unixNow() < stateRow.expires_at;
+    const state = isActiveSetup
+      ? parseSetupState(stateRow?.action_payload ?? null, stateRow?.initiator_user_id ?? null)
+      : null;
+
+    const context = { db, botToken, chatId, actorUserId, username };
+    let result: { text: string };
+    if (subAction === "branch") {
+      result = await handleSetupBranch(context, subArg, state);
+    } else if (subAction === "type-toggle") {
+      result = await handleSetupTypeToggle(context, subArg, state);
+    } else if (subAction === "next") {
+      result = await handleSetupNext(context, state);
+    } else if (subAction === "target") {
+      result = await handleSetupTarget(context, subArg, state);
+    } else if (subAction === "confirm") {
+      result = await handleSetupConfirm(context, state);
+    } else if (subAction === "cancel") {
+      result = await handleSetupCancel(context, state);
+    } else {
+      result = { text: "Action not recognized." };
+    }
+
+    await answerCallbackQuery(cb.id, botToken, { text: result.text });
+    return;
+  }
 
   if (action === "snooze" && isSnoozeArg(arg)) {
     const now = unixNow();

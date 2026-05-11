@@ -1,6 +1,12 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
 
+export const WIZARD_INTRO_MESSAGE = `<b>Welcome to PharosWatchBot</b>
+
+I send opt-in stablecoin alerts into this chat. Pick a path below — you can change anything later with /help or /list.
+
+Join <a href="https://t.me/pharoswatch">@pharoswatch</a> for Pharos updates and <a href="https://t.me/pharoswatchers">@pharoswatchers</a> for community discussion about Pharos.`;
+
 export const START_MESSAGE = `<b>Welcome to PharosWatchBot</b>
 
 I send opt-in stablecoin alerts into this chat. Start with a quiet preset, then tune thresholds only where you need more detail.
@@ -111,6 +117,33 @@ export const DISAMBIGUATION_TTL_SEC = 5 * 60;
 
 export type PendingActionType = "subscribe" | "unsubscribe" | "set";
 
+/**
+ * Setup wizard state machine. Persisted in `telegram_pending_disambiguation`
+ * with `action_type = "setup-step"` so it shares the 5-min TTL and cleanup
+ * cron used by the disambiguation flow.
+ */
+export type SetupWizardStep =
+  | "branch"
+  | "custom-types"
+  | "custom-target"
+  | "awaiting-ticker"
+  | "confirm-recommended"
+  | "confirm-custom";
+
+export type SetupWizardTarget =
+  | { kind: "preset"; presetId: string }
+  | { kind: "all" }
+  | { kind: "ticker"; coinId: string; symbol: string };
+
+export interface SetupWizardState {
+  step: SetupWizardStep;
+  alertTypes: string[];
+  target: SetupWizardTarget | null;
+  initiatorUserId: string | null;
+}
+
+export const SETUP_PENDING_ACTION_TYPE = "setup-step";
+
 export type ParsedSetCommand =
   | { ticker: string; setting: "dews"; enabled: boolean; minBand: "WARNING" | "DANGER" | null }
   | { ticker: string; setting: "safety"; enabled: boolean; mode: "downgrade-only" | "upgrade-only" | null }
@@ -143,8 +176,8 @@ export interface TelegramWebhookUpdate {
   callback_query?: {
     id: string;
     data?: string;
-    from?: { username?: string };
-    message?: { chat?: { id?: number }; message_id?: number };
+    from?: { id?: number; username?: string };
+    message?: { chat?: { id?: number; type?: string }; message_id?: number };
   };
 }
 

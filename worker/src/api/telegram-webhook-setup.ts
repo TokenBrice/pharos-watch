@@ -1,0 +1,609 @@
+/**
+ * Two-branch setup wizard for /start onboarding.
+ *
+ * State lives in `telegram_pending_disambiguation` under
+ * `action_type = "setup-step"` so it shares the 5-min TTL and cleanup cron
+ * already in place for disambiguation flows.
+ *
+ * Callback namespace: `setup:*` (see telegram-webhook-callbacks.ts).
+ */
+
+import { escapeHtml, sendToChat } from "../lib/telegram";
+import {
+  listTelegramPresets,
+  resolveTelegramPresetTargets,
+  type TelegramPresetId,
+} from "../lib/telegram-presets";
+import { resolveTicker } from "../lib/telegram-alerts";
+import {
+  buildNotFoundMessage,
+  buildPresetUnavailableMessage,
+  buildStatusAmbiguousMessage,
+  buildSubscriptionSummaryMessage,
+} from "./telegram-webhook-messages";
+import {
+  DISAMBIGUATION_TTL_SEC,
+  SETUP_PENDING_ACTION_TYPE,
+  WIZARD_INTRO_MESSAGE,
+  START_MESSAGE,
+  type SetupWizardState,
+  type SetupWizardTarget,
+} from "./telegram-webhook-shared";
+import {
+  loadSubscriptionsByIds,
+  unixNow,
+  upsertPresetSubscriptions,
+  upsertSubscriberAndSubscriptions,
+  upsertGlobalAlertTypes,
+} from "./telegram-webhook-store";
+
+const ALERT_TYPE_ORDER = ["dews", "depeg", "safety", "launch"] as const;
+
+const ALERT_TYPE_LABELS: Record<(typeof ALERT_TYPE_ORDER)[number], string> = {
+  dews: "DEWS",
+  depeg: "Depeg",
+  safety: "Safety",
+  launch: "Launch",
+};
+
+const RECOMMENDED_ALERT_TYPES = ["dews", "depeg"] as const;
+const RECOMMENDED_PRESET_ID: TelegramPresetId = "usd-top25";
+
+const PRESET_PICKER_ORDER: TelegramPresetId[] = [
+  "usd-top10",
+  "usd-top25",
+  "usd-top50",
+  "eur-top10",
+  "gold-top5",
+  "mcap-ge-100m",
+  "mcap-ge-1b",
+];
+
+interface InlineKeyboardButton {
+  text: string;
+  callback_data?: string;
+}
+
+interface InlineKeyboardMarkup {
+  inline_keyboard: InlineKeyboardButton[][];
+}
+
+interface ForceReplyMarkup {
+  force_reply: true;
+  input_field_placeholder?: string;
+  selective?: boolean;
+}
+
+function presetLabelById(presetId: string): string {
+  for (const definition of listTelegramPresets()) {
+    if (definition.id === presetId) return definition.label;
+  }
+  return presetId;
+}
+
+function buildBranchKeyboard(): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [{ text: "Use recommended (DEWS + Depeg, usd-top25)", callback_data: "setup:branch:recommended" }],
+      [{ text: "Custom setup", callback_data: "setup:branch:custom" }],
+      [{ text: "I'll type commands myself", callback_data: "setup:branch:skip" }],
+    ],
+  };
+}
+
+function buildTypeToggleKeyboard(selected: Set<string>): InlineKeyboardMarkup {
+  const rows = ALERT_TYPE_ORDER.map((type) => {
+    const checked = selected.has(type) ? "✓ " : "";
+    return [{ text: `${checked}${ALERT_TYPE_LABELS[type]}`, callback_data: `setup:type-toggle:${type}` }];
+  });
+  rows.push([
+    { text: "Cancel", callback_data: "setup:cancel" },
+    { text: "Next →", callback_data: "setup:next" },
+  ]);
+  return { inline_keyboard: rows };
+}
+
+function buildTargetKeyboard(): InlineKeyboardMarkup {
+  const rows: InlineKeyboardButton[][] = PRESET_PICKER_ORDER.map((presetId) => [
+    { text: presetLabelById(presetId), callback_data: `setup:target:${presetId}` },
+  ]);
+  rows.push([{ text: "All tracked coins", callback_data: "setup:target:all" }]);
+  rows.push([{ text: "Type a ticker", callback_data: "setup:target:type" }]);
+  rows.push([{ text: "Cancel", callback_data: "setup:cancel" }]);
+  return { inline_keyboard: rows };
+}
+
+function buildConfirmKeyboard(): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: "Confirm", callback_data: "setup:confirm" },
+        { text: "Cancel", callback_data: "setup:cancel" },
+      ],
+    ],
+  };
+}
+
+function buildForceReplyKeyboard(): ForceReplyMarkup {
+  return {
+    force_reply: true,
+    input_field_placeholder: "Type a ticker (e.g. USDC)",
+    selective: false,
+  };
+}
+
+function alertTypesSummary(alertTypes: readonly string[]): string {
+  if (alertTypes.length === 0) return "(none — choose at least one)";
+  return alertTypes
+    .map((type) => ALERT_TYPE_LABELS[type as (typeof ALERT_TYPE_ORDER)[number]] ?? type)
+    .join(", ");
+}
+
+function isAllowedAlertType(value: string): value is (typeof ALERT_TYPE_ORDER)[number] {
+  return (ALERT_TYPE_ORDER as readonly string[]).includes(value);
+}
+
+function isKnownPresetId(value: string): value is TelegramPresetId {
+  return PRESET_PICKER_ORDER.includes(value as TelegramPresetId);
+}
+
+async function persistSetupState(
+  db: D1Database,
+  chatId: string,
+  state: SetupWizardState,
+): Promise<void> {
+  const payload = {
+    step: state.step,
+    alertTypes: state.alertTypes,
+    target: state.target,
+  };
+  await db
+    .prepare(
+      `INSERT INTO telegram_pending_disambiguation (
+         chat_id,
+         action_type,
+         action_payload,
+         alert_types,
+         resolved_ids,
+         ambiguous_ticker,
+         candidates,
+         remaining_tickers,
+         expires_at,
+         initiator_user_id
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(chat_id) DO UPDATE SET
+         action_type = excluded.action_type,
+         action_payload = excluded.action_payload,
+         alert_types = excluded.alert_types,
+         resolved_ids = excluded.resolved_ids,
+         ambiguous_ticker = excluded.ambiguous_ticker,
+         candidates = excluded.candidates,
+         remaining_tickers = excluded.remaining_tickers,
+         expires_at = excluded.expires_at,
+         initiator_user_id = excluded.initiator_user_id`,
+    )
+    .bind(
+      chatId,
+      SETUP_PENDING_ACTION_TYPE,
+      JSON.stringify(payload),
+      JSON.stringify([]),
+      JSON.stringify([]),
+      "",
+      JSON.stringify([]),
+      JSON.stringify([]),
+      unixNow() + DISAMBIGUATION_TTL_SEC,
+      state.initiatorUserId,
+    )
+    .run();
+}
+
+async function clearSetupState(db: D1Database, chatId: string): Promise<void> {
+  await db
+    .prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?")
+    .bind(chatId)
+    .run();
+}
+
+export function parseSetupState(
+  actionPayload: string | null | undefined,
+  initiatorUserId: string | null,
+): SetupWizardState | null {
+  if (!actionPayload) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(actionPayload);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const record = parsed as Record<string, unknown>;
+  const step = record.step;
+  if (
+    step !== "branch" &&
+    step !== "custom-types" &&
+    step !== "custom-target" &&
+    step !== "awaiting-ticker" &&
+    step !== "confirm-recommended" &&
+    step !== "confirm-custom"
+  ) {
+    return null;
+  }
+  const alertTypes = Array.isArray(record.alertTypes)
+    ? record.alertTypes.filter((value): value is string => typeof value === "string" && isAllowedAlertType(value))
+    : [];
+  let target: SetupWizardTarget | null = null;
+  if (record.target && typeof record.target === "object") {
+    const rawTarget = record.target as Record<string, unknown>;
+    if (rawTarget.kind === "preset" && typeof rawTarget.presetId === "string" && isKnownPresetId(rawTarget.presetId)) {
+      target = { kind: "preset", presetId: rawTarget.presetId };
+    } else if (rawTarget.kind === "all") {
+      target = { kind: "all" };
+    } else if (
+      rawTarget.kind === "ticker" &&
+      typeof rawTarget.coinId === "string" &&
+      typeof rawTarget.symbol === "string"
+    ) {
+      target = { kind: "ticker", coinId: rawTarget.coinId, symbol: rawTarget.symbol };
+    }
+  }
+  return { step, alertTypes, target, initiatorUserId };
+}
+
+export async function sendWizardIntro(
+  db: D1Database,
+  botToken: string,
+  chatId: string,
+  initiatorUserId: string | null,
+): Promise<void> {
+  await persistSetupState(db, chatId, {
+    step: "branch",
+    alertTypes: [],
+    target: null,
+    initiatorUserId,
+  });
+  await sendToChat(chatId, WIZARD_INTRO_MESSAGE, botToken, {
+    disableWebPagePreview: true,
+    replyMarkup: buildBranchKeyboard(),
+  });
+}
+
+interface CallbackContext {
+  db: D1Database;
+  botToken: string;
+  chatId: string;
+  actorUserId: string | null;
+  username: string | null;
+}
+
+export async function handleSetupBranch(
+  context: CallbackContext,
+  arg: string,
+  state: SetupWizardState | null,
+): Promise<{ text: string }> {
+  if (state == null) {
+    return { text: "Setup expired. Send /start to begin again." };
+  }
+  if (state.initiatorUserId != null && state.initiatorUserId !== context.actorUserId) {
+    return { text: "Only the user who started this setup can continue." };
+  }
+
+  if (arg === "recommended") {
+    return openRecommendedConfirm(context, state);
+  }
+  if (arg === "custom") {
+    const nextState: SetupWizardState = {
+      ...state,
+      step: "custom-types",
+      alertTypes: [...RECOMMENDED_ALERT_TYPES],
+    };
+    await persistSetupState(context.db, context.chatId, nextState);
+    await sendToChat(
+      context.chatId,
+      "Pick alert types, then tap Next.\n\n" +
+        "<b>Alert types</b>\n" +
+        "- DEWS — stress score reaches an alert band\n" +
+        "- Depeg — coin trades off peg\n" +
+        "- Safety — Safety grade changes\n" +
+        "- Launch — pre-launch coin goes live on Pharos",
+      context.botToken,
+      {
+        disableWebPagePreview: true,
+        replyMarkup: buildTypeToggleKeyboard(new Set(nextState.alertTypes)),
+      },
+    );
+    return { text: "Pick alert types." };
+  }
+  if (arg === "skip") {
+    await clearSetupState(context.db, context.chatId);
+    await sendToChat(context.chatId, START_MESSAGE, context.botToken, { disableWebPagePreview: true });
+    return { text: "OK." };
+  }
+  return { text: "Action not recognized." };
+}
+
+async function openRecommendedConfirm(
+  context: CallbackContext,
+  state: SetupWizardState,
+): Promise<{ text: string }> {
+  const preview = await previewPresetCoins(context.db, RECOMMENDED_PRESET_ID);
+  if (preview == null) {
+    return { text: "Preset data unavailable. Try again in a moment." };
+  }
+
+  const nextState: SetupWizardState = {
+    step: "confirm-recommended",
+    alertTypes: [...RECOMMENDED_ALERT_TYPES],
+    target: { kind: "preset", presetId: RECOMMENDED_PRESET_ID },
+    initiatorUserId: state.initiatorUserId,
+  };
+  await persistSetupState(context.db, context.chatId, nextState);
+
+  const head = `You'll get DEWS and Depeg alerts for these ${preview.count} coins:`;
+  const body = preview.symbolPreview;
+  await sendToChat(context.chatId, escapeHtml(`${head}\n${body}`), context.botToken, {
+    disableWebPagePreview: true,
+    replyMarkup: buildConfirmKeyboard(),
+  });
+  return { text: "Review and confirm." };
+}
+
+async function previewPresetCoins(
+  db: D1Database,
+  presetId: TelegramPresetId,
+): Promise<{ count: number; symbolPreview: string } | null> {
+  const result = await resolveTelegramPresetTargets(db, [presetId]);
+  if (result.kind !== "ok") return null;
+  const coins = result.presets.flatMap((preset) => preset.coins);
+  const symbols = coins.map((coin) => coin.symbol);
+  const head = symbols.slice(0, 10).join(", ");
+  const more = coins.length > 10 ? ` ... and ${coins.length - 10} more` : "";
+  return { count: coins.length, symbolPreview: `${head}${more}` };
+}
+
+export async function handleSetupTypeToggle(
+  context: CallbackContext,
+  arg: string,
+  state: SetupWizardState | null,
+): Promise<{ text: string }> {
+  if (!state || state.step !== "custom-types") {
+    return { text: "Setup expired. Send /start to begin again." };
+  }
+  if (state.initiatorUserId != null && state.initiatorUserId !== context.actorUserId) {
+    return { text: "Only the user who started this setup can continue." };
+  }
+  if (!isAllowedAlertType(arg)) {
+    return { text: "Action not recognized." };
+  }
+  const selected = new Set(state.alertTypes);
+  if (selected.has(arg)) {
+    selected.delete(arg);
+  } else {
+    selected.add(arg);
+  }
+  const nextAlertTypes = ALERT_TYPE_ORDER.filter((type) => selected.has(type));
+  const nextState: SetupWizardState = { ...state, alertTypes: nextAlertTypes };
+  await persistSetupState(context.db, context.chatId, nextState);
+  await sendToChat(
+    context.chatId,
+    `Selected: ${alertTypesSummary(nextAlertTypes)}`,
+    context.botToken,
+    { replyMarkup: buildTypeToggleKeyboard(selected) },
+  );
+  return { text: ALERT_TYPE_LABELS[arg] };
+}
+
+export async function handleSetupNext(
+  context: CallbackContext,
+  state: SetupWizardState | null,
+): Promise<{ text: string }> {
+  if (!state || state.step !== "custom-types") {
+    return { text: "Setup expired. Send /start to begin again." };
+  }
+  if (state.initiatorUserId != null && state.initiatorUserId !== context.actorUserId) {
+    return { text: "Only the user who started this setup can continue." };
+  }
+  if (state.alertTypes.length === 0) {
+    return { text: "Pick at least one alert type first." };
+  }
+  const nextState: SetupWizardState = { ...state, step: "custom-target" };
+  await persistSetupState(context.db, context.chatId, nextState);
+  await sendToChat(
+    context.chatId,
+    `Selected alerts: ${alertTypesSummary(state.alertTypes)}\nPick a target watchlist:`,
+    context.botToken,
+    { replyMarkup: buildTargetKeyboard() },
+  );
+  return { text: "Pick a target." };
+}
+
+export async function handleSetupTarget(
+  context: CallbackContext,
+  arg: string,
+  state: SetupWizardState | null,
+): Promise<{ text: string }> {
+  if (!state || state.step !== "custom-target") {
+    return { text: "Setup expired. Send /start to begin again." };
+  }
+  if (state.initiatorUserId != null && state.initiatorUserId !== context.actorUserId) {
+    return { text: "Only the user who started this setup can continue." };
+  }
+
+  if (arg === "type") {
+    const nextState: SetupWizardState = { ...state, step: "awaiting-ticker" };
+    await persistSetupState(context.db, context.chatId, nextState);
+    await sendToChat(
+      context.chatId,
+      "Reply with a ticker (e.g. USDC) or send /cancel to abort.",
+      context.botToken,
+      { replyMarkup: buildForceReplyKeyboard() },
+    );
+    return { text: "Type a ticker." };
+  }
+
+  if (arg === "all") {
+    return advanceToCustomConfirm(context, state, { kind: "all" });
+  }
+
+  if (isKnownPresetId(arg)) {
+    return advanceToCustomConfirm(context, state, { kind: "preset", presetId: arg });
+  }
+
+  return { text: "Action not recognized." };
+}
+
+async function advanceToCustomConfirm(
+  context: CallbackContext,
+  state: SetupWizardState,
+  target: SetupWizardTarget,
+): Promise<{ text: string }> {
+  let summary: string;
+  if (target.kind === "preset") {
+    const preview = await previewPresetCoins(context.db, target.presetId as TelegramPresetId);
+    if (preview == null) {
+      return { text: "Preset data unavailable. Try again in a moment." };
+    }
+    summary = `You'll get ${alertTypesSummary(state.alertTypes)} alerts for these ${preview.count} coins:\n${preview.symbolPreview}`;
+  } else if (target.kind === "all") {
+    summary = `You'll get ${alertTypesSummary(state.alertTypes)} alerts across all tracked coins.`;
+  } else {
+    summary = `You'll get ${alertTypesSummary(state.alertTypes)} alerts for ${target.symbol}.`;
+  }
+
+  const nextState: SetupWizardState = { ...state, step: "confirm-custom", target };
+  await persistSetupState(context.db, context.chatId, nextState);
+  await sendToChat(context.chatId, escapeHtml(summary), context.botToken, {
+    disableWebPagePreview: true,
+    replyMarkup: buildConfirmKeyboard(),
+  });
+  return { text: "Review and confirm." };
+}
+
+export async function handleSetupTickerInput(
+  context: CallbackContext,
+  text: string,
+  state: SetupWizardState,
+): Promise<void> {
+  if (state.initiatorUserId != null && state.initiatorUserId !== context.actorUserId) {
+    return;
+  }
+  const resolution = resolveTicker(text.trim());
+  if (resolution.status === "not_found") {
+    await sendToChat(
+      context.chatId,
+      buildNotFoundMessage(text.trim(), resolution.suggestion),
+      context.botToken,
+      { disableWebPagePreview: true, replyMarkup: buildForceReplyKeyboard() },
+    );
+    return;
+  }
+  if (resolution.status === "ambiguous") {
+    await sendToChat(
+      context.chatId,
+      buildStatusAmbiguousMessage(text.trim(), resolution.matches),
+      context.botToken,
+      { disableWebPagePreview: true, replyMarkup: buildForceReplyKeyboard() },
+    );
+    return;
+  }
+  const coin = resolution.matches[0];
+  await advanceToCustomConfirm(context, state, {
+    kind: "ticker",
+    coinId: coin.id,
+    symbol: coin.symbol,
+  });
+}
+
+export async function handleSetupConfirm(
+  context: CallbackContext,
+  state: SetupWizardState | null,
+): Promise<{ text: string }> {
+  if (!state || (state.step !== "confirm-recommended" && state.step !== "confirm-custom")) {
+    return { text: "Setup expired. Send /start to begin again." };
+  }
+  if (state.initiatorUserId != null && state.initiatorUserId !== context.actorUserId) {
+    return { text: "Only the user who started this setup can continue." };
+  }
+  if (state.alertTypes.length === 0 || state.target == null) {
+    return { text: "Setup incomplete. Send /start to begin again." };
+  }
+
+  const alertTypes = new Set(state.alertTypes);
+
+  if (state.target.kind === "all") {
+    await upsertGlobalAlertTypes(context.db, context.chatId, context.username, alertTypes);
+    await clearSetupState(context.db, context.chatId);
+    await sendToChat(
+      context.chatId,
+      escapeHtml(`Subscribed: ${alertTypesSummary(state.alertTypes)} on all tracked coins.`),
+      context.botToken,
+      { disableWebPagePreview: true },
+    );
+    return { text: "Subscribed." };
+  }
+
+  if (state.target.kind === "preset") {
+    const result = await resolveTelegramPresetTargets(context.db, [state.target.presetId as TelegramPresetId]);
+    if (result.kind !== "ok") {
+      await sendToChat(context.chatId, buildPresetUnavailableMessage(), context.botToken, {
+        disableWebPagePreview: true,
+      });
+      return { text: "Preset data unavailable." };
+    }
+    const coins = result.presets.flatMap((preset) => preset.coins);
+    const coinIds = coins.map((coin) => coin.id);
+    await upsertSubscriberAndSubscriptions(
+      context.db,
+      context.chatId,
+      context.username,
+      alertTypes,
+      coinIds,
+      { clearPending: true },
+    );
+    await upsertPresetSubscriptions(
+      context.db,
+      context.chatId,
+      [state.target.presetId as TelegramPresetId],
+      alertTypes,
+    );
+    const subscriptions = await loadSubscriptionsByIds(context.db, context.chatId, coinIds);
+    const intro = `Subscribed via ${presetLabelById(state.target.presetId)} (${coins.length} coins). Use /list anytime.`;
+    await sendToChat(
+      context.chatId,
+      buildSubscriptionSummaryMessage(intro, subscriptions),
+      context.botToken,
+      { disableWebPagePreview: true },
+    );
+    return { text: "Subscribed." };
+  }
+
+  // ticker target
+  await upsertSubscriberAndSubscriptions(
+    context.db,
+    context.chatId,
+    context.username,
+    alertTypes,
+    [state.target.coinId],
+    { clearPending: true },
+  );
+  const subscriptions = await loadSubscriptionsByIds(context.db, context.chatId, [state.target.coinId]);
+  await sendToChat(
+    context.chatId,
+    buildSubscriptionSummaryMessage(`Subscribed for ${state.target.symbol}.`, subscriptions),
+    context.botToken,
+    { disableWebPagePreview: true },
+  );
+  return { text: "Subscribed." };
+}
+
+export async function handleSetupCancel(
+  context: CallbackContext,
+  state: SetupWizardState | null,
+): Promise<{ text: string }> {
+  if (state && state.initiatorUserId != null && state.initiatorUserId !== context.actorUserId) {
+    return { text: "Only the user who started this setup can cancel." };
+  }
+  await clearSetupState(context.db, context.chatId);
+  await sendToChat(context.chatId, "Setup cancelled. Send /start to begin again.", context.botToken);
+  return { text: "Cancelled." };
+}

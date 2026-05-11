@@ -135,11 +135,22 @@ In group and supergroup chats, commands must be addressed to the bot, for exampl
 
 Membership lookups go through `worker/src/lib/telegram-chat-member.ts`. `getCachedChatMember` and `getCachedChatAdministrators` cache results for 5 minutes in the `cache` D1 table under `telegram:chat-member:<chat_id>:<user_id>` and `telegram:chat-admins:<chat_id>` so a burst of group commands does not amplify the webhook-path Telegram API cost. Private chats, `/mute`, and snooze callbacks remain open to every chat member.
 
+### Setup Wizard
+
+`/start` (with an empty payload or `?start=setup`) opens a two-branch inline-keyboard wizard handled in `worker/src/api/telegram-webhook-setup.ts`. The keyboard uses the `setup:*` callback namespace:
+
+- `setup:branch:recommended` — confirms `dews,depeg` alerts for the `usd-top25` preset.
+- `setup:branch:custom` — toggles alert types (`setup:type-toggle:<type>`), then `setup:next` to pick a target (`setup:target:<preset|all|type>`), then `setup:confirm`.
+- `setup:branch:skip` — clears wizard state and returns the long-form `START_MESSAGE` for users who prefer typing commands.
+- `setup:target:type` — opens a `force_reply` prompt so the user can type a ticker; the next inbound message is resolved via `resolveTicker` and lands on the confirm step.
+
+Wizard state is persisted as a row in `telegram_pending_disambiguation` with `action_type = "setup-step"` and an `action_payload` JSON of `{ step, alertTypes, target }`. TTL is 5 min, shared with the disambiguation cleanup cron. When wizard state is active and a fresh slash command arrives, the wizard row is cleared so the command runs unmodified.
+
 ### Supported Commands
 
 | Command | Behavior |
 |---------|----------|
-| `/start` | Sends onboarding copy, example usage, and links to `@pharoswatch` and `@pharoswatchers` |
+| `/start` | Opens the two-branch setup wizard (Recommended / Custom / Type commands myself). Deep-link payload `?start=setup` also opens the wizard. Unknown payloads fall back to the long-form start message. |
 | `/help` | Sends command reference |
 | `/presets` | Returns the preset watchlist catalog plus subscribe and unsubscribe examples |
 | `/list` | Returns enabled alert types plus subscribed coins for the chat |

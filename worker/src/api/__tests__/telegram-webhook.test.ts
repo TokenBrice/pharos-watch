@@ -116,17 +116,117 @@ describe("handleTelegramWebhook", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("replies to /start", async () => {
+  it("/start opens the setup wizard with the branch keyboard", async () => {
     const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
     const res = await handleTelegramWebhook(db, makeWebhookRequest(123, "/start"), "test-secret", "bot-token");
 
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(sentMessageBody().text).toContain("Welcome");
-    expect(sentMessageBody().text).toContain("@pharoswatch");
-    expect(sentMessageBody().text).toContain("@pharoswatchers");
-    expect(sentMessageBody().text).toContain("/subscribe dews,depeg usd-top25");
-    expect(sentMessageBody().text).toContain("/presets");
+    const body = sentMessageBody();
+    expect(body.text).toContain("Welcome to PharosWatchBot");
+    expect(body.text).toContain("@pharoswatch");
+    expect(body.text).toContain("@pharoswatchers");
+    const [, init] = fetchSpy.mock.calls[0] ?? [];
+    const sent = JSON.parse((init?.body as string) ?? "{}") as {
+      reply_markup?: { inline_keyboard?: Array<Array<{ callback_data?: string }>> };
+    };
+    const callbacks = (sent.reply_markup?.inline_keyboard ?? []).flat().map((btn) => btn.callback_data);
+    expect(callbacks).toContain("setup:branch:recommended");
+    expect(callbacks).toContain("setup:branch:custom");
+    expect(callbacks).toContain("setup:branch:skip");
+    expect(
+      db.getHistory().some(
+        (entry) =>
+          entry.sql.includes("INSERT INTO telegram_pending_disambiguation") &&
+          entry.binds.includes("setup-step"),
+      ),
+    ).toBe(true);
+  });
+
+  it("/start setup deep-link opens the wizard", async () => {
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const res = await handleTelegramWebhook(db, makeWebhookRequest(123, "/start setup"), "test-secret", "bot-token");
+
+    expect(res.status).toBe(200);
+    const [, init] = fetchSpy.mock.calls[0] ?? [];
+    const sent = JSON.parse((init?.body as string) ?? "{}") as {
+      reply_markup?: { inline_keyboard?: Array<Array<{ callback_data?: string }>> };
+    };
+    const callbacks = (sent.reply_markup?.inline_keyboard ?? []).flat().map((btn) => btn.callback_data);
+    expect(callbacks).toContain("setup:branch:recommended");
+  });
+
+  it("setup-step awaiting-ticker advances to confirm when a unique ticker is replied", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: {
+          action_type: "setup-step",
+          action_payload: JSON.stringify({
+            step: "awaiting-ticker",
+            alertTypes: ["dews"],
+            target: null,
+          }),
+          alert_types: JSON.stringify([]),
+          resolved_ids: JSON.stringify([]),
+          ambiguous_ticker: "",
+          candidates: JSON.stringify([]),
+          remaining_tickers: JSON.stringify([]),
+          expires_at: Math.floor(Date.now() / 1000) + 60,
+          initiator_user_id: null,
+        },
+      },
+    ]);
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "USDC"), "test-secret", "bot-token");
+
+    const persist = db
+      .getHistory()
+      .filter((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
+    expect(persist.length).toBeGreaterThan(0);
+    const payload = String(persist[persist.length - 1].binds[2] ?? "");
+    expect(payload).toContain("\"step\":\"confirm-custom\"");
+    expect(payload).toContain("\"kind\":\"ticker\"");
+    expect(payload).toContain("USDC");
+  });
+
+  it("setup-step pending state lets a fresh slash command through after clearing wizard state", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: {
+          action_type: "setup-step",
+          action_payload: JSON.stringify({ step: "branch", alertTypes: [], target: null }),
+          alert_types: JSON.stringify([]),
+          resolved_ids: JSON.stringify([]),
+          ambiguous_ticker: "",
+          candidates: JSON.stringify([]),
+          remaining_tickers: JSON.stringify([]),
+          expires_at: Math.floor(Date.now() / 1000) + 60,
+          initiator_user_id: null,
+        },
+      },
+    ]);
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/help"), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
+    expect(sentMessageBody().text).toContain("Commands");
+  });
+
+  it("/start with an unknown deep-link payload falls back to the long-form message", async () => {
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/start sub_dews_usd-top25"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    const text = sentMessageBody().text;
+    expect(text).toContain("/subscribe dews,depeg usd-top25");
   });
 
   it("/start with unknown payload falls back to the standard onboarding reply", async () => {

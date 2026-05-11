@@ -23,6 +23,7 @@ import {
 } from "../lib/telegram-presets";
 import {
   HELP_MESSAGE,
+  SETUP_PENDING_ACTION_TYPE,
   START_MESSAGE,
   type ParsedSetCommand,
   type PendingAction,
@@ -33,6 +34,7 @@ import {
   type TelegramWebhookUpdate,
   type UnsubscribeActionPayload,
 } from "./telegram-webhook-shared";
+import { handleSetupTickerInput, parseSetupState, sendWizardIntro } from "./telegram-webhook-setup";
 import {
   buildGlobalAlertSummaryMessage,
   buildListMessage,
@@ -181,11 +183,30 @@ export const handleTelegramWebhook = withErrorHandler(
         .bind(chatId)
         .first<PendingDisambiguationRow>();
 
-      const pendingAction = pendingRow ? parsePendingDisambiguation(pendingRow) : null;
       const pendingNotExpired = Boolean(pendingRow && unixNow() < pendingRow.expires_at);
-      const pendingActive = Boolean(pendingRow && pendingAction && pendingNotExpired);
+      const isSetupPending =
+        Boolean(pendingRow && pendingNotExpired && pendingRow.action_type === SETUP_PENDING_ACTION_TYPE);
 
-      if (pendingRow && !pendingAction && pendingNotExpired) {
+      if (isSetupPending && pendingRow) {
+        const setupState = parseSetupState(pendingRow.action_payload, pendingRow.initiator_user_id ?? null);
+        if (setupState && setupState.step === "awaiting-ticker" && !parsedCommand) {
+          await handleSetupTickerInput(
+            { db, botToken, chatId, actorUserId, username },
+            text,
+            setupState,
+          );
+          return ok();
+        }
+        // A new slash command in setup state clears the wizard before running the command.
+        if (parsedCommand) {
+          await clearPendingDisambiguation(db, chatId);
+        }
+      }
+
+      const pendingAction = !isSetupPending && pendingRow ? parsePendingDisambiguation(pendingRow) : null;
+      const pendingActive = Boolean(!isSetupPending && pendingRow && pendingAction && pendingNotExpired);
+
+      if (!isSetupPending && pendingRow && !pendingAction && pendingNotExpired) {
         await clearPendingDisambiguation(db, chatId);
         if (!parsedCommand) {
           await reply("That pending selection could not be restored. Please rerun the command, or use /help for examples.");
@@ -193,7 +214,7 @@ export const handleTelegramWebhook = withErrorHandler(
         }
       }
 
-      if (pendingRow && !pendingActive) {
+      if (!isSetupPending && pendingRow && !pendingActive) {
         await clearPendingDisambiguation(db, chatId);
       }
 
@@ -245,7 +266,7 @@ export const handleTelegramWebhook = withErrorHandler(
             await handleCoverage(db, chatId, parsedCommand.args, botToken);
             return ok();
           case "/start":
-            await reply(START_MESSAGE);
+            await handleStart(db, chatId, actorUserId, parsedCommand.args, botToken);
             return ok();
           case "/subscribe":
           case "/unsubscribe":
@@ -384,7 +405,8 @@ async function handleStart(
       return;
     case "setup":
     case "none":
-      await replyToChat(chatId, START_MESSAGE, botToken);
+      // Empty payload or `?start=setup` both open the wizard.
+      await sendWizardIntro(db, botToken, chatId, actorUserId);
       return;
   }
 }
