@@ -2156,4 +2156,125 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.perAlertType.depeg.failed).toBe(1);
     expect(metadata.perAlertType.depeg.sent).toBe(0);
   });
+
+  it("chunks a 120-coin depeg fan-out for one chat and overflows the 200-msg cap to pending", async () => {
+    // P1-T2: a single chat subscribed to 120 stablecoins receives one
+    // consolidated depeg message that splits into multiple chunks. Many
+    // additional global subscribers push total chunk demand past the
+    // MAX_MESSAGES_PER_RUN (=200) cap so the overflow lands in the pending
+    // queue rather than being dropped, while the heavy chat is still attempted.
+    const now = Math.floor(Date.now() / 1000);
+
+    // 120 distinct synthetic stablecoin ids. They do not need to be in the
+    // tracked registry — getSymbol falls back to the id when unknown.
+    const stablecoinIds = Array.from({ length: 120 }, (_, i) => `scale-depeg-${i.toString().padStart(3, "0")}`);
+
+    const depegRows = stablecoinIds.map((id, i) => ({
+      stablecoin_id: id,
+      symbol: `SD${i}`,
+      direction: "below",
+      peak_deviation_bps: 150 + (i % 50),
+      start_price: 0.985,
+      peg_reference: 1,
+    }));
+
+    // One mega-subscribed chat owns rows for all 120 ids; depeg subscriptions
+    // are looked up via a single batched query.
+    const megaChatId = "mega-chat";
+    const directDepegRows = stablecoinIds.map((id) => ({
+      stablecoin_id: id,
+      chat_id: megaChatId,
+      last_active_at: now,
+      depeg_worsening_bps_step: null,
+      quiet_hours_enabled: 0,
+      quiet_hours_start_utc: null,
+      quiet_hours_end_utc: null,
+    }));
+
+    // 80 extra global subscribers — each receives the same consolidated 120-coin
+    // message. 81 chats × ~3 chunks each (~243 total) comfortably exceeds the
+    // 200 fresh-send cap.
+    const globalDepegRows = Array.from({ length: 80 }, (_, i) => ({
+      chat_id: `global-${i}`,
+      last_active_at: now - 1000 - i, // older than megaChatId so mega is sent first
+      quiet_hours_enabled: 0,
+      quiet_hours_start_utc: null,
+      quiet_hours_end_utc: null,
+      global_depeg_worsening_bps_step: null,
+    }));
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") return { value: JSON.stringify({}), updatedAt: now - 60 };
+      // Empty depeg snapshot ⇒ every active depeg row is a fresh trigger.
+      if (key === "alert:depeg-snapshot") return { value: JSON.stringify({}), updatedAt: now - 60 };
+      if (key === "alert:safety-snapshot") return { value: JSON.stringify({}), updatedAt: now - 60 };
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: depegRows },
+      { match: "FROM safety_grade_history", rows: [] },
+      // Pending queue empty so freshBudget = 200 (MAX_MESSAGES_PER_RUN).
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "sub.alert_depeg = 1", rows: directDepegRows },
+      { match: "WHERE global_alert_depeg = 1", rows: globalDepegRows },
+      // Capacity-overflow enqueue (one batch INSERT per overflowed chunk).
+      { match: "INSERT INTO telegram_pending_alerts", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventsDetected: { depeg: number; depegTriggered: number };
+      cappedAtLimit: boolean;
+      pendingEnqueued: number;
+      messagesSent: number;
+      freshAttempted: number;
+    };
+
+    // All 120 depeg events were detected and routed as fresh triggers.
+    expect(metadata.eventsDetected.depeg).toBe(120);
+    expect(metadata.eventsDetected.depegTriggered).toBe(120);
+
+    // sendBatch is invoked at least once; locate the call carrying mega-chat
+    // messages and confirm the consolidated body was split into >1 chunks.
+    expect(mockSendBatch).toHaveBeenCalled();
+    const allSentMessages = mockSendBatch.mock.calls.flatMap(
+      ([messages]) => messages as Array<{ chatId: string; html: string; chunkIndex?: number; canonicalHtml?: string }>,
+    );
+    const megaMessages = allSentMessages.filter((msg) => msg.chatId === megaChatId);
+    expect(megaMessages.length).toBeGreaterThan(1); // split into multiple chunks
+    // Each chunk respects the 4000-char cap.
+    for (const msg of megaMessages) {
+      expect(msg.html.length).toBeLessThanOrEqual(4000);
+    }
+    // The canonical pre-split body is shared across mega's chunks and is the
+    // SAME body, so all chunks reference the same canonicalHtml.
+    const canonicals = new Set(megaMessages.map((m) => m.canonicalHtml));
+    expect(canonicals.size).toBe(1);
+    // chunkIndex covers [0, megaMessages.length - 1] without gaps.
+    const indices = megaMessages.map((m) => m.chunkIndex ?? 0).sort((a, b) => a - b);
+    expect(indices[0]).toBe(0);
+    expect(indices[indices.length - 1]).toBe(megaMessages.length - 1);
+
+    // Cap and overflow: 81 chats × ~3 chunks each > 200, so the queue is
+    // capped and excess subscribers spilled into the pending queue.
+    expect(metadata.cappedAtLimit).toBe(true);
+    expect(metadata.pendingEnqueued).toBeGreaterThan(0);
+    // freshAttempted is bounded by the cap.
+    expect(metadata.freshAttempted).toBeLessThanOrEqual(200);
+
+    // The overflow INSERT was issued (rather than the rows being dropped).
+    const enqueueCalls = db.getHistory().filter((entry) =>
+      entry.sql.includes("INSERT INTO telegram_pending_alerts"),
+    );
+    expect(enqueueCalls.length).toBeGreaterThan(0);
+
+    // Mega chat is among the chats that got at least one fresh attempt — the
+    // multi-chunk consumer did not prevent other chats from being processed.
+    const sentChatIds = new Set(allSentMessages.map((m) => m.chatId));
+    expect(sentChatIds.has(megaChatId)).toBe(true);
+    expect(sentChatIds.size).toBeGreaterThan(1);
+  });
 });
