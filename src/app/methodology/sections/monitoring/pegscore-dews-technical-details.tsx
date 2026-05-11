@@ -1,4 +1,66 @@
+import {
+  DEWS_SIGNAL_DESCRIPTIONS,
+  DEWS_SIGNAL_LABELS,
+  DEWS_SIGNAL_SHORT_LABELS,
+  DEWS_SIGNAL_WEIGHTS,
+  DEWS_THREAT_BANDS,
+  type DewsSignalKey,
+} from "@shared/lib/dews-config";
+import {
+  THREAT_BAND_TEXT_COLORS,
+  type ThreatBand,
+} from "@shared/lib/classification";
 import { MethodologyDetails } from "../../methodology-shared";
+
+const DEWS_SIGNAL_KEYS = Object.keys(DEWS_SIGNAL_WEIGHTS) as DewsSignalKey[];
+
+const DEWS_THREAT_BAND_DESCRIPTIONS: Record<ThreatBand, string> = {
+  CALM: "no stress signals detected",
+  WATCH: "mild stress on 1-2 indicators",
+  ALERT: "multiple indicators elevated",
+  WARNING: "strong stress signals, depeg plausible",
+  DANGER: "all precursors firing",
+};
+
+function formatDewsWeight(key: DewsSignalKey): string {
+  return DEWS_SIGNAL_WEIGHTS[key].toFixed(2);
+}
+
+function getThreatBandLowerBound(index: number): number {
+  return index === 0 ? 0 : DEWS_THREAT_BANDS[index - 1].upper + 1;
+}
+
+function DewsSignalCards({ compact = false }: { compact?: boolean }) {
+  return (
+    <>
+      {DEWS_SIGNAL_KEYS.map((key) => (
+        <div key={key} className="rounded-lg border p-2 text-center">
+          <p className="text-foreground font-medium text-xs">
+            {compact ? DEWS_SIGNAL_SHORT_LABELS[key] : DEWS_SIGNAL_LABELS[key]}
+          </p>
+          <p className="text-xs text-muted-foreground">{formatDewsWeight(key)}</p>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function DewsThreatBandCards({ compact = false }: { compact?: boolean }) {
+  return (
+    <>
+      {DEWS_THREAT_BANDS.map(({ band, upper }, index) => {
+        const lower = getThreatBandLowerBound(index);
+        const label = compact && band === "WARNING" ? "WARN" : band;
+        return (
+          <div key={band} className="rounded-lg border p-2 text-center">
+            <p className={`${THREAT_BAND_TEXT_COLORS[band]} font-medium text-xs`}>{label}</p>
+            <p className="text-xs text-muted-foreground">{lower}&ndash;{upper}</p>
+          </div>
+        );
+      })}
+    </>
+  );
+}
 
 export function PegScoreDewsTechnicalDetails() {
   return (
@@ -157,38 +219,7 @@ function DewsTechnicalDetails() {
 
       <div className="hidden md:flex items-stretch gap-4">
         <div className="grid grid-cols-2 gap-2 flex-1">
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-foreground font-medium text-xs">Supply Velocity</p>
-            <p className="text-xs text-muted-foreground">0.25</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-foreground font-medium text-xs">Pool Balance Drift</p>
-            <p className="text-xs text-muted-foreground">0.20</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-foreground font-medium text-xs">Liquidity Erosion</p>
-            <p className="text-xs text-muted-foreground">0.15</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-foreground font-medium text-xs">Price Confidence</p>
-            <p className="text-xs text-muted-foreground">0.15</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-foreground font-medium text-xs">Cross-Source Divergence</p>
-            <p className="text-xs text-muted-foreground">0.15</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-foreground font-medium text-xs">Blacklist Activity</p>
-            <p className="text-xs text-muted-foreground">0.10</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-foreground font-medium text-xs">Mint/Burn Flow</p>
-            <p className="text-xs text-muted-foreground">0.10</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-foreground font-medium text-xs">Yield Anomaly</p>
-            <p className="text-xs text-muted-foreground">0.05</p>
-          </div>
+          <DewsSignalCards />
         </div>
         <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
         <div className="rounded-lg border p-3 text-center w-36 flex flex-col justify-center flex-shrink-0">
@@ -198,63 +229,13 @@ function DewsTechnicalDetails() {
         </div>
         <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
         <div className="flex flex-col gap-1.5 w-36 justify-center flex-shrink-0">
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-green-700 dark:text-green-400 font-medium text-xs">CALM</p>
-            <p className="text-xs text-muted-foreground">0–15</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-teal-700 dark:text-teal-400 font-medium text-xs">WATCH</p>
-            <p className="text-xs text-muted-foreground">16–35</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-yellow-700 dark:text-yellow-400 font-medium text-xs">ALERT</p>
-            <p className="text-xs text-muted-foreground">36–55</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-orange-700 dark:text-orange-400 font-medium text-xs">WARNING</p>
-            <p className="text-xs text-muted-foreground">56–75</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-red-700 dark:text-red-400 font-medium text-xs">DANGER</p>
-            <p className="text-xs text-muted-foreground">76–100</p>
-          </div>
+          <DewsThreatBandCards />
         </div>
       </div>
 
       <div className="flex flex-col items-center gap-3 md:hidden">
         <div className="grid grid-cols-2 gap-2 w-full">
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-foreground font-medium text-xs">Supply Velocity</p>
-            <p className="text-xs text-muted-foreground">0.25</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-foreground font-medium text-xs">Pool Balance Drift</p>
-            <p className="text-xs text-muted-foreground">0.20</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-foreground font-medium text-xs">Liquidity Erosion</p>
-            <p className="text-xs text-muted-foreground">0.15</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-foreground font-medium text-xs">Price Confidence</p>
-            <p className="text-xs text-muted-foreground">0.15</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-foreground font-medium text-xs">Cross-Source Div.</p>
-            <p className="text-xs text-muted-foreground">0.15</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-foreground font-medium text-xs">Blacklist Activity</p>
-            <p className="text-xs text-muted-foreground">0.10</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-foreground font-medium text-xs">Mint/Burn Flow</p>
-            <p className="text-xs text-muted-foreground">0.10</p>
-          </div>
-          <div className="rounded-lg border p-2 text-center">
-            <p className="text-foreground font-medium text-xs">Yield Anomaly</p>
-            <p className="text-xs text-muted-foreground">0.05</p>
-          </div>
+          <DewsSignalCards compact />
         </div>
         <div className="text-muted-foreground text-xl font-bold">&darr;</div>
         <div className="w-full rounded-lg border p-3 text-center">
@@ -263,26 +244,7 @@ function DewsTechnicalDetails() {
         </div>
         <div className="text-muted-foreground text-xl font-bold">&darr;</div>
         <div className="grid grid-cols-5 gap-1 w-full">
-          <div className="rounded-lg border p-1.5 text-center">
-            <p className="text-green-700 dark:text-green-400 font-medium text-xs">CALM</p>
-            <p className="text-xs text-muted-foreground">0–15</p>
-          </div>
-          <div className="rounded-lg border p-1.5 text-center">
-            <p className="text-teal-700 dark:text-teal-400 font-medium text-xs">WATCH</p>
-            <p className="text-xs text-muted-foreground">16–35</p>
-          </div>
-          <div className="rounded-lg border p-1.5 text-center">
-            <p className="text-yellow-700 dark:text-yellow-400 font-medium text-xs">ALERT</p>
-            <p className="text-xs text-muted-foreground">36–55</p>
-          </div>
-          <div className="rounded-lg border p-1.5 text-center">
-            <p className="text-orange-700 dark:text-orange-400 font-medium text-xs">WARN</p>
-            <p className="text-xs text-muted-foreground">56–75</p>
-          </div>
-          <div className="rounded-lg border p-1.5 text-center">
-            <p className="text-red-700 dark:text-red-400 font-medium text-xs">DANGER</p>
-            <p className="text-xs text-muted-foreground">76–100</p>
-          </div>
+          <DewsThreatBandCards compact />
         </div>
       </div>
 
@@ -299,66 +261,31 @@ function DewsTechnicalDetails() {
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Sub-Signals &amp; Weights</h3>
         <ul className="list-disc list-inside space-y-1">
-          <li>
-            <span className="text-foreground">Supply Velocity (0.25)</span> &mdash; rapid redemptions (bank run),
-            measured from 1-day and 7-day supply contraction rates
-          </li>
-          <li>
-            <span className="text-foreground">Pool Balance Drift (0.20)</span> &mdash; one-sided selling pressure
-            in DEX pools, blending balance stress, pool stress, and worst-pool imbalance
-          </li>
-          <li>
-            <span className="text-foreground">Liquidity Erosion (0.15)</span> &mdash; LPs fleeing, measured from
-            7-day changes in liquidity score and TVL
-          </li>
-          <li>
-            <span className="text-foreground">Price Confidence (0.15)</span> &mdash; N-source consensus failures
-            across CoinGecko, DefiLlama list, GeckoTerminal, Pyth, Binance, Coinbase, RedStone, Curve on-chain, and DEX prices;
-            maps confidence levels (high/single-source/low/fallback) to stress values
-          </li>
-          <li>
-            <span className="text-foreground">Cross-Source Divergence (0.15)</span> &mdash; fragmented pricing
-            between multi-source consensus price, DEX price, and peg reference
-          </li>
-          <li>
-            <span className="text-foreground">Blacklist Activity (0.10)</span> &mdash; issuer emergency freeze
-            surges for the live blacklist-tracked symbol set
-          </li>
-          <li>
-            <span className="text-foreground">Mint/Burn Flow (0.10)</span> &mdash; redemption surge vs minting
-            from on-chain Transfer event data; mature 30-day coverage stays available even when the latest
-            24-hour window is quiet, contributing zero flow stress instead of disappearing
-          </li>
-          <li>
-            <span className="text-foreground">Yield Anomaly (0.05)</span> &mdash; warning-signal accumulation from
-            yield spikes, divergence, TVL outflows, negative trends, and reward-heavy regimes
-          </li>
+          {DEWS_SIGNAL_KEYS.map((key) => (
+            <li key={key}>
+              <span className="text-foreground">
+                {DEWS_SIGNAL_LABELS[key]} ({formatDewsWeight(key)})
+              </span>{" "}
+              &mdash; {DEWS_SIGNAL_DESCRIPTIONS[key]}
+            </li>
+          ))}
         </ul>
       </div>
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Threat Bands</h3>
         <ul className="list-disc list-inside space-y-1">
-          <li>
-            <span className="text-green-700 dark:text-green-400 font-medium">CALM (0&ndash;15)</span> &mdash; no
-            stress signals detected
-          </li>
-          <li>
-            <span className="text-teal-700 dark:text-teal-400 font-medium">WATCH (16&ndash;35)</span> &mdash; mild
-            stress on 1&ndash;2 indicators
-          </li>
-          <li>
-            <span className="text-yellow-700 dark:text-yellow-400 font-medium">ALERT (36&ndash;55)</span> &mdash;
-            multiple indicators elevated
-          </li>
-          <li>
-            <span className="text-orange-700 dark:text-orange-400 font-medium">WARNING (56&ndash;75)</span>{" "}
-            &mdash; strong stress signals, depeg plausible
-          </li>
-          <li>
-            <span className="text-red-700 dark:text-red-400 font-medium">DANGER (76&ndash;100)</span> &mdash; all
-            precursors firing
-          </li>
+          {DEWS_THREAT_BANDS.map(({ band, upper }, index) => {
+            const lower = getThreatBandLowerBound(index);
+            return (
+              <li key={band}>
+                <span className={`${THREAT_BAND_TEXT_COLORS[band]} font-medium`}>
+                  {band} ({lower}&ndash;{upper})
+                </span>{" "}
+                &mdash; {DEWS_THREAT_BAND_DESCRIPTIONS[band]}
+              </li>
+            );
+          })}
         </ul>
       </div>
 

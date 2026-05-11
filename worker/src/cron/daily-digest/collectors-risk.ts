@@ -1,6 +1,8 @@
 import type { DigestInputData } from "@shared/types/digest";
 import { scoreToGrade } from "@shared/lib/report-cards";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { DEWS_SIGNAL_LABELS, type DewsSignalKey } from "@shared/lib/dews-config";
+import { THREAT_BAND_ORDER, isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
 import { computeSafetyScoresSnapshot, type SafetyGradeRow } from "../../lib/safety-scores";
 import {
   logCollectorParseFailure,
@@ -127,26 +129,14 @@ export async function collectDewsStress(
         if (key in yesterdayBandCounts) yesterdayBandCounts[key]++;
       }
 
-      const signalLabels: Record<string, string> = {
-        supply: "supply velocity",
-        pool: "pool balance drift",
-        liq: "liquidity erosion",
-        price: "price confidence",
-        diverg: "cross-source divergence",
-        black: "blacklist activity",
-        flow: "mint/burn flow",
-        yield: "yield anomaly",
-      };
-      const alertBands = new Set(["ALERT", "WARNING", "DANGER"]);
       const bandChanges: NonNullable<DigestInputData["dewsStress"]>["bandChanges"] = [];
       const malformedSignalsReason = "dews-stress-signals-json";
-      const bandRank: Record<string, number> = { CALM: 0, WATCH: 1, ALERT: 2, WARNING: 3, DANGER: 4 };
 
       for (const today of todayRows) {
         const yesterday = yesterdayMap.get(today.stablecoin_id);
         if (!yesterday || yesterday.band === today.band) continue;
-        const yesterdayRank = bandRank[yesterday.band] ?? 0;
-        const todayRank = bandRank[today.band] ?? 0;
+        const yesterdayRank = isThreatBand(yesterday.band) ? THREAT_BAND_ORDER[yesterday.band] : 0;
+        const todayRank = isThreatBand(today.band) ? THREAT_BAND_ORDER[today.band] : 0;
         if (yesterdayRank === todayRank) continue;
 
         let topDriver = "unknown";
@@ -156,7 +146,9 @@ export async function collectDewsStress(
           for (const [key, signal] of Object.entries(signals)) {
             if (signal.available && signal.value > maxVal) {
               maxVal = signal.value;
-              topDriver = signalLabels[key] ?? key;
+              topDriver = key in DEWS_SIGNAL_LABELS
+                ? DEWS_SIGNAL_LABELS[key as DewsSignalKey].toLowerCase()
+                : key;
             }
           }
         } catch (error) {
@@ -177,7 +169,7 @@ export async function collectDewsStress(
       }
 
       const elevatedCoins = todayRows
-        .filter((row) => alertBands.has(row.band))
+        .filter((row) => isDewsAlertBand(row.band))
         .map((row) => {
           const coin = ctx.trackedStablecoinAssets.find((candidate) => candidate.id === row.stablecoin_id);
           if (!coin) return null;
@@ -189,7 +181,10 @@ export async function collectDewsStress(
               .filter(([, signal]) => signal.available && signal.value > 0)
               .sort(([, a], [, b]) => b.value - a.value)
               .slice(0, 3)
-              .map(([key, signal]) => ({ name: signalLabels[key] ?? key, value: Math.round(signal.value) }));
+              .map(([key, signal]) => ({
+                name: key in DEWS_SIGNAL_LABELS ? DEWS_SIGNAL_LABELS[key as DewsSignalKey].toLowerCase() : key,
+                value: Math.round(signal.value),
+              }));
           } catch (error) {
             markCollectorDegraded(degradedReasons, malformedSignalsReason);
             logCollectorParseFailure("dews-stress", "signals_json", error, { stablecoinId: row.stablecoin_id });

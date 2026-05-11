@@ -634,8 +634,14 @@ export const THREAT_BAND_ORDER: Record<ThreatBand, number> = {
   DANGER: 4,
 };
 
+const DEWS_ALERT_BANDS = ["ALERT", "WARNING", "DANGER"] as const satisfies readonly ThreatBand[];
+
 export function isThreatBand(value: string): value is ThreatBand {
   return value in THREAT_BAND_ORDER;
+}
+
+export function isDewsAlertBand(value: string): value is (typeof DEWS_ALERT_BANDS)[number] {
+  return isThreatBand(value) && DEWS_ALERT_BANDS.includes(value as (typeof DEWS_ALERT_BANDS)[number]);
 }
 
 export const THREAT_BAND_LABELS: Record<ThreatBand, string> = {

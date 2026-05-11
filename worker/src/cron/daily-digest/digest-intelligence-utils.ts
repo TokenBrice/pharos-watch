@@ -1,16 +1,11 @@
 import type { DigestEditorialCandidate, DigestInputData, DigestSignalChange } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
+import { THREAT_BAND_ORDER } from "@shared/lib/classification";
 
 export const CHANGE_LIMIT = 3;
 export const TRIGGER_LIMIT = 3;
 
-export const DEWS_BAND_RANK: Record<string, number> = {
-  CALM: 0,
-  WATCH: 1,
-  ALERT: 2,
-  WARNING: 3,
-  DANGER: 4,
-};
+export const DEWS_BAND_RANK: Record<string, number> = THREAT_BAND_ORDER;
 
 export function unique<T>(values: T[]): T[] {
   return [...new Set(values)];

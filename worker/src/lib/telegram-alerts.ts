@@ -1,4 +1,4 @@
-import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
+import { THREAT_BAND_ORDER, isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
 import { TRACKED_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins";
 import {
   resolveTelegramPresetAlias,
@@ -579,7 +579,7 @@ export function formatListOutput(
 
 /** Returns true if a DEWS band change should trigger a notification. */
 export function isDewsAlertable(newBand: string): boolean {
-  return newBand === "ALERT" || newBand === "WARNING" || newBand === "DANGER";
+  return isDewsAlertBand(newBand);
 }
 
 /** Returns true if this is a de-escalation within alertable range (send silently). */

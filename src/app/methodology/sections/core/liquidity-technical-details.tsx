@@ -1,30 +1,60 @@
+import { LIQUIDITY_SCORE_WEIGHTS, type LiquidityScoreComponentKey } from "@shared/lib/liquidity-score-weights";
 import { MethodologyDetails } from "../../methodology-shared";
+
+const LIQUIDITY_COMPONENT_DETAILS: Record<LiquidityScoreComponentKey, { label: string; shortLabel: string; description: string }> = {
+  tvlDepth: {
+    label: "TVL Depth",
+    shortLabel: "TVL Depth",
+    description: "Effective TVL relative to market cap (log-scale): 35xlog10(depthRatio/0.0007). ~0.5%->30, ~1.5%->47, ~6%->67, ~14%->80, ~25%+->90+. Falls back to absolute TVL scale when market cap is unavailable.",
+  },
+  volumeActivity: {
+    label: "Volume Activity",
+    shortLabel: "Vol. Activity",
+    description: "Log-scale V/T ratio: 38x(log10(vtRatio)+3). ~0.3%->18, ~3.5%->59, ~19%->86, ~32%+->100",
+  },
+  poolQuality: {
+    label: "Pool Quality",
+    shortLabel: "Pool Quality",
+    description: "Venue quality retention: qualityAdjustedTvl/totalTvl, rescaled from the realistic 15-80% range to 0-100. Measures mechanism multiplier x balance health; pair quality is captured in TVL Depth via effectiveTvl.",
+  },
+  durability: {
+    label: "Durability",
+    shortLabel: "Durability",
+    description: "TVL stability (35%), volume consistency (25%), pool maturity (25%), organic fee fraction with sqrt curve (15%)",
+  },
+  pairDiversity: {
+    label: "Diversity",
+    shortLabel: "Diversity",
+    description: "Pool count with diminishing returns: min(100, poolCount x 5)",
+  },
+};
+
+function LiquidityComponentCard({
+  component,
+  compact = false,
+}: {
+  component: (typeof LIQUIDITY_SCORE_WEIGHTS)[number];
+  compact?: boolean;
+}) {
+  const detail = LIQUIDITY_COMPONENT_DETAILS[component.key];
+  return (
+    <div className={`rounded-lg border p-3 text-center ${compact && component.key === "pairDiversity" ? "col-span-2" : ""}`.trim()}>
+      <p className={`text-foreground font-medium ${compact ? "text-xs" : ""}`.trim()}>
+        {compact ? detail.shortLabel : detail.label}
+      </p>
+      <p className="text-xs text-muted-foreground mt-0.5">{component.displayWeight}</p>
+    </div>
+  );
+}
 
 export function LiquidityTechnicalDetails() {
   return (
     <MethodologyDetails summary="Technical details: component weights, TVL scaling, and quality adjustments">
       <div className="hidden md:flex flex-col items-center gap-3">
         <div className="grid grid-cols-5 gap-3 w-full">
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium">TVL Depth</p>
-            <p className="text-xs text-muted-foreground mt-0.5">30%</p>
-          </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium">Volume Activity</p>
-            <p className="text-xs text-muted-foreground mt-0.5">20%</p>
-          </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium">Pool Quality</p>
-            <p className="text-xs text-muted-foreground mt-0.5">20%</p>
-          </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium">Durability</p>
-            <p className="text-xs text-muted-foreground mt-0.5">20%</p>
-          </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium">Diversity</p>
-            <p className="text-xs text-muted-foreground mt-0.5">10%</p>
-          </div>
+          {LIQUIDITY_SCORE_WEIGHTS.map((component) => (
+            <LiquidityComponentCard key={component.key} component={component} />
+          ))}
         </div>
         <div className="text-muted-foreground text-xl font-bold">&darr;</div>
         <div className="rounded-lg border p-3 text-center w-64">
@@ -35,26 +65,9 @@ export function LiquidityTechnicalDetails() {
 
       <div className="flex flex-col items-center gap-3 md:hidden">
         <div className="grid grid-cols-2 gap-2 w-full">
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium text-xs">TVL Depth</p>
-            <p className="text-xs text-muted-foreground">30%</p>
-          </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium text-xs">Vol. Activity</p>
-            <p className="text-xs text-muted-foreground">20%</p>
-          </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium text-xs">Pool Quality</p>
-            <p className="text-xs text-muted-foreground">20%</p>
-          </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium text-xs">Durability</p>
-            <p className="text-xs text-muted-foreground">20%</p>
-          </div>
-          <div className="rounded-lg border p-3 text-center col-span-2">
-            <p className="text-foreground font-medium text-xs">Diversity</p>
-            <p className="text-xs text-muted-foreground">10%</p>
-          </div>
+          {LIQUIDITY_SCORE_WEIGHTS.map((component) => (
+            <LiquidityComponentCard key={component.key} component={component} compact />
+          ))}
         </div>
         <div className="text-muted-foreground text-xl font-bold">&darr;</div>
         <div className="w-full rounded-lg border p-3 text-center">
@@ -81,45 +94,16 @@ export function LiquidityTechnicalDetails() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-2 pr-4 text-foreground">TVL Depth</td>
-                <td className="py-2 pr-4">30%</td>
-                <td className="py-2">
-                  Effective TVL relative to market cap (log-scale): 35&times;log10(depthRatio/0.0007). ~0.5%&rarr;30,
-                  ~1.5%&rarr;47, ~6%&rarr;67, ~14%&rarr;80, ~25%+&rarr;90+. Falls back to absolute TVL scale when
-                  market cap is unavailable.
-                </td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-2 pr-4 text-foreground">Volume Activity</td>
-                <td className="py-2 pr-4">20%</td>
-                <td className="py-2">
-                  Log-scale V/T ratio: 38&times;(log10(vtRatio)+3). ~0.3%&rarr;18, ~3.5%&rarr;59, ~19%&rarr;86,
-                  ~32%+&rarr;100
-                </td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-2 pr-4 text-foreground">Pool Quality</td>
-                <td className="py-2 pr-4">20%</td>
-                <td className="py-2">
-                  Venue quality retention: qualityAdjustedTvl/totalTvl, rescaled from the realistic 15&ndash;80% range
-                  to 0&ndash;100. Measures mechanism multiplier &times; balance health; pair quality is captured in TVL
-                  Depth via effectiveTvl.
-                </td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-2 pr-4 text-foreground">Durability</td>
-                <td className="py-2 pr-4">20%</td>
-                <td className="py-2">
-                  TVL stability (35%), volume consistency (25%), pool maturity (25%), organic fee fraction with sqrt
-                  curve (15%)
-                </td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-2 pr-4 text-foreground">Diversity</td>
-                <td className="py-2 pr-4">10%</td>
-                <td className="py-2">Pool count with diminishing returns: min(100, poolCount &times; 5)</td>
-              </tr>
+              {LIQUIDITY_SCORE_WEIGHTS.map((component) => {
+                const detail = LIQUIDITY_COMPONENT_DETAILS[component.key];
+                return (
+                  <tr key={component.key} className="hover:bg-muted/40 transition-colors">
+                    <td className="py-2 pr-4 text-foreground">{detail.label}</td>
+                    <td className="py-2 pr-4">{component.displayWeight}</td>
+                    <td className="py-2">{detail.description}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -1,3 +1,4 @@
+import { isDewsAlertBand } from "@shared/lib/classification";
 import { computeStabilityIndex, type StabilityInput, type StabilityResult } from "./stability-index";
 import type { SupplySnapshotMap } from "./psi-history-universe";
 import { buildPsiHistoricalUniverseForDay } from "./psi-history-universe";
@@ -10,8 +11,6 @@ export interface PsiHistoricalDewsRow {
 }
 
 export type PsiHistoricalDewsMap = Map<number, PsiHistoricalDewsRow[]>;
-
-const PSI_STRESS_BANDS = new Set(["ALERT", "WARNING", "DANGER"]);
 
 export function buildHistoricalDewsMap(rows: PsiHistoricalDewsRow[]): PsiHistoricalDewsMap {
   const byDay: PsiHistoricalDewsMap = new Map();
@@ -39,7 +38,7 @@ export function computeHistoricalDewsStressBreadth(
   let stressBreadth = 0;
 
   for (const row of rows) {
-    if (!PSI_STRESS_BANDS.has(row.band)) continue;
+    if (!isDewsAlertBand(row.band)) continue;
     const mcapUsd = universe.mcapById.get(row.stablecoin_id) ?? 0;
     stressBreadth += Math.sqrt(mcapUsd / 1e9) * 1.5;
   }
