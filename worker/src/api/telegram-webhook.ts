@@ -77,6 +77,7 @@ import {
   validateGlobalSetCommand,
 } from "./telegram-webhook-store";
 import { withErrorHandler } from "../lib/api-utils";
+import { logTelegramEvent } from "../lib/telegram-log";
 import { handleCallbackQuery } from "./telegram-webhook-callbacks";
 import { runCoinResolutionFlow } from "./telegram-webhook-resolution";
 import {
@@ -131,7 +132,11 @@ export const handleTelegramWebhook = withErrorHandler(
       ? await timingSafeCompare(providedSecret, previousWebhookSecret)
       : false;
     if (!validCurrentSecret && !validPreviousSecret) {
-      console.warn("[telegram-webhook] auth validation failed — returning 200 to prevent retry storm");
+      logTelegramEvent({
+        level: "warn",
+        message: "auth validation failed — returning 200 to prevent retry storm",
+        action: "auth",
+      });
       return ok();
     }
     if (!botToken) return ok();
@@ -162,7 +167,13 @@ export const handleTelegramWebhook = withErrorHandler(
       try {
         await handleCallbackQuery(db, botToken, update.callback_query);
       } catch (err) {
-        console.error("[telegram-webhook] callback_query failed:", err);
+        logTelegramEvent({
+          message: "callback_query failed",
+          chatId: update.callback_query.message?.chat?.id ?? null,
+          userId: update.callback_query.from?.id ?? null,
+          action: "callback_query",
+          err: err instanceof Error ? err.message : String(err),
+        });
       }
       return ok();
     }
@@ -397,7 +408,13 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
           await reply("Unknown command. Try /help");
       }
     } catch (err) {
-      console.error("[telegram-webhook] Error:", err);
+      logTelegramEvent({
+        message: "command handler failed",
+        chatId,
+        userId: actorUserId,
+        action: "command-dispatch",
+        err: err instanceof Error ? err.message : String(err),
+      });
       await reply("Something went wrong, please try again.");
     }
 
@@ -1220,7 +1237,14 @@ async function replyToChat(
       ...(isLastChunk && options.replyMarkup != null ? { replyMarkup: options.replyMarkup } : {}),
     });
     if (!result.ok) {
-      console.warn(`[telegram-webhook] Reply to ${chatId} failed: ${result.errorClass ?? "unknown"} (${result.statusCode})`);
+      logTelegramEvent({
+        level: "warn",
+        message: "reply send failed",
+        chatId,
+        action: "reply",
+        errorClass: result.errorClass ?? "unknown",
+        statusCode: result.statusCode,
+      });
       if (result.errorClass === "rate_limit") return;
     }
   }

@@ -5,6 +5,7 @@ import {
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
 import { sendAlert } from "../lib/alerts";
 import type { CronResult } from "../lib/cron-logger";
+import { logTelegramEvent } from "../lib/telegram-log";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 
@@ -49,7 +50,13 @@ async function readPendingCount(db: D1Database): Promise<number | null> {
       .first<{ n: number | null }>();
     return row?.n ?? 0;
   } catch (err) {
-    console.warn("[telegram-degradation-watchdog] pending count unavailable:", err);
+    logTelegramEvent({
+      level: "warn",
+      message: "pending count unavailable",
+      action: "read-pending-count",
+      module: "telegram-degradation-watchdog",
+      err: err instanceof Error ? err.message : String(err),
+    });
     return null;
   }
 }
@@ -64,7 +71,13 @@ async function readLatestDispatchMetadata(db: D1Database) {
     if (!row?.metadata) return null;
     return parseTelegramDispatchCronMetadata(JSON.parse(row.metadata));
   } catch (err) {
-    console.warn("[telegram-degradation-watchdog] dispatch metadata unavailable:", err);
+    logTelegramEvent({
+      level: "warn",
+      message: "dispatch metadata unavailable",
+      action: "read-dispatch-metadata",
+      module: "telegram-degradation-watchdog",
+      err: err instanceof Error ? err.message : String(err),
+    });
     return null;
   }
 }

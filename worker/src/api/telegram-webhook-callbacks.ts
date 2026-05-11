@@ -41,6 +41,7 @@ import {
   type PendingDisambiguationRow,
 } from "./telegram-webhook-shared";
 import { SNOOZE_SECONDS, isDepegStepValue } from "../lib/telegram-constants";
+import { logTelegramEvent } from "../lib/telegram-log";
 
 // Re-export so any caller importing `SNOOZE_SECONDS` from this module keeps working.
 export { SNOOZE_SECONDS };
@@ -171,7 +172,13 @@ export async function handleCallbackQuery(
         .bind(chatId, username, until, now, now)
         .run();
     } catch (err) {
-      console.error("[telegram-webhook] snooze write failed:", err);
+      logTelegramEvent({
+        message: "snooze write failed",
+        chatId,
+        userId: cb.from?.id ?? null,
+        action: "snooze",
+        err: err instanceof Error ? err.message : String(err),
+      });
       await answerCallbackQuery(cb.id, botToken, {
         text: "Could not save snooze. Please try again.",
       });
@@ -302,7 +309,13 @@ async function handleBulkConfirmCallback(
   try {
     await executeConfirmedBulk(db, chatId, username, pendingAction.payload);
   } catch (err) {
-    console.error("[telegram-webhook] bulk confirm execution failed:", err);
+    logTelegramEvent({
+      message: "bulk confirm execution failed",
+      chatId,
+      userId: cb.from?.id ?? null,
+      action: "confirm-bulk",
+      err: err instanceof Error ? err.message : String(err),
+    });
     await answerCallbackQuery(cb.id, botToken, { text: "Could not apply changes. Please try again." });
     return;
   }

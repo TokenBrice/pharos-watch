@@ -8,6 +8,7 @@
 import { dispatchTelegramAlerts } from "../../cron/dispatch-telegram-alerts";
 import { runTelegramDegradationWatchdog } from "../../cron/telegram-degradation-watchdog";
 import { cleanExpiredDisambiguations } from "../../cron/telegram-quiet-hours";
+import { logTelegramEvent } from "../../lib/telegram-log";
 import {
   reconcileTelegramCommandRegistration,
   reconcileTelegramProfileRegistration,
@@ -45,7 +46,12 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
       console.log(`[cron] Reconciled Telegram webhook registration: ${result.expectedUrl}`);
     }
   } catch (err) {
-    console.error("[cron] Telegram registration reconciliation failed:", err);
+    logTelegramEvent({
+      message: "registration reconciliation failed",
+      action: "reconcile-registration",
+      module: "five-minute-telegram",
+      err: err instanceof Error ? err.message : String(err),
+    });
   }
 
   await runBestEffortScheduledJob(

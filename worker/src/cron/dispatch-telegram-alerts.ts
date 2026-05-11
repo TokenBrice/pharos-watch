@@ -47,6 +47,7 @@ import {
 } from "./dispatch-telegram-routing";
 import { deliverTelegramSubscriberQueue } from "./dispatch-telegram-delivery";
 import { isQuietHoursActive } from "./telegram-quiet-hours";
+import { logTelegramEvent } from "../lib/telegram-log";
 
 type DispatchResult = TelegramDispatchCronResult;
 
@@ -136,10 +137,13 @@ async function writePresetFailureCount(db: D1Database, value: number): Promise<v
   try {
     await setCache(db, PRESET_QUERY_FAILURE_CACHE_KEY, String(Math.max(0, Math.floor(value))));
   } catch (err) {
-    console.warn(
-      "[telegram-alerts] failed to persist preset failure count:",
-      err instanceof Error ? err.message : err,
-    );
+    logTelegramEvent({
+      level: "warn",
+      message: "failed to persist preset failure count",
+      action: "write-preset-failure-count",
+      module: "dispatch-telegram-alerts",
+      err: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 
@@ -348,7 +352,13 @@ async function loadPresetSubscriberRowsBatch(
         quiet_hours_end_utc: number | null;
       }>();
   } catch (err) {
-    console.warn("[telegram-alerts] dynamic preset query failed:", err instanceof Error ? err.message : err);
+    logTelegramEvent({
+      level: "warn",
+      message: "dynamic preset query failed",
+      action: "preset-query",
+      module: "dispatch-telegram-alerts",
+      err: err instanceof Error ? err.message : String(err),
+    });
     return { kind: "query-failed", error: err };
   }
 

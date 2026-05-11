@@ -9,6 +9,7 @@ import {
   SEND_BATCH_SIZE,
   TELEGRAM_SPLIT_VERSION,
 } from "../lib/telegram-constants";
+import { logTelegramEvent } from "../lib/telegram-log";
 import { isQuietHoursActive } from "./telegram-quiet-hours";
 
 // ---------- Constants ----------
@@ -183,7 +184,12 @@ export async function registerSubscriberBlockAndShouldDisable(
     return nextCount >= 2;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`[telegram-pending-queue] Failed to register block strike for ${chatId}: ${message}`);
+    logTelegramEvent({
+      message: `Failed to register block strike: ${message}`,
+      chatId,
+      action: "register-block-strike",
+      module: "telegram-pending-queue",
+    });
     return false;
   }
 }
@@ -203,7 +209,12 @@ export async function resetSubscriberBlockCount(db: D1Database, chatId: string):
       .run();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`[telegram-pending-queue] Failed to reset block count for ${chatId}: ${message}`);
+    logTelegramEvent({
+      message: `Failed to reset block count: ${message}`,
+      chatId,
+      action: "reset-block-count",
+      module: "telegram-pending-queue",
+    });
   }
 }
 
@@ -239,7 +250,12 @@ export async function disableBlockedSubscriber(db: D1Database, chatId: string): 
     return true;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`[telegram-pending-queue] Failed to disable blocked subscriber ${chatId}: ${message}`);
+    logTelegramEvent({
+      message: `Failed to disable blocked subscriber: ${message}`,
+      chatId,
+      action: "disable-blocked-subscriber",
+      module: "telegram-pending-queue",
+    });
     return false;
   }
 }
