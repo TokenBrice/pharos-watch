@@ -1,0 +1,61 @@
+{
+  "id": "usdxl-last",
+  "name": "Last USD",
+  "symbol": "USDXL",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Position-backed synthetic dollar minted against blue-chip overcollateralized positions on HypurrFi's Aave V3 fork on HyperEVM; eligible collateral includes HYPE (and HYPE LSTs), bridged BTC and ETH",
+  "pegMechanism": "Users open overcollateralized CDP-style borrows on HypurrFi and mint USDXL against their position; repayment burns the synthetic dollar. Liquidations on undercollateralized positions defend the peg, with no direct 1:1 redemption against issuer reserves",
+  "llamaId": "322",
+  "detailProvider": "defillama",
+  "geckoId": "last-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.last.net/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/lastdotnet"
+    },
+    {
+      "label": "HypurrFi (mint venue)",
+      "url": "https://hypurrfi.com/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "hyperevm",
+      "address": "0xca79db4b49f608ef54a5cb813fbed3a6387bc645",
+      "decimals": 18
+    },
+    {
+      "chain": "hyperliquid",
+      "address": "0xf448c3cad413cdf0feb1746d7b057967",
+      "decimals": 8
+    }
+  ],
+  "chainTier": "unproven",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
+  "reserves": [
+    {
+      "name": "HYPE and HYPE LSTs (Hyperliquid native)",
+      "pct": 70,
+      "risk": "very-high"
+    },
+    {
+      "name": "Bridged BTC (UBTC) and ETH",
+      "pct": 30,
+      "risk": "medium"
+    }
+  ]
+}

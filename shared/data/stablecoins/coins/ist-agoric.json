@@ -1,0 +1,73 @@
+{
+  "id": "ist-agoric",
+  "name": "Inter Stable Token",
+  "symbol": "IST",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Overcollateralized crypto vaults on Agoric accepting IBC-bridged ATOM and stATOM, plus a Parity Stability Module (PSM) that mints IST 1:1 against approved stablecoins (USDC, USDT, DAI) bridged from Ethereum via IBC",
+  "pegMechanism": "Two complementary mechanisms on Agoric: (1) Inter Protocol vaults mint IST against IBC-deposited crypto collateral with a stability fee, liquidation ratio, and Dutch-auction liquidations; (2) the Parity Stability Module swaps approved IBC stablecoins for IST at 1:1, anchoring the peg. IST is also the Agoric platform's native fee token.",
+  "llamaId": "135",
+  "detailProvider": "defillama",
+  "geckoId": "inter-stable-token",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://inter.trade/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/inter_protocol"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.inter.trade/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/Agoric/agoric-sdk/tree/master/packages/inter-protocol"
+    },
+    {
+      "label": "Analytics",
+      "url": "https://analytics.inter.trade/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "agoric",
+      "address": "uist",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": false,
+  "chainTier": "established-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "Overcollateralized crypto vaults (IBC ATOM, stATOM)",
+      "pct": 40,
+      "risk": "high"
+    },
+    {
+      "name": "Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)",
+      "pct": 60,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "DefiLlama vs CoinGecko supply mismatch",
+      "message": "DefiLlama (llamaId 135) tracks only the Osmosis IBC slice of IST (~$150k peggedUSD) and does not include native Agoric supply, Archway, or Secret Network deployments. CoinGecko reports the full ~$1.4M circulating supply across all chains. Pharos uses the DefiLlama series as the primary feed; the headline figure here will reflect the Osmosis slice only until upstream coverage broadens."
+    }
+  ]
+}

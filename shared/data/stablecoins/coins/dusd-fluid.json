@@ -1,0 +1,61 @@
+{
+  "id": "dusd-fluid",
+  "name": "Fluid DigitalDollar",
+  "symbol": "DUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "1:1 USD cash held in client-safeguarded accounts at regulated European banks; accounts are ring-fenced and bankruptcy-remote from Fluid Finance SA, with theft and fraud cover via Lloyd's of London. The DUSD smart contract enforces a verifiedOffchainAssetBalance ceiling so minted supply cannot exceed the attested treasury balance.",
+  "pegMechanism": "1:1 mint and redemption against USD wired from a user IBAN to a Fluid Finance treasury account; an oracle publishes the safeguarded-bank balance on-chain and the contract refuses to mint above that balance. Redemption burns DUSD on-chain and credits USD back to the user's IBAN.",
+  "llamaId": "70",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://fluid.ch/"
+    },
+    {
+      "label": "DUSD",
+      "url": "https://fluid.ch/dusd/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/fluid_fi"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Switzerland"
+  },
+  "contracts": [
+    {
+      "chain": "arbitrum",
+      "address": "0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "chainTier": "stage1-l2",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "USD cash in safeguarded accounts at regulated European banks (Lloyd's of London insured)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Self-reported on-chain reserves",
+      "message": "Fluid Finance publishes the safeguarded-bank balance to Arbitrum via an oracle; reserves are not independently audited in real time."
+    }
+  ]
+}

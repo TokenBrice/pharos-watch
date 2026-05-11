@@ -1,0 +1,62 @@
+{
+  "id": "usdh-hubble",
+  "name": "Hubble USDH",
+  "symbol": "USDH",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Overcollateralized basket of Solana-native crypto assets (SOL, mSOL, BTC, ETH, and other Hubble-whitelisted tokens) deposited into Hubble Protocol CDP vaults at a minimum 150% collateralization ratio",
+  "pegMechanism": "Borrowers mint USDH against overcollateralized Solana crypto vaults and repay or are liquidated under Hubble's CDP rules; Stability Pool absorbs liquidations and distributes collateral to depositors",
+  "llamaId": "65",
+  "detailProvider": "defillama",
+  "geckoId": "usdh",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://hubbleprotocol.io"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/HubbleProtocol"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.hubbleprotocol.io"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "single-chain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "Hubble Protocol overcollateralized Solana crypto vaults (SOL, mSOL, BTC, ETH and other whitelisted assets)",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Symbol collision on Solana",
+      "message": "The 'USDH' symbol is also used on Solana by Native Markets and Hermetica — distinct issuers with separate collateral models. This entry tracks the original Hubble Protocol USDH."
+    },
+    {
+      "type": "info",
+      "title": "Small float, dormant trading",
+      "message": "Hubble's USDH circulating supply has contracted to roughly $1.2–1.5M with very low secondary-market volume. The Hubble team's focus has shifted to sister protocol Kamino, though no formal USDH wind-down has been announced and the borrow app remains operational."
+    }
+  ]
+}

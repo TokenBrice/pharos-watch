@@ -6,7 +6,7 @@
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "decentralized",
-    "yieldBearing": false,
+    "yieldBearing": true,
     "rwa": false,
     "navToken": false
   },
@@ -99,6 +99,10 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",
+  "yieldConfig": {
+    "yieldSource": "Parallel Savings (sUSDp)",
+    "yieldType": "governance-set"
+  },
   "notices": [
     {
       "type": "info",

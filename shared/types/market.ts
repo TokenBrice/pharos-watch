@@ -101,6 +101,8 @@ export interface DeadStablecoin {
   name: string;
   symbol: string;
   llamaId?: string;
+  geckoId?: string;
+  aliases?: string[];
   logo?: string;
   pegCurrency: PegCurrency;
   causeOfDeath: CauseOfDeath;

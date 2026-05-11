@@ -1,0 +1,57 @@
+{
+  "id": "zkusd-goal3",
+  "name": "zkUSD Dollar",
+  "symbol": "zkUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Collateralized assets held within the Goal3 sportsbook on ZKsync Era; backing is asserted as algorithmically over-collateralized and provable on-chain, but the exact composition of accepted collateral is not publicly itemized.",
+  "pegMechanism": "Issued and redeemed through the Goal3 Portal at 1 zkUSD = 1 USDC; the protocol claims to maintain over-collateralization of zkUSD circulating supply against assets held by Goal3 on ZKsync Era.",
+  "llamaId": "151",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://goal3.xyz"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/Goal3_xyz"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.goal3.xyz/sportsbook/technical-overview/usdzkusd"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "zksync",
+      "address": "0xfc7e56298657b002b3e656400e746b7212912757",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "stage1-l2",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Reserve composition not publicly itemized",
+      "message": "Goal3 documents zkUSD as algorithmically over-collateralized by assets held in the sportsbook, but the specific accepted collateral assets and collateralization ratio are not published. The only documented holder exit is 1:1 redemption to USDC through the Goal3 Portal."
+    }
+  ],
+  "reserves": [
+    {
+      "name": "Goal3 sportsbook collateral pool (composition not disclosed)",
+      "pct": 100,
+      "risk": "high"
+    }
+  ]
+}

@@ -1542,6 +1542,98 @@
     }
   },
   {
+    "id": "bnusd-balanced",
+    "llamaId": "204",
+    "detailProvider": "defillama",
+    "name": "Balanced Dollar",
+    "symbol": "BNUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Overcollateralized loans on ICON against sICX (staked ICX), with cross-chain Hub collateral support for assets bridged in via Balanced's xCall infrastructure",
+    "pegMechanism": "CDP-style mint: users borrow bnUSD against eligible collateral on the ICON Hub through the Balanced Loans contract, paying a 0.2% origination fee and a 2% annualised interest charge; loans must remain above the protocol's collateral ratio or are eligible for liquidation. The same bnUSD supply circulates wrapper-free across connected chains via xCall, so cross-chain balances net back to the canonical ICON issuance.",
+    "geckoId": "balanced-dollars",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://balanced.network"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/BalancedDAO"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.balanced.network"
+      },
+      {
+        "label": "App",
+        "url": "https://app.balanced.network"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "base",
+        "address": "0x78b7cd9308287deb724527d8703c889e2d6c3708",
+        "decimals": 18
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xdbdd50997361522495ecfe57ebb6850da0e4c699",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xa67f4b09eed22f8201ee0637cbe9d654e63f946e",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0xc65132325bd4fcf2ec5f3a9375487163b6999206",
+        "decimals": 18
+      },
+      {
+        "chain": "injective",
+        "address": "factory/inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "mature-alt-l1",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "sICX (staked ICX) collateral on ICON",
+        "pct": 90,
+        "risk": "high"
+      },
+      {
+        "name": "Cross-chain Hub collateral (BTC, ETH, BNB, AVAX, INJ and other bridged assets)",
+        "pct": 10,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Primary issuance lives on ICON, not yet a Pharos-supported chain",
+        "message": "bnUSD is minted on ICON (canonical contract cx88fd7df7ddff82f7cc735c871dc519838cb235bb) where ~95% of supply currently sits. Balanced uses its xCall infrastructure to extend the same supply to other chains, so the EVM/Injective contracts tracked here represent cross-chain wraps of the ICON-issued supply. Additional active deployments on Archway and Havah (also not Pharos-supported), and on Optimism, are visible in DefiLlama but excluded from contracts[] until those chains are wired into Pharos."
+      },
+      {
+        "type": "info",
+        "title": "v2 migration to Sonic in progress",
+        "message": "Balanced is migrating to a v2 architecture that re-anchors bnUSD issuance on Sonic. The cross-chain deployments tracked here are the v1 (ICON-Hub) bnUSD that DefiLlama indexes under id 204; the v2 bnUSD on Sonic is a separate contract not yet tracked. Expect supply distribution and the canonical issuance chain to shift over time."
+      }
+    ]
+  },
+  {
     "id": "bold-liquity",
     "llamaId": "269",
     "detailProvider": "defillama",
@@ -5065,6 +5157,67 @@
       "yieldSource": "dTRINITY dStake (sdUSD)",
       "yieldType": "lending-vault"
     }
+  },
+  {
+    "id": "dusd-fluid",
+    "llamaId": "70",
+    "detailProvider": "defillama",
+    "name": "Fluid DigitalDollar",
+    "symbol": "DUSD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "1:1 USD cash held in client-safeguarded accounts at regulated European banks; accounts are ring-fenced and bankruptcy-remote from Fluid Finance SA, with theft and fraud cover via Lloyd's of London. The DUSD smart contract enforces a verifiedOffchainAssetBalance ceiling so minted supply cannot exceed the attested treasury balance.",
+    "pegMechanism": "1:1 mint and redemption against USD wired from a user IBAN to a Fluid Finance treasury account; an oracle publishes the safeguarded-bank balance on-chain and the contract refuses to mint above that balance. Redemption burns DUSD on-chain and credits USD back to the user's IBAN.",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://fluid.ch/"
+      },
+      {
+        "label": "DUSD",
+        "url": "https://fluid.ch/dusd/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/fluid_fi"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Switzerland"
+    },
+    "contracts": [
+      {
+        "chain": "arbitrum",
+        "address": "0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "chainTier": "stage1-l2",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "USD cash in safeguarded accounts at regulated European banks (Lloyd's of London insured)",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Self-reported on-chain reserves",
+        "message": "Fluid Finance publishes the safeguarded-bank balance to Arbitrum via an oracle; reserves are not independently audited in real time."
+      }
+    ]
   },
   {
     "id": "dusd-standx",
@@ -9521,6 +9674,79 @@
     ]
   },
   {
+    "id": "ist-agoric",
+    "llamaId": "135",
+    "detailProvider": "defillama",
+    "name": "Inter Stable Token",
+    "symbol": "IST",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Overcollateralized crypto vaults on Agoric accepting IBC-bridged ATOM and stATOM, plus a Parity Stability Module (PSM) that mints IST 1:1 against approved stablecoins (USDC, USDT, DAI) bridged from Ethereum via IBC",
+    "pegMechanism": "Two complementary mechanisms on Agoric: (1) Inter Protocol vaults mint IST against IBC-deposited crypto collateral with a stability fee, liquidation ratio, and Dutch-auction liquidations; (2) the Parity Stability Module swaps approved IBC stablecoins for IST at 1:1, anchoring the peg. IST is also the Agoric platform's native fee token.",
+    "geckoId": "inter-stable-token",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://inter.trade/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/inter_protocol"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.inter.trade/"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/Agoric/agoric-sdk/tree/master/packages/inter-protocol"
+      },
+      {
+        "label": "Analytics",
+        "url": "https://analytics.inter.trade/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "agoric",
+        "address": "uist",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": false,
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "Overcollateralized crypto vaults (IBC ATOM, stATOM)",
+        "pct": 40,
+        "risk": "high"
+      },
+      {
+        "name": "Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)",
+        "pct": 60,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "DefiLlama vs CoinGecko supply mismatch",
+        "message": "DefiLlama (llamaId 135) tracks only the Osmosis IBC slice of IST (~$150k peggedUSD) and does not include native Agoric supply, Archway, or Secret Network deployments. CoinGecko reports the full ~$1.4M circulating supply across all chains. Pharos uses the DefiLlama series as the primary feed; the headline figure here will reflect the Osmosis slice only until upstream coverage broadens."
+      }
+    ]
+  },
+  {
     "id": "iusd-indigo-protocol",
     "llamaId": "88",
     "detailProvider": "defillama",
@@ -9704,6 +9930,70 @@
       "yieldSource": "infiniFi savings (siUSD)",
       "yieldType": "lending-vault"
     }
+  },
+  {
+    "id": "iusd-initia",
+    "llamaId": "388",
+    "detailProvider": "defillama",
+    "name": "Initia iUSD",
+    "symbol": "iUSD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "1:1 reserve in Agora AUSD bridged to Initia via LayerZero; AUSD itself is backed by short-dated U.S. Treasury bills, overnight reverse repos, and cash held in a bankruptcy-remote Delaware Statutory Trust managed by VanEck and custodied by State Street",
+    "pegMechanism": "iUSD is a single-chain wrapper of bridged Agora AUSD on Initia. Each iUSD is minted against an equal amount of AUSD locked at the Initia LayerZero bridge endpoint; reserve yield from the underlying AUSD is redirected by Initia into ecosystem incentives (Echelon lending, liquidity programs, Cabal vaults) rather than to holders. Holder redemption ultimately depends on the AUSD bridge and Agora's direct USD redemption.",
+    "geckoId": "iusd-2",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://initia.xyz"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/initia"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.initia.xyz"
+      },
+      {
+        "label": "Explorer",
+        "url": "https://scan.initia.xyz"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "initia",
+        "address": "0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e",
+        "decimals": 6
+      }
+    ],
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-top",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Agora AUSD bridged via LayerZero",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "ausd-agora",
+        "depType": "collateral"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "New chain, no published proof-of-reserves for the wrapper",
+        "message": "iUSD lives on Initia, a recently launched Move-based Cosmos L1 with limited operational history. Initia has not yet published a dedicated transparency feed for the AUSD-backed iUSD wrapper; reserve trust currently inherits from Agora's published AUSD attestations plus the LayerZero bridge endpoint. Redemption to USD ultimately routes back through the AUSD bridge to Agora."
+      }
+    ]
   },
   {
     "id": "jpyc-jpyc-v1",
@@ -19755,6 +20045,61 @@
     }
   },
   {
+    "id": "usdcx-movement",
+    "detailProvider": "coingecko",
+    "name": "Movement USDCx",
+    "symbol": "USDCx",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "1:1 USDC held in a Circle-deployed xReserve smart contract; the underlying reserve is Circle USDC, whose backing is short-duration U.S. Treasuries and cash held by regulated custodians.",
+    "pegMechanism": "Users mint USDCx on Movement by depositing USDC into Circle's xReserve smart contract, which issues USDCx 1:1; redemption burns USDCx and releases the underlying USDC back to the user. xReserve also enables 1:1 transfers between USDCx and USDC across supported chains via Circle CCTP and Gateway without third-party bridges.",
+    "geckoId": "usdcx-movement",
+    "links": [
+      {
+        "label": "Announcement",
+        "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin"
+      },
+      {
+        "label": "Website",
+        "url": "https://movementnetwork.xyz/"
+      },
+      {
+        "label": "xReserve",
+        "url": "https://www.circle.com/xreserve"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.movementnetwork.xyz/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "movement",
+        "address": "0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e",
+        "decimals": 6
+      }
+    ],
+    "deploymentModel": "single-chain",
+    "collateralQuality": "native",
+    "custodyModel": "institutional-top",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Circle USDC held in xReserve smart contract",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "usdc-circle",
+        "depType": "mechanism"
+      }
+    ]
+  },
+  {
     "id": "usdd-tron-dao-reserve",
     "llamaId": "14",
     "detailProvider": "defillama",
@@ -20689,6 +21034,68 @@
     }
   },
   {
+    "id": "usdh-hubble",
+    "llamaId": "65",
+    "detailProvider": "defillama",
+    "name": "Hubble USDH",
+    "symbol": "USDH",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Overcollateralized basket of Solana-native crypto assets (SOL, mSOL, BTC, ETH, and other Hubble-whitelisted tokens) deposited into Hubble Protocol CDP vaults at a minimum 150% collateralization ratio",
+    "pegMechanism": "Borrowers mint USDH against overcollateralized Solana crypto vaults and repay or are liquidated under Hubble's CDP rules; Stability Pool absorbs liquidations and distributes collateral to depositors",
+    "geckoId": "usdh",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://hubbleprotocol.io"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/HubbleProtocol"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.hubbleprotocol.io"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "solana",
+        "address": "USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX",
+        "decimals": 6
+      }
+    ],
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "Hubble Protocol overcollateralized Solana crypto vaults (SOL, mSOL, BTC, ETH and other whitelisted assets)",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Symbol collision on Solana",
+        "message": "The 'USDH' symbol is also used on Solana by Native Markets and Hermetica — distinct issuers with separate collateral models. This entry tracks the original Hubble Protocol USDH."
+      },
+      {
+        "type": "info",
+        "title": "Small float, dormant trading",
+        "message": "Hubble's USDH circulating supply has contracted to roughly $1.2–1.5M with very low secondary-market volume. The Hubble team's focus has shifted to sister protocol Kamino, though no formal USDH wind-down has been announced and the borrow app remains operational."
+      }
+    ]
+  },
+  {
     "id": "usdh-native-markets",
     "llamaId": "321",
     "detailProvider": "defillama",
@@ -21328,7 +21735,8 @@
   },
   {
     "id": "usdnr-nerona",
-    "detailProvider": "coingecko",
+    "llamaId": "377",
+    "detailProvider": "defillama",
     "name": "Nerona USD",
     "symbol": "USDnr",
     "flags": {
@@ -21339,8 +21747,8 @@
       "rwa": true,
       "navToken": false
     },
-    "collateral": "Backed 1:1 by M (M0 Protocol's tokenized short-term U.S. Treasury bills, routed through USTB / Superstate Short Duration U.S. Government Securities Fund); per the M0 dashboard the wrapper holds ~$50.25M of USTB-collateralised M against ~$50M USDnr in circulation, with the surplus held in a Stability Reserve buffer. Reserves sit in M0 SPVs managed by the M0 Minter (MXON)",
-    "pegMechanism": "Permissioned 1:1 wrapper around M0's $M token: USDnr is minted by Nerona by depositing/wrapping $M (sourced from MXON, the legal Minter on the M0 network) and burned 1:1 against $M on redemption. T-bill yield earned by the underlying M accrues to the M0 reserve / Nerona — USDnr holders receive no rebase or NAV growth themselves. Mint/redeem is gated to permissioned, KYC-onboarded clients of Nerona's private wealth platform",
+    "collateral": "Backed 1:1 by $M (M0 Protocol's tokenized short-term U.S. Treasury bill exposure, sourced from the M0 Minter MXON). USDnr is a permissioned wrapper minted by Nerona Labs against $M held in M0-managed reserves, with a Stability Reserve buffer maintained on top of circulating supply",
+    "pegMechanism": "Permissioned 1:1 wrapper around M0's $M token: USDnr is minted by Nerona Labs by depositing/wrapping $M (sourced from MXON, the legal Minter on the M0 network) and burned 1:1 against $M on redemption. T-bill yield earned by the underlying $M accrues to the M0 reserve and Nerona — USDnr holders receive no rebase or NAV growth. The yield-bearing variant sUSDnr (Upshift ERC-4626 vault) routes that yield to stakers. Mint/redeem is gated to permissioned, KYC-onboarded clients of Nerona's private wealth platform",
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://dashboard.m0.org/stablecoins/usdnr",
@@ -21350,6 +21758,14 @@
       {
         "label": "Website",
         "url": "https://www.nerona.xyz/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.nerona.xyz/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/neronaxyz"
       },
       {
         "label": "M0 Dashboard",
@@ -21365,6 +21781,11 @@
         "chain": "ethereum",
         "address": "0xd48e565561416de59da1050ed70b8d75e8ef28f9",
         "decimals": 6
+      },
+      {
+        "chain": "fluent",
+        "address": "0xd48e565561416de59da1050ed70b8d75e8ef28f9",
+        "decimals": 6
       }
     ],
     "dependencies": [
@@ -21376,7 +21797,7 @@
     ],
     "canBeBlacklisted": "possible",
     "chainTier": "ethereum",
-    "deploymentModel": "single-chain",
+    "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "single-entity",
@@ -21385,7 +21806,7 @@
     ],
     "reserves": [
       {
-        "name": "Short-term U.S. Treasury Bills (via USTB / M0 Protocol)",
+        "name": "Short-term U.S. Treasury Bills (via $M / M0 Protocol)",
         "pct": 99,
         "risk": "very-low"
       },
@@ -21614,21 +22035,20 @@
   },
   {
     "id": "usdp-parallel",
-    "detailProvider": "coingecko",
+    "llamaId": "291",
+    "detailProvider": "defillama",
     "name": "Parallel USDp",
     "symbol": "USDp",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "centralized-dependent",
+      "governance": "decentralized",
       "yieldBearing": true,
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Overcollateralized basket of cryptocurrencies and yield-bearing stablecoins (including sfrxUSD and sUSDe); collateral composition and exposure limits set by Parallel DAO",
-    "pegMechanism": "Fee-based stability via the Parallelizer module: minting and burning fees automatically adjust to correct peg deviations; direct redemption for underlying collateral at oracle value with depeg penalty applied proportionally",
-    "geckoId": "parallel-usdp",
-    "cmcSlug": "parallel-usdp",
+    "collateral": "Overcollateralized basket of correlated USD stablecoins and yield-bearing wrappers routed through the Parallelizer Module: frxUSD, sfrxUSD, USDe, sUSDe on Ethereum; USDS, sUSDS on Base; USDe, sUSDe on HyperEVM; USDC and ygamiUSDC on Avalanche. Composition and exposure limits set by sPRL holders via DAO vote.",
+    "pegMechanism": "Parallelizer Module (a licensed fork of Angle Protocol's Transmuter) lets users mint and burn USDp at oracle value against a whitelisted overcollateralized basket, with adaptive fees that widen on depeg. Yield is delivered through a separate Savings Module wrapper (sUSDp); liquid USDp itself does not accrue yield.",
     "links": [
       {
         "label": "Website",
@@ -21645,13 +22065,28 @@
     ],
     "contracts": [
       {
+        "chain": "ethereum",
+        "address": "0x9b3a8f7cec208e247d97dee13313690977e24459",
+        "decimals": 18
+      },
+      {
         "chain": "base",
         "address": "0x76a9a0062ec6712b99b4f63bd2b4270185759dd5",
         "decimals": 18
       },
       {
-        "chain": "ethereum",
-        "address": "0x9b3a8f7cec208e247d97dee13313690977e24459",
+        "chain": "arbitrum",
+        "address": "0x76a9a0062ec6712b99b4f63bd2b4270185759dd5",
+        "decimals": 18
+      },
+      {
+        "chain": "optimism",
+        "address": "0x90337e484b1cb02132fc150d3afa262147348545",
+        "decimals": 18
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
         "decimals": 18
       },
       {
@@ -21660,32 +22095,80 @@
         "decimals": 18
       },
       {
+        "chain": "sei",
+        "address": "0x048c4e07d170eedee8772ca76aee1c4e2d133d5c",
+        "decimals": 18
+      },
+      {
         "chain": "hyperevm",
         "address": "0xbe65f0f410a72bec163dc65d46c83699e957d588",
         "decimals": 18
       },
       {
-        "chain": "avalanche",
+        "chain": "scroll",
         "address": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "decimals": 18
+      },
+      {
+        "chain": "ink",
+        "address": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "decimals": 18
+      },
+      {
+        "chain": "worldchain",
+        "address": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x048c4e07d170eedee8772ca76aee1c4e2d133d5c",
+        "decimals": 18
+      },
+      {
+        "chain": "xlayer",
+        "address": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
         "decimals": 18
       }
     ],
     "deploymentModel": "native-multichain",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
     "reserves": [
       {
-        "name": "sfrxUSD (yield-bearing frxUSD)",
-        "pct": 50,
-        "risk": "low",
+        "name": "frxUSD / sfrxUSD (Ethereum branch)",
+        "pct": 30,
+        "risk": "medium",
         "coinId": "frxusd-frax",
         "depType": "collateral"
       },
       {
-        "name": "sUSDe (yield-bearing USDe)",
-        "pct": 50,
+        "name": "USDe / sUSDe (Ethereum + HyperEVM branches)",
+        "pct": 30,
         "risk": "medium",
         "coinId": "usde-ethena",
         "depType": "collateral"
+      },
+      {
+        "name": "USDS / sUSDS (Base branch)",
+        "pct": 25,
+        "risk": "low",
+        "coinId": "usds-sky",
+        "depType": "collateral"
+      },
+      {
+        "name": "USDC / ygamiUSDC (Avalanche branch)",
+        "pct": 15,
+        "risk": "low",
+        "coinId": "usdc-circle",
+        "depType": "collateral"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Not the cemetery PAR or Paxos USDP",
+        "message": "Parallel USDp (llamaId 291, Parallel V3) is distinct from the abandoned Mimo Labs PAR (Euro CDP, llamaId 56) and from Paxos USDP / PAX Dollar. The Parallelizer is a licensed fork of Angle Protocol's Transmuter; Mimo Labs and Cooper Labs hold commercial use rights to the codebase."
       }
     ],
     "yieldConfig": {
@@ -23389,6 +23872,67 @@
         "type": "warning",
         "title": "Legacy depeg risk",
         "message": "USDX is trading at roughly a 45% discount to its dollar peg, sustained by legacy debt positions on Kava Mint CDPs. Pharos tracks the active provider entry separately from the historical cemetery incident."
+      }
+    ]
+  },
+  {
+    "id": "usdxl-last",
+    "llamaId": "322",
+    "detailProvider": "defillama",
+    "name": "Last USD",
+    "symbol": "USDXL",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Position-backed synthetic dollar minted against blue-chip overcollateralized positions on HypurrFi's Aave V3 fork on HyperEVM; eligible collateral includes HYPE (and HYPE LSTs), bridged BTC and ETH",
+    "pegMechanism": "Users open overcollateralized CDP-style borrows on HypurrFi and mint USDXL against their position; repayment burns the synthetic dollar. Liquidations on undercollateralized positions defend the peg, with no direct 1:1 redemption against issuer reserves",
+    "geckoId": "last-usd",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.last.net/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/lastdotnet"
+      },
+      {
+        "label": "HypurrFi (mint venue)",
+        "url": "https://hypurrfi.com/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "hyperevm",
+        "address": "0xca79db4b49f608ef54a5cb813fbed3a6387bc645",
+        "decimals": 18
+      },
+      {
+        "chain": "hyperliquid",
+        "address": "0xf448c3cad413cdf0feb1746d7b057967",
+        "decimals": 8
+      }
+    ],
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "multisig",
+    "reserves": [
+      {
+        "name": "HYPE and HYPE LSTs (Hyperliquid native)",
+        "pct": 70,
+        "risk": "very-high"
+      },
+      {
+        "name": "Bridged BTC (UBTC) and ETH",
+        "pct": 30,
+        "risk": "medium"
       }
     ]
   },
@@ -27789,5 +28333,62 @@
         }
       }
     }
+  },
+  {
+    "id": "zkusd-goal3",
+    "llamaId": "151",
+    "detailProvider": "defillama",
+    "name": "zkUSD Dollar",
+    "symbol": "zkUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Collateralized assets held within the Goal3 sportsbook on ZKsync Era; backing is asserted as algorithmically over-collateralized and provable on-chain, but the exact composition of accepted collateral is not publicly itemized.",
+    "pegMechanism": "Issued and redeemed through the Goal3 Portal at 1 zkUSD = 1 USDC; the protocol claims to maintain over-collateralization of zkUSD circulating supply against assets held by Goal3 on ZKsync Era.",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://goal3.xyz"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/Goal3_xyz"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.goal3.xyz/sportsbook/technical-overview/usdzkusd"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "zksync",
+        "address": "0xfc7e56298657b002b3e656400e746b7212912757",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "stage1-l2",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Goal3 sportsbook collateral pool (composition not disclosed)",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Reserve composition not publicly itemized",
+        "message": "Goal3 documents zkUSD as algorithmically over-collateralized by assets held in the sportsbook, but the specific accepted collateral assets and collateralization ratio are not published. The only documented holder exit is 1:1 redemption to USDC through the Goal3 Portal."
+      }
+    ]
   }
 ]

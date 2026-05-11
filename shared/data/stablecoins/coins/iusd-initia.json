@@ -1,0 +1,64 @@
+{
+  "id": "iusd-initia",
+  "name": "Initia iUSD",
+  "symbol": "iUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "1:1 reserve in Agora AUSD bridged to Initia via LayerZero; AUSD itself is backed by short-dated U.S. Treasury bills, overnight reverse repos, and cash held in a bankruptcy-remote Delaware Statutory Trust managed by VanEck and custodied by State Street",
+  "pegMechanism": "iUSD is a single-chain wrapper of bridged Agora AUSD on Initia. Each iUSD is minted against an equal amount of AUSD locked at the Initia LayerZero bridge endpoint; reserve yield from the underlying AUSD is redirected by Initia into ecosystem incentives (Echelon lending, liquidity programs, Cabal vaults) rather than to holders. Holder redemption ultimately depends on the AUSD bridge and Agora's direct USD redemption.",
+  "llamaId": "388",
+  "detailProvider": "defillama",
+  "geckoId": "iusd-2",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://initia.xyz"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/initia"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.initia.xyz"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://scan.initia.xyz"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "initia",
+      "address": "0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e",
+      "decimals": 6
+    }
+  ],
+  "chainTier": "unproven",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-top",
+  "governanceQuality": "single-entity",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "New chain, no published proof-of-reserves for the wrapper",
+      "message": "iUSD lives on Initia, a recently launched Move-based Cosmos L1 with limited operational history. Initia has not yet published a dedicated transparency feed for the AUSD-backed iUSD wrapper; reserve trust currently inherits from Agora's published AUSD attestations plus the LayerZero bridge endpoint. Redemption to USD ultimately routes back through the AUSD bridge to Agora."
+    }
+  ],
+  "reserves": [
+    {
+      "name": "Agora AUSD bridged via LayerZero",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "ausd-agora",
+      "depType": "collateral"
+    }
+  ]
+}

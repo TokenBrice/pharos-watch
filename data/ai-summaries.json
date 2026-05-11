@@ -1508,5 +1508,45 @@
     "title": "Regulated CAD Stablecoin",
     "text": "Stablecorp QCAD adds a live Canadian-dollar reserve feed with official supply and fiat reserve totals. The product is small, but the Canadian VRCA framework, FINTRAC registration, and issuer API make it a useful non-USD fiat stablecoin to track.",
     "updatedAt": "2026-05-11"
+  },
+  "usdxl-last": {
+    "title": "Position-backed synthetic dollar on Hyperliquid",
+    "text": "Last USD (USDXL) is a crypto-collateralized synthetic dollar minted on HypurrFi, an Aave V3 fork on HyperEVM operated by Last. Users open overcollateralized borrowing positions against HYPE, HYPE LSTs, bridged BTC (UBTC), and ETH, then draw USDXL against that collateral — closer to a CDP than to a 1:1 reserve-backed dollar. Repaying the loan burns the synthetic, and undercollateralized positions are liquidated to defend the peg. Circulating supply sits in the low single-digit millions, with the asset bridged between Hyperliquid's HyperEVM (18 decimals) and Hyperliquid L1 spot (8 decimals).",
+    "updatedAt": "2026-05-11"
+  },
+  "bnusd-balanced": {
+    "title": "Balanced's CDP stablecoin extending ICON DeFi cross-chain",
+    "text": "BNUSD is the overcollateralized stablecoin of Balanced, a Cosmos/ICON-native lending and DEX protocol. Holders borrow it against sICX (staked ICX) and other Hub collateral on ICON for a 0.2% origination fee plus 2% annualized interest, and the same supply circulates wrapper-free across connected EVM chains and Injective via Balanced's xCall messaging layer. Adding BNUSD gives Pharos coverage of the ICON/Cosmos stablecoin niche — a small but durable ecosystem that no other tracked asset represents — and exposes the cross-chain Hub-issuance pattern as a category. The asset is sub-$5M and currently mid-migration to a v2 design re-anchored on Sonic, so supply and the canonical issuance chain are expected to evolve.",
+    "updatedAt": "2026-05-11"
+  },
+  "dusd-fluid": {
+    "title": "Banked-cash backing, smart-contract enforced",
+    "text": "Fluid Finance SA's DigitalDollar is the rare USD stablecoin that holds the float in literal client-safeguarded bank cash — not T-bills, not commercial paper — at regulated European banks, with theft and fraud cover from Lloyd's of London. The differentiator is the smart-contract verifiedOffchainAssetBalance: an oracle publishes the bank balance to Arbitrum, and the contract refuses to mint DUSD beyond that ceiling. It is the only tracked DUSD that is a single-chain fiat coin, deployed only on Arbitrum at modest ~$3M supply with about 1,000 holders. The structural trade-off is that 'verifiable 24/7' is still self-reported via the issuer's oracle, not an independent attestation, and Fluid Finance SA remains a single Swiss entity rather than a regulated bank.",
+    "updatedAt": "2026-05-11"
+  },
+  "iusd-initia": {
+    "title": "Initia's AUSD-wrapped ecosystem dollar",
+    "text": "iUSD is the native dollar on Initia, the new Move-based Cosmos L1. Each iUSD is backed 1:1 by Agora's AUSD bridged in via LayerZero, so the ultimate reserve trace is Agora's short-dated U.S. Treasuries, repos, and cash custodied at State Street under VanEck management. Unlike standard fiat-backed stables, the reserve yield is redirected by Initia into ecosystem incentives — Echelon lending, liquidity programs, and Cabal vaults — rather than paid to holders. Supply is small (~$4M) and the chain is brand new, so resilience scoring leans on AUSD's transparency rather than an Initia-issued attestation. Holder redemption ultimately routes back through the LayerZero bridge to Agora's USD redemption window.",
+    "updatedAt": "2026-05-11"
+  },
+  "usdcx-movement": {
+    "title": "Movement's native USDC-backed dollar",
+    "text": "USDCx is Movement Network's native dollar stablecoin, launched on M1 mainnet in March 2026 through Circle's xReserve infrastructure. Each USDCx is backed 1:1 by Circle USDC held in a Circle-deployed xReserve smart contract on Movement, and can be moved to USDC across 30+ chains via CCTP and Gateway without third-party bridges. The issuer is Move Industries, the team behind Movement, rather than Circle directly — making USDCx a partner-issued stablecoin whose ultimate solvency inherits from USDC's regulated reserves. Circulating supply is still modest (~$2.8M), positioning USDCx as ecosystem rails for Movement-native DeFi, neobank partners like KAST, and Global South payment corridors.",
+    "updatedAt": "2026-05-11"
+  },
+  "usdh-hubble": {
+    "title": "Solana's original crypto-backed CDP stablecoin, now dormant",
+    "text": "Hubble Protocol's USDH was the first MakerDAO-style overcollateralized stablecoin on Solana, minted against a basket of SOL, mSOL, BTC, and ETH at a minimum 150% collateralization ratio with Stability Pool liquidations. The protocol launched in 2022, raised $5M from Three Arrows, Crypto.com and others, and originally aspired to challenge centralized stablecoin dominance on Solana. Today USDH circulates at roughly $1.2-1.5M with negligible secondary volume, and the team has pivoted its development energy to sister protocol Kamino Finance. No formal sunset has been announced and the borrow app remains live, but USDH is structurally dormant rather than growing. The 'USDH' symbol is shared with Native Markets and Hermetica — three distinct issuers, three distinct collateral models.",
+    "updatedAt": "2026-05-11"
+  },
+  "zkusd-goal3": {
+    "title": "ZKsync-native sportsbook stablecoin with limited reserve disclosure",
+    "text": "zkUSD Dollar is the in-house stable issued by Goal3, a sportsbook on ZKsync Era, with circulating supply just over $1M. Goal3 documents the asset as algorithmically over-collateralized by assets held in the sportsbook, redeemable 1:1 for USDC through the official portal, but the specific accepted collateral, ratios, and on-chain backing addresses are not publicly itemized. Pharos tracks zkUSD primarily for ZKsync ecosystem coverage rather than scale; users should treat it as venue-restricted credit on a single-chain operator and weight redemption access through the Goal3 Portal as the only modeled exit. Secondary liquidity exists on SyncSwap and a small MEXC listing.",
+    "updatedAt": "2026-05-11"
+  },
+  "ist-agoric": {
+    "title": "Cosmos-native crypto-backed stable with sub-$5M strategic coverage",
+    "text": "Inter Stable Token (IST) is the Agoric platform's native fee token and an overcollateralized crypto-backed stablecoin governed via Inter Protocol. IST is minted two ways: through vault positions collateralized by IBC-bridged ATOM and stATOM with a stability fee and Dutch-auction liquidations, and through a Parity Stability Module (PSM) that swaps approved IBC stablecoins (USDC, USDT, DAI) for IST 1:1. Total circulating supply is ~$1.4M across Agoric native, Osmosis, Archway, and Secret Network deployments — well below Pharos's $5M soft threshold, but tracked as a strategic Cosmos-ecosystem entry where overcollateralized fiat-pegged designs remain rare. Pharos uses DefiLlama as the primary supply feed; coverage today reflects the Osmosis IBC slice only until upstream tracking broadens to Agoric native.",
+    "updatedAt": "2026-05-11"
   }
 }

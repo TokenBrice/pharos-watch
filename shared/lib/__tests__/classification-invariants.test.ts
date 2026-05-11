@@ -6,6 +6,8 @@ const MAJORITY_THRESHOLD = 0.50;
 const EXPECTED_CENTRALIZED_CUSTODY_MAJORITIES = new Set([
   "zchf-frankencoin",
   "deuro-deuro",
+  "usdp-parallel",
+  "ist-agoric",
 ]);
 
 describe("classification invariants", () => {

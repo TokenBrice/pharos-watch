@@ -1,0 +1,92 @@
+{
+  "id": "bnusd-balanced",
+  "name": "Balanced Dollar",
+  "symbol": "BNUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Overcollateralized loans on ICON against sICX (staked ICX), with cross-chain Hub collateral support for assets bridged in via Balanced's xCall infrastructure",
+  "pegMechanism": "CDP-style mint: users borrow bnUSD against eligible collateral on the ICON Hub through the Balanced Loans contract, paying a 0.2% origination fee and a 2% annualised interest charge; loans must remain above the protocol's collateral ratio or are eligible for liquidation. The same bnUSD supply circulates wrapper-free across connected chains via xCall, so cross-chain balances net back to the canonical ICON issuance.",
+  "llamaId": "204",
+  "detailProvider": "defillama",
+  "geckoId": "balanced-dollars",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://balanced.network"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/BalancedDAO"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.balanced.network"
+    },
+    {
+      "label": "App",
+      "url": "https://app.balanced.network"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "base",
+      "address": "0x78b7cd9308287deb724527d8703c889e2d6c3708",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xdbdd50997361522495ecfe57ebb6850da0e4c699",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xa67f4b09eed22f8201ee0637cbe9d654e63f946e",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0xc65132325bd4fcf2ec5f3a9375487163b6999206",
+      "decimals": 18
+    },
+    {
+      "chain": "injective",
+      "address": "factory/inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "mature-alt-l1",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "dao-governance",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Primary issuance lives on ICON, not yet a Pharos-supported chain",
+      "message": "bnUSD is minted on ICON (canonical contract cx88fd7df7ddff82f7cc735c871dc519838cb235bb) where ~95% of supply currently sits. Balanced uses its xCall infrastructure to extend the same supply to other chains, so the EVM/Injective contracts tracked here represent cross-chain wraps of the ICON-issued supply. Additional active deployments on Archway and Havah (also not Pharos-supported), and on Optimism, are visible in DefiLlama but excluded from contracts[] until those chains are wired into Pharos."
+    },
+    {
+      "type": "info",
+      "title": "v2 migration to Sonic in progress",
+      "message": "Balanced is migrating to a v2 architecture that re-anchors bnUSD issuance on Sonic. The cross-chain deployments tracked here are the v1 (ICON-Hub) bnUSD that DefiLlama indexes under id 204; the v2 bnUSD on Sonic is a separate contract not yet tracked. Expect supply distribution and the canonical issuance chain to shift over time."
+    }
+  ],
+  "reserves": [
+    {
+      "name": "sICX (staked ICX) collateral on ICON",
+      "pct": 90,
+      "risk": "high"
+    },
+    {
+      "name": "Cross-chain Hub collateral (BTC, ETH, BNB, AVAX, INJ and other bridged assets)",
+      "pct": 10,
+      "risk": "high"
+    }
+  ]
+}

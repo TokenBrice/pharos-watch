@@ -1,0 +1,55 @@
+{
+  "id": "usdcx-movement",
+  "name": "Movement USDCx",
+  "symbol": "USDCx",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "1:1 USDC held in a Circle-deployed xReserve smart contract; the underlying reserve is Circle USDC, whose backing is short-duration U.S. Treasuries and cash held by regulated custodians.",
+  "pegMechanism": "Users mint USDCx on Movement by depositing USDC into Circle's xReserve smart contract, which issues USDCx 1:1; redemption burns USDCx and releases the underlying USDC back to the user. xReserve also enables 1:1 transfers between USDCx and USDC across supported chains via Circle CCTP and Gateway without third-party bridges.",
+  "detailProvider": "coingecko",
+  "geckoId": "usdcx-movement",
+  "links": [
+    {
+      "label": "Announcement",
+      "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin"
+    },
+    {
+      "label": "Website",
+      "url": "https://movementnetwork.xyz/"
+    },
+    {
+      "label": "xReserve",
+      "url": "https://www.circle.com/xreserve"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.movementnetwork.xyz/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "movement",
+      "address": "0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "single-chain",
+  "collateralQuality": "native",
+  "custodyModel": "institutional-top",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Circle USDC held in xReserve smart contract",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "mechanism"
+    }
+  ]
+}

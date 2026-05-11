@@ -71,6 +71,9 @@ const UNSUPPORTED_CHAINS = new Set([
   "harmony",
   "secret",
   "tempo",
+  "fluent",
+  "initia",
+  "agoric",
 ]);
 
 describe("liquidity coverage", () => {
