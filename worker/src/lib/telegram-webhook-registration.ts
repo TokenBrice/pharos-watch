@@ -12,7 +12,7 @@ const TELEGRAM_PROFILE_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_ALLOWED_UPDATES = ["message", "callback_query"] as const;
 const TELEGRAM_WEBHOOK_CACHE_VERSION = 2;
 const TELEGRAM_COMMANDS_CACHE_VERSION = 4;
-const TELEGRAM_PROFILE_CACHE_VERSION = 1;
+const TELEGRAM_PROFILE_CACHE_VERSION = 2;
 
 // Profile metadata shown on the bot's About page, card preview, and chat
 // header. Kept in code so changes flow through git review and the 15-minute

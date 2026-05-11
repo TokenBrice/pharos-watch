@@ -276,11 +276,11 @@ export interface TelegramPulse {
   coinSubscriptions: number;
   topCoins: string[];
   watcherHistory: TelegramWatcherHistoryPoint[];
-  alertTypeChats?: TelegramAlertTypeChats;
-  quietHoursEnabledChats?: number;
-  pendingDeliveries?: number;
-  updatedAt?: number;
-  updatedEverySeconds?: number;
+  alertTypeChats: TelegramAlertTypeChats;
+  quietHoursEnabledChats: number;
+  pendingDeliveries: number;
+  updatedAt: number;
+  updatedEverySeconds: number;
 }
 
 export interface TelegramDispatchEventsDetected {

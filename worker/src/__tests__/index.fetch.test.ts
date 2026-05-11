@@ -512,7 +512,17 @@ describe("worker.fetch", () => {
       }))
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ activeWatchers: 10, coinSubscriptions: 20, topCoins: [], watcherHistory: [] }),
+          JSON.stringify({
+            activeWatchers: 10,
+            coinSubscriptions: 20,
+            pendingDeliveries: 0,
+            quietHoursEnabledChats: 1,
+            alertTypeChats: { dews: 2, depeg: 3, safety: 4, launch: 5, allTypes: 1 },
+            updatedAt: 1771856400,
+            updatedEverySeconds: 300,
+            topCoins: [],
+            watcherHistory: [],
+          }),
           {
             status: 200,
             headers: { "Content-Type": "application/json" },
@@ -543,7 +553,17 @@ describe("worker.fetch", () => {
     expect(historyRes.status).toBe(200);
     expect(await historyRes.json()).toEqual({ currentStatus: "healthy", transitions: [] });
     expect(pulseRes.status).toBe(200);
-    expect(await pulseRes.json()).toEqual({ activeWatchers: 10, coinSubscriptions: 20, topCoins: [], watcherHistory: [] });
+    expect(await pulseRes.json()).toEqual({
+      activeWatchers: 10,
+      coinSubscriptions: 20,
+      pendingDeliveries: 0,
+      quietHoursEnabledChats: 1,
+      alertTypeChats: { dews: 2, depeg: 3, safety: 4, launch: 5, allTypes: 1 },
+      updatedAt: 1771856400,
+      updatedEverySeconds: 300,
+      topCoins: [],
+      watcherHistory: [],
+    });
   });
 
   it("accepts a valid API key on /api/* routes", async () => {

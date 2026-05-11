@@ -50,7 +50,7 @@ function expectedCommandsCacheValue(): string {
 
 function expectedProfileCacheValue(): string {
   return JSON.stringify({
-    version: 1,
+    version: 2,
     name: TELEGRAM_BOT_NAME,
     short_description: TELEGRAM_BOT_SHORT_DESCRIPTION,
     description: TELEGRAM_BOT_DESCRIPTION,

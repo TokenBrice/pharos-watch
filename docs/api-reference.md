@@ -1700,11 +1700,11 @@ Lightweight Telegram adoption metrics for the public PharosWatchBot page. The ca
 | ------------------- | ---------- | ----------- |
 | `activeWatchers`    | `number`   | Subscribers with at least one active alert type or per-coin alert |
 | `coinSubscriptions` | `number`   | Total active per-coin subscription rows |
-| `pendingDeliveries` | `number`   | Optional privacy-safe count of queued Telegram alert deliveries |
-| `quietHoursEnabledChats` | `number` | Optional aggregate count of chats with quiet hours enabled |
-| `alertTypeChats`    | `object`   | Optional aggregate chat counts with DEWS, depeg, safety, launch, and all-four alert coverage |
-| `updatedAt`         | `number`   | Optional Unix seconds when the pulse payload was produced |
-| `updatedEverySeconds` | `number` | Optional cache cadence for consumers that display freshness |
+| `pendingDeliveries` | `number`   | Privacy-safe count of queued Telegram alert deliveries |
+| `quietHoursEnabledChats` | `number` | Aggregate count of chats with quiet hours enabled |
+| `alertTypeChats`    | `object`   | Aggregate chat counts with DEWS, depeg, safety, launch, and all-four alert coverage |
+| `updatedAt`         | `number`   | Unix seconds when the pulse payload was produced |
+| `updatedEverySeconds` | `number` | Cache cadence for consumers that display freshness |
 | `topCoins`          | `string[]` | Up to five most subscribed coin tickers, ordered by subscription count |
 | `watcherHistory`    | `array`    | UTC day buckets for the current active watcher base, grouped by `telegram_subscribers.created_at`; each point includes `date`, millisecond `timestamp`, `newWatchers`, and cumulative `activeWatchers` |
 
@@ -3962,7 +3962,7 @@ Returns `404` with `{ "error": "Not found", "chatId": "<id>" }` when no `telegra
 
 ### `POST /api/admin-telegram-resend`
 
-Force-resends a single Telegram alert to one chat, bypassing the pending queue. Used for incident triage when a known alert did not reach a subscriber. The handler validates the chat exists, builds a synthetic `ConsolidatedAlerts` from current source data (`stress_signals` for dews, `depeg_events` for depeg, `safety_grade_history` for safety, tracked metadata for launch), and invokes the same `sendToChat` path as the dispatch cron. Every call — success or failure — is recorded in `admin_action_audit`.
+Force-resends a single Telegram alert to one chat, bypassing the pending queue. Used for incident triage when a known alert did not reach a subscriber. The handler validates the chat exists, builds a synthetic `ConsolidatedAlerts` from current source data (`stress_signals` for dews, `depeg_events` for depeg, `safety_grade_history` for safety, tracked metadata for launch), and invokes the same `sendToChat` path as the dispatch cron. Validated resend attempts that reach subscriber lookup, source lookup, or delivery are recorded in `admin_action_audit`; malformed requests and missing configuration can return before audit logging.
 
 **Authentication:** admin (`X-Pharos-Admin: 1` header required).
 
@@ -3998,7 +3998,7 @@ Force-resends a single Telegram alert to one chat, bypassing the pending queue. 
 
 ### `POST /api/admin-telegram-broadcast`
 
-Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via the standard pending-queue fan-out. Used for maintenance windows or outage notices. Live calls enqueue one `telegram_pending_alerts` row per target chat per message chunk; the existing dispatch cron delivers them with the same per-chat rate-limit isolation and wall-clock retry semantics as regular alerts. Every live call writes one row to `admin_action_audit`.
+Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via the standard pending-queue fan-out. Used for maintenance windows or outage notices. Live calls submit one pending-queue message per target chat per message chunk; existing rows with the same dedupe key are updated rather than duplicated. The existing dispatch cron delivers them with the same per-chat rate-limit isolation and wall-clock retry semantics as regular alerts. Every live call writes one row to `admin_action_audit`.
 
 **Authentication:** admin (`X-Pharos-Admin: 1` header required).
 
@@ -4033,6 +4033,6 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
 }
 ```
 
-`enqueued` equals `targetChatCount * chunkCount`. The dispatch cron drains the queue on its normal cadence.
+`enqueued` reports the number of target chat/chunk messages submitted to the pending queue (`targetChatCount * chunkCount`). Because the queue uses dedupe upserts, replaying the same broadcast before drain can update existing rows instead of inserting new rows. The dispatch cron drains the queue on its normal cadence.
 
 **Error responses:** `400` for invalid JSON, empty `messageHtml`, unknown `scope`, or non-boolean `dryRun`.

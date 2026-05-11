@@ -36,7 +36,7 @@ Detection signals:
 ## Remediation
 
 1. **Circuit breaker open.** Reset via `POST https://ops-api.pharos.watch/api/reset-circuit-breaker?circuit=telegram_api` with Access service-token headers, `X-Pharos-Admin: 1`, and an `Idempotency-Key`.
-2. **Snapshot stale loop.** Confirm the dispatch cron has run successfully at least once after the stale-snapshot reseed. If `snapshotSeeded: true` persists across three runs, inspect the snapshot cache keys (`alert:dews-snapshot`, `alert:depeg-snapshot`, `alert:safety-snapshot`) for malformed values.
+2. **Snapshot stale loop.** Confirm the dispatch cron has run successfully at least once after the stale-snapshot reseed. If `snapshotSeeded: true` persists across three runs, inspect the snapshot cache keys (`alert:dews-snapshot`, `alert:dews-alertable-snapshot`, `alert:depeg-snapshot`, `alert:safety-snapshot`) for malformed values.
 3. **Single user blocked.** If `consecutive_block_count >= 2`, the user must `/start` again. The flag resets on the next successful send. Confirm they have not blocked the bot in Telegram itself.
 4. **Single user snoozed/quiet-hours.** Advise `/unsnooze` or `/unmutehours`. No operator action.
 5. **Pending queue full / overflow.** Follow [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).
