@@ -75,6 +75,14 @@
     "disposition": "queued-p4",
     "notes": "Mint/burn flow response shaping remains a large endpoint surface after the pending pricing and flow changes in this push batch. Keep explicitly waived until a dedicated flow API cleanup can separate request parsing, summary shaping, and response projection."
   },
+  "worker/src/api/backfill-depegs.ts": {
+    "disposition": "queued-p4",
+    "notes": "Backfill depeg replay surfaced after methodology shell decompositions lowered larger JSX hotspots. The endpoint still combines request validation, replay planning, and mutation orchestration; split parser/planner/persistence helpers in a dedicated depeg-admin cleanup pass."
+  },
+  "src/app/compare/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Compare page client surfaced after methodology shell decompositions lowered larger JSX hotspots. It still owns URL state, coin selection, comparison projection, and rendering; split the view model and selector controls in a focused compare-page cleanup pass."
+  },
   "src/components/pre-launch-detail.tsx": {
     "disposition": "queued-p4",
     "notes": "The pre-launch detail component is unrelated to the PharosVille host decommission and still combines page copy, eligibility tables, and linked-surface guidance. Keep waived until a frontend route-section cleanup can split it into smaller panels."
