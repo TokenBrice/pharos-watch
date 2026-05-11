@@ -3,6 +3,7 @@
 import { Fragment, useState, type ReactNode } from "react";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { RecommendedActionStrip } from "@/components/status/recommended-action-strip";
 import { RefreshCountdown } from "@/components/status/refresh-countdown";
@@ -56,7 +57,15 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
     (healthData?.status ?? data?.availabilityStatus ?? "healthy") !== "healthy" ||
     (model?.browserProbeSummary?.failCount ?? 0) > 0 ||
     (data?.summary.worstCacheRatio ?? 0) > 1;
-  const telegramSignal = (data?.telegramBot?.pendingDeliveries ?? 0) > 0;
+  const telegramDispatch = data?.crons["dispatch-telegram-alerts"]?.lastRun ?? null;
+  const telegramDispatchMeta = parseTelegramDispatchCronMetadata(telegramDispatch?.metadata);
+  const telegramSignal =
+    (data?.telegramBot?.pendingDeliveries ?? 0) > 0 ||
+    Boolean(data?.sectionErrors.telegramBot) ||
+    (telegramDispatch != null && telegramDispatch.status !== "ok") ||
+    Boolean(telegramDispatchMeta?.cappedAtLimit) ||
+    Boolean(telegramDispatchMeta?.pendingRateLimited) ||
+    Boolean(telegramDispatchMeta?.safetyAlertsSuppressed);
 
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useAutoExpand(diagnosticsSignal);
   const [isReliabilityOpen, setIsReliabilityOpen] = useAutoExpand(reliabilitySignal);

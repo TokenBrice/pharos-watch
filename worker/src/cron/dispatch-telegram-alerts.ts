@@ -32,18 +32,15 @@ import {
 } from "./dispatch-telegram-state";
 import {
   drainPendingQueue,
-  enqueuePendingAlerts,
   cleanupExpiredPendingAlerts,
 } from "./telegram-pending-queue";
 import {
   buildSubscriberQueue,
-  deliverFreshAlerts,
-  expandSubscriberChunks,
   routeAlertEvents,
-  splitFreshQueue,
   type AlertsByChatEntry,
   type SubscriberRow,
 } from "./dispatch-telegram-routing";
+import { deliverTelegramSubscriberQueue } from "./dispatch-telegram-delivery";
 
 type DispatchResult = TelegramDispatchCronResult;
 
@@ -91,6 +88,9 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     pendingDrained: 0,
     pendingRetryQueued: 0,
     pendingDropped: 0,
+    pendingDeferred: 0,
+    pendingRateLimited: false,
+    pendingRetryAfterSec: null,
     pendingEnqueued: 0,
     pendingExpired: 0,
     freshAttempted: 0,
@@ -515,51 +515,25 @@ export async function dispatchTelegramAlerts(
         ),
     );
 
-    const freshBudget = Math.max(0, MAX_MESSAGES_PER_RUN - drainResult.attempted);
-    const { toSend, toEnqueue } = drainResult.rateLimited
-      ? { toSend: [], toEnqueue: subscriberQueue }
-      : splitFreshQueue(subscriberQueue, freshBudget);
-    const sendList = expandSubscriberChunks(toSend);
     const {
       subscribersNotified,
       freshSent,
       freshPermanentFailures,
       blockedUsersCleanedUp,
       blockedUsersCleanupFailed,
-      blockedChats,
-      retryableFreshMessages,
-    } = await deliverFreshAlerts(
+      freshAttempted,
+      freshRetryQueued,
+      pendingEnqueued,
+      cappedAtLimit,
+    } = await deliverTelegramSubscriberQueue({
       db,
-      sendList,
-      toSend,
       botToken,
-      drainResult.blocked - drainResult.blockedCleanupFailed,
-      drainResult.blockedCleanupFailed,
+      subscriberQueue,
+      drainResult,
+      maxMessagesPerRun: MAX_MESSAGES_PER_RUN,
+      nowSec,
       signal,
-    );
-    const overflowMessages = expandSubscriberChunks(toEnqueue, blockedChats);
-
-    const freshRetryQueued = retryableFreshMessages.length;
-    const pendingEnqueued = overflowMessages.length + retryableFreshMessages.length;
-    if (overflowMessages.length > 0) {
-      await enqueuePendingAlerts(
-        db,
-        overflowMessages,
-        nowSec,
-        drainResult.rateLimited
-          ? { notBeforeAt: drainResult.notBeforeAt, lastErrorClass: "rate_limit", retryAfterSec: drainResult.retryAfterSec }
-          : {},
-      );
-    }
-    for (const retry of retryableFreshMessages) {
-      const retryAfterSec = retry.result.retryAfterSec;
-      const notBeforeAt = nowSec + (retryAfterSec != null && retryAfterSec > 0 ? retryAfterSec : 60);
-      await enqueuePendingAlerts(db, [retry.message], nowSec, {
-        notBeforeAt,
-        lastErrorClass: retry.result.errorClass,
-        retryAfterSec,
-      });
-    }
+    });
 
     await writeSnapshots(db, currentSnapshots);
     const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
@@ -579,7 +553,7 @@ export async function dispatchTelegramAlerts(
       messagesSent: freshSent + drainResult.sent,
       blockedUsersCleanedUp,
       blockedUsersCleanupFailed,
-      cappedAtLimit: toEnqueue.length > 0,
+      cappedAtLimit,
       snapshotSeeded: false,
       pendingAttempted: drainResult.attempted,
       pendingDrained: drainResult.sent,
@@ -590,7 +564,7 @@ export async function dispatchTelegramAlerts(
       pendingRetryAfterSec: drainResult.retryAfterSec,
       pendingEnqueued,
       pendingExpired: expiredCount,
-      freshAttempted: sendList.length,
+      freshAttempted,
       freshSent,
       freshRetryQueued,
       freshPermanentFailures,

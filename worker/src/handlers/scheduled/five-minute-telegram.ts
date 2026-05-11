@@ -1,9 +1,9 @@
 /**
  * Five-minute Telegram trigger (2,7,12,... * * * *):
- *   dispatch-telegram-alerts (1)
+ *   dispatch-telegram-alerts (4)
  *
  * Subscriber alerts use a dedicated isolated Telegram lane.
- * Connection budget: 1/6 peak
+ * Connection budget: 4/6 peak
  */
 import { dispatchTelegramAlerts } from "../../cron/dispatch-telegram-alerts";
 import { reconcileTelegramWebhookRegistration } from "../../lib/telegram-webhook-registration";

@@ -36,14 +36,16 @@ The safety-alert path now has an additional hard dependency: `publish-report-car
 - `worker/migrations/MANIFEST.md`
 - `scripts/register-telegram-webhook.sh`
 
-## Frontend Landing Page
+## Frontend Main Page
 
-`src/app/telegram/page.tsx` is a static product-facing explainer for the Telegram feature set.
+`src/app/telegram/page.tsx` is the product-facing main page for the Telegram feature set. It is promoted into the
+primary navigation immediately after `/alt-pegs/`.
 
 - Route: `/telegram/`
 - Covers the public `@pharoswatch` digest channel, the `@pharoswatchers` community channel, and the `@PharosWatchBot` subscription bot
-- Reads `GET /api/telegram-pulse` for the lightweight watcher/subscription pulse strip
+- Reads `GET /api/telegram-pulse` for live watcher/subscription telemetry, including the hero pulse strip, adoption metrics board, and an all-time cumulative active-watcher chart
 - Does not call the webhook or any other mutating bot API; it links users to Telegram plus the on-site digest archive
+- Presents the bot around low-noise growth paths: the recommended `/subscribe dews,depeg usd-top25` default, preset cohorts, group-addressed commands, quiet hours, inline snooze, and the overflow delivery queue
 - Renders a visible FAQ section with matching `FAQPage` JSON-LD, plus `HowTo` and `SoftwareApplication` JSON-LD for the bot setup flow
 
 ## D1 Schema
@@ -55,7 +57,7 @@ The Telegram subscriber, disambiguation, and overflow-queue tables are part of `
 | `telegram_subscribers` | Per-chat state and defaults | `chat_id`, `username`, legacy default flags, `global_alert_dews`, `global_alert_depeg`, `global_alert_safety`, `global_alert_launch`, `global_depeg_worsening_bps_step`, `quiet_hours_enabled`, `quiet_hours_start_utc`, `quiet_hours_end_utc`, `alert_snooze_until_ts`, `created_at`, `last_active_at` |
 | `telegram_subscriptions` | Per-chat per-coin alert preferences | composite PK `chat_id, stablecoin_id`, `alert_dews`, `alert_depeg`, `alert_safety`, `alert_launch`, `dews_min_band`, `safety_mode`, `depeg_worsening_bps_step` |
 | `telegram_pending_disambiguation` | Short-lived state for ambiguous ticker replies | `chat_id`, `action_type`, `action_payload`, `resolved_ids`, `ambiguous_ticker`, `candidates`, `remaining_tickers`, `expires_at`, `initiator_user_id` |
-| `telegram_pending_alerts` | Overflow delivery queue | `id`, `chat_id`, `message_html`, `disable_notification`, `created_at`, `attempts` |
+| `telegram_pending_alerts` | Overflow and retry delivery queue | `id`, `chat_id`, `message_html`, `disable_notification`, `created_at`, `attempts`, `not_before_at`, `last_error_class`, `retry_after_sec`, `updated_at`, `dedupe_key`, `chunk_index` |
 
 The webhook also uses the generic `cache` table key `telegram:last-update-id` to deduplicate Telegram update re-delivery.
 
@@ -64,6 +66,7 @@ The webhook also uses the generic `cache` table key `telegram:last-update-id` to
 | Binding | Required | Used by |
 |---------|----------|---------|
 | `TELEGRAM_BOT_TOKEN` | Yes | Webhook replies, digest posting (including appended cemetery / tracking notices), subscriber alert fan-out |
+| `TELEGRAM_BOT_TOKEN_PREVIOUS` | No | Optional rotation marker validated only for config consistency; sends and webhook registration use the current token |
 | `TELEGRAM_WEBHOOK_SECRET` | Yes | Telegram webhook secret validation for `POST /api/telegram-webhook` via `X-Telegram-Bot-Api-Secret-Token` |
 | `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` | No | Temporary overlap secret accepted by `POST /api/telegram-webhook` during secret rotation; registration still emits only `TELEGRAM_WEBHOOK_SECRET` |
 | `TELEGRAM_CHAT_ID` | No | Daily digest channel posting, including appended cemetery and tracking notices |
@@ -73,7 +76,7 @@ Webhook registration is handled by `scripts/register-telegram-webhook.sh`, which
 - URL: `https://api.pharos.watch/api/telegram-webhook`
 - Secret token: `<TELEGRAM_WEBHOOK_SECRET>`
 
-The dedicated five-minute Telegram worker lane now also reconciles the webhook registration in production on a cache-backed cadence. That means the live Worker periodically re-applies the configured webhook URL and secret token via Telegram `setWebhook`, which self-heals webhook-secret drift without requiring a separate manual script run.
+The dedicated five-minute Telegram worker lane now also reconciles the webhook registration in production on a cache-backed cadence. That means the live Worker periodically re-applies the configured webhook URL, secret token, and `allowed_updates = ["message", "callback_query"]` via Telegram `setWebhook`, which self-heals webhook-secret or update-filter drift without requiring a separate manual script run.
 
 ### Webhook Secret Rotation
 
@@ -113,7 +116,7 @@ update types the bot handles.
 
 The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Token`. During rotation it accepts either `TELEGRAM_WEBHOOK_SECRET` or `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`. Invalid secrets, missing bot token, malformed JSON, and non-command messages all return `200 ok` without side effects so Telegram does not keep retrying.
 
-In group and supergroup chats, commands must be addressed to the bot, for example `/subscribe@PharosWatchBot dews usd-top25`. Unaddressed slash commands are ignored so Pharos does not intercept another bot's group command surface. Plain numeric replies for an active disambiguation prompt do not need a bot mention, but the reply must come from the same Telegram user who started the pending selection when `initiator_user_id` is available.
+In group and supergroup chats, commands must be addressed to the bot, for example `/subscribe@PharosWatchBot dews usd-top25`. Unaddressed slash commands and commands addressed to the public channel handle are ignored so Pharos does not intercept another bot's group command surface. Plain numeric replies for an active disambiguation prompt do not need a bot mention, but the reply must come from the same Telegram user who started the pending selection when `initiator_user_id` is available; unrelated group text from other users is ignored.
 
 ### Supported Commands
 
@@ -128,7 +131,7 @@ In group and supergroup chats, commands must be addressed to the bot, for exampl
 | `/subscribe <targets> depeg-step <value>` | Enables depeg alerts for explicit coins or preset watchlists and stores a worsening-step threshold (`100`, `250`, `500`, or `off`) |
 | `/subscribe <types> all` | Enables one or more alert types across all tracked stablecoins |
 | `/unsubscribe <targets>` | Removes explicit coin subscriptions and can also remove the coins covered by a preset watchlist |
-| `/unsubscribe all` | Clears all per-coin subscriptions and disables every current alert flag, including launch |
+| `/unsubscribe all` | Clears all per-coin subscriptions, disables every current alert flag including launch, and clears the global depeg worsening step |
 | `/set <ticker> <setting> <value>` | Tunes per-coin settings such as DEWS floor, safety direction mode, or depeg worsening step |
 | `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`) or sets the global depeg worsening step |
 | `/mute <start>-<end>` | Enables quiet hours in UTC (messages still deliver, notifications are silenced) |
@@ -296,7 +299,7 @@ When the same chat has both a global alert type and a per-coin subscription for 
 
 - Messages are HTML-formatted via `formatConsolidatedMessage()`.
 - Long messages are split with `splitMessage(html, 4000)`.
-- `sendBatch()` posts in parallel batches of 5 (staying under Workers 6-connection limit).
+- `sendBatch()` posts in parallel batches of 4 (staying under Workers 6-connection limit).
 - Hard cap: `200 Telegram message attempts per dispatch run`.
 - Overflow subscribers are enqueued to `telegram_pending_alerts` and drained in subsequent runs.
 - Pending alerts expire after `1 hour` (3600s) — stale alerts are cleaned up automatically.
@@ -321,6 +324,16 @@ ensuring eventual delivery.
 Pending alerts have a 1-hour TTL. Rows older than the TTL are deleted at the end of each
 run. Retryable sends are queued while the stored `attempts` counter is below 5; rows that
 fail again at `attempts >= 5` are dropped.
+
+Retry and deferral metadata lives on the pending rows:
+
+- `not_before_at` defers retryable failures, rate-limited sends, and active snoozes until the next eligible run. Quiet hours are re-evaluated at drain time and silence notifications without delaying delivery.
+- `last_error_class` and `retry_after_sec` preserve the last retryable Telegram result for observability and backoff.
+- `dedupe_key` and `chunk_index` prevent duplicate queued chunks for the same chat/message while still preserving split-message order.
+
+If Telegram rate-limits a pending drain, fresh alerts are queued instead of sent in the
+same run. The queue stores Telegram's `retry_after` value when available; otherwise it
+uses a 60-second retry floor.
 
 This design ensures snapshots always stay current (events are never "held back") while
 guaranteeing delivery for large subscriber populations.
@@ -376,7 +389,7 @@ Additional Telegram bot status metrics now include:
 - `pendingDeliveries`
 - `customPreferenceChats`
 - `quietHoursEnabledChats`
-- dispatch breakdown fields such as `freshRetryQueued`, `freshPermanentFailures`, `pendingRetryQueued`, and `pendingDropped`
+- dispatch breakdown fields such as `freshRetryQueued`, `freshPermanentFailures`, `pendingRetryQueued`, `pendingDeferred`, `pendingRateLimited`, `pendingRetryAfterSec`, and `pendingDropped`
 
 ### Circuit Breaker
 

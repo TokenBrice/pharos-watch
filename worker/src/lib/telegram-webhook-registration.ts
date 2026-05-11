@@ -28,14 +28,22 @@ export function buildTelegramWebhookUrl(selfUrl?: string | null): string {
   }
 }
 
-function buildExpectedWebhookCacheValue(expectedUrl: string): string {
+async function buildSecretTokenMarker(webhookSecret: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(webhookSecret));
+  return Array.from(new Uint8Array(digest))
+    .slice(0, 16)
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function buildExpectedWebhookCacheValue(expectedUrl: string, webhookSecret: string): Promise<string> {
   return JSON.stringify({
     version: TELEGRAM_WEBHOOK_CACHE_VERSION,
     url: expectedUrl,
     allowed_updates: [...TELEGRAM_ALLOWED_UPDATES],
     secret_token: {
       present: true,
-      marker: "v1",
+      marker: await buildSecretTokenMarker(webhookSecret),
     },
   });
 }
@@ -58,7 +66,6 @@ export async function reconcileTelegramWebhookRegistration(
   const botToken = options.botToken?.trim();
   const webhookSecret = options.webhookSecret?.trim();
   const expectedUrl = buildTelegramWebhookUrl(options.selfUrl);
-  const expectedCacheValue = buildExpectedWebhookCacheValue(expectedUrl);
 
   if (!botToken) {
     return { attempted: false, skipped: true, reason: "missing-bot-token", expectedUrl };
@@ -66,6 +73,7 @@ export async function reconcileTelegramWebhookRegistration(
   if (!webhookSecret) {
     return { attempted: false, skipped: true, reason: "missing-webhook-secret", expectedUrl };
   }
+  const expectedCacheValue = await buildExpectedWebhookCacheValue(expectedUrl, webhookSecret);
   if (await shouldSkipFreshMatchingWebhookCache(db, expectedCacheValue)) {
     return { attempted: false, skipped: true, reason: "fresh-cache", expectedUrl };
   }

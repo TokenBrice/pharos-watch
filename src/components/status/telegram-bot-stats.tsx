@@ -142,8 +142,10 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
                 {renderDelta("Pending attempted", dispatchMeta?.pendingAttempted ?? null)}
                 {renderDelta("Pending sent", dispatchMeta?.pendingDrained ?? null)}
                 {renderDelta("Pending retries queued", dispatchMeta?.pendingRetryQueued ?? null)}
+                {renderDelta("Pending deferred", dispatchMeta?.pendingDeferred ?? null)}
                 {renderDelta("Pending dropped", dispatchMeta?.pendingDropped ?? null)}
                 {renderDelta("Pending newly enqueued", dispatchMeta?.pendingEnqueued ?? null)}
+                {renderDelta("Pending retry after", dispatchMeta?.pendingRetryAfterSec ?? null)}
                 {renderDelta("Blocked cleaned up", dispatchMeta?.blockedUsersCleanedUp ?? null)}
                 {renderDelta("Safety source age", dispatchMeta?.safetyAlertSourceAgeSeconds ?? null)}
                 {renderDelta("DEWS changes", dispatchMeta?.eventsDetected?.dews ?? null)}
@@ -155,6 +157,7 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
                 <div className="flex flex-wrap gap-2 pt-1">
                   {dispatchMeta?.snapshotSeeded ? <Badge variant="secondary">snapshot reseeded</Badge> : null}
                   {dispatchMeta?.cappedAtLimit ? <Badge variant="secondary">hit message cap</Badge> : null}
+                  {dispatchMeta?.pendingRateLimited ? <Badge variant="secondary">pending rate limited</Badge> : null}
                   {dispatchMeta?.safetyAlertSourceState && dispatchMeta.safetyAlertSourceState !== "ok" ? (
                     <Badge variant="secondary">{dispatchMeta.safetyAlertSourceState}</Badge>
                   ) : null}

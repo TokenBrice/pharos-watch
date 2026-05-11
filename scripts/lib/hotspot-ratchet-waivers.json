@@ -75,10 +75,6 @@
     "disposition": "queued-p4",
     "notes": "DEWS scoring and contagion policy remain intentionally concentrated while the early-warning surface is still evolving. Split signal derivation, contagion weighting, and aggregate scoring in a dedicated DEWS cleanup pass."
   },
-  "worker/src/api/mint-burn-flows.ts": {
-    "disposition": "queued-p4",
-    "notes": "Mint/burn flow response shaping remains a large endpoint surface after the pending pricing and flow changes in this push batch. Keep explicitly waived until a dedicated flow API cleanup can separate request parsing, summary shaping, and response projection."
-  },
   "worker/src/api/api-key-requests.ts": {
     "disposition": "queued-p4",
     "notes": "The self-serve API key handler coordinates intake throttles, email-claim state, verification issuance, compensation, and private admin review in one new endpoint module. Split request lifecycle, verification exchange, and admin mutations into separate handler modules once the self-serve surface has production usage."

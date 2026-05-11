@@ -8,14 +8,25 @@ import {
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
 
-function expectedWebhookCacheValue(url = "https://api.pharos.watch/api/telegram-webhook"): string {
+async function secretTokenMarker(secret = "secret-token"): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret));
+  return Array.from(new Uint8Array(digest))
+    .slice(0, 16)
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function expectedWebhookCacheValue(
+  url = "https://api.pharos.watch/api/telegram-webhook",
+  secret = "secret-token",
+): Promise<string> {
   return JSON.stringify({
     version: 2,
     url,
     allowed_updates: ["message", "callback_query"],
     secret_token: {
       present: true,
-      marker: "v1",
+      marker: await secretTokenMarker(secret),
     },
   });
 }
@@ -43,7 +54,7 @@ describe("reconcileTelegramWebhookRegistration", () => {
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: ["telegram:webhook-reconciled"],
-        rows: [{ value: expectedWebhookCacheValue(), updated_at: nowSec }],
+        rows: [{ value: await expectedWebhookCacheValue(), updated_at: nowSec }],
       },
     ], { requireMatch: true });
 
@@ -101,7 +112,7 @@ describe("reconcileTelegramWebhookRegistration", () => {
     );
     expect(writes).toHaveLength(1);
     expect(writes[0]?.binds[0]).toBe("telegram:webhook-reconciled");
-    expect(writes[0]?.binds[1]).toBe(expectedWebhookCacheValue());
+    expect(writes[0]?.binds[1]).toBe(await expectedWebhookCacheValue());
     expect(typeof writes[0]?.binds[2]).toBe("number");
   });
 
@@ -118,7 +129,7 @@ describe("reconcileTelegramWebhookRegistration", () => {
             allowed_updates: ["message"],
             secret_token: {
               present: true,
-              marker: "v1",
+              marker: await secretTokenMarker(),
             },
           }),
           updated_at: nowSec,
@@ -147,13 +158,42 @@ describe("reconcileTelegramWebhookRegistration", () => {
     expect(body.allowed_updates).toEqual(["message", "callback_query"]);
   });
 
+  it("re-registers when the cached secret marker belongs to a previous secret", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:webhook-reconciled"],
+        rows: [{ value: await expectedWebhookCacheValue(undefined, "old-secret-token"), updated_at: nowSec }],
+      },
+      {
+        match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+        rows: [],
+      },
+    ], { requireMatch: true });
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const result = await reconcileTelegramWebhookRegistration(db, {
+      botToken: "bot-token",
+      webhookSecret: "secret-token",
+      selfUrl: "https://api.pharos.watch",
+    });
+
+    expect(result).toMatchObject({
+      attempted: true,
+      skipped: false,
+      expectedUrl: "https://api.pharos.watch/api/telegram-webhook",
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("re-registers when the matching cached config is stale", async () => {
     const staleUpdatedAtSec = Math.floor(Date.now() / 1000) - 901;
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: ["telegram:webhook-reconciled"],
-        rows: [{ value: expectedWebhookCacheValue(), updated_at: staleUpdatedAtSec }],
+        rows: [{ value: await expectedWebhookCacheValue(), updated_at: staleUpdatedAtSec }],
       },
       {
         match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
