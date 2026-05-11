@@ -56,8 +56,8 @@ describe("tracked stablecoin metadata", () => {
     expect(nonUsd).toHaveLength(0);
     expect(commodity).toHaveLength(0);
     expect(preLaunch).toHaveLength(0);
-    expect(perCoinGenerated).toHaveLength(305);
-    expect(canonicalOrder).toHaveLength(305);
+    expect(perCoinGenerated).toHaveLength(303);
+    expect(canonicalOrder).toHaveLength(303);
     expect(
       usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
     ).toBe(canonicalOrder.length);
@@ -84,15 +84,14 @@ describe("tracked stablecoin metadata", () => {
     const preLaunchCoins = perCoinGenerated.filter((coin) => coin.status === "pre-launch");
 
     expect(legacyShellCoins).toEqual([]);
-    expect(preLaunchCoins).toHaveLength(21);
+    expect(preLaunchCoins).toHaveLength(19);
     expect(preLaunchCoins.every((coin) => coin.status === "pre-launch")).toBe(true);
   });
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
-    expect(TRACKED_STABLECOINS).toHaveLength(305);
+    expect(TRACKED_STABLECOINS).toHaveLength(303);
     expect(ACTIVE_STABLECOINS).toHaveLength(281);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
-      "cadd-cad-digital",
       "usdpt-western-union",
       "roughrider-bnd",
       "fiusd-fiserv",
@@ -112,7 +111,6 @@ describe("tracked stablecoin metadata", () => {
       "brl-b3",
       "usdf-flipcash",
       "krw-imbank",
-      "sofid-sofi",
     ]);
   });
 
@@ -147,9 +145,7 @@ describe("tracked stablecoin metadata", () => {
       "savusd-avant",
       "cusdo-openeden",
       "syusd-aegis",
-      "syusd-lucidly",
       "sbold-k3-capital",
-      "shyusd-hylo",
       "fxsave-f-x-protocol",
       "susn-noon",
       "syzusd-yuzu",
