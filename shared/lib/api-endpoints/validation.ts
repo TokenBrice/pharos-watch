@@ -103,6 +103,19 @@ export function matchDynamicAdminEndpoint(path: string): DynamicAdminEndpointMat
     };
   }
 
+  if (dynamicDescriptor.key === "admin-telegram-chat") {
+    const chatId = match[1] ?? "";
+    if (!/^-?\d+$/.test(chatId)) {
+      return null;
+    }
+    return {
+      key: "admin-telegram-chat",
+      path,
+      chatId,
+      methods: dynamicDescriptor.methods,
+    };
+  }
+
   const apiKeyId = Number.parseInt(match[1] ?? "", 10);
   if (!Number.isFinite(apiKeyId) || apiKeyId <= 0) {
     return null;

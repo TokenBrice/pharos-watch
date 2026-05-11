@@ -3881,3 +3881,78 @@ Malformed `limit` defaults to `50`; out-of-range `limit` is clamped to `1..200`.
   ]
 }
 ```
+
+### `GET /api/admin-telegram-chat/:chatId`
+
+Returns the consolidated state PharosWatchBot holds for a single Telegram chat: subscriber row, per-coin and preset subscriptions, any pending ticker disambiguation, pending-alert queue aggregates plus the most recent retry error class, and the quiet-hours / snooze state. Used for incident triage and `/forgetme`-style audits.
+
+**Authentication:** admin. **Path param:** `:chatId` (signed integer; negative for groups/supergroups).
+
+Returns `404` with `{ "error": "Not found", "chatId": "<id>" }` when no `telegram_subscribers` row exists.
+
+**Response**
+
+```json
+{
+  "chatId": "12345",
+  "subscriber": {
+    "chatId": "12345",
+    "username": "alice",
+    "createdAt": 1700000000,
+    "lastActiveAt": 1700001000,
+    "globalAlerts": {
+      "dews": 1,
+      "depeg": 0,
+      "safety": 0,
+      "launch": 1,
+      "depegWorseningBpsStep": 250
+    },
+    "perCoinAlertFlags": { "dews": 1, "depeg": 0, "safety": 1, "launch": 0 },
+    "quietHours": { "enabled": true, "startHourUtc": 22, "endHourUtc": 7 },
+    "snooze": { "active": true, "untilTs": 1700001600 }
+  },
+  "subscriptions": [
+    {
+      "stablecoin_id": "usdc-circle",
+      "alert_dews": 1,
+      "alert_depeg": 1,
+      "alert_safety": 0,
+      "alert_launch": 0,
+      "dews_min_band": "WARNING",
+      "safety_mode": null,
+      "depeg_worsening_bps_step": 250
+    }
+  ],
+  "presets": [
+    {
+      "preset_id": "usd-top25",
+      "alert_dews": 1,
+      "alert_depeg": 1,
+      "alert_safety": 0,
+      "depeg_worsening_bps_step": null,
+      "created_at": 1700000500,
+      "updated_at": 1700000500
+    }
+  ],
+  "pendingDisambiguation": {
+    "alertTypes": "dews",
+    "resolvedIds": "[]",
+    "ambiguousTicker": "USD",
+    "candidates": "[]",
+    "remainingTickers": "[]",
+    "expiresAt": 1700002000,
+    "actionType": "subscribe",
+    "actionPayload": "{}",
+    "initiatorUserId": "user-1"
+  },
+  "pendingAlerts": {
+    "count": 3,
+    "oldestCreatedAt": 1700000100,
+    "newestCreatedAt": 1700000800,
+    "earliestNotBeforeAt": 1700000900,
+    "recentRetryErrorClass": "telegram-429"
+  }
+}
+```
+
+`pendingDisambiguation` is `null` when no pending row exists. `pendingAlerts.count` is `0` and the timestamp fields are `null` when the queue is empty for the chat.

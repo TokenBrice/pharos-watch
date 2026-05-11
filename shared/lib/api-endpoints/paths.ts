@@ -134,4 +134,5 @@ export const API_PATHS = {
     }),
   statusProbeHistory: (params?: { path?: string; days?: number }) =>
     buildQueryPath("/api/status-probe-history", { path: params?.path, days: params?.days }),
+  adminTelegramChat: (chatId: string) => `/api/admin-telegram-chat/${encodeURIComponent(chatId)}`,
 } as const;

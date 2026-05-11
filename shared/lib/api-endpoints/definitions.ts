@@ -80,6 +80,12 @@ export type DynamicAdminEndpointMatch =
     path: string;
     requestId: string;
     methods: readonly EndpointMethod[];
+  }
+  | {
+    key: "admin-telegram-chat";
+    path: string;
+    chatId: string;
+    methods: readonly EndpointMethod[];
   };
 
 const BASE_ENDPOINT_DEFINITIONS = [

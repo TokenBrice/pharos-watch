@@ -10,6 +10,7 @@ import { handleOg } from "../api/og";
 import { handleDiscoveryCandidateDismiss } from "../api/admin-actions";
 import { handleApiKeyDeactivate, handleApiKeyRotate, handleApiKeyUpdate } from "../api/api-keys";
 import { handleApiKeyRequestReject, handleApiKeyRequestReleaseClaim } from "../api/api-key-requests";
+import { handleAdminTelegramChat } from "../api/admin-telegram-chat";
 import { errorResponse, resolveOrReject } from "../lib/api-utils";
 import { defineDynamicRoute, type DynamicRouteDefinition, type RouteDependency, type RouteMatch } from "./shared";
 
@@ -88,6 +89,7 @@ const DYNAMIC_ADMIN_ROUTE_DEPENDENCIES = {
   "api-key-rotate": requireDynamicEndpointDescriptor("api-key-rotate").routeDependencies,
   "api-key-request-reject": requireDynamicEndpointDescriptor("api-key-request-reject").routeDependencies,
   "api-key-request-release-claim": requireDynamicEndpointDescriptor("api-key-request-release-claim").routeDependencies,
+  "admin-telegram-chat": requireDynamicEndpointDescriptor("admin-telegram-chat").routeDependencies,
 } as const satisfies Record<DynamicAdminEndpointMatch["key"], readonly RouteDependency[]>;
 
 export function getDynamicRouteMatch(path: string): RouteMatch | null {
@@ -139,6 +141,17 @@ export function getDynamicRouteMatch(path: string): RouteMatch | null {
       handle: (routeCtx) => handleApiKeyRequestReleaseClaim(
         routeCtx.db,
         dynamicAdminEndpoint.requestId,
+        routeCtx.trustedAdmin,
+        routeCtx.request,
+      ),
+    };
+  }
+  if (dynamicAdminEndpoint?.key === "admin-telegram-chat") {
+    return {
+      dependencies: DYNAMIC_ADMIN_ROUTE_DEPENDENCIES[dynamicAdminEndpoint.key],
+      handle: (routeCtx) => handleAdminTelegramChat(
+        routeCtx.db,
+        dynamicAdminEndpoint.chatId,
         routeCtx.trustedAdmin,
         routeCtx.request,
       ),

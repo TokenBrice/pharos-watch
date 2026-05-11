@@ -246,7 +246,7 @@ describe("api endpoint registry", () => {
   });
 
   it("keeps the shared dynamic descriptor table aligned with current access and dependency policies", () => {
-    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(10);
+    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(11);
 
     expect(findDynamicEndpointDescriptor("/api/stablecoin/usdt-tether")).toMatchObject({
       key: "stablecoin-detail",
@@ -289,6 +289,13 @@ describe("api endpoint registry", () => {
       methods: ["POST"],
       adminRequired: true,
       routeDependencies: [],
+      siteDataAccess: "denied",
+    });
+    expect(getDynamicEndpointDescriptorByKey("admin-telegram-chat")).toMatchObject({
+      methods: ["GET"],
+      adminRequired: true,
+      routeDependencies: [],
+      publicApiAccess: "exempt",
       siteDataAccess: "denied",
     });
 
