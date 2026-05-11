@@ -85,13 +85,16 @@ import {
 
 /**
  * Group admin gating mode for `/subscribe`, `/unsubscribe`, `/set` in
- * group/supergroup chats. "soft" warns non-admins but still runs the command.
- * A future PR will introduce a "hard" mode that refuses the command for
- * non-admins; flip this flag (and update `maybeWarnNonAdminGroupActor`) when
- * that handler lands.
+ * group/supergroup chats. "hard" refuses the command for non-admins (default).
+ * "soft" is kept as an emergency rollback path for operators: it warns the
+ * non-admin and still runs the command. The exported wrapper is mutable so
+ * tests can flip the mode; production code should keep the default.
  */
-type TelegramGroupAdminGating = "soft" | "hard";
-const TELEGRAM_GROUP_ADMIN_GATING: TelegramGroupAdminGating = "soft";
+export type TelegramGroupAdminGating = "soft" | "hard";
+/** @internal Exported for tests only — do not mutate in production code. */
+export const TELEGRAM_GROUP_ADMIN_GATING: { mode: TelegramGroupAdminGating } = {
+  mode: "hard",
+};
 
 const GROUP_ADMIN_GATED_COMMANDS = new Set(["/subscribe", "/unsubscribe", "/set"]);
 
@@ -271,7 +274,15 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
         GROUP_ADMIN_GATED_COMMANDS.has(parsedCommand.command) &&
         actorUserId != null
       ) {
-        await maybeWarnNonAdminGroupActor(db, botToken, chatId, actorUserId, parsedCommand.command, reply);
+        const proceed = await maybeGateNonAdminGroupActor(
+          db,
+          botToken,
+          chatId,
+          actorUserId,
+          parsedCommand.command,
+          reply,
+        );
+        if (!proceed) return ok();
       }
 
       switch (parsedCommand.command) {
@@ -516,22 +527,22 @@ function isGroupChat(chatType: string): boolean {
   return chatType === "group" || chatType === "supergroup";
 }
 
-async function maybeWarnNonAdminGroupActor(
+/**
+ * Returns `true` when the command should proceed, `false` when it has been
+ * refused (hard gate) and the caller must stop processing the update.
+ */
+async function maybeGateNonAdminGroupActor(
   db: D1Database,
   botToken: string,
   chatId: string,
   actorUserId: string,
   command: string,
   reply: (message: string) => Promise<void>,
-): Promise<void> {
+): Promise<boolean> {
   const member = await getCachedChatMember(db, botToken, chatId, actorUserId);
   if (member && (member.status === "creator" || member.status === "administrator")) {
-    return;
+    return true;
   }
-  // Soft launch: warn the non-admin but still let the command run. A future PR
-  // will introduce TELEGRAM_GROUP_ADMIN_GATING === "hard" and short-circuit
-  // the dispatch here.
-  if (TELEGRAM_GROUP_ADMIN_GATING !== "soft") return;
 
   const admins = await getCachedChatAdministrators(db, botToken, chatId);
   const mentions = admins ? formatAdministratorMentions(admins) : "";
@@ -541,6 +552,7 @@ async function maybeWarnNonAdminGroupActor(
       `Only group admins can change subscriptions (${command}).${adminLine}`,
     ),
   );
+  return TELEGRAM_GROUP_ADMIN_GATING.mode !== "hard";
 }
 
 function isAddressedToPharosBot(botMention: string | null): boolean {
