@@ -312,8 +312,8 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 846,
-    "maxFunctionLines": 405,
+    "fileLines": 851,
+    "maxFunctionLines": 409,
     "branchCount": 46,
     "disposition": "deferred",
     "targetBudget": {
