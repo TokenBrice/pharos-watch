@@ -215,6 +215,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     maxConnections: 4, // Telegram sendMessage batches run with SEND_BATCH_SIZE=4
   },
   {
+    job: "telegram-degradation-watchdog",
+    label: "Telegram degradation watchdog",
+    group: "five-minute",
+    intervalSec: 300,
+    scheduleKey: "fiveMinuteTelegramAlerts",
+    triggerMode: "isolated",
+    maxConnections: 0, // DB-only inspection plus optional webhook alert
+  },
+  {
     job: "sync-blacklist",
     label: "Blacklist sync",
     group: "multi-hourly",

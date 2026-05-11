@@ -416,6 +416,16 @@ Additional Telegram bot status metrics now include:
 - `presetQueryFailures` (consecutive aborted dispatch runs since the last clean preset-subscriber load; only set when > 0)
 - dispatch breakdown fields such as `freshRetryQueued`, `freshPermanentFailures`, `pendingRetryQueued`, `pendingDeferred`, `pendingRateLimited`, `pendingRetryAfterSec`, and `pendingDropped`
 
+### Alerting on degraded delivery
+
+`worker/src/cron/telegram-degradation-watchdog.ts` runs on the 5-minute Telegram lane immediately after `dispatch-telegram-alerts`. It reads fresh dispatch metadata and emits a one-shot alert via the existing `sendAlert(...)` webhook rail when any of three conditions hold; each condition emits a single "recovered" alert and clears its cache flag when it clears:
+
+- `telegram_pending_alerts` row count exceeds 500 sustained for more than 20 minutes (cache key `telegram:degradation:pending-since`).
+- `alert:safety-source-cache` reports `state != "ok"` for more than two `publish-report-card-cache` intervals (cache key `telegram:degradation:safety-source-since`).
+- The most recent `dispatch-telegram-alerts` cron run reported `eventsDetected > 0` but `messagesSent == 0` for three consecutive runs (cache key `telegram:degradation:zero-send-streak`).
+
+The watchdog is wired through `runBestEffortScheduledJob` so its own failures never block the dispatch lane, and its metadata captures `triggered`, `recovered`, and `alertSent` flags per condition for admin inspection via `cron_runs`.
+
 ### Circuit Breaker
 
 The dispatcher is protected by `CIRCUIT_SOURCE.TELEGRAM_API`.

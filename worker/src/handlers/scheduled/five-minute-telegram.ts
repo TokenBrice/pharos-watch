@@ -1,12 +1,12 @@
 /**
  * Five-minute Telegram trigger (2,7,12,... * * * *):
- *   dispatch-telegram-alerts (4)
- *   telegram-disambiguation-cleanup (1)
+ *   dispatch-telegram-alerts (4) -> telegram-degradation-watchdog (0) -> telegram-disambiguation-cleanup (1)
  *
  * Subscriber alerts use a dedicated isolated Telegram lane.
  * Connection budget: 4/6 peak
  */
 import { dispatchTelegramAlerts } from "../../cron/dispatch-telegram-alerts";
+import { runTelegramDegradationWatchdog } from "../../cron/telegram-degradation-watchdog";
 import { cleanExpiredDisambiguations } from "../../cron/telegram-quiet-hours";
 import {
   reconcileTelegramCommandRegistration,
@@ -54,6 +54,14 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     "dispatch-telegram-alerts",
     (signal) => dispatchTelegramAlerts(runtime.db, runtime.env.TELEGRAM_BOT_TOKEN!, signal),
     { errorMessage: "[cron] dispatch-telegram-alerts failed:" },
+  );
+
+  await runBestEffortScheduledJob(
+    runtime,
+    "five-minute telegram slot",
+    "telegram-degradation-watchdog",
+    (signal) => runTelegramDegradationWatchdog(runtime.db, runtime.alertWebhookUrl, signal),
+    { errorMessage: "[cron] telegram-degradation-watchdog failed:" },
   );
 
   await runBestEffortScheduledJob(
