@@ -526,6 +526,13 @@ Current critical file set (`CRITICAL_FILES` in `scripts/lib/critical-coverage.mj
 - `worker/src/api/status.ts`
 - `worker/src/api/stablecoin-detail.ts`
 - `worker/src/cron/dex-liquidity/orchestrator.ts`
+- `worker/src/api/blacklist.ts`
+- `worker/src/api/blacklist-summary.ts`
+- `worker/src/lib/blacklist-contracts.ts`
+- `worker/src/cron/sync-blacklist.ts`
+- `shared/lib/report-card-blacklist-authority.ts`
+- `shared/lib/report-card-blacklist-matchers.ts`
+- `shared/lib/blacklist-active-records.ts`
 
 Selected files have explicit threshold overrides in `scripts/check-critical-coverage.mjs`; keep that map as the source of truth instead of duplicating override values in prose.
 
