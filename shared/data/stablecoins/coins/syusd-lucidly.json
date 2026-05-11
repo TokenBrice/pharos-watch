@@ -15,6 +15,7 @@
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC deposited into a Lucidly-managed BoringVault that allocates across bluechip lending markets (Morpho, Aave V3), AMM concentrated-liquidity positions, and delta-neutral structured products",
   "pegMechanism": "Users deposit USDC via enter() to mint syUSD; base yield and incentives compound into the syUSD exchange rate against USDC (e.g. 1 syUSD = 1.01 USDC), with exits processed through an asynchronous ~24h redemption queue",
+  "detailProvider": "coingecko",
   "links": [
     {
       "label": "Website",

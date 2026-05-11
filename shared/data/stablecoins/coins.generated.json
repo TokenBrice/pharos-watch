@@ -17357,6 +17357,7 @@
   },
   {
     "id": "syusd-lucidly",
+    "detailProvider": "coingecko",
     "name": "Stable Yield USD",
     "symbol": "syUSD",
     "flags": {
