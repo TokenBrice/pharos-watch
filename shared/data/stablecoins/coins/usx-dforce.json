@@ -1,7 +1,7 @@
 {
   "id": "usx-dforce",
   "llamaId": "44",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "name": "dForce USD",
   "symbol": "USX",
   "flags": {
@@ -97,7 +97,7 @@
     {
       "type": "warning",
       "title": "Active depeg risk",
-      "message": "Recent provider data shows USX materially below $1; the configured reserve view is a collateral classification, not live redemption assurance."
+      "message": "USX is trading at approximately $0.41 (~59% discount to USD), reflecting legacy debt positions on the dForce/Unitus protocol. The configured reserve view is a collateral classification, not live redemption assurance."
     }
   ]
 }

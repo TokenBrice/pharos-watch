@@ -3,7 +3,7 @@
   "name": "Pareto USP",
   "symbol": "USP",
   "llamaId": "349",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "geckoId": "pareto-usp",
   "flags": {
     "backing": "rwa-backed",
@@ -13,7 +13,7 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "USDC and USDS collateral deployed into Pareto credit vaults, liquid buffers, and a stability fund",
+  "collateral": "USDC and USDS collateral deployed into Pareto credit vaults (private-credit lending pools), liquid buffers, and a stability fund",
   "pegMechanism": "Verified users mint and redeem USP 1:1 against stablecoin collateral through Pareto, while secondary-market holders rely on DEX liquidity",
   "links": [
     {
@@ -89,6 +89,11 @@
       "type": "warning",
       "title": "Permissioned primary market",
       "message": "Pareto USP minting and redemption are modeled for verified users; public secondary-market holders may not have direct primary redemption access."
+    },
+    {
+      "type": "warning",
+      "title": "Soft depeg",
+      "message": "USP has been trading near $0.91 (~9% discount to USD); investigate before relying on peg parity."
     }
   ]
 }
