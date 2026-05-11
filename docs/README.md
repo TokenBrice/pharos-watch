@@ -103,7 +103,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/stablecoins/governance/[governance]/`         | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
 | `/stablecoins/infrastructure/`                  | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
 | `/stablecoins/infrastructure/[infrastructure]/` | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
-| `/pharoswatchbot/`                              | [telegram-alerts.md](./telegram-alerts.md)                                                                                                            |
+| `/pharoswatchbot/`                              | [telegram-alerts.md](./telegram-alerts.md) — canonical PharosWatchBot page; `/telegram` is a redirect alias                                           |
 | `/upcoming/`                                    | [upcoming-page.md](./upcoming-page.md)                                                                                                                |
 | `/yield/`                                       | [yield-intelligence.md](./yield-intelligence.md)                                                                                                      |
 
@@ -160,7 +160,7 @@ These are public sub-pages of `/methodology/`. Use the route map below when you 
 - [yield-intelligence-operations.md](./yield-intelligence-operations.md) - runtime guardrails and degraded-mode behavior for the `sync-yield-data` cron
 - [digest-pipeline.md](./digest-pipeline.md) - digest generation, storage, distribution, and SSG pipeline
 - [feedback-pipeline.md](./feedback-pipeline.md) - feedback widget, POST contract, rate limiting, and GitHub routing
-- [telegram-alerts.md](./telegram-alerts.md) - Telegram webhook commands, subscription tables, and alert dispatch rules
+- [telegram-alerts.md](./telegram-alerts.md) - PharosWatchBot page route, Telegram webhook commands, subscription tables, and alert dispatch rules
 - [shadow-stablecoins.md](./shadow-stablecoins.md) - PSI-only shadow asset boundary and UI exclusion rules
 - [chain-health.md](./chain-health.md) - Chain Health Score inputs, formula, factors, bands, and update contract
 

@@ -21,8 +21,10 @@ const TELEGRAM_FEATURE_LIST = [
   "DEWS threat-band alerts (ALERT, WARNING, DANGER)",
   "Safety grade alerts, including global downgrade filtering by score when available",
   "Pre-launch stablecoin launch alerts",
+  "On-demand market brief, top rankings, Safety Score explanations, and coverage checks",
+  "Dynamic preset watchlists that keep tracking current cohorts",
   "Per-coin thresholds and quiet hours",
-  "Inline snooze (1h / 4h / 24h)",
+  "Inline status, tuning, and snooze actions",
 ] as const;
 
 export function buildTelegramPageJsonLd(siteUrl: string) {

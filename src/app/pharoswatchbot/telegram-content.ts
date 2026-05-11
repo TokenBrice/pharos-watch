@@ -1,7 +1,7 @@
 import type { FaqItem } from "@/lib/faq";
 
 export const TELEGRAM_PAGE_DESCRIPTION =
-  "Set up PharosWatchBot alerts for specific stablecoins, preset watchlists, or all tracked stablecoins by alert type: depeg events, depeg worsening, DEWS threat level changes, safety grade shifts, and launch promotions for pre-launch assets. Plus get the Pharos digest straight in Telegram.";
+  "Set up PharosWatchBot alerts for specific stablecoins, preset watchlists, or all tracked stablecoins by alert type: depeg events, depeg worsening, DEWS threat level changes, safety grade shifts, and launch promotions for pre-launch assets. Daily digest and community channels stay available as secondary Telegram context.";
 
 export const TELEGRAM_ACTIONS = [
   {
@@ -12,7 +12,7 @@ export const TELEGRAM_ACTIONS = [
     description:
       "Per-coin or all-stablecoin alerts for DEWS changes, depegs, safety-grade moves, and launch promotions for pre-launch assets. Configurable thresholds and quiet hours.",
     heroButtonLabel: "Start PharosWatchBot",
-    cardButtonLabel: "Start Bot",
+    cardButtonLabel: "Open Bot",
     finalButtonLabel: "Start Bot",
     showArchiveLink: false,
     isPrimary: true,
@@ -23,7 +23,7 @@ export const TELEGRAM_ACTIONS = [
     handle: "@pharoswatch",
     href: "https://t.me/pharoswatch",
     description:
-      "AI-written daily market recap every morning \u2014 peg deviations, supply shifts, liquidity changes, and emerging trends.",
+      "Optional AI-written daily market recap every morning \u2014 peg deviations, supply shifts, liquidity changes, and emerging trends.",
     heroButtonLabel: "Daily Digest",
     cardButtonLabel: "Join Channel",
     finalButtonLabel: "Digest",
@@ -36,7 +36,7 @@ export const TELEGRAM_ACTIONS = [
     handle: "@pharoswatchers",
     href: "https://t.me/pharoswatchers",
     description:
-      "The live crowd \u2014 readers swapping notes on fresh depegs, risk signals, and the market moves worth watching before the next digest lands.",
+      "Optional live crowd \u2014 readers swapping notes on fresh depegs, risk signals, and the market moves worth watching before the next digest lands.",
     heroButtonLabel: "Community",
     cardButtonLabel: "Join Community",
     finalButtonLabel: "Community",
@@ -116,8 +116,28 @@ export const TELEGRAM_COMMANDS = [
   },
   {
     command: "/status <ticker>",
-    description: "Current peg, DEWS band, and safety grade for one coin \u2014 no subscription needed",
+    description: "Current peg, supply, DEWS, safety, liquidity, active depeg, and yield context for one coin",
     example: "/status USDC",
+  },
+  {
+    command: "/brief",
+    description: "Latest compact market brief from the Pharos digest inputs",
+    example: "/brief",
+  },
+  {
+    command: "/top <view>",
+    description: "Rank current depeg, DEWS, yield, liquidity, chain, or safety views",
+    example: "/top depeg",
+  },
+  {
+    command: "/why <ticker>",
+    description: "Explain a coin's Safety Score and weakest dimensions",
+    example: "/why USDC",
+  },
+  {
+    command: "/coverage <ticker>",
+    description: "Show which Pharos data surfaces currently cover one coin",
+    example: "/coverage USDC",
   },
   {
     command: "/presets",
@@ -137,12 +157,12 @@ export const TELEGRAM_COMMANDS = [
   {
     command: "/set <ticker> <setting> <value>",
     description:
-      "DEWS floor (WARNING/DANGER), safety direction (downgrade-only/upgrade-only), or depeg-step (100/250/500 bps)",
+      "DEWS floor, safety direction, launch on/off, or depeg-step (100/250/500 bps)",
     example: "/set USDT dews WARNING",
   },
   {
     command: "/set all <setting> <value>",
-    description: "Toggle dews, depeg, or safety across every tracked coin, or set the global depeg worsening step",
+    description: "Toggle dews, depeg, safety, or launch across every tracked coin, or set the global depeg worsening step",
     example: "/set all depeg-step 250",
   },
   {
@@ -153,6 +173,11 @@ export const TELEGRAM_COMMANDS = [
   {
     command: "/unmutehours",
     description: "Disable quiet hours",
+    example: null,
+  },
+  {
+    command: "/unsnooze",
+    description: "Clear active alert snooze immediately",
     example: null,
   },
   {
@@ -239,8 +264,16 @@ export const TELEGRAM_GETTING_STARTED_OPTIONS = [
     description: "Browse preset watchlists directly inside the bot",
   },
   {
+    command: "/brief",
+    description: "Get the latest market brief without waiting for the channel digest",
+  },
+  {
+    command: "/top depeg",
+    description: "Rank the live risk view from inside Telegram",
+  },
+  {
     command: "/subscribe dews usd-top-25",
-    description: "Dashed preset spelling also works in DMs and group addressed commands",
+    description: "Dynamic preset follows keep tracking the current cohort",
   },
   {
     command: "/subscribe dews,depeg USDT,USDC",
@@ -278,6 +311,10 @@ export const TELEGRAM_GETTING_STARTED_OPTIONS = [
   {
     command: "/set all depeg-step 250",
     description: "Global depeg worsening milestones every 250 bps",
+  },
+  {
+    command: "/set all launch on",
+    description: "Global launch watch for pre-launch assets moving live",
   },
   {
     command: "/mute 22-07",

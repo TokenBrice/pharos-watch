@@ -93,7 +93,7 @@ Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-j
 | `telegram_pending_disambiguation` | Ephemeral mid-conversation state for ticker disambiguation                  |
 | `telegram_pending_alerts`         | Overflow subscriber-alert delivery queue drained by the 5-minute alert cron |
 
-The Telegram subscriber, disambiguation, and overflow-queue tables are part of the squashed worker baseline in `worker/migrations/0000_baseline.sql`; see [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) for the pre-squash lineage and current post-baseline files. For the full bot flow, see [Telegram Alert Bot](./telegram-alerts.md).
+The Telegram subscriber, disambiguation, and overflow-queue tables are part of the squashed worker baseline in `worker/migrations/0000_baseline.sql`; see [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) for the pre-squash lineage and current post-baseline files. For the full bot flow, see [PharosWatchBot and Telegram Alerts](./telegram-alerts.md).
 
 ## Telegram Alert Cron Job
 
@@ -153,6 +153,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
   - `/api/`
   - `/changelog/`
   - major feature pages with standalone static copy (`/start/`, `/alt-pegs/`, `/upcoming/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/pharoswatchbot/`, `/funding/`, `/status/`, `/about/`, `/privacy/`)
+- `/telegram` and `/telegram/*` are legacy aliases that redirect to canonical `/pharoswatchbot/` paths and are not sitemap entries.
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`
   - `/portfolio/`

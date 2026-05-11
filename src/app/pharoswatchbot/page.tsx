@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { FaqSection } from "@/components/faq-section";
+import { CopyButton } from "@/components/copy-button";
 import { Button } from "@/components/ui/button";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -70,14 +71,16 @@ const HERO_STATS = [
   {
     label: "Alert lane",
     value: "5m",
-    detail: "dedicated dispatch cadence for DEWS, depeg, safety, and launch signals",
+    detail: "Telegram dispatcher cadence for DEWS, depeg, safety, and launch signals",
   },
   {
-    label: "Default setup",
-    value: "1",
-    detail: "starter command before users fine-tune thresholds and quiet hours",
+    label: "First action",
+    value: "Paste",
+    detail: "open the bot, then send the recommended starter command",
   },
 ] as const;
+
+const RECOMMENDED_FIRST_COMMAND = "/subscribe dews,depeg usd-top25";
 
 const RECOMMENDED_SETUPS = [
   {
@@ -173,9 +176,15 @@ function TelegramLink({ href, children }: { href: string; children: React.ReactN
 
 function CommandLine({ command }: { command: string }) {
   return (
-    <code className="block overflow-x-auto whitespace-nowrap rounded-lg border border-border/60 bg-background/80 px-3 py-2 font-mono text-xs text-foreground">
-      {command}
-    </code>
+    <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border/60 bg-background/80 px-2 py-1.5">
+      <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap px-1 font-mono text-xs text-foreground">
+        {command}
+      </code>
+      <CopyButton
+        text={command}
+        className="size-8 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+      />
+    </div>
   );
 }
 
@@ -217,7 +226,7 @@ function SurfaceCard({ action, index }: { action: (typeof TELEGRAM_ACTIONS)[numb
   const Icon = TELEGRAM_ACTION_ICONS[action.key];
   const anchorId = ACTION_ANCHORS[action.key];
   const cardClassName = action.isPrimary
-    ? "border-frost-blue/35 bg-frost-blue/8 dark:bg-frost-blue/6"
+    ? "border-frost-blue/35 bg-frost-blue/8 dark:bg-frost-blue/6 md:col-span-2 lg:col-span-1"
     : "border-border/65 bg-card/78";
 
   return (
@@ -231,7 +240,18 @@ function SurfaceCard({ action, index }: { action: (typeof TELEGRAM_ACTIONS)[numb
           <Icon className="h-5 w-5" />
         </span>
         <div className="min-w-0">
-          <h2 className="text-base font-semibold leading-tight text-foreground">{action.title}</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-base font-semibold leading-tight text-foreground">{action.title}</h2>
+            {action.isPrimary ? (
+              <span className="rounded-full border border-frost-blue/30 bg-frost-blue/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-sky-700 dark:text-sky-300">
+                Primary
+              </span>
+            ) : (
+              <span className="rounded-full border border-border/60 bg-muted/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Secondary
+              </span>
+            )}
+          </div>
           <p className="mt-1 font-mono text-xs text-muted-foreground">{action.handle}</p>
         </div>
       </div>
@@ -318,7 +338,7 @@ export default function PharosWatchBotPage() {
       headerActions={
         <Button asChild size="sm" className="gap-2">
           <a href="https://t.me/PharosWatchBot" target="_blank" rel="noopener noreferrer">
-            Start Bot
+            Open Bot
             <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
           </a>
         </Button>
@@ -370,16 +390,20 @@ export default function PharosWatchBotPage() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 space-y-2">
                     <p className="pharos-kicker text-sky-700 dark:text-sky-300">Recommended first command</p>
-                    <CommandLine command="/subscribe dews,depeg usd-top25" />
+                    <CommandLine command={RECOMMENDED_FIRST_COMMAND} />
                     <TelegramPulseStrip />
                   </div>
                   <Button asChild className="shrink-0 gap-2">
                     <a href="https://t.me/PharosWatchBot" target="_blank" rel="noopener noreferrer">
-                      Start Bot
+                      Open Bot
                       <ArrowRight className="h-4 w-4" aria-hidden="true" />
                     </a>
                   </Button>
                 </div>
+                <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                  Open the bot first, then paste the command above. It subscribes you to DEWS and depeg alerts for the
+                  top USD stablecoin preset.
+                </p>
               </div>
             </div>
 
@@ -392,13 +416,14 @@ export default function PharosWatchBotPage() {
         <section className="space-y-4" aria-labelledby="telegram-surfaces-title">
           <div className="max-w-3xl space-y-2">
             <h2 id="telegram-surfaces-title" className="pharos-section-title">
-              Three Telegram surfaces, one monitoring loop
+              Bot first; digest and community when you want context
             </h2>
             <p className="pharos-lead">
-              The bot is the alert product. The digest and community give slower context around the same market signals.
+              PharosWatchBot is the alert product. The digest and community are optional companion surfaces around the
+              same market signals.
             </p>
           </div>
-          <div className="pharos-stagger-entrance grid gap-4 md:grid-cols-3">
+          <div className="pharos-stagger-entrance grid gap-4 md:grid-cols-3 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.875fr)_minmax(0,0.875fr)]">
             {TELEGRAM_ACTIONS.map((action, index) => (
               <SurfaceCard key={action.key} action={action} index={index} />
             ))}
@@ -538,64 +563,6 @@ export default function PharosWatchBotPage() {
           </div>
         </section>
 
-        <section className="space-y-4" aria-labelledby="setup-details-title">
-          <div className="max-w-3xl space-y-2">
-            <h2 id="setup-details-title" className="pharos-section-title">
-              Setup recipes
-            </h2>
-            <p className="pharos-lead">
-              Start with a preset, then tune only the coins or alert types that deserve a custom threshold.
-            </p>
-          </div>
-          <ol className="space-y-5 text-sm leading-relaxed text-muted-foreground">
-            <li className="flex items-start gap-3">
-              <span
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-foreground"
-                aria-hidden="true"
-              >
-                1
-              </span>
-              <p>
-                Open <TelegramLink href="https://t.me/PharosWatchBot">@PharosWatchBot</TelegramLink> in Telegram and
-                send <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">/start</code>.
-              </p>
-            </li>
-            <li className="flex items-start gap-3">
-              <span
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-foreground"
-                aria-hidden="true"
-              >
-                2
-              </span>
-              <div className="min-w-0 flex-1 space-y-3">
-                <p>Pick one path:</p>
-                <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
-                  {TELEGRAM_GETTING_STARTED_OPTIONS.map((option) => (
-                    <div key={option.command}>
-                      <CommandLine command={option.command} />
-                      <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <span
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-foreground"
-                aria-hidden="true"
-              >
-                3
-              </span>
-              <p>
-                Use <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">/list</code> to audit active
-                subscriptions, <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">/presets</code> to
-                discover cohorts, and <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">/mute</code>{" "}
-                or inline snooze buttons to keep alerts quiet during off-hours.
-              </p>
-            </li>
-          </ol>
-        </section>
-
         <section id="commands" className="scroll-mt-24">
           <details className="pharos-card-shell overflow-hidden group">
             <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-semibold transition-colors hover:bg-muted/30 [&::-webkit-details-marker]:hidden">
@@ -608,6 +575,26 @@ export default function PharosWatchBotPage() {
               <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
             </summary>
             <div className="space-y-4 border-t border-border/60 px-5 py-4">
+              <div className="rounded-xl border border-border/60 bg-background/35 p-4">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)]">
+                  <div className="space-y-2">
+                    <p className="pharos-kicker">Setup flow</p>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      Open <TelegramLink href="https://t.me/PharosWatchBot">@PharosWatchBot</TelegramLink>, paste a
+                      command, then use <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">/list</code>{" "}
+                      to audit active subscriptions.
+                    </p>
+                  </div>
+                  <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+                    {TELEGRAM_GETTING_STARTED_OPTIONS.map((option) => (
+                      <div key={option.command}>
+                        <CommandLine command={option.command} />
+                        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{option.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
               <div className="-mx-5 overflow-x-auto px-5">
                 <table className="w-full text-sm">
                   <thead>
@@ -630,9 +617,15 @@ export default function PharosWatchBotPage() {
                     {TELEGRAM_COMMANDS.map((cmd) => (
                       <tr key={cmd.command} className="group/row transition-colors hover:bg-muted/40">
                         <td className="py-3 pr-4 align-top">
-                          <code className="inline-flex whitespace-nowrap rounded bg-muted px-2 py-1 text-xs font-mono text-foreground">
-                            {cmd.command}
-                          </code>
+                          <div className="inline-flex items-center gap-1 rounded bg-muted px-1 py-0.5">
+                            <code className="whitespace-nowrap px-1 text-xs font-mono text-foreground">
+                              {cmd.command}
+                            </code>
+                            <CopyButton
+                              text={cmd.command}
+                              className="size-6 text-muted-foreground hover:bg-background/70 hover:text-foreground"
+                            />
+                          </div>
                         </td>
                         <td className="py-3 pr-4 align-top text-muted-foreground">{cmd.description}</td>
                         <td className="hidden py-3 align-top sm:table-cell">
@@ -664,35 +657,38 @@ export default function PharosWatchBotPage() {
         <FaqSection items={TELEGRAM_FAQ} includeJsonLd />
 
         <section className="pharos-card-shell border-t-2 border-t-sky-500/40 p-6 dark:border-t-sky-400/30 sm:p-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-center">
             <div className="max-w-3xl space-y-2">
               <p className="pharos-kicker">Start watching</p>
               <h2 id="start-bot-cta" className="text-xl font-semibold tracking-tight text-foreground">
                 One Telegram command gets you onto the live watchtower.
               </h2>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                Start @PharosWatchBot for alert routing, join @pharoswatch for the digest, or use @pharoswatchers when
-                you want the market conversation around the signals.
+                Open @PharosWatchBot, paste the recommended command, then use digest and community links only if you
+                want slower context around the alerts.
               </p>
             </div>
-            <div className="flex shrink-0 flex-wrap gap-3">
-              {TELEGRAM_ACTIONS.map((action) => {
-                const Icon = TELEGRAM_ACTION_ICONS[action.key];
-                return (
-                  <Button
-                    key={action.key}
-                    variant={action.isPrimary ? "default" : "outline"}
-                    size="sm"
-                    asChild
-                    className="gap-2"
-                  >
-                    <a href={action.href} target="_blank" rel="noopener noreferrer">
-                      <Icon className="h-4 w-4" />
-                      {action.finalButtonLabel}
-                    </a>
-                  </Button>
-                );
-              })}
+            <div className="space-y-3">
+              <CommandLine command={RECOMMENDED_FIRST_COMMAND} />
+              <div className="flex flex-wrap gap-3">
+                <Button size="sm" asChild className="gap-2">
+                  <a href="https://t.me/PharosWatchBot" target="_blank" rel="noopener noreferrer">
+                    <Bot className="h-4 w-4" />
+                    Start Bot
+                  </a>
+                </Button>
+                {TELEGRAM_ACTIONS.filter((action) => !action.isPrimary).map((action) => {
+                  const Icon = TELEGRAM_ACTION_ICONS[action.key];
+                  return (
+                    <Button key={action.key} variant="outline" size="sm" asChild className="gap-2">
+                      <a href={action.href} target="_blank" rel="noopener noreferrer">
+                        <Icon className="h-4 w-4" />
+                        {action.finalButtonLabel}
+                      </a>
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </section>

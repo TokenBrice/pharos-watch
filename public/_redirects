@@ -6,6 +6,7 @@
 /lighthouse/ https://pharosville.pharos.watch/ 302
 /lighthouse https://pharosville.pharos.watch/ 302
 
+# Legacy Telegram landing-page alias; /pharoswatchbot/ is canonical.
 /telegram/* /pharoswatchbot/:splat 301
 /telegram/ /pharoswatchbot/ 301
 /telegram /pharoswatchbot/ 301
