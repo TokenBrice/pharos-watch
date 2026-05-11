@@ -1,0 +1,55 @@
+{
+  "id": "shyusd-hylo",
+  "name": "Staked hyUSD",
+  "symbol": "shyUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "hyusd-hylo",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "hyusd-hylo",
+  "collateral": "Staked wrapper over hyUSD deposited in Hylo's Stability Pool, ultimately backed by the underlying basket of Solana LSTs (JitoSOL, mSOL, bSOL, JupSOL) overcollateralizing hyUSD",
+  "pegMechanism": "Users stake hyUSD into the Stability Pool to receive shyUSD; each epoch the protocol harvests LST yields and mints hyUSD into the pool, causing shyUSD to appreciate against hyUSD. Unstaking returns hyUSD, which inherits hyUSD's overcollateralized redemption mechanics (with xSOL absorbing SOL volatility); under defined stress conditions deposited hyUSD may be converted to xSOL",
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://hylo.so/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/hylo_so"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.hylo.so/protocol-overview/earning-yield-with-hyUSD"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "HnnGv3HrSqjRpgdFmx7vQGjntNEoex1SU4e9Lxcxuihz",
+      "decimals": 6
+    }
+  ],
+  "chainTier": "mature-alt-l1",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "reserves": [
+    {
+      "name": "hyUSD staking pool shares",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "hyusd-hylo",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Hylo Stability Pool (shyUSD)",
+    "yieldType": "nav-appreciation"
+  }
+}

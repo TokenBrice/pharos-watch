@@ -56,8 +56,8 @@ describe("tracked stablecoin metadata", () => {
     expect(nonUsd).toHaveLength(0);
     expect(commodity).toHaveLength(0);
     expect(preLaunch).toHaveLength(0);
-    expect(perCoinGenerated).toHaveLength(302);
-    expect(canonicalOrder).toHaveLength(302);
+    expect(perCoinGenerated).toHaveLength(305);
+    expect(canonicalOrder).toHaveLength(305);
     expect(
       usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
     ).toBe(canonicalOrder.length);
@@ -89,8 +89,8 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
-    expect(TRACKED_STABLECOINS).toHaveLength(302);
-    expect(ACTIVE_STABLECOINS).toHaveLength(278);
+    expect(TRACKED_STABLECOINS).toHaveLength(305);
+    expect(ACTIVE_STABLECOINS).toHaveLength(281);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "cadd-cad-digital",
       "usdpt-western-union",
@@ -147,7 +147,9 @@ describe("tracked stablecoin metadata", () => {
       "savusd-avant",
       "cusdo-openeden",
       "syusd-aegis",
+      "syusd-lucidly",
       "sbold-k3-capital",
+      "shyusd-hylo",
       "fxsave-f-x-protocol",
       "susn-noon",
       "syzusd-yuzu",

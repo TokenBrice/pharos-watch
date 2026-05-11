@@ -41,29 +41,24 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "STRC (Strategy preferred equity, BTC-linked)",
-      "pct": 40,
-      "risk": "high"
+      "name": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
+      "pct": 60,
+      "risk": "very-low"
     },
     {
-      "name": "BMNR preferred equity (ETH-linked)",
-      "pct": 15,
+      "name": "STRC (Strategy preferred equity, BTC-linked)",
+      "pct": 36.17,
       "risk": "high"
     },
     {
       "name": "SATA (Strive preferred equity, BTC-linked)",
-      "pct": 10,
+      "pct": 2.78,
       "risk": "high"
     },
     {
-      "name": "DFDV preferred equity (SOL-linked)",
-      "pct": 10,
+      "name": "Other",
+      "pct": 1.05,
       "risk": "high"
-    },
-    {
-      "name": "U.S. Treasury Bills (liquidity buffer)",
-      "pct": 25,
-      "risk": "very-low"
     }
   ],
   "liveReservesConfig": {

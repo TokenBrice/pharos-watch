@@ -40,6 +40,10 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "xai-silo-finance::Silo ETH and USDC credit-line collateral::USDC",
     "XAI reserve metadata describes a mixed Silo credit-line collateral bucket, so no single stablecoin coinId is representative.",
   ],
+  [
+    "apxusd-apyx::Cash & Equivalents (USDC, U.S. Treasury Bills)::USDC",
+    "apxUSD's cash bucket aggregates USDC and short-duration U.S. Treasury Bills, so no single coinId is representative.",
+  ],
 ]);
 
 describe("reserve coinId validation", () => {

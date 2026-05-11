@@ -1,0 +1,56 @@
+{
+  "id": "syusd-lucidly",
+  "name": "Stable Yield USD",
+  "symbol": "syUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdc-circle",
+  "collateral": "USDC deposited into a Lucidly-managed BoringVault that allocates across bluechip lending markets (Morpho, Aave V3), AMM concentrated-liquidity positions, and delta-neutral structured products",
+  "pegMechanism": "Users deposit USDC via enter() to mint syUSD; base yield and incentives compound into the syUSD exchange rate against USDC (e.g. 1 syUSD = 1.01 USDC), with exits processed through an asynchronous ~24h redemption queue",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://lucidly.finance"
+    },
+    {
+      "label": "App",
+      "url": "https://app.lucidly.finance/yields?vaultAddress=0x279CAD277447965AF3d24a78197aad1B02a2c589"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.lucidly.finance"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x279cad277447965af3d24a78197aad1b02a2c589",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USDC deployed across Lucidly hybrid yield strategies (Morpho, Aave V3, CLMM, delta-neutral)",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Lucidly syUSD hybrid strategy vault",
+    "yieldType": "nav-appreciation"
+  }
+}

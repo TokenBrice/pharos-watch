@@ -14,7 +14,7 @@
       "navToken": false
     },
     "collateral": "Russian ruble (RUB) deposits held 1:1 at Promsvyazbank (PSB), a Russian state-owned bank; reserves audited quarterly by an independent Kyrgyz auditing firm",
-    "pegMechanism": "Fiat-backed 1:1 peg to the Russian ruble; mint via KYC-verified authorized partners depositing RUB; redeem by returning A7A5 for equivalent RUB; issuer (Old Vector LLC) distributes 50% of reserve interest to holders as additional A7A5",
+    "pegMechanism": "Fiat-backed 1:1 peg to the Russian ruble enforced exclusively via off-chain primary-market mint and redemption with KYC-verified authorized partners (e.g. a7a5.kg for Russian-account holders depositing or withdrawing RUB); no on-chain DEX-based RUB liquidity exists, so USD-denominated price prints reflect RUB/USD spot movements rather than secondary-market arbitrage; issuer (Old Vector LLC) distributes 50% of reserve interest to holders as additional A7A5",
     "geckoId": "a7a5",
     "links": [
       {
@@ -371,29 +371,24 @@
     "governanceQuality": "single-entity",
     "reserves": [
       {
-        "name": "STRC (Strategy preferred equity, BTC-linked)",
-        "pct": 40,
-        "risk": "high"
+        "name": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
+        "pct": 60,
+        "risk": "very-low"
       },
       {
-        "name": "BMNR preferred equity (ETH-linked)",
-        "pct": 15,
+        "name": "STRC (Strategy preferred equity, BTC-linked)",
+        "pct": 36.17,
         "risk": "high"
       },
       {
         "name": "SATA (Strive preferred equity, BTC-linked)",
-        "pct": 10,
+        "pct": 2.78,
         "risk": "high"
       },
       {
-        "name": "DFDV preferred equity (SOL-linked)",
-        "pct": 10,
+        "name": "Other",
+        "pct": 1.05,
         "risk": "high"
-      },
-      {
-        "name": "U.S. Treasury Bills (liquidity buffer)",
-        "pct": 25,
-        "risk": "very-low"
       }
     ],
     "liveReservesConfig": {
@@ -10098,6 +10093,65 @@
     }
   },
   {
+    "id": "jusd-juicedollar",
+    "detailProvider": "coingecko",
+    "name": "Juice Dollar",
+    "symbol": "JUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "BTC deposited on Citrea (Bitcoin L2) in oracle-free overcollateralized positions; user collateral is not rehypothecated. Protocol is forked from the d-EURO / Frankencoin architecture.",
+    "pegMechanism": "Overcollateralized minting against BTC collateral on Citrea with automated on-chain liquidations when collateral ratios fall below required thresholds; no external price oracles; positions and debt are verifiable on-chain (Frankencoin-style design)",
+    "geckoId": "juice-dollar",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://juicedollar.com/"
+      },
+      {
+        "label": "App",
+        "url": "https://bapp.juicedollar.com/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.juicedollar.com/"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/JuiceDollar"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/JuiceSwap_com"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "citrea",
+        "address": "0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": false,
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "native",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "BTC collateral in oracle-free overcollateralized positions on Citrea",
+        "pct": 100,
+        "risk": "medium"
+      }
+    ]
+  },
+  {
     "id": "jusd-jusd-stable-token",
     "detailProvider": "coingecko",
     "name": "JUSD",
@@ -15337,6 +15391,61 @@
     }
   },
   {
+    "id": "shyusd-hylo",
+    "detailProvider": "coingecko",
+    "name": "Staked hyUSD",
+    "symbol": "shyUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "hyusd-hylo",
+    "collateral": "Staked wrapper over hyUSD deposited in Hylo's Stability Pool, ultimately backed by the underlying basket of Solana LSTs (JitoSOL, mSOL, bSOL, JupSOL) overcollateralizing hyUSD",
+    "pegMechanism": "Users stake hyUSD into the Stability Pool to receive shyUSD; each epoch the protocol harvests LST yields and mints hyUSD into the pool, causing shyUSD to appreciate against hyUSD. Unstaking returns hyUSD, which inherits hyUSD's overcollateralized redemption mechanics (with xSOL absorbing SOL volatility); under defined stress conditions deposited hyUSD may be converted to xSOL",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://hylo.so/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/hylo_so"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.hylo.so/protocol-overview/earning-yield-with-hyUSD"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "solana",
+        "address": "HnnGv3HrSqjRpgdFmx7vQGjntNEoex1SU4e9Lxcxuihz",
+        "decimals": 6
+      }
+    ],
+    "chainTier": "mature-alt-l1",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "variantOf": "hyusd-hylo",
+    "variantKind": "strategy-vault",
+    "reserves": [
+      {
+        "name": "hyUSD staking pool shares",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "hyusd-hylo",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Hylo Stability Pool (shyUSD)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "silk-shade-protocol",
     "llamaId": "113",
     "detailProvider": "defillama",
@@ -17243,6 +17352,62 @@
     },
     "yieldConfig": {
       "yieldSource": "Aegis staking (sYUSD)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "syusd-lucidly",
+    "name": "Stable Yield USD",
+    "symbol": "syUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usdc-circle",
+    "collateral": "USDC deposited into a Lucidly-managed BoringVault that allocates across bluechip lending markets (Morpho, Aave V3), AMM concentrated-liquidity positions, and delta-neutral structured products",
+    "pegMechanism": "Users deposit USDC via enter() to mint syUSD; base yield and incentives compound into the syUSD exchange rate against USDC (e.g. 1 syUSD = 1.01 USDC), with exits processed through an asynchronous ~24h redemption queue",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://lucidly.finance"
+      },
+      {
+        "label": "App",
+        "url": "https://app.lucidly.finance/yields?vaultAddress=0x279CAD277447965AF3d24a78197aad1B02a2c589"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.lucidly.finance"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x279cad277447965af3d24a78197aad1b02a2c589",
+        "decimals": 6
+      }
+    ],
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "variantOf": "usdc-circle",
+    "variantKind": "strategy-vault",
+    "reserves": [
+      {
+        "name": "USDC deployed across Lucidly hybrid yield strategies (Morpho, Aave V3, CLMM, delta-neutral)",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Lucidly syUSD hybrid strategy vault",
       "yieldType": "nav-appreciation"
     }
   },
