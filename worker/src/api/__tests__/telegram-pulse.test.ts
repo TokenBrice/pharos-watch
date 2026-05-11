@@ -17,6 +17,12 @@ describe("handleTelegramPulse", () => {
         first: {
           active_watchers: 5,
           coin_subscriptions: 7,
+          dews_chats: 4,
+          depeg_chats: 3,
+          safety_chats: 2,
+          launch_chats: 1,
+          all_types_chats: 1,
+          quiet_hours_enabled_chats: 2,
         },
         rows: [],
       },
@@ -27,6 +33,11 @@ describe("handleTelegramPulse", () => {
           { stablecoin_id: "usdc-circle" },
         ],
       },
+      {
+        match: "FROM telegram_pending_alerts",
+        first: { pending_count: 3 },
+        rows: [],
+      },
     ]);
 
     const response = await handleTelegramPulse(db);
@@ -34,6 +45,11 @@ describe("handleTelegramPulse", () => {
       activeWatchers: number;
       coinSubscriptions: number;
       topCoins: string[];
+      alertTypeChats: { dews: number; depeg: number; safety: number; launch: number; allTypes: number };
+      quietHoursEnabledChats: number;
+      pendingDeliveries: number;
+      updatedAt: number;
+      updatedEverySeconds: number;
       watcherHistory: Array<{
         date: string;
         timestamp: number;
@@ -54,6 +70,8 @@ describe("handleTelegramPulse", () => {
     expect(aggregateQuery?.sql).toContain("global_alert_launch");
     expect(aggregateQuery?.sql).toContain("alert_launch = 1");
     expect(aggregateQuery?.sql).toContain("SUM(COALESCE(sub.active_sub_count, 0)) AS coin_subscriptions");
+    expect(aggregateQuery?.sql).toContain("quiet_hours_enabled_chats");
+    expect(aggregateQuery?.sql).toContain("all_types_chats");
     expect(topCoinsQuery?.sql).toContain("alert_launch = 1");
     expect(watcherHistoryQuery?.sql).toContain("date(s.created_at, 'unixepoch')");
     expect(watcherHistoryQuery?.sql).toContain("global_alert_launch");
@@ -62,6 +80,17 @@ describe("handleTelegramPulse", () => {
       activeWatchers: 5,
       coinSubscriptions: 7,
       topCoins: ["USDPT", "USDC"],
+      alertTypeChats: {
+        dews: 4,
+        depeg: 3,
+        safety: 2,
+        launch: 1,
+        allTypes: 1,
+      },
+      quietHoursEnabledChats: 2,
+      pendingDeliveries: 3,
+      updatedAt: expect.any(Number),
+      updatedEverySeconds: 300,
       watcherHistory: [
         { date: "2026-04-01", timestamp: 1775001600000, newWatchers: 2, activeWatchers: 2 },
         { date: "2026-04-03", timestamp: 1775174400000, newWatchers: 3, activeWatchers: 5 },

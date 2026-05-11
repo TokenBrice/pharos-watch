@@ -5,6 +5,7 @@ import { getTelegramBotStats, mapTelegramBotStats } from "../status/telegram-bot
 describe("mapTelegramBotStats", () => {
   it("coerces aggregate rows into the public Telegram status shape", () => {
     const result = mapTelegramBotStats({
+      now: 1_710_000_100,
       aggregate: {
         total_chats: "12",
         alert_enabled_chats: "10",
@@ -25,6 +26,17 @@ describe("mapTelegramBotStats", () => {
       },
       pendingDisambiguations: { pending_count: "11" },
       pendingDeliveries: { pending_count: "12" },
+      pendingDeliveryTelemetry: {
+        pending_count: "12",
+        oldest_created_at: "1710000040",
+        due_count: "8",
+        deferred_count: "3",
+        expired_count: "1",
+      },
+      retryErrorClasses: [
+        { error_class: "rate_limit", pending_count: "4" },
+        { error_class: "server_error", pending_count: "2" },
+      ],
       topStablecoins: [
         { stablecoin_id: "usdc-circle", subscribers: "5" },
         { stablecoin_id: "unknown-stablecoin", subscribers: "2" },
@@ -56,6 +68,16 @@ describe("mapTelegramBotStats", () => {
         { stablecoinId: "usdc-circle", symbol: "USDC", subscribers: 5 },
         { stablecoinId: "unknown-stablecoin", symbol: "unknown-stablecoin", subscribers: 2 },
       ],
+      oldestPendingDeliveryAgeSec: 60,
+      retryErrorClassCounts: {
+        rate_limit: 4,
+        server_error: 2,
+      },
+      pendingDeliveryBacklog: {
+        due: 8,
+        deferred: 3,
+        expired: 1,
+      },
     });
   });
 
@@ -136,7 +158,22 @@ describe("getTelegramBotStats", () => {
         rows: [],
       },
       { match: "FROM telegram_pending_disambiguation", first: { pending_count: 1 }, rows: [] },
-      { match: "FROM telegram_pending_alerts", first: { pending_count: 2 }, rows: [] },
+      {
+        match: "MIN(created_at) AS oldest_created_at",
+        first: {
+          pending_count: 2,
+          oldest_created_at: 1_710_000_040,
+          due_count: 1,
+          deferred_count: 1,
+          expired_count: 0,
+        },
+        rows: [],
+      },
+      {
+        match: "last_error_class AS error_class",
+        rows: [{ error_class: "rate_limit", pending_count: 1 }],
+      },
+      { match: "SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts", first: { pending_count: 2 }, rows: [] },
       { match: "FROM telegram_subscriptions", rows: [{ stablecoin_id: "usdpt-western-union", subscribers: 2 }] },
     ]);
 
@@ -154,6 +191,9 @@ describe("getTelegramBotStats", () => {
     expect(aggregateQuery?.sql).toContain("alert_launch");
     expect(topCoinsQuery?.sql).toContain("alert_launch = 1");
     expect(result.alertTypeChats.launch).toBe(1);
+    expect(result.oldestPendingDeliveryAgeSec).toBe(60);
+    expect(result.pendingDeliveryBacklog).toEqual({ due: 1, deferred: 1, expired: 0 });
+    expect(result.retryErrorClassCounts).toEqual({ rate_limit: 1 });
     expect(result.topStablecoins[0]).toEqual({
       stablecoinId: "usdpt-western-union",
       symbol: "USDPT",

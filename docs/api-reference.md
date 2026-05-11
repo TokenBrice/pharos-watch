@@ -1653,7 +1653,7 @@ Browser consumers on `pharos.watch` and `ops.pharos.watch` should use same-origi
 
 ### `GET /api/telegram-pulse`
 
-Lightweight Telegram adoption metrics for the public `/pharoswatchbot/` page. Returns aggregate watcher/subscription counts, the most subscribed coin symbols, and all-time cumulative watcher growth for the current active watcher base.
+Lightweight Telegram adoption metrics for the public PharosWatchBot page. The canonical page route is `/pharoswatchbot/`; the legacy `/telegram` alias redirects there. Returns aggregate watcher/subscription counts, the most subscribed coin symbols, and all-time cumulative watcher growth for the current active watcher base.
 
 **Cache:** `public, max-age=300, s-maxage=300`
 
@@ -1663,6 +1663,17 @@ Lightweight Telegram adoption metrics for the public `/pharoswatchbot/` page. Re
 {
   "activeWatchers": 1842,
   "coinSubscriptions": 5621,
+  "pendingDeliveries": 3,
+  "quietHoursEnabledChats": 42,
+  "alertTypeChats": {
+    "dews": 1701,
+    "depeg": 1644,
+    "safety": 1512,
+    "launch": 1208,
+    "allTypes": 1191
+  },
+  "updatedAt": 1771856400,
+  "updatedEverySeconds": 300,
   "topCoins": ["USDT", "USDC", "USDe"],
   "watcherHistory": [
     {
@@ -1685,6 +1696,11 @@ Lightweight Telegram adoption metrics for the public `/pharoswatchbot/` page. Re
 | ------------------- | ---------- | ----------- |
 | `activeWatchers`    | `number`   | Subscribers with at least one active alert type or per-coin alert |
 | `coinSubscriptions` | `number`   | Total active per-coin subscription rows |
+| `pendingDeliveries` | `number`   | Optional privacy-safe count of queued Telegram alert deliveries |
+| `quietHoursEnabledChats` | `number` | Optional aggregate count of chats with quiet hours enabled |
+| `alertTypeChats`    | `object`   | Optional aggregate chat counts with DEWS, depeg, safety, launch, and all-four alert coverage |
+| `updatedAt`         | `number`   | Optional Unix seconds when the pulse payload was produced |
+| `updatedEverySeconds` | `number` | Optional cache cadence for consumers that display freshness |
 | `topCoins`          | `string[]` | Up to five most subscribed coin tickers, ordered by subscription count |
 | `watcherHistory`    | `array`    | UTC day buckets for the current active watcher base, grouped by `telegram_subscribers.created_at`; each point includes `date`, millisecond `timestamp`, `newWatchers`, and cumulative `activeWatchers` |
 
@@ -2846,6 +2862,9 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "avgSubscriptionsPerSubscribedChat": 4.9,
     "pendingDisambiguations": 1,
     "pendingDeliveries": 6,
+    "oldestPendingDeliveryAgeSec": 240,
+    "pendingDeliveryBacklog": { "due": 4, "deferred": 1, "expired": 1 },
+    "retryErrorClassCounts": { "rate_limit": 2, "server_error": 1 },
     "lastSubscriberActivityAt": 1771856420,
     "customPreferenceChats": 47,
     "quietHoursEnabledChats": 18,

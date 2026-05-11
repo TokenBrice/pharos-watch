@@ -24,10 +24,25 @@ interface TelegramBotPendingRow {
   pending_count: number | string | null;
 }
 
+interface TelegramBotPendingDeliveryTelemetryRow {
+  pending_count: number | string | null;
+  oldest_created_at: number | string | null;
+  due_count: number | string | null;
+  deferred_count: number | string | null;
+  expired_count: number | string | null;
+}
+
+interface TelegramBotRetryErrorClassRow {
+  error_class: string | null;
+  pending_count: number | string | null;
+}
+
 interface TelegramBotTopStablecoinRow {
   stablecoin_id: string;
   subscribers: number | string | null;
 }
+
+const TELEGRAM_PENDING_ALERT_TTL_SEC = 3600;
 
 const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
   COUNT(*) AS total_chats,
@@ -124,6 +139,30 @@ const TELEGRAM_PENDING_DISAMBIGUATION_SQL =
   "SELECT COUNT(*) AS pending_count FROM telegram_pending_disambiguation WHERE expires_at > ?";
 const TELEGRAM_PENDING_DELIVERIES_SQL =
   "SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts";
+const TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL = `SELECT
+  COUNT(*) AS pending_count,
+  MIN(created_at) AS oldest_created_at,
+  SUM(CASE WHEN created_at < ? THEN 1 ELSE 0 END) AS expired_count,
+  SUM(
+    CASE
+      WHEN created_at >= ? AND (not_before_at IS NULL OR not_before_at <= ?)
+      THEN 1 ELSE 0
+    END
+  ) AS due_count,
+  SUM(
+    CASE
+      WHEN created_at >= ? AND not_before_at > ?
+      THEN 1 ELSE 0
+    END
+  ) AS deferred_count
+ FROM telegram_pending_alerts`;
+const TELEGRAM_RETRY_ERROR_CLASSES_SQL = `SELECT last_error_class AS error_class, COUNT(*) AS pending_count
+  FROM telegram_pending_alerts
+ WHERE last_error_class IS NOT NULL
+   AND last_error_class <> ''
+ GROUP BY last_error_class
+ ORDER BY pending_count DESC, last_error_class ASC
+ LIMIT 10`;
 const TELEGRAM_TOP_STABLECOINS_SQL = `SELECT stablecoin_id, COUNT(*) AS subscribers
   FROM telegram_subscriptions
  WHERE alert_dews = 1
@@ -165,20 +204,65 @@ async function loadTelegramPendingCount(
   return statement.first<TelegramBotPendingRow>();
 }
 
+async function loadTelegramPendingDeliveryTelemetry(
+  db: D1Database,
+  now: number,
+): Promise<TelegramBotPendingDeliveryTelemetryRow | null> {
+  const cutoff = now - TELEGRAM_PENDING_ALERT_TTL_SEC;
+  try {
+    return await db
+      .prepare(TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL)
+      .bind(cutoff, cutoff, now, cutoff, now)
+      .first<TelegramBotPendingDeliveryTelemetryRow>();
+  } catch {
+    return null;
+  }
+}
+
+async function loadTelegramRetryErrorClasses(db: D1Database): Promise<TelegramBotRetryErrorClassRow[] | null> {
+  try {
+    const result = await db.prepare(TELEGRAM_RETRY_ERROR_CLASSES_SQL).all<TelegramBotRetryErrorClassRow>();
+    return result.results ?? [];
+  } catch {
+    return null;
+  }
+}
+
 async function loadTelegramTopStablecoins(db: D1Database): Promise<TelegramBotTopStablecoinRow[]> {
   const result = await db.prepare(TELEGRAM_TOP_STABLECOINS_SQL).all<TelegramBotTopStablecoinRow>();
   return result.results ?? [];
 }
 
 export function mapTelegramBotStats(input: {
+  now?: number;
   aggregate: TelegramBotAggregateRow | null;
   pendingDisambiguations: TelegramBotPendingRow | null;
   pendingDeliveries: TelegramBotPendingRow | null;
+  pendingDeliveryTelemetry?: TelegramBotPendingDeliveryTelemetryRow | null;
+  retryErrorClasses?: TelegramBotRetryErrorClassRow[] | null;
   topStablecoins: TelegramBotTopStablecoinRow[];
 }): TelegramBotStats {
-  const { aggregate, pendingDisambiguations, pendingDeliveries, topStablecoins } = input;
+  const {
+    aggregate,
+    pendingDisambiguations,
+    pendingDeliveries,
+    pendingDeliveryTelemetry,
+    retryErrorClasses,
+    topStablecoins,
+  } = input;
+  const now = input.now ?? Math.floor(Date.now() / 1000);
 
-  return {
+  const pendingCount = coerceCount(pendingDeliveries?.pending_count ?? pendingDeliveryTelemetry?.pending_count);
+  const oldestCreatedAt = coerceNullableTimestamp(pendingDeliveryTelemetry?.oldest_created_at);
+  const retryErrorClassCounts = retryErrorClasses?.reduce<Record<string, number>>((acc, row) => {
+    const errorClass = row.error_class?.trim();
+    if (errorClass) {
+      acc[errorClass] = coerceCount(row.pending_count);
+    }
+    return acc;
+  }, {});
+
+  const stats: TelegramBotStats = {
     totalChats: coerceCount(aggregate?.total_chats),
     alertEnabledChats: coerceCount(aggregate?.alert_enabled_chats),
     deliverableChats: coerceCount(aggregate?.deliverable_chats),
@@ -188,11 +272,11 @@ export function mapTelegramBotStats(input: {
     totalSubscriptions: coerceCount(aggregate?.total_subscriptions),
     avgSubscriptionsPerSubscribedChat: roundMetric(aggregate?.avg_subscriptions_per_subscribed_chat, 1),
     pendingDisambiguations: coerceCount(pendingDisambiguations?.pending_count),
-    pendingDeliveries: coerceCount(pendingDeliveries?.pending_count),
+    pendingDeliveries: pendingCount,
     lastSubscriberActivityAt: coerceNullableTimestamp(aggregate?.last_subscriber_activity_at),
     customPreferenceChats: coerceCount(aggregate?.custom_preference_chats),
     quietHoursEnabledChats: coerceCount(aggregate?.quiet_hours_enabled_chats),
-      alertTypeChats: {
+    alertTypeChats: {
       dews: coerceCount(aggregate?.dews_chats),
       depeg: coerceCount(aggregate?.depeg_chats),
       safety: coerceCount(aggregate?.safety_chats),
@@ -205,20 +289,48 @@ export function mapTelegramBotStats(input: {
       subscribers: coerceCount(row.subscribers),
     })),
   };
+
+  if (pendingDeliveryTelemetry) {
+    stats.oldestPendingDeliveryAgeSec =
+      pendingCount > 0 && oldestCreatedAt != null ? Math.max(0, now - oldestCreatedAt) : null;
+    stats.pendingDeliveryBacklog = {
+      due: coerceCount(pendingDeliveryTelemetry.due_count),
+      deferred: coerceCount(pendingDeliveryTelemetry.deferred_count),
+      expired: coerceCount(pendingDeliveryTelemetry.expired_count),
+    };
+  }
+
+  if (retryErrorClassCounts) {
+    stats.retryErrorClassCounts = retryErrorClassCounts;
+  }
+
+  return stats;
 }
 
 export async function getTelegramBotStats(db: D1Database, now: number): Promise<TelegramBotStats> {
-  const [aggregate, pendingDisambiguations, pendingDeliveries, topStablecoins] = await Promise.all([
+  const [
+    aggregate,
+    pendingDisambiguations,
+    pendingDeliveries,
+    pendingDeliveryTelemetry,
+    retryErrorClasses,
+    topStablecoins,
+  ] = await Promise.all([
     loadTelegramBotAggregate(db),
     loadTelegramPendingCount(db, TELEGRAM_PENDING_DISAMBIGUATION_SQL, now),
     loadTelegramPendingCount(db, TELEGRAM_PENDING_DELIVERIES_SQL),
+    loadTelegramPendingDeliveryTelemetry(db, now),
+    loadTelegramRetryErrorClasses(db),
     loadTelegramTopStablecoins(db),
   ]);
 
   return mapTelegramBotStats({
+    now,
     aggregate,
     pendingDisambiguations,
     pendingDeliveries,
+    pendingDeliveryTelemetry,
+    retryErrorClasses,
     topStablecoins,
   });
 }

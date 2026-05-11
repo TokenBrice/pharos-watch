@@ -217,6 +217,20 @@ interface TelegramBotTopStablecoin {
   subscribers: number;
 }
 
+export interface TelegramAlertTypeChats {
+  dews: number;
+  depeg: number;
+  safety: number;
+  launch: number;
+  allTypes: number;
+}
+
+export interface TelegramPendingDeliveryBacklog {
+  due: number;
+  deferred: number;
+  expired: number;
+}
+
 export interface TelegramBotStats {
   totalChats: number;
   alertEnabledChats: number;
@@ -231,14 +245,11 @@ export interface TelegramBotStats {
   lastSubscriberActivityAt: number | null;
   customPreferenceChats: number;
   quietHoursEnabledChats: number;
-  alertTypeChats: {
-    dews: number;
-    depeg: number;
-    safety: number;
-    launch: number;
-    allTypes: number;
-  };
+  alertTypeChats: TelegramAlertTypeChats;
   topStablecoins: TelegramBotTopStablecoin[];
+  oldestPendingDeliveryAgeSec?: number | null;
+  retryErrorClassCounts?: Record<string, number>;
+  pendingDeliveryBacklog?: TelegramPendingDeliveryBacklog;
 }
 
 /** Slim public-facing stats for the PharosWatchBot landing page. */
@@ -258,6 +269,11 @@ export interface TelegramPulse {
   coinSubscriptions: number;
   topCoins: string[];
   watcherHistory: TelegramWatcherHistoryPoint[];
+  alertTypeChats?: TelegramAlertTypeChats;
+  quietHoursEnabledChats?: number;
+  pendingDeliveries?: number;
+  updatedAt?: number;
+  updatedEverySeconds?: number;
 }
 
 export interface TelegramDispatchEventsDetected {
