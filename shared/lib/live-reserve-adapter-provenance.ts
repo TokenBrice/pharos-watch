@@ -1,11 +1,6 @@
 import type { LiveReserveAdapterKey } from "../types/live-reserves";
 
-export const LIVE_RESERVE_ADAPTER_STATUS_VALUES = [
-  "active",
-  "staged",
-  "retired",
-  "parked",
-] as const;
+export const LIVE_RESERVE_ADAPTER_STATUS_VALUES = ["active", "staged", "retired", "parked"] as const;
 
 export type LiveReserveAdapterStatus = (typeof LIVE_RESERVE_ADAPTER_STATUS_VALUES)[number];
 
@@ -21,6 +16,7 @@ export const LIVE_RESERVE_ADAPTER_PROVENANCE = {
   accountable: { status: "active", rationale: ACTIVE_RATIONALE },
   "anzen-usdz": { status: "active", rationale: ACTIVE_RATIONALE },
   asymmetry: { status: "active", rationale: ACTIVE_RATIONALE },
+  "attestation-pdf-index": { status: "active", rationale: ACTIVE_RATIONALE },
   btcfi: { status: "active", rationale: ACTIVE_RATIONALE },
   "buck-io-transparency": {
     status: "parked",
@@ -40,6 +36,7 @@ export const LIVE_RESERVE_ADAPTER_PROVENANCE = {
   falcon: { status: "active", rationale: ACTIVE_RATIONALE },
   "fdusd-transparency": { status: "active", rationale: ACTIVE_RATIONALE },
   "frax-balance-sheet": { status: "active", rationale: ACTIVE_RATIONALE },
+  "frax-fpi-collateral": { status: "active", rationale: ACTIVE_RATIONALE },
   fx: { status: "active", rationale: ACTIVE_RATIONALE },
   gho: { status: "active", rationale: ACTIVE_RATIONALE },
   infinifi: { status: "active", rationale: ACTIVE_RATIONALE },
@@ -61,11 +58,13 @@ export const LIVE_RESERVE_ADAPTER_PROVENANCE = {
   "superstate-liquidity": { status: "active", rationale: ACTIVE_RATIONALE },
   tether: {
     status: "parked",
-    rationale: "Tether issuer summary adapter is retained, while current Tether assets use curated-validated or single-asset reserve probes.",
+    rationale:
+      "Tether issuer summary adapter is retained, while current Tether assets use curated-validated or single-asset reserve probes.",
   },
   "usdgo-transparency": { status: "active", rationale: ACTIVE_RATIONALE },
   "usdh-native-markets": { status: "active", rationale: ACTIVE_RATIONALE },
   "usdai-proof-of-reserves": { status: "active", rationale: ACTIVE_RATIONALE },
   "usd1-bundle-oracle": { status: "active", rationale: ACTIVE_RATIONALE },
   "usdd-data-platform": { status: "active", rationale: ACTIVE_RATIONALE },
+  yamato: { status: "active", rationale: ACTIVE_RATIONALE },
 } as const satisfies Record<LiveReserveAdapterKey, LiveReserveAdapterProvenance>;

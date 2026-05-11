@@ -1,9 +1,11 @@
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import {
   fetchEtherscanUint256AtBlock,
+  fetchEvmMulticall3Aggregate3AtBlock,
   fetchEvmUint256AtBlock,
   fetchEvmCallHexAtBlock,
   fetchEtherscanProxyHex,
+  type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import type { AdapterContext } from "./types";
@@ -29,16 +31,66 @@ export interface OnchainRateProbe {
   decimals?: number;
 }
 
+export interface OnchainMulticall3Call {
+  label: string;
+  contract: string;
+  data: string;
+  allowFailure?: boolean;
+}
+
+interface EvmMulticall3Options {
+  calls: readonly OnchainMulticall3Call[];
+  signal: AbortSignal;
+  ctx?: AdapterContext;
+  rpcUrl?: string;
+  fallbackRpcUrl?: string;
+  chain?: string;
+  timeoutMs?: number;
+}
+
 export async function fetchOnchainUint256(options: EvmCallOptions): Promise<bigint | null> {
   return runAdapterIo(options.ctx, `evm-uint256:${options.chain ?? "unknown"}:${options.contract}`, async () => {
     const extraRpcUrls = [options.rpcUrl, options.fallbackRpcUrl].filter(
       (url): url is string => typeof url === "string" && url.length > 0,
     );
 
-    const rpcValue = await fetchEvmUint256AtBlock(
+    const rpcValue = await fetchEvmUint256AtBlock(options.chain, options.contract, options.data, "latest", {
+      extraRpcUrls,
+      signal: options.signal,
+      timeoutMs: options.timeoutMs ?? 10_000,
+      chainRpcs: options.ctx?.chainRpcs,
+    });
+    if (rpcValue != null) {
+      return rpcValue;
+    }
+
+    if (options.rpcMode === "etherscan-proxy") {
+      if (options.chain !== "ethereum") return null;
+      return fetchEtherscanUint256AtBlock(1, options.contract, options.data, "latest", {
+        apiKey: options.ctx?.etherscanApiKey,
+        signal: options.signal,
+        timeoutMs: options.timeoutMs ?? 10_000,
+      });
+    }
+
+    return null;
+  });
+}
+
+export async function fetchOnchainMulticall3(options: EvmMulticall3Options): Promise<EvmMulticall3Result[] | null> {
+  return runAdapterIo(options.ctx, `evm-multicall3:${options.chain ?? "unknown"}:${options.calls.length}`, async () => {
+    const extraRpcUrls = [options.rpcUrl, options.fallbackRpcUrl].filter(
+      (url): url is string => typeof url === "string" && url.length > 0,
+    );
+
+    return fetchEvmMulticall3Aggregate3AtBlock(
       options.chain,
-      options.contract,
-      options.data,
+      options.calls.map((call) => ({
+        label: call.label,
+        target: call.contract,
+        callData: call.data,
+        allowFailure: call.allowFailure,
+      })),
       "latest",
       {
         extraRpcUrls,
@@ -47,26 +99,6 @@ export async function fetchOnchainUint256(options: EvmCallOptions): Promise<bigi
         chainRpcs: options.ctx?.chainRpcs,
       },
     );
-    if (rpcValue != null) {
-      return rpcValue;
-    }
-
-    if (options.rpcMode === "etherscan-proxy") {
-      if (options.chain !== "ethereum") return null;
-      return fetchEtherscanUint256AtBlock(
-        1,
-        options.contract,
-        options.data,
-        "latest",
-        {
-          apiKey: options.ctx?.etherscanApiKey,
-          signal: options.signal,
-          timeoutMs: options.timeoutMs ?? 10_000,
-        },
-      );
-    }
-
-    return null;
   });
 }
 
@@ -102,18 +134,12 @@ export async function fetchOnchainRawCall(options: EvmCallOptions): Promise<stri
       (url): url is string => typeof url === "string" && url.length > 0,
     );
 
-    const rpcValue = await fetchEvmCallHexAtBlock(
-      options.chain,
-      options.contract,
-      options.data,
-      "latest",
-      {
-        extraRpcUrls,
-        signal: options.signal,
-        timeoutMs: options.timeoutMs ?? 10_000,
-        chainRpcs: options.ctx?.chainRpcs,
-      },
-    );
+    const rpcValue = await fetchEvmCallHexAtBlock(options.chain, options.contract, options.data, "latest", {
+      extraRpcUrls,
+      signal: options.signal,
+      timeoutMs: options.timeoutMs ?? 10_000,
+      chainRpcs: options.ctx?.chainRpcs,
+    });
     if (rpcValue != null) {
       return rpcValue;
     }

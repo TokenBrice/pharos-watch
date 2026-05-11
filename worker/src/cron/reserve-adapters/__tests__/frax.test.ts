@@ -4,7 +4,9 @@ import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import {
   adaptFraxBalanceSheet,
+  adaptFraxFpiCollateral,
   type FraxBalanceSheetResponse,
+  type FraxFpiCollateralResponse,
 } from "../frax";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
@@ -26,7 +28,7 @@ const BALANCE_SHEET_SAMPLE: FraxBalanceSheetResponse = {
     { tokenSymbol: "USTB", totalValueUsd: 45_504_345.53, category: "asset:owned:usd" },
     { tokenSymbol: "WTGXX", totalValueUsd: 8_265_342.81, category: "asset:owned:usd" },
     { tokenSymbol: "BUIDL", totalValueUsd: 15_581_870.39, category: "asset:owned:usd" },
-    { tokenSymbol: "USDB", totalValueUsd: 2_000_003.70, category: "asset:owned:usd" },
+    { tokenSymbol: "USDB", totalValueUsd: 2_000_003.7, category: "asset:owned:usd" },
   ],
 };
 
@@ -95,18 +97,22 @@ describe("adaptFraxBalanceSheet", () => {
       totalAssets: 200_000_000,
     });
 
-    expect(result.slices).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        name: "Unmapped Frax balance-sheet total-assets gap",
-        risk: "high",
-      }),
-    ]));
-    expect(result.warnings).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        code: "source-total-gap",
-        effect: "degraded",
-      }),
-    ]));
+    expect(result.slices).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "Unmapped Frax balance-sheet total-assets gap",
+          risk: "high",
+        }),
+      ]),
+    );
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "source-total-gap",
+          effect: "degraded",
+        }),
+      ]),
+    );
     expect(result.metadata).toMatchObject({
       sourceTotalAssetsUsd: 200_000_000,
       sourceTotalGapPct: expect.any(Number),
@@ -155,5 +161,108 @@ describe("adaptFraxBalanceSheet", () => {
     const result = adaptFraxBalanceSheet(msPayload);
     expect(result.metadata?.freshnessMode).toBe("verified");
     expect(result.metadata?.sourceTimestamp).toBe(1775653427);
+  });
+});
+
+/* ---------- v2 FPI collateral tests ---------- */
+
+const FPI_COLLATERAL_SAMPLE: FraxFpiCollateralResponse = {
+  updatedAtBlock: 25_072_838,
+  updatedAtTimestampSec: 1_778_514_287,
+  assets: [
+    { key: "asset:fpi_comptroller:fpi_balance", tokenSymbol: "FPI", valueUsd: 3_000_000 },
+    { key: "asset:fpi_comptroller:frax_balance", tokenSymbol: "FRAX", valueUsd: 4_900_000 },
+    { key: "asset:fpi_comptroller:sfrax_balance", tokenSymbol: "sFRAX", valueUsd: 100_000 },
+    { key: "asset:fpi_comptroller:fxs_balance", tokenSymbol: "FXS", valueUsd: 200_000 },
+  ],
+  liabilities: [
+    { key: "liability:misc:fpi_total_supply_ethereum", tokenSymbol: "FPI", valueUsd: 6_000_000 },
+    { key: "liability:misc:fpi_total_supply_fraxtal", tokenSymbol: "FPI", valueUsd: 2_000_000 },
+  ],
+};
+
+describe("adaptFraxFpiCollateral", () => {
+  it("excludes self-held FPI from collateral slices and nets it against liabilities", () => {
+    const result = adaptFraxFpiCollateral(FPI_COLLATERAL_SAMPLE);
+
+    expect(result.slices.find((slice) => slice.name === "FPI")).toBeUndefined();
+    expect(result.slices.find((slice) => slice.name === "FRAX")!.pct).toBeGreaterThan(90);
+    expect(result.metadata).toMatchObject({
+      totalCollateralUsd: 5_200_000,
+      mappedCollateralUsd: 5_200_000,
+      selfHeldFpiUsd: 3_000_000,
+      totalLiabilitiesUsd: 8_000_000,
+      netExternalLiabilitiesUsd: 5_000_000,
+      collateralizationRatio: 1.04,
+    });
+  });
+
+  it("uses verified freshness from updatedAtTimestampSec", () => {
+    const result = adaptFraxFpiCollateral(FPI_COLLATERAL_SAMPLE);
+
+    expect(result.metadata?.freshnessMode).toBe("verified");
+    expect(result.metadata?.sourceTimestamp).toBe(1_778_514_287);
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 5_000_000,
+      capacityKind: "live-proxy-validated",
+      freshnessKind: "verified-source-timestamp",
+      routeStatus: "unknown",
+    });
+  });
+
+  it("warns and buckets non-FPI unknown collateral rows", () => {
+    const result = adaptFraxFpiCollateral({
+      ...FPI_COLLATERAL_SAMPLE,
+      assets: [
+        ...FPI_COLLATERAL_SAMPLE.assets!,
+        {
+          key: "asset:fpi_comptroller:fraxswap_v2_frax_fpis",
+          name: "Fraxswap V2 FRAX/FPIS",
+          valueUsd: 500_000,
+        },
+      ],
+    });
+
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "unknown-token",
+          message: expect.stringContaining("Fraxswap V2 FRAX/FPIS"),
+        }),
+      ]),
+    );
+    expect(result.slices).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "Unmapped Frax FPI collateral assets",
+          risk: "high",
+        }),
+      ]),
+    );
+  });
+
+  it("degrades when non-FPI collateral is below net external liabilities", () => {
+    const result = adaptFraxFpiCollateral({
+      ...FPI_COLLATERAL_SAMPLE,
+      liabilities: [{ key: "liability:misc:fpi_total_supply_ethereum", tokenSymbol: "FPI", valueUsd: 10_000_000 }],
+    });
+
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "undercollateralized",
+          effect: "degraded",
+        }),
+      ]),
+    );
+  });
+
+  it("throws when only self-held FPI assets are present", () => {
+    expect(() =>
+      adaptFraxFpiCollateral({
+        assets: [{ key: "asset:fpi_comptroller:fpi_balance", tokenSymbol: "FPI", valueUsd: 3_000_000 }],
+        liabilities: [],
+      }),
+    ).toThrow(/no positive non-FPI collateral/);
   });
 });

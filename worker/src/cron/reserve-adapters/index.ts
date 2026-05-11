@@ -1,11 +1,10 @@
-import {
-  LIVE_RESERVE_ADAPTER_DEFINITIONS,
-} from "@shared/lib/live-reserve-adapters";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
 import { fetchAbracadabraReserves } from "./abracadabra";
 import { fetchAccountableReserves } from "./accountable";
 import { fetchAnzenUsdzReserves } from "./anzen-usdz";
 import { fetchAsymmetryReserves } from "./asymmetry";
+import { fetchAttestationPdfIndexReserves } from "./attestation-pdf-index";
 import { fetchBtcfiReserves } from "./btcfi";
 import { fetchBuckIoTransparencyReserves } from "./buck-io-transparency";
 import { fetchCapVaultReserves } from "./cap-vault";
@@ -20,7 +19,7 @@ import { fetchEvmBranchBalancesReserves } from "./evm-branch-balances";
 import { fetchEthenaReserves } from "./ethena";
 import { fetchFalconReserves } from "./falcon";
 import { fetchFdusdTransparencyReserves } from "./fdusd-transparency";
-import { fetchFraxBalanceSheetReserves } from "./frax";
+import { fetchFraxBalanceSheetReserves, fetchFraxFpiCollateralReserves } from "./frax";
 import { fetchFxReserves } from "./fx";
 import { fetchGhoReserves } from "./gho";
 import { fetchInfiniFiReserves } from "./infinifi";
@@ -47,6 +46,7 @@ import { fetchUsdhNativeMarketsReserves } from "./usdh-native-markets";
 import { fetchUsdAiProofOfReserves } from "./usdai-proof-of-reserves";
 import { fetchUsd1BundleOracleReserves } from "./usd1-bundle-oracle";
 import { fetchUsddDataPlatformReserves } from "./usdd-data-platform";
+import { fetchYamatoReserves } from "./yamato";
 import type { AdapterFn, ReserveAdapterDefinition } from "./types";
 
 export type { AdapterContext, AdapterResult, AdapterFn, ReserveAdapterDefinition } from "./types";
@@ -56,6 +56,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   accountable: fetchAccountableReserves,
   "anzen-usdz": fetchAnzenUsdzReserves,
   asymmetry: fetchAsymmetryReserves,
+  "attestation-pdf-index": fetchAttestationPdfIndexReserves,
   btcfi: fetchBtcfiReserves,
   "buck-io-transparency": fetchBuckIoTransparencyReserves,
   "cap-vault": fetchCapVaultReserves,
@@ -72,6 +73,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   falcon: fetchFalconReserves,
   "fdusd-transparency": fetchFdusdTransparencyReserves,
   "frax-balance-sheet": fetchFraxBalanceSheetReserves,
+  "frax-fpi-collateral": fetchFraxFpiCollateralReserves,
   fx: fetchFxReserves,
   gho: fetchGhoReserves,
   infinifi: fetchInfiniFiReserves,
@@ -97,6 +99,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   "usdai-proof-of-reserves": fetchUsdAiProofOfReserves,
   "usd1-bundle-oracle": fetchUsd1BundleOracleReserves,
   "usdd-data-platform": fetchUsddDataPlatformReserves,
+  yamato: fetchYamatoReserves,
 };
 
 const ADAPTERS = Object.fromEntries(
@@ -105,14 +108,14 @@ const ADAPTERS = Object.fromEntries(
     (() => {
       const validation = "validation" in definition ? definition.validation : undefined;
       return {
-      key,
-      fetch: ADAPTER_FNS[key as LiveReserveAdapterKey],
-      sourceModel: definition.sourceModel,
-      evidenceClass: definition.evidenceClass,
-      sharedSourceMode: definition.sharedSourceMode,
-      redemptionTelemetry: definition.redemptionTelemetry,
-      ...(validation ? { validation } : {}),
-    };
+        key,
+        fetch: ADAPTER_FNS[key as LiveReserveAdapterKey],
+        sourceModel: definition.sourceModel,
+        evidenceClass: definition.evidenceClass,
+        sharedSourceMode: definition.sharedSourceMode,
+        redemptionTelemetry: definition.redemptionTelemetry,
+        ...(validation ? { validation } : {}),
+      };
     })(),
   ]),
 ) as Record<LiveReserveAdapterKey, ReserveAdapterDefinition>;

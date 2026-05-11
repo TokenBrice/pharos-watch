@@ -10,6 +10,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   accountable: "live",
   "anzen-usdz": "live",
   asymmetry: "live",
+  "attestation-pdf-index": "curated-validated",
   btcfi: "live",
   "buck-io-transparency": "live",
   "cap-vault": "live",
@@ -26,6 +27,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   falcon: "live",
   "fdusd-transparency": "live",
   "frax-balance-sheet": "live",
+  "frax-fpi-collateral": "live",
   fx: "live",
   gho: "live",
   infinifi: "live",
@@ -51,6 +53,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   "usdai-proof-of-reserves": "live",
   "usd1-bundle-oracle": "live",
   "usdd-data-platform": "live",
+  yamato: "live",
 };
 
 const RESERVE_DISPLAY_BADGE_LABELS: Record<ReserveDisplayBadgeKind, string> = {
@@ -59,21 +62,15 @@ const RESERVE_DISPLAY_BADGE_LABELS: Record<ReserveDisplayBadgeKind, string> = {
   proof: "Proof",
 };
 
-export function getReserveDisplayBadgeKindForAdapter(
-  adapterKey: LiveReserveAdapterKey,
-): ReserveDisplayBadgeKind {
+export function getReserveDisplayBadgeKindForAdapter(adapterKey: LiveReserveAdapterKey): ReserveDisplayBadgeKind {
   return ADAPTER_DISPLAY_BADGE_KINDS[adapterKey];
 }
 
-function getReserveDisplayBadgeLabel(
-  kind: ReserveDisplayBadgeKind,
-): string {
+function getReserveDisplayBadgeLabel(kind: ReserveDisplayBadgeKind): string {
   return RESERVE_DISPLAY_BADGE_LABELS[kind];
 }
 
-export function buildReserveDisplayBadge(
-  kind: ReserveDisplayBadgeKind,
-): ReserveDisplayBadgeView {
+export function buildReserveDisplayBadge(kind: ReserveDisplayBadgeKind): ReserveDisplayBadgeView {
   return {
     kind,
     label: getReserveDisplayBadgeLabel(kind),
@@ -95,8 +92,6 @@ export function inferReserveDisplayBadgeKindFromEvidenceClass(
   }
 }
 
-export function hasReserveDisplayBadgeForAdapter(
-  adapterKey: string,
-): adapterKey is LiveReserveAdapterKey {
+export function hasReserveDisplayBadgeForAdapter(adapterKey: string): adapterKey is LiveReserveAdapterKey {
   return Object.prototype.hasOwnProperty.call(ADAPTER_DISPLAY_BADGE_KINDS, adapterKey);
 }

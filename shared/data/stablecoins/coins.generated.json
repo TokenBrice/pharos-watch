@@ -3401,7 +3401,31 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "cjpy-yamato",
+      "display": {
+        "url": "https://docs.yamato.fi/readme/kontorakutoadoresu",
+        "label": "Yamato Docs"
+      },
+      "adapter": "yamato",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "yamatoAddress": "0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257",
+        "slice": {
+          "name": "ETH",
+          "risk": "very-low"
+        }
+      }
+    }
   },
   {
     "id": "cngn-compliant-naira",
@@ -6923,7 +6947,23 @@
         "coinId": "frax-frax",
         "depType": "wrapper"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "fpi-frax",
+      "display": {
+        "url": "https://frax.com/transparency",
+        "label": "Frax Transparency"
+      },
+      "adapter": "frax-fpi-collateral",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://api.frax.finance/v2/fpifpis/fpi-collateral"
+        }
+      }
+    }
   },
   {
     "id": "frax-frax",
@@ -9876,13 +9916,13 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "kag-kinesis",
       "display": {
-        "url": "https://kinesis.money/silver/",
-        "label": "Kinesis"
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/kag-por",
+        "label": "Chainlink PoR"
       },
-      "adapter": "single-asset",
+      "adapter": "chainlink-por",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -9891,8 +9931,10 @@
         }
       },
       "params": {
-        "label": "Physical silver bullion (LBMA 999 fine)",
-        "risk": "very-low"
+        "porFeedAddress": "0x3F0543aA057BcAeA152Fe9462Cb3ffaB305a6F8D",
+        "assetLabel": "Physical silver reserves",
+        "assetRisk": "very-low",
+        "reserveUnit": "XAG"
       }
     }
   },
@@ -9940,7 +9982,30 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "attestation-mix",
+      "breakerScope": "kau-kinesis",
+      "display": {
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/kau-por",
+        "label": "Chainlink PoR"
+      },
+      "adapter": "chainlink-por",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "porFeedAddress": "0xaB5Dd7DD7669072a1Ef27c0ba241120A27A1aeC3",
+        "assetLabel": "Physical gold reserves",
+        "assetRisk": "very-low",
+        "reserveUnit": "XAU"
+      }
+    }
   },
   {
     "id": "kgst-kyrgyz-som",
@@ -19593,7 +19658,27 @@
         "risk": "low",
         "coinId": "usdc-circle"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "usdm-mega",
+      "display": {
+        "url": "https://docs.megaeth.com",
+        "label": "MegaETH Docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "megaeth",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "rpcUrl": "https://mainnet.megaeth.com/rpc"
+      }
+    }
   },
   {
     "id": "usdm-moneta",
@@ -24867,23 +24952,27 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "xsgd-straitsx",
       "display": {
         "url": "https://www.straitsx.com/xsgd",
         "label": "StraitsX"
       },
-      "adapter": "single-asset",
+      "adapter": "attestation-pdf-index",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-html",
+          "url": "https://www.straitsx.com/xsgd"
         }
       },
       "params": {
-        "label": "SGD deposits & MAS-eligible securities",
-        "risk": "very-low"
+        "slices": [
+          {
+            "name": "SGD deposits & MAS-eligible securities",
+            "pct": 100,
+            "risk": "very-low"
+          }
+        ]
       }
     }
   },

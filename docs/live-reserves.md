@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
 - **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 206 active live-enabled stablecoins across 45 registered adapters; 207 tracked metadata entries have live reserve configs, including pre-launch CADD. These counts are active/configured stablecoin entries, not raw source JSON files. 43 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
+- **Current coverage:** 210 active live-enabled stablecoins across 48 registered adapters; 211 tracked metadata entries have live reserve configs, including pre-launch CADD. These counts are active/configured stablecoin entries, not raw source JSON files. 46 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -42,21 +42,23 @@ All configured source URLs must be absolute URLs. The schema enforces this for H
 
 The shared registry in `shared/lib/live-reserve-adapters-definitions.ts` defines four important adapter properties that are not user-configured per coin:
 
-| Property           | Meaning                                                                                                      |
-| ------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `sourceModel`      | Distinguishes `dynamic-mix`, `validated-static`, and `single-bucket` reserve shapes                          |
-| `evidenceClass`    | Distinguishes scoring-eligible `independent` feeds from `static-validated` and `weak-live-probe` feeds       |
-| `sharedSourceMode` | Distinguishes per-coin fetches (`none`) from explicitly source-invariant result sharing (`source-invariant`) |
-| `redemptionTelemetry` | Declares whether the adapter can emit direct/proxy redemption capacity and current-fee telemetry          |
+| Property              | Meaning                                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `sourceModel`         | Distinguishes `dynamic-mix`, `validated-static`, and `single-bucket` reserve shapes                          |
+| `evidenceClass`       | Distinguishes scoring-eligible `independent` feeds from `static-validated` and `weak-live-probe` feeds       |
+| `sharedSourceMode`    | Distinguishes per-coin fetches (`none`) from explicitly source-invariant result sharing (`source-invariant`) |
+| `redemptionTelemetry` | Declares whether the adapter can emit direct/proxy redemption capacity and current-fee telemetry             |
 
 - `dynamic-mix`: independently measured reserve compositions. These can be `independent` evidence for scoring when the sync state is clean.
 - `validated-static`: live validation/probe adapters over curated/static slices. These remain authoritative for the reserve detail API, but they are tagged `static-validated` and do not count as independent live collateral inputs for report-card scoring.
-- `single-bucket`: one-slice live proofs/attestations. Some are true independent evidence (`btcfi`, `chainlink-nav`, `chainlink-por`, `erc4626-single-asset`, `liquity-v1`, `sgforge-coinvertible`, `superstate-liquidity`, `usd1-bundle-oracle`), while weak liveness-only probes such as `single-asset` and coarse issuer attestation summaries such as `tether` are tagged `weak-live-probe`.
+- `single-bucket`: one-slice live proofs/attestations. Some are true independent evidence (`btcfi`, `chainlink-nav`, `chainlink-por`, `erc4626-single-asset`, `liquity-v1`, `sgforge-coinvertible`, `superstate-liquidity`, `usd1-bundle-oracle`, `yamato`), while weak liveness-only probes such as `single-asset` and coarse issuer attestation summaries such as `tether` are tagged `weak-live-probe`.
 - `independent`: scoring-eligible live evidence when the snapshot is fresh, authoritative, and the most recent sync status is `ok`.
 - `static-validated`, `weak-live-probe`: detail/status-visible evidence classes that never override curated collateral scoring.
 - `source-invariant`: opt-in within-run result sharing for adapters whose returned payload is coin-invariant. All other adapters run per coin even when configs look similar.
 
 `single-asset` now supports optional `reserveProbe`, `supplyProbe`, and `timestampProbe` paths so weak single-bucket feeds can persist honest reserve/supply ratio telemetry when the upstream exposes it. The family remains `weak-live-probe` unless the source is strong enough to justify promotion into a more independent adapter class.
+
+`attestation-pdf-index` is a validated-static adapter for issuer pages that expose dated PDF attestations. It selects the newest dated PDF link, including Webflow-style gated PDF attributes, validates source freshness from the report date, and emits configured static reserve slices until full PDF text extraction is implemented.
 
 ### Fallback Inputs
 
@@ -70,13 +72,13 @@ USDD currently uses this path: the cron retries `latest-collateral` on Ethereum 
 
 Supported input kinds:
 
-| Kind          | Meaning                                                              |
-| ------------- | -------------------------------------------------------------------- |
-| `http-json`   | JSON API endpoint                                                    |
-| `http-html`   | HTML page parsed by the adapter                                      |
-| `indexer`     | Indexed external data feed                                           |
-| `onchain-solana` | On-chain Solana mint-supply reads via the public mainnet RPCs       |
-| `onchain-evm` | On-chain EVM reads via `etherscan-proxy`, `alchemy`, or `public-rpc` |
+| Kind             | Meaning                                                              |
+| ---------------- | -------------------------------------------------------------------- |
+| `http-json`      | JSON API endpoint                                                    |
+| `http-html`      | HTML page parsed by the adapter                                      |
+| `indexer`        | Indexed external data feed                                           |
+| `onchain-solana` | On-chain Solana mint-supply reads via the public mainnet RPCs        |
+| `onchain-evm`    | On-chain EVM reads via `etherscan-proxy`, `alchemy`, or `public-rpc` |
 
 The shared live-reserve config schema enforces adapter-specific primary and fallback input kinds. For example, `curated-validated` can use `onchain-evm` or `onchain-solana`, `single-asset` can use `http-json` or `onchain-evm`, and HTML scrapers such as `circle-transparency` cannot accidentally be configured with an on-chain input that would pass metadata validation but fail during cron execution.
 
@@ -96,26 +98,26 @@ Successful adapters can attach structured snapshot metadata that is stored on th
 
 Common metadata fields:
 
-| Field                                                           | Meaning                                                                                         |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `sourceTimestamp`                                               | Upstream disclosure timestamp, when independently verified                                      |
-| `freshnessMode`                                                 | `verified`, `unverified`, or `not-applicable`                                                   |
-| `collateralizationRatio`                                        | Reserve / liability or reserve / supply ratio when the adapter can quantify both sides honestly |
-| `details.freshnessSource` / `details.freshnessReason`           | Adapter-supplied explanation when freshness is explicitly unverified                            |
-| `unknownExposurePct`                                            | Share of reserve value that could not be mapped cleanly                                         |
-| `supplyUsd`, `totalReserveUsd`                                  | Adapter-level reserve / supply totals when exposed                                              |
-| `totalAssetsUsd`, `totalLiabilitiesUsd`, `shareholderEquityUsd` | Raw attestation balance-sheet totals for coarse issuer feeds                                    |
-| `immediateRedeemableUsd`, `immediateRedeemableRatio`            | Current redeemable-capacity telemetry reused by redemption backstops                            |
-| `redemptionFeeBps`                                              | Current live redemption fee telemetry when the source exposes it                                |
-| `buyFeeBpsMin`, `buyFeeBpsMax`                                  | Optional raw buy-fee range context retained alongside normalized `redemptionFeeBps`             |
-| `redemption.capacityUsd`, `redemption.capacityRatioOfSupply`    | Normalized redemption-capacity telemetry. New adapters should prefer this nested shape; legacy flat fields remain readable during migration |
-| `redemption.capacityKind`, `redemption.freshnessKind`           | Typed redemption evidence tier and freshness basis used by redemption-backstop validation        |
-| `redemption.routeStatus`, `redemption.routeStatusSource`, `redemption.routeStatusReason`, `redemption.routeStatusReviewedAt` | Optional current route availability signal and provenance, separate from reserve-sync status |
-| `redemption.sourceTimestamp`, `redemption.sourceUrls`           | Optional redemption-specific source timestamp and source URLs carried through to the redemption API/UI |
-| `redemption.settlementDelaySec`, `redemption.queueDepthUsd`     | Optional queue/delay context for redemption routes that are current but not atomic              |
-| `redemption.dailyLimitUsd`, `redemption.minRedeemUsd`           | Optional adapter-emitted daily redemption limit and minimum redemption size constraints          |
-| `redemption.holderEligibility`                                  | Optional live holder-eligibility context when the adapter can sharpen the static route model     |
-| `redemption.feeBps`                                             | Normalized current redemption fee in the nested telemetry contract                              |
+| Field                                                                                                                        | Meaning                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sourceTimestamp`                                                                                                            | Upstream disclosure timestamp, when independently verified                                                                                  |
+| `freshnessMode`                                                                                                              | `verified`, `unverified`, or `not-applicable`                                                                                               |
+| `collateralizationRatio`                                                                                                     | Reserve / liability or reserve / supply ratio when the adapter can quantify both sides honestly                                             |
+| `details.freshnessSource` / `details.freshnessReason`                                                                        | Adapter-supplied explanation when freshness is explicitly unverified                                                                        |
+| `unknownExposurePct`                                                                                                         | Share of reserve value that could not be mapped cleanly                                                                                     |
+| `supplyUsd`, `totalReserveUsd`                                                                                               | Adapter-level reserve / supply totals when exposed                                                                                          |
+| `totalAssetsUsd`, `totalLiabilitiesUsd`, `shareholderEquityUsd`                                                              | Raw attestation balance-sheet totals for coarse issuer feeds                                                                                |
+| `immediateRedeemableUsd`, `immediateRedeemableRatio`                                                                         | Current redeemable-capacity telemetry reused by redemption backstops                                                                        |
+| `redemptionFeeBps`                                                                                                           | Current live redemption fee telemetry when the source exposes it                                                                            |
+| `buyFeeBpsMin`, `buyFeeBpsMax`                                                                                               | Optional raw buy-fee range context retained alongside normalized `redemptionFeeBps`                                                         |
+| `redemption.capacityUsd`, `redemption.capacityRatioOfSupply`                                                                 | Normalized redemption-capacity telemetry. New adapters should prefer this nested shape; legacy flat fields remain readable during migration |
+| `redemption.capacityKind`, `redemption.freshnessKind`                                                                        | Typed redemption evidence tier and freshness basis used by redemption-backstop validation                                                   |
+| `redemption.routeStatus`, `redemption.routeStatusSource`, `redemption.routeStatusReason`, `redemption.routeStatusReviewedAt` | Optional current route availability signal and provenance, separate from reserve-sync status                                                |
+| `redemption.sourceTimestamp`, `redemption.sourceUrls`                                                                        | Optional redemption-specific source timestamp and source URLs carried through to the redemption API/UI                                      |
+| `redemption.settlementDelaySec`, `redemption.queueDepthUsd`                                                                  | Optional queue/delay context for redemption routes that are current but not atomic                                                          |
+| `redemption.dailyLimitUsd`, `redemption.minRedeemUsd`                                                                        | Optional adapter-emitted daily redemption limit and minimum redemption size constraints                                                     |
+| `redemption.holderEligibility`                                                                                               | Optional live holder-eligibility context when the adapter can sharpen the static route model                                                |
+| `redemption.feeBps`                                                                                                          | Normalized current redemption fee in the nested telemetry contract                                                                          |
 
 Redemption telemetry is validated before persistence. Negative capacity or constraint values, capacity ratios outside `0..1`, negative fees, malformed redemption source URLs, invalid redemption freshness/capacity/holder-eligibility enum values, invalid `routeStatusReviewedAt` dates, capacity emitted by adapters that do not declare redemption-capacity support, fee telemetry emitted by adapters that do not declare fee support, and direct/proxy/queue capacity evidence emitted by an incompatible adapter capability fail the adapter output validation. Queue capacity that omits queue depth, settlement delay, or daily-limit semantics is stored only with a degraded warning. Existing flat fields are still parsed for backward compatibility, but new adapter work should emit the nested `metadata.redemption` object.
 
@@ -214,19 +216,19 @@ Append-only history of successful live snapshots. Every successful upsert also i
 
 Per-coin operational state for the most recent attempt.
 
-| Column              | Meaning                                                                                                                                   |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `stablecoin_id`     | Canonical Pharos coin ID                                                                                                                  |
-| `adapter_key`       | Adapter used for the most recent attempt                                                                                                  |
-| `breaker_key`       | Per-source circuit-breaker key                                                                                                            |
-| `last_attempted_at` | Unix timestamp of the latest attempt                                                                                                      |
-| `last_success_at`   | Unix timestamp of the latest successful live snapshot                                                                                     |
-| `last_status`       | `ok`, `degraded`, `error`, or `skipped`                                                                                                   |
-| `warning_count`     | Number of adapter warnings                                                                                                                |
-| `warnings`          | JSON-serialized warning objects                                                                                                           |
-| `last_error`        | Latest failure message, if any                                                                                                            |
-| `metadata`          | Attempt-scoped operational metadata only (for example skip/failure reasons or warning-effect counts), not authoritative reserve telemetry |
-| `last_attempt_id` / `pending_attempt_id` / `last_success_attempt_id` | Attempt-fencing identifiers used to reject orphaned or partially written live snapshots |
+| Column                                                               | Meaning                                                                                                                                   |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `stablecoin_id`                                                      | Canonical Pharos coin ID                                                                                                                  |
+| `adapter_key`                                                        | Adapter used for the most recent attempt                                                                                                  |
+| `breaker_key`                                                        | Per-source circuit-breaker key                                                                                                            |
+| `last_attempted_at`                                                  | Unix timestamp of the latest attempt                                                                                                      |
+| `last_success_at`                                                    | Unix timestamp of the latest successful live snapshot                                                                                     |
+| `last_status`                                                        | `ok`, `degraded`, `error`, or `skipped`                                                                                                   |
+| `warning_count`                                                      | Number of adapter warnings                                                                                                                |
+| `warnings`                                                           | JSON-serialized warning objects                                                                                                           |
+| `last_error`                                                         | Latest failure message, if any                                                                                                            |
+| `metadata`                                                           | Attempt-scoped operational metadata only (for example skip/failure reasons or warning-effect counts), not authoritative reserve telemetry |
+| `last_attempt_id` / `pending_attempt_id` / `last_success_attempt_id` | Attempt-fencing identifiers used to reject orphaned or partially written live snapshots                                                   |
 
 ### `reserve_sync_attempt_history`
 
@@ -300,11 +302,11 @@ Successful responses return `StablecoinReservesResponse` with one of these modes
 
 Cache control:
 
-| Response mode                              | Cache-Control                        |
-| ------------------------------------------ | ------------------------------------ |
-| `live`                                     | `public, s-maxage=3600, max-age=300` |
-| `live-stale`                               | `public, s-maxage=1800, max-age=120` |
-| fallback / unavailable modes               | `public, s-maxage=300, max-age=60`   |
+| Response mode                | Cache-Control                        |
+| ---------------------------- | ------------------------------------ |
+| `live`                       | `public, s-maxage=3600, max-age=300` |
+| `live-stale`                 | `public, s-maxage=1800, max-age=120` |
+| fallback / unavailable modes | `public, s-maxage=300, max-age=60`   |
 
 The optional `provenance` object is present only when the response is serving an authoritative `live` or `live-stale` snapshot:
 
@@ -317,10 +319,10 @@ The optional `provenance` object is present only when the response is serving an
 
 The optional `displayBadge` object is also present only for authoritative `live` / `live-stale` snapshots:
 
-| Field   | Meaning                                                                                              |
-| ------- | ---------------------------------------------------------------------------------------------------- |
-| `kind`  | `live`, `curated-validated`, or `proof`                                                              |
-| `label` | User-facing badge text rendered on the detail page (`Live`, `Curated-Validated`, or `Proof`)        |
+| Field   | Meaning                                                                                      |
+| ------- | -------------------------------------------------------------------------------------------- |
+| `kind`  | `live`, `curated-validated`, or `proof`                                                      |
+| `label` | User-facing badge text rendered on the detail page (`Live`, `Curated-Validated`, or `Proof`) |
 
 `displayBadge` is intentionally separate from `mode` and `provenance`:
 
@@ -372,67 +374,70 @@ Fallback, template-fallback, and unavailable responses use a shorter edge cache 
 Registered in `worker/src/cron/reserve-adapters/index.ts`.
 This table reflects the adapter keys currently configured in `shared/data/stablecoins/coins/*.json`; the runtime registry also retains unconfigured implementations.
 
-| Adapter                    | Primary input               | Semantics                            | Configured coins |
-| -------------------------- | --------------------------- | ------------------------------------ | ---------------- |
-| `abracadabra`              | `onchain-evm`               | `collateral-mix`                     | 1                |
-| `accountable`              | `http-json`                 | `collateral-mix` / `protocol-reserve` | 7               |
-| `anzen-usdz`               | `onchain-evm`              | `single-asset`                       | 1                |
-| `asymmetry`                | `http-json`                 | `collateral-mix`                     | 1                |
-| `btcfi`                    | `http-json`                 | `collateral-mix`                     | 1                |
-| `cap-vault`                | `onchain-evm`               | `protocol-reserve`                   | 1                |
-| `chainlink-nav`            | `onchain-evm`               | `single-asset`                       | 6                |
-| `chainlink-por`            | `onchain-evm`               | `attestation-mix`                    | 2                |
-| `circle-transparency`      | `http-html`                 | `attestation-mix`                    | 2                |
-| `collateral-positions-api` | `http-json`                 | `collateral-mix`                     | 2                |
-| `crvusd`                   | `http-json`                 | `collateral-mix`                     | 1                |
-| `curated-validated`        | `onchain-evm` / `onchain-solana` | `attestation-mix` / `collateral-mix` / `single-asset` | 56 |
-| `dola-inverse`             | `http-json`                 | `collateral-mix`                     | 1                |
-| `erc4626-single-asset`     | `onchain-evm`               | `single-asset`                       | 16               |
-| `ethena`                   | `http-json`                 | `collateral-mix`                     | 1                |
-| `evm-branch-balances`      | `onchain-evm`               | `collateral-mix`                     | 4                |
-| `falcon`                   | `http-json`                 | `collateral-mix`                     | 1                |
-| `fdusd-transparency`       | `http-html`                 | `attestation-mix`                    | 1                |
-| `frax-balance-sheet`       | `http-json`                 | `attestation-mix`                    | 3                |
-| `fx`                       | `http-json`                 | `collateral-mix`                     | 1                |
-| `gho`                      | `onchain-evm`               | `protocol-reserve`                   | 1                |
-| `infinifi`                 | `http-json`                 | `collateral-mix`                     | 1                |
-| `jupusd`                   | `http-json`                 | `collateral-mix`                     | 1                |
-| `liquity-v1`               | `onchain-evm`               | `single-asset`                       | 1                |
-| `liquity-v2-branches`      | `onchain-evm`               | `collateral-mix`                     | 6                |
-| `lista`                    | `onchain-evm`               | `collateral-mix`                     | 1                |
-| `m0`                       | `http-json`                 | `protocol-reserve`                   | 10               |
-| `mento`                    | `http-json`                 | `collateral-mix`                     | 5                |
-| `openeden-usdo`            | `http-json`                 | `collateral-mix`                     | 1                |
-| `re-metrics`               | `http-html`                 | `collateral-mix`                     | 1                |
-| `reserve-protocol-dtf`     | `http-json`                 | `collateral-mix`                     | 1                |
-| `reservoir`                | `http-json`                 | `protocol-reserve`                   | 1                |
-| `river-protocol-info`      | `http-json`                 | `protocol-reserve`                   | 1                |
-| `sgforge-coinvertible`     | `http-html`                 | `attestation-mix`                    | 1                |
-| `single-asset`             | `http-json` / `onchain-evm` | `single-asset`                       | 52               |
-| `sky-makercore`            | `http-json`                 | `collateral-mix`                     | 2                |
-| `solstice-attestation`     | `http-json`                 | `protocol-reserve`                   | 1                |
-| `superstate-liquidity`     | `onchain-evm` primary; `params.liquidityUrl` API | `single-asset`                       | 1                |
-| `usdgo-transparency`       | `http-json`                 | `attestation-mix`                    | 1                |
-| `usdai-proof-of-reserves`  | `http-json`                 | `collateral-mix`                     | 1                |
-| `usd1-bundle-oracle`       | `onchain-evm`               | `single-asset`                       | 1                |
-| `usdd-data-platform`       | `http-json`                 | `collateral-mix`                     | 1                |
-| `usdh-native-markets`      | `http-html`                 | `attestation-mix`                    | 1                |
+| Adapter                    | Primary input                                    | Semantics                                             | Configured coins |
+| -------------------------- | ------------------------------------------------ | ----------------------------------------------------- | ---------------- |
+| `abracadabra`              | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
+| `accountable`              | `http-json`                                      | `collateral-mix` / `protocol-reserve`                 | 7                |
+| `anzen-usdz`               | `onchain-evm`                                    | `single-asset`                                        | 1                |
+| `asymmetry`                | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `attestation-pdf-index`    | `http-html`                                      | `attestation-mix`                                     | 1                |
+| `btcfi`                    | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `cap-vault`                | `onchain-evm`                                    | `protocol-reserve`                                    | 1                |
+| `chainlink-nav`            | `onchain-evm`                                    | `single-asset`                                        | 6                |
+| `chainlink-por`            | `onchain-evm`                                    | `attestation-mix`                                     | 4                |
+| `circle-transparency`      | `http-html`                                      | `attestation-mix`                                     | 2                |
+| `collateral-positions-api` | `http-json`                                      | `collateral-mix`                                      | 2                |
+| `crvusd`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `curated-validated`        | `onchain-evm` / `onchain-solana`                 | `attestation-mix` / `collateral-mix` / `single-asset` | 60               |
+| `dola-inverse`             | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `erc4626-single-asset`     | `onchain-evm`                                    | `single-asset`                                        | 16               |
+| `ethena`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `evm-branch-balances`      | `onchain-evm`                                    | `collateral-mix`                                      | 6                |
+| `falcon`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `fdusd-transparency`       | `http-html`                                      | `attestation-mix`                                     | 1                |
+| `frax-balance-sheet`       | `http-json`                                      | `attestation-mix`                                     | 3                |
+| `frax-fpi-collateral`      | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `fx`                       | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `gho`                      | `onchain-evm`                                    | `protocol-reserve`                                    | 1                |
+| `infinifi`                 | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `jupusd`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `liquity-v1`               | `onchain-evm`                                    | `single-asset`                                        | 1                |
+| `liquity-v2-branches`      | `onchain-evm`                                    | `collateral-mix`                                      | 5                |
+| `lista`                    | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
+| `m0`                       | `http-json`                                      | `protocol-reserve`                                    | 10               |
+| `mento`                    | `http-json`                                      | `collateral-mix`                                      | 5                |
+| `openeden-usdo`            | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `re-metrics`               | `http-html`                                      | `collateral-mix`                                      | 1                |
+| `reserve-protocol-dtf`     | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `reservoir`                | `http-json`                                      | `protocol-reserve`                                    | 1                |
+| `river-protocol-info`      | `http-json`                                      | `protocol-reserve`                                    | 1                |
+| `sgforge-coinvertible`     | `http-html`                                      | `attestation-mix`                                     | 1                |
+| `single-asset`             | `http-json` / `onchain-evm`                      | `single-asset`                                        | 51               |
+| `sky-makercore`            | `http-json`                                      | `collateral-mix`                                      | 2                |
+| `solstice-attestation`     | `http-json`                                      | `protocol-reserve`                                    | 1                |
+| `superstate-liquidity`     | `onchain-evm` primary; `params.liquidityUrl` API | `single-asset`                                        | 1                |
+| `usd1-bundle-oracle`       | `onchain-evm`                                    | `single-asset`                                        | 1                |
+| `usdai-proof-of-reserves`  | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `usdgo-transparency`       | `http-json`                                      | `attestation-mix`                                     | 1                |
+| `usdd-data-platform`       | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `usdh-native-markets`      | `http-html`                                      | `attestation-mix`                                     | 1                |
+| `yamato`                   | `onchain-evm`                                    | `single-asset`                                        | 1                |
 
 Adapter key intent is tracked in `shared/lib/live-reserve-adapter-provenance.ts` and covered by the registry tests. Every registered key has one of these statuses:
 
-| Status    | Meaning                                                                 |
-| --------- | ----------------------------------------------------------------------- |
-| `active`  | Bound by at least one active stablecoin `liveReservesConfig`            |
-| `staged`  | Implemented for an approved upcoming binding, but not active yet        |
+| Status    | Meaning                                                                   |
+| --------- | ------------------------------------------------------------------------- |
+| `active`  | Bound by at least one active stablecoin `liveReservesConfig`              |
+| `staged`  | Implemented for an approved upcoming binding, but not active yet          |
 | `retired` | Kept only for historical compatibility while no new binding should use it |
-| `parked`  | Retained intentionally while no active coin currently binds it          |
+| `parked`  | Retained intentionally while no active coin currently binds it            |
 
 Current unbound registered adapters are explicit:
 
-| Adapter                  | Status   | Rationale                                                                                                       |
-| ------------------------ | -------- | --------------------------------------------------------------------------------------------------------------- |
-| `buck-io-transparency`   | `parked` | BUCK.fi transparency implementation is retained, but no tracked active coin currently binds it.                 |
-| `tether`                 | `parked` | Tether issuer summary adapter is retained, while current Tether assets use curated-validated or single-asset probes. |
+| Adapter                | Status   | Rationale                                                                                                            |
+| ---------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
+| `buck-io-transparency` | `parked` | BUCK.fi transparency implementation is retained, but no tracked active coin currently binds it.                      |
+| `tether`               | `parked` | Tether issuer summary adapter is retained, while current Tether assets use curated-validated or single-asset probes. |
 
 `collateral-positions-api` can now optionally attach direct redemption-capacity telemetry alongside the collateral mix when a reviewed bridge-backed stable exit exists. `zchf-frankencoin` uses this path to publish the current VCHF StablecoinBridge inventory as `immediateRedeemableUsd` for redemption-backstop modeling without changing the reserve-slice composition itself.
 
@@ -464,11 +469,19 @@ the `liquity-v2-branches` adapter reads branch ActivePool collateral balances, D
 Chainlink NAV note:
 `chainlink-nav` now supports both standard AggregatorV3 feeds and Ondo router-style NAV lookups. When `oracleMethod = "getAssetPrice"`, the adapter calls `getAssetPrice(token)` on the router and, when available, follows `tokenToRWAOracle(token) -> getPriceData()` to recover a verified freshness timestamp instead of treating the feed as permanently timestampless.
 
+Chainlink PoR note:
+`chainlink-por` supports USD-denominated reserve feeds and commodity reserve-unit feeds. Commodity configs such as Kinesis KAU and KAG set `reserveUnit = "XAU"` or `"XAG"`; those snapshots persist reserve quantity/unit metadata and intentionally omit USD reserve totals, supply USD, and collateralization ratios because the feed proves physical commodity quantity rather than a USD liability value.
+
 `superstate-liquidity` extends USTB's on-chain NAV reserve proof with Superstate's public liquidity endpoint. Reserve slices remain NAV-based, while nested redemption telemetry uses the current Circle USD available amount plus USDC RedemptionIdle balance as bounded proxy capacity. Missing or malformed liquidity fields fail the adapter instead of falling back to NAV/AUM as immediate liquidity.
 
 `usd1-bundle-oracle` reads USD1's Chainlink bundle oracle on Ethereum. The adapter decodes `latestBundle()` into a source timestamp and reserve value, cross-checks `latestBundleTimestamp()`, reads live USD1 total supply, and stores reserve metadata from latest-state on-chain data. The oracle publishes WLFI aggregate fund reserves across multiple products rather than USD1-earmarked collateral, so the adapter intentionally does not emit a `collateralizationRatio`. The raw fund-reserve / USD1-supply ratio is persisted as `fundBackingTotalRatio` alongside a `details.fundScope` disclaimer; consumers must not read it as a 1:1 collateralization signal.
 
 `frax-balance-sheet` now covers both `frxusd-frax` and legacy `frax-frax` through the Frax v2 balance-sheet API. Known Frax ecosystem assets are classified explicitly; any future unmapped balance-sheet exposure is aggregated and only degrades the run when material. For frxUSD redemption modeling, the adapter emits current stablecoin capacity as a USD amount and intentionally avoids reusing reserve-composition ratios as supply-relative redemption capacity.
+
+`frax-fpi-collateral` parses Frax's `/v2/fpifpis/fpi-collateral` endpoint for FPI. It excludes self-held FPI from reserve slices, nets self-held FPI against liabilities, classifies known Frax ecosystem assets, and degrades only when unmapped non-FPI collateral exposure becomes material.
+
+`yamato` reads CJPY reserve state directly from Yamato's `getStates()` contract path and values ETH collateral with the configured Yamato price-feed `getPrice()` call. The latest-state on-chain read uses `freshnessMode = "not-applicable"` and publishes protocol collateral ratio and threshold metadata for the reserve detail view.
+
 Business-day NAV feeds can set `maxOracleAgeSec` when their oracle is expected to pause through weekends or market holidays; `ousg-ondo-finance` and `mtbill-midas` use a 4-day window so normal Friday-to-Monday NAV cadence does not trip their reserve circuit breakers.
 
 Adapter helpers now live in a small helper family, with `worker/src/cron/reserve-adapters/helpers.ts` kept as the shared import surface:
@@ -478,7 +491,7 @@ Adapter helpers now live in a small helper family, with `worker/src/cron/reserve
 - Shared bucketed-composition accumulation and classification helpers (`classification.ts`) for adapters that collapse many raw assets into a smaller reserve-bucket surface while tracking unknown exposure consistently
 - Shared unverified-freshness metadata helper so timestamp-less dashboard feeds explain why they remain non-scoring
 - DefiLlama spot-price loading for valuation (`fetchDefiLlamaPrices`), with fixed-price overrides supported for wrapper branches in `evm-branch-balances`; tracked branch assets can also reuse a fresh stablecoins cache price when DefiLlama address pricing is missing
-- EVM balance, total-supply, and hex-call reads (`fetchErc20Balance`, `fetchErc20TotalSupply`)
+- EVM balance, total-supply, hex-call, and Multicall3 aggregate reads (`fetchErc20Balance`, `fetchErc20TotalSupply`, `fetchOnchainMulticall3`)
 - Solana mint-supply reads (`fetchSolanaTokenSupplyRaw`) used by `curated-validated` for tracked Solana-issued assets
 - Input-kind type guards and validators (`requireJsonInput`, `requireJsonInputFromConfig`, etc.)
 - Slice normalization / valuation / unknown-exposure math (`slice-math.ts`) with configurable precision (`normalizeSlices`, `slicesFromValues`, `valueUsdFromBigIntPrice`)
@@ -508,20 +521,20 @@ Adapter helpers now live in a small helper family, with `worker/src/cron/reserve
 
 ## File Index
 
-| File                                            | Role                                                                                             |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `shared/types/live-reserves.ts`                 | `LiveReservesConfig`, `StablecoinReservesResponse`, sync-state types                             |
-| `shared/lib/live-reserve-adapters.ts`           | Shared adapter registry, source/evidence classes, validation policy, and config schemas          |
-| `shared/lib/stablecoins/index.ts`               | Loader for per-coin `liveReservesConfig` declarations backed by `shared/data/stablecoins/coins/*.json` |
-| `worker/src/cron/sync-live-reserves.ts`         | 4-hourly sync orchestration and cron result statuses                                             |
-| `worker/src/cron/reserve-adapters/index.ts`     | Adapter registry                                                                                 |
-| `worker/src/cron/reserve-adapters/helpers.ts`   | Shared adapter fetch / normalization helpers                                                     |
-| `worker/src/lib/live-reserves-store.ts`         | Public facade over the live-reserve store helpers                                                |
-| `worker/src/lib/live-reserves-store-read.ts`    | D1 read/query helpers and authoritative row loaders                                              |
-| `worker/src/lib/live-reserves-store-write.ts`   | D1 write paths and history pruning                                                               |
-| `worker/src/lib/live-reserves-store-overview.ts`| Status overview, scoring-eligible freshness checks, and authoritative snapshot maps              |
-| `worker/src/lib/live-reserves-store-response.ts`| Detail/API reserve-result resolution and curated/static fallback handling                        |
-| `worker/src/lib/live-reserves-store-shared.ts`  | Shared live-reserve store types, constants, and row mapping                                      |
-| `worker/src/api/stablecoin-reserves.ts`         | Public API handler                                                                               |
-| `src/hooks/use-stablecoin-reserves.ts`          | Frontend query hook                                                                              |
-| `src/hooks/use-stablecoin-detail-view-model.ts` | Detail-page integration                                                                          |
+| File                                             | Role                                                                                                   |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `shared/types/live-reserves.ts`                  | `LiveReservesConfig`, `StablecoinReservesResponse`, sync-state types                                   |
+| `shared/lib/live-reserve-adapters.ts`            | Shared adapter registry, source/evidence classes, validation policy, and config schemas                |
+| `shared/lib/stablecoins/index.ts`                | Loader for per-coin `liveReservesConfig` declarations backed by `shared/data/stablecoins/coins/*.json` |
+| `worker/src/cron/sync-live-reserves.ts`          | 4-hourly sync orchestration and cron result statuses                                                   |
+| `worker/src/cron/reserve-adapters/index.ts`      | Adapter registry                                                                                       |
+| `worker/src/cron/reserve-adapters/helpers.ts`    | Shared adapter fetch / normalization helpers                                                           |
+| `worker/src/lib/live-reserves-store.ts`          | Public facade over the live-reserve store helpers                                                      |
+| `worker/src/lib/live-reserves-store-read.ts`     | D1 read/query helpers and authoritative row loaders                                                    |
+| `worker/src/lib/live-reserves-store-write.ts`    | D1 write paths and history pruning                                                                     |
+| `worker/src/lib/live-reserves-store-overview.ts` | Status overview, scoring-eligible freshness checks, and authoritative snapshot maps                    |
+| `worker/src/lib/live-reserves-store-response.ts` | Detail/API reserve-result resolution and curated/static fallback handling                              |
+| `worker/src/lib/live-reserves-store-shared.ts`   | Shared live-reserve store types, constants, and row mapping                                            |
+| `worker/src/api/stablecoin-reserves.ts`          | Public API handler                                                                                     |
+| `src/hooks/use-stablecoin-reserves.ts`           | Frontend query hook                                                                                    |
+| `src/hooks/use-stablecoin-detail-view-model.ts`  | Detail-page integration                                                                                |

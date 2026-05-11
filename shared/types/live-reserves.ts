@@ -13,6 +13,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "accountable",
   "anzen-usdz",
   "asymmetry",
+  "attestation-pdf-index",
   "btcfi",
   "buck-io-transparency",
   "cap-vault",
@@ -29,6 +30,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "falcon",
   "fdusd-transparency",
   "frax-balance-sheet",
+  "frax-fpi-collateral",
   "fx",
   "gho",
   "infinifi",
@@ -54,6 +56,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "usdai-proof-of-reserves",
   "usd1-bundle-oracle",
   "usdd-data-platform",
+  "yamato",
 ] as const;
 
 export const LIVE_RESERVE_SOURCE_MODEL_VALUES = ["dynamic-mix", "validated-static", "single-bucket"] as const;

@@ -17,11 +17,20 @@ import {
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
 const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;
+const CHAINLINK_POR_RESERVE_UNITS = ["USD", "XAU", "XAG"] as const;
+
+export type ChainlinkPorReserveUnit = (typeof CHAINLINK_POR_RESERVE_UNITS)[number];
+
+const COMMODITY_RESERVE_UNIT_LABELS = {
+  XAU: "troy ounces of gold",
+  XAG: "troy ounces of silver",
+} as const satisfies Record<Exclude<ChainlinkPorReserveUnit, "USD">, string>;
 
 export interface ChainlinkPorParams {
   porFeedAddress: string;
   assetLabel: string;
   assetRisk: ReserveSlice["risk"];
+  reserveUnit?: ChainlinkPorReserveUnit;
   rpcUrl?: string;
   fallbackRpcUrl?: string;
   maxOracleAgeSec?: number;
@@ -51,8 +60,43 @@ function isEvmContract(contract: ContractDeployment): boolean {
   return contract.chain !== "tron" && contract.chain !== "solana";
 }
 
+function parseReserveUnit(raw: unknown): ChainlinkPorReserveUnit | undefined {
+  if (raw == null) return undefined;
+  if (typeof raw === "string" && CHAINLINK_POR_RESERVE_UNITS.includes(raw as ChainlinkPorReserveUnit)) {
+    return raw as ChainlinkPorReserveUnit;
+  }
+  throw new Error("chainlink-por adapter params invalid.reserveUnit: Expected USD, XAU, or XAG");
+}
+
 function readParams(config: LiveReservesConfig): ChainlinkPorParams {
-  return parseLiveReserveAdapterParams("chainlink-por", config.params);
+  const { reserveUnit: rawReserveUnit, ...schemaParams } = config.params ?? {};
+  const parsed = parseLiveReserveAdapterParams("chainlink-por", schemaParams);
+  return {
+    ...parsed,
+    reserveUnit: parseReserveUnit(rawReserveUnit),
+  };
+}
+
+function inferReserveUnit(coin: StablecoinMeta, params: ChainlinkPorParams): ChainlinkPorReserveUnit {
+  if (params.reserveUnit) return params.reserveUnit;
+  if (coin.flags.pegCurrency === "GOLD") return "XAU";
+  if (coin.flags.pegCurrency === "SILVER") return "XAG";
+  return "USD";
+}
+
+function buildReserveValueMetadata(
+  reserveValue: number,
+  reserveUnit: ChainlinkPorReserveUnit,
+): Record<string, unknown> {
+  if (reserveUnit === "USD") {
+    return { totalReserveUsd: reserveValue };
+  }
+
+  return {
+    reserveUnit,
+    reserveUnitLabel: COMMODITY_RESERVE_UNIT_LABELS[reserveUnit],
+    totalReserveQuantity: reserveValue,
+  };
 }
 
 /** Pure transformation from decoded Chainlink data + params → AdapterResult. Exported for testing. */
@@ -65,39 +109,50 @@ export function adaptChainlinkPorResponse(
     throw new Error("chainlink-por: feed reported zero or negative reserves");
   }
 
-  const totalReserveUsd = decimalNumberFromBigInt(data.reserves, data.decimals);
-  const supplyUsd = supply && supply.contributions.length > 0
-    ? supply.contributions.reduce(
-        (acc, contribution) => acc + decimalNumberFromBigInt(contribution.raw, contribution.decimals),
-        0,
-      )
-    : undefined;
-  const collateralizationRatio = supplyUsd != null && supplyUsd > 0 ? totalReserveUsd / supplyUsd : undefined;
+  const reserveUnit = params.reserveUnit ?? "USD";
+  const reserveValue = decimalNumberFromBigInt(data.reserves, data.decimals);
+  const compareSupplyAsUsd = reserveUnit === "USD";
+  const supplyUsd =
+    compareSupplyAsUsd && supply && supply.contributions.length > 0
+      ? supply.contributions.reduce(
+          (acc, contribution) => acc + decimalNumberFromBigInt(contribution.raw, contribution.decimals),
+          0,
+        )
+      : undefined;
+  const collateralizationRatio = supplyUsd != null && supplyUsd > 0 ? reserveValue / supplyUsd : undefined;
 
   const warnings: LiveReserveWarning[] = [];
   if (collateralizationRatio != null && collateralizationRatio < 0.995) {
-    warnings.push(reserveDegradedWarning(
-      "por-reserve-under-supply",
-      `Chainlink PoR reserves cover ${(collateralizationRatio * 100).toFixed(2)}% of multichain token supply`,
-    ));
+    warnings.push(
+      reserveDegradedWarning(
+        "por-reserve-under-supply",
+        `Chainlink PoR reserves cover ${(collateralizationRatio * 100).toFixed(2)}% of multichain token supply`,
+      ),
+    );
   }
   if (collateralizationRatio != null && collateralizationRatio > 1.1) {
-    warnings.push(reserveDegradedWarning(
-      "por-reserve-over-supply",
-      `Chainlink PoR reserves cover ${(collateralizationRatio * 100).toFixed(2)}% of multichain token supply (possible scope mismatch)`,
-    ));
+    warnings.push(
+      reserveDegradedWarning(
+        "por-reserve-over-supply",
+        `Chainlink PoR reserves cover ${(collateralizationRatio * 100).toFixed(2)}% of multichain token supply (possible scope mismatch)`,
+      ),
+    );
   }
   if (supply && supply.omittedNonEvmChains.length > 0) {
-    warnings.push(reserveInfoWarning(
-      "por-supply-chain-omitted",
-      `Supply aggregation omits non-EVM chains: ${supply.omittedNonEvmChains.join(", ")}`,
-    ));
+    warnings.push(
+      reserveInfoWarning(
+        "por-supply-chain-omitted",
+        `Supply aggregation omits non-EVM chains: ${supply.omittedNonEvmChains.join(", ")}`,
+      ),
+    );
   }
   if (supply && supply.omittedReadFailureChains.length > 0) {
-    warnings.push(reserveDegradedWarning(
-      "partial-supply-read-failure",
-      `Supply aggregation omits EVM chains whose totalSupply() read failed: ${supply.omittedReadFailureChains.join(", ")}`,
-    ));
+    warnings.push(
+      reserveDegradedWarning(
+        "partial-supply-read-failure",
+        `Supply aggregation omits EVM chains whose totalSupply() read failed: ${supply.omittedReadFailureChains.join(", ")}`,
+      ),
+    );
   }
 
   const primaryContribution = supply?.contributions[0];
@@ -118,7 +173,7 @@ export function adaptChainlinkPorResponse(
       sourceTimestamp: data.updatedAt,
       freshnessMode: "verified",
       redemption: buildDocumentedRedemptionTelemetry(data.updatedAt),
-      totalReserveUsd,
+      ...buildReserveValueMetadata(reserveValue, reserveUnit),
       ...(supplyUsd != null
         ? {
             supplyUsd,
@@ -151,7 +206,11 @@ export async function fetchChainlinkPorReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, "chainlink-por");
-  const params = readParams(config);
+  const parsedParams = readParams(config);
+  const params: ChainlinkPorParams = {
+    ...parsedParams,
+    reserveUnit: inferReserveUnit(coin, parsedParams),
+  };
 
   const callBase = {
     contract: params.porFeedAddress,
@@ -193,6 +252,10 @@ export async function fetchChainlinkPorReserves(
     throw new Error(`chainlink-por: feed data is stale (${ageSec}s > ${maxOracleAgeSec}s)`);
   }
 
+  if (params.reserveUnit !== "USD") {
+    return adaptChainlinkPorResponse({ reserves: answer, decimals, roundId, updatedAt }, params, null);
+  }
+
   // 3. Aggregate totalSupply across all EVM chains in coin.contracts.
   //    Non-EVM chains (tron, solana) are omitted and surfaced as an info warning.
   const allContracts = coin.contracts ?? [];
@@ -203,21 +266,23 @@ export async function fetchChainlinkPorReserves(
     throw new Error(`chainlink-por: no EVM contracts available for ${coin.id}`);
   }
 
-  const supplyReads = await Promise.all(evmContracts.map(async (contract) => {
-    const raw = await fetchErc20TotalSupply(
-      { ...input, chain: contract.chain },
-      contract.address,
-      signal,
-      ctx,
-      params.rpcUrl,
-      params.fallbackRpcUrl,
-    );
-    return { contract, raw };
-  }));
+  const supplyReads = await Promise.all(
+    evmContracts.map(async (contract) => {
+      const raw = await fetchErc20TotalSupply(
+        { ...input, chain: contract.chain },
+        contract.address,
+        signal,
+        ctx,
+        params.rpcUrl,
+        params.fallbackRpcUrl,
+      );
+      return { contract, raw };
+    }),
+  );
 
-  const successful = supplyReads.filter((entry): entry is { contract: ContractDeployment; raw: bigint } => (
-    entry.raw != null && entry.raw > 0n
-  ));
+  const successful = supplyReads.filter(
+    (entry): entry is { contract: ContractDeployment; raw: bigint } => entry.raw != null && entry.raw > 0n,
+  );
   const failed = supplyReads.filter((entry) => entry.raw == null || entry.raw <= 0n);
 
   if (successful.length === 0) {
@@ -235,9 +300,5 @@ export async function fetchChainlinkPorReserves(
     omittedReadFailureChains: failed.map((entry) => entry.contract.chain),
   };
 
-  return adaptChainlinkPorResponse(
-    { reserves: answer, decimals, roundId, updatedAt },
-    params,
-    supplyAggregate,
-  );
+  return adaptChainlinkPorResponse({ reserves: answer, decimals, roundId, updatedAt }, params, supplyAggregate);
 }

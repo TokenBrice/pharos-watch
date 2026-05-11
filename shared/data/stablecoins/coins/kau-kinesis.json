@@ -42,5 +42,28 @@
       "pct": 100,
       "risk": "very-low"
     }
-  ]
+  ],
+  "liveReservesConfig": {
+    "adapter": "chainlink-por",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "kau-kinesis",
+    "display": {
+      "url": "https://data.chain.link/feeds/ethereum/mainnet/kau-por",
+      "label": "Chainlink PoR"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "porFeedAddress": "0xaB5Dd7DD7669072a1Ef27c0ba241120A27A1aeC3",
+      "assetLabel": "Physical gold reserves",
+      "assetRisk": "very-low",
+      "reserveUnit": "XAU"
+    }
+  }
 }
