@@ -75,10 +75,6 @@
     "disposition": "queued-p4",
     "notes": "Blacklist amount recovery is an existing cron repair surface with chain-specific parsing and persistence branches. Keep waived here; split chain fetch, event normalization, and balance reconciliation in a dedicated blacklist cron cleanup."
   },
-  "worker/src/cron/yield-sync/sources-rpc.ts": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after merging the local yield coverage and publication-health tranche. Optional protocol RPC handling still combines deterministic rate fetches, telemetry, fallback routing, and source emission; split fetch-family orchestration from per-source adapters in a dedicated yield cleanup pass."
-  },
   "worker/src/cron/yield-sync/cache.ts": {
     "disposition": "queued-p4",
     "notes": "Surfaced after merging the local yield coverage and publication-health tranche. Yield cache validation now covers rankings publication state, benchmark caches, supplemental source caches, and deterministic on-chain health; split schema parsing by cache family in a dedicated yield cleanup pass."

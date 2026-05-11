@@ -88,6 +88,7 @@ describe("api endpoint registry", () => {
       "/api/stress-signals",
       "/api/supply-history",
       "/api/supply-history?stablecoin=usdt-tether",
+      "/api/telegram-pending",
       "/api/telegram-pulse",
       "/api/telegram-webhook",
       "/api/trigger-digest",
@@ -166,6 +167,7 @@ describe("api endpoint registry", () => {
       "/api/reset-circuit-breaker",
       "/api/kill-cron-in-flight",
       "/api/bulk-dismiss-discovery-candidates",
+      "/api/telegram-pending",
     ]);
   });
 

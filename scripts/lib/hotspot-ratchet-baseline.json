@@ -264,9 +264,9 @@
     "notes": "The self-serve API key route now delegates public response assembly and admin-review helpers to adjacent modules. Continue splitting request persistence and verification issuance before adding more lifecycle branches."
   },
   "worker/src/api/api-key-requests/admin.ts": {
-    "fileLines": 225,
+    "fileLines": 216,
     "maxFunctionLines": 41,
-    "branchCount": 9,
+    "branchCount": 6,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 200,
@@ -312,9 +312,9 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 722,
-    "maxFunctionLines": 364,
-    "branchCount": 39,
+    "fileLines": 777,
+    "maxFunctionLines": 396,
+    "branchCount": 43,
     "disposition": "deferred",
     "targetBudget": {
       "fileLines": 540,

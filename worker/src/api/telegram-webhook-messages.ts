@@ -300,7 +300,7 @@ export function formatQuietHours(startHourUtc: number | null | undefined, endHou
   return `${pad(startHourUtc)}:00–${pad(endHourUtc)}:00 UTC`;
 }
 
-export function formatQuietHoursStatus(subscriber: SubscriberRow | null, nowSec: number): string {
+function formatQuietHoursStatus(subscriber: SubscriberRow | null, nowSec: number): string {
   if (!subscriber?.quiet_hours_enabled) return "Off";
   const start = subscriber.quiet_hours_start_utc;
   const end = subscriber.quiet_hours_end_utc;
@@ -312,7 +312,7 @@ export function formatQuietHoursStatus(subscriber: SubscriberRow | null, nowSec:
   return `${pad(start)}:00–${pad(end)}:00 UTC`;
 }
 
-export function formatSnoozeLine(snoozeUntilSec: number | null, nowSec: number): string {
+function formatSnoozeLine(snoozeUntilSec: number | null, nowSec: number): string {
   if (snoozeUntilSec == null || snoozeUntilSec <= nowSec) return "Snooze: Off";
   return `Snoozed for ${formatRelativeDuration(snoozeUntilSec - nowSec)}`;
 }
