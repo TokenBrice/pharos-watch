@@ -1,4 +1,15 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
+
+vi.mock("../../../lib/abort", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/abort")>();
+  return {
+    ...actual,
+    sleepWithSignal: vi.fn(async (_ms: number, signal?: AbortSignal) => {
+      actual.throwIfAborted(signal);
+    }),
+  };
+});
+
 import { fetchTronEventsIncremental, parseTronEvent } from "../tron-source";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
 import { createBudget, type RateLimitedFetch } from "../../../lib/evm-logs";

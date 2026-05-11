@@ -1,7 +1,20 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+
+vi.mock("../../../lib/abort", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/abort")>();
+  return {
+    ...actual,
+    sleepWithSignal: vi.fn(async (_ms: number, signal?: AbortSignal) => {
+      actual.throwIfAborted(signal);
+    }),
+  };
+});
+
 import { fetchTronEventsIncremental } from "../tron-source";
-import { createBudget, createRateLimiter } from "../../../lib/evm-logs";
+import { createBudget, type RateLimitedFetch } from "../../../lib/evm-logs";
 import type { BlacklistRunBudget } from "../run-budget";
+
+const noopLimiter: RateLimitedFetch = (fn) => fn();
 
 const configStub = {
   configKey: "tron-test",
@@ -37,7 +50,7 @@ describe("fetchTronEventsIncremental error propagation", () => {
       null,
       0,
       makeRunBudget(),
-      createRateLimiter(3),
+      noopLimiter,
       undefined,
     );
     expect(result.apiError).toBe(true);
@@ -53,7 +66,7 @@ describe("fetchTronEventsIncremental error propagation", () => {
       null,
       0,
       makeRunBudget(),
-      createRateLimiter(3),
+      noopLimiter,
       undefined,
     );
     expect(result.apiError).toBe(true);
@@ -68,7 +81,7 @@ describe("fetchTronEventsIncremental error propagation", () => {
       null,
       0,
       makeRunBudget(),
-      createRateLimiter(3),
+      noopLimiter,
       undefined,
     );
     expect(result.apiError).toBe(true);
@@ -84,7 +97,7 @@ describe("fetchTronEventsIncremental error propagation", () => {
       null,
       0,
       makeRunBudget(),
-      createRateLimiter(3),
+      noopLimiter,
       undefined,
     );
     expect(result.apiError).toBe(false);

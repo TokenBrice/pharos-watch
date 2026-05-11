@@ -1,4 +1,15 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
+
+vi.mock("../../lib/abort", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/abort")>();
+  return {
+    ...actual,
+    sleepWithSignal: vi.fn(async (_ms: number, signal?: AbortSignal) => {
+      actual.throwIfAborted(signal);
+    }),
+  };
+});
+
 import { isReasonablePrice, hasMissingPrice, PRICE_BOUNDS, enrichMissingPrices, fetchPrimaryPrices, applyResolvedPrice, applyPoolChallenge } from "../sync-stablecoins/enrich-prices";
 import { applyListAggregatorDowngrade } from "../sync-stablecoins/enrich-prices-primary";
 import type { PeggedAsset, PrimaryPriceResult, PriceValidationStats } from "../sync-stablecoins/enrich-prices";

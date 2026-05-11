@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
@@ -16,12 +16,16 @@ describe("buildRedemptionBackstopEntry", () => {
   let buildRedemptionBackstopEntry: typeof import("../redemption-backstop-sources").buildRedemptionBackstopEntry;
   const now = 1_700_000_000;
 
-  beforeEach(async () => {
-    vi.resetModules();
-    getReserveSyncStateMock.mockResolvedValue(null);
-    getLatestSuccessfulReserveSnapshotMetadataMock.mockResolvedValue(null);
+  beforeAll(async () => {
     const mod = await import("../redemption-backstop-sources");
     buildRedemptionBackstopEntry = mod.buildRedemptionBackstopEntry;
+  });
+
+  beforeEach(() => {
+    getReserveSyncStateMock.mockReset();
+    getLatestSuccessfulReserveSnapshotMetadataMock.mockReset();
+    getReserveSyncStateMock.mockResolvedValue(null);
+    getLatestSuccessfulReserveSnapshotMetadataMock.mockResolvedValue(null);
   });
 
   it("resolves supply-full capacity with valid supply", async () => {

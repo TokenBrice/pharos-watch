@@ -39,6 +39,16 @@ vi.mock("../backfill-price-sources", async (importOriginal) => {
   };
 });
 
+vi.mock("../backfill-fx", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../backfill-fx")>();
+  return {
+    ...actual,
+    fetchHistoricalFxRates: vi.fn(async () => ({})),
+    fetchHistoricalSecondaryFxRates: vi.fn(async () => ({})),
+    buildCommodityMedianSeriesFromCg: vi.fn(async () => ({})),
+  };
+});
+
 import { handleBackfillDepegs } from "../backfill-depegs";
 import { fetchMarketBackfillPriceSeries } from "../backfill-price-sources";
 

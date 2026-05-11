@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { fetchBalancerPools } from "../dex-liquidity/fetch-balancer";
+import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
+import { fetchOrcaPools } from "../dex-liquidity/fetch-orca";
+import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
 
 vi.mock("../../lib/abort", async () => {
   const actual = await vi.importActual<typeof import("../../lib/abort")>("../../lib/abort");
@@ -33,10 +37,9 @@ function encodeRpcWords(words: Array<number | bigint>): string {
 // Fluid
 // ---------------------------------------------------------------------------
 describe("fetchFluidPools", () => {
-  afterEach(() => { mockFetch.mockReset(); vi.resetModules(); });
+  afterEach(() => { mockFetch.mockReset(); });
 
   it("fetches all chains and normalizes to DexApiPool[]", async () => {
-    const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
     mockJsonFetch([
       {
         ticker_id: "0xbase_0xquote",
@@ -63,7 +66,6 @@ describe("fetchFluidPools", () => {
   });
 
   it("hydrates balances and fee rate from the Fluid DexReservesResolver when available", async () => {
-    const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
     mockFetch.mockImplementation((input, init) => {
       const url = String(input);
       if (url === "https://api.fluid.instadapp.io/v2/1/dexes/stats/tickers") {
@@ -104,7 +106,6 @@ describe("fetchFluidPools", () => {
   });
 
   it("uses provided chain RPCs for resolver enrichment", async () => {
-    const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
     mockFetch.mockImplementation((input, init) => {
       const url = String(input);
       if (url === "https://api.fluid.instadapp.io/v2/1/dexes/stats/tickers") {
@@ -156,7 +157,6 @@ describe("fetchFluidPools", () => {
   });
 
   it("sets empty symbols and decimals=0 for tokens", async () => {
-    const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
     mockJsonFetch([
       {
         ticker_id: "0xbase_0xquote",
@@ -178,7 +178,6 @@ describe("fetchFluidPools", () => {
   });
 
   it("approximates volume as sum of base and target volumes", async () => {
-    const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
     mockJsonFetch([
       {
         ticker_id: "tid",
@@ -200,7 +199,6 @@ describe("fetchFluidPools", () => {
   });
 
   it("handles chain failure gracefully with Promise.allSettled", async () => {
-    const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
     mockFetch
       .mockRejectedValueOnce(new Error("network error"))
       .mockRejectedValueOnce(new Error("network error"))
@@ -215,7 +213,6 @@ describe("fetchFluidPools", () => {
   });
 
   it("returns empty array on complete failure", async () => {
-    const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
     mockFetch.mockRejectedValue(new Error("all chains down"));
     const pools = await fetchFluidPools();
     expect(pools.pools).toHaveLength(0);
@@ -224,7 +221,6 @@ describe("fetchFluidPools", () => {
   });
 
   it("skips tickers with zero or invalid TVL", async () => {
-    const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
     mockJsonFetch([
       {
         ticker_id: "tid",
@@ -255,7 +251,6 @@ describe("fetchFluidPools", () => {
   });
 
   it("sets price to null for invalid prices", async () => {
-    const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
     mockJsonFetch([
       {
         ticker_id: "tid",
@@ -274,7 +269,6 @@ describe("fetchFluidPools", () => {
   });
 
   it("sets feeRate to null (Fluid API does not provide fee data)", async () => {
-    const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
     mockJsonFetch([
       {
         ticker_id: "tid",
@@ -294,7 +288,6 @@ describe("fetchFluidPools", () => {
   });
 
   it("handles non-array response body", async () => {
-    const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
     mockJsonFetch({ error: "bad request" });
 
     const pools = await fetchFluidPools();
@@ -304,7 +297,6 @@ describe("fetchFluidPools", () => {
   });
 
   it("handles HTTP error status gracefully", async () => {
-    const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
     mockTextFetch("Server Error", 500);
 
     const pools = await fetchFluidPools();
@@ -318,10 +310,9 @@ describe("fetchFluidPools", () => {
 // Balancer
 // ---------------------------------------------------------------------------
 describe("fetchBalancerPools", () => {
-  afterEach(() => { mockFetch.mockReset(); vi.resetModules(); });
+  afterEach(() => { mockFetch.mockReset(); });
 
   it("fetches stable pools and classifies pool type", async () => {
-    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     mockJsonFetch({
       data: { poolGetPools: [{
         id: "0xpool",
@@ -347,7 +338,6 @@ describe("fetchBalancerPools", () => {
   });
 
   it("uses the exact pool address exposed by the API instead of the 32-byte vault pool id", async () => {
-    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     mockJsonFetch({
       data: { poolGetPools: [{
         id: "0x4e415957aa4fd703ad701e43ee5335d1d7891d8300020000000000000000053b",
@@ -367,7 +357,6 @@ describe("fetchBalancerPools", () => {
   });
 
   it("classifies WEIGHTED pools correctly", async () => {
-    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     mockJsonFetch({
       data: { poolGetPools: [{
         id: "0xweighted",
@@ -386,7 +375,6 @@ describe("fetchBalancerPools", () => {
   });
 
   it("classifies all stable pool variants as balancer-stable", async () => {
-    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     const stableTypes = ["STABLE", "COMPOSABLE_STABLE", "META_STABLE", "PHANTOM_STABLE", "GYRO", "GYROE"];
     const poolData = stableTypes.map((type, i) => ({
       id: `0xpool${i}`,
@@ -409,7 +397,6 @@ describe("fetchBalancerPools", () => {
   });
 
   it("derives per-token priceUsd from balanceUSD / balance", async () => {
-    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     mockJsonFetch({
       data: { poolGetPools: [{
         id: "0xpool",
@@ -429,7 +416,6 @@ describe("fetchBalancerPools", () => {
   });
 
   it("sets token priceUsd to null when balance is zero", async () => {
-    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     mockJsonFetch({
       data: { poolGetPools: [{
         id: "0xpool",
@@ -449,7 +435,6 @@ describe("fetchBalancerPools", () => {
   });
 
   it("paginates through multiple pages", async () => {
-    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     // Page 1: full page (1000 items)
     const page1 = Array.from({ length: 1000 }, (_, i) => ({
       id: `0xpool${i}`,
@@ -483,7 +468,6 @@ describe("fetchBalancerPools", () => {
   });
 
   it("skips pools with unknown chain", async () => {
-    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     mockJsonFetch({
       data: { poolGetPools: [{
         id: "0xpool",
@@ -503,7 +487,6 @@ describe("fetchBalancerPools", () => {
   });
 
   it("skips pools with zero TVL", async () => {
-    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     mockJsonFetch({
       data: { poolGetPools: [{
         id: "0xpool",
@@ -523,7 +506,6 @@ describe("fetchBalancerPools", () => {
   });
 
   it("returns empty array when API returns error status", async () => {
-    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     mockTextFetch("Internal Server Error", 500);
     const pools = await fetchBalancerPools();
     expect(pools.pools).toHaveLength(0);
@@ -532,7 +514,6 @@ describe("fetchBalancerPools", () => {
   });
 
   it("returns empty array when response has no poolGetPools", async () => {
-    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     mockJsonFetch({ data: {} });
     const pools = await fetchBalancerPools();
     expect(pools.pools).toHaveLength(0);
@@ -541,7 +522,6 @@ describe("fetchBalancerPools", () => {
   });
 
   it("returns a degraded result when Balancer returns invalid JSON", async () => {
-    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     mockFetch.mockResolvedValueOnce(new Response("{bad-json", { status: 200 }));
 
     const pools = await fetchBalancerPools();
@@ -553,7 +533,6 @@ describe("fetchBalancerPools", () => {
   });
 
   it("returns a degraded result when Balancer returns a null root", async () => {
-    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     mockFetch.mockResolvedValueOnce(new Response("null", { status: 200 }));
 
     const pools = await fetchBalancerPools();
@@ -565,7 +544,6 @@ describe("fetchBalancerPools", () => {
   });
 
   it("skips malformed Balancer pool rows while preserving valid rows from the same page", async () => {
-    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     mockJsonFetch({
       data: { poolGetPools: [
         {
@@ -599,7 +577,6 @@ describe("fetchBalancerPools", () => {
   });
 
   it("maps Balancer chain enums to internal chain names", async () => {
-    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     mockJsonFetch({
       data: { poolGetPools: [
         {
@@ -625,10 +602,9 @@ describe("fetchBalancerPools", () => {
 // Raydium
 // ---------------------------------------------------------------------------
 describe("fetchRaydiumPools", () => {
-  afterEach(() => { mockFetch.mockReset(); vi.resetModules(); });
+  afterEach(() => { mockFetch.mockReset(); });
 
   it("fetches concentrated pools and maps to DexApiPool", async () => {
-    const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
     mockFetch
       .mockResolvedValueOnce(jsonResponse({
         success: true,
@@ -660,7 +636,6 @@ describe("fetchRaydiumPools", () => {
   });
 
   it("classifies standard pools as raydium-amm", async () => {
-    const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
     // First call for concentrated returns empty, second for standard returns pool
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: { count: 0, data: [] } })))
@@ -686,7 +661,6 @@ describe("fetchRaydiumPools", () => {
   });
 
   it("sets chain to solana for all pools", async () => {
-    const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
     mockJsonFetch({
       success: true,
       data: { count: 1, data: [{
@@ -708,7 +682,6 @@ describe("fetchRaydiumPools", () => {
   });
 
   it("stops pagination when TVL drops below threshold", async () => {
-    const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
     mockJsonFetch({
       success: true,
       data: { count: 2, data: [
@@ -738,7 +711,6 @@ describe("fetchRaydiumPools", () => {
   });
 
   it("handles complete API failure gracefully", async () => {
-    const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
     mockFetch.mockRejectedValue(new Error("network error"));
     const pools = await fetchRaydiumPools();
     expect(pools.pools).toHaveLength(0);
@@ -747,7 +719,6 @@ describe("fetchRaydiumPools", () => {
   });
 
   it("handles HTTP error status", async () => {
-    const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
     mockTextFetch("error", 503);
     const pools = await fetchRaydiumPools();
     expect(pools.pools).toHaveLength(0);
@@ -756,7 +727,6 @@ describe("fetchRaydiumPools", () => {
   });
 
   it("handles malformed response body", async () => {
-    const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
     mockJsonFetch({ success: true, data: null });
     const pools = await fetchRaydiumPools();
     expect(pools.pools).toHaveLength(0);
@@ -765,7 +735,6 @@ describe("fetchRaydiumPools", () => {
   });
 
   it("preserves Raydium standard pools when concentrated returns invalid JSON", async () => {
-    const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
     mockFetch
       .mockResolvedValueOnce(new Response("{bad-json", { status: 200 }))
       .mockResolvedValueOnce(jsonResponse({
@@ -794,7 +763,6 @@ describe("fetchRaydiumPools", () => {
   });
 
   it("returns a degraded result when Raydium returns a null root", async () => {
-    const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
     mockFetch.mockImplementation(() => Promise.resolve(new Response("null", { status: 200 })));
 
     const pools = await fetchRaydiumPools();
@@ -806,7 +774,6 @@ describe("fetchRaydiumPools", () => {
   });
 
   it("skips malformed Raydium pool rows while preserving valid rows from the same page", async () => {
-    const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
     mockFetch
       .mockResolvedValueOnce(jsonResponse({
         success: true,
@@ -849,7 +816,6 @@ describe("fetchRaydiumPools", () => {
   });
 
   it("sets price to null when pool price is zero", async () => {
-    const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
     mockJsonFetch({
       success: true,
       data: { count: 1, data: [{
@@ -870,10 +836,9 @@ describe("fetchRaydiumPools", () => {
 // Orca
 // ---------------------------------------------------------------------------
 describe("fetchOrcaPools", () => {
-  afterEach(() => { mockFetch.mockReset(); vi.resetModules(); });
+  afterEach(() => { mockFetch.mockReset(); });
 
   it("fetches whirlpools and normalizes to DexApiPool", async () => {
-    const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
     mockJsonFetch({
       data: [{
         address: "9tXiuRRw7kbejLhZXtxDxYs2REe43uH2e7k1kocgdM9B",
@@ -899,7 +864,6 @@ describe("fetchOrcaPools", () => {
   });
 
   it("handles 429 rate limit gracefully", async () => {
-    const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
     mockTextFetch("rate limited", 429);
     const pools = await fetchOrcaPools();
     expect(pools.pools).toHaveLength(0);
@@ -908,7 +872,6 @@ describe("fetchOrcaPools", () => {
   });
 
   it("normalizes feeRate by dividing by 1_000_000", async () => {
-    const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
     mockJsonFetch({
       data: [{
         address: "pool1",
@@ -929,7 +892,6 @@ describe("fetchOrcaPools", () => {
   });
 
   it("sets chain to solana for all pools", async () => {
-    const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
     mockJsonFetch({
       data: [{
         address: "pool1",
@@ -950,7 +912,6 @@ describe("fetchOrcaPools", () => {
   });
 
   it("follows cursor-based pagination", async () => {
-    const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
     const makePool = (addr: string) => ({
       address: addr,
       price: "1.0",
@@ -982,7 +943,6 @@ describe("fetchOrcaPools", () => {
   });
 
   it("stops pagination on 429 mid-pagination and returns partial results", async () => {
-    const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
     mockFetch
       .mockResolvedValueOnce(jsonResponse({
         data: [{
@@ -1011,7 +971,6 @@ describe("fetchOrcaPools", () => {
   });
 
   it("skips pools below TVL threshold", async () => {
-    const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
     mockJsonFetch({
       data: [{
         address: "pool1",
@@ -1034,7 +993,6 @@ describe("fetchOrcaPools", () => {
   });
 
   it("returns empty array on HTTP error", async () => {
-    const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
     mockTextFetch("error", 500);
     const pools = await fetchOrcaPools();
     expect(pools.pools).toHaveLength(0);
@@ -1043,7 +1001,6 @@ describe("fetchOrcaPools", () => {
   });
 
   it("returns empty array when data is empty", async () => {
-    const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
     mockJsonFetch({
       data: [],
       meta: { cursor: { next: null } },
@@ -1055,7 +1012,6 @@ describe("fetchOrcaPools", () => {
   });
 
   it("parses string token balances correctly", async () => {
-    const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
     mockJsonFetch({
       data: [{
         address: "pool1",
@@ -1076,7 +1032,6 @@ describe("fetchOrcaPools", () => {
   });
 
   it("sets price to null for invalid price strings", async () => {
-    const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
     mockJsonFetch({
       data: [{
         address: "pool1",
