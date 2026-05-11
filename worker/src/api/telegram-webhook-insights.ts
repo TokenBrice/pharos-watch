@@ -120,7 +120,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
     case "depegs": {
       const result = await db
         .prepare(
-          `SELECT stablecoin_id, symbol, direction, peak_deviation_bps, price, peg_reference, started_at
+          `SELECT stablecoin_id, symbol, direction, peak_deviation_bps, COALESCE(peak_price, start_price) AS display_price, peg_reference, started_at
              FROM depeg_events
             WHERE ended_at IS NULL
             ORDER BY ABS(peak_deviation_bps) DESC, started_at DESC
@@ -132,12 +132,12 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
           symbol: string;
           direction: string;
           peak_deviation_bps: number;
-          price: number;
+          display_price: number;
           peg_reference: number;
           started_at: number;
         }>();
       return formatTopRows("Top active depegs", result.results ?? [], (row, i) =>
-        `${i}. ${row.symbol} — ${row.direction} peg ${(row.peak_deviation_bps / 100).toFixed(1)}%, price $${row.price.toFixed(4)}, ${formatAge(row.started_at)} old`,
+        `${i}. ${row.symbol} — ${row.direction} peg ${(row.peak_deviation_bps / 100).toFixed(1)}%, price $${row.display_price.toFixed(4)}, ${formatAge(row.started_at)} old`,
       );
     }
     case "dews": {

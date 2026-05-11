@@ -1,0 +1,49 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockD1 } from "./helpers/mock-d1";
+import { buildTopMessage } from "../telegram-webhook-insights";
+
+describe("buildTopMessage", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("builds /top depeg from schema-correct depeg_events columns", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-11T12:00:00Z"));
+
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            symbol: "USDC",
+            direction: "below",
+            peak_deviation_bps: 180,
+            display_price: 0.982,
+            peg_reference: 1,
+            started_at: Math.floor(Date.now() / 1000) - 3600,
+          },
+        ],
+      },
+    ]);
+
+    const message = await buildTopMessage(db, "depeg");
+
+    expect(message).toContain("Top active depegs");
+    expect(message).toContain("USDC");
+    expect(message).toContain("below peg 1.8%");
+    expect(message).toContain("price $0.9820");
+
+    const sql = db.getHistory()[0]?.sql ?? "";
+    expect(sql).toMatch(/\bCOALESCE\(peak_price,\s*start_price\) AS display_price\b/);
+    expect(sql).not.toMatch(/\bSELECT\b[\s\S]*,\s*price\s*,[\s\S]*\bFROM depeg_events\b/);
+  });
+
+  it("falls back to usage text for unknown /top views", async () => {
+    const db = mockD1([], { requireMatch: true });
+
+    await expect(buildTopMessage(db, "unknown")).resolves.toBe("Usage: /top depeg|dews|yield|liquidity|chains|safety");
+    expect(db.getHistory()).toEqual([]);
+  });
+});
