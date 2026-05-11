@@ -658,7 +658,7 @@ async function handleManagePage(
   }
   const pageRaw = (cb.data ?? "").split(":")[2];
   const page = Number(pageRaw);
-  if (!Number.isFinite(page) || page < 0) {
+  if (!Number.isInteger(page) || page < 0) {
     await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
     return;
   }

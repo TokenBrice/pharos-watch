@@ -12,8 +12,15 @@ function makeWebhookRequest(
   chatId: number,
   text: string,
   secret = "test-secret",
-  options: { chatType?: string; fromId?: number; fromUsername?: string } = {},
+  options: { chatType?: string; fromId?: number; fromUsername?: string; includeFrom?: boolean } = {},
 ): Request {
+  const message: Record<string, unknown> = {
+    chat: { id: chatId, username: "testuser", type: options.chatType ?? "private" },
+    text,
+  };
+  if (options.includeFrom !== false) {
+    message.from = { id: options.fromId ?? 999, username: options.fromUsername ?? "requester" };
+  }
   return new Request(`https://x/api/telegram-webhook`, {
     method: "POST",
     headers: {
@@ -21,11 +28,7 @@ function makeWebhookRequest(
       "X-Telegram-Bot-Api-Secret-Token": secret,
     },
     body: JSON.stringify({
-      message: {
-        chat: { id: chatId, username: "testuser", type: options.chatType ?? "private" },
-        from: { id: options.fromId ?? 999, username: options.fromUsername ?? "requester" },
-        text,
-      },
+      message,
     }),
   });
 }
@@ -36,6 +39,12 @@ function sentMessageBody(callIndex = 0): { text: string; reply_markup?: unknown 
     throw new Error("Expected sendToChat to call fetch with a string JSON body");
   }
   return JSON.parse(init.body) as { text: string; reply_markup?: unknown };
+}
+
+function latestSendMessageBody(): { text: string; reply_markup?: unknown } {
+  const sendCall = [...fetchSpy.mock.calls].reverse().find((call) => String(call[0]).includes("sendMessage"));
+  if (!sendCall) throw new Error("Expected sendMessage call");
+  return JSON.parse((sendCall[1]?.body as string) ?? "{}") as { text: string; reply_markup?: unknown };
 }
 
 function makeStablecoinsCacheValue(overrides: Record<string, number>): string {
@@ -609,6 +618,117 @@ describe("handleTelegramWebhook", () => {
 
     expect(sentMessageBody().text).toContain("No active subscriptions");
     expect(sentMessageBody().text).toContain("/presets");
+  });
+
+  it("allows non-admin group users to view /list without an admin lookup", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      { match: "FROM telegram_subscribers", rows: [], first: null },
+      { match: "FROM telegram_subscriptions", rows: [] },
+    ]);
+
+    await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(-123, "/list@PharosWatchBot", "test-secret", {
+        chatType: "supergroup",
+        fromId: 7,
+      }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(sentMessageBody().text).toContain("No active subscriptions");
+    expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("getChatMember"))).toBe(false);
+    expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("getChatAdministrators"))).toBe(false);
+  });
+
+  it("allows non-admin group users to open read-only /settings and /timezone views", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      { match: "FROM telegram_subscribers", rows: [], first: null },
+    ]);
+
+    await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(-123, "/settings@PharosWatchBot", "test-secret", {
+        chatType: "supergroup",
+        fromId: 7,
+      }),
+      "test-secret",
+      "bot-token",
+    );
+    await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(-123, "/timezone@PharosWatchBot", "test-secret", {
+        chatType: "supergroup",
+        fromId: 7,
+      }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("getChatMember"))).toBe(false);
+    expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("getChatAdministrators"))).toBe(false);
+    const sentTexts = fetchSpy.mock.calls
+      .filter((call) => String(call[0]).includes("sendMessage"))
+      .map((call) => JSON.parse((call[1]?.body as string) ?? "{}") as { text: string });
+    expect(sentTexts.some((body) => body.text.includes("<b>Settings</b>"))).toBe(true);
+    expect(sentTexts.some((body) => body.text.includes("Current timezone"))).toBe(true);
+  });
+
+  it("denies mutating group commands when Telegram omits from.id", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      { match: "FROM cache WHERE key = ?", rows: [], first: null },
+    ]);
+    fetchSpy.mockImplementation(async (url) => {
+      if (String(url).includes("getChatAdministrators")) {
+        return new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+
+    await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(-123, "/mute@PharosWatchBot 22-07", "test-secret", {
+        chatType: "supergroup",
+        includeFrom: false,
+      }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(latestSendMessageBody().text).toMatch(/Only group admins/i);
+    expect(db.getHistory().some((entry) => /INSERT INTO telegram_subscribers|UPDATE telegram_subscribers/i.test(entry.sql))).toBe(false);
+  });
+
+  it("denies mutating /timezone args for non-admin group users", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      { match: "FROM cache WHERE key = ?", rows: [], first: null },
+    ]);
+    fetchSpy.mockImplementation(async (url) => {
+      if (String(url).includes("getChatMember")) {
+        return new Response(
+          JSON.stringify({ ok: true, result: { user: { id: 7, first_name: "member" }, status: "member" } }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+
+    await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(-123, "/timezone@PharosWatchBot Europe/Paris", "test-secret", {
+        chatType: "supergroup",
+        fromId: 7,
+      }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(latestSendMessageBody().text).toMatch(/Only group admins/i);
+    expect(db.getHistory().some((entry) => /INSERT INTO telegram_subscribers|UPDATE telegram_subscribers/i.test(entry.sql))).toBe(false);
   });
 
   it("splits long /list replies into Telegram-safe chunks", async () => {

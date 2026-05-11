@@ -54,8 +54,6 @@ const GROUP_ADMIN_GATED_COMMANDS = new Set([
   "/mute",
   "/unmutehours",
   "/unsnooze",
-  "/settings",
-  "/timezone",
 ]);
 
 /**
@@ -295,8 +293,7 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
 
       if (
         isGroupChat(chatType) &&
-        GROUP_ADMIN_GATED_COMMANDS.has(parsedCommand.command) &&
-        actorUserId != null
+        commandRequiresGroupAdmin(parsedCommand.command, parsedCommand.args)
       ) {
         const proceed = await maybeGateNonAdminGroupActor(
           db,
@@ -342,13 +339,15 @@ async function maybeGateNonAdminGroupActor(
   db: D1Database,
   botToken: string,
   chatId: string,
-  actorUserId: string,
+  actorUserId: string | null,
   command: string,
   reply: (message: string) => Promise<void>,
 ): Promise<boolean> {
-  const member = await getCachedChatMember(db, botToken, chatId, actorUserId);
-  if (member && (member.status === "creator" || member.status === "administrator")) {
-    return true;
+  if (actorUserId != null) {
+    const member = await getCachedChatMember(db, botToken, chatId, actorUserId);
+    if (member && (member.status === "creator" || member.status === "administrator")) {
+      return true;
+    }
   }
 
   const admins = await getCachedChatAdministrators(db, botToken, chatId);
@@ -360,6 +359,12 @@ async function maybeGateNonAdminGroupActor(
     ),
   );
   return TELEGRAM_GROUP_ADMIN_GATING.mode !== "hard";
+}
+
+function commandRequiresGroupAdmin(command: string, args: string): boolean {
+  if (GROUP_ADMIN_GATED_COMMANDS.has(command)) return true;
+  if (command === "/timezone") return args.trim().length > 0;
+  return false;
 }
 
 function isAddressedToPharosBot(botMention: string | null): boolean {

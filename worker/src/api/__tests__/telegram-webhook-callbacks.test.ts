@@ -788,6 +788,33 @@ describe("handleCallbackQuery", () => {
       expect(unsubCount).toBe(2);
     });
 
+    it("manage:page in a group allows non-admin read-only pagination", async () => {
+      const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [makeSubRow("usdc-circle")] }]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-manage-group",
+        data: "manage:page:0",
+        from: { id: 7, username: "member" },
+        message: { chat: { id: -42, type: "supergroup" }, message_id: 100 },
+      });
+
+      expect(editMessageBody().text).toContain("Manage watchlist");
+      expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("getChatMember"))).toBe(false);
+    });
+
+    it("rejects malformed manage page numbers without loading subscriptions", async () => {
+      const db = mockD1([]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-manage-bad",
+        data: "manage:page:1.5",
+        from: { id: 1, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 100 },
+      });
+
+      expect(db.getHistory().some((h) => h.sql.includes("FROM telegram_subscriptions"))).toBe(false);
+      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toBe("Action not recognized.");
+    });
+
     it("unsub:<id> deletes the subscription and re-renders the same page", async () => {
       // First call (DELETE batch). Second SELECT after delete returns the remaining row.
       const remaining = [makeSubRow("dai-makerdao")];
