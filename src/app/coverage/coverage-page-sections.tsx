@@ -1,11 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { ChevronDown, Search, SearchX } from "lucide-react";
-import { formatCurrency } from "@shared/lib/format";
 import { getPricingSourceLabel } from "@shared/lib/pricing-sources";
 import { CoverageLensSummary } from "@/components/coverage-lens-summary";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,9 +15,9 @@ import {
   SORT_OPTIONS,
   type CoverageSortKey,
 } from "@/lib/coverage-page-config";
-import { buildStablecoinUrl } from "@/lib/urls";
 import { cn } from "@/lib/utils";
 import { CoverageBadge } from "./coverage-badge";
+import { CoverageCoinIdentity } from "./coverage-coin-identity";
 import { CoverageFeatureSnapshotRow, FeatureSnapshotInsight } from "./coverage-feature-snapshot";
 import { CoverageMobileCard } from "./coverage-mobile-card";
 import type { useCoveragePageModel } from "./use-coverage-page-model";
@@ -432,31 +429,7 @@ export function CoverageMatrixCard(
                                 stripeClass,
                               )}
                             >
-                              <Link
-                                href={buildStablecoinUrl(row.id)}
-                                className="pharos-focus-ring inline-flex w-full min-w-0 items-center gap-2 rounded-lg"
-                              >
-                                <StablecoinLogo src={model.logos?.[row.id]} name={row.name} size={24} />
-                                <div className="min-w-0">
-                                  <div className="flex min-w-0 items-center gap-2">
-                                    <span className="text-sm font-medium text-foreground">{row.symbol}</span>
-                                    <span className="truncate text-xs text-muted-foreground xl:text-sm">
-                                      {row.name}
-                                    </span>
-                                  </div>
-                                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
-                                    <span className="font-mono tabular-nums text-foreground">
-                                      {row.marketCapUsd > 0 ? formatCurrency(row.marketCapUsd) : "Mcap —"}
-                                    </span>
-                                    <span aria-hidden>·</span>
-                                    <span>{row.pegLabel}</span>
-                                    <span aria-hidden>·</span>
-                                    <span>{row.backingLabel}</span>
-                                    <span aria-hidden>·</span>
-                                    <span>{row.governanceLabel}</span>
-                                  </div>
-                                </div>
-                              </Link>
+                              <CoverageCoinIdentity row={row} logoSrc={model.logos?.[row.id]} logoSize={24} linked />
                             </TableCell>
                             {COVERAGE_FEATURES.map((feature) => (
                               <TableCell key={feature.key} className="pb-2 pt-3 align-top">

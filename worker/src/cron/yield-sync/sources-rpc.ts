@@ -87,6 +87,27 @@ function logOptionalRpcTelemetry(family: string, telemetry: OptionalRpcFamilyTel
   );
 }
 
+function finalizeOptionalRpcTelemetry<T extends { chain: string; symbol: string }>(
+  family: string,
+  telemetry: OptionalRpcFamilyTelemetry,
+  targets: readonly T[],
+  accountedTargets: Set<string>,
+  emittedCount: number,
+  budgetExhausted: boolean,
+): void {
+  if (budgetExhausted) telemetry.budgetExhausted = true;
+  for (const target of targets) {
+    const targetLabel = buildOptionalRpcTargetLabel(target.chain, target.symbol);
+    if (!accountedTargets.has(targetLabel)) {
+      recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "budget-exhausted");
+      accountedTargets.add(targetLabel);
+    }
+  }
+
+  telemetry.emittedCount = emittedCount;
+  logOptionalRpcTelemetry(family, telemetry);
+}
+
 export interface OnChainRateResult {
   rates: Map<string, { rate: number }>;
   failureBreakdown: Record<string, number> | null;
@@ -392,17 +413,14 @@ export async function fetchCompoundV3SupplyRates(
       }
     }
 
-    if (budget.budgetController.signal.aborted) telemetry.budgetExhausted = true;
-    for (const target of targets) {
-      const targetLabel = buildOptionalRpcTargetLabel(target.chain, target.symbol);
-      if (!accountedTargets.has(targetLabel)) {
-        recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "budget-exhausted");
-        accountedTargets.add(targetLabel);
-      }
-    }
-
-    telemetry.emittedCount = results.length;
-    logOptionalRpcTelemetry("compound-v3", telemetry);
+    finalizeOptionalRpcTelemetry(
+      "compound-v3",
+      telemetry,
+      targets,
+      accountedTargets,
+      results.length,
+      budget.budgetController.signal.aborted,
+    );
     return { results, telemetry };
   } finally {
     budget.cleanup();
@@ -624,17 +642,14 @@ export async function fetchAaveV3SupplyRates(
       );
     }
 
-    if (budget.budgetController.signal.aborted) telemetry.budgetExhausted = true;
-    for (const target of targets) {
-      const targetLabel = buildOptionalRpcTargetLabel(target.chain, target.symbol);
-      if (!accountedTargets.has(targetLabel)) {
-        recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "budget-exhausted");
-        accountedTargets.add(targetLabel);
-      }
-    }
-
-    telemetry.emittedCount = results.length;
-    logOptionalRpcTelemetry("aave-v3", telemetry);
+    finalizeOptionalRpcTelemetry(
+      "aave-v3",
+      telemetry,
+      targets,
+      accountedTargets,
+      results.length,
+      budget.budgetController.signal.aborted,
+    );
     return { rates, results, telemetry };
   } finally {
     budget.cleanup();

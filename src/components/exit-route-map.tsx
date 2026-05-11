@@ -106,6 +106,52 @@ function ExitRoutePackets({
   );
 }
 
+function InteractiveExitRouteGroup({
+  route,
+  kind,
+  selected,
+  onSelect,
+  children,
+}: {
+  route: LiquidityExitRouteItem;
+  kind: "protocol" | "chain";
+  selected: LiquidityExitRouteSelection;
+  onSelect: (selection: LiquidityExitRouteSelection) => void;
+  children: React.ReactNode;
+}) {
+  const nextSelection = selectionFromRoute(kind, route);
+  const selectedKey = selectionKey(selected.kind, selected.key);
+  const isSelected = selectedKey === selectionKey(kind, route.key);
+  const isDimmed = selected.kind !== "throat" && !isSelected;
+  const kindLabel = kind === "protocol" ? "protocol door" : "chain lane";
+  const testId = kind === "protocol" ? `protocol-door-${route.key}` : `chain-lane-${route.key}`;
+  const handleKeyDown = (event: KeyboardEvent<SVGGElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onSelect(nextSelection);
+  };
+
+  return (
+    <g
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
+      className={`exit-route-instrument__route exit-route-instrument__route--${kind} ${isSelected ? "exit-route-instrument__route-selected" : ""} ${isDimmed ? "exit-route-instrument__route-dimmed" : ""}`}
+      data-testid={testId}
+      data-flow-intensity={route.flowIntensity}
+      data-share-pct={route.sharePct.toFixed(2)}
+      aria-label={`${route.label} ${kindLabel}, ${formatCurrency(route.valueUsd, 0)}, ${formatPercent(route.sharePct, 1)} of DEX TVL`}
+      onFocus={() => onSelect(nextSelection)}
+      onMouseEnter={() => onSelect(nextSelection)}
+      onClick={() => onSelect(nextSelection)}
+      onKeyDown={handleKeyDown}
+    >
+      <title>{`${route.label}: ${formatCurrency(route.valueUsd, 0)} ${kindLabel} (${formatPercent(route.sharePct, 1)})`}</title>
+      {children}
+    </g>
+  );
+}
+
 function ExitRouteInstrumentScene({
   model,
   selected,
@@ -116,7 +162,6 @@ function ExitRouteInstrumentScene({
   onSelect: (selection: LiquidityExitRouteSelection) => void;
 }) {
   const throat = throatGeometry(model);
-  const selectedKey = selectionKey(selected.kind, selected.key);
   const routeSummary = [
     `${formatCurrency(model.totalTvlUsd, 0)} DEX TVL`,
     model.topProtocol ? `${model.topProtocol.label} leading protocol` : null,
@@ -175,26 +220,14 @@ function ExitRouteInstrumentScene({
           {model.protocolRoutes.map((route, i) => {
             const label = compactRouteLabel(route.label, 16);
             const geometry = protocolRouteGeometry(route, i);
-            const nextSelection = selectionFromRoute("protocol", route);
-            const isSelected = selectedKey === selectionKey("protocol", route.key);
-            const isDimmed = selected.kind !== "throat" && !isSelected;
             return (
-              <g
+              <InteractiveExitRouteGroup
                 key={`protocol-${route.key}`}
-                role="button"
-                tabIndex={0}
-                aria-pressed={isSelected}
-                className={`exit-route-instrument__route exit-route-instrument__route--protocol ${isSelected ? "exit-route-instrument__route-selected" : ""} ${isDimmed ? "exit-route-instrument__route-dimmed" : ""}`}
-                data-testid={`protocol-door-${route.key}`}
-                data-flow-intensity={route.flowIntensity}
-                data-share-pct={route.sharePct.toFixed(2)}
-                aria-label={`${route.label} protocol door, ${formatCurrency(route.valueUsd, 0)}, ${formatPercent(route.sharePct, 1)} of DEX TVL`}
-                onFocus={() => onSelect(nextSelection)}
-                onMouseEnter={() => onSelect(nextSelection)}
-                onClick={() => onSelect(nextSelection)}
-                onKeyDown={(event) => handleRouteKeyDown(event, nextSelection)}
+                route={route}
+                kind="protocol"
+                selected={selected}
+                onSelect={onSelect}
               >
-                <title>{`${route.label}: ${formatCurrency(route.valueUsd, 0)} protocol door (${formatPercent(route.sharePct, 1)})`}</title>
                 <path
                   className="exit-route-instrument__route-path"
                   d={geometry.pathD}
@@ -223,33 +256,21 @@ function ExitRouteInstrumentScene({
                 <text x="78" y={geometry.y + 10} fill="var(--route-caption)" fontSize="10" fontFamily="ui-monospace, Menlo, monospace" aria-hidden="true">
                   {`${formatCurrency(route.valueUsd, 0)} · ${formatPercent(route.sharePct, 1)}`}
                 </text>
-              </g>
+              </InteractiveExitRouteGroup>
             );
           })}
 
           {model.chainRoutes.map((route, i) => {
             const label = compactRouteLabel(route.label, 14);
             const geometry = chainRouteGeometry(route, i);
-            const nextSelection = selectionFromRoute("chain", route);
-            const isSelected = selectedKey === selectionKey("chain", route.key);
-            const isDimmed = selected.kind !== "throat" && !isSelected;
             return (
-              <g
+              <InteractiveExitRouteGroup
                 key={`chain-${route.key}`}
-                role="button"
-                tabIndex={0}
-                aria-pressed={isSelected}
-                className={`exit-route-instrument__route exit-route-instrument__route--chain ${isSelected ? "exit-route-instrument__route-selected" : ""} ${isDimmed ? "exit-route-instrument__route-dimmed" : ""}`}
-                data-testid={`chain-lane-${route.key}`}
-                data-flow-intensity={route.flowIntensity}
-                data-share-pct={route.sharePct.toFixed(2)}
-                aria-label={`${route.label} chain lane, ${formatCurrency(route.valueUsd, 0)}, ${formatPercent(route.sharePct, 1)} of DEX TVL`}
-                onFocus={() => onSelect(nextSelection)}
-                onMouseEnter={() => onSelect(nextSelection)}
-                onClick={() => onSelect(nextSelection)}
-                onKeyDown={(event) => handleRouteKeyDown(event, nextSelection)}
+                route={route}
+                kind="chain"
+                selected={selected}
+                onSelect={onSelect}
               >
-                <title>{`${route.label}: ${formatCurrency(route.valueUsd, 0)} chain lane (${formatPercent(route.sharePct, 1)})`}</title>
                 <path
                   className="exit-route-instrument__route-path"
                   d={geometry.pathD}
@@ -275,7 +296,7 @@ function ExitRouteInstrumentScene({
                 ) : (
                   <text x={EXIT_ROUTE_SCENE.laneLogoX} y={geometry.logoY + 4} textAnchor="middle" fill="var(--route-hero)" fontSize="12" fontWeight="800" aria-hidden="true">+</text>
                 )}
-              </g>
+              </InteractiveExitRouteGroup>
             );
           })}
 

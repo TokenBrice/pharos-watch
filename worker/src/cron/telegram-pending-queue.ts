@@ -1,6 +1,7 @@
 import { sendToChat, type BatchMessage, type TelegramSendErrorClass } from "../lib/telegram";
 import { batchExecute } from "../lib/db";
 import { SNOOZE_REPLY_MARKUP } from "../lib/telegram-alerts";
+import { isQuietHoursActive } from "./telegram-quiet-hours";
 
 // ---------- Constants ----------
 
@@ -57,30 +58,6 @@ function emptyDrainResult(): PendingDrainResult {
     retryAfterSec: null,
     notBeforeAt: null,
   };
-}
-
-function isQuietHoursActive(
-  nowSec: number,
-  quietHoursEnabled: boolean,
-  quietHoursStartUtc: number | null,
-  quietHoursEndUtc: number | null,
-): boolean {
-  if (!quietHoursEnabled || quietHoursStartUtc == null || quietHoursEndUtc == null) return false;
-  if (
-    quietHoursStartUtc < 0 ||
-    quietHoursStartUtc > 23 ||
-    quietHoursEndUtc < 0 ||
-    quietHoursEndUtc > 23 ||
-    quietHoursStartUtc === quietHoursEndUtc
-  ) {
-    return false;
-  }
-
-  const hourUtc = Math.floor((nowSec % 86_400) / 3600);
-  if (quietHoursStartUtc < quietHoursEndUtc) {
-    return hourUtc >= quietHoursStartUtc && hourUtc < quietHoursEndUtc;
-  }
-  return hourUtc >= quietHoursStartUtc || hourUtc < quietHoursEndUtc;
 }
 
 function isPendingRowSnoozed(row: PendingAlertRow, nowSec: number): boolean {

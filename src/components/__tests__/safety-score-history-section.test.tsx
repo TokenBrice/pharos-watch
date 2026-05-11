@@ -9,10 +9,7 @@ vi.mock("@/hooks/api-hooks", () => ({
   useSafetyScoreHistory: useSafetyScoreHistoryMock,
 }));
 
-import {
-  SafetyScoreHistorySection,
-  describeSafetyScoreTransition,
-} from "@/components/stablecoin-detail/safety-score-history-section";
+import { SafetyScoreHistorySection } from "@/components/stablecoin-detail/safety-score-history-section";
 
 // Stable "now" so streak calculations are deterministic
 const NOW_SEC = 1_742_000_000; // ~2025-03-15
@@ -28,30 +25,6 @@ import { afterEach } from "vitest";
 describe("SafetyScoreHistorySection", () => {
   beforeEach(() => {
     useSafetyScoreHistoryMock.mockReset();
-  });
-
-  it("describes initial and transition rows", () => {
-    expect(
-      describeSafetyScoreTransition({
-        date: 1_772_000_000,
-        grade: "B+",
-        score: 78,
-        prevGrade: null,
-        prevScore: null,
-        methodologyVersion: "5.5",
-      }),
-    ).toBe("Initial grade");
-
-    expect(
-      describeSafetyScoreTransition({
-        date: 1_772_086_400,
-        grade: "A-",
-        score: 82,
-        prevGrade: "B+",
-        prevScore: 78,
-        methodologyVersion: "5.5",
-      }),
-    ).toBe("B+ -> A-");
   });
 
   it("does not render while loading", () => {

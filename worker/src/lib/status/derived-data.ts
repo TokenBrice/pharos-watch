@@ -9,6 +9,7 @@ import type {
 import { buildInClause } from "../db";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../stablecoins-cache";
+import { emptyReserveCompositionOverview } from "../live-reserves-store-shared";
 export { getTelegramBotStats } from "./telegram-bot-stats";
 
 export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
@@ -28,25 +29,7 @@ export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
 
 export function emptyReserveComposition(): StatusResponse["reserveComposition"] {
   return {
-    configuredCoins: 0,
-    freshCoins: 0,
-    staleCoins: 0,
-    missingCoins: 0,
-    degradedCoins: 0,
-    errorCoins: 0,
-    corruptCoins: 0,
-    independentFreshEligible: 0,
-    independentFreshUnverified: 0,
-    staticValidatedFresh: 0,
-    weakProbeFresh: 0,
-    writeTimeoutUncertain: 0,
-    deferredCoins: 0,
-    runBudgetTruncated: false,
-    deferredAt: null,
-    nextCursorStablecoinId: null,
-    persistentlyStaleIndependentCoins: [],
-    lastSuccessAt: null,
-    oldestFreshAgeSec: null,
+    ...emptyReserveCompositionOverview(),
     status: "healthy",
     freshCoverageRatio: 0,
     authoritativeFreshCoverageRatio: 0,

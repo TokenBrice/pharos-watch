@@ -6,6 +6,7 @@ import {
   LIVE_RESERVE_FRESHNESS_SEC,
   PERSISTENTLY_STALE_INDEPENDENT_THRESHOLD_SEC,
   SCORING_LIVE_RESERVE_EVIDENCE_CLASSES,
+  emptyReserveCompositionOverview,
   type AuthoritativeReserveSnapshot,
   type ReserveSyncStateRecord,
 } from "./live-reserves-store-shared";
@@ -29,27 +30,7 @@ export async function computeReserveCompositionOverview(
 ): Promise<ReserveCompositionOverview> {
   const configuredCoins = getConfiguredLiveReserveCoins();
   if (configuredCoins.length === 0) {
-    return {
-      configuredCoins: 0,
-      freshCoins: 0,
-      staleCoins: 0,
-      missingCoins: 0,
-      degradedCoins: 0,
-      errorCoins: 0,
-      corruptCoins: 0,
-      independentFreshEligible: 0,
-      independentFreshUnverified: 0,
-      staticValidatedFresh: 0,
-      weakProbeFresh: 0,
-      writeTimeoutUncertain: 0,
-      deferredCoins: 0,
-      runBudgetTruncated: false,
-      deferredAt: null,
-      nextCursorStablecoinId: null,
-      persistentlyStaleIndependentCoins: [],
-      lastSuccessAt: null,
-      oldestFreshAgeSec: null,
-    };
+    return emptyReserveCompositionOverview();
   }
 
   const coinIds = configuredCoins.map((coin) => coin.id);

@@ -66,6 +66,26 @@ export interface PrimaryDexCandidateTelemetry {
   divergenceThresholdBps?: number;
 }
 
+function buildPromotedDexCandidateTelemetry(
+  asset: PrimaryPriceAssetLike,
+  source: SourcePrice,
+  matchingInput: DexProtocolSourceQuote | undefined,
+  outcome: Pick<PrimaryDexCandidateTelemetry, "status"> & Partial<Pick<PrimaryDexCandidateTelemetry, "reason" | "divergenceThresholdBps">>,
+): PrimaryDexCandidateTelemetry {
+  const sourceProtocol = source.source.replace(/-dex$/, "");
+  return {
+    stablecoinId: asset.id,
+    symbol: asset.symbol,
+    protocol: sourceProtocol,
+    sourceKey: source.source,
+    chain: typeof source.metadata?.chain === "string" ? source.metadata.chain : matchingInput?.chain ?? "unknown",
+    price: source.price,
+    tvl: typeof source.metadata?.tvl === "number" ? source.metadata.tvl : matchingInput?.tvl ?? null,
+    updatedAt: source.observedAt ?? matchingInput?.updatedAt ?? null,
+    ...outcome,
+  };
+}
+
 export interface DlListQuote {
   price: number;
   observedAt: number | null;
@@ -405,35 +425,17 @@ export function buildPrimarySourceCandidates(
     for (const source of promotedDexProtocolSources) {
       const sourceProtocol = source.source.replace(/-dex$/, "");
       const matchingInput = (collected.protocolSources ?? []).find((entry) => entry.protocol === sourceProtocol);
-      dexCandidateTelemetry.push({
-        stablecoinId: asset.id,
-        symbol: asset.symbol,
-        protocol: sourceProtocol,
-        sourceKey: source.source,
-        chain: typeof source.metadata?.chain === "string" ? source.metadata.chain : matchingInput?.chain ?? "unknown",
-        price: source.price,
-        tvl: typeof source.metadata?.tvl === "number" ? source.metadata.tvl : matchingInput?.tvl ?? null,
-        updatedAt: source.observedAt ?? matchingInput?.updatedAt ?? null,
-        status: "accepted",
-      });
+      dexCandidateTelemetry.push(buildPromotedDexCandidateTelemetry(asset, source, matchingInput, { status: "accepted" }));
     }
   } else if (hasPromotedDexProtocolSource) {
     for (const source of promotedDexProtocolSources) {
       const sourceProtocol = source.source.replace(/-dex$/, "");
       const matchingInput = (collected.protocolSources ?? []).find((entry) => entry.protocol === sourceProtocol);
-      dexCandidateTelemetry.push({
-        stablecoinId: asset.id,
-        symbol: asset.symbol,
-        protocol: sourceProtocol,
-        sourceKey: source.source,
-        chain: typeof source.metadata?.chain === "string" ? source.metadata.chain : matchingInput?.chain ?? "unknown",
-        price: source.price,
-        tvl: typeof source.metadata?.tvl === "number" ? source.metadata.tvl : matchingInput?.tvl ?? null,
-        updatedAt: source.observedAt ?? matchingInput?.updatedAt ?? null,
+      dexCandidateTelemetry.push(buildPromotedDexCandidateTelemetry(asset, source, matchingInput, {
         status: "excluded",
         reason: "lacked_corroboration",
         divergenceThresholdBps,
-      });
+      }));
     }
   }
 

@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
-import { formatCurrency } from "@shared/lib/format";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
   type CoverageFeatureDefinition,
   type CoverageFeatureKey,
@@ -11,6 +9,7 @@ import {
 import { MOBILE_PREVIEW_FEATURES } from "@/lib/coverage-page-config";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { CoverageBadge } from "./coverage-badge";
+import { CoverageCoinIdentity } from "./coverage-coin-identity";
 
 const REMAINING_MOBILE_FEATURES = COVERAGE_FEATURES.filter((feature) => !MOBILE_PREVIEW_FEATURES.includes(feature.key));
 const COVERAGE_FEATURES_BY_KEY = Object.fromEntries(
@@ -28,26 +27,7 @@ export function CoverageMobileCard({ row, logoSrc }: CoverageMobileCardProps) {
     <details className="group rounded-2xl border border-border/70 bg-background/35 open:bg-background/42">
       <summary className="pharos-focus-ring flex cursor-pointer list-none flex-col gap-4 p-4 [&::-webkit-details-marker]:hidden">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <StablecoinLogo src={logoSrc} name={row.name} size={32} />
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="text-sm font-semibold text-foreground">{row.symbol}</span>
-                <span className="truncate text-sm text-muted-foreground">{row.name}</span>
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
-                <span className="font-mono tabular-nums text-foreground">
-                  {row.marketCapUsd > 0 ? formatCurrency(row.marketCapUsd) : "Mcap —"}
-                </span>
-                <span aria-hidden>·</span>
-                <span>{row.pegLabel}</span>
-                <span aria-hidden>·</span>
-                <span>{row.backingLabel}</span>
-                <span aria-hidden>·</span>
-                <span>{row.governanceLabel}</span>
-              </div>
-            </div>
-          </div>
+          <CoverageCoinIdentity row={row} logoSrc={logoSrc} logoSize={32} variant="mobile" />
 
           <div className="shrink-0 text-right">
             <div className="pharos-kicker">Available</div>

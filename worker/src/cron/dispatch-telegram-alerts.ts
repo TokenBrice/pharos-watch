@@ -43,6 +43,7 @@ import {
   type SubscriberRow,
 } from "./dispatch-telegram-routing";
 import { deliverTelegramSubscriberQueue } from "./dispatch-telegram-delivery";
+import { isQuietHoursActive } from "./telegram-quiet-hours";
 
 type DispatchResult = TelegramDispatchCronResult;
 
@@ -118,30 +119,6 @@ function hasEscalation(alerts: ConsolidatedAlerts): boolean {
     alerts.depegWorsening.length > 0 ||
     alerts.safety.some((change) => !isSafetyDeescalation(change.oldGrade, change.newGrade))
   );
-}
-
-function isQuietHoursActive(
-  nowSec: number,
-  quietHoursEnabled: boolean,
-  quietHoursStartUtc: number | null,
-  quietHoursEndUtc: number | null,
-): boolean {
-  if (!quietHoursEnabled || quietHoursStartUtc == null || quietHoursEndUtc == null) return false;
-  if (
-    quietHoursStartUtc < 0 ||
-    quietHoursStartUtc > 23 ||
-    quietHoursEndUtc < 0 ||
-    quietHoursEndUtc > 23 ||
-    quietHoursStartUtc === quietHoursEndUtc
-  ) {
-    return false;
-  }
-
-  const hourUtc = Math.floor((nowSec % 86_400) / 3600);
-  if (quietHoursStartUtc < quietHoursEndUtc) {
-    return hourUtc >= quietHoursStartUtc && hourUtc < quietHoursEndUtc;
-  }
-  return hourUtc >= quietHoursStartUtc || hourUtc < quietHoursEndUtc;
 }
 
 function meetsDewsThreshold(newBand: string, minBand: string | null): boolean {

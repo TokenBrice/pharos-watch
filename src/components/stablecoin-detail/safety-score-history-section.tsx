@@ -42,14 +42,6 @@ function gradeRank(grade: ReportCardGrade): number {
   return idx >= 0 ? idx : Infinity;
 }
 
-/** Kept exported for backward-compatible test coverage. */
-export function describeSafetyScoreTransition(
-  point: SafetyScoreHistoryPoint,
-): string {
-  if (point.prevGrade == null) return "Initial grade";
-  return `${point.prevGrade} -> ${point.grade}`;
-}
-
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
