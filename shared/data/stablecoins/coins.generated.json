@@ -456,6 +456,7 @@
         "decimals": 18
       }
     ],
+    "chainTier": "ethereum",
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
@@ -509,7 +510,7 @@
     "symbol": "ARC",
     "flags": {
       "backing": "rwa-backed",
-      "pegCurrency": "OTHER",
+      "pegCurrency": "INR",
       "governance": "centralized",
       "yieldBearing": false,
       "rwa": false,
@@ -1485,7 +1486,7 @@
     "name": "BFUSD",
     "symbol": "BFUSD",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": true,
@@ -1713,7 +1714,9 @@
     "jurisdiction": {
       "country": "Brazil"
     },
+    "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
     "status": "pre-launch",
     "announcedDate": "2025-12",
     "expectedLaunchDate": "2026-H1",
@@ -2705,9 +2708,8 @@
         "message": "CADD launched May 4, 2026 but remains excluded from active runtime surfaces until CoinGecko or DefiLlama publishes usable live price and supply data."
       }
     ],
-    "status": "pre-launch",
-    "launchPhase": "launching-soon",
-    "launchPhaseDetail": "LAUNCHED May 4 — Canada's first CAD-backed stablecoin issued by a financial institution; ~530K CADD circulating on Ethereum + Base; now also deployed on Tempo (contract address TBA); backers include Shopify, National Bank of Canada, ATB Financial, Wealthsimple, Shakepay; Baker Tilly monthly attestations live; CoinGecko still zero price/supply, DefiLlama detail endpoint has data but aggregate list does not; PROMOTION CANDIDATE pending aggregator coverage",
+    "status": "active",
+    "launchDate": "2026-05-04",
     "featuredContent": [
       {
         "type": "article",
@@ -3405,6 +3407,7 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -5958,7 +5961,9 @@
       }
     ],
     "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
     "reserves": [
       {
         "name": "Euro fiat reserves and euro-denominated assets",
@@ -7626,6 +7631,7 @@
         "decimals": 18
       }
     ],
+    "chainTier": "ethereum",
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
@@ -7808,6 +7814,7 @@
       }
     ],
     "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
     "custodyModel": "institutional-top",
     "governanceQuality": "regulated-entity",
     "reserves": [
@@ -7882,6 +7889,7 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -8722,6 +8730,13 @@
         "blacklistable": true
       }
     ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "On-chain reserve tracking pending",
+        "message": "Live reserve tracking for hbUSDT is pending HyperEVM RPC integration in the worker. HyperEVM is recognized as a chain but has no public RPC entry in the reserve infrastructure; a public RPC endpoint must be added before an erc4626-single-asset adapter can be wired."
+      }
+    ],
     "yieldConfig": {
       "yieldSource": "Hyperbeat USDT vault",
       "yieldType": "lending-vault"
@@ -8734,7 +8749,7 @@
     "symbol": "HKD-HSBC",
     "flags": {
       "backing": "rwa-backed",
-      "pegCurrency": "OTHER",
+      "pegCurrency": "HKD",
       "governance": "centralized",
       "yieldBearing": false,
       "rwa": false,
@@ -8787,7 +8802,7 @@
     "symbol": "HKDAP",
     "flags": {
       "backing": "rwa-backed",
-      "pegCurrency": "OTHER",
+      "pegCurrency": "HKD",
       "governance": "centralized",
       "yieldBearing": false,
       "rwa": false,
@@ -9744,7 +9759,9 @@
     ],
     "canBeBlacklisted": "possible",
     "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
     "reserves": [
       {
         "name": "JPY reserve assets for legacy JPYC v1",
@@ -9905,6 +9922,7 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -11206,7 +11224,14 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Soft depeg below $0.99",
+        "message": "MAI has been trading around $0.987 across all 9 supported chains; CDP redemption pressure is not currently restoring parity."
+      }
+    ]
   },
   {
     "id": "meusd-mezo",
@@ -11657,6 +11682,7 @@
         "decimals": 18
       }
     ],
+    "chainTier": "ethereum",
     "deploymentModel": "native-multichain",
     "collateralQuality": "exotic",
     "custodyModel": "institutional-unregulated",
@@ -12574,7 +12600,14 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Sustained soft depeg",
+        "message": "NXUSD is trading near $0.982; the peg has been below 0.99 for an extended period. Treat collateral classification as advisory rather than live redemption assurance."
+      }
+    ]
   },
   {
     "id": "okrw-hashed",
@@ -13814,6 +13847,7 @@
       }
     ],
     "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
     "reserves": [
@@ -14391,13 +14425,18 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "Issuer-managed fiat reserve assets and short-term liquid instruments disclosed by Royal/R Coins materials",
     "pegMechanism": "Centralized 1:1 dollar token with issuer-managed mint and redemption processes for approved users",
     "geckoId": "royal-dollar",
     "protocolSlug": "rcoins",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://book.royalcc.world/books/RUSD_Whitepaper/",
+      "provider": "Royal Coin / RUSD Whitepaper"
+    },
     "links": [
       {
         "label": "Website",
@@ -15210,6 +15249,13 @@
         "pct": 30,
         "risk": "high"
       }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "On-chain reserve tracking pending",
+        "message": "Live reserve tracking for scUSD is pending Rings publishing canonical BoringVault and treasury backing addresses. Check https://docs.rings.money/backing for the latest published addresses."
+      }
     ]
   },
   {
@@ -15391,61 +15437,6 @@
     }
   },
   {
-    "id": "shyusd-hylo",
-    "detailProvider": "coingecko",
-    "name": "Staked hyUSD",
-    "symbol": "shyUSD",
-    "flags": {
-      "backing": "crypto-backed",
-      "pegCurrency": "USD",
-      "governance": "decentralized",
-      "yieldBearing": true,
-      "rwa": false,
-      "navToken": true
-    },
-    "pegReferenceId": "hyusd-hylo",
-    "collateral": "Staked wrapper over hyUSD deposited in Hylo's Stability Pool, ultimately backed by the underlying basket of Solana LSTs (JitoSOL, mSOL, bSOL, JupSOL) overcollateralizing hyUSD",
-    "pegMechanism": "Users stake hyUSD into the Stability Pool to receive shyUSD; each epoch the protocol harvests LST yields and mints hyUSD into the pool, causing shyUSD to appreciate against hyUSD. Unstaking returns hyUSD, which inherits hyUSD's overcollateralized redemption mechanics (with xSOL absorbing SOL volatility); under defined stress conditions deposited hyUSD may be converted to xSOL",
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://hylo.so/"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/hylo_so"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.hylo.so/protocol-overview/earning-yield-with-hyUSD"
-      }
-    ],
-    "contracts": [
-      {
-        "chain": "solana",
-        "address": "HnnGv3HrSqjRpgdFmx7vQGjntNEoex1SU4e9Lxcxuihz",
-        "decimals": 6
-      }
-    ],
-    "chainTier": "mature-alt-l1",
-    "collateralQuality": "alt-lst-bridged-or-mixed",
-    "variantOf": "hyusd-hylo",
-    "variantKind": "strategy-vault",
-    "reserves": [
-      {
-        "name": "hyUSD staking pool shares",
-        "pct": 100,
-        "risk": "high",
-        "coinId": "hyusd-hylo",
-        "depType": "wrapper"
-      }
-    ],
-    "yieldConfig": {
-      "yieldSource": "Hylo Stability Pool (shyUSD)",
-      "yieldType": "nav-appreciation"
-    }
-  },
-  {
     "id": "silk-shade-protocol",
     "llamaId": "113",
     "detailProvider": "defillama",
@@ -15514,7 +15505,7 @@
   },
   {
     "id": "sofid-sofi",
-    "detailProvider": "defillama",
+    "detailProvider": "coingecko",
     "name": "SoFiUSD",
     "symbol": "SOFID",
     "flags": {
@@ -15551,11 +15542,16 @@
     ],
     "canBeBlacklisted": "possible",
     "custodyModel": "institutional-regulated",
-    "status": "pre-launch",
+    "notices": [
+      {
+        "type": "info",
+        "title": "Market data preview-only",
+        "message": "Coin is live but CoinGecko market data is preview-only pending retail rollout; price may report null until market activates."
+      }
+    ],
+    "status": "active",
+    "launchDate": "2025-12-18",
     "announcedDate": "2025-12",
-    "expectedLaunchDate": "2026",
-    "launchPhase": "launching-soon",
-    "launchPhaseDetail": "LIVE on Ethereum since Dec 2025 — ~100M SOFID minted, 3 holders, 73 transactions; first nationally chartered FDIC-insured U.S. bank stablecoin on public blockchain; Mastercard settlement partnership (Mar 2026); BitGo Mint infrastructure (Apr 2026); Solana expansion announced May 5 at Solana Accelerate Miami; CoinGecko preview listing (no trades); not on DefiLlama; retail rollout to 13.7M SoFi members 'in coming months'; PROMOTION CANDIDATE pending aggregator data and public trading",
     "featuredContent": [
       {
         "type": "article",
@@ -15733,6 +15729,7 @@
         "decimals": 18
       }
     ],
+    "chainTier": "ethereum",
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "multisig",
@@ -15803,6 +15800,7 @@
         "decimals": 18
       }
     ],
+    "chainTier": "ethereum",
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "custodyModel": "cex",
@@ -15964,6 +15962,7 @@
       }
     ],
     "canBeBlacklisted": true,
+    "chainTier": "ethereum",
     "deploymentModel": "single-chain",
     "collateralQuality": "rwa",
     "custodyModel": "onchain",
@@ -16045,6 +16044,7 @@
       }
     ],
     "canBeBlacklisted": true,
+    "chainTier": "ethereum",
     "deploymentModel": "single-chain",
     "collateralQuality": "rwa",
     "custodyModel": "onchain",
@@ -16360,6 +16360,9 @@
     "canBeBlacklisted": "possible",
     "chainTier": "established-alt-l1",
     "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "governanceQuality": "single-entity",
     "reserves": [
       {
         "name": "USDC / Venus Protocol lending strategy",
@@ -16771,6 +16774,7 @@
         "decimals": 18
       }
     ],
+    "chainTier": "ethereum",
     "deploymentModel": "native-multichain",
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
@@ -17352,63 +17356,6 @@
     },
     "yieldConfig": {
       "yieldSource": "Aegis staking (sYUSD)",
-      "yieldType": "nav-appreciation"
-    }
-  },
-  {
-    "id": "syusd-lucidly",
-    "detailProvider": "coingecko",
-    "name": "Stable Yield USD",
-    "symbol": "syUSD",
-    "flags": {
-      "backing": "crypto-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized",
-      "yieldBearing": true,
-      "rwa": false,
-      "navToken": true
-    },
-    "pegReferenceId": "usdc-circle",
-    "collateral": "USDC deposited into a Lucidly-managed BoringVault that allocates across bluechip lending markets (Morpho, Aave V3), AMM concentrated-liquidity positions, and delta-neutral structured products",
-    "pegMechanism": "Users deposit USDC via enter() to mint syUSD; base yield and incentives compound into the syUSD exchange rate against USDC (e.g. 1 syUSD = 1.01 USDC), with exits processed through an asynchronous ~24h redemption queue",
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://lucidly.finance"
-      },
-      {
-        "label": "App",
-        "url": "https://app.lucidly.finance/yields?vaultAddress=0x279CAD277447965AF3d24a78197aad1B02a2c589"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.lucidly.finance"
-      }
-    ],
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x279cad277447965af3d24a78197aad1b02a2c589",
-        "decimals": 6
-      }
-    ],
-    "deploymentModel": "single-chain",
-    "collateralQuality": "exotic",
-    "custodyModel": "onchain",
-    "governanceQuality": "wrapper",
-    "variantOf": "usdc-circle",
-    "variantKind": "strategy-vault",
-    "reserves": [
-      {
-        "name": "USDC deployed across Lucidly hybrid yield strategies (Morpho, Aave V3, CLMM, delta-neutral)",
-        "pct": 100,
-        "risk": "high",
-        "coinId": "usdc-circle",
-        "depType": "wrapper"
-      }
-    ],
-    "yieldConfig": {
-      "yieldSource": "Lucidly syUSD hybrid strategy vault",
       "yieldType": "nav-appreciation"
     }
   },
@@ -18800,6 +18747,7 @@
       }
     ],
     "canBeBlacklisted": true,
+    "chainTier": "mature-alt-l1",
     "deploymentModel": "single-chain",
     "reserves": [
       {
@@ -23306,7 +23254,7 @@
       {
         "type": "warning",
         "title": "Aggregate reserve disclosure",
-        "message": "USDv has on-chain supply validation, but public attestations are aggregate and do not expose a live composition API or a modeled primary redemption backstop."
+        "message": "USDv has on-chain supply validation, but public attestations are aggregate and do not expose a live composition API or a modeled primary redemption backstop. The live feed validates Solana token supply only; reserve composition is Ceffu-custodied off-exchange and is not on-chain verifiable."
       }
     ]
   },
@@ -23428,6 +23376,7 @@
       }
     ],
     "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
     "reserves": [
       {
         "name": "Kava CDP collateral and protocol liquidity",
@@ -23439,7 +23388,7 @@
       {
         "type": "warning",
         "title": "Legacy depeg risk",
-        "message": "USDX has a long-lived discount to its dollar peg; Pharos tracks the active provider entry separately from the historical cemetery incident."
+        "message": "USDX is trading at roughly a 45% discount to its dollar peg, sustained by legacy debt positions on Kava Mint CDPs. Pharos tracks the active provider entry separately from the historical cemetery incident."
       }
     ]
   },
@@ -23995,7 +23944,7 @@
   {
     "id": "usp-pareto-credit",
     "llamaId": "349",
-    "detailProvider": "defillama",
+    "detailProvider": "coingecko",
     "name": "Pareto USP",
     "symbol": "USP",
     "flags": {
@@ -24006,7 +23955,7 @@
       "rwa": true,
       "navToken": false
     },
-    "collateral": "USDC and USDS collateral deployed into Pareto credit vaults, liquid buffers, and a stability fund",
+    "collateral": "USDC and USDS collateral deployed into Pareto credit vaults (private-credit lending pools), liquid buffers, and a stability fund",
     "pegMechanism": "Verified users mint and redeem USP 1:1 against stablecoin collateral through Pareto, while secondary-market holders rely on DEX liquidity",
     "geckoId": "pareto-usp",
     "links": [
@@ -24083,6 +24032,11 @@
         "type": "warning",
         "title": "Permissioned primary market",
         "message": "Pareto USP minting and redemption are modeled for verified users; public secondary-market holders may not have direct primary redemption access."
+      },
+      {
+        "type": "warning",
+        "title": "Soft depeg",
+        "message": "USP has been trading near $0.91 (~9% discount to USD); investigate before relying on peg parity."
       }
     ]
   },
@@ -24483,7 +24437,7 @@
   {
     "id": "usx-dforce",
     "llamaId": "44",
-    "detailProvider": "defillama",
+    "detailProvider": "coingecko",
     "name": "dForce USD",
     "symbol": "USX",
     "flags": {
@@ -24579,7 +24533,7 @@
       {
         "type": "warning",
         "title": "Active depeg risk",
-        "message": "Recent provider data shows USX materially below $1; the configured reserve view is a collateral classification, not live redemption assurance."
+        "message": "USX is trading at approximately $0.41 (~59% discount to USD), reflecting legacy debt positions on the dForce/Unitus protocol. The configured reserve view is a collateral classification, not live redemption assurance."
       }
     ]
   },
@@ -25579,6 +25533,8 @@
         "url": "https://docs.wemix.com/"
       }
     ],
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
     "reserves": [
       {
         "name": "WEMIX ecosystem reserve assets",
@@ -25589,8 +25545,8 @@
     "notices": [
       {
         "type": "info",
-        "title": "Unsupported issuance chain",
-        "message": "WEMIX Dollar primarily circulates on WEMIX chain, which is not a configured Pharos chain, so no contract is stored."
+        "title": "Non-indexed issuance chain",
+        "message": "WEMIX Dollar primarily circulates on WEMIX chain, which is not EVM-indexed by Pharos. No on-chain contract is stored; supply and metadata are supplemented by external sources only."
       }
     ]
   },
@@ -25648,7 +25604,7 @@
       }
     ],
     "deploymentModel": "native-multichain",
-    "collateralQuality": "rwa",
+    "collateralQuality": "exotic",
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "multisig",
     "reserves": [
@@ -25658,6 +25614,13 @@
         "risk": "low",
         "coinId": "usdc-circle",
         "depType": "collateral"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Active depeg",
+        "message": "WEUSD has been trading near $0.91 despite documented 1:1 USDC backing; redemption pipeline may be impaired."
       }
     ]
   },
@@ -26471,6 +26434,7 @@
       }
     ],
     "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
     "reserves": [
       {
         "name": "DAI backing through Gnosis bridge infrastructure",
@@ -26708,6 +26672,8 @@
         "url": "https://x.com/XTexchange"
       }
     ],
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
     "custodyModel": "cex",
     "reserves": [
       {
@@ -26719,8 +26685,8 @@
     "notices": [
       {
         "type": "info",
-        "title": "Unsupported issuance chain",
-        "message": "XTUSD primarily circulates on XSC, which is not a configured Pharos chain, so no contract is stored."
+        "title": "Non-indexed issuance chain",
+        "message": "XTUSD primarily circulates on XSC, which is not EVM-indexed by Pharos. No on-chain contract is stored; supply and metadata are supplemented by external sources only."
       },
       {
         "type": "info",
