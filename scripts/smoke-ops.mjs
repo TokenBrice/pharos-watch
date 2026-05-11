@@ -25,6 +25,14 @@ function requireEnv(name) {
   return value;
 }
 
+export function getSmokeOpsScope(input = process.env.SMOKE_OPS_SCOPE ?? "full") {
+  const normalized = (input ?? "").trim().toLowerCase();
+  if (normalized === "full" || normalized === "canary") {
+    return normalized;
+  }
+  throw new Error(`Invalid SMOKE_OPS_SCOPE "${input}". Expected "full" or "canary".`);
+}
+
 function buildAccessHeaders() {
   return {
     "CF-Access-Client-Id": requireEnv("OPS_SMOKE_CF_ACCESS_CLIENT_ID"),
@@ -246,6 +254,7 @@ export function shouldSkipOpsUiProxyAssertion(response, cookieHeader) {
 }
 
 export async function run() {
+  const scope = getSmokeOpsScope();
   const headers = buildAccessHeaders();
   const opsUiUrl = ensureUrl(DEFAULT_OPS_UI_URL);
   const opsApiBase = ensureUrl(DEFAULT_OPS_API_BASE);
@@ -257,35 +266,38 @@ export async function run() {
   blacklistBackfillUrl.searchParams.set("chainId", DEFAULT_BLACKLIST_BACKFILL_CHAIN_ID);
   blacklistBackfillUrl.searchParams.set("limit", "1");
 
-  console.log(`[smoke-ops] Running checks against ${opsUiUrl} and ${opsApiBase}`);
+  console.log(`[smoke-ops] Running ${scope} checks against ${opsUiUrl} and ${opsApiBase}`);
 
   const uiPromise = fetchText(opsUiUrl, headers);
   const adminApiPromise = fetchText(adminApiUrl, headers);
-  const directOpsPromise = Promise.all([
-    fetchJson(new URL("/api/status", opsApiBase).toString(), headers),
-    fetchJson(new URL("/api/status-history?limit=5", opsApiBase).toString(), headers),
-    fetchJson(new URL("/api/api-key-requests-admin?limit=1", opsApiBase).toString(), headers),
-    fetchJson(new URL("/api/audit-depeg-history?dry-run=true&limit=1", opsApiBase).toString(), headers),
-    fetchJsonWithRetry(
-      blacklistBackfillUrl.toString(),
-      {
-        ...headers,
-        "Content-Type": "application/json",
-        "X-Pharos-Admin": "1",
-      },
-      {
-        requestInit: { method: "POST", body: "{}" },
-        onRetry: ({ attemptNumber, retryCount, retryDelayMs, status }) => {
-          console.warn(
-            `[smoke-ops] blacklist balance dry-run returned ${status}; retrying ${attemptNumber}/${retryCount} after ${retryDelayMs}ms to absorb post-deploy backend warmup`,
-          );
-        },
-      },
-    ),
-  ]).then(
-    (value) => ({ error: null, value }),
-    (error) => ({ error, value: null }),
-  );
+  const statusPromise = fetchJson(new URL("/api/status", opsApiBase).toString(), headers);
+  const directOpsDetailsPromise =
+    scope === "full"
+      ? Promise.all([
+          fetchJson(new URL("/api/status-history?limit=5", opsApiBase).toString(), headers),
+          fetchJson(new URL("/api/api-key-requests-admin?limit=1", opsApiBase).toString(), headers),
+          fetchJson(new URL("/api/audit-depeg-history?dry-run=true&limit=1", opsApiBase).toString(), headers),
+          fetchJsonWithRetry(
+            blacklistBackfillUrl.toString(),
+            {
+              ...headers,
+              "Content-Type": "application/json",
+              "X-Pharos-Admin": "1",
+            },
+            {
+              requestInit: { method: "POST", body: "{}" },
+              onRetry: ({ attemptNumber, retryCount, retryDelayMs, status }) => {
+                console.warn(
+                  `[smoke-ops] blacklist balance dry-run returned ${status}; retrying ${attemptNumber}/${retryCount} after ${retryDelayMs}ms to absorb post-deploy backend warmup`,
+                );
+              },
+            },
+          ),
+        ]).then(
+          (value) => ({ error: null, value }),
+          (error) => ({ error, value: null }),
+        )
+      : null;
 
   const ui = await uiPromise;
   if (ui.response.status === 200) {
@@ -318,11 +330,7 @@ export async function run() {
     console.log("[smoke-ops] OK /admin-api/ access gate");
   }
 
-  const directOps = await directOpsPromise;
-  if (directOps.error) {
-    throw directOps.error;
-  }
-  const [status, history, apiKeyRequestsAdmin, audit, blacklistBackfill] = directOps.value;
+  const status = await statusPromise;
   if (status.response.status !== 200) {
     console.error(
       `[smoke-ops] /api/status returned ${status.response.status}, body: ${status.bodyText?.slice(0, 500)}`,
@@ -370,6 +378,17 @@ export async function run() {
         : `[smoke-ops] OK ops UI /api/admin/status (${proxiedStatus.body.overallStatus})`,
     );
   }
+
+  if (scope === "canary") {
+    console.log("[smoke-ops] Canary checks passed.");
+    return;
+  }
+
+  const directOpsDetails = await directOpsDetailsPromise;
+  if (directOpsDetails.error) {
+    throw directOpsDetails.error;
+  }
+  const [history, apiKeyRequestsAdmin, audit, blacklistBackfill] = directOpsDetails.value;
 
   assert(
     apiKeyRequestsAdmin.response.status === 200,
@@ -436,7 +455,10 @@ export async function run() {
     );
     console.error(`[smoke-ops] Response headers:`, Object.fromEntries(blacklistBackfill.response.headers.entries()));
   }
-  assert(blacklistBackfill.response.status === 200, `Expected blacklist balance dry-run 200, got ${blacklistBackfill.response.status}`);
+  assert(
+    blacklistBackfill.response.status === 200,
+    `Expected blacklist balance dry-run 200, got ${blacklistBackfill.response.status}`,
+  );
   assert(
     blacklistBackfill.body && blacklistBackfill.body.dryRun === true,
     "Blacklist balance dry-run response missing dryRun=true",

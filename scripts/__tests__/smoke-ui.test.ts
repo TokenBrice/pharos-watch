@@ -38,9 +38,7 @@ describe("hasGaConfigInit", () => {
   });
 
   it("accepts GA config calls with options", () => {
-    expect(hasGaConfigInit("gtag('config', \"G-6TS0KG8H04\", { send_page_view: false });", "G-6TS0KG8H04")).toBe(
-      true,
-    );
+    expect(hasGaConfigInit("gtag('config', \"G-6TS0KG8H04\", { send_page_view: false });", "G-6TS0KG8H04")).toBe(true);
   });
 
   it("accepts the JSON-escaped GA config emitted in static RSC payloads", () => {
@@ -91,9 +89,9 @@ describe("getOverflowWorkerCount", () => {
     });
   });
 
-  it("allows env overrides while capping workers to three and route count", () => {
+  it("allows env overrides while capping workers to six and route count", () => {
     withEnv("SMOKE_UI_OVERFLOW_WORKERS", "8", () => {
-      expect(getOverflowWorkerCount("local", 11)).toBe(3);
+      expect(getOverflowWorkerCount("local", 11)).toBe(6);
       expect(getOverflowWorkerCount("local", 2)).toBe(2);
     });
   });
@@ -129,7 +127,9 @@ describe("verifyAnalyticsSnippet", () => {
   it("accepts GA config init from the root static RSC payload", async () => {
     const fetchMock = async (url: string) => {
       if (url === "https://pharos.watch/") {
-        return new Response('<link rel="preload" href="https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04" as="script"/>');
+        return new Response(
+          '<link rel="preload" href="https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04" as="script"/>',
+        );
       }
       if (url === "https://pharos.watch/index.txt") {
         return new Response("gtag('config', \\\"G-6TS0KG8H04\\\");");

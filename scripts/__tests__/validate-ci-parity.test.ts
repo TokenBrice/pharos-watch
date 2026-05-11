@@ -265,10 +265,12 @@ describe("validate-ci parity", () => {
 
     const pagesReleaseJob = extractJobBlock(deployWorkflow, "pages-release");
     expect(pagesReleaseJob).toContain("Start local export smoke server");
-    expect(pagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "3"');
+    expect(pagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "6"');
     expect(pagesReleaseJob).toContain("Wait for validation gate");
     expect(pagesReleaseJob).toContain("Deploy Pages with retry");
     expect(pagesReleaseJob).toContain("Run post-publish smokes");
+    expect(pagesReleaseJob).toContain("--mode live --skip-overflow");
+    expect(pagesReleaseJob).toContain('SMOKE_OPS_SCOPE: "canary"');
 
     expect(deployWorkflow).not.toContain("  pages-prepare:");
     expect(deployWorkflow).not.toContain("  pages-publish:");
