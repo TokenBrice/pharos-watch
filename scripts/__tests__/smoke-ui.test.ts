@@ -11,6 +11,12 @@ describe("hasGaConfigInit", () => {
     expect(hasGaConfigInit("gtag('config', \"G-6TS0KG8H04\");", "G-6TS0KG8H04")).toBe(true);
   });
 
+  it("accepts GA config calls with options", () => {
+    expect(hasGaConfigInit("gtag('config', \"G-6TS0KG8H04\", { send_page_view: false });", "G-6TS0KG8H04")).toBe(
+      true,
+    );
+  });
+
   it("accepts the JSON-escaped GA config emitted in static RSC payloads", () => {
     expect(hasGaConfigInit("gtag('config', \\\"G-6TS0KG8H04\\\");", "G-6TS0KG8H04")).toBe(true);
   });

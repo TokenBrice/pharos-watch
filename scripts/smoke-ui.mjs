@@ -451,12 +451,14 @@ function formatUiSummary(summary) {
 
 export function hasGaConfigInit(html, expectedGaId) {
   const compactHtml = html.replace(/\s+/g, "").replace(/\\"/g, '"').replace(/\\'/g, "'");
-  return [
+  const callHeads = [
     `gtag('config','${expectedGaId}')`,
     `gtag('config',"${expectedGaId}")`,
     `gtag("config",'${expectedGaId}')`,
     `gtag("config","${expectedGaId}")`,
-  ].some((candidate) => compactHtml.includes(candidate));
+  ];
+  const callHeadsWithOptions = callHeads.map((callHead) => callHead.slice(0, -1) + ",");
+  return [...callHeads, ...callHeadsWithOptions].some((candidate) => compactHtml.includes(candidate));
 }
 
 export function getAnalyticsPayloadUrls(url) {
