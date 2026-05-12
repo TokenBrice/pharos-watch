@@ -27,6 +27,33 @@ export function ScoringChangelogV720Entry() {
   );
 }
 
+export function ScoringChangelogV721Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.21")}
+      accent="border-l-violet-500"
+    >
+      <p>
+        crvUSD scoring now reads LLAMMA reserve balances directly from on-chain Curve ControllerFactory data instead
+        of relying on a legacy market-state API.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          CrvUSD continues to use existing on-chain factory flows for Yield Basis while LLAMMA <code className="text-xs bg-muted px-1 py-0.5 rounded">bands_y</code>{" "}
+          is consumed directly for collateral inventory checks.
+        </li>
+        <li>
+          Soft-liquidity <code className="text-xs bg-muted px-1 py-0.5 rounded">bands_x</code> inventory remains in snapshot metadata rather than being reclassified as external collateral.
+        </li>
+        <li>
+          Freshness output for this path is marked as <code className="text-xs bg-muted px-1 py-0.5 rounded">&quot;not-applicable&quot;</code>, which
+          allows clean crvUSD snapshots to stay eligible for score-grade live reserve inputs.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV719Entry() {
   return (
     <VersionCard

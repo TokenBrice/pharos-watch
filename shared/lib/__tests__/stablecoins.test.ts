@@ -61,7 +61,7 @@ describe("tracked stablecoin metadata", () => {
     expect(
       usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
     ).toBe(canonicalOrder.length);
-    expect(parseDeadStablecoinAssets(deadStablecoinAsset, "dead-stablecoins")).toHaveLength(90);
+    expect(parseDeadStablecoinAssets(deadStablecoinAsset, "dead-stablecoins")).toHaveLength(91);
   });
 
   it("keeps canonical order references limited to known tracked IDs", () => {
