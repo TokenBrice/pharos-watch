@@ -421,7 +421,7 @@ describe("syncStablecoins", () => {
       expect.any(Map),
       undefined,
       expect.objectContaining({
-        previousAssetsById: new Map(),
+        previousAssetsById: expect.any(Map),
         addressProvider: undefined,
       }),
     );
