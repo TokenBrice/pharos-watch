@@ -82,6 +82,11 @@ const CONFIG_CURATED_VALIDATED = {
   allowedVersions: [1, 2],
 } as const satisfies LiveReserveAdapterConfigValidationPolicy;
 
+const UNVERIFIED_OR_NOT_APPLICABLE_FRESHNESS = [
+  "unverified",
+  "not-applicable",
+] satisfies LiveReserveAdapterValidationPolicy["allowedFreshnessModes"];
+
 export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
   abracadabra: {
     sourceModel: "dynamic-mix",
@@ -323,7 +328,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+      allowedFreshnessModes: UNVERIFIED_OR_NOT_APPLICABLE_FRESHNESS,
     },
   },
   gho: {

@@ -6,11 +6,16 @@ import {
   decimalNumberFromBigInt,
   fetchDefiLlamaPrices,
   fetchJsonWithRetry,
+  fetchOnchainUint256,
+  isHttpJsonInput,
+  notApplicableFreshnessMetadata,
   requireJsonInput,
+  requireOnchainInput,
   slicesFromValues,
   unverifiedFreshnessMetadata,
   valueUsdFromBigIntPrice,
 } from "./helpers";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 
 interface FxPoolInfo {
   collateralBalance?: string;
@@ -24,12 +29,36 @@ interface FxPayload {
 }
 
 const TOKEN_META = {
-  wstETH: { chain: "ethereum", address: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0", decimals: 18, risk: getCanonicalReserveAssetRisk("WSTETH") ?? "low", name: "wstETH (Lido)" },
-  wbtc: { chain: "ethereum", address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", decimals: 8, risk: getCanonicalReserveAssetRisk("WBTC") ?? "medium", name: "WBTC" },
+  wstETH: {
+    chain: "ethereum",
+    address: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+    decimals: 18,
+    risk: getCanonicalReserveAssetRisk("WSTETH") ?? "low",
+    name: "wstETH (Lido)",
+    poolAddress: "0x6Ecfa38FeE8a5277B91eFdA204c235814F0122E8",
+  },
+  wbtc: {
+    chain: "ethereum",
+    address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+    decimals: 8,
+    risk: getCanonicalReserveAssetRisk("WBTC") ?? "medium",
+    name: "WBTC",
+    poolAddress: "0xAB709e26Fa6B0A30c119D8c55B887DeD24952473",
+  },
 };
 
+const GET_TOTAL_RAW_COLLATERALS_SELECTOR = "0xee65a03c";
+const GET_TOTAL_RAW_DEBTS_SELECTOR = "0xf9d45fd2";
+
+interface FxParams {
+  rpcUrl?: string;
+  fallbackRpcUrl?: string;
+}
+
+type FxBalance = { key: keyof typeof TOKEN_META; amountRaw: bigint; debtRaw: bigint };
+
 export function adaptFx(payload: FxPayload): {
-  balances: Array<{ key: keyof typeof TOKEN_META; amountRaw: bigint; debtRaw: bigint }>;
+  balances: FxBalance[];
   unknownKeys: string[];
 } {
   const poolInfo = payload.data?.poolInfo ?? {};
@@ -60,18 +89,17 @@ export function adaptFx(payload: FxPayload): {
   };
 }
 
-export async function fetchFxReserves(
-  _coin: StablecoinMeta,
-  config: LiveReservesConfig,
+async function buildFxResult(
+  balances: FxBalance[],
   signal: AbortSignal,
-  ctx?: AdapterContext,
+  ctx: AdapterContext | undefined,
+  freshnessMetadata: Record<string, unknown>,
+  sourceUrls: string[],
 ): Promise<AdapterResult> {
-  const input = requireJsonInput(config.inputs.primary, "fx");
-  const payload = await fetchJsonWithRetry<FxPayload>(input.url, signal, 12_000, ctx);
-  const { balances, unknownKeys } = adaptFx(payload);
-  if (unknownKeys.length > 0) {
-    throw new Error(`fx returned unmapped positive collateral keys with unquantified exposure: ${unknownKeys.join(", ")}`);
+  if (balances.length === 0) {
+    throw new Error("fx returned no positive collateral balances");
   }
+
   const priceMap = await fetchDefiLlamaPrices(
     balances.map(({ key }) => ({
       key,
@@ -101,10 +129,7 @@ export async function fetchFxReserves(
   return {
     slices: slicesFromValues(knownValues),
     metadata: {
-      ...unverifiedFreshnessMetadata(
-        "protocol-pool-api",
-        "FX protocol pool payload does not expose a trustworthy source timestamp",
-      ),
+      ...freshnessMetadata,
       ...(capacityUsd > 0
         ? {
             immediateRedeemableUsd: capacityUsd,
@@ -115,13 +140,98 @@ export async function fetchFxReserves(
               routeStatus: "open" as const,
               holderEligibility: "any-holder",
               settlementDelaySec: 0,
-              sourceUrls: [
-                "https://api.aladdin.club/api1/get_fx_tvl",
-                "https://fxprotocol.gitbook.io/fx-docs",
-              ],
+              sourceUrls,
             },
           }
         : {}),
     },
   };
+}
+
+async function fetchFxApiReserves(
+  config: LiveReservesConfig,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<AdapterResult> {
+  const input = requireJsonInput(config.inputs.primary, "fx");
+  const payload = await fetchJsonWithRetry<FxPayload>(input.url, signal, 12_000, ctx);
+  const { balances, unknownKeys } = adaptFx(payload);
+  if (unknownKeys.length > 0) {
+    throw new Error(`fx returned unmapped positive collateral keys with unquantified exposure: ${unknownKeys.join(", ")}`);
+  }
+
+  return buildFxResult(
+    balances,
+    signal,
+    ctx,
+    unverifiedFreshnessMetadata(
+      "protocol-pool-api",
+      "FX protocol pool payload does not expose a trustworthy source timestamp",
+    ),
+    [
+      "https://api.aladdin.club/api1/get_fx_tvl",
+      "https://fxprotocol.gitbook.io/fx-docs",
+    ],
+  );
+}
+
+async function fetchFxOnchainReserves(
+  config: LiveReservesConfig,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<AdapterResult> {
+  const input = requireOnchainInput(config.inputs.primary, "fx");
+  const params = parseLiveReserveAdapterParams("fx", config.params) as FxParams;
+  const balances = await Promise.all(
+    (Object.keys(TOKEN_META) as Array<keyof typeof TOKEN_META>).map(async (key): Promise<FxBalance> => {
+      const meta = TOKEN_META[key];
+      const callBase = {
+        contract: meta.poolAddress,
+        signal,
+        ctx,
+        chain: input.chain,
+        rpcMode: input.rpcMode,
+        rpcUrl: params.rpcUrl,
+        fallbackRpcUrl: params.fallbackRpcUrl,
+        timeoutMs: 12_000,
+      };
+      const [amountRaw, debtRaw] = await Promise.all([
+        fetchOnchainUint256({ ...callBase, data: GET_TOTAL_RAW_COLLATERALS_SELECTOR }),
+        fetchOnchainUint256({ ...callBase, data: GET_TOTAL_RAW_DEBTS_SELECTOR }),
+      ]);
+      if (amountRaw == null) {
+        throw new Error(`fx on-chain collateral read failed for ${key}`);
+      }
+      if (debtRaw == null) {
+        throw new Error(`fx on-chain debt read failed for ${key}`);
+      }
+      return { key, amountRaw, debtRaw };
+    }),
+  );
+
+  return buildFxResult(
+    balances.filter((entry) => entry.amountRaw > 0n),
+    signal,
+    ctx,
+    notApplicableFreshnessMetadata({
+      proofKind: "fx-pool-direct-onchain",
+      poolCount: balances.length,
+    }),
+    [
+      "https://fxprotocol.gitbook.io/fx-docs",
+    ],
+  );
+}
+
+export async function fetchFxReserves(
+  _coin: StablecoinMeta,
+  config: LiveReservesConfig,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<AdapterResult> {
+  if (isHttpJsonInput(config.inputs.primary)) {
+    return fetchFxApiReserves(config, signal, ctx);
+  }
+
+  return fetchFxOnchainReserves(config, signal, ctx);
 }

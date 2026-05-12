@@ -74,7 +74,7 @@ export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = {
   "fdusd-transparency": ["http-html"],
   "frax-balance-sheet": ["http-json"],
   "frax-fpi-collateral": ["http-json"],
-  fx: ["http-json"],
+  fx: ["http-json", "onchain-evm"],
   gho: ["onchain-evm"],
   infinifi: ["http-json"],
   jupusd: ["http-json"],
@@ -162,6 +162,13 @@ const attestationPdfIndexParamsSchema = z
 const btcfiParamsSchema = z
   .object({
     handlersUrl: AbsoluteUrlSchema,
+  })
+  .strict();
+
+const fxParamsSchema = z
+  .object({
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
   })
   .strict();
 
@@ -523,7 +530,7 @@ export const adapterParamsSchemas = {
   "fdusd-transparency": noParamsSchema,
   "frax-balance-sheet": noParamsSchema,
   "frax-fpi-collateral": noParamsSchema,
-  fx: noParamsSchema,
+  fx: fxParamsSchema,
   gho: ghoParamsSchema,
   infinifi: noParamsSchema,
   jupusd: jupusdParamsSchema,

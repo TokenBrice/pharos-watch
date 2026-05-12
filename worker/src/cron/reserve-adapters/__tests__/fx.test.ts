@@ -1,5 +1,21 @@
-import { describe, expect, it } from "vitest";
-import { adaptFx } from "../fx";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+
+vi.mock("../helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../helpers")>();
+  return {
+    ...actual,
+    fetchDefiLlamaPrices: vi.fn(),
+    fetchOnchainUint256: vi.fn(),
+  };
+});
+
+import { adaptFx, fetchFxReserves } from "../fx";
+import { fetchDefiLlamaPrices, fetchOnchainUint256 } from "../helpers";
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("adaptFx", () => {
   it("extracts non-zero collateral balances from the official fx TVL payload", () => {
@@ -68,5 +84,45 @@ describe("adaptFx", () => {
       },
     });
     expect(result.unknownKeys).toEqual([]);
+  });
+
+  it("reads configured f(x) pools directly on-chain for score-grade freshness", async () => {
+    vi.mocked(fetchOnchainUint256)
+      .mockResolvedValueOnce(2n * 10n ** 18n)
+      .mockResolvedValueOnce(3_000n * 10n ** 18n)
+      .mockResolvedValueOnce(1n * 10n ** 8n)
+      .mockResolvedValueOnce(60_000n * 10n ** 18n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([
+      ["wstETH", 4_000],
+      ["wbtc", 100_000],
+    ]));
+
+    const coin = TRACKED_META_BY_ID.get("fxusd-f-x-protocol");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchFxReserves(
+      coin!,
+      coin!.liveReservesConfig!,
+      AbortSignal.timeout(5_000),
+    );
+
+    expect(fetchOnchainUint256).toHaveBeenCalledTimes(4);
+    expect(result.slices).toEqual([
+      { name: "WBTC", pct: 92.6, risk: "medium" },
+      { name: "wstETH (Lido)", pct: 7.4, risk: "low" },
+    ]);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "not-applicable",
+      immediateRedeemableUsd: 63_000,
+      details: {
+        proofKind: "fx-pool-direct-onchain",
+        poolCount: 2,
+      },
+      redemption: {
+        capacityUsd: 63_000,
+        capacityKind: "live-proxy-validated",
+        freshnessKind: "same-run-api",
+      },
+    });
   });
 });

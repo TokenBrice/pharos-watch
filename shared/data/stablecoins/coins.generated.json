@@ -8733,9 +8733,14 @@
       "adapter": "fx",
       "inputs": {
         "primary": {
-          "kind": "http-json",
-          "url": "https://api.aladdin.club/api1/get_fx_tvl"
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
         }
+      },
+      "params": {
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://eth.llamarpc.com"
       }
     },
     "yieldConfig": {
