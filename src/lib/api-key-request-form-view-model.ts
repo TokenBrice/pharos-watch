@@ -216,7 +216,7 @@ export function buildApiKeySelfServeRequestPayload(state: ApiKeyRequestWorkflowS
   };
 }
 
-export function toggleEndpointSelection(current: readonly string[], path: string): string[] {
+function toggleEndpointSelection(current: readonly string[], path: string): string[] {
   if (current.includes(path)) {
     return current.filter((item) => item !== path);
   }

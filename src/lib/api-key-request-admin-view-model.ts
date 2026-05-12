@@ -90,7 +90,7 @@ export function createApiKeyRequestIdempotencyKey(action: ApiKeyRequestAction, r
   return `api-key-request:${action}:${requestId}:${randomPart}`;
 }
 
-export function hasActiveUnexpiredLinkedKey(
+function hasActiveUnexpiredLinkedKey(
   request: ApiKeySelfServeRequestAdminSummary,
   generatedAt: number,
 ): boolean {
@@ -98,7 +98,7 @@ export function hasActiveUnexpiredLinkedKey(
     && (request.linkedKeyExpiresAt == null || request.linkedKeyExpiresAt > generatedAt);
 }
 
-export function canReleaseRequestClaim(
+function canReleaseRequestClaim(
   request: ApiKeySelfServeRequestAdminSummary,
   generatedAt: number,
 ): boolean {
@@ -107,7 +107,7 @@ export function canReleaseRequestClaim(
     && request.claimStatus !== "released";
 }
 
-export function describeNextAction(
+function describeNextAction(
   request: ApiKeySelfServeRequestAdminSummary,
   generatedAt: number,
 ): string {
@@ -145,7 +145,7 @@ export function describeNextAction(
     : "Rejected request is closed and the claim is clear.";
 }
 
-export function describeReleaseClaimTitle(
+function describeReleaseClaimTitle(
   request: ApiKeySelfServeRequestAdminSummary,
   hasActiveUnexpiredKey: boolean,
 ): string {

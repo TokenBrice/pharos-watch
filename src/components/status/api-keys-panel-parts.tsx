@@ -22,7 +22,7 @@ import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
 type CreateKeyPatch = Partial<CreateKeyState>;
 type EditableKeyPatch = Partial<EditableKeyState>;
 
-export function fieldClassName() {
+function fieldClassName() {
   return "w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring";
 }
 

@@ -42,7 +42,7 @@ export const HEALTH_HEX_FILL: Record<HealthBand, string> = {
   concentrated: "#dc2626",
 };
 
-export const CHAIN_ACCENT_HEX: Record<string, string> = {
+const CHAIN_ACCENT_HEX: Record<string, string> = {
   arbitrum: "#28a0f0",
   base: "#0052ff",
   bsc: "#f3ba2f",

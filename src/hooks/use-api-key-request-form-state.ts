@@ -23,13 +23,6 @@ export type {
   RequestStatus,
   VerificationStatus,
 } from "@/lib/api-key-request-form-view-model";
-export {
-  EMAIL_MAX_LENGTH,
-  EXPECTED_VOLUME_MAX_LENGTH,
-  NAME_MAX_LENGTH,
-  ORGANIZATION_MAX_LENGTH,
-  PROJECT_URL_MAX_LENGTH,
-} from "@/lib/api-key-request-form-view-model";
 
 function useVerificationTokenEffect(verifyToken: (token: string) => Promise<void>) {
   const consumedVerificationTokenRef = useRef<string | null>(null);

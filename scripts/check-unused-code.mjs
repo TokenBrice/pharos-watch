@@ -47,6 +47,8 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/stablecoins/schema.ts::CanonicalOrderAssetSchema",
   "shared/lib/stablecoins/schema.ts::DeadStablecoinAssetSchema",
   "shared/lib/stablecoins/schema.ts::DeadStablecoinAssetArraySchema",
+  // Consumed by scripts/lib/stablecoin-catalog-sources.ts (out-of-scan-scope).
+  "shared/lib/stablecoins/schema.ts::findDuplicateStablecoinCatalogIds",
   "shared/lib/tracked-stablecoin-utils.ts::findTrackedContract",
   "shared/lib/yield-scoring.ts::PYS_DEFAULT_SAFETY_SCORE",
   "src/components/pharos-logo.tsx::PharosLogoWithText",

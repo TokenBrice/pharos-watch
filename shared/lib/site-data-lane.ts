@@ -8,7 +8,6 @@ import {
 
 export const SITE_DATA_PATH_PREFIX = "/_site-data";
 export const SITE_DATA_ALLOWED_METHOD = "GET";
-export const SITE_DATA_ALLOWED_METHODS = [SITE_DATA_ALLOWED_METHOD] as const;
 export const SITE_DATA_PROXY_SECRET_HEADER = "X-Pharos-Site-Proxy-Secret";
 
 export interface SiteDataUiOriginEnv {
@@ -85,7 +84,7 @@ export function isSiteDataPath(
   return resolveSiteDataUpstreamPath(pathname, method) != null;
 }
 
-export function resolveSiteDataAllowedUiHostnames(env: SiteDataUiOriginEnv = {}): Set<string> {
+function resolveSiteDataAllowedUiHostnames(env: SiteDataUiOriginEnv = {}): Set<string> {
   return new Set([
     new URL(resolveOrigin(env.SITE_ORIGIN, SITE_ORIGIN)).hostname,
     new URL(resolveOrigin(env.OPS_UI_ORIGIN, OPS_UI_ORIGIN)).hostname,

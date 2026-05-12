@@ -22,9 +22,9 @@ export interface SafetyGradeRangeMetadata {
 
 export const SAFETY_GRADE_RANGES = ["A", "B", "C", "D", "F", "NR"] as const satisfies readonly SafetyGradeRange[];
 
-export const SAFETY_GRADE_BADGE_CLASSES: Record<ReportCardGrade, string> = REPORT_CARD_GRADE_COLORS;
+const SAFETY_GRADE_BADGE_CLASSES: Record<ReportCardGrade, string> = REPORT_CARD_GRADE_COLORS;
 
-export const SAFETY_GRADE_RANGE_METADATA: Record<SafetyGradeRange, SafetyGradeRangeMetadata> = {
+const SAFETY_GRADE_RANGE_METADATA: Record<SafetyGradeRange, SafetyGradeRangeMetadata> = {
   A: {
     barClassName: "bg-emerald-500",
     interactiveBarClassName: "bg-emerald-500 hover:bg-emerald-400",

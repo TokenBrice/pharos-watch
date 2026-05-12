@@ -35,8 +35,8 @@ export interface ApiKeySummaryItem {
   detail: string;
 }
 
-export const API_KEY_DEFAULT_RATE_LIMIT_INPUT = String(API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE);
-export const API_KEY_EXPIRING_SOON_WINDOW_SEC = WEEK_SECONDS;
+const API_KEY_DEFAULT_RATE_LIMIT_INPUT = String(API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE);
+const API_KEY_EXPIRING_SOON_WINDOW_SEC = WEEK_SECONDS;
 
 export const DEFAULT_CREATE_KEY_STATE: CreateKeyState = {
   name: "",
@@ -85,12 +85,12 @@ function padTwo(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-export function formatDateTimeLocalValue(epochSeconds: number): string {
+function formatDateTimeLocalValue(epochSeconds: number): string {
   const date = new Date(epochSeconds * 1000);
   return `${date.getFullYear()}-${padTwo(date.getMonth() + 1)}-${padTwo(date.getDate())}T${padTwo(date.getHours())}:${padTwo(date.getMinutes())}`;
 }
 
-export function parseDateTimeLocalValue(value: string): number | null {
+function parseDateTimeLocalValue(value: string): number | null {
   const trimmed = value.trim();
   const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
   if (!match) {
@@ -109,7 +109,7 @@ export function parseDateTimeLocalValue(value: string): number | null {
   return Number.isFinite(epochMs) ? Math.floor(epochMs / 1000) : null;
 }
 
-export function parseRateLimitInput(value: string): number {
+function parseRateLimitInput(value: string): number {
   const trimmed = value.trim();
   if (!/^\d+$/.test(trimmed)) {
     throw new Error("Rate limit must be a whole number");

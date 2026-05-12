@@ -10,7 +10,7 @@ import { buildHistoryKey, pickHistoryRowsForSource } from "./evaluation-history"
 import { compareCandidates, getConfidencePriority, getConfidenceTier, relativeDivergence, resolveYieldSourceLabel, resolveYieldTypeLabel } from "./evaluation-arbitration";
 import type { EvaluatedYieldSource } from "./evaluation-types";
 
-export { buildHistoryKey, isLegacyDeterministicOnChainSourceKey, normalizePreviousBestSourceKey } from "./evaluation-history";
+export { buildHistoryKey } from "./evaluation-history";
 export { buildSelectionReason } from "./evaluation-arbitration";
 export type { ConfidenceTier, EvaluatedYieldSource } from "./evaluation-types";
 
