@@ -8,7 +8,7 @@ user_invocable: true
 
 Two-phase workflow:
 1. **Gap Discovery** — fetch DefiLlama stablecoins list, compare chain coverage against our contracts, apply supply thresholds, produce gap report
-2. **Population** — for each gap, fetch CoinGecko address, verify on block explorer, write to the matching `shared/data/stablecoins/*.json` entry
+2. **Population** — for each gap, fetch CoinGecko address, verify on block explorer, write to the matching `shared/data/stablecoins/coins/*.json` entry
 
 ### Input
 
@@ -265,7 +265,7 @@ binancecoin              (BNB Beacon Chain / BEP2 — legacy)
 
 ### Step 1 — Load our stablecoin data
 
-1. Read `shared/data/stablecoins/{usd-major,usd-minor,non-usd,commodity,pre-launch}.json`
+1. Read `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json`)
 2. For each stablecoin, extract: `id`, `symbol`, `name`, `llamaId`, `geckoId`, `contracts[]` (list of chain IDs already populated)
 3. Treat the runtime stablecoin re-export as import-only; contract metadata edits belong in the JSON shards and must match `shared/lib/stablecoins/schema.ts`
 
@@ -409,7 +409,7 @@ vechain        | VeChain       | https://explore.vechain.org               | nul
 
 ### Step 5 — Write to the stablecoin JSON shard
 
-1. Edit the coin's `contracts` array in the matching `shared/data/stablecoins/*.json` entry using the Edit tool
+1. Edit the coin's `contracts` array in the matching `shared/data/stablecoins/coins/*.json` entry using the Edit tool
 2. Append new entries after existing ones
 3. Format as JSON objects with `chain`, `address`, and `decimals`
 4. EVM addresses: lowercase hex

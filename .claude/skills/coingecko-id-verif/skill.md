@@ -5,7 +5,7 @@ description: Verify CoinGecko IDs for tracked stablecoins by cross-referencing o
 
 # CoinGecko ID Verification
 
-Verifies that the `geckoId` in `shared/data/stablecoins/*.json` is correct by cross-referencing three sources:
+Verifies that the `geckoId` in `shared/data/stablecoins/coins/*.json` is correct by cross-referencing three sources:
 
 1. **Our config** (`geckoId` in the stablecoin JSON registry) -> CoinGecko coin endpoint
 2. **DefiLlama's geckoId** (`gecko_id` from stablecoins.llama.fi) -> CoinGecko coin endpoint
@@ -58,6 +58,6 @@ The **contract address lookup is the ground truth** -- it tells you exactly whic
 ## Interpreting Results
 
 - `VERDICT: Our geckoId is CORRECT` -- no action needed
-- `VERDICT: DL geckoId is correct, ours is WRONG` -- update `geckoId` in the matching `shared/data/stablecoins/*.json` entry
+- `VERDICT: DL geckoId is correct, ours is WRONG` -- update `geckoId` in the matching `shared/data/stablecoins/coins/*.json` entry
 - `VERDICT: NEITHER (contract=xxx)` -- update our geckoId to `xxx`
 - `VERDICT: Token not found on CoinGecko` -- token may not be listed on CG (normal for some coins)

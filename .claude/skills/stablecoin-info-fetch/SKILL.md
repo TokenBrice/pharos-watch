@@ -1,12 +1,12 @@
 ---
 name: stablecoin-info-fetch
-description: Use when asked to verify, populate, or audit a single tracked stablecoin's detail fields (collateral, peg mechanism, jurisdiction, links, geckoId, contracts). Run per-coin to fill gaps or validate existing data in shared/data/stablecoins/*.json.
+description: Use when asked to verify, populate, or audit a single tracked stablecoin's detail fields (collateral, peg mechanism, jurisdiction, links, geckoId, contracts). Run per-coin to fill gaps or validate existing data in `shared/data/stablecoins/coins/*.json`.
 user_invocable: true
 ---
 
 ## Stablecoin Info Fetch & Verify
 
-Verify and populate a single tracked stablecoin's metadata in the matching JSON shard under `shared/data/stablecoins/*.json`. Designed to be run sequentially — one coin at a time.
+Verify and populate a single tracked stablecoin's metadata in the matching `shared/data/stablecoins/coins/*.json` file. Designed to be run sequentially — one coin at a time.
 
 ### Input
 
@@ -44,7 +44,7 @@ Many sites (CoinGecko, Etherscan, etc.) block plain HTTP requests with 403s. **A
 
 #### Step 1 — Read current state
 
-1. Read `shared/data/stablecoins/{usd-major,usd-minor,non-usd,commodity,pre-launch}.json` and locate the coin's entry
+1. Read `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json` for a canonical runtime view) and locate the coin's entry
 2. List which fields are **present**, **missing**, or **suspect** (vague placeholders like "U.S. dollar reserves" or "Direct redemption through issuer")
 3. Note the coin's `flags` (backing, pegCurrency, governance) — these are authoritative and should NOT be changed by this skill
 4. Treat the runtime stablecoin re-export as import-only. If the asset is dead/cemetery-only, use `shared/data/dead-stablecoins.json` and `DeadStablecoinAssetSchema` instead of this tracked-metadata workflow
@@ -111,7 +111,7 @@ For each field that needs updating:
 
 After user approval:
 
-1. Edit the coin's JSON object in the matching `shared/data/stablecoins/*.json` shard using the `Edit` tool
+1. Edit the coin's JSON object in `shared/data/stablecoins/coins/*.json` using the `Edit` tool
 2. If adding a new tracked coin, also keep `shared/data/stablecoins/canonical-order.json` aligned
 3. Preserve the existing JSON style:
    - Contract addresses: lowercase hex for EVM, original case for Tron and other non-EVM chains

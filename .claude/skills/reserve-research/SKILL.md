@@ -12,7 +12,7 @@ User provides a stablecoin name, symbol, or ID from the tracked metadata JSON sh
 
 ### Step 1: Read Current State
 
-Read the coin's entry in `shared/data/stablecoins/{usd-major,usd-minor,non-usd,commodity,pre-launch}.json`. Treat the runtime stablecoin re-export as import-only. Note:
+Read the coin's entry in `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json`). Treat the runtime stablecoin re-export as import-only. Note:
 - `collateral` field (text description of backing — this is your starting hypothesis)
 - `pegMechanism` field
 - `flags.backing` (rwa-backed | crypto-backed | algorithmic)
@@ -86,7 +86,7 @@ Wait for user approval before applying.
 
 ### Step 5: Apply Changes
 
-After approval, use the Edit tool to add the `reserves` array to the coin's JSON object in the matching `shared/data/stablecoins/*.json` shard.
+After approval, use the Edit tool to add the `reserves` array to the coin's JSON object in the matching `shared/data/stablecoins/coins/*.json` file.
 
 Verify: `npm run build` succeeds.
 

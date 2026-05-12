@@ -3,7 +3,7 @@
 Verify CoinGecko IDs for tracked stablecoins.
 
 Cross-checks:
-1. Our configured geckoId in shared/data/stablecoins/*.json
+1. Our configured geckoId in shared/data/stablecoins/coins/*.json (runtime aggregate is `shared/data/stablecoins/coins.generated.json`)
 2. DefiLlama's gecko_id from stablecoins.llama.fi
 3. CoinGecko's contract-address lookup for the Ethereum deployment
 
@@ -28,11 +28,7 @@ CG_BASE = "https://pro-api.coingecko.com/api/v3"
 CG_FREE_BASE = "https://api.coingecko.com/api/v3"
 DL_BASE = "https://stablecoins.llama.fi"
 STABLECOIN_DATA_FILES = [
-    Path("shared/data/stablecoins/usd-major.json"),
-    Path("shared/data/stablecoins/usd-minor.json"),
-    Path("shared/data/stablecoins/non-usd.json"),
-    Path("shared/data/stablecoins/commodity.json"),
-    Path("shared/data/stablecoins/pre-launch.json"),
+    Path("shared/data/stablecoins/coins.generated.json"),
 ]
 
 
@@ -334,7 +330,9 @@ def main() -> None:
 
     coins = load_stablecoin_assets(repo_root)
     coins_by_id = {coin["id"]: coin for coin in coins}
-    print(f"Loaded {len(coins)} tracked coins from {repo_root / 'shared/data/stablecoins/*.json'}")
+    print(
+        f"Loaded {len(coins)} tracked coins from {repo_root / 'shared/data/stablecoins/coins.generated.json'}"
+    )
 
     if args.coin:
         coin = coins_by_id.get(args.coin)

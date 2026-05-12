@@ -44,7 +44,7 @@ Summaries must be grounded in Pharos's own data, not just external research. Con
 
 #### Static Metadata (always read)
 
-Stablecoin metadata lives in `shared/data/stablecoins/*.json` (split across `usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, and `pre-launch.json`). Find the coin's entry by `id` and check:
+Stablecoin metadata lives in `shared/data/stablecoins/coins/*.json` (generated into `shared/data/stablecoins/coins.generated.json` at build-time). Find the coin's entry by `id` and check:
 
 - **Classification flags**: `flags.backing`, `flags.governance`, `flags.pegCurrency`, `flags.yieldBearing`, `flags.navToken`
 - **Collateral & mechanism**: `collateral` (free-text description), `pegMechanism` (how peg is maintained)
@@ -73,7 +73,7 @@ The detail page at `pharos.watch/stablecoin/{id}` shows live scoring and analyti
 
 ### Process
 
-1. **Read metadata**: Find the coin's entry in `shared/data/stablecoins/*.json`. Read all fields — classification, collateral description, pegMechanism, reserves, jurisdiction, dependencies, resilience sub-factors (custodyModel, chainTier, collateralQuality, governanceQuality, deploymentModel), notices, yield config, blacklist status, and deployment footprint. Load `data/ai-summaries.json` to see existing summaries and avoid repeating patterns
+1. **Read metadata**: Find the coin's entry in `shared/data/stablecoins/coins/*.json` (or its generated runtime in `coins.generated.json`). Read all fields — classification, collateral description, pegMechanism, reserves, jurisdiction, dependencies, resilience sub-factors (custodyModel, chainTier, collateralQuality, governanceQuality, deploymentModel), notices, yield config, blacklist status, and deployment footprint. Load `data/ai-summaries.json` to see existing summaries and avoid repeating patterns
 2. **Check live data** (for refreshes and high-profile coins): Use `agent-browser https://pharos.watch/stablecoin/{id}` to check the report card, peg score, liquidity score, redemption backstop, and DEWS band. Note anything the raw metadata doesn't capture — particularly depeg event history, safety grade trends, and exit liquidity quality
 3. **Research if needed**: Use web search for recent events (depegs, regulatory actions, governance changes) that would make the summary more current and specific. Check the coin's `links` for official sources
 4. **Write the summary**: Follow voice guidelines. Weave Pharos-specific insights into the narrative where they add editorial value. Don't just describe the coin generically — interpret what our data reveals about its risks, strengths, and contradictions

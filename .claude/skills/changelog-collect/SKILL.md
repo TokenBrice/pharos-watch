@@ -85,7 +85,7 @@ Group the surviving commits by conventional prefix (`feat`, `fix`, `docs`, `refa
 
 Actively check these signals — they often belong in the headline or a labeled cluster:
 
-- **Stablecoin count crossings**: compare the count implied by `shared/data/stablecoins/*.json` (or the `npm run check:doc-counts` output) against the previous entry's claim. A crossing (e.g., 192 → 194) is headline-worthy.
+- **Stablecoin count crossings**: compare the count implied by `shared/data/stablecoins/coins.generated.json` (or the `npm run check:doc-counts` output) against the previous entry's claim. A crossing (e.g., 192 → 194) is headline-worthy.
 - **Methodology version bumps**: grep filtered commits for `v\d+\.\d+\d?` (e.g., `v6.93`, `v5.0`). Map each bump to a cluster with the correct `href` (see step 7).
 - **Live-reserve adapter additions**: `feat(reserves): add … adapter` / `promote … to live` / `enable live reserves for …`. Aggregate and cite the new total if material.
 - **Audit / remediation series**: mentions of `audit`, `remediation`, `tranche`, `phase \d`. Usually a single "Codebase hardening" (`security`) cluster.

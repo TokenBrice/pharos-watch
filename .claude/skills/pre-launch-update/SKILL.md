@@ -27,7 +27,7 @@ Valid enum values for `launchPhase`, milestone `type`, and `featuredContent.type
 
 ### Data Locations
 
-Pre-launch coins live in `shared/data/stablecoins/pre-launch.json`.
+Pre-launch coins live in `shared/data/stablecoins/coins/*.json` with `status: "pre-launch"`, and are sourced in generated runtime output via `shared/data/stablecoins/coins.generated.json` and `canonical-order.json`.
 
 AI summaries: `data/ai-summaries.json`
 
@@ -52,7 +52,7 @@ Skip cosmetic updates: single promotional tweets, blog restyles, minor PR mentio
 
 Rank coins by staleness before researching so attention lands on the most-outdated entries.
 
-1. For each coin, find the most recent `milestones[].date` (or the coin's last edit via `git log -1 --format="%cs" -- shared/data/stablecoins/pre-launch.json` if milestones are empty)
+1. For each coin, find the most recent `milestones[].date` (or the coin's last edit via `git log -1 --format="%cs" -- shared/data/stablecoins/coins/*.json` if milestones are empty)
 2. Present a sorted list (oldest first) with days-since-last-milestone
 3. Do deep research (Twitter fetch, full web search, browser fallback) on the top 5 stalest coins; lighter-touch checks on the rest
 
@@ -60,7 +60,7 @@ Any coin with no milestones, or with a latest milestone older than 8 weeks, is a
 
 #### Step 1 — Read current state
 
-1. Read `shared/data/stablecoins/pre-launch.json` and list every pre-launch coin with its current `launchPhase`, `expectedLaunchDate`, `launchPhaseDetail`, milestone count, and `featuredContent` count
+1. Read all `shared/data/stablecoins/coins/*.json` entries where `status` is `"pre-launch"` and list every coin with its current `launchPhase`, `expectedLaunchDate`, `launchPhaseDetail`, milestone count, and `featuredContent` count
 2. Read `data/ai-summaries.json` to see which pre-launch coins have summaries and when they were last updated
 3. Present a summary table to the user: coin name, phase, expected date, milestones count, last summary update
 
@@ -112,7 +112,7 @@ Approval is **per coin**, not bulk. For each coin with proposed changes, wait fo
 4. Add new featured content to `featuredContent[]`
 5. Update AI summaries in `data/ai-summaries.json` only for coins that meet the Material Change Definition (follow `write-ai-summaries` voice guidelines)
 6. Verify:
-   - `npm run check:stablecoin-data` — validates the zod schema for `pre-launch.json` (catches missing required fields, bad enum values, malformed dates). **Required.**
+   - `npm run check:stablecoin-data` — validates the zod schema for the tracked registry (including pre-launch entries). **Required.**
    - `npm run test:merge-gate` — project pre-push gate (per CLAUDE.md). **Required before the session ends or a commit is made.**
    - `npm run build` alone is not sufficient — it does not enforce the pre-launch schema.
 
@@ -134,14 +134,14 @@ Report format:
 - Preview only: `**{Name} has a preview listing, not ready** — CoinGecko entry exists but circulating/market-cap are zero; keep tracking`
 - Ambiguous: `**{Name} possible match, unverified** — {reason}; recommend manual confirmation before next run`
 
-Do **NOT** execute the promotion (removing `status: "pre-launch"`, adding `llamaId`, normalizing across chains, moving the entry out of `pre-launch.json`, etc.) — that's a manual, coordinated process that requires schema changes beyond the scope of this skill.
+Do **NOT** execute the promotion (removing `status: "pre-launch"`, adding `llamaId`, normalizing across chains, moving the entry out of `shared/data/stablecoins/coins/*.json` by status change, etc.) — that's a manual, coordinated process that requires schema changes beyond the scope of this skill.
 
 #### Step 6 — Propose new candidates (optional)
 
 After updating existing coins, sweep for pre-launch stablecoins we don't yet track. Use all three lanes:
 
 - **DefiLlama diff**: Fetch `https://stablecoins.llama.fi/stablecoins`. Surface entries with near-zero `circulating` or with "preview" / "upcoming" / "testnet" markers in name or description.
-- **News sweep**: `WebSearch` for phrases in the last 14 days — `"announces stablecoin"`, `"launches stablecoin"`, `"unveils stablecoin"`, `"stablecoin pilot"`. Filter out issuers already tracked across all `shared/data/stablecoins/*.json` files.
+- **News sweep**: `WebSearch` for phrases in the last 14 days — `"announces stablecoin"`, `"launches stablecoin"`, `"unveils stablecoin"`, `"stablecoin pilot"`. Filter out issuers already tracked across `shared/data/stablecoins/coins.generated.json` and `shared/data/stablecoins/canonical-order.json`.
 - **Regulatory sweep**: `WebSearch` for `"stablecoin license"`, `"stablecoin charter"`, `"BitLicense"`, `"EMI license stablecoin"`, `"MiCA stablecoin approval"`. Jurisdictional first-movers often foreshadow tracked-worthy launches.
 
 For each candidate, report: name, symbol, issuer, peg currency, backing type, and a 1-line "why notable" (issuer size, novel mechanism, jurisdictional significance). Let the user decide whether to add. Do **NOT** add coins without user approval.

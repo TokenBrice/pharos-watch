@@ -6,7 +6,7 @@ user_invocable: true
 
 ## Contract Address Population
 
-Fetch and merge contract addresses from CoinGecko into the matching `shared/data/stablecoins/*.json` entry. Expands `shared/lib/chains.ts` with new chains as discovered.
+Fetch and merge contract addresses from CoinGecko into the matching `shared/data/stablecoins/coins/*.json` entry. Expands `shared/lib/chains.ts` with new chains as discovered.
 
 ### Input
 
@@ -125,7 +125,7 @@ binancecoin              (BNB Beacon Chain / BEP2 — legacy, not smart contract
 
 #### Step 1 — Read current state
 
-1. Read `shared/data/stablecoins/{usd-major,usd-minor,non-usd,commodity,pre-launch}.json` and locate the coin's entry
+1. Read `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json`) and locate the coin's entry
 2. Note the coin's `geckoId` — if missing, skip this coin and flag it
 3. Note all existing chains in the coin's `contracts` array (these are curated and will NOT be overwritten)
 4. Treat the runtime stablecoin re-export as import-only; contract metadata edits belong in the JSON shards and must match `shared/lib/stablecoins/schema.ts`
@@ -199,7 +199,7 @@ When a chain ID is not in `CHAIN_META`, add it with:
 
 #### Step 5 — Write changes
 
-1. Edit the coin's `contracts` array in the matching `shared/data/stablecoins/*.json` entry using the Edit tool
+1. Edit the coin's `contracts` array in the matching `shared/data/stablecoins/coins/*.json` entry using the Edit tool
 2. Append new chains after the existing entries
 3. Format new entries as JSON objects with `chain`, `address`, and `decimals`
 4. For EVM addresses: lowercase hex (CoinGecko usually returns lowercase, verify)
