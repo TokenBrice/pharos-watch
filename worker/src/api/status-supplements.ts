@@ -34,6 +34,7 @@ import { loadFreshIndependentLiveReserveMap } from "../lib/live-reserves-store";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getCacheBlobSizes, getD1UsageSummary } from "../lib/status/d1-usage";
 import { getMintBurnReconciliation } from "../lib/status/derived-data";
+import { loadSourceDepthDistribution } from "../lib/status/price-source-depth";
 
 function sectionError(code: string, message?: string): StatusSectionError {
   const safeMessage = message ?? (
@@ -254,6 +255,17 @@ export async function loadStatusSupplements(
     const metadata = syncStablecoinsCron?.lastRun?.metadata;
     if (metadata?.priceSourceHealth) {
       priceSourceHealth = metadata.priceSourceHealth as PriceSourceHealth;
+      try {
+        const sourceDepthDistribution = await loadSourceDepthDistribution(db);
+        if (sourceDepthDistribution) {
+          priceSourceHealth = {
+            ...priceSourceHealth,
+            sourceDepthDistribution: priceSourceHealth.sourceDepthDistribution ?? sourceDepthDistribution,
+          };
+        }
+      } catch (err) {
+        console.warn("[status] Price source depth distribution unavailable:", err);
+      }
     }
     if (Array.isArray(metadata?.providerDiagnostics)) {
       priceProviderDiagnostics = metadata.providerDiagnostics.filter(

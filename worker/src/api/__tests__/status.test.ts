@@ -48,7 +48,29 @@ describe("handleStatus", () => {
   it("returns 200 with status body when authorized", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
-      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          symbol: "USDT",
+          price: 1.0,
+          consensusSources: ["coingecko", "defillama-list", "pyth"],
+          circulating: { peggedUSD: 100_000_000 },
+        },
+        {
+          id: "usdc-circle",
+          symbol: "USDC",
+          price: 1.0,
+          consensusSources: ["coingecko"],
+          circulating: { peggedUSD: 100_000_000 },
+        },
+        {
+          id: "pyusd-paypal",
+          symbol: "PYUSD",
+          price: 1.0,
+          consensusSources: ["coingecko", "defillama-list", "pyth", "binance", "coinbase"],
+          circulating: { peggedUSD: 100_000_000 },
+        },
+      ],
     });
 
     const db = mockD1([
@@ -235,6 +257,14 @@ describe("handleStatus", () => {
     });
     expect(body.priceSourceHealth).toMatchObject({
       totalAssets: 156,
+      sourceDepthDistribution: {
+        "0": 0,
+        "1": 1,
+        "2": 0,
+        "3": 1,
+        "4": 0,
+        "5+": 1,
+      },
     });
     expect(body.coingeckoPriceDiff).toBeNull();
     expect(body.liquidityHealth).toMatchObject({

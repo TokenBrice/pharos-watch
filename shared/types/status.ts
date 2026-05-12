@@ -425,8 +425,18 @@ export interface DiscoveryCandidatesResponse {
   total: number;
 }
 
+export type PriceSourceDepthBucket = "0" | "1" | "2" | "3" | "4" | "5+";
+
+export type PriceSourceDepthDistribution = Record<PriceSourceDepthBucket, number>;
+
 export interface PriceSourceHealth {
   sourceDistribution: Record<PriceSourceHealthBucketKey, number>;
+  /**
+   * Distribution of active canonical assets by candidate `consensusSources`
+   * count. Bucket `5+` contains all assets with five or more candidate
+   * sources.
+   */
+  sourceDepthDistribution?: PriceSourceDepthDistribution;
   confidenceDistribution: {
     high: number;
     "single-source": number;
