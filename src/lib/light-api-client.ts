@@ -11,7 +11,7 @@ function buildSiteDataPath(path: string): string {
   return `/_site-data${path.slice("/api".length)}`;
 }
 
-export function buildLightApiUrl(path: string): string {
+function buildLightApiUrl(path: string): string {
   const hostname = getBrowserHostname();
   const envBase = process.env.NEXT_PUBLIC_API_BASE;
   if (!(envBase ?? "").trim() && hostname && isSiteDataUiHostname(hostname)) {

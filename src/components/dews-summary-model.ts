@@ -100,7 +100,7 @@ export function mcapDotRadius(mcap: number | undefined): number | undefined {
   return 5;                              // small: <=50M
 }
 
-export function computePositions(
+function computePositions(
   signals: Record<string, { score: number; band: string }>,
   logos: Record<string, string> | undefined,
   mcapById?: Map<string, number>,
@@ -144,7 +144,7 @@ export function computePositions(
   return result;
 }
 
-export function computeCalmDots(signals: Record<string, { score: number; band: string }>): CalmDot[] {
+function computeCalmDots(signals: Record<string, { score: number; band: string }>): CalmDot[] {
   const calmIds = Object.keys(signals).filter((id) => signals[id].band === "CALM");
   const angles = distributeAngles(calmIds.length);
   return calmIds.map((id, i) => {
