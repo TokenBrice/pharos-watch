@@ -20,6 +20,7 @@ npm run check:cemetery-dataset # Verify generated Stablecoin Cemetery JSON/CSV e
 npm run check:agent-doc-sync # Verify AGENTS.md and CLAUDE.md stay synchronized where required
 npm run check:worker-boundary # Enforce the shared boundary in both directions (no worker -> `src` imports, no `src`/`shared`/`scripts`/`functions` -> `worker/src` imports; pure cross-runtime metadata belongs in `shared/`)
 npm run check:shared-cycles # Fail on circular dependencies inside `shared/`, `worker/src`, and `src`
+npm run check:shared-types-imports # Manual guardrail for broad `@shared/types` value imports
 npm run check:unused-code # Detect unreferenced internal runtime modules and unused named exports across `src/`, `shared/`, `worker/src/`, and `functions/`
 npm run check:hotspot-ratchet # Fail when enrolled hotspots regress or generated hotspot candidates lack explicit enrollment/waivers
 npm run check:cron-abort-contract # Verify leased cron jobs accept/pass AbortSignal or carry explicit waivers
@@ -38,6 +39,7 @@ npm run check:postman # Verify generated public Postman collection/environment a
 npm run check:world-map # Verify generated static world map SVG is current
 npm run check:sql-safety # Static analysis of D1 SQL patterns for safety issues
 npm run check:stablecoin-data # Validate stablecoin JSON data files against schema
+npm run check:build-size # Report and enforce static-export JS/CSS/media/HTML/TXT size budgets after `npm run build`
 npm run check:supply-helper-usage # Enforce `getCirculatingRaw()` usage for DefiLlama list-endpoint supply values
 npm run check:redemption-backstops # Validate redemption backstop configs for completeness
 npm run check:migrations # Replay worker D1 migrations against a throwaway SQLite DB

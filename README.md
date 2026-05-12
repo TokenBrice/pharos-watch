@@ -94,11 +94,14 @@ DEX discovery sources write to `dex_pool_staging` every 2 hours on the dedicated
 
 ## Getting Started
 
-Requires Node 24 LTS (`package.json#engines.node`, `.nvmrc`). Install dependencies from the repo root; npm workspaces will wire both the frontend and `worker/` package:
+Requires Node 24 LTS (`package.json#engines.node`, `.nvmrc`, and `.npmrc` `engine-strict=true`). Activate the pinned version before installing dependencies from the repo root; npm workspaces will wire both the frontend and `worker/` package:
 
 ```bash
-npm install
+nvm use
+npm ci
 ```
+
+Use `npm install` instead of `npm ci` only when intentionally changing dependencies.
 
 ### Frontend
 
@@ -143,6 +146,7 @@ npm run build    # Production static build
 npm run lint     # ESLint
 npm run typecheck # Type-check frontend, shared, Pages Functions, and root scripts
 npm run typecheck:worker # Type-check worker
+npm run typecheck:worker-scripts # Type-check worker-bound operational scripts
 ```
 
 ## Project Structure
@@ -152,7 +156,8 @@ src/                              Frontend (Next.js static export)
 ├── app/
 │   ├── page.tsx                  Homepage: stats, charts, filters, peg tracker, table
 │   ├── alt-pegs/                 Non-USD market structure route
-│   ├── blacklist/                Freeze & blacklist event tracker
+│   ├── freezewatch/              FreezeWatch issuer-control tracker
+│   ├── blacklist/                Legacy redirect/noindex wrapper for `/freezewatch/`
 │   ├── cemetery/                 Dead stablecoin graveyard
 │   ├── chains/                   Chain analytics leaderboard + per-chain profiles
 │   ├── compare/                  Side-by-side comparison tool + static comparison landing pages
@@ -386,11 +391,11 @@ Required GitHub variable: `API_BASE_URL`
 Optional GitHub variable: `SMOKE_API_BASE_URL` (recommended when smoke-testing a dedicated API host)
 Optional GitHub variables: `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`
 
-Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `JUPITER_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_TOKEN_PREVIOUS`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `SITE_API_SHARED_SECRET`, `SITE_API_SHARED_SECRET_PREVIOUS`, `API_KEY_HASH_PEPPER`, `API_KEY_HASH_PEPPER_PREVIOUS`, `API_KEY_SELF_SERVE_IP_SALT`, `API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER`, `API_KEY_SELF_SERVE_REQUEST_PEPPER`, `API_KEY_SELF_SERVE_EMAIL_FROM`, `API_KEY_SELF_SERVE_EMAIL_REPLY_TO`, `API_KEY_SELF_SERVE_PUBLIC_BASE_URL`, `RESEND_API_KEY`, `CLOUDFLARE_D1_STATUS_API_TOKEN`
+Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `MORALIS_API_KEY`, `BIRDEYE_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `JUPITER_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_TOKEN_PREVIOUS`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `SITE_API_SHARED_SECRET`, `SITE_API_SHARED_SECRET_PREVIOUS`, `API_KEY_HASH_PEPPER`, `API_KEY_HASH_PEPPER_PREVIOUS`, `API_KEY_SELF_SERVE_IP_SALT`, `API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER`, `API_KEY_SELF_SERVE_REQUEST_PEPPER`, `API_KEY_SELF_SERVE_EMAIL_FROM`, `API_KEY_SELF_SERVE_EMAIL_REPLY_TO`, `API_KEY_SELF_SERVE_PUBLIC_BASE_URL`, `RESEND_API_KEY`, `CLOUDFLARE_D1_STATUS_API_TOKEN`
 
 `API_KEY_HASH_PEPPER` is required: non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`, and the worker can't verify keys without the pepper. No-key public exceptions are health checks, OG images, feedback submission, self-serve API-key request/verification, and the Telegram webhook; Telegram still authenticates with its own secret. Self-serve default keys are email-verified, limited to 30 requests per minute, expire after 60 days, and are managed privately through `ops.pharos.watch/admin-api/`.
 
-Worker vars (see `.env.example` for the current surface): active worker bindings include `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_API_AUD`, `MAINTENANCE_MODE`, `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_D1_DATABASE_ID`. `OPS_UI_ORIGIN`, `OPS_API_ORIGIN`, and `CF_ACCESS_OPS_UI_AUD` remain reserved on the worker side for cross-runtime contract alignment; `CF_ACCESS_OPS_UI_AUD` is active and required on Pages Functions for `/api/admin/*` UI JWT verification.
+Worker vars (see `.env.example` for the current surface): active worker bindings include `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_API_AUD`, `ADDRESS_PRICE_PROVIDERS_ENABLED`, `MAINTENANCE_MODE`, `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_D1_DATABASE_ID`. `OPS_UI_ORIGIN`, `OPS_API_ORIGIN`, and `CF_ACCESS_OPS_UI_AUD` remain reserved on the worker side for cross-runtime contract alignment; `CF_ACCESS_OPS_UI_AUD` is active and required on Pages Functions for `/api/admin/*` UI JWT verification.
 
 Pages Functions bindings: `SITE_API_SHARED_SECRET` and production `SITE_API_ORIGIN` for `/_site-data/*`; `DB` for site-data attribution; `OPS_API_SERVICE_TOKEN_ID`, `OPS_API_SERVICE_TOKEN_SECRET`, `CF_ACCESS_TEAM_DOMAIN`, and `CF_ACCESS_OPS_UI_AUD` for `/api/admin/*`. Optional Pages origin overrides are `SITE_ORIGIN`, `OPS_UI_ORIGIN`, and `OPS_API_ORIGIN`.
 

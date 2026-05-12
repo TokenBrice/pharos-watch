@@ -53,6 +53,7 @@ npm run typecheck
 npm test
 npm run test:watch
 cd worker && npx tsc --noEmit
+cd worker && npx tsc --noEmit -p tsconfig.scripts.json
 cd worker && npx wrangler dev
 ```
 
