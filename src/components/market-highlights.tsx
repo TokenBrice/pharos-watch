@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { type CSSProperties, type ReactNode, useMemo } from "react";
 import Link from "next/link";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +19,8 @@ const SKELETON_DEPEG_INDICES = Array.from({ length: 6 }, (_, i) => i);
 const SKELETON_MOVER_INDICES = Array.from({ length: 3 }, (_, i) => i);
 
 const SUPPLY_FLOOR = 1_000_000;
+const ENTRY_LINK_CLASS =
+  "pharos-focus-ring group min-w-0 items-center gap-2 rounded-lg px-2 py-2 transition-[background-color,color] duration-150 hover:bg-muted/40 sm:gap-1.5 sm:rounded-md sm:px-1.5 sm:py-1";
 
 /**
  * Responsive visibility classes per item index.
@@ -80,7 +82,7 @@ function useDepegs(data: StablecoinData[] | undefined, pegRates: Record<string, 
 
       const pegRef = getPegReference(coin.pegType, pegRates, meta.commodityOunces);
       if (pegRef === 0) continue;
-      const bps = Math.round(((coin.price / pegRef) - 1) * 10000);
+      const bps = Math.round((coin.price / pegRef - 1) * 10000);
 
       entries.push({ id: coin.id, symbol: coin.symbol, name: coin.name, bps });
     }
@@ -109,7 +111,10 @@ function useMovers(data: StablecoinData[] | undefined) {
     const sorted = [...entries].sort((a, b) => b.pctChange - a.pctChange);
     return {
       growers: sorted.slice(0, 3),
-      shrinkers: sorted.slice(-3).reverse().filter((e) => e.pctChange < 0),
+      shrinkers: sorted
+        .slice(-3)
+        .reverse()
+        .filter((e) => e.pctChange < 0),
     };
   }, [data]);
 }
@@ -149,19 +154,24 @@ function DepegEntry({
   visClass: string;
   staggerIndex?: number;
 }) {
+  const deviation = formatPegDeviation(entry.bps / 10000 + 1, 1);
+
   return (
     <Link
       href={buildStablecoinUrl(entry.id)}
-      style={staggerIndex != null ? { '--stagger-index': staggerIndex } as React.CSSProperties : undefined}
-      className={`${visClass} pharos-focus-ring group items-center gap-1.5 rounded-md px-1.5 py-1 transition-[background-color,color] duration-150 hover:bg-muted/40`}
+      aria-label={`${entry.name} (${entry.symbol}) price deviation: ${deviation} from peg`}
+      style={staggerIndex != null ? ({ "--stagger-index": staggerIndex } as CSSProperties) : undefined}
+      className={`${visClass} ${ENTRY_LINK_CLASS} min-h-11 sm:min-h-8`}
     >
-      <StablecoinLogo src={logos?.[entry.id]} name={entry.name} size={16} />
-      <span className="text-xs font-medium group-hover:underline group-focus-visible:underline">
+      <StablecoinLogo src={logos?.[entry.id]} name={entry.name} size={18} />
+      <span className="min-w-0 truncate text-[13px] font-medium group-hover:underline group-focus-visible:underline sm:text-xs">
         {entry.symbol}
       </span>
-      <span className={`inline-flex items-center gap-0.5 text-xs font-mono font-semibold ${depegColorClass(entry.bps)}`}>
+      <span
+        className={`ml-auto inline-flex shrink-0 items-center gap-0.5 font-mono text-xs font-semibold ${depegColorClass(entry.bps)}`}
+      >
         <DepegIcon bps={entry.bps} />
-        {formatPegDeviation(entry.bps / 10000 + 1, 1)}
+        {deviation}
       </span>
     </Link>
   );
@@ -179,20 +189,110 @@ function MoverEntry({
   staggerIndex?: number;
 }) {
   const isGrower = entry.pctChange >= 0;
+  const change = `${isGrower ? "+" : ""}${entry.pctChange.toFixed(1)}%`;
+
   return (
     <Link
       href={buildStablecoinUrl(entry.id)}
-      style={staggerIndex != null ? { '--stagger-index': staggerIndex } as React.CSSProperties : undefined}
-      className={`${visClass} pharos-focus-ring group items-center gap-1.5 rounded-md px-1.5 py-1 transition-[background-color,color] duration-150 hover:bg-muted/40`}
+      aria-label={`${entry.name} (${entry.symbol}) 7-day supply change: ${change}`}
+      style={staggerIndex != null ? ({ "--stagger-index": staggerIndex } as CSSProperties) : undefined}
+      className={`${visClass} ${ENTRY_LINK_CLASS} min-h-11 sm:min-h-8`}
     >
-      <StablecoinLogo src={logos?.[entry.id]} name={entry.name} size={16} />
-      <span className="truncate text-xs font-medium group-hover:underline group-focus-visible:underline">
+      <StablecoinLogo src={logos?.[entry.id]} name={entry.name} size={18} />
+      <span className="min-w-0 truncate text-[13px] font-medium group-hover:underline group-focus-visible:underline sm:text-xs">
         {entry.symbol}
       </span>
-      <span className={`text-xs font-mono font-semibold ml-auto flex-shrink-0 ${isGrower ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}>
-        {isGrower ? "+" : ""}{entry.pctChange.toFixed(1)}%
+      <span
+        className={`ml-auto shrink-0 font-mono text-xs font-semibold ${isGrower ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}
+      >
+        {change}
       </span>
     </Link>
+  );
+}
+
+function SectionHeader({
+  id,
+  title,
+  detail,
+  badge,
+  hint,
+}: {
+  id: string;
+  title: string;
+  detail: string;
+  badge: string;
+  hint?: ReactNode;
+}) {
+  return (
+    <div className="flex min-h-16 items-start justify-between gap-3 border-b border-border/60 bg-muted/20 px-4 py-3 sm:px-5">
+      <div className="min-w-0 space-y-1">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <h3 id={id} className="pharos-kicker truncate text-foreground">
+            {title}
+          </h3>
+          {hint}
+        </div>
+        <p className="text-[11px] leading-snug text-muted-foreground">{detail}</p>
+      </div>
+      <span className="shrink-0 rounded-full border border-border/60 bg-background/70 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {badge}
+      </span>
+    </div>
+  );
+}
+
+function MarketHighlightSection({
+  titleId,
+  title,
+  detail,
+  badge,
+  hint,
+  children,
+}: {
+  titleId: string;
+  title: string;
+  detail: string;
+  badge: string;
+  hint?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section aria-labelledby={titleId} className="min-w-0">
+      <SectionHeader id={titleId} title={title} detail={detail} badge={badge} hint={hint} />
+      <div className="px-3 py-3 sm:px-4">{children}</div>
+    </section>
+  );
+}
+
+function MoversGroup({
+  label,
+  tone,
+  entries,
+  logos,
+}: {
+  label: string;
+  tone: "up" | "down";
+  entries: MoverItem[];
+  logos?: Record<string, string>;
+}) {
+  if (entries.length === 0) return null;
+
+  const Icon = tone === "up" ? TrendingUp : TrendingDown;
+  const toneClass = tone === "up" ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400";
+
+  return (
+    <div className="space-y-1.5">
+      <p className={`flex items-center gap-1 px-1 text-[10px] font-semibold uppercase tracking-[0.1em] ${toneClass}`}>
+        <Icon className="h-3 w-3" aria-hidden="true" />
+        {label}
+      </p>
+      <div className="pharos-stagger-entrance grid grid-cols-1 gap-x-3 gap-y-1 min-[360px]:grid-cols-2 lg:grid-cols-3">
+        {entries.map((entry, i) => (
+          <MoverEntry key={entry.id} entry={entry} logos={logos} visClass={MOVER_VIS[i] ?? "hidden"} staggerIndex={i} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -201,32 +301,46 @@ function MoverEntry({
 function MarketSignalsSkeleton() {
   return (
     <div className="pharos-card-shell overflow-hidden p-0">
-      <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-3">
-        <Skeleton className="h-2.5 w-24" />
-        <Skeleton className="h-2.5 w-20" />
-      </div>
-      <div className="flex flex-col lg:flex-row lg:divide-x lg:divide-border/40 divide-y lg:divide-y-0 divide-border/40">
+      <div className="grid grid-cols-1 divide-y divide-border/60 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
         {/* Depegs skeleton */}
-        <div className="flex-1 px-4 py-3">
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-            {SKELETON_DEPEG_INDICES.map((i) => (
-              <Skeleton key={i} className={`h-5 w-full ${i >= 4 ? "hidden lg:block" : ""}`} />
-            ))}
+        <section>
+          <div className="flex min-h-16 items-start justify-between gap-3 border-b border-border/60 bg-muted/20 px-4 py-3 sm:px-5">
+            <div className="space-y-2">
+              <Skeleton className="h-2.5 w-24" />
+              <Skeleton className="h-2 w-32" />
+            </div>
+            <Skeleton className="h-5 w-12 rounded-full" />
           </div>
-        </div>
+          <div className="px-3 py-3 sm:px-4">
+            <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 lg:grid-cols-3">
+              {SKELETON_DEPEG_INDICES.map((i) => (
+                <Skeleton key={i} className={`h-10 w-full sm:h-7 ${i >= 4 ? "hidden lg:block" : ""}`} />
+              ))}
+            </div>
+          </div>
+        </section>
         {/* Movers skeleton */}
-        <div className="flex-1 px-4 py-3 space-y-2">
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-            {SKELETON_MOVER_INDICES.map((i) => (
-              <Skeleton key={i} className="h-5 w-full" />
-            ))}
+        <section>
+          <div className="flex min-h-16 items-start justify-between gap-3 border-b border-border/60 bg-muted/20 px-4 py-3 sm:px-5">
+            <div className="space-y-2">
+              <Skeleton className="h-2.5 w-36" />
+              <Skeleton className="h-2 w-40" />
+            </div>
+            <Skeleton className="h-5 w-10 rounded-full" />
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-            {SKELETON_MOVER_INDICES.map((i) => (
-              <Skeleton key={i} className="h-5 w-full" />
-            ))}
+          <div className="space-y-3 px-3 py-3 sm:px-4">
+            <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 lg:grid-cols-3">
+              {SKELETON_MOVER_INDICES.map((i) => (
+                <Skeleton key={i} className="h-10 w-full sm:h-7" />
+              ))}
+            </div>
+            <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 lg:grid-cols-3">
+              {SKELETON_MOVER_INDICES.map((i) => (
+                <Skeleton key={i} className="h-10 w-full sm:h-7" />
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
@@ -241,73 +355,53 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
   if (!data) return <MarketSignalsSkeleton />;
 
   return (
-    <div aria-label="Market highlights" className="pharos-card-shell overflow-hidden p-0 animate-in fade-in duration-300">
-      {/* ── Header bar ── */}
-      <div className="grid grid-cols-2 items-start gap-x-6 border-b border-border/60 bg-muted/20 px-4 py-3">
-        <h2 className="sr-only">Market Highlights</h2>
-        <div className="flex items-center gap-1.5">
-          <span className="pharos-kicker" aria-hidden="true">Biggest Depegs</span>
-          <MethodologyHint topic="depegBps" />
-        </div>
-        <span className="pharos-kicker" aria-hidden="true">Biggest 7-Day Supply Moves</span>
-      </div>
+    <div
+      aria-label="Market highlights"
+      className="pharos-card-shell overflow-hidden p-0 animate-in fade-in duration-300"
+    >
+      <h2 className="sr-only">Market Highlights</h2>
 
       {/* ── Content ── */}
-      <div className="flex flex-col lg:flex-row lg:divide-x lg:divide-border/40 divide-y lg:divide-y-0 divide-border/40">
+      <div className="grid grid-cols-1 divide-y divide-border/60 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
         {/* ── Depegs zone ── */}
-        <div className="flex-1 px-4 py-3">
+        <MarketHighlightSection
+          titleId="market-highlights-depegs-title"
+          title="Biggest Depegs"
+          detail="Live price move away from peg"
+          badge="Live"
+          hint={<MethodologyHint topic="depegBps" />}
+        >
           {depegs.length === 0 ? (
-            <p className="text-xs text-muted-foreground">All on-peg</p>
+            <p className="rounded-lg border border-dashed border-border/60 px-3 py-3 text-sm text-muted-foreground sm:text-xs">
+              All on-peg
+            </p>
           ) : (
-            <div className="pharos-stagger-entrance grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
+            <div className="pharos-stagger-entrance grid grid-cols-1 gap-x-3 gap-y-1 min-[360px]:grid-cols-2 lg:grid-cols-3">
               {depegs.map((d, i) => (
-                <DepegEntry
-                  key={d.id}
-                  entry={d}
-                  logos={logos}
-                  visClass={DEPEG_VIS[i] ?? "hidden"}
-                  staggerIndex={i}
-                />
+                <DepegEntry key={d.id} entry={d} logos={logos} visClass={DEPEG_VIS[i] ?? "hidden"} staggerIndex={i} />
               ))}
             </div>
           )}
-        </div>
+        </MarketHighlightSection>
 
         {/* ── Movers zone ── */}
-        <div className="flex-1 px-4 py-3">
+        <MarketHighlightSection
+          titleId="market-highlights-movers-title"
+          title="Biggest 7-Day Supply Moves"
+          detail="Largest supply increases and decreases"
+          badge="7D"
+        >
           {growers.length === 0 && shrinkers.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No significant moves</p>
+            <p className="rounded-lg border border-dashed border-border/60 px-3 py-3 text-sm text-muted-foreground sm:text-xs">
+              No significant moves
+            </p>
           ) : (
-            <div className="space-y-1">
-              {growers.length > 0 && (
-                <div className="pharos-stagger-entrance grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
-                  {growers.map((g, i) => (
-                    <MoverEntry
-                      key={g.id}
-                      entry={g}
-                      logos={logos}
-                      visClass={MOVER_VIS[i] ?? "hidden"}
-                      staggerIndex={i}
-                    />
-                  ))}
-                </div>
-              )}
-              {shrinkers.length > 0 && (
-                <div className="pharos-stagger-entrance grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
-                  {shrinkers.map((s, i) => (
-                    <MoverEntry
-                      key={s.id}
-                      entry={s}
-                      logos={logos}
-                      visClass={MOVER_VIS[i] ?? "hidden"}
-                      staggerIndex={i}
-                    />
-                  ))}
-                </div>
-              )}
+            <div className="space-y-3">
+              <MoversGroup label="Supply up" tone="up" entries={growers} logos={logos} />
+              <MoversGroup label="Supply down" tone="down" entries={shrinkers} logos={logos} />
             </div>
           )}
-        </div>
+        </MarketHighlightSection>
       </div>
     </div>
   );
