@@ -98,18 +98,15 @@ export function InterventionSeismograph({ stats, chart, isLoading }: Interventio
   const liveChartHasData = (chart ?? []).length > 0;
 
   return (
-    <section
-      aria-labelledby={titleId}
-      className="pharos-card-shell p-4 animate-in fade-in duration-300 sm:p-5"
-    >
+    <section aria-labelledby={titleId} className="pharos-card-shell p-4 animate-in fade-in duration-300 sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-1">
           <p className="pharos-kicker">Intervention Seismograph</p>
           <h2 id={titleId} className="pharos-section-title">
-            Quarterly fissures across the freeze ledger
+            Quarterly freeze, release, and wipe events
           </h2>
           <p className="text-sm text-muted-foreground">
-            Every quarter where the ice cracked — freezes ground the trace, releases lift it, wipes pierce above.
+            Event counts by quarter across every supported contract family.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:gap-3">
@@ -146,7 +143,7 @@ export function InterventionSeismograph({ stats, chart, isLoading }: Interventio
         <LegendSwatch color={EVENT_COLORS.destroy} label={EVENT_LABELS.destroy} />
         <LegendSwatch color={EVENT_COLORS.unblacklist} label={EVENT_LABELS.unblacklist} />
         <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">
-          horizon = magnitude of intervention
+          height = quarterly event count
         </span>
       </div>
     </section>

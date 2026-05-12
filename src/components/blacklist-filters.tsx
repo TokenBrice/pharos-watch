@@ -3,11 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import {
-  BLACKLIST_STABLECOINS,
-  type BlacklistStablecoin,
-  type BlacklistEventType,
-} from "@shared/types";
+import { BLACKLIST_STABLECOINS, type BlacklistStablecoin, type BlacklistEventType } from "@shared/types";
 
 interface BlacklistFiltersProps {
   chains: Array<{ id: string; name: string }>;
@@ -147,13 +143,13 @@ export function BlacklistFilters({
             All
           </ToggleGroupItem>
           <ToggleGroupItem value="blacklist" className="min-h-11 sm:min-h-8">
-            Blacklist
+            Freeze
           </ToggleGroupItem>
           <ToggleGroupItem value="unblacklist" className="min-h-11 sm:min-h-8">
-            Unblacklist
+            Release
           </ToggleGroupItem>
           <ToggleGroupItem value="destroy" className="min-h-11 sm:min-h-8">
-            Destroy
+            Wipe
           </ToggleGroupItem>
         </ToggleGroup>
       </div>

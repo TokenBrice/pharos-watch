@@ -34,9 +34,7 @@ export function getBlacklistTooltipSummary(payload?: ReadonlyArray<BlacklistTool
 export function getBlacklistChartCoins(
   chartData: ReadonlyArray<BlacklistSummaryResponse["chart"][number] & Partial<Record<BlacklistStablecoin, number>>>,
 ): BlacklistStablecoin[] {
-  return BLACKLIST_STABLECOINS.filter((coin) =>
-    chartData.some((point) => (point[coin] ?? 0) > 0),
-  );
+  return BLACKLIST_STABLECOINS.filter((coin) => chartData.some((point) => (point[coin] ?? 0) > 0));
 }
 
 export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
@@ -70,9 +68,12 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
-            <CardTitle as="h2" className="pharos-kicker">Tracked Frozen Total by Quarter</CardTitle>
+            <CardTitle as="h2" className="pharos-kicker">
+              Tracked Frozen Total by Quarter
+            </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Quarterly spread of the tracked freeze ledger, attributed to each address&apos;s latest recorded blacklist quarter
+              Quarterly spread of the tracked freeze ledger, attributed to each address&apos;s latest recorded freeze
+              quarter.
             </p>
           </div>
           {peakQuarters.length > 0 && (
@@ -96,85 +97,85 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
       <CardContent>
         {chartData.length > 0 ? (
           <>
-          <div className="mb-3 flex flex-wrap gap-2">
-            {chartCoins.map((coin) => (
-              <div key={coin} className="pharos-chart-legend-chip">
-                <span
-                  className="inline-block h-2.5 w-2.5 rounded-sm"
-                  style={{ backgroundColor: BLACKLIST_CHART_COLORS[coin] }}
-                />
-                {coin}
-              </div>
-            ))}
-            <div className="pharos-chart-legend-chip">
-              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-foreground/45" />
-              Total
-            </div>
-          </div>
-          <div
-            ref={chartContainerRef}
-            className={CHART_HEIGHT}
-            role="figure"
-            aria-label={`Tracked frozen total stacked bar chart showing ${chartData.length} quarters of freeze-ledger balances by stablecoin issuer`}
-          >
-            {isChartReady ? (
-              <ComposedChart
-                width={width}
-                height={height}
-                data={chartData}
-                margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
-              >
-                <ChartGrid strokeDasharray="3 3" />
-                <CategoricalXAxis
-                  dataKey="quarter"
-                  tick={{
-                    fontSize: 11,
-                    fontFamily: "var(--font-mono, monospace)",
-                    fill: "var(--color-muted-foreground)",
-                  }}
-                  angle={-35}
-                  textAnchor="end"
-                  height={52}
-                  interval={Math.max(0, Math.floor(chartData.length / 8) - 1)}
-                />
-                <MonoYAxis
-                  tick={{
-                    fontSize: 11,
-                    fontFamily: "var(--font-mono, monospace)",
-                    fill: "var(--color-muted-foreground)",
-                  }}
-                  tickFormatter={(val: number) => formatCurrency(val, 0)}
-                  width={62}
-                />
-                <Tooltip content={<BlacklistTooltip />} cursor={{ fill: "currentColor", opacity: 0.05 }} />
-                {chartCoins.map((coin, i) => (
-                  <Bar
-                    key={coin}
-                    dataKey={coin}
-                    stackId="a"
-                    fill={BLACKLIST_CHART_COLORS[coin]}
-                    fillOpacity={i === 0 ? 0.75 : 0.62}
-                    radius={i === chartCoins.length - 1 ? [3, 3, 0, 0] : undefined}
+            <div className="mb-3 flex flex-wrap gap-2">
+              {chartCoins.map((coin) => (
+                <div key={coin} className="pharos-chart-legend-chip">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-sm"
+                    style={{ backgroundColor: BLACKLIST_CHART_COLORS[coin] }}
                   />
-                ))}
-                <Line
-                  type="monotone"
-                  dataKey="total"
-                  stroke="var(--color-foreground)"
-                  strokeOpacity={0.45}
-                  strokeWidth={1.5}
-                  dot={false}
-                  activeDot={{ r: 3, strokeWidth: 0 }}
-                />
-              </ComposedChart>
-            ) : (
-              <Skeleton className="h-full w-full" />
-            )}
-          </div>
+                  {coin}
+                </div>
+              ))}
+              <div className="pharos-chart-legend-chip">
+                <span className="inline-block h-2.5 w-2.5 rounded-sm bg-foreground/45" />
+                Total
+              </div>
+            </div>
+            <div
+              ref={chartContainerRef}
+              className={CHART_HEIGHT}
+              role="figure"
+              aria-label={`Tracked frozen total stacked bar chart showing ${chartData.length} quarters of freeze-ledger balances by stablecoin issuer`}
+            >
+              {isChartReady ? (
+                <ComposedChart
+                  width={width}
+                  height={height}
+                  data={chartData}
+                  margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
+                >
+                  <ChartGrid strokeDasharray="3 3" />
+                  <CategoricalXAxis
+                    dataKey="quarter"
+                    tick={{
+                      fontSize: 11,
+                      fontFamily: "var(--font-mono, monospace)",
+                      fill: "var(--color-muted-foreground)",
+                    }}
+                    angle={-35}
+                    textAnchor="end"
+                    height={52}
+                    interval={Math.max(0, Math.floor(chartData.length / 8) - 1)}
+                  />
+                  <MonoYAxis
+                    tick={{
+                      fontSize: 11,
+                      fontFamily: "var(--font-mono, monospace)",
+                      fill: "var(--color-muted-foreground)",
+                    }}
+                    tickFormatter={(val: number) => formatCurrency(val, 0)}
+                    width={62}
+                  />
+                  <Tooltip content={<BlacklistTooltip />} cursor={{ fill: "currentColor", opacity: 0.05 }} />
+                  {chartCoins.map((coin, i) => (
+                    <Bar
+                      key={coin}
+                      dataKey={coin}
+                      stackId="a"
+                      fill={BLACKLIST_CHART_COLORS[coin]}
+                      fillOpacity={i === 0 ? 0.75 : 0.62}
+                      radius={i === chartCoins.length - 1 ? [3, 3, 0, 0] : undefined}
+                    />
+                  ))}
+                  <Line
+                    type="monotone"
+                    dataKey="total"
+                    stroke="var(--color-foreground)"
+                    strokeOpacity={0.45}
+                    strokeWidth={1.5}
+                    dot={false}
+                    activeDot={{ r: 3, strokeWidth: 0 }}
+                  />
+                </ComposedChart>
+              ) : (
+                <Skeleton className="h-full w-full" />
+              )}
+            </div>
           </>
         ) : (
           <div className={`flex ${CHART_HEIGHT} items-center justify-center text-muted-foreground`}>
-            No blacklist events recorded yet
+            No freeze events recorded yet.
           </div>
         )}
       </CardContent>

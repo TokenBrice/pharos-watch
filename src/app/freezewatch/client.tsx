@@ -1,14 +1,13 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { UsdsStatusCard } from "@/components/usds-status-card";
 import { EurcBlacklistCard } from "@/components/eurc-blacklist-card";
 import { BlacklistStats } from "@/components/blacklist-stats";
-import { BlacklistInterventionLedger } from "@/components/blacklist-intervention-ledger";
 import { BlacklistChart } from "@/components/blacklist-chart";
-import { BlacklistStatusCharts } from "@/components/blacklist-status-charts";
 import { BlacklistStatusDrilldown } from "@/components/blacklist-status-drilldown";
 import { BlacklistFilters } from "@/components/blacklist-filters";
 import { BlacklistTable } from "@/components/blacklist-table";
@@ -22,6 +21,29 @@ import {
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/blacklist-tracker-version";
 import { useFreezeWatchPageController } from "./view-model";
+
+function FreezeWatchSection({
+  eyebrow,
+  title,
+  description,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-3 animate-in fade-in duration-300">
+      <div className="space-y-1">
+        <p className="pharos-kicker">{eyebrow}</p>
+        <h2 className="pharos-section-title">{title}</h2>
+        {description ? <p className="pharos-meta max-w-3xl">{description}</p> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 export default function FreezeWatchClient() {
   const {
@@ -78,8 +100,8 @@ export default function FreezeWatchClient() {
         changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
       }}
       leadParagraphs={[
-        "Issuer control over your stablecoin balance — live.",
-        "Circle, Tether, Paxos, and other centralized issuers can freeze, unblock, pause, or destroy balances when their contracts give them that control. FreezeWatch records those on-chain actions across supported contracts and chains so you can see which addresses were affected, when it happened, and how much value was involved.",
+        "Live issuer freeze, release, and wipe events across supported stablecoin contracts.",
+        "Use FreezeWatch to see affected addresses, chains, timing, current frozen value, and whether each asset has direct or upstream freeze exposure.",
       ]}
     >
       <QueryErrorNotice
@@ -91,55 +113,32 @@ export default function FreezeWatchClient() {
         }}
       />
       <StaleDataBanner
-        queries={[{ preset: "blacklist", dataUpdatedAt, error, hasData: !!summary || events.length > 0, meta: freshnessMeta }]}
+        queries={[
+          { preset: "blacklist", dataUpdatedAt, error, hasData: !!summary || events.length > 0, meta: freshnessMeta },
+        ]}
       />
 
-      <FreezableSupplyMeter
-        buckets={blacklistStatusBuckets}
-        stats={summary?.stats}
-        isLoading={summaryLoading || supportDataLoading}
-      />
-
-      <InterventionSeismograph
-        stats={summary?.stats}
-        chart={summary?.chart}
-        isLoading={summaryLoading}
-      />
-
-      <SovereigntyLattice
-        coverage={summary?.coverage}
-        stats={summary?.stats}
-        chains={summary?.chains ?? []}
-        isLoading={summaryLoading}
-        onCellSelect={({ stablecoin, chainId }) => {
-          handleStablecoinChange(stablecoin);
-          handleChainChange(chainId);
-        }}
-      />
-
-      <BlacklistStats
-        stats={summary?.stats}
-        summary={summary}
-        freshnessMeta={freshnessMeta}
-        isLoading={summaryLoading}
-        blacklistStatusBuckets={blacklistStatusBuckets}
-        supportDataLoading={supportDataLoading}
-        onUnfreezableSelect={() => handleStatusBucketChange("no")}
-      />
-
-      <BlacklistInterventionLedger
-        stats={summary?.stats}
-        chart={summary?.chart}
-        buckets={blacklistStatusBuckets}
-        isLoading={summaryLoading || supportDataLoading}
-      />
-
-      <BlacklistStatusCharts
-        buckets={blacklistStatusBuckets}
-        isLoading={supportDataLoading}
-        selectedStatus={statusBucket}
-        onStatusSelect={handleStatusBucketChange}
-      />
+      <FreezeWatchSection
+        eyebrow="Exposure"
+        title="Who can freeze value"
+        description="Market-cap exposure and current frozen value in one summary."
+      >
+        <div className="grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
+          <FreezableSupplyMeter
+            buckets={blacklistStatusBuckets}
+            isLoading={summaryLoading || supportDataLoading}
+            selectedBucket={statusBucket}
+            onBucketSelect={handleStatusBucketChange}
+          />
+          <BlacklistStats
+            stats={summary?.stats}
+            isLoading={summaryLoading}
+            blacklistStatusBuckets={blacklistStatusBuckets}
+            supportDataLoading={supportDataLoading}
+            onUnfreezableSelect={() => handleStatusBucketChange("no")}
+          />
+        </div>
+      </FreezeWatchSection>
 
       {statusBucket ? (
         <div ref={drilldownRef}>
@@ -155,54 +154,93 @@ export default function FreezeWatchClient() {
 
       <BlacklistChart chart={summary?.chart} isLoading={summaryLoading} />
 
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <BlacklistFilters
+      <FreezeWatchSection
+        eyebrow="Event ledger"
+        title="Affected addresses and transactions"
+        description="Filter by asset, chain, event type, or address to isolate the rows that matter."
+      >
+        <div className="pharos-card-shell rounded-xl">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <BlacklistFilters
+              chains={summary?.chains ?? []}
+              stablecoinFilter={stablecoinFilter}
+              chainFilter={chainFilter}
+              eventTypeFilter={eventTypeFilter}
+              perCoinTotalEvents={summary?.stats.perCoinTotalEvents}
+              onStablecoinChange={handleStablecoinChange}
+              onChainChange={handleChainChange}
+              onEventTypeChange={handleEventTypeChange}
+            />
+            <FilterSearchInput
+              value={searchInput}
+              onValueChange={handleSearchChange}
+              placeholder="Search address..."
+              className="relative w-full sm:w-56"
+              inputClassName="pl-8 h-11 sm:h-8 text-sm sm:text-xs"
+              ariaLabel="Search events by address"
+            />
+          </div>
+        </div>
+
+        <BlacklistTable
+          events={events}
+          isLoading={pageLoading}
+          page={clampedPage}
+          pageSize={pageSize}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          onSortChange={handleSortChange}
+        />
+
+        {total > 0 && (
+          <TablePagination
+            page={clampedPage - 1} /* TablePagination expects 0-indexed page */
+            totalPages={totalPages}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            total={total}
+            onPrevious={handlePreviousPage}
+            onNext={handleNextPage}
+            noun="events"
+          />
+        )}
+      </FreezeWatchSection>
+
+      <FreezeWatchSection
+        eyebrow="Coverage"
+        title="Watched contracts by chain"
+        description="Coverage cells show where Pharos watches issuer intervention events. Empty cells mean no tracker coverage, not no freeze risk."
+      >
+        <SovereigntyLattice
+          coverage={summary?.coverage}
+          stats={summary?.stats}
           chains={summary?.chains ?? []}
-          stablecoinFilter={stablecoinFilter}
-          chainFilter={chainFilter}
-          eventTypeFilter={eventTypeFilter}
-          perCoinTotalEvents={summary?.stats.perCoinTotalEvents}
-          onStablecoinChange={handleStablecoinChange}
-          onChainChange={handleChainChange}
-          onEventTypeChange={handleEventTypeChange}
+          isLoading={summaryLoading}
+          onCellSelect={({ stablecoin, chainId }) => {
+            handleStablecoinChange(stablecoin);
+            handleChainChange(chainId);
+          }}
         />
-        <FilterSearchInput
-          value={searchInput}
-          onValueChange={handleSearchChange}
-          placeholder="Search by address..."
-          className="relative w-full sm:w-56"
-          inputClassName="pl-8 h-11 sm:h-8 text-sm sm:text-xs"
-          ariaLabel="Search events by address"
-        />
-      </div>
+      </FreezeWatchSection>
 
-      <BlacklistTable
-        events={events}
-        isLoading={pageLoading}
-        page={clampedPage}
-        pageSize={pageSize}
-        sortKey={sortKey}
-        sortDirection={sortDirection}
-        onSortChange={handleSortChange}
-      />
+      <FreezeWatchSection
+        eyebrow="Timeline"
+        title="Quarterly freeze, release, and wipe events"
+        description="Historical event volume by quarter. Use the ledger above for address-level rows."
+      >
+        <InterventionSeismograph stats={summary?.stats} chart={summary?.chart} isLoading={summaryLoading} />
+      </FreezeWatchSection>
 
-      {total > 0 && (
-        <TablePagination
-          page={clampedPage - 1} /* TablePagination expects 0-indexed page */
-          totalPages={totalPages}
-          rangeStart={rangeStart}
-          rangeEnd={rangeEnd}
-          total={total}
-          onPrevious={handlePreviousPage}
-          onNext={handleNextPage}
-          noun="events"
-        />
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
-        <UsdsStatusCard />
-        <EurcBlacklistCard />
-      </div>
+      <FreezeWatchSection
+        eyebrow="Monitors"
+        title="Special-case issuer controls"
+        description="Known edge cases that need separate status context."
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
+          <UsdsStatusCard />
+          <EurcBlacklistCard />
+        </div>
+      </FreezeWatchSection>
     </FeaturePageShell>
   );
 }

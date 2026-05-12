@@ -66,8 +66,9 @@ describe("BlacklistStats", () => {
     expect(screen.getByText("2 stablecoins · $30.00B of $240.00B total")).toBeTruthy();
     expect(screen.getByText("Tracked Frozen Total")).toBeTruthy();
     expect(screen.getByText("last-known freeze snapshots")).toBeTruthy();
-    expect(screen.getByText("Snapshot Basis")).toBeTruthy();
-    expect(screen.getByText("Last-known successful reads; new rows are contract/config scoped.")).toBeTruthy();
+    expect(screen.getByText("Total Wiped Value")).toBeTruthy();
+    expect(screen.queryByText("Snapshot Basis")).toBeNull();
+    expect(screen.queryByText("Data Quality")).toBeNull();
     expect(screen.queryByText("Freeze Ledger")).toBeNull();
     expect(screen.queryByText("USDT Blacklisted")).toBeNull();
     expect(screen.queryByText("unique events")).toBeNull();

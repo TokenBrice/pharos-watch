@@ -1,6 +1,8 @@
 "use client";
 
+import type { CSSProperties, ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import {
   BLACKLIST_STATUS_BUCKET_COLORS,
   BLACKLIST_STATUS_BUCKET_DESCRIPTIONS,
@@ -10,45 +12,45 @@ import {
   type BlacklistStatusBucketKey,
 } from "@/lib/blacklist-status-buckets";
 import { formatCurrency } from "@shared/lib/format";
-import type { BlacklistSummaryResponse } from "@shared/types";
 
 const FREEZABLE_BUCKETS = new Set<BlacklistStatusBucketKey>(["yes", "dilutable", "upstream", "possible"]);
 
 interface FreezableSupplyMeterProps {
   buckets: BlacklistStatusBucket[] | null | undefined;
-  stats: BlacklistSummaryResponse["stats"] | undefined;
   isLoading: boolean;
+  selectedBucket?: BlacklistStatusBucketKey | null;
+  onBucketSelect?: (bucket: BlacklistStatusBucketKey) => void;
 }
-
-const USD_FORMATTER = new Intl.NumberFormat("en-US", {
-  currency: "USD",
-  maximumFractionDigits: 0,
-  style: "currency",
-});
 
 function formatShare(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return "0%";
+  if (value > 99 && value < 100) return `${value.toFixed(2)}%`;
   if (value < 0.1) return `${value.toFixed(2)}%`;
   if (value < 1) return `${value.toFixed(1)}%`;
   return `${value.toFixed(0)}%`;
 }
 
-export function FreezableSupplyMeter({ buckets, stats, isLoading }: FreezableSupplyMeterProps) {
+export function FreezableSupplyMeter({
+  buckets,
+  isLoading,
+  selectedBucket = null,
+  onBucketSelect,
+}: FreezableSupplyMeterProps) {
   if (isLoading) {
     return (
-      <section className="pharos-card-shell p-4 sm:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-36" />
-            <Skeleton className="h-8 w-72 max-w-full" />
-          </div>
-          <Skeleton className="h-10 w-44" />
+      <section className="pharos-card-shell p-5 sm:p-6">
+        <Skeleton className="h-4 w-44" />
+        <div className="mt-4 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+          <Skeleton className="h-16 w-64 max-w-full" />
+          <Skeleton className="h-14 w-40" />
         </div>
-        <Skeleton className="mt-5 h-4 w-full rounded-full" />
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <Skeleton key={index} className="h-20 rounded-xl" />
-          ))}
+        <Skeleton className="mt-6 h-12 w-full rounded-md" />
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <Skeleton className="h-32 rounded-xl lg:col-span-2" />
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
         </div>
       </section>
     );
@@ -62,70 +64,203 @@ export function FreezableSupplyMeter({ buckets, stats, isLoading }: FreezableSup
     .filter((bucket) => FREEZABLE_BUCKETS.has(bucket.key))
     .reduce((sum, bucket) => sum + bucket.marketCap, 0);
   const freezableShare = totalMarketCap > 0 ? (freezableMarketCap / totalMarketCap) * 100 : 0;
+  const yesBucket = orderedBuckets.find((bucket) => bucket.key === "yes") ?? null;
+  const noBucket = orderedBuckets.find((bucket) => bucket.key === "no") ?? null;
+  const midBuckets = orderedBuckets.filter((bucket) => bucket.key !== "yes" && bucket.key !== "no");
 
   return (
     <section
-      className="pharos-card-shell p-4 animate-in fade-in duration-300 sm:p-5"
+      className="pharos-card-shell relative isolate overflow-hidden p-5 animate-in fade-in duration-300 sm:p-6"
       aria-labelledby="freezable-supply-meter-title"
     >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-1">
-          <p className="pharos-kicker">Freezable Supply Meter</p>
-          <h2 id="freezable-supply-meter-title" className="pharos-section-title">
-            {formatCurrency(freezableMarketCap, 0)} sits under issuer freeze control
+      {/* Atmospheric backdrop: red bleed from the freezable side, frost-blue glow from the safe side */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(60% 80% at 0% 0%, oklch(0.62 0.22 27 / 0.09) 0%, transparent 62%), radial-gradient(55% 90% at 100% 100%, oklch(0.74 0.16 240 / 0.07) 0%, transparent 65%)",
+        }}
+      />
+
+      <p className="pharos-kicker">Freezable Supply Meter</p>
+
+      <div className="mt-3 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
+        <div className="min-w-0">
+          <h2
+            id="freezable-supply-meter-title"
+            className="font-mono text-4xl font-black leading-[0.95] tracking-tight tabular-nums text-foreground sm:text-5xl lg:text-6xl"
+          >
+            {formatCurrency(freezableMarketCap, 0)}
           </h2>
-          <p className="text-sm text-muted-foreground">
-            {formatShare(freezableShare)} of tracked stablecoin market cap resolves to direct, dilutable, upstream, or
-            possible freeze exposure — only the &quot;no&quot; bucket falls outside the freeze line.
+          <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+            sits under issuer freeze control — direct, dilutable, upstream, or possible exposure across tracked
+            stablecoins.
           </p>
         </div>
-        <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase text-muted-foreground">Tracked frozen total</p>
-          <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
-            {formatCurrency(stats?.trackedFrozenTotal ?? 0, 0)}
+        <div className="shrink-0 sm:border-l sm:border-border/60 sm:pl-6 lg:pl-8">
+          <p className="font-mono text-3xl font-black leading-[0.95] tabular-nums text-foreground sm:text-4xl lg:text-5xl">
+            {formatShare(freezableShare)}
+          </p>
+          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            of tracked market cap
           </p>
         </div>
       </div>
 
       <FreezeLineBar buckets={orderedBuckets} totalMarketCap={totalMarketCap} />
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {orderedBuckets.map((bucket) => {
-          const share = totalMarketCap > 0 ? (bucket.marketCap / totalMarketCap) * 100 : 0;
-
-          return (
-            <div key={bucket.key} className="rounded-xl border border-border/60 bg-background/60 p-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: BLACKLIST_STATUS_BUCKET_COLORS[bucket.key] }}
-                  />
-                  <span className="text-sm font-semibold text-foreground">
-                    {BLACKLIST_STATUS_BUCKET_LABELS[bucket.key]}
-                  </span>
-                </div>
-                <span className="font-mono text-xs tabular-nums text-muted-foreground">{formatShare(share)}</span>
-              </div>
-              <p className="mt-3 font-mono text-lg font-semibold tabular-nums text-foreground">
-                {USD_FORMATTER.format(bucket.marketCap)}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">{bucket.count} stablecoins</p>
-              <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                {BLACKLIST_STATUS_BUCKET_DESCRIPTIONS[bucket.key]}
-              </p>
-            </div>
-          );
-        })}
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        {yesBucket ? (
+          <BucketCard
+            bucket={yesBucket}
+            totalMarketCap={totalMarketCap}
+            isSelected={selectedBucket === yesBucket.key}
+            onSelect={onBucketSelect}
+            variant="hero"
+          />
+        ) : null}
+        {midBuckets.map((bucket) => (
+          <BucketCard
+            key={bucket.key}
+            bucket={bucket}
+            totalMarketCap={totalMarketCap}
+            isSelected={selectedBucket === bucket.key}
+            onSelect={onBucketSelect}
+            variant="mid"
+          />
+        ))}
+        {noBucket ? (
+          <BucketCard
+            bucket={noBucket}
+            totalMarketCap={totalMarketCap}
+            isSelected={selectedBucket === noBucket.key}
+            onSelect={onBucketSelect}
+            variant="safe"
+          />
+        ) : null}
       </div>
     </section>
+  );
+}
+
+interface BucketCardProps {
+  bucket: BlacklistStatusBucket;
+  totalMarketCap: number;
+  isSelected: boolean;
+  onSelect?: (bucket: BlacklistStatusBucketKey) => void;
+  variant: "hero" | "mid" | "safe";
+}
+
+function BucketCard({ bucket, totalMarketCap, isSelected, onSelect, variant }: BucketCardProps) {
+  const share = totalMarketCap > 0 ? (bucket.marketCap / totalMarketCap) * 100 : 0;
+  const color = BLACKLIST_STATUS_BUCKET_COLORS[bucket.key];
+  const isInteractive = typeof onSelect === "function";
+
+  const spanClass = variant === "hero" ? "lg:col-span-2" : "lg:col-span-1";
+  const padClass = variant === "hero" ? "p-4 sm:p-5" : "p-3 sm:p-3.5";
+  const labelClass =
+    variant === "hero" ? "text-base font-semibold text-foreground" : "text-sm font-semibold text-foreground";
+  const valueClass =
+    variant === "hero"
+      ? "mt-3 font-mono text-2xl font-extrabold tabular-nums text-foreground sm:text-3xl"
+      : "mt-2.5 font-mono text-lg font-bold tabular-nums text-foreground";
+  const descClass =
+    variant === "hero"
+      ? "mt-2.5 line-clamp-3 text-xs leading-relaxed text-muted-foreground"
+      : "mt-1.5 line-clamp-1 text-[11px] leading-snug text-muted-foreground";
+  const safeAccentClass = variant === "safe" ? "bg-emerald-500/[0.06]" : "";
+
+  const accentStripStyle: CSSProperties = {
+    background:
+      variant === "safe" && !isSelected
+        ? color
+        : isSelected
+          ? color
+          : `linear-gradient(90deg, ${color} 0%, ${color}55 55%, transparent 100%)`,
+    opacity: isSelected || variant === "safe" ? 1 : 0.75,
+  };
+  const fillStyle: CSSProperties | undefined = isSelected
+    ? { background: `linear-gradient(180deg, ${color}26 0%, ${color}08 60%, transparent 100%)` }
+    : undefined;
+  const borderStyle: CSSProperties | undefined = isSelected ? { borderColor: color } : undefined;
+
+  const baseClass = cn(
+    "group relative overflow-hidden rounded-xl border border-border/60 bg-background/55 text-left transition-[background-color,border-color,box-shadow,transform]",
+    safeAccentClass,
+    padClass,
+    spanClass,
+  );
+  const interactiveClass = isInteractive
+    ? "pharos-focus-ring cursor-pointer hover:-translate-y-px hover:bg-muted/40 hover:border-foreground/25"
+    : "";
+
+  const content: ReactNode = (
+    <>
+      <div aria-hidden className="absolute inset-x-0 top-0 h-[3px]" style={accentStripStyle} />
+      {fillStyle ? <div aria-hidden className="pointer-events-none absolute inset-0" style={fillStyle} /> : null}
+      <div className="relative">
+        {variant === "hero" ? (
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+              <span className={labelClass}>{BLACKLIST_STATUS_BUCKET_LABELS[bucket.key]}</span>
+            </div>
+            <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">{formatShare(share)}</span>
+          </div>
+        ) : (
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+            <span className={labelClass}>{BLACKLIST_STATUS_BUCKET_LABELS[bucket.key]}</span>
+          </div>
+        )}
+        {variant === "safe" ? (
+          <p className="mt-1.5 font-mono text-[9px] font-semibold uppercase tracking-[0.16em] text-emerald-500">
+            Safe haven
+          </p>
+        ) : null}
+        <p className={valueClass}>{formatCurrency(bucket.marketCap, 2)}</p>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          {variant === "hero" ? (
+            `${bucket.count} stablecoins`
+          ) : (
+            <>
+              <span className="font-mono tabular-nums text-foreground/85">{formatShare(share)}</span>
+              <span className="mx-1 text-muted-foreground/60">·</span>
+              {bucket.count} stablecoins
+            </>
+          )}
+        </p>
+        <p className={descClass}>{BLACKLIST_STATUS_BUCKET_DESCRIPTIONS[bucket.key]}</p>
+      </div>
+    </>
+  );
+
+  if (isInteractive) {
+    return (
+      <button
+        type="button"
+        className={cn(baseClass, interactiveClass)}
+        style={borderStyle}
+        aria-pressed={isSelected}
+        onClick={() => onSelect(bucket.key)}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className={baseClass} style={borderStyle}>
+      {content}
+    </div>
   );
 }
 
 function FreezeLineBar({ buckets, totalMarketCap }: { buckets: BlacklistStatusBucket[]; totalMarketCap: number }) {
   if (totalMarketCap <= 0) {
     return (
-      <div className="mt-5 flex h-6 items-center justify-center rounded-full border border-border/70 bg-muted/30 text-[11px] text-muted-foreground">
+      <div className="mt-6 flex h-12 items-center justify-center rounded-md border border-border/70 bg-muted/30 text-[11px] text-muted-foreground">
         No tracked market-cap data yet.
       </div>
     );
@@ -144,14 +279,14 @@ function FreezeLineBar({ buckets, totalMarketCap }: { buckets: BlacklistStatusBu
   const freezableEnd = segments
     .filter((segment) => FREEZABLE_BUCKETS.has(segment.key))
     .reduce((sum, segment) => sum + segment.width, 0);
-  const safeFreezeLineLeft = Math.max(12, Math.min(88, freezableEnd));
-  const safeFreezeLineTransform =
+  const safeFreezeLineLeft = Math.max(8, Math.min(92, freezableEnd));
+  const labelTransform =
     freezableEnd <= 12 ? "translateX(0%)" : freezableEnd >= 88 ? "translateX(-100%)" : "translateX(-50%)";
 
   return (
-    <div className="relative mt-5 h-6">
+    <div className="relative mt-7 h-14">
       <div
-        className="relative h-full overflow-hidden rounded-full border border-border/70 bg-muted/40"
+        className="relative h-12 overflow-hidden rounded-md border border-border/70 bg-muted/40 shadow-[inset_0_1px_0_oklch(1_0_0_/0.04),inset_0_-1px_0_oklch(0_0_0_/0.22)]"
         role="img"
         aria-label="Freeze exposure distribution across tracked stablecoin market cap"
       >
@@ -176,23 +311,47 @@ function FreezeLineBar({ buckets, totalMarketCap }: { buckets: BlacklistStatusBu
               left: 0,
               width: `${freezableEnd}%`,
               backgroundImage:
-                "repeating-linear-gradient(135deg, oklch(1 0 0 / 0.16) 0 1.5px, transparent 1.5px 5px), linear-gradient(180deg, oklch(1 0 0 / 0.14) 0%, transparent 70%)",
+                "repeating-linear-gradient(135deg, oklch(1 0 0 / 0.24) 0 2px, transparent 2px 7px), linear-gradient(180deg, oklch(1 0 0 / 0.18) 0%, transparent 70%)",
             }}
           />
         ) : null}
+        {freezableEnd > 0 ? (
+          <div
+            aria-hidden
+            className="freezable-meter-scan pointer-events-none absolute top-0 h-full"
+            style={{ left: 0, width: `${freezableEnd}%` }}
+          />
+        ) : null}
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 inset-y-0">
+          {[25, 50, 75].map((tick) => (
+            <span
+              key={`t-${tick}`}
+              className="absolute top-0 h-1.5 w-px bg-foreground/30"
+              style={{ left: `${tick}%` }}
+            />
+          ))}
+          {[25, 50, 75].map((tick) => (
+            <span
+              key={`b-${tick}`}
+              className="absolute bottom-0 h-1.5 w-px bg-foreground/30"
+              style={{ left: `${tick}%` }}
+            />
+          ))}
+        </div>
       </div>
+
       {freezableEnd > 0 && freezableEnd < 100 ? (
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-1 h-[calc(100%+0.5rem)]"
+          className="pointer-events-none absolute -top-4 h-[calc(3rem+1rem)]"
           style={{ left: `${safeFreezeLineLeft}%` }}
         >
-          <div className="absolute -left-px h-full w-0.5 bg-frost-blue shadow-[0_0_6px_oklch(0.74_0.16_240_/_0.55)]" />
+          <div className="absolute left-0 h-full w-[2px] -translate-x-1/2 bg-frost-blue shadow-[0_0_10px_oklch(0.74_0.16_240_/_0.75)]" />
           <span
-            className="absolute -top-3.5 whitespace-nowrap rounded-sm border border-frost-blue/40 bg-background/90 px-1.5 py-px font-mono text-[9px] uppercase tracking-[0.14em] text-frost-blue"
-            style={{ left: 0, transform: safeFreezeLineTransform }}
+            className="absolute -top-0.5 whitespace-nowrap rounded-sm border border-frost-blue/60 bg-background/95 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-frost-blue shadow-[0_2px_10px_oklch(0_0_0_/0.45)]"
+            style={{ left: 0, transform: labelTransform }}
           >
-            freeze line
+            Freeze line
           </span>
         </div>
       ) : null}
