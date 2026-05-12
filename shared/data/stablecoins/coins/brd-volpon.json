@@ -1,0 +1,73 @@
+{
+  "id": "brd-volpon",
+  "name": "BRD Stablecoin",
+  "symbol": "BRD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "BRL",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Brazilian National Treasury bonds (LTN/NTN-B); yield from the Selic-linked rate (currently ~15%) is structured to be shared with token holders",
+  "pegMechanism": "1:1 mint/redemption against BRL subscriptions held in trust at CF Inovacao S.A.; the underlying Treasury-bond portfolio is the reserve, and accrued interest is passed back to holders rather than retained by the issuer",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Issuer",
+      "url": "https://cfinovacao.com.br"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Brazil",
+    "regulator": "Banco Central do Brasil (Consulta Publica 111 pending)"
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: BRD resolves to Yes because existing metadata classifies the asset as centralized and a single Brazilian issuer (CF Inovacao) controls mint and redemption authority.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "collateralQuality": "rwa",
+  "status": "pre-launch",
+  "announcedDate": "2026-01-06",
+  "expectedLaunchDate": "2026",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Announced Jan 6 2026 on 'Cripto na Real' by former Brazil central bank deputy governor Tony Volpon (BCB 2015-16, ex-UBS/Nomura MD); to be issued by CF Inovacao (co-founded with Jose Carneiro in 2023), targeting institutional investors who want on-chain access to Selic-rate yield (~15%); positioned as the first BRL-pegged token to explicitly share government-debt yield with holders, competing against Crown's BRLV which raised a $13.5M Series A from Paradigm in December 2025; no formal product docs or deployment timeline yet; awaiting BCB Resolution implementation under Public Consultation 111 (FX-classification regime effective February 2 2026)",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.coindesk.com/business/2026/01/07/former-brazil-central-bank-official-unveils-real-pegged-stablecoin-with-yield-sharing",
+      "title": "Former Brazil central bank official unveils real-pegged stablecoin with yield sharing",
+      "description": "Tony Volpon's CF Inovacao to issue BRD, a BRL token backed by Brazilian Treasury bonds with the Selic-linked yield (~15%) passed through to holders.",
+      "source": "CoinDesk"
+    },
+    {
+      "type": "article",
+      "url": "https://coinlaw.io/?p=24660",
+      "title": "BRD joins Brazil's stablecoin race with yield-sharing digital real",
+      "description": "Competitive landscape against Transfero BRZ ($185M), BBRL ($51M), BRL1, and Crown BRLV; structural differentiation through explicit yield distribution to holders.",
+      "source": "CoinLaw"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-01-06",
+      "type": "announcement",
+      "title": "Tony Volpon unveils BRD yield-sharing BRL stablecoin on 'Cripto na Real'",
+      "description": "Former BCB deputy governor announces CF Inovacao-issued BRD, backed by Brazilian government debt with Selic-rate yield distributed to holders; positions BRD against existing BRL stablecoins and Paradigm-backed Crown BRLV.",
+      "sourceUrl": "https://www.coindesk.com/business/2026/01/07/former-brazil-central-bank-official-unveils-real-pegged-stablecoin-with-yield-sharing"
+    },
+    {
+      "date": "2026-02-02",
+      "type": "regulatory",
+      "title": "Brazil stablecoin FX-classification regime takes effect",
+      "description": "BCB resolutions classifying stablecoin transactions as foreign-exchange operations enter force; BRD launch deferred pending issuer compliance under the new regime and final Consulta Publica 111 output.",
+      "sourceUrl": "https://www.coindesk.com/business/2026/01/07/former-brazil-central-bank-official-unveils-real-pegged-stablecoin-with-yield-sharing"
+    }
+  ]
+}

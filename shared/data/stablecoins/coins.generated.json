@@ -168,6 +168,112 @@
     }
   },
   {
+    "id": "acred-apollo-securitize",
+    "detailProvider": "coingecko",
+    "name": "Apollo Diversified Credit Securitize Fund",
+    "symbol": "ACRED",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Feeder share into Apollo Diversified Credit Fund, a multi-strategy private credit portfolio including direct lending, structured credit, performing credit, and dislocated credit; administered by Securitize",
+    "pegMechanism": "NAV-accreting ERC-4626 fund share token; subscription and redemption are institutional-only at monthly fund NAV through Securitize Markets, with an on-demand liquidity pool sized up to roughly 5% of NAV; RedStone publishes the NAV oracle used by integrations",
+    "geckoId": "apollo-diversified-credit-securitize-fund",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
+      "provider": "Securitize / Apollo (NAV statements published per fund cadence)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/apolloglobal"
+      },
+      {
+        "label": "Securitize Markets",
+        "url": "https://markets.securitize.io/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "SEC",
+      "license": "Securitize-administered feeder; access restricted to qualified purchasers"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x17418038ecf73ba4026c4f428547bf099706f27b",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Securitize ACRED page",
+          "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+        }
+      ],
+      "evidence": "Securitize operates ACRED with permissioned token transfers restricted to KYC-onboarded qualified purchasers and retains transfer-agent freeze and burn authority on behalf of Apollo.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Apollo Diversified Credit Fund strategy book (direct lending, structured and performing credit, dislocated credit)",
+        "pct": 95,
+        "risk": "high"
+      },
+      {
+        "name": "Cash and stablecoin liquidity buffer",
+        "pct": 5,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "acred-apollo-securitize",
+      "display": {
+        "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
+        "label": "Securitize ACRED fund page"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Private credit, not Treasuries",
+        "message": "ACRED is a feeder into Apollo Diversified Credit Fund, which holds direct lending and structured credit positions. Risk profile is medium-to-high and closer to syrupUSDC than to BUIDL or BENJI. Token transfers are permissioned and redemption is monthly at NAV via Securitize Markets, with an on-demand pool sized to ~5% of NAV. ACRED is also issued on Aptos, Avalanche, Ink, Polygon, Solana, and Sei via Wormhole; Pharos tracks only the Ethereum supply contract pending per-chain verification."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Apollo Diversified Credit Fund (private credit strategy NAV)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "aeur-anchored-coins",
     "llamaId": "147",
     "detailProvider": "defillama",
@@ -1646,6 +1752,107 @@
     }
   },
   {
+    "id": "bc3m-backed",
+    "detailProvider": "coingecko",
+    "name": "Backed GOVIES 0-6 months EURO investment grade",
+    "symbol": "bC3M",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "EUR",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Tracker certificate fully backed by the AMUNDI ETF GOVIES 0-6 MONTHS EUROMTS INVESTMENT GRADE UCITS ETF, held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
+    "pegMechanism": "EUR-denominated NAV-accreting tracker token (not pegged to €1); price reflects the underlying short-term Eurozone government bond ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
+    "geckoId": "backed-govies-0-6-months-euro-investment-grade",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://app.backed.fi/issuance",
+      "provider": "Backed Finance (monthly attestations and on-chain reserve dashboard)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://backed.fi/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/BackedFi"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.backed.fi/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Switzerland",
+      "regulator": "FINMA",
+      "license": "Swiss DLT Act registered uncertificated securities"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Backed Finance documentation",
+          "url": "https://docs.backed.fi/"
+        }
+      ],
+      "evidence": "Backed Assets retains transfer-agent freeze and burn authority over bC3M balances under its Swiss DLT Act framework and operates KYC-gated primary issuance.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "AMUNDI ETF GOVIES 0-6 Months Euro Investment Grade UCITS ETF",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "bc3m-backed",
+      "display": {
+        "url": "https://app.backed.fi/issuance",
+        "label": "Backed Finance issuance dashboard"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Multi-chain Backed product",
+        "message": "bC3M is also issued on Base, BNB Chain, Polygon, and Gnosis (same contract address pattern as Backed's other tokens). Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF NAV accretion",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "bd-basedollar",
     "detailProvider": "defillama",
     "name": "Base Dollar",
@@ -1704,6 +1911,117 @@
         "sourceUrl": "https://github.com/basedollar/basedollar/pull/98"
       }
     ]
+  },
+  {
+    "id": "benji-franklin-templeton",
+    "detailProvider": "coingecko",
+    "name": "Franklin OnChain U.S. Government Money Fund",
+    "symbol": "BENJI",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "U.S. government securities, cash, and repurchase agreements held by the Franklin OnChain U.S. Government Money Fund (FOBXX); '40 Act-registered money market fund custodied by BNY Mellon with Franklin Templeton as transfer agent and Benji as the on-chain share record",
+    "pegMechanism": "Single fund, multi-chain BENJI token tracking FOBXX's stable $1.00 NAV; rebasing share count records distributed yield directly on-chain; subscriptions and redemptions are gated to KYC-verified Benji wallets with USD-wire and Benji-to-USDC settlement paths",
+    "geckoId": "franklin-onchain-u-s-government-money-fund",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX",
+      "provider": "Franklin Templeton (daily fund holdings and NAV factsheet)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/FTI_Global"
+      },
+      {
+        "label": "Benji App",
+        "url": "https://benji.franklintempleton.com/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "SEC",
+      "license": "Investment Company Act of 1940 (registered money market fund)"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x3ddc84940ab509c11b20b76b466933f40b750dc9",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "FOBXX prospectus",
+          "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
+        }
+      ],
+      "evidence": "Franklin Templeton operates Benji as the fund's transfer agent with permissioned token transfers restricted to KYC-verified holders, giving the issuer freeze and burn authority over BENJI balances.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "U.S. Government Securities",
+        "pct": 60,
+        "risk": "very-low"
+      },
+      {
+        "name": "Repurchase Agreements",
+        "pct": 35,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash",
+        "pct": 5,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "benji-franklin-templeton",
+      "display": {
+        "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX",
+        "label": "Franklin Templeton FOBXX fund page"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Multi-chain fund with limited on-chain telemetry",
+        "message": "BENJI is the multi-chain share token of Franklin Templeton's FOBXX money market fund. The fund is also deployed on Stellar (primary), Polygon, Arbitrum, Avalanche, Aptos, Base, Solana, BNB Chain, and Canton, but Pharos currently tracks only the Ethereum supply contract pending per-chain verification. Live reserves use a curated weekly snapshot of the official fund factsheet until an on-chain NAV oracle becomes available."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Franklin Templeton FOBXX U.S. government money market fund",
+      "yieldType": "rebase"
+    }
   },
   {
     "id": "bfusd-binance",
@@ -1780,6 +2098,130 @@
     "yieldConfig": {
       "yieldSource": "Binance BFUSD daily APR / rewards",
       "yieldType": "governance-set"
+    }
+  },
+  {
+    "id": "bib01-backed",
+    "detailProvider": "coingecko",
+    "name": "Backed IB01 Treasury Bond 0-1yr",
+    "symbol": "bIB01",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Tracker certificate fully backed by the BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01), held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
+    "pegMechanism": "NAV-accreting tracker token (not pegged to $1); price reflects the underlying iShares 0-1yr T-bill ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
+    "geckoId": "backed-ib01-treasury-bond-0-1yr",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://app.backed.fi/issuance",
+      "provider": "Backed Finance (monthly attestations and on-chain reserve dashboard)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://backed.fi/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/BackedFi"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.backed.fi/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Switzerland",
+      "regulator": "FINMA",
+      "license": "Swiss DLT Act registered uncertificated securities"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "decimals": 18
+      },
+      {
+        "chain": "gnosis",
+        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "decimals": 18
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Backed Finance documentation",
+          "url": "https://docs.backed.fi/"
+        }
+      ],
+      "evidence": "Backed Assets retains transfer-agent freeze and burn authority over bIB01 balances under its Swiss DLT Act framework and operates KYC-gated primary issuance.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01)",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "bib01-backed",
+      "display": {
+        "url": "https://app.backed.fi/issuance",
+        "label": "Backed Finance issuance dashboard"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "iShares 0-1yr Treasury Bond ETF (IB01) NAV accretion",
+      "yieldType": "nav-appreciation"
     }
   },
   {
@@ -2035,6 +2477,79 @@
     }
   },
   {
+    "id": "brd-volpon",
+    "detailProvider": "defillama",
+    "name": "BRD Stablecoin",
+    "symbol": "BRD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "BRL",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Brazilian National Treasury bonds (LTN/NTN-B); yield from the Selic-linked rate (currently ~15%) is structured to be shared with token holders",
+    "pegMechanism": "1:1 mint/redemption against BRL subscriptions held in trust at CF Inovacao S.A.; the underlying Treasury-bond portfolio is the reserve, and accrued interest is passed back to holders rather than retained by the issuer",
+    "links": [
+      {
+        "label": "Issuer",
+        "url": "https://cfinovacao.com.br"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Brazil",
+      "regulator": "Banco Central do Brasil (Consulta Publica 111 pending)"
+    },
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: BRD resolves to Yes because existing metadata classifies the asset as centralized and a single Brazilian issuer (CF Inovacao) controls mint and redemption authority.",
+      "reviewer": "Codex inferred-status backfill",
+      "reviewedAt": "2026-05-12"
+    },
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "single-entity",
+    "status": "pre-launch",
+    "announcedDate": "2026-01-06",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "announced",
+    "launchPhaseDetail": "Announced Jan 6 2026 on 'Cripto na Real' by former Brazil central bank deputy governor Tony Volpon (BCB 2015-16, ex-UBS/Nomura MD); to be issued by CF Inovacao (co-founded with Jose Carneiro in 2023), targeting institutional investors who want on-chain access to Selic-rate yield (~15%); positioned as the first BRL-pegged token to explicitly share government-debt yield with holders, competing against Crown's BRLV which raised a $13.5M Series A from Paradigm in December 2025; no formal product docs or deployment timeline yet; awaiting BCB Resolution implementation under Public Consultation 111 (FX-classification regime effective February 2 2026)",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://www.coindesk.com/business/2026/01/07/former-brazil-central-bank-official-unveils-real-pegged-stablecoin-with-yield-sharing",
+        "title": "Former Brazil central bank official unveils real-pegged stablecoin with yield sharing",
+        "description": "Tony Volpon's CF Inovacao to issue BRD, a BRL token backed by Brazilian Treasury bonds with the Selic-linked yield (~15%) passed through to holders.",
+        "source": "CoinDesk"
+      },
+      {
+        "type": "article",
+        "url": "https://coinlaw.io/?p=24660",
+        "title": "BRD joins Brazil's stablecoin race with yield-sharing digital real",
+        "description": "Competitive landscape against Transfero BRZ ($185M), BBRL ($51M), BRL1, and Crown BRLV; structural differentiation through explicit yield distribution to holders.",
+        "source": "CoinLaw"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2026-01-06",
+        "type": "announcement",
+        "title": "Tony Volpon unveils BRD yield-sharing BRL stablecoin on 'Cripto na Real'",
+        "description": "Former BCB deputy governor announces CF Inovacao-issued BRD, backed by Brazilian government debt with Selic-rate yield distributed to holders; positions BRD against existing BRL stablecoins and Paradigm-backed Crown BRLV.",
+        "sourceUrl": "https://www.coindesk.com/business/2026/01/07/former-brazil-central-bank-official-unveils-real-pegged-stablecoin-with-yield-sharing"
+      },
+      {
+        "date": "2026-02-02",
+        "type": "regulatory",
+        "title": "Brazil stablecoin FX-classification regime takes effect",
+        "description": "BCB resolutions classifying stablecoin transactions as foreign-exchange operations enter force; BRD launch deferred pending issuer compliance under the new regime and final Consulta Publica 111 output.",
+        "sourceUrl": "https://www.coindesk.com/business/2026/01/07/former-brazil-central-bank-official-unveils-real-pegged-stablecoin-with-yield-sharing"
+      }
+    ]
+  },
+  {
     "id": "brl-b3",
     "detailProvider": "defillama",
     "name": "B3 BRL Stablecoin",
@@ -2092,6 +2607,80 @@
         "title": "B3 announces BRL stablecoin and tokenization platform",
         "description": "Latin America's largest stock exchange plans a BRL-pegged settlement stablecoin for tokenized asset trading.",
         "sourceUrl": "https://www.coindesk.com/business/2025/12/17/brazilian-stock-exchange-b3-to-launch-its-own-tokenization-platform-and-stablecoin/"
+      }
+    ]
+  },
+  {
+    "id": "brl-itau",
+    "detailProvider": "defillama",
+    "name": "Itau Unibanco BRL Stablecoin",
+    "symbol": "BRL-ITAU",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "BRL",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.itau.com.br"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/itau"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Brazil",
+      "regulator": "Banco Central do Brasil (Consulta Publica 111 pending)"
+    },
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: BRL-ITAU resolves to Yes because existing metadata classifies the asset as centralized and a Brazilian regulated bank issuer would retain freeze/reissue authority.",
+      "reviewer": "Codex inferred-status backfill",
+      "reviewedAt": "2026-05-12"
+    },
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "status": "pre-launch",
+    "announcedDate": "2025-04-03",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "announced",
+    "launchPhaseDetail": "Itau Unibanco (Brazil's largest private bank by assets, ~5.6T BRL) is evaluating its own stablecoin. Head of Digital Assets Guto Antunes confirmed exploration at an industry event in Sao Paulo in April 2025: 'we are always open to understanding whether it makes sense for our clients to have a stablecoin, even one in real, within Itau'. Final peg-currency choice (BRL or USD) and product timeline are gated on Brazil's regulatory output via BCB Consulta Publica 111. Itau already participates in the DREX wholesale CBDC pilot, providing distribution-rail experience; ticker not yet announced. Pharos tracks BRL as the most likely first launch given the Brazilian retail base, but the editorial summary documents the open USD option.",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://www.coindesk.com/markets/2025/04/03/brazil-s-largest-bank-itau-unibanco-mulls-its-own-stablecoin",
+        "title": "Brazil's largest bank Itau Unibanco mulls its own stablecoin",
+        "description": "Head of Digital Assets Guto Antunes confirms Itau is evaluating a BRL or USD stablecoin pending BCB regulation under Consulta Publica 111.",
+        "source": "CoinDesk"
+      },
+      {
+        "type": "article",
+        "url": "https://www.ledgerinsights.com/brazils-largest-bank-itau-weighs-stablecoin-launch-report/",
+        "title": "Brazil's largest bank Itau weighs stablecoin launch",
+        "description": "Itau participates in DREX wholesale CBDC pilot; cautions that self-custody restrictions in proposed BCB rules would be a key product constraint.",
+        "source": "Ledger Insights"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2025-04-03",
+        "type": "announcement",
+        "title": "Itau Unibanco confirms it is evaluating its own stablecoin",
+        "description": "Head of Digital Assets Guto Antunes tells a Sao Paulo industry event Itau is exploring a BRL or USD stablecoin pending BCB regulation under Consulta Publica 111.",
+        "sourceUrl": "https://www.coindesk.com/markets/2025/04/03/brazil-s-largest-bank-itau-unibanco-mulls-its-own-stablecoin"
+      },
+      {
+        "date": "2026-02-02",
+        "type": "regulatory",
+        "title": "Brazil stablecoin FX-classification regime takes effect",
+        "description": "BCB resolutions classifying stablecoin transactions as foreign-exchange operations enter force; Itau's launch timing remains contingent on the final Consulta Publica 111 framework, especially around self-custody and bank-issuer permissions.",
+        "sourceUrl": "https://www.coindesk.com/markets/2025/04/03/brazil-s-largest-bank-itau-unibanco-mulls-its-own-stablecoin"
       }
     ]
   },
@@ -4335,7 +4924,7 @@
       }
     ],
     "liveReservesConfig": {
-      "version": 2,
+      "version": 3,
       "semantics": "collateral-mix",
       "breakerScope": "crvusd-curve",
       "display": {
@@ -4345,8 +4934,9 @@
       "adapter": "crvusd",
       "inputs": {
         "primary": {
-          "kind": "http-json",
-          "url": "https://prices.curve.finance/v1/crvusd/markets"
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
         }
       }
     }
@@ -6267,120 +6857,6 @@
     ]
   },
   {
-    "id": "eura-angle",
-    "llamaId": "55",
-    "detailProvider": "defillama",
-    "name": "EURA",
-    "symbol": "EURA",
-    "flags": {
-      "backing": "crypto-backed",
-      "pegCurrency": "EUR",
-      "governance": "decentralized",
-      "yieldBearing": false,
-      "rwa": false,
-      "navToken": false
-    },
-    "collateral": "Diversified euro-denominated collateral basket inside the Angle Transmuter, historically composed of EURC, EURe, and tokenized euro debt; during the wind-down EURA is redeemable 1:1 for EURC through the Transmuter until 2027-03-01",
-    "pegMechanism": "Wind-down redemption: EURA holders can redeem 1:1 for EURC on Ethereum through the Angle Transmuter (legacy Borrowing module deprecated); after the 2027-03-01 cutoff the guardian multisig recovers remaining reserves and airdrops them pro-rata via Merkl",
-    "geckoId": "ageur",
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.angle.money/eura"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/AngleProtocol"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.angle.money/"
-      },
-      {
-        "label": "Wind-Down Announcement",
-        "url": "https://blockonomi.com/angle-protocol-winds-down-eura-and-usda-stablecoins-after-community-governance-vote/"
-      }
-    ],
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x1a7e4e63778b4f12a199c062f3efdd288afcbce8",
-        "decimals": 18
-      },
-      {
-        "chain": "polygon",
-        "address": "0xe0b52e49357fd4daf2c15e02058dce6bc0057db4",
-        "decimals": 18
-      },
-      {
-        "chain": "arbitrum",
-        "address": "0xfa5ed56a203466cbbc2430a43c66b9d8723528e7",
-        "decimals": 18
-      },
-      {
-        "chain": "base",
-        "address": "0xa61beb4a3d02decb01039e378237032b351125b4",
-        "decimals": 18
-      },
-      {
-        "chain": "bsc",
-        "address": "0x12f31b73d812c6bb0d735a218c086d44d5fe5f89",
-        "decimals": 18
-      },
-      {
-        "chain": "celo",
-        "address": "0xc16b81af351ba9e64c1a069e3ab18c244a1e3049",
-        "decimals": 18
-      },
-      {
-        "chain": "gnosis",
-        "address": "0x4b1e2c2762667331bc91648052f646d1b0d35984",
-        "decimals": 18
-      }
-    ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "Etherscan contract source",
-      "url": "https://etherscan.io/address/0x1a7e4e63778b4f12a199c062f3efdd288afcbce8#code"
-    },
-    "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
-      "sources": [
-        {
-          "label": "Etherscan contract source",
-          "url": "https://etherscan.io/address/0x1a7e4e63778b4f12a199c062f3efdd288afcbce8#code"
-        }
-      ],
-      "evidence": "Explicit Dilutable retained: governance-controlled mint authority through Angle Treasury and Transmuter contracts without a confirmed holder-balance freeze or arbitrary-burn surface on the EURA token itself.",
-      "reviewer": "Pharos lane D Wave 3 non-USD review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "third-party-bridge",
-    "collateralQuality": "exotic",
-    "custodyModel": "onchain",
-    "governanceQuality": "dao-governance",
-    "reserves": [
-      {
-        "name": "EURC (redemption target during 2026-03 to 2027-03 wind-down)",
-        "pct": 100,
-        "risk": "very-low",
-        "coinId": "eurc-circle",
-        "depType": "mechanism"
-      }
-    ],
-    "notices": [
-      {
-        "type": "warning",
-        "title": "Protocol in wind-down",
-        "message": "Angle Protocol is sunsetting EURA and USDA following governance vote AIP-112. EURA is redeemable 1:1 for EURC via the Transmuter on Ethereum until 2027-03-01. After that date, residual reserves will be airdropped pro-rata to remaining holders via Merkl, and the peg may break."
-      }
-    ],
-    "tags": [
-      "wind-down"
-    ]
-  },
-  {
     "id": "eurau-allunity",
     "llamaId": "319",
     "detailProvider": "defillama",
@@ -6712,7 +7188,7 @@
     },
     "collateral": "Euro deposits held in segregated accounts with credit institutions and high-quality liquid assets (HQLA) denominated in EUR, separated from Monerium's own funds; over 100% backing maintained as required under MiCA",
     "pegMechanism": "Mint-and-burn: EURe is minted when users deposit EUR via SEPA bank transfer after KYC/AML verification, and burned upon redemption back to EUR; peg maintained by licensed EMI with 1:1 backing",
-    "geckoId": "monerium-eur-money",
+    "geckoId": "monerium-eur-money-2",
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://monerium.com/financial-information/"
@@ -7636,6 +8112,112 @@
           "rpcMode": "public-rpc"
         }
       }
+    }
+  },
+  {
+    "id": "eutbl-spiko",
+    "detailProvider": "coingecko",
+    "name": "Spiko EU T-Bills Money Market Fund",
+    "symbol": "EUTBL",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "EUR",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Short-dated Eurozone sovereign Treasury bills (issued by AAA / strong-Member-State issuers) with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
+    "pegMechanism": "EUR-denominated NAV-accreting share token tracking the variable-NAV money market fund; primary mint and redemption settle same-day at fund NAV with a €1k minimum; Chainlink CCIP relays issuance between Ethereum, Arbitrum, and Polygon",
+    "geckoId": "spiko-eu-t-bills-money-market-fund",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.spiko.io/",
+      "provider": "Spiko (daily NAV and fund holdings disclosures)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.spiko.io/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/spiko_eu"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.spiko.io/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "France",
+      "regulator": "AMF",
+      "license": "UCITS Short-Term VNAV Money Market Fund"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "decimals": 5
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Spiko website",
+          "url": "https://www.spiko.io/"
+        }
+      ],
+      "evidence": "Spiko acts as transfer agent for EUTBL with permissioned ERC-1967 upgradeable proxy and KYC-gated transfers, retaining freeze and burn authority over fund shares.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Eurozone short-term Treasury Bills",
+        "pct": 95,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash and bank deposits",
+        "pct": 5,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "eutbl-spiko",
+      "display": {
+        "url": "https://www.spiko.io/",
+        "label": "Spiko fund page"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Multi-chain EU-regulated MMF",
+        "message": "EUTBL is also issued on Arbitrum and Polygon via Chainlink CCIP. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Spiko EU T-Bills MMF (Eurozone Treasury bill NAV)",
+      "yieldType": "nav-appreciation"
     }
   },
   {
@@ -10052,6 +10634,16 @@
         "chain": "arbitrum",
         "address": "0x589d35656641d6ab57a545f08cf473ecd9b6d5f7",
         "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "Crn4x1Y2HUKko7ox2EZMT6N2t2ZyH7eKtwkBGVnhEq1g",
+        "decimals": 6
+      },
+      {
+        "chain": "stellar",
+        "address": "GYEN-GDF6VOEGRWLOZ64PQQGKD2IYWA22RLT37GJKS2EJXZHT2VLAGWLC5TOB-1",
+        "decimals": 7
       }
     ],
     "blacklistabilityReview": {
@@ -10089,7 +10681,14 @@
         "label": "JPY fiat reserves",
         "risk": "very-low"
       }
-    }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "2021 depeg and 2026 class-action settlement",
+        "message": "GYEN suffered multiple de-pegging events shortly after its 2021 launch (notably hitting >1.5x its peg in May 2021), causing material holder losses on Coinbase. A class action filed in 2022 (Donovan v. Coinbase / GMO Trust) led to a $6.75M proposed settlement; motion for final approval was filed on April 17, 2026 with a final-approval hearing set for May 27, 2026. Settlement class covers GYEN purchasers in New York or California between Dec 29, 2020 and Oct 10, 2025. Methodology-relevant historical record of peg failure for an otherwise NYDFS-supervised issuer."
+      }
+    ]
   },
   {
     "id": "hbd-hive",
@@ -10365,6 +10964,95 @@
         "title": "HKMA awards first stablecoin license to Anchorpoint Financial",
         "description": "Standard Chartered / HKT / Animoca Brands JV becomes first licensed HKD stablecoin issuer under Hong Kong's Stablecoins Ordinance.",
         "sourceUrl": "https://www.coindesk.com/policy/2026/03/24/hong-kong-awards-first-stablecoin-licenses-to-hsbc-standard-chartered-led-group"
+      }
+    ]
+  },
+  {
+    "id": "hkdr-rd-technologies",
+    "detailProvider": "defillama",
+    "name": "RD Technologies HKDR",
+    "symbol": "HKDR",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "HKD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "1:1 HKD-denominated high-quality liquid assets in segregated custody at licensed financial institutions; reserves to be disclosed via periodic independent attestation per HKMA Stablecoins Ordinance",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://rd.group"
+      },
+      {
+        "label": "Product page",
+        "url": "https://rd.group/hkdr"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Hong Kong",
+      "regulator": "HKMA (Stablecoins Ordinance)"
+    },
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: HKDR resolves to Yes because existing metadata classifies the asset as centralized and an HKMA-licensed issuer can freeze and reissue under its compliance program.",
+      "reviewer": "Codex inferred-status backfill",
+      "reviewedAt": "2026-05-12"
+    },
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "status": "pre-launch",
+    "announcedDate": "2024-07",
+    "expectedLaunchDate": "2026-H1",
+    "launchPhase": "auditing",
+    "launchPhaseDetail": "Issued by RD InnoTech Limited (a subsidiary of RD Technologies, founded by former HKMA chief executive Norman Chan); admitted to the HKMA stablecoin issuer sandbox in the first July 2024 cohort; testing digital asset trading and cross-border trade payments, partnership with ZA Bank for regulated use cases; HKMA chief executive Eddie Yue signalled the first wave of fiat-referenced stablecoin licences in March 2026 will be limited to 'a very small number' of issuers and RD InnoTech is widely cited as a leading candidate; HK$25M minimum paid-up capital and 100%+ reserve backing requirements already met under sandbox conditions",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://www.rd.group/news/blogs/Announcement-RD-Technologies-Joins-the-HKMA-Stablecoin-Issuer-Sandbox/",
+        "title": "Announcement: RD Technologies joins the HKMA Stablecoin Issuer Sandbox",
+        "description": "RD InnoTech enters the first July 2024 HKMA sandbox cohort to test HKDR for digital asset trading and cross-border trade payments.",
+        "source": "RD Technologies"
+      },
+      {
+        "type": "article",
+        "url": "https://www.prnewswire.com/news-releases/rd-technologies-celebrates-passage-of-stablecoins-ordinance-in-hong-kong-302462073.html",
+        "title": "RD Technologies celebrates passage of Stablecoins Ordinance in Hong Kong",
+        "description": "RD Technologies welcomes Hong Kong's stablecoin regulatory framework; positions HKDR for licensing under the new regime taking effect August 2025.",
+        "source": "PR Newswire"
+      },
+      {
+        "type": "article",
+        "url": "https://asiatimes.com/2026/02/hong-kong-signals-caution-in-stablecoin-license-rollout/",
+        "title": "Hong Kong signals caution in stablecoin license rollout",
+        "description": "HKMA chief executive Eddie Yue signals only a 'very small number' of stablecoin licences will be granted in the first wave, targeting March 2026 issuance.",
+        "source": "Asia Times"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2024-07-18",
+        "type": "regulatory",
+        "title": "RD InnoTech enters HKMA Stablecoin Issuer Sandbox (first cohort)",
+        "description": "HKDR begins sandbox testing for digital asset trading and cross-border trade payments under HKMA supervision.",
+        "sourceUrl": "https://www.rd.group/news/blogs/Announcement-RD-Technologies-Joins-the-HKMA-Stablecoin-Issuer-Sandbox/"
+      },
+      {
+        "date": "2025-05-21",
+        "type": "regulatory",
+        "title": "Hong Kong Stablecoins Ordinance passed; takes effect August 1 2025",
+        "description": "Legislative Council passes the Stablecoins Ordinance, mandating HKMA licensing for issuers of fiat-referenced stablecoins; RD Technologies welcomes the framework.",
+        "sourceUrl": "https://www.prnewswire.com/news-releases/rd-technologies-celebrates-passage-of-stablecoins-ordinance-in-hong-kong-302462073.html"
+      },
+      {
+        "date": "2026-02-15",
+        "type": "regulatory",
+        "title": "HKMA confirms first batch of stablecoin licences targeted for March 2026",
+        "description": "Eddie Yue signals stability over speed and limits initial licences to 'a very small number'; RD InnoTech named among credible candidates given early sandbox participation.",
+        "sourceUrl": "https://asiatimes.com/2026/02/hong-kong-signals-caution-in-stablecoin-license-rollout/"
       }
     ]
   },
@@ -11518,7 +12206,7 @@
     },
     "collateral": "Japanese-yen reserve assets held for the legacy prepaid-payment JPYC v1 token series",
     "pegMechanism": "Legacy prepaid-payment JPYC token series redeemable through JPYC processes before migration to the newer funds-transfer-token contracts",
-    "geckoId": "jpyc",
+    "geckoId": "jpycoin",
     "protocolSlug": "jpyc",
     "links": [
       {
@@ -11880,6 +12568,113 @@
         "sourceUrl": "https://coinpaper.com/16814/what-is-sbi-holdings-actually-building-with-ripple-xrp-and-rlusd-in-2026"
       }
     ]
+  },
+  {
+    "id": "jtrsy-anemoy",
+    "detailProvider": "coingecko",
+    "name": "Janus Henderson Anemoy Treasury Fund",
+    "symbol": "JTRSY",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Short-duration U.S. Treasury bills selected and managed by Janus Henderson as sub-advisor inside Anemoy's BVI Professional Fund, tokenised through Centrifuge as ERC-7540 vault shares",
+    "pegMechanism": "NAV-accreting fund share token; same-day subscription and redemption at fund NAV for whitelisted non-U.S. Professional Investors via the Centrifuge issuer rail; S&P assigns AA+f / S1+ to the fund",
+    "geckoId": "anemoy-janus-henderson-treasury-fund",
+    "protocolSlug": "centrifuge",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://centrifuge.io/pools/jtrsy",
+      "provider": "Centrifuge on-chain NAV publishing with Janus Henderson sub-advisory; S&P AA+f / S1+ rating"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://centrifuge.io/pools/jtrsy"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/centrifuge"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.centrifuge.io/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "British Virgin Islands",
+      "regulator": "BVI FSC",
+      "license": "BVI Professional Fund"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Centrifuge JTRSY pool",
+          "url": "https://centrifuge.io/pools/jtrsy"
+        }
+      ],
+      "evidence": "Anemoy / Centrifuge operate JTRSY with permissioned ERC-7540 vault transfers restricted to whitelisted Professional Investors and retain freeze and burn authority over fund shares.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "U.S. Treasury Bills (Janus Henderson sub-advised)",
+        "pct": 97,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash and equivalents",
+        "pct": 3,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "jtrsy-anemoy",
+      "display": {
+        "url": "https://centrifuge.io/pools/jtrsy",
+        "label": "Centrifuge JTRSY pool"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Centrifuge V3 multi-chain availability",
+        "message": "JTRSY is also distributed across Centrifuge V3 to additional chains. Pharos currently tracks the Ethereum supply contract pending per-chain verification; on-chain NAV publishing from Centrifuge can later replace the curated snapshot."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Janus Henderson Anemoy Treasury Fund (T-bill NAV accretion)",
+      "yieldType": "nav-appreciation"
+    }
   },
   {
     "id": "jupusd-jupiter",
@@ -12512,6 +13307,97 @@
         "title": "iM Bank and Finger announce first bank-led KRW stablecoin PoC on Kaia",
         "description": "Pilot features quantum-resistant security via BTQ Technologies' post-quantum cryptography stack.",
         "sourceUrl": "https://www.prnewswire.com/news-releases/btq-technologies-qssn-selected-as-core-security-infrastructure-for-south-koreas-first-bank-led-krw-stablecoin-proof-of-concept-302763840.html"
+      }
+    ]
+  },
+  {
+    "id": "krw1-bdacs",
+    "detailProvider": "defillama",
+    "name": "BDACS KRW1",
+    "symbol": "KRW1",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "KRW",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "1:1 South Korean won held in escrow at Woori Bank with real-time banking-API proof of reserves",
+    "pegMechanism": "Custodian-managed mint/redemption against KRW deposits at Woori Bank; KRW1 is a brand trademarked by BDACS (December 2023) and operated by BDACS as the regulated digital asset custodian",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.bdacs.com"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/BDACSKorea"
+      }
+    ],
+    "jurisdiction": {
+      "country": "South Korea",
+      "regulator": "FSC / FSS (Digital Asset Basic Act pending)"
+    },
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: KRW1 resolves to Yes because existing metadata classifies the asset as centralized and the regulated custodian-issuer can freeze and reissue under its compliance program.",
+      "reviewer": "Codex inferred-status backfill",
+      "reviewedAt": "2026-05-12"
+    },
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "status": "pre-launch",
+    "announcedDate": "2025-09",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "beta",
+    "launchPhaseDetail": "Pilot phase following successful September 2025 proof of concept; not yet in public circulation. BDACS is South Korea's regulated digital-asset custodian; Woori Bank holds the won reserves and participated directly in the PoC. Initial deployment on Avalanche (cited by KISA for reliability in public-sector use); multi-chain expansion planned. February 2026 Plume partnership positions KRW1 as Korean institutional settlement rail for tokenized RWA. Commercial launch contingent on Korea's forthcoming Digital Asset Basic Act framework where BDACS is positioning KRW1 as the leading technical standard.",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://www.prnewswire.com/news-releases/bdacs-launches-krw1--the-first-fully-krw-backed-stablecoin-developed-with-woori-bank-on-avalanche-302259560.html",
+        "title": "BDACS launches KRW1, the first fully KRW-backed stablecoin developed with Woori Bank on Avalanche",
+        "description": "September 2025 proof-of-concept launch; Avalanche-native KRW1 with real-time banking-API reserve attestation through Woori Bank.",
+        "source": "PR Newswire"
+      },
+      {
+        "type": "article",
+        "url": "https://financefeeds.com/bdacs-launches-krw1-stablecoin-following-successful-proof-of-concept-with-woori-bank/",
+        "title": "BDACS launches KRW1 stablecoin following successful proof of concept with Woori Bank",
+        "description": "Pilot details: each KRW1 fully collateralized via won held in Woori Bank escrow; KISA cites Avalanche for public-sector reliability.",
+        "source": "FinanceFeeds"
+      },
+      {
+        "type": "article",
+        "url": "https://www.seoulz.com/korea-won-stablecoin-2026/",
+        "title": "The Korea Won Stablecoin 2026 Race: 6 Players Competing for Asia's Next Financial Frontier",
+        "description": "Comparative analysis of KRW1's institutional-RWA settlement positioning versus retail-bank consortium plans under Korea's pending Digital Asset Basic Act.",
+        "source": "Seoulz"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2023-12-15",
+        "type": "milestone",
+        "title": "BDACS trademarks KRW1 brand",
+        "description": "BDACS files KRW1 trademark and begins building issuance infrastructure ahead of formal Korean stablecoin regulation.",
+        "sourceUrl": "https://coinmarketcap.com/academy/article/krw1-stablecoin-debuts-on-avalanche-network"
+      },
+      {
+        "date": "2025-09-17",
+        "type": "milestone",
+        "title": "KRW1 proof-of-concept goes live on Avalanche with Woori Bank",
+        "description": "Successful PoC validates fiat deposits, on-chain issuance, and real-time banking-API reserve attestation; not yet in public circulation.",
+        "sourceUrl": "https://www.prnewswire.com/news-releases/bdacs-launches-krw1--the-first-fully-krw-backed-stablecoin-developed-with-woori-bank-on-avalanche-302259560.html"
+      },
+      {
+        "date": "2026-02-11",
+        "type": "partnership",
+        "title": "BDACS partners with Plume to position KRW1 as Korean institutional RWA settlement rail",
+        "description": "Plume integration lets Korean institutional investors allocate into tokenized RWA instruments denominated in KRW1 without USD conversion; ~$645M of tokenized assets currently on Plume.",
+        "sourceUrl": "https://www.seoulz.com/korea-won-stablecoin-2026/"
       }
     ]
   },
@@ -14522,6 +15408,113 @@
     ]
   },
   {
+    "id": "nbasis-nest",
+    "detailProvider": "coingecko",
+    "name": "Nest Basis Vault",
+    "symbol": "nBASIS",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "collateral": "Basis-trade strategy book combining tokenised T-bill collateral (Superstate USTB / USCC) on Plume with perpetual short positions; risk-managed and rebalanced by Nest",
+    "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the basis-trade strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
+    "geckoId": "nest-basis-vault",
+    "protocolSlug": "nest-credit",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.nest.credit/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/NestCredit"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.nest.credit/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "decimals": 6
+      },
+      {
+        "chain": "plume",
+        "address": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Docs",
+          "url": "https://docs.nest.credit/"
+        }
+      ],
+      "evidence": "Nest retains issuer / admin authority over vault shares with permissioned issuance and freeze surfaces beyond reserve-only exposure.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Superstate USTB / USCC Treasury and credit collateral",
+        "pct": 95,
+        "risk": "very-low",
+        "coinId": "ustb-superstate"
+      },
+      {
+        "name": "Stablecoin liquidity buffer",
+        "pct": 5,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "nbasis-nest",
+      "display": {
+        "url": "https://www.nest.credit/",
+        "label": "Nest Credit API"
+      },
+      "adapter": "nest-vault-positions",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/positions"
+        }
+      },
+      "params": {
+        "priceUrl": "https://api.nest.credit/v1/vaults/nest-basis-vault/price",
+        "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-basis-vault/last-price-update"
+      }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Active strategy, not par stablecoin",
+        "message": "nBASIS runs a basis-trade strategy whose value drifts with funding-rate performance. It is closer in profile to Midas mRe7YIELD than to a 1:1 stablecoin, and Pharos lists it because its primary reference is the U.S. dollar."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Nest Basis Vault NAV (basis-trade strategy)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "nect-beraborrow",
     "llamaId": "329",
     "detailProvider": "defillama",
@@ -14626,6 +15619,230 @@
       "params": {
         "rpcUrl": "https://rpc.berachain.com"
       }
+    }
+  },
+  {
+    "id": "nopal-nest",
+    "detailProvider": "coingecko",
+    "name": "Nest BlackOpal LiquidStone II Vault",
+    "symbol": "nOPAL",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "collateral": "BlackOpal LiquidStone II tokenised credit positions plus stablecoin and Treasury liquidity buffers held inside the Nest vault",
+    "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the BlackOpal LiquidStone II credit strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
+    "geckoId": "nest-opal-vault",
+    "protocolSlug": "nest-credit",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.nest.credit/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/NestCredit"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.nest.credit/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "decimals": 6
+      },
+      {
+        "chain": "plume",
+        "address": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Docs",
+          "url": "https://docs.nest.credit/"
+        }
+      ],
+      "evidence": "Nest retains issuer / admin authority over vault shares with permissioned issuance and freeze surfaces beyond reserve-only exposure.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "BlackOpal LiquidStone II tokenised credit positions",
+        "pct": 90,
+        "risk": "high"
+      },
+      {
+        "name": "Nest Treasury Vault (nTBILL) liquidity buffer",
+        "pct": 5,
+        "risk": "low"
+      },
+      {
+        "name": "Stablecoin liquidity buffer (USDC / pUSD)",
+        "pct": 5,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "nopal-nest",
+      "display": {
+        "url": "https://www.nest.credit/",
+        "label": "Nest Credit API"
+      },
+      "adapter": "nest-vault-positions",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/positions"
+        }
+      },
+      "params": {
+        "priceUrl": "https://api.nest.credit/v1/vaults/nest-opal-vault/price",
+        "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-opal-vault/last-price-update"
+      }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Private credit strategy, not par stablecoin",
+        "message": "nOPAL holds BlackOpal LiquidStone II tokenised credit positions. The token references a dollar base but behaves like a credit vault share rather than a 1:1 par stablecoin."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Nest BlackOpal LiquidStone II Vault NAV",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "ntbill-nest",
+    "detailProvider": "coingecko",
+    "name": "Nest Treasury Vault",
+    "symbol": "nTBILL",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Tokenised short-duration U.S. Treasury exposure routed by Nest into Superstate USTB / USCC and Janus Henderson JTRSY positions, plus stablecoin liquidity buffers",
+    "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying Treasury fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
+    "geckoId": "nest-treasury-vault",
+    "protocolSlug": "nest-credit",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.nest.credit/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/NestCredit"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.nest.credit/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+        "decimals": 6
+      },
+      {
+        "chain": "plume",
+        "address": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Docs",
+          "url": "https://docs.nest.credit/"
+        }
+      ],
+      "evidence": "Nest retains issuer / admin authority over vault shares with permissioned issuance and freeze surfaces beyond reserve-only exposure.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Superstate USTB / USCC Treasury and credit positions",
+        "pct": 70,
+        "risk": "very-low",
+        "coinId": "ustb-superstate"
+      },
+      {
+        "name": "Janus Henderson Anemoy Treasury Fund (JTRSY)",
+        "pct": 25,
+        "risk": "very-low",
+        "coinId": "jtrsy-anemoy"
+      },
+      {
+        "name": "Stablecoin liquidity buffer (USDC / pUSD)",
+        "pct": 5,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "ntbill-nest",
+      "display": {
+        "url": "https://www.nest.credit/",
+        "label": "Nest Credit API"
+      },
+      "adapter": "nest-vault-positions",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://api.nest.credit/v1/vaults/nest-treasury-vault/positions"
+        }
+      },
+      "params": {
+        "priceUrl": "https://api.nest.credit/v1/vaults/nest-treasury-vault/price",
+        "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-treasury-vault/last-price-update"
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "NAV-style dollar asset",
+        "message": "nTBILL is a Nest vault share whose value tracks the underlying Treasury fund book. It behaves like a vault share rather than a hard 1:1 par stablecoin."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Nest Treasury Vault NAV",
+      "yieldType": "nav-appreciation"
     }
   },
   {
@@ -14742,6 +15959,117 @@
     "yieldConfig": {
       "yieldSource": "Neutrl savings (sNUSD)",
       "yieldType": "lending-vault"
+    }
+  },
+  {
+    "id": "nwisdom-nest",
+    "detailProvider": "coingecko",
+    "name": "Nest Wisdom Vault",
+    "symbol": "nWISDOM",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "WisdomTree tokenised fund shares (xCRDYX and similar WisdomTree Connect products) plus Nest Treasury Vault (nTBILL) and stablecoin liquidity buffers",
+    "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying WisdomTree fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
+    "geckoId": "nest-wisdom-vault",
+    "protocolSlug": "nest-credit",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.nest.credit/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/NestCredit"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.nest.credit/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+        "decimals": 6
+      },
+      {
+        "chain": "plume",
+        "address": "0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Docs",
+          "url": "https://docs.nest.credit/"
+        }
+      ],
+      "evidence": "Nest retains issuer / admin authority over vault shares with permissioned issuance and freeze surfaces beyond reserve-only exposure.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "WisdomTree tokenised fund shares (xCRDYX and WisdomTree Connect products)",
+        "pct": 95,
+        "risk": "very-low"
+      },
+      {
+        "name": "Nest Treasury Vault (nTBILL) liquidity buffer",
+        "pct": 3,
+        "risk": "low"
+      },
+      {
+        "name": "Stablecoin liquidity buffer (USDC / pUSD)",
+        "pct": 2,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "nwisdom-nest",
+      "display": {
+        "url": "https://www.nest.credit/",
+        "label": "Nest Credit API"
+      },
+      "adapter": "nest-vault-positions",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/positions"
+        }
+      },
+      "params": {
+        "priceUrl": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/price",
+        "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/last-price-update"
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "NAV-style dollar asset",
+        "message": "nWISDOM is a Nest vault share whose value tracks the underlying WisdomTree fund book. It behaves like a vault share rather than a hard 1:1 par stablecoin."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Nest Wisdom Vault NAV (WisdomTree-backed strategy)",
+      "yieldType": "nav-appreciation"
     }
   },
   {
@@ -16994,6 +18322,87 @@
     ]
   },
   {
+    "id": "rusd-revolut",
+    "detailProvider": "defillama",
+    "name": "Revolut USD Stablecoin",
+    "symbol": "RUSD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.revolut.com"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/RevolutApp"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Cyprus / Lithuania",
+      "regulator": "CySEC (MiCA CASP) and Bank of Lithuania (EMI)"
+    },
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: RUSD resolves to Yes because existing metadata classifies the asset as centralized and an EMI-regulated issuer can freeze and reissue under its compliance program.",
+      "reviewer": "Codex inferred-status backfill",
+      "reviewedAt": "2026-05-12"
+    },
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "status": "pre-launch",
+    "announcedDate": "2025-10-23",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "announced",
+    "launchPhaseDetail": "Companion to the already-tracked RGBP (Revolut GBP). Revolut secured a MiCA CASP licence from Cyprus (CySEC) on Oct 23 2025 and operates an existing EMI licence in Lithuania, the legal foundations for issuing e-money tokens under MiCA Title IV. The Cyprus announcement bundled a 'Crypto 2.0' platform that includes '1:1 conversion between stablecoins and USD' without spreads, fuelling industry expectation of a Revolut-issued USD EMT in 2026 (EU counsel quoted by Decrypt as 'plausible'). Specific ticker, chain selection, and reserve disclosure model not yet publicly confirmed; commercial design must navigate MiCA EMT issuer constraints (EMI/credit-institution-only) and any UK Bank-of-England restrictions on cross-group stablecoin issuance.",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://www.coindesk.com/policy/2025/10/23/revolut-secures-mica-license-in-cyprus-expanding-regulated-crypto-services-across-europe",
+        "title": "Revolut secures MiCA license in Cyprus, expanding regulated crypto services across Europe",
+        "description": "CySEC MiCA authorisation lets Revolut passport regulated crypto services across the 30 EEA countries; 65M global users; Crypto 2.0 platform unveiled alongside.",
+        "source": "CoinDesk"
+      },
+      {
+        "type": "article",
+        "url": "https://decrypt.co/345674/revolut-secures-mica-license-in-cyprus-is-a-stablecoin-next",
+        "title": "Revolut secures MiCA license in Cyprus, is a stablecoin next?",
+        "description": "EU counsel describes a Revolut stablecoin in 2026 as 'plausible' under MiCA; clarifies that the Cyprus CASP licence does not itself authorise issuance, which must come via Revolut's Lithuanian EMI.",
+        "source": "Decrypt"
+      },
+      {
+        "type": "article",
+        "url": "https://cointelegraph.com/news/revolut-secures-mica-license-in-cyprus",
+        "title": "Revolut secures MiCA licence in Cyprus to launch Europe-wide crypto services",
+        "description": "Crypto 2.0 product suite includes 280+ tokens, zero-fee staking and 1:1 stablecoin-to-USD conversion without spreads.",
+        "source": "Cointelegraph"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2025-10-23",
+        "type": "regulatory",
+        "title": "Revolut Digital Assets Europe receives MiCA CASP licence from CySEC",
+        "description": "Revolut's Cyprus entity gets MiCA authorisation to passport regulated crypto services across the EEA; unveils 'Crypto 2.0' platform with 1:1 stablecoin/USD conversion as a flagship feature.",
+        "sourceUrl": "https://www.coindesk.com/policy/2025/10/23/revolut-secures-mica-license-in-cyprus-expanding-regulated-crypto-services-across-europe"
+      },
+      {
+        "date": "2025-10-23",
+        "type": "milestone",
+        "title": "EU counsel describes a Revolut USD/EUR stablecoin in 2026 as 'plausible' under MiCA",
+        "description": "Decrypt reports Revolut's Lithuanian EMI provides the EMT issuer foundation; Cyprus CASP licence is the service-provider side; sources say Revolut has been working on its own stablecoin for over a year.",
+        "sourceUrl": "https://decrypt.co/345674/revolut-secures-mica-license-in-cyprus-is-a-stablecoin-next"
+      }
+    ]
+  },
+  {
     "id": "rusd-royal-dollar",
     "detailProvider": "coingecko",
     "name": "Royal Dollar",
@@ -18675,6 +20084,110 @@
     "yieldConfig": {
       "yieldSource": "Strata senior USDe tranche",
       "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "stbt-matrixdock",
+    "detailProvider": "coingecko",
+    "name": "Matrixdock Short-Term Treasury Bill",
+    "symbol": "STBT",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "U.S. Treasury securities maturing within six months and reverse repurchase agreements collateralised by U.S. Treasuries; custodied through prime brokerage relationships and administered by Matrixdock (Matrixport, Singapore)",
+    "pegMechanism": "$1.00 rebasing share token; daily T-bill yield is distributed by adjusting holder balances rather than the unit price; institutional KYC mint and redemption at same-day NAV via Matrixdock with a $100k minimum; Chainlink Proof-of-Reserve feed publishes the underlying reserve attestation",
+    "geckoId": "matrixdock-short-term-treasury-bill",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://www.matrixdock.com/stbt",
+      "provider": "Chainlink Proof of Reserve (Matrixdock T-Bill PoR feed)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.matrixdock.com/stbt"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Matrixdock_"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.matrixdock.com/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Singapore",
+      "regulator": "MAS",
+      "license": "Singapore MAS exemption (institutional / accredited investors only)"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x530824da86689c9c17cdc2871ff29b058345b44a",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Matrixdock STBT page",
+          "url": "https://www.matrixdock.com/stbt"
+        }
+      ],
+      "evidence": "Matrixdock retains transfer-agent freeze and burn authority over STBT balances under its institutional KYC framework.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "U.S. Treasury Bills",
+        "pct": 70,
+        "risk": "very-low"
+      },
+      {
+        "name": "Reverse Repo Agreements (UST-collateralised)",
+        "pct": 28,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash and equivalents",
+        "pct": 2,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "stbt-matrixdock",
+      "display": {
+        "url": "https://www.matrixdock.com/stbt",
+        "label": "Matrixdock STBT page (Chainlink PoR feed)"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Matrixdock STBT (short-term U.S. Treasury bill rebase)",
+      "yieldType": "rebase"
     }
   },
   {
@@ -21640,6 +23153,73 @@
       "yieldSource": "BIMA savings (sUSBD)",
       "yieldType": "lending-vault"
     }
+  },
+  {
+    "id": "usd-nubank",
+    "detailProvider": "defillama",
+    "name": "Nubank USD Stablecoin",
+    "symbol": "USD-NU",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://nubank.com.br"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/nubank"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Brazil",
+      "regulator": "Banco Central do Brasil"
+    },
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: USD-NU resolves to Yes because existing metadata classifies the asset as centralized and a single regulated digital-bank issuer would retain freeze/reissue authority.",
+      "reviewer": "Codex inferred-status backfill",
+      "reviewedAt": "2026-05-12"
+    },
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "status": "pre-launch",
+    "announcedDate": "2025-09-18",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "announced",
+    "launchPhaseDetail": "Nubank vice-chair Roberto Campos Neto (former Central Bank of Brazil governor) announced a dollar-pegged stablecoin pilot tied to credit-card payments at Meridian 2025. Nubank serves 100M+ customers across Brazil, Mexico, and Colombia; integrated USDC inside the app since 2023. The credit-card pilot is the first product surface, with a broader 'tokenize deposits and issue credit against tokenized assets' roadmap behind it. Whether Nubank issues its own dollar token or routes through an existing stablecoin (Campos Neto noted the open product question) is undecided; ticker, chain, and reserve disclosure model not yet confirmed. Pharos opens this pre-launch entry against the announced own-issuance interpretation; will be retired if Nubank's pilot instead routes through USDC/PYUSD/other tracked tokens.",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://cointelegraph.com/news/nubank-plans-stablecoin-integration-credit-card-transactions",
+        "title": "Nubank plans stablecoin integration for credit card transactions",
+        "description": "Campos Neto reveals Nubank credit-card stablecoin pilot at Meridian 2025; positions tokenized deposits as the underlying infrastructure play.",
+        "source": "Cointelegraph"
+      },
+      {
+        "type": "article",
+        "url": "https://coinlaw.io/nubank-stablecoin-credit-card-brazil/",
+        "title": "Nubank launches stablecoin trial for credit-card users in Brazil",
+        "description": "Pilot details and roadmap context; Nubank's 100M-customer LATAM footprint and existing USDC integration.",
+        "source": "CoinLaw"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2025-09-18",
+        "type": "announcement",
+        "title": "Roberto Campos Neto announces Nubank credit-card stablecoin pilot at Meridian 2025",
+        "description": "Nubank vice-chair (former BCB governor) tells local media stablecoin credit-card testing will begin later in 2025; part of a broader roadmap to tokenize deposits and use them as collateral for credit issuance.",
+        "sourceUrl": "https://cointelegraph.com/news/nubank-plans-stablecoin-integration-credit-card-transactions"
+      }
+    ]
   },
   {
     "id": "usd0-usual",
@@ -27363,6 +28943,101 @@
     ]
   },
   {
+    "id": "usdw-wisdomtree",
+    "detailProvider": "coingecko",
+    "name": "WisdomTree Dollar Token",
+    "symbol": "USDW",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Cash and short-duration U.S. Treasury bills held in segregated accounts under WisdomTree Digital Trust Company, a New York-chartered limited-purpose trust company supervised by NYDFS",
+    "pegMechanism": "1:1 USD-pegged stablecoin issued by WisdomTree Digital Trust; primary mint and redemption operate through WisdomTree Connect with USD-wire settlement and dealer-facilitated USDC routes",
+    "geckoId": "wisdomtree-dollar-token",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.wisdomtree.com/digital-funds/usdw",
+      "provider": "WisdomTree Digital Trust (monthly reserve reports)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.wisdomtree.com/digital-funds/usdw"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/WisdomTreeFunds"
+      },
+      {
+        "label": "WisdomTree Connect",
+        "url": "https://www.wisdomtree.com/connect"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "NYDFS",
+      "license": "WisdomTree Digital Trust Company (NY limited-purpose trust charter)"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x2e5f7dbed4aa799b13c737992562b7e8742b3a32",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "WisdomTree Connect terms",
+          "url": "https://www.wisdomtree.com/connect"
+        }
+      ],
+      "evidence": "WisdomTree Digital Trust acts as transfer agent for USDW with permissioned issuance and freeze authority under NYDFS supervision.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "U.S. Treasury Bills",
+        "pct": 85,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash and bank deposits",
+        "pct": 15,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "attestation-mix",
+      "breakerScope": "usdw-wisdomtree",
+      "display": {
+        "url": "https://www.wisdomtree.com/digital-funds/usdw",
+        "label": "WisdomTree USDW disclosures"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    }
+  },
+  {
     "id": "usdx-hex-trust",
     "llamaId": "263",
     "detailProvider": "defillama",
@@ -28733,6 +30408,112 @@
     }
   },
   {
+    "id": "ustbl-spiko",
+    "detailProvider": "coingecko",
+    "name": "Spiko US T-Bills Money Market Fund",
+    "symbol": "USTBL",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Short-dated U.S. Treasury bills with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
+    "pegMechanism": "USD-denominated NAV-accreting share token tracking the variable-NAV money market fund; primary mint and redemption settle same-day at fund NAV with a $1k minimum; Chainlink CCIP relays issuance between Ethereum, Arbitrum, and Polygon",
+    "geckoId": "spiko-us-t-bills-money-market-fund",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.spiko.io/",
+      "provider": "Spiko (daily NAV and fund holdings disclosures)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.spiko.io/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/spiko_eu"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.spiko.io/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "France",
+      "regulator": "AMF",
+      "license": "UCITS Short-Term VNAV Money Market Fund"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "decimals": 5
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Spiko website",
+          "url": "https://www.spiko.io/"
+        }
+      ],
+      "evidence": "Spiko acts as transfer agent for USTBL with permissioned ERC-1967 upgradeable proxy and KYC-gated transfers, retaining freeze and burn authority over fund shares.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "U.S. Treasury Bills",
+        "pct": 95,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash and bank deposits",
+        "pct": 5,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "ustbl-spiko",
+      "display": {
+        "url": "https://www.spiko.io/",
+        "label": "Spiko fund page"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Multi-chain EU-regulated MMF",
+        "message": "USTBL is also issued on Arbitrum and Polygon via Chainlink CCIP. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Spiko US T-Bills MMF (U.S. Treasury bill NAV)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "usx-dforce",
     "llamaId": "44",
     "detailProvider": "coingecko",
@@ -29283,6 +31064,112 @@
         "risk": "high"
       }
     ]
+  },
+  {
+    "id": "vbill-vaneck",
+    "detailProvider": "coingecko",
+    "name": "VanEck Treasury Fund",
+    "symbol": "VBILL",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Short-duration U.S. Treasury bills held by a BVI Professional Fund advised by Van Eck Associates; tokenization, transfer agency, and KYC by Securitize with State Street as fund administrator",
+    "pegMechanism": "NAV-accreting institutional T-bill share token; instant mint and redemption at daily NAV through Securitize Markets against USDC, AUSD, or USD wire; Chainlink NAVLink oracle is integrated by Aave Horizon (oracle address not yet wired into Pharos)",
+    "geckoId": "vaneck-treasury-fund",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund",
+      "provider": "Securitize / Van Eck Associates (daily NAV and holdings disclosures)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/vaneck_us"
+      },
+      {
+        "label": "Securitize Markets",
+        "url": "https://markets.securitize.io/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "British Virgin Islands",
+      "regulator": "BVI FSC",
+      "license": "BVI Professional Fund"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Securitize VBILL page",
+          "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund"
+        }
+      ],
+      "evidence": "Securitize operates VBILL with permissioned token transfers restricted to KYC-onboarded institutional holders and retains transfer-agent freeze and burn authority on behalf of Van Eck Associates.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "U.S. Treasury Bills",
+        "pct": 95,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash and repurchase agreements",
+        "pct": 5,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "vbill-vaneck",
+      "display": {
+        "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund",
+        "label": "Securitize VBILL fund page"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Securitize-administered NAV token",
+        "message": "VBILL is institutional only via Securitize Markets and also issues on Avalanche, BNB Chain, and Solana via Wormhole. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "VanEck Treasury Fund (T-bill NAV accretion)",
+      "yieldType": "nav-appreciation"
+    }
   },
   {
     "id": "vchf-vnx",
@@ -30513,6 +32400,195 @@
     },
     "yieldConfig": {
       "yieldSource": "Reservoir savings vault (srUSD)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "wstbt-matrixdock",
+    "detailProvider": "coingecko",
+    "name": "Wrapped Matrixdock STBT",
+    "symbol": "wSTBT",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "pegReferenceId": "stbt-matrixdock",
+    "collateral": "1:1 wrapper around Matrixdock STBT (short-term U.S. Treasury bills and Treasury-collateralised reverse repos); yield accrues into the wrapper's exchange rate rather than rebasing supply",
+    "pegMechanism": "Non-rebasing NAV-accreting wrapper around STBT used on Curve and other AMMs; mint and redeem against STBT via the wstbt contract; underlying redemption against U.S. dollars runs through Matrixdock at NAV",
+    "geckoId": "wrapped-stbt",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.matrixdock.com/stbt"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Matrixdock_"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.matrixdock.com/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Singapore",
+      "regulator": "MAS",
+      "license": "Singapore MAS exemption (institutional / accredited investors only)"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x288a8005c53632d920045b7c7c2e54a3f1bc4c83",
+        "decimals": 18
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "stbt-matrixdock",
+        "weight": 1,
+        "type": "wrapper"
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: wSTBT resolves to Upstream because the wrapper variant inherits freeze and transfer surface from STBT.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "variantOf": "stbt-matrixdock",
+    "variantKind": "savings-passthrough",
+    "reserves": [
+      {
+        "name": "Matrixdock STBT (short-term U.S. Treasury bills and reverse repos)",
+        "pct": 100,
+        "risk": "very-low",
+        "coinId": "stbt-matrixdock",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Matrixdock STBT NAV accretion (wrapped, non-rebasing)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "wtgxx-wisdomtree",
+    "detailProvider": "coingecko",
+    "name": "WisdomTree Government Money Market Digital Fund",
+    "symbol": "WTGXX",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "U.S. government obligations, cash, and repurchase agreements held by WisdomTree Digital Government Money Market Fund; '40 Act-registered money market fund administered by WisdomTree Asset Management and recorded natively on-chain via the WisdomTree Connect platform",
+    "pegMechanism": "$1.00 stable NAV money market share; SEC-approved 24/7 dealer trading at fixed $1 intraday (Feb 2026); primary subscription and redemption are gated to WisdomTree Connect users with USDC dealer settlement and USD-wire alternatives",
+    "geckoId": "wisdomtree-government-money-market-digital-fund",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",
+      "provider": "WisdomTree Asset Management (daily NAV and holdings published on fund page)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/WisdomTreeFunds"
+      },
+      {
+        "label": "WisdomTree Connect",
+        "url": "https://www.wisdomtree.com/connect"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "SEC",
+      "license": "Investment Company Act of 1940 (registered money market fund)"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x1fecf3d9d4fee7f2c02917a66028a48c6706c179",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "WisdomTree Digital Funds prospectus",
+          "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+        }
+      ],
+      "evidence": "WisdomTree acts as transfer agent for WTGXX with permissioned token transfers restricted to WisdomTree Connect-onboarded holders, giving the issuer freeze and burn authority over WTGXX balances.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "U.S. Government Securities",
+        "pct": 65,
+        "risk": "very-low"
+      },
+      {
+        "name": "Repurchase Agreements",
+        "pct": 30,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash",
+        "pct": 5,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "wtgxx-wisdomtree",
+      "display": {
+        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",
+        "label": "WisdomTree WTGXX fund page"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Multi-chain fund with limited on-chain telemetry",
+        "message": "WTGXX is the digital share token of WisdomTree's '40 Act government money market fund, also deployed on Arbitrum, Avalanche, Base, Optimism, Plume, and Stellar via WisdomTree Connect. Pharos currently tracks only the Ethereum supply contract pending per-chain verification; live reserves use a curated weekly snapshot of the WisdomTree fund factsheet."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "WisdomTree WTGXX U.S. government money market fund",
       "yieldType": "nav-appreciation"
     }
   },

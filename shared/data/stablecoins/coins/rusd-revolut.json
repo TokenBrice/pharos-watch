@@ -1,0 +1,81 @@
+{
+  "id": "rusd-revolut",
+  "name": "Revolut USD Stablecoin",
+  "symbol": "RUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.revolut.com"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/RevolutApp"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Cyprus / Lithuania",
+    "regulator": "CySEC (MiCA CASP) and Bank of Lithuania (EMI)"
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: RUSD resolves to Yes because existing metadata classifies the asset as centralized and an EMI-regulated issuer can freeze and reissue under its compliance program.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "status": "pre-launch",
+  "announcedDate": "2025-10-23",
+  "expectedLaunchDate": "2026",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Companion to the already-tracked RGBP (Revolut GBP). Revolut secured a MiCA CASP licence from Cyprus (CySEC) on Oct 23 2025 and operates an existing EMI licence in Lithuania, the legal foundations for issuing e-money tokens under MiCA Title IV. The Cyprus announcement bundled a 'Crypto 2.0' platform that includes '1:1 conversion between stablecoins and USD' without spreads, fuelling industry expectation of a Revolut-issued USD EMT in 2026 (EU counsel quoted by Decrypt as 'plausible'). Specific ticker, chain selection, and reserve disclosure model not yet publicly confirmed; commercial design must navigate MiCA EMT issuer constraints (EMI/credit-institution-only) and any UK Bank-of-England restrictions on cross-group stablecoin issuance.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.coindesk.com/policy/2025/10/23/revolut-secures-mica-license-in-cyprus-expanding-regulated-crypto-services-across-europe",
+      "title": "Revolut secures MiCA license in Cyprus, expanding regulated crypto services across Europe",
+      "description": "CySEC MiCA authorisation lets Revolut passport regulated crypto services across the 30 EEA countries; 65M global users; Crypto 2.0 platform unveiled alongside.",
+      "source": "CoinDesk"
+    },
+    {
+      "type": "article",
+      "url": "https://decrypt.co/345674/revolut-secures-mica-license-in-cyprus-is-a-stablecoin-next",
+      "title": "Revolut secures MiCA license in Cyprus, is a stablecoin next?",
+      "description": "EU counsel describes a Revolut stablecoin in 2026 as 'plausible' under MiCA; clarifies that the Cyprus CASP licence does not itself authorise issuance, which must come via Revolut's Lithuanian EMI.",
+      "source": "Decrypt"
+    },
+    {
+      "type": "article",
+      "url": "https://cointelegraph.com/news/revolut-secures-mica-license-in-cyprus",
+      "title": "Revolut secures MiCA licence in Cyprus to launch Europe-wide crypto services",
+      "description": "Crypto 2.0 product suite includes 280+ tokens, zero-fee staking and 1:1 stablecoin-to-USD conversion without spreads.",
+      "source": "Cointelegraph"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2025-10-23",
+      "type": "regulatory",
+      "title": "Revolut Digital Assets Europe receives MiCA CASP licence from CySEC",
+      "description": "Revolut's Cyprus entity gets MiCA authorisation to passport regulated crypto services across the EEA; unveils 'Crypto 2.0' platform with 1:1 stablecoin/USD conversion as a flagship feature.",
+      "sourceUrl": "https://www.coindesk.com/policy/2025/10/23/revolut-secures-mica-license-in-cyprus-expanding-regulated-crypto-services-across-europe"
+    },
+    {
+      "date": "2025-10-23",
+      "type": "milestone",
+      "title": "EU counsel describes a Revolut USD/EUR stablecoin in 2026 as 'plausible' under MiCA",
+      "description": "Decrypt reports Revolut's Lithuanian EMI provides the EMT issuer foundation; Cyprus CASP licence is the service-provider side; sources say Revolut has been working on its own stablecoin for over a year.",
+      "sourceUrl": "https://decrypt.co/345674/revolut-secures-mica-license-in-cyprus-is-a-stablecoin-next"
+    }
+  ]
+}

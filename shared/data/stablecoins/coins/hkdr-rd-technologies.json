@@ -1,0 +1,89 @@
+{
+  "id": "hkdr-rd-technologies",
+  "name": "RD Technologies HKDR",
+  "symbol": "HKDR",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "HKD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "1:1 HKD-denominated high-quality liquid assets in segregated custody at licensed financial institutions; reserves to be disclosed via periodic independent attestation per HKMA Stablecoins Ordinance",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://rd.group"
+    },
+    {
+      "label": "Product page",
+      "url": "https://rd.group/hkdr"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Hong Kong",
+    "regulator": "HKMA (Stablecoins Ordinance)"
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: HKDR resolves to Yes because existing metadata classifies the asset as centralized and an HKMA-licensed issuer can freeze and reissue under its compliance program.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "status": "pre-launch",
+  "announcedDate": "2024-07",
+  "expectedLaunchDate": "2026-H1",
+  "launchPhase": "auditing",
+  "launchPhaseDetail": "Issued by RD InnoTech Limited (a subsidiary of RD Technologies, founded by former HKMA chief executive Norman Chan); admitted to the HKMA stablecoin issuer sandbox in the first July 2024 cohort; testing digital asset trading and cross-border trade payments, partnership with ZA Bank for regulated use cases; HKMA chief executive Eddie Yue signalled the first wave of fiat-referenced stablecoin licences in March 2026 will be limited to 'a very small number' of issuers and RD InnoTech is widely cited as a leading candidate; HK$25M minimum paid-up capital and 100%+ reserve backing requirements already met under sandbox conditions",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.rd.group/news/blogs/Announcement-RD-Technologies-Joins-the-HKMA-Stablecoin-Issuer-Sandbox/",
+      "title": "Announcement: RD Technologies joins the HKMA Stablecoin Issuer Sandbox",
+      "description": "RD InnoTech enters the first July 2024 HKMA sandbox cohort to test HKDR for digital asset trading and cross-border trade payments.",
+      "source": "RD Technologies"
+    },
+    {
+      "type": "article",
+      "url": "https://www.prnewswire.com/news-releases/rd-technologies-celebrates-passage-of-stablecoins-ordinance-in-hong-kong-302462073.html",
+      "title": "RD Technologies celebrates passage of Stablecoins Ordinance in Hong Kong",
+      "description": "RD Technologies welcomes Hong Kong's stablecoin regulatory framework; positions HKDR for licensing under the new regime taking effect August 2025.",
+      "source": "PR Newswire"
+    },
+    {
+      "type": "article",
+      "url": "https://asiatimes.com/2026/02/hong-kong-signals-caution-in-stablecoin-license-rollout/",
+      "title": "Hong Kong signals caution in stablecoin license rollout",
+      "description": "HKMA chief executive Eddie Yue signals only a 'very small number' of stablecoin licences will be granted in the first wave, targeting March 2026 issuance.",
+      "source": "Asia Times"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2024-07-18",
+      "type": "regulatory",
+      "title": "RD InnoTech enters HKMA Stablecoin Issuer Sandbox (first cohort)",
+      "description": "HKDR begins sandbox testing for digital asset trading and cross-border trade payments under HKMA supervision.",
+      "sourceUrl": "https://www.rd.group/news/blogs/Announcement-RD-Technologies-Joins-the-HKMA-Stablecoin-Issuer-Sandbox/"
+    },
+    {
+      "date": "2025-05-21",
+      "type": "regulatory",
+      "title": "Hong Kong Stablecoins Ordinance passed; takes effect August 1 2025",
+      "description": "Legislative Council passes the Stablecoins Ordinance, mandating HKMA licensing for issuers of fiat-referenced stablecoins; RD Technologies welcomes the framework.",
+      "sourceUrl": "https://www.prnewswire.com/news-releases/rd-technologies-celebrates-passage-of-stablecoins-ordinance-in-hong-kong-302462073.html"
+    },
+    {
+      "date": "2026-02-15",
+      "type": "regulatory",
+      "title": "HKMA confirms first batch of stablecoin licences targeted for March 2026",
+      "description": "Eddie Yue signals stability over speed and limits initial licences to 'a very small number'; RD InnoTech named among credible candidates given early sandbox participation.",
+      "sourceUrl": "https://asiatimes.com/2026/02/hong-kong-signals-caution-in-stablecoin-license-rollout/"
+    }
+  ]
+}

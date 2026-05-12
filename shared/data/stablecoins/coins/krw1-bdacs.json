@@ -1,0 +1,91 @@
+{
+  "id": "krw1-bdacs",
+  "name": "BDACS KRW1",
+  "symbol": "KRW1",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "KRW",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "1:1 South Korean won held in escrow at Woori Bank with real-time banking-API proof of reserves",
+  "pegMechanism": "Custodian-managed mint/redemption against KRW deposits at Woori Bank; KRW1 is a brand trademarked by BDACS (December 2023) and operated by BDACS as the regulated digital asset custodian",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.bdacs.com"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/BDACSKorea"
+    }
+  ],
+  "jurisdiction": {
+    "country": "South Korea",
+    "regulator": "FSC / FSS (Digital Asset Basic Act pending)"
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: KRW1 resolves to Yes because existing metadata classifies the asset as centralized and the regulated custodian-issuer can freeze and reissue under its compliance program.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "collateralQuality": "rwa",
+  "status": "pre-launch",
+  "announcedDate": "2025-09",
+  "expectedLaunchDate": "2026",
+  "launchPhase": "beta",
+  "launchPhaseDetail": "Pilot phase following successful September 2025 proof of concept; not yet in public circulation. BDACS is South Korea's regulated digital-asset custodian; Woori Bank holds the won reserves and participated directly in the PoC. Initial deployment on Avalanche (cited by KISA for reliability in public-sector use); multi-chain expansion planned. February 2026 Plume partnership positions KRW1 as Korean institutional settlement rail for tokenized RWA. Commercial launch contingent on Korea's forthcoming Digital Asset Basic Act framework where BDACS is positioning KRW1 as the leading technical standard.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.prnewswire.com/news-releases/bdacs-launches-krw1--the-first-fully-krw-backed-stablecoin-developed-with-woori-bank-on-avalanche-302259560.html",
+      "title": "BDACS launches KRW1, the first fully KRW-backed stablecoin developed with Woori Bank on Avalanche",
+      "description": "September 2025 proof-of-concept launch; Avalanche-native KRW1 with real-time banking-API reserve attestation through Woori Bank.",
+      "source": "PR Newswire"
+    },
+    {
+      "type": "article",
+      "url": "https://financefeeds.com/bdacs-launches-krw1-stablecoin-following-successful-proof-of-concept-with-woori-bank/",
+      "title": "BDACS launches KRW1 stablecoin following successful proof of concept with Woori Bank",
+      "description": "Pilot details: each KRW1 fully collateralized via won held in Woori Bank escrow; KISA cites Avalanche for public-sector reliability.",
+      "source": "FinanceFeeds"
+    },
+    {
+      "type": "article",
+      "url": "https://www.seoulz.com/korea-won-stablecoin-2026/",
+      "title": "The Korea Won Stablecoin 2026 Race: 6 Players Competing for Asia's Next Financial Frontier",
+      "description": "Comparative analysis of KRW1's institutional-RWA settlement positioning versus retail-bank consortium plans under Korea's pending Digital Asset Basic Act.",
+      "source": "Seoulz"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2023-12-15",
+      "type": "milestone",
+      "title": "BDACS trademarks KRW1 brand",
+      "description": "BDACS files KRW1 trademark and begins building issuance infrastructure ahead of formal Korean stablecoin regulation.",
+      "sourceUrl": "https://coinmarketcap.com/academy/article/krw1-stablecoin-debuts-on-avalanche-network"
+    },
+    {
+      "date": "2025-09-17",
+      "type": "milestone",
+      "title": "KRW1 proof-of-concept goes live on Avalanche with Woori Bank",
+      "description": "Successful PoC validates fiat deposits, on-chain issuance, and real-time banking-API reserve attestation; not yet in public circulation.",
+      "sourceUrl": "https://www.prnewswire.com/news-releases/bdacs-launches-krw1--the-first-fully-krw-backed-stablecoin-developed-with-woori-bank-on-avalanche-302259560.html"
+    },
+    {
+      "date": "2026-02-11",
+      "type": "partnership",
+      "title": "BDACS partners with Plume to position KRW1 as Korean institutional RWA settlement rail",
+      "description": "Plume integration lets Korean institutional investors allocate into tokenized RWA instruments denominated in KRW1 without USD conversion; ~$645M of tokenized assets currently on Plume.",
+      "sourceUrl": "https://www.seoulz.com/korea-won-stablecoin-2026/"
+    }
+  ]
+}

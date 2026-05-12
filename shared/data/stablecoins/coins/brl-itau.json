@@ -1,0 +1,74 @@
+{
+  "id": "brl-itau",
+  "name": "Itau Unibanco BRL Stablecoin",
+  "symbol": "BRL-ITAU",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "BRL",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.itau.com.br"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/itau"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Brazil",
+    "regulator": "Banco Central do Brasil (Consulta Publica 111 pending)"
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: BRL-ITAU resolves to Yes because existing metadata classifies the asset as centralized and a Brazilian regulated bank issuer would retain freeze/reissue authority.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "status": "pre-launch",
+  "announcedDate": "2025-04-03",
+  "expectedLaunchDate": "2026",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Itau Unibanco (Brazil's largest private bank by assets, ~5.6T BRL) is evaluating its own stablecoin. Head of Digital Assets Guto Antunes confirmed exploration at an industry event in Sao Paulo in April 2025: 'we are always open to understanding whether it makes sense for our clients to have a stablecoin, even one in real, within Itau'. Final peg-currency choice (BRL or USD) and product timeline are gated on Brazil's regulatory output via BCB Consulta Publica 111. Itau already participates in the DREX wholesale CBDC pilot, providing distribution-rail experience; ticker not yet announced. Pharos tracks BRL as the most likely first launch given the Brazilian retail base, but the editorial summary documents the open USD option.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.coindesk.com/markets/2025/04/03/brazil-s-largest-bank-itau-unibanco-mulls-its-own-stablecoin",
+      "title": "Brazil's largest bank Itau Unibanco mulls its own stablecoin",
+      "description": "Head of Digital Assets Guto Antunes confirms Itau is evaluating a BRL or USD stablecoin pending BCB regulation under Consulta Publica 111.",
+      "source": "CoinDesk"
+    },
+    {
+      "type": "article",
+      "url": "https://www.ledgerinsights.com/brazils-largest-bank-itau-weighs-stablecoin-launch-report/",
+      "title": "Brazil's largest bank Itau weighs stablecoin launch",
+      "description": "Itau participates in DREX wholesale CBDC pilot; cautions that self-custody restrictions in proposed BCB rules would be a key product constraint.",
+      "source": "Ledger Insights"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2025-04-03",
+      "type": "announcement",
+      "title": "Itau Unibanco confirms it is evaluating its own stablecoin",
+      "description": "Head of Digital Assets Guto Antunes tells a Sao Paulo industry event Itau is exploring a BRL or USD stablecoin pending BCB regulation under Consulta Publica 111.",
+      "sourceUrl": "https://www.coindesk.com/markets/2025/04/03/brazil-s-largest-bank-itau-unibanco-mulls-its-own-stablecoin"
+    },
+    {
+      "date": "2026-02-02",
+      "type": "regulatory",
+      "title": "Brazil stablecoin FX-classification regime takes effect",
+      "description": "BCB resolutions classifying stablecoin transactions as foreign-exchange operations enter force; Itau's launch timing remains contingent on the final Consulta Publica 111 framework, especially around self-custody and bank-issuer permissions.",
+      "sourceUrl": "https://www.coindesk.com/markets/2025/04/03/brazil-s-largest-bank-itau-unibanco-mulls-its-own-stablecoin"
+    }
+  ]
+}

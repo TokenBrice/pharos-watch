@@ -1,0 +1,67 @@
+{
+  "id": "usd-nubank",
+  "name": "Nubank USD Stablecoin",
+  "symbol": "USD-NU",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://nubank.com.br"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/nubank"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Brazil",
+    "regulator": "Banco Central do Brasil"
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: USD-NU resolves to Yes because existing metadata classifies the asset as centralized and a single regulated digital-bank issuer would retain freeze/reissue authority.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "status": "pre-launch",
+  "announcedDate": "2025-09-18",
+  "expectedLaunchDate": "2026",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Nubank vice-chair Roberto Campos Neto (former Central Bank of Brazil governor) announced a dollar-pegged stablecoin pilot tied to credit-card payments at Meridian 2025. Nubank serves 100M+ customers across Brazil, Mexico, and Colombia; integrated USDC inside the app since 2023. The credit-card pilot is the first product surface, with a broader 'tokenize deposits and issue credit against tokenized assets' roadmap behind it. Whether Nubank issues its own dollar token or routes through an existing stablecoin (Campos Neto noted the open product question) is undecided; ticker, chain, and reserve disclosure model not yet confirmed. Pharos opens this pre-launch entry against the announced own-issuance interpretation; will be retired if Nubank's pilot instead routes through USDC/PYUSD/other tracked tokens.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://cointelegraph.com/news/nubank-plans-stablecoin-integration-credit-card-transactions",
+      "title": "Nubank plans stablecoin integration for credit card transactions",
+      "description": "Campos Neto reveals Nubank credit-card stablecoin pilot at Meridian 2025; positions tokenized deposits as the underlying infrastructure play.",
+      "source": "Cointelegraph"
+    },
+    {
+      "type": "article",
+      "url": "https://coinlaw.io/nubank-stablecoin-credit-card-brazil/",
+      "title": "Nubank launches stablecoin trial for credit-card users in Brazil",
+      "description": "Pilot details and roadmap context; Nubank's 100M-customer LATAM footprint and existing USDC integration.",
+      "source": "CoinLaw"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2025-09-18",
+      "type": "announcement",
+      "title": "Roberto Campos Neto announces Nubank credit-card stablecoin pilot at Meridian 2025",
+      "description": "Nubank vice-chair (former BCB governor) tells local media stablecoin credit-card testing will begin later in 2025; part of a broader roadmap to tokenize deposits and use them as collateral for credit issuance.",
+      "sourceUrl": "https://cointelegraph.com/news/nubank-plans-stablecoin-integration-credit-card-transactions"
+    }
+  ]
+}

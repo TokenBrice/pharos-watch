@@ -165,6 +165,7 @@ export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
 export const INTENTIONAL_GAP_REASONS: Record<string, string> = {
   "bfusd-binance": "Binance account yield product with no reliable runtime APY source wired yet",
   "bd-basedollar": "asset with no reliable runtime yield source yet",
+  "brd-volpon": "pre-launch yield-bearing BRL asset with no reliable runtime yield source yet",
   "gldy-streamex": "gold leasing yield is issuer-distributed; no reliable runtime APY source is wired yet",
   "pusd-polaris": "asset with no reliable runtime yield source yet",
   "stkgho-umbrella-aave": "Umbrella rewards are external emissions over a 1:1 GHO staking receipt; no reliable APY source is wired yet",
