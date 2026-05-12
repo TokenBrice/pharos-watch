@@ -4,8 +4,8 @@ import { useMemo } from "react";
 import { formatCompactCount } from "@shared/lib/format";
 import { useDexLiquidity, useHealth } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { TRACKED_IDS } from "@shared/lib/stablecoins";
 import { PharosLogo } from "@/components/pharos-logo";
+import { TRACKED_STABLECOIN_IDS } from "@/lib/stablecoin-static-data";
 
 interface SiteHeaderProps {
   total: number;
@@ -68,7 +68,7 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
 
     const availableIds = new Set(assets.map((asset) => asset.id));
     let count = 0;
-    for (const id of TRACKED_IDS) {
+    for (const id of TRACKED_STABLECOIN_IDS) {
       if (availableIds.has(id)) count++;
     }
     return count;

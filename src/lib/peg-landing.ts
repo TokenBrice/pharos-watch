@@ -1,6 +1,8 @@
 import type { PegCurrency } from "@shared/types";
-import { TRACKED_STABLECOINS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { PEG_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { ACTIVE_PEG_CURRENCIES, ACTIVE_PEG_CURRENCY_COUNTS } from "@/lib/stablecoin-static-data";
+
+const ACTIVE_PEG_COUNTS: Partial<Record<PegCurrency, number>> = ACTIVE_PEG_CURRENCY_COUNTS;
 
 // ---------------------------------------------------------------------------
 // Slug ↔ PegCurrency mapping
@@ -40,14 +42,7 @@ const ALL_SLUGS: Record<PegCurrency, string> = {
 };
 
 /** Only pegs with at least one tracked stablecoin. */
-export const ACTIVE_PEGS: PegCurrency[] = (() => {
-  const seen = new Set<PegCurrency>();
-  for (const coin of TRACKED_STABLECOINS) {
-    seen.add(coin.flags.pegCurrency);
-  }
-  // Return in a stable order (same as ALL_SLUGS key order)
-  return (Object.keys(ALL_SLUGS) as PegCurrency[]).filter((p) => seen.has(p));
-})();
+export const ACTIVE_PEGS: PegCurrency[] = [...ACTIVE_PEG_CURRENCIES];
 
 /** PegCurrency → URL slug (only active pegs). */
 export const PEG_SLUGS: Partial<Record<PegCurrency, string>> = Object.fromEntries(
@@ -56,7 +51,7 @@ export const PEG_SLUGS: Partial<Record<PegCurrency, string>> = Object.fromEntrie
 
 /** Number of tracked stablecoins per peg currency. */
 export function pegCoinCount(peg: PegCurrency): number {
-  return ACTIVE_STABLECOINS.filter((c) => c.flags.pegCurrency === peg).length;
+  return ACTIVE_PEG_COUNTS[peg] ?? 0;
 }
 
 /** Peg landing-page URL, or null when the peg has no landing page yet. */

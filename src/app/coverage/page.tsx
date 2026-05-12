@@ -4,7 +4,11 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildFaqJsonLd } from "@/lib/faq";
-import { ACTIVE_STABLECOINS, PRE_LAUNCH_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import {
+  ACTIVE_STABLECOIN_COUNT,
+  PRE_LAUNCH_STABLECOIN_COUNT,
+  TRACKED_STABLECOIN_COUNT,
+} from "@/lib/stablecoin-static-data";
 
 const coverageDescription =
   "Per-coin feature coverage across Pharos. See which stablecoins have depeg tracking, DEX price verification, reserve views, redemption backstop coverage, yield intelligence, mint/burn flows, blacklist tracking, and dependency-map visibility.";
@@ -31,10 +35,10 @@ export default createClientFeaturePage({
     title: "Coverage Matrix",
     statusBadge: { status: "mature" },
     leadParagraphs: [
-      `Use this page to answer two questions fast across ${ACTIVE_STABLECOINS.length} active stablecoins from the ${TRACKED_STABLECOINS.length}-asset tracked universe: what Pharos can show for a coin right now, and how much of the tracked market each surface actually reaches.`,
+      `Use this page to answer two questions fast across ${ACTIVE_STABLECOIN_COUNT} active stablecoins from the ${TRACKED_STABLECOIN_COUNT}-asset tracked universe: what Pharos can show for a coin right now, and how much of the tracked market each surface actually reaches.`,
       "Start with the feature snapshot for breadth by coin count and market-cap share, then drop into the matrix when you need the asset-level truth.",
       <>
-        {PRE_LAUNCH_STABLECOINS.length}{" "}
+        {PRE_LAUNCH_STABLECOIN_COUNT}{" "}
         <a href="/upcoming" className="underline underline-offset-2 hover:text-foreground transition-colors">
           upcoming stablecoins
         </a>{" "}

@@ -3,8 +3,13 @@
 import { useEffect, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { getWindowStorage, safeStorageGetItem, safeStorageSetItem } from "@/lib/browser-storage";
-import { useDailyDigest, useHealth, usePegSummary, useStabilityIndex } from "@/hooks/api-hooks";
-import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
+import {
+  useSidebarBlacklistSignal,
+  useSidebarDailyDigestSignal,
+  useSidebarHealthSignal,
+  useSidebarPegSummarySignal,
+  useSidebarStabilityIndexSignal,
+} from "@/hooks/use-sidebar-nav-signal-data";
 import {
   getBlacklistNavSignal,
   getDepegNavSignal,
@@ -19,11 +24,11 @@ import {
 export function useSidebarNavSignals() {
   const pathname = usePathname();
   const shouldFetchBlacklistSignal = pathname != null;
-  const { data: pegSummary } = usePegSummary();
-  const { data: stabilityIndex } = useStabilityIndex();
-  const { data: blacklistSummary } = useBlacklistSummary({ enabled: shouldFetchBlacklistSignal });
-  const { data: health } = useHealth();
-  const { data: dailyDigest } = useDailyDigest();
+  const { data: pegSummary } = useSidebarPegSummarySignal();
+  const { data: stabilityIndex } = useSidebarStabilityIndexSignal();
+  const { data: blacklistSummary } = useSidebarBlacklistSignal(shouldFetchBlacklistSignal);
+  const { data: health } = useSidebarHealthSignal();
+  const { data: dailyDigest } = useSidebarDailyDigestSignal();
   const seenDigestGeneratedAt = useMemo(() => {
     if (pathname.startsWith("/digest") && dailyDigest?.generatedAt != null) {
       return dailyDigest.generatedAt;

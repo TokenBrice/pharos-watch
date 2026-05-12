@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useStabilityIndex } from "@/hooks/api-hooks";
+import { useStabilityIndexLight } from "@/hooks/use-stability-index-light";
 import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
 import { getDisplayedPsi, getPsiBandStreak } from "@shared/lib/psi-view-model";
 import { cn } from "@/lib/utils";
 
 /** Persistent 3px bar at the top of every page, colored by current PSI band. */
 export function RegimeBar() {
-  const { data: psiData } = useStabilityIndex();
+  const { data: psiData } = useStabilityIndexLight();
   const [expanded, setExpanded] = useState(false);
 
   const current = psiData?.current;

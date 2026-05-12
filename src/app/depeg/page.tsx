@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Bell } from "lucide-react";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalloutBanner } from "@/components/callout-banner";
 import { ShareButton } from "@/components/share-button";
@@ -12,8 +11,9 @@ import {
 } from "@shared/lib/depeg-dews-version";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildFaqJsonLd } from "@/lib/faq";
+import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 
-const depegDescription = `Use the Depeg Tracker as the live incident board for peg stress across ${ACTIVE_STABLECOINS.length} stablecoins: active deviations, DEWS early warnings, heatmaps, and depeg history in one surface.`;
+const depegDescription = `Use the Depeg Tracker as the live incident board for peg stress across ${ACTIVE_STABLECOIN_COUNT} stablecoins: active deviations, DEWS early warnings, heatmaps, and depeg history in one surface.`;
 
 export const metadata = buildPageMetadata({
   title: "Depeg Tracker: Live Peg Monitoring & Early Warnings",
@@ -58,7 +58,7 @@ export default createClientFeaturePage({
     ),
     leadParagraphs: [
       "A forward-looking incident board — not just price deviations, but early warning signals before the depeg happens.",
-      `DEWS scans 8 sub-signals every 30 minutes across ${ACTIVE_STABLECOINS.length} stablecoins — supply velocity, pool drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, and yield anomaly — to flag stress before it hits the price. When systemic risk rises, the radar sweeps faster.`,
+      `DEWS scans 8 sub-signals every 30 minutes across ${ACTIVE_STABLECOIN_COUNT} stablecoins — supply velocity, pool drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, and yield anomaly — to flag stress before it hits the price. When systemic risk rises, the radar sweeps faster.`,
     ],
   },
   beforeClient: (

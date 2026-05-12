@@ -22,8 +22,11 @@ import {
   TEAM_MEMBERS,
   type AboutFeatureItem,
 } from "./content";
-import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
-import { ACTIVE_STABLECOINS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
+import {
+  ACTIVE_STABLECOIN_COUNT,
+  DEAD_STABLECOIN_COUNT,
+  PRE_LAUNCH_STABLECOIN_COUNT,
+} from "@/lib/stablecoin-static-data";
 
 const INLINE_EXTERNAL_LINK_CLASS =
   "pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-frost-blue";
@@ -194,9 +197,9 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default function AboutPage() {
-  const activeStablecoinCount = ACTIVE_STABLECOINS.length;
-  const preLaunchStablecoinCount = PRE_LAUNCH_STABLECOINS.length;
-  const deadStablecoinCount = DEAD_STABLECOINS.length;
+  const activeStablecoinCount = ACTIVE_STABLECOIN_COUNT;
+  const preLaunchStablecoinCount = PRE_LAUNCH_STABLECOIN_COUNT;
+  const deadStablecoinCount = DEAD_STABLECOIN_COUNT;
   const trackedFeatures = getTrackedFeatures({
     activeStablecoins: activeStablecoinCount,
     deadStablecoins: deadStablecoinCount,
@@ -239,8 +242,8 @@ export default function AboutPage() {
             dozens of derivatives that looked safe in isolation.
           </p>
           <p>
-            Pharos was built to make these risks visible. It tracks {ACTIVE_STABLECOINS.length} live stablecoins,{" "}
-            {PRE_LAUNCH_STABLECOINS.length} upcoming launches, and {DEAD_STABLECOINS.length} dead ones, then scores the
+            Pharos was built to make these risks visible. It tracks {ACTIVE_STABLECOIN_COUNT} live stablecoins,{" "}
+            {PRE_LAUNCH_STABLECOIN_COUNT} upcoming launches, and {DEAD_STABLECOIN_COUNT} dead ones, then scores the
             live universe with honest governance classification, transitive dependency scoring, and live reserve
             composition where available. Real-time depeg detection, freeze monitoring across 35 stablecoins, safety
             grades that cap scores based on upstream exposure, and a 30-minute ecosystem-wide stability index give you

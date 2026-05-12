@@ -4,13 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Moon, Sun, FileText, Coins, Clock, Trash2, Search, Copy, BookOpen, Newspaper, KeyRound } from "lucide-react";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
-import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
+import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
 import {
   COMMAND_PALETTE_PAGES,
   buildCommandPaletteActionDefinitions,
@@ -54,6 +53,11 @@ interface SearchResult {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
+interface CommandPaletteProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
 function getActionIcon(icon: CommandPaletteActionIcon): React.ReactNode {
   switch (icon) {
     case "theme-light":
@@ -71,71 +75,44 @@ function getActionIcon(icon: CommandPaletteActionIcon): React.ReactNode {
   }
 }
 
-export function CommandPalette() {
-  const [open, setOpen] = useState(false);
+export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
+  const wasOpenRef = useRef(false);
   const router = useRouter();
   const { isDark, toggleTheme } = useThemeToggle();
   const { data: logos } = useLogos();
   const { history, addToHistory, clearHistory } = useCommandPaletteHistory();
 
-  // ── Open/close handlers ──────────────────────────────────────────────────
-
-  const openPalette = useCallback(() => {
-    if (typeof document !== "undefined") {
-      const activeElement = document.activeElement;
-      if (activeElement instanceof HTMLElement) {
-        lastFocusedElementRef.current = activeElement;
-      }
-    }
-    setOpen(true);
-    setQuery("");
-    setSelectedIndex(0);
-  }, []);
-
   const closePalette = useCallback(() => {
-    setOpen(false);
-  }, []);
-
-  // ── Global keyboard shortcut (Ctrl/Cmd+K) ─────────────────────────────
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        if (open) {
-          closePalette();
-        } else {
-          openPalette();
-        }
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, openPalette, closePalette]);
-
-  // ── Custom event listener (for sidebar/header search icons) ────────────
-
-  useEffect(() => {
-    const handler = () => openPalette();
-    window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, handler);
-    return () => window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, handler);
-  }, [openPalette]);
+    onOpenChange(false);
+  }, [onOpenChange]);
 
   // ── Restore focus on close and auto-focus input when open ────────────────────
 
   useEffect(() => {
+    const wasOpen = wasOpenRef.current;
+    wasOpenRef.current = open;
+
     if (!open) {
-      const focusTarget = lastFocusedElementRef.current;
+      const focusTarget = wasOpen ? lastFocusedElementRef.current : null;
       if (focusTarget) {
         focusTarget.focus();
       }
       lastFocusedElementRef.current = null;
       return;
+    }
+
+    if (!wasOpen) {
+      const activeElement = document.activeElement;
+      if (activeElement instanceof HTMLElement) {
+        lastFocusedElementRef.current = activeElement;
+      }
+      setQuery("");
+      setSelectedIndex(0);
     }
 
     requestAnimationFrame(() => {
@@ -169,34 +146,40 @@ export function CommandPalette() {
 
     // Stablecoins
     if (q) {
-      const matched: Array<{ coin: typeof TRACKED_STABLECOINS[number]; score: number; status: string }> = [];
-      for (const coin of TRACKED_STABLECOINS) {
-        const symbolMatch = fuzzyMatch(q, coin.symbol);
-        const nameMatch = fuzzyMatch(q, coin.name);
-        const idMatch = fuzzyMatch(q, coin.id);
+      const matched: Array<{
+        coin: (typeof COMMAND_PALETTE_STABLECOINS)[number];
+        score: number;
+        status: string;
+      }> = [];
+      for (const coin of COMMAND_PALETTE_STABLECOINS) {
+        const [id, name, symbol, status] = coin;
+        const symbolMatch = fuzzyMatch(q, symbol);
+        const nameMatch = fuzzyMatch(q, name);
+        const idMatch = fuzzyMatch(q, id);
         if (!symbolMatch && !nameMatch && !idMatch) continue;
         const score = (symbolMatch ? 3 : 0) + (nameMatch ? 2 : 0) + (idMatch ? 1 : 0);
-        matched.push({ coin, score, status: coin.status ?? "active" });
+        matched.push({ coin, score, status: status ?? "active" });
       }
       const ranked = rankCommandPaletteResults(matched);
       for (const { coin } of ranked) {
-        const logoUrl = logos[coin.id];
-        const href = buildStablecoinUrl(coin.id);
+        const [id, name, symbol, status, frozenAt] = coin;
+        const logoUrl = logos[id];
+        const href = buildStablecoinUrl(id);
         const sublabel =
-          coin.status === "pre-launch"
-            ? `${coin.symbol} · Pre-launch`
-            : coin.status === "frozen"
-              ? `${coin.symbol} · Frozen${coin.frozenAt ? ` ${coin.frozenAt}` : ""}`
-              : coin.symbol;
+          status === "pre-launch"
+            ? `${symbol} · Pre-launch`
+            : status === "frozen"
+              ? `${symbol} · Frozen${frozenAt ? ` ${frozenAt}` : ""}`
+              : symbol;
         items.push({
-          id: `coin-${coin.id}`,
-          label: coin.name,
+          id: `coin-${id}`,
+          label: name,
           sublabel,
           section: "Stablecoins",
           logoUrl,
-          frozen: coin.status === "frozen",
+          frozen: status === "frozen",
           onSelect: () => {
-            addToHistory(coin.id, "stablecoin", coin.name, coin.symbol, href);
+            addToHistory(id, "stablecoin", name, symbol, href);
             router.push(href);
             closePalette();
           },
@@ -341,7 +324,7 @@ export function CommandPalette() {
   let flatIndex = 0;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="inset-x-0 top-0 translate-x-0 translate-y-0 flex h-[100dvh] max-w-none flex-col rounded-none border-0 sm:inset-x-auto sm:top-[50%] sm:left-[50%] sm:h-auto sm:max-h-none sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-[-50%] sm:mt-[18vh] sm:rounded-xl sm:border sm:border-border/75 z-[100] overflow-hidden bg-card p-0 shadow-[0_28px_50px_oklch(0_0_0_/0.35)]"
         showCloseButton={false}

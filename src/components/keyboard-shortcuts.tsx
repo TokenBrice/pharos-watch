@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Shortcut {
@@ -37,33 +36,17 @@ function KeyCombo({ keys }: { keys: string[] }) {
   );
 }
 
-export function KeyboardShortcuts() {
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      // Show shortcuts on '?' (but not when typing in inputs)
-      if (
-        e.key === "?" &&
-        !e.ctrlKey &&
-        !e.metaKey &&
-        !e.altKey &&
-        !(e.target instanceof HTMLInputElement) &&
-        !(e.target instanceof HTMLTextAreaElement)
-      ) {
-        e.preventDefault();
-        setOpen(true);
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
+export function KeyboardShortcuts({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const categories = [...new Set(SHORTCUTS.map((s) => s.category))];
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold">Keyboard Shortcuts</DialogTitle>
@@ -94,51 +77,4 @@ export function KeyboardShortcuts() {
       </DialogContent>
     </Dialog>
   );
-}
-
-// Hook to provide global keyboard shortcut functionality
-export function useGlobalShortcuts({
-  onToggleTheme,
-  onFocusSearch,
-  onFocusTable,
-}: {
-  onToggleTheme?: () => void;
-  onFocusSearch?: () => void;
-  onFocusTable?: () => void;
-}) {
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      // Ignore if typing in input
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      ) {
-        return;
-      }
-
-      switch (e.key.toLowerCase()) {
-        case "t":
-          if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-            e.preventDefault();
-            onToggleTheme?.();
-          }
-          break;
-        case "/":
-          if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-            e.preventDefault();
-            onFocusSearch?.();
-          }
-          break;
-        case "s":
-          if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-            e.preventDefault();
-            onFocusTable?.();
-          }
-          break;
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onToggleTheme, onFocusSearch, onFocusTable]);
 }

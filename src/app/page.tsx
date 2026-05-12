@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
 import { HomepageClient } from "@/components/homepage-client";
@@ -10,10 +9,15 @@ import { safeJsonLd } from "@/lib/json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { logosById } from "@/lib/logos";
+import {
+  ACTIVE_STABLECOIN_COUNT,
+  HOMEPAGE_TOP_ACTIVE_STABLECOINS,
+  TRACKED_STABLECOIN_COUNT,
+} from "@/lib/stablecoin-static-data";
 
 export const metadata: Metadata = {
   title: {
-    absolute: `Stablecoin Analytics Dashboard — Track ${TRACKED_STABLECOINS.length} Coins | Pharos`,
+    absolute: `Stablecoin Analytics Dashboard — Track ${TRACKED_STABLECOIN_COUNT} Coins | Pharos`,
   },
   description:
     "Pharos tracks stablecoins across supported chains with depeg alerts, liquidity scores, on-chain safety signals, dependency risk scoring, and report-card style risk summaries.",
@@ -21,7 +25,7 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: `Stablecoin Analytics Dashboard — Track ${TRACKED_STABLECOINS.length} Coins | Pharos`,
+    title: `Stablecoin Analytics Dashboard — Track ${TRACKED_STABLECOIN_COUNT} Coins | Pharos`,
     description:
       "Pharos tracks stablecoins across supported chains with depeg alerts, liquidity scores, on-chain safety signals, dependency risk scoring, and report-card style risk summaries.",
     url: "/",
@@ -31,10 +35,10 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  const total = ACTIVE_STABLECOINS.length;
+  const total = ACTIVE_STABLECOIN_COUNT;
 
   // Top 20 stablecoins for ItemList schema
-  const itemListElements = ACTIVE_STABLECOINS.slice(0, 20).map((coin, i) => {
+  const itemListElements = HOMEPAGE_TOP_ACTIVE_STABLECOINS.map((coin, i) => {
     const logo = logosById[coin.id];
     const url = `${SITE_URL}${buildStablecoinUrl(coin.id)}`;
 

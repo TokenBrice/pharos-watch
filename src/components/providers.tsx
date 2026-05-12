@@ -1,17 +1,27 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import { ThemeProvider } from "next-themes";
-import { useState, useCallback } from "react";
-import { CommandPalette } from "./command-palette";
-import { ToastContainer } from "./toast-container";
-import { KeyboardShortcuts, useGlobalShortcuts } from "./keyboard-shortcuts";
+import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
-import { openCommandPalette } from "@/lib/command-palette";
+import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette";
 
 // Create a context for toast functionality
 import { createContext, useContext } from "react";
+
+const CommandPalette = dynamic(() => import("./command-palette").then((mod) => mod.CommandPalette), {
+  ssr: false,
+});
+
+const KeyboardShortcuts = dynamic(() => import("./keyboard-shortcuts").then((mod) => mod.KeyboardShortcuts), {
+  ssr: false,
+});
+
+const ToastContainer = dynamic(() => import("./toast-container").then((mod) => mod.ToastContainer), {
+  ssr: false,
+});
 
 interface ToastContextType {
   addToast: (message: string, type?: "success" | "info" | "warning" | "error", duration?: number) => void;
@@ -29,28 +39,90 @@ export function useToastContext() {
 function AppProviders({ children }: { children: React.ReactNode }) {
   const { toasts, addToast, removeToast } = useToast();
   const { toggleTheme } = useThemeToggle({ toast: addToast });
+  const [commandPaletteLoaded, setCommandPaletteLoaded] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [keyboardShortcutsLoaded, setKeyboardShortcutsLoaded] = useState(false);
+  const [keyboardShortcutsOpen, setKeyboardShortcutsOpen] = useState(false);
 
-  const handleFocusSearch = useCallback(() => {
-    openCommandPalette();
+  const openGlobalCommandPalette = useCallback(() => {
+    setCommandPaletteLoaded(true);
+    setCommandPaletteOpen(true);
   }, []);
+
+  const handleFocusSearch = openGlobalCommandPalette;
 
   const handleFocusTable = useCallback(() => {
     // Dispatch event to focus table
     window.dispatchEvent(new CustomEvent("focus-stablecoin-table"));
   }, []);
 
-  useGlobalShortcuts({
-    onToggleTheme: toggleTheme,
-    onFocusSearch: handleFocusSearch,
-    onFocusTable: handleFocusTable,
-  });
+  useEffect(() => {
+    function handleOpenCommandPalette() {
+      openGlobalCommandPalette();
+    }
+
+    function handleGlobalOverlayKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandPaletteLoaded(true);
+        setCommandPaletteOpen((open) => !open);
+        return;
+      }
+
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (
+        event.key === "?" &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey
+      ) {
+        event.preventDefault();
+        setKeyboardShortcutsLoaded(true);
+        setKeyboardShortcutsOpen(true);
+        return;
+      }
+
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+
+      switch (event.key.toLowerCase()) {
+        case "t":
+          event.preventDefault();
+          toggleTheme();
+          break;
+        case "/":
+          event.preventDefault();
+          handleFocusSearch();
+          break;
+        case "s":
+          event.preventDefault();
+          handleFocusTable();
+          break;
+      }
+    }
+
+    window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, handleOpenCommandPalette);
+    window.addEventListener("keydown", handleGlobalOverlayKeyDown);
+    return () => {
+      window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, handleOpenCommandPalette);
+      window.removeEventListener("keydown", handleGlobalOverlayKeyDown);
+    };
+  }, [handleFocusSearch, handleFocusTable, openGlobalCommandPalette, toggleTheme]);
 
   return (
     <ToastContext.Provider value={{ addToast }}>
       {children}
-      <CommandPalette />
-      <KeyboardShortcuts />
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      {commandPaletteLoaded && (
+        <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+      )}
+      {keyboardShortcutsLoaded && (
+        <KeyboardShortcuts open={keyboardShortcutsOpen} onOpenChange={setKeyboardShortcutsOpen} />
+      )}
+      {toasts.length > 0 && <ToastContainer toasts={toasts} removeToast={removeToast} />}
     </ToastContext.Provider>
   );
 }

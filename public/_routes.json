@@ -25,7 +25,6 @@
     "/chains/*",
     "/dexes/*",
     "/featured/*",
-    "/fonts/*",
     "/og-*.png",
     "/llms.txt",
     "/sitemap.xml",

@@ -4,7 +4,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import {
   BACKING_TAXONOMY_PAGES,
   GOVERNANCE_TAXONOMY_PAGES,
@@ -12,7 +12,7 @@ import {
 } from "@/lib/stablecoin-taxonomy";
 import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
 
-const TOTAL = ACTIVE_STABLECOINS.length;
+const TOTAL = ACTIVE_STABLECOIN_COUNT;
 
 interface TaxonomyLinkPage {
   href: string;

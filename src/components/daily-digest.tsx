@@ -6,7 +6,7 @@ import { useDailyDigest } from "@/hooks/api-hooks";
 import { getDigestBodyParagraphs, EDITORIAL_BODY_STYLE } from "@/lib/digest";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DigestIntelligencePanel } from "@/components/digest-intelligence";
-import { digestDisplay } from "@/lib/fonts";
+import { digestDisplay } from "@/lib/fonts/digest";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
 import type {
