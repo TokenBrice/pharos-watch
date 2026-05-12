@@ -189,6 +189,48 @@ describe("adaptAccountableTypeBreakdown", () => {
     ]);
   });
 
+  it("maps product-scoped protocol_split values into reserve slices", () => {
+    const slices = adaptAccountableTypeBreakdown(
+      {
+        res: "ok",
+        data: {
+          collateralization: 1.002,
+          ts: "1778509189684",
+          reserves: {
+            protocol_split: {
+              hoUSDT: { hoUSDT: 3_676_711.58 },
+              USDT0: { USDT0: 25_184.45 },
+              USDC: { Morpho: 586_637.21 },
+              masterUSD: { masterUSD: 2_001_257.2 },
+            },
+          },
+        },
+      },
+      {
+        bucket: "protocol_split",
+        riskMap: {
+          hoUSDT: "high",
+          USDT0: "low",
+          USDC: "medium",
+          masterUSD: "high",
+        },
+        renameMap: {
+          hoUSDT: "hoUSDT strategy exposure",
+          USDT0: "USDT0 reserves",
+          USDC: "Morpho USDC lending exposure",
+          masterUSD: "masterUSD strategy exposure",
+        },
+      },
+    );
+
+    expect(slices).toEqual([
+      { name: "hoUSDT strategy exposure", pct: 58.5, risk: "high" },
+      { name: "masterUSD strategy exposure", pct: 31.8, risk: "high" },
+      { name: "Morpho USDC lending exposure", pct: 9.3, risk: "medium" },
+      { name: "USDT0 reserves", pct: 0.4, risk: "low" },
+    ]);
+  });
+
   it("preserves unmapped buckets as explicit unknown exposure instead of defaulting them to medium risk", async () => {
     const config: LiveReservesConfig = {
       adapter: "accountable",

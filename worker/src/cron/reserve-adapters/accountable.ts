@@ -28,17 +28,18 @@ interface AccountableDashboardResponse {
       type_split?: Record<string, number>;
       stablecoin_split?: Record<string, number>;
       exposure_split?: Record<string, Record<string, number> | number>;
+      protocol_split?: Record<string, Record<string, number> | number>;
     };
   };
 }
 
 interface AccountableParams {
-  bucket?: "type" | "reserves_split" | "deployment" | "type_split" | "stablecoin_split" | "exposure_split";
+  bucket?: "type" | "reserves_split" | "deployment" | "type_split" | "stablecoin_split" | "exposure_split" | "protocol_split";
   riskMap?: Record<string, ReserveSlice["risk"]>;
   renameMap?: Record<string, string>;
 }
 
-const VALID_BUCKETS = new Set(["type", "reserves_split", "deployment", "type_split", "stablecoin_split", "exposure_split"]);
+const VALID_BUCKETS = new Set(["type", "reserves_split", "deployment", "type_split", "stablecoin_split", "exposure_split", "protocol_split"]);
 
 function parseAccountableParams(config: LiveReservesConfig): AccountableParams {
   const params = parseLiveReserveAdapterParams("accountable", config.params);
@@ -86,6 +87,9 @@ function extractBucketEntries(
       return Object.entries(reserves.stablecoin_split ?? {}).map(([name, value]) => ({ name, value }));
     case "exposure_split":
       return Object.entries(reserves.exposure_split ?? {})
+        .map(([name, value]) => ({ name, value: extractAccountableBucketValue(value) ?? 0 }));
+    case "protocol_split":
+      return Object.entries(reserves.protocol_split ?? {})
         .map(([name, value]) => ({ name, value: extractAccountableBucketValue(value) ?? 0 }));
     default:
       return [];

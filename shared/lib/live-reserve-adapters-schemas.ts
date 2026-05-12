@@ -146,7 +146,7 @@ const usd1BundleOracleParamsSchema = z
 const accountableParamsSchema = z
   .object({
     bucket: z
-      .enum(["type", "reserves_split", "deployment", "type_split", "stablecoin_split", "exposure_split"])
+      .enum(["type", "reserves_split", "deployment", "type_split", "stablecoin_split", "exposure_split", "protocol_split"])
       .optional(),
     riskMap: riskRecordSchema.optional(),
     renameMap: stringRecordSchema.optional(),
