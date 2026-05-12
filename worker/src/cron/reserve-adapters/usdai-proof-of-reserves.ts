@@ -359,8 +359,15 @@ async function fetchUsdAiProofPageTimestamp(
   let html: string;
   try {
     html = await fetchTextWithRetry(url, signal, 12_000, ctx);
-  } catch {
-    return { timestamp: null, summary: null };
+  } catch (error) {
+    return {
+      timestamp: null,
+      summary: null,
+      fallbackWarning: reserveInfoWarning(
+        "usdai-proof-html-fetch-failed",
+        `USD.AI proof-of-reserves page fetch failed (${url}): ${error instanceof Error ? error.message : String(error)}`,
+      ),
+    };
   }
   const scoped = extractUsdAiProofPageTimestampSummary(html);
   if (scoped != null) return { timestamp: scoped.sourceTimestamp, summary: scoped };
