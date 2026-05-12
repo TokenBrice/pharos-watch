@@ -24,6 +24,7 @@ export const TARGET_FILES = [
   "src/app/coverage/client.tsx",
   "src/components/api-key-request-form.tsx",
   "src/hooks/use-api-key-request-form-state.ts",
+  "src/lib/stablecoin-detail-view-model.ts",
   "worker/src/api/api-key-requests.ts",
   "worker/src/api/api-key-requests/admin.ts",
   "worker/src/api/reclassify-atomic-roundtrips.ts",

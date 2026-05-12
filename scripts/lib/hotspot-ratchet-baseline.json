@@ -84,8 +84,8 @@
     "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 177,
-    "maxFunctionLines": 155,
+    "fileLines": 173,
+    "maxFunctionLines": 151,
     "branchCount": 8,
     "disposition": "stabilized",
     "targetBudget": {
@@ -216,8 +216,8 @@
     "notes": "Reference tables are already separated. Keep future lookup tables here rather than regrowing the per-version modules."
   },
   "src/app/coverage/client.tsx": {
-    "fileLines": 59,
-    "maxFunctionLines": 44,
+    "fileLines": 54,
+    "maxFunctionLines": 39,
     "branchCount": 2,
     "disposition": "stabilized",
     "targetBudget": {
@@ -228,9 +228,9 @@
     "notes": "Coverage page orchestration now lives behind a page-model hook plus section components. Keep this file as a route shell that composes the sections."
   },
   "src/components/api-key-request-form.tsx": {
-    "fileLines": 474,
+    "fileLines": 446,
     "maxFunctionLines": 413,
-    "branchCount": 29,
+    "branchCount": 27,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 420,
@@ -240,28 +240,40 @@
     "notes": "The public self-serve form now delegates request, verification, copy, and one-time reveal state to `use-api-key-request-form-state`. Keep future behavior in the hook or focused subcomponents instead of regrowing the presentation shell."
   },
   "src/hooks/use-api-key-request-form-state.ts": {
-    "fileLines": 264,
-    "maxFunctionLines": 224,
-    "branchCount": 20,
+    "fileLines": 206,
+    "maxFunctionLines": 136,
+    "branchCount": 12,
+    "disposition": "stabilized",
+    "targetBudget": {
+      "fileLines": 220,
+      "maxFunctionLines": 150,
+      "branchCount": 16
+    },
+    "notes": "The hook is now the side-effect coordinator for submit, verification, copy, and one-time reveal flows; reducer state, payload shaping, and constants live in `api-key-request-form-view-model`. Keep future field workflow logic out of the hook unless it owns a browser side effect."
+  },
+  "src/lib/stablecoin-detail-view-model.ts": {
+    "fileLines": 845,
+    "maxFunctionLines": 318,
+    "branchCount": 60,
     "disposition": "queued-p4",
     "targetBudget": {
-      "fileLines": 240,
+      "fileLines": 560,
       "maxFunctionLines": 180,
-      "branchCount": 18
+      "branchCount": 40
     },
-    "notes": "Self-serve API-key intake, verification, copy-state, and one-time reveal protection now live in this hook. Split field-state and issued-key reveal helpers if the workflow grows again."
+    "notes": "The stablecoin detail page and hero now share this view-model layer after the hero extraction. Split hero-specific signal rail, market metrics, and reserve/detail shaping into focused helpers before expanding the detail surface further."
   },
   "worker/src/api/api-key-requests.ts": {
-    "fileLines": 981,
-    "maxFunctionLines": 171,
-    "branchCount": 49,
-    "disposition": "queued-p4",
+    "fileLines": 10,
+    "maxFunctionLines": 0,
+    "branchCount": 0,
+    "disposition": "stabilized",
     "targetBudget": {
-      "fileLines": 900,
-      "maxFunctionLines": 140,
-      "branchCount": 45
+      "fileLines": 40,
+      "maxFunctionLines": 10,
+      "branchCount": 2
     },
-    "notes": "The self-serve API key route now delegates public response assembly and admin-review helpers to adjacent modules. Continue splitting request persistence and verification issuance before adding more lifecycle branches."
+    "notes": "The self-serve API key route is now a stable export facade over public, admin, state, notification, and response modules. Keep route behavior in the adjacent modules instead of regrowing this barrel."
   },
   "worker/src/api/api-key-requests/admin.ts": {
     "fileLines": 216,
@@ -276,8 +288,8 @@
     "notes": "Admin list/mutation support is isolated from the public issuance route. Keep rejection, claim-release, audit, and row mapping helpers here rather than leaking them back into the route shell."
   },
   "worker/src/api/reclassify-atomic-roundtrips.ts": {
-    "fileLines": 149,
-    "maxFunctionLines": 94,
+    "fileLines": 156,
+    "maxFunctionLines": 89,
     "branchCount": 7,
     "disposition": "stabilized",
     "targetBudget": {

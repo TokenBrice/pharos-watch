@@ -1,12 +1,4 @@
 {
-  "src/components/stablecoin-detail/hero-card.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The stablecoin detail hero remains a large presentation hotspot. Track it for the planned frontend decomposition lane rather than mixing it into the worker-focused tranche."
-  },
-  "src/app/chains/nautical-chart.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The chains harbor scene intentionally concentrates SVG ship, lighthouse, water, and label primitives during the nautical redesign. Split ship rendering, harbor background, and scene view-model helpers in the next chains visualization cleanup pass."
-  },
   "src/components/command-palette.tsx": {
     "disposition": "queued-p4",
     "notes": "The command palette still combines indexing, keyboard handling, and rendering in one shell. Keep it waived until the navigation/search UI cleanup lane is scheduled."
@@ -27,17 +19,9 @@
     "disposition": "deferred",
     "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work."
   },
-  "src/components/status/api-keys-panel.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The API keys operator panel currently mixes create/edit form state, admin mutations, expiry/rate-limit validation, and token reveal rendering in one client component. Keep it explicitly waived until the next ops-UI decomposition pass splits the mutation helpers and per-key row editor out of the panel shell."
-  },
   "src/app/admin/status-dashboard.tsx": {
     "disposition": "queued-p4",
     "notes": "Admin status dashboard still centralizes top-fold triage, section composition, and operator controls in one client shell. Keep waived until the dedicated admin-status decomposition lane is scheduled instead of widening the current mixed status/frontend tranche."
-  },
-  "shared/lib/classification.ts": {
-    "disposition": "deferred",
-    "notes": "Classification now intentionally centralizes peg labels, badge styles, chart colors, and filter labels behind a canonical metadata table. Treat the file-line count as a data-table hotspot, not a behavior hotspot; revisit only if classification grows more non-data logic."
   },
   "worker/src/cron/daily-digest/prompt.ts": {
     "disposition": "queued-p4",
@@ -71,9 +55,25 @@
     "disposition": "queued-p4",
     "notes": "Surfaced after merging the local yield coverage and publication-health tranche. Yield cache validation now covers rankings publication state, benchmark caches, supplemental source caches, and deterministic on-chain health; split schema parsing by cache family in a dedicated yield cleanup pass."
   },
+  "worker/src/cron/sync-stablecoins/enrich-prices-primary-provider-collection.ts": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after the larger pricing-provider shells were split. This module still combines provider target collection, cache gates, and diagnostic shaping; split target selection from provider execution in a follow-up pricing cleanup."
+  },
+  "worker/src/cron/sync-fx-rates-helpers.ts": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after the stablecoin pricing hotspots dropped out of the candidate set. FX helper policy still combines source parsing, freshness decisions, and fallback diagnostics; split provider-specific helpers in a dedicated FX cleanup pass."
+  },
+  "src/components/pre-launch-detail.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after frontend hotspot reductions. The pre-launch detail page still combines hero, readiness, source, and status rendering in one component; split page sections once the pre-launch surface changes again."
+  },
   "src/app/yield/client.tsx": {
     "disposition": "queued-p4",
     "notes": "Surfaced after Phase 6 reduced larger hotspots. The yield client still combines filter state, table shaping, and interaction handling in one route shell; split view-model and table controls in the next yield UI cleanup pass."
+  },
+  "src/app/compare/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after stablecoin detail and chains reductions. The compare client still owns selection state, URL wiring, metrics, and table rendering; split compare state/model helpers before expanding the comparison surface."
   },
   "shared/lib/redemption-backstop-configs/validation.ts": {
     "disposition": "queued-p4",
