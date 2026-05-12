@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.05",
+  currentVersion: "5.06",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.06",
+      title: "ERC-4626 NAV authoritative price provider",
+      date: "2026-05-12",
+      effectiveAt: 1778556958,
+      summary:
+        "Added a generic ERC-4626 NAV authoritative price provider that prices wrapper vault tokens from on-chain `convertToAssets(1 share)` times the tracked parent's live price, replacing missing-price publication for navToken vaults whose parents already price through consensus.",
+      impact: [
+        "`susdt-spark`, `gtusdc-gauntlet`, `yvusdc-yearn`, `sgho-aave`, `stkgho-umbrella-aave`, and `sbold-k3-capital` now publish a `protocol-redeem` high-confidence price derived from the standard ERC-4626 `convertToAssets(uint256)` selector and the tracked parent asset price",
+        "Each vault override carries the parent provenance metadata (source, confidence, observed-at, replay-safety) the same way the inherited tracked-base lane already does",
+        "The provider rejects on-chain quotes outside a 0.5–10.0 share-to-asset bound to prevent silent regressions if the vault contract migrates or returns degenerate data",
+        "Parent-trust gating is shared with the existing inherited-base lane, so low-confidence, stale, cached, or fallback parents cannot upgrade into a high-confidence child vault price",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.05",
       title: "Authenticated Jupiter gateway support",

@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v5.05`
+- **Current methodology version:** `v5.06`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -202,6 +202,12 @@ After market/oracle consensus, `worker/src/lib/authoritative-price-sources.ts` c
 | `usdk-kast` | inherits tracked `wm-m0` pricing as a Solana M0 extension unit |
 | `xo-exodus` | inherits tracked `wm-m0` pricing as a Solana M0 extension unit |
 | `usdnr-nerona` | inherits tracked `wm-m0` pricing as an M0 extension unit |
+| `susdt-spark` | ERC-4626 `convertToAssets(1 share)` × tracked `usdt-tether` price |
+| `gtusdc-gauntlet` | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price |
+| `yvusdc-yearn` | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price |
+| `sgho-aave` | ERC-4626 `convertToAssets(1 share)` × tracked `gho-aave` price |
+| `stkgho-umbrella-aave` | ERC-4626 `convertToAssets(1 share)` × tracked `gho-aave` price |
+| `sbold-k3-capital` | ERC-4626 `convertToAssets(1 share)` × tracked `bold-liquity` price |
 
 When a live override validates successfully, the cached asset is written with:
 

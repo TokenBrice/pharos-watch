@@ -707,6 +707,112 @@ describe("authoritative-price-sources", () => {
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
   });
 
+  it("prices an ERC-4626 NAV vault from convertToAssets() x parent price", async () => {
+    // convertToAssets(10^18 gtUSDC shares) -> 1_010_000 USDC (1.01 per share)
+    const oneShareUsdcRaw = (1_010_000n).toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneShareUsdcRaw}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "gtusdc-gauntlet",
+        name: "Gauntlet USDC Core",
+        symbol: "gtUSDC",
+        circulating: { peggedUSD: 128_000_000 },
+      },
+      {
+        id: "usdc-circle",
+        name: "USDC",
+        symbol: "USDC",
+        price: 0.9999,
+        priceSource: "coingecko+pyth",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
+      },
+    ]);
+
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
+      "ethereum",
+      "0xdd0f28e19c1780eb6396170735d45153d261490d",
+      expect.stringMatching(/^0x07a2d13a/),
+      "latest",
+      expect.any(Object),
+    );
+
+    const override = overrides.get("gtusdc-gauntlet");
+    expect(override).toMatchObject({
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: {
+        inheritedFrom: "usdc-circle",
+        parentSource: "coingecko+pyth",
+        parentConfidence: "high",
+      },
+    });
+    // 1.01 assets per share * $0.9999 parent = ~$1.009899
+    expect(override?.price).toBeCloseTo(1.01 * 0.9999, 4);
+  });
+
+  it("skips ERC-4626 NAV override when parent price is stale or untrusted", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "gtusdc-gauntlet",
+        name: "Gauntlet USDC Core",
+        symbol: "gtUSDC",
+        circulating: { peggedUSD: 128_000_000 },
+      },
+      {
+        id: "usdc-circle",
+        name: "USDC",
+        symbol: "USDC",
+        price: 0.9999,
+        priceSource: "coingecko+pyth",
+        priceConfidence: "low",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
+      },
+    ]);
+
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+    expect(overrides.has("gtusdc-gauntlet")).toBe(false);
+    warnSpy.mockRestore();
+  });
+
+  it("rejects ERC-4626 NAV override when convertToAssets ratio is outside trusted bounds", async () => {
+    // convertToAssets returns 100x the share amount — should be rejected
+    const insaneRaw = (100_000_000n).toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${insaneRaw}`);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "gtusdc-gauntlet",
+        name: "Gauntlet USDC Core",
+        symbol: "gtUSDC",
+        circulating: { peggedUSD: 128_000_000 },
+      },
+      {
+        id: "usdc-circle",
+        name: "USDC",
+        symbol: "USDC",
+        price: 0.9999,
+        priceSource: "coingecko+pyth",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
+      },
+    ]);
+
+    expect(overrides.has("gtusdc-gauntlet")).toBe(false);
+    warnSpy.mockRestore();
+  });
+
   it("preserves existing backfill rows when authoritative history coverage is too low", async () => {
     resolveClosestBlockAtOrBeforeTimestampMock.mockResolvedValueOnce(22_874_100);
     fetchEvmCallHexAtBlockMock.mockResolvedValue(QUOTE_HEX);
