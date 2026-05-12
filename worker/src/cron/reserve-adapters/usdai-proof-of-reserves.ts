@@ -4,12 +4,13 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildUnknownExposureWarning,
   fetchTextWithRetry,
-  parseTimestampLikeToUnixSeconds,
   requireJsonInput,
   reserveInfoWarning,
   reserveDegradedWarning,
   SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
   slicesFromPercentages,
+  summarizeSourceTimestamps,
+  type SourceTimestampSummary,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -34,13 +35,6 @@ interface ResolvedReserveBucket {
 }
 
 type WeightMode = "share" | "amount";
-
-interface UsdAiProofTimestampSummary {
-  sourceTimestamp: number;
-  latestSourceTimestamp: number;
-  sourceTimestampSpreadSec: number;
-  timestampCount: number;
-}
 
 function parseIntegerLike(value: unknown): bigint | null {
   if (typeof value === "string" && /^\d+$/.test(value.trim())) {
@@ -106,28 +100,13 @@ function resolveTbillBucket(name: string): ResolvedReserveBucket {
 // that might appear elsewhere (activity feed, news) in future layouts.
 const USDAI_PROOF_SCOPE_KEY = '\\"dealsDetailsCache\\":';
 
-function summarizeUsdAiProofTimestamps(timestamps: number[]): UsdAiProofTimestampSummary | null {
-  if (timestamps.length === 0) return null;
-  const sorted = [...timestamps].sort((left, right) => left - right);
-  const sourceTimestamp = sorted[0];
-  const latestSourceTimestamp = sorted[sorted.length - 1];
-  return {
-    sourceTimestamp,
-    latestSourceTimestamp,
-    sourceTimestampSpreadSec: latestSourceTimestamp - sourceTimestamp,
-    timestampCount: sorted.length,
-  };
+function extractUsdAiProofTimestampSummaryFromSlice(proofSlice: string): SourceTimestampSummary | null {
+  const rawValues = Array.from(proofSlice.matchAll(/"timeLastUpdated"\s*:\s*"([^"\\]+)"/g))
+    .map((match) => match[1]);
+  return summarizeSourceTimestamps(rawValues);
 }
 
-function extractUsdAiProofTimestampSummaryFromSlice(proofSlice: string): UsdAiProofTimestampSummary | null {
-  const timestamps = Array.from(proofSlice.matchAll(/"timeLastUpdated"\s*:\s*"([^"\\]+)"/g))
-    .map((match) => parseTimestampLikeToUnixSeconds(match[1]))
-    .filter((value): value is number => value != null);
-
-  return summarizeUsdAiProofTimestamps(timestamps);
-}
-
-export function extractUsdAiProofPageTimestampSummary(html: string): UsdAiProofTimestampSummary | null {
+export function extractUsdAiProofPageTimestampSummary(html: string): SourceTimestampSummary | null {
   let proofSlice: string;
   try {
     proofSlice = extractEscapedJsonValueAfterKey(
@@ -166,7 +145,7 @@ export function parseUsdAiProofOfReserves(raw: string): UsdAiProofOfReservesEntr
 export function adaptUsdAiProofOfReserves(
   entries: UsdAiProofOfReservesEntry[],
   sourceTimestamp: number | null = null,
-  sourceTimestampSummary: UsdAiProofTimestampSummary | null = sourceTimestamp != null
+  sourceTimestampSummary: SourceTimestampSummary | null = sourceTimestamp != null
     ? {
         sourceTimestamp,
         latestSourceTimestamp: sourceTimestamp,
@@ -358,17 +337,15 @@ export function adaptUsdAiProofOfReserves(
   };
 }
 
-function extractUsdAiProofPageTimestampFallback(html: string): UsdAiProofTimestampSummary | null {
-  const timestamps = Array.from(html.matchAll(/\\?"timeLastUpdated\\?"\s*:\s*\\?"([^"\\]+)\\?"/g))
-    .map((match) => parseTimestampLikeToUnixSeconds(match[1]))
-    .filter((value): value is number => value != null);
-
-  return summarizeUsdAiProofTimestamps(timestamps);
+function extractUsdAiProofPageTimestampFallback(html: string): SourceTimestampSummary | null {
+  const rawValues = Array.from(html.matchAll(/\\?"timeLastUpdated\\?"\s*:\s*\\?"([^"\\]+)\\?"/g))
+    .map((match) => match[1]);
+  return summarizeSourceTimestamps(rawValues);
 }
 
 interface UsdAiProofPageTimestampResult {
   timestamp: number | null;
-  summary: UsdAiProofTimestampSummary | null;
+  summary: SourceTimestampSummary | null;
   fallbackWarning?: LiveReserveWarning;
 }
 

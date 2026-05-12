@@ -28,6 +28,7 @@ export {
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./freshness";
+export type { SourceTimestampSummary } from "./freshness";
 export { htmlLayoutChangedError, htmlParseError } from "./html";
 export { fetchJsonPostWithRetry, fetchJsonWithRetry, fetchPrimaryHtmlInput, fetchTextWithRetry } from "./request";
 export { fetchDefiLlamaPrices } from "./defillama";
@@ -44,4 +45,4 @@ export {
 export { probeOnchainTotalSupply, probeTrackedTokenSupply } from "./token-supply";
 export { buildRedemptionSnapshotMetadata, probeOptionalRedemptionRateBps } from "./redemption";
 export { getJsonPath } from "./json-path";
-export { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
+export { catchAndWarn, reserveDegradedWarning, reserveInfoWarning } from "./warnings";

@@ -4,12 +4,12 @@ import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildUnknownExposureWarning,
+  catchAndWarn,
   decimalNumberFromBigInt,
   fetchJsonWithRetry,
   normalizeSlices,
   parseTimestampLikeToUnixSeconds,
   requireJsonInput,
-  reserveInfoWarning,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -185,22 +185,20 @@ export async function fetchJupUsdReserves(
   const [payload, snapshots, oracle] = await Promise.all([
     fetchJsonWithRetry<JupUsdDataPayload>(input.url, signal, 12_000, ctx),
     params.snapshotsUrl
-      ? fetchJsonWithRetry<JupUsdSnapshotPayload>(params.snapshotsUrl, signal, 12_000, ctx).catch(() => {
-          extraWarnings.push(reserveInfoWarning(
-            "jupusd-snapshots-unavailable",
-            `JupUSD snapshots feed failed: ${params.snapshotsUrl}`,
-          ));
-          return null;
-        })
+      ? catchAndWarn(
+          fetchJsonWithRetry<JupUsdSnapshotPayload>(params.snapshotsUrl, signal, 12_000, ctx),
+          "jupusd-snapshots-unavailable",
+          `JupUSD snapshots feed failed: ${params.snapshotsUrl}`,
+          extraWarnings,
+        )
       : Promise.resolve(null),
     params.oracleUrl
-      ? fetchJsonWithRetry<JupUsdOraclePayload>(params.oracleUrl, signal, 12_000, ctx).catch(() => {
-          extraWarnings.push(reserveInfoWarning(
-            "jupusd-oracle-unavailable",
-            `JupUSD oracle feed failed: ${params.oracleUrl}`,
-          ));
-          return null;
-        })
+      ? catchAndWarn(
+          fetchJsonWithRetry<JupUsdOraclePayload>(params.oracleUrl, signal, 12_000, ctx),
+          "jupusd-oracle-unavailable",
+          `JupUSD oracle feed failed: ${params.oracleUrl}`,
+          extraWarnings,
+        )
       : Promise.resolve(null),
   ]);
   const latestTimestamp = parseTimestampLikeToUnixSeconds(snapshots?.snapshots?.[0]?.timestamp);
