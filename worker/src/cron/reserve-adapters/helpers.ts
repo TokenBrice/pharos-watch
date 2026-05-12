@@ -29,7 +29,18 @@ export {
   verifiedFreshnessMetadata,
 } from "./freshness";
 export type { SourceTimestampSummary } from "./freshness";
-export { escapeRegExp, htmlLayoutChangedError, htmlParseError } from "./html";
+export {
+  HTML_ENTITY_MAP,
+  decodeHtmlEntities,
+  escapeRegExp,
+  extractAnchorWindow,
+  extractLabeledSpanText,
+  extractTagById,
+  htmlLayoutChangedError,
+  htmlParseError,
+  readHtmlAttribute,
+  stripTags,
+} from "./html";
 export { fetchJsonPostWithRetry, fetchJsonWithRetry, fetchPrimaryHtmlInput, fetchTextWithRetry } from "./request";
 export { fetchDefiLlamaPrices } from "./defillama";
 export {

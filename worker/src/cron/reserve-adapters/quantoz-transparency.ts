@@ -8,20 +8,12 @@ import {
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
   slicesFromPercentages,
+  stripTags,
   verifiedFreshnessMetadata,
 } from "./helpers";
 
 const ADAPTER_KEY = "quantoz-transparency";
 const MIN_RESERVE_RATIO_PCT = 99.5;
-
-function stripTags(value: string): string {
-  return value
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;|&#xA0;|\u00a0/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 function parseLocalizedNumber(raw: string): number | null {
   const cleaned = raw

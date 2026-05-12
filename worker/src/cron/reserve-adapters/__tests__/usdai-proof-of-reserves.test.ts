@@ -12,19 +12,19 @@ const SAMPLE_RAW_PAYLOAD = JSON.stringify([
     type: "TBILL",
     name: "PYUSD",
     chain: 42161,
-    share: 944000000000000000,
+    share: "944000000000000000",
   },
   {
     type: "DEAL",
     name: "NVIDIA B200 [8]",
     chain: 42161,
-    share: 30000000000000000,
+    share: "30000000000000000",
   },
   {
     type: "DEAL",
     name: "NVIDIA RTX PRO 6000 [1]",
     chain: 42161,
-    share: 26000000000000000,
+    share: "26000000000000000",
   },
 ]);
 
@@ -59,13 +59,33 @@ const MIXED_WEIGHT_PAYLOAD = [
 ];
 
 describe("usdai-proof-of-reserves adapter", () => {
-  it("preserves oversized share integers when parsing the raw API payload", () => {
+  it("preserves oversized share strings when parsing the raw API payload", () => {
     const parsed = parseUsdAiProofOfReserves(SAMPLE_RAW_PAYLOAD);
 
     expect(parsed[0]).toMatchObject({
       type: "TBILL",
       name: "PYUSD",
       share: "944000000000000000",
+    });
+  });
+
+  it("accepts safe-integer numeric amount values without regex preprocessing", () => {
+    const raw = JSON.stringify([
+      { type: "TBILL", name: "PYUSD", chain: 42161, amount: 9440 },
+      { type: "DEAL", name: "NVIDIA B300 [1]", chain: 42161, amount: 560 },
+    ]);
+
+    const parsed = parseUsdAiProofOfReserves(raw);
+    expect(parsed[0].amount).toBe(9440);
+    expect(typeof parsed[0].amount).toBe("number");
+
+    const result = adaptUsdAiProofOfReserves(parsed);
+    expect(result.slices).toEqual([
+      { name: "PYUSD (PayPal USD)", pct: 94.4, risk: "low", coinId: "pyusd-paypal" },
+      { name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: 5.6, risk: "high" },
+    ]);
+    expect(result.metadata).toMatchObject({
+      weightingBasis: "amount",
     });
   });
 

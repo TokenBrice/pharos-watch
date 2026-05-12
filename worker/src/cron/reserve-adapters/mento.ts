@@ -54,7 +54,14 @@ interface MentoReserveApiResponse {
   };
 }
 
-const MENTO_DASHBOARD_TIMESTAMP_PATTERN = /\\?"timestamp\\?"\s*:\s*\\?"([^"\\]+)\\?"/;
+// The Mento dashboard ships its reserve payload as a React Query cache entry
+// embedded in the Next.js Flight payload. The reserve-scoped timestamp always
+// appears between the `troves` array and the `dataUpdateCount` cache marker
+// (i.e. it is the React Query entry's payload-update timestamp, not some
+// unrelated build-manifest or news timestamp). Anchoring on those neighbours
+// rules out the many unrelated `"timestamp":"..."` occurrences in the bundle.
+const MENTO_DASHBOARD_TIMESTAMP_PATTERN =
+  /troves\\?"\s*:\s*\[[\s\S]*?\]\s*,\s*\\?"timestamp\\?"\s*:\s*\\?"([^"\\]+)\\?"[\s\S]{0,128}?\\?"dataUpdateCount\\?"/;
 
 interface TokenConfig {
   key: string;

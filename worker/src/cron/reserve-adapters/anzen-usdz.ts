@@ -15,18 +15,12 @@ const SPCT_POOL_DECIMALS = 18;
 const SUPPLY_CHAINS = ["ethereum", "base", "arbitrum", "blast", "manta"] as const;
 type SupportedSupplyChain = (typeof SUPPLY_CHAINS)[number];
 
-/** Blast and Manta are not in the public RPC registry — keep hardcoded fallbacks. */
-const NON_REGISTRY_RPC_URLS: Partial<Record<SupportedSupplyChain, string>> = {
-  blast: "https://rpc.blast.io",
-  manta: "https://pacific-rpc.manta.network/http",
-};
-
 function getSupplyChainRpcUrl(chain: SupportedSupplyChain): string {
   const registryUrl = getPublicRpcUrl(chain);
-  if (registryUrl) return registryUrl;
-  const fallback = NON_REGISTRY_RPC_URLS[chain];
-  if (fallback) return fallback;
-  throw new Error(`${ADAPTER_KEY} no RPC URL available for chain ${chain}`);
+  if (!registryUrl) {
+    throw new Error(`${ADAPTER_KEY} no RPC URL available for chain ${chain}`);
+  }
+  return registryUrl;
 }
 
 function getRequiredContract(

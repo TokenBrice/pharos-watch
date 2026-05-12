@@ -10,10 +10,14 @@ const PUBLIC_RPC_URLS: Record<string, string> = {
   fantom: "https://rpc.ftm.tools",
   celo: "https://forno.celo.org",
   tron: "https://api.trongrid.io",
+  blast: "https://rpc.blast.io",
+  manta: "https://pacific-rpc.manta.network/http",
 };
 
 const EXTRA_FALLBACK_RPC_URLS: Record<string, string[]> = {
   ethereum: ["https://eth.llamarpc.com"],
+  blast: ["https://blast.blockpi.network/v1/rpc/public"],
+  manta: ["https://manta-pacific.drpc.org"],
 };
 
 export function getPublicRpcUrl(chainId: string): string | undefined {

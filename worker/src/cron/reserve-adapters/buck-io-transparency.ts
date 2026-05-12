@@ -2,7 +2,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  escapeRegExp,
+  extractLabeledSpanText,
   fetchPrimaryHtmlInput,
   htmlLayoutChangedError,
   parseTimestampLikeToUnixSeconds,
@@ -33,26 +33,8 @@ function extractLabeledAmount(html: string, label: string): number | null {
   // The Buck transparency page emits:
   //   <span class="font-light">USDC in reserves</span>
   //   <span class="font-[350] text-black">$150.00K</span>
-  const escapedLabel = escapeRegExp(label);
-  // eslint-disable-next-line security/detect-non-literal-regexp -- label is adapter-owned and escaped.
-  const re = new RegExp(
-    `<span[^>]*>\\s*${escapedLabel}\\s*</span>\\s*<span[^>]*>\\s*([^<]+?)\\s*</span>`,
-    "i",
-  );
-  const match = html.match(re);
-  if (!match) return null;
-  return parseDollarAmount(match[1]);
-}
-
-function extractLabeledText(html: string, label: string): string | null {
-  const escapedLabel = escapeRegExp(label);
-  // eslint-disable-next-line security/detect-non-literal-regexp -- label is adapter-owned and escaped.
-  const re = new RegExp(
-    `<span[^>]*>\\s*${escapedLabel}\\s*</span>\\s*<span[^>]*>\\s*([^<]+?)\\s*</span>`,
-    "i",
-  );
-  const match = html.match(re);
-  return match?.[1]?.trim() ?? null;
+  const raw = extractLabeledSpanText(html, label);
+  return raw == null ? null : parseDollarAmount(raw);
 }
 
 export function adaptBuckIoTransparency(html: string): AdapterResult {
@@ -69,7 +51,7 @@ export function adaptBuckIoTransparency(html: string): AdapterResult {
     );
   }
 
-  const lastUpdatedRaw = extractLabeledText(html, "Last updated");
+  const lastUpdatedRaw = extractLabeledSpanText(html, "Last updated");
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(lastUpdatedRaw);
 
   const slices = slicesFromValues([

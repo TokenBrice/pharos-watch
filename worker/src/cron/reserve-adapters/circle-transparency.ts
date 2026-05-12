@@ -4,6 +4,8 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   escapeRegExp,
+  extractAnchorWindow,
+  extractTagById,
   fetchPrimaryHtmlInput,
   htmlLayoutChangedError,
   parseTimestampLikeToUnixSeconds,
@@ -48,13 +50,6 @@ function extractAttrValue(html: string, attr: string): number | null {
   return Number.isFinite(val) && val > 0 ? val : null;
 }
 
-function extractTagById(html: string, id: string): string | null {
-  const escapedId = escapeRegExp(id);
-  // eslint-disable-next-line security/detect-non-literal-regexp -- id is selected from adapter-owned constants and escaped before interpolation.
-  const re = new RegExp(`<[^>]*\\sid\\s*=\\s*["']${escapedId}["'][^>]*>`, "i");
-  return html.match(re)?.[0] ?? null;
-}
-
 function extractDisplayAmount(html: string, coinType: string): number | null {
   const displayId = coinType === "eurc" ? "euro-in-circulation" : "usdc-in-circulation";
   const tag = extractTagById(html, displayId);
@@ -69,14 +64,9 @@ function extractReserveSectionHtml(html: string, coinType: string): string | nul
   // to the reserve block, not some other page-level "As of" banner. Circle's
   // reserve disclosure places the date adjacent to the chart; a ±1500-char
   // window is more than enough without reaching unrelated site chrome.
-  // eslint-disable-next-line security/detect-non-literal-regexp -- canvasId is selected from adapter-owned constants and escaped before interpolation.
+  // eslint-disable-next-line security/detect-non-literal-regexp -- canvasId is escaped before interpolation.
   const anchorRe = new RegExp(`id\\s*=\\s*["']${escapedId}["']`, "i");
-  const anchorMatch = anchorRe.exec(html);
-  if (!anchorMatch) return null;
-  const anchorIndex = anchorMatch.index;
-  const windowStart = Math.max(0, anchorIndex - 1_500);
-  const windowEnd = Math.min(html.length, anchorIndex + 1_500);
-  return html.slice(windowStart, windowEnd);
+  return extractAnchorWindow(html, anchorRe, 1_500);
 }
 
 function extractDisclosureTimestamp(

@@ -87,7 +87,16 @@ export function valueUsdFromBigIntPrice(value: bigint, decimals: number, priceUs
 
   const scale = 10n ** BigInt(decimals);
   const usdMicros = (value * priceMicros + scale / 2n) / scale;
-  return Number(usdMicros) / 1_000_000;
+  // Above ~$9.007B the micros bigint exceeds Number.MAX_SAFE_INTEGER, so a
+  // direct Number() cast loses precision in the integer-dollar part. Split into
+  // dollars + sub-dollar micros so only the sub-dollar tail incurs rounding.
+  const MAX_SAFE = BigInt(Number.MAX_SAFE_INTEGER);
+  if (usdMicros < MAX_SAFE && usdMicros > -MAX_SAFE) {
+    return Number(usdMicros) / 1_000_000;
+  }
+  const dollars = usdMicros / 1_000_000n;
+  const remainder = usdMicros % 1_000_000n;
+  return Number(dollars) + Number(remainder) / 1_000_000;
 }
 
 export function parsePositiveNumericLike(value: unknown): number | null {

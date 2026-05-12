@@ -4,7 +4,6 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  decimalNumberFromBigInt,
   fetchErc20Balance,
   fetchJsonWithRetry,
   normalizeSlices,
@@ -118,11 +117,10 @@ function inferDepType(symbol: string): ReserveSlice["depType"] | undefined {
   return getProtocolAssetConfig(symbol)?.depType;
 }
 
-function parseCollateralBalance(raw: string | undefined, decimals: number): number {
-  if (typeof raw !== "string" || !/^\d+$/.test(raw)) return 0;
-  if (!Number.isInteger(decimals) || decimals < 0) return 0;
-  const parsed = decimalNumberFromBigInt(BigInt(raw), decimals);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+function parseCollateralBalance(raw: string | undefined, decimals: number): bigint {
+  if (typeof raw !== "string" || !/^\d+$/.test(raw)) return 0n;
+  if (!Number.isInteger(decimals) || decimals < 0) return 0n;
+  return BigInt(raw);
 }
 
 export function adaptCollateralPositions(
@@ -148,12 +146,12 @@ export function adaptCollateralPositions(
     const totalBalance = entry.positions.reduce((acc, position) => {
       if (position.closed || position.denied) return acc;
       return acc + parseCollateralBalance(position.collateralBalance, entry.decimals);
-    }, 0);
+    }, 0n);
 
-    if (totalBalance <= 0) continue;
+    if (totalBalance <= 0n) continue;
     activePositionCount += entry.positions.filter((position) => {
       if (position.closed || position.denied) return false;
-      return parseCollateralBalance(position.collateralBalance, entry.decimals) > 0;
+      return parseCollateralBalance(position.collateralBalance, entry.decimals) > 0n;
     }).length;
 
     const priceInfo = prices[entry.address.toLowerCase()];
@@ -163,6 +161,9 @@ export function adaptCollateralPositions(
       continue;
     }
 
+    const usdValue = valueUsdFromBigIntPrice(totalBalance, entry.decimals, usdPrice);
+    if (!Number.isFinite(usdValue) || usdValue <= 0) continue;
+
     const risk = inferRisk(entry.symbol);
     const unknown = !isKnownAsset(entry.symbol);
     if (unknown) {
@@ -170,12 +171,12 @@ export function adaptCollateralPositions(
         "unknown-asset",
         `Unmapped collateral symbol: ${entry.symbol} (inferred risk: ${risk})`,
       ));
-      unknownExposureUsd += totalBalance * usdPrice;
+      unknownExposureUsd += usdValue;
     }
 
     values.push({
       name: `${entry.symbol}${entry.name && entry.name !== entry.symbol ? ` (${entry.name})` : ""}`,
-      usd: totalBalance * usdPrice,
+      usd: usdValue,
       risk,
       coinId: inferCoinId(entry.symbol),
       depType: inferDepType(entry.symbol),

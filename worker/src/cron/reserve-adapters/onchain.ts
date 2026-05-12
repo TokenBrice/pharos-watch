@@ -48,33 +48,49 @@ interface EvmMulticall3Options {
   timeoutMs?: number;
 }
 
-export async function fetchOnchainUint256(options: EvmCallOptions): Promise<bigint | null> {
-  return runAdapterIo(options.ctx, `evm-uint256:${options.chain ?? "unknown"}:${options.contract}`, async () => {
+async function runWithRpcFallback<T>(
+  options: EvmCallOptions,
+  opLabel: string,
+  runRpc: (extraRpcUrls: string[]) => Promise<T | null>,
+  runEtherscan: () => Promise<T | null>,
+): Promise<T | null> {
+  return runAdapterIo(options.ctx, `${opLabel}:${options.chain ?? "unknown"}:${options.contract}`, async () => {
     const extraRpcUrls = [options.rpcUrl, options.fallbackRpcUrl].filter(
       (url): url is string => typeof url === "string" && url.length > 0,
     );
 
-    const rpcValue = await fetchEvmUint256AtBlock(options.chain, options.contract, options.data, "latest", {
-      extraRpcUrls,
-      signal: options.signal,
-      timeoutMs: options.timeoutMs ?? 10_000,
-      chainRpcs: options.ctx?.chainRpcs,
-    });
+    const rpcValue = await runRpc(extraRpcUrls);
     if (rpcValue != null) {
       return rpcValue;
     }
 
     if (options.rpcMode === "etherscan-proxy") {
       if (options.chain !== "ethereum") return null;
-      return fetchEtherscanUint256AtBlock(1, options.contract, options.data, "latest", {
-        apiKey: options.ctx?.etherscanApiKey,
-        signal: options.signal,
-        timeoutMs: options.timeoutMs ?? 10_000,
-      });
+      return runEtherscan();
     }
 
     return null;
   });
+}
+
+export async function fetchOnchainUint256(options: EvmCallOptions): Promise<bigint | null> {
+  return runWithRpcFallback<bigint>(
+    options,
+    "evm-uint256",
+    (extraRpcUrls) =>
+      fetchEvmUint256AtBlock(options.chain, options.contract, options.data, "latest", {
+        extraRpcUrls,
+        signal: options.signal,
+        timeoutMs: options.timeoutMs ?? 10_000,
+        chainRpcs: options.ctx?.chainRpcs,
+      }),
+    () =>
+      fetchEtherscanUint256AtBlock(1, options.contract, options.data, "latest", {
+        apiKey: options.ctx?.etherscanApiKey,
+        signal: options.signal,
+        timeoutMs: options.timeoutMs ?? 10_000,
+      }),
+  );
 }
 
 export async function fetchOnchainMulticall3(options: EvmMulticall3Options): Promise<EvmMulticall3Result[] | null> {
@@ -129,24 +145,18 @@ export async function fetchOnchainRateBps(
 }
 
 export async function fetchOnchainRawCall(options: EvmCallOptions): Promise<string | null> {
-  return runAdapterIo(options.ctx, `evm-call:${options.chain ?? "unknown"}:${options.contract}`, async () => {
-    const extraRpcUrls = [options.rpcUrl, options.fallbackRpcUrl].filter(
-      (url): url is string => typeof url === "string" && url.length > 0,
-    );
-
-    const rpcValue = await fetchEvmCallHexAtBlock(options.chain, options.contract, options.data, "latest", {
-      extraRpcUrls,
-      signal: options.signal,
-      timeoutMs: options.timeoutMs ?? 10_000,
-      chainRpcs: options.ctx?.chainRpcs,
-    });
-    if (rpcValue != null) {
-      return rpcValue;
-    }
-
-    if (options.rpcMode === "etherscan-proxy") {
-      if (options.chain !== "ethereum") return null;
-      return fetchEtherscanProxyHex({
+  return runWithRpcFallback<string>(
+    options,
+    "evm-call",
+    (extraRpcUrls) =>
+      fetchEvmCallHexAtBlock(options.chain, options.contract, options.data, "latest", {
+        extraRpcUrls,
+        signal: options.signal,
+        timeoutMs: options.timeoutMs ?? 10_000,
+        chainRpcs: options.ctx?.chainRpcs,
+      }),
+    () =>
+      fetchEtherscanProxyHex({
         evmChainId: 1,
         action: "eth_call",
         to: options.contract,
@@ -155,11 +165,8 @@ export async function fetchOnchainRawCall(options: EvmCallOptions): Promise<stri
         apiKey: options.ctx?.etherscanApiKey,
         signal: options.signal,
         timeoutMs: options.timeoutMs ?? 10_000,
-      });
-    }
-
-    return null;
-  });
+      }),
+  );
 }
 
 export async function fetchErc20Balance(

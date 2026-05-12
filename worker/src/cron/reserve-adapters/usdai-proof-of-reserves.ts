@@ -41,7 +41,7 @@ function parseIntegerLike(value: unknown): bigint | null {
     return BigInt(value.trim());
   }
 
-  if (typeof value === "number" && Number.isFinite(value) && Number.isInteger(value) && value >= 0) {
+  if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) {
     return BigInt(value);
   }
 
@@ -128,7 +128,7 @@ export function extractUsdAiProofPageTimestamp(html: string): number | null {
 export function parseUsdAiProofOfReserves(raw: string): UsdAiProofOfReservesEntry[] {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw.replace(/("(?:share|amount)"\s*:\s*)(\d+)/g, '$1"$2"')) as unknown;
+    parsed = JSON.parse(raw) as unknown;
   } catch (error) {
     throw new Error(
       `usdai-proof-of-reserves payload is malformed: ${error instanceof Error ? error.message : String(error)}`,
