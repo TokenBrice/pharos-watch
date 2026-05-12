@@ -39,6 +39,13 @@ export interface CoverageFeatureDefinition {
   headlineShareLabel?: string;
   href?: string;
   external?: boolean;
+  /** Every status kind the feature's resolver can produce. */
+  statusKinds: readonly string[];
+  /** Per-feature breakdown formatter. Replaces the central switch in coverage.ts. */
+  formatBreakdown: (
+    rows: readonly CoverageRow[],
+    breakdownMap: ReadonlyMap<string, number>,
+  ) => CoverageBreakdownItem[];
 }
 
 export interface CoverageBreakdownItem {

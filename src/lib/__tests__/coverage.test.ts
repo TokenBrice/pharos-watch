@@ -670,3 +670,27 @@ describe("coverage helpers", () => {
     ]);
   });
 });
+
+describe("coverage legend invariant", () => {
+  it("provides a legend entry (general or per-feature) for every producible status kind", async () => {
+    const {
+      COVERAGE_FEATURE_LEGEND_ITEMS,
+      GENERAL_LEGEND_STATUS_KINDS,
+    } = await import("@/lib/coverage-features");
+
+    const generalKinds = new Set(GENERAL_LEGEND_STATUS_KINDS);
+
+    for (const feature of COVERAGE_FEATURES) {
+      const legendKinds = new Set<string>();
+      for (const item of COVERAGE_FEATURE_LEGEND_ITEMS[feature.key]) {
+        for (const kind of item.kinds) {
+          legendKinds.add(kind);
+        }
+      }
+      const uncovered = feature.statusKinds.filter(
+        (kind) => !legendKinds.has(kind) && !generalKinds.has(kind),
+      );
+      expect(uncovered, `feature ${feature.key} has uncovered kinds: ${uncovered.join(", ")}`).toEqual([]);
+    }
+  });
+});

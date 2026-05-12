@@ -10,6 +10,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import type { CoverageFeatureKey } from "@/lib/coverage";
+import { COVERAGE_FEATURE_LEGEND_ITEMS } from "@/lib/coverage-features";
 
 export type CoverageFilterKey =
   | "all"
@@ -248,14 +249,24 @@ export const MOBILE_PREVIEW_FEATURES: readonly CoverageFeatureKey[] = [
 export type LegendCategory =
   | "general"
   | "price"
+  | "safety"
   | "dex"
   | "reserves"
   | "redemption"
+  | "yield"
   | "flows"
   | "blacklist"
   | "dependency";
 
-const LEGEND_ITEMS = [
+interface LegendItem {
+  term: string;
+  category: LegendCategory;
+  description: string;
+}
+
+// General legend entries that are not tied to a specific feature's resolver
+// (cross-cutting status terms surfaced by multiple features).
+const GENERAL_LEGEND_ITEMS: readonly LegendItem[] = [
   {
     term: "NR",
     category: "general",
@@ -272,124 +283,16 @@ const LEGEND_ITEMS = [
     category: "general",
     description: "Pharos does not currently expose that feature for the asset.",
   },
-  {
-    term: "Tracked",
-    category: "price",
-    description: "Price and depeg monitoring are available. Source count appears when the price pipeline reports it.",
-  },
-  {
-    term: "Price only",
-    category: "price",
-    description: "NAV-priced asset with price coverage, but no peg or depeg tracking.",
-  },
-  {
-    term: "Primary / Mixed / Fallback",
-    category: "dex",
-    description:
-      "DEX coverage quality: primary sources, blended primary plus fallback sources, or fallback-only discovery.",
-  },
-  {
-    term: "Score-grade",
-    category: "reserves",
-    description: "Fresh independent live reserve data was used by the current report-card snapshot for collateral scoring.",
-  },
-  {
-    term: "Configured",
-    category: "reserves",
-    description: "A reserve view or live reserve adapter exists, but the current report-card snapshot did not use it for collateral scoring.",
-  },
-  {
-    term: "Checking",
-    category: "reserves",
-    description:
-      "Reserve coverage is configured, but report-card freshness data is still loading or unavailable.",
-  },
-  {
-    term: "Curated-Validated",
-    category: "reserves",
-    description: "A reviewed reserve baseline is kept current through live validation.",
-  },
-  {
-    term: "Proof",
-    category: "reserves",
-    description: "Reserve view is backed by proof, attestation, or liveness evidence rather than a full live mix.",
-  },
-  {
-    term: "Curated / Estimated",
-    category: "reserves",
-    description: "Reserve composition is manually curated or falls back to classification-based estimates.",
-  },
-  {
-    term: "Issuer / PSM / Queue / Collat. / Stable / Basket",
-    category: "redemption",
-    description: "The modeled redemption-backstop route family counted as strong redemption coverage.",
-  },
-  {
-    term: "Heur.",
-    category: "redemption",
-    description:
-      "A redemption route is modeled, but the current capacity evidence is still heuristic / low-confidence and does not count as strong coverage.",
-  },
-  {
-    term: "Config.",
-    category: "redemption",
-    description: "A redemption route is configured, but the current snapshot could not resolve a usable score.",
-  },
-  {
-    term: "Full / Partial / Lagging / Bootstr.",
-    category: "flows",
-    description: "Mint/burn flow coverage maturity and sync state for configured assets.",
-  },
-  {
-    term: "Bootstr.",
-    category: "flows",
-    description: "Tracking is configured, but the history window is still building.",
-  },
-  {
-    term: "Live",
-    category: "blacklist",
-    description:
-      "Direct freeze controls are confirmed and live blacklist event tracking is published for this issuer.",
-  },
-  {
-    term: "Yes",
-    category: "blacklist",
-    description: "Direct token, vault, or issuer controls can freeze, block, seize, or destroy user balances.",
-  },
-  {
-    term: "Dilutable",
-    category: "blacklist",
-    description: "No direct address freeze is resolved, but an admin can mint without bound and dilute holders.",
-  },
-  {
-    term: "Upstream",
-    category: "blacklist",
-    description: "No direct control is resolved; exposure comes from freezable upstream collateral or parent assets.",
-  },
-  {
-    term: "Possible",
-    category: "blacklist",
-    description:
-      "Mutable or pause-capable admin surfaces indicate possible controls, but active address-level freezing is not confirmed.",
-  },
-  {
-    term: "No",
-    category: "blacklist",
-    description: "No direct, upstream, possible, or dilutable freeze exposure is resolved in the current model.",
-  },
-  {
-    term: "Node",
-    category: "dependency",
-    description: "The asset participates in the report-card dependency graph.",
-  },
-] as const;
+];
 
 const LEGEND_CATEGORY_LABELS: Record<LegendCategory, string> = {
   general: "General",
   price: "Price & Depeg",
+  safety: "Safety Score",
   dex: "DEX Liquidity",
   reserves: "Reserves",
   redemption: "Redemption",
+  yield: "Yield",
   flows: "Flows",
   blacklist: "Blacklist Status",
   dependency: "Dependency",
@@ -398,17 +301,46 @@ const LEGEND_CATEGORY_LABELS: Record<LegendCategory, string> = {
 const LEGEND_CATEGORY_ORDER: readonly LegendCategory[] = [
   "general",
   "price",
+  "safety",
   "dex",
   "reserves",
   "redemption",
+  "yield",
   "flows",
   "blacklist",
   "dependency",
 ] as const;
 
+// Map each per-feature legend category to its source feature key.
+const FEATURE_KEY_BY_CATEGORY: Record<Exclude<LegendCategory, "general">, CoverageFeatureKey> = {
+  price: "price",
+  safety: "safety",
+  dex: "dex",
+  reserves: "reserves",
+  redemption: "redemption",
+  yield: "yield",
+  flows: "flows",
+  blacklist: "blacklist",
+  dependency: "dependency",
+};
+
+// Assembled at module load: general entries + per-feature entries derived from
+// COVERAGE_FEATURE_LEGEND_ITEMS, preserving the public LegendItem shape.
+const LEGEND_ITEMS: readonly LegendItem[] = [
+  ...GENERAL_LEGEND_ITEMS,
+  ...(Object.keys(FEATURE_KEY_BY_CATEGORY) as Array<Exclude<LegendCategory, "general">>).flatMap(
+    (category) =>
+      COVERAGE_FEATURE_LEGEND_ITEMS[FEATURE_KEY_BY_CATEGORY[category]].map((item) => ({
+        term: item.term,
+        category,
+        description: item.description,
+      })),
+  ),
+];
+
 export function getLegendGroups(): ReadonlyArray<{
   label: string;
-  items: ReadonlyArray<(typeof LEGEND_ITEMS)[number]>;
+  items: ReadonlyArray<LegendItem>;
 }> {
   return LEGEND_CATEGORY_ORDER
     .map((category) => ({
