@@ -78,14 +78,6 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
     assetDecimals: 6,
   },
   {
-    id: "sgho-aave",
-    parentId: "gho-aave",
-    chain: ETHEREUM_CHAIN,
-    vault: "0x1a88df1cfe15af22b3c4c783d4e6f7f9e0c1885d",
-    vaultDecimals: 18,
-    assetDecimals: 18,
-  },
-  {
     id: "stkgho-umbrella-aave",
     parentId: "gho-aave",
     chain: ETHEREUM_CHAIN,

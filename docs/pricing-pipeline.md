@@ -205,7 +205,6 @@ After market/oracle consensus, `worker/src/lib/authoritative-price-sources.ts` c
 | `susdt-spark` | ERC-4626 `convertToAssets(1 share)` × tracked `usdt-tether` price |
 | `gtusdc-gauntlet` | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price |
 | `yvusdc-yearn` | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price |
-| `sgho-aave` | ERC-4626 `convertToAssets(1 share)` × tracked `gho-aave` price |
 | `stkgho-umbrella-aave` | ERC-4626 `convertToAssets(1 share)` × tracked `gho-aave` price |
 | `sbold-k3-capital` | ERC-4626 `convertToAssets(1 share)` × tracked `bold-liquity` price |
 | `aa-falconx-mev-capital` | Idle CDO `virtualPrice(address tranche)` × tracked `usdc-circle` price |
