@@ -65,7 +65,7 @@
     "yieldType": "nav-appreciation"
   },
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "erc4626-single-asset",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "susdd-tron-dao-reserve",
@@ -78,6 +78,15 @@
         "kind": "onchain-evm",
         "chain": "ethereum",
         "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDD savings wrapper shares",
+        "risk": "medium",
+        "coinId": "usdd-tron-dao-reserve",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x4f8e5de400de08b164e7421b3ee387f461becd1a"
       }
     }
   }

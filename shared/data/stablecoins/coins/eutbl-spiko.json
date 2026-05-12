@@ -86,20 +86,28 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "chainlink-nav",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "eutbl-spiko",
     "display": {
-      "url": "https://www.spiko.io/",
-      "label": "Spiko fund page"
+      "url": "https://data.chain.link/feeds/ethereum/mainnet/eutbl-nav",
+      "label": "Chainlink EUTBL NAV"
     },
     "inputs": {
       "primary": {
         "kind": "onchain-evm",
         "chain": "ethereum",
-        "rpcMode": "etherscan-proxy"
+        "rpcMode": "alchemy"
       }
+    },
+    "params": {
+      "oracleAddress": "0xfD628af590c4150A9651C1f4ddD0b4f532B703ae",
+      "tokenAddress": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+      "assetLabel": "Spiko EU T-Bills Money Market Fund NAV",
+      "assetRisk": "very-low",
+      "oracleMethod": "latestRoundData",
+      "maxOracleAgeSec": 345600
     }
   },
   "yieldConfig": {

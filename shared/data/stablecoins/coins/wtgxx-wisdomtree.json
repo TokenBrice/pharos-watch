@@ -111,20 +111,28 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "chainlink-nav",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "wtgxx-wisdomtree",
     "display": {
-      "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",
-      "label": "WisdomTree WTGXX fund page"
+      "url": "https://data.chain.link/feeds/ethereum/mainnet/wtgxx-nav-24h",
+      "label": "Chainlink WTGXX NAV"
     },
     "inputs": {
       "primary": {
         "kind": "onchain-evm",
         "chain": "ethereum",
-        "rpcMode": "etherscan-proxy"
+        "rpcMode": "alchemy"
       }
+    },
+    "params": {
+      "oracleAddress": "0xD13cB763C43B5C058E7Ec40176962c5030F4EB49",
+      "tokenAddress": "0x1fecf3d9d4fee7f2c02917a66028a48c6706c179",
+      "assetLabel": "U.S. government money market fund shares",
+      "assetRisk": "very-low",
+      "oracleMethod": "latestRoundData",
+      "maxOracleAgeSec": 345600
     }
   },
   "yieldConfig": {
@@ -135,7 +143,7 @@
     {
       "type": "info",
       "title": "Multi-chain fund with limited on-chain telemetry",
-      "message": "WTGXX is the digital share token of WisdomTree's '40 Act government money market fund, deployed across Arbitrum, Avalanche, Base, Ethereum, Optimism, Plume, and Stellar via WisdomTree Connect. Pharos tracks the verified contract set; live reserves still use a curated weekly snapshot of the WisdomTree fund factsheet."
+      "message": "WTGXX is the digital share token of WisdomTree's '40 Act government money market fund, deployed across Arbitrum, Avalanche, Base, Ethereum, Optimism, Plume, and Stellar via WisdomTree Connect. Pharos tracks the verified contract set; live reserves use Chainlink's WTGXX NAV feed for score-grade reserve freshness."
     }
   ]
 }

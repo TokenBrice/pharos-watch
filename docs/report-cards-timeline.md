@@ -1,6 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.21 (2026-02-25 → 2026-05-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.22 (2026-02-25 → 2026-05-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.22 — Additional independent NAV and wrapper reserve feeds (2026-05-12)
+
+- WTGXX, VBILL, ACRED, USTBL, EUTBL, and JTRSY now use timestamped Chainlink NAV feeds instead of curated validation or the failing ERC-7540 vault path
+- USDCV now uses the SG Forge CoinVertible parser, aligning USD and EUR CoinVertible reserve freshness handling
+- sUSDD and sUSN now use ERC-4626 wrapper reads with parent `coinId` links, so clean snapshots can drive collateral and dependency inputs from live reserve data
 
 ## v7.21 — crvUSD direct on-chain LLAMMA reserve reads (2026-05-12)
 

@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.21",
+  currentVersion: "7.22",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.22",
+      title: "Additional independent NAV and wrapper reserve feeds",
+      date: "2026-05-12",
+      effectiveAt: 1778599200,
+      summary:
+        "More RWA NAV tokens and tracked savings wrappers now use direct independent reserve feeds instead of curated validation or weak liveness probes.",
+      impact: [
+        "WTGXX, VBILL, ACRED, USTBL, EUTBL, and JTRSY now use timestamped Chainlink NAV feeds for score-grade reserve freshness",
+        "USDCV now uses the SG Forge CoinVertible reserve parser, aligning it with EURCV's independent attestation path",
+        "sUSDD and sUSN now use ERC-4626 totalAssets()/asset() wrapper reads so their live reserve slices inherit the tracked USDD and USN parent links",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.21",
       title: "crvUSD direct on-chain LLAMMA reserve reads",

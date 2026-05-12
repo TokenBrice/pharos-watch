@@ -77,27 +77,28 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "centrifuge-vault",
+    "adapter": "chainlink-nav",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "jtrsy-anemoy",
     "display": {
-      "url": "https://centrifuge.io/pools/jtrsy",
-      "label": "Centrifuge JTRSY pool"
+      "url": "https://data.chain.link/feeds/ethereum/mainnet/jtrsy-nav-v2",
+      "label": "Chainlink JTRSY NAV"
     },
     "inputs": {
       "primary": {
         "kind": "onchain-evm",
         "chain": "ethereum",
-        "rpcMode": "etherscan-proxy"
+        "rpcMode": "alchemy"
       }
     },
     "params": {
-      "assetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "slice": {
-        "name": "U.S. Treasury bills via Janus Henderson Anemoy fund",
-        "risk": "very-low"
-      }
+      "oracleAddress": "0x0C2e4Df738e99e8db80012f5bb2a303f3f48Ca74",
+      "tokenAddress": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+      "assetLabel": "Janus Henderson Anemoy Treasury Fund NAV",
+      "assetRisk": "very-low",
+      "oracleMethod": "latestRoundData",
+      "maxOracleAgeSec": 345600
     }
   },
   "yieldConfig": {

@@ -87,7 +87,7 @@
     "yieldType": "nav-appreciation"
   },
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "erc4626-single-asset",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "susn-noon",
@@ -100,6 +100,15 @@
         "kind": "onchain-evm",
         "chain": "ethereum",
         "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USN staking wrapper shares",
+        "risk": "high",
+        "coinId": "usn-noon",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xda67b4284609d2d48e5d10cfac411572727dc1ed"
       }
     }
   }

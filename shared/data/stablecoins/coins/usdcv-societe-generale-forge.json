@@ -68,24 +68,22 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "single-asset",
+    "adapter": "sgforge-coinvertible",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "attestation-mix",
     "breakerScope": "usdcv-societe-generale-forge",
     "display": {
       "url": "https://www.sgforge.com/product/coinvertible/",
-      "label": "SG Forge"
+      "label": "SG Forge CoinVertible"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.sgforge.com/product/coinvertible/"
       }
     },
     "params": {
-      "label": "USD cash deposits (BNY Mellon segregated)",
-      "risk": "very-low"
+      "coinType": "usd"
     }
   }
 }

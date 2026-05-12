@@ -275,16 +275,24 @@
       "semantics": "single-asset",
       "breakerScope": "acred-apollo-securitize",
       "display": {
-        "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
-        "label": "Securitize ACRED fund page"
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/acred-nav",
+        "label": "Chainlink ACRED NAV"
       },
-      "adapter": "curated-validated",
+      "adapter": "chainlink-nav",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
+          "rpcMode": "alchemy"
         }
+      },
+      "params": {
+        "oracleAddress": "0x35DDfB90011E686CCf837a6819562705076207EB",
+        "tokenAddress": "0x17418038ecf73ba4026c4f428547bf099706f27b",
+        "assetLabel": "Apollo Diversified Credit Fund NAV",
+        "assetRisk": "high",
+        "oracleMethod": "latestRoundData",
+        "maxOracleAgeSec": 345600
       }
     },
     "notices": [
@@ -8304,16 +8312,24 @@
       "semantics": "single-asset",
       "breakerScope": "eutbl-spiko",
       "display": {
-        "url": "https://www.spiko.io/",
-        "label": "Spiko fund page"
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/eutbl-nav",
+        "label": "Chainlink EUTBL NAV"
       },
-      "adapter": "curated-validated",
+      "adapter": "chainlink-nav",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
+          "rpcMode": "alchemy"
         }
+      },
+      "params": {
+        "oracleAddress": "0xfD628af590c4150A9651C1f4ddD0b4f532B703ae",
+        "tokenAddress": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "assetLabel": "Spiko EU T-Bills Money Market Fund NAV",
+        "assetRisk": "very-low",
+        "oracleMethod": "latestRoundData",
+        "maxOracleAgeSec": 345600
       }
     },
     "notices": [
@@ -12824,23 +12840,24 @@
       "semantics": "single-asset",
       "breakerScope": "jtrsy-anemoy",
       "display": {
-        "url": "https://centrifuge.io/pools/jtrsy",
-        "label": "Centrifuge JTRSY pool"
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/jtrsy-nav-v2",
+        "label": "Chainlink JTRSY NAV"
       },
-      "adapter": "centrifuge-vault",
+      "adapter": "chainlink-nav",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
+          "rpcMode": "alchemy"
         }
       },
       "params": {
-        "assetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        "slice": {
-          "name": "U.S. Treasury bills via Janus Henderson Anemoy fund",
-          "risk": "very-low"
-        }
+        "oracleAddress": "0x0C2e4Df738e99e8db80012f5bb2a303f3f48Ca74",
+        "tokenAddress": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+        "assetLabel": "Janus Henderson Anemoy Treasury Fund NAV",
+        "assetRisk": "very-low",
+        "oracleMethod": "latestRoundData",
+        "maxOracleAgeSec": 345600
       }
     },
     "notices": [
@@ -21369,12 +21386,21 @@
         "url": "https://usdd.io/",
         "label": "USDD Savings"
       },
-      "adapter": "curated-validated",
+      "adapter": "erc4626-single-asset",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "USDD savings wrapper shares",
+          "risk": "medium",
+          "coinId": "usdd-tron-dao-reserve",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0x4f8e5de400de08b164e7421b3ee387f461becd1a"
         }
       }
     },
@@ -21785,12 +21811,21 @@
         "url": "https://noon.accountable.capital/",
         "label": "Noon Accountable Dashboard"
       },
-      "adapter": "curated-validated",
+      "adapter": "erc4626-single-asset",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "USN staking wrapper shares",
+          "risk": "high",
+          "coinId": "usn-noon",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0xda67b4284609d2d48e5d10cfac411572727dc1ed"
         }
       }
     },
@@ -24819,23 +24854,21 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "usdcv-societe-generale-forge",
       "display": {
         "url": "https://www.sgforge.com/product/coinvertible/",
-        "label": "SG Forge"
+        "label": "SG Forge CoinVertible"
       },
-      "adapter": "single-asset",
+      "adapter": "sgforge-coinvertible",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-html",
+          "url": "https://www.sgforge.com/product/coinvertible/"
         }
       },
       "params": {
-        "label": "USD cash deposits (BNY Mellon segregated)",
-        "risk": "very-low"
+        "coinType": "usd"
       }
     }
   },
@@ -30467,16 +30500,24 @@
       "semantics": "single-asset",
       "breakerScope": "ustbl-spiko",
       "display": {
-        "url": "https://www.spiko.io/",
-        "label": "Spiko fund page"
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/ustbl-nav",
+        "label": "Chainlink USTBL NAV"
       },
-      "adapter": "curated-validated",
+      "adapter": "chainlink-nav",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
+          "rpcMode": "alchemy"
         }
+      },
+      "params": {
+        "oracleAddress": "0x477e363c51Ab0C4D13B22CD6B57D56d4a3Cb7Abe",
+        "tokenAddress": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "assetLabel": "Spiko US T-Bills Money Market Fund NAV",
+        "assetRisk": "very-low",
+        "oracleMethod": "latestRoundData",
+        "maxOracleAgeSec": 345600
       }
     },
     "notices": [
@@ -31146,16 +31187,24 @@
       "semantics": "single-asset",
       "breakerScope": "vbill-vaneck",
       "display": {
-        "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund",
-        "label": "Securitize VBILL fund page"
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/vbill-nav",
+        "label": "Chainlink VBILL NAV"
       },
-      "adapter": "curated-validated",
+      "adapter": "chainlink-nav",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
+          "rpcMode": "alchemy"
         }
+      },
+      "params": {
+        "oracleAddress": "0xd92095BAf79a6ca6533019e952aDe0d3C5834f4b",
+        "tokenAddress": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
+        "assetLabel": "VanEck Treasury Fund shares",
+        "assetRisk": "very-low",
+        "oracleMethod": "latestRoundData",
+        "maxOracleAgeSec": 345600
       }
     },
     "notices": [
@@ -32559,23 +32608,31 @@
       "semantics": "single-asset",
       "breakerScope": "wtgxx-wisdomtree",
       "display": {
-        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",
-        "label": "WisdomTree WTGXX fund page"
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/wtgxx-nav-24h",
+        "label": "Chainlink WTGXX NAV"
       },
-      "adapter": "curated-validated",
+      "adapter": "chainlink-nav",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
+          "rpcMode": "alchemy"
         }
+      },
+      "params": {
+        "oracleAddress": "0xD13cB763C43B5C058E7Ec40176962c5030F4EB49",
+        "tokenAddress": "0x1fecf3d9d4fee7f2c02917a66028a48c6706c179",
+        "assetLabel": "U.S. government money market fund shares",
+        "assetRisk": "very-low",
+        "oracleMethod": "latestRoundData",
+        "maxOracleAgeSec": 345600
       }
     },
     "notices": [
       {
         "type": "info",
         "title": "Multi-chain fund with limited on-chain telemetry",
-        "message": "WTGXX is the digital share token of WisdomTree's '40 Act government money market fund, deployed across Arbitrum, Avalanche, Base, Ethereum, Optimism, Plume, and Stellar via WisdomTree Connect. Pharos tracks the verified contract set; live reserves still use a curated weekly snapshot of the WisdomTree fund factsheet."
+        "message": "WTGXX is the digital share token of WisdomTree's '40 Act government money market fund, deployed across Arbitrum, Avalanche, Base, Ethereum, Optimism, Plume, and Stellar via WisdomTree Connect. Pharos tracks the verified contract set; live reserves use Chainlink's WTGXX NAV feed for score-grade reserve freshness."
       }
     ],
     "yieldConfig": {

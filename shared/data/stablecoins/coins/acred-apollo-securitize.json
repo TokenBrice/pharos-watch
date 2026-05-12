@@ -101,20 +101,28 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "chainlink-nav",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "acred-apollo-securitize",
     "display": {
-      "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
-      "label": "Securitize ACRED fund page"
+      "url": "https://data.chain.link/feeds/ethereum/mainnet/acred-nav",
+      "label": "Chainlink ACRED NAV"
     },
     "inputs": {
       "primary": {
         "kind": "onchain-evm",
         "chain": "ethereum",
-        "rpcMode": "etherscan-proxy"
+        "rpcMode": "alchemy"
       }
+    },
+    "params": {
+      "oracleAddress": "0x35DDfB90011E686CCf837a6819562705076207EB",
+      "tokenAddress": "0x17418038ecf73ba4026c4f428547bf099706f27b",
+      "assetLabel": "Apollo Diversified Credit Fund NAV",
+      "assetRisk": "high",
+      "oracleMethod": "latestRoundData",
+      "maxOracleAgeSec": 345600
     }
   },
   "yieldConfig": {

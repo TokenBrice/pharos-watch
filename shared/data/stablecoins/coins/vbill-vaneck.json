@@ -91,20 +91,28 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "chainlink-nav",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "vbill-vaneck",
     "display": {
-      "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund",
-      "label": "Securitize VBILL fund page"
+      "url": "https://data.chain.link/feeds/ethereum/mainnet/vbill-nav",
+      "label": "Chainlink VBILL NAV"
     },
     "inputs": {
       "primary": {
         "kind": "onchain-evm",
         "chain": "ethereum",
-        "rpcMode": "etherscan-proxy"
+        "rpcMode": "alchemy"
       }
+    },
+    "params": {
+      "oracleAddress": "0xd92095BAf79a6ca6533019e952aDe0d3C5834f4b",
+      "tokenAddress": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
+      "assetLabel": "VanEck Treasury Fund shares",
+      "assetRisk": "very-low",
+      "oracleMethod": "latestRoundData",
+      "maxOracleAgeSec": 345600
     }
   },
   "yieldConfig": {
