@@ -1,0 +1,63 @@
+{
+  "id": "hlusd-hela",
+  "detailProvider": "coingecko",
+  "name": "HeLa USD",
+  "symbol": "HLUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Fiat and fiat-equivalent reserve assets supporting the HeLa ecosystem's HLUSD stablecoin at a one U.S. dollar target",
+  "pegMechanism": "Issuer- and ecosystem-managed stablecoin used as the HeLa runtime settlement asset, with external pricing and market-cap coverage supplied by CoinGecko",
+  "geckoId": "hela-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.helalabs.com/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.stablehodl.com/overview/about-hlusd"
+    },
+    {
+      "label": "Governance",
+      "url": "https://docs.helalabs.com/hlusd/stablecoin-governance"
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Website",
+        "url": "https://www.helalabs.com/"
+      }
+    ],
+    "evidence": "HLUSD is managed by the HeLa ecosystem and its native chain is not yet modeled in Pharos contracts; available sources do not prove a direct holder blacklist path, so admin-control risk is retained as possible.",
+    "reviewer": "Codex coverage expansion",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "unproven",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Fiat and fiat-equivalent reserves",
+      "pct": 100,
+      "risk": "medium"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Native chain not yet supported",
+      "message": "CoinGecko lists HLUSD without a supported Pharos contract platform. Runtime coverage uses the CoinGecko price and market-cap path while contract coverage remains intentionally absent."
+    }
+  ]
+}

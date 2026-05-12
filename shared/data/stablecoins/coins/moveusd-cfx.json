@@ -1,0 +1,70 @@
+{
+  "id": "moveusd-cfx",
+  "llamaId": "389",
+  "detailProvider": "defillama",
+  "name": "CFX MoveUSD",
+  "symbol": "MOVEUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "USD deposits, cash-equivalent instruments, and marketable U.S. Treasury securities supporting the CFX-issued MoveUSD token at a 1:1 U.S. dollar target",
+  "pegMechanism": "Issuer-managed mint and redemption route for approved CFX customers, with MOVEUSD intended to trade and settle at one U.S. dollar on Solana",
+  "links": [
+    {
+      "label": "Docs",
+      "url": "https://docs.moveusd.com/docs/what-is-moveusd"
+    },
+    {
+      "label": "Market Page",
+      "url": "https://perena.org/stablecoins/moveusd"
+    },
+    {
+      "label": "Token",
+      "url": "https://www.solflare.com/prices/moveusd/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.moveusd.com/docs/what-is-moveusd"
+      }
+    ],
+    "evidence": "MoveUSD is issuer-managed on Solana and public docs describe a centralized CFX issuance and redemption process; available registry sources do not prove a holder-level freeze path.",
+    "reviewer": "Codex coverage expansion",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "mature-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "USD deposits, cash equivalents, and marketable U.S. Treasury securities",
+      "pct": 100,
+      "risk": "low"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Tokenized-deposit profile",
+      "message": "MoveUSD is tracked because DefiLlama reports a current price and circulating supply, but its public materials present it as a CFX-issued stable token for approved customers rather than an open DeFi-native stablecoin."
+    }
+  ]
+}

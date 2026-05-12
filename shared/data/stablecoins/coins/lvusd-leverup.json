@@ -1,0 +1,66 @@
+{
+  "id": "lvusd-leverup",
+  "detailProvider": "coingecko",
+  "name": "LeverUp USD",
+  "symbol": "lvUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDC and MON collateral supporting LeverUp's liquidity-layer stablecoin for perpetuals and margin trading",
+  "pegMechanism": "Synthetic stablecoin used inside LeverUp's Monad liquidity layer, with mint, burn, and redemption mechanics tied to the protocol's collateral and trading engine",
+  "geckoId": "leverup-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://leverup.xyz/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "monad",
+      "address": "0xfd44b35139ae53fff7d8f2a9869c503d987f00d1",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
+      }
+    ],
+    "evidence": "lvUSD is tied to a managed perpetuals liquidity layer on a new chain; available sources do not prove a direct blacklist function, but admin and protocol-control risk remain unresolved.",
+    "reviewer": "Codex coverage expansion",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "unproven",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
+  "reserves": [
+    {
+      "name": "USDC and MON liquidity-layer collateral",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Perpetuals liquidity-layer stablecoin",
+      "message": "lvUSD is included through CoinGecko price and market-cap coverage, but its collateral and redemption model are tied to LeverUp's trading system rather than a conventional issuer reserve."
+    }
+  ]
+}

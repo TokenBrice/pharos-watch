@@ -1,0 +1,59 @@
+{
+  "id": "vusd-virtue",
+  "detailProvider": "coingecko",
+  "name": "Virtue USD",
+  "symbol": "VUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Overcollateralized IOTA and stIOTA positions backing VUSD debt inside the Virtue Money protocol",
+  "pegMechanism": "CDP-style mint: users borrow VUSD against IOTA or stIOTA collateral and repay debt to unlock collateral, with liquidation and redemption mechanics supporting the U.S. dollar peg",
+  "geckoId": "virtue-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://virtue.money/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.virtue.money/overview/what-is-vusd"
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.virtue.money/overview/what-is-vusd"
+      }
+    ],
+    "evidence": "Virtue is a crypto-collateralized protocol, but the IOTA deployment is not yet represented in Pharos contract metadata and available sources do not prove the absence of admin or pause surfaces.",
+    "reviewer": "Codex coverage expansion",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "unproven",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
+  "reserves": [
+    {
+      "name": "IOTA and stIOTA collateral",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "IOTA contract excluded",
+      "message": "CoinGecko verifies the IOTA VUSD object, but IOTA is not yet a supported Pharos chain. Runtime coverage uses the CoinGecko supplemental path and leaves contracts[] empty."
+    }
+  ]
+}
