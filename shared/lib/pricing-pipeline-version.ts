@@ -3,9 +3,23 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.06",
+  currentVersion: "5.07",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.07",
+      title: "Idle CDO virtualPrice authoritative price provider",
+      date: "2026-05-12",
+      effectiveAt: 1778558000,
+      summary:
+        "Added an Idle Perpetual Yield Tranches authoritative price provider that reads `virtualPrice(address tranche)` on the CDO contract and multiplies the resulting underlying-denominated NAV by the tracked parent asset's live price.",
+      impact: [
+        "`aa-falconx-mev-capital` now publishes a `protocol-redeem` high-confidence NAV from the CDO `virtualPrice` reading and the tracked `usdc-circle` parent price, instead of staying at `priceSource: missing`",
+        "The provider reuses the shared parent-trust gating, parent provenance metadata, and 0.5–10.0 NAV bound from the ERC-4626 NAV lane so untrusted, stale, or degenerate quotes cannot upgrade into a high-confidence child price",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.06",
       title: "ERC-4626 NAV authoritative price provider",

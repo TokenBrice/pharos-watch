@@ -28,6 +28,7 @@ const IUSD_INFINIFI_REDEEM_CONTROLLER = "0xCb1747E89a43DEdcF4A2b831a0D94859EFeC7
 const ERC4626_CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a"; // convertToAssets(uint256)
 const ERC4626_NAV_MIN_RATIO = 0.5;
 const ERC4626_NAV_MAX_RATIO = 10;
+const IDLE_CDO_VIRTUAL_PRICE_SELECTOR = "0x9290d427"; // virtualPrice(address)
 
 const CAP_SAMPLE_SUPPLY_FRACTION = 0.01;
 const CAP_SAMPLE_NOTIONAL_MIN_USD = 1_000;
@@ -104,6 +105,34 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
 
 const ERC4626_NAV_VAULTS_BY_ID = new Map<string, Erc4626NavVaultConfig>(
   ERC4626_NAV_VAULTS.map((entry) => [entry.id, entry]),
+);
+
+interface IdleCdoTrancheConfig {
+  id: string;
+  parentId: string;
+  chain: string;
+  cdo: string;
+  tranche: string;
+  assetDecimals: number;
+}
+
+// Idle Perpetual Yield Tranches priced from `virtualPrice(address tranche)`
+// on the CDO contract. The returned amount is denominated in the underlying
+// asset's decimals, so the published price multiplies it by the tracked
+// parent's live USD price.
+const IDLE_CDO_TRANCHES: readonly IdleCdoTrancheConfig[] = [
+  {
+    id: "aa-falconx-mev-capital",
+    parentId: USDC_CIRCLE_ID,
+    chain: ETHEREUM_CHAIN,
+    cdo: "0x433d5b175148da32ffe1e1a37a939e1b7e79be4d",
+    tranche: "0xc26a6fa2c37b38e549a4a1807543801db684f99c",
+    assetDecimals: 6,
+  },
+];
+
+const IDLE_CDO_TRANCHES_BY_ID = new Map<string, IdleCdoTrancheConfig>(
+  IDLE_CDO_TRANCHES.map((entry) => [entry.id, entry]),
 );
 
 export interface CurrentPriceOverride {
@@ -607,11 +636,91 @@ const erc4626NavProvider: PriceSourceProvider = {
   },
 };
 
+async function fetchIdleCdoTrancheAssetsPerShare(
+  config: IdleCdoTrancheConfig,
+  blockNumberOrTag: number | "latest",
+  signal?: AbortSignal,
+): Promise<number | null> {
+  const calldata = `${IDLE_CDO_VIRTUAL_PRICE_SELECTOR}${encodeAddress(config.tranche)}`;
+  const quoteHex = await fetchEvmCallHexAtBlock(config.chain, config.cdo, calldata, blockNumberOrTag, {
+    signal,
+    extraRpcUrls: getArchiveFallbackRpcUrls(config.chain),
+  });
+  if (!quoteHex) {
+    console.warn(`[authoritative-price-sources] ${config.id}: virtualPrice() returned null`);
+    return null;
+  }
+  const outputAmount = decodeUint256Word(quoteHex, 0);
+  if (outputAmount == null || outputAmount <= 0n) {
+    console.warn(`[authoritative-price-sources] ${config.id}: virtualPrice() returned zero or invalid output`);
+    return null;
+  }
+  const assetsPerShare = Number(outputAmount) / 10 ** config.assetDecimals;
+  if (!Number.isFinite(assetsPerShare) || assetsPerShare <= 0) return null;
+  if (assetsPerShare < ERC4626_NAV_MIN_RATIO || assetsPerShare > ERC4626_NAV_MAX_RATIO) {
+    console.warn(
+      `[authoritative-price-sources] ${config.id}: virtualPrice() ratio ${assetsPerShare} outside trusted bounds`,
+    );
+    return null;
+  }
+  return assetsPerShare;
+}
+
+const idleCdoTrancheProvider: PriceSourceProvider = {
+  source: PROTOCOL_REDEEM_SOURCE,
+  matches(stablecoinId: string): boolean {
+    return IDLE_CDO_TRANCHES_BY_ID.has(stablecoinId);
+  },
+  async fetchLivePrice(
+    asset: PeggedAsset,
+    context: LivePriceContext,
+    signal?: AbortSignal,
+  ): Promise<CurrentPriceOverride | null> {
+    const config = IDLE_CDO_TRANCHES_BY_ID.get(asset.id);
+    if (!config) return null;
+
+    const parentAsset = context.assetsById.get(config.parentId);
+    if (!parentAsset) return null;
+
+    const trustedParent = resolveTrustedInheritedParent(parentAsset, Math.floor(Date.now() / 1000));
+    if (!trustedParent) {
+      console.warn(
+        `[authoritative-price-sources] ${asset.id}: skipped Idle CDO virtualPrice because parent ${config.parentId} provenance is not trusted`,
+      );
+      return null;
+    }
+
+    const assetsPerShare = await fetchIdleCdoTrancheAssetsPerShare(config, "latest", signal);
+    if (assetsPerShare == null) return null;
+
+    const price = assetsPerShare * trustedParent.price;
+    if (!Number.isFinite(price) || price <= 0) return null;
+
+    const parentObservedAt = parentAsset.priceObservedAt ?? parentAsset.priceUpdatedAt ?? null;
+    return {
+      price,
+      source: PROTOCOL_REDEEM_SOURCE,
+      confidence: "high",
+      observedAt: trustedParent.observedAt,
+      observedAtMode: trustedParent.observedAtMode,
+      metadata: {
+        inheritedFrom: config.parentId,
+        parentSource: parentAsset.priceSource ?? null,
+        parentConfidence: parentAsset.priceConfidence ?? null,
+        parentObservedAt,
+        parentObservedAtMode: parentAsset.priceObservedAtMode ?? null,
+        parentReplaySafe: trustedParent.replaySafe,
+      },
+    };
+  },
+};
+
 const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   capCusdProvider,
   iusdInfinifiProvider,
   inheritedTrackedPriceProvider,
   erc4626NavProvider,
+  idleCdoTrancheProvider,
 ];
 
 export async function fetchAuthoritativeLivePriceOverrides(

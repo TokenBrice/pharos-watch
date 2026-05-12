@@ -783,6 +783,51 @@ describe("authoritative-price-sources", () => {
     warnSpy.mockRestore();
   });
 
+  it("prices an Idle CDO senior tranche from virtualPrice() x parent USDC price", async () => {
+    // virtualPrice returns 1_081_076 (= 1.081076 USDC per AA share, 6 decimals)
+    const virtualPriceRaw = (1_081_076n).toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${virtualPriceRaw}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "aa-falconx-mev-capital",
+        name: "MEV Capital Falcon USDC Senior Tranche",
+        symbol: "AA_FalconXUSDC",
+        circulating: { peggedUSD: 117_450_000 },
+      },
+      {
+        id: "usdc-circle",
+        name: "USDC",
+        symbol: "USDC",
+        price: 0.9999,
+        priceSource: "coingecko+pyth",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
+      },
+    ]);
+
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
+      "ethereum",
+      "0x433d5b175148da32ffe1e1a37a939e1b7e79be4d",
+      expect.stringMatching(
+        new RegExp("^0x9290d427000000000000000000000000c26a6fa2c37b38e549a4a1807543801db684f99c$"),
+      ),
+      "latest",
+      expect.any(Object),
+    );
+
+    const override = overrides.get("aa-falconx-mev-capital");
+    expect(override).toMatchObject({
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: { inheritedFrom: "usdc-circle" },
+    });
+    expect(override?.price).toBeCloseTo(1.081076 * 0.9999, 4);
+  });
+
   it("rejects ERC-4626 NAV override when convertToAssets ratio is outside trusted bounds", async () => {
     // convertToAssets returns 100x the share amount — should be rejected
     const insaneRaw = (100_000_000n).toString(16).padStart(64, "0");

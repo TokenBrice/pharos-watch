@@ -19,9 +19,9 @@
     "disposition": "queued-p4",
     "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche."
   },
-  "worker/src/api/telegram-webhook-store.ts": {
+  "worker/src/lib/authoritative-price-sources.ts": {
     "disposition": "queued-p4",
-    "notes": "Webhook store setup, dispatch, and command routing remain centralized across preset, cache, and stateful notification paths. Defer decomposition until a dedicated Telegram store cleanup pass following this maintenance tranche."
+    "notes": "Authoritative price overrides centralize per-protocol live and historical readers (Cap, infiniFi, ERC-4626 NAV, Idle CDO tranche, tracked-base inheritance). The shared shape — selector + provider record + parent-trust gating — is easier to audit in one file while new vault families are still being added. Split per-protocol providers into separate modules once the catalog stabilizes."
   },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",

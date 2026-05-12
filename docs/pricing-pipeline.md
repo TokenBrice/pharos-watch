@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v5.06`
+- **Current methodology version:** `v5.07`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -208,6 +208,7 @@ After market/oracle consensus, `worker/src/lib/authoritative-price-sources.ts` c
 | `sgho-aave` | ERC-4626 `convertToAssets(1 share)` × tracked `gho-aave` price |
 | `stkgho-umbrella-aave` | ERC-4626 `convertToAssets(1 share)` × tracked `gho-aave` price |
 | `sbold-k3-capital` | ERC-4626 `convertToAssets(1 share)` × tracked `bold-liquity` price |
+| `aa-falconx-mev-capital` | Idle CDO `virtualPrice(address tranche)` × tracked `usdc-circle` price |
 
 When a live override validates successfully, the cached asset is written with:
 
