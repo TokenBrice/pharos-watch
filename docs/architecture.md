@@ -210,6 +210,22 @@ Reminder: Tailwind classes must be static strings -- never construct class names
 
 ---
 
+## Coverage Subsystem
+
+The `/coverage` page model lives under `src/lib/coverage/` as one module per feature (`price`, `safety`, `dex`, `reserves`, `redemption`, `yield`, `flows`, `blacklist`, `dependency`), plus a `shared.ts` with primitives (`createStatus`, `createPresetStatus`, `createDataUnavailableStatus`, `resolveBooleanCoverageStatus`). Each per-feature module owns:
+
+- The feature's preset table (when applicable).
+- The `resolve<Feature>Coverage(...)` function that maps a `StablecoinMeta` (plus auxiliary inputs) to a `CoverageStatus`.
+- A `format<Feature>Breakdown(rows, breakdownMap)` callback returning `CoverageBreakdownItem[]`.
+- The `<FEATURE>_STATUS_KINDS` array enumerating every `kind` the resolver can produce, used by the legend invariant.
+- A `<FEATURE>_LEGEND_ITEMS` list of `{ kind, label, description }` entries aggregated into the global legend.
+
+`src/lib/coverage.ts` is a thin orchestrator + barrel — it re-exports every public symbol so consumers can keep importing from `@/lib/coverage`, and it owns the cross-feature helpers (`buildCoverageRow`, `buildCoverageFeatureSummary`, `countAvailableFeatures`, `countHeadlineFeatures`, `isHeadlineFeatureCovered`). `buildCoverageBreakdown` is now a dispatcher that calls `feature.formatBreakdown(rows, breakdownMap)` — adding a new feature requires providing the callback, otherwise TypeScript fails the build.
+
+`src/lib/coverage-features.ts` wires each feature key to its per-feature module exports (resolver, formatter, status kinds, legend items). `src/lib/coverage-page-config.ts` derives `LEGEND_ITEMS` from those per-feature exports plus a small fixed set of general entries (NR / Data n/a / —). A runtime invariant test in `src/lib/__tests__/coverage.test.ts` asserts every `kind` any resolver can produce has a matching legend entry, and a second exhaustiveness test invokes each resolver against a synthetic fixture matrix to confirm `*_STATUS_KINDS` doesn't drift from actual resolver output.
+
+---
+
 ## Worker Coding Conventions
 
 ### Loose-equality null guard (`!= null`)
