@@ -1,4 +1,5 @@
 import type { CoverageFeatureKey, CoverageFeatureSummary } from "@/lib/coverage";
+import type { BlacklistBreakdownStatusKind } from "@/lib/coverage-page-config";
 import {
   BLACKLIST_BREAKDOWN_CHIP_CLASS,
   FEATURE_ACCENT_CLASSES,
@@ -83,7 +84,9 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
           {breakdownItems.map((item, index) => {
             const statusKey = item.split(/\s+/)[0]?.toLowerCase() ?? "";
             const blacklistChip =
-              summary.feature.key === "blacklist" ? BLACKLIST_BREAKDOWN_CHIP_CLASS[statusKey] : undefined;
+              summary.feature.key === "blacklist" && statusKey in BLACKLIST_BREAKDOWN_CHIP_CLASS
+                ? BLACKLIST_BREAKDOWN_CHIP_CLASS[statusKey as BlacklistBreakdownStatusKind]
+                : undefined;
             return (
               <span
                 key={`${summary.feature.key}-${item}`}
