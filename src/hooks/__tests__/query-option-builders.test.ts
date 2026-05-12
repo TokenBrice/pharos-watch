@@ -14,8 +14,24 @@ import { dexLiquidityHistoryQueryOptions, safetyScoreHistoryQueryOptions } from 
 import { depegEventsInfiniteQueryOptions } from "../use-depeg-events";
 import { supplyHistoryQueryOptions } from "../use-stablecoins";
 import { mintBurnFlowsCoinQueryOptions } from "../use-mint-burn-flows";
+import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
 
 describe("query option builders", () => {
+  it("keeps low-risk API hook descriptors in the frontend registry", () => {
+    expect(FRONTEND_API_QUERY_REGISTRY.reportCards).toMatchObject({
+      queryKey: ["report-cards"],
+      path: "/api/report-cards",
+      producerIntervalMs: 15 * 60 * 1000,
+      metaMaxAgeSec: 900,
+    });
+    expect(FRONTEND_API_QUERY_REGISTRY.safetyScoreHistory("usdc-circle", 3650)).toMatchObject({
+      queryKey: ["safety-score-history", "usdc-circle", 3650],
+      path: "/api/safety-score-history?stablecoin=usdc-circle&days=3650",
+      producerIntervalMs: 24 * 60 * 60 * 1000,
+      metaMaxAgeSec: 24 * 60 * 60,
+    });
+  });
+
   it("builds canonical supply-history options", async () => {
     const options = supplyHistoryQueryOptions("usdc-circle");
 

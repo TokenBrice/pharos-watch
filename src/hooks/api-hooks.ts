@@ -1,23 +1,7 @@
 "use client";
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { API_PATHS } from "@shared/lib/api-endpoints";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
-  BluechipRatingsMapSchema,
-  DexLiquidityMapSchema,
-  HealthResponseSchema,
-  PegSummaryResponseSchema,
-  ReportCardsResponseSchema,
-  RedemptionBackstopsResponseSchema,
-  SafetyScoreHistoryResponseSchema,
-  StabilityIndexResponseSchema,
-  StablecoinChartResponseSchema,
-  StressSignalsAllResponseSchema,
-  StressSignalDetailResponseSchema,
-  UsdsStatusResponseSchema,
-  YieldHistoryResponseSchema,
-  YieldRankingsResponseSchema,
   type BluechipRatingsMap,
   type DailyDigestResponse,
   type DexLiquidityHistoryPoint,
@@ -46,38 +30,98 @@ import {
   useApiQuery,
   useApiQueryWithMeta,
 } from "./use-api-query";
-import { CRON_1H, CRON_1MIN, CRON_15MIN, CRON_24H, CRON_30MIN, CRON_RESERVE_SYNC, CRON_YIELD } from "@/lib/cron-intervals";
-
-const YIELD_META_MAX_AGE_SEC = CRON_YIELD / 1000;
+import {
+  FRONTEND_API_QUERY_REGISTRY,
+  type FrontendApiQueryDescriptor,
+  type FrontendStaticApiQueryDescriptor,
+  type NonUsdSharePoint as RegistryNonUsdSharePoint,
+} from "@/lib/api-query-registry";
 
 export type { StabilityContributor };
+export type { NonUsdSharePoint } from "@/lib/api-query-registry";
+
+interface QueryControlOverrides {
+  enabled?: boolean;
+  retry?: number | boolean;
+  retryDelay?: (attempt: number) => number;
+}
+
+function useRegisteredApiQuery<T>(
+  descriptor: FrontendApiQueryDescriptor<T>,
+  overrides?: QueryControlOverrides,
+) {
+  return useApiQuery<T>(
+    descriptor.queryKey,
+    descriptor.path,
+    descriptor.producerIntervalMs,
+    { ...overrides, schema: descriptor.schema },
+  );
+}
+
+function useRegisteredApiQueryWithMeta<T>(
+  descriptor: FrontendApiQueryDescriptor<T>,
+  overrides?: QueryControlOverrides,
+) {
+  return useApiQueryWithMeta<T>(
+    descriptor.queryKey,
+    descriptor.path,
+    descriptor.producerIntervalMs,
+    { ...overrides, schema: descriptor.schema, metaMaxAgeSec: descriptor.metaMaxAgeSec },
+  );
+}
+
+function createRegisteredApiPollingQueryOptions<T>(
+  descriptor: FrontendApiQueryDescriptor<T>,
+  overrides?: QueryControlOverrides,
+) {
+  return createApiPollingQueryOptions<T>(
+    descriptor.queryKey,
+    descriptor.path,
+    descriptor.producerIntervalMs,
+    { ...overrides, schema: descriptor.schema },
+  );
+}
+
+function createRegisteredApiPollingQueryOptionsWithMeta<T>(
+  descriptor: FrontendApiQueryDescriptor<T>,
+  overrides?: QueryControlOverrides,
+) {
+  return createApiPollingQueryOptionsWithMeta<T>(
+    descriptor.queryKey,
+    descriptor.path,
+    descriptor.producerIntervalMs,
+    { ...overrides, schema: descriptor.schema, metaMaxAgeSec: descriptor.metaMaxAgeSec },
+  );
+}
+
+function createRegisteredStaticQueryOptions<T>(
+  descriptor: FrontendStaticApiQueryDescriptor<T>,
+  opts?: {
+    enabled?: boolean;
+    retry?: number | boolean;
+    retryDelay?: (attempt: number) => number;
+    staleTime?: number;
+  },
+) {
+  return createStaticQueryOptions(
+    descriptor.queryKey,
+    createApiQueryFn<T>(descriptor.path, descriptor.schema),
+    opts,
+  );
+}
 
 export function useBluechipRatings() {
-  return useApiQueryWithMeta<BluechipRatingsMap | null>(
-    ["bluechip-ratings"],
-    API_PATHS.bluechipRatings(),
-    CRON_24H,
-    {
-      schema: BluechipRatingsMapSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.bluechip,
-    },
+  return useRegisteredApiQueryWithMeta<BluechipRatingsMap | null>(
+    FRONTEND_API_QUERY_REGISTRY.bluechipRatings,
   );
 }
 
 export function useDailyDigest() {
-  return useApiQuery<DailyDigestResponse>(["daily-digest"], API_PATHS.dailyDigest(), CRON_24H);
+  return useRegisteredApiQuery<DailyDigestResponse>(FRONTEND_API_QUERY_REGISTRY.dailyDigest);
 }
 
 export function useDexLiquidity() {
-  return useApiQueryWithMeta<DexLiquidityMap>(
-    ["dex-liquidity"],
-    API_PATHS.dexLiquidity(),
-    CRON_30MIN,
-    {
-      schema: DexLiquidityMapSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
-    },
-  );
+  return useRegisteredApiQueryWithMeta<DexLiquidityMap>(FRONTEND_API_QUERY_REGISTRY.dexLiquidity);
 }
 
 export function useDexLiquidityHistory(stablecoinId: string, days = 90) {
@@ -87,154 +131,86 @@ export function useDexLiquidityHistory(stablecoinId: string, days = 90) {
 }
 
 export function dexLiquidityHistoryQueryOptions(stablecoinId: string, days = 90) {
-  return createApiPollingQueryOptions<DexLiquidityHistoryPoint[]>(
-    ["dex-liquidity-history", stablecoinId, days],
-    API_PATHS.dexLiquidityHistory(stablecoinId, days),
-    CRON_1H,
+  return createRegisteredApiPollingQueryOptions<DexLiquidityHistoryPoint[]>(
+    FRONTEND_API_QUERY_REGISTRY.dexLiquidityHistory(stablecoinId, days),
   );
 }
 
 export function useDigestArchive() {
-  return useApiQueryWithMeta<DigestArchiveResponse>(
-    ["digest-archive"],
-    API_PATHS.digestArchive(),
-    CRON_24H,
-    { metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.digestArchive },
+  return useRegisteredApiQueryWithMeta<DigestArchiveResponse>(
+    FRONTEND_API_QUERY_REGISTRY.digestArchive,
   );
 }
 
 // Digest snapshots are immutable by date — static cache, no polling needed
 export function useDigestSnapshot(date: string): UseQueryResult<DigestSnapshotResponse, Error> {
   return useQuery<DigestSnapshotResponse, Error>(
-    createStaticQueryOptions(
-      ["digest-snapshot", date],
-      createApiQueryFn<DigestSnapshotResponse>(API_PATHS.digestSnapshot(date)),
+    createRegisteredStaticQueryOptions(
+      FRONTEND_API_QUERY_REGISTRY.digestSnapshot(date),
       { enabled: !!date, retry: 1 },
     ),
   );
 }
 
 export function useHealth(): UseQueryResult<HealthResponse, Error> {
-  return useApiQuery<HealthResponse>(
-    ["health"],
-    API_PATHS.health(),
-    CRON_1MIN,
-    { retry: 1, schema: HealthResponseSchema },
+  return useRegisteredApiQuery<HealthResponse>(
+    FRONTEND_API_QUERY_REGISTRY.health,
+    { retry: 1 },
   );
 }
 
 export function usePegSummary() {
-  return useApiQueryWithMeta<PegSummaryResponse>(
-    ["peg-summary"],
-    API_PATHS.pegSummary(),
-    CRON_15MIN,
-    {
-      schema: PegSummaryResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.pegSummary,
-    },
-  );
+  return useRegisteredApiQueryWithMeta<PegSummaryResponse>(FRONTEND_API_QUERY_REGISTRY.pegSummary);
 }
 
 export function useReportCards() {
-  return useApiQueryWithMeta<ReportCardsResponse>(
-    ["report-cards"],
-    API_PATHS.reportCards(),
-    CRON_15MIN,
-    {
-      schema: ReportCardsResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
-    },
-  );
+  return useRegisteredApiQueryWithMeta<ReportCardsResponse>(FRONTEND_API_QUERY_REGISTRY.reportCards);
 }
 
 export function useRedemptionBackstops() {
-  return useApiQueryWithMeta<RedemptionBackstopsResponse>(
-    ["redemption-backstops"],
-    API_PATHS.redemptionBackstops(),
-    CRON_RESERVE_SYNC,
-    {
-      schema: RedemptionBackstopsResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops,
-    },
+  return useRegisteredApiQueryWithMeta<RedemptionBackstopsResponse>(
+    FRONTEND_API_QUERY_REGISTRY.redemptionBackstops,
   );
 }
 
 export function useSafetyScoreHistory(stablecoinId: string, days = 3650) {
-  return useApiQueryWithMeta<SafetyScoreHistoryResponse>(
-    ["safety-score-history", stablecoinId, days],
-    API_PATHS.safetyScoreHistory(stablecoinId, days),
-    CRON_24H,
-    {
-      enabled: !!stablecoinId,
-      schema: SafetyScoreHistoryResponseSchema,
-      metaMaxAgeSec: CRON_24H / 1000,
-    },
+  return useRegisteredApiQueryWithMeta<SafetyScoreHistoryResponse>(
+    FRONTEND_API_QUERY_REGISTRY.safetyScoreHistory(stablecoinId, days),
+    { enabled: !!stablecoinId },
   );
 }
 
 export function safetyScoreHistoryQueryOptions(stablecoinId: string, days = 3650) {
-  return createApiPollingQueryOptionsWithMeta<SafetyScoreHistoryResponse>(
-    ["safety-score-history", stablecoinId, days],
-    API_PATHS.safetyScoreHistory(stablecoinId, days),
-    CRON_24H,
-    {
-      enabled: !!stablecoinId,
-      schema: SafetyScoreHistoryResponseSchema,
-      metaMaxAgeSec: CRON_24H / 1000,
-    },
+  return createRegisteredApiPollingQueryOptionsWithMeta<SafetyScoreHistoryResponse>(
+    FRONTEND_API_QUERY_REGISTRY.safetyScoreHistory(stablecoinId, days),
+    { enabled: !!stablecoinId },
   );
 }
 
 export function useStablecoinCharts() {
-  return useApiQuery<StablecoinChartPoint[]>(
-    ["stablecoin-charts"],
-    API_PATHS.stablecoinCharts(),
-    CRON_1H,
-    { schema: StablecoinChartResponseSchema },
+  return useRegisteredApiQuery<StablecoinChartPoint[]>(
+    FRONTEND_API_QUERY_REGISTRY.stablecoinCharts,
   );
 }
 
-export interface NonUsdSharePoint {
-  date: number;
-  commodityShare: number | null;
-  fiatNonUsdShare: number | null;
-  commodity: number | null;
-  fiatNonUsd: number | null;
-  total: number;
-}
-
 export function useNonUsdShare() {
-  return useApiQuery<NonUsdSharePoint[]>(["non-usd-share"], API_PATHS.nonUsdShare(), CRON_24H);
+  return useRegisteredApiQuery<RegistryNonUsdSharePoint[]>(FRONTEND_API_QUERY_REGISTRY.nonUsdShare);
 }
 
 export function useStabilityIndex() {
-  return useApiQueryWithMeta<StabilityIndexResponse>(
-    ["stability-index"],
-    API_PATHS.stabilityIndex(),
-    CRON_30MIN,
-    {
-      schema: StabilityIndexResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stabilityIndex,
-    },
+  return useRegisteredApiQueryWithMeta<StabilityIndexResponse>(
+    FRONTEND_API_QUERY_REGISTRY.stabilityIndex,
   );
 }
 
 export function useStabilityIndexDetail() {
-  return useApiQueryWithMeta<StabilityIndexResponse>(
-    ["stability-index-detail"],
-    API_PATHS.stabilityIndex(true),
-    CRON_30MIN,
-    {
-      schema: StabilityIndexResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stabilityIndex,
-    },
+  return useRegisteredApiQueryWithMeta<StabilityIndexResponse>(
+    FRONTEND_API_QUERY_REGISTRY.stabilityIndexDetail,
   );
 }
 
 export function useUsdsStatus() {
-  return useApiQuery<UsdsStatusResponse | null>(["usds-status"], API_PATHS.usdsStatus(), CRON_15MIN, {
-    schema: UsdsStatusResponseSchema,
-  });
+  return useRegisteredApiQuery<UsdsStatusResponse | null>(FRONTEND_API_QUERY_REGISTRY.usdsStatus);
 }
 
 export function useYieldHistory(
@@ -249,44 +225,27 @@ export function useYieldHistory(
   const days = options?.days ?? 90;
   const mode = options?.sourceKey ? "source" : (options?.mode ?? "best");
   const sourceKey = options?.sourceKey ?? null;
-  return useApiQueryWithMeta<YieldHistoryResponse>(
-    ["yield-history", stablecoinId, days, mode, sourceKey],
-    API_PATHS.yieldHistory(stablecoinId, days, mode, sourceKey ?? undefined),
-    CRON_YIELD,
-    { metaMaxAgeSec: YIELD_META_MAX_AGE_SEC, enabled: options?.enabled ?? !!stablecoinId, schema: YieldHistoryResponseSchema },
+  return useRegisteredApiQueryWithMeta<YieldHistoryResponse>(
+    FRONTEND_API_QUERY_REGISTRY.yieldHistory(stablecoinId, days, mode, sourceKey),
+    { enabled: options?.enabled ?? !!stablecoinId },
   );
 }
 
 export function useYieldRankings() {
-  return useApiQueryWithMeta<YieldRankingsResponse>(
-    ["yield-rankings"],
-    API_PATHS.yieldRankings(),
-    CRON_YIELD,
-    { metaMaxAgeSec: YIELD_META_MAX_AGE_SEC, schema: YieldRankingsResponseSchema },
+  return useRegisteredApiQueryWithMeta<YieldRankingsResponse>(
+    FRONTEND_API_QUERY_REGISTRY.yieldRankings,
   );
 }
 
 export function useStressSignals() {
-  return useApiQueryWithMeta<StressSignalsAllResponse>(
-    ["stress-signals"],
-    API_PATHS.stressSignals(),
-    CRON_30MIN,
-    {
-      schema: StressSignalsAllResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
-    },
+  return useRegisteredApiQueryWithMeta<StressSignalsAllResponse>(
+    FRONTEND_API_QUERY_REGISTRY.stressSignals,
   );
 }
 
 export function useStressSignalDetail(stablecoinId: string, days = 30) {
-  return useApiQueryWithMeta<StressSignalDetailResponse>(
-    ["stress-signals", stablecoinId, days],
-    API_PATHS.stressSignals(stablecoinId, days),
-    CRON_30MIN,
-    {
-      enabled: !!stablecoinId,
-      schema: StressSignalDetailResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
-    },
+  return useRegisteredApiQueryWithMeta<StressSignalDetailResponse>(
+    FRONTEND_API_QUERY_REGISTRY.stressSignalDetail(stablecoinId, days),
+    { enabled: !!stablecoinId },
   );
 }
