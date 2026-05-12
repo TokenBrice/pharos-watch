@@ -38,7 +38,7 @@
   "announcedDate": "2025-10-23",
   "expectedLaunchDate": "2026",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Companion to the already-tracked RGBP (Revolut GBP). Revolut secured a MiCA CASP licence from Cyprus (CySEC) on Oct 23 2025 and operates an existing EMI licence in Lithuania, the legal foundations for issuing e-money tokens under MiCA Title IV. The Cyprus announcement bundled a 'Crypto 2.0' platform that includes '1:1 conversion between stablecoins and USD' without spreads, fuelling industry expectation of a Revolut-issued USD EMT in 2026 (EU counsel quoted by Decrypt as 'plausible'). Specific ticker, chain selection, and reserve disclosure model not yet publicly confirmed; commercial design must navigate MiCA EMT issuer constraints (EMI/credit-institution-only) and any UK Bank-of-England restrictions on cross-group stablecoin issuance.",
+  "launchPhaseDetail": "Companion to the already-tracked RGBP (Revolut GBP). Revolut secured a MiCA CASP licence from Cyprus (CySEC) on Oct 23 2025 and operates an existing EMI licence in Lithuania — the legal foundations for issuing e-money tokens under MiCA Title IV. In October 2025, Revolut launched fee-free 1:1 USD↔stablecoin swaps (USDC/USDT on Ethereum, Solana, and Tron) for its 65M users; stablecoin payment volumes on the platform surged 156% in 2025 to ~$10.5B. In February 2026, the FCA selected Revolut as one of 4 firms (from 20 applicants) for a UK stablecoin payment testing pilot covering payments, wholesale settlement, and crypto trading — results will inform the FCA's crypto framework targeting October 2027. A Revolut-branded proprietary USD stablecoin has not been officially confirmed; Polymarket puts the probability at ~25% by year-end 2026. Specific ticker, chain selection, and reserve disclosure model remain unannounced.",
   "featuredContent": [
     {
       "type": "article",
@@ -76,6 +76,13 @@
       "title": "EU counsel describes a Revolut USD/EUR stablecoin in 2026 as 'plausible' under MiCA",
       "description": "Decrypt reports Revolut's Lithuanian EMI provides the EMT issuer foundation; Cyprus CASP licence is the service-provider side; sources say Revolut has been working on its own stablecoin for over a year.",
       "sourceUrl": "https://decrypt.co/345674/revolut-secures-mica-license-in-cyprus-is-a-stablecoin-next"
+    },
+    {
+      "date": "2026-02-25",
+      "type": "regulatory",
+      "title": "FCA selects Revolut for UK stablecoin payment testing pilot",
+      "description": "Revolut is one of 4 firms chosen from 20 applicants to trial stablecoin products in real-world UK conditions from Q1 2026; use cases include stablecoin payments, wholesale settlement, and crypto trading. Results will inform the FCA's crypto regulatory framework targeting October 2027.",
+      "sourceUrl": "https://paymentexpert.com/2026/02/26/fca-revolut-stablecoin-payment-test/"
     }
   ]
 }

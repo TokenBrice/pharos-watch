@@ -41,7 +41,7 @@
   "announcedDate": "2025-09",
   "expectedLaunchDate": "2026",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Pilot phase following successful September 2025 proof of concept; not yet in public circulation. BDACS is South Korea's regulated digital-asset custodian; Woori Bank holds the won reserves and participated directly in the PoC. Initial deployment on Avalanche (cited by KISA for reliability in public-sector use); multi-chain expansion planned. February 2026 Plume partnership positions KRW1 as Korean institutional settlement rail for tokenized RWA. Commercial launch contingent on Korea's forthcoming Digital Asset Basic Act framework where BDACS is positioning KRW1 as the leading technical standard.",
+  "launchPhaseDetail": "Pilot phase following successful September 2025 proof of concept; not yet in public circulation. BDACS is South Korea's regulated digital-asset custodian; Woori Bank holds the won reserves and participated directly in the PoC. Initial deployment on Avalanche (cited by KISA for reliability in public-sector use); KRW1 expanded to Polygon in December 2025 for broader payments, remittances, and enterprise reach. October 2025 MoU with Circle positions KRW1 for deployment on Arc (Circle's new Layer 1), where it joins national stablecoin issuers from Japan, Brazil, Mexico, and the Philippines. February 2026 Plume partnership positions KRW1 as Korean institutional settlement rail for tokenized RWA. The Bank of Korea nominee (April 2026) signalled CBDC and bank-issued deposit tokens should lead Korea's digital money system, with private stablecoins in a secondary role — a headwind for commercial launch timing. Commercial launch contingent on Korea's forthcoming Digital Asset Basic Act framework.",
   "featuredContent": [
     {
       "type": "article",
@@ -63,6 +63,20 @@
       "title": "The Korea Won Stablecoin 2026 Race: 6 Players Competing for Asia's Next Financial Frontier",
       "description": "Comparative analysis of KRW1's institutional-RWA settlement positioning versus retail-bank consortium plans under Korea's pending Digital Asset Basic Act.",
       "source": "Seoulz"
+    },
+    {
+      "type": "article",
+      "url": "https://cointelegraph.com/news/south-korea-bdacs-krw1-stablecoin-circle-arc",
+      "title": "South Korea's BDACS to launch KRW1 stablecoin on Circle's Arc blockchain",
+      "description": "BDACS signs MoU with Circle to bring KRW1 to Arc's public testnet; KRW1 becomes the first Korea-based issuer on the network alongside Japan, Brazil, Mexico, and Philippines issuers.",
+      "source": "CoinTelegraph"
+    },
+    {
+      "type": "article",
+      "url": "https://crypto.news/bdacs-brings-krw-stablecoin-krw1-to-polygon/",
+      "title": "BDACS brings KRW stablecoin KRW1 to Polygon",
+      "description": "Multi-chain expansion to Polygon in December 2025; selected for speed, low fees, and enterprise integrations with Stripe, Circle, and Mastercard.",
+      "source": "crypto.news"
     }
   ],
   "milestones": [
@@ -79,6 +93,20 @@
       "title": "KRW1 proof-of-concept goes live on Avalanche with Woori Bank",
       "description": "Successful PoC validates fiat deposits, on-chain issuance, and real-time banking-API reserve attestation; not yet in public circulation.",
       "sourceUrl": "https://www.prnewswire.com/news-releases/bdacs-launches-krw1--the-first-fully-krw-backed-stablecoin-developed-with-woori-bank-on-avalanche-302259560.html"
+    },
+    {
+      "date": "2025-10-29",
+      "type": "partnership",
+      "title": "BDACS signs MoU with Circle to bring KRW1 to Arc blockchain",
+      "description": "BDACS and Circle formalize collaboration to deploy KRW1 on Arc, Circle's new Layer 1 blockchain (public testnet); KRW1 becomes the first Korea-based issuer on the network, joining issuers from Japan, Brazil, Mexico, and the Philippines.",
+      "sourceUrl": "https://cointelegraph.com/news/south-korea-bdacs-krw1-stablecoin-circle-arc"
+    },
+    {
+      "date": "2025-12-05",
+      "type": "milestone",
+      "title": "KRW1 launches on Polygon network",
+      "description": "Multi-chain expansion following the Avalanche PoC; Polygon selected for high throughput, low fees, and integrations with Stripe, Circle, and Mastercard, enabling payments, remittances, and enterprise use cases.",
+      "sourceUrl": "https://crypto.news/bdacs-brings-krw-stablecoin-krw1-to-polygon/"
     },
     {
       "date": "2026-02-11",
