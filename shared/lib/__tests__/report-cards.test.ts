@@ -342,8 +342,8 @@ describe("scoreLiquidity", () => {
       capacitySemantics: "immediate-bounded",
     });
 
-    // Best-path model: redemption-only uses raw score (no cap/discount)
-    expect(result.score).toBe(90);
+    // Capacity-aware model: medium-confidence redemption-only routes are discounted.
+    expect(result.score).toBe(68);
     expect(result.detail).toContain("DEX liquidity unavailable");
     expect(result.detail).toContain("Redemption backstop 90/100");
   });
@@ -362,8 +362,8 @@ describe("scoreLiquidity", () => {
       },
     );
 
-    // Best-path: max(95, 30) + min(95, 30) × 0.10 = 95 + 3 = 98
-    expect(result.score).toBe(98);
+    // Correlated queue redemption does not add an independent-route diversification bonus.
+    expect(result.score).toBe(95);
   });
 
   it("does not let low-confidence redemption uplift liquidity", () => {
@@ -429,7 +429,7 @@ describe("scoreLiquidity", () => {
       { activeDepegBps: 3000 },
     );
 
-    expect(result.score).toBeGreaterThan(90);
+    expect(result.score).toBe(90);
     expect(result.detail).not.toContain("not used for Safety Score uplift");
   });
 
@@ -632,7 +632,7 @@ describe("scoreLiquidity", () => {
       },
     );
 
-    expect(result.score).toBe(69);
+    expect(result.score).toBe(63);
     expect(result.detail).toContain("primary-market exit bonus only");
     expect(result.detail).toContain("eventual redeemability modeled; immediate buffer not separately quantified");
     expect(result.detail).not.toContain("not used for Safety Score uplift");
@@ -716,8 +716,8 @@ describe("scoreLiquidity", () => {
       },
     );
 
-    // Queue cap: min(90, 70), then best-path blend with DEX 40 => 70 + 4.
-    expect(result.score).toBe(74);
+    // Queue cap and medium confidence discount the redemption contribution before blending.
+    expect(result.score).toBe(53);
   });
 });
 

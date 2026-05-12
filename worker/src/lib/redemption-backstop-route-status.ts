@@ -39,7 +39,7 @@ function normalizeEvidence(
   };
 }
 
-export function getStaticRedemptionRouteStatusFeed(stablecoinId: string): RedemptionRouteStatusFeedEntry | null {
+function getStaticRedemptionRouteStatusFeed(stablecoinId: string): RedemptionRouteStatusFeedEntry | null {
   return STATIC_ROUTE_STATUS_OVERRIDES[stablecoinId] ?? null;
 }
 

@@ -330,8 +330,8 @@ describe("buildReportCardsSnapshot", () => {
     expect(card?.rawInputs.liquidityScore).toBe(29);
     expect(card?.rawInputs.redemptionBackstopScore).toBe(88);
     expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(true);
-    expect(card?.rawInputs.effectiveExitScore).toBe(91);
-    expect(card?.dimensions.liquidity.score).toBe(91);
+    expect(card?.rawInputs.effectiveExitScore).toBe(66);
+    expect(card?.dimensions.liquidity.score).toBe(66);
   });
 
   it("suppresses stale redemption backstop rows from report-card liquidity", async () => {
@@ -417,7 +417,7 @@ describe("buildReportCardsSnapshot", () => {
     expect(snapshot.inputFreshness.redemptionBackstops.stale).toBe(false);
     expect(card?.rawInputs.redemptionBackstopScore).toBe(88);
     expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(true);
-    expect(card?.dimensions.liquidity.score).toBe(91);
+    expect(card?.dimensions.liquidity.score).toBe(66);
   });
 
   it("uses documented offchain issuer eventual redemption only as a DEX-gated bonus", async () => {
@@ -470,8 +470,8 @@ describe("buildReportCardsSnapshot", () => {
     const snapshot = await buildReportCardsSnapshot(db);
     const card = snapshot.cards.find((entry) => entry.id === "cusd-cap");
     expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(true);
-    expect(card?.rawInputs.effectiveExitScore).toBe(32);
-    expect(card?.dimensions.liquidity.score).toBe(32);
+    expect(card?.rawInputs.effectiveExitScore).toBe(29);
+    expect(card?.dimensions.liquidity.score).toBe(29);
     expect(card?.dimensions.liquidity.detail).toContain("primary-market exit bonus only");
   });
 
@@ -580,9 +580,9 @@ describe("buildReportCardsSnapshot", () => {
     expect(snapshot.inputFreshness.dexLiquidity.stale).toBe(true);
     expect(card?.rawInputs.liquidityScore).toBe(29);
     expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(true);
-    expect(card?.rawInputs.effectiveExitScore).toBe(32);
+    expect(card?.rawInputs.effectiveExitScore).toBe(29);
     expect(card?.dimensions.liquidity.grade).not.toBe("NR");
-    expect(card?.dimensions.liquidity.score).toBe(32);
+    expect(card?.dimensions.liquidity.score).toBe(29);
     expect(card?.dimensions.liquidity.detail).toContain("primary-market exit bonus only");
   });
 
@@ -699,7 +699,7 @@ describe("buildReportCardsSnapshot", () => {
     const liveSnapshot = await buildReportCardsSnapshot(db);
     const liveCard = liveSnapshot.cards.find((entry) => entry.id === "cusd-cap");
     expect(liveCard?.rawInputs.redemptionUsedForLiquidity).toBe(true);
-    expect(liveCard?.dimensions.liquidity.score).toBe(91);
+    expect(liveCard?.dimensions.liquidity.score).toBe(66);
   });
 
   it("inherits peg risk for configured NAV wrappers from the referenced base stablecoin", async () => {

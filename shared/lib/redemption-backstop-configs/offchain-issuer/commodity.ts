@@ -3,6 +3,7 @@ import {
   documentedBoundSupplyFull,
   documentedVariableFee,
   fixedFee,
+  issuerBase,
   commodityIssuerBase,
   sourceRef,
 } from "../shared";

@@ -37,14 +37,6 @@ export function defineBatch(
   return ids.map((id) => ({ id, config }));
 }
 
-export function defineReviewedBatch(
-  ids: readonly string[],
-  config: RedemptionBackstopConfig,
-  reviewedAt: string,
-): RedemptionBackstopRegistryEntry[] {
-  return defineBatch(ids, { ...config, reviewedAt });
-}
-
 export function defineOverride(
   id: string,
   base: RedemptionBackstopConfig,

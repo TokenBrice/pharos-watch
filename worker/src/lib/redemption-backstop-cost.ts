@@ -106,7 +106,7 @@ function resolveScenarioScore(
   return resolveBoundedFeeScore(effectiveFeeBps);
 }
 
-export function resolveRedemptionCost(
+function resolveRedemptionCost(
   stablecoinId: string,
   costModel: RedemptionCostModel,
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,

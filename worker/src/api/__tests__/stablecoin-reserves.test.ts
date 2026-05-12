@@ -102,7 +102,6 @@ describe("handleStablecoinReserves", () => {
         sourceUrls: [
           "https://stats.infinifi.xyz/",
           "https://docs.infinifi.example/reserves",
-          "https://docs.infinifi.example/reserves",
         ],
       },
     });
