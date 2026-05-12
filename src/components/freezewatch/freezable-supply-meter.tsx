@@ -279,7 +279,6 @@ function FreezeLineBar({ buckets, totalMarketCap }: { buckets: BlacklistStatusBu
   const freezableEnd = segments
     .filter((segment) => FREEZABLE_BUCKETS.has(segment.key))
     .reduce((sum, segment) => sum + segment.width, 0);
-  const safeFreezeLineLeft = Math.max(8, Math.min(92, freezableEnd));
   const labelTransform =
     freezableEnd <= 12 ? "translateX(0%)" : freezableEnd >= 88 ? "translateX(-100%)" : "translateX(-50%)";
 
@@ -344,7 +343,7 @@ function FreezeLineBar({ buckets, totalMarketCap }: { buckets: BlacklistStatusBu
         <div
           aria-hidden
           className="pointer-events-none absolute -top-4 h-[calc(3rem+1rem)]"
-          style={{ left: `${safeFreezeLineLeft}%` }}
+          style={{ left: `${freezableEnd}%` }}
         >
           <div className="absolute left-0 h-full w-[2px] -translate-x-1/2 bg-frost-blue shadow-[0_0_10px_oklch(0.74_0.16_240_/_0.75)]" />
           <span
