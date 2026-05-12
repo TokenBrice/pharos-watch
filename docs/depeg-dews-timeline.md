@@ -1,6 +1,14 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.97` (2026-02-18 -> 2026-05-11).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98` (2026-02-18 -> 2026-05-12).
+
+---
+
+## v5.98 — Registry-backed depeg source families (May 12, 2026)
+
+- Depeg trust and pending-confirmation policy now resolve source families from the pricing-source registry's `depegSourceFamily` metadata, expanding composite labels such as `coingecko+geckoterminal` before family checks
+- CoinGecko variants, DefiLlama list/detail/contract variants, and CoinMarketCap-style list aggregators remain correlated families for confirmation and severe-downside corroboration; fallback/search lanes remain non-authoritative
+- Promoted DEX protocol lanes keep protocol-specific `dex:*` families, so independent protocol evidence can be counted without treating the whole DEX surface as one generic family
 
 ---
 ## v5.97 — Source-family confirmation and zero-event backfill parity (May 11, 2026)

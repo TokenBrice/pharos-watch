@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "5.97",
+  currentVersion: "5.98",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+    {
+      version: "5.98",
+      title: "Registry-backed depeg source families",
+      date: "2026-05-12",
+      effectiveAt: 1778612253,
+      summary:
+        "Depeg trust and pending-confirmation policy now resolve source families from pricing-source registry metadata, expanding composite labels before family and authority checks.",
+      impact: [
+        "Composite labels such as `coingecko+geckoterminal` are expanded before source-family checks, so they no longer behave like unknown standalone sources",
+        "CoinGecko variants, DefiLlama list/detail/contract variants, and CoinMarketCap-style list aggregators remain correlated families for confirmation and severe-downside corroboration",
+        "Fallback/search lanes remain non-authoritative, while hard market, oracle, protocol, and promoted DEX protocol lanes keep explicit registry-backed families",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.97",
       title: "Source-family confirmation and zero-event backfill parity",

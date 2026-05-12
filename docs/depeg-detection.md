@@ -4,7 +4,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v5.97`
+- **Current methodology version:** `v5.98`
 - **Runtime/version source:** `shared/lib/depeg-dews-version.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Version timeline:** [depeg-dews-timeline.md](./depeg-dews-timeline.md)
@@ -133,6 +133,8 @@ Primary-price trust gates:
 - `authoritative`: fresh `high` / `single-source` current-sync prices
 - `confirm_required`: cached, fallback, low-confidence, or stale primary prices
 - `unusable`: invalid/missing/non-finite price
+
+Before those gates are applied, `priceSource` and `agreeSources` are normalized through the pricing-source registry. Composite labels are expanded into their component source keys, unknown sources do not become pool-challenge eligible by accident, and each known key resolves to its registered `depegSourceFamily`. CoinGecko variants, DefiLlama list/detail/contract variants, and CoinMarketCap-style list aggregators are therefore not counted as independent hard corroboration just because their labels differ; promoted DEX protocol lanes and hard market/oracle/protocol sources keep provider- or protocol-specific families.
 
 Deviation calculation:
 

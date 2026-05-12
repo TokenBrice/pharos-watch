@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.96` (2026-02-01 -> 2026-05-12).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.97` (2026-02-01 -> 2026-05-12).
+
+---
+
+## v5.97 - Registry source-family normalization (May 12, 2026)
+
+- Pricing source registry entries now carry explicit `depegSourceFamily` metadata, and downstream policy expands composite source labels before applying replay-safety, pool-challenge, fallback-only, depeg-authority, and severe-downside corroboration checks
+- CoinGecko-family and DefiLlama-family variants collapse for independence checks; CoinMarketCap and DefiLlama contract fallback are treated as list aggregators, while fallback/search lanes remain non-authoritative
+- Promoted DEX protocol lanes keep protocol-specific `dex:*` families instead of being collapsed into one generic DEX family, so source-depth reporting and depeg confirmation can distinguish independent protocol evidence
+- Seven verified `pythFeedId` metadata additions expand coverage through the existing Pyth Hermes hard-oracle lane; this does not add a new provider, source family, or trust tier
+- The source-depth audit script is an operator measurement harness for candidate, agreeing, and depeg-authoritative source distributions; it does not change live pricing selection
 
 ---
 

@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) estimating depeg probability. Com
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v5.97`
+- **Current methodology version:** `v5.98`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
@@ -199,7 +199,7 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
-  "methodology": { "version": "5.97", "versionLabel": "...", "currentVersion": "5.97", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "5.98", "versionLabel": "...", "currentVersion": "5.98", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
@@ -217,7 +217,7 @@ Unknown IDs return `404` with `Unknown stablecoin`; tracked-but-non-active IDs r
     ...
   ],
   "malformedRows": 0,
-  "methodology": { "version": "5.97", "versionLabel": "...", "currentVersion": "5.97", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "5.98", "versionLabel": "...", "currentVersion": "5.98", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 

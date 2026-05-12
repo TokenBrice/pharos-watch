@@ -3,9 +3,26 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.96",
+  currentVersion: "5.97",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.97",
+      title: "Registry source-family normalization",
+      date: "2026-05-12",
+      effectiveAt: 1778612253,
+      summary:
+        "Pricing source registry entries now carry explicit depeg source-family metadata, composite source labels are normalized before downstream policy checks, and seven verified Pyth feed IDs expand coverage through the existing hard-oracle lane.",
+      impact: [
+        "Replay safety, pool-challenge eligibility, fallback-only classification, depeg authority, and severe-downside corroboration now expand composite labels such as `coingecko+geckoterminal` before applying source policy",
+        "CoinGecko-family and DefiLlama-family variants collapse for independence checks, CoinMarketCap and DefiLlama contract fallback are treated as list aggregators, and fallback/search lanes remain non-authoritative",
+        "Promoted DEX protocol lanes keep protocol-specific `dex:*` families instead of collapsing into one generic DEX family",
+        "`susds-sky`, `susde-ethena`, `syrupusdt-maple`, `sdai-sky`, `thbill-theo`, `usdv-solomon`, and `usdxl-last` now have verified Pyth feed metadata for the existing Pyth Hermes source path",
+        "The source-depth audit script measures candidate, agreeing, and depeg-authoritative source distributions without changing live pricing selection",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.96",
       title: "Yearn yBOLD NAV wrapper pricing",
