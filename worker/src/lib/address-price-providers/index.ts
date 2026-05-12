@@ -10,6 +10,10 @@ import { resolveChainId } from "@shared/lib/chains";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import { CIRCUIT_SOURCE } from "../constants";
 import type { PricingProviderDiagnosticSource } from "../pricing-provider-diagnostics";
+import {
+  buildBlockedProviderDiagnostic,
+  buildNoCandidatesDiagnostic,
+} from "../pricing-provider-lifecycle";
 import { runAlchemyAddressProvider } from "./alchemy";
 import { runBirdeyeAddressProvider } from "./birdeye";
 import { runDexPaprikaAddressProvider } from "./dexpaprika";
@@ -289,32 +293,22 @@ export async function collectAddressPriceProviderQuotes(params: {
     const targets = params.targetsByProvider.get(provider) ?? [];
     if (targets.length === 0) {
       providerOutcomes.set(provider, true);
-      diagnostics.push({
+      diagnostics.push(buildNoCandidatesDiagnostic({
         source: provider as PricingProviderDiagnosticSource,
         stage: "no-candidates",
         endpoint: provider,
-        status: null,
-        ok: true,
-        success: true,
-        candidateCount: 0,
-      });
+      }));
       continue;
     }
 
     if (!params.sourceAllowed[provider]) {
       providerOutcomes.set(provider, false);
-      diagnostics.push({
+      diagnostics.push(buildBlockedProviderDiagnostic({
         source: provider as PricingProviderDiagnosticSource,
         stage: "primary",
         endpoint: provider,
-        status: null,
-        ok: false,
-        success: false,
         candidateCount: targets.length,
-        errorClass: "blocked",
-        errorMessage: `${provider} circuit open`,
-        rejectionReasonCounts: { blocked: 1 },
-      });
+      }, `${provider} circuit open`));
       continue;
     }
 

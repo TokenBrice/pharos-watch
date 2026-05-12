@@ -5,7 +5,7 @@ import {
 } from "../../lib/price-validation";
 import type { PriceObservedAtMode } from "@shared/types/core";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
-import type { PeggedAsset } from "./enrich-prices-shared";
+import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
 
 const FALLBACK_FUTURE_TIMESTAMP_SKEW_SEC = 120;
 
@@ -26,6 +26,27 @@ export interface FallbackPriceQuote {
   observedAtMode?: PriceObservedAtMode;
   symbol?: string;
   confidence?: number;
+}
+
+export interface MissingPriceCandidate {
+  asset: PeggedAsset;
+  index: number;
+}
+
+export function collectMissingPriceCandidates<T extends object = Record<never, never>>(
+  assets: PeggedAsset[],
+  enrich?: (asset: PeggedAsset, index: number) => T | null,
+): Array<MissingPriceCandidate & T> {
+  const candidates: Array<MissingPriceCandidate & T> = [];
+  assets.forEach((asset, index) => {
+    if (hasMissingPrice(asset)) {
+      const extra = enrich ? enrich(asset, index) : ({} as T);
+      if (extra != null) {
+        candidates.push({ asset, index, ...extra });
+      }
+    }
+  });
+  return candidates;
 }
 
 export function sumCirculatingValue(asset: PeggedAsset): number {

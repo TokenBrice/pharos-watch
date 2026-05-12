@@ -13,14 +13,11 @@ import { resolveYieldSources } from "./yield-sync/resolve";
 import {
   loadYieldHistorySnapshots,
   purgeYieldHistoryOwnershipHandoffs,
-  type YieldHistorySnapshotRow,
 } from "./yield-sync/history";
 import {
   evaluateYieldSources,
-  buildHistoryKey,
-  isLegacyDeterministicOnChainSourceKey,
-  normalizePreviousBestSourceKey,
 } from "./yield-sync/evaluation";
+import { buildYieldHistoryEvaluationInputs } from "./yield-sync/coordinator-history";
 import {
   buildYieldDegradationReasons,
   buildYieldSafetySnapshotMeta,
@@ -142,71 +139,18 @@ export async function syncYieldData(
     resolvedCountByCoin.set(entry.id, (resolvedCountByCoin.get(entry.id) ?? 0) + 1);
   }
 
-  const sourceHistory = new Map<string, YieldHistorySnapshotRow[]>();
-  const onChainCompatibilityHistoryById = new Map<string, YieldHistorySnapshotRow[]>();
-  const legacyDeterministicOnChainHistoryById = new Map<string, YieldHistorySnapshotRow[]>();
-  const legacyHistoryById = new Map<string, YieldHistorySnapshotRow[]>();
-  const prevTvlBySource = new Map<string, number | null>();
-  const legacyPrevTvlById = new Map<string, number | null>();
-  const prevBestSourceKeyByCoin = new Map<string, string>();
-
-  if (resolvedIds.length > 0) {
-    const {
-      historyRows,
-      prevTvlRows,
-      prevBestRows,
-    } = await loadYieldHistorySnapshots(db, resolvedIds, startSec, sevenDaysAgoSec);
-
-    for (const row of historyRows) {
-      const sourceKey = row.source_key ?? "legacy-best";
-      const normalizedRow = { ...row, source_key: sourceKey };
-      if (sourceKey === "legacy-best") {
-        const list = legacyHistoryById.get(row.stablecoin_id) ?? [];
-        list.push(normalizedRow);
-        legacyHistoryById.set(row.stablecoin_id, list);
-      } else {
-        const key = buildHistoryKey(row.stablecoin_id, sourceKey);
-        const list = sourceHistory.get(key) ?? [];
-        list.push(normalizedRow);
-        sourceHistory.set(key, list);
-      }
-
-      if (row.data_source === "onchain" && row.exchange_rate != null) {
-        const list = onChainCompatibilityHistoryById.get(row.stablecoin_id) ?? [];
-        list.push(normalizedRow);
-        onChainCompatibilityHistoryById.set(row.stablecoin_id, list);
-      }
-
-      if (isLegacyDeterministicOnChainSourceKey(row.stablecoin_id, sourceKey)) {
-        const list = legacyDeterministicOnChainHistoryById.get(row.stablecoin_id) ?? [];
-        list.push(normalizedRow);
-        legacyDeterministicOnChainHistoryById.set(row.stablecoin_id, list);
-      }
-    }
-
-    for (const row of prevTvlRows) {
-      const sourceKey = row.source_key ?? "legacy-best";
-      if (sourceKey === "legacy-best") {
-        if (!legacyPrevTvlById.has(row.stablecoin_id)) {
-          legacyPrevTvlById.set(row.stablecoin_id, row.source_tvl_usd ?? null);
-        }
-      } else {
-        const key = buildHistoryKey(row.stablecoin_id, sourceKey);
-        if (!prevTvlBySource.has(key)) {
-          prevTvlBySource.set(key, row.source_tvl_usd ?? null);
-        }
-      }
-    }
-
-    for (const row of prevBestRows) {
-      if (!prevBestSourceKeyByCoin.has(row.stablecoin_id)) {
-        prevBestSourceKeyByCoin.set(
-          row.stablecoin_id,
-          normalizePreviousBestSourceKey(row),
-        );
-      }
-    }
-  }
+  const historySnapshots = resolvedIds.length > 0
+    ? await loadYieldHistorySnapshots(db, resolvedIds, startSec, sevenDaysAgoSec)
+    : { historyRows: [], prevTvlRows: [], prevBestRows: [] };
+  const {
+    sourceHistory,
+    onChainCompatibilityHistoryById,
+    legacyDeterministicOnChainHistoryById,
+    legacyHistoryById,
+    prevTvlBySource,
+    legacyPrevTvlById,
+    prevBestSourceKeyByCoin,
+  } = buildYieldHistoryEvaluationInputs(historySnapshots);
 
   const {
     evaluatedSources,

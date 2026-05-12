@@ -7,14 +7,20 @@ import {
   USER_AGENT,
 } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
+import {
+  applyJsonParseFailureDiagnostic,
+  applyNonOkProviderDiagnostic,
+  buildPricingProviderDiagnostic,
+  isProviderCircuitAllowed,
+  recordProviderOutcomeSafe,
+} from "../../lib/pricing-provider-lifecycle";
 import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd, dsRateLimit } from "../../lib/dexscreener";
 import {
   applyResolvedPrice,
-  hasMissingPrice,
   type PeggedAsset,
 } from "./enrich-prices-shared";
 import {
+  collectMissingPriceCandidates,
   type EnrichPassResult,
   isUsableFallbackPrice,
   sumCirculatingValue,
@@ -22,7 +28,6 @@ import {
 } from "./enrich-prices-pass-common";
 import {
   endpointLabel,
-  readResponseSnippet,
   type PricingProviderAttemptDiagnostic,
 } from "../../lib/pricing-provider-diagnostics";
 
@@ -230,9 +235,7 @@ export async function runDexScreenerPass(
   let resolved = 0;
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
 
-  const stillMissing = assets
-    .map((asset, index) => ({ asset, index }))
-    .filter((entry) => hasMissingPrice(entry.asset));
+  const stillMissing = collectMissingPriceCandidates(assets);
   if (stillMissing.length === 0) {
     return { resolved, failures: [] };
   }
@@ -241,10 +244,30 @@ export async function runDexScreenerPass(
     console.warn(`[enrich] ${stillMissing.length} assets still missing prices — capping DexScreener to ${DEXSCREENER_MAX_REQUESTS} requests`);
   }
 
-  const dexscreenerAllowed =
-    db != null ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES) : true;
-  const dexscreenerSearchAllowed =
-    db != null ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.DEXSCREENER_SEARCH) : true;
+  const dexscreenerAllowed = await isProviderCircuitAllowed({
+    db,
+    circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES,
+    diagnostic: {
+      source: "dexscreener-exact",
+      stage: "fallback",
+      endpoint: "api.dexscreener.com/tokens/v1",
+      candidateCount: stillMissing.length,
+    },
+    diagnostics,
+    errorMessage: "DexScreener exact circuit open",
+  });
+  const dexscreenerSearchAllowed = await isProviderCircuitAllowed({
+    db,
+    circuitSource: CIRCUIT_SOURCE.DEXSCREENER_SEARCH,
+    diagnostic: {
+      source: "dexscreener-search",
+      stage: "fallback",
+      endpoint: "api.dexscreener.com/latest/dex/search",
+      candidateCount: stillMissing.length,
+    },
+    diagnostics,
+    errorMessage: "DexScreener search circuit open",
+  });
   let dexExactAttempts = 0;
   let dexExactSuccessfulCalls = 0;
   let dexSearchAttempts = 0;
@@ -360,33 +383,36 @@ export async function runDexScreenerPass(
           DEXSCREENER_MAX_RETRIES,
           { timeoutMs: Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, searchRemainingBudgetMs) },
         );
-        const searchDiagnostic: PricingProviderAttemptDiagnostic = {
+        const searchDiagnostic: PricingProviderAttemptDiagnostic = buildPricingProviderDiagnostic({
           source: "dexscreener-search",
           stage: "fallback",
           endpoint: endpointLabel(searchUrl),
+          candidateCount: 1,
+        }, {
           status: res?.status ?? null,
           ok: res?.ok === true,
-          success: false,
-          candidateCount: 1,
-        };
+        });
         if (!res) {
-          diagnostics.push({
-            ...searchDiagnostic,
-            ok: false,
-            errorClass: "no-response",
-            errorMessage: "DexScreener search returned no response",
-          });
+          diagnostics.push(await applyNonOkProviderDiagnostic(searchDiagnostic, res, {
+            noResponseErrorMessage: "DexScreener search returned no response",
+          }));
           console.warn(`[enrich] DexScreener returned no response for ${entry.asset.symbol}`);
           continue;
         }
         if (!res.ok) {
-          searchDiagnostic.snippet = await readResponseSnippet(res);
-          diagnostics.push(searchDiagnostic);
+          diagnostics.push(await applyNonOkProviderDiagnostic(searchDiagnostic, res));
           console.warn(`[enrich] DexScreener returned ${res.status} for ${entry.asset.symbol}`);
           continue;
         }
 
-        const data = (await res.json()) as { pairs?: unknown };
+        let data: { pairs?: unknown };
+        try {
+          data = (await res.json()) as { pairs?: unknown };
+        } catch (error) {
+          diagnostics.push(applyJsonParseFailureDiagnostic(searchDiagnostic, error));
+          console.warn(`[enrich] DexScreener returned malformed JSON for ${entry.asset.symbol}`);
+          continue;
+        }
         if (data.pairs != null && !Array.isArray(data.pairs)) {
           diagnostics.push({
             ...searchDiagnostic,
@@ -447,12 +473,18 @@ export async function runDexScreenerPass(
       }
     }
 
-    if (dexExactAttempts > 0 && db) {
-      await recordOutcomeSafe(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, dexExactSuccessfulCalls > 0);
-    }
-    if (dexSearchAttempts > 0 && db) {
-      await recordOutcomeSafe(db, CIRCUIT_SOURCE.DEXSCREENER_SEARCH, dexSuccessfulSearchCalls > 0);
-    }
+    await recordProviderOutcomeSafe({
+      db,
+      circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES,
+      attempted: dexExactAttempts,
+      successful: dexExactSuccessfulCalls,
+    });
+    await recordProviderOutcomeSafe({
+      db,
+      circuitSource: CIRCUIT_SOURCE.DEXSCREENER_SEARCH,
+      attempted: dexSearchAttempts,
+      successful: dexSuccessfulSearchCalls,
+    });
     console.log(`[enrich] DexScreener pass: exact=${dexExactSuccessfulCalls}/${dexExactAttempts} search=${dexSuccessfulSearchCalls}/${dexSearchAttempts} resolved=${resolved}`);
   } else {
     console.warn("[enrich] DexScreener exact and search circuits open — skipping pass 4");

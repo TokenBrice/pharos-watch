@@ -2,13 +2,15 @@ import { USER_AGENT } from "../constants";
 import { fetchWithRetry } from "../fetch-retry";
 import {
   endpointLabel,
-  errorClassFor,
-  errorMessageFor,
-  readResponseSnippet,
   type PricingProviderAttemptDiagnostic,
   type PricingProviderDiagnosticSource,
   type PricingProviderRejectionReason,
 } from "../pricing-provider-diagnostics";
+import {
+  applyJsonParseFailureDiagnostic,
+  applyNonOkProviderDiagnostic,
+  buildPricingProviderDiagnostic,
+} from "../pricing-provider-lifecycle";
 import type {
   AddressPriceProviderKey,
   AddressPriceProviderRunResult,
@@ -103,13 +105,10 @@ export async function fetchProviderJson(params: {
   candidateCount: number;
   signal?: AbortSignal;
 }): Promise<{ json: unknown | null; diagnostic: PricingProviderAttemptDiagnostic }> {
-  const baseDiagnostic: PricingProviderAttemptDiagnostic = {
+  const baseDiagnostic = {
     source: params.provider as PricingProviderDiagnosticSource,
-    stage: "primary",
+    stage: "primary" as const,
     endpoint: params.endpoint ?? endpointLabel(params.url),
-    status: null,
-    ok: false,
-    success: false,
     candidateCount: params.candidateCount,
   };
 
@@ -133,24 +132,20 @@ export async function fetchProviderJson(params: {
   if (!response) {
     return {
       json: null,
-      diagnostic: {
-        ...baseDiagnostic,
+      diagnostic: buildPricingProviderDiagnostic(baseDiagnostic, {
         errorClass: "no-response",
         rejectionReasonCounts: { "upstream-error": 1 },
-      },
+      }),
     };
   }
 
-  const diagnostic: PricingProviderAttemptDiagnostic = {
-    ...baseDiagnostic,
+  const diagnostic = buildPricingProviderDiagnostic(baseDiagnostic, {
     status: response.status,
     ok: response.ok,
-  };
+  });
 
   if (!response.ok) {
-    diagnostic.snippet = await readResponseSnippet(response);
-    diagnostic.rejectionReasonCounts = { "non-ok": 1 };
-    return { json: null, diagnostic };
+    return { json: null, diagnostic: await applyNonOkProviderDiagnostic(diagnostic, response) };
   }
 
   try {
@@ -158,12 +153,7 @@ export async function fetchProviderJson(params: {
   } catch (error) {
     return {
       json: null,
-      diagnostic: {
-        ...diagnostic,
-        errorClass: errorClassFor(error),
-        errorMessage: errorMessageFor(error),
-        rejectionReasonCounts: { "malformed-json": 1 },
-      },
+      diagnostic: applyJsonParseFailureDiagnostic(diagnostic, error),
     };
   }
 }

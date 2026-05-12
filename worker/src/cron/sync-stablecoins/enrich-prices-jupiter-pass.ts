@@ -5,10 +5,16 @@ import {
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { JupiterPriceResponseSchema, SolanaSlotResponseSchema } from "../../lib/schemas";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
-import { getCircuitRecord, shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
+import {
+  applyJsonParseFailureDiagnostic,
+  applyNonOkProviderDiagnostic,
+  buildPricingProviderDiagnostic,
+  isProviderCircuitAllowed,
+  recoverProviderOnNoCandidates,
+  recordProviderOutcomeSafe,
+} from "../../lib/pricing-provider-lifecycle";
 import {
   endpointLabel,
-  readResponseSnippet,
   type PricingProviderAttemptDiagnostic,
 } from "../../lib/pricing-provider-diagnostics";
 import {
@@ -17,10 +23,10 @@ import {
 } from "../../lib/price-validation";
 import {
   applyResolvedPrice,
-  hasMissingPrice,
   type PeggedAsset,
 } from "./enrich-prices-shared";
 import {
+  collectMissingPriceCandidates,
   type EnrichPassResult,
   SOLANA_MINT_BY_ID,
 } from "./enrich-prices-pass-common";
@@ -54,30 +60,35 @@ export async function runJupiterPass(
 ): Promise<EnrichPassResult> {
   let resolved = 0;
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
-  const candidates = assets.flatMap((asset, index) => {
+  const candidates = collectMissingPriceCandidates(assets, (asset) => {
     const mint = SOLANA_MINT_BY_ID.get(asset.id);
-    return hasMissingPrice(asset) && mint ? [{ asset, index, mint }] : [];
+    return mint ? { mint } : null;
   });
   if (candidates.length === 0) {
-    if (db) {
-      const record = await getCircuitRecord(db, CIRCUIT_SOURCE.JUPITER_PRICES);
-      if (record.state !== "closed") {
-        diagnostics.push({
-          source: "jupiter",
-          stage: "no-candidates",
-          endpoint: "none",
-          status: null,
-          ok: true,
-          success: true,
-          candidateCount: 0,
-        });
-        await recordOutcomeSafe(db, CIRCUIT_SOURCE.JUPITER_PRICES, true);
-      }
-    }
+    await recoverProviderOnNoCandidates({
+      db,
+      circuitSource: CIRCUIT_SOURCE.JUPITER_PRICES,
+      diagnostic: {
+        source: "jupiter",
+        stage: "no-candidates",
+        endpoint: "none",
+      },
+      diagnostics,
+    });
     return { resolved, failures: [], diagnostics };
   }
 
-  const jupiterAllowed = db != null ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.JUPITER_PRICES) : true;
+  const jupiterAllowed = await isProviderCircuitAllowed({
+    db,
+    circuitSource: CIRCUIT_SOURCE.JUPITER_PRICES,
+    diagnostic: {
+      source: "jupiter",
+      stage: "fallback",
+      endpoint: endpointLabel(JUPITER_PRICE_API),
+      candidateCount: candidates.length,
+    },
+    errorMessage: "Jupiter circuit open",
+  });
   if (!jupiterAllowed) {
     console.warn("[enrich] Jupiter circuit open — skipping pass 3");
     return { resolved, failures: [], diagnostics };
@@ -147,7 +158,13 @@ export async function runJupiterPass(
   }
 
   if (db) {
-    await recordOutcomeSafe(db, CIRCUIT_SOURCE.JUPITER_PRICES, successfulCalls > 0);
+    await recordProviderOutcomeSafe({
+      db,
+      circuitSource: CIRCUIT_SOURCE.JUPITER_PRICES,
+      attempted: Math.ceil(candidates.length / JUPITER_MAX_IDS_PER_REQUEST),
+      successful: successfulCalls,
+      recordWhenNoAttempts: true,
+    });
   }
 
   return { resolved, failures: [], diagnostics };
@@ -168,9 +185,6 @@ async function fetchJupiterPrices(
     source: "jupiter" as const,
     stage,
     endpoint,
-    status: null,
-    ok: false,
-    success: false,
     candidateCount: ids.length,
   };
 
@@ -193,20 +207,17 @@ async function fetchJupiterPrices(
   if (!res) {
     return {
       data: null,
-      diagnostic: { ...baseDiagnostic, errorClass: "no-response" },
+      diagnostic: buildPricingProviderDiagnostic(baseDiagnostic, { errorClass: "no-response" }),
     };
   }
 
-  const diagnostic: PricingProviderAttemptDiagnostic = {
-    ...baseDiagnostic,
+  const diagnostic: PricingProviderAttemptDiagnostic = buildPricingProviderDiagnostic(baseDiagnostic, {
     status: res.status,
     ok: res.ok,
-    success: false,
-  };
+  });
 
   if (!res.ok) {
-    diagnostic.snippet = await readResponseSnippet(res);
-    return { data: null, diagnostic };
+    return { data: null, diagnostic: await applyNonOkProviderDiagnostic(diagnostic, res) };
   }
 
   try {
@@ -229,9 +240,7 @@ async function fetchJupiterPrices(
     return { data, diagnostic };
   } catch (err) {
     await cancelResponseBodyQuietly(res);
-    diagnostic.errorClass = err instanceof Error && err.name ? err.name : typeof err;
-    diagnostic.errorMessage = err instanceof Error ? err.message : String(err);
-    return { data: null, diagnostic };
+    return { data: null, diagnostic: applyJsonParseFailureDiagnostic(diagnostic, err) };
   }
 }
 
@@ -246,13 +255,10 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal): Promise<{
   diagnostic?: PricingProviderAttemptDiagnostic;
 }> {
   const endpoint = endpointLabel(SOLANA_SLOT_RPC_URL);
-  const baseDiagnostic: PricingProviderAttemptDiagnostic = {
-    source: "jupiter",
-    stage: "fallback",
+  const baseDiagnostic = {
+    source: "jupiter" as const,
+    stage: "fallback" as const,
     endpoint,
-    status: null,
-    ok: false,
-    success: false,
     candidateCount: 1,
   };
 
@@ -282,25 +288,28 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal): Promise<{
   if (!res) {
     return {
       slot: null,
-      diagnostic: {
-        ...baseDiagnostic,
+      diagnostic: buildPricingProviderDiagnostic(baseDiagnostic, {
         errorClass: "no-response",
         errorMessage: "Solana slot reference returned no response",
-      },
+      }),
     };
   }
 
-  const diagnostic: PricingProviderAttemptDiagnostic = {
-    ...baseDiagnostic,
+  const diagnostic: PricingProviderAttemptDiagnostic = buildPricingProviderDiagnostic(baseDiagnostic, {
     status: res.status,
     ok: res.ok,
-  };
+  });
 
   if (!res.ok) {
-    diagnostic.snippet = await readResponseSnippet(res);
-    diagnostic.errorClass = "upstream-error";
-    diagnostic.errorMessage = "Solana slot reference returned non-OK";
-    return { slot: null, diagnostic };
+    const nonOkDiagnostic = await applyNonOkProviderDiagnostic(diagnostic, res);
+    return {
+      slot: null,
+      diagnostic: {
+        ...nonOkDiagnostic,
+        errorClass: "upstream-error",
+        errorMessage: "Solana slot reference returned non-OK",
+      },
+    };
   }
 
   try {
@@ -314,9 +323,6 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal): Promise<{
     return { slot: parsed.data.result };
   } catch (err) {
     await cancelResponseBodyQuietly(res);
-    diagnostic.errorClass = err instanceof Error && err.name ? err.name : typeof err;
-    diagnostic.errorMessage = err instanceof Error ? err.message : String(err);
-    diagnostic.rejectionReasonCounts = { "malformed-json": 1 };
-    return { slot: null, diagnostic };
+    return { slot: null, diagnostic: applyJsonParseFailureDiagnostic(diagnostic, err) };
   }
 }

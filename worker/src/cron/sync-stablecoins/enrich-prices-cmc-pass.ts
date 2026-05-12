@@ -4,15 +4,17 @@ import {
 } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import {
-  getCircuitRecord,
-  recordOutcomeSafe,
-  shouldAttemptFetch,
-} from "../../lib/circuit-breaker";
+  applyJsonParseFailureDiagnostic,
+  applyNonOkProviderDiagnostic,
+  buildPricingProviderDiagnostic,
+  isProviderCircuitAllowed,
+  recoverProviderOnNoCandidates,
+  recordProviderOutcomeSafe,
+} from "../../lib/pricing-provider-lifecycle";
 import { getCache, setCache } from "../../lib/db-cache";
 import { CmcCategoryResponseSchema } from "../../lib/schemas";
 import {
   endpointLabel,
-  readResponseSnippet,
   type PricingProviderAttemptDiagnostic,
 } from "../../lib/pricing-provider-diagnostics";
 import {
@@ -21,10 +23,10 @@ import {
 } from "../../lib/price-validation";
 import {
   applyResolvedPrice,
-  hasMissingPrice,
   type PeggedAsset,
 } from "./enrich-prices-shared";
 import {
+  collectMissingPriceCandidates,
   type EnrichPassResult,
   type FallbackPriceQuote,
   isFreshFallbackObservedAt,
@@ -37,6 +39,7 @@ const CMC_MAX_RETRIES = 0;
 const CMC_CATEGORY_LIMIT = 300;
 const CMC_QUOTE_MAX_AGE_SEC = 60 * 60;
 const CMC_PASSTHROUGH_STATUSES = [400, 401, 403, 404, 408, 409, 418, 425, 429, 451, 500, 502, 503, 504];
+const CMC_CATEGORY_ENDPOINT = "pro-api.coinmarketcap.com/v1/cryptocurrency/category";
 
 interface CmcFallbackQuote extends FallbackPriceQuote {
   observedAt: number;
@@ -54,32 +57,35 @@ export async function runCmcPass(
   let resolved = 0;
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
 
-  const missingAfterPass1b = assets
-    .map((asset, index) => ({ asset, index }))
-    .filter((entry) => hasMissingPrice(entry.asset));
+  const missingAfterPass1b = collectMissingPriceCandidates(assets);
   if (missingAfterPass1b.length === 0) {
-    if (db) {
-      const record = await getCircuitRecord(db, CIRCUIT_SOURCE.CMC_PRICES);
-      if (record.state !== "closed") {
-        diagnostics.push({
-          source: "coinmarketcap",
-          stage: "no-candidates",
-          endpoint: "pro-api.coinmarketcap.com/v1/cryptocurrency/category",
-          status: null,
-          ok: true,
-          success: true,
-          candidateCount: 0,
-        });
-        await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, true);
-      }
-    }
+    await recoverProviderOnNoCandidates({
+      db,
+      circuitSource: CIRCUIT_SOURCE.CMC_PRICES,
+      diagnostic: {
+        source: "coinmarketcap",
+        stage: "no-candidates",
+        endpoint: CMC_CATEGORY_ENDPOINT,
+      },
+      diagnostics,
+    });
     return diagnostics.length > 0 ? { resolved, failures: [], diagnostics } : { resolved, failures: [] };
   }
 
-  const cmcAllowed =
-    cmcApiKey != null && db != null
-      ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.CMC_PRICES)
-      : true;
+  const cmcAllowed = cmcApiKey
+    ? await isProviderCircuitAllowed({
+        db,
+        circuitSource: CIRCUIT_SOURCE.CMC_PRICES,
+        diagnostic: {
+          source: "coinmarketcap",
+          stage: "fallback",
+          endpoint: CMC_CATEGORY_ENDPOINT,
+          candidateCount: missingAfterPass1b.length,
+        },
+        diagnostics,
+        errorMessage: "CoinMarketCap circuit open",
+      })
+    : true;
   if (cmcApiKey && cmcAllowed) {
     let shouldCall = true;
     if (db) {
@@ -113,30 +119,28 @@ export async function runCmcPass(
           passthroughStatuses: CMC_PASSTHROUGH_STATUSES,
         },
       );
-      const diagnostic: PricingProviderAttemptDiagnostic = {
+      const diagnostic: PricingProviderAttemptDiagnostic = buildPricingProviderDiagnostic({
         source: "coinmarketcap",
         stage: "fallback",
         endpoint: endpointLabel(url),
+        candidateCount: missingAfterPass1b.length,
+      }, {
         status: cmcRes?.status ?? null,
         ok: cmcRes?.ok === true,
-        success: false,
-        candidateCount: missingAfterPass1b.length,
-      };
+      });
 
       if (cmcRes?.ok) {
         let cmcJson: unknown;
         try {
           cmcJson = await cmcRes.json();
         } catch (error) {
-          diagnostics.push({
-            ...diagnostic,
-            errorClass: "malformed-json",
-            errorMessage: error instanceof Error ? error.message : String(error),
-            rejectionReasonCounts: { "malformed-json": 1 },
+          diagnostics.push(applyJsonParseFailureDiagnostic(diagnostic, error));
+          await recordProviderOutcomeSafe({
+            db,
+            circuitSource: CIRCUIT_SOURCE.CMC_PRICES,
+            attempted: 1,
+            successful: 0,
           });
-          if (db) {
-            await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, false);
-          }
           return { resolved, failures: [], diagnostics };
         }
         const parsed = CmcCategoryResponseSchema.safeParse(cmcJson);
@@ -147,9 +151,12 @@ export async function runCmcPass(
             errorMessage: "Expected CoinMarketCap category payload with data.num_tokens and quote timestamps",
             rejectionReasonCounts: { "invalid-shape": 1 },
           });
-          if (db) {
-            await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, false);
-          }
+          await recordProviderOutcomeSafe({
+            db,
+            circuitSource: CIRCUIT_SOURCE.CMC_PRICES,
+            attempted: 1,
+            successful: 0,
+          });
           return { resolved, failures: [], diagnostics };
         }
         const cmcData = parsed.data;
@@ -164,9 +171,12 @@ export async function runCmcPass(
             errorMessage: `CoinMarketCap category response may be truncated (${cmcData.data.coins.length}/${cmcData.data.num_tokens})`,
             rejectionReasonCounts: { "invalid-shape": 1 },
           });
-          if (db) {
-            await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, false);
-          }
+          await recordProviderOutcomeSafe({
+            db,
+            circuitSource: CIRCUIT_SOURCE.CMC_PRICES,
+            attempted: 1,
+            successful: 0,
+          });
           return { resolved, failures: [], diagnostics };
         }
         diagnostic.responseRowCount = cmcData.data.coins.length;
@@ -234,31 +244,25 @@ export async function runCmcPass(
           } catch (error) {
             console.warn("[enrich-prices] Failed to update CMC rate-limit timestamp:", error);
           }
-          await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, true);
+          await recordProviderOutcomeSafe({
+            db,
+            circuitSource: CIRCUIT_SOURCE.CMC_PRICES,
+            attempted: 1,
+            successful: 1,
+          });
         }
       } else {
-        diagnostic.snippet = cmcRes ? await readResponseSnippet(cmcRes) : undefined;
-        diagnostic.rejectionReasonCounts = { "non-ok": 1 };
-        diagnostics.push(diagnostic);
+        diagnostics.push(await applyNonOkProviderDiagnostic(diagnostic, cmcRes));
         console.warn(`[enrich] CMC API returned ${cmcRes?.status ?? "no response"}`);
-        if (db) {
-          await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, false);
-        }
+        await recordProviderOutcomeSafe({
+          db,
+          circuitSource: CIRCUIT_SOURCE.CMC_PRICES,
+          attempted: 1,
+          successful: 0,
+        });
       }
     }
   } else if (cmcApiKey && !cmcAllowed) {
-    diagnostics.push({
-      source: "coinmarketcap",
-      stage: "fallback",
-      endpoint: "pro-api.coinmarketcap.com/v1/cryptocurrency/category",
-      status: null,
-      ok: false,
-      success: false,
-      candidateCount: missingAfterPass1b.length,
-      errorClass: "blocked",
-      errorMessage: "CoinMarketCap circuit open",
-      rejectionReasonCounts: { blocked: 1 },
-    });
     console.warn("[enrich] CoinMarketCap circuit open — skipping pass 2");
   }
 
