@@ -86,12 +86,12 @@ export function resolveRedemptionCoverage(
   if (!entry) {
     return createStatus(
       "none",
-      "—",
+      "Not Covered",
       "slate",
       false,
       0,
       "No modeled redemption-backstop route is currently configured.",
-      "Not tracked",
+      "Not covered",
     );
   }
 

@@ -48,12 +48,12 @@ const DEX_STATUS_PRESETS = {
   },
   unobserved: {
     kind: "unobserved",
-    label: "NR",
+    label: "Not Covered",
     tone: "slate",
     available: false,
     sortRank: 0,
     detail: "No observed DEX-liquidity row is currently available.",
-    spokenLabel: "Not rated",
+    spokenLabel: "Not covered",
   },
   unknown: {
     kind: "unknown",

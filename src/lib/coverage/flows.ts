@@ -57,12 +57,12 @@ const FLOW_STATUS_PRESETS = {
   },
   none: {
     kind: "none",
-    label: "—",
+    label: "Not Covered",
     tone: "slate",
     available: false,
     sortRank: 0,
     detail: "No issuance-chain mint/burn flow tracking is currently configured.",
-    spokenLabel: "Not tracked",
+    spokenLabel: "Not covered",
   },
 } satisfies Record<string, CoverageStatusPreset>;
 

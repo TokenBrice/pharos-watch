@@ -71,7 +71,8 @@ export const COVERAGE_BADGE_TONE_CLASS: Record<CoverageTone, string> = {
   amber: "border-amber-500/30 bg-amber-500/12 text-amber-800 dark:text-amber-300",
   violet: "border-violet-500/28 bg-violet-500/10 text-violet-800 dark:text-violet-300",
   rose: "border-rose-500/35 bg-rose-500/12 text-rose-800 dark:text-rose-300",
-  slate: "border-border/70 bg-muted/70 text-muted-foreground",
+  slate:
+    "border-border/70 bg-muted/70 text-muted-foreground bg-[repeating-linear-gradient(135deg,transparent_0_5px,oklch(1_0_0_/0.04)_5px_10px)]",
 };
 
 export function buildCoverageFeatureSummary(

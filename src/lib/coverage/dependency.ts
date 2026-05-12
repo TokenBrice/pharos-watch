@@ -22,12 +22,12 @@ const DEPENDENCY_NODE_PRESET: CoverageStatusPreset = {
 
 const DEPENDENCY_NONE_PRESET: CoverageStatusPreset = {
   kind: "none",
-  label: "—",
+  label: "Gap",
   tone: "slate",
   available: false,
   sortRank: 0,
   detail: "This asset currently has no dependency-graph edge coverage.",
-  spokenLabel: "Not included",
+  spokenLabel: "Gap",
 };
 
 export function resolveDependencyCoverage(

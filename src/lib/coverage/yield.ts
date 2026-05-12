@@ -22,12 +22,12 @@ const YIELD_RANKED_PRESET: CoverageStatusPreset = {
 
 const YIELD_NONE_PRESET: CoverageStatusPreset = {
   kind: "none",
-  label: "—",
+  label: "Gap",
   tone: "slate",
   available: false,
   sortRank: 0,
   detail: "This asset is not currently present in the Yield Intelligence rankings.",
-  spokenLabel: "Not ranked",
+  spokenLabel: "Gap",
 };
 
 export function resolveYieldCoverage(hasYieldCoverage: boolean, dataAvailable = true): CoverageStatus {
