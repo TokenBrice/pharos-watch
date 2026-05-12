@@ -1,11 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HeroCard } from "@/components/stablecoin-detail/hero-card";
-import type { DexLiquidityData, PegSummaryCoin, ReportCard, StablecoinData, StablecoinMeta, StressSignalEntry, YieldRanking } from "@shared/types";
+import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
+import type {
+  DexLiquidityData,
+  PegSummaryCoin,
+  ReportCard,
+  StablecoinData,
+  StablecoinMeta,
+  StressSignalEntry,
+  YieldRanking,
+} from "@shared/types";
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
-    <a href={href} {...props}>{children}</a>
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -218,10 +229,19 @@ const stressSignal: StressSignalEntry = {
   methodologyVersion: "v1",
 };
 
+function HeroCardUnderTest({
+  onOpenFeedback,
+  ...props
+}: Parameters<typeof buildStablecoinDetailHeroViewModel>[0] & {
+  onOpenFeedback: () => void;
+}) {
+  return <HeroCard model={buildStablecoinDetailHeroViewModel(props)} onOpenFeedback={onOpenFeedback} />;
+}
+
 describe("HeroCard", () => {
   it("renders shared identity, price, and metric content across responsive layouts", () => {
     const html = renderToStaticMarkup(
-      <HeroCard
+      <HeroCardUnderTest
         coin={coin}
         coinData={coinData}
         logoSrc="/logos/usdc.svg"
@@ -289,7 +309,7 @@ describe("HeroCard", () => {
     };
 
     const html = renderToStaticMarkup(
-      <HeroCard
+      <HeroCardUnderTest
         coin={inheritedCoin}
         coinData={{ ...coinData, id: "mock-inherited", name: "Mock Inherited", symbol: "MCK" }}
         logoSrc="/logos/mock.svg"
@@ -308,7 +328,12 @@ describe("HeroCard", () => {
         liquidityData={liquidityData}
         yieldRanking={null}
         stressSignal={null}
-        reportCard={{ ...reportCardWithInheritedBlacklistRisk, id: "mock-inherited", name: "Mock Inherited", symbol: "MCK" }}
+        reportCard={{
+          ...reportCardWithInheritedBlacklistRisk,
+          id: "mock-inherited",
+          name: "Mock Inherited",
+          symbol: "MCK",
+        }}
         onOpenFeedback={() => {}}
       />,
     );
@@ -336,7 +361,7 @@ describe("HeroCard", () => {
     };
 
     const html = renderToStaticMarkup(
-      <HeroCard
+      <HeroCardUnderTest
         coin={dilutableCoin}
         coinData={{ ...coinData, id: "dai-makerdao", name: "Dai", symbol: "DAI" }}
         logoSrc="/logos/dai.svg"
@@ -367,7 +392,7 @@ describe("HeroCard", () => {
 
   it("uses shared no-gap copy when excess yield is unavailable", () => {
     const html = renderToStaticMarkup(
-      <HeroCard
+      <HeroCardUnderTest
         coin={coin}
         coinData={coinData}
         logoSrc="/logos/usdc.svg"
@@ -416,7 +441,7 @@ describe("HeroCard", () => {
     };
 
     const html = renderToStaticMarkup(
-      <HeroCard
+      <HeroCardUnderTest
         coin={variantCoin}
         coinData={{ ...coinData, id: "susds-sky", name: "Sky Savings USDS", symbol: "sUSDS" }}
         logoSrc="/logos/susds.svg"
@@ -471,7 +496,7 @@ describe("HeroCard", () => {
     };
 
     const html = renderToStaticMarkup(
-      <HeroCard
+      <HeroCardUnderTest
         coin={nonUsdCoin}
         coinData={nonUsdCoinData}
         logoSrc="/logos/zchf.svg"
@@ -501,7 +526,7 @@ describe("HeroCard", () => {
 
   it("renders a limited depeg coverage note for sub-floor off-peg coins", () => {
     const html = renderToStaticMarkup(
-      <HeroCard
+      <HeroCardUnderTest
         coin={coin}
         coinData={{ ...coinData, price: 0.97, circulating: { peggedUSD: 500_000 } }}
         logoSrc="/logos/usdc.svg"
@@ -538,7 +563,7 @@ describe("HeroCard", () => {
     };
 
     const html = renderToStaticMarkup(
-      <HeroCard
+      <HeroCardUnderTest
         coin={m0Coin}
         coinData={{ ...coinData, id: "usdsc-startale", name: "Startale USD", symbol: "USDSC" }}
         logoSrc="/logos/usdsc.svg"
@@ -576,7 +601,7 @@ describe("HeroCard", () => {
     };
 
     const html = renderToStaticMarkup(
-      <HeroCard
+      <HeroCardUnderTest
         coin={dualCoin}
         coinData={{ ...coinData, id: "hypothetical-dual", name: "Hypothetical Dual", symbol: "HYP" }}
         logoSrc="/logos/hyp.svg"

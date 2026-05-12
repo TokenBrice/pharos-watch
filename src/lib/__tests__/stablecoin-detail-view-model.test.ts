@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { buildStablecoinDetailViewModel } from "../stablecoin-detail-view-model";
+import { buildStablecoinDetailHeroViewModel, buildStablecoinDetailViewModel } from "../stablecoin-detail-view-model";
 
 type BuildStablecoinDetailViewModelParams = Parameters<typeof buildStablecoinDetailViewModel>[0];
 
@@ -400,7 +400,7 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.status).toBe("ready");
     if (viewModel.status !== "ready") return;
 
-    expect(viewModel.performanceVsUsd1y).toBeCloseTo(((1.12 / 0.98) - 1) * 100, 6);
+    expect(viewModel.performanceVsUsd1y).toBeCloseTo((1.12 / 0.98 - 1) * 100, 6);
   });
 
   it("does not derive 1Y vs USD performance for NAV tokens", () => {
@@ -513,5 +513,158 @@ describe("stablecoin detail view-model builder", () => {
 
     expect(viewModel.reserves?.mode).toBe("curated-fallback");
     expect(viewModel.reserveFetchError).toBeInstanceOf(Error);
+  });
+});
+
+describe("stablecoin detail hero view-model builder", () => {
+  it("derives hero display metrics and signal rail from raw detail inputs", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle");
+    expect(coin).toBeDefined();
+
+    const hero = buildStablecoinDetailHeroViewModel({
+      coin: coin!,
+      coinData: {
+        id: "usdc-circle",
+        name: "USD Coin",
+        symbol: "USDC",
+        pegType: "peggedUSD",
+        price: 0.97,
+        circulating: { peggedUSD: 500_000 },
+        circulatingPrevDay: { peggedUSD: 600_000 },
+        circulatingPrevWeek: { peggedUSD: 450_000 },
+        circulatingPrevMonth: { peggedUSD: 0 },
+        chains: ["ethereum", "base"],
+      } as never,
+      isNavToken: false,
+      mcap: 500_000,
+      supply: 500_000,
+      prevDay: 600_000,
+      prevWeek: 450_000,
+      prevMonth: 0,
+      performanceVsUsd1y: 12.34,
+      pegRef: 1,
+      deviationBps: -300,
+      gaugeDeviationBps: -300,
+      pegScoreResult: {
+        id: "usdc-circle",
+        symbol: "USDC",
+        pegScore: 45,
+        pegPct: 99.4,
+        eventCount: 2,
+        currentBand: "CALM",
+        trackingSpanDays: 365,
+        activeDepeg: true,
+        depegEventCoverageLimited: true,
+      },
+      recordedDepegEventCount: 3,
+      liquidityData: {
+        liquidityScore: 28,
+        poolCount: 4,
+      } as never,
+      yieldRanking: {
+        excessYield: -0.25,
+        benchmarkLabel: "USD 3M T-Bill",
+        benchmarkCurrency: "USD",
+        benchmarkRecordDate: "2026-04-21",
+        benchmarkIsFallback: false,
+        benchmarkFallbackMode: null,
+        benchmarkSelectionMode: "native",
+        benchmarkIsProxy: false,
+      } as never,
+      stressSignal: {
+        score: 31,
+        band: "WATCH",
+      } as never,
+      reportCard: {
+        overallGrade: "B+",
+        overallScore: 79,
+        rawInputs: {
+          canBeBlacklisted: true,
+        },
+      } as never,
+    });
+
+    expect(hero.header.coinName).toBe("USD Coin");
+    expect(hero.chainCount).toBe(2);
+    expect(hero.market.safePrevMonth).toBeNull();
+    expect(hero.market.prevDayTrendClass).toContain("text-red-700");
+    expect(hero.market.prevWeekTrendClass).toContain("text-green-700");
+    expect(hero.price.limitedDepegCoverageNote).toContain("Below $1.00M live-event floor");
+
+    const pegMetric = hero.tertiaryMetrics.find((metric) => metric.key === "peg-score");
+    expect(pegMetric?.display).toMatchObject({
+      value: "45",
+      sub: "3 recorded · 2 in 4y window",
+    });
+    expect(pegMetric?.accentClass).toBe("border-l-2 border-l-red-500");
+
+    expect(hero.tertiaryMetrics.find((metric) => metric.key === "performance-vs-usd")?.display.value).toBe("+12.34%");
+    expect(hero.desktopTertiaryMetrics.map((metric) => metric.key)).not.toContain("dews");
+    expect(hero.signalRailItems.find((item) => item.key === "safety")).toMatchObject({
+      primary: "B+",
+      secondary: "79/100",
+    });
+  });
+
+  it("derives unavailable peg score and dilutable source states", () => {
+    const coin = TRACKED_META_BY_ID.get("dai-makerdao");
+    expect(coin).toBeDefined();
+
+    const hero = buildStablecoinDetailHeroViewModel({
+      coin: {
+        ...coin!,
+        canBeBlacklisted: "dilutable",
+        canBeBlacklistedSource: {
+          label: "Etherscan contract source",
+          url: "https://etherscan.io/address/example#code",
+        },
+      },
+      coinData: {
+        id: "dai-makerdao",
+        name: "Dai",
+        symbol: "DAI",
+        pegType: "peggedUSD",
+        price: 1,
+        circulating: { peggedUSD: 100 },
+        chains: [],
+      } as never,
+      isNavToken: false,
+      mcap: 100,
+      supply: 100,
+      prevDay: null,
+      prevWeek: null,
+      prevMonth: null,
+      performanceVsUsd1y: null,
+      pegRef: 1,
+      deviationBps: 0,
+      gaugeDeviationBps: 0,
+      pegScoreResult: {
+        id: "dai-makerdao",
+        symbol: "DAI",
+        pegScore: null,
+        pegPct: 0,
+        eventCount: 0,
+        currentBand: "CALM",
+        trackingSpanDays: 3,
+        activeDepeg: false,
+      },
+      recordedDepegEventCount: null,
+      liquidityData: undefined,
+      yieldRanking: null,
+      stressSignal: null,
+      reportCard: null,
+    });
+
+    expect(hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")?.display).toMatchObject({
+      value: "NR",
+      sub: "3d tracked",
+    });
+    expect(hero.tertiaryMetrics.find((metric) => metric.key === "blacklistable")?.display).toMatchObject({
+      value: "Dilutable",
+      methodologyTopic: "freezableDilutable",
+      source: {
+        label: "Etherscan contract source",
+      },
+    });
   });
 });

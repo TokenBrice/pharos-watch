@@ -21,14 +21,12 @@ import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-varian
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
 import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
-import {
-  useStablecoinDetailViewModel,
-  type StablecoinDetailSummary,
-} from "@/hooks/use-stablecoin-detail-view-model";
+import { useStablecoinDetailViewModel, type StablecoinDetailSummary } from "@/hooks/use-stablecoin-detail-view-model";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { deriveDependencies } from "@shared/lib/dependency-derivation";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
+import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
 import type { BlacklistStablecoin, StablecoinMeta } from "@shared/types";
 
@@ -47,20 +45,23 @@ const PegDeviationChart = dynamic(
   },
 );
 
-const DepegHistory = dynamic(
-  () => import("@/components/depeg-history").then((mod) => mod.DepegHistory),
+const DepegHistory = dynamic(() => import("@/components/depeg-history").then((mod) => mod.DepegHistory), {
+  loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
+});
+
+const FlowsSection = dynamic(
+  () => import("@/components/stablecoin-detail/flows-section").then((mod) => mod.FlowsSection),
   {
-    loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
+    loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
   },
 );
 
-const FlowsSection = dynamic(() => import("@/components/stablecoin-detail/flows-section").then((mod) => mod.FlowsSection), {
-  loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
-});
-
-const BlacklistSection = dynamic(() => import("@/components/stablecoin-detail/blacklist-section").then((mod) => mod.BlacklistSection), {
-  loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
-});
+const BlacklistSection = dynamic(
+  () => import("@/components/stablecoin-detail/blacklist-section").then((mod) => mod.BlacklistSection),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
+  },
+);
 
 const KeyInfoCard = dynamic(() => import("@/components/key-info-card").then((mod) => mod.KeyInfoCard), {
   loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
@@ -70,12 +71,9 @@ const YieldDetailSection = dynamic(() => import("@/components/yield-detail-secti
   loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
 });
 
-const DexLiquidityCard = dynamic(
-  () => import("@/components/dex-liquidity-card").then((mod) => mod.DexLiquidityCard),
-  {
-    loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
-  },
-);
+const DexLiquidityCard = dynamic(() => import("@/components/dex-liquidity-card").then((mod) => mod.DexLiquidityCard), {
+  loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
+});
 
 const CollateralUsageSection = dynamic(
   () => import("@/components/stablecoin-detail/collateral-usage-section").then((mod) => mod.CollateralUsageSection),
@@ -92,7 +90,8 @@ const DistributionSection = dynamic(
 );
 
 const SafetyScoreHistorySection = dynamic(
-  () => import("@/components/stablecoin-detail/safety-score-history-section").then((mod) => mod.SafetyScoreHistorySection),
+  () =>
+    import("@/components/stablecoin-detail/safety-score-history-section").then((mod) => mod.SafetyScoreHistorySection),
   {
     loading: () => <DetailSectionSkeleton className="h-[220px] w-full rounded-xl" />,
   },
@@ -166,9 +165,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       return deriveDependencies(c).some((dep) => dep.id === id);
     });
   }, [id]);
-  const {
-    data: depegHistoryData,
-  } = useInfiniteDepegEvents({
+  const { data: depegHistoryData } = useInfiniteDepegEvents({
     stablecoinId: id,
     enabled: viewModel.status === "ready" && !viewModel.isNavToken,
     autoLoadAll: viewModel.status === "ready" && !viewModel.isNavToken,
@@ -182,7 +179,10 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
     return (
       <div className="space-y-4">
         <Button variant="ghost" asChild>
-          <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" />Back to Dashboard</Link>
+          <Link href="/">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Link>
         </Button>
         <QueryErrorNotice error={viewModel.listError} hasData={false} onRetry={viewModel.handleRetryAll} />
       </div>
@@ -193,21 +193,44 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
     return (
       <div className="space-y-4">
         <Button variant="ghost" asChild>
-          <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" />Back to Dashboard</Link>
+          <Link href="/">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Link>
         </Button>
-        <p className="text-muted-foreground">
-          This stablecoin is not part of the tracked Pharos universe.
-        </p>
+        <p className="text-muted-foreground">This stablecoin is not part of the tracked Pharos universe.</p>
       </div>
     );
   }
 
-  const hasPriceTransparency =
-    !!viewModel.coinData && (viewModel.coinData.price != null || !!viewModel.dexPriceCheck);
+  const hasPriceTransparency = !!viewModel.coinData && (viewModel.coinData.price != null || !!viewModel.dexPriceCheck);
   const frozenNote =
     viewModel.coin.status === "frozen" && viewModel.coin.frozenAt ? (
       <FrozenDataNote frozenAt={viewModel.coin.frozenAt} />
     ) : null;
+  const heroModel = buildStablecoinDetailHeroViewModel({
+    coin: viewModel.coin,
+    coinData: viewModel.coinData,
+    logoSrc: viewModel.logoSrc,
+    isNavToken: viewModel.isNavToken,
+    mcap: viewModel.mcap,
+    supply: viewModel.supply,
+    prevDay: viewModel.prevDay,
+    prevWeek: viewModel.prevWeek,
+    prevMonth: viewModel.prevMonth,
+    performanceVsUsd1y: viewModel.performanceVsUsd1y,
+    pegRef: viewModel.pegRef,
+    deviationBps: viewModel.deviationBps,
+    gaugeDeviationBps: viewModel.gaugeDeviationBps,
+    pegScoreResult: viewModel.pegScoreResult,
+    recordedDepegEventCount: depegHistoryData?.total ?? null,
+    liquidityData: viewModel.liquidityData,
+    yieldRanking: viewModel.yieldRanking,
+    stressSignal: viewModel.stressSignal,
+    reportCard: viewModel.reportCard ?? null,
+    variantParent: viewModel.variantParent,
+    variantKind: viewModel.coin.variantKind ?? null,
+  });
   const s = DETAIL_SECTION_DEFS;
   const detailSections = [
     s.safety,
@@ -239,30 +262,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
       {/* ── Identity zone ── */}
       <div className="space-y-4">
-        <HeroCard
-          coin={viewModel.coin}
-          coinData={viewModel.coinData}
-          logoSrc={viewModel.logoSrc}
-          isNavToken={viewModel.isNavToken}
-          mcap={viewModel.mcap}
-          supply={viewModel.supply}
-          prevDay={viewModel.prevDay}
-          prevWeek={viewModel.prevWeek}
-          prevMonth={viewModel.prevMonth}
-          performanceVsUsd1y={viewModel.performanceVsUsd1y}
-          pegRef={viewModel.pegRef}
-          deviationBps={viewModel.deviationBps}
-          gaugeDeviationBps={viewModel.gaugeDeviationBps}
-          pegScoreResult={viewModel.pegScoreResult}
-          recordedDepegEventCount={depegHistoryData?.total ?? null}
-          liquidityData={viewModel.liquidityData}
-          yieldRanking={viewModel.yieldRanking}
-          stressSignal={viewModel.stressSignal}
-          reportCard={viewModel.reportCard ?? null}
-          variantParent={viewModel.variantParent}
-          variantKind={viewModel.coin.variantKind ?? null}
-          onOpenFeedback={() => setFeedbackOpen(true)}
-        />
+        <HeroCard model={heroModel} onOpenFeedback={() => setFeedbackOpen(true)} />
 
         <ExploitNoticeBanner notices={viewModel.coin.notices} />
 
@@ -291,7 +291,10 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
               </Link>
               <span className="text-border">|</span>
               <Link
-                href={getPrimaryStaticComparisonPageForCoin(viewModel.coin.id)?.href ?? buildLiveCompareUrl([viewModel.coin.id])}
+                href={
+                  getPrimaryStaticComparisonPageForCoin(viewModel.coin.id)?.href ??
+                  buildLiveCompareUrl([viewModel.coin.id])
+                }
                 className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
               >
                 Compare
@@ -329,9 +332,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
                 siblings={viewModel.variantSiblings}
               />
             ) : null}
-            {viewModel.childVariants.length > 0 ? (
-              <ParentVariantsCard variants={viewModel.childVariants} />
-            ) : null}
+            {viewModel.childVariants.length > 0 ? <ParentVariantsCard variants={viewModel.childVariants} /> : null}
             <NoticesAndSummarySection
               stablecoinId={viewModel.id}
               coin={viewModel.coin}
@@ -367,10 +368,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         {viewModel.coin.flags.pegCurrency === "USD" && !viewModel.isNavToken ? (
           <section id="peg-deviation">
             {frozenNote}
-            <PegDeviationChart
-              data={viewModel.supplyHistory}
-              pegCurrency={viewModel.coin.flags.pegCurrency}
-            />
+            <PegDeviationChart data={viewModel.supplyHistory} pegCurrency={viewModel.coin.flags.pegCurrency} />
           </section>
         ) : null}
 
@@ -398,10 +396,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
           <div>
             {frozenNote}
             <SectionErrorBoundary name="blacklist">
-              <BlacklistSection
-                stablecoinId={viewModel.id}
-                symbol={viewModel.coin.symbol as BlacklistStablecoin}
-              />
+              <BlacklistSection stablecoinId={viewModel.id} symbol={viewModel.coin.symbol as BlacklistStablecoin} />
             </SectionErrorBoundary>
           </div>
         )}
