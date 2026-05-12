@@ -75,10 +75,6 @@
     "disposition": "queued-p4",
     "notes": "Surfaced after Phase 6 reduced larger hotspots. The yield client still combines filter state, table shaping, and interaction handling in one route shell; split view-model and table controls in the next yield UI cleanup pass."
   },
-  "worker/src/lib/evm-rpc.ts": {
-    "disposition": "queued-p4",
-    "notes": "Multicall3 support expanded the shared EVM RPC helper while keeping existing RPC fallback, timeout, and critical-coverage paths centralized. Split Multicall3 ABI encoding/decoding into a dedicated helper module in the next on-chain reserve cleanup pass if this file grows again."
-  },
   "shared/lib/redemption-backstop-configs/validation.ts": {
     "disposition": "queued-p4",
     "notes": "Redemption registry validation currently centralizes schema checks, source-module AST auditing, documentation support ratchets, policy rows, and coverage summaries. Keep waived for the v4 validation tranche; split source-module AST scanning and policy validation into helper modules in the next redemption-maintenance pass."
