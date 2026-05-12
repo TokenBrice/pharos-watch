@@ -24,6 +24,7 @@
   "pegMechanism": "Deposit DAI to mint sDAI and redeem sDAI for the current convertToAssets amount of DAI; the share price rises as DSR accrues, and Spark's savings front-end documents withdrawals without slippage or platform fees",
   "detailProvider": "coingecko",
   "geckoId": "savings-dai",
+  "pythFeedId": "0x710659c5a68e2416ce4264ca8d50d34acc20041d91289110eea152c52ff3dc39",
   "links": [
     {
       "label": "Website",
