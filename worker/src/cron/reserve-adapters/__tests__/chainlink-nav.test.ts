@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
-import { parseChainlinkLatestRoundData } from "../chainlink";
+import { parseChainlinkLatestRoundData } from "../../../lib/chainlink-round-data";
 import {
   adaptChainlinkNavResponse,
   parseOndoPriceData,

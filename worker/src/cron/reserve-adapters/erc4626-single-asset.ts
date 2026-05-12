@@ -1,7 +1,7 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import { TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
+import { TOTAL_SUPPLY_SELECTOR, encodeUint256Arg } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
 import {
@@ -14,10 +14,6 @@ import {
 const ERC4626_TOTAL_ASSETS_SELECTOR = "0x01e1d114";
 const ERC4626_ASSET_SELECTOR = "0x38d52e0f";
 const ERC4626_CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
-
-function encodeUint256Arg(value: bigint): string {
-  return value.toString(16).padStart(64, "0");
-}
 
 interface SingleAssetSliceConfig {
   name: ReserveSlice["name"];
@@ -58,29 +54,21 @@ export async function fetchErc4626SingleAssetReserves(
   }
 
   const timeout = 12_000;
+  const call = (data: string) =>
+    fetchOnchainRawCall({
+      contract: contractAddress,
+      data,
+      signal,
+      ctx: _ctx,
+      rpcMode: primaryInput.rpcMode,
+      chain: primaryInput.chain,
+      rpcUrl: sliceConfig.rpcUrl,
+      fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+      timeoutMs: timeout,
+    });
   const [assetResult, totalAssetsResult] = await Promise.all([
-    fetchOnchainRawCall({
-      contract: contractAddress,
-      data: ERC4626_ASSET_SELECTOR,
-      signal,
-      ctx: _ctx,
-      rpcMode: primaryInput.rpcMode,
-      chain: primaryInput.chain,
-      rpcUrl: sliceConfig.rpcUrl,
-      fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
-      timeoutMs: timeout,
-    }),
-    fetchOnchainRawCall({
-      contract: contractAddress,
-      data: ERC4626_TOTAL_ASSETS_SELECTOR,
-      signal,
-      ctx: _ctx,
-      rpcMode: primaryInput.rpcMode,
-      chain: primaryInput.chain,
-      rpcUrl: sliceConfig.rpcUrl,
-      fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
-      timeoutMs: timeout,
-    }),
+    call(ERC4626_ASSET_SELECTOR),
+    call(ERC4626_TOTAL_ASSETS_SELECTOR),
   ]);
 
   if (!totalAssetsResult) {
@@ -109,17 +97,7 @@ export async function fetchErc4626SingleAssetReserves(
   }
 
   // NAV cross-check: totalSupply() shares valued through convertToAssets() vs totalAssets()
-  const totalSupplyResult = await fetchOnchainRawCall({
-    contract: contractAddress,
-    data: TOTAL_SUPPLY_SELECTOR,
-    signal,
-    ctx: _ctx,
-    rpcMode: primaryInput.rpcMode,
-    chain: primaryInput.chain,
-    rpcUrl: sliceConfig.rpcUrl,
-    fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
-    timeoutMs: timeout,
-  });
+  const totalSupplyResult = await call(TOTAL_SUPPLY_SELECTOR);
 
   let collateralizationRatio: number | undefined;
   let convertToAssetsRaw: bigint | undefined;
@@ -127,17 +105,9 @@ export async function fetchErc4626SingleAssetReserves(
   if (totalSupplyResult) {
     totalSupplyRaw = BigInt(totalSupplyResult);
     if (totalSupplyRaw > 0n) {
-      const convertResult = await fetchOnchainRawCall({
-        contract: contractAddress,
-        data: `${ERC4626_CONVERT_TO_ASSETS_SELECTOR}${encodeUint256Arg(totalSupplyRaw)}`,
-        signal,
-        ctx: _ctx,
-        rpcMode: primaryInput.rpcMode,
-        chain: primaryInput.chain,
-        rpcUrl: sliceConfig.rpcUrl,
-        fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
-        timeoutMs: timeout,
-      });
+      const convertResult = await call(
+        `${ERC4626_CONVERT_TO_ASSETS_SELECTOR}${encodeUint256Arg(totalSupplyRaw)}`,
+      );
       if (convertResult) {
         convertToAssetsRaw = BigInt(convertResult);
         if (totalAssetsRaw > 0n) {

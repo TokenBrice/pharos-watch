@@ -2,9 +2,15 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
+import {
+  DECIMALS_SELECTOR,
+  LATEST_ROUND_DATA_SELECTOR,
+  TOTAL_SUPPLY_SELECTOR,
+  encodeAddressArg,
+} from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
-import { parseChainlinkLatestRoundData } from "./chainlink";
+import { parseChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
+import { parseEvmAddressResult } from "./evm";
 import {
   decimalStringFromBigInt,
   fetchOnchainRawCall,
@@ -23,6 +29,10 @@ const GET_ASSET_PRICE_SELECTOR = "0xb3596f07";
 const TOKEN_TO_RWA_ORACLE_SELECTOR = "0xeca6f018";
 const GET_PRICE_DATA_SELECTOR = "0xa4a28168";
 const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;
+/** Max decimals we accept for ERC-20 or oracle reads. ERC-20 spec is uint8 (≤255);
+ *  we cap at 36 to allow high-precision oracles while rejecting overflow values
+ *  that would corrupt downstream `10n ** BigInt(decimals)` math. */
+const MAX_DECIMALS = 36;
 
 export interface ChainlinkNavParams {
   oracleAddress: string;
@@ -48,17 +58,22 @@ export interface ChainlinkNavData {
   oracleTimestampSource?: "oracle-round" | "ondo-price-data" | "unavailable";
 }
 
-function encodeAddressArgument(selector: string, address: string): `0x${string}` {
-  return `${selector}${address.toLowerCase().replace(/^0x/, "").padStart(64, "0")}` as `0x${string}`;
+function parseAddressResult(raw: string | null): `0x${string}` | null {
+  if (typeof raw !== "string") return null;
+  const address = parseEvmAddressResult(raw as `0x${string}`);
+  if (!address || /^0x0{40}$/.test(address)) return null;
+  return address as `0x${string}`;
 }
 
-function parseAddressResult(raw: string | null): `0x${string}` | null {
-  if (typeof raw !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(raw)) {
-    return null;
+function decodeDecimalsResult(raw: bigint | null, source: string): number {
+  if (raw == null) {
+    throw new Error(`chainlink-nav: ${source} decimals() call failed`);
   }
-
-  const address = `0x${raw.slice(-40).toLowerCase()}` as `0x${string}`;
-  return /^0x0{40}$/.test(address) ? null : address;
+  const decimals = Number(raw);
+  if (!Number.isSafeInteger(decimals) || decimals < 0 || decimals > MAX_DECIMALS) {
+    throw new Error(`chainlink-nav: ${source} decimals out of range (${raw})`);
+  }
+  return decimals;
 }
 
 export function parseOndoPriceData(raw: string): { price: bigint; updatedAt: number } {
@@ -177,7 +192,7 @@ export async function fetchChainlinkNavReserves(
   } else if (method === "getAssetPrice") {
     const rawPrice = await fetchOnchainUint256({
       ...oracleCallBase,
-      data: encodeAddressArgument(GET_ASSET_PRICE_SELECTOR, params.tokenAddress),
+      data: `${GET_ASSET_PRICE_SELECTOR}${encodeAddressArg(params.tokenAddress)}`,
     });
     if (rawPrice == null) {
       throw new Error("chainlink-nav: getAssetPrice(address) call failed");
@@ -191,7 +206,7 @@ export async function fetchChainlinkNavReserves(
 
     const rawWrapperAddress = await fetchOnchainRawCall({
       ...oracleCallBase,
-      data: encodeAddressArgument(TOKEN_TO_RWA_ORACLE_SELECTOR, params.tokenAddress),
+      data: `${TOKEN_TO_RWA_ORACLE_SELECTOR}${encodeAddressArg(params.tokenAddress)}`,
     });
     const wrapperAddress = parseAddressResult(rawWrapperAddress);
     if (wrapperAddress) {
@@ -226,10 +241,7 @@ export async function fetchChainlinkNavReserves(
   } else {
     // Standard AggregatorV3Interface: decimals() + latestRoundData()
     const rawOracleDecimals = await fetchOnchainUint256({ ...oracleCallBase, data: DECIMALS_SELECTOR });
-    if (rawOracleDecimals == null) {
-      throw new Error("chainlink-nav: oracle decimals() call failed");
-    }
-    navDecimals = Number(rawOracleDecimals);
+    navDecimals = decodeDecimalsResult(rawOracleDecimals, "oracle");
 
     const rawRoundData = await fetchOnchainRawCall({
       ...oracleCallBase,
@@ -259,9 +271,7 @@ export async function fetchChainlinkNavReserves(
   }
 
   const [rawTokenDecimals, rawTotalSupply] = await Promise.all([tokenDecimalsP, totalSupplyP]);
-  if (rawTokenDecimals == null) {
-    throw new Error("chainlink-nav: token decimals() call failed");
-  }
+  const tokenDecimals = decodeDecimalsResult(rawTokenDecimals, "token");
   if (rawTotalSupply == null) {
     throw new Error("chainlink-nav: token totalSupply() call failed");
   }
@@ -271,7 +281,7 @@ export async function fetchChainlinkNavReserves(
       navPerToken,
       navDecimals,
       totalSupply: rawTotalSupply,
-      tokenDecimals: Number(rawTokenDecimals),
+      tokenDecimals,
       roundId,
       updatedAt,
       oracleTimestampSource,

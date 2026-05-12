@@ -4,7 +4,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
-import { parseChainlinkLatestRoundData } from "./chainlink";
+import { parseChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
 import {
   decimalNumberFromBigInt,
   fetchErc20TotalSupply,

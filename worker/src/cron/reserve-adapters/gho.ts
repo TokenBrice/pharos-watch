@@ -1,7 +1,7 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import { TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
+import { TOTAL_SUPPLY_SELECTOR, encodeAddressArg, encodeUint256Arg } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult } from "./evm";
 import {
@@ -98,20 +98,8 @@ export interface GhoFacilitatorData {
   totalSupply?: bigint;
 }
 
-function normalizeAddress(value: string): string {
-  return value.toLowerCase();
-}
-
 function scale18ToUsd(value: bigint): number {
   return decimalNumberFromBigInt(value, 18);
-}
-
-function encodeAddressArg(address: string): string {
-  return normalizeAddress(address).slice(2).padStart(64, "0");
-}
-
-function encodeUint256Arg(value: bigint): string {
-  return value.toString(16).padStart(64, "0");
 }
 
 function hexWords(raw: string): string[] {

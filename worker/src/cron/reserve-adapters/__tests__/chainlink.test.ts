@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseChainlinkLatestRoundData } from "../chainlink";
+import { parseChainlinkLatestRoundData } from "../../../lib/chainlink-round-data";
 
 function word(value: bigint): string {
   return value.toString(16).padStart(64, "0");
