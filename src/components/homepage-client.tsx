@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, SlidersHorizontal, X } from "lucide-react";
 import { useDexLiquidity, usePegSummary, useReportCards, useStressSignals } from "@/hooks/api-hooks";
@@ -13,6 +13,7 @@ import { useDataAnnounce } from "@/hooks/use-data-announce";
 import { DataLiveRegion } from "@/components/data-live-region";
 import { MarketHighlights } from "@/components/market-highlights";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
+import type { StaleQuery } from "@/components/stale-data-banner";
 import { FilterBar } from "@/components/filter-bar";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { SectionSkeleton, ChartSkeleton } from "@/components/homepage-skeletons";
@@ -20,18 +21,21 @@ import { PegBrowseStrip } from "@/components/peg-distribution-grid";
 import { HomepageSectionBand } from "@/components/homepage-sections";
 import { HomepageAltPegsTeaser } from "@/components/homepage-alt-pegs-teaser";
 import { Button } from "@/components/ui/button";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { UpcomingStablecoinsSection } from "@/components/upcoming-stablecoins-section";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { ACTIVE_PEGS, pegCoinCount } from "@/lib/peg-landing";
-import { buildHomepageViewModel } from "@/components/homepage-client-view-model";
+import {
+  buildHomepageCriticalViewModel,
+  buildHomepageOptionalViewModel,
+} from "@/components/homepage-client-view-model";
 import { getHomepageActiveFilterLabel } from "@/lib/homepage-filter-labels";
 import { buildAltPegSnapshot } from "@/lib/alt-peg-market";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
+import { ACTIVE_STABLECOIN_COUNT, ACTIVE_STABLECOIN_GOVERNANCE_COUNTS } from "@/lib/stablecoin-static-data";
 
-const CEFI_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized").length;
-const CEFI_DEP_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length;
-const DEFI_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "decentralized").length;
+const CEFI_COUNT = ACTIVE_STABLECOIN_GOVERNANCE_COUNTS.centralized;
+const CEFI_DEP_COUNT = ACTIVE_STABLECOIN_GOVERNANCE_COUNTS["centralized-dependent"];
+const DEFI_COUNT = ACTIVE_STABLECOIN_GOVERNANCE_COUNTS.decentralized;
 
 const StablecoinTable = dynamic(() => import("@/components/stablecoin-table").then((mod) => mod.StablecoinTable), {
   loading: () => <SectionSkeleton className="h-[720px] w-full rounded-xl" />,
@@ -71,48 +75,159 @@ const DailyDigest = dynamic(() => import("@/components/daily-digest").then((mod)
   loading: () => <SectionSkeleton className="h-[220px] w-full rounded-xl" />,
 });
 
+function useDeferredHomepageOptionalQueries(criticalQueriesSettled: boolean) {
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    if (enabled || !criticalQueriesSettled) return;
+
+    const timeoutId = window.setTimeout(() => setEnabled(true), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [criticalQueriesSettled, enabled]);
+
+  return enabled;
+}
+
 export function HomepageClient() {
   const [showFilters, setShowFilters] = useState(false);
   const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices, meta: pricesMeta } = useStablecoins();
   const { data: logos } = useLogos();
-  const { data: pegSummaryData, dataUpdatedAt: pegUpdatedAt, error: pegError, refetch: refetchPeg, meta: pegMeta } = usePegSummary();
+  const {
+    data: pegSummaryData,
+    isLoading: isPegLoading,
+    dataUpdatedAt: pegUpdatedAt,
+    error: pegError,
+    refetch: refetchPeg,
+    meta: pegMeta,
+  } = usePegSummary();
+  const optionalQueriesEnabled = useDeferredHomepageOptionalQueries(!isLoading && !isPegLoading);
   const {
     data: dexLiquidity,
     dataUpdatedAt: liqUpdatedAt,
     error: liquidityError,
     refetch: refetchLiquidity,
     meta: liquidityMeta,
-  } = useDexLiquidity();
+  } = useDexLiquidity({ enabled: optionalQueriesEnabled });
   const {
     data: reportCardsData,
     dataUpdatedAt: rcUpdatedAt,
     error: reportCardsError,
     refetch: refetchReportCards,
     meta: reportCardsMeta,
-  } = useReportCards();
-  const { data: stressData } = useStressSignals();
+  } = useReportCards({ enabled: optionalQueriesEnabled });
+  const {
+    data: stressData,
+    dataUpdatedAt: stressUpdatedAt,
+    error: stressError,
+    refetch: refetchStress,
+    meta: stressMeta,
+  } = useStressSignals({ enabled: optionalQueriesEnabled });
 
   const filters = useHomepageFilters();
   const pinnedStablecoins = usePinnedStablecoins();
-  const { dewsRiskLevel, filteredRowCount, pegRates, pegScores, reportCardMap } = useMemo(
-    () => buildHomepageViewModel({
-      stablecoinsData: data,
-      pegSummaryData,
+  const { reportCardMap, dewsRiskLevel } = useMemo(
+    () => buildHomepageOptionalViewModel({
       reportCardsData,
       stressData,
-      dexLiquidity,
+    }),
+    [reportCardsData, stressData],
+  );
+  const { filteredRowCount, pegRates, pegScores } = useMemo(
+    () => buildHomepageCriticalViewModel({
+      stablecoinsData: data,
+      pegSummaryData,
+      reportCardMap,
       filters: {
         activeFilters: filters.activeFilters,
         searchQuery: filters.searchQuery,
       },
     }),
-    [data, dexLiquidity, filters.activeFilters, filters.searchQuery, pegSummaryData, reportCardsData, stressData],
+    [data, filters.activeFilters, filters.searchQuery, pegSummaryData, reportCardMap],
   );
   const altPegSnapshot = useMemo(() => buildAltPegSnapshot(data?.peggedAssets), [data?.peggedAssets]);
-  const globalError = pricesError ?? pegError ?? liquidityError ?? reportCardsError;
+  const hasStressSignals = !!stressData?.signals && Object.keys(stressData.signals).length > 0;
+  const includeLiquidityFreshness = optionalQueriesEnabled || liqUpdatedAt > 0 || !!dexLiquidity || !!liquidityError;
+  const includeReportCardsFreshness = optionalQueriesEnabled || rcUpdatedAt > 0 || !!reportCardsData?.cards?.length || !!reportCardsError;
+  const includeStressFreshness = optionalQueriesEnabled || stressUpdatedAt > 0 || hasStressSignals || !!stressError;
+  const globalError = pricesError ?? pegError ?? (optionalQueriesEnabled ? liquidityError ?? reportCardsError ?? stressError : null);
+  const freshnessQueries = useMemo<StaleQuery[]>(() => {
+    const queries: StaleQuery[] = [
+      {
+        preset: "stablecoins",
+        dataUpdatedAt,
+        error: pricesError,
+        hasData: !!data?.peggedAssets?.length,
+        meta: pricesMeta,
+      },
+      {
+        preset: "pegSummary",
+        dataUpdatedAt: pegUpdatedAt,
+        error: pegError,
+        hasData: !!pegSummaryData?.coins?.length,
+        meta: pegMeta,
+      },
+    ];
+
+    if (includeLiquidityFreshness) {
+      queries.push({
+        preset: "dexLiquidity",
+        dataUpdatedAt: liqUpdatedAt,
+        error: liquidityError,
+        hasData: !!dexLiquidity,
+        meta: liquidityMeta,
+      });
+    }
+
+    if (includeReportCardsFreshness) {
+      queries.push({
+        preset: "reportCards",
+        dataUpdatedAt: rcUpdatedAt,
+        error: reportCardsError,
+        hasData: !!reportCardsData?.cards?.length,
+        meta: reportCardsMeta,
+      });
+    }
+
+    if (includeStressFreshness) {
+      queries.push({
+        preset: "stressSignals",
+        dataUpdatedAt: stressUpdatedAt,
+        error: stressError,
+        hasData: hasStressSignals,
+        meta: stressMeta,
+      });
+    }
+
+    return queries;
+  }, [
+    data?.peggedAssets?.length,
+    dataUpdatedAt,
+    dexLiquidity,
+    includeLiquidityFreshness,
+    includeReportCardsFreshness,
+    includeStressFreshness,
+    liqUpdatedAt,
+    liquidityError,
+    liquidityMeta,
+    pegError,
+    pegMeta,
+    pegSummaryData?.coins?.length,
+    pegUpdatedAt,
+    pricesError,
+    pricesMeta,
+    rcUpdatedAt,
+    reportCardsData?.cards?.length,
+    reportCardsError,
+    reportCardsMeta,
+    hasStressSignals,
+    stressError,
+    stressMeta,
+    stressUpdatedAt,
+  ]);
   const handleRetry = useCallback(() => {
-    return refetchQueryGroup([refetchPrices, refetchPeg, refetchLiquidity, refetchReportCards]);
-  }, [refetchPeg, refetchLiquidity, refetchPrices, refetchReportCards]);
+    const optionalRefetches = optionalQueriesEnabled ? [refetchLiquidity, refetchReportCards, refetchStress] : [];
+    return refetchQueryGroup([refetchPrices, refetchPeg, ...optionalRefetches]);
+  }, [optionalQueriesEnabled, refetchPeg, refetchLiquidity, refetchPrices, refetchReportCards, refetchStress]);
 
   // Announce data updates to screen readers
   useDataAnnounce([
@@ -129,36 +244,7 @@ export function HomepageClient() {
         error={globalError}
         hasData={!!data?.peggedAssets?.length}
         onRetry={handleRetry}
-        queries={[
-          {
-            preset: "stablecoins",
-            dataUpdatedAt,
-            error: pricesError,
-            hasData: !!data?.peggedAssets?.length,
-            meta: pricesMeta,
-          },
-          {
-            preset: "pegSummary",
-            dataUpdatedAt: pegUpdatedAt,
-            error: pegError,
-            hasData: !!pegSummaryData?.coins?.length,
-            meta: pegMeta,
-          },
-          {
-            preset: "dexLiquidity",
-            dataUpdatedAt: liqUpdatedAt,
-            error: liquidityError,
-            hasData: !!dexLiquidity,
-            meta: liquidityMeta,
-          },
-          {
-            preset: "reportCards",
-            dataUpdatedAt: rcUpdatedAt,
-            error: reportCardsError,
-            hasData: !!reportCardsData?.cards?.length,
-            meta: reportCardsMeta,
-          },
-        ]}
+        queries={freshnessQueries}
       />
 
       <SectionErrorBoundary name="highlights">
@@ -285,7 +371,11 @@ export function HomepageClient() {
                   <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
-              <DEWSSummary logos={logos} showHeader={false} />
+              {optionalQueriesEnabled || stressUpdatedAt > 0 || hasStressSignals ? (
+                <DEWSSummary logos={logos} showHeader={false} />
+              ) : (
+                <ChartSkeleton className="h-[320px] w-full" type="radar" />
+              )}
             </section>
           </SectionErrorBoundary>
           <SectionErrorBoundary name="mint-burn-snapshot">
@@ -358,7 +448,7 @@ export function HomepageClient() {
 
       <section aria-label="About Pharos" className="space-y-2 border-t border-border/50 pt-6">
         <p className="mx-auto max-w-5xl text-center text-xs leading-relaxed text-muted-foreground">
-          Pharos tracks {ACTIVE_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg currencies with honest
+          Pharos tracks {ACTIVE_STABLECOIN_COUNT} stablecoins across {PEG_CURRENCY_COUNT} peg currencies with honest
           governance classification:{" "}
           {CEFI_COUNT} CeFi, {CEFI_DEP_COUNT} CeFi-Dependent, and {DEFI_COUNT} DeFi. Use the dashboard
           for live market ranking, then drill into peg stress, safety, liquidity, blacklist risk, flows, and dead-coin

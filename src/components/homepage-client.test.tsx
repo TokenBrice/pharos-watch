@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HomepageClient } from "@/components/homepage-client";
@@ -94,10 +94,10 @@ describe("HomepageClient", () => {
       refetch: refetchMock,
       meta: null,
     });
-    usePegSummaryMock.mockReturnValue({ data: { coins: [], summary: {} }, dataUpdatedAt: 0, error: null, refetch: refetchMock, meta: null });
+    usePegSummaryMock.mockReturnValue({ data: { coins: [], summary: {} }, isLoading: false, dataUpdatedAt: 0, error: null, refetch: refetchMock, meta: null });
     useDexLiquidityMock.mockReturnValue({ data: {}, dataUpdatedAt: 0, error: null, refetch: refetchMock, meta: null });
     useReportCardsMock.mockReturnValue({ data: { cards: [], dependencyGraph: { edges: [] } }, dataUpdatedAt: 0, error: null, refetch: refetchMock, meta: null });
-    useStressSignalsMock.mockReturnValue({ data: { signals: {} } });
+    useStressSignalsMock.mockReturnValue({ data: { signals: {} }, dataUpdatedAt: 0, error: null, refetch: refetchMock, meta: null });
     useLogosMock.mockReturnValue({ data: {} });
     usePinnedStablecoinsMock.mockReturnValue({ pinnedIds: [], togglePinned: vi.fn() });
     useHomepageFiltersMock.mockReturnValue(makeFilters());
@@ -105,6 +105,47 @@ describe("HomepageClient", () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
+  });
+
+  it("defers optional homepage queries until after the critical render", async () => {
+    vi.useFakeTimers();
+
+    render(<HomepageClient />);
+
+    expect(useDexLiquidityMock).toHaveBeenLastCalledWith({ enabled: false });
+    expect(useReportCardsMock).toHaveBeenLastCalledWith({ enabled: false });
+    expect(useStressSignalsMock).toHaveBeenLastCalledWith({ enabled: false });
+
+    await act(async () => {
+      vi.runOnlyPendingTimers();
+    });
+
+    expect(useDexLiquidityMock).toHaveBeenLastCalledWith({ enabled: true });
+    expect(useReportCardsMock).toHaveBeenLastCalledWith({ enabled: true });
+    expect(useStressSignalsMock).toHaveBeenLastCalledWith({ enabled: true });
+  });
+
+  it("does not start optional homepage queries while critical queries are loading", async () => {
+    vi.useFakeTimers();
+    useStablecoinsMock.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+      dataUpdatedAt: 0,
+      refetch: refetchMock,
+      meta: null,
+    });
+
+    render(<HomepageClient />);
+
+    await act(async () => {
+      vi.runOnlyPendingTimers();
+    });
+
+    expect(useDexLiquidityMock).toHaveBeenLastCalledWith({ enabled: false });
+    expect(useReportCardsMock).toHaveBeenLastCalledWith({ enabled: false });
+    expect(useStressSignalsMock).toHaveBeenLastCalledWith({ enabled: false });
   });
 
   it("renders the sixth filter group when the filter panel is opened", () => {

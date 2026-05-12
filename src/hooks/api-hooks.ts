@@ -120,8 +120,11 @@ export function useDailyDigest() {
   return useRegisteredApiQuery<DailyDigestResponse>(FRONTEND_API_QUERY_REGISTRY.dailyDigest);
 }
 
-export function useDexLiquidity() {
-  return useRegisteredApiQueryWithMeta<DexLiquidityMap>(FRONTEND_API_QUERY_REGISTRY.dexLiquidity);
+export function useDexLiquidity(overrides?: QueryControlOverrides) {
+  return useRegisteredApiQueryWithMeta<DexLiquidityMap>(
+    FRONTEND_API_QUERY_REGISTRY.dexLiquidity,
+    overrides,
+  );
 }
 
 export function useDexLiquidityHistory(stablecoinId: string, days = 90) {
@@ -163,8 +166,11 @@ export function usePegSummary() {
   return useRegisteredApiQueryWithMeta<PegSummaryResponse>(FRONTEND_API_QUERY_REGISTRY.pegSummary);
 }
 
-export function useReportCards() {
-  return useRegisteredApiQueryWithMeta<ReportCardsResponse>(FRONTEND_API_QUERY_REGISTRY.reportCards);
+export function useReportCards(overrides?: QueryControlOverrides) {
+  return useRegisteredApiQueryWithMeta<ReportCardsResponse>(
+    FRONTEND_API_QUERY_REGISTRY.reportCards,
+    overrides,
+  );
 }
 
 export function useRedemptionBackstops() {
@@ -237,9 +243,10 @@ export function useYieldRankings() {
   );
 }
 
-export function useStressSignals() {
+export function useStressSignals(overrides?: QueryControlOverrides) {
   return useRegisteredApiQueryWithMeta<StressSignalsAllResponse>(
     FRONTEND_API_QUERY_REGISTRY.stressSignals,
+    overrides,
   );
 }
 

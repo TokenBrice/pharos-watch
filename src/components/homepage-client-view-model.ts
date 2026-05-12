@@ -1,5 +1,4 @@
 import type {
-  DexLiquidityMap,
   FilterTag,
   PegSummaryResponse,
   ReportCardsResponse,
@@ -9,28 +8,25 @@ import type {
 import { getDewsRiskLevel, isThreatBand } from "@shared/lib/classification";
 import { buildTrackedIdSet, filterStablecoins } from "@/components/stablecoin-table-logic";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
+import { buildReportCardMap } from "@/lib/stablecoin-lookups";
 
 interface HomepageFiltersState {
   activeFilters: readonly FilterTag[];
   searchQuery: string;
 }
 
-export function buildHomepageViewModel(args: {
+export function buildHomepageCriticalViewModel(args: {
   stablecoinsData?: StablecoinListResponse;
   pegSummaryData?: PegSummaryResponse;
-  reportCardsData?: ReportCardsResponse;
-  stressData?: StressSignalsAllResponse;
-  dexLiquidity?: DexLiquidityMap;
   filters: HomepageFiltersState;
+  reportCardMap?: ReturnType<typeof buildReportCardMap>;
 }) {
   const tableInputs = buildStablecoinTableInputs({
     stablecoins: args.stablecoinsData?.peggedAssets,
     fxFallbackRates: args.stablecoinsData?.fxFallbackRates,
     pegSummaryCoins: args.pegSummaryData?.coins,
-    reportCards: args.reportCardsData?.cards,
   });
-  const reportCardMap = tableInputs.reportCards;
-  const trackedIds = buildTrackedIdSet(args.filters.activeFilters, reportCardMap);
+  const trackedIds = buildTrackedIdSet(args.filters.activeFilters, args.reportCardMap);
   const filteredRowCount = filterStablecoins(
     args.stablecoinsData?.peggedAssets,
     trackedIds,
@@ -38,15 +34,24 @@ export function buildHomepageViewModel(args: {
   ).length;
 
   return {
-    reportCardMap,
     pegScores: tableInputs.pegScores,
     pegRates: tableInputs.pegRates,
     filteredRowCount,
+  };
+}
+
+export function buildHomepageOptionalViewModel(args: {
+  reportCardsData?: ReportCardsResponse;
+  stressData?: StressSignalsAllResponse;
+}) {
+  const reportCardMap = buildReportCardMap(args.reportCardsData?.cards);
+
+  return {
+    reportCardMap,
     dewsRiskLevel: getDewsRiskLevel(
       args.stressData?.signals
         ? Object.values(args.stressData.signals).map((signal) => signal.band).filter(isThreatBand)
         : [],
     ),
-    hasDexLiquidity: !!args.dexLiquidity,
   };
 }
