@@ -263,7 +263,7 @@ Six weighted dimensions:
 Grade thresholds: A+≥97, A≥93, A-≥90, B+≥85, B≥80, B-≥75, C+≥70, C≥65, C-≥60, D≥50, F≥0.
 Minimum 3 rated dimensions required, otherwise overall = NR.
 
-### v1.0 patches (same day)
+### Patch notes from the initial v1.0 launch day
 
 - **Weighted dependencies** (`9c7ccc9`): Switch from `string[]` to `DependencyWeight[]` (`{id, weight}`). Upstream scores multiplied by declared weight before averaging.
 - **Peg bonus fix** (`f5ad69a`): +3 bonus now only applies when `eventCount > 0` and last event was old. Zero-event coins no longer get the bonus.
@@ -320,7 +320,7 @@ New types: `ChainRisk`, `CollateralQuality`, `CustodyModel`. Defaults inferred f
 | --- | --------- | ---------- | ---------------- | -------- |
 | 25% | 20%       | 20%        | 10%              | 25%      |
 
-### v3.0 note — Chain-risk penalty bump (Feb 26)
+### Chain-risk penalty note from the v3.0 era (Feb 26)
 
 **Commit:** `69ea4c9`
 

@@ -150,7 +150,7 @@ From the repo root:
 cd worker
 npx --no-install wrangler versions upload --tag operator-origin-update
 # Smoke the uploaded version's preview URL before promotion.
-npx --no-install wrangler versions deploy <VERSION_ID>@100
+npx --no-install wrangler versions deploy "$VERSION_ID@100"
 npx --no-install wrangler triggers deploy
 ```
 

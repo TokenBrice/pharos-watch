@@ -455,7 +455,7 @@ Current frontend practice is a local logo file plus a static map entry.
 
 Example:
 
-```json
+```text
 "ausd-acme": "/logos/ausd-acme.png"
 ```
 
@@ -469,7 +469,7 @@ Notes:
 
 Add an entry to `data/ai-summaries.json` keyed by canonical ID:
 
-```json
+```text
 "ausd-acme": {
   "title": "Short headline",
   "text": "3-6 sentence editorial summary grounded in actual Pharos metadata and market structure.",
@@ -550,13 +550,17 @@ Examples:
 ```bash
 curl -X POST "https://ops-api.pharos.watch/api/backfill-supply-history?stablecoin=ausd-acme" \
   -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET"
+  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+  -H "X-Pharos-Admin: 1" \
+  -H "Idempotency-Key: backfill-supply-ausd-acme"
 ```
 
 ```bash
 curl -X POST "https://ops-api.pharos.watch/api/backfill-cg-prices?stablecoin=ausd-acme" \
   -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET"
+  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+  -H "X-Pharos-Admin: 1" \
+  -H "Idempotency-Key: backfill-cg-prices-ausd-acme"
 ```
 
 Optional:

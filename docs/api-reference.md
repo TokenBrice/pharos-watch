@@ -16,7 +16,7 @@ The runtime now uses three HTTP lanes:
 
 Static dataset exports are served from the public website, not from the Worker API, and do not require `X-API-Key`. The Stablecoin Cemetery export is available as JSON at `https://pharos.watch/datasets/stablecoin-cemetery.json` and CSV at `https://pharos.watch/datasets/stablecoin-cemetery.csv`.
 
-Machine-readable integration artifacts are also served from the public website for onboarding. The OpenAPI endpoint catalogue is available at `https://pharos.watch/openapi.json`, and Postman artifacts are available at `https://pharos.watch/postman/pharos-api.postman_collection.json` plus `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both Postman files, then replace the environment `apiKey` placeholder with a real `X-API-Key`. The public artifacts intentionally exclude Cloudflare-Access-gated admin routes and the self-serve key issuance POST endpoints; request keys through `https://pharos.watch/api/`.
+Machine-readable integration artifacts are also served from the public website for onboarding. The OpenAPI endpoint catalogue is available at `https://pharos.watch/openapi.json`, and Postman artifacts are available at `https://pharos.watch/postman/pharos-api.postman_collection.json` plus `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both Postman files, then replace the environment `apiKey` placeholder with a real `X-API-Key`. These are public integration/read onboarding artifacts, not a complete dump of every no-key route; they intentionally exclude Cloudflare-Access-gated admin routes, self-serve key issuance POST endpoints, feedback submission, Telegram webhook ingestion, and dynamic OG image routes. Request keys through `https://pharos.watch/api/`.
 
 Browser consumers should use same-origin `/_site-data/*` via the frontend helpers in `src/lib/api.ts`. In production, that Pages proxy targets `https://site-api.pharos.watch` through `SITE_API_ORIGIN`. Direct integrations, CI smoke, and build-time sync scripts should target `https://api.pharos.watch`.
 
@@ -3368,7 +3368,9 @@ Cron `sync-mint-burn` automatically heals recent NULL-price events within a 48-h
 
 ### `GET /api/backfill-dews`
 
-Validates DEWS against historical depeg events. Reports true-positive rate and average lead time.
+Runs the historical DEWS backtest path against stored depeg events. This is the default `GET` mode when no `mode` or `repair` query is supplied; it reports true-positive coverage and lead-time summary fields from the historical replay implementation.
+
+Use `GET /api/backfill-dews?mode=backtest-metrics` for the curated anchor fixture metrics described below. Use `GET /api/backfill-dews?repair=...&dry-run=true` for repair previews; mutating repair runs are `POST`-only.
 
 ### `GET /api/backfill-dews?mode=backtest-metrics`
 
@@ -3547,7 +3549,8 @@ Queues a deferred daily-digest regeneration, bypassing the normal 1-hour dedup c
 {
   "ok": true,
   "accepted": true,
-  "requestId": "manual-digest-..."
+  "requestId": "manual-digest-...",
+  "message": "Digest trigger queued; will execute on the next polling tick (≤5 min)."
 }
 ```
 
@@ -3581,8 +3584,25 @@ Returns current blacklist sync state for all configured chains. Useful for diagn
 
 ```json
 [
-  { "config_key": "ethereum-usdc", "last_block": 19500000 },
-  { "config_key": "tron-usdt", "last_block": 1740000000000 }
+  {
+    "configKey": "ethereum-usdc",
+    "stablecoin": "USDC",
+    "stablecoinId": "usdc-circle",
+    "chainId": 1,
+    "chainName": "Ethereum",
+    "contractAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "providerSource": "evm-logs",
+    "lastBlock": 19500000,
+    "cursorAgeSec": null,
+    "lastEventAt": 1710500000,
+    "lastEventAgeSec": 3600,
+    "lastEventBlock": 19499999,
+    "eventCount": 42,
+    "lastRunStartedAt": 1710503000,
+    "lastRunStatus": "ok",
+    "lastErrorClass": null,
+    "lastErrorMessage": null
+  }
 ]
 ```
 

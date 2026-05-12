@@ -189,9 +189,9 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/confidence.ts` - confidenceClass
 - `src/lib/constants.ts` - CATEGORY_LINKS, DAY_HOURS, NINETY_DAYS_HOURS, NINETY_DAYS_MS, TABLE_PAGE_SIZE, THIRTY_DAYS_HOURS
 - `src/lib/contagion-layout.ts` - CORE_LANE_HALF_WIDTH, CORE_LANE_MARGIN, CORE_PAIR_X_JITTER, CORE_PAIR_Y_OFFSET, CORE_RING_RADIUS_X, CORE_RING_RADIUS_Y
-- `src/lib/coverage-features.ts` - COVERAGE_FEATURES
-- `src/lib/coverage-page-config.ts` - AUTHORITATIVE_ACCENT, CoverageFilterGroup, CoverageFilterKey, CoverageSortKey, FEATURE_ACCENT_CLASSES, FEATURE_ICON
-- `src/lib/coverage-types.ts` - CoverageFeatureDefinition, CoverageFeatureKey, CoverageFeatureSummary, CoverageRow, CoverageStatus, CoverageTone
+- `src/lib/coverage-features.ts` - COVERAGE_FEATURES, COVERAGE_FEATURE_LEGEND_ITEMS, GENERAL_LEGEND_STATUS_KINDS
+- `src/lib/coverage-page-config.ts` - AUTHORITATIVE_ACCENT, BLACKLIST_BREAKDOWN_CHIP_CLASS, BlacklistBreakdownStatusKind, CoverageFilterGroup, CoverageFilterKey, CoverageSortKey
+- `src/lib/coverage-types.ts` - CoverageBreakdownItem, CoverageFeatureDefinition, CoverageFeatureKey, CoverageFeatureSummary, CoverageRow, CoverageStatus
 - `src/lib/coverage.ts` - COVERAGE_BADGE_TONE_CLASS, COVERAGE_FEATURES, buildCoverageFeatureSummary, buildCoverageRow, countAvailableFeatures, resolveBlacklistCoverage
 - `src/lib/cron-intervals.ts` - CRON_15MIN, CRON_1H, CRON_1MIN, CRON_24H, CRON_30MIN, CRON_BLACKLIST
 - `src/lib/csv-export.ts` - downloadCsv
@@ -334,45 +334,45 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 - `shared/data/stablecoins/canonical-order.json` - 338 entries
 - `shared/data/stablecoins/coins.generated.json` - 338 entries
-- `shared/data/stablecoins/coins/a7a5-old-vector.json` - 15 keys
-- `shared/data/stablecoins/coins/aeur-anchored-coins.json` - 17 keys
-- `shared/data/stablecoins/coins/aid-gaib.json` - 17 keys
-- `shared/data/stablecoins/coins/alusd-alchemix.json` - 14 keys
-- `shared/data/stablecoins/coins/apxusd-apyx.json` - 16 keys
-- `shared/data/stablecoins/coins/apyusd-apyx.json` - 20 keys
-- `shared/data/stablecoins/coins/arc-anq.json` - 16 keys
-- `shared/data/stablecoins/coins/audd-novatti.json` - 17 keys
-- `shared/data/stablecoins/coins/audf-forte.json` - 15 keys
-- `shared/data/stablecoins/coins/audm-macropod.json` - 22 keys
-- `shared/data/stablecoins/coins/audx-aussie-dollar-token.json` - 19 keys
-- `shared/data/stablecoins/coins/ausd-agora.json` - 18 keys
-- `shared/data/stablecoins/coins/ausdt-tether-alloy.json` - 20 keys
-- `shared/data/stablecoins/coins/avusd-avant.json` - 17 keys
-- `shared/data/stablecoins/coins/axcnh-anchorx.json` - 14 keys
-- `shared/data/stablecoins/coins/aznd-mu-digital.json` - 17 keys
-- `shared/data/stablecoins/coins/bd-basedollar.json` - 12 keys
-- `shared/data/stablecoins/coins/bfusd-binance.json` - 20 keys
-- `shared/data/stablecoins/coins/bold-liquity.json` - 18 keys
-- `shared/data/stablecoins/coins/brl-b3.json` - 16 keys
-- `shared/data/stablecoins/coins/brl1-brl1.json` - 20 keys
-- `shared/data/stablecoins/coins/brla-brla-digital.json` - 19 keys
-- `shared/data/stablecoins/coins/brlv-crown.json` - 20 keys
-- `shared/data/stablecoins/coins/brz-transfero.json` - 17 keys
-- `shared/data/stablecoins/coins/btcusd-btcfi.json` - 16 keys
-- `shared/data/stablecoins/coins/buck-buck-assets.json` - 23 keys
-- `shared/data/stablecoins/coins/buck-bucket-protocol.json` - 15 keys
-- `shared/data/stablecoins/coins/buidl-blackrock.json` - 18 keys
-- `shared/data/stablecoins/coins/busd0-usual.json` - 20 keys
-- `shared/data/stablecoins/coins/cadc-cad-coin.json` - 16 keys
-- `shared/data/stablecoins/coins/cadd-cad-digital.json` - 26 keys
-- `shared/data/stablecoins/coins/cash-phantom.json` - 17 keys
-- `shared/data/stablecoins/coins/cdp-enosys.json` - 16 keys
-- `shared/data/stablecoins/coins/cdxusd-cod3x.json` - 15 keys
-- `shared/data/stablecoins/coins/cetes-etherfuse.json` - 19 keys
-- `shared/data/stablecoins/coins/ceur-celo.json` - 16 keys
-- `shared/data/stablecoins/coins/cgo-comtech.json` - 14 keys
-- `shared/data/stablecoins/coins/cgusd-cygnus-finance.json` - 14 keys
-- ... 273 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
+- `shared/data/stablecoins/coins/a7a5-old-vector.json` - 16 keys
+- `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 23 keys
+- `shared/data/stablecoins/coins/acred-apollo-securitize.json` - 23 keys
+- `shared/data/stablecoins/coins/aeur-anchored-coins.json` - 18 keys
+- `shared/data/stablecoins/coins/aid-gaib.json` - 18 keys
+- `shared/data/stablecoins/coins/alusd-alchemix.json` - 15 keys
+- `shared/data/stablecoins/coins/apxusd-apyx.json` - 17 keys
+- `shared/data/stablecoins/coins/apyusd-apyx.json` - 22 keys
+- `shared/data/stablecoins/coins/arc-anq.json` - 17 keys
+- `shared/data/stablecoins/coins/audd-novatti.json` - 18 keys
+- `shared/data/stablecoins/coins/audf-forte.json` - 16 keys
+- `shared/data/stablecoins/coins/audm-macropod.json` - 23 keys
+- `shared/data/stablecoins/coins/audx-aussie-dollar-token.json` - 20 keys
+- `shared/data/stablecoins/coins/ausd-agora.json` - 19 keys
+- `shared/data/stablecoins/coins/ausdt-tether-alloy.json` - 21 keys
+- `shared/data/stablecoins/coins/avusd-avant.json` - 18 keys
+- `shared/data/stablecoins/coins/axcnh-anchorx.json` - 15 keys
+- `shared/data/stablecoins/coins/aznd-mu-digital.json` - 18 keys
+- `shared/data/stablecoins/coins/bc3m-backed.json` - 23 keys
+- `shared/data/stablecoins/coins/bd-basedollar.json` - 13 keys
+- `shared/data/stablecoins/coins/benji-franklin-templeton.json` - 23 keys
+- `shared/data/stablecoins/coins/bfusd-binance.json` - 21 keys
+- `shared/data/stablecoins/coins/bib01-backed.json` - 23 keys
+- `shared/data/stablecoins/coins/bnusd-balanced.json` - 19 keys
+- `shared/data/stablecoins/coins/bold-liquity.json` - 19 keys
+- `shared/data/stablecoins/coins/brd-volpon.json` - 20 keys
+- `shared/data/stablecoins/coins/brl-b3.json` - 19 keys
+- `shared/data/stablecoins/coins/brl-itau.json` - 17 keys
+- `shared/data/stablecoins/coins/brl1-brl1.json` - 21 keys
+- `shared/data/stablecoins/coins/brla-brla-digital.json` - 20 keys
+- `shared/data/stablecoins/coins/brlv-crown.json` - 21 keys
+- `shared/data/stablecoins/coins/brz-transfero.json` - 18 keys
+- `shared/data/stablecoins/coins/btcusd-btcfi.json` - 17 keys
+- `shared/data/stablecoins/coins/buck-buck-assets.json` - 24 keys
+- `shared/data/stablecoins/coins/buck-bucket-protocol.json` - 16 keys
+- `shared/data/stablecoins/coins/buidl-blackrock.json` - 19 keys
+- `shared/data/stablecoins/coins/busd0-usual.json` - 21 keys
+- `shared/data/stablecoins/coins/cadc-cad-coin.json` - 17 keys
+- ... 306 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
 
 ## Worker routing
 
@@ -427,6 +427,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/admin-kill-cron-in-flight.ts` - handleKillCronInFlight
 - `worker/src/api/admin-reset-circuit-breaker.ts` - handleResetCircuitBreaker
 - `worker/src/api/admin-reset-cron-lease.ts` - handleResetCronLease
+- `worker/src/api/admin-telegram-broadcast.ts` - handleAdminTelegramBroadcast
+- `worker/src/api/admin-telegram-chat.ts` - handleAdminTelegramChat
+- `worker/src/api/admin-telegram-pending.ts` - handleClearTelegramPending
+- `worker/src/api/admin-telegram-resend.ts` - handleAdminTelegramResend
 - `worker/src/api/api-key-audit-log.ts` - handleApiKeyAuditLog
 - `worker/src/api/api-key-requests.ts` - handleApiKeyRequest, handleApiKeyRequestReject, handleApiKeyRequestReleaseClaim, handleApiKeyRequestVerify, handleApiKeyRequestsAdmin
 - `worker/src/api/api-key-requests/admin.ts` - buildAdminMutationResponse, deactivateLinkedSelfServeKey, listAdminRequests, mapAdminRow, parseAdminMutationBody, recordRequestAdminAction
@@ -477,11 +481,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/mint-burn-events.ts` - handleMintBurnEvents
 - `worker/src/api/mint-burn-flows-shared.ts` - BASELINE_WINDOW_DAYS, DailyBaselineRow, ETHEREUM_CHAIN_ID, EventRow, FLOW_CACHE_PREFIX, FLOW_DEFAULT_WINDOW_HOURS
 - `worker/src/api/mint-burn-flows.ts` - handleMintBurnFlows, refreshAggregateMintBurnFlowCache
-- `worker/src/api/non-usd-share.ts` - handleNonUsdShare
-- `worker/src/api/og.tsx` - deriveStablecoinOgCardData, handleOg
-- `worker/src/api/peg-summary.ts` - handlePegSummary
-- `worker/src/api/public-status-history.ts` - handlePublicStatusHistory
-- ... 33 more files omitted; use `rg --files worker/src/api` for the full list.
+- ... 65 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 
@@ -565,7 +565,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/fetch-slipstream.ts` - fetchSlipstreamPools, getSlipstreamPoolFeeBps, sqrtRatioToSpotPrice
 - `worker/src/cron/dex-liquidity/geckoterminal-shared.ts` - fetchGtTokenPools, getGtPoolKind, getGtPoolType, parseGtPool
 - `worker/src/cron/dex-liquidity/index.ts` - syncDexLiquidity
-- ... 223 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 232 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -596,6 +596,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/binary-search.ts` - binarySearchNearest
 - `worker/src/lib/blacklist-api.ts` - BlacklistEventRow, mapBlacklistEventRow
 - `worker/src/lib/blacklist-contracts.ts` - BlacklistEventDef, BlacklistEventFamily, CONTRACT_CONFIGS, ChainConfig, ContractEventConfig, PYUSD_EVENT_FAMILY
+- `worker/src/lib/blacklist-coverage-manifest.ts` - BlacklistCoverageManifestEntry, BlacklistCoverageManifestStatus, BlacklistDeferredCoverageEntry, buildBlacklistCoverageManifest, getDeferredBlacklistCoverage, getSupportedBlacklistChainIds
 - `worker/src/lib/blacklist-current-balances.ts` - BlacklistCurrentBalanceRow, deleteBlacklistCurrentBalance, loadBlacklistCurrentBalanceMap, upsertBlacklistCurrentBalance
 - `worker/src/lib/blacklist-gaps.ts` - BlacklistGapMetrics, queryBlacklistGapMetrics
 - `worker/src/lib/bluechip-cache.ts` - parseBluechipRatingsCache
@@ -628,12 +629,12 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/depeg-signals.ts` - DepegDirection, DepegSignal, DirectionalSignalStatus, classifyDirectionalSignal, coerceDepegDirection, deriveDepegSignal
 - `worker/src/lib/depeg-trust-policy.ts` - DexPriceTrustTier, DexTrustPolicy, OffchainDepegConfirmerKey, chooseIndependentOffchainDepegConfirmer, classifyPrimaryDepegTrust, getDexTrustPolicy
 - `worker/src/lib/dews.ts` - DEWSInput, DEWSResult, PoolEntry, SignalResult, computeDEWS, getThreatBand
-- `worker/src/lib/dex-api-common.ts`
-- ... 143 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 147 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 
 - `scripts/__tests__/audit-pricing-provider-config.test.ts`
+- `scripts/__tests__/blacklistability-review.test.ts`
 - `scripts/__tests__/check-critical-coverage.test.ts`
 - `scripts/__tests__/check-worker-migrations.test.ts`
 - `scripts/__tests__/classify-deploy-changes.test.ts`
@@ -692,5 +693,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/fetch-logos.ts`
 - `scripts/fix-commodity-depeg-median.ts`
 - `scripts/fix-non-usd-depeg-fx.ts`
-- `scripts/freeze-stablecoin.ts` - FreezePlan, buildFreezePlan
-- ... 44 more files omitted; use `rg --files scripts` for the full list.
+- ... 46 more files omitted; use `rg --files scripts` for the full list.

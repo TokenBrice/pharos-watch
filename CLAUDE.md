@@ -49,6 +49,7 @@ worker/src/lib/  - Worker runtime/auth/cache/helpers/constants
 npm run dev
 npm run build
 npm run lint
+npm run typecheck
 npm test
 npm run test:watch
 cd worker && npx tsc --noEmit

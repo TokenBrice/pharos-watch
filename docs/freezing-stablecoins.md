@@ -19,7 +19,7 @@ If the coin never launched on Pharos (no historical data), do not freeze: simply
 ### 1. Run the freeze script
 
 ```bash
-PHAROS_API_KEY=<key> npx tsx scripts/freeze-stablecoin.ts <coin-id>
+PHAROS_API_KEY="$PHAROS_API_KEY" npx tsx scripts/freeze-stablecoin.ts "$COIN_ID"
 ```
 
 The script prints two artifacts:
@@ -55,7 +55,7 @@ The CI guards in `npm run check:frozen-invariants` enforce that frozen coins do 
 Copy the active logo into the cemetery directory using the symbol-derived filename `frozenToDeadShape` resolves:
 
 ```bash
-cp public/logos/<llamaId>-<symbol>.png public/logos/cemetery/<symbol-lowercase>.png
+cp "public/logos/${LLAMA_ID}-${SYMBOL}.png" "public/logos/cemetery/${SYMBOL_LOWERCASE}.png"
 ```
 
 (e.g. `public/logos/197-usr.png` → `public/logos/cemetery/usr.png`.) The cemetery tombstone falls back to a single-letter glyph when the file is missing.
@@ -92,7 +92,7 @@ PR title: `feat(stablecoin): freeze <symbol> (<coin-id>)`. Include a brief obitu
 - Visit `/stablecoin/<id>/` — confirm the frozen banner above the hero, and the "Data frozen on YYYY-MM-DD" footer above each chart section.
 - Inspect Worker logs — confirm no INSERT/UPDATE for the coin's id from any cron.
 - Confirm the next daily Telegram digest fires a cemetery appendix line.
-- Test OG: `https://api.pharos.watch/api/og?stablecoin=<id>` returns 200.
+- Test OG: `https://api.pharos.watch/api/og/stablecoin/<id>` returns 200.
 
 ## Known behaviors (not bugs)
 

@@ -582,7 +582,7 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | 15      | `5 8 * * *`        |                         4 (Bluechip batch of 3 + Anthropic; digest/recap chained)                  |    2     |
 | 16      | `10 8 * * *`       |                                  1 (weekly CoinGecko discovery scan)                               |    5     |
 | 17      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
-| 18      | `0 3 * * *`        |                     0 (prune-status-probe-runs + prune-cron-history; both DB-only)                 |    6     |
+| 18      | `0 3 * * *`        |             0 (status-probe, cron-history, and Telegram inactive-cleanup maintenance; all DB-only)  |    6     |
 
 The `*/5 * * * *` digest-trigger poll slot exists in the scheduled runner registry, but it is not represented in `CRON_JOB_DEFINITIONS` and is not part of the enforced `check:cron-connections` budget table today. It performs a lightweight D1 poll and, when a manual trigger is pending, executes `generateDailyDigest(...)` directly under the existing `daily-digest` lease.
 
@@ -1180,7 +1180,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `discovery-scan`                | 604,800s (7d)    | `10 8 * * *` (Monday-only)                        |
 | `prune-status-probe-runs`       | 86,400s (24h)    | `0 3 * * *`                                       |
 | `prune-cron-history`            | 86,400s (24h)    | `0 3 * * *`                                       |
-| `telegram-inactive-cleanup`     | 86,400s (24h)    | `0 3 * * *`                                       |
+| `telegram-inactive-cleanup`     | 604,800s (7d)    | `0 3 * * *` (daily invocation, 7-day cache guard) |
 | `yield-coverage-audit`          | 2,592,000s (30d) | `0 6 1 * *`                                       |
 
 A job is treated as healthy when cron telemetry is unavailable, when a fresh in-flight run exists, when the last run is fresh and `ok`/`degraded`, when a fresh `skipped_locked` run has another fresh `ok` run in recent history, or when a watch-tier job has no history yet. Otherwise it is unhealthy, including stale history or non-fresh errors. `/api/status` now also exposes `crons[*].inFlight` while a long-running leased job is active, including `stage`, `itemsDone/itemsTotal`, the last heartbeat timestamp, and a `stale` flag when the active-progress row stops updating. Only progress rows backed by a still-active matching lease are surfaced this way.

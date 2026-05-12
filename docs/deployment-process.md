@@ -16,7 +16,7 @@ This document defines the production deploy flow and the required local gate for
 
 ```bash
 git fetch origin
-git worktree add .worktrees/<feature-name> -b <branch-name> origin/main
+git worktree add ".worktrees/$FEATURE_NAME" -b "$BRANCH_NAME" origin/main
 ```
 
 2. Implement and test in that worktree branch.
@@ -25,7 +25,7 @@ git worktree add .worktrees/<feature-name> -b <branch-name> origin/main
 ```bash
 git checkout main
 git pull --ff-only origin main
-git merge --no-ff <branch-name>
+git merge --no-ff "$BRANCH_NAME"
 ```
 
 4. Run the merge gate on `main`.

@@ -41,7 +41,7 @@
     },
     {
       "name": "frontend-routes",
-      "sources": ["src/app/**", "src/components/**", "src/hooks/**", "src/lib/page-metadata.ts", "src/app/sitemap.ts", "src/app/robots.ts", "next.config.ts"],
+      "sources": ["src/app/**", "src/components/**", "src/hooks/**", "src/lib/nav-config.ts", "src/lib/page-metadata.ts", "src/app/sitemap.ts", "src/app/robots.ts", "shared/lib/public-docs.ts", "next.config.ts"],
       "docs": ["docs/README.md", "docs/architecture.md", "docs/homepage.md", "docs/start-page.md", "docs/stablecoin-detail-page.md", "docs/chains-page.md", "docs/coverage-page.md", "docs/status-dashboard.md"],
       "notes": ["Start with docs/README.md Public Route Coverage to select the route-specific contract; the listed docs are high-churn examples, not the full route-doc set."]
     },

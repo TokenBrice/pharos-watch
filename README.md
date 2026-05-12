@@ -31,9 +31,9 @@ Public-facing analytics dashboard tracking 338 stablecoins in repo metadata: 310
 - **Compare** — side-by-side stablecoin comparison across key metrics
 - **Daily Digest** — AI-generated daily summary of market movements and notable events
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
-- **Stablecoin Cemetery** — 88 curated dead stablecoins plus 3 frozen archives documented with cause of death, peak market cap, and obituaries
+- **Stablecoin Cemetery** — 91 curated dead stablecoins plus 3 frozen archives documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
-- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 223 configured assets
+- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 238 configured assets
 - **Detail pages** — full analytics dossiers for tracked live assets plus dedicated pre-launch detail views, with conditional reserve, redemption backstop, liquidity, and safety surfaces when data exists
 - **Public API access + private operator admin** — self-serve email-verified API keys on `/api/`, read-only system health on `/status/`, plus Access-gated monitoring and recovery controls on `ops.pharos.watch/admin/` and API management on `ops.pharos.watch/admin-api/`
 - **Backing type breakdown** — active public surfaces expose RWA-backed and crypto-backed cohorts; algorithmic remains a legacy metadata label only, with no generated algorithmic backing route because there are no active algorithmic assets
@@ -103,7 +103,7 @@ npm install
 ### Frontend
 
 ```bash
-NEXT_PUBLIC_API_BASE=http://localhost:8787 npm run dev
+npm run dev
 ```
 
 `NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, browser reads on `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and `*.stablecoin-dashboard.pages.dev` go through same-origin `/_site-data/*`. All Pages hosts require `SITE_API_ORIGIN` and proxy that lane with `SITE_API_SHARED_SECRET` to the dedicated `site-api` origin; when the binding is missing the proxy returns `500`. The `/_site-data/*` lane gates on the caller's `Origin` (or `Referer` fallback) and only accepts `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, or a subdomain of `stablecoin-dashboard.pages.dev`. Direct browser calls still use `https://api.pharos.watch` only for exempt public routes such as feedback submission, self-serve API key request/verification, and OG image fetches; every other `/api/*` route requires a valid `X-API-Key`. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time.
@@ -127,7 +127,7 @@ curl "http://localhost:8787/__scheduled?cron=*/15+*+*+*+*"
 Use one of these paths:
 
 - Leave `NEXT_PUBLIC_API_BASE` empty and set `SITE_API_SHARED_SECRET` in `.env.local`; `npm run dev` starts `scripts/dev-api-proxy.mjs` so local same-origin `/api/*` reads are rewritten through the dev proxy and authenticate against the site-data lane.
-- Set `NEXT_PUBLIC_API_BASE=http://localhost:8787` when you are also running a configured local Worker with `cd worker && npx wrangler dev`.
+- Set `NEXT_PUBLIC_API_BASE=http://localhost:8787` and run `npm run dev:next` when you are also running a configured local Worker with `cd worker && npx wrangler dev`; `npm run dev` always starts the local site-data proxy as well.
 - `next dev` allows `ops.pharos.watch` as a development origin so the ops host can point at a local dev server during Access/proxy debugging.
 
 **Worker-only (`cd worker && npx wrangler dev`)**
@@ -141,6 +141,7 @@ Both sets above. Run `npm run dev` and `cd worker && npx wrangler dev` in separa
 ```bash
 npm run build    # Production static build
 npm run lint     # ESLint
+npm run typecheck # Type-check frontend, shared, Pages Functions, and root scripts
 npm run typecheck:worker # Type-check worker
 ```
 
@@ -172,9 +173,13 @@ src/                              Frontend (Next.js static export)
 │   ├── stability-index/          Pharos Stability Index (ecosystem health)
 │   ├── upcoming/                 Pre-launch stablecoin tracker
 │   ├── stablecoin/[id]/          Detail page per stablecoin
+│   ├── stablecoins/              Stablecoin taxonomy hub
 │   ├── stablecoins/[peg]/        Stablecoins filtered by peg currency
+│   ├── stablecoins/backing/      Backing taxonomy hub
 │   ├── stablecoins/backing/[backing]/     Backing taxonomy landing pages
+│   ├── stablecoins/governance/   Governance taxonomy hub
 │   ├── stablecoins/governance/[governance]/ Governance taxonomy landing pages
+│   ├── stablecoins/infrastructure/ Infrastructure taxonomy hub
 │   ├── stablecoins/infrastructure/[infrastructure]/ Infrastructure landing pages
 │   ├── admin/                    Access-gated operator admin panel (ops.pharos.watch only)
 │   ├── admin-api/                Access-gated API key/request management panel (ops.pharos.watch only)
@@ -188,6 +193,7 @@ src/                              Frontend (Next.js static export)
 └── lib/                          Frontend-only utilities (API client, charts/colors, metadata, UI helpers)
 
 functions/                        Cloudflare Pages Functions for same-origin website/ops proxying
+├── _middleware.ts                Markdown content negotiation for generated `.md` route variants
 ├── _site-data/[[path]].ts        Same-origin website data proxy; requires `SITE_API_ORIGIN` and gates on the caller's `Origin`/`Referer`
 ├── admin/[[path]].ts             Host gate for `/admin/` on `ops.pharos.watch`
 ├── api/admin/[[path]].ts         Same-origin admin proxy from `ops.pharos.watch` to `ops-api.pharos.watch`
@@ -206,6 +212,9 @@ shared/                           Runtime-neutral shared boundary (`@shared/*`)
 
 worker/                           Cloudflare Worker (API + cron jobs)
 ├── src/
+│   ├── handlers/                 HTTP and scheduled entrypoint orchestration
+│   ├── routes/                   Shared endpoint-to-handler route registry and dependency hydration
+│   ├── router.ts                 HTTP dispatch, method validation, and dynamic route matching
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
 │   ├── api/                      REST endpoint handlers (stablecoin/detail/history/status/admin)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
@@ -254,9 +263,9 @@ Cloudflare Worker (API layer)
   ├── Cron: 11 */4 * * *                        → live reserve sync + redemption backstop snapshots + Kinesis supply + collateral drift check (every 4h)
   ├── Cron: 20 * * * *                          → yield sync
   ├── Cron: 25 */4 * * *                        → supplemental yield sync
-  ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts
+  ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts + degradation watchdog + disambiguation cleanup
   ├── Cron: */5 * * * *                         → manual digest trigger poll
-  ├── Cron: 0 3 * * *                           → status-probe TTL prune + cron-history TTL prune
+  ├── Cron: 0 3 * * *                           → status-probe TTL prune + cron-history TTL prune + weekly-gated Telegram inactive cleanup
   ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + USDS status
   ├── Cron: 5 8 * * *                           → Bluechip sync + daily digest + weekly recap (Mondays)
   ├── Cron: 10 8 * * *                          → discovery scan (Mondays)
@@ -383,7 +392,7 @@ Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_A
 
 Worker vars (see `.env.example` for the current surface): active worker bindings include `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_API_AUD`, `MAINTENANCE_MODE`, `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_D1_DATABASE_ID`. `OPS_UI_ORIGIN`, `OPS_API_ORIGIN`, and `CF_ACCESS_OPS_UI_AUD` remain reserved on the worker side for cross-runtime contract alignment; `CF_ACCESS_OPS_UI_AUD` is active and required on Pages Functions for `/api/admin/*` UI JWT verification.
 
-Pages Functions bindings: `SITE_API_SHARED_SECRET` and production `SITE_API_ORIGIN` for `/_site-data/*`; `DB` for site-data attribution; `OPS_API_SERVICE_TOKEN_ID`, `OPS_API_SERVICE_TOKEN_SECRET`, `CF_ACCESS_TEAM_DOMAIN`, and `CF_ACCESS_OPS_UI_AUD` for `/api/admin/*`
+Pages Functions bindings: `SITE_API_SHARED_SECRET` and production `SITE_API_ORIGIN` for `/_site-data/*`; `DB` for site-data attribution; `OPS_API_SERVICE_TOKEN_ID`, `OPS_API_SERVICE_TOKEN_SECRET`, `CF_ACCESS_TEAM_DOMAIN`, and `CF_ACCESS_OPS_UI_AUD` for `/api/admin/*`. Optional Pages origin overrides are `SITE_ORIGIN`, `OPS_UI_ORIGIN`, and `OPS_API_ORIGIN`.
 
 Frontend build/runtime vars: `NEXT_PUBLIC_API_BASE` (optional local-dev override) and `NEXT_PUBLIC_GA_ID` (optional GA4 injection)
 

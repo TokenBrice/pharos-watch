@@ -76,6 +76,8 @@ Operational and CI helper scripts live in `scripts/`, while worker-bound operati
 
 The SQL safety checker now scans both `worker/src/**` and `worker/scripts/**`, and its regression fixtures live under `scripts/__tests__/fixtures/sql-safety/`.
 
+`worker/package.json` still exposes `npm run deploy` as a raw `wrangler deploy` convenience, but it is not the production release path. Production Worker releases use the CI-documented sequence: upload a Worker Version, run validation and migration checks, preview-smoke the uploaded version, promote it with `wrangler versions deploy`, and then sync triggers.
+
 ## CI-Critical Scripts
 
 These are wired into the GitHub Actions CI workflows (`.github/workflows/validate-ci.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-prepare.yml`, `.github/workflows/pages-publish.yml`, `.github/workflows/pages-release.yml`, and `.github/workflows/rebuild-pages.yml`) directly, or indirectly through `npm run build`:
@@ -149,7 +151,9 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 - `npm run dev` starts `scripts/dev-api-proxy.mjs` and `next dev` together for local frontend work against production-compatible site-data auth.
 - Use `npm run dev:proxy` to run only the local API proxy, or `npm run dev:next` to run only Next.js when the proxy is already running elsewhere.
-- Loads `.env.local` before the shell environment, accepts `DEV_PROXY_UPSTREAM` and `DEV_PROXY_PORT`, and forwards `SITE_API_SHARED_SECRET` to the upstream site-data host.
+- Loads `.env.local` through `process.loadEnvFile()`, so existing shell environment values keep precedence.
+- Accepts `DEV_PROXY_UPSTREAM` and forwards `SITE_API_SHARED_SECRET` to the upstream site-data host.
+- `DEV_PROXY_PORT` changes the proxy process port, but `next.config.ts` currently rewrites local `/api/*` traffic to port `3001` when `SITE_API_SHARED_SECRET` is set. Keep the default port for full `npm run dev` until the Next rewrite is made configurable.
 
 ### `worker/scripts/repair-non-usd-fiat-depeg-history.ts`
 

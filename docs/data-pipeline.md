@@ -101,12 +101,13 @@ The registry lives in `worker/src/lib/authoritative-price-sources.ts` and suppor
 - **Live override** — used by `syncStablecoins()` to replace the current cached price
 - **Historical replay** — used by `backfill-depegs.ts` so historical rebuilds can consult the same authoritative provider instead of drifting back to CoinGecko/DefiLlama for those assets
 
-- **Current scope:** `cusd-cap`, `iusd-infinifi`, `usdai-usd-ai`, `usdk-kast`, `xo-exodus`, `usdnr-nerona` (crvUSD was migrated out of the authoritative override registry and into primary consensus as a `curve-oracle` source at weight 3; see [Pricing Pipeline](./pricing-pipeline.md))
-- **Source:** either direct Ethereum `eth_call` redemption quotes or tracked-base inheritance when a redeemable wrapper should shadow another tracked asset:
+- **Current scope:** see [Pricing Pipeline](./pricing-pipeline.md#current-scope) for the asset-by-asset registry. The current code covers direct redeem quotes, tracked-base inheritance, ERC-4626 NAV wrappers, Aave `previewRedeem`, and Idle CDO virtual-price tranches. `crvusd-curve` was migrated out of the authoritative override registry and into primary consensus as a `curve-oracle` source at weight 3.
+- **Source:** direct `eth_call` redemption/NAV quotes or tracked-base inheritance when a redeemable wrapper should shadow another tracked asset:
   - Cap `getBurnAmount(address,uint256)` for `cUSD -> USDC`
   - infiniFi `RedeemController.receiptToAsset(uint256)` for `iUSD -> USDC`
   - USDAI inherits the tracked `PYUSD` live price and historical market replay because the base token is treated as an instantly redeemable PYUSD wrapper rather than a free-floating market-priced asset
-  - USDK, XO, and USDnr inherit the tracked `wM` live price and historical market replay because Pharos models them as M0 extension units rather than as independently discovered secondary-market price surfaces
+  - Initia iUSD and Movement USDCx inherit their tracked parent prices; USDK, XO, and USDnr inherit the tracked `wM` live price and historical market replay because Pharos models them as extension units rather than independently discovered secondary-market price surfaces
+  - ERC-4626, Aave savings, and Idle CDO wrappers read the contract's asset-per-share value and multiply it by a trusted tracked parent price
 - **Reason:** CG/DL can overweight thin secondary-market liquidity for wrapper-style assets whose real executable value is set by direct protocol redemption or by an instantly redeemable base asset
 - **Result:** the final cached asset keeps `priceSource = "protocol-redeem"` and `priceConfidence = "high"` when the quote validates against peg bounds
 
