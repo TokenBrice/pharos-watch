@@ -8,6 +8,7 @@ import {
   getSmokeOpsScope,
   hasOpsUiAccessSessionCookie,
   mergeCookieHeader,
+  shouldSkipCanaryOpsUiProxyAssertion,
   shouldRetryDirectOpsJson,
   shouldSkipOpsUiProxyAssertion,
   shouldRetryOpsUiProxyStatus,
@@ -382,6 +383,18 @@ describe("shouldSkipOpsUiProxyAssertion", () => {
     });
 
     expect(shouldSkipOpsUiProxyAssertion(response, "CF_Authorization=ui-session")).toBe(false);
+  });
+});
+
+describe("shouldSkipCanaryOpsUiProxyAssertion", () => {
+  it("skips exhausted transient proxy failures only for canary smokes", () => {
+    const response = new Response("gateway timeout", {
+      status: 504,
+      headers: { "content-type": "text/html" },
+    });
+
+    expect(shouldSkipCanaryOpsUiProxyAssertion(response, "CF_Authorization=ui-session", "canary")).toBe(true);
+    expect(shouldSkipCanaryOpsUiProxyAssertion(response, "CF_Authorization=ui-session", "full")).toBe(false);
   });
 });
 

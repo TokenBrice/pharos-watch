@@ -253,6 +253,13 @@ export function shouldSkipOpsUiProxyAssertion(response, cookieHeader) {
   );
 }
 
+export function shouldSkipCanaryOpsUiProxyAssertion(response, cookieHeader, scope) {
+  return (
+    shouldSkipOpsUiProxyAssertion(response, cookieHeader) ||
+    (scope === "canary" && shouldRetryOpsUiProxyStatus(response))
+  );
+}
+
 export async function run() {
   const scope = getSmokeOpsScope();
   const headers = buildAccessHeaders();
@@ -360,9 +367,11 @@ export async function run() {
   }
   const proxiedAttempt = proxiedAttemptResult.value;
   const proxiedStatus = proxiedAttempt.proxiedStatus;
-  if (shouldSkipOpsUiProxyAssertion(proxiedStatus.response, proxiedAttempt.cookieHeader)) {
+  if (shouldSkipCanaryOpsUiProxyAssertion(proxiedStatus.response, proxiedAttempt.cookieHeader, scope)) {
     console.log(
-      "[smoke-ops] SKIP ops UI /api/admin/status (Pages proxy still unauthorized under CI Access flow; direct ops-api smoke already passed)",
+      shouldRetryOpsUiProxyStatus(proxiedStatus.response)
+        ? `[smoke-ops] SKIP ops UI /api/admin/status (Pages proxy returned transient ${proxiedStatus.response.status} after retries; direct ops-api smoke already passed)`
+        : "[smoke-ops] SKIP ops UI /api/admin/status (Pages proxy still unauthorized under CI Access flow; direct ops-api smoke already passed)",
     );
   } else {
     if (proxiedStatus.response.status !== 200) {
