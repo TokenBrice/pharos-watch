@@ -1079,6 +1079,11 @@
     "text": "sBOLD is K3 Capital's ERC-4626 wrapper around BOLD deployed into Liquity V2 Stability Pools. It earns interest and liquidation gains while automating the conversion of liquidated ETH and LST collateral back into BOLD. The base BOLD system is immutable and fully on-chain, but sBOLD adds K3-controlled vault, oracle, solver, and fee-switch risk, so it belongs as a separate wrapper exposure.",
     "updatedAt": "2026-04-21"
   },
+  "ybold-yearn": {
+    "title": "Yearn's BOLD Stability Pool Vault",
+    "text": "yBOLD is Yearn's ERC-4626 wrapper around BOLD deposited into Liquity V2 Stability Pool strategies. It keeps the economic exposure anchored to BOLD while automating allocation across Stability Pools and liquidation-reward compounding through Yearn-managed strategy contracts. Holders can redeem the vault share back into BOLD at the live exchange rate, but the exposure is not the same as holding base BOLD: it adds Yearn vault governance, strategy execution, auction, and smart-contract risk on top of Liquity's collateral-redemption design.",
+    "updatedAt": "2026-05-12"
+  },
   "stkgho-umbrella-aave": {
     "title": "Aave Umbrella GHO Staking",
     "text": "Aave Umbrella stkGHO is the slashable GHO staking receipt for Aave's upgraded safety module. It is backed by GHO, but unlike liquid GHO or simple savings GHO, holders accept Umbrella-specific cooldowns, withdrawal windows, and automated slashing if covered GHO deficits occur. That makes it a distinct loss-absorption asset rather than a plain yield venue on the base stablecoin.",

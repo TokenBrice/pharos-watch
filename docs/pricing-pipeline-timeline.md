@@ -1,6 +1,15 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.95` (2026-02-01 -> 2026-05-12).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.96` (2026-02-01 -> 2026-05-12).
+
+---
+
+## v5.96 - Yearn yBOLD NAV wrapper pricing (May 12, 2026)
+
+- Yearn yBOLD is now tracked as a first-class BOLD strategy-vault variant and prices through the existing guarded ERC-4626 NAV lane
+- `ybold-yearn` is admitted through Ethereum on-chain total supply and publishes `protocol-redeem` pricing from `convertToAssets(1 share)` multiplied by the tracked `bold-liquity` parent price
+- `sbold-k3-capital` and `ybold-yearn` are both covered by regression tests for BOLD-derived ERC-4626 NAV pricing
+- The parent-trust gate, parent provenance metadata, and 0.5-10.0 share-to-asset bounds remain unchanged
 
 ---
 

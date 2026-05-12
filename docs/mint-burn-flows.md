@@ -19,11 +19,11 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.1`
+- **Current methodology version:** `v6.11`
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Internal reconstructed timeline:** [Mint/Burn Flow Methodology Timeline](./mint-burn-flows-timeline.md)
 
-> **Note:** `v6.1` went live on 2026-05-08 with Tangent USD (USG) added to extended Ethereum mint/burn tracking from its reviewed deployment block. `v6.0` shipped bridge-mint tagging, LayerZero endpoint-only signal, canonical-chain gauge weighting, 0.5% roundtrip tolerance, config deferral, concurrent tx-context fetch, extended cron metadata, and migrations 0096/0097. Historical rows are reclassified progressively via the operator playbook (`/api/reclassify-atomic-roundtrips?stablecoinId=<id>` for partition-scoped reverse flips; `/api/backfill-mint-burn` for chunked bridge-mint replay).
+> **Note:** `v6.11` went live on 2026-05-12 with Yearn BOLD (yBOLD) added to extended Ethereum mint/burn tracking. `v6.1` added Tangent USD (USG) coverage from its reviewed deployment block, while `v6.0` shipped bridge-mint tagging, LayerZero endpoint-only signal, canonical-chain gauge weighting, 0.5% roundtrip tolerance, config deferral, concurrent tx-context fetch, extended cron metadata, and migrations 0096/0097. Historical rows are reclassified progressively via the operator playbook (`/api/reclassify-atomic-roundtrips?stablecoinId=<id>` for partition-scoped reverse flips; `/api/backfill-mint-burn` for chunked bridge-mint replay).
 
 ---
 
@@ -95,6 +95,7 @@ The table below is representative, not exhaustive. The complete active registry 
 | USDS | usds-sky | 18 | Risky | Transfer |
 | FRXUSD | frxusd-frax | 18 | Risky | Transfer |
 | BOLD | bold-liquity | 18 | Risky | Transfer |
+| yBOLD | ybold-yearn | 18 | Extended | Transfer |
 | fxUSD | fxusd-f-x-protocol | 18 | Extended | Transfer |
 | crvUSD | crvusd-curve | 18 | Extended | Transfer |
 | AUSD | ausd-agora | 6 | Extended | Transfer |

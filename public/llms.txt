@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 312 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 313 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -207,6 +207,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [sUSD (SUSD)](https://pharos.watch/stablecoin/susd-synthetix/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Liquity BOLD (BOLD)](https://pharos.watch/stablecoin/bold-liquity/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [sBOLD by K3 Capital (sBOLD)](https://pharos.watch/stablecoin/sbold-k3-capital/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Yearn BOLD (yBOLD)](https://pharos.watch/stablecoin/ybold-yearn/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Hylo HYUSD (HYUSD)](https://pharos.watch/stablecoin/hyusd-hylo/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Liquity USD (LUSD)](https://pharos.watch/stablecoin/lusd-liquity/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [fxUSD (fxUSD)](https://pharos.watch/stablecoin/fxusd-f-x-protocol/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.

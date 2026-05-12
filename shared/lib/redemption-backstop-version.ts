@@ -1,9 +1,24 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "4.0",
+  currentVersion: "4.01",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "4.01",
+      title: "Yearn yBOLD wrapper redemption coverage",
+      date: "2026-05-12",
+      effectiveAt: 1778608800,
+      summary:
+        "yBOLD now has a reviewed Yearn ERC-4626 wrapper redemption route into BOLD, keeping the wrapper exit separate from BOLD's downstream Liquity collateral-redemption route.",
+      impact: [
+        "`ybold-yearn` now carries a source-reviewed stablecoin-redeem route using documented-bound supply-full capacity semantics",
+        "Coverage rises to 267 configured redemption routes, with route-family totals now at 125 offchain-issuer, 58 stablecoin-redeem, 32 collateral-redeem, 35 queue-redeem, 10 psm-swap, and 7 basket-redeem",
+        "The route notes clarify that yBOLD exits into BOLD at the Yearn vault exchange rate, while final par exit quality still inherits BOLD's Liquity collateral-redemption path",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "4.0",
       title: "Current-capacity scoring and evidence-aware route quality",

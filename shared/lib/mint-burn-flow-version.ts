@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const mintBurnFlow = createMethodologyVersion({
-  currentVersion: "6.1",
+  currentVersion: "6.11",
   changelogPath: "/methodology/mint-burn-flow-changelog/",
   changelog: [
+  {
+    version: "6.11",
+    title: "yBOLD extended transfer coverage",
+    date: "2026-05-12",
+    effectiveAt: 1778608800,
+    summary:
+      "Yearn BOLD (yBOLD) now has extended Ethereum mint/burn tracking through standard ERC-20 zero-address Transfer events.",
+    impact: [
+      "Adds yBOLD to the extended mint/burn config registry using the shared Ethereum contract metadata",
+      "Tracks yBOLD share issuance and redemption separately from base BOLD's mint/burn flow so wrapper activity does not disappear into the parent asset",
+      "Keeps bridge detection unchanged because the tracked yBOLD deployment is the single Ethereum vault share token",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "6.1",
     title: "USG extended transfer coverage",

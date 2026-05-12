@@ -1953,14 +1953,14 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeModelKind": "undisclosed-reviewed",
       "modelConfidence": "low",
       "updatedAt": 1773350400,
-      "methodologyVersion": "3.994"
+      "methodologyVersion": "4.0"
     }
   },
   "methodology": {
-    "version": "3.994",
-    "versionLabel": "v3.994",
-    "currentVersion": "3.994",
-    "currentVersionLabel": "v3.994",
+    "version": "4.0",
+    "versionLabel": "v4.0",
+    "currentVersion": "4.0",
+    "currentVersionLabel": "v4.0",
     "changelogPath": "/methodology/#safety-scores-methodology",
     "asOf": 1773350400,
     "isCurrent": true,
@@ -1974,7 +1974,22 @@ Rows written by the current worker are grouped by a completed snapshot run manif
     },
     "effectiveExitModel": {
       "model": "best-path",
-      "diversificationFactor": 0.1
+      "diversificationFactor": 0.1,
+      "modeledExitSize": {
+        "supplyRatio": 0.05,
+        "floorUsd": 100000,
+        "capUsd": 25000000
+      },
+      "capacityFactor": {
+        "formula": "min(1, currentExecutableCapacityUsd / modeledExitSizeUsd)",
+        "missingCapacityBehavior": "unbounded"
+      },
+      "confidenceFactors": {
+        "high": 1,
+        "medium": 0.75,
+        "low": 0.35
+      },
+      "diversificationPolicy": "Only independent issuer rails receive the secondary-path diversification bonus in v4 snapshots."
     }
   },
   "updatedAt": 1773350400
@@ -1983,7 +1998,7 @@ Rows written by the current worker are grouped by a completed snapshot run manif
 
 `score` is the direct redemption-quality score.
 
-`effectiveExitScore` is the raw best-path exit score written into the redemption snapshot when the route resolved cleanly and is not currently impaired. It reuses last-known DEX liquidity even when the DEX input is stale; the cron records that operational state through `metadata.liquidityStale`. When both DEX liquidity and redemption exist, the model uses `min(100, max(dex, redemption) + min(dex, redemption) × 0.10)`. Report cards may still recompute liquidity from the same underlying redemption score with additional confidence, eligibility, and active-depeg gating, so this raw endpoint value can differ numerically from `dimensions.liquidity.score`.
+`effectiveExitScore` is the raw best-path exit score written into the redemption snapshot when the route resolved cleanly and is not currently impaired. It reuses last-known DEX liquidity even when the DEX input is stale; the cron records that operational state through `metadata.liquidityStale`. In v4, redemption contribution is adjusted by `capacityFactor = min(1, currentExecutableCapacityUsd / modeledExitSizeUsd)` and by route confidence (`high = 1`, `medium = 0.75`, `low = 0.35`) before the best-path blend. `modeledExitSizeUsd` is `min(max(supplyUsd × 0.05, 100000), 25000000)`. When both DEX liquidity and adjusted redemption exist, only independent issuer rails receive the 10% secondary-path diversification bonus. Report cards may still recompute liquidity from the same underlying redemption score with additional confidence, eligibility, and active-depeg gating, so this raw endpoint value can differ numerically from `dimensions.liquidity.score`.
 
 `methodology.version` is attributed from the latest completed redemption snapshot run, falling back to the latest stored row for legacy snapshots. `methodology.currentVersion` remains the live code version when the API is serving an older snapshot that has not yet been recomputed.
 

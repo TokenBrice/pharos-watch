@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v5.95`
+- **Current methodology version:** `v5.96`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -217,6 +217,7 @@ After market/oracle consensus, `worker/src/lib/authoritative-price-sources.ts` c
 | `syzusd-yuzu` | ERC-4626 `convertToAssets(1 share)` × tracked `yzusd-yuzu` price |
 | `stkgho-umbrella-aave` | ERC-4626 `convertToAssets(1 share)` × tracked `gho-aave` price |
 | `sbold-k3-capital` | ERC-4626 `convertToAssets(1 share)` × tracked `bold-liquity` price |
+| `ybold-yearn` | ERC-4626 `convertToAssets(1 share)` × tracked `bold-liquity` price |
 | `sgho-aave` | Aave legacy savings `previewRedeem(1 share)` × tracked `gho-aave` price |
 | `aa-falconx-mev-capital` | Idle CDO `virtualPrice(address tranche)` × tracked `usdc-circle` price |
 

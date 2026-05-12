@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.95",
+  currentVersion: "5.96",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.96",
+      title: "Yearn yBOLD NAV wrapper pricing",
+      date: "2026-05-12",
+      effectiveAt: 1778605200,
+      summary:
+        "Yearn yBOLD is now tracked as a first-class BOLD strategy-vault variant and prices through the existing guarded ERC-4626 NAV lane.",
+      impact: [
+        "`ybold-yearn` is admitted through Ethereum on-chain total supply and publishes `protocol-redeem` pricing from `convertToAssets(1 share)` multiplied by the tracked `bold-liquity` parent price",
+        "`sbold-k3-capital` and `ybold-yearn` are both covered by regression tests for BOLD-derived ERC-4626 NAV pricing",
+        "The parent-trust gate, parent provenance metadata, and 0.5-10.0 share-to-asset bounds remain unchanged",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.95",
       title: "Low-volume CoinGecko fallback for DL-listed gaps",

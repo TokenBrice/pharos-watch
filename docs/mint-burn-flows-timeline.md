@@ -1,6 +1,17 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.1` (2026-03-01 -> 2026-05-08).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.11` (2026-03-01 -> 2026-05-12).
+
+---
+
+## v6.11 - yBOLD extended transfer coverage (May 12, 2026)
+
+**Commit:** `unreleased`
+
+- Added Yearn BOLD (`ybold-yearn`) to the extended Ethereum mint/burn registry.
+- The config uses the checked-in yBOLD Ethereum ERC-20 vault-share contract metadata and standard zero-address `Transfer` events.
+- yBOLD share issuance/redemption is tracked separately from base BOLD flow because the wrapper has distinct vault-share supply dynamics.
+- No bridge classifier was added: Pharos tracks the single Ethereum yBOLD vault-share deployment.
 
 ---
 
