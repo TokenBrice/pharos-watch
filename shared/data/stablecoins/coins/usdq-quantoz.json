@@ -10,8 +10,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "U.S. dollar deposits and government bonds (Netherlands, Germany, US) held in segregated, bankruptcy-remote accounts at Tier 1 European banks by Stichting Quantoz, supervised by DNB; reserves maintained at ≥102% of circulating supply per MiCAR requirements",
-  "pegMechanism": "Direct 1:1 redemption through Quantoz Payments for onboarded customers; reserves held at ≥102% overcollateralization per MiCAR",
+  "collateral": "U.S. dollar deposits and government bonds (Netherlands, Germany, US) held in segregated, bankruptcy-remote accounts at Tier 1 European banks by Stichting Quantoz, supervised by DNB; reserve ratio disclosed on Quantoz's transparency page",
+  "pegMechanism": "Direct 1:1 redemption through Quantoz Payments for onboarded customers; reserves are disclosed against circulating supply on the Quantoz transparency page",
   "llamaId": "275",
   "detailProvider": "defillama",
   "geckoId": "quantoz-usdq",
@@ -76,19 +76,19 @@
   "reserves": [
     {
       "name": "Government bonds (NL, DE, US)",
-      "pct": 69,
+      "pct": 70,
       "risk": "very-low"
     },
     {
       "name": "Cash deposits at Tier 1 European banks",
-      "pct": 31,
+      "pct": 30,
       "risk": "very-low"
     }
   ],
   "liveReservesConfig": {
-    "adapter": "single-asset",
+    "adapter": "quantoz-transparency",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "attestation-mix",
     "breakerScope": "usdq-quantoz",
     "display": {
       "url": "https://quantoz.com/transparency",
@@ -96,14 +96,12 @@
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.quantoz.com/transparency"
       }
     },
     "params": {
-      "label": "Government bonds & cash deposits",
-      "risk": "very-low"
+      "token": "USDQ"
     }
   }
 }

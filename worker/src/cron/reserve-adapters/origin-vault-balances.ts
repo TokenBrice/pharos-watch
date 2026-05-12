@@ -1,0 +1,123 @@
+import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import type { AdapterContext, AdapterResult } from "./types";
+import {
+  decimalNumberFromBigInt,
+  fetchOnchainUint256,
+  notApplicableFreshnessMetadata,
+  requireOnchainInput,
+  reserveDegradedWarning,
+  slicesFromValues,
+} from "./helpers";
+
+const CHECK_BALANCE_SELECTOR = "0x5f515226";
+const TOTAL_VALUE_SELECTOR = "0xd4c3eea0";
+
+interface OriginVaultAssetConfig {
+  address: string;
+  decimals: number;
+  name: ReserveSlice["name"];
+  risk: ReserveSlice["risk"];
+  coinId?: string;
+  depType?: ReserveSlice["depType"];
+}
+
+interface OriginVaultBalancesParams {
+  vaultAddress: string;
+  rpcUrl?: string;
+  fallbackRpcUrl?: string;
+  assets: OriginVaultAssetConfig[];
+}
+
+function encodeAddressArg(address: string): string {
+  const normalized = address.toLowerCase();
+  if (!/^0x[0-9a-f]{40}$/.test(normalized)) {
+    throw new Error(`origin-vault-balances invalid asset address: ${address}`);
+  }
+  return normalized.slice(2).padStart(64, "0");
+}
+
+function readParams(config: LiveReservesConfig): OriginVaultBalancesParams {
+  return parseLiveReserveAdapterParams("origin-vault-balances", config.params);
+}
+
+export async function fetchOriginVaultBalancesReserves(
+  _coin: StablecoinMeta,
+  config: LiveReservesConfig,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<AdapterResult> {
+  const input = requireOnchainInput(config.inputs.primary, "origin-vault-balances");
+  const params = readParams(config);
+  const timeoutMs = 12_000;
+  const values = await Promise.all(params.assets.map(async (asset) => {
+    const raw = await fetchOnchainUint256({
+      contract: params.vaultAddress,
+      data: `${CHECK_BALANCE_SELECTOR}${encodeAddressArg(asset.address)}`,
+      signal,
+      ctx,
+      rpcMode: input.rpcMode,
+      chain: input.chain,
+      rpcUrl: params.rpcUrl,
+      fallbackRpcUrl: params.fallbackRpcUrl,
+      timeoutMs,
+    });
+    if (raw == null) {
+      throw new Error(`origin-vault-balances checkBalance failed for ${asset.name}`);
+    }
+    return {
+      value: decimalNumberFromBigInt(raw, asset.decimals),
+      name: asset.name,
+      risk: asset.risk,
+      ...(asset.coinId ? { coinId: asset.coinId } : {}),
+      ...(asset.depType ? { depType: asset.depType } : {}),
+    };
+  }));
+
+  const totalValueRaw = await fetchOnchainUint256({
+    contract: params.vaultAddress,
+    data: TOTAL_VALUE_SELECTOR,
+    signal,
+    ctx,
+    rpcMode: input.rpcMode,
+    chain: input.chain,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    timeoutMs,
+  });
+  if (totalValueRaw == null || totalValueRaw <= 0n) {
+    throw new Error("origin-vault-balances totalValue probe failed");
+  }
+
+  const totalReserveUsd = values.reduce((sum, value) => sum + value.value, 0);
+  if (totalReserveUsd <= 0) {
+    throw new Error("origin-vault-balances produced zero reserve value");
+  }
+  const totalValueUsd = decimalNumberFromBigInt(totalValueRaw, 18);
+  const assetCoverageRatio = totalReserveUsd / totalValueUsd;
+  const warnings = assetCoverageRatio < 0.995
+    ? [
+      reserveDegradedWarning(
+        "origin-vault-coverage-gap",
+        `Origin vault asset probes cover ${(assetCoverageRatio * 100).toFixed(2)}% of totalValue()`,
+      ),
+    ]
+    : undefined;
+
+  return {
+    slices: slicesFromValues(values),
+    ...(warnings ? { warnings } : {}),
+    metadata: {
+      ...notApplicableFreshnessMetadata(),
+      details: {
+        proofKind: "origin-vault-check-balance",
+        vaultAddress: params.vaultAddress,
+      },
+      totalReserveUsd,
+      totalValueUsd,
+      assetCoverageRatio,
+      totalValueRaw: totalValueRaw.toString(),
+    },
+  };
+}

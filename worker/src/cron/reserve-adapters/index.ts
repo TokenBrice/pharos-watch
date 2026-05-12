@@ -5,6 +5,7 @@ import { fetchAccountableReserves } from "./accountable";
 import { fetchAnzenUsdzReserves } from "./anzen-usdz";
 import { fetchAsymmetryReserves } from "./asymmetry";
 import { fetchAttestationPdfIndexReserves } from "./attestation-pdf-index";
+import { fetchBlastUsdbYieldManagerReserves } from "./blast-usdb-yield-manager";
 import { fetchBtcfiReserves } from "./btcfi";
 import { fetchBuckIoTransparencyReserves } from "./buck-io-transparency";
 import { fetchCapVaultReserves } from "./cap-vault";
@@ -29,10 +30,14 @@ import { fetchLiquityV1Reserves } from "./liquity-v1";
 import { fetchLiquityV2BranchReserves } from "./liquity-v2-branches";
 import { fetchM0Reserves } from "./m0";
 import { fetchMentoReserves } from "./mento";
+import { fetchNestVaultPositionsReserves } from "./nest-vault-positions";
 import { fetchOpenEdenUsdoReserves } from "./openeden";
+import { fetchOriginVaultBalancesReserves } from "./origin-vault-balances";
+import { fetchQuantozTransparencyReserves } from "./quantoz-transparency";
 import { fetchReMetricsReserves } from "./re-metrics";
 import { fetchReserveProtocolDtfReserves } from "./reserve-protocol-dtf";
 import { fetchReservoirReserves } from "./reservoir";
+import { fetchRippleTransparencyReserves } from "./ripple-transparency";
 import { fetchRiverProtocolInfoReserves } from "./river-protocol-info";
 import { fetchErc4626SingleAssetReserves } from "./erc4626-single-asset";
 import { fetchSgForgeCoinvertibleReserves } from "./sgforge-coinvertible";
@@ -57,6 +62,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   "anzen-usdz": fetchAnzenUsdzReserves,
   asymmetry: fetchAsymmetryReserves,
   "attestation-pdf-index": fetchAttestationPdfIndexReserves,
+  "blast-usdb-yield-manager": fetchBlastUsdbYieldManagerReserves,
   btcfi: fetchBtcfiReserves,
   "buck-io-transparency": fetchBuckIoTransparencyReserves,
   "cap-vault": fetchCapVaultReserves,
@@ -83,10 +89,14 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   "liquity-v2-branches": fetchLiquityV2BranchReserves,
   m0: fetchM0Reserves,
   mento: fetchMentoReserves,
+  "nest-vault-positions": fetchNestVaultPositionsReserves,
   "openeden-usdo": fetchOpenEdenUsdoReserves,
+  "origin-vault-balances": fetchOriginVaultBalancesReserves,
+  "quantoz-transparency": fetchQuantozTransparencyReserves,
   "re-metrics": fetchReMetricsReserves,
   "reserve-protocol-dtf": fetchReserveProtocolDtfReserves,
   reservoir: fetchReservoirReserves,
+  "ripple-transparency": fetchRippleTransparencyReserves,
   "river-protocol-info": fetchRiverProtocolInfoReserves,
   "sgforge-coinvertible": fetchSgForgeCoinvertibleReserves,
   "solstice-attestation": fetchSolsticeAttestationReserves,

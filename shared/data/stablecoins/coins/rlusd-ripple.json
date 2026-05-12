@@ -74,19 +74,18 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "ripple-transparency",
     "version": 1,
     "semantics": "attestation-mix",
     "breakerScope": "rlusd-ripple",
     "display": {
-      "url": "https://ripple.com/solutions/stablecoin/",
+      "url": "https://ripple.com/solutions/stablecoin/transparency/",
       "label": "Ripple"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://ripple.com/solutions/stablecoin/transparency/"
       }
     }
   }

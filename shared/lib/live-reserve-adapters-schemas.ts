@@ -56,6 +56,7 @@ export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = {
   "anzen-usdz": ["onchain-evm"],
   asymmetry: ["http-json"],
   "attestation-pdf-index": ["http-html"],
+  "blast-usdb-yield-manager": ["onchain-evm"],
   btcfi: ["http-json"],
   "buck-io-transparency": ["http-html"],
   "cap-vault": ["onchain-evm"],
@@ -82,10 +83,14 @@ export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = {
   "liquity-v2-branches": ["onchain-evm"],
   m0: ["http-json"],
   mento: ["http-json"],
+  "nest-vault-positions": ["http-json"],
   "openeden-usdo": ["http-json"],
+  "origin-vault-balances": ["onchain-evm"],
+  "quantoz-transparency": ["http-html"],
   "re-metrics": ["http-html"],
   "reserve-protocol-dtf": ["http-json"],
   reservoir: ["http-json"],
+  "ripple-transparency": ["http-html"],
   "sgforge-coinvertible": ["http-html"],
   "solstice-attestation": ["http-json"],
   "single-asset": ["http-json", "onchain-evm"],
@@ -157,6 +162,18 @@ const attestationPdfIndexParamsSchema = z
 const btcfiParamsSchema = z
   .object({
     handlersUrl: AbsoluteUrlSchema,
+  })
+  .strict();
+
+const blastUsdbYieldManagerParamsSchema = z
+  .object({
+    yieldManagerAddress: z.string(),
+    supplyChain: z.string(),
+    supplyTokenAddress: z.string(),
+    supplyRpcUrl: AbsoluteUrlSchema,
+    fallbackSupplyRpcUrl: AbsoluteUrlSchema.optional(),
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
   })
   .strict();
 
@@ -293,6 +310,39 @@ const erc4626SingleAssetParamsSchema = z
     slice: reserveSliceDescriptorSchema,
     rpcUrl: AbsoluteUrlSchema.optional(),
     fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict();
+
+const originVaultAssetSchema = z
+  .object({
+    address: z.string(),
+    decimals: z.number().int().nonnegative(),
+    name: z.string(),
+    risk: LiveReserveRiskSchema,
+    coinId: z.string().optional(),
+    depType: LiveReserveDependencyTypeSchema.optional(),
+  })
+  .strict();
+
+const originVaultBalancesParamsSchema = z
+  .object({
+    vaultAddress: z.string(),
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    assets: z.array(originVaultAssetSchema).min(1),
+  })
+  .strict();
+
+const nestVaultPositionsParamsSchema = z
+  .object({
+    priceUrl: AbsoluteUrlSchema,
+    lastPriceUpdateUrl: AbsoluteUrlSchema,
+  })
+  .strict();
+
+const quantozTransparencyParamsSchema = z
+  .object({
+    token: z.enum(["EURQ", "USDQ"]),
   })
   .strict();
 
@@ -455,6 +505,7 @@ export const adapterParamsSchemas = {
   "anzen-usdz": noParamsSchema,
   asymmetry: noParamsSchema,
   "attestation-pdf-index": attestationPdfIndexParamsSchema,
+  "blast-usdb-yield-manager": blastUsdbYieldManagerParamsSchema,
   btcfi: btcfiParamsSchema,
   "buck-io-transparency": noParamsSchema,
   "cap-vault": capVaultParamsSchema,
@@ -481,10 +532,14 @@ export const adapterParamsSchemas = {
   "liquity-v2-branches": liquityV2BranchesParamsSchema,
   m0: noParamsSchema,
   mento: mentoParamsSchema,
+  "nest-vault-positions": nestVaultPositionsParamsSchema,
   "openeden-usdo": noParamsSchema,
+  "origin-vault-balances": originVaultBalancesParamsSchema,
+  "quantoz-transparency": quantozTransparencyParamsSchema,
   "re-metrics": noParamsSchema,
   "reserve-protocol-dtf": reserveProtocolDtfParamsSchema,
   reservoir: noParamsSchema,
+  "ripple-transparency": noParamsSchema,
   "sgforge-coinvertible": sgForgeCoinvertibleParamsSchema,
   "solstice-attestation": noParamsSchema,
   "single-asset": singleAssetParamsSchema,

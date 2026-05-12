@@ -10,7 +10,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Euro-denominated reserves in bank accounts and liquid euro bonds (102% reserve ratio)",
+  "collateral": "Euro-denominated cash deposits and government bonds held in segregated reserves with reserve ratio disclosed on Quantoz's transparency page",
   "pegMechanism": "Direct 1:1 redemption through Quantoz Payments",
   "detailProvider": "coingecko",
   "geckoId": "quantoz-eurq",
@@ -51,17 +51,17 @@
   "reserves": [
     {
       "name": "Government bonds (NL, DE, US)",
-      "pct": 68,
+      "pct": 70,
       "risk": "very-low"
     },
     {
       "name": "Cash deposits (Tier 1 European banks)",
-      "pct": 32,
+      "pct": 30,
       "risk": "very-low"
     }
   ],
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "quantoz-transparency",
     "version": 1,
     "semantics": "attestation-mix",
     "breakerScope": "eurq-quantoz",
@@ -71,10 +71,12 @@
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.quantoz.com/transparency"
       }
+    },
+    "params": {
+      "token": "EURQ"
     }
   }
 }

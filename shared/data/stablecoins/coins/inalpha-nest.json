@@ -61,26 +61,40 @@
   "deploymentModel": "native-multichain",
   "reserves": [
     {
-      "name": "Nest Alpha Vault strategy assets",
-      "pct": 100,
+      "name": "Nest private and structured credit vaults",
+      "pct": 93,
       "risk": "high"
+    },
+    {
+      "name": "Nest Treasury vault (nTBILL)",
+      "pct": 3,
+      "risk": "low"
+    },
+    {
+      "name": "Liquid stablecoin balances",
+      "pct": 4,
+      "risk": "low",
+      "coinId": "usdc-circle"
     }
   ],
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "nest-vault-positions",
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "inalpha-nest",
     "display": {
-      "url": "https://docs.nest.credit/",
-      "label": "Nest Credit docs"
+      "url": "https://www.nest.credit/",
+      "label": "Nest Credit API"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-json",
+        "url": "https://api.nest.credit/v1/vaults/nest-alpha-vault/positions"
       }
+    },
+    "params": {
+      "priceUrl": "https://api.nest.credit/v1/vaults/nest-alpha-vault/price",
+      "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-alpha-vault/last-price-update"
     }
   },
   "yieldConfig": {

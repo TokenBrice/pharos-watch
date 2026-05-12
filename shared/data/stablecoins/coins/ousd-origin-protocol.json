@@ -67,9 +67,9 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "origin-vault-balances",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "collateral-mix",
     "breakerScope": "ousd-origin-protocol",
     "display": {
       "url": "https://analytics.ousd.com",
@@ -81,6 +81,21 @@
         "chain": "ethereum",
         "rpcMode": "public-rpc"
       }
+    },
+    "params": {
+      "vaultAddress": "0xE75D77B1865Ae93c7eaa3040B038D7aA7BC02F70",
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com",
+      "assets": [
+        {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "decimals": 6,
+          "name": "USDC deployed through Origin OUSD strategies",
+          "risk": "medium",
+          "coinId": "usdc-circle",
+          "depType": "wrapper"
+        }
+      ]
     }
   },
   "yieldConfig": {

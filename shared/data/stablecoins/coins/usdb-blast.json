@@ -48,28 +48,16 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {
-      "name": "DAI / sDAI (via MakerDAO DSR)",
-      "pct": 60,
+      "name": "MakerDAO DSR / DAI yield manager",
+      "pct": 100,
       "risk": "low",
       "coinId": "dai-makerdao"
-    },
-    {
-      "name": "USDC (bridged)",
-      "pct": 25,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "USDT (bridged)",
-      "pct": 15,
-      "risk": "low",
-      "coinId": "usdt-tether"
     }
   ],
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "blast-usdb-yield-manager",
     "version": 1,
-    "semantics": "collateral-mix",
+    "semantics": "single-asset",
     "breakerScope": "usdb-blast",
     "display": {
       "url": "https://blast.io/",
@@ -78,12 +66,17 @@
     "inputs": {
       "primary": {
         "kind": "onchain-evm",
-        "chain": "blast",
+        "chain": "ethereum",
         "rpcMode": "public-rpc"
       }
     },
     "params": {
-      "rpcUrl": "https://rpc.blast.io"
+      "yieldManagerAddress": "0xa230285d5683C74935aD14c446e137c8c8828438",
+      "supplyChain": "blast",
+      "supplyTokenAddress": "0x4300000000000000000000000000000000000003",
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com",
+      "supplyRpcUrl": "https://rpc.blast.io"
     }
   },
   "yieldConfig": {
