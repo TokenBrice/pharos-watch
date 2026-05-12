@@ -2,6 +2,7 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@shared/lib/format";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 
 interface SovereigntyLatticeProps {
@@ -16,6 +17,7 @@ interface LatticeRow {
   stablecoin: BlacklistStablecoin;
   supportedChains: Set<string>;
   eventCount: number;
+  frozenTotal: number;
 }
 
 const COUNT_FORMATTER = new Intl.NumberFormat("en-US", {
@@ -37,6 +39,7 @@ function buildRows(
       stablecoin: item.symbol,
       supportedChains: new Set<string>(),
       eventCount: stats?.perCoinTotalEvents[item.symbol] ?? 0,
+      frozenTotal: stats?.perCoinFrozenTotal[item.symbol] ?? 0,
     };
     row.supportedChains.add(item.chainId);
     rowsByStablecoin.set(item.symbol, row);
@@ -78,19 +81,22 @@ export function SovereigntyLattice({ coverage, stats, chains, isLoading, onCellS
         <div className="space-y-1">
           <p className="pharos-kicker">Sovereignty Lattice</p>
           <h2 id="sovereignty-lattice-title" className="pharos-section-title">
-            Supported freeze-event coverage by chain
+            Where issuers can freeze you — by stablecoin and chain
           </h2>
         </div>
         <p className="max-w-xl text-xs leading-relaxed text-muted-foreground">
-          Filled cells are live tracker coverage configurations; selecting a cell filters the event table.
+          Each frosted cell is a contract Pharos actively watches for issuer freezes. Empty cells mean no coverage, not
+          no risk. Click a cell to filter the event ledger below.
         </p>
       </div>
 
       <div className="overflow-x-auto p-4 sm:p-5">
         {rows.length > 0 && visibleChains.length > 0 ? (
           <div
-            className="grid min-w-[760px] gap-1"
-            style={{ gridTemplateColumns: `7rem repeat(${visibleChains.length}, minmax(2.5rem, 1fr)) 5rem` }}
+            className="grid min-w-[820px] gap-1"
+            style={{
+              gridTemplateColumns: `7rem repeat(${visibleChains.length}, minmax(2.5rem, 1fr)) 5rem 6rem`,
+            }}
           >
             <div className="text-xs font-semibold uppercase text-muted-foreground">Stablecoin</div>
             {visibleChains.map((chain) => (
@@ -99,6 +105,7 @@ export function SovereigntyLattice({ coverage, stats, chains, isLoading, onCellS
               </div>
             ))}
             <div className="text-right text-xs font-semibold uppercase text-muted-foreground">Events</div>
+            <div className="text-right text-xs font-semibold uppercase text-muted-foreground">Frozen</div>
 
             {rows.map((row) => (
               <LatticeRowCells
@@ -143,21 +150,38 @@ function LatticeRowCells({
             aria-label={`${row.stablecoin} ${chain.name} coverage ${supported ? "supported" : "not supported"}`}
             title={`${row.stablecoin} on ${chain.name}`}
             className={cn(
-              "h-9 border border-border/60 text-xs transition-colors",
+              "relative h-9 overflow-hidden border border-border/60 text-xs transition-colors",
               supported
-                ? "bg-red-500/80 text-white hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
-                : "cursor-not-allowed bg-muted/25 text-muted-foreground/50",
+                ? "bg-frost-blue/35 text-foreground hover:bg-frost-blue/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-frost-blue focus-visible:ring-offset-2"
+                : "cursor-not-allowed bg-muted/15 text-muted-foreground/40",
             )}
             onClick={() => {
               if (supported) onCellSelect({ stablecoin: row.stablecoin, chainId: chain.id });
             }}
           >
-            {supported ? "●" : ""}
+            {supported ? (
+              <>
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(135deg, oklch(1 0 0 / 0.18) 0 1.5px, transparent 1.5px 5px)",
+                  }}
+                />
+                <span className="relative">●</span>
+              </>
+            ) : (
+              ""
+            )}
           </button>
         );
       })}
-      <div className="flex h-9 items-center justify-end rounded-r-lg border border-border/60 bg-background/70 px-2 font-mono text-xs tabular-nums text-muted-foreground">
+      <div className="flex h-9 items-center justify-end border border-border/60 bg-background/70 px-2 font-mono text-xs tabular-nums text-muted-foreground">
         {formatCount(row.eventCount)}
+      </div>
+      <div className="flex h-9 items-center justify-end rounded-r-lg border border-border/60 bg-background/70 px-2 font-mono text-xs tabular-nums text-muted-foreground">
+        {row.frozenTotal > 0 ? formatCurrency(row.frozenTotal, 0) : "—"}
       </div>
     </>
   );
