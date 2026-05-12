@@ -24,6 +24,13 @@
       "url": "https://wiki.defillama.com/wiki/NUSD"
     }
   ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x1B84765dE8B7566e4cEAF4D0fD3c5aF52D3DdE4F",
+      "decimals": 18
+    }
+  ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
@@ -63,7 +70,7 @@
     {
       "type": "info",
       "title": "Legacy bridge-liquidity asset",
-      "message": "NUSD is included because DefiLlama still returns a live price and circulating supply, but it represents a legacy Synapse bridge liquidity stable asset rather than a standalone modern issuer token. Contract coverage is intentionally omitted pending fresh Synapse deployment verification."
+      "message": "NUSD is included because DefiLlama still returns a live price and circulating supply, but it represents a legacy Synapse bridge liquidity stable asset rather than a standalone modern issuer token. The canonical Ethereum contract is included for symbol disambiguation; legacy per-chain bridge deployments are not exhaustively modeled."
     }
   ]
 }

@@ -57,7 +57,7 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getAllByRole("link", { name: /open bot/i }).length).toBeGreaterThan(0);
     expect(screen.getByText("Command Reference")).toBeTruthy();
     expect(screen.getAllByText("/brief").length).toBeGreaterThan(0);
-    expect(screen.getByText("341")).toBeTruthy();
+    expect(screen.getByText("360")).toBeTruthy();
     expect(screen.getByText("tracked stablecoins across active, frozen, and pre-launch coverage")).toBeTruthy();
 
     const jsonLd = [...container.querySelectorAll('script[type="application/ld+json"]')]

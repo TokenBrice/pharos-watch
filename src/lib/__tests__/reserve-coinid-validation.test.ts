@@ -56,6 +56,14 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "ist-agoric::Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)::DAI",
     "IST's PSM bucket aggregates multiple IBC stablecoins, so no single tracked stablecoin coinId is representative.",
   ],
+  [
+    "lvusd-leverup::USDC and MON liquidity-layer collateral::USDC",
+    "lvUSD's reserve slice mixes USDC with MON protocol collateral, so no single tracked stablecoin coinId is representative.",
+  ],
+  [
+    "xmd-metal-dollar::USDC, PYUSD, and Paxos dollar stablecoin basket::USDC",
+    "XMD's reserve slice aggregates a multi-stablecoin Paxos-dollar basket, so no single tracked stablecoin coinId is representative.",
+  ],
 ]);
 
 describe("reserve coinId validation", () => {
