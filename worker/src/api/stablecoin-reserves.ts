@@ -2,15 +2,12 @@ import { jsonFreshResponse, errorResponse, withErrorHandler } from "../lib/api-u
 import { READABLE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { ReservePresentationMode, StablecoinReservesResponse } from "@shared/types/live-reserves";
 import { resolveReserveResult } from "../lib/live-reserves-store";
-
-const LIVE_CACHE_CONTROL = "public, s-maxage=3600, max-age=300";
-const LIVE_STALE_CACHE_CONTROL = "public, s-maxage=1800, max-age=120";
-const FALLBACK_CACHE_CONTROL = "public, s-maxage=300, max-age=60";
+import { CACHE_PROFILES } from "../lib/constants";
 
 export function reserveCacheControlForMode(mode: ReservePresentationMode): string {
-  if (mode === "live") return LIVE_CACHE_CONTROL;
-  if (mode === "live-stale") return LIVE_STALE_CACHE_CONTROL;
-  return FALLBACK_CACHE_CONTROL;
+  if (mode === "live") return CACHE_PROFILES.reserveLive;
+  if (mode === "live-stale") return CACHE_PROFILES.reserveLiveStale;
+  return CACHE_PROFILES.reserveFallback;
 }
 
 export const handleStablecoinReserves = withErrorHandler("stablecoin-reserves", async (

@@ -8,6 +8,7 @@ import {
   getStatusStateSnapshot,
   listRecentStatusTransitions,
 } from "../lib/status-reliability";
+import { CACHE_PROFILES } from "../lib/constants";
 import { assessPublicHealth } from "../lib/public-health-assessment";
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
 import {
@@ -98,6 +99,6 @@ export const handlePublicStatusHistory = withErrorHandler(
       transitions: filteredTransitions.map(toPublicTransition),
     };
 
-    return jsonResponse(body, { "Cache-Control": "public, max-age=60" });
+    return jsonResponse(body, { "Cache-Control": CACHE_PROFILES.publicStatus });
   },
 );

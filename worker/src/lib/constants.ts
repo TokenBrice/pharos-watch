@@ -1,3 +1,4 @@
+import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { CACHE_AVAILABILITY_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   DEPEG_THRESHOLD_BPS,
@@ -68,14 +69,7 @@ export const MIN_VALID_ASSET_COUNT = 50;
 export const DEXSCREENER_MIN_LIQUIDITY_USD = 50_000;
 
 /** Standard Cache-Control header profiles for API responses */
-export const CACHE_PROFILES = {
-  /** ~realtime data: stablecoins, blacklist, depeg-events, peg-summary */
-  realtime: "public, s-maxage=60, max-age=10",
-  /** Standard refresh: stablecoin-charts, dex-liquidity, usds-status */
-  standard: "public, s-maxage=300, max-age=60",
-  /** Slow-changing data: dex-liquidity-history, supply-history, daily-digest, bluechip-ratings */
-  slow: "public, s-maxage=3600, max-age=300",
-} as const;
+export const CACHE_PROFILES = API_CACHE_PROFILES;
 
 /** Maximum cache age (in seconds) per cache key — used by both /health and /status endpoints */
 export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = CACHE_AVAILABILITY_MAX_AGE_SEC;

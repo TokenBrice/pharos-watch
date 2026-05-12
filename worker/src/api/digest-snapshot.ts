@@ -1,6 +1,7 @@
 import { withErrorHandler, safeJsonParse, errorResponse, jsonResponse } from "../lib/api-utils";
 import type { DigestInputData } from "@shared/types/digest";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../cron/daily-digest/shared";
+import { CACHE_PROFILES } from "../lib/constants";
 
 interface DigestRow {
   generated_at: number;
@@ -156,5 +157,5 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
     prevInputData,
     depegEvents,
     blacklistEvents,
-  }, { "Cache-Control": "public, s-maxage=86400, max-age=3600" });
+  }, { "Cache-Control": CACHE_PROFILES.archive });
 });

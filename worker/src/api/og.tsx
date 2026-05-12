@@ -15,6 +15,7 @@ import { ACTIVE_IDS, FROZEN_IDS, READABLE_IDS, TRACKED_META_BY_ID } from "@share
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache } from "../lib/report-card-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
+import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { scoreToGrade } from "@shared/lib/report-cards";
 
 // ---------------------------------------------------------------------------
@@ -62,7 +63,7 @@ const OG_WIDTH = 1200;
 const OG_HEIGHT = 628;
 const CACHE_HEADERS = {
   "Content-Type": "image/png",
-  "Cache-Control": "public, max-age=900, s-maxage=900",
+  "Cache-Control": API_CACHE_PROFILES.ogImage,
 };
 
 // ---------------------------------------------------------------------------

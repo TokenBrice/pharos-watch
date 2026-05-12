@@ -5,6 +5,7 @@ import {
   jsonResponse,
   getLatestSuccessfulCronTimestamp,
 } from "../lib/api-utils";
+import { CACHE_PROFILES } from "../lib/constants";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { getLiquidityMethodologyVersionAt } from "@shared/lib/liquidity-score-version";
 import {
@@ -142,7 +143,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
   const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "sync-dex-liquidity", latestRowUpdate);
 
   const headers = addFreshnessHeaders({
-    "Cache-Control": "public, s-maxage=300, max-age=300",
+    "Cache-Control": CACHE_PROFILES.custom,
   }, freshnessTs, API_FRESHNESS_MAX_AGE_SEC.dexLiquidity);
   const degradedWarning = buildDexLiquidityWarning(latestCron);
   if (degradedWarning) {
