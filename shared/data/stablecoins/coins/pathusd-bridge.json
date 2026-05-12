@@ -27,7 +27,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.tempo.xyz/protocol/exchange/quote-tokens#pathusd"
+      "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD"
     },
     {
       "label": "Token List",
@@ -51,7 +51,7 @@
     "sources": [
       {
         "label": "Docs",
-        "url": "https://docs.tempo.xyz/protocol/exchange/quote-tokens#pathusd"
+        "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD"
       },
       {
         "label": "Website",

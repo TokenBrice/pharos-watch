@@ -10,8 +10,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Position-backed synthetic dollar minted against blue-chip overcollateralized positions on HypurrFi's Aave V3 fork on HyperEVM; eligible collateral includes HYPE (and HYPE LSTs), bridged BTC and ETH",
-  "pegMechanism": "Users open overcollateralized CDP-style borrows on HypurrFi and mint USDXL against their position; repayment burns the synthetic dollar. Liquidations on undercollateralized positions defend the peg, with no direct 1:1 redemption against issuer reserves",
+  "collateral": "Position-backed synthetic dollar minted against blue-chip overcollateralized positions on HypurrFi's Aave V3 fork on HyperEVM, with protocol-owned liquidity and stablecoin reserves including USDT0 supporting secondary liquidity. Eligible borrow collateral includes HYPE and HYPE LSTs, bridged BTC, and ETH.",
+  "pegMechanism": "Users open overcollateralized CDP-style borrows on HypurrFi and mint USDXL against their position; repayment burns the synthetic dollar. Liquidations and protocol-owned liquidity defend the peg, but public docs do not describe an enabled direct 1:1 holder redemption against issuer reserves.",
   "llamaId": "322",
   "detailProvider": "defillama",
   "geckoId": "last-usd",
@@ -42,9 +42,9 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDXL resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: USDXL resolves to Upstream because the reserve/liquidity description includes USDT0 stablecoin exposure.",
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
@@ -56,13 +56,32 @@
   "reserves": [
     {
       "name": "HYPE and HYPE LSTs (Hyperliquid native)",
-      "pct": 70,
+      "pct": 60,
       "risk": "very-high"
     },
     {
       "name": "Bridged BTC (UBTC) and ETH",
-      "pct": 30,
+      "pct": 25,
       "risk": "medium"
+    },
+    {
+      "name": "USDT0 and stablecoin liquidity reserves",
+      "pct": 10,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral"
+    },
+    {
+      "name": "Protocol-owned USDXL liquidity",
+      "pct": 5,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "No direct public redemption rail",
+      "message": "USDXL is minted and repaid through HypurrFi debt positions. Pharos does not model a redemption backstop because public Last/HypurrFi materials reviewed do not expose an enabled direct 1:1 holder redemption route."
     }
   ]
 }

@@ -47,10 +47,24 @@
       "chain": "avalanche",
       "address": "0x06d47f3fb376649c3a9dafe069b3d6e35572219e",
       "decimals": 18
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xb8d89678e75a973e74698c976716308abb8a46a4",
+      "decimals": 18
+    },
+    {
+      "chain": "linea",
+      "address": "0x5c247948fd58bb02b6c4678d9940f5e6b9af1127",
+      "decimals": 18
+    },
+    {
+      "chain": "plasma",
+      "address": "0xa29420057f3e3b9512d4786df135da1674bd74d4",
+      "decimals": 18
     }
   ],
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
+  "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "wrapper",

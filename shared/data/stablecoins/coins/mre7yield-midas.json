@@ -79,13 +79,13 @@
     "yieldType": "nav-appreciation"
   },
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "chainlink-nav",
     "version": 1,
-    "semantics": "collateral-mix",
+    "semantics": "single-asset",
     "breakerScope": "mre7yield-midas",
     "display": {
       "url": "https://midas.app/mre7yield",
-      "label": "Midas mRe7YIELD"
+      "label": "Midas mRe7YIELD NAV"
     },
     "inputs": {
       "primary": {
@@ -93,6 +93,12 @@
         "chain": "ethereum",
         "rpcMode": "alchemy"
       }
+    },
+    "params": {
+      "oracleAddress": "0x0a2a51f2f206447de3e3a80fcf92240244722395",
+      "tokenAddress": "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf",
+      "assetLabel": "Re7-managed DeFi yield strategy NAV",
+      "assetRisk": "high"
     }
   }
 }

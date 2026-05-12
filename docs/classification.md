@@ -27,7 +27,7 @@ Active Pharos taxonomy no longer exposes `algorithmic` as a standalone backing b
 
 ### Peg Currency
 
-`USD`, `EUR`, `GBP`, `CHF`, `BRL`, `RUB`, `JPY`, `KRW`, `IDR`, `MYR`, `SGD`, `TRY`, `AUD`, `ZAR`, `CAD`, `CNY`, `CNH`, `PHP`, `MXN`, `UAH`, `ARS`, `KGS`, `NGN`, `GOLD`, `SILVER`, `VAR` (variable/CPI-linked), `OTHER`
+`USD`, `EUR`, `GBP`, `CHF`, `BRL`, `RUB`, `JPY`, `KRW`, `IDR`, `MYR`, `SGD`, `TRY`, `AUD`, `ZAR`, `CAD`, `CNY`, `CNH`, `PHP`, `MXN`, `UAH`, `ARS`, `KGS`, `NGN`, `VND`, `GOLD`, `SILVER`, `VAR` (variable/CPI-linked), `OTHER`
 
 ### Boolean Flags
 

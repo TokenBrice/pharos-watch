@@ -13,6 +13,8 @@
   "collateral": "Mexican peso fiat reserves self-reported by Moneta Digital and held in undisclosed Mexican banking partners; no SAT (Tax Administration Service) registration is independently verified for the issuer and no third-party accounting attestation cadence is currently published",
   "pegMechanism": "Issuer-managed 1:1 mint and redemption against MXN deposits, operated directly by Moneta Digital with TruBit as a SPEI-bank off-ramp partner; reserve composition and bank custodians are self-reported by the issuer with no independent attestation, audit cadence, or proof-of-reserves feed",
   "detailProvider": "coingecko",
+  "geckoId": "moneta-digital",
+  "cmcSlug": "moneta-digital",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://monetadigital.com/",

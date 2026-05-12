@@ -4633,9 +4633,7 @@
       {
         "name": "USDm (Mento Dollar) CDP collateral",
         "pct": 100,
-        "risk": "low",
-        "coinId": "cusd-celo",
-        "depType": "collateral"
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -9512,12 +9510,19 @@
         "url": "https://fx.aladdin.club/",
         "label": "f(x) USD Saving"
       },
-      "adapter": "curated-validated",
+      "adapter": "erc4626-single-asset",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "fxSP stability-pool shares",
+          "risk": "medium",
+          "expectedAssetAddress": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be"
         }
       }
     },
@@ -9777,9 +9782,7 @@
       {
         "name": "USDm (Mento Dollar) CDP collateral",
         "pct": 100,
-        "risk": "low",
-        "coinId": "cusd-celo",
-        "depType": "collateral"
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -10863,6 +10866,11 @@
     "collateral": "USDT deposited into Hyperbeat's HyperEVM yield vault, with returns sourced from HyperEVM DeFi lending and strategy allocation",
     "pegMechanism": "hbUSDT is a yield-bearing vault token over USDT strategy exposure; holders exit through Hyperbeat vault liquidity into USDT, while ultimate fiat par exit remains Tether's issuer route",
     "geckoId": "hyperbeat-usdt",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://accountable.hyperbeat.org/",
+      "provider": "Accountable"
+    },
     "links": [
       {
         "label": "Website",
@@ -12041,15 +12049,14 @@
       {
         "name": "Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)",
         "pct": 60,
-        "risk": "low",
-        "coinId": "usdc-circle"
+        "risk": "low"
       }
     ],
     "notices": [
       {
         "type": "info",
         "title": "DefiLlama vs CoinGecko supply mismatch",
-        "message": "DefiLlama (llamaId 135) tracks only the Osmosis IBC slice of IST (~$150k peggedUSD) and does not include native Agoric supply, Archway, or Secret Network deployments. CoinGecko reports the full ~$1.4M circulating supply across all chains. Pharos uses the DefiLlama series as the primary feed; the headline figure here will reflect the Osmosis slice only until upstream coverage broadens."
+        "message": "DefiLlama (llamaId 135) now includes Agoric-native and Osmosis IST rows, but still differs from CoinGecko's cross-chain supply treatment. Pharos uses the DefiLlama series as the primary feed; reserve dependency scoring keeps the mixed USDC/USDT/DAI PSM slice unlinked until the live source exposes stablecoin-level weights."
       }
     ]
   },
@@ -12529,7 +12536,8 @@
   },
   {
     "id": "jpym-mento",
-    "detailProvider": "coingecko",
+    "llamaId": "363",
+    "detailProvider": "defillama",
     "name": "Mento Japanese Yen",
     "symbol": "JPYm",
     "flags": {
@@ -12585,9 +12593,7 @@
       {
         "name": "USDm (Mento Dollar) CDP collateral",
         "pct": 100,
-        "risk": "low",
-        "coinId": "cusd-celo",
-        "depType": "collateral"
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -14556,6 +14562,8 @@
     },
     "collateral": "Mexican peso fiat reserves self-reported by Moneta Digital and held in undisclosed Mexican banking partners; no SAT (Tax Administration Service) registration is independently verified for the issuer and no third-party accounting attestation cadence is currently published",
     "pegMechanism": "Issuer-managed 1:1 mint and redemption against MXN deposits, operated directly by Moneta Digital with TruBit as a SPEI-bank off-ramp partner; reserve composition and bank custodians are self-reported by the issuer with no independent attestation, audit cadence, or proof-of-reserves feed",
+    "geckoId": "moneta-digital",
+    "cmcSlug": "moneta-digital",
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://monetadigital.com/",
@@ -14893,19 +14901,25 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "collateral-mix",
+      "semantics": "single-asset",
       "breakerScope": "mre7yield-midas",
       "display": {
         "url": "https://midas.app/mre7yield",
-        "label": "Midas mRe7YIELD"
+        "label": "Midas mRe7YIELD NAV"
       },
-      "adapter": "curated-validated",
+      "adapter": "chainlink-nav",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "alchemy"
         }
+      },
+      "params": {
+        "oracleAddress": "0x0a2a51f2f206447de3e3a80fcf92240244722395",
+        "tokenAddress": "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf",
+        "assetLabel": "Re7-managed DeFi yield strategy NAV",
+        "assetRisk": "high"
       }
     },
     "yieldConfig": {
@@ -16213,9 +16227,9 @@
     "governanceQuality": "regulated-entity",
     "reserves": [
       {
-        "name": "WisdomTree tokenised fund shares (xCRDYX and WisdomTree Connect products)",
+        "name": "WisdomTree CRDYX / alternative credit vehicles",
         "pct": 95,
-        "risk": "very-low"
+        "risk": "high"
       },
       {
         "name": "Nest Treasury Vault (nTBILL) liquidity buffer",
@@ -16731,7 +16745,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.tempo.xyz/protocol/exchange/quote-tokens#pathusd"
+        "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD"
       },
       {
         "label": "Token List",
@@ -16755,7 +16769,7 @@
       "sources": [
         {
           "label": "Docs",
-          "url": "https://docs.tempo.xyz/protocol/exchange/quote-tokens#pathusd"
+          "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD"
         },
         {
           "label": "Website",
@@ -18908,6 +18922,21 @@
         "chain": "avalanche",
         "address": "0x06d47f3fb376649c3a9dafe069b3d6e35572219e",
         "decimals": 18
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb8d89678e75a973e74698c976716308abb8a46a4",
+        "decimals": 18
+      },
+      {
+        "chain": "linea",
+        "address": "0x5c247948fd58bb02b6c4678d9940f5e6b9af1127",
+        "decimals": 18
+      },
+      {
+        "chain": "plasma",
+        "address": "0xa29420057f3e3b9512d4786df135da1674bd74d4",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -18917,8 +18946,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
-    "chainTier": "established-alt-l1",
-    "deploymentModel": "single-chain",
+    "deploymentModel": "third-party-bridge",
     "collateralQuality": "exotic",
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "wrapper",
@@ -19588,8 +19616,8 @@
       "navToken": true
     },
     "pegReferenceId": "gho-aave",
-    "collateral": "GHO deposited into Aave's non-slashable Savings GHO module; reward emissions accrue to depositors in GHO at the Aave-governance-set savings rate",
-    "pegMechanism": "Deposit GHO to mint sGHO at a 1:1 conversion; the contract distributes GHO rewards to holders over time. Withdrawals burn sGHO for GHO without slashing risk (distinct from the slashable Umbrella stkGHO safety module)",
+    "collateral": "GHO deposited into Aave's current sGHO / legacy stkGHO-compatible savings contract; reward emissions accrue to depositors in GHO at the Aave-governance-set savings rate",
+    "pegMechanism": "Deposit GHO to mint sGHO at a 1:1 conversion; the current contract exposes `previewRedeem` for GHO exits but does not expose standard ERC-4626 `asset()` / `convertToAssets()` reads. Pharos prices this entry from the protocol redeem preview rather than secondary-market liquidity.",
     "geckoId": "aave-stkgho",
     "links": [
       {
@@ -19633,6 +19661,13 @@
         "risk": "low",
         "coinId": "gho-aave",
         "depType": "wrapper"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Legacy savings contract",
+        "message": "The tracked Aave sGHO contract currently resolves as stkGHO-compatible rather than a full ERC-4626 vault. Pharos uses `previewRedeem` for price discovery and avoids the generic ERC-4626 reserve adapter until the replacement savings vault exposes standard asset and totalAssets methods."
       }
     ],
     "yieldConfig": {
@@ -19987,6 +20022,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "multisig",
@@ -20938,6 +20974,7 @@
     "collateral": "Staked receipt over Lorenzo USD1+, a synthetic dollar strategy ultimately settled into WLFI USD1 and designed to combine USD1 reserve yield with delta-neutral strategy returns",
     "pegMechanism": "sUSD1+ accrues yield from the Lorenzo USD1+ vault while final exit depends on unstaking back into USD1+ and settlement into USD1-supported stable liquidity",
     "geckoId": "staked-usd1",
+    "cmcSlug": "lorenzo-staked-usd1",
     "links": [
       {
         "label": "Website",
@@ -21654,6 +21691,16 @@
       {
         "chain": "zksync",
         "address": "0xb6a09d426861c63722aa0b333a9ce5d5a9b04c4f",
+        "decimals": 18
+      },
+      {
+        "chain": "sophon",
+        "address": "0xb87dbe27db932bacaaa96478443b6519d52c5004",
+        "decimals": 18
+      },
+      {
+        "chain": "starknet",
+        "address": "0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17",
         "decimals": 18
       }
     ],
@@ -25860,13 +25907,21 @@
         "decimals": 6
       }
     ],
+    "canBeBlacklisted": false,
     "blacklistabilityReview": {
-      "reviewedStatus": "inherited",
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: USDH resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-      "reviewer": "Codex inferred-status backfill",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": false,
+      "sources": [
+        {
+          "label": "Docs",
+          "url": "https://docs.hubbleprotocol.io"
+        }
+      ],
+      "evidence": "Reviewed No: Hubble USDH is a Solana CDP debt token backed by borrower vault collateral and Stability Pool liquidations; reviewed docs do not identify a holder-balance blacklist, freeze, or arbitrary burn path on USDH itself.",
+      "reviewer": "Codex stablecoin audit",
+      "reviewedAt": "2026-05-12",
+      "upstreamSuppressionRationale": "The reviewed override is scoped to the USDH holder-facing token. Hubble docs describe a crypto-collateral CDP vault system, so this override deliberately suppresses inferred upstream freeze exposure from generic BTC/ETH/stablecoin text signals."
     },
+    "chainTier": "mature-alt-l1",
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
@@ -29029,8 +29084,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Position-backed synthetic dollar minted against blue-chip overcollateralized positions on HypurrFi's Aave V3 fork on HyperEVM; eligible collateral includes HYPE (and HYPE LSTs), bridged BTC and ETH",
-    "pegMechanism": "Users open overcollateralized CDP-style borrows on HypurrFi and mint USDXL against their position; repayment burns the synthetic dollar. Liquidations on undercollateralized positions defend the peg, with no direct 1:1 redemption against issuer reserves",
+    "collateral": "Position-backed synthetic dollar minted against blue-chip overcollateralized positions on HypurrFi's Aave V3 fork on HyperEVM, with protocol-owned liquidity and stablecoin reserves including USDT0 supporting secondary liquidity. Eligible borrow collateral includes HYPE and HYPE LSTs, bridged BTC, and ETH.",
+    "pegMechanism": "Users open overcollateralized CDP-style borrows on HypurrFi and mint USDXL against their position; repayment burns the synthetic dollar. Liquidations and protocol-owned liquidity defend the peg, but public docs do not describe an enabled direct 1:1 holder redemption against issuer reserves.",
     "geckoId": "last-usd",
     "links": [
       {
@@ -29059,9 +29114,9 @@
       }
     ],
     "blacklistabilityReview": {
-      "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: USDXL resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: USDXL resolves to Upstream because the reserve/liquidity description includes USDT0 stablecoin exposure.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
@@ -29073,13 +29128,32 @@
     "reserves": [
       {
         "name": "HYPE and HYPE LSTs (Hyperliquid native)",
-        "pct": 70,
+        "pct": 60,
         "risk": "very-high"
       },
       {
         "name": "Bridged BTC (UBTC) and ETH",
-        "pct": 30,
+        "pct": 25,
         "risk": "medium"
+      },
+      {
+        "name": "USDT0 and stablecoin liquidity reserves",
+        "pct": 10,
+        "risk": "low",
+        "coinId": "usdt-tether",
+        "depType": "collateral"
+      },
+      {
+        "name": "Protocol-owned USDXL liquidity",
+        "pct": 5,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "No direct public redemption rail",
+        "message": "USDXL is minted and repaid through HypurrFi debt positions. Pharos does not model a redemption backstop because public Last/HypurrFi materials reviewed do not expose an enabled direct 1:1 holder redemption route."
       }
     ]
   },
@@ -31593,6 +31667,11 @@
         "decimals": 18
       },
       {
+        "chain": "stellar",
+        "address": "VNXAU-GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3",
+        "decimals": 7
+      },
+      {
         "chain": "solana",
         "address": "9TPL8droGJ7jThsq4momaoz6uhTcvX2SeMqipoPmNa8R",
         "decimals": 9
@@ -31858,6 +31937,11 @@
         "decimals": 6
       },
       {
+        "chain": "plume",
+        "address": "0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
+        "decimals": 6
+      },
+      {
         "chain": "movement",
         "address": "0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6",
         "decimals": 6
@@ -31870,6 +31954,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "chainTier": "unproven",
     "deploymentModel": "native-multichain",
     "collateralQuality": "exotic",
     "custodyModel": "institutional-unregulated",
@@ -32322,9 +32407,39 @@
     },
     "contracts": [
       {
+        "chain": "arbitrum",
+        "address": "0xfeb26f0943c3885b2cb85a9f933975356c81c33d",
+        "decimals": 18
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x870fd36b3bf7f5abeeea2c8d4abdf1dc4e33109d",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x5096b85ed11798fddcb8b5cb27c399c04689c435",
+        "decimals": 18
+      },
+      {
         "chain": "ethereum",
         "address": "0x1fecf3d9d4fee7f2c02917a66028a48c6706c179",
         "decimals": 18
+      },
+      {
+        "chain": "optimism",
+        "address": "0x870fd36b3bf7f5abeeea2c8d4abdf1dc4e33109d",
+        "decimals": 18
+      },
+      {
+        "chain": "plume",
+        "address": "0xcf7a8813bd3bdaf70a9f46d310ce1ee8d80a4f5a",
+        "decimals": 18
+      },
+      {
+        "chain": "stellar",
+        "address": "GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6",
+        "decimals": 7
       }
     ],
     "canBeBlacklisted": true,
@@ -32383,7 +32498,7 @@
       {
         "type": "info",
         "title": "Multi-chain fund with limited on-chain telemetry",
-        "message": "WTGXX is the digital share token of WisdomTree's '40 Act government money market fund, also deployed on Arbitrum, Avalanche, Base, Optimism, Plume, and Stellar via WisdomTree Connect. Pharos currently tracks only the Ethereum supply contract pending per-chain verification; live reserves use a curated weekly snapshot of the WisdomTree fund factsheet."
+        "message": "WTGXX is the digital share token of WisdomTree's '40 Act government money market fund, deployed across Arbitrum, Avalanche, Base, Ethereum, Optimism, Plume, and Stellar via WisdomTree Connect. Pharos tracks the verified contract set; live reserves still use a curated weekly snapshot of the WisdomTree fund factsheet."
       }
     ],
     "yieldConfig": {

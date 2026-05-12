@@ -57,9 +57,7 @@
     {
       "name": "USDm (Mento Dollar) CDP collateral",
       "pct": 100,
-      "risk": "low",
-      "coinId": "cusd-celo",
-      "depType": "collateral"
+      "risk": "low"
     }
   ],
   "liveReservesConfig": {

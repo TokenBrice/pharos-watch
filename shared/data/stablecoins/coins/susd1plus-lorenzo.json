@@ -15,6 +15,7 @@
   "pegMechanism": "sUSD1+ accrues yield from the Lorenzo USD1+ vault while final exit depends on unstaking back into USD1+ and settlement into USD1-supported stable liquidity",
   "detailProvider": "coingecko",
   "geckoId": "staked-usd1",
+  "cmcSlug": "lorenzo-staked-usd1",
   "links": [
     {
       "label": "Website",

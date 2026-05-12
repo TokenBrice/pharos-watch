@@ -57,6 +57,16 @@
       "chain": "zksync",
       "address": "0xb6a09d426861c63722aa0b333a9ce5d5a9b04c4f",
       "decimals": 18
+    },
+    {
+      "chain": "sophon",
+      "address": "0xb87dbe27db932bacaaa96478443b6519d52c5004",
+      "decimals": 18
+    },
+    {
+      "chain": "starknet",
+      "address": "0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17",
+      "decimals": 18
     }
   ],
   "deploymentModel": "third-party-bridge",

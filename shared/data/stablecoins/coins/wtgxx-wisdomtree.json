@@ -40,9 +40,39 @@
   },
   "contracts": [
     {
+      "chain": "arbitrum",
+      "address": "0xfeb26f0943c3885b2cb85a9f933975356c81c33d",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x870fd36b3bf7f5abeeea2c8d4abdf1dc4e33109d",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x5096b85ed11798fddcb8b5cb27c399c04689c435",
+      "decimals": 18
+    },
+    {
       "chain": "ethereum",
       "address": "0x1fecf3d9d4fee7f2c02917a66028a48c6706c179",
       "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x870fd36b3bf7f5abeeea2c8d4abdf1dc4e33109d",
+      "decimals": 18
+    },
+    {
+      "chain": "plume",
+      "address": "0xcf7a8813bd3bdaf70a9f46d310ce1ee8d80a4f5a",
+      "decimals": 18
+    },
+    {
+      "chain": "stellar",
+      "address": "GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6",
+      "decimals": 7
     }
   ],
   "canBeBlacklisted": true,
@@ -105,7 +135,7 @@
     {
       "type": "info",
       "title": "Multi-chain fund with limited on-chain telemetry",
-      "message": "WTGXX is the digital share token of WisdomTree's '40 Act government money market fund, also deployed on Arbitrum, Avalanche, Base, Optimism, Plume, and Stellar via WisdomTree Connect. Pharos currently tracks only the Ethereum supply contract pending per-chain verification; live reserves use a curated weekly snapshot of the WisdomTree fund factsheet."
+      "message": "WTGXX is the digital share token of WisdomTree's '40 Act government money market fund, deployed across Arbitrum, Avalanche, Base, Ethereum, Optimism, Plume, and Stellar via WisdomTree Connect. Pharos tracks the verified contract set; live reserves still use a curated weekly snapshot of the WisdomTree fund factsheet."
     }
   ]
 }

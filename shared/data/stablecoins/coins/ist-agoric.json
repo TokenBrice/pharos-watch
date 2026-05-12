@@ -76,15 +76,14 @@
     {
       "name": "Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)",
       "pct": 60,
-      "risk": "low",
-      "coinId": "usdc-circle"
+      "risk": "low"
     }
   ],
   "notices": [
     {
       "type": "info",
       "title": "DefiLlama vs CoinGecko supply mismatch",
-      "message": "DefiLlama (llamaId 135) tracks only the Osmosis IBC slice of IST (~$150k peggedUSD) and does not include native Agoric supply, Archway, or Secret Network deployments. CoinGecko reports the full ~$1.4M circulating supply across all chains. Pharos uses the DefiLlama series as the primary feed; the headline figure here will reflect the Osmosis slice only until upstream coverage broadens."
+      "message": "DefiLlama (llamaId 135) now includes Agoric-native and Osmosis IST rows, but still differs from CoinGecko's cross-chain supply treatment. Pharos uses the DefiLlama series as the primary feed; reserve dependency scoring keeps the mixed USDC/USDT/DAI PSM slice unlinked until the live source exposes stablecoin-level weights."
     }
   ]
 }

@@ -62,6 +62,11 @@
       "decimals": 18
     },
     {
+      "chain": "stellar",
+      "address": "VNXAU-GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3",
+      "decimals": 7
+    },
+    {
       "chain": "solana",
       "address": "9TPL8droGJ7jThsq4momaoz6uhTcvX2SeMqipoPmNa8R",
       "decimals": 9

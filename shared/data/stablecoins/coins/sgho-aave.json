@@ -20,8 +20,8 @@
   "variantOf": "gho-aave",
   "variantKind": "savings-passthrough",
   "pegReferenceId": "gho-aave",
-  "collateral": "GHO deposited into Aave's non-slashable Savings GHO module; reward emissions accrue to depositors in GHO at the Aave-governance-set savings rate",
-  "pegMechanism": "Deposit GHO to mint sGHO at a 1:1 conversion; the contract distributes GHO rewards to holders over time. Withdrawals burn sGHO for GHO without slashing risk (distinct from the slashable Umbrella stkGHO safety module)",
+  "collateral": "GHO deposited into Aave's current sGHO / legacy stkGHO-compatible savings contract; reward emissions accrue to depositors in GHO at the Aave-governance-set savings rate",
+  "pegMechanism": "Deposit GHO to mint sGHO at a 1:1 conversion; the current contract exposes `previewRedeem` for GHO exits but does not expose standard ERC-4626 `asset()` / `convertToAssets()` reads. Pharos prices this entry from the protocol redeem preview rather than secondary-market liquidity.",
   "detailProvider": "coingecko",
   "geckoId": "aave-stkgho",
   "links": [
@@ -62,5 +62,12 @@
   "yieldConfig": {
     "yieldSource": "Aave Savings GHO",
     "yieldType": "governance-set"
-  }
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Legacy savings contract",
+      "message": "The tracked Aave sGHO contract currently resolves as stkGHO-compatible rather than a full ERC-4626 vault. Pharos uses `previewRedeem` for price discovery and avoids the generic ERC-4626 reserve adapter until the replacement savings vault exposes standard asset and totalAssets methods."
+    }
+  ]
 }

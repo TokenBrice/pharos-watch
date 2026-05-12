@@ -46,6 +46,11 @@
       "decimals": 6
     },
     {
+      "chain": "plume",
+      "address": "0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
+      "decimals": 6
+    },
+    {
       "chain": "movement",
       "address": "0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6",
       "decimals": 6
@@ -58,6 +63,7 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "chainTier": "unproven",
   "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",

@@ -61,9 +61,9 @@
   "governanceQuality": "regulated-entity",
   "reserves": [
     {
-      "name": "WisdomTree tokenised fund shares (xCRDYX and WisdomTree Connect products)",
+      "name": "WisdomTree CRDYX / alternative credit vehicles",
       "pct": 95,
-      "risk": "very-low"
+      "risk": "high"
     },
     {
       "name": "Nest Treasury Vault (nTBILL) liquidity buffer",

@@ -64,7 +64,7 @@
     "yieldType": "nav-appreciation"
   },
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "erc4626-single-asset",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "fxsave-f-x-protocol",
@@ -77,6 +77,13 @@
         "kind": "onchain-evm",
         "chain": "ethereum",
         "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "fxSP stability-pool shares",
+        "risk": "medium",
+        "expectedAssetAddress": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be"
       }
     }
   }
