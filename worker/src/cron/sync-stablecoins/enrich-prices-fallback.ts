@@ -1,5 +1,5 @@
 import type { PeggedAsset } from "./enrich-prices-shared";
-import { runDlContractPasses, runCmcPass, runDexScreenerPass, runJupiterPass } from "./enrich-prices-passes";
+import { runCoingeckoLowVolumePass, runDlContractPasses, runCmcPass, runDexScreenerPass, runJupiterPass } from "./enrich-prices-passes";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 
 export interface EnrichmentPassCounts {
@@ -8,6 +8,7 @@ export interface EnrichmentPassCounts {
   passCmc: number;
   passJupiter: number;
   passDex: number;
+  passCgLowVolume: number;
 }
 
 interface EnrichmentPassResult {
@@ -19,6 +20,7 @@ interface EnrichmentPassResult {
 interface EnrichmentPassContext {
   assets: PeggedAsset[];
   cmcApiKey?: string;
+  coingeckoApiKey?: string | null;
   jupiterApiKey?: string | null;
   db?: D1Database;
   fxRates?: Record<string, number>;
@@ -87,6 +89,19 @@ const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
       };
     },
   },
+  {
+    label: "CoinGecko low-volume",
+    failureLabel: "coingecko-low-volume",
+    run: async ({ assets, coingeckoApiKey, fxRates, db, signal }) => {
+      const result = await runCoingeckoLowVolumePass(assets, coingeckoApiKey, fxRates, db, signal);
+      return {
+        counts: {
+          passCgLowVolume: result.resolved,
+        },
+        failures: result.failures,
+      };
+    },
+  },
 ];
 
 function createEmptyEnrichmentCounts(): EnrichmentPassCounts {
@@ -96,6 +111,7 @@ function createEmptyEnrichmentCounts(): EnrichmentPassCounts {
     passCmc: 0,
     passJupiter: 0,
     passDex: 0,
+    passCgLowVolume: 0,
   };
 }
 

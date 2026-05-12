@@ -29,6 +29,7 @@ export interface EnrichmentStats {
   passCmc: number;
   passJupiter: number;
   passDex: number;
+  passCgLowVolume: number;
   finalMissing: number;
   failedPasses: string[];
   providerDiagnostics?: PricingProviderAttemptDiagnostic[];
@@ -40,6 +41,7 @@ export async function enrichMissingPrices(
   db?: D1Database,
   signal?: AbortSignal,
   jupiterApiKey?: string | null,
+  coingeckoApiKey?: string | null,
 ): Promise<EnrichmentStats> {
   throwIfAborted(signal);
   const totalMissing = assets.filter(hasMissingPrice).length;
@@ -51,6 +53,7 @@ export async function enrichMissingPrices(
       passCmc: 0,
       passJupiter: 0,
       passDex: 0,
+      passCgLowVolume: 0,
       finalMissing: 0,
       failedPasses: [],
     };
@@ -66,18 +69,10 @@ export async function enrichMissingPrices(
     }
   }
 
-  const {
-    counts: {
-      pass1: pass1Count,
-      pass1b: pass1bCount,
-      passCmc: passCmcCount,
-      passJupiter: passJupiterCount,
-      passDex: passDexCount,
-    },
-    failedPasses, providerDiagnostics,
-  } = await runEnrichmentPasses({
+  const { counts, failedPasses, providerDiagnostics } = await runEnrichmentPasses({
     assets,
     cmcApiKey,
+    coingeckoApiKey,
     jupiterApiKey,
     db,
     fxRates,
@@ -85,14 +80,15 @@ export async function enrichMissingPrices(
   });
 
   const finalMissing = assets.filter(hasMissingPrice).length;
-  const totalEnriched = pass1Count + pass1bCount + passCmcCount + passJupiterCount + passDexCount;
+  const totalEnriched = Object.values(counts).reduce((sum, count) => sum + count, 0);
   if (totalMissing > 0) {
     console.log(
       `[enrich] ${totalMissing} assets missing prices → ` +
-      `Pass 1: +${pass1Count}, Pass 1b (multi-chain): +${pass1bCount}, ` +
-      `Pass 2 (CMC): +${passCmcCount}, ` +
-      `Pass 3 (Jupiter): +${passJupiterCount}, ` +
-      `Pass 4 (DexScreener): +${passDexCount}, still missing: ${finalMissing}`
+      `Pass 1: +${counts.pass1}, Pass 1b (multi-chain): +${counts.pass1b}, ` +
+      `Pass 2 (CMC): +${counts.passCmc}, ` +
+      `Pass 3 (Jupiter): +${counts.passJupiter}, ` +
+      `Pass 4 (DexScreener): +${counts.passDex}, ` +
+      `Pass 5 (CG low-volume): +${counts.passCgLowVolume}, still missing: ${finalMissing}`
     );
   }
   if (totalEnriched > 0) {
@@ -100,11 +96,7 @@ export async function enrichMissingPrices(
   }
   return {
     totalMissing,
-    pass1: pass1Count,
-    pass1b: pass1bCount,
-    passCmc: passCmcCount,
-    passJupiter: passJupiterCount,
-    passDex: passDexCount,
+    ...counts,
     finalMissing,
     failedPasses, providerDiagnostics,
   };

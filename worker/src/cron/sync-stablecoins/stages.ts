@@ -222,6 +222,7 @@ export async function runStablecoinsPricingStage(
     syncStartSec: options.syncStartSec,
     signal: options.signal,
     cmcApiKey: options.cmcApiKey,
+    coingeckoApiKey: options.coingeckoApiKey,
     jupiterApiKey: options.jupiterApiKey,
     returnIfAborted,
   }, "");

@@ -518,6 +518,91 @@ describe("enrichMissingPrices", () => {
     expect(stats.passDex).toBe(0);
   });
 
+  it("fills selected DL-listed missing prices from the low-volume CoinGecko fallback lane", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const observedAt = nowSec - 3600;
+    const assets: PeggedAsset[] = [
+      {
+        id: "usp-pareto-credit",
+        name: "Pareto USP",
+        symbol: "USP",
+        price: null,
+        priceSource: "defillama",
+        geckoId: "pareto-usp",
+        pegType: "peggedUSD",
+        circulating: { peggedUSD: 2_000_000 },
+      },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("coins.llama.fi")) {
+        return new Response(JSON.stringify({ coins: {} }), { status: 200 });
+      }
+      if (url.includes("dexscreener.com")) {
+        return new Response(JSON.stringify([]), { status: 200 });
+      }
+      if (url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({
+          "pareto-usp": { usd: 0.911, last_updated_at: observedAt },
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const stats = await enrichMissingPrices(assets);
+
+    expect(stats.totalMissing).toBe(1);
+    expect(stats.passCgLowVolume).toBe(1);
+    expect(stats.finalMissing).toBe(0);
+    expect(assets[0]).toMatchObject({
+      price: 0.911,
+      priceSource: "coingecko-low-volume",
+      priceSelectedSource: "coingecko-low-volume",
+      priceConfidence: "fallback",
+      priceObservedAt: observedAt,
+      priceObservedAtMode: "upstream",
+      consensusSources: ["coingecko-low-volume"],
+    });
+  });
+
+  it("does not apply low-volume CoinGecko fallback to unallowlisted stale rows", async () => {
+    const observedAt = Math.floor(Date.now() / 1000) - 3600;
+    const assets: PeggedAsset[] = [
+      {
+        id: "usx-dforce",
+        name: "dForce USD",
+        symbol: "USX",
+        price: null,
+        priceSource: "defillama",
+        geckoId: "token-dforce-usd",
+        pegType: "peggedUSD",
+        circulating: { peggedUSD: 2_000_000 },
+      },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("coins.llama.fi")) {
+        return new Response(JSON.stringify({ coins: {} }), { status: 200 });
+      }
+      if (url.includes("dexscreener.com")) {
+        return new Response(JSON.stringify([]), { status: 200 });
+      }
+      if (url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({
+          "token-dforce-usd": { usd: 0.414, last_updated_at: observedAt },
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const stats = await enrichMissingPrices(assets);
+
+    expect(stats.passCgLowVolume).toBe(0);
+    expect(stats.finalMissing).toBe(1);
+    expect(assets[0].price).toBeNull();
+    expect(assets[0].priceSource).toBe("defillama");
+  });
+
   it("still uses stale FX cache for DexScreener fallback in enrichment (characterization)", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([

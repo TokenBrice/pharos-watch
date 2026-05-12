@@ -24,10 +24,11 @@ export async function fetchCoingeckoSimplePrices(
   coingeckoApiKey: string | null,
   signal: AbortSignal | undefined,
   nowSec: number,
+  options?: { sourceKey?: string },
 ): Promise<FetcherOutcome<Map<string, CoingeckoSimplePriceEntry>>> {
   const prices = new Map<string, CoingeckoSimplePriceEntry>();
   const coingeckoMaxTrustedAgeSec =
-    getPricingSourceRegistryEntry("coingecko")?.maxTrustedAgeSec ?? 15 * 60;
+    getPricingSourceRegistryEntry(options?.sourceKey ?? "coingecko")?.maxTrustedAgeSec ?? 15 * 60;
   let staleCount = 0;
   let hadBatchFailure = false;
 

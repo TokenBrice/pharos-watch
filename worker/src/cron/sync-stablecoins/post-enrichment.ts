@@ -93,6 +93,7 @@ export interface MissingPriceEnrichmentInput {
   syncStartSec: number;
   signal?: AbortSignal;
   cmcApiKey?: string;
+  coingeckoApiKey?: string | null;
   jupiterApiKey?: string | null;
   returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
 }
@@ -400,6 +401,7 @@ export async function runMissingPriceEnrichmentPhase(
     input.db,
     input.signal,
     input.jupiterApiKey,
+    input.coingeckoApiKey,
   );
 
   for (const asset of input.assets) {

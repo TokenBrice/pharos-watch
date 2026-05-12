@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PeggedAsset } from "../enrich-prices-shared";
-import { applySupplementalPricePatches } from "../shared";
+import { runCoingeckoLowVolumePass } from "../enrich-prices-coingecko-low-volume-pass";
 
 function asset(input: Partial<PeggedAsset> & Pick<PeggedAsset, "id" | "symbol">): PeggedAsset {
   return {
@@ -10,8 +10,22 @@ function asset(input: Partial<PeggedAsset> & Pick<PeggedAsset, "id" | "symbol">)
   } as PeggedAsset;
 }
 
-describe("applySupplementalPricePatches", () => {
-  it("patches missing primary prices from supplemental low-volume CoinGecko rows", () => {
+describe("runCoingeckoLowVolumePass", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("patches selected missing prices from relaxed CoinGecko rows", async () => {
+    const observedAt = Math.floor(Date.now() / 1000) - 3600;
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({
+          "pareto-usp": { usd: 0.911, last_updated_at: observedAt },
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
     const primary = asset({
       id: "usp-pareto-credit",
       symbol: "USP",
@@ -21,43 +35,32 @@ describe("applySupplementalPricePatches", () => {
       supplySource: "defillama",
       circulating: { peggedUSD: 2_000_000 },
     });
-    const supplemental = asset({
-      id: "usp-pareto-credit",
-      symbol: "USP",
-      price: 0.911,
-      priceSource: "coingecko-low-volume",
-      priceConfidence: "fallback",
-      priceUpdatedAt: 1_778_435_542,
-      priceObservedAt: 1_778_435_542,
-      priceObservedAtMode: "upstream",
-      priceSyncedAt: 1_778_600_000,
-      supplySource: "coingecko-fallback",
-      circulating: { peggedUSD: 1_900_000 },
-    });
 
-    const result = applySupplementalPricePatches([primary], [supplemental]);
+    const result = await runCoingeckoLowVolumePass([primary], null, undefined);
 
-    expect(result).toEqual({
-      patchedCount: 1,
-      patchedIds: ["usp-pareto-credit"],
-    });
+    expect(result).toEqual({ resolved: 1, failures: [] });
     expect(primary).toMatchObject({
       price: 0.911,
       priceSource: "coingecko-low-volume",
       priceSelectedSource: "coingecko-low-volume",
       priceConfidence: "fallback",
-      priceUpdatedAt: 1_778_435_542,
-      priceObservedAt: 1_778_435_542,
+      priceUpdatedAt: observedAt,
+      priceObservedAt: observedAt,
       priceObservedAtMode: "upstream",
-      priceSyncedAt: 1_778_600_000,
+      priceSyncedAt: observedAt,
       supplySource: "defillama",
       circulating: { peggedUSD: 2_000_000 },
       consensusSources: ["coingecko-low-volume"],
-      agreeSources: ["coingecko-low-volume"],
     });
   });
 
-  it("does not overwrite primary prices that are already present", () => {
+  it("does not overwrite prices that are already present", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({
+        bilira: { usd: 0.023, last_updated_at: Math.floor(Date.now() / 1000) - 3600 },
+      }), { status: 200 })
+    ));
+
     const primary = asset({
       id: "tryb-bilira",
       symbol: "TRYB",
@@ -66,17 +69,10 @@ describe("applySupplementalPricePatches", () => {
       priceConfidence: "single-source",
       supplySource: "defillama",
     });
-    const supplemental = asset({
-      id: "tryb-bilira",
-      symbol: "TRYB",
-      price: 0.023,
-      priceSource: "coingecko-low-volume",
-      priceConfidence: "fallback",
-    });
 
-    const result = applySupplementalPricePatches([primary], [supplemental]);
+    const result = await runCoingeckoLowVolumePass([primary], null, undefined);
 
-    expect(result).toEqual({ patchedCount: 0, patchedIds: [] });
+    expect(result).toEqual({ resolved: 0, failures: [] });
     expect(primary).toMatchObject({
       price: 0.022,
       priceSource: "defillama-list",
@@ -85,25 +81,24 @@ describe("applySupplementalPricePatches", () => {
     });
   });
 
-  it("ignores supplemental rows without a publishable price", () => {
+  it("ignores unallowlisted stale CoinGecko rows", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({
+        "token-dforce-usd": { usd: 0.414, last_updated_at: Math.floor(Date.now() / 1000) - 3600 },
+      }), { status: 200 })
+    ));
+
     const primary = asset({
-      id: "cadd-cad-digital",
-      symbol: "CADD",
+      id: "usx-dforce",
+      symbol: "USX",
       price: null,
       priceSource: "defillama",
       supplySource: "defillama",
     });
-    const supplemental = asset({
-      id: "cadd-cad-digital",
-      symbol: "CADD",
-      price: null,
-      priceSource: "missing",
-      priceConfidence: null,
-    });
 
-    const result = applySupplementalPricePatches([primary], [supplemental]);
+    const result = await runCoingeckoLowVolumePass([primary], null, undefined);
 
-    expect(result).toEqual({ patchedCount: 0, patchedIds: [] });
+    expect(result).toEqual({ resolved: 0, failures: [] });
     expect(primary).toMatchObject({
       price: null,
       priceSource: "defillama",

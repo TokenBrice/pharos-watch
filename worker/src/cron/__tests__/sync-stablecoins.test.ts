@@ -218,7 +218,7 @@ vi.mock("@shared/lib/stablecoins/frozen-snapshots", () => ({
 // Stub enrich-prices to avoid complex 5-pass pipeline
 vi.mock("../sync-stablecoins/enrich-prices", () => ({
   enrichMissingPrices: vi.fn(async () => ({
-    totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, finalMissing: 0, failedPasses: [],
+    totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, passCgLowVolume: 0, finalMissing: 0, failedPasses: [],
   })),
   hasMissingPrice: vi.fn((a: { price?: number | null }) => a.price == null || typeof a.price !== "number" || a.price === 0),
   fetchPrimaryPrices: vi.fn(async () => ({
@@ -361,7 +361,7 @@ describe("syncStablecoins", () => {
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(undefined);
     fetchWithRetryMock.mockReset();
     vi.mocked(enrichMissingPrices).mockReset().mockResolvedValue({
-      totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, finalMissing: 0, failedPasses: [],
+      totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, passCgLowVolume: 0, finalMissing: 0, failedPasses: [],
     });
     vi.mocked(fetchPrimaryPrices).mockReset().mockResolvedValue({
       results: new Map(),
@@ -412,7 +412,7 @@ describe("syncStablecoins", () => {
     expect(cacheWrites.length).toBeGreaterThanOrEqual(1);
     expect(shouldAttemptFetch).toHaveBeenCalledWith(db, "defillama-stablecoins");
     expect(fetchPrimaryPrices).toHaveBeenCalledWith(expect.any(Array), db, undefined, undefined, undefined, undefined, expect.any(Map));
-    expect(enrichMissingPrices).toHaveBeenCalledWith(expect.any(Array), undefined, db, undefined, undefined);
+    expect(enrichMissingPrices).toHaveBeenCalledWith(expect.any(Array), undefined, db, undefined, undefined, undefined);
     expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
     expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
     const primaryPriceAssets = vi.mocked(fetchPrimaryPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
@@ -460,7 +460,7 @@ describe("syncStablecoins", () => {
     vi.mocked(enrichMissingPrices).mockImplementationOnce(async () => {
       order.push("enrich");
       return {
-        totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, finalMissing: 0, failedPasses: [],
+        totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, passCgLowVolume: 0, finalMissing: 0, failedPasses: [],
       };
     });
     vi.mocked(runGtProbePass).mockImplementationOnce(async () => {
@@ -652,6 +652,7 @@ describe("syncStablecoins", () => {
         passCmc: 0,
         passJupiter: 0,
         passDex: 0,
+        passCgLowVolume: 0,
         finalMissing: 0,
         failedPasses: [],
       };
@@ -1068,6 +1069,7 @@ describe("syncStablecoins", () => {
         passCmc: 0,
         passJupiter: 0,
         passDex: 0,
+        passCgLowVolume: 0,
         finalMissing: 1,
         failedPasses: [],
       };
