@@ -2,6 +2,7 @@ import { DISAMBIGUATION_TTL_SEC } from "../api/telegram-webhook-shared";
 import { throwIfAborted } from "../lib/abort";
 import { runWithOverloadRetry } from "../lib/cron-lease";
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 
 /**
  * Returns the current hour (0–23, h23 cycle) in the given IANA timezone.
@@ -109,9 +110,9 @@ export async function cleanExpiredDisambiguations(
       .run(),
   );
   const disambiguationRowsCleaned = result.meta?.changes ?? 0;
-  return {
+  return createCronResult({
     status: "ok",
     itemCount: disambiguationRowsCleaned,
-    metadata: JSON.stringify({ disambiguationRowsCleaned, cutoffSec }),
-  };
+    metadata: { disambiguationRowsCleaned, cutoffSec },
+  });
 }

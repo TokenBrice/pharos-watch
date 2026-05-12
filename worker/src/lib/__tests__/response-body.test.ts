@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { cancelResponseBodyQuietly, drainResponseBody } from "../response-body";
+import {
+  cancelResponseBodyQuietly,
+  cancelUnsuccessfulResponseBodyQuietly,
+  drainResponseBody,
+} from "../response-body";
 
 describe("drainResponseBody", () => {
   it("returns without touching responses that are already consumed", async () => {
@@ -66,5 +70,29 @@ describe("cancelResponseBodyQuietly", () => {
     } as unknown as Response;
 
     await expect(cancelResponseBodyQuietly(response)).resolves.toBeUndefined();
+  });
+});
+
+describe("cancelUnsuccessfulResponseBodyQuietly", () => {
+  it("does not cancel successful responses", async () => {
+    const cancel = vi.fn(async () => undefined);
+    const response = {
+      ok: true,
+      body: { cancel },
+    } as unknown as Response;
+
+    await expect(cancelUnsuccessfulResponseBodyQuietly(response)).resolves.toBeUndefined();
+    expect(cancel).not.toHaveBeenCalled();
+  });
+
+  it("cancels non-OK responses", async () => {
+    const cancel = vi.fn(async () => undefined);
+    const response = {
+      ok: false,
+      body: { cancel },
+    } as unknown as Response;
+
+    await expect(cancelUnsuccessfulResponseBodyQuietly(response)).resolves.toBeUndefined();
+    expect(cancel).toHaveBeenCalledTimes(1);
   });
 });

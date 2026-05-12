@@ -118,7 +118,8 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     key: "half-hourly",
     title: "30-minute slot",
     badge: "~30 min",
-    description: "Dedicated DEX and chart lanes, decoupled DEWS/PSI publication, plus isolated mint/burn critical and extended triggers.",
+    description:
+      "Dedicated DEX and chart lanes, decoupled DEWS/PSI publication, plus isolated mint/burn critical and extended triggers.",
   },
   {
     key: "hourly",
@@ -130,13 +131,15 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     key: "multi-hourly",
     title: "Multi-hour slot",
     badge: "2-6h",
-    description: "Isolated slower lanes: 2-hour DEX discovery, 4-hour reserve/redemption/Kinesis and supplemental yield, plus 6-hour critical blacklist sync.",
+    description:
+      "Isolated slower lanes: 2-hour DEX discovery, 4-hour reserve/redemption/Kinesis and supplemental yield, plus 6-hour critical blacklist sync.",
   },
   {
     key: "daily",
     title: "Daily slot",
     badge: "daily",
-    description: "03:00 retention pruning plus 08:00 snapshots/monitors, 08:05 digest/Bluechip/recap, and 08:10 coverage discovery lanes.",
+    description:
+      "03:00 retention pruning plus 08:00 snapshots/monitors, 08:05 digest/Bluechip/recap, and 08:10 coverage discovery lanes.",
   },
   {
     key: "other",
@@ -222,6 +225,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
     maxConnections: 0, // DB-only inspection plus optional webhook alert
+  },
+  {
+    job: "telegram-disambiguation-cleanup",
+    label: "Telegram disambiguation cleanup",
+    group: "five-minute",
+    intervalSec: 300,
+    scheduleKey: "fiveMinuteTelegramAlerts",
+    triggerMode: "isolated",
+    maxConnections: 0, // DB-only DELETE of expired pending disambiguation rows
   },
   {
     job: "sync-blacklist",
@@ -467,10 +479,10 @@ export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS
   ...definition,
   schedule: CRON_SCHEDULES[definition.scheduleKey],
   statusImpact:
-    definition.job === "sync-stablecoins"
-    || definition.job === "sync-fx-rates"
-    || definition.job === "sync-blacklist"
-    || definition.job === "sync-mint-burn"
+    definition.job === "sync-stablecoins" ||
+    definition.job === "sync-fx-rates" ||
+    definition.job === "sync-blacklist" ||
+    definition.job === "sync-mint-burn"
       ? "critical"
       : "watch",
 }));
@@ -480,9 +492,7 @@ export const CRON_INTERVALS = Object.freeze(
   Object.fromEntries(CRON_JOB_DEFINITIONS.map((item) => [item.job, item.intervalSec])) as Record<string, number>,
 );
 
-const CRON_JOB_META_BY_ID = new Map(
-  CRON_JOB_DEFINITIONS.map((definition) => [definition.job, definition]),
-);
+const CRON_JOB_META_BY_ID = new Map(CRON_JOB_DEFINITIONS.map((definition) => [definition.job, definition]));
 const CRON_SCHEDULE_KEY_BY_EXPRESSION = new Map<string, CronScheduleKey>(
   Object.entries(CRON_SCHEDULES).map(([scheduleKey, expression]) => [expression, scheduleKey as CronScheduleKey]),
 );
@@ -499,11 +509,7 @@ export function getCronScheduleKey(expression: string): CronScheduleKey | null {
   return CRON_SCHEDULE_KEY_BY_EXPRESSION.get(expression) ?? null;
 }
 
-function normalizeCronSlotStartedAt(
-  timestampSec: number,
-  intervalSec: number,
-  offsetSec = 0,
-): number {
+function normalizeCronSlotStartedAt(timestampSec: number, intervalSec: number, offsetSec = 0): number {
   if (!Number.isFinite(timestampSec) || !Number.isFinite(intervalSec) || intervalSec <= 0) {
     return Math.floor(Date.now() / 1000);
   }

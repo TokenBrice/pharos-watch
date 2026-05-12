@@ -1,6 +1,7 @@
 /**
  * Five-minute Telegram trigger (2,7,12,... * * * *):
- *   dispatch-telegram-alerts (4) -> telegram-degradation-watchdog (0) -> telegram-disambiguation-cleanup (1)
+ *   serial:
+ *     dispatch-telegram-alerts (4) -> telegram-degradation-watchdog (0) -> telegram-disambiguation-cleanup (0)
  *
  * Subscriber alerts use a dedicated isolated Telegram lane.
  * Connection budget: 4/6 peak
@@ -15,7 +16,34 @@ import {
   reconcileTelegramWebhookRegistration,
 } from "../../lib/telegram-webhook-registration";
 import type { ScheduledRuntimeContext } from "./context";
-import { runBestEffortScheduledJob } from "./run-best-effort-job";
+import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
+
+function buildTelegramSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
+  return [
+    {
+      mode: "serial",
+      label: "telegram-alerts-and-sidecars",
+      tasks: [
+        {
+          job: "dispatch-telegram-alerts",
+          errorMessage: "[cron] dispatch-telegram-alerts failed:",
+          run: (signal) => dispatchTelegramAlerts(runtime.db, runtime.env.TELEGRAM_BOT_TOKEN!, signal),
+        },
+        {
+          job: "telegram-degradation-watchdog",
+          errorMessage: "[cron] telegram-degradation-watchdog failed:",
+          run: (signal) => runTelegramDegradationWatchdog(runtime.db, runtime.alertWebhookUrl, signal),
+        },
+        {
+          job: "telegram-disambiguation-cleanup",
+          kind: "db-only-sidecar",
+          errorMessage: "[cron] telegram-disambiguation-cleanup failed:",
+          run: (signal) => cleanExpiredDisambiguations(runtime.db, signal),
+        },
+      ],
+    },
+  ];
+}
 
 export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext): Promise<void> {
   if (!runtime.env.TELEGRAM_BOT_TOKEN) {
@@ -54,27 +82,5 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     });
   }
 
-  await runBestEffortScheduledJob(
-    runtime,
-    "five-minute telegram slot",
-    "dispatch-telegram-alerts",
-    (signal) => dispatchTelegramAlerts(runtime.db, runtime.env.TELEGRAM_BOT_TOKEN!, signal),
-    { errorMessage: "[cron] dispatch-telegram-alerts failed:" },
-  );
-
-  await runBestEffortScheduledJob(
-    runtime,
-    "five-minute telegram slot",
-    "telegram-degradation-watchdog",
-    (signal) => runTelegramDegradationWatchdog(runtime.db, runtime.alertWebhookUrl, signal),
-    { errorMessage: "[cron] telegram-degradation-watchdog failed:" },
-  );
-
-  await runBestEffortScheduledJob(
-    runtime,
-    "five-minute telegram slot",
-    "telegram-disambiguation-cleanup",
-    (signal) => cleanExpiredDisambiguations(runtime.db, signal),
-    { errorMessage: "[cron] telegram-disambiguation-cleanup failed:" },
-  );
+  await runScheduledSlotGroups(runtime, "five-minute telegram slot", buildTelegramSlotGroups(runtime));
 }

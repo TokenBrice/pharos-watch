@@ -1,5 +1,6 @@
 import type { CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
+import { createCronResult } from "../lib/cron-result";
 
 /**
  * Delete rows from `status_probe_runs` older than `cutoffSec`, capped at
@@ -25,9 +26,9 @@ export async function runPruneStatusProbeRuns(db: D1Database, signal?: AbortSign
   const cutoffSec = Math.floor(Date.now() / 1000) - 90 * 86_400;
   const { deleted } = await pruneStatusProbeRuns(db, { cutoffSec, batchSize: 10_000 });
   throwIfAborted(signal);
-  return {
+  return createCronResult({
     status: "ok",
     itemCount: deleted,
-    metadata: JSON.stringify({ cutoffSec, deleted }),
-  };
+    metadata: { cutoffSec, deleted },
+  });
 }

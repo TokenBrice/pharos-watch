@@ -25,3 +25,11 @@ export async function cancelResponseBodyQuietly(response: Response | null | unde
     /* best-effort cancellation only */
   }
 }
+
+export async function cancelUnsuccessfulResponseBodyQuietly(response: Response | null | undefined): Promise<void> {
+  if (!response || response.ok) {
+    return;
+  }
+
+  await cancelResponseBodyQuietly(response);
+}

@@ -1,4 +1,5 @@
 import { USER_AGENT } from "../../lib/constants";
+import { cancelUnsuccessfulResponseBodyQuietly } from "../../lib/response-body";
 import { readDexApiJson } from "./direct-api-json";
 import {
   DIRECT_API_DEFAULT_MAX_PAGES,
@@ -67,6 +68,7 @@ export async function runPaginatedDirectApiFetch<TRow>(
     }
 
     if (!res.ok) {
+      await cancelUnsuccessfulResponseBodyQuietly(res);
       errors.push(`${source} page ${page} returned ${res.status}`);
       break;
     }

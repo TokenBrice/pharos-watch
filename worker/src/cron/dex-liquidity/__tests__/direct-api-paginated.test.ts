@@ -7,6 +7,17 @@ function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status });
 }
 
+function nonOkStreamingResponse(status = 503): { response: Response; cancel: ReturnType<typeof vi.fn> } {
+  const cancel = vi.fn(async () => undefined);
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode("upstream error"));
+    },
+    cancel,
+  });
+  return { response: new Response(stream, { status }), cancel };
+}
+
 describe("runPaginatedDirectApiFetch", () => {
   afterEach(() => {
     mockFetch.mockReset();
@@ -37,9 +48,10 @@ describe("runPaginatedDirectApiFetch", () => {
 
   it("returns first page rows and an error on HTTP failure mid-pagination", async () => {
     const { runPaginatedDirectApiFetch } = await import("../direct-api-paginated");
+    const failure = nonOkStreamingResponse(503);
     mockFetch
       .mockResolvedValueOnce(jsonResponse({ items: ["a", "b"] }))
-      .mockResolvedValueOnce(new Response("error", { status: 503 }));
+      .mockResolvedValueOnce(failure.response);
 
     const result = await runPaginatedDirectApiFetch<string>({
       source: "test",
@@ -56,6 +68,7 @@ describe("runPaginatedDirectApiFetch", () => {
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toContain("returned 503");
     expect(result.successfulPages).toBe(1);
+    expect(failure.cancel).toHaveBeenCalledTimes(1);
   });
 
   it("reports error and breaks on JSON parse failure", async () => {

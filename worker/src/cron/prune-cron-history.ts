@@ -2,6 +2,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
 import { SECONDS } from "../lib/time-constants";
 import { runWithOverloadRetry } from "../lib/cron-lease";
+import { createCronResult } from "../lib/cron-result";
 
 // Kept in sync with the retention window previously enforced inline inside
 // runScheduledSlotWithFence (14 days).  Consolidated here so the daily
@@ -30,14 +31,14 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
   throwIfAborted(signal);
   const slotExecutionsDeleted = slotResult.meta?.changes ?? 0;
 
-  return {
+  return createCronResult({
     status: "ok",
     itemCount: cronRunsDeleted + slotExecutionsDeleted,
-    metadata: JSON.stringify({
+    metadata: {
       cronRunsDeleted,
       slotExecutionsDeleted,
       cutoffCronRunsSec: now - SECONDS.ONE_WEEK,
       cutoffSlotExecutionsSec: now - SLOT_EXECUTION_RETENTION_SEC,
-    }),
-  };
+    },
+  });
 }

@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 19 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 33 `CRON_JOB_DEFINITIONS` jobs across 18 job-bearing slots; the separate `*/5 * * * *` digest-trigger poll slot is the 19th runner slot and executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 19 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 34 `CRON_JOB_DEFINITIONS` jobs across 18 job-bearing slots; the separate `*/5 * * * *` digest-trigger poll slot is the 19th runner slot and executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -499,8 +499,9 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 | -------------------------- | -------------------------- | --------------------------------------------- | ------------------------------------------ |
 | `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
 | `telegram-degradation-watchdog` | `runTelegramDegradationWatchdog()` | `worker/src/cron/telegram-degradation-watchdog.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
+| `telegram-disambiguation-cleanup` | `cleanExpiredDisambiguations()` | `worker/src/cron/telegram-quiet-hours.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
 
-Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out gets its own 6-connection pool and CPU budget. Before status-tracked jobs run, the slot best-effort reconciles Telegram command suggestions, bot profile metadata, and webhook registration when a bot token is configured. Subscriber fan-out uses up to 4 of 6 available connections for parallel `sendBatch()` sends. Up to 200 subscriber message attempts per run; overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` in D1 for subsequent runs. After alert dispatch, the watchdog records Telegram degradation signals, and the slot also runs a non-status `telegram-disambiguation-cleanup` sidecar to prune expired mid-conversation state.
+Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out gets its own 6-connection pool and CPU budget. Before status-tracked jobs run, the slot best-effort reconciles Telegram command suggestions, bot profile metadata, and webhook registration when a bot token is configured. Subscriber fan-out uses up to 4 of 6 available connections for parallel `sendBatch()` sends. Up to 200 subscriber message attempts per run; overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` in D1 for subsequent runs. After alert dispatch, the watchdog records Telegram degradation signals, and the DB-only `telegram-disambiguation-cleanup` sidecar prunes expired mid-conversation state.
 
 Safety-grade fan-out on this lane is now gated by the generation-aware live source cache `cache["alert:safety-source-cache"]`, written only by `publish-report-card-cache`. If that source is missing, corrupt, stale, or from the wrong generation, only safety alerts are suppressed; DEWS/depeg/launch alerts continue.
 
@@ -1154,7 +1155,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 33 cron jobs across 18 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. The `*/5 * * * *` digest-trigger poll slot is not listed as a separate job because it runs work under the existing `daily-digest` lease only when a manual trigger flag is pending:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 34 cron jobs across 18 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. The `*/5 * * * *` digest-trigger poll slot is not listed as a separate job because it runs work under the existing `daily-digest` lease only when a manual trigger flag is pending:
 
 | Job                             | Interval         | Trigger                                           |
 | ------------------------------- | ---------------- | ------------------------------------------------- |
@@ -1166,6 +1167,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `status-self-check`             | 900s (15min)     | `9,24,39,54 * * * *`                              |
 | `dispatch-telegram-alerts`      | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`       |
 | `telegram-degradation-watchdog` | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`       |
+| `telegram-disambiguation-cleanup` | 300s (5min)    | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`       |
 | `sync-blacklist`                | 21,600s (6h)     | `3 */6 * * *`                                     |
 | `sync-mint-burn`                | 1,800s (30min)   | `4,34 * * * *`                                    |
 | `sync-dex-discovery`            | 7,200s (2h)      | `6 */2 * * *`                                     |

@@ -1,5 +1,6 @@
 import type { CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
+import { runBoundedQueue } from "./shared/bounded-queue";
 
 /**
  * Weekly cleanup of inactive Telegram subscribers.
@@ -49,11 +50,7 @@ async function recordLastRunSec(db: D1Database, now: number): Promise<void> {
     .run();
 }
 
-async function loadCandidateChats(
-  db: D1Database,
-  cutoffSec: number,
-  limit: number,
-): Promise<string[]> {
+async function loadCandidateChats(db: D1Database, cutoffSec: number, limit: number): Promise<string[]> {
   const result = await db
     .prepare(
       `SELECT s.chat_id AS chat_id
@@ -85,10 +82,7 @@ async function deleteChatCascade(db: D1Database, chatId: string): Promise<void> 
   ]);
 }
 
-export async function runTelegramInactiveCleanup(
-  db: D1Database,
-  signal?: AbortSignal,
-): Promise<CronResult> {
+export async function runTelegramInactiveCleanup(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   throwIfAborted(signal);
   const now = Math.floor(Date.now() / 1000);
 
@@ -110,12 +104,16 @@ export async function runTelegramInactiveCleanup(
   const candidates = await loadCandidateChats(db, cutoffSec, MAX_DELETIONS_PER_RUN);
   throwIfAborted(signal);
 
-  let deleted = 0;
-  for (const chatId of candidates) {
-    throwIfAborted(signal);
-    await deleteChatCascade(db, chatId);
-    deleted += 1;
-  }
+  const deletionResults = await runBoundedQueue({
+    items: candidates,
+    concurrency: 1,
+    signal,
+    worker: async (chatId) => {
+      await deleteChatCascade(db, chatId);
+      return 1;
+    },
+  });
+  const deleted = deletionResults.reduce((sum, count) => sum + count, 0);
 
   await recordLastRunSec(db, now);
 
