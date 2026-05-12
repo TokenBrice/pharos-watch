@@ -135,7 +135,7 @@ export const API_FRESHNESS_MAX_AGE_SEC = {
   yieldRankings: CACHE_FRESHNESS_LANES.yieldData.endpointMaxAgeSec,
   yieldHistory: CACHE_FRESHNESS_LANES.yieldData.endpointMaxAgeSec,
   stabilityIndex: DAY_SECONDS,
-  dailyDigest: 7200,
+  dailyDigest: DAY_SECONDS,
   digestArchive: DAY_SECONDS,
   bluechip: CACHE_FRESHNESS_LANES.bluechipRatings.endpointMaxAgeSec,
   usdsStatus: CACHE_FRESHNESS_LANES.usdsStatus.endpointMaxAgeSec,

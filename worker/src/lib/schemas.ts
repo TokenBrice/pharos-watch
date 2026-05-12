@@ -26,8 +26,11 @@ export const CmcCategoryResponseSchema = z.object({
         last_updated: z.string().optional(),
         quote: z.object({
           USD: z.object({
-            price: z.number(),
-            last_updated: z.string(),
+            // CMC returns null price for tokens without recent quotes; the
+            // downstream loop already skips null/non-positive prices, so accept
+            // them here instead of rejecting the whole response.
+            price: z.number().nullable().optional(),
+            last_updated: z.string().nullable().optional(),
           }),
         }),
       }),
@@ -45,7 +48,9 @@ export const CmcCategoryResponseSchema = z.object({
 export const JupiterPriceResponseSchema = z.record(
   z.string(),
   z.object({
-    usdPrice: z.number(),
+    // Jupiter omits usdPrice for low-liquidity tokens but still returns the
+    // entry; treat as optional and let the consumer skip missing prices.
+    usdPrice: z.number().nullable().optional(),
     decimals: z.number().int().nonnegative(),
     blockId: z.number().int().positive(),
     priceChange24h: z.number().nullable().optional(),

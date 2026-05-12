@@ -105,7 +105,7 @@
       "branches": [
         {
           "name": "Sovryn Dollar DLLR",
-          "holder": "0x1440d19436beaf8517896bffb957a88ec95a00f",
+          "holder": "0x1440d19436bEEaf8517896bffB957A88ec95a00F",
           "token": {
             "chain": "rootstock",
             "address": "0xc1411567d2670e24d9c4daaa7cda95686e1250aa",
@@ -118,7 +118,7 @@
         },
         {
           "name": "Rootstock Bridged USDT",
-          "holder": "0x1440d19436beaf8517896bffb957a88ec95a00f",
+          "holder": "0x1440d19436bEEaf8517896bffB957A88ec95a00F",
           "token": {
             "chain": "rootstock",
             "address": "0xef213441a85df4d7acbdae0cf78004e1e486bb96",
@@ -131,7 +131,7 @@
         },
         {
           "name": "Stargate Bridged USDC.e",
-          "holder": "0x1440d19436beaf8517896bffb957a88ec95a00f",
+          "holder": "0x1440d19436bEEaf8517896bffB957A88ec95a00F",
           "token": {
             "chain": "rootstock",
             "address": "0x74c9f2b00581f1b11aa7ff05aa9f608b7389de67",
@@ -144,7 +144,7 @@
         },
         {
           "name": "DAI Rootstock bridge variants",
-          "holder": "0x1440d19436beaf8517896bffb957a88ec95a00f",
+          "holder": "0x1440d19436bEEaf8517896bffB957A88ec95a00F",
           "token": {
             "chain": "rootstock",
             "address": "0x6b1a73d547f4009a26b8485b63d7015d248ad406",
@@ -157,7 +157,7 @@
         },
         {
           "name": "Dollar on Chain DOC",
-          "holder": "0x1440d19436beaf8517896bffb957a88ec95a00f",
+          "holder": "0x1440d19436bEEaf8517896bffB957A88ec95a00F",
           "token": {
             "chain": "rootstock",
             "address": "0xe700691da7b9851f2f35f8b8182c69c53ccad9db",

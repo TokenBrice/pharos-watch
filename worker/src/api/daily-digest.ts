@@ -1,5 +1,6 @@
 import { withErrorHandler, addFreshnessHeaders, jsonResponse, safeJsonParse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { selectDigestRiskSignal } from "./digest-risk-summary";
 import { selectDigestIntelligence } from "./digest-intelligence-summary";
 
@@ -35,5 +36,5 @@ export const handleDailyDigest = withErrorHandler("daily-digest", async (db: D1D
     ...intelligence,
   }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.standard,
-  }, row.generated_at, 7200));
+  }, row.generated_at, API_FRESHNESS_MAX_AGE_SEC.dailyDigest));
 });

@@ -4,9 +4,13 @@ import { fetchWithRetry } from "../lib/fetch-retry";
 import { DEFILLAMA_BASE } from "../lib/constants";
 import { getFxReferenceTypeFromState, loadFxRateState } from "../lib/fx-rate-state";
 import { buildInClause } from "../lib/db";
+import { chunkArray } from "../lib/collections";
 import { normalizeStablecoinChartDateSeconds } from "../lib/stablecoin-charts-payload";
 import { mergeStructuralSupplementalHistoryIntoCharts, STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS } from "../lib/stablecoin-charts-reconciliation";
 import { throwIfAborted } from "../lib/abort";
+
+// D1 caps bound parameters per query at 100; keep headroom for non-IN binds.
+const SUPPLEMENTAL_HISTORY_IN_CHUNK_SIZE = 90;
 
 /** Implied rate must be within 1/N to Nx of our cached FX rate.
  *  3x tolerates multi-year FX drift (e.g. ARS ~10x over 4 years won't hit
@@ -166,20 +170,24 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
   throwIfAborted(signal);
   if (STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.length > 0) {
     const supplementalIds = STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map((config) => config.id);
-    const supplementalIn = buildInClause(supplementalIds);
-    const overlayRowsResult = await db
-      .prepare(
-        `SELECT stablecoin_id, snapshot_date, circulating_usd
-         FROM supply_history
-         WHERE stablecoin_id IN (${supplementalIn.sql})
-         ORDER BY stablecoin_id ASC, snapshot_date ASC`,
-      )
-      .bind(...supplementalIn.binds)
-      .all<SupplyHistoryChartRow>();
+    const overlayRows: SupplyHistoryChartRow[] = [];
+    for (const idChunk of chunkArray(supplementalIds, SUPPLEMENTAL_HISTORY_IN_CHUNK_SIZE)) {
+      const supplementalIn = buildInClause(idChunk);
+      const overlayRowsResult = await db
+        .prepare(
+          `SELECT stablecoin_id, snapshot_date, circulating_usd
+           FROM supply_history
+           WHERE stablecoin_id IN (${supplementalIn.sql})
+           ORDER BY stablecoin_id ASC, snapshot_date ASC`,
+        )
+        .bind(...supplementalIn.binds)
+        .all<SupplyHistoryChartRow>();
+      if (overlayRowsResult.results) overlayRows.push(...overlayRowsResult.results);
+    }
     normalizedRaw = mergeStructuralSupplementalHistoryIntoCharts(normalizedRaw.map((point) => ({
       date: point.date,
       totalCirculatingUSD: point.totalCirculatingUSD ?? {},
-    })), overlayRowsResult.results ?? []).map((point) => ({
+    })), overlayRows).map((point) => ({
       date: point.date,
       totalCirculatingUSD: point.totalCirculatingUSD,
     }));
