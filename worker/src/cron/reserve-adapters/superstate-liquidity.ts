@@ -2,7 +2,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchChainlinkNavReserves } from "./chainlink-nav";
+import { fetchChainlinkNavCore } from "./chainlink-nav-core";
 import { fetchJsonWithRetry } from "./helpers";
 
 interface SuperstateLiquidityEntry {
@@ -71,7 +71,7 @@ export async function fetchSuperstateLiquidityReserves(
 ): Promise<AdapterResult> {
   const params = parseLiveReserveAdapterParams("superstate-liquidity", config.params);
   const { liquidityUrl, ticker, ...chainlinkParams } = params;
-  const navResult = await fetchChainlinkNavReserves(
+  const navResult = await fetchChainlinkNavCore(
     coin,
     {
       ...config,
