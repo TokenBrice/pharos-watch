@@ -262,6 +262,11 @@ export function normalizeRedemptionBackstopRunMetadata(
   return decoded.payload ?? {};
 }
 
+function isMissingTableError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.toLowerCase().includes("no such table");
+}
+
 function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {
   const details = parseDetails(row.details_json);
   const resolutionState = details.resolutionState ?? (row.score != null ? "resolved" : "missing-capacity");
@@ -435,6 +440,65 @@ async function queryRedemptionBackstopMap(db: D1Database, runId?: string | null)
   }
 }
 
+async function queryRedemptionBackstopMapFromRunRows(
+  db: D1Database,
+  runId: string,
+): Promise<RedemptionBackstopMap> {
+  let rows: D1Result<RedemptionBackstopRow>;
+  try {
+    rows = await db
+      .prepare(
+        `SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score,
+                access_score, settlement_score, execution_certainty_score,
+                capacity_score, output_asset_quality_score, cost_score,
+                route_family, access_model, settlement_model, execution_model,
+                output_asset_type, provider, source_mode, immediate_capacity_usd,
+                immediate_capacity_ratio, fee_bps, queue_enabled, updated_at,
+                methodology_version, details_json, snapshot_run_id
+           FROM redemption_backstop_run_rows
+          WHERE snapshot_run_id = ?`,
+      )
+      .bind(runId)
+      .all<RedemptionBackstopRow>();
+  } catch (error) {
+    if (isMissingTableError(error)) {
+      throw error;
+    }
+    throw new RedemptionBackstopSnapshotUnavailableError("Failed to load immutable redemption backstop run rows", {
+      cause: error,
+    });
+  }
+
+  try {
+    return Object.fromEntries((rows.results ?? []).map((row) => [row.stablecoin_id, toEntry(row)]));
+  } catch (error) {
+    throw new RedemptionBackstopSnapshotUnavailableError("Failed to decode immutable redemption backstop run rows", {
+      cause: error,
+    });
+  }
+}
+
+async function queryCompletedRedemptionBackstopRunMap(
+  db: D1Database,
+  runId: string,
+): Promise<{ map: RedemptionBackstopMap; source: "run-rows" | "legacy-current" }> {
+  try {
+    const map = await queryRedemptionBackstopMapFromRunRows(db, runId);
+    if (Object.keys(map).length > 0) {
+      return { map, source: "run-rows" };
+    }
+  } catch (error) {
+    if (!isMissingTableError(error)) {
+      throw error;
+    }
+  }
+
+  return {
+    map: await queryRedemptionBackstopMap(db, runId),
+    source: "legacy-current",
+  };
+}
+
 export async function loadRedemptionBackstopMap(db: D1Database): Promise<RedemptionBackstopMap> {
   return queryRedemptionBackstopMap(db);
 }
@@ -456,8 +520,11 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
         }
 
         let map: RedemptionBackstopMap;
+        let source: "run-rows" | "legacy-current";
         try {
-          map = await queryRedemptionBackstopMap(db, run.run_id);
+          const result = await queryCompletedRedemptionBackstopRunMap(db, run.run_id);
+          map = result.map;
+          source = result.source;
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           rejectionReasons.push(`${run.run_id}: query failed (${message})`);
@@ -466,7 +533,9 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
 
         const rowCount = Object.keys(map).length;
         if (rowCount !== run.written_count) {
-          rejectionReasons.push(`${run.run_id}: row count mismatch (${rowCount}/${run.written_count})`);
+          rejectionReasons.push(
+            `${run.run_id}: ${source} row count mismatch (${rowCount}/${run.written_count})`,
+          );
           continue;
         }
 
@@ -538,6 +607,21 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<
       effectiveExitModel: {
         model: "best-path",
         diversificationFactor: EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR,
+        modeledExitSize: {
+          supplyRatio: 0.05,
+          floorUsd: 100_000,
+          capUsd: 25_000_000,
+        },
+        capacityFactor: {
+          formula: "min(1, currentExecutableCapacityUsd / modeledExitSizeUsd)",
+          missingCapacityBehavior: "unbounded",
+        },
+        confidenceFactors: {
+          high: 1,
+          medium: 0.75,
+          low: 0.35,
+        },
+        diversificationPolicy: "Only independent issuer rails receive the secondary-path diversification bonus in v4 snapshots.",
       },
       routeFamilyCaps: {
         queueRedeem: REDEMPTION_ROUTE_FAMILY_CAPS.queueRedeem,

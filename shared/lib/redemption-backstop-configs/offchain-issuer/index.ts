@@ -12,8 +12,9 @@ import type { RedemptionBackstopConfig } from "../shared";
 function defineRecordEntries(
   configs: Record<string, RedemptionBackstopConfig>,
   overrideReason: string,
+  sourceFilePath: string,
 ): RedemptionBackstopRegistryEntry[] {
-  return Object.entries(configs).map(([id, config]) => ({ id, config, overrideReason }));
+  return Object.entries(configs).map(([id, config]) => ({ id, config, overrideReason, sourceFilePath }));
 }
 
 export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = defineBackstopRegistry([
@@ -21,22 +22,27 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   ...defineRecordEntries(
     COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS,
     "Reviewed issuer-specific config replaces the shared offchain issuer default.",
+    "shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts",
   ),
   ...defineRecordEntries(
     MAJOR_ISSUER_OFFCHAIN_CONFIGS,
     "Reviewed major-issuer config replaces the shared offchain issuer default.",
+    "shared/lib/redemption-backstop-configs/offchain-issuer/major-issuers.ts",
   ),
   ...defineRecordEntries(
     NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS,
     "Reviewed non-USD or tokenized-asset config replaces the shared offchain issuer default.",
+    "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
   ),
   ...defineRecordEntries(
     COMMODITY_OFFCHAIN_CONFIGS,
     "Reviewed commodity issuer config replaces the shared offchain issuer default.",
+    "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
   ),
   ...defineRecordEntries(
     REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS,
     "Reviewed remediation or late-audit config replaces the shared offchain issuer default.",
+    "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts",
   ),
 ]);
 

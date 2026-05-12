@@ -9,7 +9,7 @@ import {
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "../stablecoins";
 import type { RedemptionDocSourceSupport, RedemptionRouteFamily } from "../../types";
 import { RedemptionBackstopConfigSchema } from "./schema";
-import { getBackstopRegistryOverrideReasons } from "./factory";
+import { getBackstopRegistryOverrideReasons, getBackstopRegistrySourceFilePaths } from "./factory";
 import type { RedemptionBackstopConfig } from "./shared";
 import {
   REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
@@ -104,17 +104,6 @@ const DOC_SOURCE_SUPPORT_BASELINE = {
   missingSupportKindCounts: Record<RedemptionDocSourceSupport, number>;
 };
 
-const LEGACY_REDEMPTION_CONFIG_OVERRIDES = new Set([
-  "collateral-redeem:bold-liquity:expandIds->property",
-  "collateral-redeem:lusd-liquity:expandIds->property",
-  "collateral-redeem:feusd-felix:expandIds->property",
-  "collateral-redeem:meusd-mezo:expandIds->property",
-  "collateral-redeem:nect-beraborrow:expandIds->property",
-  "collateral-redeem:fxusd-f-x-protocol:expandIds->property",
-  "collateral-redeem:usdq-quill:expandIds->property",
-  "collateral-redeem:usdk-orki:expandIds->property",
-]);
-
 const ROUTE_FAMILY_ORDER: RedemptionRouteFamily[] = [
   "offchain-issuer",
   "stablecoin-redeem",
@@ -133,6 +122,12 @@ export function validateRedemptionBackstopRegistry(
   for (const moduleEntry of manifest) {
     for (const [id, reason] of getBackstopRegistryOverrideReasons(moduleEntry.configs)) {
       overrideReasonById.set(id, reason);
+    }
+  }
+  const sourceFileById = new Map<string, string>();
+  for (const moduleEntry of manifest) {
+    for (const [id, sourceFilePath] of getBackstopRegistrySourceFilePaths(moduleEntry.configs)) {
+      sourceFileById.set(id, sourceFilePath);
     }
   }
   const findings: RedemptionRegistryFinding[] = [];
@@ -275,7 +270,7 @@ export function validateRedemptionBackstopRegistry(
     return {
       stablecoinId: id,
       family: owner?.name ?? "unknown",
-      filePath: owner?.filePath ?? "unknown",
+      filePath: sourceFileById.get(id) ?? owner?.filePath ?? "unknown",
       routeFamily: config.routeFamily,
       accessModel: config.accessModel,
       settlementModel: config.settlementModel,
@@ -712,13 +707,12 @@ function validateStaticConfigSourceFile(
     for (const entry of registryEntries) {
       const previous = seenInModule.get(entry.id);
       if (previous) {
-        const key = `${moduleEntry.name}:${entry.id}:${previous}->${entry.kind}`;
-        if (!getBackstopRegistryOverrideReasons(moduleEntry.configs).has(entry.id) && !LEGACY_REDEMPTION_CONFIG_OVERRIDES.has(key)) {
+        if (!getBackstopRegistryOverrideReasons(moduleEntry.configs).has(entry.id)) {
           addFinding(
             findings,
             "error",
             "unapproved-config-overwrite",
-            `${moduleEntry.name} overwrites "${entry.id}" via ${previous}->${entry.kind}; add it to INTENTIONAL_REDEMPTION_CONFIG_OVERRIDES if intentional.`,
+            `${moduleEntry.name} overwrites "${entry.id}" via ${previous}->${entry.kind}; use defineBackstopRegistry with an overrideReason if intentional.`,
             { stablecoinId: entry.id, family: moduleEntry.name, filePath },
           );
         }

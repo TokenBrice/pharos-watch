@@ -16,8 +16,8 @@ describe("check-redemption-backstops CLI", () => {
 
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- test reads its own temp report path.
     const report = JSON.parse(readFileSync(reportPath, "utf8"));
-    expect(report.summary.configuredCount).toBe(266);
-    expect(report.auditRows).toHaveLength(266);
+    expect(report.summary.configuredCount).toBe(267);
+    expect(report.auditRows).toHaveLength(267);
     expect(report.auditRows[0]).toMatchObject({
       stablecoinId: expect.any(String),
       routeFamily: expect.any(String),

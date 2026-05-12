@@ -56,8 +56,8 @@ describe("tracked stablecoin metadata", () => {
     expect(nonUsd).toHaveLength(0);
     expect(commodity).toHaveLength(0);
     expect(preLaunch).toHaveLength(0);
-    expect(perCoinGenerated).toHaveLength(340);
-    expect(canonicalOrder).toHaveLength(340);
+    expect(perCoinGenerated).toHaveLength(341);
+    expect(canonicalOrder).toHaveLength(341);
     expect(
       usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
     ).toBe(canonicalOrder.length);
@@ -89,8 +89,8 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
-    expect(TRACKED_STABLECOINS).toHaveLength(340);
-    expect(ACTIVE_STABLECOINS).toHaveLength(312);
+    expect(TRACKED_STABLECOINS).toHaveLength(341);
+    expect(ACTIVE_STABLECOINS).toHaveLength(313);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "usdpt-western-union",
       "roughrider-bnd",
@@ -159,6 +159,7 @@ describe("tracked stablecoin metadata", () => {
       "cusdo-openeden",
       "syusd-aegis",
       "sbold-k3-capital",
+      "ybold-yearn",
       "fxsave-f-x-protocol",
       "susn-noon",
       "syzusd-yuzu",
@@ -179,8 +180,9 @@ describe("tracked stablecoin metadata", () => {
     }
   });
 
-  it("keeps only USDS with two tracked child variants", () => {
+  it("keeps multi-variant parents explicit", () => {
     expect(getVariants("usds-sky").map((coin) => coin.id)).toEqual(["susds-sky", "stusds-sky"]);
+    expect(getVariants("bold-liquity").map((coin) => coin.id)).toEqual(["sbold-k3-capital", "ybold-yearn"]);
   });
 
   it("rejects malformed stablecoin assets with readable schema errors", () => {

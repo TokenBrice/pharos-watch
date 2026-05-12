@@ -312,9 +312,9 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 851,
+    "fileLines": 856,
     "maxFunctionLines": 409,
-    "branchCount": 46,
+    "branchCount": 47,
     "disposition": "deferred",
     "targetBudget": {
       "fileLines": 540,
@@ -420,8 +420,8 @@
     "notes": "Source loading, DEWS signal assembly, and persistence now live in `cron/dews/*` helpers. Keep the entrypoint as the coordinator instead of regrowing source-specific reads or writeback logic."
   },
   "worker/src/cron/sync-stablecoins/enrich-prices.ts": {
-    "fileLines": 112,
-    "maxFunctionLines": 75,
+    "fileLines": 104,
+    "maxFunctionLines": 66,
     "branchCount": 6,
     "disposition": "stabilized",
     "targetBudget": {

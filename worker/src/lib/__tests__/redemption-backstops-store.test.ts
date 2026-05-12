@@ -374,6 +374,42 @@ describe("loadRedemptionBackstopMap", () => {
     expect(result.latestUpdatedAt).toBe(1_699_999_990);
   });
 
+  it("serves immutable rows from the latest completed run when the current mirror was overwritten by a failed run", async () => {
+    const db = mockD1([
+      {
+        match: "FROM redemption_backstop_runs",
+        rows: [
+          {
+            run_id: "run-old-completed",
+            completed_at: 1_700_000_000,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: 1_699_999_990,
+            max_updated_at: 1_699_999_990,
+            methodology_version: "1.1",
+          },
+        ],
+      },
+      {
+        match: "FROM redemption_backstop_run_rows",
+        matchBinds: ["run-old-completed"],
+        rows: [makeRealisticRow({ snapshot_run_id: "run-old-completed", updated_at: 1_699_999_990 })],
+      },
+      {
+        match: "FROM redemption_backstop\n            WHERE snapshot_run_id = ?",
+        matchBinds: ["run-old-completed"],
+        rows: [],
+        throwError: new Error("current mirror should not be read for completed run rows"),
+      },
+    ]);
+
+    const result = await loadRedemptionBackstopSnapshot(db);
+
+    expect(result.runId).toBe("run-old-completed");
+    expect(result.latestUpdatedAt).toBe(1_699_999_990);
+    expect(result.map["eurc-circle"]?.updatedAt).toBe(1_699_999_990);
+  });
+
   it("rejects completed run manifests when every recent candidate is invalid", async () => {
     const db = mockD1([
       {
@@ -637,6 +673,12 @@ describe("loadRedemptionBackstopMap", () => {
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("INSERT INTO redemption_backstop_runs"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("UPDATE redemption_backstop_runs"))).toBe(true);
+    expect(
+      history.some(
+        (entry) =>
+          entry.sql.includes("INSERT INTO redemption_backstop_run_rows") && entry.binds.includes("run-test"),
+      ),
+    ).toBe(true);
     expect(
       history.some(
         (entry) => entry.sql.includes("INSERT INTO redemption_backstop") && entry.binds.includes("run-test"),

@@ -860,6 +860,24 @@ describe("authoritative-price-sources", () => {
         outputRaw: 1_020_871_205_300_000_000n,
         expectedRatio: 1.0208712,
       },
+      {
+        id: "sbold-k3-capital",
+        parentId: "bold-liquity",
+        parentSymbol: "BOLD",
+        vault: "0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+        chain: "ethereum",
+        outputRaw: 1_041_000_000_000_000_000n,
+        expectedRatio: 1.041,
+      },
+      {
+        id: "ybold-yearn",
+        parentId: "bold-liquity",
+        parentSymbol: "BOLD",
+        vault: "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
+        chain: "ethereum",
+        outputRaw: 1_000_000_000_000_000_000n,
+        expectedRatio: 1,
+      },
     ];
 
     for (const testCase of cases) {

@@ -6,6 +6,8 @@ import {
   REVIEWED_REMEDIATION_AT,
 } from "./shared";
 
+const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/offchain-issuer/base-batches.ts";
+
 export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
   ...defineBatch(
     [
@@ -79,6 +81,7 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
       "wars-argentine-peso",
     ],
     issuerBase,
+    { sourceFilePath: SOURCE_FILE_PATH },
   ),
   ...defineBatch(
     ["zarp-zarp", "cetes-etherfuse"],
@@ -86,6 +89,7 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
       ...issuerBase,
       ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
     },
+    { sourceFilePath: SOURCE_FILE_PATH },
   ).map((entry) => ({
     ...entry,
     overrideReason: "Remediation review upgrades offchain issuer default to documented-bound capacity.",
@@ -106,14 +110,19 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
       ...issuerBase,
       ...documentedBoundSupplyFull(REVIEWED_NON_USD_BATCH_AT),
     },
+    { sourceFilePath: SOURCE_FILE_PATH },
   ).map((entry) => ({
     ...entry,
     overrideReason: "Non-USD review cohort upgrades issuer defaults to documented-bound capacity.",
   })),
-  ...defineBatch(["usyc-hashnote", "ustb-superstate", "a7a5-old-vector", "gusd-gate"], {
-    ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
-  }).map((entry) => ({
+  ...defineBatch(
+    ["usyc-hashnote", "ustb-superstate", "a7a5-old-vector", "gusd-gate"],
+    {
+      ...issuerBase,
+      ...reviewedDirectRedemptionSupplyFull,
+    },
+    { sourceFilePath: SOURCE_FILE_PATH },
+  ).map((entry) => ({
     ...entry,
     overrideReason: "Direct-redemption review cohort upgrades issuer defaults to documented-bound capacity.",
   })),

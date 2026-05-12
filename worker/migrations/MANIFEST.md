@@ -63,6 +63,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0117     | `0117_telegram_global_alert_indexes.sql`        | Partial indexes on `telegram_subscribers.global_alert_*` flags plus `telegram_pending_alerts(chat_id)` for dispatcher fan-out and drain JOIN |
 | 0118     | `0118_telegram_subscriber_timezone.sql`         | Add nullable `timezone` IANA zone to `telegram_subscribers` for resolving quiet hours locally (NULL = UTC) |
 | 0119     | `0119_telegram_subscription_snooze.sql`         | Add `alert_snooze_until_ts` to `telegram_subscriptions` so per-coin snooze can suppress fan-out for a single coin without muting the whole chat |
+| 0120     | `0120_redemption_backstop_run_rows.sql`         | Add immutable per-run redemption backstop rows so completed snapshots survive later failed mirror writes |
 
 ## Retired Individual Migrations
 

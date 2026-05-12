@@ -31,10 +31,6 @@
     "disposition": "queued-p4",
     "notes": "The API keys operator panel currently mixes create/edit form state, admin mutations, expiry/rate-limit validation, and token reveal rendering in one client component. Keep it explicitly waived until the next ops-UI decomposition pass splits the mutation helpers and per-key row editor out of the panel shell."
   },
-  "worker/src/cron/sync-fx-rates-helpers.ts": {
-    "disposition": "deferred",
-    "notes": "FX-rate helper orchestration remains a large policy surface after earlier trims. Defer another split until the next FX-state/runtime cleanup tranche."
-  },
   "src/app/admin/status-dashboard.tsx": {
     "disposition": "queued-p4",
     "notes": "Admin status dashboard still centralizes top-fold triage, section composition, and operator controls in one client shell. Keep waived until the dedicated admin-status decomposition lane is scheduled instead of widening the current mixed status/frontend tranche."
@@ -82,5 +78,13 @@
   "worker/src/lib/evm-rpc.ts": {
     "disposition": "queued-p4",
     "notes": "Multicall3 support expanded the shared EVM RPC helper while keeping existing RPC fallback, timeout, and critical-coverage paths centralized. Split Multicall3 ABI encoding/decoding into a dedicated helper module in the next on-chain reserve cleanup pass if this file grows again."
+  },
+  "shared/lib/redemption-backstop-configs/validation.ts": {
+    "disposition": "queued-p4",
+    "notes": "Redemption registry validation currently centralizes schema checks, source-module AST auditing, documentation support ratchets, policy rows, and coverage summaries. Keep waived for the v4 validation tranche; split source-module AST scanning and policy validation into helper modules in the next redemption-maintenance pass."
+  },
+  "worker/src/lib/redemption-backstop-capacity.ts": {
+    "disposition": "queued-p4",
+    "notes": "Redemption capacity resolution intentionally centralizes supply-full, supply-ratio, fixed-USD, and reserve-sync metadata semantics while v4 current-capacity behavior is still being audited. Split capacity profile construction from per-model resolution once the v4 route coverage expansion settles."
   }
 }

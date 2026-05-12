@@ -84,6 +84,7 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "stcusd-cap", dustThreshold: 10_000 },
   { stablecoinId: "msy-main-street", dustThreshold: 10_000 },
   { stablecoinId: "sbold-k3-capital", dustThreshold: 10_000 },
+  { stablecoinId: "ybold-yearn", dustThreshold: 10_000 },
   { stablecoinId: "yusd-yieldfi", dustThreshold: 10_000 },
   { stablecoinId: "said-gaib", dustThreshold: 10_000 },
 ];

@@ -139,6 +139,94 @@ function buildCurrentUpsert(
     );
 }
 
+function buildRunRowUpsert(
+  db: D1Database,
+  record: RedemptionBackstopSnapshotRecord,
+  runId: string,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT INTO redemption_backstop_run_rows (
+         snapshot_run_id,
+         stablecoin_id,
+         score,
+         effective_exit_score,
+         dex_liquidity_score,
+         access_score,
+         settlement_score,
+         execution_certainty_score,
+         capacity_score,
+         output_asset_quality_score,
+         cost_score,
+         route_family,
+         access_model,
+         settlement_model,
+         execution_model,
+         output_asset_type,
+         provider,
+         source_mode,
+         immediate_capacity_usd,
+         immediate_capacity_ratio,
+         fee_bps,
+         queue_enabled,
+         updated_at,
+         methodology_version,
+         details_json
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(snapshot_run_id, stablecoin_id) DO UPDATE SET
+         score = excluded.score,
+         effective_exit_score = excluded.effective_exit_score,
+         dex_liquidity_score = excluded.dex_liquidity_score,
+         access_score = excluded.access_score,
+         settlement_score = excluded.settlement_score,
+         execution_certainty_score = excluded.execution_certainty_score,
+         capacity_score = excluded.capacity_score,
+         output_asset_quality_score = excluded.output_asset_quality_score,
+         cost_score = excluded.cost_score,
+         route_family = excluded.route_family,
+         access_model = excluded.access_model,
+         settlement_model = excluded.settlement_model,
+         execution_model = excluded.execution_model,
+         output_asset_type = excluded.output_asset_type,
+         provider = excluded.provider,
+         source_mode = excluded.source_mode,
+         immediate_capacity_usd = excluded.immediate_capacity_usd,
+         immediate_capacity_ratio = excluded.immediate_capacity_ratio,
+         fee_bps = excluded.fee_bps,
+         queue_enabled = excluded.queue_enabled,
+         updated_at = excluded.updated_at,
+         methodology_version = excluded.methodology_version,
+         details_json = excluded.details_json`,
+    )
+    .bind(
+      runId,
+      record.stablecoinId,
+      record.score,
+      record.effectiveExitScore,
+      record.dexLiquidityScore,
+      record.accessScore,
+      record.settlementScore,
+      record.executionCertaintyScore,
+      record.capacityScore,
+      record.outputAssetQualityScore,
+      record.costScore,
+      record.routeFamily,
+      record.accessModel,
+      record.settlementModel,
+      record.executionModel,
+      record.outputAssetType,
+      record.provider,
+      record.sourceMode,
+      record.immediateCapacityUsd,
+      record.immediateCapacityRatio,
+      record.feeBps,
+      record.queueEnabled ? 1 : 0,
+      record.updatedAt,
+      record.methodologyVersion,
+      buildDetailsJson(record),
+    );
+}
+
 function buildHistoryUpsert(
   db: D1Database,
   record: RedemptionBackstopSnapshotRecord,
@@ -311,13 +399,14 @@ export async function upsertRedemptionBackstopSnapshots(
 
     const stmts: D1PreparedStatement[] = [];
     for (const record of records) {
+      stmts.push(buildRunRowUpsert(db, record, runId));
       stmts.push(buildCurrentUpsert(db, record, runId));
       stmts.push(buildHistoryUpsert(db, record, snapshotDate, runId));
     }
 
-    // Each coin produces 2 statements (current: 25 params, history: 9 params = 34 total).
-    // D1 limits total bound params per batch (~1000), so chunk at 20 (20×34=680).
-    await batchExecute(db, stmts, 20);
+    // Each coin produces 3 statements (run row: 25 params, current: 25 params, history: 9 params = 59 total).
+    // D1 limits total bound params per batch (~1000), so chunk at 15 (15×59=885).
+    await batchExecute(db, stmts, 15);
 
     const { minUpdatedAt, maxUpdatedAt } = resolveRunBounds(records);
     const completion = await runWithOverloadRetry(() =>

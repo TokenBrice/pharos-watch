@@ -331,6 +331,21 @@ export const RedemptionBackstopMethodologySchema = MethodologyEnvelopeSchema.ext
   effectiveExitModel: z.object({
     model: z.string(),
     diversificationFactor: z.number(),
+    modeledExitSize: z.object({
+      supplyRatio: z.number(),
+      floorUsd: z.number(),
+      capUsd: z.number(),
+    }).optional(),
+    capacityFactor: z.object({
+      formula: z.string(),
+      missingCapacityBehavior: z.string(),
+    }).optional(),
+    confidenceFactors: z.object({
+      high: z.number(),
+      medium: z.number(),
+      low: z.number(),
+    }).optional(),
+    diversificationPolicy: z.string().optional(),
   }),
   routeFamilyCaps: z.object({
     queueRedeem: z.number(),

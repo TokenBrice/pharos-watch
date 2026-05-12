@@ -169,6 +169,14 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
     vaultDecimals: 18,
     assetDecimals: 18,
   },
+  {
+    id: "ybold-yearn",
+    parentId: "bold-liquity",
+    chain: ETHEREUM_CHAIN,
+    vault: "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
+    vaultDecimals: 18,
+    assetDecimals: 18,
+  },
 ];
 
 const ERC4626_NAV_VAULTS_BY_ID = new Map<string, Erc4626NavVaultConfig>(
