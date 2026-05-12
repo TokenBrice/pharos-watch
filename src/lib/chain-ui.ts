@@ -1,6 +1,14 @@
 import { getNetColor } from "@shared/lib/format";
 import type { HealthBand } from "@shared/types/chains";
 
+export const HEALTH_BAND_ORDER = [
+  "robust",
+  "healthy",
+  "mixed",
+  "fragile",
+  "concentrated",
+] as const satisfies readonly HealthBand[];
+
 export const HEALTH_BADGE_CLASSES: Record<HealthBand, string> = {
   robust: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
   healthy: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
@@ -33,6 +41,28 @@ export const HEALTH_HEX_FILL: Record<HealthBand, string> = {
   fragile: "#ea580c",
   concentrated: "#dc2626",
 };
+
+export const CHAIN_ACCENT_HEX: Record<string, string> = {
+  arbitrum: "#28a0f0",
+  base: "#0052ff",
+  bsc: "#f3ba2f",
+  ethereum: "#627eea",
+  hyperliquid: "#50e3c2",
+  polygon: "#8247e5",
+  solana: "#14f195",
+  tron: "#ff060a",
+};
+
+export function chainAccentHex(id: string): string {
+  const curated = CHAIN_ACCENT_HEX[id];
+  if (curated) return curated;
+
+  let hash = 0;
+  for (const char of id) {
+    hash = (hash * 31 + char.charCodeAt(0)) % 360;
+  }
+  return `oklch(0.68 0.14 ${hash})`;
+}
 
 export function trendColor(value: number): string {
   return getNetColor(value, {
