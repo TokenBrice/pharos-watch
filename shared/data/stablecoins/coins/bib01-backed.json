@@ -1,0 +1,124 @@
+{
+  "id": "bib01-backed",
+  "name": "Backed IB01 Treasury Bond 0-1yr",
+  "symbol": "bIB01",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Tracker certificate fully backed by the BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01), held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
+  "pegMechanism": "NAV-accreting tracker token (not pegged to $1); price reflects the underlying iShares 0-1yr T-bill ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
+  "detailProvider": "coingecko",
+  "geckoId": "backed-ib01-treasury-bond-0-1yr",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://app.backed.fi/issuance",
+    "provider": "Backed Finance (monthly attestations and on-chain reserve dashboard)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://backed.fi/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/BackedFi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.backed.fi/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Switzerland",
+    "regulator": "FINMA",
+    "license": "Swiss DLT Act registered uncertificated securities"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Backed Finance documentation",
+        "url": "https://docs.backed.fi/"
+      }
+    ],
+    "evidence": "Backed Assets retains transfer-agent freeze and burn authority over bIB01 balances under its Swiss DLT Act framework and operates KYC-gated primary issuance.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "bib01-backed",
+    "display": {
+      "url": "https://app.backed.fi/issuance",
+      "label": "Backed Finance issuance dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "iShares 0-1yr Treasury Bond ETF (IB01) NAV accretion",
+    "yieldType": "nav-appreciation"
+  }
+}

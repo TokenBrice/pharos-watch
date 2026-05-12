@@ -1,0 +1,78 @@
+{
+  "id": "wstbt-matrixdock",
+  "name": "Wrapped Matrixdock STBT",
+  "symbol": "wSTBT",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "1:1 wrapper around Matrixdock STBT (short-term U.S. Treasury bills and Treasury-collateralised reverse repos); yield accrues into the wrapper's exchange rate rather than rebasing supply",
+  "pegMechanism": "Non-rebasing NAV-accreting wrapper around STBT used on Curve and other AMMs; mint and redeem against STBT via the wstbt contract; underlying redemption against U.S. dollars runs through Matrixdock at NAV",
+  "detailProvider": "coingecko",
+  "geckoId": "wrapped-stbt",
+  "pegReferenceId": "stbt-matrixdock",
+  "variantOf": "stbt-matrixdock",
+  "variantKind": "savings-passthrough",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: wSTBT resolves to Upstream because the wrapper variant inherits freeze and transfer surface from STBT.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.matrixdock.com/stbt"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Matrixdock_"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.matrixdock.com/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Singapore",
+    "regulator": "MAS",
+    "license": "Singapore MAS exemption (institutional / accredited investors only)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x288a8005c53632d920045b7c7c2e54a3f1bc4c83",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "dependencies": [
+    {
+      "id": "stbt-matrixdock",
+      "type": "wrapper",
+      "weight": 1
+    }
+  ],
+  "reserves": [
+    {
+      "name": "Matrixdock STBT (short-term U.S. Treasury bills and reverse repos)",
+      "pct": 100,
+      "risk": "very-low",
+      "coinId": "stbt-matrixdock",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Matrixdock STBT NAV accretion (wrapped, non-rebasing)",
+    "yieldType": "nav-appreciation"
+  }
+}

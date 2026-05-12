@@ -1,0 +1,107 @@
+{
+  "id": "jtrsy-anemoy",
+  "name": "Janus Henderson Anemoy Treasury Fund",
+  "symbol": "JTRSY",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Short-duration U.S. Treasury bills selected and managed by Janus Henderson as sub-advisor inside Anemoy's BVI Professional Fund, tokenised through Centrifuge as ERC-7540 vault shares",
+  "pegMechanism": "NAV-accreting fund share token; same-day subscription and redemption at fund NAV for whitelisted non-U.S. Professional Investors via the Centrifuge issuer rail; S&P assigns AA+f / S1+ to the fund",
+  "detailProvider": "coingecko",
+  "geckoId": "anemoy-janus-henderson-treasury-fund",
+  "protocolSlug": "centrifuge",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://centrifuge.io/pools/jtrsy",
+    "provider": "Centrifuge on-chain NAV publishing with Janus Henderson sub-advisory; S&P AA+f / S1+ rating"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://centrifuge.io/pools/jtrsy"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/centrifuge"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.centrifuge.io/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands",
+    "regulator": "BVI FSC",
+    "license": "BVI Professional Fund"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Centrifuge JTRSY pool",
+        "url": "https://centrifuge.io/pools/jtrsy"
+      }
+    ],
+    "evidence": "Anemoy / Centrifuge operate JTRSY with permissioned ERC-7540 vault transfers restricted to whitelisted Professional Investors and retain freeze and burn authority over fund shares.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "U.S. Treasury Bills (Janus Henderson sub-advised)",
+      "pct": 97,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash and equivalents",
+      "pct": 3,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "jtrsy-anemoy",
+    "display": {
+      "url": "https://centrifuge.io/pools/jtrsy",
+      "label": "Centrifuge JTRSY pool"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Janus Henderson Anemoy Treasury Fund (T-bill NAV accretion)",
+    "yieldType": "nav-appreciation"
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Centrifuge V3 multi-chain availability",
+      "message": "JTRSY is also distributed across Centrifuge V3 to additional chains. Pharos currently tracks the Ethereum supply contract pending per-chain verification; on-chain NAV publishing from Centrifuge can later replace the curated snapshot."
+    }
+  ]
+}

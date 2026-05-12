@@ -1,0 +1,106 @@
+{
+  "id": "eutbl-spiko",
+  "name": "Spiko EU T-Bills Money Market Fund",
+  "symbol": "EUTBL",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Short-dated Eurozone sovereign Treasury bills (issued by AAA / strong-Member-State issuers) with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
+  "pegMechanism": "EUR-denominated NAV-accreting share token tracking the variable-NAV money market fund; primary mint and redemption settle same-day at fund NAV with a €1k minimum; Chainlink CCIP relays issuance between Ethereum, Arbitrum, and Polygon",
+  "detailProvider": "coingecko",
+  "geckoId": "spiko-eu-t-bills-money-market-fund",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.spiko.io/",
+    "provider": "Spiko (daily NAV and fund holdings disclosures)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.spiko.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/spiko_eu"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.spiko.io/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "France",
+    "regulator": "AMF",
+    "license": "UCITS Short-Term VNAV Money Market Fund"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+      "decimals": 5
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Spiko website",
+        "url": "https://www.spiko.io/"
+      }
+    ],
+    "evidence": "Spiko acts as transfer agent for EUTBL with permissioned ERC-1967 upgradeable proxy and KYC-gated transfers, retaining freeze and burn authority over fund shares.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "Eurozone short-term Treasury Bills",
+      "pct": 95,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash and bank deposits",
+      "pct": 5,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "eutbl-spiko",
+    "display": {
+      "url": "https://www.spiko.io/",
+      "label": "Spiko fund page"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Spiko EU T-Bills MMF (Eurozone Treasury bill NAV)",
+    "yieldType": "nav-appreciation"
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Multi-chain EU-regulated MMF",
+      "message": "EUTBL is also issued on Arbitrum and Polygon via Chainlink CCIP. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+    }
+  ]
+}

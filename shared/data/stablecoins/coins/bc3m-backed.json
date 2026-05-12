@@ -1,0 +1,101 @@
+{
+  "id": "bc3m-backed",
+  "name": "Backed GOVIES 0-6 months EURO investment grade",
+  "symbol": "bC3M",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Tracker certificate fully backed by the AMUNDI ETF GOVIES 0-6 MONTHS EUROMTS INVESTMENT GRADE UCITS ETF, held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
+  "pegMechanism": "EUR-denominated NAV-accreting tracker token (not pegged to €1); price reflects the underlying short-term Eurozone government bond ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
+  "detailProvider": "coingecko",
+  "geckoId": "backed-govies-0-6-months-euro-investment-grade",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://app.backed.fi/issuance",
+    "provider": "Backed Finance (monthly attestations and on-chain reserve dashboard)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://backed.fi/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/BackedFi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.backed.fi/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Switzerland",
+    "regulator": "FINMA",
+    "license": "Swiss DLT Act registered uncertificated securities"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Backed Finance documentation",
+        "url": "https://docs.backed.fi/"
+      }
+    ],
+    "evidence": "Backed Assets retains transfer-agent freeze and burn authority over bC3M balances under its Swiss DLT Act framework and operates KYC-gated primary issuance.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "AMUNDI ETF GOVIES 0-6 Months Euro Investment Grade UCITS ETF",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "bc3m-backed",
+    "display": {
+      "url": "https://app.backed.fi/issuance",
+      "label": "Backed Finance issuance dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF NAV accretion",
+    "yieldType": "nav-appreciation"
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Multi-chain Backed product",
+      "message": "bC3M is also issued on Base, BNB Chain, Polygon, and Gnosis (same contract address pattern as Backed's other tokens). Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "id": "stbt-matrixdock",
+  "name": "Matrixdock Short-Term Treasury Bill",
+  "symbol": "STBT",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "U.S. Treasury securities maturing within six months and reverse repurchase agreements collateralised by U.S. Treasuries; custodied through prime brokerage relationships and administered by Matrixdock (Matrixport, Singapore)",
+  "pegMechanism": "$1.00 rebasing share token; daily T-bill yield is distributed by adjusting holder balances rather than the unit price; institutional KYC mint and redemption at same-day NAV via Matrixdock with a $100k minimum; Chainlink Proof-of-Reserve feed publishes the underlying reserve attestation",
+  "detailProvider": "coingecko",
+  "geckoId": "matrixdock-short-term-treasury-bill",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://www.matrixdock.com/stbt",
+    "provider": "Chainlink Proof of Reserve (Matrixdock T-Bill PoR feed)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.matrixdock.com/stbt"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Matrixdock_"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.matrixdock.com/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Singapore",
+    "regulator": "MAS",
+    "license": "Singapore MAS exemption (institutional / accredited investors only)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x530824da86689c9c17cdc2871ff29b058345b44a",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Matrixdock STBT page",
+        "url": "https://www.matrixdock.com/stbt"
+      }
+    ],
+    "evidence": "Matrixdock retains transfer-agent freeze and burn authority over STBT balances under its institutional KYC framework.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "U.S. Treasury Bills",
+      "pct": 70,
+      "risk": "very-low"
+    },
+    {
+      "name": "Reverse Repo Agreements (UST-collateralised)",
+      "pct": 28,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash and equivalents",
+      "pct": 2,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "stbt-matrixdock",
+    "display": {
+      "url": "https://www.matrixdock.com/stbt",
+      "label": "Matrixdock STBT page (Chainlink PoR feed)"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Matrixdock STBT (short-term U.S. Treasury bill rebase)",
+    "yieldType": "rebase"
+  }
+}

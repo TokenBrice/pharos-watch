@@ -1669,6 +1669,107 @@
     }
   },
   {
+    "id": "bc3m-backed",
+    "detailProvider": "coingecko",
+    "name": "Backed GOVIES 0-6 months EURO investment grade",
+    "symbol": "bC3M",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "EUR",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Tracker certificate fully backed by the AMUNDI ETF GOVIES 0-6 MONTHS EUROMTS INVESTMENT GRADE UCITS ETF, held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
+    "pegMechanism": "EUR-denominated NAV-accreting tracker token (not pegged to €1); price reflects the underlying short-term Eurozone government bond ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
+    "geckoId": "backed-govies-0-6-months-euro-investment-grade",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://app.backed.fi/issuance",
+      "provider": "Backed Finance (monthly attestations and on-chain reserve dashboard)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://backed.fi/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/BackedFi"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.backed.fi/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Switzerland",
+      "regulator": "FINMA",
+      "license": "Swiss DLT Act registered uncertificated securities"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Backed Finance documentation",
+          "url": "https://docs.backed.fi/"
+        }
+      ],
+      "evidence": "Backed Assets retains transfer-agent freeze and burn authority over bC3M balances under its Swiss DLT Act framework and operates KYC-gated primary issuance.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "AMUNDI ETF GOVIES 0-6 Months Euro Investment Grade UCITS ETF",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "bc3m-backed",
+      "display": {
+        "url": "https://app.backed.fi/issuance",
+        "label": "Backed Finance issuance dashboard"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Multi-chain Backed product",
+        "message": "bC3M is also issued on Base, BNB Chain, Polygon, and Gnosis (same contract address pattern as Backed's other tokens). Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF NAV accretion",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "bd-basedollar",
     "detailProvider": "defillama",
     "name": "Base Dollar",
@@ -1914,6 +2015,130 @@
     "yieldConfig": {
       "yieldSource": "Binance BFUSD daily APR / rewards",
       "yieldType": "governance-set"
+    }
+  },
+  {
+    "id": "bib01-backed",
+    "detailProvider": "coingecko",
+    "name": "Backed IB01 Treasury Bond 0-1yr",
+    "symbol": "bIB01",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Tracker certificate fully backed by the BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01), held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
+    "pegMechanism": "NAV-accreting tracker token (not pegged to $1); price reflects the underlying iShares 0-1yr T-bill ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
+    "geckoId": "backed-ib01-treasury-bond-0-1yr",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://app.backed.fi/issuance",
+      "provider": "Backed Finance (monthly attestations and on-chain reserve dashboard)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://backed.fi/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/BackedFi"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.backed.fi/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Switzerland",
+      "regulator": "FINMA",
+      "license": "Swiss DLT Act registered uncertificated securities"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "decimals": 18
+      },
+      {
+        "chain": "gnosis",
+        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "decimals": 18
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Backed Finance documentation",
+          "url": "https://docs.backed.fi/"
+        }
+      ],
+      "evidence": "Backed Assets retains transfer-agent freeze and burn authority over bIB01 balances under its Swiss DLT Act framework and operates KYC-gated primary issuance.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01)",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "bib01-backed",
+      "display": {
+        "url": "https://app.backed.fi/issuance",
+        "label": "Backed Finance issuance dashboard"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "iShares 0-1yr Treasury Bond ETF (IB01) NAV accretion",
+      "yieldType": "nav-appreciation"
     }
   },
   {
@@ -7660,6 +7885,112 @@
     }
   },
   {
+    "id": "eutbl-spiko",
+    "detailProvider": "coingecko",
+    "name": "Spiko EU T-Bills Money Market Fund",
+    "symbol": "EUTBL",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "EUR",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Short-dated Eurozone sovereign Treasury bills (issued by AAA / strong-Member-State issuers) with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
+    "pegMechanism": "EUR-denominated NAV-accreting share token tracking the variable-NAV money market fund; primary mint and redemption settle same-day at fund NAV with a €1k minimum; Chainlink CCIP relays issuance between Ethereum, Arbitrum, and Polygon",
+    "geckoId": "spiko-eu-t-bills-money-market-fund",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.spiko.io/",
+      "provider": "Spiko (daily NAV and fund holdings disclosures)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.spiko.io/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/spiko_eu"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.spiko.io/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "France",
+      "regulator": "AMF",
+      "license": "UCITS Short-Term VNAV Money Market Fund"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "decimals": 5
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Spiko website",
+          "url": "https://www.spiko.io/"
+        }
+      ],
+      "evidence": "Spiko acts as transfer agent for EUTBL with permissioned ERC-1967 upgradeable proxy and KYC-gated transfers, retaining freeze and burn authority over fund shares.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Eurozone short-term Treasury Bills",
+        "pct": 95,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash and bank deposits",
+        "pct": 5,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "eutbl-spiko",
+      "display": {
+        "url": "https://www.spiko.io/",
+        "label": "Spiko fund page"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Multi-chain EU-regulated MMF",
+        "message": "EUTBL is also issued on Arbitrum and Polygon via Chainlink CCIP. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Spiko EU T-Bills MMF (Eurozone Treasury bill NAV)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "fdusd-first-digital",
     "llamaId": "119",
     "detailProvider": "defillama",
@@ -11713,6 +12044,113 @@
         "sourceUrl": "https://coinpaper.com/16814/what-is-sbi-holdings-actually-building-with-ripple-xrp-and-rlusd-in-2026"
       }
     ]
+  },
+  {
+    "id": "jtrsy-anemoy",
+    "detailProvider": "coingecko",
+    "name": "Janus Henderson Anemoy Treasury Fund",
+    "symbol": "JTRSY",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Short-duration U.S. Treasury bills selected and managed by Janus Henderson as sub-advisor inside Anemoy's BVI Professional Fund, tokenised through Centrifuge as ERC-7540 vault shares",
+    "pegMechanism": "NAV-accreting fund share token; same-day subscription and redemption at fund NAV for whitelisted non-U.S. Professional Investors via the Centrifuge issuer rail; S&P assigns AA+f / S1+ to the fund",
+    "geckoId": "anemoy-janus-henderson-treasury-fund",
+    "protocolSlug": "centrifuge",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://centrifuge.io/pools/jtrsy",
+      "provider": "Centrifuge on-chain NAV publishing with Janus Henderson sub-advisory; S&P AA+f / S1+ rating"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://centrifuge.io/pools/jtrsy"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/centrifuge"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.centrifuge.io/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "British Virgin Islands",
+      "regulator": "BVI FSC",
+      "license": "BVI Professional Fund"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Centrifuge JTRSY pool",
+          "url": "https://centrifuge.io/pools/jtrsy"
+        }
+      ],
+      "evidence": "Anemoy / Centrifuge operate JTRSY with permissioned ERC-7540 vault transfers restricted to whitelisted Professional Investors and retain freeze and burn authority over fund shares.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "U.S. Treasury Bills (Janus Henderson sub-advised)",
+        "pct": 97,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash and equivalents",
+        "pct": 3,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "jtrsy-anemoy",
+      "display": {
+        "url": "https://centrifuge.io/pools/jtrsy",
+        "label": "Centrifuge JTRSY pool"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Centrifuge V3 multi-chain availability",
+        "message": "JTRSY is also distributed across Centrifuge V3 to additional chains. Pharos currently tracks the Ethereum supply contract pending per-chain verification; on-chain NAV publishing from Centrifuge can later replace the curated snapshot."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Janus Henderson Anemoy Treasury Fund (T-bill NAV accretion)",
+      "yieldType": "nav-appreciation"
+    }
   },
   {
     "id": "jupusd-jupiter",
@@ -18282,6 +18720,110 @@
     "yieldConfig": {
       "yieldSource": "Strata senior USDe tranche",
       "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "stbt-matrixdock",
+    "detailProvider": "coingecko",
+    "name": "Matrixdock Short-Term Treasury Bill",
+    "symbol": "STBT",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "U.S. Treasury securities maturing within six months and reverse repurchase agreements collateralised by U.S. Treasuries; custodied through prime brokerage relationships and administered by Matrixdock (Matrixport, Singapore)",
+    "pegMechanism": "$1.00 rebasing share token; daily T-bill yield is distributed by adjusting holder balances rather than the unit price; institutional KYC mint and redemption at same-day NAV via Matrixdock with a $100k minimum; Chainlink Proof-of-Reserve feed publishes the underlying reserve attestation",
+    "geckoId": "matrixdock-short-term-treasury-bill",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://www.matrixdock.com/stbt",
+      "provider": "Chainlink Proof of Reserve (Matrixdock T-Bill PoR feed)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.matrixdock.com/stbt"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Matrixdock_"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.matrixdock.com/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Singapore",
+      "regulator": "MAS",
+      "license": "Singapore MAS exemption (institutional / accredited investors only)"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x530824da86689c9c17cdc2871ff29b058345b44a",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Matrixdock STBT page",
+          "url": "https://www.matrixdock.com/stbt"
+        }
+      ],
+      "evidence": "Matrixdock retains transfer-agent freeze and burn authority over STBT balances under its institutional KYC framework.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "U.S. Treasury Bills",
+        "pct": 70,
+        "risk": "very-low"
+      },
+      {
+        "name": "Reverse Repo Agreements (UST-collateralised)",
+        "pct": 28,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash and equivalents",
+        "pct": 2,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "stbt-matrixdock",
+      "display": {
+        "url": "https://www.matrixdock.com/stbt",
+        "label": "Matrixdock STBT page (Chainlink PoR feed)"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Matrixdock STBT (short-term U.S. Treasury bill rebase)",
+      "yieldType": "rebase"
     }
   },
   {
@@ -28242,6 +28784,112 @@
     }
   },
   {
+    "id": "ustbl-spiko",
+    "detailProvider": "coingecko",
+    "name": "Spiko US T-Bills Money Market Fund",
+    "symbol": "USTBL",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Short-dated U.S. Treasury bills with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
+    "pegMechanism": "USD-denominated NAV-accreting share token tracking the variable-NAV money market fund; primary mint and redemption settle same-day at fund NAV with a $1k minimum; Chainlink CCIP relays issuance between Ethereum, Arbitrum, and Polygon",
+    "geckoId": "spiko-us-t-bills-money-market-fund",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.spiko.io/",
+      "provider": "Spiko (daily NAV and fund holdings disclosures)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.spiko.io/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/spiko_eu"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.spiko.io/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "France",
+      "regulator": "AMF",
+      "license": "UCITS Short-Term VNAV Money Market Fund"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "decimals": 5
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Spiko website",
+          "url": "https://www.spiko.io/"
+        }
+      ],
+      "evidence": "Spiko acts as transfer agent for USTBL with permissioned ERC-1967 upgradeable proxy and KYC-gated transfers, retaining freeze and burn authority over fund shares.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "U.S. Treasury Bills",
+        "pct": 95,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash and bank deposits",
+        "pct": 5,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "ustbl-spiko",
+      "display": {
+        "url": "https://www.spiko.io/",
+        "label": "Spiko fund page"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Multi-chain EU-regulated MMF",
+        "message": "USTBL is also issued on Arbitrum and Polygon via Chainlink CCIP. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Spiko US T-Bills MMF (U.S. Treasury bill NAV)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "usx-dforce",
     "llamaId": "44",
     "detailProvider": "coingecko",
@@ -30045,6 +30693,84 @@
     },
     "yieldConfig": {
       "yieldSource": "Reservoir savings vault (srUSD)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "wstbt-matrixdock",
+    "detailProvider": "coingecko",
+    "name": "Wrapped Matrixdock STBT",
+    "symbol": "wSTBT",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "pegReferenceId": "stbt-matrixdock",
+    "collateral": "1:1 wrapper around Matrixdock STBT (short-term U.S. Treasury bills and Treasury-collateralised reverse repos); yield accrues into the wrapper's exchange rate rather than rebasing supply",
+    "pegMechanism": "Non-rebasing NAV-accreting wrapper around STBT used on Curve and other AMMs; mint and redeem against STBT via the wstbt contract; underlying redemption against U.S. dollars runs through Matrixdock at NAV",
+    "geckoId": "wrapped-stbt",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.matrixdock.com/stbt"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Matrixdock_"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.matrixdock.com/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Singapore",
+      "regulator": "MAS",
+      "license": "Singapore MAS exemption (institutional / accredited investors only)"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x288a8005c53632d920045b7c7c2e54a3f1bc4c83",
+        "decimals": 18
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "stbt-matrixdock",
+        "weight": 1,
+        "type": "wrapper"
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: wSTBT resolves to Upstream because the wrapper variant inherits freeze and transfer surface from STBT.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "variantOf": "stbt-matrixdock",
+    "variantKind": "savings-passthrough",
+    "reserves": [
+      {
+        "name": "Matrixdock STBT (short-term U.S. Treasury bills and reverse repos)",
+        "pct": 100,
+        "risk": "very-low",
+        "coinId": "stbt-matrixdock",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Matrixdock STBT NAV accretion (wrapped, non-rebasing)",
       "yieldType": "nav-appreciation"
     }
   },

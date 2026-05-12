@@ -1573,5 +1573,40 @@
     "title": "Private Credit, Not Treasuries",
     "text": "ACRED is the on-chain feeder share into Apollo Diversified Credit Fund, a multi-strategy private credit portfolio combining direct lending, structured credit, performing credit, and dislocated credit. Unlike BUIDL or BENJI, the collateral is illiquid private credit rather than T-bills — risk profile is medium-to-high and closer to syrupUSDC than to a stable-NAV vehicle. ACRED is NAV-accreting; primary redemption is monthly at fund NAV through Securitize Markets, supplemented by an on-demand liquidity pool sized to roughly 5% of NAV, and RedStone publishes a NAV oracle used by integrations. Pharos tracks the Ethereum supply contract and flags this asset as a private-credit NAV token rather than a par stablecoin.",
     "updatedAt": "2026-05-12"
+  },
+  "eutbl-spiko": {
+    "title": "Europe's First Tokenised T-Bill MMF",
+    "text": "EUTBL is Spiko's EUR-denominated short-term money market fund — the first AMF-regulated UCITS MMF tokenised on Ethereum. The fund holds short-dated Eurozone sovereign T-bills with weighted average maturity under two months, and EUTBL behaves as a VNAV (variable-NAV) share that accretes value as T-bill yield compounds. Primary subscriptions and redemptions settle same-day at fund NAV with a €1k minimum; Chainlink CCIP bridges issuance to Arbitrum and Polygon. EUTBL is one of Pharos's few EUR-pegged RWA assets and one of the cleanest fits for European institutional users seeking regulatory-grade tokenised cash.",
+    "updatedAt": "2026-05-12"
+  },
+  "ustbl-spiko": {
+    "title": "Spiko's USD T-Bill MMF Cousin",
+    "text": "USTBL is the USD-denominated sister fund to Spiko's EUTBL — same AMF-regulated UCITS MMF architecture, same ERC-1967 upgradeable proxy, same Chainlink CCIP multi-chain rollout (Ethereum, Arbitrum, Polygon), but holding short-dated U.S. Treasury bills instead of Eurozone sovereigns. The VNAV share accretes value as T-bill yield compounds, with $1k minimums and same-day NAV settlement. The combined Spiko AUM passed $1 billion in late 2025, making the pair one of the larger EU-regulated tokenised treasury franchises in market.",
+    "updatedAt": "2026-05-12"
+  },
+  "stbt-matrixdock": {
+    "title": "Matrixdock's Rebasing T-Bill Token",
+    "text": "STBT is Matrixport's Singapore MAS-exempted tokenised short-term Treasury token: holders see a stable $1.00 unit price while daily yield is distributed by adjusting balances rather than the price. Reserves are U.S. Treasury securities maturing within six months and reverse repurchase agreements collateralised by U.S. Treasuries, with a live Chainlink Proof-of-Reserve feed providing independent attestation. Primary access is institutional KYC with a $100k minimum and same-day NAV settlement; the wrapped wSTBT variant exposes the same backing as a non-rebasing token suitable for AMM liquidity.",
+    "updatedAt": "2026-05-12"
+  },
+  "wstbt-matrixdock": {
+    "title": "Wrapped STBT for AMM Liquidity",
+    "text": "wSTBT is the non-rebasing wrapper for Matrixdock STBT: instead of distributing yield by rebasing balances, it lets the exchange rate accrete so the wrapper behaves like a typical NAV-accreting token usable in Curve pools and other AMMs. The underlying reserve base is identical to STBT — short-duration U.S. Treasuries and Treasury-collateralised reverse repos under Matrixdock's institutional KYC framework. Pharos tracks wSTBT as a savings-passthrough variant of STBT.",
+    "updatedAt": "2026-05-12"
+  },
+  "jtrsy-anemoy": {
+    "title": "S&P's Highest-Rated Tokenised Fund",
+    "text": "JTRSY is the Janus Henderson Anemoy Treasury Fund, a BVI Professional Fund where Janus Henderson acts as sub-advisor and Centrifuge handles the on-chain ERC-7540 vault. The fund is rated AA+f / S1+ by S&P, currently the highest credit rating assigned to any tokenised fund. Holdings are short-duration U.S. T-bills; primary subscriptions and redemptions settle same-day at fund NAV for whitelisted non-U.S. Professional Investors via Centrifuge's issuer rail. Distribution extends across Centrifuge V3 to additional chains; Pharos tracks the Ethereum supply contract first with a curated snapshot until the Centrifuge on-chain NAV publishing path is wired into the live reserves adapter.",
+    "updatedAt": "2026-05-12"
+  },
+  "bib01-backed": {
+    "title": "Backed's Flagship Treasury Tracker",
+    "text": "bIB01 is Backed Finance's most-traded tokenised ETF: a Swiss DLT Act-registered tracker certificate that fully backs each token with the BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01). The token is NAV-accreting and not pegged to $1 — price drifts upward continuously as the underlying T-bill ETF accrues yield. Primary mint and redeem are KYC-gated through Backed; secondary liquidity is on Uniswap and CoW Protocol. bIB01 deploys on Ethereum, Base, BNB Chain, Polygon, Arbitrum, Gnosis, and Avalanche using the same contract address pattern that Backed uses across its product line.",
+    "updatedAt": "2026-05-12"
+  },
+  "bc3m-backed": {
+    "title": "Backed's EUR Govt Bond Tracker",
+    "text": "bC3M is Backed Finance's EUR-denominated tokenised tracker certificate fully backed by the AMUNDI GOVIES 0-6 Months Euro Investment Grade UCITS ETF. The token is NAV-accreting in euros, giving Pharos one of the few EUR-pegged RWA assets backed by short-duration Eurozone government bonds. Same Swiss DLT Act framework as bIB01, same KYC-gated primary issuance through Backed, same Uniswap / CoW secondary liquidity surfaces. Pharos tracks the Ethereum supply contract first; Backed also publishes the asset on Base, BNB Chain, Polygon, and Gnosis using its multi-chain deployment pattern.",
+    "updatedAt": "2026-05-12"
   }
 }
