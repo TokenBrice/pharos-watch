@@ -36,4 +36,24 @@ describe("valueUsdFromBigIntPrice", () => {
     const value = 1_000_000n * 10n ** 18n;
     expect(valueUsdFromBigIntPrice(value, 18, 1500)).toBe(1_500_000_000);
   });
+
+  it("returns 0 for zero balance regardless of decimals or price", () => {
+    expect(valueUsdFromBigIntPrice(0n, 18, 1)).toBe(0);
+    expect(valueUsdFromBigIntPrice(0n, 6, 100_000)).toBe(0);
+    expect(valueUsdFromBigIntPrice(0n, 0, 1)).toBe(0);
+  });
+
+  it("handles decimals=0 (whole-unit token) without division-by-zero", () => {
+    // 5 units at $1 = $5. Direct path.
+    expect(valueUsdFromBigIntPrice(5n, 0, 1)).toBe(5);
+  });
+
+  it("returns price exactly when 1 whole token × price stays representable", () => {
+    // 1_000_000n raw at 6 decimals = 1 token. At a Number.MAX_SAFE_INTEGER
+    // price, USD = MAX_SAFE_INTEGER which is itself exactly representable.
+    // This exercises the two-stage divide path at the upper representable edge
+    // — both branches must converge on the same integer.
+    const price = Number.MAX_SAFE_INTEGER;
+    expect(valueUsdFromBigIntPrice(1_000_000n, 6, price)).toBe(price);
+  });
 });

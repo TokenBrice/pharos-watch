@@ -134,4 +134,35 @@ describe("adaptCircleTransparency", () => {
       },
     });
   });
+
+  it("emits a circle-disclosure-timestamp-ambiguous warning when multiple unique 'As of' dates appear outside the disclosure window", () => {
+    const htmlWithoutLocalDate = EURC_AMOUNT_HTML.replace(/\bAs of\s+[A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}\b/gi, "");
+    const farPadding = "<div>" + "x".repeat(3_000) + "</div>";
+    const result = adaptCircleTransparency(
+      `<p>As of May 07, 2026</p>${farPadding}${htmlWithoutLocalDate}${farPadding}<p>As of Apr 01, 2026</p>`,
+      "eurc",
+    );
+
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "circle-disclosure-timestamp-ambiguous" }),
+      ]),
+    );
+    expect(result.slices.length).toBeGreaterThan(0);
+    expect(result.metadata).toMatchObject({ freshnessMode: "unverified" });
+  });
+
+  it("throws layout-changed when a data-usdc-* attribute carries a multi-dot value like '4.7.18'", () => {
+    const html = `
+<canvas id="usdc_chartjs_canvas"
+  data-usdc-us-treasuries="4.7.18"
+  data-usdc-months="19.87"
+  data-usdc-cash="11.35"
+  data-usdc-in-circulation="21.70">
+</canvas>
+`;
+
+    expect(() => adaptCircleTransparency(html, "usdc")).toThrow(/layout-changed/);
+    expect(() => adaptCircleTransparency(html, "usdc")).toThrow(/data-usdc-us-treasuries/);
+  });
 });

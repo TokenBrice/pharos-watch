@@ -89,6 +89,30 @@ describe("usdai-proof-of-reserves adapter", () => {
     });
   });
 
+  it("rejects unsafe-integer numeric amount values rather than silently mis-coercing them", () => {
+    // Q-NEW-7 contract: with the regex preprocessing gone, parseIntegerLike
+    // must drop numbers that have already lost precision in JS. The downstream
+    // adapter then surfaces a clear "missing a valid amount" error rather than
+    // computing slices from a corrupted value.
+    const parsedShareOnly = [
+      { type: "TBILL", name: "PYUSD", chain: 42161, share: "944000000000000000" },
+      // amount is a JSON number above MAX_SAFE_INTEGER — would lose precision if accepted.
+      { type: "DEAL", name: "NVIDIA B300 [1]", chain: 42161, amount: 9_007_199_254_740_993 },
+    ];
+    expect(() => adaptUsdAiProofOfReserves(parsedShareOnly)).toThrow(
+      /usdai-proof-of-reserves share-bearing rows cover only/,
+    );
+
+    // Same input forced into amount-only weighting (no share present) → missing-amount throw.
+    const amountOnly = [
+      { type: "TBILL", name: "PYUSD", chain: 42161, amount: 9_007_199_254_740_993 },
+      { type: "DEAL", name: "NVIDIA B300 [1]", chain: 42161, amount: 560 },
+    ];
+    expect(() => adaptUsdAiProofOfReserves(amountOnly)).toThrow(
+      /usdai-proof-of-reserves entry is missing a valid amount/,
+    );
+  });
+
   it("groups live PYUSD and deal exposures into readable reserve slices", () => {
     const result = adaptUsdAiProofOfReserves(parseUsdAiProofOfReserves(SAMPLE_RAW_PAYLOAD));
 

@@ -1,15 +1,19 @@
 import { describe, expect, it } from "vitest";
 import type { RedemptionBackstopEntry, StablecoinMeta } from "@shared/types";
+import type { CoverageFeatureKey } from "@/lib/coverage-types";
 import {
   buildCoverageFeatureSummary,
   buildCoverageRow,
   COVERAGE_FEATURES,
   resolveBlacklistCoverage,
+  resolveDependencyCoverage,
   resolveDexCoverage,
   resolveFlowCoverage,
   resolvePriceCoverage,
   resolveRedemptionCoverage,
   resolveReserveCoverage,
+  resolveSafetyCoverage,
+  resolveYieldCoverage,
 } from "@/lib/coverage";
 
 function makeCoin(overrides?: Partial<StablecoinMeta>): StablecoinMeta {
@@ -668,6 +672,251 @@ describe("coverage helpers", () => {
       { key: "possible", label: "possible", count: 1 },
       { key: "no", label: "no", count: 1 },
     ]);
+  });
+});
+
+describe("coverage status-kind runtime exhaustiveness", () => {
+  // Synthetic fixture matrix: each entry exercises a specific resolver branch.
+  // Fixtures are explicit rather than mined from ACTIVE_STABLECOINS because some
+  // branches (data-unavailable flags, "modeled" redemption fallback, reserves
+  // "unavailable" template miss) are not reliably reached by current production
+  // data and we want determinism over implicit coverage.
+
+  const baseFlags = {
+    backing: "rwa-backed" as const,
+    governance: "centralized" as const,
+    pegCurrency: "USD" as const,
+    yieldBearing: false,
+    rwa: true,
+    navToken: false,
+  };
+
+  function coin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
+    return { id: "x", name: "X", symbol: "X", flags: baseFlags, ...overrides };
+  }
+
+  function redemption(
+    overrides: Partial<RedemptionBackstopEntry> = {},
+  ): RedemptionBackstopEntry {
+    return {
+      stablecoinId: "x",
+      score: 72,
+      effectiveExitScore: 65,
+      dexLiquidityScore: 58,
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      capacityScore: 60,
+      outputAssetQualityScore: 100,
+      costScore: 40,
+      routeFamily: "psm-swap",
+      accessModel: "permissionless-onchain",
+      settlementModel: "atomic",
+      executionModel: "deterministic-onchain",
+      outputAssetType: "stable-single",
+      provider: "supply-ratio-model",
+      sourceMode: "estimated",
+      resolutionState: "resolved",
+      routeStatus: "open",
+      routeStatusSource: "static-config",
+      holderEligibility: "any-holder",
+      capacityConfidence: "documented-bound",
+      capacitySemantics: "immediate-bounded",
+      feeConfidence: "undisclosed-reviewed",
+      feeModelKind: "undisclosed-reviewed",
+      modelConfidence: "medium",
+      immediateCapacityUsd: 10_000_000,
+      immediateCapacityRatio: 0.15,
+      feeBps: null,
+      queueEnabled: false,
+      methodologyVersion: "1.1",
+      updatedAt: 1_700_000_000,
+      ...overrides,
+    };
+  }
+
+  const liveCfg = {
+    adapter: "infinifi" as const,
+    version: 1 as const,
+    semantics: "collateral-mix" as const,
+    inputs: { primary: { kind: "http-json" as const, url: "https://example.com" } },
+  };
+  const curatedValidatedCfg = {
+    adapter: "curated-validated" as const,
+    version: 1 as const,
+    semantics: "attestation-mix" as const,
+    inputs: {
+      primary: { kind: "onchain-evm" as const, chain: "ethereum", rpcMode: "public-rpc" as const },
+    },
+  };
+  const proofCfg = {
+    adapter: "single-asset" as const,
+    version: 1 as const,
+    semantics: "single-asset" as const,
+    inputs: {
+      primary: { kind: "onchain-evm" as const, chain: "ethereum", rpcMode: "public-rpc" as const },
+    },
+    params: { label: "Issuer reserves", risk: "very-low" as const },
+  };
+
+  const observed: Record<CoverageFeatureKey, Set<string>> = {
+    price: new Set(),
+    safety: new Set(),
+    dex: new Set(),
+    reserves: new Set(),
+    redemption: new Set(),
+    yield: new Set(),
+    flows: new Set(),
+    blacklist: new Set(),
+    dependency: new Set(),
+  };
+
+  function record(key: CoverageFeatureKey, kind: string) {
+    observed[key].add(kind);
+  }
+
+  // ── price ────────────────────────────────────────────────────────────────
+  record("price", resolvePriceCoverage(coin(), true).kind); // tracked
+  record("price", resolvePriceCoverage(coin(), false).kind); // missing
+  record(
+    "price",
+    resolvePriceCoverage(coin({ flags: { ...baseFlags, navToken: true } }), false).kind,
+  ); // price-only
+  record("price", resolvePriceCoverage(coin(), true, undefined, undefined, false).kind); // data-unavailable
+
+  // ── safety ───────────────────────────────────────────────────────────────
+  record("safety", resolveSafetyCoverage(82).kind); // rated
+  record("safety", resolveSafetyCoverage(null).kind); // nr
+  record("safety", resolveSafetyCoverage(82, false).kind); // data-unavailable
+
+  // ── dex ──────────────────────────────────────────────────────────────────
+  record("dex", resolveDexCoverage("primary").kind);
+  record("dex", resolveDexCoverage("mixed").kind);
+  record("dex", resolveDexCoverage("fallback").kind);
+  record("dex", resolveDexCoverage("legacy").kind);
+  record("dex", resolveDexCoverage("unobserved").kind);
+  record("dex", resolveDexCoverage(null).kind); // unknown
+  record("dex", resolveDexCoverage("primary", false).kind); // data-unavailable
+
+  // ── reserves ─────────────────────────────────────────────────────────────
+  record("reserves", resolveReserveCoverage(coin({ liveReservesConfig: liveCfg }), true).kind); // live
+  record(
+    "reserves",
+    resolveReserveCoverage(coin({ liveReservesConfig: liveCfg }), false).kind,
+  ); // live-configured
+  record(
+    "reserves",
+    resolveReserveCoverage(coin({ liveReservesConfig: liveCfg }), null).kind,
+  ); // checking
+  record(
+    "reserves",
+    resolveReserveCoverage(coin({ liveReservesConfig: curatedValidatedCfg })).kind,
+  ); // curated-validated
+  record("reserves", resolveReserveCoverage(coin({ liveReservesConfig: proofCfg })).kind); // proof
+  record(
+    "reserves",
+    resolveReserveCoverage(coin({ reserves: [{ name: "Cash", pct: 100, risk: "very-low" }] })).kind,
+  ); // curated
+  record("reserves", resolveReserveCoverage(coin()).kind); // estimated (template fallback)
+  record(
+    "reserves",
+    resolveReserveCoverage(
+      coin({
+        flags: { ...baseFlags, backing: "rwa-backed", governance: "decentralized" },
+      }),
+    ).kind,
+  ); // unavailable: no template match for rwa-decentralized
+  record("reserves", resolveReserveCoverage(coin(), true, false).kind); // data-unavailable
+
+  // ── redemption ───────────────────────────────────────────────────────────
+  record("redemption", resolveRedemptionCoverage(null).kind); // none
+  record("redemption", resolveRedemptionCoverage(undefined, false).kind); // data-unavailable
+  record(
+    "redemption",
+    resolveRedemptionCoverage(
+      redemption({ resolutionState: "impaired", modelConfidence: "low" }),
+    ).kind,
+  ); // configured-unrated (impaired)
+  record(
+    "redemption",
+    resolveRedemptionCoverage(redemption({ resolutionState: "missing-capacity" })).kind,
+  ); // configured-unrated (non-resolved)
+  record(
+    "redemption",
+    resolveRedemptionCoverage(redemption({ modelConfidence: "low" })).kind,
+  ); // modeled-heuristic
+  for (const family of [
+    "offchain-issuer",
+    "psm-swap",
+    "queue-redeem",
+    "collateral-redeem",
+    "stablecoin-redeem",
+    "basket-redeem",
+  ] as const) {
+    record("redemption", resolveRedemptionCoverage(redemption({ routeFamily: family })).kind);
+  }
+  // Trigger the "modeled" preset fallback by passing an unknown route family.
+  record(
+    "redemption",
+    resolveRedemptionCoverage(
+      redemption({ routeFamily: "unknown-family" as unknown as RedemptionBackstopEntry["routeFamily"] }),
+    ).kind,
+  );
+
+  // ── yield ────────────────────────────────────────────────────────────────
+  record("yield", resolveYieldCoverage(true).kind); // ranked
+  record("yield", resolveYieldCoverage(false).kind); // none
+  record("yield", resolveYieldCoverage(true, false).kind); // data-unavailable
+
+  // ── flows ────────────────────────────────────────────────────────────────
+  for (const status of [
+    "full",
+    "partial-history",
+    "lagging",
+    "bootstrapping",
+    "disabled",
+  ] as const) {
+    record("flows", resolveFlowCoverage(status).kind);
+  }
+  record("flows", resolveFlowCoverage(null).kind); // none
+  record("flows", resolveFlowCoverage("full", false).kind); // data-unavailable
+
+  // ── blacklist ────────────────────────────────────────────────────────────
+  record("blacklist", resolveBlacklistCoverage(coin({ symbol: "USDC" }), true).kind); // live
+  record("blacklist", resolveBlacklistCoverage(coin({ symbol: "YES" }), true).kind); // yes
+  record("blacklist", resolveBlacklistCoverage(coin({ symbol: "USDS" }), "dilutable").kind);
+  record("blacklist", resolveBlacklistCoverage(coin({ symbol: "DAI" }), "inherited").kind); // upstream
+  record("blacklist", resolveBlacklistCoverage(coin({ symbol: "USDT" }), "possible").kind);
+  record("blacklist", resolveBlacklistCoverage(coin({ symbol: "USDQ" }), false).kind); // no
+  record("blacklist", resolveBlacklistCoverage(coin({ symbol: "X" }), null).kind); // data-unavailable
+
+  // ── dependency ───────────────────────────────────────────────────────────
+  record("dependency", resolveDependencyCoverage(true).kind); // node
+  record("dependency", resolveDependencyCoverage(false).kind); // none
+  record("dependency", resolveDependencyCoverage(true, false).kind); // data-unavailable
+
+  it.each(COVERAGE_FEATURES.map((f) => [f.key, f] as const))(
+    "every observed kind for feature %s appears in its statusKinds array",
+    (key, feature) => {
+      const allowed = new Set(feature.statusKinds);
+      const drift = [...observed[key]].filter((kind) => !allowed.has(kind));
+      expect(drift, `feature ${key} produced kinds missing from statusKinds: ${drift.join(", ")}`).toEqual([]);
+    },
+  );
+
+  it("exercises each documented status kind at least once across the resolver matrix", () => {
+    // Inverse check: if a kind is declared in *_STATUS_KINDS but never observed,
+    // either the fixture matrix has a gap or the declared kind is stale. Flag
+    // both so drift in either direction is visible.
+    const gaps: string[] = [];
+    for (const feature of COVERAGE_FEATURES) {
+      for (const kind of feature.statusKinds) {
+        if (!observed[feature.key].has(kind)) {
+          gaps.push(`${feature.key}/${kind}`);
+        }
+      }
+    }
+    expect(gaps).toEqual([]);
   });
 });
 

@@ -134,6 +134,25 @@ describe("mento adapter", () => {
     )).toBe(Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000));
   });
 
+  it("ignores unrelated timestamps that appear outside the troves/dataUpdateCount anchor window", () => {
+    const buildManifest =
+      'buildManifest\\":{\\"timestamp\\":\\"2099-01-01T00:00:00.000Z\\"},\\"polyfillFiles\\":[]';
+    const anchoredPayload =
+      'troves\\":[{}],\\"timestamp\\":\\"2026-05-11T23:21:16.007Z\\"},\\"dataUpdateCount\\":1';
+    const html = `${buildManifest}${"x".repeat(1024)}${anchoredPayload}`;
+
+    expect(extractMentoDashboardTimestamp(html)).toBe(
+      Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000),
+    );
+  });
+
+  it("returns null when only a bare timestamp appears without troves/dataUpdateCount anchors", () => {
+    const html =
+      '<script>window.__data={\\"timestamp\\":\\"2026-05-01T12:00:00.000Z\\",\\"foo\\":1}</script>';
+
+    expect(extractMentoDashboardTimestamp(html)).toBeNull();
+  });
+
   it("emits a structural integrity warning when fewer than 3 reserve entries are parsed", () => {
     const twoEntryPayload = {
       collateral: {
