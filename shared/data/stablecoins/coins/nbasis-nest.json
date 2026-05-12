@@ -57,7 +57,7 @@
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "cex",
   "governanceQuality": "single-entity",
   "reserves": [
     {
