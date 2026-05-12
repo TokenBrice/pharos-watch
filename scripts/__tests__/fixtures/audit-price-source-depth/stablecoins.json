@@ -1,0 +1,88 @@
+{
+  "peggedAssets": [
+    {
+      "id": "missing-property",
+      "name": "Missing Property",
+      "symbol": "MISS",
+      "price": 1,
+      "priceSource": "coingecko",
+      "priceConfidence": "low",
+      "circulating": { "peggedUSD": 70 },
+      "chainCirculating": {},
+      "chains": []
+    },
+    {
+      "id": "null-sources",
+      "name": "Null Sources",
+      "symbol": "NULL",
+      "price": 1,
+      "priceSource": "coinmarketcap",
+      "priceConfidence": "fallback",
+      "consensusSources": null,
+      "agreeSources": null,
+      "circulating": { "peggedUSD": 60 },
+      "chainCirculating": {},
+      "chains": []
+    },
+    {
+      "id": "empty-sources",
+      "name": "Empty Sources",
+      "symbol": "EMPTY",
+      "price": null,
+      "priceSource": "missing",
+      "consensusSources": [],
+      "agreeSources": [],
+      "circulating": { "peggedUSD": 50 },
+      "chainCirculating": {},
+      "chains": []
+    },
+    {
+      "id": "one-source",
+      "name": "One Source",
+      "symbol": "ONE",
+      "price": 1,
+      "priceSource": "coingecko",
+      "consensusSources": ["coingecko"],
+      "agreeSources": ["coingecko"],
+      "circulating": { "peggedUSD": 100 },
+      "chainCirculating": {},
+      "chains": []
+    },
+    {
+      "id": "two-source",
+      "name": "Two Source",
+      "symbol": "TWO",
+      "price": 1,
+      "priceSource": "binance+coingecko",
+      "consensusSources": ["binance", "coingecko"],
+      "agreeSources": ["binance", "coingecko"],
+      "circulating": { "peggedUSD": 200 },
+      "chainCirculating": {},
+      "chains": []
+    },
+    {
+      "id": "three-source",
+      "name": "Three Source",
+      "symbol": "THREE",
+      "price": 1,
+      "priceSource": "pyth+binance+coingecko",
+      "consensusSources": ["pyth", "binance", "coingecko"],
+      "agreeSources": ["pyth", "binance", "coingecko"],
+      "circulating": { "peggedUSD": 300 },
+      "chainCirculating": {},
+      "chains": []
+    },
+    {
+      "id": "five-source",
+      "name": "Five Source",
+      "symbol": "FIVE",
+      "price": 1,
+      "priceSource": "pyth+redstone+binance+kraken+unknown-feed",
+      "consensusSources": ["pyth", "redstone", "binance", "kraken", "unknown-feed"],
+      "agreeSources": ["pyth", "redstone", "binance", "kraken", "unknown-feed"],
+      "circulating": { "peggedUSD": 500 },
+      "chainCirculating": {},
+      "chains": []
+    }
+  ]
+}

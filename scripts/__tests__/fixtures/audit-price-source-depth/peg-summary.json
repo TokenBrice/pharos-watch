@@ -1,0 +1,72 @@
+{
+  "coins": [
+    {
+      "id": "missing-property",
+      "symbol": "MISS",
+      "name": "Missing Property",
+      "priceSource": "coingecko",
+      "priceConfidence": "low",
+      "primaryTrust": "confirm_required"
+    },
+    {
+      "id": "null-sources",
+      "symbol": "NULL",
+      "name": "Null Sources",
+      "priceSource": "coinmarketcap",
+      "priceConfidence": "fallback",
+      "primaryTrust": "unusable",
+      "consensusSources": null,
+      "agreeSources": null
+    },
+    {
+      "id": "empty-sources",
+      "symbol": "EMPTY",
+      "name": "Empty Sources",
+      "priceSource": "missing",
+      "priceConfidence": null,
+      "primaryTrust": "unusable",
+      "consensusSources": [],
+      "agreeSources": []
+    },
+    {
+      "id": "one-source",
+      "symbol": "ONE",
+      "name": "One Source",
+      "priceSource": "coingecko",
+      "priceConfidence": "low",
+      "primaryTrust": "confirm_required",
+      "consensusSources": ["coingecko"],
+      "agreeSources": ["coingecko"]
+    },
+    {
+      "id": "two-source",
+      "symbol": "TWO",
+      "name": "Two Source",
+      "priceSource": "binance+coingecko",
+      "priceConfidence": "medium",
+      "primaryTrust": "confirm_required",
+      "consensusSources": ["binance", "coingecko"],
+      "agreeSources": ["binance", "coingecko"]
+    },
+    {
+      "id": "three-source",
+      "symbol": "THREE",
+      "name": "Three Source",
+      "priceSource": "pyth+binance+coingecko",
+      "priceConfidence": "high",
+      "primaryTrust": "authoritative",
+      "consensusSources": ["pyth", "binance", "coingecko"],
+      "agreeSources": ["pyth", "binance", "coingecko"]
+    },
+    {
+      "id": "five-source",
+      "symbol": "FIVE",
+      "name": "Five Source",
+      "priceSource": "pyth+redstone+binance+kraken+unknown-feed",
+      "priceConfidence": "high",
+      "primaryTrust": "authoritative",
+      "consensusSources": ["pyth", "redstone", "binance", "kraken", "unknown-feed"],
+      "agreeSources": ["pyth", "redstone", "binance", "kraken", "unknown-feed"]
+    }
+  ]
+}

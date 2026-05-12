@@ -1,0 +1,43 @@
+[
+  {
+    "id": "missing-property",
+    "name": "Missing Property",
+    "symbol": "MISS",
+    "geckoId": "missing-property",
+    "links": [{ "label": "Docs", "url": "https://example.com/missing-property" }]
+  },
+  {
+    "id": "null-sources",
+    "name": "Null Sources",
+    "symbol": "NULL",
+    "llamaId": "null-sources"
+  },
+  {
+    "id": "empty-sources",
+    "name": "Empty Sources",
+    "symbol": "EMPTY",
+    "contracts": [{ "chain": "ethereum", "address": "0x0000000000000000000000000000000000000001" }]
+  },
+  {
+    "id": "one-source",
+    "name": "One Source",
+    "symbol": "ONE",
+    "geckoId": "one-source"
+  },
+  {
+    "id": "two-source",
+    "name": "Two Source",
+    "symbol": "TWO",
+    "pythFeedId": "0xfeed"
+  },
+  {
+    "id": "three-source",
+    "name": "Three Source",
+    "symbol": "THREE"
+  },
+  {
+    "id": "five-source",
+    "name": "Five Source",
+    "symbol": "FIVE"
+  }
+]
