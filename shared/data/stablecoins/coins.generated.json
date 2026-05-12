@@ -4478,6 +4478,8 @@
         }
       },
       "params": {
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://eth.llamarpc.com",
         "assets": [
           {
             "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
@@ -4505,6 +4507,13 @@
             "name": "BUIDL",
             "risk": "low",
             "coinId": "buidl-blackrock",
+            "priceUsd": 1
+          },
+          {
+            "address": "0x434558cb1ebe9950e8a66f1ef8a15a473dce7d8c",
+            "name": "WTGXX",
+            "risk": "low",
+            "depType": "collateral",
             "priceUsd": 1
           }
         ]
@@ -6920,7 +6929,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Euro-denominated reserves in bank accounts and liquid euro bonds (102% reserve ratio)",
+    "collateral": "Euro-denominated cash deposits and government bonds held in segregated reserves with reserve ratio disclosed on Quantoz's transparency page",
     "pegMechanism": "Direct 1:1 redemption through Quantoz Payments",
     "geckoId": "quantoz-eurq",
     "proofOfReserves": {
@@ -6960,12 +6969,12 @@
     "reserves": [
       {
         "name": "Government bonds (NL, DE, US)",
-        "pct": 68,
+        "pct": 70,
         "risk": "very-low"
       },
       {
         "name": "Cash deposits (Tier 1 European banks)",
-        "pct": 32,
+        "pct": 30,
         "risk": "very-low"
       }
     ],
@@ -6977,13 +6986,15 @@
         "url": "https://quantoz.com/transparency",
         "label": "Quantoz Transparency"
       },
-      "adapter": "curated-validated",
+      "adapter": "quantoz-transparency",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-html",
+          "url": "https://www.quantoz.com/transparency"
         }
+      },
+      "params": {
+        "token": "EURQ"
       }
     }
   },
@@ -10593,9 +10604,20 @@
     "deploymentModel": "native-multichain",
     "reserves": [
       {
-        "name": "Nest Alpha Vault strategy assets",
-        "pct": 100,
+        "name": "Nest private and structured credit vaults",
+        "pct": 93,
         "risk": "high"
+      },
+      {
+        "name": "Nest Treasury vault (nTBILL)",
+        "pct": 3,
+        "risk": "low"
+      },
+      {
+        "name": "Liquid stablecoin balances",
+        "pct": 4,
+        "risk": "low",
+        "coinId": "usdc-circle"
       }
     ],
     "liveReservesConfig": {
@@ -10603,16 +10625,19 @@
       "semantics": "collateral-mix",
       "breakerScope": "inalpha-nest",
       "display": {
-        "url": "https://docs.nest.credit/",
-        "label": "Nest Credit docs"
+        "url": "https://www.nest.credit/",
+        "label": "Nest Credit API"
       },
-      "adapter": "curated-validated",
+      "adapter": "nest-vault-positions",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-json",
+          "url": "https://api.nest.credit/v1/vaults/nest-alpha-vault/positions"
         }
+      },
+      "params": {
+        "priceUrl": "https://api.nest.credit/v1/vaults/nest-alpha-vault/price",
+        "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-alpha-vault/last-price-update"
       }
     },
     "notices": [
@@ -14512,19 +14537,34 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "collateral-mix",
       "breakerScope": "ousd-origin-protocol",
       "display": {
         "url": "https://analytics.ousd.com",
         "label": "Origin Analytics"
       },
-      "adapter": "curated-validated",
+      "adapter": "origin-vault-balances",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
+      },
+      "params": {
+        "vaultAddress": "0xE75D77B1865Ae93c7eaa3040B038D7aA7BC02F70",
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://eth.llamarpc.com",
+        "assets": [
+          {
+            "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+            "decimals": 6,
+            "name": "USDC deployed through Origin OUSD strategies",
+            "risk": "medium",
+            "coinId": "usdc-circle",
+            "depType": "wrapper"
+          }
+        ]
       }
     },
     "yieldConfig": {
@@ -16205,15 +16245,14 @@
       "semantics": "attestation-mix",
       "breakerScope": "rlusd-ripple",
       "display": {
-        "url": "https://ripple.com/solutions/stablecoin/",
+        "url": "https://ripple.com/solutions/stablecoin/transparency/",
         "label": "Ripple"
       },
-      "adapter": "curated-validated",
+      "adapter": "ripple-transparency",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-html",
+          "url": "https://ripple.com/solutions/stablecoin/transparency/"
         }
       }
     }
@@ -16826,13 +16865,24 @@
         "url": "https://docs.avantprotocol.com/",
         "label": "Avant savUSD"
       },
-      "adapter": "curated-validated",
+      "adapter": "erc4626-single-asset",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "avalanche",
           "rpcMode": "public-rpc"
         }
+      },
+      "params": {
+        "slice": {
+          "name": "avUSD savings vault shares",
+          "risk": "high",
+          "coinId": "avusd-avant",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0x24de8771bc5ddb3362db529fc3358f2df3a0e346"
+        },
+        "rpcUrl": "https://avalanche-c-chain-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://api.avax.network/ext/bc/C/rpc"
       }
     },
     "yieldConfig": {
@@ -17896,13 +17946,24 @@
         "url": "https://strata.markets",
         "label": "Strata"
       },
-      "adapter": "curated-validated",
+      "adapter": "erc4626-single-asset",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "alchemy"
         }
+      },
+      "params": {
+        "slice": {
+          "name": "Senior tranche USDe vault shares",
+          "risk": "high",
+          "coinId": "usde-ethena",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3"
+        },
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://eth.llamarpc.com"
       }
     },
     "yieldConfig": {
@@ -19670,6 +19731,33 @@
         "depType": "wrapper"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "syzusd-yuzu",
+      "display": {
+        "url": "https://yuzu.money/",
+        "label": "Yuzu syzUSD ERC-4626 vault"
+      },
+      "adapter": "erc4626-single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "plasma",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "Yuzu USD staking vault shares",
+          "risk": "high",
+          "coinId": "yzusd-yuzu",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+        },
+        "rpcUrl": "https://rpc.plasma.to"
+      }
+    },
     "yieldConfig": {
       "yieldSource": "Yuzu staking (syzUSD)",
       "yieldType": "nav-appreciation"
@@ -20593,6 +20681,62 @@
         "risk": "high"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "usbd-bima",
+      "display": {
+        "url": "https://docs.bima.money/security/mainnet-addresses",
+        "label": "BIMA Mainnet Addresses"
+      },
+      "adapter": "evm-branch-balances",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://eth.llamarpc.com",
+        "branches": [
+          {
+            "name": "WBTC BIMA collateral wrapper",
+            "holder": "0xa20c3dc27c8c1a1adc92e3b443607914ed800ff2",
+            "token": {
+              "chain": "ethereum",
+              "address": "0x59063fbe70d3b0f9312e5c89acdc476f5d2018e1",
+              "decimals": 18
+            },
+            "risk": "medium",
+            "priceUsd": 1
+          },
+          {
+            "name": "tacBTC BIMA collateral wrapper",
+            "holder": "0x29467211ad35f97cea26ae11da0c427836ec4c05",
+            "token": {
+              "chain": "ethereum",
+              "address": "0xdc0ccad18ca645a03870676c78a81524b4655197",
+              "decimals": 18
+            },
+            "risk": "medium",
+            "priceUsd": 1
+          },
+          {
+            "name": "strBTC BIMA collateral wrapper",
+            "holder": "0x5066dc39248e6696c0f2606a744a4482a3d36b97",
+            "token": {
+              "chain": "ethereum",
+              "address": "0x856db20b0c326afee3bf64770f7d8d39bf232ce0",
+              "decimals": 18
+            },
+            "risk": "medium",
+            "priceUsd": 1
+          }
+        ]
+      }
+    },
     "yieldConfig": {
       "yieldSource": "BIMA savings (sUSBD)",
       "yieldType": "lending-vault"
@@ -21660,42 +21804,35 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
       {
-        "name": "DAI / sDAI (via MakerDAO DSR)",
-        "pct": 60,
+        "name": "MakerDAO DSR / DAI yield manager",
+        "pct": 100,
         "risk": "low",
         "coinId": "dai-makerdao"
-      },
-      {
-        "name": "USDC (bridged)",
-        "pct": 25,
-        "risk": "low",
-        "coinId": "usdc-circle"
-      },
-      {
-        "name": "USDT (bridged)",
-        "pct": 15,
-        "risk": "low",
-        "coinId": "usdt-tether"
       }
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "collateral-mix",
+      "semantics": "single-asset",
       "breakerScope": "usdb-blast",
       "display": {
         "url": "https://blast.io/",
         "label": "Blast"
       },
-      "adapter": "curated-validated",
+      "adapter": "blast-usdb-yield-manager",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
-          "chain": "blast",
+          "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
       },
       "params": {
-        "rpcUrl": "https://rpc.blast.io"
+        "yieldManagerAddress": "0xa230285d5683C74935aD14c446e137c8c8828438",
+        "supplyChain": "blast",
+        "supplyTokenAddress": "0x4300000000000000000000000000000000000003",
+        "supplyRpcUrl": "https://rpc.blast.io",
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://eth.llamarpc.com"
       }
     },
     "yieldConfig": {
@@ -24065,6 +24202,42 @@
         "risk": "medium"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "usdn-smardex",
+      "display": {
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol",
+        "label": "SMARDEX USDN vault"
+      },
+      "adapter": "evm-branch-balances",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://eth.llamarpc.com",
+        "branches": [
+          {
+            "name": "wstETH-backed USDN vault",
+            "holder": "0x656cb8c6d154aad29d8771384089be5b5141f01a",
+            "token": {
+              "chain": "ethereum",
+              "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+              "decimals": 18
+            },
+            "risk": "medium"
+          }
+        ],
+        "debtSelector": "0x18160ddd",
+        "debtContract": "0xde17a000ba631c5d7c2bd9fb692efea52d90dee2",
+        "debtDecimals": 18
+      }
+    },
     "yieldConfig": {
       "yieldSource": "SMARDEX USDN rebasing vault",
       "yieldType": "rebase"
@@ -24811,8 +24984,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "U.S. dollar deposits and government bonds (Netherlands, Germany, US) held in segregated, bankruptcy-remote accounts at Tier 1 European banks by Stichting Quantoz, supervised by DNB; reserves maintained at ≥102% of circulating supply per MiCAR requirements",
-    "pegMechanism": "Direct 1:1 redemption through Quantoz Payments for onboarded customers; reserves held at ≥102% overcollateralization per MiCAR",
+    "collateral": "U.S. dollar deposits and government bonds (Netherlands, Germany, US) held in segregated, bankruptcy-remote accounts at Tier 1 European banks by Stichting Quantoz, supervised by DNB; reserve ratio disclosed on Quantoz's transparency page",
+    "pegMechanism": "Direct 1:1 redemption through Quantoz Payments for onboarded customers; reserves are disclosed against circulating supply on the Quantoz transparency page",
     "geckoId": "quantoz-usdq",
     "proofOfReserves": {
       "type": "self-reported",
@@ -24875,34 +25048,32 @@
     "reserves": [
       {
         "name": "Government bonds (NL, DE, US)",
-        "pct": 69,
+        "pct": 70,
         "risk": "very-low"
       },
       {
         "name": "Cash deposits at Tier 1 European banks",
-        "pct": 31,
+        "pct": 30,
         "risk": "very-low"
       }
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "usdq-quantoz",
       "display": {
         "url": "https://quantoz.com/transparency",
         "label": "Quantoz Transparency"
       },
-      "adapter": "single-asset",
+      "adapter": "quantoz-transparency",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-html",
+          "url": "https://www.quantoz.com/transparency"
         }
       },
       "params": {
-        "label": "Government bonds & cash deposits",
-        "risk": "very-low"
+        "token": "USDQ"
       }
     }
   },
@@ -30611,6 +30782,32 @@
         "risk": "high"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "yousd-yield-optimizer",
+      "display": {
+        "url": "https://yo.xyz/",
+        "label": "yoUSD ERC-4626 vault"
+      },
+      "adapter": "erc4626-single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "base",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "USDC-denominated Yield Optimizer strategies",
+          "risk": "high",
+          "expectedAssetAddress": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        },
+        "rpcUrl": "https://base-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://base.llamarpc.com"
+      }
+    },
     "yieldConfig": {
       "yieldSource": "Yield Optimizer strategies",
       "yieldType": "nav-appreciation"
@@ -30963,6 +31160,8 @@
           "[Securitize]_VBILL_Loop": "high",
           "[Sky]_Sky_Savings_Vault": "low",
           "[Superstate]_USTB_Loop": "high",
+          "[Ethena]_USDe_Loop": "high",
+          "[Ethena]_USDe": "high",
           "[Maple]_syrupUSDC_Loop": "high",
           "[Morpho]_sky.money_USDT_Savings": "medium",
           "[Maple]_syrupUSDC": "medium",
@@ -30971,7 +31170,10 @@
           "[Maple]_syrupUSDT_Loop": "high",
           "[Fluid]_syrupUSDT_Loop": "high",
           "[Sky]_sUSDS_Loop": "high",
+          "[Sky]_SUSDS_Loop": "high",
           "[Paypal]_PYUSD_Loop": "high",
+          "[MegaEth]_USDm": "low",
+          "[Paxos]_USDG": "low",
           "[Ethena]_sUSDe_Loop": "high"
         },
         "renameMap": {
@@ -30986,6 +31188,8 @@
           "[Securitize]_VBILL_Loop": "Securitize VBILL loop",
           "[Sky]_Sky_Savings_Vault": "Sky Savings Vault",
           "[Superstate]_USTB_Loop": "Superstate USTB loop",
+          "[Ethena]_USDe_Loop": "Ethena USDe loop",
+          "[Ethena]_USDe": "Ethena USDe",
           "[Maple]_syrupUSDC_Loop": "Maple syrupUSDC loop",
           "[Morpho]_sky.money_USDT_Savings": "Morpho Sky money USDT savings",
           "[Maple]_syrupUSDC": "Maple syrupUSDC",
@@ -30994,7 +31198,10 @@
           "[Maple]_syrupUSDT_Loop": "Maple syrupUSDT loop",
           "[Fluid]_syrupUSDT_Loop": "Fluid syrupUSDT loop",
           "[Sky]_sUSDS_Loop": "Sky sUSDS loop",
+          "[Sky]_SUSDS_Loop": "Sky sUSDS loop",
           "[Paypal]_PYUSD_Loop": "PayPal PYUSD loop",
+          "[MegaEth]_USDm": "MegaETH USDm",
+          "[Paxos]_USDG": "Paxos USDG",
           "[Ethena]_sUSDe_Loop": "Ethena sUSDe loop"
         }
       }
