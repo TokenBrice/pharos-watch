@@ -74,9 +74,9 @@ The full list is exported from `shared/lib/stablecoins/index.ts`, with editable 
 
 Endpoints backed by the cron cache include these additional headers:
 
-| Header       | Description                                                                           |
-| ------------ | ------------------------------------------------------------------------------------- |
-| `X-Data-Age` | Seconds elapsed since the cron last wrote this data to D1                             |
+| Header       | Description                                                                                                                                                             |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `X-Data-Age` | Seconds elapsed since the cron last wrote this data to D1                                                                                                               |
 | `Warning`    | Freshness warning (`110`) when cached data is older than the generic freshness runway, plus endpoint-specific advisory warnings (`199`) on a few compute-on-read routes |
 
 Generic freshness status is `fresh` through `8x maxAge`, `degraded` through `12x maxAge`, then `stale`. Generic freshness headers emit `Warning` and downgrade `Cache-Control` to `no-store` after `age > 8x maxAge` so edge/browser caches do not keep serving an old payload after the underlying cron data recovers. Some routes also use `Warning` for dependency or quality advisories even when the age is still inside that runway; clients should treat body `_meta.status` as authoritative when it exists.
@@ -99,23 +99,23 @@ Endpoints that emit `_meta` into plain-object (non-array) response bodies do so 
 }
 ```
 
-| Field        | Type     | Description                                                                               |
-| ------------ | -------- | ----------------------------------------------------------------------------------------- |
-| `updatedAt`  | `number` | Unix epoch seconds when the cron last wrote this data to D1                               |
-| `ageSeconds` | `number` | `floor(now / 1000) - updatedAt`                                                           |
+| Field        | Type     | Description                                                                                 |
+| ------------ | -------- | ------------------------------------------------------------------------------------------- |
+| `updatedAt`  | `number` | Unix epoch seconds when the cron last wrote this data to D1                                 |
+| `ageSeconds` | `number` | `floor(now / 1000) - updatedAt`                                                             |
 | `status`     | `string` | `"fresh"` (age/max <= 8.0), `"degraded"` (8.0 < ratio <= 12.0), or `"stale"` (ratio > 12.0) |
 
 Route-specific manual `_meta` injectors can be stricter. `GET /api/chains` uses its 1800-second budget directly (`fresh <= 1x`, `degraded <= 2x`, then `stale`) and switches its response to `no-store` whenever the chain snapshot is not fresh.
 
 **Endpoints with `_meta`:**
 
-| Endpoint                     | Max Age (sec) | Source                                       |
-| ---------------------------- | ------------- | -------------------------------------------- |
-| `GET /api/stablecoins`       | 600           | `createCacheHandler`                         |
-| `GET /api/chains`            | 1800          | `worker/src/api/chains.ts`                  |
-| `GET /api/bluechip-ratings`  | 43200         | Custom cache reader in `worker/src/api/cache-handlers.ts` |
-| `GET /api/usds-status`       | 86400         | `createCacheHandler`                         |
-| `GET /api/yield-rankings`    | 3600          | Manual injection after live safety hydration |
+| Endpoint                    | Max Age (sec) | Source                                                    |
+| --------------------------- | ------------- | --------------------------------------------------------- |
+| `GET /api/stablecoins`      | 600           | `createCacheHandler`                                      |
+| `GET /api/chains`           | 1800          | `worker/src/api/chains.ts`                                |
+| `GET /api/bluechip-ratings` | 43200         | Custom cache reader in `worker/src/api/cache-handlers.ts` |
+| `GET /api/usds-status`      | 86400         | `createCacheHandler`                                      |
+| `GET /api/yield-rankings`   | 3600          | Manual injection after live safety hydration              |
 
 Array-typed responses (e.g., endpoints returning a JSON array at the top level) do not include `_meta`. They receive `X-Data-Age` / `Warning` only when their handler wires freshness metadata explicitly. Supply history, safety score history, and non-USD share are explicit history-endpoint exceptions that emit freshness headers; DEX liquidity history currently exposes cache headers but no freshness headers.
 
@@ -127,15 +127,15 @@ The frontend `apiFetchWithMeta()` helper (in `src/lib/api.ts`) reads `_meta` fro
 
 These profiles apply while the dataset is within its generic freshness runway. Once a cache-backed response exceeds `8x` its endpoint max age, the worker overrides that response to `Cache-Control: no-store` until a fresh response is generated.
 
-| Profile  | `Cache-Control`                      | Used by                                                                                                                                                                                                                                                                              |
-| -------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| realtime | `public, s-maxage=60, max-age=10`    | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                                                                                                                                    |
-| standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                                                                                                   |
-| custom   | `public, s-maxage=300, max-age=300`  | dex-liquidity (browser-side max-age extended to match CDN TTL)                                                                                                                                                                                                                       |
-| per-coin | `public, s-maxage=300, max-age=10`   | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                           |
-| slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, non-usd-share                                                                                                                                                                         |
-| archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                                                                                                                                     |
-| no-store | `no-store`                           | health plus all admin GET routes after router override (`status`, `status-history`, `request-source-stats`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `discovery-candidates`, `status-probe-history`) |
+| Profile  | `Cache-Control`                        | Used by                                                                                                                                                                                                                                                                                                                           |
+| -------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| realtime | `public, s-maxage=60, max-age=10`      | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                                                                                                                                                                                |
+| standard | `public, s-maxage=300, max-age=60`     | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                                                                                                                                                |
+| custom   | `public, s-maxage=300, max-age=300`    | dex-liquidity (browser-side max-age extended to match CDN TTL)                                                                                                                                                                                                                                                                    |
+| per-coin | `public, s-maxage=300, max-age=10`     | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                                                                        |
+| slow     | `public, s-maxage=3600, max-age=300`   | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, non-usd-share                                                                                                                                                                                                                       |
+| archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                                                                                                                                                                                   |
+| no-store | `no-store`                             | health plus all admin GET routes after router override (`status`, `status-history`, `request-source-stats`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `discovery-candidates`, `status-probe-history`) |
 
 `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The self-serve API-key endpoints explicitly return no-store responses so verification tokens and plaintext API keys are never cacheable.
 
@@ -168,8 +168,8 @@ Public API traffic enforces per-key rate limiting to ensure fair usage. Non-exem
 
 ### Per-key limit
 
-| Scope | Limit | Window |
-|-------|-------|--------|
+| Scope       | Limit                | Window     |
+| ----------- | -------------------- | ---------- |
 | Per API key | Varies (default 120) | 60 seconds |
 
 Per-key overrides are stored in `api_keys.rate_limit_per_minute`.
@@ -201,17 +201,17 @@ API-key authentication and per-key limiter storage normally rely on D1. For prot
 
 JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` returns `image/png` on success; unknown OG route patterns return the normal JSON error body, while OG data/render failures inside known image routes can return `text/plain`.
 
-| Status | Meaning               | When                                                                                                                                                                                                     |
-| ------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 400    | Bad Request           | Missing required parameters, invalid enum values, malformed numeric input, or out-of-range numeric/filter values on handlers that opt into rejection (`rangePolicy: "reject"`). Some endpoints intentionally clamp or default selected numeric params; endpoint sections call this out where it is part of the contract. |
-| 401    | Unauthorized          | Public `/api/*` endpoint called without a valid `X-API-Key`, or admin endpoint called without a valid `ops-api` Access JWT (typically obtained through Cloudflare Access user login or service-token auth) |
-| 403    | Forbidden             | Disallowed CORS preflight from a foreign `Origin`, Pages ops proxy mutating request without a matching same-origin `Origin`, or mutating admin request missing `X-Pharos-Admin: 1` |
-| 404    | Not Found             | Unknown stablecoin ID or missing resource                                                                                                                                                                |
-| 429    | Too Many Requests     | Rate limit exceeded (per-key public API limiter or feedback-specific limiter; feedback uses its own message body)                                                               |
-| 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                                                                                                                       |
-| 502    | Bad Gateway           | Upstream fetch failed (external data provider or Pages proxy upstream), or the ops proxy received a Cloudflare Access login redirect from `ops-api` |
+| Status | Meaning               | When                                                                                                                                                                                                                                                                                                                                           |
+| ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 400    | Bad Request           | Missing required parameters, invalid enum values, malformed numeric input, or out-of-range numeric/filter values on handlers that opt into rejection (`rangePolicy: "reject"`). Some endpoints intentionally clamp or default selected numeric params; endpoint sections call this out where it is part of the contract.                       |
+| 401    | Unauthorized          | Public `/api/*` endpoint called without a valid `X-API-Key`, or admin endpoint called without a valid `ops-api` Access JWT (typically obtained through Cloudflare Access user login or service-token auth)                                                                                                                                     |
+| 403    | Forbidden             | Disallowed CORS preflight from a foreign `Origin`, Pages ops proxy mutating request without a matching same-origin `Origin`, or mutating admin request missing `X-Pharos-Admin: 1`                                                                                                                                                             |
+| 404    | Not Found             | Unknown stablecoin ID or missing resource                                                                                                                                                                                                                                                                                                      |
+| 429    | Too Many Requests     | Rate limit exceeded (per-key public API limiter or feedback-specific limiter; feedback uses its own message body)                                                                                                                                                                                                                              |
+| 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                                                                                                                                                                                                                                                             |
+| 502    | Bad Gateway           | Upstream fetch failed (external data provider or Pages proxy upstream), or the ops proxy received a Cloudflare Access login redirect from `ops-api`                                                                                                                                                                                            |
 | 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated, cached payload is corrupt / rejected by validation, a protected public API request cannot be authenticated from D1 or the recent verified-key cache, the feedback limiter/storage dependency fails, or `MAINTENANCE_MODE=true` (global kill switch via `wrangler secret put`) |
-| 504    | Gateway Timeout       | Pages `/_site-data/*` or `/api/admin/*` proxy timed out waiting for its Worker upstream (10 s default; 20 s for ops `/api/status` and `/api/status-history`) |
+| 504    | Gateway Timeout       | Pages `/_site-data/*` or `/api/admin/*` proxy timed out waiting for its Worker upstream (10 s default; 20 s for ops `/api/status` and `/api/status-history`)                                                                                                                                                                                   |
 
 **Rule:** Cache-passthrough handlers return **503** when data hasn't been populated yet or when the stored cache payload is malformed and rejected at read time. Query handlers that find no matching rows return **200** with empty results (e.g., `{ events: [], total: 0 }`). When `MAINTENANCE_MODE` is set to `"true"`, all non-`OPTIONS` requests immediately return `503` with `{ "error": "maintenance", "message": "..." }` — used during DB migrations. `OPTIONS` CORS preflights are handled before the maintenance gate.
 
@@ -296,39 +296,39 @@ The canonical `stablecoins` cache is written only after `StablecoinListResponseS
 
 **`StablecoinData` fields**
 
-| Field                  | Type                               | Description                                                                                                                                       |
-| ---------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                   | `string`                           | Pharos stablecoin ID                                                                                                                              |
-| `name`                 | `string`                           | Full name (e.g. `"Tether"`)                                                                                                                       |
-| `symbol`               | `string`                           | Ticker (e.g. `"USDT"`)                                                                                                                            |
-| `geckoId`              | `string \| null`                   | CoinGecko ID (normalized output key; upstream DefiLlama uses `gecko_id`)                                                                          |
-| `pegType`              | `string`                           | DefiLlama peg type (e.g. `"peggedUSD"`, `"peggedEUR"`)                                                                                            |
-| `pegMechanism`         | `string`                           | `"fiat-backed"`, `"crypto-backed-algorithmic"`, etc.                                                                                              |
-| `priceSource`          | `string`                           | Source label for the current price (`"defillama-list"`, `"coingecko"`, composite agreement labels such as `"binance+coingecko+kraken"`, `"geckoterminal"`, `"protocol-redeem"`, `"dexscreener"`, etc.). For high-confidence consensus this label can describe the full agreeing cluster even when the published price is the cluster median rather than one member's raw mark. When no usable current price survives validation, the cache keeps `price = null` and serializes `priceSource = "missing"` for contract stability. |
-| `priceConfidence`      | `string \| null`                   | Price confidence level: `"high"` (cross-validated agreement), `"single-source"`, `"low"` (sources diverge), `"fallback"` (enrichment pipeline)    |
-| `priceUpdatedAt`       | `number \| null`                   | Compatibility timestamp for the current price; mirrors the effective observation time when available                                                 |
-| `priceObservedAt`      | `number \| null`                   | Unix seconds for the effective observation time attached to the selected source price; interpret alongside `priceObservedAtMode`                   |
-| `priceObservedAtMode`  | `"upstream" \| "local_fetch" \| "unknown" \| null` | Whether `priceObservedAt` came from source-native freshness metadata, local fetch time, or legacy/unknown provenance                              |
-| `priceSyncedAt`        | `number \| null`                   | Unix seconds when Pharos selected and wrote the current price during the sync                                                                   |
-| `supplySource`         | `string \| undefined`              | Supply data source: `"defillama"`, `"defillama-history-gap-fill"` (used when a tracked DefiLlama live row collapses to zero supply but recent DefiLlama chart history still has a fresh non-zero total), `"coingecko-gap-fill"` (used when tracked deployments are missing from DefiLlama chain coverage and CoinGecko repairs the total/history buckets), `"coingecko-fallback"`, or `"onchain-total-supply"` (used when a supplemental asset is normalized from on-chain total supply instead of an upstream market-cap field) |
-| `price`                | `number \| null`                   | Current price in USD. For high-confidence consensus this is the median of the winning agreeing cluster; for single-source, low-confidence, or fallback outcomes it is the selected source price. |
-| `circulating`          | `Record<string, number>`           | Current supply in USD, keyed by pegType (e.g. `{ "peggedUSD": 138000000 }`)                                                                       |
-| `circulatingPrevDay`   | `Record<string, number>`           | Supply 24 h ago                                                                                                                                   |
-| `circulatingPrevWeek`  | `Record<string, number>`           | Supply 7 days ago                                                                                                                                 |
-| `circulatingPrevMonth` | `Record<string, number>`           | Supply ~30 days ago                                                                                                                               |
-| `chainCirculating`     | `Record<string, ChainCirculating>` | Per-chain breakdown. For `"coingecko-gap-fill"` and `"defillama-history-gap-fill"` assets this remains DefiLlama-led unless the missing total can be allocated safely to one tracked chain, so the per-chain sum may be a lower bound on total supply. |
-| `chains`               | `string[]`                         | List of chain names where the token is deployed                                                                                                   |
-| `consensusSources`     | `string[]`                         | Source names that returned a valid price for this coin during the sync cycle. Defaults to `[]` when absent.                                        |
-| `priceSourceConfidenceProfile` | `PriceSourceConfidenceProfile \| undefined` | Present for DEX-inclusive primary prices. Summarizes active protocol DEX lanes, the freshest DEX lane age, and whether the price relies only on the aggregate `dex-promoted` lane. |
-| `agreeSources`         | `string[] \| undefined`            | Compatibility alias for agreeing/current price sources when present                                                                                |
+| Field                          | Type                                               | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------ | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                           | `string`                                           | Pharos stablecoin ID                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `name`                         | `string`                                           | Full name (e.g. `"Tether"`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `symbol`                       | `string`                                           | Ticker (e.g. `"USDT"`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `geckoId`                      | `string \| null`                                   | CoinGecko ID (normalized output key; upstream DefiLlama uses `gecko_id`)                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `pegType`                      | `string`                                           | DefiLlama peg type (e.g. `"peggedUSD"`, `"peggedEUR"`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `pegMechanism`                 | `string`                                           | `"fiat-backed"`, `"crypto-backed-algorithmic"`, etc.                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `priceSource`                  | `string`                                           | Source label for the current price (`"defillama-list"`, `"coingecko"`, composite agreement labels such as `"binance+coingecko+kraken"`, `"geckoterminal"`, `"protocol-redeem"`, `"dexscreener"`, etc.). For high-confidence consensus this label can describe the full agreeing cluster even when the published price is the cluster median rather than one member's raw mark. When no usable current price survives validation, the cache keeps `price = null` and serializes `priceSource = "missing"` for contract stability. |
+| `priceConfidence`              | `string \| null`                                   | Price confidence level: `"high"` (cross-validated agreement), `"single-source"`, `"low"` (sources diverge), `"fallback"` (enrichment pipeline)                                                                                                                                                                                                                                                                                                                                                                                   |
+| `priceUpdatedAt`               | `number \| null`                                   | Compatibility timestamp for the current price; mirrors the effective observation time when available                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `priceObservedAt`              | `number \| null`                                   | Unix seconds for the effective observation time attached to the selected source price; interpret alongside `priceObservedAtMode`                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `priceObservedAtMode`          | `"upstream" \| "local_fetch" \| "unknown" \| null` | Whether `priceObservedAt` came from source-native freshness metadata, local fetch time, or legacy/unknown provenance                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `priceSyncedAt`                | `number \| null`                                   | Unix seconds when Pharos selected and wrote the current price during the sync                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `supplySource`                 | `string \| undefined`                              | Supply data source: `"defillama"`, `"defillama-history-gap-fill"` (used when a tracked DefiLlama live row collapses to zero supply but recent DefiLlama chart history still has a fresh non-zero total), `"coingecko-gap-fill"` (used when tracked deployments are missing from DefiLlama chain coverage and CoinGecko repairs the total/history buckets), `"coingecko-fallback"`, or `"onchain-total-supply"` (used when a supplemental asset is normalized from on-chain total supply instead of an upstream market-cap field) |
+| `price`                        | `number \| null`                                   | Current price in USD. For high-confidence consensus this is the median of the winning agreeing cluster; for single-source, low-confidence, or fallback outcomes it is the selected source price.                                                                                                                                                                                                                                                                                                                                 |
+| `circulating`                  | `Record<string, number>`                           | Current supply in USD, keyed by pegType (e.g. `{ "peggedUSD": 138000000 }`)                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `circulatingPrevDay`           | `Record<string, number>`                           | Supply 24 h ago                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `circulatingPrevWeek`          | `Record<string, number>`                           | Supply 7 days ago                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `circulatingPrevMonth`         | `Record<string, number>`                           | Supply ~30 days ago                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `chainCirculating`             | `Record<string, ChainCirculating>`                 | Per-chain breakdown. For `"coingecko-gap-fill"` and `"defillama-history-gap-fill"` assets this remains DefiLlama-led unless the missing total can be allocated safely to one tracked chain, so the per-chain sum may be a lower bound on total supply.                                                                                                                                                                                                                                                                           |
+| `chains`                       | `string[]`                                         | List of chain names where the token is deployed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `consensusSources`             | `string[]`                                         | Source names that returned a valid price for this coin during the sync cycle. Defaults to `[]` when absent.                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `priceSourceConfidenceProfile` | `PriceSourceConfidenceProfile \| undefined`        | Present for DEX-inclusive primary prices. Summarizes active protocol DEX lanes, the freshest DEX lane age, and whether the price relies only on the aggregate `dex-promoted` lane.                                                                                                                                                                                                                                                                                                                                               |
+| `agreeSources`                 | `string[] \| undefined`                            | Compatibility alias for agreeing/current price sources when present                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 **`PriceSourceConfidenceProfile`**
 
-| Field                   | Type                 | Description                                                                                   |
-| ----------------------- | -------------------- | --------------------------------------------------------------------------------------------- |
-| `activeDexLanes`        | `number`             | Count of accepted protocol-specific DEX lanes such as `balancer-dex` or `raydium-dex`.         |
-| `freshestDexLaneAgeSec` | `number \| null`     | Age in seconds of the freshest accepted DEX lane when the source carried observation metadata. |
-| `aggregateLaneOnly`     | `boolean`            | `true` when the only DEX contribution is the legacy aggregate `dex-promoted` source.           |
+| Field                   | Type             | Description                                                                                    |
+| ----------------------- | ---------------- | ---------------------------------------------------------------------------------------------- |
+| `activeDexLanes`        | `number`         | Count of accepted protocol-specific DEX lanes such as `balancer-dex` or `raydium-dex`.         |
+| `freshestDexLaneAgeSec` | `number \| null` | Age in seconds of the freshest accepted DEX lane when the source carried observation metadata. |
+| `aggregateLaneOnly`     | `boolean`        | `true` when the only DEX contribution is the legacy aggregate `dex-promoted` source.           |
 
 **`ChainCirculating`**
 
@@ -415,21 +415,21 @@ Browser surfaces on `pharos.watch` and `ops.pharos.watch` should reach this rout
 }
 ```
 
-| Field             | Type                     | Description                                                                                                                 |
-| ----------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `id`              | `string`                 | Pharos stablecoin ID                                                                                                        |
-| `name`            | `string`                 | Asset name                                                                                                                  |
-| `symbol`          | `string`                 | Ticker symbol                                                                                                               |
-| `pegType`         | `string`                 | Peg type key (`peggedUSD`, `peggedEUR`, etc.)                                                                               |
-| `pegMechanism`    | `string`                 | Backing/mechanism classification                                                                                            |
-| `priceUsd`        | `number \| null`         | Current price in USD                                                                                                        |
+| Field             | Type                     | Description                                                                                                                               |
+| ----------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`              | `string`                 | Pharos stablecoin ID                                                                                                                      |
+| `name`            | `string`                 | Asset name                                                                                                                                |
+| `symbol`          | `string`                 | Ticker symbol                                                                                                                             |
+| `pegType`         | `string`                 | Peg type key (`peggedUSD`, `peggedEUR`, etc.)                                                                                             |
+| `pegMechanism`    | `string`                 | Backing/mechanism classification                                                                                                          |
+| `priceUsd`        | `number \| null`         | Current price in USD                                                                                                                      |
 | `priceSource`     | `string`                 | Price source identifier. When `priceUsd` is `null`, this may be `"missing"` to indicate that no usable current price survived validation. |
-| `priceConfidence` | `string \| null`         | Price confidence label                                                                                                      |
-| `supplySource`    | `string \| null`         | Supply source identifier                                                                                                    |
-| `supplyByPegUsd`  | `Record<string, number>` | Current supply by peg bucket (USD)                                                                                          |
-| `supplyUsd`       | `object`                 | Aggregate USD supply values and deltas (`current`, `prevDay`, `prevWeek`, `prevMonth`, `change1d`, `change7d`, `change30d`) |
-| `chainCount`      | `number`                 | Number of chains where the asset is deployed                                                                                |
-| `updatedAt`       | `number`                 | Unix seconds of the stablecoins snapshot used for this response                                                             |
+| `priceConfidence` | `string \| null`         | Price confidence label                                                                                                                    |
+| `supplySource`    | `string \| null`         | Supply source identifier                                                                                                                  |
+| `supplyByPegUsd`  | `Record<string, number>` | Current supply by peg bucket (USD)                                                                                                        |
+| `supplyUsd`       | `object`                 | Aggregate USD supply values and deltas (`current`, `prevDay`, `prevWeek`, `prevMonth`, `change1d`, `change7d`, `change30d`)               |
+| `chainCount`      | `number`                 | Number of chains where the asset is deployed                                                                                              |
+| `updatedAt`       | `number`                 | Unix seconds of the stablecoins snapshot used for this response                                                                           |
 
 ---
 
@@ -441,22 +441,22 @@ Returns historical non-USD stablecoin market share data from `supply_history`, s
 
 Freshness headers are emitted from the latest completed `snapshot-supply` run when available. Stale responses include `X-Data-Age` and can downgrade to `Cache-Control: no-store` with `Warning: 110` once the daily history runway is exceeded. Rows newer than the completed daily snapshot marker are hidden so a failed chunked write cannot expose a partial latest day.
 
-| Param  | Type     | Default | Constraints    | Description                           |
-| ------ | -------- | ------- | -------------- | ------------------------------------- |
-| `days` | `number` | `1825`  | min 30, max 1825 | Lookback window in days             |
+| Param  | Type     | Default | Constraints      | Description             |
+| ------ | -------- | ------- | ---------------- | ----------------------- |
+| `days` | `number` | `1825`  | min 30, max 1825 | Lookback window in days |
 
 Unlike most numeric-query handlers, this endpoint defaults missing or malformed `days` values to `1825` and clamps most out-of-range values into `30..1825` instead of returning `400`. Current parser quirk: `days=0` is treated like a missing value and returns the default `1825` rather than the minimum `30`.
 
 **Response:** `Array<{ date, commodityShare, fiatNonUsdShare, commodity, fiatNonUsd, total }>`
 
-| Field              | Type     | Description                                      |
-| ------------------ | -------- | ------------------------------------------------ |
-| `date`             | `number` | Unix seconds (snapshot date)                     |
-| `commodityShare`   | `number` | Commodity-pegged share as % of total supply      |
-| `fiatNonUsdShare`  | `number` | Non-commodity non-USD share as % of total supply, using the legacy field name |
-| `commodity`        | `number` | Commodity-pegged circulating USD                 |
-| `fiatNonUsd`       | `number` | Non-commodity non-USD circulating USD, using the legacy field name |
-| `total`            | `number` | Total circulating USD across all tracked coins   |
+| Field             | Type     | Description                                                                   |
+| ----------------- | -------- | ----------------------------------------------------------------------------- |
+| `date`            | `number` | Unix seconds (snapshot date)                                                  |
+| `commodityShare`  | `number` | Commodity-pegged share as % of total supply                                   |
+| `fiatNonUsdShare` | `number` | Non-commodity non-USD share as % of total supply, using the legacy field name |
+| `commodity`       | `number` | Commodity-pegged circulating USD                                              |
+| `fiatNonUsd`      | `number` | Non-commodity non-USD circulating USD, using the legacy field name            |
+| `total`           | `number` | Total circulating USD across all tracked coins                                |
 
 ---
 
@@ -470,10 +470,10 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 
 **Status codes:**
 
-| Status | Meaning                                                         |
-| ------ | --------------------------------------------------------------- |
+| Status | Meaning                                                                            |
+| ------ | ---------------------------------------------------------------------------------- |
 | 200    | Chain aggregates computed successfully; freshness may still be degraded in `_meta` |
-| 503    | Stablecoins cache unavailable (missing or structurally corrupt) |
+| 503    | Stablecoins cache unavailable (missing or structurally corrupt)                    |
 
 **Response (`ChainsResponse`):**
 
@@ -503,42 +503,42 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 }
 ```
 
-| Field                      | Type             | Description                                                |
-| -------------------------- | ---------------- | ---------------------------------------------------------- |
-| `chains`                   | `ChainSummary[]` | Chains sorted by `totalUsd` descending                     |
+| Field                      | Type             | Description                                                                              |
+| -------------------------- | ---------------- | ---------------------------------------------------------------------------------------- |
+| `chains`                   | `ChainSummary[]` | Chains sorted by `totalUsd` descending                                                   |
 | `globalTotalUsd`           | `number`         | Total tracked stablecoin supply in USD, matching `GET /api/stablecoins` aggregate supply |
-| `chainAttributedTotalUsd`  | `number`         | Supply that the source data attributes to concrete chains in USD |
-| `unattributedTotalUsd`     | `number`         | Positive residual between tracked supply and chain-attributed supply in USD |
-| `globalChange24hPct`       | `number`         | 24h change for total tracked stablecoin supply as a decimal share |
-| `globalChange7dPct`        | `number`         | 7d change for total tracked stablecoin supply as a decimal share |
-| `globalChange30dPct`       | `number`         | 30d change for total tracked stablecoin supply as a decimal share |
-| `updatedAt`                | `number`         | Unix epoch seconds of the underlying stablecoins snapshot  |
-| `healthMethodologyVersion` | `string`         | Chain Health Score methodology version (currently `"1.2"`) |
+| `chainAttributedTotalUsd`  | `number`         | Supply that the source data attributes to concrete chains in USD                         |
+| `unattributedTotalUsd`     | `number`         | Positive residual between tracked supply and chain-attributed supply in USD              |
+| `globalChange24hPct`       | `number`         | 24h change for total tracked stablecoin supply as a decimal share                        |
+| `globalChange7dPct`        | `number`         | 7d change for total tracked stablecoin supply as a decimal share                         |
+| `globalChange30dPct`       | `number`         | 30d change for total tracked stablecoin supply as a decimal share                        |
+| `updatedAt`                | `number`         | Unix epoch seconds of the underlying stablecoins snapshot                                |
+| `healthMethodologyVersion` | `string`         | Chain Health Score methodology version (currently `"1.2"`)                               |
 
 `_meta.dependencies.reportCards` is present when the endpoint can determine report-card freshness. When that dependency is stale or unavailable, `healthScore` degrades to `null` and the route UI surfaces the dependency reason instead of pretending the chain is fully fresh.
 
 **`ChainSummary` fields:**
 
-| Field                | Type                         | Description                                                                                                                  |
-| -------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `id`                 | `string`                     | Canonical chain identifier (DefiLlama chain name)                                                                            |
-| `name`               | `string`                     | Human-readable chain name                                                                                                    |
-| `logoPath`           | `string \| null`             | Path to chain logo asset                                                                                                     |
-| `type`               | `"evm" \| "tron" \| "other"` | Chain runtime family from `CHAIN_META`                                                                                       |
-| `totalUsd`           | `number`                     | Total stablecoin supply on this chain in USD                                                                                 |
-| `change24h`          | `number`                     | Absolute 24h supply change in USD                                                                                            |
-| `change24hPct`       | `number`                     | 24h supply change as a percentage                                                                                            |
-| `change7d`           | `number`                     | Absolute 7d supply change in USD                                                                                             |
-| `change7dPct`        | `number`                     | 7d supply change as a percentage                                                                                             |
-| `change30d`          | `number`                     | Absolute 30d supply change in USD                                                                                            |
-| `change30dPct`       | `number`                     | 30d supply change as a percentage                                                                                            |
-| `stablecoinCount`    | `number`                              | Number of distinct stablecoins on this chain                                                                                 |
-| `dominantStablecoin` | `{ id, symbol, share }`               | Largest stablecoin by supply on the chain                                                                                    |
-| `topStablecoins`     | `{ id, symbol, share, supplyUsd }[]`  | Up to five largest stablecoins by supply on the chain; `share` is chain-local (0–1) and `supplyUsd` is USD-denominated       |
-| `dominanceShare`     | `number`                              | Chain share of `globalTotalUsd` (0–1); chain rows may sum below 1 when source data has unattributed supply                    |
-| `healthScore`        | `number \| null`                      | Chain Health Score 0–100, or `null` if insufficient data                                                                     |
-| `healthBand`         | `string \| null`                      | Health band label: `"robust"` (80–100), `"healthy"` (60–79), `"mixed"` (40–59), `"fragile"` (20–39), `"concentrated"` (0–19) |
-| `healthFactors`      | `ChainHealthFactors`                  | Raw sub-factor scores (0–100 each; `quality` may still be `null`)                                                            |
+| Field                | Type                                 | Description                                                                                                                  |
+| -------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `id`                 | `string`                             | Canonical chain identifier (DefiLlama chain name)                                                                            |
+| `name`               | `string`                             | Human-readable chain name                                                                                                    |
+| `logoPath`           | `string \| null`                     | Path to chain logo asset                                                                                                     |
+| `type`               | `"evm" \| "tron" \| "other"`         | Chain runtime family from `CHAIN_META`                                                                                       |
+| `totalUsd`           | `number`                             | Total stablecoin supply on this chain in USD                                                                                 |
+| `change24h`          | `number`                             | Absolute 24h supply change in USD                                                                                            |
+| `change24hPct`       | `number`                             | 24h supply change as a percentage                                                                                            |
+| `change7d`           | `number`                             | Absolute 7d supply change in USD                                                                                             |
+| `change7dPct`        | `number`                             | 7d supply change as a percentage                                                                                             |
+| `change30d`          | `number`                             | Absolute 30d supply change in USD                                                                                            |
+| `change30dPct`       | `number`                             | 30d supply change as a percentage                                                                                            |
+| `stablecoinCount`    | `number`                             | Number of distinct stablecoins on this chain                                                                                 |
+| `dominantStablecoin` | `{ id, symbol, share }`              | Largest stablecoin by supply on the chain                                                                                    |
+| `topStablecoins`     | `{ id, symbol, share, supplyUsd }[]` | Up to five largest stablecoins by supply on the chain; `share` is chain-local (0–1) and `supplyUsd` is USD-denominated       |
+| `dominanceShare`     | `number`                             | Chain share of `globalTotalUsd` (0–1); chain rows may sum below 1 when source data has unattributed supply                   |
+| `healthScore`        | `number \| null`                     | Chain Health Score 0–100, or `null` if insufficient data                                                                     |
+| `healthBand`         | `string \| null`                     | Health band label: `"robust"` (80–100), `"healthy"` (60–79), `"mixed"` (40–59), `"fragile"` (20–39), `"concentrated"` (0–19) |
+| `healthFactors`      | `ChainHealthFactors`                 | Raw sub-factor scores (0–100 each; `quality` may still be `null`)                                                            |
 
 **`ChainHealthFactors` fields:**
 
@@ -548,7 +548,7 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 | `quality`          | `number \| null` | Supply-weighted average stablecoin quality from report-card grades; `null` when rated supply coverage is below 50% by value |
 | `chainEnvironment` | `number`         | Resilience-tier score for the chain itself (`100` tier 1, `60` tier 2, `20` tier 3)                                         |
 | `pegStability`     | `number`         | Supply-weighted average peg deviation score                                                                                 |
-| `backingDiversity` | `number`         | Shannon entropy of the active backing split across the chain (`rwa-backed` vs `crypto-backed`)                             |
+| `backingDiversity` | `number`         | Shannon entropy of the active backing split across the chain (`rwa-backed` vs `crypto-backed`)                              |
 
 ---
 
@@ -570,20 +570,20 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 
 **Response (200):**
 
-| Field          | Type             | Description                                                                                                                      |
-| -------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `stablecoinId` | `string`         | Pharos coin ID                                                                                                                   |
-| `mode`         | `string`         | One of `live`, `live-stale`, `curated-fallback`, `template-fallback`, `unavailable`. This is snapshot transport/freshness state, not the user-facing reserve badge semantics. |
-| `reserves`     | `ReserveSlice[]` | Reserve slices currently being shown to the user                                                                                 |
-| `estimated`    | `boolean`        | `true` only when using the classification template fallback                                                                      |
-| `liveAt`       | `number?`        | Unix seconds of the last successful live snapshot. Present only when live data exists                                            |
-| `source`       | `string?`        | Adapter key (for example `"infinifi"`, `"m0"`, `"openeden-usdo"`, or `"accountable"`). Present only when live data exists        |
-| `displayUrl`   | `string?`        | Curated click-through page shown as `Source` in the UI. Present only when configured                                             |
-| `evidenceUrls` | `string[]?`      | Adapter-emitted evidence URLs for the authoritative live snapshot, shown separately as `Evidence` links when available           |
-| `displayBadge` | `object?`        | User-facing reserve badge semantics for authoritative live snapshots (`live`, `curated-validated`, or `proof`)                  |
+| Field          | Type             | Description                                                                                                                                                                                                          |
+| -------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stablecoinId` | `string`         | Pharos coin ID                                                                                                                                                                                                       |
+| `mode`         | `string`         | One of `live`, `live-stale`, `curated-fallback`, `template-fallback`, `unavailable`. This is snapshot transport/freshness state, not the user-facing reserve badge semantics.                                        |
+| `reserves`     | `ReserveSlice[]` | Reserve slices currently being shown to the user                                                                                                                                                                     |
+| `estimated`    | `boolean`        | `true` only when using the classification template fallback                                                                                                                                                          |
+| `liveAt`       | `number?`        | Unix seconds of the last successful live snapshot. Present only when live data exists                                                                                                                                |
+| `source`       | `string?`        | Adapter key (for example `"infinifi"`, `"m0"`, `"openeden-usdo"`, or `"accountable"`). Present only when live data exists                                                                                            |
+| `displayUrl`   | `string?`        | Curated click-through page shown as `Source` in the UI. Present only when configured                                                                                                                                 |
+| `evidenceUrls` | `string[]?`      | Adapter-emitted evidence URLs for the authoritative live snapshot, shown separately as `Evidence` links when available                                                                                               |
+| `displayBadge` | `object?`        | User-facing reserve badge semantics for authoritative live snapshots (`live`, `curated-validated`, or `proof`)                                                                                                       |
 | `metadata`     | `object?`        | Adapter snapshot metadata for authoritative live snapshots. This can include feed-specific context such as `yieldBasisCollateralPct` for `crvusd`; adapter-specific metadata and nested `details` remain passthrough |
-| `provenance`   | `object?`        | Evidence-quality envelope for authoritative live snapshots (`evidenceClass`, `sourceModel`, optional `freshnessMode`, `scoringEligible`) |
-| `sync`         | `object?`        | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`, `lastError`, optional `failureCategory`, optional `uncertainWrite`). Present only when live-enabled |
+| `provenance`   | `object?`        | Evidence-quality envelope for authoritative live snapshots (`evidenceClass`, `sourceModel`, optional `freshnessMode`, `scoringEligible`)                                                                             |
+| `sync`         | `object?`        | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`, `lastError`, optional `failureCategory`, optional `uncertainWrite`). Present only when live-enabled                 |
 
 `sync.warnings` can include both adapter-emitted warnings from the latest attempt and storage-integrity warnings when a stored live snapshot is rejected and the endpoint fails closed to a fallback presentation.
 `sync.failureCategory` is copied from `reserve_sync_state.metadata.failureCategory` when available. `sync.uncertainWrite=true` means the latest attempt hit the D1 write-timeout / finalize-rejection path, so the endpoint may be serving the last consistent snapshot or fallback while the attempted write remains ambiguous until the next clean run.
@@ -596,19 +596,19 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 
 When present, `displayBadge` has:
 
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `kind` | `"live" \| "curated-validated" \| "proof"` | User-facing reserve badge classification |
-| `label` | `string` | Badge label rendered by the frontend (`Live`, `Curated-Validated`, or `Proof`) |
+| Field   | Type                                       | Description                                                                    |
+| ------- | ------------------------------------------ | ------------------------------------------------------------------------------ |
+| `kind`  | `"live" \| "curated-validated" \| "proof"` | User-facing reserve badge classification                                       |
+| `label` | `string`                                   | Badge label rendered by the frontend (`Live`, `Curated-Validated`, or `Proof`) |
 
 When present, `provenance` has:
 
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `evidenceClass` | `"independent" \| "static-validated" \| "weak-live-probe"` | Evidence class used for scoring and provenance. This is related to, but not identical to, the UI badge semantics. |
-| `sourceModel` | `"dynamic-mix" \| "validated-static" \| "single-bucket"` | Structural shape of the reserve feed |
-| `freshnessMode` | `"verified" \| "unverified" \| "not-applicable" \| undefined` | Explicit freshness policy when the adapter emits one |
-| `scoringEligible` | `boolean` | Whether this exact snapshot is currently eligible for collateral-quality passthrough |
+| Field             | Type                                                          | Description                                                                                                       |
+| ----------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `evidenceClass`   | `"independent" \| "static-validated" \| "weak-live-probe"`    | Evidence class used for scoring and provenance. This is related to, but not identical to, the UI badge semantics. |
+| `sourceModel`     | `"dynamic-mix" \| "validated-static" \| "single-bucket"`      | Structural shape of the reserve feed                                                                              |
+| `freshnessMode`   | `"verified" \| "unverified" \| "not-applicable" \| undefined` | Explicit freshness policy when the adapter emits one                                                              |
+| `scoringEligible` | `boolean`                                                     | Whether this exact snapshot is currently eligible for collateral-quality passthrough                              |
 
 **Response (404):** unknown or non-canonical IDs are rejected by the shared ID resolver with `{ "error": "Unknown stablecoin" }`; known active coins without live reserve support, or with no resolved reserve result, return `{ "error": "Not found" }`.
 
@@ -634,10 +634,10 @@ Aggregate historical supply chart data across the live homepage market-cap unive
 ]
 ```
 
-| Field                 | Type                     | Description |
-| --------------------- | ------------------------ | ----------- |
+| Field                 | Type                     | Description                                                                                                                                          |
+| --------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `date`                | `number`                 | Unix timestamp (seconds). Historical points are downsampled cache entries; the trailing point may be a fresher live `stablecoins` snapshot timestamp |
-| `totalCirculatingUSD` | `Record<string, number>` | Aggregate supply in USD per peg type |
+| `totalCirculatingUSD` | `Record<string, number>` | Aggregate supply in USD per peg type                                                                                                                 |
 
 ---
 
@@ -651,17 +651,17 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 
 **Query parameters**
 
-| Param        | Type      | Default | Description                                                    |
-| ------------ | --------- | ------- | -------------------------------------------------------------- |
-| `stablecoin` | `string`  | —       | Filter by uppercase blacklist-tracker symbol from the full `BLACKLIST_STABLECOINS` set in `shared/types/market.ts` (for example `USDT`, not `usdt-tether`) |
-| `chain`      | `string`  | —       | Filter by exact chain display name (e.g. `Ethereum`, `Tron`) |
-| `chainId`    | `string`  | —       | Filter by canonical chain-registry ID (e.g. `ethereum`, `tron`). When both `chain` and `chainId` are supplied, they must identify the same chain or the endpoint returns `400` |
-| `eventType`  | `string`  | —       | Filter by type: `blacklist`, `unblacklist`, `destroy`          |
-| `q`          | `string`  | —       | Case-insensitive address substring search                      |
-| `sortBy`     | `string`  | `date`  | Sort field: `date`, `stablecoin`, `chain`, `event`            |
-| `sortDirection` | `string` | `desc` | Sort direction: `asc`, `desc`                                 |
-| `limit`      | `integer` | `1000`  | Max results (1–1000; `0` maps to default `1000`)               |
-| `offset`     | `integer` | `0`     | Pagination offset                                              |
+| Param           | Type      | Default | Description                                                                                                                                                                    |
+| --------------- | --------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `stablecoin`    | `string`  | —       | Filter by uppercase blacklist-tracker symbol from the full `BLACKLIST_STABLECOINS` set in `shared/types/market.ts` (for example `USDT`, not `usdt-tether`)                     |
+| `chain`         | `string`  | —       | Filter by exact chain display name (e.g. `Ethereum`, `Tron`)                                                                                                                   |
+| `chainId`       | `string`  | —       | Filter by canonical chain-registry ID (e.g. `ethereum`, `tron`). When both `chain` and `chainId` are supplied, they must identify the same chain or the endpoint returns `400` |
+| `eventType`     | `string`  | —       | Filter by type: `blacklist`, `unblacklist`, `destroy`                                                                                                                          |
+| `q`             | `string`  | —       | Case-insensitive address substring search                                                                                                                                      |
+| `sortBy`        | `string`  | `date`  | Sort field: `date`, `stablecoin`, `chain`, `event`                                                                                                                             |
+| `sortDirection` | `string`  | `desc`  | Sort direction: `asc`, `desc`                                                                                                                                                  |
+| `limit`         | `integer` | `1000`  | Max results (1–1000; `0` maps to default `1000`)                                                                                                                               |
+| `offset`        | `integer` | `0`     | Pagination offset                                                                                                                                                              |
 
 **Response**
 
@@ -683,29 +683,29 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 
 **`BlacklistEvent`**
 
-| Field                | Type             | Description                                                                             |
-| -------------------- | ---------------- | --------------------------------------------------------------------------------------- |
-| `id`                 | `string`         | Composite ID: `{chainId}-{txHash}-{logIndex}`                                           |
-| `stablecoin`         | `string`         | Token symbol (`USDC`, `USDT`, etc.)                                                     |
-| `chainId`            | `string`         | Stable chain identifier from the shared chain registry (e.g. `"ethereum"`, `"tron"`). This is the preferred join key for integrations |
-| `chainName`          | `string`         | Human-readable chain name (e.g. `"Ethereum"`)                                           |
-| `eventType`          | `string`         | `"blacklist"`, `"unblacklist"`, or `"destroy"`                                          |
-| `address`            | `string`         | Affected address (EVM `0x…` or Tron `T…`)                                               |
-| `amountNative`       | `number \| null` | Canonical token-native amount recovered from event data or historical balance lookup      |
-| `amountUsdAtEvent`   | `number \| null` | Event-time USD value when Pharos can justify one                                          |
-| `amountSource`       | `string`         | `event`, `historical_balance`, `current_balance_snapshot`, `derived`, `legacy_migration`, or `unavailable` |
-| `amountStatus`       | `string`         | `resolved`, `recoverable_pending`, `permanently_unavailable`, `provider_failed`, `ambiguous` |
-| `txHash`             | `string`         | Transaction hash                                                                        |
-| `blockNumber`        | `number`         | Block number                                                                            |
-| `timestamp`          | `number`         | Unix seconds                                                                            |
-| `methodologyVersion` | `string`         | Methodology version attributed to this event row                                        |
-| `contractAddress`    | `string \| null` | Emitting token contract when known                                                      |
-| `configKey`          | `string \| null` | Internal tracker config identity (`{chainId}-{contract}`)                               |
-| `eventSignature`     | `string \| null` | Human-readable event signature/name when known                                          |
-| `eventTopic0`        | `string \| null` | Raw EVM topic0 when applicable                                                          |
-| `suppressionReason`  | `string \| null` | Always `null` or absent on public rows because `/api/blacklist` filters `suppression_reason IS NULL`; non-null reasons are retained only on internal/audit DB rows excluded from public aggregates/events          |
-| `explorerTxUrl`      | `string`         | Block explorer URL for the transaction                                                  |
-| `explorerAddressUrl` | `string`         | Block explorer URL for the address                                                      |
+| Field                | Type             | Description                                                                                                                                                                                               |
+| -------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                 | `string`         | Composite ID: `{chainId}-{txHash}-{logIndex}`                                                                                                                                                             |
+| `stablecoin`         | `string`         | Token symbol (`USDC`, `USDT`, etc.)                                                                                                                                                                       |
+| `chainId`            | `string`         | Stable chain identifier from the shared chain registry (e.g. `"ethereum"`, `"tron"`). This is the preferred join key for integrations                                                                     |
+| `chainName`          | `string`         | Human-readable chain name (e.g. `"Ethereum"`)                                                                                                                                                             |
+| `eventType`          | `string`         | `"blacklist"`, `"unblacklist"`, or `"destroy"`                                                                                                                                                            |
+| `address`            | `string`         | Affected address (EVM `0x…` or Tron `T…`)                                                                                                                                                                 |
+| `amountNative`       | `number \| null` | Canonical token-native amount recovered from event data or historical balance lookup                                                                                                                      |
+| `amountUsdAtEvent`   | `number \| null` | Event-time USD value when Pharos can justify one                                                                                                                                                          |
+| `amountSource`       | `string`         | `event`, `historical_balance`, `current_balance_snapshot`, `derived`, `legacy_migration`, or `unavailable`                                                                                                |
+| `amountStatus`       | `string`         | `resolved`, `recoverable_pending`, `permanently_unavailable`, `provider_failed`, `ambiguous`                                                                                                              |
+| `txHash`             | `string`         | Transaction hash                                                                                                                                                                                          |
+| `blockNumber`        | `number`         | Block number                                                                                                                                                                                              |
+| `timestamp`          | `number`         | Unix seconds                                                                                                                                                                                              |
+| `methodologyVersion` | `string`         | Methodology version attributed to this event row                                                                                                                                                          |
+| `contractAddress`    | `string \| null` | Emitting token contract when known                                                                                                                                                                        |
+| `configKey`          | `string \| null` | Internal tracker config identity (`{chainId}-{contract}`)                                                                                                                                                 |
+| `eventSignature`     | `string \| null` | Human-readable event signature/name when known                                                                                                                                                            |
+| `eventTopic0`        | `string \| null` | Raw EVM topic0 when applicable                                                                                                                                                                            |
+| `suppressionReason`  | `string \| null` | Always `null` or absent on public rows because `/api/blacklist` filters `suppression_reason IS NULL`; non-null reasons are retained only on internal/audit DB rows excluded from public aggregates/events |
+| `explorerTxUrl`      | `string`         | Block explorer URL for the transaction                                                                                                                                                                    |
+| `explorerAddressUrl` | `string`         | Block explorer URL for the address                                                                                                                                                                        |
 
 **`methodology`**
 
@@ -761,9 +761,7 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
       "USDC": [{ "quarter": "Q1 '26", "blacklist": 42, "unblacklist": 0, "destroy": 1 }]
     }
   },
-  "chart": [
-    { "quarter": "Q1 '24", "USDT": 1200000, "USDC": 850000, "PAXG": 0, "XAUT": 0, "total": 2050000 }
-  ],
+  "chart": [{ "quarter": "Q1 '24", "USDT": 1200000, "USDC": 850000, "PAXG": 0, "XAUT": 0, "total": 2050000 }],
   "chains": [
     { "id": "ethereum", "name": "Ethereum" },
     { "id": "tron", "name": "Tron" }
@@ -782,7 +780,9 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
         "eventTypes": ["blacklist", "unblacklist", "destroy"]
       }
     ],
-    "unsupportedDeferred": [{ "symbol": "TUSD", "chainId": "bsc", "reason": "deferred_contract_creation_verification" }],
+    "unsupportedDeferred": [
+      { "symbol": "TUSD", "chainId": "bsc", "reason": "deferred_contract_creation_verification" }
+    ],
     "counts": {
       "supportedConfigs": 71,
       "unsupportedDeferredConfigs": 10,
@@ -892,23 +892,23 @@ Results are ordered by `startedAt` descending (most recent first).
 
 **`DepegEvent`**
 
-| Field              | Type                   | Description                                                                                   |
-| ------------------ | ---------------------- | --------------------------------------------------------------------------------------------- |
-| `id`               | `number`               | Auto-increment DB ID                                                                          |
-| `stablecoinId`     | `string`               | Pharos stablecoin ID                                                                          |
-| `symbol`           | `string`               | Token symbol                                                                                  |
-| `pegType`          | `string`               | DefiLlama peg type (e.g. `"peggedUSD"`)                                                       |
-| `direction`        | `"above" \| "below"`   | Whether the price was above or below the peg                                                  |
-| `peakDeviationBps` | `number`               | Largest deviation observed (basis points, signed; negative = below peg, positive = above peg) |
-| `startedAt`        | `number`               | Unix seconds when depeg was first detected                                                    |
-| `endedAt`          | `number \| null`       | Unix seconds when price returned to peg; `null` if still active                               |
-| `startPrice`       | `number`               | Price at event start (USD)                                                                    |
-| `peakPrice`        | `number \| null`       | Price at worst deviation                                                                      |
-| `recoveryPrice`    | `number \| null`       | Price at recovery                                                                             |
-| `pegReference`     | `number`               | Reference peg value used (USD)                                                                |
-| `source`           | `"live" \| "backfill"` | Detection method                                                                              |
-| `confirmationSources` | `string \| null`    | Composite provenance tag recorded when a pending depeg was promoted. Components (joined with `+`): the off-chain source label (`CoinGecko`, `DefiLlama`, or `NativePeg(<currency>)`), `DEX`, `CEX`, `Pool`. Example: `"DEX+CEX"` or `"CoinGecko+Pool"`. `null` for events that bypassed the pending lane (small-cap authoritative direct-insert and historical backfill rows). |
-| `pendingReason`    | `string \| null`       | Composite reason the incident entered the pending lane, e.g. `"large-cap"`, `"low-confidence"`, `"large-cap+low-confidence"`, `"extreme-move"`. `null` when the event did not enter pending. |
+| Field                 | Type                   | Description                                                                                                                                                                                                                                                                                                                                                                    |
+| --------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`                  | `number`               | Auto-increment DB ID                                                                                                                                                                                                                                                                                                                                                           |
+| `stablecoinId`        | `string`               | Pharos stablecoin ID                                                                                                                                                                                                                                                                                                                                                           |
+| `symbol`              | `string`               | Token symbol                                                                                                                                                                                                                                                                                                                                                                   |
+| `pegType`             | `string`               | DefiLlama peg type (e.g. `"peggedUSD"`)                                                                                                                                                                                                                                                                                                                                        |
+| `direction`           | `"above" \| "below"`   | Whether the price was above or below the peg                                                                                                                                                                                                                                                                                                                                   |
+| `peakDeviationBps`    | `number`               | Largest deviation observed (basis points, signed; negative = below peg, positive = above peg)                                                                                                                                                                                                                                                                                  |
+| `startedAt`           | `number`               | Unix seconds when depeg was first detected                                                                                                                                                                                                                                                                                                                                     |
+| `endedAt`             | `number \| null`       | Unix seconds when price returned to peg; `null` if still active                                                                                                                                                                                                                                                                                                                |
+| `startPrice`          | `number`               | Price at event start (USD)                                                                                                                                                                                                                                                                                                                                                     |
+| `peakPrice`           | `number \| null`       | Price at worst deviation                                                                                                                                                                                                                                                                                                                                                       |
+| `recoveryPrice`       | `number \| null`       | Price at recovery                                                                                                                                                                                                                                                                                                                                                              |
+| `pegReference`        | `number`               | Reference peg value used (USD)                                                                                                                                                                                                                                                                                                                                                 |
+| `source`              | `"live" \| "backfill"` | Detection method                                                                                                                                                                                                                                                                                                                                                               |
+| `confirmationSources` | `string \| null`       | Composite provenance tag recorded when a pending depeg was promoted. Components (joined with `+`): the off-chain source label (`CoinGecko`, `DefiLlama`, or `NativePeg(<currency>)`), `DEX`, `CEX`, `Pool`. Example: `"DEX+CEX"` or `"CoinGecko+Pool"`. `null` for events that bypassed the pending lane (small-cap authoritative direct-insert and historical backfill rows). |
+| `pendingReason`       | `string \| null`       | Composite reason the incident entered the pending lane, e.g. `"large-cap"`, `"low-confidence"`, `"large-cap+low-confidence"`, `"extreme-move"`. `null` when the event did not enter pending.                                                                                                                                                                                   |
 
 **`methodology`**
 
@@ -950,36 +950,36 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
 
 **`PegSummaryCoin`**
 
-| Field                 | Type                                                       | Description                                                                                                                                                         |
-| --------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                  | `string`                                                   | Pharos stablecoin ID                                                                                                                                                |
-| `symbol`              | `string`                                                   | Token symbol                                                                                                                                                        |
-| `name`                | `string`                                                   | Full name                                                                                                                                                           |
-| `pegType`             | `string`                                                   | DefiLlama peg type                                                                                                                                                  |
-| `pegCurrency`         | `string`                                                   | Peg currency code (`USD`, `EUR`, `GOLD`, etc.)                                                                                                                      |
-| `governance`          | `string`                                                   | `"centralized"`, `"centralized-dependent"`, `"decentralized"`                                                                                                       |
-| `currentDeviationBps` | `number \| null`                                           | Live price deviation from peg (basis points, signed). `null` for NAV / non-fixed-peg rows, for coins with current supply below the live depeg-event floor, or when price / peg-reference inputs are missing. |
-| `depegEventCoverageLimited` | `boolean`                                           | Present when the coin's current supply is below the live depeg-event floor (`$1M`). Use this to distinguish "below coverage floor" from generic missing-price cases when `currentDeviationBps` is `null`. |
-| `priceSource`         | `string`                                                   | Primary price source label used for current deviation (`defillama-list`, `coingecko`, composite agreement labels such as `binance+coingecko+kraken`, `protocol-redeem`, `defillama-contract`, `coinmarketcap`, `dexscreener`, `cached`, etc.). High-confidence consensus can expose the agreeing cluster label even when the published price is the cluster median. |
-| `priceConfidence`     | `"high" \| "single-source" \| "low" \| "fallback" \| null` | Confidence tier attached to the primary price input                                                                                                                 |
-| `priceUpdatedAt`      | `number \| null`                                           | Compatibility timestamp for the primary price; now mirrors the effective observation time rather than the cache-write time                                         |
-| `priceObservedAt`     | `number \| null`                                           | Unix seconds for the effective observation time attached to the selected primary price; interpret alongside `priceObservedAtMode`                                |
-| `priceObservedAtMode` | `"upstream" \| "local_fetch" \| "unknown" \| null`         | Whether `priceObservedAt` came from source-native freshness metadata, local fetch time, or legacy/unknown provenance                                            |
-| `priceSyncedAt`       | `number \| null`                                           | Unix seconds when Pharos selected and wrote the primary price during the sync                                                                   |
-| `primaryTrust`        | `"authoritative" \| "confirm_required" \| "unusable"`      | Whether the current primary price is trusted to mutate live depeg state directly                                                                                    |
-| `pegScore`            | `number \| null`                                           | Composite peg score 0–100 (higher = more stable)                                                                                                                    |
-| `pegPct`              | `number`                                                   | % of tracked time within ±100 bps                                                                                                                                   |
-| `severityScore`       | `number`                                                   | Severity sub-score (0–100)                                                                                                                                          |
-| `spreadPenalty`       | `number`                                                   | Spread/liquidity penalty applied to score                                                                                                                           |
-| `eventCount`          | `number`                                                   | Number of depeg events in the 4-year window                                                                                                                         |
-| `worstDeviationBps`   | `number \| null`                                           | Worst single deviation seen (basis points)                                                                                                                          |
-| `activeDepeg`         | `boolean`                                                  | Whether a depeg event is currently open                                                                                                                             |
-| `lastEventAt`         | `number \| null`                                           | Unix seconds of most recent depeg event                                                                                                                             |
-| `trackingSpanDays`    | `number`                                                   | Days of history used for score computation                                                                                                                          |
-| `methodologyVersion`  | `string`                                                   | Methodology version attributed to this coin snapshot                                                                                                                |
-| `dexPriceCheck`       | `DexPriceCheck \| null`                                    | Optional cross-validation against DEX price (shown when coin supply is at or above the live depeg-event floor, DEX data is ≤ 60 minutes old, and aggregate source TVL is ≥ $250K) |
-| `consensusSources`    | `string[]`                                                 | Source names that returned a valid price for this coin. Defaults to `[]` when absent.                                                                               |
-| `agreeSources`        | `string[] \| undefined`                                    | Compatibility alias for agreeing/current price sources when present                                                                                                |
+| Field                       | Type                                                       | Description                                                                                                                                                                                                                                                                                                                                                         |
+| --------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                        | `string`                                                   | Pharos stablecoin ID                                                                                                                                                                                                                                                                                                                                                |
+| `symbol`                    | `string`                                                   | Token symbol                                                                                                                                                                                                                                                                                                                                                        |
+| `name`                      | `string`                                                   | Full name                                                                                                                                                                                                                                                                                                                                                           |
+| `pegType`                   | `string`                                                   | DefiLlama peg type                                                                                                                                                                                                                                                                                                                                                  |
+| `pegCurrency`               | `string`                                                   | Peg currency code (`USD`, `EUR`, `GOLD`, etc.)                                                                                                                                                                                                                                                                                                                      |
+| `governance`                | `string`                                                   | `"centralized"`, `"centralized-dependent"`, `"decentralized"`                                                                                                                                                                                                                                                                                                       |
+| `currentDeviationBps`       | `number \| null`                                           | Live price deviation from peg (basis points, signed). `null` for NAV / non-fixed-peg rows, for coins with current supply below the live depeg-event floor, or when price / peg-reference inputs are missing.                                                                                                                                                        |
+| `depegEventCoverageLimited` | `boolean`                                                  | Present when the coin's current supply is below the live depeg-event floor (`$1M`). Use this to distinguish "below coverage floor" from generic missing-price cases when `currentDeviationBps` is `null`.                                                                                                                                                           |
+| `priceSource`               | `string`                                                   | Primary price source label used for current deviation (`defillama-list`, `coingecko`, composite agreement labels such as `binance+coingecko+kraken`, `protocol-redeem`, `defillama-contract`, `coinmarketcap`, `dexscreener`, `cached`, etc.). High-confidence consensus can expose the agreeing cluster label even when the published price is the cluster median. |
+| `priceConfidence`           | `"high" \| "single-source" \| "low" \| "fallback" \| null` | Confidence tier attached to the primary price input                                                                                                                                                                                                                                                                                                                 |
+| `priceUpdatedAt`            | `number \| null`                                           | Compatibility timestamp for the primary price; now mirrors the effective observation time rather than the cache-write time                                                                                                                                                                                                                                          |
+| `priceObservedAt`           | `number \| null`                                           | Unix seconds for the effective observation time attached to the selected primary price; interpret alongside `priceObservedAtMode`                                                                                                                                                                                                                                   |
+| `priceObservedAtMode`       | `"upstream" \| "local_fetch" \| "unknown" \| null`         | Whether `priceObservedAt` came from source-native freshness metadata, local fetch time, or legacy/unknown provenance                                                                                                                                                                                                                                                |
+| `priceSyncedAt`             | `number \| null`                                           | Unix seconds when Pharos selected and wrote the primary price during the sync                                                                                                                                                                                                                                                                                       |
+| `primaryTrust`              | `"authoritative" \| "confirm_required" \| "unusable"`      | Whether the current primary price is trusted to mutate live depeg state directly                                                                                                                                                                                                                                                                                    |
+| `pegScore`                  | `number \| null`                                           | Composite peg score 0–100 (higher = more stable)                                                                                                                                                                                                                                                                                                                    |
+| `pegPct`                    | `number`                                                   | % of tracked time within ±100 bps                                                                                                                                                                                                                                                                                                                                   |
+| `severityScore`             | `number`                                                   | Severity sub-score (0–100)                                                                                                                                                                                                                                                                                                                                          |
+| `spreadPenalty`             | `number`                                                   | Spread/liquidity penalty applied to score                                                                                                                                                                                                                                                                                                                           |
+| `eventCount`                | `number`                                                   | Number of depeg events in the 4-year window                                                                                                                                                                                                                                                                                                                         |
+| `worstDeviationBps`         | `number \| null`                                           | Worst single deviation seen (basis points)                                                                                                                                                                                                                                                                                                                          |
+| `activeDepeg`               | `boolean`                                                  | Whether a depeg event is currently open                                                                                                                                                                                                                                                                                                                             |
+| `lastEventAt`               | `number \| null`                                           | Unix seconds of most recent depeg event                                                                                                                                                                                                                                                                                                                             |
+| `trackingSpanDays`          | `number`                                                   | Days of history used for score computation                                                                                                                                                                                                                                                                                                                          |
+| `methodologyVersion`        | `string`                                                   | Methodology version attributed to this coin snapshot                                                                                                                                                                                                                                                                                                                |
+| `dexPriceCheck`             | `DexPriceCheck \| null`                                    | Optional cross-validation against DEX price (shown when coin supply is at or above the live depeg-event floor, DEX data is ≤ 60 minutes old, and aggregate source TVL is ≥ $250K)                                                                                                                                                                                   |
+| `consensusSources`          | `string[]`                                                 | Source names that returned a valid price for this coin. Defaults to `[]` when absent.                                                                                                                                                                                                                                                                               |
+| `agreeSources`              | `string[] \| undefined`                                    | Compatibility alias for agreeing/current price sources when present                                                                                                                                                                                                                                                                                                 |
 
 **`DexPriceCheck`**
 
@@ -993,16 +993,16 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
 
 **`PegSummaryStats`**
 
-| Field                  | Type                          | Description                                                                                                    |
-| ---------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `activeDepegCount`     | `number`                      | Coins with an open depeg event                                                                                 |
-| `medianDeviationBps`   | `number`                      | Median absolute deviation across rows with a live current deviation                                            |
-| `worstCurrent`         | `{ id, symbol, bps } \| null` | Coin with the largest current deviation among rows with a live current deviation                               |
+| Field                  | Type                          | Description                                                                                                                   |
+| ---------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `activeDepegCount`     | `number`                      | Coins with an open depeg event                                                                                                |
+| `medianDeviationBps`   | `number`                      | Median absolute deviation across rows with a live current deviation                                                           |
+| `worstCurrent`         | `{ id, symbol, bps } \| null` | Coin with the largest current deviation among rows with a live current deviation                                              |
 | `coinsAtPeg`           | `number`                      | Rows with a live current deviation that are below their live depeg threshold (100 bps for USD pegs, 150 bps for non-USD pegs) |
-| `totalTracked`         | `number`                      | Rows included in the live peg-status aggregate (`currentDeviationBps !== null`)                               |
-| `depegEventsToday`     | `number`                      | Number of depeg events whose `startedAt` is in the current UTC day                                             |
-| `depegEventsYesterday` | `number`                      | Number of depeg events whose `startedAt` is in the previous UTC day                                            |
-| `fallbackPegRates`     | `string[]`                    | _(optional)_ pegType keys using stale FX fallback rates                                                        |
+| `totalTracked`         | `number`                      | Rows included in the live peg-status aggregate (`currentDeviationBps !== null`)                                               |
+| `depegEventsToday`     | `number`                      | Number of depeg events whose `startedAt` is in the current UTC day                                                            |
+| `depegEventsYesterday` | `number`                      | Number of depeg events whose `startedAt` is in the previous UTC day                                                           |
+| `fallbackPegRates`     | `string[]`                    | _(optional)_ pegType keys using stale FX fallback rates                                                                       |
 
 **`methodology`** — same fields and semantics as `/api/depeg-events`
 
@@ -1094,44 +1094,44 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 
 **`DexLiquidityData`**
 
-| Field                   | Type                                                             | Description                                                                                                                                          |
-| ----------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `totalTvlUsd`           | `number`                                                         | Total DEX TVL (USD)                                                                                                                                  |
-| `totalVolume24hUsd`     | `number`                                                         | 24 h trading volume (USD)                                                                                                                            |
-| `totalVolume7dUsd`      | `number`                                                         | 7-day trading volume (USD)                                                                                                                           |
-| `poolCount`             | `number`                                                         | Number of liquidity pools                                                                                                                            |
-| `pairCount`             | `number`                                                         | Number of unique trading pairs                                                                                                                       |
-| `chainCount`            | `number`                                                         | Number of chains with active pools                                                                                                                   |
-| `protocolTvl`           | `Record<string, number>`                                         | TVL per DEX protocol (e.g. `{ "uniswap-v3": 100000 }`)                                                                                               |
-| `chainTvl`              | `Record<string, number>`                                         | TVL per chain (e.g. `{ "Ethereum": 500000 }`)                                                                                                        |
-| `topPools`              | `DexLiquidityPool[]`                                             | Top 10 retained pools sorted by 24h volume, then TVL                                                                                                 |
-| `liquidityScore`        | `number \| null`                                                 | Composite liquidity score 0–100                                                                                                                      |
-| `concentrationHhi`      | `number \| null`                                                 | Herfindahl–Hirschman Index for pool concentration (0–1; lower = more distributed), computed from the full retained pool set before top-10 truncation |
-| `depthStability`        | `number \| null`                                                 | Pool depth stability metric                                                                                                                          |
-| `tvlChange24h`          | `number \| null`                                                 | % TVL change vs. 24 h ago                                                                                                                            |
-| `tvlChange7d`           | `number \| null`                                                 | % TVL change vs. 7 days ago                                                                                                                          |
-| `updatedAt`             | `number`                                                         | Unix seconds of last cron update                                                                                                                     |
-| `dexPriceUsd`           | `number \| null`                                                 | DEX-derived price (USD)                                                                                                                              |
-| `dexDeviationBps`       | `number \| null`                                                 | DEX price deviation from peg (basis points, signed)                                                                                                  |
-| `priceSourceCount`      | `number \| null`                                                 | Number of pools used for DEX price (all must meet the shared $50K observation floor)                                                                 |
-| `priceSourceTvl`        | `number \| null`                                                 | Combined TVL of price-source pools (USD)                                                                                                             |
-| `priceSources`          | `DexPriceSource[] \| null`                                       | Aggregated price sources by protocol (for example one `balancer` or `raydium` entry per asset)                                                       |
-| `effectiveTvlUsd`       | `number`                                                         | TVL after applying quality multipliers                                                                                                               |
-| `avgPoolStress`         | `number \| null`                                                 | Average pool stress index on a 0–100 scale (0 = balanced, 100 = maximally stressed / imbalanced)                                                     |
-| `weightedBalanceRatio`  | `number \| null`                                                 | TVL-weighted balance ratio across pools                                                                                                              |
-| `organicFraction`       | `number \| null`                                                 | Fraction of TVL from organic (non-incentivized) pools                                                                                                |
-| `durabilityScore`       | `number \| null`                                                 | Score for pool maturity and reliability                                                                                                              |
-| `coverageClass`         | `"primary" \| "mixed" \| "fallback" \| "legacy" \| "unobserved" \| null` | Coverage-confidence classification for the retained pool set; `primary` includes pure `dl` and pure `direct_api` rows. The `__global__` aggregate sentinel uses `null`. |
-| `coverageConfidence`    | `number`                                                         | Evidence-weighted confidence (`0-1`) derived from retained-pool breadth, measured TVL share, and synthetic/decayed dependence                         |
-| `liquidityEvidenceClass`| `"unobserved" \| "measured" \| "partial_measured" \| "observed_unmeasured"` | Explicit classification of whether liquidity is balance-measured versus only observed from TVL / price evidence                          |
-| `hasMeasuredLiquidityEvidence` | `boolean`                                                | Whether any retained liquidity evidence for the row includes measured pool balances                                                                   |
-| `trendworthy`           | `boolean`                                                        | Whether this row is suitable for trend baselines (`coverageConfidence >= 0.75`, positive TVL, and `primary`/`mixed` coverage)                        |
-| `sourceMix`             | `Record<string, { poolCount: number; tvlUsd: number }>`          | TVL/pool-count mix across source families (`dl`, `direct_api`, `cg_onchain`, `gecko_terminal`, `dexscreener`, `cg_tickers`)                          |
-| `balanceMeasuredTvlUsd` | `number`                                                         | TVL denominator actually used for `weightedBalanceRatio`                                                                                             |
-| `organicMeasuredTvlUsd` | `number`                                                         | TVL denominator actually used for `organicFraction`                                                                                                  |
-| `scoreComponents`       | `ScoreComponents \| null`                                        | Breakdown of the composite liquidity score                                                                                                           |
-| `lockedLiquidityPct`    | `number \| null`                                                 | TVL-weighted fraction of liquidity reported as locked by source pools                                                                                |
-| `methodologyVersion`    | `string`                                                         | Methodology version attributed to this row                                                                                                           |
+| Field                          | Type                                                                        | Description                                                                                                                                                             |
+| ------------------------------ | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `totalTvlUsd`                  | `number`                                                                    | Total DEX TVL (USD)                                                                                                                                                     |
+| `totalVolume24hUsd`            | `number`                                                                    | 24 h trading volume (USD)                                                                                                                                               |
+| `totalVolume7dUsd`             | `number`                                                                    | 7-day trading volume (USD)                                                                                                                                              |
+| `poolCount`                    | `number`                                                                    | Number of liquidity pools                                                                                                                                               |
+| `pairCount`                    | `number`                                                                    | Number of unique trading pairs                                                                                                                                          |
+| `chainCount`                   | `number`                                                                    | Number of chains with active pools                                                                                                                                      |
+| `protocolTvl`                  | `Record<string, number>`                                                    | TVL per DEX protocol (e.g. `{ "uniswap-v3": 100000 }`)                                                                                                                  |
+| `chainTvl`                     | `Record<string, number>`                                                    | TVL per chain (e.g. `{ "Ethereum": 500000 }`)                                                                                                                           |
+| `topPools`                     | `DexLiquidityPool[]`                                                        | Top 10 retained pools sorted by 24h volume, then TVL                                                                                                                    |
+| `liquidityScore`               | `number \| null`                                                            | Composite liquidity score 0–100                                                                                                                                         |
+| `concentrationHhi`             | `number \| null`                                                            | Herfindahl–Hirschman Index for pool concentration (0–1; lower = more distributed), computed from the full retained pool set before top-10 truncation                    |
+| `depthStability`               | `number \| null`                                                            | Pool depth stability metric                                                                                                                                             |
+| `tvlChange24h`                 | `number \| null`                                                            | % TVL change vs. 24 h ago                                                                                                                                               |
+| `tvlChange7d`                  | `number \| null`                                                            | % TVL change vs. 7 days ago                                                                                                                                             |
+| `updatedAt`                    | `number`                                                                    | Unix seconds of last cron update                                                                                                                                        |
+| `dexPriceUsd`                  | `number \| null`                                                            | DEX-derived price (USD)                                                                                                                                                 |
+| `dexDeviationBps`              | `number \| null`                                                            | DEX price deviation from peg (basis points, signed)                                                                                                                     |
+| `priceSourceCount`             | `number \| null`                                                            | Number of pools used for DEX price (all must meet the shared $50K observation floor)                                                                                    |
+| `priceSourceTvl`               | `number \| null`                                                            | Combined TVL of price-source pools (USD)                                                                                                                                |
+| `priceSources`                 | `DexPriceSource[] \| null`                                                  | Aggregated price sources by protocol (for example one `balancer` or `raydium` entry per asset)                                                                          |
+| `effectiveTvlUsd`              | `number`                                                                    | TVL after applying quality multipliers                                                                                                                                  |
+| `avgPoolStress`                | `number \| null`                                                            | Average pool stress index on a 0–100 scale (0 = balanced, 100 = maximally stressed / imbalanced)                                                                        |
+| `weightedBalanceRatio`         | `number \| null`                                                            | TVL-weighted balance ratio across pools                                                                                                                                 |
+| `organicFraction`              | `number \| null`                                                            | Fraction of TVL from organic (non-incentivized) pools                                                                                                                   |
+| `durabilityScore`              | `number \| null`                                                            | Score for pool maturity and reliability                                                                                                                                 |
+| `coverageClass`                | `"primary" \| "mixed" \| "fallback" \| "legacy" \| "unobserved" \| null`    | Coverage-confidence classification for the retained pool set; `primary` includes pure `dl` and pure `direct_api` rows. The `__global__` aggregate sentinel uses `null`. |
+| `coverageConfidence`           | `number`                                                                    | Evidence-weighted confidence (`0-1`) derived from retained-pool breadth, measured TVL share, and synthetic/decayed dependence                                           |
+| `liquidityEvidenceClass`       | `"unobserved" \| "measured" \| "partial_measured" \| "observed_unmeasured"` | Explicit classification of whether liquidity is balance-measured versus only observed from TVL / price evidence                                                         |
+| `hasMeasuredLiquidityEvidence` | `boolean`                                                                   | Whether any retained liquidity evidence for the row includes measured pool balances                                                                                     |
+| `trendworthy`                  | `boolean`                                                                   | Whether this row is suitable for trend baselines (`coverageConfidence >= 0.75`, positive TVL, and `primary`/`mixed` coverage)                                           |
+| `sourceMix`                    | `Record<string, { poolCount: number; tvlUsd: number }>`                     | TVL/pool-count mix across source families (`dl`, `direct_api`, `cg_onchain`, `gecko_terminal`, `dexscreener`, `cg_tickers`)                                             |
+| `balanceMeasuredTvlUsd`        | `number`                                                                    | TVL denominator actually used for `weightedBalanceRatio`                                                                                                                |
+| `organicMeasuredTvlUsd`        | `number`                                                                    | TVL denominator actually used for `organicFraction`                                                                                                                     |
+| `scoreComponents`              | `ScoreComponents \| null`                                                   | Breakdown of the composite liquidity score                                                                                                                              |
+| `lockedLiquidityPct`           | `number \| null`                                                            | TVL-weighted fraction of liquidity reported as locked by source pools                                                                                                   |
+| `methodologyVersion`           | `string`                                                                    | Methodology version attributed to this row                                                                                                                              |
 
 **`ScoreComponents`**
 
@@ -1145,26 +1145,26 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 
 **`DexLiquidityPool`**
 
-| Field         | Type                  | Description                                                    |
-| ------------- | --------------------- | -------------------------------------------------------------- |
-| `project`     | `string`              | Protocol slug (e.g. `"curve-dex"`, `"uniswap-v3"`)             |
-| `chain`       | `string`              | Chain name                                                     |
-| `tvlUsd`      | `number`              | Pool TVL (USD)                                                 |
+| Field         | Type                  | Description                                                                                                             |
+| ------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `project`     | `string`              | Protocol slug (e.g. `"curve-dex"`, `"uniswap-v3"`)                                                                      |
+| `chain`       | `string`              | Chain name                                                                                                              |
+| `tvlUsd`      | `number`              | Pool TVL (USD)                                                                                                          |
 | `symbol`      | `string`              | Pool pair name (e.g. `"USDC-USDT"`), normalized to tracked tickers when direct-API sources only provide token addresses |
-| `volumeUsd1d` | `number`              | 24 h volume (USD)                                              |
-| `poolType`    | `string`              | Pool type (e.g. `"curve-stableswap"`, `"uniswap-v3-5bp"`)      |
-| `source`      | `string \| undefined` | Canonical source family for this retained pool                 |
-| `extra`       | `object \| undefined` | Optional detailed pool metrics (A-factor, balance ratio, measurement flags, etc.) |
+| `volumeUsd1d` | `number`              | 24 h volume (USD)                                                                                                       |
+| `poolType`    | `string`              | Pool type (e.g. `"curve-stableswap"`, `"uniswap-v3-5bp"`)                                                               |
+| `source`      | `string \| undefined` | Canonical source family for this retained pool                                                                          |
+| `extra`       | `object \| undefined` | Optional detailed pool metrics (A-factor, balance ratio, measurement flags, etc.)                                       |
 
 `extra` may include:
 
-| Field                      | Type                                                                             | Description                                                                                                                                                    |
-| -------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `amplificationCoefficient` | `number \| undefined`                                                            | Curve amplification coefficient (`A`)                                                                                                                          |
-| `balanceRatio`             | `number \| undefined`                                                            | Measured pool balance ratio from 0 to 1; Balancer weighted pools normalize against weights and Fluid uses official DexReservesResolver balances where deployed |
-| `feeTier`                  | `number \| undefined`                                                            | Normalized fee tier in basis points                                                                                                                            |
-| `balanceDetails`           | `Array<{ symbol: string; balancePct: number; isTracked: boolean }> \| undefined` | Per-token USD composition shares used for balance tooltips/detail                                                                                              |
-| `measurement`             | `object \| undefined`                                                            | Per-pool provenance flags such as `tvlMeasured`, `volumeMeasured`, `balanceMeasured`, `maturityMeasured`, `priceMeasured`, `synthetic`, `decayed`, and `capped` |
+| Field                      | Type                                                                             | Description                                                                                                                                                     |
+| -------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `amplificationCoefficient` | `number \| undefined`                                                            | Curve amplification coefficient (`A`)                                                                                                                           |
+| `balanceRatio`             | `number \| undefined`                                                            | Measured pool balance ratio from 0 to 1; Balancer weighted pools normalize against weights and Fluid uses official DexReservesResolver balances where deployed  |
+| `feeTier`                  | `number \| undefined`                                                            | Normalized fee tier in basis points                                                                                                                             |
+| `balanceDetails`           | `Array<{ symbol: string; balancePct: number; isTracked: boolean }> \| undefined` | Per-token USD composition shares used for balance tooltips/detail                                                                                               |
+| `measurement`              | `object \| undefined`                                                            | Per-pool provenance flags such as `tvlMeasured`, `volumeMeasured`, `balanceMeasured`, `maturityMeasured`, `priceMeasured`, `synthetic`, `decayed`, and `capped` |
 
 **`DexPriceSource`**
 
@@ -1214,18 +1214,18 @@ Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC m
 ]
 ```
 
-| Field                | Type             | Description                                                                        |
-| -------------------- | ---------------- | ---------------------------------------------------------------------------------- |
-| `tvl`                | `number`         | Total DEX TVL snapshot (USD)                                                       |
-| `volume24h`          | `number`         | 24 h volume at time of snapshot (USD)                                              |
-| `score`              | `number \| null` | Liquidity score at time of snapshot                                                |
-| `date`               | `number`         | Unix seconds                                                                       |
-| `coverageClass`      | `string`         | Snapshot confidence class (`primary`, `mixed`, `fallback`, `legacy`, `unobserved`) |
-| `coverageConfidence` | `number`         | Snapshot confidence score                                                          |
-| `liquidityEvidenceClass` | `string`     | Snapshot evidence class (`measured`, `partial_measured`, `observed_unmeasured`, `unobserved`) |
-| `hasMeasuredLiquidityEvidence` | `boolean` | Whether the snapshot qualifies as balance-measured liquidity evidence            |
-| `trendworthy`        | `boolean`        | Whether the snapshot is suitable for trend baselines rather than informational use |
-| `methodologyVersion` | `string`         | Methodology version attributed to this snapshot                                    |
+| Field                          | Type             | Description                                                                                   |
+| ------------------------------ | ---------------- | --------------------------------------------------------------------------------------------- |
+| `tvl`                          | `number`         | Total DEX TVL snapshot (USD)                                                                  |
+| `volume24h`                    | `number`         | 24 h volume at time of snapshot (USD)                                                         |
+| `score`                        | `number \| null` | Liquidity score at time of snapshot                                                           |
+| `date`                         | `number`         | Unix seconds                                                                                  |
+| `coverageClass`                | `string`         | Snapshot confidence class (`primary`, `mixed`, `fallback`, `legacy`, `unobserved`)            |
+| `coverageConfidence`           | `number`         | Snapshot confidence score                                                                     |
+| `liquidityEvidenceClass`       | `string`         | Snapshot evidence class (`measured`, `partial_measured`, `observed_unmeasured`, `unobserved`) |
+| `hasMeasuredLiquidityEvidence` | `boolean`        | Whether the snapshot qualifies as balance-measured liquidity evidence                         |
+| `trendworthy`                  | `boolean`        | Whether the snapshot is suitable for trend baselines rather than informational use            |
+| `methodologyVersion`           | `string`         | Methodology version attributed to this snapshot                                               |
 
 ---
 
@@ -1290,9 +1290,7 @@ Latest AI-generated market summary, produced daily at 08:05 UTC via the Claude A
     "activeCount": 7,
     "date": null
   },
-  "riskTape": [
-    { "id": "risk-tape:depegs", "label": "Depegs", "value": "PMUSD 5284bps", "tone": "critical" }
-  ],
+  "riskTape": [{ "id": "risk-tape:depegs", "label": "Depegs", "value": "PMUSD 5284bps", "tone": "critical" }],
   "nextTriggers": [
     {
       "id": "trigger:depeg:pmusd",
@@ -1311,18 +1309,18 @@ Latest AI-generated market summary, produced daily at 08:05 UTC via the Claude A
 
 If no digest exists yet, the endpoint returns only `{ "digest": null }`.
 
-| Field            | Type             | Description                                                                          |
-| ---------------- | ---------------- | ------------------------------------------------------------------------------------ |
-| `digest`         | `string \| null` | Tweet-ready summary (≤ 240 characters). `null` if no digest has been generated yet.  |
-| `digestTitle`    | `string \| null` | Short headline for the digest                                                        |
-| `digestExtended` | `string \| null` | Extended commentary for the website view                                             |
-| `generatedAt`    | `number`         | Unix seconds when this digest was generated (present only when `digest` is non-null) |
-| `editionNumber`  | `number \| null` | Sequential daily digest number (present only when `digest` is non-null)              |
-| `riskSignal`     | `DigestRiskSignal \| null` | Compact active-depeg risk summary parsed from stored digest input data      |
-| `changeSummary`  | `DigestChangeSummary \| null` | Deterministic "what changed since yesterday" summary parsed from stored digest input data |
-| `nextTriggers`   | `DigestNextTrigger[] \| null` | Structured forward-looking threshold checks for tomorrow's digest |
-| `forwardLookOutcomes` | `DigestForwardLookOutcome[] \| null` | Evaluation of the previous digest's next triggers against the latest input |
-| `riskTape`       | `DigestRiskTapeItem[] \| null` | Compact reader-facing risk state chips parsed from stored digest input data |
+| Field                 | Type                                 | Description                                                                               |
+| --------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `digest`              | `string \| null`                     | Tweet-ready summary (≤ 240 characters). `null` if no digest has been generated yet.       |
+| `digestTitle`         | `string \| null`                     | Short headline for the digest                                                             |
+| `digestExtended`      | `string \| null`                     | Extended commentary for the website view                                                  |
+| `generatedAt`         | `number`                             | Unix seconds when this digest was generated (present only when `digest` is non-null)      |
+| `editionNumber`       | `number \| null`                     | Sequential daily digest number (present only when `digest` is non-null)                   |
+| `riskSignal`          | `DigestRiskSignal \| null`           | Compact active-depeg risk summary parsed from stored digest input data                    |
+| `changeSummary`       | `DigestChangeSummary \| null`        | Deterministic "what changed since yesterday" summary parsed from stored digest input data |
+| `nextTriggers`        | `DigestNextTrigger[] \| null`        | Structured forward-looking threshold checks for tomorrow's digest                         |
+| `forwardLookOutcomes` | `DigestForwardLookOutcome[] \| null` | Evaluation of the previous digest's next triggers against the latest input                |
+| `riskTape`            | `DigestRiskTapeItem[] \| null`       | Compact reader-facing risk state chips parsed from stored digest input data               |
 
 ---
 
@@ -1354,9 +1352,7 @@ Newest-first archive of up to 365 daily and weekly digests.
         "activeCount": 7,
         "date": "2026-05-05"
       },
-      "riskTape": [
-        { "id": "risk-tape:depegs", "label": "Depegs", "value": "PMUSD 5284bps", "tone": "critical" }
-      ],
+      "riskTape": [{ "id": "risk-tape:depegs", "label": "Depegs", "value": "PMUSD 5284bps", "tone": "critical" }],
       "nextTriggers": [
         {
           "id": "trigger:depeg:pmusd",
@@ -1379,48 +1375,48 @@ Newest-first archive of up to 365 daily and weekly digests.
 
 Each element uses `digestText` (note: differs from the singular `/api/daily-digest` which uses `digest`).
 
-| Field            | Type             | Description                                                 |
-| ---------------- | ---------------- | ----------------------------------------------------------- |
-| `digestText`     | `string`         | Tweet-ready summary                                         |
-| `digestTitle`    | `string \| null` | Short headline                                              |
-| `digestExtended` | `string \| null` | Extended commentary                                         |
-| `generatedAt`    | `number`         | Unix seconds of generation time                             |
-| `psiScore`       | `number \| null` | PSI score parsed from archived digest input data            |
-| `psiBand`        | `string \| null` | PSI condition band parsed from archived digest input data   |
-| `totalMcapUsd`   | `number \| null` | Ecosystem market cap parsed from archived digest input data |
-| `riskSignal`     | `DigestRiskSignal \| null` | Compact active-depeg risk summary parsed from archived digest input data |
-| `nextTriggers`   | `DigestNextTrigger[] \| null` | Structured forward-looking threshold checks parsed from archived digest input data |
+| Field                 | Type                                 | Description                                                                              |
+| --------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `digestText`          | `string`                             | Tweet-ready summary                                                                      |
+| `digestTitle`         | `string \| null`                     | Short headline                                                                           |
+| `digestExtended`      | `string \| null`                     | Extended commentary                                                                      |
+| `generatedAt`         | `number`                             | Unix seconds of generation time                                                          |
+| `psiScore`            | `number \| null`                     | PSI score parsed from archived digest input data                                         |
+| `psiBand`             | `string \| null`                     | PSI condition band parsed from archived digest input data                                |
+| `totalMcapUsd`        | `number \| null`                     | Ecosystem market cap parsed from archived digest input data                              |
+| `riskSignal`          | `DigestRiskSignal \| null`           | Compact active-depeg risk summary parsed from archived digest input data                 |
+| `nextTriggers`        | `DigestNextTrigger[] \| null`        | Structured forward-looking threshold checks parsed from archived digest input data       |
 | `forwardLookOutcomes` | `DigestForwardLookOutcome[] \| null` | Evaluation of the previous digest's next triggers parsed from archived digest input data |
-| `riskTape`       | `DigestRiskTapeItem[] \| null` | Compact risk-state chips parsed from archived digest input data |
-| `digestType`     | `"daily" \| "weekly"` | Digest cadence for this archived entry                 |
-| `editionNumber`  | `number`         | Sequential edition number within that digest cadence        |
+| `riskTape`            | `DigestRiskTapeItem[] \| null`       | Compact risk-state chips parsed from archived digest input data                          |
+| `digestType`          | `"daily" \| "weekly"`                | Digest cadence for this archived entry                                                   |
+| `editionNumber`       | `number`                             | Sequential edition number within that digest cadence                                     |
 
 **`DigestRiskSignal`**
 
-| Field         | Type                   | Description                                                                         |
-| ------------- | ---------------------- | ----------------------------------------------------------------------------------- |
-| `kind`        | `"depeg"`              | Risk signal family; currently active-depeg context                                  |
-| `symbol`      | `string`               | Stablecoin symbol                                                                   |
-| `bps`         | `number`               | Signed basis-point deviation where available; archive badges display absolute value |
-| `mcapUsd`     | `number \| null`       | Market cap associated with the stored digest signal                                 |
-| `severity`    | `"critical" \| "watch"` | `"critical"` at ≥2,500 bps and ≥$50M mcap, or ≥5,000 bps and ≥$10M mcap          |
-| `activeCount` | `number`               | Active depeg count from the stored digest input, when available                     |
-| `date`        | `string \| null`       | Daily input date for weekly archive entries; `null` for latest daily responses      |
+| Field         | Type                    | Description                                                                         |
+| ------------- | ----------------------- | ----------------------------------------------------------------------------------- |
+| `kind`        | `"depeg"`               | Risk signal family; currently active-depeg context                                  |
+| `symbol`      | `string`                | Stablecoin symbol                                                                   |
+| `bps`         | `number`                | Signed basis-point deviation where available; archive badges display absolute value |
+| `mcapUsd`     | `number \| null`        | Market cap associated with the stored digest signal                                 |
+| `severity`    | `"critical" \| "watch"` | `"critical"` at ≥2,500 bps and ≥$50M mcap, or ≥5,000 bps and ≥$10M mcap             |
+| `activeCount` | `number`                | Active depeg count from the stored digest input, when available                     |
+| `date`        | `string \| null`        | Daily input date for weekly archive entries; `null` for latest daily responses      |
 
 **Digest intelligence fields**
 
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `DigestRiskTapeItem.id` | `string` | Stable identifier for the displayed tape item |
-| `DigestRiskTapeItem.label` | `string` | Short label such as `PSI`, `Depegs`, `Gauge`, `DEWS`, or `Supply` |
-| `DigestRiskTapeItem.value` | `string` | Already formatted compact value for display |
-| `DigestRiskTapeItem.tone` | `"critical" \| "warning" \| "neutral" \| "positive"` | Presentation severity |
-| `DigestRiskTapeItem.detail` | `string` | Optional supporting detail |
-| `DigestNextTrigger.metric` | `"depeg-bps" \| "supply-1d-usd" \| "supply-7d-usd" \| "bank-run-gauge" \| "dews-band" \| "psi-score"` | Metric that the next daily input can evaluate |
-| `DigestNextTrigger.comparator` | `"abs-gte" \| "gte" \| "lte" \| "band-gte"` | Comparison operator for `thresholdValue` |
-| `DigestNextTrigger.thresholdLabel` | `string` | Display string for the threshold |
-| `DigestForwardLookOutcome.status` | `"hit" \| "missed" \| "pending"` | Whether the prior trigger fired, failed, or still needs more data |
-| `DigestChangeSummary.*Signals` | `array` | Buckets of signal changes, each with `id`, `label`, `kind`, `symbols`, and `detail` |
+| Field                              | Type                                                                                                  | Description                                                                         |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `DigestRiskTapeItem.id`            | `string`                                                                                              | Stable identifier for the displayed tape item                                       |
+| `DigestRiskTapeItem.label`         | `string`                                                                                              | Short label such as `PSI`, `Depegs`, `Gauge`, `DEWS`, or `Supply`                   |
+| `DigestRiskTapeItem.value`         | `string`                                                                                              | Already formatted compact value for display                                         |
+| `DigestRiskTapeItem.tone`          | `"critical" \| "warning" \| "neutral" \| "positive"`                                                  | Presentation severity                                                               |
+| `DigestRiskTapeItem.detail`        | `string`                                                                                              | Optional supporting detail                                                          |
+| `DigestNextTrigger.metric`         | `"depeg-bps" \| "supply-1d-usd" \| "supply-7d-usd" \| "bank-run-gauge" \| "dews-band" \| "psi-score"` | Metric that the next daily input can evaluate                                       |
+| `DigestNextTrigger.comparator`     | `"abs-gte" \| "gte" \| "lte" \| "band-gte"`                                                           | Comparison operator for `thresholdValue`                                            |
+| `DigestNextTrigger.thresholdLabel` | `string`                                                                                              | Display string for the threshold                                                    |
+| `DigestForwardLookOutcome.status`  | `"hit" \| "missed" \| "pending"`                                                                      | Whether the prior trigger fired, failed, or still needs more data                   |
+| `DigestChangeSummary.*Signals`     | `array`                                                                                               | Buckets of signal changes, each with `id`, `label`, `kind`, `symbols`, and `detail` |
 
 ---
 
@@ -1432,8 +1428,8 @@ Contextual data snapshot for a specific digest date — includes the digest's in
 
 **Required query parameter**
 
-| Param  | Type     | Description                            |
-| ------ | -------- | -------------------------------------- |
+| Param  | Type     | Description                                                                           |
+| ------ | -------- | ------------------------------------------------------------------------------------- |
 | `date` | `string` | Date in `YYYY-MM-DD` format, or `YYYY-MM-DD-weekly` for weekly recap pages (required) |
 
 **Response**
@@ -1448,13 +1444,13 @@ Contextual data snapshot for a specific digest date — includes the digest's in
 }
 ```
 
-| Field             | Type             | Description                                                         |
-| ----------------- | ---------------- | ------------------------------------------------------------------- |
-| `date`            | `string`         | The requested date                                                  |
+| Field             | Type             | Description                                                                                     |
+| ----------------- | ---------------- | ----------------------------------------------------------------------------------------------- |
+| `date`            | `string`         | The requested date                                                                              |
 | `inputData`       | `object \| null` | Digest input data (mcap, depegs, supply changes, PSI, digest intelligence fields) for this date |
-| `prevInputData`   | `object \| null` | Previous day's input data for delta computation                     |
-| `depegEvents`     | `array`          | Up to 20 depeg events active on that date, ordered by severity      |
-| `blacklistEvents` | `array`          | Up to 50 blacklist events on that date                              |
+| `prevInputData`   | `object \| null` | Previous day's input data for delta computation                                                 |
+| `depegEvents`     | `array`          | Up to 20 depeg events active on that date, ordered by severity                                  |
+| `blacklistEvents` | `array`          | Up to 50 blacklist events on that date                                                          |
 
 **Error responses:** `400` for missing/invalid date, `404` if no digest exists for that date.
 
@@ -1476,9 +1472,33 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
   "timestamp": 1771856453,
   "warnings": [],
   "caches": {
-    "stablecoins": { "ageSeconds": 323, "maxAge": 600, "healthy": true, "producerJob": "sync-stablecoins", "producerIntervalSec": 900, "endpointMaxAge": 600, "availabilityMaxAge": 600 },
-    "stablecoin-charts": { "ageSeconds": 323, "maxAge": 3600, "healthy": true, "producerJob": "sync-stablecoin-charts", "producerIntervalSec": 3600, "endpointMaxAge": 3600, "availabilityMaxAge": 3600 },
-    "usds-status": { "ageSeconds": 47118, "maxAge": 86400, "healthy": true, "producerJob": "sync-usds-status", "producerIntervalSec": 86400, "endpointMaxAge": 86400, "availabilityMaxAge": 86400 },
+    "stablecoins": {
+      "ageSeconds": 323,
+      "maxAge": 600,
+      "healthy": true,
+      "producerJob": "sync-stablecoins",
+      "producerIntervalSec": 900,
+      "endpointMaxAge": 600,
+      "availabilityMaxAge": 600
+    },
+    "stablecoin-charts": {
+      "ageSeconds": 323,
+      "maxAge": 3600,
+      "healthy": true,
+      "producerJob": "sync-stablecoin-charts",
+      "producerIntervalSec": 3600,
+      "endpointMaxAge": 3600,
+      "availabilityMaxAge": 3600
+    },
+    "usds-status": {
+      "ageSeconds": 47118,
+      "maxAge": 86400,
+      "healthy": true,
+      "producerJob": "sync-usds-status",
+      "producerIntervalSec": 86400,
+      "endpointMaxAge": 86400,
+      "availabilityMaxAge": 86400
+    },
     "fx-rates": {
       "ageSeconds": 1223,
       "maxAge": 1800,
@@ -1494,10 +1514,42 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
       "warning": null,
       "consecutiveFallbackRuns": 0
     },
-    "bluechip-ratings": { "ageSeconds": 22815, "maxAge": 86400, "healthy": true, "producerJob": "sync-bluechip", "producerIntervalSec": 86400, "endpointMaxAge": 43200, "availabilityMaxAge": 86400 },
-    "dex-liquidity": { "ageSeconds": 290, "maxAge": 43200, "healthy": true, "producerJob": "sync-dex-liquidity", "producerIntervalSec": 1800, "endpointMaxAge": 3600, "availabilityMaxAge": 43200 },
-    "yield-data": { "ageSeconds": 820, "maxAge": 3600, "healthy": true, "producerJob": "sync-yield-data", "producerIntervalSec": 3600, "endpointMaxAge": 3600, "availabilityMaxAge": 3600 },
-    "dews": { "ageSeconds": 240, "maxAge": 1800, "healthy": true, "producerJob": "compute-dews", "producerIntervalSec": 1800, "endpointMaxAge": 1800, "availabilityMaxAge": 1800 }
+    "bluechip-ratings": {
+      "ageSeconds": 22815,
+      "maxAge": 86400,
+      "healthy": true,
+      "producerJob": "sync-bluechip",
+      "producerIntervalSec": 86400,
+      "endpointMaxAge": 43200,
+      "availabilityMaxAge": 86400
+    },
+    "dex-liquidity": {
+      "ageSeconds": 290,
+      "maxAge": 43200,
+      "healthy": true,
+      "producerJob": "sync-dex-liquidity",
+      "producerIntervalSec": 1800,
+      "endpointMaxAge": 3600,
+      "availabilityMaxAge": 43200
+    },
+    "yield-data": {
+      "ageSeconds": 820,
+      "maxAge": 3600,
+      "healthy": true,
+      "producerJob": "sync-yield-data",
+      "producerIntervalSec": 3600,
+      "endpointMaxAge": 3600,
+      "availabilityMaxAge": 3600
+    },
+    "dews": {
+      "ageSeconds": 240,
+      "maxAge": 1800,
+      "healthy": true,
+      "producerJob": "compute-dews",
+      "producerIntervalSec": 1800,
+      "endpointMaxAge": 1800,
+      "availabilityMaxAge": 1800
+    }
   },
   "blacklist": {
     "totalEvents": 13422,
@@ -1537,61 +1589,61 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
 }
 ```
 
-| Field                                | Type                               | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| ------------------------------------ | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `status`                             | `string`                           | `"healthy"` / `"degraded"` / `"stale"`                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `timestamp`                          | `number`                           | Unix seconds at time of response                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `warnings`                           | `string[]`                         | Best-effort machine-readable warnings when health subqueries fail but the endpoint can still return a non-500 payload. Messages are sanitized for public output and do not include raw exception text, SQL fragments, or table names.                                                                                                                                                                                                                                                                             |
-| `caches`                             | `Record<string, CacheStatus>`      | Per-cache freshness status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `caches["fx-rates"]`                 | `CacheStatus`                      | FX cache freshness plus source-cadence diagnostics (`mode`, `sourceUpdatedAt`, `sourceAgeSeconds`, `sourceStatus`, `warning`, `consecutiveFallbackRuns`)                                                                                                                                                                                                                                                                                                                                                             |
-| `blacklist.totalEvents`              | `number`                           | Total events in blacklist table                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `blacklist.missingAmounts`           | `number`                           | Events where `amount` is null (should be 0)                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `blacklist.recentMissingAmounts`     | `number`                           | Missing-amount events inside the recent monitoring window used by status logic                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `blacklist.recentWindowSec`          | `number`                           | Size of the recent monitoring window in seconds                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `blacklist.missingRatio`             | `number`                           | `missingAmounts / totalEvents` (0 when no blacklist rows exist yet)                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `telegramSummary`                    | `TelegramHealthSummary \| null`    | Lightweight Telegram delivery health summary. `null` when the Telegram tables are unavailable or not yet migrated                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `telegramSummary.totalChats`         | `number`                           | Total subscribed Telegram chats currently stored                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `telegramSummary.pendingDeliveries`  | `number`                           | Pending overflow alert deliveries waiting in `telegram_pending_alerts`                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `telegramSummary.lastDispatchAt`     | `number \| null`                   | Unix seconds of the most recent `dispatch-telegram-alerts` cron run, if available                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `telegramSummary.lastDispatchStatus` | `string \| null`                   | Status of the most recent `dispatch-telegram-alerts` cron run, if available                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `telegramSummary.safetyAlertSourceState` | `"ok" \| "missing" \| "corrupt" \| "stale" \| "wrong-generation" \| null` | Live safety-alert source-cache state from the most recent Telegram dispatch run                                                                                                                                                                                                                                                                                                                                                         |
-| `telegramSummary.safetyAlertSourceAgeSeconds` | `number \| null`            | Age of the current live safety-alert source snapshot when available                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `telegramSummary.safetyAlertsSuppressed` | `boolean`                    | `true` when safety alerts are paused because the live source snapshot is missing, corrupt, stale, or from the wrong generation                                                                                                                                                                                                                                                                                                                                                                                   |
-| `telegramSummary.safetyAlertSourceGeneration` | `string \| null`          | Generation marker of the current live safety-alert source snapshot                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `mintBurn.totalEvents`               | `number \| null`                   | Legacy advisory total. `null` on the budget-capped health path because `/api/health` no longer scans `mint_burn_hourly`; use `/api/mint-burn-flows` or `/api/mint-burn-events` for mint/burn data views.                                                                                                                                                                                                                                                                                                             |
-| `mintBurn.latestEventTs`             | `number \| null`                   | Legacy advisory timestamp. `null` on the budget-capped health path because `/api/health` no longer scans `mint_burn_events`; freshness is represented by `mintBurn.sync.lastSuccessfulSyncAt`.                                                                                                                                                                                                                                                                                                                       |
-| `mintBurn.latestHourlyTs`            | `number \| null`                   | Legacy advisory timestamp. `null` on the budget-capped health path because `/api/health` no longer scans `mint_burn_hourly`.                                                                                                                                                                                                                                                                                                                                                                                         |
-| `mintBurn.freshnessAgeSec`           | `number \| null`                   | Legacy advisory age. `null` on the budget-capped health path; derive critical-lane age from `mintBurn.sync.lastSuccessfulSyncAt`.                                                                                                                                                                                                                                                                                                                                                                                    |
-| `mintBurn.majorStaleCount`           | `number`                           | Legacy advisory count. Always `0` on the budget-capped health path because per-symbol stale checks are intentionally not scanned from D1.                                                                                                                                                                                                                                                                                                                                                                            |
-| `mintBurn.staleMajorSymbols`         | `string[]`                         | Legacy advisory list. Always empty on the budget-capped health path because per-symbol stale checks are intentionally not scanned from D1.                                                                                                                                                                                                                                                                                                                                                                           |
-| `mintBurn.sync`                      | `object`                           | Critical-lane sync freshness summary used for public health evaluation                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `mintBurn.sync.lastSuccessfulSyncAt` | `number \| null`                   | Unix seconds of the latest successful `sync-mint-burn` run                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `mintBurn.sync.freshnessStatus`      | `"fresh" \| "degraded" \| "stale"` | Public freshness state keyed to the 30-minute critical-lane cadence (`fresh <= 60m`, `degraded <= 90m`, `stale > 90m`)                                                                                                                                                                                                                                                                                                                                                                                               |
-| `mintBurn.sync.warning`              | `string \| null`                   | Human-readable warning when the critical lane is stale, degraded, or errored                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `mintBurn.sync.criticalLaneHealthy`  | `boolean`                          | `true` when the latest critical-lane run is `ok`, `degraded`, or `skipped_locked`                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `circuits`                           | `Record<string, CircuitRecord>`    | Per-source circuit breaker states. Keys include `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coinmarketcap-prices`, `dexscreener-prices`, `dexscreener-search`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`, `pyth-prices`, `binance-prices`, `coinbase-prices`, `redstone-prices`, `curve-onchain`, `curve-liquidity-api`, `fx-realtime` |
+| Field                                         | Type                                                                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| --------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `status`                                      | `string`                                                                  | `"healthy"` / `"degraded"` / `"stale"`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `timestamp`                                   | `number`                                                                  | Unix seconds at time of response                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `warnings`                                    | `string[]`                                                                | Best-effort machine-readable warnings when health subqueries fail but the endpoint can still return a non-500 payload. Messages are sanitized for public output and do not include raw exception text, SQL fragments, or table names.                                                                                                                                                                                                                                                                                                      |
+| `caches`                                      | `Record<string, CacheStatus>`                                             | Per-cache freshness status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `caches["fx-rates"]`                          | `CacheStatus`                                                             | FX cache freshness plus source-cadence diagnostics (`mode`, `sourceUpdatedAt`, `sourceAgeSeconds`, `sourceStatus`, `warning`, `consecutiveFallbackRuns`)                                                                                                                                                                                                                                                                                                                                                                                   |
+| `blacklist.totalEvents`                       | `number`                                                                  | Total events in blacklist table                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `blacklist.missingAmounts`                    | `number`                                                                  | Events where `amount` is null (should be 0)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `blacklist.recentMissingAmounts`              | `number`                                                                  | Missing-amount events inside the recent monitoring window used by status logic                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `blacklist.recentWindowSec`                   | `number`                                                                  | Size of the recent monitoring window in seconds                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `blacklist.missingRatio`                      | `number`                                                                  | `missingAmounts / totalEvents` (0 when no blacklist rows exist yet)                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `telegramSummary`                             | `TelegramHealthSummary \| null`                                           | Lightweight Telegram delivery health summary. `null` when the Telegram tables are unavailable or not yet migrated                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `telegramSummary.totalChats`                  | `number`                                                                  | Total subscribed Telegram chats currently stored                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `telegramSummary.pendingDeliveries`           | `number`                                                                  | Pending overflow alert deliveries waiting in `telegram_pending_alerts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `telegramSummary.lastDispatchAt`              | `number \| null`                                                          | Unix seconds of the most recent `dispatch-telegram-alerts` cron run, if available                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `telegramSummary.lastDispatchStatus`          | `string \| null`                                                          | Status of the most recent `dispatch-telegram-alerts` cron run, if available                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `telegramSummary.safetyAlertSourceState`      | `"ok" \| "missing" \| "corrupt" \| "stale" \| "wrong-generation" \| null` | Live safety-alert source-cache state from the most recent Telegram dispatch run                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `telegramSummary.safetyAlertSourceAgeSeconds` | `number \| null`                                                          | Age of the current live safety-alert source snapshot when available                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `telegramSummary.safetyAlertsSuppressed`      | `boolean`                                                                 | `true` when safety alerts are paused because the live source snapshot is missing, corrupt, stale, or from the wrong generation                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `telegramSummary.safetyAlertSourceGeneration` | `string \| null`                                                          | Generation marker of the current live safety-alert source snapshot                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `mintBurn.totalEvents`                        | `number \| null`                                                          | Legacy advisory total. `null` on the budget-capped health path because `/api/health` no longer scans `mint_burn_hourly`; use `/api/mint-burn-flows` or `/api/mint-burn-events` for mint/burn data views.                                                                                                                                                                                                                                                                                                                                   |
+| `mintBurn.latestEventTs`                      | `number \| null`                                                          | Legacy advisory timestamp. `null` on the budget-capped health path because `/api/health` no longer scans `mint_burn_events`; freshness is represented by `mintBurn.sync.lastSuccessfulSyncAt`.                                                                                                                                                                                                                                                                                                                                             |
+| `mintBurn.latestHourlyTs`                     | `number \| null`                                                          | Legacy advisory timestamp. `null` on the budget-capped health path because `/api/health` no longer scans `mint_burn_hourly`.                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `mintBurn.freshnessAgeSec`                    | `number \| null`                                                          | Legacy advisory age. `null` on the budget-capped health path; derive critical-lane age from `mintBurn.sync.lastSuccessfulSyncAt`.                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `mintBurn.majorStaleCount`                    | `number`                                                                  | Legacy advisory count. Always `0` on the budget-capped health path because per-symbol stale checks are intentionally not scanned from D1.                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `mintBurn.staleMajorSymbols`                  | `string[]`                                                                | Legacy advisory list. Always empty on the budget-capped health path because per-symbol stale checks are intentionally not scanned from D1.                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `mintBurn.sync`                               | `object`                                                                  | Critical-lane sync freshness summary used for public health evaluation                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `mintBurn.sync.lastSuccessfulSyncAt`          | `number \| null`                                                          | Unix seconds of the latest successful `sync-mint-burn` run                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `mintBurn.sync.freshnessStatus`               | `"fresh" \| "degraded" \| "stale"`                                        | Public freshness state keyed to the 30-minute critical-lane cadence (`fresh <= 60m`, `degraded <= 90m`, `stale > 90m`)                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `mintBurn.sync.warning`                       | `string \| null`                                                          | Human-readable warning when the critical lane is stale, degraded, or errored                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `mintBurn.sync.criticalLaneHealthy`           | `boolean`                                                                 | `true` when the latest critical-lane run is `ok`, `degraded`, or `skipped_locked`                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `circuits`                                    | `Record<string, CircuitRecord>`                                           | Per-source circuit breaker states. Keys include `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coinmarketcap-prices`, `dexscreener-prices`, `dexscreener-search`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`, `pyth-prices`, `binance-prices`, `coinbase-prices`, `redstone-prices`, `curve-onchain`, `curve-liquidity-api`, `fx-realtime` |
 
 **`CacheStatus`**
 
-| Field                     | Type                                         | Description                                                                                  |
-| ------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `ageSeconds`              | `number \| null`                             | Seconds since last cron update; `null` if never populated                                    |
-| `maxAge`                  | `number`                                     | Availability budget in seconds for this cache key; same value as `availabilityMaxAge` for current workers |
-| `healthy`                 | `boolean`                                    | `true` when `ageSeconds / maxAge ≤ 12.0`; status-page bands use `>8.0x` for degraded and `>12.0x` for stale |
-| `producerJob`             | `string \| null \| undefined`                | Cron job that produces the cache freshness signal                                            |
-| `producerIntervalSec`     | `number \| null \| undefined`                | Expected producer cadence in seconds                                                        |
-| `endpointMaxAge`          | `number \| null \| undefined`                | Endpoint freshness basis used by `_meta`, `X-Data-Age`, and generic freshness warning runway when available |
-| `availabilityMaxAge`      | `number \| null \| undefined`                | Availability budget used by `/api/health`, `/api/status`, and status-page cache ratios       |
-| `endpointBudgetReason`    | `string \| null \| undefined`                | Short explanation when endpoint freshness differs from producer cadence or availability budget |
-| `availabilityBudgetReason` | `string \| null \| undefined`               | Short explanation for the availability budget                                                |
-| `freshnessSource`          | `"freshness-sentinel" \| "table-fallback" \| "cron-fallback" \| undefined` | Source used to derive freshness for sentinel-backed cache lanes                              |
-| `sentinelValidationReason` | `string \| null \| undefined`               | Present when a malformed, stale, wrong-source, future-dated, or non-`ok` freshness sentinel was ignored |
-| `mode`                    | `"live" \| "cached-fallback" \| undefined`   | FX cache only: whether the latest usable sync came from a live fetch or cached fallback      |
-| `sourceUpdatedAt`         | `number \| null \| undefined`                | FX cache only: Unix seconds for the source currently driving `sourceStatus`                  |
-| `sourceAgeSeconds`        | `number \| null \| undefined`                | FX cache only: age of the source currently driving `sourceStatus`                            |
-| `sourceStatus`            | `"fresh" \| "degraded" \| "stale" \| "none"` | FX cache only: cadence-aware source freshness status                                         |
-| `warning`                 | `string \| null \| undefined`                | Human-readable warning when a lane is running on degraded freshness evidence (FX fallback/source cadence, or cache freshness fallback from sentinel to table/cron evidence) |
-| `consecutiveFallbackRuns` | `number \| undefined`                        | FX cache only: number of back-to-back cached-fallback runs                                   |
+| Field                      | Type                                                                       | Description                                                                                                                                                                 |
+| -------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ageSeconds`               | `number \| null`                                                           | Seconds since last cron update; `null` if never populated                                                                                                                   |
+| `maxAge`                   | `number`                                                                   | Availability budget in seconds for this cache key; same value as `availabilityMaxAge` for current workers                                                                   |
+| `healthy`                  | `boolean`                                                                  | `true` when `ageSeconds / maxAge ≤ 12.0`; status-page bands use `>8.0x` for degraded and `>12.0x` for stale                                                                 |
+| `producerJob`              | `string \| null \| undefined`                                              | Cron job that produces the cache freshness signal                                                                                                                           |
+| `producerIntervalSec`      | `number \| null \| undefined`                                              | Expected producer cadence in seconds                                                                                                                                        |
+| `endpointMaxAge`           | `number \| null \| undefined`                                              | Endpoint freshness basis used by `_meta`, `X-Data-Age`, and generic freshness warning runway when available                                                                 |
+| `availabilityMaxAge`       | `number \| null \| undefined`                                              | Availability budget used by `/api/health`, `/api/status`, and status-page cache ratios                                                                                      |
+| `endpointBudgetReason`     | `string \| null \| undefined`                                              | Short explanation when endpoint freshness differs from producer cadence or availability budget                                                                              |
+| `availabilityBudgetReason` | `string \| null \| undefined`                                              | Short explanation for the availability budget                                                                                                                               |
+| `freshnessSource`          | `"freshness-sentinel" \| "table-fallback" \| "cron-fallback" \| undefined` | Source used to derive freshness for sentinel-backed cache lanes                                                                                                             |
+| `sentinelValidationReason` | `string \| null \| undefined`                                              | Present when a malformed, stale, wrong-source, future-dated, or non-`ok` freshness sentinel was ignored                                                                     |
+| `mode`                     | `"live" \| "cached-fallback" \| undefined`                                 | FX cache only: whether the latest usable sync came from a live fetch or cached fallback                                                                                     |
+| `sourceUpdatedAt`          | `number \| null \| undefined`                                              | FX cache only: Unix seconds for the source currently driving `sourceStatus`                                                                                                 |
+| `sourceAgeSeconds`         | `number \| null \| undefined`                                              | FX cache only: age of the source currently driving `sourceStatus`                                                                                                           |
+| `sourceStatus`             | `"fresh" \| "degraded" \| "stale" \| "none"`                               | FX cache only: cadence-aware source freshness status                                                                                                                        |
+| `warning`                  | `string \| null \| undefined`                                              | Human-readable warning when a lane is running on degraded freshness evidence (FX fallback/source cadence, or cache freshness fallback from sentinel to table/cron evidence) |
+| `consecutiveFallbackRuns`  | `number \| undefined`                                                      | FX cache only: number of back-to-back cached-fallback runs                                                                                                                  |
 
 The `/status/` page consumes the richer blacklist fields directly so it can distinguish long-tail historical cleanup from fresh incoming amount gaps.
 Blacklist amount-gap severity is intentionally tolerant of isolated parser/provider misses: data-quality degrades when the missing-amount ratio reaches 1% or when at least 5 recent events are missing amounts, and becomes stale at 2% or at 25 recent missing events.
@@ -1616,10 +1668,10 @@ Public transition history for the read-only `/status/` page. Returns the current
 
 **Query parameters**
 
-| Param    | Type                  | Default | Description |
-| -------- | --------------------- | ------- | ----------- |
-| `window` | `"24h" \| "7d" \| "30d"` | `"30d"` | Transition time window applied server-side before rows are returned |
-| `limit`  | `integer`             | `50`    | Max raw status transitions loaded within the time window before public-impact filtering (1–200); returned public transitions may be fewer |
+| Param    | Type                     | Default | Description                                                                                                                               |
+| -------- | ------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `window` | `"24h" \| "7d" \| "30d"` | `"30d"` | Transition time window applied server-side before rows are returned                                                                       |
+| `limit`  | `integer`                | `50`    | Max raw status transitions loaded within the time window before public-impact filtering (1–200); returned public transitions may be fewer |
 
 **Response**
 
@@ -1641,12 +1693,12 @@ Public transition history for the read-only `/status/` page. Returns the current
 }
 ```
 
-| Field           | Type                                | Description |
-| --------------- | ----------------------------------- | ----------- |
-| `timestamp`     | `number`                            | Unix seconds at time of response |
+| Field           | Type                                 | Description                                                                                                  |
+| --------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `timestamp`     | `number`                             | Unix seconds at time of response                                                                             |
 | `currentStatus` | `"healthy" \| "degraded" \| "stale"` | Current public status, sourced from `assessPublicHealth` (matches the `status` field from `GET /api/health`) |
-| `lastChangedAt` | `number \| null`                    | Unix seconds for the latest admin status-machine change, if known |
-| `transitions`   | `PublicStatusTransition[]`          | Recent public-impact incident transitions, inside the requested window, newest first |
+| `lastChangedAt` | `number \| null`                     | Unix seconds for the latest admin status-machine change, if known                                            |
+| `transitions`   | `PublicStatusTransition[]`           | Recent public-impact incident transitions, inside the requested window, newest first                         |
 
 This endpoint powers two separate public `/status/` views: the hero `Status runway` always uses `window=30d`, while the transition table owns its own user-selected `24h` / `7d` / `30d` filter.
 
@@ -1697,17 +1749,17 @@ Lightweight Telegram adoption metrics for the public PharosWatchBot page. The ca
 }
 ```
 
-| Field               | Type       | Description |
-| ------------------- | ---------- | ----------- |
-| `activeWatchers`    | `number`   | Subscribers with at least one active alert type or per-coin alert |
-| `coinSubscriptions` | `number`   | Total active per-coin subscription rows |
-| `pendingDeliveries` | `number`   | Privacy-safe count of queued Telegram alert deliveries |
-| `quietHoursEnabledChats` | `number` | Aggregate count of chats with quiet hours enabled |
-| `alertTypeChats`    | `object`   | Aggregate chat counts with DEWS, depeg, safety, launch, and all-four alert coverage |
-| `updatedAt`         | `number`   | Unix seconds when the pulse payload was produced |
-| `updatedEverySeconds` | `number` | Cache cadence for consumers that display freshness |
-| `topCoins`          | `string[]` | Up to five most subscribed coin tickers, ordered by subscription count |
-| `watcherHistory`    | `array`    | UTC day buckets for the current active watcher base, grouped by `telegram_subscribers.created_at`; each point includes `date`, millisecond `timestamp`, `newWatchers`, and cumulative `activeWatchers` |
+| Field                    | Type       | Description                                                                                                                                                                                            |
+| ------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `activeWatchers`         | `number`   | Subscribers with at least one active alert type or per-coin alert                                                                                                                                      |
+| `coinSubscriptions`      | `number`   | Total active per-coin subscription rows                                                                                                                                                                |
+| `pendingDeliveries`      | `number`   | Privacy-safe count of queued Telegram alert deliveries                                                                                                                                                 |
+| `quietHoursEnabledChats` | `number`   | Aggregate count of chats with quiet hours enabled                                                                                                                                                      |
+| `alertTypeChats`         | `object`   | Aggregate chat counts with DEWS, depeg, safety, launch, and all-four alert coverage                                                                                                                    |
+| `updatedAt`              | `number`   | Unix seconds when the pulse payload was produced                                                                                                                                                       |
+| `updatedEverySeconds`    | `number`   | Cache cadence for consumers that display freshness                                                                                                                                                     |
+| `topCoins`               | `string[]` | Up to five most subscribed coin tickers, ordered by subscription count                                                                                                                                 |
+| `watcherHistory`         | `array`    | UTC day buckets for the current active watcher base, grouped by `telegram_subscribers.created_at`; each point includes `date`, millisecond `timestamp`, `newWatchers`, and cumulative `activeWatchers` |
 
 Browser consumers on `pharos.watch` and `ops.pharos.watch` should use same-origin `/_site-data/telegram-pulse`, which proxies onto the internal website lane instead of calling the external API host directly.
 
@@ -1723,8 +1775,8 @@ Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a comp
 
 **Optional query parameters**
 
-| Param    | Type     | Default | Description                                                                                   |
-| -------- | -------- | ------- | --------------------------------------------------------------------------------------------- |
+| Param    | Type     | Default | Description                                                                                             |
+| -------- | -------- | ------- | ------------------------------------------------------------------------------------------------------- |
 | `detail` | `"true"` | —       | When `"true"`, returns full history with persisted per-day component breakdowns instead of last 91 days |
 
 **Response**
@@ -1751,25 +1803,25 @@ Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a comp
 }
 ```
 
-| Field                          | Type                  | Description                                                                                 |
-| ------------------------------ | --------------------- | ------------------------------------------------------------------------------------------- |
-| `current`                      | `object \| null`      | Latest PSI score and components. `null` if cron has not yet run                             |
-| `current.score`                | `number`              | PSI score 0–100                                                                             |
-| `current.band`                 | `string`              | Condition band: `"BEDROCK"`, `"STEADY"`, `"TREMOR"`, `"FRACTURE"`, `"CRISIS"`, `"MELTDOWN"` |
-| `current.avg24h`               | `number \| undefined` | Rolling 24 h average PSI score                                                              |
-| `current.avg24hBand`           | `string \| undefined` | Condition band for `avg24h`                                                                 |
-| `current.components`           | `object`              | Component breakdown: `severity`, `breadth`, `stressBreadth`, `trend`                        |
-| `current.contributors`         | `array`               | Top per-coin contributors from `input_snapshot.contributors` (empty when unavailable)       |
-| `current.inputDegradation`     | `object \| undefined` | Dependency-loss metadata carried by the served sample when the stored input snapshot recorded degraded upstream inputs |
-| `current.totalMcapUsd`         | `number`              | Total ecosystem market cap from the latest input snapshot (`0` when unavailable)            |
-| `current.computedAt`           | `number`              | Unix seconds of computation                                                                 |
-| `current.methodologyVersion`   | `string`              | Methodology version used to compute the current score                                       |
+| Field                          | Type                  | Description                                                                                                                                               |
+| ------------------------------ | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `current`                      | `object \| null`      | Latest PSI score and components. `null` if cron has not yet run                                                                                           |
+| `current.score`                | `number`              | PSI score 0–100                                                                                                                                           |
+| `current.band`                 | `string`              | Condition band: `"BEDROCK"`, `"STEADY"`, `"TREMOR"`, `"FRACTURE"`, `"CRISIS"`, `"MELTDOWN"`                                                               |
+| `current.avg24h`               | `number \| undefined` | Rolling 24 h average PSI score                                                                                                                            |
+| `current.avg24hBand`           | `string \| undefined` | Condition band for `avg24h`                                                                                                                               |
+| `current.components`           | `object`              | Component breakdown: `severity`, `breadth`, `stressBreadth`, `trend`                                                                                      |
+| `current.contributors`         | `array`               | Top per-coin contributors from `input_snapshot.contributors` (empty when unavailable)                                                                     |
+| `current.inputDegradation`     | `object \| undefined` | Dependency-loss metadata carried by the served sample when the stored input snapshot recorded degraded upstream inputs                                    |
+| `current.totalMcapUsd`         | `number`              | Total ecosystem market cap from the latest input snapshot (`0` when unavailable)                                                                          |
+| `current.computedAt`           | `number`              | Unix seconds of computation                                                                                                                               |
+| `current.methodologyVersion`   | `string`              | Methodology version used to compute the current score                                                                                                     |
 | `history`                      | `array`               | Historical scores, newest first. With `detail=true`, persisted rows include `components`; the synthesized current-day running-average point may omit them |
-| `malformedRows`                | `number`              | Count of historical rows dropped from `detail=true` because persisted `components` JSON was malformed |
-| `history[].methodologyVersion` | `string`              | Methodology version used for that history point                                             |
-| `methodology`                  | `object`              | Version metadata for current PSI methodology context                                        |
-| `methodology.version`          | `string`              | Methodology version used by current score                                                   |
-| `methodology.changelogPath`    | `string`              | Relative path to full methodology changelog                                                 |
+| `malformedRows`                | `number`              | Count of historical rows dropped from `detail=true` because persisted `components` JSON was malformed                                                     |
+| `history[].methodologyVersion` | `string`              | Methodology version used for that history point                                                                                                           |
+| `methodology`                  | `object`              | Version metadata for current PSI methodology context                                                                                                      |
+| `methodology.version`          | `string`              | Methodology version used by current score                                                                                                                 |
+| `methodology.changelogPath`    | `string`              | Relative path to full methodology changelog                                                                                                               |
 
 ---
 
@@ -1850,54 +1902,54 @@ For peg handling, `rawInputs.pegScore` is the effective peg input used by report
 
 **`ReportCard`**
 
-| Field             | Type                                   | Description                                                                         |
-| ----------------- | -------------------------------------- | ----------------------------------------------------------------------------------- |
-| `id`              | `string`                               | Canonical Pharos stablecoin ID for live cards; stable cemetery ID for defunct cards |
-| `name`            | `string`                               | Full name                                                                           |
-| `symbol`          | `string`                               | Ticker                                                                              |
-| `overallGrade`    | `string`                               | Letter grade: `"A+"` through `"F"`, or `"NR"`                                       |
-| `overallScore`    | `number \| null`                       | Weighted score 0–100. `null` for unrated coins                                      |
-| `baseScore`       | `number \| null`                       | Pre-peg-multiplier/no-liquidity/active-depeg-cap score after base dimension blending |
-| `overallCapped`   | `boolean`                              | `true` when the card is capped at a tracked parent stablecoin's overall score        |
-| `uncappedOverallScore` | `number \| null`                  | Post-dimension/post-peg score before the tracked-parent overall cap, when applicable |
-| `dimensions`      | `Record<DimensionKey, DimensionScore>` | Per-dimension grade, score, and detail text                                         |
-| `ratedDimensions` | `number`                               | Number of dimensions with data (max 5)                                              |
-| `rawInputs`       | `RawDimensionInputs`                   | Raw scoring inputs for client-side grade recomputation (stress testing)             |
-| `isDefunct`       | `boolean`                              | `true` for cemetery coins (permanent F grade)                                       |
+| Field                  | Type                                   | Description                                                                          |
+| ---------------------- | -------------------------------------- | ------------------------------------------------------------------------------------ |
+| `id`                   | `string`                               | Canonical Pharos stablecoin ID for live cards; stable cemetery ID for defunct cards  |
+| `name`                 | `string`                               | Full name                                                                            |
+| `symbol`               | `string`                               | Ticker                                                                               |
+| `overallGrade`         | `string`                               | Letter grade: `"A+"` through `"F"`, or `"NR"`                                        |
+| `overallScore`         | `number \| null`                       | Weighted score 0–100. `null` for unrated coins                                       |
+| `baseScore`            | `number \| null`                       | Pre-peg-multiplier/no-liquidity/active-depeg-cap score after base dimension blending |
+| `overallCapped`        | `boolean`                              | `true` when the card is capped at a tracked parent stablecoin's overall score        |
+| `uncappedOverallScore` | `number \| null`                       | Post-dimension/post-peg score before the tracked-parent overall cap, when applicable |
+| `dimensions`           | `Record<DimensionKey, DimensionScore>` | Per-dimension grade, score, and detail text                                          |
+| `ratedDimensions`      | `number`                               | Number of dimensions with data (max 5)                                               |
+| `rawInputs`            | `RawDimensionInputs`                   | Raw scoring inputs for client-side grade recomputation (stress testing)              |
+| `isDefunct`            | `boolean`                              | `true` for cemetery coins (permanent F grade)                                        |
 
 **`DependencyWeight`**: `{ id: string, weight: number, type?: DependencyType }` — upstream stablecoin ID + fraction of collateral from that source (0–1), with optional dependency category. When total dependency weight is ≤ 1.0, the remainder represents non-stablecoin collateral; when declared dependency weight exceeds 1.0, dependency scoring normalizes by raw total and uses no self-backed remainder.
 
 **`RawDimensionInputs`**
 
-| Field                              | Type                                            |
-| ---------------------------------- | ----------------------------------------------- |
-| `pegScore`                         | `number \| null`                                |
-| `activeDepeg`                      | `boolean`                                       |
-| `activeDepegBps`                   | `number \| null`                                |
-| `depegEventCount`                  | `number`                                        |
-| `lastEventAt`                      | `number \| null`                                |
-| `liquidityScore`                   | `number \| null`                                |
-| `effectiveExitScore`               | `number \| null`                                |
-| `redemptionBackstopScore`          | `number \| null`                                |
-| `redemptionRouteFamily`            | `RedemptionRouteFamily \| null`                 |
-| `redemptionModelConfidence`        | `"high" \| "medium" \| "low" \| null`           |
-| `redemptionUsedForLiquidity`       | `boolean`                                       |
-| `redemptionImmediateCapacityUsd`   | `number \| null`                                |
-| `redemptionImmediateCapacityRatio` | `number \| null`                                |
-| `concentrationHhi`                 | `number \| null`                                |
-| `bluechipGrade`                    | `BluechipGrade \| null`                         |
-| `canBeBlacklisted`                 | `boolean \| "dilutable" \| "possible" \| "inherited"` |
-| `chainTier`                        | `ChainTier`                                     |
-| `deploymentModel`                  | `DeploymentModel`                               |
-| `collateralQuality`                | `CollateralQuality`                             |
-| `custodyModel`                     | `CustodyModel`                                  |
-| `governanceTier`                   | `GovernanceType`                                |
-| `governanceQuality`                | `GovernanceQuality`                             |
-| `dependencies`                     | `DependencyWeight[]`                            |
-| `variantParentId`                  | `string \| null`                                |
+| Field                              | Type                                                                                        |
+| ---------------------------------- | ------------------------------------------------------------------------------------------- |
+| `pegScore`                         | `number \| null`                                                                            |
+| `activeDepeg`                      | `boolean`                                                                                   |
+| `activeDepegBps`                   | `number \| null`                                                                            |
+| `depegEventCount`                  | `number`                                                                                    |
+| `lastEventAt`                      | `number \| null`                                                                            |
+| `liquidityScore`                   | `number \| null`                                                                            |
+| `effectiveExitScore`               | `number \| null`                                                                            |
+| `redemptionBackstopScore`          | `number \| null`                                                                            |
+| `redemptionRouteFamily`            | `RedemptionRouteFamily \| null`                                                             |
+| `redemptionModelConfidence`        | `"high" \| "medium" \| "low" \| null`                                                       |
+| `redemptionUsedForLiquidity`       | `boolean`                                                                                   |
+| `redemptionImmediateCapacityUsd`   | `number \| null`                                                                            |
+| `redemptionImmediateCapacityRatio` | `number \| null`                                                                            |
+| `concentrationHhi`                 | `number \| null`                                                                            |
+| `bluechipGrade`                    | `BluechipGrade \| null`                                                                     |
+| `canBeBlacklisted`                 | `boolean \| "dilutable" \| "possible" \| "inherited"`                                       |
+| `chainTier`                        | `ChainTier`                                                                                 |
+| `deploymentModel`                  | `DeploymentModel`                                                                           |
+| `collateralQuality`                | `CollateralQuality`                                                                         |
+| `custodyModel`                     | `CustodyModel`                                                                              |
+| `governanceTier`                   | `GovernanceType`                                                                            |
+| `governanceQuality`                | `GovernanceQuality`                                                                         |
+| `dependencies`                     | `DependencyWeight[]`                                                                        |
+| `variantParentId`                  | `string \| null`                                                                            |
 | `variantKind`                      | `"savings-passthrough" \| "strategy-vault" \| "risk-absorption" \| "bond-maturity" \| null` |
-| `navToken`                         | `boolean`                                       |
-| `collateralFromLive`               | `boolean`                                       |
+| `navToken`                         | `boolean`                                                                                   |
+| `collateralFromLive`               | `boolean`                                                                                   |
 
 `rawInputs.canBeBlacklisted` is the canonical resolved blacklist status used by report-card-backed product surfaces. It can therefore differ from the raw `StablecoinMeta.canBeBlacklisted` override field, which only carries manual metadata and never stores computed `"inherited"` values. Product labels map the wire values to the five-status model: `true` -> `Yes`, `"dilutable"` -> `Dilutable`, `"inherited"` -> `Upstream`, `"possible"` -> `Possible`, and `false` -> `No`. Raw metadata accepts `"dilutable"` for uncapped admin-mint cases; those entries must include `canBeBlacklistedSource` for source provenance. `"inherited"` / Upstream can be produced by any reserve, backing, custody, parent-asset, or CEX/custody-rail exposure; it does not require a majority reserve weight.
 
@@ -2022,58 +2074,58 @@ For v4-compatible snapshots, route-status and capacity telemetry remain part of 
 
 Top-level fields:
 
-| Field         | Type                                      | Description                                                                                  |
-| ------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `coins`       | `Record<string, RedemptionBackstopEntry>` | Current snapshot keyed by Pharos stablecoin ID                                               |
-| `methodology` | `object`                                  | Version metadata plus component weights, effective-exit blend weights, and route-family caps |
+| Field         | Type                                      | Description                                                                                                |
+| ------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `coins`       | `Record<string, RedemptionBackstopEntry>` | Current snapshot keyed by Pharos stablecoin ID                                                             |
+| `methodology` | `object`                                  | Version metadata plus component weights, effective-exit blend weights, and route-family caps               |
 | `updatedAt`   | `number`                                  | Freshest `updated_at` timestamp for the served completed run, or freshest current row for legacy snapshots |
 
 `RedemptionBackstopEntry` highlights:
 
-| Field                    | Type                                            | Description                                                                                                 |
-| ------------------------ | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `score`                  | `number \| null`                                | Direct redemption-quality score after route-family/config caps                                              |
-| `effectiveExitScore`     | `number \| null`                                | Blended exit score used by report cards                                                                     |
-| `dexLiquidityScore`      | `number \| null`                                | DEX liquidity input used in the blend                                                                       |
-| `routeFamily`            | `string`                                        | `stablecoin-redeem`, `basket-redeem`, `collateral-redeem`, `psm-swap`, `queue-redeem`, or `offchain-issuer` |
-| `accessModel`            | `string`                                        | `permissionless-onchain`, `whitelisted-onchain`, `issuer-api`, or `manual`                                  |
-| `settlementModel`        | `string`                                        | `atomic`, `immediate`, `same-day`, `days`, or `queued`                                                      |
-| `outputAssetType`        | `string`                                        | `stable-single`, `stable-basket`, `bluechip-collateral`, `mixed-collateral`, or `nav`                       |
-| `sourceMode`             | `string`                                        | `dynamic`, `estimated`, or `static` capacity provenance                                                     |
-| `resolutionState`        | `string`                                        | `resolved`, `missing-cache`, `missing-capacity`, `failed`, or `impaired`                                    |
-| `routeStatus`            | `string`                                        | Current route availability: `open`, `degraded`, `paused`, `cohort-limited`, or `unknown`                   |
-| `routeStatusSource`      | `string`                                        | Source for current route availability: `static-config`, `market-implied`, `operator-notice`, `protocol-api`, or `onchain` |
-| `routeStatusReason`      | `string \| undefined`                           | Human-readable explanation when current availability impairs scoring                                       |
-| `routeStatusReviewedAt`  | `string \| undefined`                           | UTC date (`YYYY-MM-DD`) for the current route-status assessment                                            |
-| `holderEligibility`      | `string`                                        | Modeled holder cohort: `any-holder`, `verified-customer`, `whitelisted-primary`, `pre-incident-holder`, `issuer-discretionary`, or `unknown` |
-| `capacityConfidence`     | `string`                                        | `live-direct`, `live-proxy`, `documented-bound`, `heuristic`, or legacy `dynamic` fidelity tag for the capacity model |
-| `capacityBasis`          | `string \| undefined`                           | Typed basis for the modeled capacity, such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `live-direct-telemetry`, or `live-proxy-buffer` |
-| `capacitySemantics`      | `string`                                        | `immediate-bounded` or `eventual-only`, distinguishing current redeemable buffer from eventual redeemability |
-| `capacityProfile`        | `object \| undefined`                           | Optional v4 capacity profile separating immediate, daily, queued, eventual, and scoring capacity with a `scoringHorizon` and `capacityProfileConfidence` |
-| `capacityKind`           | `string \| undefined`                           | Optional adapter-declared live evidence shape, such as `live-direct-bounded`, `live-queue`, `live-proxy-validated`, `documented-bound`, `documented-eventual`, or `heuristic`. Context only; not Safety eligibility by itself |
-| `freshnessKind`          | `string \| undefined`                           | Optional adapter-declared redemption freshness evidence, such as `verified-source-timestamp`, `same-run-onchain`, `same-run-api`, `reviewed-static`, or `unverified` |
-| `confidenceDetails`      | `object \| undefined`                           | Optional v4 confidence rollup dimensions for capacity evidence, fee evidence, route-status freshness, holder-cohort breadth, and source quality |
-| `sourceTimestamp`        | `number \| undefined`                           | Optional source timestamp emitted by a live reserve adapter for the redemption telemetry |
-| `sourceUrls`             | `string[] \| undefined`                         | Optional source URLs emitted by a live reserve adapter for the redemption telemetry |
-| `settlementDelaySec`     | `number \| undefined`                           | Optional adapter-emitted settlement delay constraint in seconds |
-| `queueDepthUsd`          | `number \| undefined`                           | Optional adapter-emitted queued redemption depth in USD |
-| `dailyLimitUsd`          | `number \| undefined`                           | Optional adapter-emitted daily redemption limit in USD |
-| `minRedeemUsd`           | `number \| undefined`                           | Optional adapter-emitted minimum redemption size in USD |
-| `liveHolderEligibility`  | `string \| undefined`                           | Optional adapter-emitted holder eligibility context when it differs from or sharpens the static model |
-| `eventualRedeemabilityScore` | `number \| null \| undefined`                | Optional v4 long-tail legal/protocol redeemability score, separate from current executable exit capacity |
-| `feeConfidence`          | `string`                                        | `fixed`, `formula`, or `undisclosed-reviewed` fidelity tag for the fee model                                |
-| `feeModelKind`           | `string`                                        | `fixed-bps`, `formula`, `documented-variable`, or `undisclosed-reviewed`                                    |
-| `modelConfidence`        | `string`                                        | Overall route-fidelity rollup: `high`, `medium`, or `low`                                                   |
-| `immediateCapacityUsd`   | `number \| null`                                | Immediate redeemable capacity in USD. `null` when the model is eventual-only or currently unrated           |
-| `immediateCapacityRatio` | `number \| null`                                | Immediate redeemable capacity as a share of supply. `null` when not separately quantified                   |
-| `feeBps`                 | `number \| null`                                | Explicit bounded fee when configured                                                                        |
-| `feeDescription`         | `string \| undefined`                           | Docs-backed fee description for variable, conditional, flat-minimum, or undisclosed redemption schedules    |
-| `costScenarioScores`     | `object \| undefined`                           | Optional v4 cost scores for retail, active-user, and institutional route-size scenarios                     |
-| `routeExitCorrelation`   | `string \| undefined`                           | Optional v4 correlation tag for DEX-vs-redemption independence, such as `independent-issuer-rail`, `same-stablecoin-pool-backing`, `same-protocol-liquidity`, `wrapper-to-parent-dependency`, or `unknown` |
-| `queueEnabled`           | `boolean`                                       | Whether the modeled route is explicitly queued/serial                                                       |
-| `docs`                   | `{ label?: string, url?: string, reviewedAt?: string, provenance?: string, sources?: { label: string, url: string, supports?: string[] }[] } \| undefined` | Optional documentation / transparency metadata. `reviewedAt` is the route-review date, while `provenance` is `config-reviewed`, `live-reserve-display`, `proof-of-reserves`, or `preferred-link` |
-| `notes`                  | `string[] \| undefined`                         | Runtime notes such as stale reserve metadata fallback                                                       |
-| `capsApplied`            | `string[] \| undefined`                         | Applied score caps (`queue-route-cap`, `offchain-route-cap`, `config-cap`)                                  |
+| Field                        | Type                                                                                                                                                       | Description                                                                                                                                                                                                                   |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `score`                      | `number \| null`                                                                                                                                           | Direct redemption-quality score after route-family/config caps                                                                                                                                                                |
+| `effectiveExitScore`         | `number \| null`                                                                                                                                           | Blended exit score used by report cards                                                                                                                                                                                       |
+| `dexLiquidityScore`          | `number \| null`                                                                                                                                           | DEX liquidity input used in the blend                                                                                                                                                                                         |
+| `routeFamily`                | `string`                                                                                                                                                   | `stablecoin-redeem`, `basket-redeem`, `collateral-redeem`, `psm-swap`, `queue-redeem`, or `offchain-issuer`                                                                                                                   |
+| `accessModel`                | `string`                                                                                                                                                   | `permissionless-onchain`, `whitelisted-onchain`, `issuer-api`, or `manual`                                                                                                                                                    |
+| `settlementModel`            | `string`                                                                                                                                                   | `atomic`, `immediate`, `same-day`, `days`, or `queued`                                                                                                                                                                        |
+| `outputAssetType`            | `string`                                                                                                                                                   | `stable-single`, `stable-basket`, `bluechip-collateral`, `mixed-collateral`, or `nav`                                                                                                                                         |
+| `sourceMode`                 | `string`                                                                                                                                                   | `dynamic`, `estimated`, or `static` capacity provenance                                                                                                                                                                       |
+| `resolutionState`            | `string`                                                                                                                                                   | `resolved`, `missing-cache`, `missing-capacity`, `failed`, or `impaired`                                                                                                                                                      |
+| `routeStatus`                | `string`                                                                                                                                                   | Current route availability: `open`, `degraded`, `paused`, `cohort-limited`, or `unknown`                                                                                                                                      |
+| `routeStatusSource`          | `string`                                                                                                                                                   | Source for current route availability: `static-config`, `market-implied`, `operator-notice`, `protocol-api`, or `onchain`                                                                                                     |
+| `routeStatusReason`          | `string \| undefined`                                                                                                                                      | Human-readable explanation when current availability impairs scoring                                                                                                                                                          |
+| `routeStatusReviewedAt`      | `string \| undefined`                                                                                                                                      | UTC date (`YYYY-MM-DD`) for the current route-status assessment                                                                                                                                                               |
+| `holderEligibility`          | `string`                                                                                                                                                   | Modeled holder cohort: `any-holder`, `verified-customer`, `whitelisted-primary`, `pre-incident-holder`, `issuer-discretionary`, or `unknown`                                                                                  |
+| `capacityConfidence`         | `string`                                                                                                                                                   | `live-direct`, `live-proxy`, `documented-bound`, `heuristic`, or legacy `dynamic` fidelity tag for the capacity model                                                                                                         |
+| `capacityBasis`              | `string \| undefined`                                                                                                                                      | Typed basis for the modeled capacity, such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `live-direct-telemetry`, or `live-proxy-buffer`          |
+| `capacitySemantics`          | `string`                                                                                                                                                   | `immediate-bounded` or `eventual-only`, distinguishing current redeemable buffer from eventual redeemability                                                                                                                  |
+| `capacityProfile`            | `object \| undefined`                                                                                                                                      | Optional v4 capacity profile separating immediate, daily, queued, eventual, and scoring capacity with a `scoringHorizon` and `capacityProfileConfidence`                                                                      |
+| `capacityKind`               | `string \| undefined`                                                                                                                                      | Optional adapter-declared live evidence shape, such as `live-direct-bounded`, `live-queue`, `live-proxy-validated`, `documented-bound`, `documented-eventual`, or `heuristic`. Context only; not Safety eligibility by itself |
+| `freshnessKind`              | `string \| undefined`                                                                                                                                      | Optional adapter-declared redemption freshness evidence, such as `verified-source-timestamp`, `same-run-onchain`, `same-run-api`, `reviewed-static`, or `unverified`                                                          |
+| `confidenceDetails`          | `object \| undefined`                                                                                                                                      | Optional v4 confidence rollup dimensions for capacity evidence, fee evidence, route-status freshness, holder-cohort breadth, and source quality                                                                               |
+| `sourceTimestamp`            | `number \| undefined`                                                                                                                                      | Optional source timestamp emitted by a live reserve adapter for the redemption telemetry                                                                                                                                      |
+| `sourceUrls`                 | `string[] \| undefined`                                                                                                                                    | Optional source URLs emitted by a live reserve adapter for the redemption telemetry                                                                                                                                           |
+| `settlementDelaySec`         | `number \| undefined`                                                                                                                                      | Optional adapter-emitted settlement delay constraint in seconds                                                                                                                                                               |
+| `queueDepthUsd`              | `number \| undefined`                                                                                                                                      | Optional adapter-emitted queued redemption depth in USD                                                                                                                                                                       |
+| `dailyLimitUsd`              | `number \| undefined`                                                                                                                                      | Optional adapter-emitted daily redemption limit in USD                                                                                                                                                                        |
+| `minRedeemUsd`               | `number \| undefined`                                                                                                                                      | Optional adapter-emitted minimum redemption size in USD                                                                                                                                                                       |
+| `liveHolderEligibility`      | `string \| undefined`                                                                                                                                      | Optional adapter-emitted holder eligibility context when it differs from or sharpens the static model                                                                                                                         |
+| `eventualRedeemabilityScore` | `number \| null \| undefined`                                                                                                                              | Optional v4 long-tail legal/protocol redeemability score, separate from current executable exit capacity                                                                                                                      |
+| `feeConfidence`              | `string`                                                                                                                                                   | `fixed`, `formula`, or `undisclosed-reviewed` fidelity tag for the fee model                                                                                                                                                  |
+| `feeModelKind`               | `string`                                                                                                                                                   | `fixed-bps`, `formula`, `documented-variable`, or `undisclosed-reviewed`                                                                                                                                                      |
+| `modelConfidence`            | `string`                                                                                                                                                   | Overall route-fidelity rollup: `high`, `medium`, or `low`                                                                                                                                                                     |
+| `immediateCapacityUsd`       | `number \| null`                                                                                                                                           | Immediate redeemable capacity in USD. `null` when the model is eventual-only or currently unrated                                                                                                                             |
+| `immediateCapacityRatio`     | `number \| null`                                                                                                                                           | Immediate redeemable capacity as a share of supply. `null` when not separately quantified                                                                                                                                     |
+| `feeBps`                     | `number \| null`                                                                                                                                           | Explicit bounded fee when configured                                                                                                                                                                                          |
+| `feeDescription`             | `string \| undefined`                                                                                                                                      | Docs-backed fee description for variable, conditional, flat-minimum, or undisclosed redemption schedules                                                                                                                      |
+| `costScenarioScores`         | `object \| undefined`                                                                                                                                      | Optional v4 cost scores for retail, active-user, and institutional route-size scenarios                                                                                                                                       |
+| `routeExitCorrelation`       | `string \| undefined`                                                                                                                                      | Optional v4 correlation tag for DEX-vs-redemption independence, such as `independent-issuer-rail`, `same-stablecoin-pool-backing`, `same-protocol-liquidity`, `wrapper-to-parent-dependency`, or `unknown`                    |
+| `queueEnabled`               | `boolean`                                                                                                                                                  | Whether the modeled route is explicitly queued/serial                                                                                                                                                                         |
+| `docs`                       | `{ label?: string, url?: string, reviewedAt?: string, provenance?: string, sources?: { label: string, url: string, supports?: string[] }[] } \| undefined` | Optional documentation / transparency metadata. `reviewedAt` is the route-review date, while `provenance` is `config-reviewed`, `live-reserve-display`, `proof-of-reserves`, or `preferred-link`                              |
+| `notes`                      | `string[] \| undefined`                                                                                                                                    | Runtime notes such as stale reserve metadata fallback                                                                                                                                                                         |
+| `capsApplied`                | `string[] \| undefined`                                                                                                                                    | Applied score caps (`queue-route-cap`, `offchain-route-cap`, `config-cap`)                                                                                                                                                    |
 
 **Response (503):** `{ "error": "Data not yet available" }` or `{ "error": "Redemption backstop snapshot unavailable" }`
 
@@ -2160,54 +2212,54 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 }
 ```
 
-| Field           | Type             | Description                                                                                                              |
-| --------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `rankings`      | `YieldRanking[]` | All ranked stablecoins, sorted by Pharos Yield Score descending |
-| `riskFreeRate`  | `number`         | Default USD benchmark rate (%) retained for backward compatibility and mixed-view fallback |
-| `benchmarks`    | `object \| null` | Benchmark registry keyed by currency (`USD`, `EUR`, `CHF`) with label, rate, freshness, fallback, and proxy metadata |
-| `scalingFactor` | `number`         | Scaling factor applied in yield score computation |
-| `medianApy`     | `number`         | TVL-weighted median APY (30d) across best-source rows, used as a peer reference in warning heuristics |
-| `updatedAt`     | `number`         | Unix seconds when the rankings were last computed |
+| Field           | Type             | Description                                                                                                                                               |
+| --------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rankings`      | `YieldRanking[]` | All ranked stablecoins, sorted by Pharos Yield Score descending                                                                                           |
+| `riskFreeRate`  | `number`         | Default USD benchmark rate (%) retained for backward compatibility and mixed-view fallback                                                                |
+| `benchmarks`    | `object \| null` | Benchmark registry keyed by currency (`USD`, `EUR`, `CHF`) with label, rate, freshness, fallback, and proxy metadata                                      |
+| `scalingFactor` | `number`         | Scaling factor applied in yield score computation                                                                                                         |
+| `medianApy`     | `number`         | TVL-weighted median APY (30d) across best-source rows, used as a peer reference in warning heuristics                                                     |
+| `updatedAt`     | `number`         | Unix seconds when the rankings were last computed                                                                                                         |
 | `provenance`    | `object \| null` | Snapshot-level provenance for default benchmark freshness, full benchmark registry, DeFiLlama pool input freshness, safety coverage, and selection method |
 
 **`YieldRanking`**
 
-| Field              | Type               | Description                                                                                                                                         |
-| ------------------ | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`               | `string`           | Pharos stablecoin ID                                                                                                                                |
-| `symbol`           | `string`           | Token symbol                                                                                                                                        |
-| `name`             | `string`           | Full name                                                                                                                                           |
-| `currentApy`       | `number`           | Current APY (%)                                                                                                                                     |
-| `apy7d`            | `number`           | 7-day average APY (%)                                                                                                                               |
-| `apy30d`           | `number`           | 30-day average APY (%)                                                                                                                              |
-| `apyBase`          | `number \| null`   | Base APY component (%)                                                                                                                              |
-| `apyReward`        | `number \| null`   | Reward APY component (%), `null` if none                                                                                                            |
-| `yieldSource`      | `string`           | Human-readable yield source description                                                                                                             |
-| `yieldSourceUrl`   | `string \| null`   | Official URL for the selected source when Pharos has a curated or metadata-derived link                                                             |
-| `yieldType`        | `string`           | Yield type classification (e.g. `"lending-vault"`, `"staking"`)                                                                                     |
-| `dataSource`       | `string`           | Data source identifier (e.g. `"defillama"`)                                                                                                         |
-| `sourceTvlUsd`     | `number \| null`   | TVL of the yield source pool (USD)                                                                                                                  |
-| `pharosYieldScore` | `number \| null`   | Composite Pharos Yield Score (0–100), recomputed at read time from cached APY + benchmark inputs plus the current Safety Score                     |
-| `safetyScore`      | `number \| null`   | Current Safety Score input used by Yield Intelligence. Rated coins match `/api/report-cards`; unrated coins use the default NR penalty input (`40`) |
-| `safetyGrade`      | `string \| null`   | Current Safety Score letter grade (`"A+"` through `"F"`, or `"NR"`) from `/api/report-cards`                                                        |
-| `yieldToRisk`      | `number \| null`   | Yield-to-risk ratio recomputed at read time from cached APY inputs plus the current Safety Score                                                    |
-| `excessYield`      | `number \| null`   | 30-day average APY above the row benchmark (percentage points)                                                                                      |
-| `benchmarkKey`     | `"USD" \| "EUR" \| "CHF" \| undefined` | Benchmark selected for this row's `excessYield` and any rate-derived APY logic |
-| `benchmarkLabel`   | `string \| undefined` | Human-readable benchmark label for the row |
-| `benchmarkCurrency`| `string \| undefined` | Benchmark currency code used for the row |
-| `benchmarkRate`    | `number \| undefined` | Benchmark rate (%) applied to this row |
-| `benchmarkRecordDate` | `string \| null \| undefined` | Market or policy record date for the selected benchmark |
-| `benchmarkIsFallback` | `boolean \| undefined` | Whether the row benchmark is currently on a fallback path |
-| `benchmarkFallbackMode` | `string \| null \| undefined` | Fallback reason for the row benchmark when applicable |
-| `benchmarkSelectionMode` | `"native" \| "fallback-usd" \| "manual-override" \| undefined` | How the row benchmark was selected |
-| `benchmarkIsProxy` | `boolean \| undefined` | True when the selected benchmark is an explicit proxy rather than the exact reference rate |
-| `yieldStability`   | `number \| null`   | Yield stability metric (0–1; higher = more stable)                                                                                                  |
-| `apyVariance30d`   | `number \| null`   | 30-day APY variance                                                                                                                                 |
-| `apyMin30d`        | `number \| null`   | Minimum APY in last 30 days (%)                                                                                                                     |
-| `apyMax30d`        | `number \| null`   | Maximum APY in last 30 days (%)                                                                                                                     |
-| `warningSignals`   | `string[]`         | Active warning-signal flags for the selected best source                                                                                            |
-| `altSources`       | `AltYieldSource[]` | Additional non-selected source rows for the same coin                                                                                               |
-| `provenance`       | `object \| null`   | Source-level provenance: confidence tier, selection reason, benchmark state, source-switch metadata, source freshness, and optional anchor timing   |
+| Field                    | Type                                                           | Description                                                                                                                                         |
+| ------------------------ | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                     | `string`                                                       | Pharos stablecoin ID                                                                                                                                |
+| `symbol`                 | `string`                                                       | Token symbol                                                                                                                                        |
+| `name`                   | `string`                                                       | Full name                                                                                                                                           |
+| `currentApy`             | `number`                                                       | Current APY (%)                                                                                                                                     |
+| `apy7d`                  | `number`                                                       | 7-day average APY (%)                                                                                                                               |
+| `apy30d`                 | `number`                                                       | 30-day average APY (%)                                                                                                                              |
+| `apyBase`                | `number \| null`                                               | Base APY component (%)                                                                                                                              |
+| `apyReward`              | `number \| null`                                               | Reward APY component (%), `null` if none                                                                                                            |
+| `yieldSource`            | `string`                                                       | Human-readable yield source description                                                                                                             |
+| `yieldSourceUrl`         | `string \| null`                                               | Official URL for the selected source when Pharos has a curated or metadata-derived link                                                             |
+| `yieldType`              | `string`                                                       | Yield type classification (e.g. `"lending-vault"`, `"staking"`)                                                                                     |
+| `dataSource`             | `string`                                                       | Data source identifier (e.g. `"defillama"`)                                                                                                         |
+| `sourceTvlUsd`           | `number \| null`                                               | TVL of the yield source pool (USD)                                                                                                                  |
+| `pharosYieldScore`       | `number \| null`                                               | Composite Pharos Yield Score (0–100), recomputed at read time from cached APY + benchmark inputs plus the current Safety Score                      |
+| `safetyScore`            | `number \| null`                                               | Current Safety Score input used by Yield Intelligence. Rated coins match `/api/report-cards`; unrated coins use the default NR penalty input (`40`) |
+| `safetyGrade`            | `string \| null`                                               | Current Safety Score letter grade (`"A+"` through `"F"`, or `"NR"`) from `/api/report-cards`                                                        |
+| `yieldToRisk`            | `number \| null`                                               | Yield-to-risk ratio recomputed at read time from cached APY inputs plus the current Safety Score                                                    |
+| `excessYield`            | `number \| null`                                               | 30-day average APY above the row benchmark (percentage points)                                                                                      |
+| `benchmarkKey`           | `"USD" \| "EUR" \| "CHF" \| undefined`                         | Benchmark selected for this row's `excessYield` and any rate-derived APY logic                                                                      |
+| `benchmarkLabel`         | `string \| undefined`                                          | Human-readable benchmark label for the row                                                                                                          |
+| `benchmarkCurrency`      | `string \| undefined`                                          | Benchmark currency code used for the row                                                                                                            |
+| `benchmarkRate`          | `number \| undefined`                                          | Benchmark rate (%) applied to this row                                                                                                              |
+| `benchmarkRecordDate`    | `string \| null \| undefined`                                  | Market or policy record date for the selected benchmark                                                                                             |
+| `benchmarkIsFallback`    | `boolean \| undefined`                                         | Whether the row benchmark is currently on a fallback path                                                                                           |
+| `benchmarkFallbackMode`  | `string \| null \| undefined`                                  | Fallback reason for the row benchmark when applicable                                                                                               |
+| `benchmarkSelectionMode` | `"native" \| "fallback-usd" \| "manual-override" \| undefined` | How the row benchmark was selected                                                                                                                  |
+| `benchmarkIsProxy`       | `boolean \| undefined`                                         | True when the selected benchmark is an explicit proxy rather than the exact reference rate                                                          |
+| `yieldStability`         | `number \| null`                                               | Yield stability metric (0–1; higher = more stable)                                                                                                  |
+| `apyVariance30d`         | `number \| null`                                               | 30-day APY variance                                                                                                                                 |
+| `apyMin30d`              | `number \| null`                                               | Minimum APY in last 30 days (%)                                                                                                                     |
+| `apyMax30d`              | `number \| null`                                               | Maximum APY in last 30 days (%)                                                                                                                     |
+| `warningSignals`         | `string[]`                                                     | Active warning-signal flags for the selected best source                                                                                            |
+| `altSources`             | `AltYieldSource[]`                                             | Additional non-selected source rows for the same coin                                                                                               |
+| `provenance`             | `object \| null`                                               | Source-level provenance: confidence tier, selection reason, benchmark state, source-switch metadata, source freshness, and optional anchor timing   |
 
 When present, `YieldRanking.provenance` includes:
 
@@ -2233,11 +2285,11 @@ For the five tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, 
 
 **Optional query parameters**
 
-| Param       | Type      | Default | Bounds | Description                                                       |
-| ----------- | --------- | ------- | ------ | ----------------------------------------------------------------- |
-| `days`      | `integer` | `90`    | 1–365  | Lookback window in days                                           |
+| Param       | Type      | Default | Bounds           | Description                                                                      |
+| ----------- | --------- | ------- | ---------------- | -------------------------------------------------------------------------------- |
+| `days`      | `integer` | `90`    | 1–365            | Lookback window in days                                                          |
 | `mode`      | `string`  | `best`  | `best`, `source` | `best` for historically selected best-source rows; `source` requires `sourceKey` |
-| `sourceKey` | `string`  | —       | —      | When present, returns source-specific history for that source key |
+| `sourceKey` | `string`  | —       | —                | When present, returns source-specific history for that source key                |
 
 **Response**
 
@@ -2258,12 +2310,12 @@ For the five tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, 
 }
 ```
 
-| Field         | Type                   | Description                                                                 |
-| ------------- | ---------------------- | --------------------------------------------------------------------------- |
-| `current`     | `YieldHistoryPoint\|null` | Latest row in the returned history window, or `null` when no history exists |
-| `history`     | `YieldHistoryPoint[]`  | History rows sorted by `date` ASC                                           |
-| `methodology` | `object`               | Yield methodology envelope for the response                                 |
-| `warning`     | `string \| undefined`  | Present when freshness lookup fails and the handler falls back to cache metadata |
+| Field         | Type                      | Description                                                                      |
+| ------------- | ------------------------- | -------------------------------------------------------------------------------- |
+| `current`     | `YieldHistoryPoint\|null` | Latest row in the returned history window, or `null` when no history exists      |
+| `history`     | `YieldHistoryPoint[]`     | History rows sorted by `date` ASC                                                |
+| `methodology` | `object`                  | Yield methodology envelope for the response                                      |
+| `warning`     | `string \| undefined`     | Present when freshness lookup fails and the handler falls back to cache metadata |
 
 **`YieldHistoryPoint`**
 
@@ -2358,35 +2410,35 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 
 **Top-level metadata**
 
-| Field         | Type     | Description                                                                                  |
-| ------------- | -------- | -------------------------------------------------------------------------------------------- |
-| `windowHours` | `number` | Requested chart window for `hourly[]`                                                        |
+| Field         | Type     | Description                                                                                                        |
+| ------------- | -------- | ------------------------------------------------------------------------------------------------------------------ |
+| `windowHours` | `number` | Requested chart window for `hourly[]`                                                                              |
 | `scope`       | `object` | Current ingestion scope, for example `{ chainIds: ["ethereum", "arbitrum"], label: "Configured issuance chains" }` |
-| `sync`        | `object` | Latest critical-lane freshness metadata, warning state, and optional `classificationWarning` |
+| `sync`        | `object` | Latest critical-lane freshness metadata, warning state, and optional `classificationWarning`                       |
 
 **`CoinFlow`**
 
-| Field                 | Type                                             | Description                                                                                                                         |
-| --------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `stablecoinId`        | `string`                                         | Pharos stablecoin ID                                                                                                                |
-| `symbol`              | `string`                                         | Token symbol                                                                                                                        |
-| `flowIntensity`       | `number \| null`                                 | Deprecated alias for `pressureShiftScore`; retained for compatibility                                                               |
-| `pressureShiftScore`  | `number \| null`                                 | Canonical baseline-relative pressure score (-100 to +100). `null` if < 7 days of data or no current activity                        |
-| `pressureShiftState`  | `"improving" \| "stable" \| "worsening" \| "nr"` | Interpreted pressure state from `pressureShiftScore`                                                                                |
-| `netFlowDirection24h` | `"minting" \| "burning" \| "flat" \| "inactive"` | Current 24h direction derived from raw net flow + activity                                                                          |
-| `has24hActivity`      | `boolean`                                        | Whether any 24h mint/burn events were recorded for the coin                                                                         |
-| `baselineDailyNetUsd` | `number \| null`                                 | Average daily net flow over the baseline window used for scoring                                                                    |
-| `baselineDailyAbsUsd` | `number \| null`                                 | Average daily absolute flow over the baseline window used for scoring                                                               |
-| `baselineDataDays`    | `number \| null`                                 | Number of tracked days contributing to the baseline window                                                                          |
-| `netFlow24hUsd`       | `number`                                         | Raw 24h net flow (USD, positive = net minting, negative = net burning). Fixed to the canonical 24h window even when `hours` changes |
-| `mintVolume24hUsd`    | `number`                                         | Total mint volume in the canonical 24h window (USD)                                                                                 |
-| `burnVolume24hUsd`    | `number`                                         | Total burn volume in the canonical 24h window (USD)                                                                                 |
-| `mintCount24h`        | `number`                                         | Number of mint events in the canonical 24h window                                                                                   |
-| `burnCount24h`        | `number`                                         | Number of burn events in the canonical 24h window                                                                                   |
-| `netFlow7dUsd`        | `number`                                         | 7-day net flow (USD)                                                                                                                |
-| `netFlow30dUsd`       | `number`                                         | 30-day net flow (USD)                                                                                                               |
-| `netFlow90dUsd`       | `number`                                         | 90-day net flow (USD)                                                                                                               |
-| `largestEvent24h`     | `object \| null`                                 | Largest event in the last 24h: `{ direction, amountUsd, txHash, timestamp }`                                                        |
+| Field                 | Type                                             | Description                                                                                                                                                                                       |
+| --------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stablecoinId`        | `string`                                         | Pharos stablecoin ID                                                                                                                                                                              |
+| `symbol`              | `string`                                         | Token symbol                                                                                                                                                                                      |
+| `flowIntensity`       | `number \| null`                                 | Deprecated alias for `pressureShiftScore`; retained for compatibility                                                                                                                             |
+| `pressureShiftScore`  | `number \| null`                                 | Canonical baseline-relative pressure score (-100 to +100). `null` if < 7 days of data or no current activity                                                                                      |
+| `pressureShiftState`  | `"improving" \| "stable" \| "worsening" \| "nr"` | Interpreted pressure state from `pressureShiftScore`                                                                                                                                              |
+| `netFlowDirection24h` | `"minting" \| "burning" \| "flat" \| "inactive"` | Current 24h direction derived from raw net flow + activity                                                                                                                                        |
+| `has24hActivity`      | `boolean`                                        | Whether any 24h mint/burn events were recorded for the coin                                                                                                                                       |
+| `baselineDailyNetUsd` | `number \| null`                                 | Average daily net flow over the baseline window used for scoring                                                                                                                                  |
+| `baselineDailyAbsUsd` | `number \| null`                                 | Average daily absolute flow over the baseline window used for scoring                                                                                                                             |
+| `baselineDataDays`    | `number \| null`                                 | Number of tracked days contributing to the baseline window                                                                                                                                        |
+| `netFlow24hUsd`       | `number`                                         | Raw 24h net flow (USD, positive = net minting, negative = net burning). Fixed to the canonical 24h window even when `hours` changes                                                               |
+| `mintVolume24hUsd`    | `number`                                         | Total mint volume in the canonical 24h window (USD)                                                                                                                                               |
+| `burnVolume24hUsd`    | `number`                                         | Total burn volume in the canonical 24h window (USD)                                                                                                                                               |
+| `mintCount24h`        | `number`                                         | Number of mint events in the canonical 24h window                                                                                                                                                 |
+| `burnCount24h`        | `number`                                         | Number of burn events in the canonical 24h window                                                                                                                                                 |
+| `netFlow7dUsd`        | `number`                                         | 7-day net flow (USD)                                                                                                                                                                              |
+| `netFlow30dUsd`       | `number`                                         | 30-day net flow (USD)                                                                                                                                                                             |
+| `netFlow90dUsd`       | `number`                                         | 90-day net flow (USD)                                                                                                                                                                             |
+| `largestEvent24h`     | `object \| null`                                 | Largest event in the last 24h: `{ direction, amountUsd, txHash, timestamp }`                                                                                                                      |
 | `coverage`            | `object \| undefined`                            | Coverage metadata: `startBlock`, `lastSyncedBlock`, `lagBlocks`, `historyStartAt`, window booleans, adapter provenance (`adapterKinds`, `startBlockSource`, `startBlockConfidence`), and `status` |
 
 **`HourlyFlow`**
@@ -2459,26 +2511,26 @@ Results are ordered by `timestamp` descending (most recent first).
 
 **`MintBurnEvent`**
 
-| Field              | Type                                                             | Description                                                                                 |
-| ------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `id`               | `string`                                                         | Composite ID: `{chainId}-{txHash}-{logIndex}`                                               |
-| `stablecoinId`     | `string`                                                         | Pharos stablecoin ID                                                                        |
-| `symbol`           | `string`                                                         | Token symbol                                                                                |
-| `chainId`          | `string`                                                         | Chain identifier (e.g. `"ethereum"`)                                                        |
-| `direction`        | `"mint" \| "burn"`                                               | Whether tokens were minted or burned                                                        |
+| Field              | Type                                                             | Description                                                                                                       |
+| ------------------ | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `id`               | `string`                                                         | Composite ID: `{chainId}-{txHash}-{logIndex}`                                                                     |
+| `stablecoinId`     | `string`                                                         | Pharos stablecoin ID                                                                                              |
+| `symbol`           | `string`                                                         | Token symbol                                                                                                      |
+| `chainId`          | `string`                                                         | Chain identifier (e.g. `"ethereum"`)                                                                              |
+| `direction`        | `"mint" \| "burn"`                                               | Whether tokens were minted or burned                                                                              |
 | `flowType`         | `"standard" \| "bridge_transfer" \| "atomic_roundtrip"`          | Flow-noise classification; `bridge_transfer` and `atomic_roundtrip` rows are excluded from aggregate flow metrics |
-| `amount`           | `number`                                                         | Amount in native token units                                                                |
-| `amountUsd`        | `number \| null`                                                 | USD value at time of event                                                                  |
-| `burnType`         | `"effective_burn" \| "bridge_burn" \| "review_required" \| null` | Burn classification; `null` for mint rows                                                   |
-| `burnReviewReason` | `string \| null`                                                 | Reason emitted when a burn requires manual review classification                            |
-| `counterparty`     | `string \| null`                                                 | Non-zero address (recipient for mint, sender for burn)                                      |
-| `txHash`           | `string`                                                         | Transaction hash                                                                            |
-| `blockNumber`      | `number`                                                         | Block number                                                                                |
-| `timestamp`        | `number`                                                         | Unix seconds                                                                                |
-| `explorerTxUrl`    | `string`                                                         | Block explorer URL for the transaction                                                      |
-| `priceUsed`        | `number \| null`                                                 | Price used to derive `amountUsd`                                                            |
-| `priceTimestamp`   | `number \| null`                                                 | Unix seconds of the price snapshot used                                                     |
-| `priceSource`      | `string \| null`                                                 | Valuation provenance (`supply_history`, `price_cache`, `price_cache_heal`, etc.)            |
+| `amount`           | `number`                                                         | Amount in native token units                                                                                      |
+| `amountUsd`        | `number \| null`                                                 | USD value at time of event                                                                                        |
+| `burnType`         | `"effective_burn" \| "bridge_burn" \| "review_required" \| null` | Burn classification; `null` for mint rows                                                                         |
+| `burnReviewReason` | `string \| null`                                                 | Reason emitted when a burn requires manual review classification                                                  |
+| `counterparty`     | `string \| null`                                                 | Non-zero address (recipient for mint, sender for burn)                                                            |
+| `txHash`           | `string`                                                         | Transaction hash                                                                                                  |
+| `blockNumber`      | `number`                                                         | Block number                                                                                                      |
+| `timestamp`        | `number`                                                         | Unix seconds                                                                                                      |
+| `explorerTxUrl`    | `string`                                                         | Block explorer URL for the transaction                                                                            |
+| `priceUsed`        | `number \| null`                                                 | Price used to derive `amountUsd`                                                                                  |
+| `priceTimestamp`   | `number \| null`                                                 | Unix seconds of the price snapshot used                                                                           |
+| `priceSource`      | `string \| null`                                                 | Valuation provenance (`supply_history`, `price_cache`, `price_cache_heal`, etc.)                                  |
 
 ---
 
@@ -2619,18 +2671,18 @@ Public self-serve API key request endpoint used by `https://pharos.watch/api/`. 
 }
 ```
 
-| Field               | Type                                                                                | Required | Notes |
-| ------------------- | ----------------------------------------------------------------------------------- | -------- | ----- |
-| `email`             | `string`                                                                            | Yes      | Normalized to lowercase for the one-key-per-email claim |
-| `requesterName`     | `string`                                                                            | No       | Private operator context only |
-| `organization`      | `string`                                                                            | No       | Private operator context only |
-| `projectUrl`        | `string`                                                                            | No       | Must start with `https://` when provided |
-| `useCase`           | `string`                                                                            | Yes      | 10-1200 characters |
-| `intendedEndpoints` | `string[]`                                                                          | No       | Public API paths, known dynamic patterns such as `/api/stablecoin/:id`, or `unknown`; admin/API-key/backfill paths are rejected |
-| `expectedCadence`   | `"hourly" \| "every_5_min" \| "every_1_min" \| "manual" \| "other"`                 | Yes      | Used for review context |
-| `expectedVolume`    | `string`                                                                            | No       | Private operator context only |
-| `acceptedTerms`     | `true`                                                                              | Yes      | Fair-use acknowledgement |
-| `website`           | `string`                                                                            | No       | Honeypot field; non-empty submissions are silently accepted without issuing work |
+| Field               | Type                                                                | Required | Notes                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `email`             | `string`                                                            | Yes      | Normalized to lowercase for the one-key-per-email claim                                                                         |
+| `requesterName`     | `string`                                                            | No       | Private operator context only                                                                                                   |
+| `organization`      | `string`                                                            | No       | Private operator context only                                                                                                   |
+| `projectUrl`        | `string`                                                            | No       | Must start with `https://` when provided                                                                                        |
+| `useCase`           | `string`                                                            | Yes      | 10-1200 characters                                                                                                              |
+| `intendedEndpoints` | `string[]`                                                          | No       | Public API paths, known dynamic patterns such as `/api/stablecoin/:id`, or `unknown`; admin/API-key/backfill paths are rejected |
+| `expectedCadence`   | `"hourly" \| "every_5_min" \| "every_1_min" \| "manual" \| "other"` | Yes      | Used for review context                                                                                                         |
+| `expectedVolume`    | `string`                                                            | No       | Private operator context only                                                                                                   |
+| `acceptedTerms`     | `true`                                                              | Yes      | Fair-use acknowledgement                                                                                                        |
+| `website`           | `string`                                                            | No       | Honeypot field; non-empty submissions are silently accepted without issuing work                                                |
 
 **Success response:** `202 Accepted`
 
@@ -2720,15 +2772,15 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 }
 ```
 
-| Field                                                         | Type                                              | Required    | Notes                                                                                  |
-| ------------------------------------------------------------- | ------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------- |
-| `type`                                                        | `"bug" \| "data-correction" \| "feature-request"` | Yes         | Submission category                                                                    |
-| `title`                                                       | `string`                                          | Conditional | Required for `bug` and `feature-request` (3–100 chars); optional for `data-correction` |
-| `description`                                                 | `string`                                          | Yes         | 10–2000 chars                                                                          |
+| Field                                                         | Type                                              | Required    | Notes                                                                                                                                      |
+| ------------------------------------------------------------- | ------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `type`                                                        | `"bug" \| "data-correction" \| "feature-request"` | Yes         | Submission category                                                                                                                        |
+| `title`                                                       | `string`                                          | Conditional | Required for `bug` and `feature-request` (3–100 chars); optional for `data-correction`                                                     |
+| `description`                                                 | `string`                                          | Yes         | 10–2000 chars                                                                                                                              |
 | `pageUrl`                                                     | `string`                                          | Yes         | Relative app path (must be a single-slash internal path such as `/stablecoin/usdc-circle/`; protocol-relative `//...` values are rejected) |
-| `website`                                                     | `string`                                          | No          | Honeypot field; non-empty is silently accepted/dropped                                 |
-| `expectedValue`, `stablecoinId`, `stablecoinName`, `pegValue` | `string`                                          | No          | Optional metadata                                                                      |
-| `contactHandle`                                               | `string`                                          | No          | Optional Telegram/X handle that appears publicly on GitHub                             |
+| `website`                                                     | `string`                                          | No          | Honeypot field; non-empty is silently accepted/dropped                                                                                     |
+| `expectedValue`, `stablecoinId`, `stablecoinName`, `pegValue` | `string`                                          | No          | Optional metadata                                                                                                                          |
+| `contactHandle`                                               | `string`                                          | No          | Optional Telegram/X handle that appears publicly on GitHub                                                                                 |
 
 **Response**
 
@@ -3127,12 +3179,11 @@ When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue,
 
 Machine-readable status timeline endpoint for tooling and incident analysis.
 
-
 **Query parameters**
 
-| Param   | Type                  | Default | Description                                                                              |
-| ------- | --------------------- | ------- | ---------------------------------------------------------------------------------------- |
-| `limit` | `integer`             | `50`    | Number of transitions to return (1–200)                                                  |
+| Param   | Type                  | Default | Description                                                                                                          |
+| ------- | --------------------- | ------- | -------------------------------------------------------------------------------------------------------------------- |
+| `limit` | `integer`             | `50`    | Number of transitions to return (1–200)                                                                              |
 | `from`  | `integer \| ISO date` | —       | Optional lower bound for transition `created_at` (Unix seconds/milliseconds or ISO date); invalid values are ignored |
 | `to`    | `integer \| ISO date` | —       | Optional upper bound for transition `created_at` (Unix seconds/milliseconds or ISO date); invalid values are ignored |
 
@@ -3152,15 +3203,14 @@ The top-line `site` bucket combines:
 
 The top-line `external` bucket is `api.pharos.watch` traffic not classified as site. Admin-only routes and `/api/telegram-webhook` remain excluded. The response also includes worker-lane telemetry so operators can distinguish total demand from actual `public-api` vs `site-api` worker load.
 
-
 **Query parameters**
 
-| Param        | Type      | Default | Description |
-| ------------ | --------- | ------- | ----------- |
-| `hours`      | `integer` | `24`    | Window size in hours (`1`–`840`, currently 35 days) |
-| `bucketSec`  | `integer` | `3600`  | Time-bucket rollup size in seconds (`60`–`86400`) |
-| `routeLimit` | `integer` | `20`    | Max per-route rows returned in the route breakdown (`1`-`100`) |
-| `apiKeyLimit` | `integer` | `25`   | Max per-key rows returned in the keyed public-API breakdown (`1`-`100`) |
+| Param         | Type      | Default | Description                                                             |
+| ------------- | --------- | ------- | ----------------------------------------------------------------------- |
+| `hours`       | `integer` | `24`    | Window size in hours (`1`–`840`, currently 35 days)                     |
+| `bucketSec`   | `integer` | `3600`  | Time-bucket rollup size in seconds (`60`–`86400`)                       |
+| `routeLimit`  | `integer` | `20`    | Max per-route rows returned in the route breakdown (`1`-`100`)          |
+| `apiKeyLimit` | `integer` | `25`    | Max per-key rows returned in the keyed public-API breakdown (`1`-`100`) |
 
 Malformed numeric params return `400`; out-of-range numeric params are clamped to the documented bounds.
 
@@ -3183,7 +3233,6 @@ Malformed numeric params return `400`; out-of-range numeric params are clamped t
 
 Admin-only API key inventory. Returns masked tokens plus metadata, but never returns stored secret material. Expired keys remain listed for operator review; callers should use `isActive` plus `expiresAt` to distinguish `active`, `expired`, and deliberate non-expiring exceptions.
 
-
 **Response shape:** `ApiKeyListResponse` (defined in `shared/types/api-keys.ts`)
 
 ### `GET /api/api-keys/audit-log`
@@ -3192,9 +3241,9 @@ Admin-only API key lifecycle audit log. Returns recent create/update/deactivate/
 
 **Query params:**
 
-| Param      | Type      | Default | Max | Description |
-| ---------- | --------- | ------- | --- | ----------- |
-| `limit`    | `integer` | `50`    | 200 | Number of audit entries to return |
+| Param      | Type      | Default | Max | Description                        |
+| ---------- | --------- | ------- | --- | ---------------------------------- |
+| `limit`    | `integer` | `50`    | 200 | Number of audit entries to return  |
 | `apiKeyId` | `integer` | n/a     | n/a | Optional filter for one API key ID |
 
 **Response shape:**
@@ -3218,17 +3267,16 @@ Admin-only API key lifecycle audit log. Returns recent create/update/deactivate/
 
 Admin-only API key creation route.
 
-
 **Body shape:** `ApiKeyCreateRequest`
 
-| Field                | Type      | Required | Description |
-| -------------------- | --------- | -------- | ----------- |
-| `name`               | `string`  | Yes      | Display name for the key |
-| `ownerEmail`         | `string`  | No       | Optional operator / owner contact |
-| `tier`               | `string`  | No       | Free-form tier label; defaults to `"standard"` |
-| `trafficClass`       | `"external" \| "site"` | No | Attribution class for demand accounting. Use `"site"` for website-owned automation or browser-adjacent keys; defaults to `"external"` |
-| `rateLimitPerMinute` | `integer` | No       | Per-key threshold (`1`–`10000`, default `120`) |
-| `expiresAt`          | `integer \| null` | No | Unix timestamp when the key should expire. Omit to use the default 90-day expiry. Send `null` only for a deliberate non-expiring exception. |
+| Field                | Type                   | Required | Description                                                                                                                                 |
+| -------------------- | ---------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`               | `string`               | Yes      | Display name for the key                                                                                                                    |
+| `ownerEmail`         | `string`               | No       | Optional operator / owner contact                                                                                                           |
+| `tier`               | `string`               | No       | Free-form tier label; defaults to `"standard"`                                                                                              |
+| `trafficClass`       | `"external" \| "site"` | No       | Attribution class for demand accounting. Use `"site"` for website-owned automation or browser-adjacent keys; defaults to `"external"`       |
+| `rateLimitPerMinute` | `integer`              | No       | Per-key threshold (`1`–`10000`, default `120`)                                                                                              |
+| `expiresAt`          | `integer \| null`      | No       | Unix timestamp when the key should expire. Omit to use the default 90-day expiry. Send `null` only for a deliberate non-expiring exception. |
 
 **Response shape:** `ApiKeyCreateResponse`
 
@@ -3274,10 +3322,10 @@ Admin-only self-serve API key request list used by `ops.pharos.watch/admin-api/`
 
 **Query params:**
 
-| Param    | Type      | Default | Max | Description |
-| -------- | --------- | ------- | --- | ----------- |
+| Param    | Type      | Default | Max | Description                                                                            |
+| -------- | --------- | ------- | --- | -------------------------------------------------------------------------------------- |
 | `status` | `string`  | n/a     | n/a | Optional filter: `pending_verification`, `issued`, `rejected`, `blocked`, or `expired` |
-| `limit`  | `integer` | `50`    | 100 | Number of request rows to return |
+| `limit`  | `integer` | `50`    | 100 | Number of request rows to return                                                       |
 
 **Response shape:** `ApiKeySelfServeRequestAdminListResponse` (defined in `shared/types/api-key-requests.ts`)
 
@@ -3305,22 +3353,20 @@ Supported non-USD fiat assets now prefer direct CoinGecko native-fiat history fi
 
 Bounded replay windows also support `startDay` / `endDay`, plus optional `contextDays` to widen the replay pad around that UTC window. This makes long-history audits and repairs practical over `ops-api` without waiting for a full-coin rebuild. In mutating mode, bounded replays only replace overlapping `source='backfill'` rows for that coin and preserve non-overlapping backfill rows plus all `source='live'` rows.
 
-
 **Query parameters**
 
-| Param        | Type                                | Default | Description                                                               |
-| ------------ | ----------------------------------- | ------- | ------------------------------------------------------------------------- |
-| `stablecoin` | `string`                            | —       | Process a single stablecoin ID                                            |
-| `batch`      | `integer`                           | `0`     | Batch offset (3 coins per batch)                                          |
-| `dry-run`    | `"true"`                            | —       | Preview replay-vs-backfill differences without writing `depeg_events`     |
-| `startDay`   | `integer \| ISO date (YYYY-MM-DD)` | —       | Lower bound for bounded replay compare/mutation                           |
-| `endDay`     | `integer \| ISO date (YYYY-MM-DD)` | —       | Upper bound for bounded replay compare/mutation                           |
-| `contextDays` | `integer`                          | `7`     | Extra replay context days on each side of a bounded window (max `90`)     |
+| Param         | Type                               | Default | Description                                                           |
+| ------------- | ---------------------------------- | ------- | --------------------------------------------------------------------- |
+| `stablecoin`  | `string`                           | —       | Process a single stablecoin ID                                        |
+| `batch`       | `integer`                          | `0`     | Batch offset (3 coins per batch)                                      |
+| `dry-run`     | `"true"`                           | —       | Preview replay-vs-backfill differences without writing `depeg_events` |
+| `startDay`    | `integer \| ISO date (YYYY-MM-DD)` | —       | Lower bound for bounded replay compare/mutation                       |
+| `endDay`      | `integer \| ISO date (YYYY-MM-DD)` | —       | Upper bound for bounded replay compare/mutation                       |
+| `contextDays` | `integer`                          | `7`     | Extra replay context days on each side of a bounded window (max `90`) |
 
 ### `POST /api/backfill-supply-history`
 
 Backfills per-coin supply history snapshots. When historical market-price series are available, the endpoint also persists daily `supply_history.price` values on restored rows so historical PSI replay can use day-level deviation instead of blunt peak fallback.
-
 
 **Query parameters**
 
@@ -3337,19 +3383,17 @@ Backfills historical stability index scores from stored depeg events and supply 
 
 The rebuild now stops at the last completed UTC day; it does not write a `stability_index` row for the current UTC day. Historical market-cap denominators in this replay path are bounded to the PSI-eligible universe (tracked coins plus configured shadow assets). Historical replay treats a depeg as active for any UTC day whose window overlaps the event interval. When a usable same-day `supply_history.price` exists, the replay derives day severity from that price, but on the UTC day the depeg begins it keeps `peak_deviation_bps` as a floor only when the event materially persisted past that UTC close and the daily snapshot undercaptures the shock by at least the configured depeg threshold. Same-day recovered wicks, near-midnight bleed-throughs, and moderate follow-on moves that the restored day price already captures use the daily historical price instead, and replay days whose restored daily price is back inside the configured depeg threshold are dropped instead of still contributing breadth. Later days fall back to `peak_deviation_bps` only for missing/invalid historical prices. The historical restore path is expected to repair replay-critical `supply_history.price` coverage, including PSI-only shadow assets, before rerunning this rebuild. For methodology `v3.0+`, the replay also derives daily `stressBreadth` from `stress_signal_history` rows in `ALERT`, `WARNING`, or `DANGER` bands. If a rebuild day cannot be replayed because archival inputs are unavailable, the endpoint preserves the existing stored row instead of deleting that day. The response includes the evaluated `startDay`/`endDay` so operators can confirm the rebuild window.
 
-
 **Query parameters**
 
-| Param     | Type                               | Default | Description |
-| --------- | ---------------------------------- | ------- | ----------- |
-| `dry-run` | `"true"`                           | —       | Preview the rebuild window and change summary without mutating `stability_index` |
-| `startDay` | `integer \| ISO date (YYYY-MM-DD)` | earliest depeg day | Lower bound for rebuilt UTC days |
-| `endDay` | `integer \| ISO date (YYYY-MM-DD)` | last completed UTC day | Upper bound for rebuilt UTC days |
+| Param      | Type                               | Default                | Description                                                                      |
+| ---------- | ---------------------------------- | ---------------------- | -------------------------------------------------------------------------------- |
+| `dry-run`  | `"true"`                           | —                      | Preview the rebuild window and change summary without mutating `stability_index` |
+| `startDay` | `integer \| ISO date (YYYY-MM-DD)` | earliest depeg day     | Lower bound for rebuilt UTC days                                                 |
+| `endDay`   | `integer \| ISO date (YYYY-MM-DD)` | last completed UTC day | Upper bound for rebuilt UTC days                                                 |
 
 ### `POST /api/backfill-cg-prices`
 
 Backfills historical market prices for the PSI-eligible universe. The endpoint fills NULL `supply_history.price` gaps and can insert missing `supply_history` day rows when market-cap history exists, including PSI-only shadow assets such as `ust-terra`.
-
 
 **Query parameters**
 
@@ -3364,7 +3408,6 @@ Backfills historical market prices for the PSI-eligible universe. The endpoint f
 Repairs incomplete mint/burn valuation metadata using a historical-first policy. The endpoint now prefers event-day `supply_history` prices for rows with `amount_usd IS NULL` and only derives audit fields for already-valued rows. It no longer bulk-fills historical `amount_usd` from the current `price_cache` snapshot.
 
 Cron `sync-mint-burn` automatically heals recent NULL-price events within a 48-hour window and reports the healed count in cron metadata as `nullPricesHealed`; this endpoint is primarily for historical backfills beyond that window.
-
 
 **Response**
 
@@ -3422,23 +3465,23 @@ Backtest harness that replays DEWS over a curated set of historical depeg onsets
 }
 ```
 
-| Field             | Type                     | Description                                                                                      |
-| ----------------- | ------------------------ | ------------------------------------------------------------------------------------------------ |
-| `detectionRate`   | `number`                 | Fraction of anchors where DEWS surfaced at least `ALERT` before `onsetAt` (`0` if no anchors)     |
-| `leadTimeDaysP50` | `number \| null`         | 50th-percentile lead time in days across detected anchors; `null` when no anchors were detected   |
-| `leadTimeDaysP90` | `number \| null`         | 90th-percentile lead time in days across detected anchors; `null` when no anchors were detected   |
-| `granularity`     | `"daily"`                | Snapshot granularity used to compute lead time                                                    |
-| `perAnchor`       | `BacktestMetricsPerAnchor[]` | One entry per anchor in the fixture (see below)                                               |
+| Field             | Type                         | Description                                                                                     |
+| ----------------- | ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| `detectionRate`   | `number`                     | Fraction of anchors where DEWS surfaced at least `ALERT` before `onsetAt` (`0` if no anchors)   |
+| `leadTimeDaysP50` | `number \| null`             | 50th-percentile lead time in days across detected anchors; `null` when no anchors were detected |
+| `leadTimeDaysP90` | `number \| null`             | 90th-percentile lead time in days across detected anchors; `null` when no anchors were detected |
+| `granularity`     | `"daily"`                    | Snapshot granularity used to compute lead time                                                  |
+| `perAnchor`       | `BacktestMetricsPerAnchor[]` | One entry per anchor in the fixture (see below)                                                 |
 
 **`BacktestMetricsPerAnchor`**
 
-| Field             | Type                                        | Description                                                                         |
-| ----------------- | ------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `stablecoinId`    | `string`                                    | Pharos stablecoin ID of the anchor                                                  |
-| `onsetAt`         | `number`                                    | Unix seconds of the curated depeg onset                                             |
-| `detected`        | `boolean`                                   | Whether DEWS reached at least `ALERT` within the 14-day pre-onset window            |
-| `leadTimeDays`    | `number \| null`                            | Days between the first elevated band and `onsetAt`; `null` if `detected=false`      |
-| `firstAlertBand`  | `"ALERT" \| "WARNING" \| "DANGER" \| null` | Band of the first elevated snapshot inside the window; `null` if `detected=false`   |
+| Field            | Type                                       | Description                                                                       |
+| ---------------- | ------------------------------------------ | --------------------------------------------------------------------------------- |
+| `stablecoinId`   | `string`                                   | Pharos stablecoin ID of the anchor                                                |
+| `onsetAt`        | `number`                                   | Unix seconds of the curated depeg onset                                           |
+| `detected`       | `boolean`                                  | Whether DEWS reached at least `ALERT` within the 14-day pre-onset window          |
+| `leadTimeDays`   | `number \| null`                           | Days between the first elevated band and `onsetAt`; `null` if `detected=false`    |
+| `firstAlertBand` | `"ALERT" \| "WARNING" \| "DANGER" \| null` | Band of the first elevated snapshot inside the window; `null` if `detected=false` |
 
 ### `GET /api/backfill-dews?repair=refresh-current&dry-run=true`
 
@@ -3458,29 +3501,28 @@ Deletes bounded `stress_signal_history` windows that cannot be deterministically
 
 **Query parameters**
 
-| Param       | Type      | Default              | Description |
-| ----------- | --------- | -------------------- | ----------- |
-| `repair`    | `"refresh-current" \| "prune-history"` | required for `POST` | Selects the DEWS repair mode |
-| `dry-run`   | `"true"`  | —                    | Required for `GET` repair previews; optional on `POST` to preview without writes |
-| `stablecoin` | `string` | —                    | Optional tracked stablecoin ID for `repair=prune-history` |
-| `startDay`  | `string`  | `2026-03-09`         | Optional prune-window start day (`YYYY-MM-DD`, Unix seconds, or Unix milliseconds) |
-| `endDay`    | `string`  | current UTC day      | Optional prune-window end day (`YYYY-MM-DD`, Unix seconds, or Unix milliseconds) |
+| Param        | Type                                   | Default             | Description                                                                        |
+| ------------ | -------------------------------------- | ------------------- | ---------------------------------------------------------------------------------- |
+| `repair`     | `"refresh-current" \| "prune-history"` | required for `POST` | Selects the DEWS repair mode                                                       |
+| `dry-run`    | `"true"`                               | —                   | Required for `GET` repair previews; optional on `POST` to preview without writes   |
+| `stablecoin` | `string`                               | —                   | Optional tracked stablecoin ID for `repair=prune-history`                          |
+| `startDay`   | `string`                               | `2026-03-09`        | Optional prune-window start day (`YYYY-MM-DD`, Unix seconds, or Unix milliseconds) |
+| `endDay`     | `string`                               | current UTC day     | Optional prune-window end day (`YYYY-MM-DD`, Unix seconds, or Unix milliseconds)   |
 
 ### `POST /api/backfill-mint-burn`
 
 Backfills mint/burn event ingestion for a specific contract config using the same parsing/classification pipeline as the cron.
 If `configKey` is omitted, the worker auto-selects one tracked config using a critical-first / major-symbol-first / most-behind policy and returns the selected config in the response.
 
-
 **Request body or query parameters**
 
-| Param       | Type      | Default         | Description                                                                  |
-| ----------- | --------- | --------------- | ---------------------------------------------------------------------------- |
+| Param       | Type      | Default         | Description                                                                              |
+| ----------- | --------- | --------------- | ---------------------------------------------------------------------------------------- |
 | `configKey` | `string`  | auto-selected   | Optional config key: `{chainId}-{contractAddress}` across the tracked issuance-chain set |
-| `fromBlock` | `integer` | from sync state | Start block override                                                         |
-| `toBlock`   | `integer` | chain head      | End block override (clamped to chain head)                                   |
-| `chunkSize` | `integer` | `50000`         | Block span per fetch chunk (max 50000)                                       |
-| `maxChunks` | `integer` | `24`            | Maximum chunks to process per request                                        |
+| `fromBlock` | `integer` | from sync state | Start block override                                                                     |
+| `toBlock`   | `integer` | chain head      | End block override (clamped to chain head)                                               |
+| `chunkSize` | `integer` | `50000`         | Block span per fetch chunk (max 50000)                                                   |
+| `maxChunks` | `integer` | `24`            | Maximum chunks to process per request                                                    |
 
 ### `POST /api/reclassify-atomic-roundtrips`
 
@@ -3488,10 +3530,10 @@ Retroactively tags same-transaction mint+burn pairs for the same stablecoin as `
 
 **Query parameters**
 
-| Param          | Type      | Default                     | Description |
-| -------------- | --------- | --------------------------- | ----------- |
-| `since`        | `integer` | `now - 90 days`             | Unix seconds cutoff for both forward and reverse scans; `0` requests a full-table sweep and may exceed D1 CPU limits without `stablecoinId` |
-| `stablecoinId` | `string`  | —                           | Optional Pharos stablecoin ID filter applied to both scans |
+| Param          | Type      | Default         | Description                                                                                                                                 |
+| -------------- | --------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `since`        | `integer` | `now - 90 days` | Unix seconds cutoff for both forward and reverse scans; `0` requests a full-table sweep and may exceed D1 CPU limits without `stablecoinId` |
+| `stablecoinId` | `string`  | —               | Optional Pharos stablecoin ID filter applied to both scans                                                                                  |
 
 **Response**
 
@@ -3519,17 +3561,16 @@ The same endpoint also supports dry-run historical repair previews:
 - `repair=synthetic-splits` surfaces adjacent same-direction events that were likely split either by the old DEX-only auto-close behavior or by a backfill-to-live handoff where historical replay expired mid-ongoing depeg
 - `repair=contradictory-recovery-price` surfaces ended events whose stored `recovery_price` is still outside the allowed depeg threshold and should be nulled
 
-
 **Query parameters**
 
-| Param        | Type      | Default  | Description                              |
-| ------------ | --------- | -------- | ---------------------------------------- |
-| `limit`      | `integer` | `25`     | Max events or repair candidates to inspect per request (`max 25`) |
-| `offset`     | `integer` | `0`      | Pagination offset                        |
-| `dry-run`    | `"true"`  | required | Must be exactly `"true"` for `GET`       |
-| `min-supply` | `number`  | `0`      | Minimum supply (USD) to include in audit |
-| `symbol`     | `string`  | —        | Filter by symbol (case-insensitive)      |
-| `repair`     | `"synthetic-splits" \| "contradictory-recovery-price"` | — | Preview synthetic split consolidation or contradictory terminal-price repairs instead of the CoinGecko false-positive audit |
+| Param        | Type                                                   | Default  | Description                                                                                                                 |
+| ------------ | ------------------------------------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `limit`      | `integer`                                              | `25`     | Max events or repair candidates to inspect per request (`max 25`)                                                           |
+| `offset`     | `integer`                                              | `0`      | Pagination offset                                                                                                           |
+| `dry-run`    | `"true"`                                               | required | Must be exactly `"true"` for `GET`                                                                                          |
+| `min-supply` | `number`                                               | `0`      | Minimum supply (USD) to include in audit                                                                                    |
+| `symbol`     | `string`                                               | —        | Filter by symbol (case-insensitive)                                                                                         |
+| `repair`     | `"synthetic-splits" \| "contradictory-recovery-price"` | —        | Preview synthetic split consolidation or contradictory terminal-price repairs instead of the CoinGecko false-positive audit |
 
 ### `POST /api/audit-depeg-history`
 
@@ -3550,20 +3591,19 @@ Mutating delete/repair runs and false-positive deletes stage any required PSI st
 
 **Query parameters**
 
-| Param        | Type      | Default | Description                                                                                    |
-| ------------ | --------- | ------- | ---------------------------------------------------------------------------------------------- |
-| `limit`      | `integer` | `25`    | Max events or repair candidates to process per request (`max 25`)                             |
-| `offset`     | `integer` | `0`     | Pagination offset                                                                              |
-| `delete`     | `string`  | —       | Comma-separated event IDs to delete directly (skips CG audit)                                  |
-| `dry-run`    | `"true"`  | —       | When `"true"`, preview deletions without touching DB. Default behavior deletes false positives |
-| `min-supply` | `number`  | `0`     | Minimum supply (USD) to include in audit                                                       |
-| `symbol`     | `string`  | —       | Filter by symbol (case-insensitive)                                                            |
-| `repair`     | `"synthetic-splits" \| "contradictory-recovery-price"` | — | Run synthetic split consolidation or contradictory terminal-price repair instead of the CoinGecko false-positive audit |
+| Param        | Type                                                   | Default | Description                                                                                                            |
+| ------------ | ------------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `limit`      | `integer`                                              | `25`    | Max events or repair candidates to process per request (`max 25`)                                                      |
+| `offset`     | `integer`                                              | `0`     | Pagination offset                                                                                                      |
+| `delete`     | `string`                                               | —       | Comma-separated event IDs to delete directly (skips CG audit)                                                          |
+| `dry-run`    | `"true"`                                               | —       | When `"true"`, preview deletions without touching DB. Default behavior deletes false positives                         |
+| `min-supply` | `number`                                               | `0`     | Minimum supply (USD) to include in audit                                                                               |
+| `symbol`     | `string`                                               | —       | Filter by symbol (case-insensitive)                                                                                    |
+| `repair`     | `"synthetic-splits" \| "contradictory-recovery-price"` | —       | Run synthetic split consolidation or contradictory terminal-price repair instead of the CoinGecko false-positive audit |
 
 ### `POST /api/trigger-digest`
 
 Queues a deferred daily-digest regeneration, bypassing the normal 1-hour dedup check. The HTTP handler writes a `digest:force-run-request` flag into the D1 `cache` table and returns `202`; the dedicated `*/5 * * * *` digest-trigger poll slot runs the digest on the next tick under the scheduled-event wall-clock and the existing `daily-digest` lease.
-
 
 **Response**
 
@@ -3586,7 +3626,6 @@ Unhandled pre-enqueue failures are wrapped by the shared error handler and retur
 
 Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled back by 50,000 blocks; Tron is rolled back by 7 days. Routed through `worker/src/router.ts`.
 
-
 **Response** (`evmReset` / `tronReset` are row-change counts from the `blacklist_sync_state` UPDATE, not block numbers)
 
 ```json
@@ -3600,7 +3639,6 @@ Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled 
 ### `GET /api/debug-sync-state`
 
 Returns current blacklist sync state for all configured chains. Useful for diagnosing sync issues. Routed through `worker/src/router.ts`.
-
 
 **Response**
 
@@ -3688,12 +3726,12 @@ Admin-only one-shot backfill endpoint for `blacklist_current_balances`, intended
 
 **Query parameters**
 
-| Param | Type | Default | Description |
-| ----- | ---- | ------- | ----------- |
-| `stablecoin` | `string` | — | Optional uppercase symbol filter; matches any configured blacklist-contract stablecoin symbol |
-| `chainId` | `string` | — | Optional chain filter matching the blacklist contract config `chainId` |
-| `limit` | `integer` | `500` | Max blacklist-event rows to load per matching config (max `2000`) |
-| `dryRun` | `"true"` | — | Preview the active-blacklisted candidate count without writing cache rows |
+| Param        | Type      | Default | Description                                                                                   |
+| ------------ | --------- | ------- | --------------------------------------------------------------------------------------------- |
+| `stablecoin` | `string`  | —       | Optional uppercase symbol filter; matches any configured blacklist-contract stablecoin symbol |
+| `chainId`    | `string`  | —       | Optional chain filter matching the blacklist contract config `chainId`                        |
+| `limit`      | `integer` | `500`   | Max blacklist-event rows to load per matching config (max `2000`)                             |
+| `dryRun`     | `"true"`  | —       | Preview the active-blacklisted candidate count without writing cache rows                     |
 
 `400` is returned when the filters match no configured blacklist contracts.
 
@@ -3757,13 +3795,12 @@ Admin-only one-shot backfill endpoint for `blacklist_current_balances`, intended
 
 Returns stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet monitor, surfaced by the Monday CoinGecko discovery scan plus quarter-hourly DefiLlama residual upserts.
 
-
 **Query parameters**
 
-| Param    | Type                               | Default    | Description                |
-| -------- | ---------------------------------- | ---------- | -------------------------- |
-| `status` | `"active" \| "dismissed" \| "all"` | `"active"` | Filter by candidate status |
-| `limit`  | `integer`                          | `50`       | Max results (clamped to 1–200) |
+| Param    | Type                               | Default    | Description                         |
+| -------- | ---------------------------------- | ---------- | ----------------------------------- |
+| `status` | `"active" \| "dismissed" \| "all"` | `"active"` | Filter by candidate status          |
+| `limit`  | `integer`                          | `50`       | Max results (clamped to 1–200)      |
 | `offset` | `integer`                          | `0`        | Pagination offset (clamped to >= 0) |
 
 Malformed `limit` / `offset` values return `400` instead of silently defaulting. Out-of-range numeric values are clamped by the shared query parser.
@@ -3796,7 +3833,6 @@ Malformed `limit` / `offset` values return `400` instead of silently defaulting.
 ### `POST /api/discovery-candidates/:id/dismiss`
 
 Dismisses a discovery candidate so it no longer appears in the active list. Dismissed candidates will not resurface unless their market cap crosses 10× the value at dismissal time.
-
 
 **Path parameter:** `:id` — candidate ID from `GET /api/discovery-candidates`
 
