@@ -1229,6 +1229,11 @@
     "text": "Freedom Dollar is a Zano ecosystem dollar asset admitted through CoinGecko. Its privacy-chain context and unsupported chain mean Pharos cannot attach a contract or run reserve sync today. The reserve model is therefore a high-risk single slice based on ecosystem collateral and documented peg intent. That makes FUSD visible in the dashboard while keeping confidence appropriately low.",
     "updatedAt": "2026-05-05"
   },
+  "zsd-zephyr-protocol": {
+    "title": "The Zephyr Privacy Dollar",
+    "text": "Zephyr Stable Dollar is a protocol-native private-chain stablecoin admitted through CoinGecko rather than a supported Pharos contract path. Its Djed-inspired design mints and redeems ZSD against ZEPH reserve collateral, with reserve-ratio constraints intended to preserve overcollateralization. The privacy-chain architecture means Pharos does not attach a token contract or run live reserve sync today. The asset is therefore tracked with a high-risk native-collateral reserve slice and an unsupported-chain notice.",
+    "updatedAt": "2026-05-12"
+  },
   "iusd-indigo-protocol": {
     "title": "The Cardano Synthetic Dollar",
     "text": "Indigo iUSD is a Cardano synthetic dollar minted against overcollateralized positions in Indigo Protocol. Its risk profile is a classic crypto-CDP profile: collateral volatility, liquidation execution, oracle quality, and governance all matter. Pharos stores the Cardano asset identifier and DefiLlama provider ID, but current live reserve adapters do not probe Cardano supply. The reserve view stays curated until a Cardano-capable live path exists.",

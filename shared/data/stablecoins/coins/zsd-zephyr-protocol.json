@@ -1,0 +1,70 @@
+{
+  "id": "zsd-zephyr-protocol",
+  "name": "Zephyr Stable Dollar",
+  "symbol": "ZSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "ZEPH base-coin collateral held by the Zephyr Protocol reserve; the protocol targets overcollateralization before allowing new ZSD minting",
+  "pegMechanism": "Users mint or redeem ZSD against ZEPH through Zephyr's Djed-inspired reserve mechanism, with oracle pricing and reserve-ratio constraints maintaining the dollar target",
+  "detailProvider": "coingecko",
+  "geckoId": "zephyr-protocol-stable-dollar",
+  "protocolSlug": "zephyr-protocol",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://zephyrprotocol.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/zephyr_org"
+    },
+    {
+      "label": "Docs",
+      "url": "https://zephyrprotocol.com/documentation"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/ZephyrProtocol/zephyr"
+    }
+  ],
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://zephyrprotocol.com/documentation"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/ZephyrProtocol/zephyr"
+      }
+    ],
+    "evidence": "Zephyr documentation presents ZSD as a native asset on a Monero-derived protocol and does not identify an issuer-controlled freeze, blacklist, pause, privileged burn, or proxy-upgrade control surface for holder balances.",
+    "reviewer": "Codex metadata pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "reserves": [
+    {
+      "name": "ZEPH protocol reserve collateral",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Unsupported private chain",
+      "message": "ZSD primarily circulates as a native Zephyr asset on a Monero-derived chain, which is not a configured Pharos chain, so no contract is stored."
+    }
+  ]
+}
