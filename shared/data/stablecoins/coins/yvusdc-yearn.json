@@ -19,6 +19,7 @@
   },
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
+  "canBeBlacklisted": true,
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC allocated by Yearn v3 strategy allocator across whitelisted yield strategies (Aave, Compound, Morpho, Sky and similar protocols) selected by Yearn governance",
   "pegMechanism": "ERC-4626 Yearn v3 vault shares accrue value against USDC as the underlying strategies generate yield; redemptions return USDC subject to the v3 queue and strategy liquidity",

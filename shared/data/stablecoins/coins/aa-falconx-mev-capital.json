@@ -19,6 +19,7 @@
   },
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
+  "canBeBlacklisted": true,
   "pegReferenceId": "usdc-circle",
   "collateral": "Senior (AA) tranche of an Idle CDO over MEV-Capital-curated Morpho lending markets routed into Falcon Finance's USDf collateral; the senior class has first claim on USDC collected from interest and exit liquidity",
   "pegMechanism": "Pareto Idle CDO senior tranche shares appreciate against USDC as borrower interest accrues; redemption depends on USDf exit liquidity through Falcon's mint/burn rails and on Morpho market liquidity. Tranche economics absorb losses junior-first, but exit pricing tracks USDf solvency",

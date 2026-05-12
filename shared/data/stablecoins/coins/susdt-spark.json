@@ -19,6 +19,7 @@
   },
   "variantOf": "usdt-tether",
   "variantKind": "savings-passthrough",
+  "canBeBlacklisted": true,
   "pegReferenceId": "usdt-tether",
   "collateral": "USDT deposited into Spark's ERC-4626 savings vault V2, routed through Sky's PSM and savings rate to generate USDT-denominated yield",
   "pegMechanism": "Deposit USDT to mint spUSDT; the share price appreciates against USDT as the Sky Savings Rate accrues. Withdrawals burn spUSDT for USDT subject to Spark vault liquidity",
