@@ -1,6 +1,15 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.94` (2026-02-01 -> 2026-05-12).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.95` (2026-02-01 -> 2026-05-12).
+
+---
+
+## v5.95 - Low-volume CoinGecko fallback for DL-listed gaps (May 12, 2026)
+
+- Selected DefiLlama-listed stablecoins with null DL prices can now recover through the existing relaxed CoinGecko low-volume lane while keeping DefiLlama as the supply source
+- `usp-pareto-credit` and `tryb-bilira` can use `coingecko-low-volume` fallback pricing when CoinGecko has a positive row inside the relaxed low-volume freshness window and all earlier missing-price passes fail
+- The recovery is explicitly allowlisted, keeps `priceConfidence: fallback`, and does not change the strict primary CoinGecko freshness gate
+- DefiLlama supply rows remain authoritative; the new pass only fills missing price provenance and cannot overwrite an already-published primary price
 
 ---
 

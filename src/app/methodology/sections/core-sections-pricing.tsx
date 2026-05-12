@@ -100,7 +100,7 @@ export function PricingPipelineMethodologySection() {
 
         <p>
           <strong className="text-foreground">Enrichment &amp; confidence.</strong>{" "}
-          A 5-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level so
+          A 6-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level so
           downstream systems can react to data quality, and severe fixed-peg downside publication now requires corroboration
           unless it comes from an explicit protocol redemption or pool-challenge replacement mark. Two-source clusters
           composed only of list-style aggregators (CoinGecko, DefiLlama, DefiLlama-list) are now downgraded to
@@ -265,7 +265,7 @@ export function PricingPipelineMethodologySection() {
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Enrichment Pipeline (5-pass fallback)</h3>
+            <h3 className="text-foreground font-medium">Enrichment Pipeline (6-pass fallback)</h3>
             <p>Assets still missing prices after primary consensus go through a staged enrichment pipeline:</p>
             <ol className="list-decimal list-inside space-y-1">
               <li><span className="text-foreground font-medium">Pass 1:</span> Canonical tracked contract identity &rarr; DefiLlama coins API, but only prices that pass peg-aware validation can resolve the asset</li>
@@ -273,6 +273,7 @@ export function PricingPipelineMethodologySection() {
               <li><span className="text-foreground font-medium">Pass 2:</span> CoinMarketCap batch listings (slug first; symbol fallback only when the tracked symbol is unique, rate-limited to 1 call/hour)</li>
               <li><span className="text-foreground font-medium">Pass 3:</span> Jupiter Price API for tracked Solana mints (authenticated when configured, block-freshness checked, and peg-aware)</li>
               <li><span className="text-foreground font-medium">Pass 4:</span> DexScreener exact token-address pools first; unique-symbol search is reserved for addressless assets and stays filtered by &gt;$50K liquidity, capped at 10 actual requests per run while the pass walks the full prioritized missing set so skipped non-unique rows do not crowd out later valid candidates</li>
+              <li><span className="text-foreground font-medium">Pass 5:</span> Allowlisted low-volume CoinGecko recovery for selected DefiLlama-listed assets that still have no price, published only with fallback confidence</li>
             </ol>
           </div>
 

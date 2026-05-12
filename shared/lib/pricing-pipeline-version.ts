@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.94",
+  currentVersion: "5.95",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.95",
+      title: "Low-volume CoinGecko fallback for DL-listed gaps",
+      date: "2026-05-12",
+      effectiveAt: 1778601600,
+      summary:
+        "Selected DefiLlama-listed stablecoins with null DL prices can now recover through the existing relaxed CoinGecko low-volume lane while keeping DefiLlama as the supply source.",
+      impact: [
+        "`usp-pareto-credit` and `tryb-bilira` can use `coingecko-low-volume` fallback pricing when CoinGecko has a positive row inside the relaxed low-volume freshness window and all earlier missing-price passes fail",
+        "The recovery is explicitly allowlisted, keeps `priceConfidence: fallback`, and does not change the strict primary CoinGecko freshness gate",
+        "DefiLlama supply rows remain authoritative for these assets; the new pass only fills missing price provenance and cannot overwrite an already-published primary price",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.94",
       title: "Zephyr Scanner supplemental pricing",
