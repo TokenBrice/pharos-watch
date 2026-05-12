@@ -6,6 +6,7 @@ import {
   fetchCurveScrvusdCurrentRateSource,
   fetchHashnoteUsycSource,
   fetchOndoUsdyOracleSource,
+  fetchZephyrZysSource,
 } from "./sources";
 import { runTimedOptionalSource } from "./optional-source-runtime";
 import type { ResolvedYield } from "./types";
@@ -16,6 +17,7 @@ const SCRVUSD_CURVE_ID = "scrvusd-curve";
 const BIMA_USBD_ID = "usbd-bima";
 const HASHNOTE_USYC_ID = "usyc-hashnote";
 const ONDO_USDY_ID = "usdy-ondo-finance";
+const ZEPHYR_ZYS_ID = "zys-zephyr-protocol";
 const SCRVUSD_CURRENT_RATE_SOURCE_KEY = "onchain:scrvusd-curve:scrvusd-current-rate";
 
 export interface TrackedOptionalSourceContext {
@@ -124,6 +126,17 @@ const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
         null,
       );
     },
+  },
+  {
+    stablecoinId: ZEPHYR_ZYS_ID,
+    sourceKey: "protocol-api:zys-zephyr-protocol",
+    run: (context) =>
+      runTimedOptionalSource(
+        "Zephyr ZYS source",
+        context.signal,
+        (budgetSignal) => fetchZephyrZysSource(budgetSignal),
+        null,
+      ),
   },
 ] as const;
 

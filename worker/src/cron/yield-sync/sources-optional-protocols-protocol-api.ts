@@ -24,6 +24,14 @@ interface BimaEarnPool {
   };
 }
 
+interface ZephyrReturnWindow {
+  effectiveApy?: number;
+}
+
+interface ZephyrHistoricalReturns {
+  oneDay?: ZephyrReturnWindow;
+}
+
 const BIMA_SUSBD_SOURCE_KEY = "protocol-api:bima-susbd";
 const BIMA_SUSBD_SOURCE_LABEL = "BIMA savings (sUSBD)";
 const BIMA_SUSBD_SOURCE_TYPE = "lending-vault";
@@ -44,6 +52,20 @@ const ONDO_USDY_SOURCE_LABEL = "Ondo USDY Oracle";
 const ONDO_USDY_SOURCE_TYPE = "nav-appreciation";
 const ONDO_USDY_ORACLE = "0xa0219aa5b31e65bc920b5b6dfb8edf0988121de0";
 const ONDO_GET_PRICE_SELECTOR = "0x98d5fdca";
+const ZEPHYR_ZYS_SOURCE_KEY = "protocol-api:zys-zephyr-protocol";
+const ZEPHYR_ZYS_SOURCE_LABEL = "Zephyr Scanner ZYS returns";
+const ZEPHYR_ZYS_SOURCE_TYPE = "nav-appreciation";
+const ZEPHYR_HISTORICAL_RETURNS_URL = "https://zephyrprotocol.com/api/v1/historicalreturns";
+const ZEPHYR_MIN_APY_PERCENT = 0;
+const ZEPHYR_MAX_APY_PERCENT = 500;
+
+function parseUnixSecondsHeader(res: Response, headerName: string): number | null {
+  const raw = res.headers.get(headerName);
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed > 10_000_000_000 ? Math.floor(parsed / 1000) : Math.floor(parsed);
+}
 
 export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
   try {
@@ -213,6 +235,53 @@ export async function fetchOndoUsdyOracleSource(
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
     console.warn("[yield] Ondo USDY oracle source failed:", error);
+    return null;
+  }
+}
+
+export async function fetchZephyrZysSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
+  try {
+    const res = await fetchWithRetry(
+      ZEPHYR_HISTORICAL_RETURNS_URL,
+      {
+        headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+        signal,
+      },
+      0,
+      { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+    );
+    if (!res?.ok) return null;
+
+    const body = (await res.json()) as ZephyrHistoricalReturns;
+    const oneDayApy = getFiniteNumber(body.oneDay?.effectiveApy);
+    if (
+      oneDayApy == null ||
+      oneDayApy < ZEPHYR_MIN_APY_PERCENT ||
+      oneDayApy > ZEPHYR_MAX_APY_PERCENT
+    ) {
+      return null;
+    }
+
+    return {
+      currentApy: oneDayApy,
+      apyBase: oneDayApy,
+      apyReward: null,
+      sourcePool: null,
+      sourceTvlUsd: null,
+      dataSource: "protocol-api",
+      exchangeRate: null,
+      sourceKey: ZEPHYR_ZYS_SOURCE_KEY,
+      yieldSource: ZEPHYR_ZYS_SOURCE_LABEL,
+      yieldType: ZEPHYR_ZYS_SOURCE_TYPE,
+      sourceObservedAt:
+        parseUnixSecondsHeader(res, "x-last-success-at") ??
+        parseUnixSecondsHeader(res, "x-fetched-at") ??
+        Math.floor(Date.now() / 1000),
+      comparisonAnchorObservedAt: null,
+    };
+  } catch (error) {
+    if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+    console.warn("[yield] Zephyr ZYS source failed:", error);
     return null;
   }
 }

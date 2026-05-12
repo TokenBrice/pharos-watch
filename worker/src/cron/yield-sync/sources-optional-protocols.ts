@@ -6,6 +6,7 @@ export {
   fetchBimaSusbdSource,
   fetchHashnoteUsycSource,
   fetchOndoUsdyOracleSource,
+  fetchZephyrZysSource,
 } from "./sources-optional-protocols-protocol-api";
 export {
   fetchBeefySources,

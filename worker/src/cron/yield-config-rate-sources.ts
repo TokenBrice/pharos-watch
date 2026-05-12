@@ -160,6 +160,7 @@ export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
   "usbd-bima": "BIMA savings",
   "usyc-hashnote": "Hashnote NAV feed",
   "usdy-ondo-finance": "Ondo USDY oracle",
+  "zys-zephyr-protocol": "Zephyr Scanner ZYS returns",
 };
 
 export const INTENTIONAL_GAP_REASONS: Record<string, string> = {

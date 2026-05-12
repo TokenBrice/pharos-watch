@@ -9,6 +9,7 @@ import {
   ON_CHAIN_RATE_CONFIGS,
   PRICE_DERIVED_FALLBACK_IDS,
   RATE_DERIVED_CONFIGS,
+  YIELD_SOURCE_REGISTRY,
   YIELD_ADAPTER_MANIFEST,
   YIELD_POOL_MAP,
   YIELD_VARIANT_MAP,
@@ -18,6 +19,11 @@ const onChainIds = new Set(ON_CHAIN_RATE_CONFIGS.map((config) => config.stableco
 const rateDerivedIds = new Set(RATE_DERIVED_CONFIGS.map((config) => config.stablecoinId));
 const intentionalGapIds = new Set(
   YIELD_ADAPTER_MANIFEST.filter((entry) => entry.status === "intentional-gap")
+    .map((entry) => entry.stablecoinId),
+);
+const directProtocolApiIds = new Set(
+  YIELD_SOURCE_REGISTRY
+    .filter((entry) => entry.directProtocolApiLabel)
     .map((entry) => entry.stablecoinId),
 );
 
@@ -30,6 +36,7 @@ function hasRuntimeYieldStrategy(stablecoinId: string, navToken: boolean) {
     PRICE_DERIVED_FALLBACK_IDS.has(stablecoinId) ||
     rateDerivedIds.has(stablecoinId) ||
     Boolean(AUTO_LENDING_POOL_MAP[stablecoinId]) ||
+    directProtocolApiIds.has(stablecoinId) ||
     intentionalGapIds.has(stablecoinId)
   );
 }
@@ -164,5 +171,20 @@ describe("yield config registry", () => {
     for (const stablecoinId of nonYieldBearingExplicitPoolIds) {
       expect(manifestIds.has(stablecoinId), stablecoinId).toBe(false);
     }
+  });
+
+  it("wires Zephyr yield only to the ZYS share wrapper", () => {
+    expect(
+      YIELD_SOURCE_REGISTRY.find((entry) => entry.stablecoinId === "zys-zephyr-protocol"),
+    ).toMatchObject({
+      directProtocolApiLabel: "Zephyr Scanner ZYS returns",
+    });
+
+    expect(
+      YIELD_SOURCE_REGISTRY.find((entry) => entry.stablecoinId === "zsd-zephyr-protocol")?.directProtocolApiLabel,
+    ).toBeUndefined();
+    expect(
+      TRACKED_STABLECOINS.find((entry) => entry.id === "zsd-zephyr-protocol")?.flags.yieldBearing,
+    ).not.toBe(true);
   });
 });

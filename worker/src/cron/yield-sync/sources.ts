@@ -7,6 +7,7 @@ export {
   fetchOndoUsdyOracleSource,
   fetchPendleMarketSources,
   fetchYearnKongSources,
+  fetchZephyrZysSource,
 } from "./sources-optional-protocols";
 export {
   fetchAaveV3SupplyRates,

@@ -14,6 +14,11 @@ import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { probeTrackedTokenSupply } from "../reserve-adapters/helpers";
 import type { DefiLlamaCoinPrice, PeggedAsset } from "./enrich-prices";
+import {
+  buildZephyrZsdPeggedAsset,
+  fetchZephyrZsdStats,
+  ZEPHYR_ZSD_ASSET_ID,
+} from "./zephyr-zsd";
 
 const COMMODITY_TOKENS = ACTIVE_STABLECOINS.filter(
   (stablecoin) => stablecoin.flags.pegCurrency === "GOLD" || stablecoin.flags.pegCurrency === "SILVER",
@@ -465,7 +470,11 @@ async function fetchFiatCoinGeckoTokens(
   throwIfAborted(signal);
 
   try {
-    const priceData = await fetchSupplementalPriceData(FIAT_CG_METAS, "fiat-cg", signal);
+    const hasZephyrZsd = FIAT_CG_METAS.some((meta) => meta.id === ZEPHYR_ZSD_ASSET_ID);
+    const [priceData, zephyrZsdStats] = await Promise.all([
+      fetchSupplementalPriceData(FIAT_CG_METAS, "fiat-cg", signal),
+      hasZephyrZsd ? fetchZephyrZsdStats(signal) : Promise.resolve(null),
+    ]);
 
     const mcapMap: Record<string, number> = {};
     for (const token of FIAT_CG_METAS) {
@@ -501,6 +510,14 @@ async function fetchFiatCoinGeckoTokens(
         // USD-pegged coins with no CG/DL price source so the on-chain fallback can compute mcap.
         const usdPegDefault = meta.flags.pegCurrency === "USD" ? 1.0 : undefined;
         const priceForSupply = priceResolution?.price ?? pegReferencePrice ?? usdPegDefault;
+
+        if (meta.id === ZEPHYR_ZSD_ASSET_ID) {
+          if (!zephyrZsdStats) {
+            console.log(`[fiat-cg] No Zephyr scanner supply for ${meta.symbol}, skipping`);
+            return null;
+          }
+          return buildZephyrZsdPeggedAsset(meta, zephyrZsdStats, priceResolution, nowSec);
+        }
 
         let mcap = mcapMap[meta.id];
         let supplySource: string = "coingecko-fallback";
