@@ -72,11 +72,33 @@
       "risk": "low"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "phpc-coins-ph",
+    "display": {
+      "url": "https://coins.ph/blog/bsp-grants-coins-ph-approval-to-pilot-phpc-stablecoin/",
+      "label": "Coins.ph BSP sandbox approval disclosure"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "polygon",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
   "notices": [
     {
       "type": "info",
       "title": "BSP regulatory sandbox",
       "message": "PHPC is issued under the Bangko Sentral ng Pilipinas Regulatory Sandbox Framework. Coins.ph also deploys PHPC on Ronin Network, which is not yet tracked by Pharos; Polygon supply is the canonical observable surface."
+    },
+    {
+      "type": "warning",
+      "title": "Curated reserves are self-reported",
+      "message": "The curated-validated live-reserves adapter currently points at Coins.ph's BSP sandbox announcement because no independent third-party attestation page for PHPC reserves has been verified. Reserve composition reflects Coins.ph's own sandbox disclosure until an external auditor or proof-of-reserves feed is published."
     }
   ]
 }

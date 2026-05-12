@@ -11,7 +11,7 @@
     "navToken": false
   },
   "collateral": "Vietnamese dong reserves self-reported by Jade Labs (the VNDC issuer) and tracked across Polygon and BNB Smart Chain deployments; no formal independent attestation is published",
-  "pegMechanism": "1:1 fiat-collateralized issuer mint and redemption operated by Jade Labs through the ONUS and VNDC Hub platforms; users on-ramp/off-ramp VND through Vietnamese banking partners",
+  "pegMechanism": "1:1 fiat-collateralized issuer mint and redemption operated by Jade Labs through the ONUS and VNDC Hub platforms with VND on/off-ramps via Vietnamese banking partners; reserve backing is self-reported by Jade Labs with no third-party attestation, audit cadence, or proof-of-reserves feed currently published",
   "detailProvider": "coingecko",
   "geckoId": "vndc",
   "proofOfReserves": {
@@ -73,11 +73,33 @@
       "risk": "high"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "vndc-jade-labs",
+    "display": {
+      "url": "https://vndc.io/",
+      "label": "Jade Labs / VNDC issuer disclosure"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "polygon",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
   "notices": [
     {
       "type": "warning",
-      "title": "Attestation gap and peg-currency placeholder",
-      "message": "VNDC is pegged to the Vietnamese dong, but Pharos does not yet support VND as a first-class peg currency, so the asset is tracked under pegCurrency: \"OTHER\" pending a coordinated VND addition across formatting, FX, and price-validation pipelines. Separately, aggregator-reported market cap (~$50M) does not consistently match on-chain Polygon/BSC supply, and reserves are self-disclosed by the issuer without independent audit cadence."
+      "title": "Market cap and supply inconsistency",
+      "message": "Aggregator-reported market cap (~$50M) does not consistently match on-chain Polygon/BSC supply, and reserves are self-disclosed by Jade Labs without an independent audit cadence."
+    },
+    {
+      "type": "warning",
+      "title": "Curated reserves are self-reported",
+      "message": "The curated-validated live-reserves adapter points at the Jade Labs / VNDC issuer website because no third-party attestation page has been verified. Reserve composition reflects the issuer's own disclosure only until an independent auditor or proof-of-reserves feed is published."
     }
   ]
 }
