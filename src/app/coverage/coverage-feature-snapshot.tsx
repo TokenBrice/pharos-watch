@@ -84,36 +84,38 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
   return (
     <li
       className={cn(
-        "relative grid gap-3 bg-card px-4 py-4 transition-colors before:absolute before:inset-y-3 before:left-0 before:w-[3px] hover:bg-muted/10 md:grid-cols-[minmax(10rem,0.7fr)_minmax(0,2fr)_minmax(13rem,0.75fr)] md:items-center md:px-5",
-        accent.rail,
+        "grid gap-4 bg-card px-4 py-4 transition-colors hover:bg-muted/10 md:grid-cols-[minmax(11.5rem,0.85fr)_minmax(0,2fr)_minmax(11.5rem,0.7fr)] md:items-center md:px-5",
       )}
     >
       <div className="min-w-0">
         <CoverageFeatureLink
           feature={summary.feature}
           className={cn(
-            "inline-flex min-w-0 items-center gap-2 rounded-md",
+            "inline-flex min-w-0 items-center gap-3 rounded-md",
             summary.feature.href ? "pharos-focus-ring text-foreground hover:text-foreground" : "text-foreground",
           )}
         >
-          <span
-            className={cn("inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border", accent.ring)}
-          >
-            <Icon className={cn("h-4 w-4", accent.icon)} aria-hidden="true" />
-          </span>
+          <Icon className={cn("h-5 w-5 shrink-0", accent.icon)} aria-hidden="true" />
           <span className="min-w-0">
-            <span className={cn("block truncate text-sm font-semibold leading-tight", accent.title)}>
+            <span
+              className={cn(
+                "block truncate text-[15px] font-semibold leading-tight tracking-tight",
+                accent.title,
+              )}
+            >
               {summary.feature.label}
             </span>
-            <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{summary.countLabel}</span>
+            <span className="mt-0.5 block truncate text-[11px] leading-tight text-muted-foreground">
+              {summary.countLabel}
+            </span>
           </span>
           <span className="sr-only">: {summary.feature.description}</span>
         </CoverageFeatureLink>
       </div>
 
-      <div className="min-w-0 space-y-2">
+      <div className="min-w-0">
         <div
-          className="relative flex h-9 overflow-hidden rounded-lg border border-border/70 bg-muted/70"
+          className="relative flex h-10 overflow-hidden rounded-md border border-border/60 bg-muted/65 shadow-[inset_0_1px_0_oklch(0_0_0_/0.18)]"
           role="img"
           aria-label={`${summary.feature.label} coverage: ${segmentLabel}`}
         >
@@ -126,7 +128,7 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
               <div
                 key={`${summary.feature.key}-${item.key}-bar`}
                 className={cn(
-                  "flex h-full min-w-0 items-center justify-center border-r border-card/85 px-1 last:border-r-0",
+                  "flex h-full min-w-0 items-center justify-center border-r border-card/80 px-1.5 last:border-r-0",
                   visual?.bar ?? accent.countBar,
                 )}
                 style={{ flexGrow: item.count, flexBasis: 0 }}
@@ -135,7 +137,7 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
                 {showLabel ? (
                   <span
                     className={cn(
-                      "truncate text-[10px] font-semibold leading-none tabular-nums drop-shadow-sm",
+                      "truncate text-[10px] font-semibold leading-none tracking-[0.02em] tabular-nums",
                       BAR_TEXT_CLASS,
                     )}
                   >
@@ -149,6 +151,7 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
             <div
               className={cn(
                 "h-full border-r border-card/80 bg-background/80 last:border-r-0",
+                "bg-[repeating-linear-gradient(135deg,transparent_0_5px,oklch(1_0_0_/0.04)_5px_10px)]",
                 barItems.length === 0 && DEFAULT_MUTED_BAR_CLASS,
               )}
               style={{ flexGrow: missingCount, flexBasis: 0 }}
@@ -158,30 +161,22 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-[minmax(6rem,0.9fr)_minmax(5.5rem,0.75fr)] md:items-center md:justify-self-end">
-        <div className="min-w-0">
+      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 md:justify-self-end">
+        <div className="min-w-0 md:text-right">
           <div className="font-mono text-2xl font-semibold leading-none tabular-nums text-foreground">
             {summary.availableCount}
-            <span className="text-sm text-muted-foreground">/{summary.totalCount}</span>
+            <span className="ml-0.5 text-sm font-medium text-muted-foreground">/{summary.totalCount}</span>
           </div>
-          <div className="mt-1 text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+          <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             {summary.coveragePct.toFixed(0)}% count
           </div>
         </div>
-        <div className="min-w-0">
-          <div className="font-mono text-xl font-semibold leading-none tabular-nums text-foreground">
+        <div className="min-w-0 md:text-right">
+          <div className="font-mono text-2xl font-semibold leading-none tabular-nums text-foreground">
             {marketCapLabel}
           </div>
-          <div className="mt-1 text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
-            market cap
-          </div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-frost-blue/12">
-            <div
-              className="h-full rounded-full bg-frost-blue/75"
-              style={{
-                width: `${summary.mcapSharePct && summary.mcapSharePct > 0 ? Math.max(summary.mcapSharePct, 2) : 0}%`,
-              }}
-            />
+          <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            of cap
           </div>
         </div>
       </div>

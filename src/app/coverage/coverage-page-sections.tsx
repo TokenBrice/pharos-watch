@@ -65,80 +65,87 @@ export function CoverageFeatureSnapshotCard({
 
   return (
     <Card className="overflow-hidden rounded-xl border border-border/80 bg-card/90 shadow-[0_22px_54px_oklch(0_0_0_/0.18)]">
-      <CardHeader className="border-b border-border/70 bg-muted/20 px-4 py-4 sm:px-5">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)] lg:items-end">
-          <div className="space-y-3">
+      <CardHeader className="border-b border-border/70 bg-muted/20 px-4 py-5 sm:px-6 sm:py-6">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:items-end">
+          <div className="space-y-4">
             <div className="space-y-1.5">
               <p className="pharos-kicker">Coverage Overview</p>
-              <CardTitle as="h2" className="text-xl font-semibold tracking-tight sm:text-2xl">
+              <CardTitle as="h2" className="text-xl font-semibold leading-tight tracking-tight sm:text-[1.6rem]">
                 Coverage control panel
               </CardTitle>
             </div>
-            <div className="grid max-w-xl grid-cols-2 gap-2 sm:grid-cols-3">
-              <div className="rounded-lg border border-border/70 bg-background/55 px-3 py-2">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-2 border-t border-border/40 pt-3">
+              <div className="flex items-baseline gap-1.5">
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Universe
-                </div>
-                <div className="mt-1 font-mono text-2xl font-semibold leading-none tabular-nums text-foreground">
+                </dt>
+                <dd className="font-mono text-[15px] font-semibold leading-none tabular-nums text-foreground">
                   {activeCoinTotal}
-                </div>
-                <div className="mt-1 text-[11px] text-muted-foreground">active coins</div>
+                </dd>
+                <span className="text-[11px] text-muted-foreground">coins</span>
               </div>
-              <div className="rounded-lg border border-border/70 bg-background/55 px-3 py-2">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  Avg. Reach
-                </div>
-                <div className="mt-1 font-mono text-2xl font-semibold leading-none tabular-nums text-foreground">
+              <span aria-hidden="true" className="h-3 w-px bg-border/60" />
+              <div className="flex items-baseline gap-1.5">
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Avg. reach
+                </dt>
+                <dd className="font-mono text-[15px] font-semibold leading-none tabular-nums text-foreground">
                   {averageCoveragePct.toFixed(0)}%
-                </div>
-                <div className="mt-1 text-[11px] text-muted-foreground">headline rules</div>
+                </dd>
+                <span className="text-[11px] text-muted-foreground">headline</span>
               </div>
-              <div className="col-span-2 rounded-lg border border-border/70 bg-background/55 px-3 py-2 sm:col-span-1">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <span aria-hidden="true" className="h-3 w-px bg-border/60" />
+              <div className="flex items-baseline gap-1.5">
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Surfaces
-                </div>
-                <div className="mt-1 font-mono text-2xl font-semibold leading-none tabular-nums text-foreground">
+                </dt>
+                <dd className="font-mono text-[15px] font-semibold leading-none tabular-nums text-foreground">
                   {featureSummaries.length}
-                </div>
-                <div className="mt-1 text-[11px] text-muted-foreground">tracked items</div>
+                </dd>
+                <span className="text-[11px] text-muted-foreground">tracked</span>
               </div>
-            </div>
+            </dl>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid gap-2.5 sm:grid-cols-3">
             {widestFeature ? (
               <FeatureSnapshotInsight
-                label="Widest"
+                label="Widest reach"
                 accent={widestFeature.feature.key}
                 title={widestFeature.feature.shortLabel}
                 detail={
                   <>
-                    {widestFeature.availableCount}/{widestFeature.totalCount} | {widestFeature.coveragePct.toFixed(0)}%
+                    <span className="text-foreground">{widestFeature.coveragePct.toFixed(0)}%</span>
+                    <span className="mx-1.5 text-muted-foreground/60">·</span>
+                    {widestFeature.availableCount}/{widestFeature.totalCount}
                   </>
                 }
               />
             ) : null}
             {narrowestFeature ? (
               <FeatureSnapshotInsight
-                label="Tightest"
+                label="Tightest reach"
                 accent={narrowestFeature.feature.key}
                 title={narrowestFeature.feature.shortLabel}
                 detail={
                   <>
-                    {narrowestFeature.availableCount}/{narrowestFeature.totalCount} |{" "}
-                    {narrowestFeature.coveragePct.toFixed(0)}%
+                    <span className="text-foreground">{narrowestFeature.coveragePct.toFixed(0)}%</span>
+                    <span className="mx-1.5 text-muted-foreground/60">·</span>
+                    {narrowestFeature.availableCount}/{narrowestFeature.totalCount}
                   </>
                 }
               />
             ) : null}
             {mostConcentratedFeature ? (
               <FeatureSnapshotInsight
-                label="Cap Skew"
+                label="Cap skew"
                 accent={mostConcentratedFeature.feature.key}
                 title={mostConcentratedFeature.feature.shortLabel}
                 detail={
                   <>
-                    {mostConcentratedFeature.mcapSharePct?.toFixed(0) ?? "0"}% cap |{" "}
+                    <span className="text-foreground">{mostConcentratedFeature.mcapSharePct?.toFixed(0) ?? "0"}%</span>
+                    <span className="ml-1 text-muted-foreground/80">cap</span>
+                    <span className="mx-1.5 text-muted-foreground/60">·</span>
                     {mostConcentratedFeature.coveragePct.toFixed(0)}% count
                   </>
                 }
@@ -148,7 +155,7 @@ export function CoverageFeatureSnapshotCard({
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <ul className="divide-y divide-border/65">
+        <ul className="divide-y divide-border/55">
           {featureSummaries.map((summary) => (
             <CoverageFeatureSnapshotRow key={summary.feature.key} summary={summary} />
           ))}
