@@ -92,7 +92,7 @@ export function parseOndoPriceData(raw: string): { price: bigint; updatedAt: num
   return { price, updatedAt };
 }
 
-export function readChainlinkNavParams(config: LiveReservesConfig): ChainlinkNavParams {
+function readChainlinkNavParams(config: LiveReservesConfig): ChainlinkNavParams {
   return parseLiveReserveAdapterParams("chainlink-nav", config.params);
 }
 
