@@ -13,7 +13,7 @@ import {
   type CoverageStatusPreset,
 } from "./shared";
 
-export const FLOW_STATUS_PRESETS = {
+const FLOW_STATUS_PRESETS = {
   full: {
     kind: "full",
     label: "Full",

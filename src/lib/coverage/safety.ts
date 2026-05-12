@@ -12,7 +12,7 @@ import {
   type CoverageStatusPreset,
 } from "./shared";
 
-export const SAFETY_STATUS_PRESETS = {
+const SAFETY_STATUS_PRESETS = {
   rated: {
     kind: "rated",
     label: "Rated",

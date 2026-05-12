@@ -1,8 +1,4 @@
 {
-  "src/lib/coverage.ts": {
-    "disposition": "deferred",
-    "notes": "Coverage aggregation and scenario logic are still evolving with the matrix surface. Defer decomposition until the coverage data model settles."
-  },
   "src/components/stablecoin-detail/hero-card.tsx": {
     "disposition": "queued-p4",
     "notes": "The stablecoin detail hero remains a large presentation hotspot. Track it for the planned frontend decomposition lane rather than mixing it into the worker-focused tranche."
@@ -22,6 +18,10 @@
   "worker/src/api/audit-depeg-history.ts": {
     "disposition": "queued-p4",
     "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche."
+  },
+  "worker/src/api/telegram-webhook-store.ts": {
+    "disposition": "queued-p4",
+    "notes": "Webhook store setup, dispatch, and command routing remain centralized across preset, cache, and stateful notification paths. Defer decomposition until a dedicated Telegram store cleanup pass following this maintenance tranche."
   },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",

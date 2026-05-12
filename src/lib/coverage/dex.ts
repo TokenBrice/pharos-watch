@@ -13,7 +13,7 @@ import {
   type CoverageStatusPreset,
 } from "./shared";
 
-export const DEX_STATUS_PRESETS = {
+const DEX_STATUS_PRESETS = {
   primary: {
     kind: "primary",
     label: "Primary",

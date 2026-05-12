@@ -14,7 +14,7 @@ import {
   type CoverageStatusPreset,
 } from "./shared";
 
-export const REDEMPTION_ROUTE_STATUS_PRESETS = {
+const REDEMPTION_ROUTE_STATUS_PRESETS = {
   "offchain-issuer": {
     kind: "offchain-issuer",
     label: "Issuer",
