@@ -519,10 +519,11 @@ Renders in the Admin Pipeline lane immediately after the quality threshold board
 
 - **Confidence tiles** — colored metric tiles for `High`, `Single-source`, `Low`, `Fallback`, and `Missing` counts
 - **Source breakdown line** — which price sources contributed to the current sync, including protocol redemption quotes when they override thin market pricing
+- **Source-depth distribution** — backend-only status metadata keyed by active canonical `consensusSources.length` buckets (`0`, `1`, `2`, `3`, `4`, `5+`)
 - **Missing tile** — count of assets whose current price source is `missing`
 - **Last sync age** — how old the price-health snapshot is
 
-Data is sourced from `sync-stablecoins` cron metadata stored in the most recent `cron_runs` row — no extra DB query required.
+Distribution and confidence data is sourced from `sync-stablecoins` cron metadata stored in the most recent `cron_runs` row. The source-depth distribution is added by the status supplement from the cached stablecoins payload so it reflects active canonical assets without changing the pricing cron metadata contract.
 
 ## CoinGecko Price Drift Card
 

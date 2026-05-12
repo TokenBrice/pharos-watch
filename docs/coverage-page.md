@@ -81,7 +81,7 @@ Additional page-level sources:
 | Market-cap weights                                                        | `/api/stablecoins` via `useStablecoins()`, using `getCirculatingRaw()` on the cached list payload                                     |
 | Peg/backing/governance labels in each row                                 | `coin.flags.*` from tracked metadata, formatted through `@shared/lib/classification` short-label maps                                 |
 | Pricing-source tiles                                                      | `usePegSummary().data.coins[].consensusSources`, grouped into market sources vs authoritative overrides in `useCoverageMatrixModel()` |
-| Snapshot insight cards (`Widest today`, `Narrowest today`, `Major-heavy`) | Derived from the same per-feature summaries used by the feature snapshot rows                                                         |
+| Snapshot insight cards (`Source target`, `Widest today`, `Narrowest today`, `Major-heavy`) | Derived from the same per-feature summaries and per-row source-depth counts used by the feature snapshot rows                         |
 
 ---
 
@@ -117,7 +117,7 @@ Breakdowns are intentionally dense and should stay short:
 
 #### Source count enrichment
 
-When `consensusSources` data is available from the peg-summary API, the "Tracked" badge shows a source count suffix: "Tracked (5 sources)" (or "Tracked (5)" in compact mode). Tooltip expands to show confidence level and source names (e.g., "High confidence — CoinGecko, DefiLlama, Pyth Network"). The feature snapshot breakdown adds a secondary source-depth distribution: `5+ sources: N · 3-4: N · 1-2: N`.
+When `consensusSources` data is available from the peg-summary API, the "Tracked" badge shows a source count suffix: "Tracked (5 sources)" (or "Tracked (5)" in compact mode). Tooltip expands to show confidence level and source names (e.g., "High confidence — CoinGecko, DefiLlama, Pyth Network"). The feature snapshot breakdown adds a secondary source-depth distribution: `5+ sources: N · 3-4: N · 1-2: N`. The snapshot header also includes a compact `Source target` tile for the `>=3` candidate-source count and market-cap reach.
 
 If a feature gains richer user-facing states, update both `src/lib/coverage.ts` and this document.
 
@@ -128,7 +128,7 @@ If a feature gains richer user-facing states, update both `src/lib/coverage.ts` 
 - The feature snapshot comes first and answers the breadth question before the page shifts into source context and per-coin inspection.
 - The pricing-source card renders after the feature snapshot when consensus-source data is available.
 - Search filters by name and ticker.
-- Quick filters are grouped as tier filters (`All coins`, `Fully available`, `Fully headline`), feature filters (`Redemption`, `Yield`, `Reserves`, `Flows`, `Blacklist`), and gap filters (`No Safety`, `No DEX`, `No Reserves`, `Weak price`, `No Flows`, `No Dependency`).
+- Quick filters are grouped as tier filters (`All coins`, `Fully available`, `Fully headline`), feature filters (`Redemption`, `Yield`, `Reserves`, `Flows`, `Blacklist`), and gap filters (`No Safety`, `No DEX`, `No Reserves`, `2 sources`, `Weak price`, `No Flows`, `No Dependency`).
 - The `Reserves` quick filter is intentionally strict: it matches only rows where `statuses.reserves.kind === "live"`, the score-grade live reserve state, not `Curated-Validated` or `Proof`.
 - Default sort is descending live market cap.
 - On small screens, the matrix adapts into scan-first per-coin cards that preview the highest-signal statuses and expand for the remaining states.

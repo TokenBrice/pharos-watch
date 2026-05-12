@@ -3020,6 +3020,14 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
       "cached": 4,
       "missing": 3
     },
+    "sourceDepthDistribution": {
+      "0": 3,
+      "1": 15,
+      "2": 52,
+      "3": 64,
+      "4": 18,
+      "5+": 4
+    },
     "confidenceDistribution": {
       "high": 127,
       "single-source": 15,
@@ -3163,7 +3171,7 @@ When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue,
 
 `datasetFreshness` covers the key operator-visible datasets written by the pipeline: cache-backed stablecoins, blacklist, mint/burn, supply snapshots, safety-grade history, yield, depeg/dews tables, daily digest, and discovery backlog timestamps.
 
-`priceSourceHealth` is derived from the final `sync-stablecoins` asset payload and summarizes resolved price-source distribution, confidence buckets, total assets, and the timestamp of the latest successful price-health snapshot. CoinGecko-vs-Pharos divergence details live in the separate `coingeckoPriceDiff` block.
+`priceSourceHealth` is derived from the final `sync-stablecoins` asset payload and summarizes resolved price-source distribution, active canonical source-depth buckets (`sourceDepthDistribution`, keyed by `consensusSources.length` buckets `0`, `1`, `2`, `3`, `4`, `5+`), confidence buckets, total assets, and the timestamp of the latest successful price-health snapshot. CoinGecko-vs-Pharos divergence details live in the separate `coingeckoPriceDiff` block.
 
 `coingeckoPriceDiff` is an admin-only live comparison block. It reads the cached tracked assets with `geckoId`, fetches current CoinGecko spot prices through one or more batched `simple/price` calls, and reports the rows where `abs(pharosPrice - coinGeckoPrice) / coinGeckoPrice > 0.05`. The field is `null` when the comparison is unavailable in the current environment or when the loader fails; failures are surfaced through `sectionErrors.coingeckoPriceDiff`.
 
