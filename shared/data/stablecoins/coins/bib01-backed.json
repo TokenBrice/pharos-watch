@@ -101,24 +101,36 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "chainlink-por",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "bib01-backed",
     "display": {
-      "url": "https://app.backed.fi/issuance",
-      "label": "Backed Finance issuance dashboard"
+      "url": "https://data.chain.link/feeds/polygon/mainnet/bib01-por",
+      "label": "Chainlink LedgerLens PoR (Polygon)"
     },
     "inputs": {
       "primary": {
         "kind": "onchain-evm",
-        "chain": "ethereum",
+        "chain": "polygon",
         "rpcMode": "etherscan-proxy"
       }
+    },
+    "params": {
+      "porFeedAddress": "0xad4395fc414fc1575a7a38c20b0bfdbdb09ee41a",
+      "assetLabel": "IB01 ETF shares (Chainlink LedgerLens PoR)",
+      "assetRisk": "very-low"
     }
   },
   "yieldConfig": {
     "yieldSource": "iShares 0-1yr Treasury Bond ETF (IB01) NAV accretion",
     "yieldType": "nav-appreciation"
-  }
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "PoR on Polygon, supply on Ethereum",
+      "message": "Backed's Chainlink LedgerLens Proof-of-Reserve feed for bIB01 is published on Polygon, while Pharos reads the primary supply contract on Ethereum. Both reads are valid and refer to the same underlying Backed fund."
+    }
+  ]
 }

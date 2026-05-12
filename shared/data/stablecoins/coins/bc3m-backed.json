@@ -96,6 +96,11 @@
       "type": "info",
       "title": "Multi-chain Backed product",
       "message": "bC3M is also issued on Base, BNB Chain, Polygon, and Gnosis (same contract address pattern as Backed's other tokens). Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+    },
+    {
+      "type": "info",
+      "title": "No on-chain reserve feed today",
+      "message": "Unlike bIB01, Backed has not published a Chainlink LedgerLens Proof-of-Reserve or NAV feed for bC3M on any chain. Reserves remain on the curated path until an on-chain feed is available."
     }
   ]
 }
