@@ -3,6 +3,7 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { TOTAL_SUPPLY_SELECTOR, encodeUint256Arg } from "../../lib/evm-selectors";
 import {
+  buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
   fetchOnchainRawCall,
   notApplicableFreshnessMetadata,
@@ -72,6 +73,7 @@ export async function fetchSghoWrapperReserves(
 
   const previewRedeemUsd = decimalNumberFromBigInt(previewRedeemRaw, 18);
   const supplyUsd = decimalNumberFromBigInt(totalSupplyRaw, 18);
+  const capacityRatioOfSupply = Math.min(1, previewRedeemUsd / supplyUsd);
 
   return {
     slices: [readSlice(config)],
@@ -86,13 +88,19 @@ export async function fetchSghoWrapperReserves(
       supplyUsd,
       previewRedeemUsd,
       collateralizationRatio: previewRedeemUsd / supplyUsd,
-      redemption: {
+      immediateRedeemableUsd: previewRedeemUsd,
+      immediateRedeemableRatio: capacityRatioOfSupply,
+      ...buildRedemptionSnapshotMetadata({
         capacityUsd: previewRedeemUsd,
-        capacityKind: "live-direct" as const,
-        freshnessKind: "same-run-onchain" as const,
-        routeStatus: "open" as const,
+        capacityRatioOfSupply,
+        capacityKind: "live-direct",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+        holderEligibility: "any-holder",
+        settlementDelaySec: 0,
         sourceUrls: ["https://aave.com/docs/developers/smart-contracts/tokenization#stakedtoken"],
-      },
+      }),
     },
   };
 }

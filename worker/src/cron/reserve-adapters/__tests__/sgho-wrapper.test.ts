@@ -59,11 +59,17 @@ describe("sgho-wrapper adapter", () => {
       supplyUsd: 1000,
       previewRedeemUsd: 1005,
       collateralizationRatio: 1.005,
+      immediateRedeemableUsd: 1005,
+      immediateRedeemableRatio: 1,
       redemption: {
         capacityUsd: 1005,
+        capacityRatioOfSupply: 1,
         capacityKind: "live-direct",
         freshnessKind: "same-run-onchain",
         routeStatus: "open",
+        routeStatusSource: "onchain",
+        holderEligibility: "any-holder",
+        settlementDelaySec: 0,
       },
     });
   });

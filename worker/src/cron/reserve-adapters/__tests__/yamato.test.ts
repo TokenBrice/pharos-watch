@@ -149,6 +149,39 @@ describe("adaptYamatoStates", () => {
       redemptionReserveRatePct: 80,
       sweepReserveRatePct: 20,
       gasReserveRatePct: 1,
+      redemption: {
+        freshnessKind: "same-run-onchain",
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+        holderEligibility: "any-holder",
+        settlementDelaySec: 0,
+        sourceUrls: [
+          "https://docs.yamato.fi/v/en",
+          "https://github.com/DeFiGeek-Community/yamato",
+        ],
+      },
+    });
+  });
+
+  it("degrades redemption route metadata when system CR is below MCR", () => {
+    const result = adaptYamatoStates(
+      {
+        totalCollateralRaw: 1n * ONE,
+        totalDebtRaw: 100_000n * ONE,
+        mcrPct: 130,
+        rrrPct: 80,
+        srrPct: 20,
+        grrPct: 1,
+      },
+      {
+        ethJpyPriceRaw: 100_000n * ONE,
+      },
+    );
+
+    expect(result.metadata?.redemption).toMatchObject({
+      routeStatus: "degraded",
+      routeStatusSource: "onchain",
+      routeStatusReason: expect.stringContaining("below MCR"),
     });
   });
 

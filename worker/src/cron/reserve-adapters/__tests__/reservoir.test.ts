@@ -155,6 +155,7 @@ describe("adaptReservoirReserves", () => {
       totalLiabilitiesUsd: 95,
       shareholderEquityUsd: 5,
       collateralizationRatio: 100 / 95,
+      redemption: { routeStatus: "unknown", routeStatusSource: "protocol-api" },
     });
   });
 

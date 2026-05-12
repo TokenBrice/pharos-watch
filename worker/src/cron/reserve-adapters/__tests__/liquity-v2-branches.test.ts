@@ -37,8 +37,13 @@ describe("buildLiquityV2RedemptionMetadata", () => {
         capacityKind: "live-direct-bounded",
         freshnessKind: "same-run-onchain",
         routeStatus: "open",
+        routeStatusSource: "onchain",
         holderEligibility: "any-holder",
         settlementDelaySec: 0,
+        sourceUrls: [
+          "https://docs.liquity.org/v2-faq/redemptions-and-delegation",
+          "https://docs.liquity.org/v2-faq/technical-resources",
+        ],
         feeBps: 52,
       },
       details: {

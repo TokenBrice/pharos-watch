@@ -68,6 +68,8 @@ describe("adaptCapVaultState", () => {
         capacityKind: "live-direct-bounded",
         freshnessKind: "same-run-onchain",
         routeStatus: "degraded",
+        routeStatusSource: "onchain",
+        settlementDelaySec: 0,
       },
     });
     expect(result.warnings?.some((warning) => warning.code === "cap-asset-paused")).toBe(true);

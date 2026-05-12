@@ -9,6 +9,7 @@ import { STABLECOIN_REDEEM_BACKSTOP_CONFIGS } from "./stablecoin-redeem";
 export interface RedemptionBackstopConfigManifestEntry {
   name: string;
   filePath: string;
+  sourceFilePaths?: readonly string[];
   configs: Record<string, RedemptionBackstopConfig>;
   allowedRouteFamilies: readonly RedemptionRouteFamily[];
   reviewerLane?: string;
@@ -17,7 +18,15 @@ export interface RedemptionBackstopConfigManifestEntry {
 export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
   {
     name: "offchain-issuer",
-    filePath: "shared/lib/redemption-backstop-configs/offchain-issuer.ts",
+    filePath: "shared/lib/redemption-backstop-configs/offchain-issuer/index.ts",
+    sourceFilePaths: [
+      "shared/lib/redemption-backstop-configs/offchain-issuer/base-batches.ts",
+      "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+      "shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts",
+      "shared/lib/redemption-backstop-configs/offchain-issuer/major-issuers.ts",
+      "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
+      "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts",
+    ],
     configs: OFFCHAIN_ISSUER_BACKSTOP_CONFIGS,
     allowedRouteFamilies: ["offchain-issuer"],
     reviewerLane: "issuer/legal redemption rails",

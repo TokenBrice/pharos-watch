@@ -218,6 +218,7 @@ export async function fetchInfiniFiReserves(
         capacityKind: "live-queue",
         freshnessKind: "unverified",
         routeStatus: "unknown",
+        routeStatusSource: "protocol-api",
         ...(payload.data.stats.asset.pendingRedemptionsAssetNormalized != null
           ? { queueDepthUsd: payload.data.stats.asset.pendingRedemptionsAssetNormalized }
           : {}),

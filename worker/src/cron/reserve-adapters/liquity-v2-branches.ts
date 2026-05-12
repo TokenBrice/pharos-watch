@@ -97,9 +97,14 @@ export function buildLiquityV2RedemptionMetadata(
       capacityKind: "live-direct-bounded",
       freshnessKind: "same-run-onchain",
       routeStatus,
+      routeStatusSource: "onchain",
       ...(routeStatusReason ? { routeStatusReason } : {}),
       holderEligibility: "any-holder",
       settlementDelaySec: 0,
+      sourceUrls: [
+        "https://docs.liquity.org/v2-faq/redemptions-and-delegation",
+        "https://docs.liquity.org/v2-faq/technical-resources",
+      ],
       feeBps: snapshot.redemptionFeeBps,
     }),
     details: {

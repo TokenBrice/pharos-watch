@@ -35,6 +35,7 @@ describe("adaptJupUsdData", () => {
         capacityKind: "live-direct-bounded",
         freshnessKind: "verified-source-timestamp",
         routeStatus: "open",
+        routeStatusSource: "protocol-api",
         holderEligibility: "whitelisted-primary",
       },
     });

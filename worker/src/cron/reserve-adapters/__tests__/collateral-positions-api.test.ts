@@ -178,10 +178,46 @@ describe("adaptCollateralPositions", () => {
       },
       2,
       395_346.145491,
+      { sourceUrls: ["https://example.com/positions", "https://example.com/prices"] },
     );
 
     expect(result.metadata).toMatchObject({
       immediateRedeemableUsd: 395_346.145491,
+      redemption: {
+        capacityUsd: 395_346.145491,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+        holderEligibility: "any-holder",
+        settlementDelaySec: 0,
+        sourceUrls: ["https://example.com/positions", "https://example.com/prices"],
+      },
+    });
+  });
+
+  it("marks bridge-backed redemption paused when same-run capacity is zero", () => {
+    const result = adaptCollateralPositions(
+      {
+        "0xbtc": {
+          address: "0xBTC",
+          name: "Wrapped BTC",
+          symbol: "WBTC",
+          decimals: 8,
+          positions: [{ collateralBalance: "100000000" }],
+        },
+      },
+      {
+        "0xbtc": { price: { usd: 100000 } },
+      },
+      2,
+      0,
+    );
+
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 0,
+      routeStatus: "paused",
+      routeStatusSource: "onchain",
     });
   });
 

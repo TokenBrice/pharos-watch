@@ -50,6 +50,7 @@ function buildReport(result: RedemptionRegistryValidationResult): object {
     summary: result.summary,
     findings: result.findings,
     auditRows: result.auditRows,
+    policyRows: result.policyRows,
   };
 }
 
@@ -63,7 +64,10 @@ function writeJson(path: string, value: unknown): void {
 
 const options = parseArgs(process.argv.slice(2));
 const sourceTextByPath = new Map(
-  REDEMPTION_BACKSTOP_CONFIG_MANIFEST.map((entry) => [entry.filePath, readRepoFile(entry.filePath)]),
+  REDEMPTION_BACKSTOP_CONFIG_MANIFEST.flatMap((entry) => {
+    const sourceFilePaths = "sourceFilePaths" in entry ? entry.sourceFilePaths : [];
+    return [entry.filePath, ...sourceFilePaths].map((filePath) => [filePath, readRepoFile(filePath)] as const);
+  }),
 );
 
 const result = validateRedemptionBackstopRegistry({

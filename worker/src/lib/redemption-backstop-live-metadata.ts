@@ -1,4 +1,8 @@
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
+import {
+  getAllowedRedemptionCapacityWarningReason,
+  isRedemptionFreshnessAllowedByPolicy,
+} from "@shared/lib/redemption-backstop-configs/policies";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type {
   RedemptionCapacityConfidence,
@@ -125,13 +129,6 @@ function coerceSchemaValue<T>(
   return parsed.success ? parsed.data : null;
 }
 
-const SCOREABLE_REDEMPTION_FRESHNESS_KINDS = new Set<RedemptionLiveFreshnessKind>([
-  "verified-source-timestamp",
-  "same-run-onchain",
-  "same-run-api",
-  "reviewed-static",
-]);
-
 const SCOREABLE_REDEMPTION_CAPACITY_KINDS = new Set<RedemptionLiveCapacityKind>([
   "live-direct",
   "live-direct-bounded",
@@ -140,36 +137,12 @@ const SCOREABLE_REDEMPTION_CAPACITY_KINDS = new Set<RedemptionLiveCapacityKind>(
   "documented-bound",
 ]);
 
-const UNVERIFIED_REDEMPTION_FRESHNESS_ALLOWLIST = new Set([
-  "frxusd-frax",
-  "iusd-infinifi",
-  "usdf-falcon",
-  "wsrusd-reservoir",
-]);
-
-const LEGACY_REDEMPTION_FRESHNESS_BRIDGE_IDS = new Set(["zchf-frankencoin"]);
-
 function isRedemptionFreshnessAllowed(
   stablecoinId: string,
   freshnessKind: RedemptionLiveFreshnessKind | null,
   hasScoringEligibleFreshness: boolean,
 ): boolean {
-  if (freshnessKind) {
-    if (SCOREABLE_REDEMPTION_FRESHNESS_KINDS.has(freshnessKind)) return true;
-    return freshnessKind === "unverified" && UNVERIFIED_REDEMPTION_FRESHNESS_ALLOWLIST.has(stablecoinId);
-  }
-  return hasScoringEligibleFreshness || LEGACY_REDEMPTION_FRESHNESS_BRIDGE_IDS.has(stablecoinId);
-}
-
-const REDEMPTION_CAPACITY_WARNING_EXCEPTIONS: Readonly<Partial<Record<string, Partial<Record<string, string>>>>> = {
-  "gho-aave": {
-    "aggregated-residual-issuance":
-      "Using tracked live GSM backing as a lower-bound redemption capacity despite aggregated residual issuance outside configured GSM modules",
-  },
-};
-
-function isAllowedCapacityWarning(stablecoinId: string, warning: LiveReserveWarning): boolean {
-  return warning.effect !== "info" && !!REDEMPTION_CAPACITY_WARNING_EXCEPTIONS[stablecoinId]?.[warning.code];
+  return isRedemptionFreshnessAllowedByPolicy({ stablecoinId, freshnessKind, hasScoringEligibleFreshness });
 }
 
 function hasBlockingRedemptionWarnings(
@@ -179,7 +152,9 @@ function hasBlockingRedemptionWarnings(
 ): boolean {
   if (warningCount <= 0) return false;
   if (warnings.length === 0) return true;
-  return warnings.some((warning) => warning.effect !== "info" && !isAllowedCapacityWarning(stablecoinId, warning));
+  return warnings.some(
+    (warning) => warning.effect !== "info" && !getAllowedRedemptionCapacityWarningReason(stablecoinId, warning),
+  );
 }
 
 function canUseCapacityDespiteDegradedSync(
@@ -192,7 +167,7 @@ function canUseCapacityDespiteDegradedSync(
   let foundAllowedBlockingWarning = false;
   for (const warning of snapshotMetadata.warnings) {
     if (warning.effect === "info") continue;
-    if (!isAllowedCapacityWarning(stablecoinId, warning)) return false;
+    if (!getAllowedRedemptionCapacityWarningReason(stablecoinId, warning)) return false;
     foundAllowedBlockingWarning = true;
   }
   return foundAllowedBlockingWarning;
@@ -205,7 +180,7 @@ function resolveCapacityNotes(
   if (!canUseCapacityDespiteDegradedSync(stablecoinId, snapshotMetadata)) return [];
   const notes = new Set<string>();
   for (const warning of snapshotMetadata?.warnings ?? []) {
-    const note = REDEMPTION_CAPACITY_WARNING_EXCEPTIONS[stablecoinId]?.[warning.code];
+    const note = getAllowedRedemptionCapacityWarningReason(stablecoinId, warning);
     if (note) notes.add(note);
   }
   return [...notes];

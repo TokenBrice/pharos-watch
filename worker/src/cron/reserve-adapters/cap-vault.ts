@@ -220,7 +220,9 @@ export function adaptCapVaultState(args: {
           : immediateRedeemableUsd > 0
             ? "degraded"
             : "paused",
+        routeStatusSource: "onchain",
         holderEligibility: "any-holder",
+        settlementDelaySec: 0,
         sourceUrls: ["https://docs.cap.app/concepts/vault"],
       }),
     },

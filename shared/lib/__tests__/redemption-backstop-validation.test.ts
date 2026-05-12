@@ -1,4 +1,14 @@
 import { describe, expect, it } from "vitest";
+import {
+  defineBackstopRegistry,
+  defineBatch,
+  defineOverride,
+  getBackstopRegistryOverrideReasons,
+} from "@shared/lib/redemption-backstop-configs/factory";
+import {
+  getAllowedRedemptionCapacityWarningReason,
+  isRedemptionFreshnessAllowedByPolicy,
+} from "@shared/lib/redemption-backstop-configs/policies";
 import { validateRedemptionBackstopRegistry } from "@shared/lib/redemption-backstop-configs/validation";
 import type { RedemptionBackstopConfigManifestEntry } from "@shared/lib/redemption-backstop-configs";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
@@ -24,6 +34,76 @@ function validateFixture(manifest: RedemptionBackstopConfigManifestEntry[]) {
 }
 
 describe("validateRedemptionBackstopRegistry", () => {
+  it("rejects duplicate factory entries unless the later entry carries an override reason", () => {
+    expect(() =>
+      defineBackstopRegistry([
+        ...defineBatch(["usdt-tether"], baseConfig),
+        ...defineBatch(["usdt-tether"], baseConfig),
+      ]),
+    ).toThrow(/duplicated without an override reason/);
+  });
+
+  it("records factory override reasons for audit output", () => {
+    const registry = defineBackstopRegistry([
+      ...defineBatch(["usdt-tether"], baseConfig),
+      defineOverride(
+        "usdt-tether",
+        baseConfig,
+        { settlementModel: "days" },
+        "Reviewed issuer terms document slower settlement.",
+      ),
+    ]);
+
+    expect(registry["usdt-tether"].settlementModel).toBe("days");
+    expect(getBackstopRegistryOverrideReasons(registry).get("usdt-tether")).toBe(
+      "Reviewed issuer terms document slower settlement.",
+    );
+  });
+
+  it("keeps redemption policy approvals in owned shared config", () => {
+    expect(
+      isRedemptionFreshnessAllowedByPolicy({
+        stablecoinId: "frxusd-frax",
+        freshnessKind: "unverified",
+        hasScoringEligibleFreshness: false,
+      }),
+    ).toBe(true);
+    expect(
+      isRedemptionFreshnessAllowedByPolicy({
+        stablecoinId: "usdt-tether",
+        freshnessKind: "unverified",
+        hasScoringEligibleFreshness: false,
+      }),
+    ).toBe(false);
+    expect(
+      getAllowedRedemptionCapacityWarningReason("gho-aave", {
+        code: "aggregated-residual-issuance",
+        effect: "degraded",
+      }),
+    ).toContain("lower-bound redemption capacity");
+  });
+
+  it("surfaces reviewed redemption policy entries in the audit report", () => {
+    const result = validateFixture([
+      {
+        name: "issuer",
+        filePath: "issuer.ts",
+        configs: { "usdt-tether": baseConfig },
+        allowedRouteFamilies: ["offchain-issuer"],
+      },
+    ]);
+
+    expect(result.policyRows).toContainEqual(
+      expect.objectContaining({
+        kind: "unverified-freshness",
+        stablecoinId: "frxusd-frax",
+        owner: "redemption-backstop-v4",
+        reviewedAt: "2026-05-12",
+      }),
+    );
+    expect(result.findings.filter((finding) => finding.code.startsWith("redemption-policy-"))).toEqual([]);
+  });
+
   it("reports duplicate IDs across manifest families", () => {
     const result = validateFixture([
       {

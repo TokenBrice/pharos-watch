@@ -786,6 +786,7 @@ describe("buildRedemptionBackstopEntry", () => {
           routeStatusReviewedAt: "2026-04-14",
           activeDepegBps: 8332,
           activeDepegStartedAt: 1_774_145_097,
+          activeDepegDirection: "below",
         },
       },
     );
@@ -851,6 +852,7 @@ describe("buildRedemptionBackstopEntry", () => {
           routeStatusReviewedAt: "2026-04-14",
           activeDepegBps: 3000,
           activeDepegStartedAt: now,
+          activeDepegDirection: "below",
         },
       },
     );

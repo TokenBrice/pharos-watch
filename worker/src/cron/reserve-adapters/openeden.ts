@@ -150,6 +150,7 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "unverified",
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
         routeStatus: "open",
+        routeStatusSource: "protocol-api",
         holderEligibility: "verified-customer",
         sourceUrls: ["https://openeden.com/usdo/transparency"],
       }),

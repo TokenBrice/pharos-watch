@@ -55,6 +55,7 @@ describe("mergeRedemptionRouteStatus", () => {
         routeStatusReviewedAt: "2026-05-12",
         activeDepegBps: 3000,
         activeDepegStartedAt: 1_777_000_000,
+        activeDepegDirection: "below",
       },
       allowSevereMarketOpenException: false,
     });
@@ -79,6 +80,7 @@ describe("mergeRedemptionRouteStatus", () => {
         routeStatusReviewedAt: "2026-05-12",
         activeDepegBps: 3000,
         activeDepegStartedAt: 1_777_000_000,
+        activeDepegDirection: "below",
       },
       allowSevereMarketOpenException: true,
     });
@@ -87,5 +89,32 @@ describe("mergeRedemptionRouteStatus", () => {
     expect(result.routeStatusSource).toBe("onchain");
     expect(result.impaired).toBe(false);
     expect(result.capsApplied).toEqual([]);
+  });
+
+  it("does not exempt strong live-direct routes from output dependency impairment", () => {
+    const result = mergeRedemptionRouteStatus({
+      staticEvidence: staticOpen,
+      liveEvidence: {
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+      },
+      severeMarketImplied: {
+        routeStatus: "degraded",
+        routeStatusSource: "market-implied",
+        routeStatusReason: "Output asset impairment",
+        routeStatusReviewedAt: "2026-05-12",
+        activeDepegBps: 3000,
+        activeDepegStartedAt: 1_777_000_000,
+        activeDepegDirection: "below",
+        outputImpairedDependencyId: "usdc-circle",
+        outputImpairedShare: 1,
+      },
+      allowSevereMarketOpenException: true,
+    });
+
+    expect(result.routeStatus).toBe("degraded");
+    expect(result.routeStatusSource).toBe("market-implied");
+    expect(result.impaired).toBe(true);
+    expect(result.capsApplied).toEqual(["market-implied-depeg-impairment"]);
   });
 });

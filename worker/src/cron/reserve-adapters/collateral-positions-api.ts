@@ -49,6 +49,10 @@ interface ProtocolAssetConfig {
   depType?: ReserveSlice["depType"];
 }
 
+interface CollateralPositionsRedemptionOptions {
+  sourceUrls?: string[];
+}
+
 function readParams(config: LiveReservesConfig): PositionsApiParams {
   return parseLiveReserveAdapterParams("collateral-positions-api", config.params);
 }
@@ -128,6 +132,7 @@ export function adaptCollateralPositions(
   prices: PriceMappingPayload,
   otherThresholdPct = 2,
   immediateRedeemableUsd?: number | null,
+  redemptionOptions: CollateralPositionsRedemptionOptions = {},
 ): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
   const values: Array<{
@@ -245,7 +250,11 @@ export function adaptCollateralPositions(
               capacityUsd: immediateRedeemableUsd,
               capacityKind: "live-direct-bounded" as const,
               freshnessKind: "same-run-onchain" as const,
-              routeStatus: "open" as const,
+              routeStatus: immediateRedeemableUsd > 0 ? ("open" as const) : ("paused" as const),
+              routeStatusSource: "onchain" as const,
+              holderEligibility: "any-holder" as const,
+              settlementDelaySec: 0,
+              ...(redemptionOptions.sourceUrls ? { sourceUrls: redemptionOptions.sourceUrls } : {}),
             },
           }
         : {}),
@@ -314,5 +323,8 @@ export async function fetchCollateralPositionsApiReserves(
     prices,
     params.otherThresholdPct ?? 2,
     immediateRedeemableUsd,
+    params.redemptionBridge
+      ? { sourceUrls: [input.url, params.pricesUrl] }
+      : {},
   );
 }

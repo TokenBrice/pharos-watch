@@ -237,4 +237,61 @@ describe("adaptInfiniFi", () => {
       excludedProtocolFarms: ["ProtocolBuffer"],
     });
   });
+
+  it("surfaces queue depth and route-status source from the protocol payload", async () => {
+    const url = "https://example.com/infinifi";
+    const response: InfiniFiProtocolData = {
+      code: "OK",
+      data: {
+        stats: {
+          asset: {
+            totalTVLAssetNormalized: 100,
+            totalLiquidAssetNormalized: 35,
+            pendingRedemptionsAssetNormalized: 12,
+          },
+        },
+        receipt: {
+          totalSupplyNormalized: 80,
+        },
+        farms: [
+          {
+            name: "spark-sUSDC-refcode",
+            label: "Spark sUSDC",
+            assetsNormalized: 100,
+            type: "LIQUID",
+            underlyingAssetSymbol: "sUSDC",
+          },
+        ],
+      },
+    };
+
+    const result = await fetchInfiniFiReserves(
+      { id: "infinifi" } as never,
+      {
+        adapter: "infinifi",
+        version: 1,
+        semantics: "collateral-mix",
+        inputs: { primary: { kind: "http-json", url } },
+      },
+      new AbortController().signal,
+      {
+        requestCache: new Map([
+          [`json-get:${url}:12000:null`, Promise.resolve(response)],
+        ]),
+      } as never,
+    );
+
+    expect(result.metadata).toMatchObject({
+      pendingRedemptionsUsd: 12,
+      redemption: {
+        capacityUsd: 35,
+        capacityRatioOfSupply: 35 / 80,
+        capacityKind: "live-queue",
+        routeStatus: "unknown",
+        routeStatusSource: "protocol-api",
+        queueDepthUsd: 12,
+        sourceUrls: [url],
+      },
+    });
+  });
 });

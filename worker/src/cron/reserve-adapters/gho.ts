@@ -535,6 +535,9 @@ export function buildGhoRedemptionMetadata(telemetry: GhoRedemptionTelemetry) {
     capacityKind: "live-direct" as const,
     freshnessKind: "same-run-onchain" as const,
     routeStatus: immediateRedeemableRaw > 0n ? ("open" as const) : ("paused" as const),
+    routeStatusSource: "onchain" as const,
+    holderEligibility: "any-holder" as const,
+    settlementDelaySec: 0,
     ...(redemptionFeeBps != null ? { feeBps: redemptionFeeBps } : {}),
     sourceUrls: ["https://aave.com/help/gho-stablecoin/stability-module"],
   };

@@ -152,6 +152,7 @@ export function adaptJupUsdData(
         capacityKind: "live-direct-bounded",
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "same-run-api",
         routeStatus,
+        routeStatusSource: "protocol-api",
         ...(routeStatusReason ? { routeStatusReason } : {}),
         holderEligibility: "whitelisted-primary",
         settlementDelaySec: 0,

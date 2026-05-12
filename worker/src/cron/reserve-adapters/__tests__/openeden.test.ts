@@ -28,6 +28,11 @@ describe("adaptOpenEdenUsdo", () => {
       reserveAssetsInUsd: 62_539_444.54,
       supplyUsd: 62_283_070,
       immediateRedeemableUsd: 4_767_161.22,
+      redemption: {
+        routeStatus: "open",
+        routeStatusSource: "protocol-api",
+        holderEligibility: "verified-customer",
+      },
     });
   });
 

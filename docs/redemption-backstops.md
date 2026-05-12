@@ -20,8 +20,8 @@ There is no standalone changelog page yet. The public methodology link currently
 
 Configured coverage is defined statically behind the thin facade in `shared/lib/redemption-backstops.ts`, with route-family modules under `shared/lib/redemption-backstop-configs/`.
 
-- **Configured coins:** 264
-- **Route families:** 124 `offchain-issuer`, 57 `stablecoin-redeem`, 32 `collateral-redeem`, 34 `queue-redeem`, 10 `psm-swap`, 7 `basket-redeem`
+- **Configured coins:** 266
+- **Route families:** 125 `offchain-issuer`, 57 `stablecoin-redeem`, 32 `collateral-redeem`, 35 `queue-redeem`, 10 `psm-swap`, 7 `basket-redeem`
 - **No discovery layer:** only coins present in `REDEMPTION_BACKSTOP_CONFIGS` are modeled
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.
@@ -95,7 +95,7 @@ An optional per-config `totalScoreCap` can apply an additional `config-cap`.
 
 The redemption-backstop cron materializes raw `effectiveExitScore` on every resolved row using the last-known DEX liquidity input, even when that input is stale relative to the `CRON_INTERVALS["sync-dex-liquidity"] * 2` freshness budget. Stale DEX input still marks the cron run `degraded` and flips `metadata.liquidityStale = true` for operational visibility. Report cards then apply their own confidence and availability gating on top, so stale redemption snapshots and low-confidence redemption routes stay visible on redemption surfaces but do not uplift Safety Score liquidity. In v4, eventual-only routes expose `eventualRedeemabilityScore` for route-quality context but do not create redemption-only Safety liquidity uplift without current executable capacity.
 
-Severe active depegs add a current-exercisability gate on top of the static route score. When an open `depeg_events` row has `abs(peak_deviation_bps) >= 2500`, a static, estimated, live-proxy, issuer/API, queue, or documented-bound redemption route is marked `impaired` unless it has live-direct dynamic permissionless redemption capacity with atomic or immediate settlement. For configured tracked wrappers whose metadata keeps `pegReferenceId === variantOf`, that impairment now also propagates from the parent stablecoin's open severe-depeg row. This prevents stale route documentation from producing a strong par-exit score while the market is indicating that broad redemption is not currently clearing.
+Severe active downside depegs add a current-exercisability gate on top of the static route score. When an open `depeg_events` row is directionally below peg with `abs(peak_deviation_bps) >= 2500`, a static, estimated, live-proxy, issuer/API, queue, or documented-bound redemption route is marked `impaired` unless it has live-direct dynamic permissionless redemption capacity with atomic or immediate settlement. Severe upside events do not automatically impair a route whose redemption still clears at par into a non-impaired output asset. For configured tracked wrappers whose metadata keeps `pegReferenceId === variantOf`, downside impairment now also propagates from the parent stablecoin's open severe-depeg row as output-asset impairment. This prevents stale route documentation from producing a strong par-exit score while the market is indicating that broad redemption is not currently clearing.
 
 The effective exit model parameters are surfaced by the `methodology.effectiveExitModel` field on `GET /api/redemption-backstops` and reused by report cards.
 

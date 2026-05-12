@@ -40,6 +40,11 @@ describe("adaptFalconTransparency", () => {
       assetCount: 5,
       sourceTimestamp: 1773316982,
       freshnessMode: "verified",
+      redemption: {
+        routeStatus: "open",
+        routeStatusSource: "protocol-api",
+        settlementDelaySec: 604800,
+      },
     });
     // AVAX is a known altcoin — no warning emitted
     expect(result.warnings).toBeUndefined();

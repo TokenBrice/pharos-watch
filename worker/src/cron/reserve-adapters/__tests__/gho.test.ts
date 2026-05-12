@@ -266,6 +266,9 @@ describe("buildGhoRedemptionMetadata", () => {
     expect(block.feeBps).toBe(12);
     expect(block.capacityKind).toBe("live-direct");
     expect(block.freshnessKind).toBe("same-run-onchain");
+    expect(block.routeStatusSource).toBe("onchain");
+    expect(block.holderEligibility).toBe("any-holder");
+    expect(block.settlementDelaySec).toBe(0);
     expect(block.sourceUrls).toEqual(["https://aave.com/help/gho-stablecoin/stability-module"]);
   });
 

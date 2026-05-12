@@ -9,12 +9,17 @@ import {
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "../stablecoins";
 import type { RedemptionDocSourceSupport, RedemptionRouteFamily } from "../../types";
 import { RedemptionBackstopConfigSchema } from "./schema";
+import { getBackstopRegistryOverrideReasons } from "./factory";
 import type { RedemptionBackstopConfig } from "./shared";
 import {
   REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
   buildRedemptionBackstopRegistry,
   type RedemptionBackstopConfigManifestEntry,
 } from "./manifest";
+import {
+  REDEMPTION_BACKSTOP_POLICY_ENTRIES,
+  type RedemptionBackstopPolicyEntry,
+} from "./policies";
 
 export type RedemptionRegistryFindingSeverity = "error" | "warning";
 
@@ -51,9 +56,21 @@ export interface RedemptionRegistryAuditRow {
   overrideReason: string | null;
 }
 
+export interface RedemptionPolicyAuditRow {
+  kind: RedemptionBackstopPolicyEntry["kind"];
+  stablecoinId: string;
+  warningCode: string | null;
+  reason: string;
+  owner: string;
+  reviewedAt: string;
+  liveReserveAdapter: string | null;
+  liveReserveTelemetry: string | null;
+}
+
 export interface RedemptionRegistryValidationResult {
   findings: RedemptionRegistryFinding[];
   auditRows: RedemptionRegistryAuditRow[];
+  policyRows: RedemptionPolicyAuditRow[];
   summary: {
     configuredCount: number;
     strongProxyCount: number;
@@ -87,76 +104,7 @@ const DOC_SOURCE_SUPPORT_BASELINE = {
   missingSupportKindCounts: Record<RedemptionDocSourceSupport, number>;
 };
 
-const INTENTIONAL_REDEMPTION_CONFIG_OVERRIDES = new Set([
-  "offchain-issuer:audx-aussie-dollar-token:expandIds->expandIds",
-  "offchain-issuer:brl1-brl1:expandIds->expandIds",
-  "offchain-issuer:cngn-compliant-naira:expandIds->expandIds",
-  "offchain-issuer:kgst-kyrgyz-som:expandIds->expandIds",
-  "offchain-issuer:reur-royal-euro:expandIds->expandIds",
-  "offchain-issuer:wars-argentine-peso:expandIds->expandIds",
-  "offchain-issuer:usyc-hashnote:expandIds->expandIds",
-  "offchain-issuer:ustb-superstate:expandIds->expandIds",
-  "offchain-issuer:a7a5-old-vector:expandIds->expandIds",
-  "offchain-issuer:gusd-gate:expandIds->expandIds",
-  "offchain-issuer:usdt-tether:expandIds->property",
-  "offchain-issuer:usdc-circle:expandIds->property",
-  "offchain-issuer:pyusd-paypal:expandIds->property",
-  "offchain-issuer:fdusd-first-digital:expandIds->property",
-  "offchain-issuer:rlusd-ripple:expandIds->property",
-  "offchain-issuer:eurc-circle:expandIds->property",
-  "offchain-issuer:usdp-paxos:expandIds->property",
-  "offchain-issuer:gusd-gemini:expandIds->property",
-  "offchain-issuer:usdg-paxos:expandIds->property",
-  "offchain-issuer:usdx-hex-trust:expandIds->property",
-  "offchain-issuer:xusd-straitsx:expandIds->property",
-  "offchain-issuer:xsgd-straitsx:expandIds->property",
-  "offchain-issuer:euri-banking-circle:expandIds->property",
-  "offchain-issuer:usdq-quantoz:expandIds->property",
-  "offchain-issuer:eurq-quantoz:expandIds->property",
-  "offchain-issuer:usd1-world-liberty-financial:expandIds->property",
-  "offchain-issuer:ausd-agora:expandIds->property",
-  "offchain-issuer:usdo-openeden:expandIds->property",
-  "offchain-issuer:usdm-moneta:expandIds->property",
-  "offchain-issuer:ustb-superstate:expandIds->property",
-  "offchain-issuer:usdh-native-markets:expandIds->property",
-  "offchain-issuer:fidd-fidelity:expandIds->property",
-  "offchain-issuer:usdcv-societe-generale-forge:expandIds->property",
-  "offchain-issuer:tusd-trueusd:expandIds->property",
-  "offchain-issuer:eurs-stasis:expandIds->property",
-  "offchain-issuer:brz-transfero:expandIds->property",
-  "offchain-issuer:ylds-figure:expandIds->property",
-  "offchain-issuer:usdtb-ethena:expandIds->property",
-  "offchain-issuer:pusd-plume:expandIds->property",
-  "offchain-issuer:gyen-gyen:expandIds->property",
-  "offchain-issuer:cadc-cad-coin:expandIds->property",
-  "offchain-issuer:veur-vnx:expandIds->property",
-  "offchain-issuer:vchf-vnx:expandIds->property",
-  "offchain-issuer:vgbp-vnx:expandIds->property",
-  "offchain-issuer:tryb-bilira:expandIds->property",
-  "offchain-issuer:tgbp-tokenised:expandIds->property",
-  "offchain-issuer:jpyc-jpyc:expandIds->property",
-  "offchain-issuer:axcnh-anchorx:expandIds->property",
-  "offchain-issuer:idrt-rupiah-token:expandIds->property",
-  "offchain-issuer:europ-schuman:expandIds->property",
-  "offchain-issuer:eurau-allunity:expandIds->property",
-  "offchain-issuer:chfau-allunity:expandIds->property",
-  "offchain-issuer:usda-anzens:expandIds->property",
-  "offchain-issuer:cash-phantom:expandIds->property",
-  "offchain-issuer:mnee-mnee:expandIds->property",
-  "offchain-issuer:sbc-brale:expandIds->property",
-  "offchain-issuer:m-m0:expandIds->property",
-  "offchain-issuer:musd-metamask:expandIds->property",
-  "offchain-issuer:usdn-noble:expandIds->property",
-  "offchain-issuer:aeur-anchored-coins:expandIds->property",
-  "offchain-issuer:eurcv-societe-generale-forge:expandIds->property",
-  "offchain-issuer:tbill-openeden:expandIds->property",
-  "offchain-issuer:eure-monerium:expandIds->property",
-  "offchain-issuer:eurr-stablr:expandIds->property",
-  "offchain-issuer:wusd-worldwide:expandIds->property",
-  "offchain-issuer:usdgo-osl:expandIds->property",
-  "offchain-issuer:audd-novatti:expandIds->property",
-  "offchain-issuer:usdr-stablr:expandIds->property",
-  "offchain-issuer:usat-tether:expandIds->property",
+const LEGACY_REDEMPTION_CONFIG_OVERRIDES = new Set([
   "collateral-redeem:bold-liquity:expandIds->property",
   "collateral-redeem:lusd-liquity:expandIds->property",
   "collateral-redeem:feusd-felix:expandIds->property",
@@ -181,6 +129,12 @@ export function validateRedemptionBackstopRegistry(
 ): RedemptionRegistryValidationResult {
   const manifest = options.manifest ?? REDEMPTION_BACKSTOP_CONFIG_MANIFEST;
   const mergedConfigs = options.mergedConfigs ?? buildRedemptionBackstopRegistry(manifest);
+  const overrideReasonById = new Map<string, string>();
+  for (const moduleEntry of manifest) {
+    for (const [id, reason] of getBackstopRegistryOverrideReasons(moduleEntry.configs)) {
+      overrideReasonById.set(id, reason);
+    }
+  }
   const findings: RedemptionRegistryFinding[] = [];
   const seenById = new Map<string, string>();
   const ownerById = new Map<string, RedemptionBackstopConfigManifestEntry>();
@@ -339,12 +293,13 @@ export function validateRedemptionBackstopRegistry(
       liveReserveAdapter: adapterKey,
       liveReserveTelemetry: adapterDefinition?.redemptionTelemetry.capacity ?? null,
       reviewedAt: config.reviewedAt ?? null,
-      overrideReason: null,
+      overrideReason: overrideReasonById.get(id) ?? null,
     };
   });
 
   validateDocSupportRatchet(findings, sourcesWithoutSupports, missingSupportKindCounts);
   validateConfidenceDocs(findings, options.docsText, options.apiDocsText);
+  const policyRows = validateRedemptionBackstopPolicies(findings);
 
   const configuredIds = new Set(mergedIds);
   const unconfiguredActiveIds = [...ACTIVE_META_BY_ID.keys()].filter((id) => !configuredIds.has(id)).sort();
@@ -367,6 +322,7 @@ export function validateRedemptionBackstopRegistry(
   return {
     findings,
     auditRows,
+    policyRows,
     summary: {
       configuredCount: mergedIds.length,
       strongProxyCount: mergedIds.length - heuristicIds.length,
@@ -506,6 +462,103 @@ function validateConfigInvariants(
   }
 }
 
+function validateRedemptionBackstopPolicies(findings: RedemptionRegistryFinding[]): RedemptionPolicyAuditRow[] {
+  const seen = new Set<string>();
+
+  return REDEMPTION_BACKSTOP_POLICY_ENTRIES.map((entry) => {
+    const adapterKey = TRACKED_META_BY_ID.get(entry.stablecoinId)?.liveReservesConfig?.adapter ?? null;
+    const adapterDefinition = adapterKey ? getLiveReserveAdapterDefinition(adapterKey) : null;
+    const warningCode = entry.kind === "degraded-sync-warning-exception" ? entry.warningCode : null;
+    const policyKey = `${entry.kind}:${entry.stablecoinId}:${warningCode ?? ""}`;
+
+    if (seen.has(policyKey)) {
+      addFinding(
+        findings,
+        "error",
+        "duplicate-redemption-policy",
+        `Duplicate redemption policy entry ${policyKey}.`,
+        { stablecoinId: entry.stablecoinId, filePath: "shared/lib/redemption-backstop-configs/policies.ts" },
+      );
+    }
+    seen.add(policyKey);
+
+    if (!TRACKED_META_BY_ID.has(entry.stablecoinId)) {
+      addFinding(
+        findings,
+        "error",
+        "redemption-policy-unknown-tracked-id",
+        `Redemption policy references unknown tracked stablecoin id "${entry.stablecoinId}".`,
+        { stablecoinId: entry.stablecoinId, filePath: "shared/lib/redemption-backstop-configs/policies.ts" },
+      );
+    }
+
+    if (!adapterKey) {
+      addFinding(
+        findings,
+        "error",
+        "redemption-policy-missing-adapter",
+        `${entry.stablecoinId}: redemption policy requires liveReservesConfig adapter metadata.`,
+        { stablecoinId: entry.stablecoinId, filePath: "shared/lib/redemption-backstop-configs/policies.ts" },
+      );
+    } else if (!adapterDefinition) {
+      addFinding(
+        findings,
+        "error",
+        "redemption-policy-unknown-adapter",
+        `${entry.stablecoinId}: redemption policy references unknown adapter (${adapterKey}).`,
+        { stablecoinId: entry.stablecoinId, filePath: "shared/lib/redemption-backstop-configs/policies.ts" },
+      );
+    } else if (adapterDefinition.redemptionTelemetry.capacity === "none") {
+      addFinding(
+        findings,
+        "error",
+        "redemption-policy-adapter-no-capacity",
+        `${entry.stablecoinId}: redemption policy points to adapter without redemption capacity telemetry (${adapterKey}).`,
+        { stablecoinId: entry.stablecoinId, filePath: "shared/lib/redemption-backstop-configs/policies.ts" },
+      );
+    }
+
+    if (!entry.reason.trim()) {
+      addFinding(
+        findings,
+        "error",
+        "redemption-policy-missing-reason",
+        `${entry.stablecoinId}: redemption policy missing reason.`,
+        { stablecoinId: entry.stablecoinId, filePath: "shared/lib/redemption-backstop-configs/policies.ts" },
+      );
+    }
+    if (!entry.owner.trim()) {
+      addFinding(
+        findings,
+        "error",
+        "redemption-policy-missing-owner",
+        `${entry.stablecoinId}: redemption policy missing owner.`,
+        { stablecoinId: entry.stablecoinId, filePath: "shared/lib/redemption-backstop-configs/policies.ts" },
+      );
+    }
+    if (!isValidReviewedAt(entry.reviewedAt)) {
+      addFinding(
+        findings,
+        "error",
+        "redemption-policy-invalid-reviewed-at",
+        `${entry.stablecoinId}: redemption policy reviewedAt must be YYYY-MM-DD.`,
+        { stablecoinId: entry.stablecoinId, filePath: "shared/lib/redemption-backstop-configs/policies.ts" },
+      );
+    }
+
+    return {
+      kind: entry.kind,
+      stablecoinId: entry.stablecoinId,
+      warningCode,
+      reason: entry.reason,
+      owner: entry.owner,
+      reviewedAt: entry.reviewedAt,
+      liveReserveAdapter: adapterKey,
+      liveReserveTelemetry: adapterDefinition?.redemptionTelemetry.capacity ?? null,
+    };
+  });
+}
+
 function validateDocSupportRatchet(
   findings: RedemptionRegistryFinding[],
   sourcesWithoutSupports: number,
@@ -566,9 +619,21 @@ function validateStaticConfigOverwrites(
   if (!sourceTextByPath) return;
 
   for (const moduleEntry of manifest) {
-    const sourceText = sourceTextByPath.get(moduleEntry.filePath);
-    if (sourceText == null) continue;
-    const sourceFile = ts.createSourceFile(moduleEntry.filePath, sourceText, ts.ScriptTarget.Latest, true);
+    for (const filePath of [moduleEntry.filePath, ...(moduleEntry.sourceFilePaths ?? [])]) {
+      validateStaticConfigSourceFile(moduleEntry, filePath, sourceTextByPath, findings);
+    }
+  }
+}
+
+function validateStaticConfigSourceFile(
+  moduleEntry: RedemptionBackstopConfigManifestEntry,
+  filePath: string,
+  sourceTextByPath: ReadonlyMap<string, string>,
+  findings: RedemptionRegistryFinding[],
+): void {
+    const sourceText = sourceTextByPath.get(filePath);
+    if (sourceText == null) return;
+    const sourceFile = ts.createSourceFile(filePath, sourceText, ts.ScriptTarget.Latest, true);
     const registryEntries: { id: string; kind: "expandIds" | "property" }[] = [];
 
     function visit(node: ts.Node): void {
@@ -592,8 +657,8 @@ function validateStaticConfigOverwrites(
                 findings,
                 "error",
                 "expand-ids-inline-array-required",
-                `${moduleEntry.filePath}:${line + 1}:${character + 1}: expandIds() must use an inline string array for overwrite checks.`,
-                { family: moduleEntry.name, filePath: moduleEntry.filePath },
+                `${filePath}:${line + 1}:${character + 1}: expandIds() must use an inline string array for overwrite checks.`,
+                { family: moduleEntry.name, filePath },
               );
               continue;
             }
@@ -628,8 +693,8 @@ function validateStaticConfigOverwrites(
                 findings,
                 "error",
                 "duplicate-object-key",
-                `${moduleEntry.filePath}:${line + 1}:${character + 1}: duplicate object key "${key}" previously declared at line ${previousPosition.line + 1}.`,
-                { stablecoinId: key, family: moduleEntry.name, filePath: moduleEntry.filePath },
+                `${filePath}:${line + 1}:${character + 1}: duplicate object key "${key}" previously declared at line ${previousPosition.line + 1}.`,
+                { stablecoinId: key, family: moduleEntry.name, filePath },
               );
               continue;
             }
@@ -648,19 +713,18 @@ function validateStaticConfigOverwrites(
       const previous = seenInModule.get(entry.id);
       if (previous) {
         const key = `${moduleEntry.name}:${entry.id}:${previous}->${entry.kind}`;
-        if (!INTENTIONAL_REDEMPTION_CONFIG_OVERRIDES.has(key)) {
+        if (!getBackstopRegistryOverrideReasons(moduleEntry.configs).has(entry.id) && !LEGACY_REDEMPTION_CONFIG_OVERRIDES.has(key)) {
           addFinding(
             findings,
             "error",
             "unapproved-config-overwrite",
             `${moduleEntry.name} overwrites "${entry.id}" via ${previous}->${entry.kind}; add it to INTENTIONAL_REDEMPTION_CONFIG_OVERRIDES if intentional.`,
-            { stablecoinId: entry.id, family: moduleEntry.name, filePath: moduleEntry.filePath },
+            { stablecoinId: entry.id, family: moduleEntry.name, filePath },
           );
         }
       }
       seenInModule.set(entry.id, entry.kind);
     }
-  }
 }
 
 function propertyNameText(name: ts.PropertyName | ts.BindingName): string | undefined {
@@ -679,6 +743,12 @@ function collectStringArray(expression: ts.Expression | undefined): string[] | n
     ids.push(element.text);
   }
   return ids;
+}
+
+function isValidReviewedAt(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
 function addFinding(

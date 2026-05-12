@@ -189,6 +189,8 @@ export function adaptYamatoStates(states: YamatoStates, options: YamatoAdaptOpti
   };
 
   let priceMetadata: Record<string, unknown> = {};
+  let routeStatus: "open" | "degraded" = "open";
+  let routeStatusReason: string | undefined;
   if (options.ethJpyPriceRaw != null) {
     if (options.ethJpyPriceRaw <= 0n) {
       throw new Error("yamato priceFeed.getPrice() returned zero ETH/JPY price");
@@ -196,6 +198,10 @@ export function adaptYamatoStates(states: YamatoStates, options: YamatoAdaptOpti
     const ethJpyPrice = decimalNumberFromBigInt(options.ethJpyPriceRaw, YAMATO_VALUE_DECIMALS);
     const totalCollateralJpy = totalCollateralEth * ethJpyPrice;
     const collateralizationRatio = totalCollateralJpy / totalDebtJpy;
+    if (collateralizationRatio < minimumCollateralRatio) {
+      routeStatus = "degraded";
+      routeStatusReason = `System collateralization ratio ${collateralizationRatio.toFixed(3)} is below MCR ${minimumCollateralRatio.toFixed(3)}`;
+    }
     priceMetadata = {
       ethJpyPriceRaw: options.ethJpyPriceRaw.toString(),
       ethJpyPrice,
@@ -229,6 +235,18 @@ export function adaptYamatoStates(states: YamatoStates, options: YamatoAdaptOpti
       totalDebtJpy,
       ...thresholdMetadata,
       ...priceMetadata,
+      redemption: {
+        freshnessKind: "same-run-onchain",
+        routeStatus,
+        routeStatusSource: "onchain",
+        ...(routeStatusReason ? { routeStatusReason } : {}),
+        holderEligibility: "any-holder",
+        settlementDelaySec: 0,
+        sourceUrls: [
+          "https://docs.yamato.fi/v/en",
+          "https://github.com/DeFiGeek-Community/yamato",
+        ],
+      },
     },
   };
 }

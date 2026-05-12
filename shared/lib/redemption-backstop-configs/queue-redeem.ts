@@ -559,6 +559,30 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ],
     notes: ["Nest docs list an expected nTBILL redemption window of 1-3 business days."],
   },
+  "inalpha-nest": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    accessModel: "issuer-api",
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Nest docs describe nALPHA/inALPHA redemption requests through the app and atomic queue; public materials reviewed do not publish one fixed redemption fee",
+    ),
+    docs: [
+      sourceRef("Nest liquidity and redemptions", "https://docs.nest.credit/about/liquidity-and-redemptions", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", ["route", "capacity", "settlement"]),
+      sourceRef(
+        "Nest nALPHA vault integration",
+        "https://docs.nest.credit/developers/evm-integration-guides/nalpha-vault",
+        ["route", "capacity", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      "Nest's nALPHA guide documents redemption requests from Plume or Ethereum into pUSD or USDC through the atomic queue; Pharos tracks inALPHA as the same Alpha vault LP exposure.",
+      "Nest docs list a 3-5 business day nALPHA redemption window and broader queue mechanics, so the route is modeled as delayed NAV redemption rather than instant stablecoin liquidity.",
+    ],
+  },
   "nbasis-nest": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),

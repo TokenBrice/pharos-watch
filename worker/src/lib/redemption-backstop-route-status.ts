@@ -75,7 +75,9 @@ export function mergeRedemptionRouteStatus(args: {
     };
 
   const selectedImpaired = selected.routeStatus !== "open" && selected.routeStatus !== "unknown";
-  const severeMarketImpaired = args.severeMarketImplied != null && !args.allowSevereMarketOpenException;
+  const severeOutputImpaired = args.severeMarketImplied?.outputImpairedDependencyId != null;
+  const severeMarketImpaired =
+    args.severeMarketImplied != null && (severeOutputImpaired || !args.allowSevereMarketOpenException);
   const finalEvidence = severeMarketImpaired ? (args.severeMarketImplied as RedemptionRouteStatusEvidence) : selected;
   const capsApplied: string[] = [];
   if (selectedImpaired) capsApplied.push("route-status-impairment");

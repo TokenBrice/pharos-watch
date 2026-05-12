@@ -273,6 +273,7 @@ export async function fetchReservoirReserves(
               capacityKind: "live-proxy-validated" as const,
               freshnessKind: "unverified" as const,
               routeStatus: "unknown" as const,
+              routeStatusSource: "protocol-api" as const,
               sourceUrls: [primaryInput.url],
             },
           }
