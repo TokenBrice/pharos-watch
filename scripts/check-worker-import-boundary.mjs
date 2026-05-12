@@ -38,6 +38,10 @@ function formatMatches(matches) {
 // Adding a new waiver is an architectural decision: prefer pushing shared
 // metadata into `shared/` and update MAX_BOUNDARY_WAIVERS only when the
 // architectural exception is reviewed.
+//
+// Every entry below MUST have a matching section in
+// `docs/process/boundary-waivers.md`. The invariant is enforced by
+// `scripts/__tests__/worker-boundary-waivers.test.ts`.
 const BOUNDARY_WAIVERS = [
   {
     id: "frozen-invariants-lifecycle-registry-check",
@@ -50,7 +54,7 @@ if (BOUNDARY_WAIVERS.length > MAX_BOUNDARY_WAIVERS) {
   console.error(
     `[boundary] BOUNDARY_WAIVERS has ${BOUNDARY_WAIVERS.length} entries; cap is ${MAX_BOUNDARY_WAIVERS}. ` +
       "Each waiver is an architectural exception — push shared metadata into `shared/` instead of growing the list, " +
-      "or raise MAX_BOUNDARY_WAIVERS with a documented review.",
+      "or raise MAX_BOUNDARY_WAIVERS with a documented review and update docs/process/boundary-waivers.md.",
   );
   process.exit(1);
 }

@@ -10,6 +10,8 @@
  * Boundary waiver: frozen-invariants-lifecycle-registry-check. This script is
  * the only approved non-test cross-layer validator that imports worker and
  * frontend registries to prove frozen IDs were removed from lifecycle surfaces.
+ * See `docs/process/boundary-waivers.md` for rationale, mitigations, and the
+ * retirement assessment.
  */
 import {
   ACTIVE_IDS,
