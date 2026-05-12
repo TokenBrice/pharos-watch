@@ -13,7 +13,7 @@
   "collateral": "BlackOpal LiquidStone II tokenised credit positions plus stablecoin and Treasury liquidity buffers held inside the Nest vault",
   "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the BlackOpal LiquidStone II credit strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
   "detailProvider": "coingecko",
-  "geckoId": "nest-opal-vault",
+  "geckoId": "nest-blackopal-liquidstone-ii-vault",
   "protocolSlug": "nest-credit",
   "links": [
     {

@@ -1559,11 +1559,6 @@
     "text": "WTGXX is the digital share class of WisdomTree's Government Money Market Digital Fund, a '40 Act-registered money market fund that received SEC approval in early 2026 to support 24/7 dealer trading at a fixed $1.00 NAV — making it one of the most stable-coin-like tokenised MMFs in market. Subscriptions and redemptions are gated to WisdomTree Connect users with USDC dealer settlement and USD-wire alternatives; holdings are short-duration U.S. government obligations, repos, and cash. Around $857 million of AUM sits across Ethereum, Arbitrum, Avalanche, Base, Optimism, Plume, and Stellar; Pharos tracks the Ethereum supply contract first and runs a curated weekly snapshot of the official WisdomTree fund factsheet for reserves.",
     "updatedAt": "2026-05-12"
   },
-  "usdw-wisdomtree": {
-    "title": "WisdomTree Digital Trust's Companion Dollar",
-    "text": "USDW is the NYDFS-regulated dollar token issued by WisdomTree Digital Trust Company, the New York limited-purpose trust company that complements WisdomTree's '40 Act MMF (WTGXX). Unlike WTGXX, USDW does not pay yield to holders; it functions as a settlement-grade dollar with monthly reserve attestations and access through WisdomTree Connect. Reserves are held in U.S. Treasury bills and cash; WisdomTree Digital Trust retains transfer-agent freeze and burn authority. Pharos tracks the Ethereum supply contract as a curated-validated asset until reserve reporting expands.",
-    "updatedAt": "2026-05-12"
-  },
   "vbill-vaneck": {
     "title": "VanEck's Securitize-Administered Treasury Share",
     "text": "VBILL is the on-chain share token of the VanEck Treasury Fund, a BVI Professional Fund advised by Van Eck Associates and administered by Securitize on Ethereum with bridged Wormhole deployments on Avalanche, BNB Chain, and Solana. The token is NAV-accreting (price drifts upward with T-bill yield) rather than rebasing; subscription minimums of $100k/$1M apply by chain and redemption settles through Securitize Markets against USDC, AUSD, or USD wire. A Chainlink NAVLink oracle publishes daily NAV for Aave Horizon and other integrations; Pharos tracks the Ethereum supply contract with a curated reserves snapshot pending oracle wiring.",
@@ -1582,16 +1577,6 @@
   "ustbl-spiko": {
     "title": "Spiko's USD T-Bill MMF Cousin",
     "text": "USTBL is the USD-denominated sister fund to Spiko's EUTBL — same AMF-regulated UCITS MMF architecture, same ERC-1967 upgradeable proxy, same Chainlink CCIP multi-chain rollout (Ethereum, Arbitrum, Polygon), but holding short-dated U.S. Treasury bills instead of Eurozone sovereigns. The VNAV share accretes value as T-bill yield compounds, with $1k minimums and same-day NAV settlement. The combined Spiko AUM passed $1 billion in late 2025, making the pair one of the larger EU-regulated tokenised treasury franchises in market.",
-    "updatedAt": "2026-05-12"
-  },
-  "stbt-matrixdock": {
-    "title": "Matrixdock's Rebasing T-Bill Token",
-    "text": "STBT is Matrixport's Singapore MAS-exempted tokenised short-term Treasury token: holders see a stable $1.00 unit price while daily yield is distributed by adjusting balances rather than the price. Reserves are U.S. Treasury securities maturing within six months and reverse repurchase agreements collateralised by U.S. Treasuries, with a live Chainlink Proof-of-Reserve feed providing independent attestation. Primary access is institutional KYC with a $100k minimum and same-day NAV settlement; the wrapped wSTBT variant exposes the same backing as a non-rebasing token suitable for AMM liquidity.",
-    "updatedAt": "2026-05-12"
-  },
-  "wstbt-matrixdock": {
-    "title": "Wrapped STBT for AMM Liquidity",
-    "text": "wSTBT is the non-rebasing wrapper for Matrixdock STBT: instead of distributing yield by rebasing balances, it lets the exchange rate accrete so the wrapper behaves like a typical NAV-accreting token usable in Curve pools and other AMMs. The underlying reserve base is identical to STBT — short-duration U.S. Treasuries and Treasury-collateralised reverse repos under Matrixdock's institutional KYC framework. Pharos tracks wSTBT as a savings-passthrough variant of STBT.",
     "updatedAt": "2026-05-12"
   },
   "jtrsy-anemoy": {

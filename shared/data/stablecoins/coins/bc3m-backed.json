@@ -13,7 +13,7 @@
   "collateral": "Tracker certificate fully backed by the AMUNDI ETF GOVIES 0-6 MONTHS EUROMTS INVESTMENT GRADE UCITS ETF, held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
   "pegMechanism": "EUR-denominated NAV-accreting tracker token (not pegged to €1); price reflects the underlying short-term Eurozone government bond ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
   "detailProvider": "coingecko",
-  "geckoId": "backed-govies-0-6-months-euro-investment-grade",
+  "geckoId": "backed-govies-0-6-months-euro",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://app.backed.fi/issuance",

@@ -1767,7 +1767,7 @@
     },
     "collateral": "Tracker certificate fully backed by the AMUNDI ETF GOVIES 0-6 MONTHS EUROMTS INVESTMENT GRADE UCITS ETF, held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
     "pegMechanism": "EUR-denominated NAV-accreting tracker token (not pegged to €1); price reflects the underlying short-term Eurozone government bond ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
-    "geckoId": "backed-govies-0-6-months-euro-investment-grade",
+    "geckoId": "backed-govies-0-6-months-euro",
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://app.backed.fi/issuance",
@@ -12628,7 +12628,7 @@
     },
     "collateral": "Short-duration U.S. Treasury bills selected and managed by Janus Henderson as sub-advisor inside Anemoy's BVI Professional Fund, tokenised through Centrifuge as ERC-7540 vault shares",
     "pegMechanism": "NAV-accreting fund share token; same-day subscription and redemption at fund NAV for whitelisted non-U.S. Professional Investors via the Centrifuge issuer rail; S&P assigns AA+f / S1+ to the fund",
-    "geckoId": "anemoy-janus-henderson-treasury-fund",
+    "geckoId": "janus-henderson-anemoy-treasury-fund",
     "protocolSlug": "centrifuge",
     "proofOfReserves": {
       "type": "independent-audit",
@@ -15708,7 +15708,7 @@
     },
     "collateral": "BlackOpal LiquidStone II tokenised credit positions plus stablecoin and Treasury liquidity buffers held inside the Nest vault",
     "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the BlackOpal LiquidStone II credit strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
-    "geckoId": "nest-opal-vault",
+    "geckoId": "nest-blackopal-liquidstone-ii-vault",
     "protocolSlug": "nest-credit",
     "links": [
       {
@@ -16048,7 +16048,7 @@
     },
     "collateral": "WisdomTree tokenised fund shares (xCRDYX and similar WisdomTree Connect products) plus Nest Treasury Vault (nTBILL) and stablecoin liquidity buffers",
     "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying WisdomTree fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
-    "geckoId": "nest-wisdom-vault",
+    "geckoId": "nest-wisdomtree-vault",
     "protocolSlug": "nest-credit",
     "links": [
       {
@@ -20163,110 +20163,6 @@
     "yieldConfig": {
       "yieldSource": "Strata senior USDe tranche",
       "yieldType": "nav-appreciation"
-    }
-  },
-  {
-    "id": "stbt-matrixdock",
-    "detailProvider": "coingecko",
-    "name": "Matrixdock Short-Term Treasury Bill",
-    "symbol": "STBT",
-    "flags": {
-      "backing": "rwa-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized",
-      "yieldBearing": true,
-      "rwa": true,
-      "navToken": false
-    },
-    "collateral": "U.S. Treasury securities maturing within six months and reverse repurchase agreements collateralised by U.S. Treasuries; custodied through prime brokerage relationships and administered by Matrixdock (Matrixport, Singapore)",
-    "pegMechanism": "$1.00 rebasing share token; daily T-bill yield is distributed by adjusting holder balances rather than the unit price; institutional KYC mint and redemption at same-day NAV via Matrixdock with a $100k minimum; Chainlink Proof-of-Reserve feed publishes the underlying reserve attestation",
-    "geckoId": "matrixdock-short-term-treasury-bill",
-    "proofOfReserves": {
-      "type": "real-time",
-      "url": "https://www.matrixdock.com/stbt",
-      "provider": "Chainlink Proof of Reserve (Matrixdock T-Bill PoR feed)"
-    },
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.matrixdock.com/stbt"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/Matrixdock_"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.matrixdock.com/"
-      }
-    ],
-    "jurisdiction": {
-      "country": "Singapore",
-      "regulator": "MAS",
-      "license": "Singapore MAS exemption (institutional / accredited investors only)"
-    },
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x530824da86689c9c17cdc2871ff29b058345b44a",
-        "decimals": 18
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "Matrixdock STBT page",
-          "url": "https://www.matrixdock.com/stbt"
-        }
-      ],
-      "evidence": "Matrixdock retains transfer-agent freeze and burn authority over STBT balances under its institutional KYC framework.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "single-chain",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
-    "reserves": [
-      {
-        "name": "U.S. Treasury Bills",
-        "pct": 70,
-        "risk": "very-low"
-      },
-      {
-        "name": "Reverse Repo Agreements (UST-collateralised)",
-        "pct": 28,
-        "risk": "very-low"
-      },
-      {
-        "name": "Cash and equivalents",
-        "pct": 2,
-        "risk": "very-low"
-      }
-    ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "single-asset",
-      "breakerScope": "stbt-matrixdock",
-      "display": {
-        "url": "https://www.matrixdock.com/stbt",
-        "label": "Matrixdock STBT page (Chainlink PoR feed)"
-      },
-      "adapter": "curated-validated",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
-        }
-      }
-    },
-    "yieldConfig": {
-      "yieldSource": "Matrixdock STBT (short-term U.S. Treasury bill rebase)",
-      "yieldType": "rebase"
     }
   },
   {
@@ -29024,101 +28920,6 @@
     ]
   },
   {
-    "id": "usdw-wisdomtree",
-    "detailProvider": "coingecko",
-    "name": "WisdomTree Dollar Token",
-    "symbol": "USDW",
-    "flags": {
-      "backing": "rwa-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized",
-      "yieldBearing": false,
-      "rwa": false,
-      "navToken": false
-    },
-    "collateral": "Cash and short-duration U.S. Treasury bills held in segregated accounts under WisdomTree Digital Trust Company, a New York-chartered limited-purpose trust company supervised by NYDFS",
-    "pegMechanism": "1:1 USD-pegged stablecoin issued by WisdomTree Digital Trust; primary mint and redemption operate through WisdomTree Connect with USD-wire settlement and dealer-facilitated USDC routes",
-    "geckoId": "wisdomtree-dollar-token",
-    "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://www.wisdomtree.com/digital-funds/usdw",
-      "provider": "WisdomTree Digital Trust (monthly reserve reports)"
-    },
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.wisdomtree.com/digital-funds/usdw"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/WisdomTreeFunds"
-      },
-      {
-        "label": "WisdomTree Connect",
-        "url": "https://www.wisdomtree.com/connect"
-      }
-    ],
-    "jurisdiction": {
-      "country": "United States",
-      "regulator": "NYDFS",
-      "license": "WisdomTree Digital Trust Company (NY limited-purpose trust charter)"
-    },
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x2e5f7dbed4aa799b13c737992562b7e8742b3a32",
-        "decimals": 18
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "WisdomTree Connect terms",
-          "url": "https://www.wisdomtree.com/connect"
-        }
-      ],
-      "evidence": "WisdomTree Digital Trust acts as transfer agent for USDW with permissioned issuance and freeze authority under NYDFS supervision.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "native-multichain",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
-    "reserves": [
-      {
-        "name": "U.S. Treasury Bills",
-        "pct": 85,
-        "risk": "very-low"
-      },
-      {
-        "name": "Cash and bank deposits",
-        "pct": 15,
-        "risk": "very-low"
-      }
-    ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "attestation-mix",
-      "breakerScope": "usdw-wisdomtree",
-      "display": {
-        "url": "https://www.wisdomtree.com/digital-funds/usdw",
-        "label": "WisdomTree USDW disclosures"
-      },
-      "adapter": "curated-validated",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
-        }
-      }
-    }
-  },
-  {
     "id": "usdx-hex-trust",
     "llamaId": "263",
     "detailProvider": "defillama",
@@ -31657,7 +31458,7 @@
     "symbol": "VNDC",
     "flags": {
       "backing": "rwa-backed",
-      "pegCurrency": "OTHER",
+      "pegCurrency": "VND",
       "governance": "centralized",
       "yieldBearing": false,
       "rwa": true,
@@ -32485,78 +32286,6 @@
     }
   },
   {
-    "id": "wstbt-matrixdock",
-    "detailProvider": "coingecko",
-    "name": "Wrapped Matrixdock STBT",
-    "symbol": "wSTBT",
-    "flags": {
-      "backing": "rwa-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized-dependent",
-      "yieldBearing": true,
-      "rwa": true,
-      "navToken": true
-    },
-    "pegReferenceId": "stbt-matrixdock",
-    "collateral": "1:1 wrapper around Matrixdock STBT (short-term U.S. Treasury bills and Treasury-collateralised reverse repos); yield accrues into the wrapper's exchange rate rather than rebasing supply",
-    "pegMechanism": "Non-rebasing NAV-accreting wrapper around STBT used on Curve and other AMMs; mint and redeem against STBT via the wstbt contract; underlying redemption against U.S. dollars runs through Matrixdock at NAV",
-    "geckoId": "wrapped-stbt",
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.matrixdock.com/stbt"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/Matrixdock_"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.matrixdock.com/"
-      }
-    ],
-    "jurisdiction": {
-      "country": "Singapore",
-      "regulator": "MAS",
-      "license": "Singapore MAS exemption (institutional / accredited investors only)"
-    },
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x288a8005c53632d920045b7c7c2e54a3f1bc4c83",
-        "decimals": 18
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: wSTBT resolves to Upstream because the wrapper variant inherits freeze and transfer surface from STBT.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "single-chain",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
-    "variantOf": "stbt-matrixdock",
-    "variantKind": "savings-passthrough",
-    "reserves": [
-      {
-        "name": "Matrixdock STBT (short-term U.S. Treasury bills and reverse repos)",
-        "pct": 100,
-        "risk": "very-low",
-        "coinId": "stbt-matrixdock",
-        "depType": "wrapper"
-      }
-    ],
-    "yieldConfig": {
-      "yieldSource": "Matrixdock STBT NAV accretion (wrapped, non-rebasing)",
-      "yieldType": "nav-appreciation"
-    }
-  },
-  {
     "id": "wtgxx-wisdomtree",
     "detailProvider": "coingecko",
     "name": "WisdomTree Government Money Market Digital Fund",
@@ -32571,7 +32300,7 @@
     },
     "collateral": "U.S. government obligations, cash, and repurchase agreements held by WisdomTree Digital Government Money Market Fund; '40 Act-registered money market fund administered by WisdomTree Asset Management and recorded natively on-chain via the WisdomTree Connect platform",
     "pegMechanism": "$1.00 stable NAV money market share; SEC-approved 24/7 dealer trading at fixed $1 intraday (Feb 2026); primary subscription and redemption are gated to WisdomTree Connect users with USDC dealer settlement and USD-wire alternatives",
-    "geckoId": "wisdomtree-government-money-market-digital-fund",
+    "geckoId": "wisdomtree-treasury-money-market-digital-fund",
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",

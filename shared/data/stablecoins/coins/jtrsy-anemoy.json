@@ -13,7 +13,7 @@
   "collateral": "Short-duration U.S. Treasury bills selected and managed by Janus Henderson as sub-advisor inside Anemoy's BVI Professional Fund, tokenised through Centrifuge as ERC-7540 vault shares",
   "pegMechanism": "NAV-accreting fund share token; same-day subscription and redemption at fund NAV for whitelisted non-U.S. Professional Investors via the Centrifuge issuer rail; S&P assigns AA+f / S1+ to the fund",
   "detailProvider": "coingecko",
-  "geckoId": "anemoy-janus-henderson-treasury-fund",
+  "geckoId": "janus-henderson-anemoy-treasury-fund",
   "protocolSlug": "centrifuge",
   "proofOfReserves": {
     "type": "independent-audit",
