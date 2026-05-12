@@ -39,6 +39,7 @@
     "test:watch": "vitest",
     "audit:pricing-providers": "tsx scripts/audit-pricing-provider-config.ts",
     "audit:price-source-depth": "tsx scripts/audit-price-source-depth.ts",
+    "audit:dia-provider": "tsx scripts/audit-dia-provider-poc.ts",
     "freeze-stablecoin": "tsx scripts/freeze-stablecoin.ts",
     "sync:digests": "tsx scripts/sync-digests.ts",
     "serve:static-export": "npx --yes tsx scripts/serve-static-export.mjs",
