@@ -49,6 +49,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   reservoir: "live",
   "ripple-transparency": "live",
   "sgforge-coinvertible": "live",
+  "sgho-wrapper": "live",
   "solstice-attestation": "proof",
   "single-asset": "proof",
   "sky-makercore": "live",

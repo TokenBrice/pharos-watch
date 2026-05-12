@@ -52,6 +52,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "reservoir",
   "ripple-transparency",
   "sgforge-coinvertible",
+  "sgho-wrapper",
   "solstice-attestation",
   "single-asset",
   "sky-makercore",

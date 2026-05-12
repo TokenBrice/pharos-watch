@@ -59,6 +59,31 @@
       "depType": "wrapper"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "sgho-wrapper",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "sgho-aave",
+    "display": {
+      "url": "https://aave.com/docs/aave-v3/guides/sgho",
+      "label": "Aave sGHO"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "GHO deposited in Aave Savings module",
+        "risk": "low",
+        "coinId": "gho-aave",
+        "depType": "wrapper"
+      }
+    }
+  },
   "yieldConfig": {
     "yieldSource": "Aave Savings GHO",
     "yieldType": "governance-set"
@@ -67,7 +92,7 @@
     {
       "type": "info",
       "title": "Legacy savings contract",
-      "message": "The tracked Aave sGHO contract currently resolves as stkGHO-compatible rather than a full ERC-4626 vault. Pharos uses `previewRedeem` for price discovery and avoids the generic ERC-4626 reserve adapter until the replacement savings vault exposes standard asset and totalAssets methods."
+      "message": "The tracked Aave sGHO contract currently resolves as stkGHO-compatible rather than a full ERC-4626 vault. Pharos uses `previewRedeem` for price discovery and live reserve telemetry, and avoids the generic ERC-4626 reserve adapter until the replacement savings vault exposes standard asset and totalAssets methods."
     }
   ]
 }

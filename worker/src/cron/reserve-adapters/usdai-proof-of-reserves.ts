@@ -413,13 +413,13 @@ async function fetchUsdAiProofPageTimestamp(
     };
   }
   const scoped = extractUsdAiProofPageTimestampSummary(html);
-  if (scoped != null) return { timestamp: scoped.sourceTimestamp, summary: scoped };
+  if (scoped != null) return { timestamp: scoped.latestSourceTimestamp, summary: scoped };
 
   const whole = extractUsdAiProofPageTimestampFallback(html);
   if (whole == null) return { timestamp: null, summary: null };
 
   return {
-    timestamp: whole.sourceTimestamp,
+    timestamp: whole.latestSourceTimestamp,
     summary: whole,
     fallbackWarning: reserveInfoWarning(
       "usdai-proof-scope-fallback",

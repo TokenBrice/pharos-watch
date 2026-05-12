@@ -235,12 +235,12 @@ describe("usdai-proof-of-reserves adapter", () => {
     });
   });
 
-  it("uses oldest proof-row timestamp and warns when proof-row freshness is widely spread", () => {
+  it("can stamp the latest proof-row timestamp while preserving oldest-component metadata", () => {
     const oldest = Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000);
     const latest = Math.floor(Date.parse("2026-04-10T03:44:09.495Z") / 1000);
     const result = adaptUsdAiProofOfReserves(
       parseUsdAiProofOfReserves(SAMPLE_RAW_PAYLOAD),
-      oldest,
+      latest,
       {
         sourceTimestamp: oldest,
         latestSourceTimestamp: latest,
@@ -251,7 +251,7 @@ describe("usdai-proof-of-reserves adapter", () => {
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
-      sourceTimestamp: oldest,
+      sourceTimestamp: latest,
       oldestSourceTimestamp: oldest,
       latestSourceTimestamp: latest,
       sourceTimestampSpreadSec: latest - oldest,
@@ -379,7 +379,8 @@ describe("usdai-proof-of-reserves adapter", () => {
           [
             "text-get:https://app.usd.ai/reserves:12000",
             Promise.resolve(
-              '\\"dealsDetailsCache\\":{\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"}',
+              '\\"dealsDetailsCache\\":{\\"tokens\\":[{\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"},'
+              + '{\\"timeLastUpdated\\":\\"2026-04-10T03:44:09.495Z\\"}]}',
             ),
           ],
         ]),
@@ -393,5 +394,7 @@ describe("usdai-proof-of-reserves adapter", () => {
       coinId: "pyusd-paypal",
     });
     expect(result.metadata?.freshnessMode).toBe("verified");
+    expect(result.metadata?.sourceTimestamp).toBe(Math.floor(Date.parse("2026-04-10T03:44:09.495Z") / 1000));
+    expect(result.metadata?.oldestSourceTimestamp).toBe(Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000));
   });
 });

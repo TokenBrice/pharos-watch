@@ -43,6 +43,7 @@ import { fetchRippleTransparencyReserves } from "./ripple-transparency";
 import { fetchRiverProtocolInfoReserves } from "./river-protocol-info";
 import { fetchErc4626SingleAssetReserves } from "./erc4626-single-asset";
 import { fetchSgForgeCoinvertibleReserves } from "./sgforge-coinvertible";
+import { fetchSghoWrapperReserves } from "./sgho-wrapper";
 import { fetchSingleAssetReserves } from "./single-asset";
 import { fetchSkyMakercoreReserves } from "./sky-makercore";
 import { fetchSolsticeAttestationReserves } from "./solstice-attestation";
@@ -104,6 +105,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   "ripple-transparency": fetchRippleTransparencyReserves,
   "river-protocol-info": fetchRiverProtocolInfoReserves,
   "sgforge-coinvertible": fetchSgForgeCoinvertibleReserves,
+  "sgho-wrapper": fetchSghoWrapperReserves,
   "solstice-attestation": fetchSolsticeAttestationReserves,
   "single-asset": fetchSingleAssetReserves,
   "sky-makercore": fetchSkyMakercoreReserves,

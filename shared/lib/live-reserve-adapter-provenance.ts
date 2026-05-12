@@ -73,6 +73,7 @@ export const LIVE_RESERVE_ADAPTER_PROVENANCE = {
   "ripple-transparency": { status: "active", rationale: ACTIVE_RATIONALE },
   "river-protocol-info": { status: "active", rationale: ACTIVE_RATIONALE },
   "sgforge-coinvertible": { status: "active", rationale: ACTIVE_RATIONALE },
+  "sgho-wrapper": { status: "active", rationale: ACTIVE_RATIONALE },
   "single-asset": { status: "active", rationale: ACTIVE_RATIONALE },
   "sky-makercore": { status: "active", rationale: ACTIVE_RATIONALE },
   "solstice-attestation": { status: "active", rationale: ACTIVE_RATIONALE },
