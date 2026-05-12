@@ -8,7 +8,7 @@ import {
   DEX_PRICE_CHECK_FRESHNESS_SEC,
   DEX_PRICE_CHECK_UI_MIN_TVL_USD,
 } from "./constants";
-import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
+import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import {
   countDepegAuthoritativeSources,
   hasUpstreamCapableDepegAuthoritativeSource,
@@ -53,15 +53,23 @@ function getPrimaryPriceAgeSec(
 }
 
 function getPrimaryTrustSources(input: Pick<PrimaryPriceTrustInput, "agreeSources" | "priceSource">): string[] {
-  return input.agreeSources && input.agreeSources.length > 0
+  const sources = input.agreeSources && input.agreeSources.length > 0
     ? input.agreeSources
-    : splitCompositePriceSource(input.priceSource ?? "");
+    : input.priceSource ?? "";
+  return normalizePricingSourceKeys(sources);
 }
 
 export function resolveDepegSourceFamily(sourceKey: string | null | undefined): string | null {
   if (!sourceKey) return null;
   const normalized = sourceKey.trim().toLowerCase();
   if (!normalized) return null;
+  const compositeParts = normalizePricingSourceKeys(normalized);
+  if (compositeParts.length > 1) {
+    const families = compositeParts
+      .map((part) => resolveDepegSourceFamily(part))
+      .filter((family): family is string => !!family);
+    return [...new Set(families)].join("+") || null;
+  }
 
   if (
     normalized === "coingecko" ||
@@ -80,16 +88,12 @@ export function resolveDepegSourceFamily(sourceKey: string | null | undefined): 
     return "defillama";
   }
   if (
-    normalized === "dex-promoted" ||
-    normalized === "geckoterminal" ||
-    normalized === "pool-tvl-weighted" ||
-    normalized === "dexscreener" ||
-    normalized.endsWith("-dex")
+    normalized === "dexscreener"
   ) {
-    return "dex";
+    return "fallback:dexscreener";
   }
 
-  return getPricingSourceRegistryEntry(normalized)?.trustTier ?? normalized;
+  return getPricingSourceRegistryEntry(normalized)?.depegSourceFamily ?? normalized;
 }
 
 export function getPrimaryDepegSourceFamilies(

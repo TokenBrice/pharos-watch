@@ -6,6 +6,7 @@ import type { GtProbeStats } from "../../lib/geckoterminal-price-probe";
 import {
   createEmptyPriceSourceHealthDistribution,
   isPriceSourceHealthBucketKey,
+  normalizePricingSourceKeys,
   splitCompositePriceSource,
 } from "@shared/lib/pricing-sources";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
@@ -88,9 +89,9 @@ function hasIndependentHardSource(asset: PeggedAsset): boolean {
   const sources = asset.agreeSources && asset.agreeSources.length > 0
     ? asset.agreeSources
     : asset.priceSource
-      ? splitCompositePriceSource(asset.priceSource)
+      ? normalizePricingSourceKeys(asset.priceSource)
       : [];
-  return sources.some((source) => {
+  return normalizePricingSourceKeys(sources).some((source) => {
     const trustTier = getPricingSourceRegistryEntry(source)?.trustTier;
     return trustTier === "hard_market" || trustTier === "hard_oracle" || trustTier === "hard_protocol";
   });
@@ -117,8 +118,10 @@ export function buildPricingSourceAuditReport(
     fallbackOrCachedCount: assets.filter((asset) => {
       const source = asset.priceSource;
       if (source === "cached" || asset.priceConfidence === "fallback") return true;
-      const entry = source ? getPricingSourceRegistryEntry(source) : undefined;
-      return entry?.trustTier === "fallback_search" || entry?.trustTier === "cached_replay";
+      const entries = normalizePricingSourceKeys(source).map((sourceKey) => getPricingSourceRegistryEntry(sourceKey));
+      return entries.length > 0 && entries.every((entry) =>
+        entry?.trustTier === "fallback_search" || entry?.trustTier === "cached_replay"
+      );
     }).length,
     lowConfidenceCount: assets.filter((asset) => asset.priceConfidence === "low").length,
     assetsWithoutIndependentHardSource: assets

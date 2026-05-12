@@ -3423,6 +3423,38 @@ describe("applyListAggregatorDowngrade", () => {
     expect(stats.singleSource).toBe(1);
   });
 
+  it("downgrades CMC-style list aggregators when paired only with another list aggregator", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["usdt-tether", {
+        price: 1.0, source: "coingecko+coinmarketcap",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["coingecko", "coinmarketcap"],
+        agreeSources: ["coingecko", "coinmarketcap"],
+      }],
+    ]);
+    const stats: PriceValidationStats = { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
+    applyListAggregatorDowngrade(results, stats);
+    expect(results.get("usdt-tether")!.confidence).toBe("single-source");
+    expect(stats.high).toBe(0);
+    expect(stats.singleSource).toBe(1);
+  });
+
+  it("normalizes composite agree source labels before applying list-aggregator downgrade", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["usdt-tether", {
+        price: 1.0, source: "coingecko+defillama-list",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["coingecko", "defillama-list"],
+        agreeSources: ["coingecko+defillama-list"],
+      }],
+    ]);
+    const stats: PriceValidationStats = { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
+    applyListAggregatorDowngrade(results, stats);
+    expect(results.get("usdt-tether")!.confidence).toBe("single-source");
+    expect(stats.high).toBe(0);
+    expect(stats.singleSource).toBe(1);
+  });
+
   it("does NOT downgrade when cluster includes a non-list-aggregator source (binance)", () => {
     const results = new Map<string, PrimaryPriceResult>([
       ["usdt-tether", {

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { PRICING_SOURCE_REGISTRY } from "@shared/lib/pricing-source-registry";
 import {
+  countDepegAuthoritativeSources,
   getPriceCacheMaxAgeSec,
+  hasDepegAuthoritativeSource,
   isPoolChallengeEligibleConsensus,
   isReplaySafePriceSource,
 } from "../pricing-source-policy";
@@ -30,6 +32,7 @@ describe("pricing-source registry ↔ policy contract", () => {
     expect(isReplaySafePriceSource(undefined)).toBe(false);
     expect(isReplaySafePriceSource("dexscreener-search")).toBe(false);
     expect(isPoolChallengeEligibleConsensus([])).toBe(false);
+    expect(isPoolChallengeEligibleConsensus(["not-a-source"])).toBe(false);
   });
 
   it("uses the strictest component freshness for replay-cache composite sources", () => {
@@ -37,5 +40,28 @@ describe("pricing-source registry ↔ policy contract", () => {
     expect(getPriceCacheMaxAgeSec("bitstamp+coinbase", 6 * 3600)).toBe(10 * 60);
     expect(getPriceCacheMaxAgeSec("coingecko+not-a-source", 6 * 3600)).toBe(0);
     expect(getPriceCacheMaxAgeSec(null, 6 * 3600)).toBe(6 * 3600);
+  });
+
+  it("expands composite source labels before applying authority and pool-challenge policy", () => {
+    expect(hasDepegAuthoritativeSource(["coingecko+geckoterminal"])).toBe(false);
+    expect(countDepegAuthoritativeSources(["coingecko+pyth"])).toBe(1);
+    expect(isPoolChallengeEligibleConsensus(["coingecko+pyth"])).toBe(false);
+    expect(isPoolChallengeEligibleConsensus(["coingecko+geckoterminal"])).toBe(true);
+  });
+
+  it("keeps fallback/search lanes non-authoritative", () => {
+    const fallbackEntries = PRICING_SOURCE_REGISTRY.filter((entry) => entry.trustTier === "fallback_search");
+    expect(fallbackEntries.map((entry) => entry.key).sort()).toEqual([
+      "coinmarketcap",
+      "dexscreener-exact",
+      "dexscreener-search",
+      "jupiter",
+    ]);
+
+    for (const entry of fallbackEntries) {
+      expect(entry.canBeDepegAuthoritative, entry.key).toBe(false);
+      expect(entry.canSingleSourceDepegAuthoritative, entry.key).toBe(false);
+      expect(hasDepegAuthoritativeSource([entry.key]), entry.key).toBe(false);
+    }
   });
 });

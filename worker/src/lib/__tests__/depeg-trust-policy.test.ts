@@ -44,6 +44,16 @@ describe("classifyPrimaryDepegTrust", () => {
       agreeSources: ["pyth"],
     }, nowSec)).toBe("confirm_required");
   });
+
+  it("requires confirmation for composite soft-source agreement labels", () => {
+    expect(classifyPrimaryDepegTrust({
+      price: 0.999,
+      priceSource: "coingecko+geckoterminal",
+      priceConfidence: "high",
+      priceObservedAt: nowSec - 60,
+      agreeSources: ["coingecko+geckoterminal"],
+    }, nowSec)).toBe("confirm_required");
+  });
 });
 
 describe("hasFreshMultiSourcePrimaryAgreement", () => {
@@ -136,7 +146,8 @@ describe("depeg confirmation source families", () => {
     expect(resolveDepegSourceFamily("cg-ticker")).toBe("coingecko");
     expect(resolveDepegSourceFamily("defillama-list")).toBe("defillama");
     expect(resolveDepegSourceFamily("defillama-contract")).toBe("defillama");
-    expect(resolveDepegSourceFamily("balancer-dex")).toBe("dex");
+    expect(resolveDepegSourceFamily("balancer-dex")).toBe("dex:balancer");
+    expect(resolveDepegSourceFamily("coingecko+geckoterminal")).toBe("coingecko+dex:geckoterminal");
   });
 
   it.each([
@@ -153,5 +164,12 @@ describe("depeg confirmation source families", () => {
       priceSource: "pyth",
       agreeSources: ["defillama-list", "coingecko"],
     })].sort()).toEqual(["coingecko", "defillama"]);
+  });
+
+  it("expands composite agreeSources before choosing off-chain confirmation family", () => {
+    expect(chooseIndependentOffchainDepegConfirmer({
+      priceSource: "pyth",
+      agreeSources: ["coingecko+geckoterminal"],
+    })).toBe("defillama-confirm");
   });
 });

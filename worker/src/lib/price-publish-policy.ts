@@ -2,7 +2,7 @@ import {
   getPricingSourceRegistryEntry,
   isPricingSourceSoftGuardrailExempt,
 } from "@shared/lib/pricing-source-registry";
-import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
+import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationDecision, type PriceValidationReferences } from "./price-validation";
 import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO, hasDepegAuthoritativeSource } from "./pricing-source-policy";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
@@ -49,15 +49,19 @@ export interface PriceAssetPublicationLike {
   candidatePrices?: Record<string, number>;
 }
 
+function isFallbackOnlyPublicationSource(source: string | null | undefined): boolean {
+  if (!source) return false;
+  if (source === "dexscreener") return true;
+  const parts = normalizePricingSourceKeys(source);
+  return parts.length > 0 && parts.every((part) => {
+    if (part === "coingecko-native-implied" || part === "defillama-contract") return true;
+    const trustTier = getPricingSourceRegistryEntry(part)?.trustTier;
+    return trustTier === "fallback_search" || trustTier === "cached_replay";
+  });
+}
+
 function priceValidationModeForAsset(asset: PriceAssetPublicationLike): "primary_authoritative" | "fallback_enrichment" {
-  return asset.priceConfidence === "fallback" ||
-    asset.priceSource === "coingecko-native-implied" ||
-    asset.priceSource === "defillama-contract" ||
-    asset.priceSource === "coinmarketcap" ||
-    asset.priceSource === "dexscreener" ||
-    asset.priceSource === "dexscreener-exact" ||
-    asset.priceSource === "dexscreener-search" ||
-    asset.priceSource === "cached"
+  return asset.priceConfidence === "fallback" || isFallbackOnlyPublicationSource(asset.priceSource)
     ? "fallback_enrichment"
     : "primary_authoritative";
 }
@@ -70,41 +74,11 @@ function sourceLineageFamily(source: string): string | null {
   const entry = getPricingSourceRegistryEntry(source);
   if (!entry) return null;
 
-  if (
-    source === "coingecko" ||
-    source === "coingecko-native-implied" ||
-    source === "coingecko-mirror" ||
-    source === "coingecko-low-volume" ||
-    source === "cg-ticker"
-  ) {
-    return "coingecko";
-  }
-  if (source === "defillama" || source === "defillama-list" || source === "defillama-contract") {
-    return "defillama";
-  }
-  if (source === "protocol-redeem") {
-    return "protocol:redeem";
-  }
-  if (source === "curve-onchain" || source === "curve-oracle") {
-    return "protocol:curve";
-  }
-  if (source === "dex-promoted") {
-    return "dex:aggregate";
-  }
-  if (source.endsWith("-dex")) {
-    return `dex:${source.replace(/-dex$/, "")}`;
-  }
-  if (entry.trustTier === "hard_market") {
-    return `cex:${source}`;
-  }
-  if (entry.trustTier === "hard_oracle") {
-    return `oracle:${source}`;
-  }
-  return source;
+  return entry.depegSourceFamily;
 }
 
 function sourceParts(source: string | null | undefined): string[] {
-  return source ? splitCompositePriceSource(source) : [];
+  return normalizePricingSourceKeys(source);
 }
 
 function countIndependentSevereSourceFamilies(sources: string[]): {
@@ -115,7 +89,7 @@ function countIndependentSevereSourceFamilies(sources: string[]): {
   let sawSource = false;
   let allListAggregators = true;
 
-  for (const source of sources) {
+  for (const source of normalizePricingSourceKeys(sources)) {
     const entry = getPricingSourceRegistryEntry(source);
     const family = sourceLineageFamily(source);
     if (!entry || !family) continue;

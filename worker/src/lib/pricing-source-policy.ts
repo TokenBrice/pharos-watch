@@ -1,4 +1,4 @@
-import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
+import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import type { PriceObservedAtMode } from "@shared/types/core";
 import {
   getPricingSourceRegistryEntry,
@@ -7,7 +7,11 @@ import {
 export const FIXED_PEG_SEVERE_DOWNSIDE_RATIO = 0.5;
 
 export function isPoolChallengeEligibleConsensus(sources: string[]): boolean {
-  return sources.length > 0 && sources.every((source) => !getPricingSourceRegistryEntry(source)?.isPoolChallengeExempt);
+  const sourceParts = normalizePricingSourceKeys(sources);
+  return sourceParts.length > 0 && sourceParts.every((source) => {
+    const entry = getPricingSourceRegistryEntry(source);
+    return entry != null && !entry.isPoolChallengeExempt;
+  });
 }
 
 export function isGtProbeEligibleSingleSource(source: string): boolean {
@@ -16,14 +20,15 @@ export function isGtProbeEligibleSingleSource(source: string): boolean {
 
 export function isReplaySafePriceSource(source: string | null | undefined): boolean {
   if (!source) return false;
-  return splitCompositePriceSource(source).every((part) => getPricingSourceRegistryEntry(part)?.isReplaySafe ?? false);
+  const sourceParts = normalizePricingSourceKeys(source);
+  return sourceParts.length > 0 && sourceParts.every((part) => getPricingSourceRegistryEntry(part)?.isReplaySafe ?? false);
 }
 
 /** Returns the per-source max trusted age (seconds), or the composite cap when the source has no per-source window. */
 export function getPriceCacheMaxAgeSec(source: string | null | undefined, compositeCapSec: number): number {
   if (!source) return compositeCapSec;
   let maxAgeSec = compositeCapSec;
-  for (const part of splitCompositePriceSource(source)) {
+  for (const part of normalizePricingSourceKeys(source)) {
     const entry = getPricingSourceRegistryEntry(part);
     if (!entry?.isReplaySafe) {
       return 0;
@@ -38,17 +43,20 @@ export function getPriceCacheMaxAgeSec(source: string | null | undefined, compos
 
 export function hasDepegAuthoritativeSource(sources: string[] | null | undefined): boolean {
   if (!sources || sources.length === 0) return false;
-  return sources.some((source) => getPricingSourceRegistryEntry(source)?.canBeDepegAuthoritative ?? false);
+  return normalizePricingSourceKeys(sources)
+    .some((source) => getPricingSourceRegistryEntry(source)?.canBeDepegAuthoritative ?? false);
 }
 
 export function countDepegAuthoritativeSources(sources: string[] | null | undefined): number {
   if (!sources || sources.length === 0) return 0;
-  return sources.filter((source) => getPricingSourceRegistryEntry(source)?.canBeDepegAuthoritative ?? false).length;
+  return [...new Set(normalizePricingSourceKeys(sources))]
+    .filter((source) => getPricingSourceRegistryEntry(source)?.canBeDepegAuthoritative ?? false)
+    .length;
 }
 
 export function hasUpstreamCapableDepegAuthoritativeSource(sources: string[] | null | undefined): boolean {
   if (!sources || sources.length === 0) return false;
-  return sources.some((source) => {
+  return normalizePricingSourceKeys(sources).some((source) => {
     const entry = getPricingSourceRegistryEntry(source);
     return !!entry?.canBeDepegAuthoritative && !!entry.supportsUpstreamObservedAt;
   });
@@ -59,7 +67,9 @@ export function isSingleSourceDepegAuthoritative(
   observedAtMode: PriceObservedAtMode | null | undefined,
 ): boolean {
   if (!source) return false;
-  const entry = getPricingSourceRegistryEntry(source);
+  const sourceParts = normalizePricingSourceKeys(source);
+  if (sourceParts.length !== 1) return false;
+  const entry = getPricingSourceRegistryEntry(sourceParts[0]);
   if (!entry?.canSingleSourceDepegAuthoritative) {
     return false;
   }

@@ -1,4 +1,5 @@
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
 import {
   buildPriceValidationContext,
@@ -24,8 +25,9 @@ export function applyListAggregatorDowngrade(
 ): void {
   for (const result of results.values()) {
     if (result.confidence !== "high") continue;
-    if (result.agreeSources.length !== 2) continue;
-    const allListAggregator = result.agreeSources.every(
+    const agreeSources = normalizePricingSourceKeys(result.agreeSources);
+    if (agreeSources.length !== 2) continue;
+    const allListAggregator = agreeSources.every(
       (source) => getPricingSourceRegistryEntry(source)?.isListAggregator === true,
     );
     if (!allListAggregator) continue;
