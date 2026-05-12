@@ -14,6 +14,8 @@ import { buildBrowserHeaders } from "./request";
 
 interface ReservoirBalanceItem {
   label: string;
+  description?: string;
+  iconPath?: string;
   totalBalanceValue: string;
 }
 
@@ -25,7 +27,7 @@ export interface ReservoirReservesResponse {
   equity: string;
 }
 
-type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "gho" | "usdt" | "usdc" | "rusd";
+type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "ausd" | "gho" | "usdt" | "usdc" | "rusd";
 
 const RESERVOIR_BROWSER_HEADERS = buildBrowserHeaders(
   "https://app.reservoir.xyz",
@@ -40,10 +42,19 @@ const RESERVOIR_STABLE_BUCKET_KEYS: readonly ReservoirBucketKey[] = [
   "usd1",
   "pyusd",
   "rlusd",
+  "ausd",
   "gho",
   "usdt",
   "usdc",
 ];
+
+function searchableReservoirText(item: ReservoirBalanceItem): string {
+  return [
+    item.label,
+    item.description ?? "",
+    item.iconPath ?? "",
+  ].join(" ");
+}
 
 // Word-boundary regex rules are single-token exclusive; for multi-token
 // labels (e.g. "PYUSD/USDC") the first matching rule wins, so wrappers
@@ -72,6 +83,13 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     match: (item) => /\bRLUSD\b/.test(item.label),
   },
   {
+    key: "ausd",
+    name: "AUSD lending markets",
+    risk: "medium",
+    ...wrapperAssetMeta("ausd"),
+    match: (item) => /\bAUSD\b/.test(searchableReservoirText(item)),
+  },
+  {
     key: "gho",
     name: "GHO lending markets",
     risk: "medium",
@@ -95,7 +113,9 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     ...wrapperAssetMeta("usdc"),
     // USDC standalone only; other stablecoins that contain "USD" (USD1/USDT/etc)
     // match their own rules first.
-    match: (item) => /\bUSDC\b/.test(item.label),
+    match: (item) =>
+      /\bUSDC\b/.test(searchableReservoirText(item))
+      || /\bSteakhouse Prime Instant\b/i.test(item.label),
   },
   {
     key: "rusd",

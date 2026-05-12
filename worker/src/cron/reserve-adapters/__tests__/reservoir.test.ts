@@ -35,6 +35,36 @@ describe("adaptReservoirReserves", () => {
     expect(unknownExposurePct).toBe(0);
   });
 
+  it("classifies current Reservoir AUSD and Steakhouse Prime strategy rows", () => {
+    const { slices, unknownExposurePct, immediateRedeemableUsd } = adaptReservoirReserves({
+      assets: [
+        {
+          label: "Morpho - Grove x Steakhouse High Yield AUSD",
+          description: "The Steakhouse High Yield AUSD vault lends AUSD against approved collateral.",
+          iconPath: "/ausd.svg",
+          totalBalanceValue: "60",
+        },
+        {
+          label: "Morpho - Steakhouse Prime Instant V2 Adapter",
+          description: "Steakhouse Prime Instant vault aims to optimize yields by lending USDC.",
+          iconPath: "/USDC.svg",
+          totalBalanceValue: "40",
+        },
+      ],
+      liabilities: [],
+      totalAssets: "100",
+      totalLiabilities: "95",
+      equity: "5",
+    });
+
+    expect(slices).toEqual([
+      { name: "AUSD lending markets", pct: 60, risk: "medium", coinId: "ausd-agora", depType: "wrapper" },
+      { name: "USDC positions", pct: 40, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
+    ]);
+    expect(immediateRedeemableUsd).toBe(100);
+    expect(unknownExposurePct).toBe(0);
+  });
+
   it("returns empty slices for zero total assets", () => {
     const { slices } = adaptReservoirReserves({
       assets: [],

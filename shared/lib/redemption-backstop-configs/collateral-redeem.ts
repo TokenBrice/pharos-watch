@@ -153,6 +153,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "ussd-sonic-labs": {
     ...collateralRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
     outputAssetType: "stable-single",
     costModel: fixedFee(0, "Zero minting and redemption fees per Sonic Labs documentation"),
   },
@@ -194,10 +195,42 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "usdp-parallel": {
     ...collateralRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
     outputAssetType: "mixed-collateral",
     costModel: documentedVariableFee(
       "Parallelizer module: dynamic minting/burning fees adjust to correct peg deviations; depeg penalty applied proportionally",
     ),
+  },
+  "hyusd-hylo": {
+    ...collateralRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    outputAssetType: "bluechip-collateral",
+    costModel: documentedVariableFee(
+      "Hylo docs describe hyUSD burns/redemptions against the SOL LST collateral pool through protocol pricing; public materials reviewed do not publish one fixed redemption fee",
+    ),
+    docs: [
+      sourceRef("Hylo hyUSD and xSOL", "https://docs.hylo.so/protocol-overview/hyUSD-%26-xSOL", ["route", "capacity", "fees"]),
+      sourceRef("Hylo risk management", "https://docs.hylo.so/protocol-overview/risk-management", ["capacity", "settlement", "access"]),
+    ],
+    notes: [
+      "Hylo is modeled as protocol collateral redemption into SOL LST-backed value, with xSOL absorbing reserve volatility before hyUSD holders.",
+    ],
+  },
+  "fusd-freedom-dollar": {
+    ...collateralRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    executionModel: "rules-based-nav",
+    outputAssetType: "bluechip-collateral",
+    costModel: documentedVariableFee(
+      "Freedom Dollar materials describe protocol conversion between fUSD and ZANO at the target dollar value; public materials reviewed do not publish one fixed redemption fee",
+    ),
+    docs: [
+      sourceRef("Freedom Dollar overview", "https://www.freedomdollar.com/en", ["route", "capacity", "access"]),
+      sourceRef("Freedom Dollar mechanics", "https://www.freedomdollar.com/how-it-works", ["route", "capacity", "fees", "settlement"]),
+    ],
+    notes: [
+      "Freedom Dollar is modeled as decentralized protocol conversion into ZANO reserve value rather than issuer fiat redemption.",
+    ],
   },
   "satusd-river": {
     ...collateralRedeemBase,

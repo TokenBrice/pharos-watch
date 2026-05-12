@@ -75,7 +75,6 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "veur-vnx",
       "vchf-vnx",
       "vgbp-vnx",
-      "zarp-zarp",
       "audd-novatti",
       "axcnh-anchorx",
       "mnee-mnee",
@@ -90,7 +89,6 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "usyc-hashnote",
       "ustb-superstate",
       "tbill-openeden",
-      "cetes-etherfuse",
       "usdn-noble",
       "reur-royal-euro",
       "kgst-kyrgyz-som",
@@ -100,6 +98,13 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "wars-argentine-peso",
     ],
     issuerBase,
+  ),
+  ...expandIds(
+    ["zarp-zarp", "cetes-etherfuse"],
+    {
+      ...issuerBase,
+      ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
+    },
   ),
   ...expandIds(
     [
@@ -1424,10 +1429,12 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   ),
   "cgo-comtech": {
     ...commodityIssuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
     costModel: documentedVariableFee("Physical gold coins via ComTech Gold app; minimum 10 grams in 1-gram multiples"),
   },
   "dgld-gold-token-sa": {
     ...commodityIssuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
     costModel: fixedFee(0, "No custody or transfer fees per Gold Token SA; minimum 1 gram"),
   },
   "wusd-worldwide": {

@@ -1,6 +1,7 @@
 import type { ReserveSlice } from "@shared/types/core";
 
 type WrapperAssetKey =
+  | "ausd"
   | "gho"
   | "pyusd"
   | "rlusd"
@@ -12,6 +13,7 @@ const WRAPPER_ASSET_META: Record<WrapperAssetKey, {
   coinId: string;
   depType: ReserveSlice["depType"];
 }> = {
+  ausd: { coinId: "ausd-agora", depType: "wrapper" },
   gho: { coinId: "gho-aave", depType: "wrapper" },
   pyusd: { coinId: "pyusd-paypal", depType: "wrapper" },
   rlusd: { coinId: "rlusd-ripple", depType: "wrapper" },

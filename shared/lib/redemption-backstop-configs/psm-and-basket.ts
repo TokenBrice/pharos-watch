@@ -213,6 +213,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "dusd-alto": {
     ...psmSwapBase,
+    ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
     costModel: fixedFee(
       20,
       "Alto docs describe a 0.20% (20 bps) fee on both PSM swap directions; PSM capacity is capped at 5M USDC which currently exceeds total DUSD supply",

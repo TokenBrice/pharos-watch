@@ -1,9 +1,26 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.996",
+  currentVersion: "3.997",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.997",
+      title: "Redemption coverage expansion and documented-bound upgrades",
+      date: "2026-05-12",
+      effectiveAt: 1778594400,
+      summary:
+        "Reviewed redemption coverage expands across issuer rails, NAV wrappers, queue exits, PSM routes, collateral redemptions, and protocol conversions, while older reviewed routes with explicit terms are promoted from heuristic to documented-bound capacity.",
+      impact: [
+        "BENJI, WTGXX, VBILL, JTRSY, USTBL, EUTBL, bIB01, bC3M, CADD, MYRC, KRWQ, and SOFID now carry source-reviewed offchain issuer or platform redemption routes",
+        "stUSDS, stcUSD, sBOLD, msY, yUSD, sAID, and ZYS now carry source-reviewed wrapper, vault, or protocol-conversion routes",
+        "ACRED, bUSD0, IST, uUSD, ZSD, hyUSD, and fUSD now carry source-reviewed queued, PSM, collateral, or protocol-conversion routes",
+        "ZARP, CETES, CGO, DGLD, DUSD Alto, USSD, and USDP move from low-confidence heuristic capacity into documented-bound coverage based on reviewed public route terms",
+        "Coverage rises to 264 configured redemption routes, with route-family totals now at 124 offchain-issuer, 57 stablecoin-redeem, 32 collateral-redeem, 34 queue-redeem, 10 psm-swap, and 7 basket-redeem",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.996",
       title: "Stablecoin audit route coverage expansion",
