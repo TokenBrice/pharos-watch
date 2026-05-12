@@ -14,7 +14,7 @@ describe("handleBlacklistSummary", () => {
         ],
       },
       {
-        match: "WITH ranked AS",
+        match: "latest_event_type",
         rows: [
           makeBlacklistRow({
             id: "bl-usdt",
@@ -149,7 +149,7 @@ describe("handleBlacklistSummary", () => {
         ],
       },
       {
-        match: "WITH ranked AS",
+        match: "latest_event_type",
         rows: [
           // Latest-per-(stablecoin,chain,address) after unblacklist is 'unblacklist'.
           makeBlacklistRow({
@@ -216,7 +216,7 @@ describe("handleBlacklistSummary", () => {
   it("scopes recoverableGapCount to recoverable blacklist and destroy amount gaps", async () => {
     const db = mockD1([
       { match: "GROUP BY stablecoin, event_type", rows: [] },
-      { match: "WITH ranked AS", rows: [] },
+      { match: "latest_event_type", rows: [] },
       {
         match: "COUNT(*) AS total",
         rows: [],
@@ -272,7 +272,7 @@ describe("handleBlacklistSummary", () => {
     const latestEventTs = now - 7200;
     const db = mockD1([
       { match: "GROUP BY stablecoin, event_type", rows: [] },
-      { match: "WITH ranked AS", rows: [] },
+      { match: "latest_event_type", rows: [] },
       {
         match: "COUNT(*) AS total",
         rows: [],
@@ -295,7 +295,7 @@ describe("handleBlacklistSummary", () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
       { match: "GROUP BY stablecoin, event_type", rows: [] },
-      { match: "WITH ranked AS", rows: [] },
+      { match: "latest_event_type", rows: [] },
       {
         match: "COUNT(*) AS total",
         rows: [],
@@ -362,7 +362,7 @@ describe("handleBlacklistSummary", () => {
     // corpora. Mirror that here with zero-count aggregates.
     const db = mockD1([
       { match: "GROUP BY stablecoin, event_type", rows: [] },
-      { match: "WITH ranked AS", rows: [] },
+      { match: "latest_event_type", rows: [] },
       {
         match: "COUNT(*) AS total",
         rows: [],
@@ -406,9 +406,9 @@ describe("handleBlacklistSummary", () => {
         ],
       },
       {
-        match: "WITH ranked AS",
-        // ROW_NUMBER over (coin, chain, LOWER(address)) returns the latest-event-
-        // per-address. 0xa's latest is unblacklist; 0xb's latest is blacklist.
+        match: "latest_event_type",
+        // Latest-per-event-type rows contain enough history to derive the
+        // latest event per address. 0xa's latest is unblacklist; 0xb's latest is blacklist.
         rows: [
           makeBlacklistRow({
             id: "bl-a-u",
@@ -454,24 +454,6 @@ describe("handleBlacklistSummary", () => {
         rows: [
           { stablecoin: "USDT", event_type: "blacklist", n: 1, usd_sum: 100 },
           { stablecoin: "USDT", event_type: "destroy", n: 1, usd_sum: 100 },
-        ],
-      },
-      {
-        match: "WITH ranked AS",
-        rows: [
-          makeBlacklistRow({
-            id: "destroy-latest",
-            stablecoin: "USDT",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
-            event_type: "destroy",
-            address: "0xdestroyed",
-            amount_native: 100,
-            amount_usd_at_event: 100,
-            timestamp: destroyedAt,
-            config_key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
-            contract_address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-          }),
         ],
       },
       {
@@ -559,7 +541,7 @@ describe("handleBlacklistSummary", () => {
         ],
       },
       {
-        match: "WITH ranked AS",
+        match: "latest_event_type",
         rows: [
           makeBlacklistRow({
             id: "bl-usdt-d1",
@@ -621,7 +603,7 @@ describe("handleBlacklistSummary", () => {
           { stablecoin: "USDC", event_type: "blacklist", n: 3, usd_sum: 0 },
         ],
       },
-      { match: "WITH ranked AS", rows: [] },
+      { match: "latest_event_type", rows: [] },
       {
         match: "COUNT(*) AS total",
         rows: [],

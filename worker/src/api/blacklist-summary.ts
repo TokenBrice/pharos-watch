@@ -30,6 +30,7 @@ import {
 import { mapBlacklistEventRow, type BlacklistEventRow } from "../lib/blacklist-api";
 import {
   buildBlacklistActiveRecords,
+  buildBlacklistRecordIdentityKey,
   computeBlacklistActiveSummaryStats,
   computeBlacklistTrackedSummaryStats,
   type BlacklistCurrentBalanceSnapshot,
@@ -102,6 +103,27 @@ function sourceCategory(source: string): "bootstrap" | "current" | "destroy" | "
   if (source === "destroy_event") return "destroy";
   if (source === "current_balance") return "current";
   return "other";
+}
+
+function isLaterBlacklistEvent(candidate: BlacklistEvent, current: BlacklistEvent): boolean {
+  if (candidate.timestamp !== current.timestamp) {
+    return candidate.timestamp > current.timestamp;
+  }
+  return candidate.id.localeCompare(current.id) > 0;
+}
+
+function deriveLatestByIdentity(events: BlacklistEvent[]): BlacklistEvent[] {
+  const latest = new Map<string, BlacklistEvent>();
+
+  for (const event of events) {
+    const key = buildBlacklistRecordIdentityKey(event);
+    const current = latest.get(key);
+    if (!current || isLaterBlacklistEvent(event, current)) {
+      latest.set(key, event);
+    }
+  }
+
+  return [...latest.values()];
 }
 
 function buildFreezeLedgerMeta(
@@ -246,39 +268,6 @@ export const handleBlacklistSummary = withErrorHandler(
       )
       .all<{ stablecoin: string; quarter_sort_key: number; event_type: string; n: number }>();
 
-    // D1 supports SQLite >= 3.25 window functions (ROW_NUMBER OVER PARTITION BY).
-    // Latest event per contract/config-scoped identity drives net-frozen
-    // semantics. Legacy rows without config/contract stay address-scoped.
-    const latestByAddrResult = await db
-      .prepare(
-        `WITH ranked AS (
-           SELECT
-             id, stablecoin, chain_id, chain_name, event_type, address,
-             amount_native, amount_usd_at_event, amount_source, amount_status,
-             tx_hash, block_number, timestamp, methodology_version,
-             contract_address, config_key, event_signature, event_topic0,
-             suppression_reason, explorer_tx_url, explorer_address_url,
-             ROW_NUMBER() OVER (
-               PARTITION BY ${BLACKLIST_IDENTITY_PARTITION_SQL}
-               ORDER BY timestamp DESC, id DESC
-             ) AS rn
-           FROM blacklist_events
-           WHERE suppression_reason IS NULL
-         )
-         SELECT id, stablecoin, chain_id, chain_name, event_type, address,
-                amount_native, amount_usd_at_event, amount_source, amount_status,
-                tx_hash, block_number, timestamp, methodology_version,
-                contract_address, config_key, event_signature, event_topic0,
-                suppression_reason, explorer_tx_url, explorer_address_url
-         FROM ranked
-         WHERE rn = 1`,
-      )
-      .all<BlacklistEventRow>();
-
-    // Map snake_case -> camelCase so buildBlacklistActiveRecords (and
-    // buildBlacklistQuarterlyChartFromSnapshots) see a canonical BlacklistEvent.
-    const latestByAddr: BlacklistEvent[] = (latestByAddrResult.results ?? []).map(mapBlacklistEventRow);
-
     const activeHistoryResult = await db
       .prepare(
         `WITH latest_event_type AS (
@@ -308,6 +297,10 @@ export const handleBlacklistSummary = withErrorHandler(
       .all<BlacklistEventRow>();
 
     const activeHistory: BlacklistEvent[] = (activeHistoryResult.results ?? []).map(mapBlacklistEventRow);
+    // `activeHistory` contains the latest row for each identity and event
+    // type. The latest row across those event-type slices is the same net
+    // latest-per-identity view previously fetched with a separate window query.
+    const latestByAddr = deriveLatestByIdentity(activeHistory);
     const activeRecordEvents = activeHistory.length > 0 ? activeHistory : latestByAddr;
 
     // Preserve NET semantics: addresses whose LATEST action is still 'blacklist'.
