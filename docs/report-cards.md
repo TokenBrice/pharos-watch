@@ -6,12 +6,12 @@ The stablecoin registry currently contains 340 tracked metadata entries. Report-
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.21`
+- **Current methodology version:** `v7.22`
 - **Runtime/version source:** `shared/lib/safety-score-version-data.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
-## Overall Grade (v7.21)
+## Overall Grade (v7.22)
 
 Four-step computation:
 
@@ -22,7 +22,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.21 upgrades crvUSD reserve scoring to use direct ControllerFactory/LLAMMA on-chain reads. The previous v7.20 Dilutable sweep remains active: DAI, DOLA, FPI, PHT, USDD, USDe, USDN (SMARDEX), crvUSD, REUSD, USDU, and XAI join vCRED, LUAUSD, and srUSD as `Dilutable`; every Dilutable metadata override records a contract-source link and the UI exposes that source from the Dilutable status label.
+Current-version note: v7.22 adds independent NAV and wrapper reserve feeds for WTGXX, VBILL, ACRED, USTBL, EUTBL, JTRSY, USDCV, sUSDD, and sUSN. The previous v7.21 crvUSD reserve scoring upgrade remains active, using direct ControllerFactory/LLAMMA on-chain reads.
 
 ## Dimensions
 
