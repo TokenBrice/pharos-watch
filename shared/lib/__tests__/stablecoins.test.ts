@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DETAIL_PROVIDER_VALUES } from "../../types/core";
 import deadStablecoinAsset from "../../data/dead-stablecoins.json";
 import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
 import perCoinGeneratedAsset from "../../data/stablecoins/coins.generated.json";
@@ -19,6 +20,7 @@ import {
 } from "@shared/lib/stablecoins";
 import { getVariants, isTrackedVariant } from "@shared/lib/stablecoins";
 import {
+  findStablecoinCatalogInvariantIssues,
   parseCanonicalOrderAsset,
   parseDeadStablecoinAssets,
   parseStablecoinMetaAssets,
@@ -242,6 +244,34 @@ describe("tracked stablecoin metadata", () => {
         makeStablecoinAsset({ commodityOunces }),
       ], `commodity-${commodityOunces}.json`)).toThrowError(/commodityOunces/);
     }
+  });
+
+  it("validates detailProvider through the canonical metadata enum schema", () => {
+    for (const detailProvider of DETAIL_PROVIDER_VALUES) {
+      expect(parseStablecoinMetaAssets([
+        makeStablecoinAsset({ detailProvider }),
+      ], `detail-provider-${detailProvider}.json`)[0]?.detailProvider).toBe(detailProvider);
+    }
+
+    expect(() => parseStablecoinMetaAssets([
+      makeStablecoinAsset({ detailProvider: "coinmarketcap" }),
+    ], "detail-provider-broken.json")).toThrowError(/detailProvider/);
+  });
+
+  it("reports duplicate IDs and canonical-order drift through the shared invariant helper", () => {
+    expect(findStablecoinCatalogInvariantIssues({
+      canonicalOrder: ["alpha-usd", "alpha-usd", "ghost-usd"],
+      stablecoins: [
+        { id: "alpha-usd" },
+        { id: "alpha-usd" },
+        { id: "beta-usd" },
+      ],
+    })).toEqual({
+      duplicateStablecoinIds: ["alpha-usd"],
+      duplicateCanonicalOrderIds: ["alpha-usd"],
+      missingCanonicalOrderIds: ["beta-usd"],
+      unknownCanonicalOrderIds: ["ghost-usd"],
+    });
   });
 
   it("rejects malformed dead stablecoin assets with readable schema errors", () => {

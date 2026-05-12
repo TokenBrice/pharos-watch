@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { getFilterTags } from "../../lib/filter-tags";
-import { STABLECOIN_STATUS_VALUES, type StablecoinMeta } from "../core";
+import {
+  DETAIL_PROVIDER_VALUES,
+  DetailProviderSchema,
+  STABLECOIN_STATUS_VALUES,
+  type StablecoinMeta,
+} from "../core";
 
 function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
   return {
@@ -22,6 +27,14 @@ function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
 describe("STABLECOIN_STATUS_VALUES", () => {
   it("includes the three lifecycle phases", () => {
     expect(STABLECOIN_STATUS_VALUES).toEqual(["pre-launch", "active", "frozen"]);
+  });
+});
+
+describe("DETAIL_PROVIDER_VALUES", () => {
+  it("keeps the canonical detail provider enum and schema aligned", () => {
+    expect(DETAIL_PROVIDER_VALUES).toEqual(["defillama", "coingecko", "commodity"]);
+    expect(DetailProviderSchema.options).toEqual(DETAIL_PROVIDER_VALUES);
+    expect(DetailProviderSchema.safeParse("coinmarketcap").success).toBe(false);
   });
 });
 

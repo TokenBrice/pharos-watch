@@ -2,6 +2,8 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { dirname, resolve } from "node:path";
 import type { StablecoinMeta } from "../../shared/types";
 import {
+  findDuplicateStablecoinCatalogIds,
+  findStablecoinCatalogInvariantIssues,
   StablecoinMetaAssetArraySchema,
   StablecoinMetaAssetSchema,
 } from "../../shared/lib/stablecoins/schema";
@@ -142,9 +144,14 @@ export function loadGeneratedPerCoinCoins(rootDir = process.cwd()): StablecoinMe
 }
 
 export function findDuplicateStablecoinIds(entries: StablecoinSourceEntry[]): StablecoinDuplicateIdIssue[] {
+  const duplicateIds = new Set(findDuplicateStablecoinCatalogIds(entries));
   const byId = new Map<string, StablecoinSourceEntry[]>();
 
   for (const entry of entries) {
+    if (!duplicateIds.has(entry.id)) {
+      continue;
+    }
+
     const existing = byId.get(entry.id);
     if (existing) {
       existing.push(entry);
@@ -154,7 +161,6 @@ export function findDuplicateStablecoinIds(entries: StablecoinSourceEntry[]): St
   }
 
   return [...byId.values()]
-    .filter((group) => group.length > 1)
     .sort((a, b) => a[0]!.id.localeCompare(b[0]!.id))
     .map((group) => ({ entries: group, id: group[0]!.id }));
 }
@@ -209,29 +215,15 @@ export function findCanonicalOrderIssues(
   canonicalOrder: string[],
   entries: StablecoinSourceEntry[],
 ): CanonicalOrderIssues {
-  const duplicateCanonicalIds: string[] = [];
-  const seenCanonical = new Set<string>();
-
-  for (const id of canonicalOrder) {
-    if (seenCanonical.has(id)) {
-      duplicateCanonicalIds.push(id);
-      continue;
-    }
-    seenCanonical.add(id);
-  }
-
-  const knownIds = new Set(entries.map((entry) => entry.id));
-  const unknownIds = canonicalOrder.filter((id) => !knownIds.has(id));
-  const missingIds = [...new Set(
-    entries
-      .map((entry) => entry.id)
-      .filter((id) => !seenCanonical.has(id)),
-  )].sort((a, b) => a.localeCompare(b));
+  const issues = findStablecoinCatalogInvariantIssues({
+    canonicalOrder,
+    stablecoins: entries,
+  });
 
   return {
-    duplicateIds: [...new Set(duplicateCanonicalIds)].sort((a, b) => a.localeCompare(b)),
-    missingIds,
-    unknownIds: [...new Set(unknownIds)].sort((a, b) => a.localeCompare(b)),
+    duplicateIds: [...issues.duplicateCanonicalOrderIds].sort((a, b) => a.localeCompare(b)),
+    missingIds: [...issues.missingCanonicalOrderIds].sort((a, b) => a.localeCompare(b)),
+    unknownIds: [...issues.unknownCanonicalOrderIds].sort((a, b) => a.localeCompare(b)),
   };
 }
 

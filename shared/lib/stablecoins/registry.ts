@@ -2,6 +2,7 @@ import type { StablecoinMeta } from "../../types";
 import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
 import perCoinGeneratedAsset from "../../data/stablecoins/coins.generated.json";
 import {
+  findStablecoinCatalogInvariantIssues,
   parseCanonicalOrderAsset,
   parseStablecoinMetaAssets,
 } from "./schema";
@@ -17,12 +18,12 @@ const PER_COIN_SOURCE_COINS: StablecoinMeta[] = parseStablecoinMetaAssets(
   "shared/data/stablecoins/coins.generated.json",
 );
 
-const duplicateIdIssues = [...PER_COIN_SOURCE_COINS.reduce((counts, stablecoin) => {
-  counts.set(stablecoin.id, (counts.get(stablecoin.id) ?? 0) + 1);
-  return counts;
-}, new Map<string, number>()).entries()]
-  .filter(([, count]) => count > 1)
-  .map(([id]) => id)
+const catalogInvariantIssues = findStablecoinCatalogInvariantIssues({
+  canonicalOrder: CANONICAL_ORDER,
+  stablecoins: PER_COIN_SOURCE_COINS,
+});
+
+const duplicateIdIssues = [...catalogInvariantIssues.duplicateStablecoinIds]
   .sort((a, b) => a.localeCompare(b));
 
 if (duplicateIdIssues.length > 0) {
@@ -30,31 +31,25 @@ if (duplicateIdIssues.length > 0) {
 }
 
 const byId = new Map(PER_COIN_SOURCE_COINS.map((stablecoin) => [stablecoin.id, stablecoin]));
-const canonicalOrderSeen = new Set<string>();
-const duplicateCanonicalOrderIds: string[] = [];
-
-for (const id of CANONICAL_ORDER) {
-  if (canonicalOrderSeen.has(id)) {
-    duplicateCanonicalOrderIds.push(id);
-    continue;
-  }
-  canonicalOrderSeen.add(id);
-}
+const duplicateCanonicalOrderIds = catalogInvariantIssues.duplicateCanonicalOrderIds;
 
 if (duplicateCanonicalOrderIds.length > 0) {
   throw new Error(
-    `canonical-order.json contains duplicate stablecoin IDs: ${[...new Set(duplicateCanonicalOrderIds)].join(", ")}`,
+    `canonical-order.json contains duplicate stablecoin IDs: ${duplicateCanonicalOrderIds.join(", ")}`,
   );
 }
 
-const missingCanonicalOrderIds = PER_COIN_SOURCE_COINS
-  .map((stablecoin) => stablecoin.id)
-  .filter((id, index, ids) => ids.indexOf(id) === index && !canonicalOrderSeen.has(id));
+const missingCanonicalOrderIds = catalogInvariantIssues.missingCanonicalOrderIds;
 
 if (missingCanonicalOrderIds.length > 0) {
   throw new Error(
     `canonical-order.json is missing tracked stablecoin IDs: ${missingCanonicalOrderIds.join(", ")}`,
   );
+}
+
+const unknownCanonicalOrderId = catalogInvariantIssues.unknownCanonicalOrderIds[0];
+if (unknownCanonicalOrderId) {
+  throw new Error(`canonical-order.json references unknown stablecoin ID: ${unknownCanonicalOrderId}`);
 }
 
 /** Tracked stablecoins in canonical market-cap order. */

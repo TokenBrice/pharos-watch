@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { DeadStablecoin, StablecoinMeta } from "../../types";
 import { LiveReservesConfigSchema } from "../live-reserve-adapters";
 import {
+  DetailProviderSchema,
   PEG_CURRENCY_VALUES,
 } from "../../types/core";
 import { CAUSE_OF_DEATH_VALUES } from "../../types/market";
@@ -22,9 +23,73 @@ import {
   YieldConfigSchema,
 } from "../../types/stablecoin-meta-schemas";
 
-const DETAIL_PROVIDER_VALUES = ["defillama", "coingecko", "commodity"] as const;
-
 const CommodityOuncesSchema = z.number().finite().positive();
+
+export interface StablecoinCatalogIdEntry {
+  id: string;
+}
+
+export interface StablecoinCatalogInvariantIssues {
+  duplicateStablecoinIds: string[];
+  duplicateCanonicalOrderIds: string[];
+  missingCanonicalOrderIds: string[];
+  unknownCanonicalOrderIds: string[];
+}
+
+function uniqueInOrder(values: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const uniqueValues: string[] = [];
+
+  for (const value of values) {
+    if (seen.has(value)) {
+      continue;
+    }
+    seen.add(value);
+    uniqueValues.push(value);
+  }
+
+  return uniqueValues;
+}
+
+export function findDuplicateStablecoinCatalogIds(entries: readonly StablecoinCatalogIdEntry[]): string[] {
+  const seen = new Set<string>();
+  const duplicateIds: string[] = [];
+  const duplicateSeen = new Set<string>();
+
+  for (const entry of entries) {
+    if (seen.has(entry.id)) {
+      if (!duplicateSeen.has(entry.id)) {
+        duplicateIds.push(entry.id);
+        duplicateSeen.add(entry.id);
+      }
+      continue;
+    }
+
+    seen.add(entry.id);
+  }
+
+  return duplicateIds;
+}
+
+export function findStablecoinCatalogInvariantIssues({
+  canonicalOrder,
+  stablecoins,
+}: {
+  canonicalOrder: readonly string[];
+  stablecoins: readonly StablecoinCatalogIdEntry[];
+}): StablecoinCatalogInvariantIssues {
+  const canonicalOrderEntries = canonicalOrder.map((id) => ({ id }));
+  const stablecoinIds = stablecoins.map((stablecoin) => stablecoin.id);
+  const knownIds = new Set(stablecoinIds);
+  const canonicalIds = new Set(canonicalOrder);
+
+  return {
+    duplicateStablecoinIds: findDuplicateStablecoinCatalogIds(stablecoins),
+    duplicateCanonicalOrderIds: findDuplicateStablecoinCatalogIds(canonicalOrderEntries),
+    missingCanonicalOrderIds: uniqueInOrder(stablecoinIds.filter((id) => !canonicalIds.has(id))),
+    unknownCanonicalOrderIds: uniqueInOrder(canonicalOrder.filter((id) => !knownIds.has(id))),
+  };
+}
 
 function isSlugLikeId(value: string): boolean {
   if (!value) return false;
@@ -70,7 +135,7 @@ const obituarySchema = z.object({
 export const StablecoinMetaAssetSchema = z.object({
   id: StablecoinIdSchema,
   llamaId: z.string().optional(),
-  detailProvider: z.enum(DETAIL_PROVIDER_VALUES).optional(),
+  detailProvider: DetailProviderSchema.optional(),
   name: z.string(),
   symbol: z.string(),
   flags: StablecoinFlagsSchema,

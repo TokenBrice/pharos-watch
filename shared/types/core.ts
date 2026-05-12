@@ -230,6 +230,10 @@ export interface FeaturedContent {
 export const STABLECOIN_STATUS_VALUES = ["pre-launch", "active", "frozen"] as const;
 export type StablecoinStatus = (typeof STABLECOIN_STATUS_VALUES)[number];
 
+export const DETAIL_PROVIDER_VALUES = ["defillama", "coingecko", "commodity"] as const;
+export type DetailProvider = (typeof DETAIL_PROVIDER_VALUES)[number];
+export const DetailProviderSchema = z.enum(DETAIL_PROVIDER_VALUES);
+
 export interface StablecoinObituary {
   /** Cemetery cause-of-death enum, shared with `DeadStablecoin`. */
   causeOfDeath: CauseOfDeath;
@@ -248,7 +252,7 @@ export interface StablecoinObituary {
 export interface StablecoinMeta {
   id: string;
   llamaId?: string;
-  detailProvider?: "defillama" | "coingecko" | "commodity";
+  detailProvider?: DetailProvider;
   name: string;
   symbol: string;
   flags: StablecoinFlags;
