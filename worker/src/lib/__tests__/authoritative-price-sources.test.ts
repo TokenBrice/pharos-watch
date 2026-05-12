@@ -606,9 +606,7 @@ describe("authoritative-price-sources", () => {
 
   it("passes the CoinGecko API key through authoritative market-history replays", async () => {
     fetchMarketBackfillPriceSeriesMock.mockResolvedValue({
-      prices: [
-        { timestamp: 1_759_363_200, price: 1 },
-      ],
+      prices: [{ timestamp: 1_759_363_200, price: 1 }],
       diagnostics: {
         granularity: "hourly",
         sourcesUsed: ["coingecko"],
@@ -775,7 +773,7 @@ describe("authoritative-price-sources", () => {
 
   it("prices an ERC-4626 NAV vault from convertToAssets() x parent price", async () => {
     // convertToAssets(10^18 gtUSDC shares) -> 1_010_000 USDC (1.01 per share)
-    const oneShareUsdcRaw = (1_010_000n).toString(16).padStart(64, "0");
+    const oneShareUsdcRaw = 1_010_000n.toString(16).padStart(64, "0");
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneShareUsdcRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
 
@@ -824,6 +822,15 @@ describe("authoritative-price-sources", () => {
   it("prices audited ERC-4626 NAV vaults from their configured parent assets", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const cases = [
+      {
+        id: "susdt-spark",
+        parentId: "usdt-tether",
+        parentSymbol: "USDT",
+        vault: "0xe2e7a17dff93280dec073c995595155283e3c372",
+        chain: "ethereum",
+        outputRaw: 1_020_856n,
+        expectedRatio: 1.020856,
+      },
       {
         id: "susdc-spark",
         parentId: "usdc-circle",
@@ -921,7 +928,7 @@ describe("authoritative-price-sources", () => {
   });
 
   it("prices legacy Aave sGHO from previewRedeem() x tracked GHO price", async () => {
-    const oneGhoRaw = (1_000_000_000_000_000_000n).toString(16).padStart(64, "0");
+    const oneGhoRaw = 1_000_000_000_000_000_000n.toString(16).padStart(64, "0");
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneGhoRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
 
@@ -989,7 +996,7 @@ describe("authoritative-price-sources", () => {
 
   it("prices an Idle CDO senior tranche from virtualPrice() x parent USDC price", async () => {
     // virtualPrice returns 1_081_076 (= 1.081076 USDC per AA share, 6 decimals)
-    const virtualPriceRaw = (1_081_076n).toString(16).padStart(64, "0");
+    const virtualPriceRaw = 1_081_076n.toString(16).padStart(64, "0");
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${virtualPriceRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
 
@@ -1016,9 +1023,7 @@ describe("authoritative-price-sources", () => {
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
       "ethereum",
       "0x433d5b175148da32ffe1e1a37a939e1b7e79be4d",
-      expect.stringMatching(
-        new RegExp("^0x9290d427000000000000000000000000c26a6fa2c37b38e549a4a1807543801db684f99c$"),
-      ),
+      expect.stringMatching(new RegExp("^0x9290d427000000000000000000000000c26a6fa2c37b38e549a4a1807543801db684f99c$")),
       "latest",
       expect.any(Object),
     );
@@ -1034,7 +1039,7 @@ describe("authoritative-price-sources", () => {
 
   it("rejects ERC-4626 NAV override when convertToAssets ratio is outside trusted bounds", async () => {
     // convertToAssets returns 100x the share amount — should be rejected
-    const insaneRaw = (100_000_000n).toString(16).padStart(64, "0");
+    const insaneRaw = 100_000_000n.toString(16).padStart(64, "0");
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${insaneRaw}`);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const nowSec = Math.floor(Date.now() / 1000);

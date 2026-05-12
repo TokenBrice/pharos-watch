@@ -6,14 +6,8 @@ import type { DlListQuote } from "../../lib/primary-price-collector";
 import { createValidationContextResolver, type ValidationContextResolver } from "./pricing";
 import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
 import type { PriceValidationStats } from "./enrich-prices-primary-shared";
-import {
-  buildPrimaryPricePlan,
-  collectPrimaryProviderQuotes,
-} from "./enrich-prices-primary-provider-collection";
-import {
-  buildPrimaryConsensusResults,
-  logDexPriceSourceLoadTelemetry,
-} from "./enrich-prices-primary-consensus";
+import { buildPrimaryPricePlan, collectPrimaryProviderQuotes } from "./enrich-prices-primary-provider-collection";
+import { buildPrimaryConsensusResults, logDexPriceSourceLoadTelemetry } from "./enrich-prices-primary-consensus";
 import {
   applyListAggregatorDowngrade,
   applyPoolChallenge,
@@ -75,6 +69,7 @@ export async function fetchPrimaryPrices(
     signal,
     coingeckoApiKey,
     chainRpcs,
+    references,
   });
 
   buildPrimaryConsensusResults({

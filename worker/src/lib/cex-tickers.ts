@@ -30,20 +30,34 @@ const BINANCE_TICKER_URLS = [
   "https://api.binance.com/api/v3/ticker/price",
 ] as const;
 
-const BINANCE_PAIR_TO_SYMBOL = new Map<string, string>(BINANCE_MARKETS.map((market) => [market.pair, market.symbol]));
+const BINANCE_PAIR_TO_MARKET = new Map<string, (typeof BINANCE_MARKETS)[number]>(
+  BINANCE_MARKETS.map((market) => [market.pair, market]),
+);
 const KRAKEN_RESPONSE_KEY_TO_SYMBOL = new Map<string, string>(
   KRAKEN_MARKETS.flatMap((market) => market.responseKeys.map((key) => [key, market.symbol] as const)),
 );
 const BITSTAMP_PAIR_TO_SYMBOL = new Map<string, string>(BITSTAMP_MARKETS.map((market) => [market.pair, market.symbol]));
-const COINBASE_PRODUCT_TO_SYMBOL = new Map<string, string>(COINBASE_PRODUCTS.map((product) => [product.productId, product.symbol]));
+const COINBASE_PRODUCT_TO_SYMBOL = new Map<string, string>(
+  COINBASE_PRODUCTS.map((product) => [product.productId, product.symbol]),
+);
 
-export const BINANCE_KNOWN_SYMBOLS: readonly string[] = [...new Set(BINANCE_MARKETS.map((market) => market.symbol))].sort();
-export const KRAKEN_KNOWN_SYMBOLS: readonly string[] = [...new Set(KRAKEN_MARKETS.map((market) => market.symbol))].sort();
-export const BITSTAMP_KNOWN_SYMBOLS: readonly string[] = [...new Set(BITSTAMP_MARKETS.map((market) => market.symbol))].sort();
-export const COINBASE_KNOWN_SYMBOLS: readonly string[] = [...new Set(COINBASE_PRODUCTS.map((product) => product.symbol))].sort();
+export const BINANCE_KNOWN_SYMBOLS: readonly string[] = [
+  ...new Set(BINANCE_MARKETS.map((market) => market.symbol)),
+].sort();
+export const KRAKEN_KNOWN_SYMBOLS: readonly string[] = [
+  ...new Set(KRAKEN_MARKETS.map((market) => market.symbol)),
+].sort();
+export const BITSTAMP_KNOWN_SYMBOLS: readonly string[] = [
+  ...new Set(BITSTAMP_MARKETS.map((market) => market.symbol)),
+].sort();
+export const COINBASE_KNOWN_SYMBOLS: readonly string[] = [
+  ...new Set(COINBASE_PRODUCTS.map((product) => product.symbol)),
+].sort();
 
 function isBinanceProviderBlocked(diagnostics: readonly PricingProviderAttemptDiagnostic[]): boolean {
-  return diagnostics.length > 0 && diagnostics.every((diagnostic) => diagnostic.status === 403 || diagnostic.status === 451);
+  return (
+    diagnostics.length > 0 && diagnostics.every((diagnostic) => diagnostic.status === 403 || diagnostic.status === 451)
+  );
 }
 
 function parsePositiveNumber(value: string | number | null | undefined): number | null {
@@ -148,9 +162,7 @@ async function fetchBinanceTickerUrl(
     throwIfAborted(signal);
     try {
       const perRequestTimeout = AbortSignal.timeout(CEX_REQUEST_TIMEOUT_MS);
-      const combinedSignal = signal
-        ? AbortSignal.any([signal, perRequestTimeout])
-        : perRequestTimeout;
+      const combinedSignal = signal ? AbortSignal.any([signal, perRequestTimeout]) : perRequestTimeout;
       const response = await fetch(url, {
         signal: combinedSignal,
         headers: { Accept: "application/json", "User-Agent": USER_AGENT },
@@ -170,7 +182,7 @@ async function fetchBinanceTickerUrl(
         return { prices: results, diagnostic };
       }
 
-      const payload = await response.json() as unknown;
+      const payload = (await response.json()) as unknown;
       if (!Array.isArray(payload)) {
         diagnostic.errorClass = "invalid-shape";
         diagnostic.errorMessage = "Expected Binance ticker response to be an array";
@@ -178,12 +190,30 @@ async function fetchBinanceTickerUrl(
       }
 
       diagnostic.responseRowCount = payload.length;
+      const pendingStableQuoted: Array<{ symbol: string; quoteSymbol: string; quotePrice: number }> = [];
       for (const ticker of payload as Array<{ symbol?: string; price?: string }>) {
-        const symbol = ticker.symbol ? BINANCE_PAIR_TO_SYMBOL.get(ticker.symbol) : undefined;
+        const market = ticker.symbol ? BINANCE_PAIR_TO_MARKET.get(ticker.symbol) : undefined;
         const price = parsePositiveNumber(ticker.price);
-        if (symbol && price != null) {
-          results.set(symbol, price);
+        if (!market || price == null) continue;
+
+        if ("quoteSymbol" in market) {
+          pendingStableQuoted.push({
+            symbol: market.symbol,
+            quoteSymbol: market.quoteSymbol,
+            quotePrice: price,
+          });
+        } else {
+          results.set(market.symbol, price);
         }
+      }
+
+      for (const market of pendingStableQuoted) {
+        const quoteUsd = results.get(market.quoteSymbol);
+        if (quoteUsd == null) continue;
+
+        const convertedPrice = market.quotePrice * quoteUsd;
+        const existingPrice = results.get(market.symbol);
+        results.set(market.symbol, existingPrice == null ? convertedPrice : (existingPrice + convertedPrice) / 2);
       }
 
       diagnostic.matchedCount = results.size;
@@ -231,7 +261,8 @@ export async function fetchBinancePricesDetailed(
     return { kind: "no-data", value: { prices: emptyPrices, diagnostics } };
   }
   const firstError = diagnostics.find((d) => d.errorMessage) ?? diagnostics.find((d) => !d.ok);
-  const reason = firstError?.errorMessage ?? (firstError?.status != null ? `HTTP ${firstError.status}` : "all Binance hosts failed");
+  const reason =
+    firstError?.errorMessage ?? (firstError?.status != null ? `HTTP ${firstError.status}` : "all Binance hosts failed");
   return { kind: "upstream-error", value: { prices: emptyPrices, diagnostics }, reason };
 }
 
@@ -240,19 +271,16 @@ export async function fetchKrakenPrices(
   signal?: AbortSignal,
 ): Promise<FetcherOutcome<Map<string, number>>> {
   const results = new Map<string, number>();
-  const requestedPairs = KRAKEN_MARKETS
-    .filter((market) => symbols.includes(market.symbol))
-    .map((market) => market.requestPair);
+  const requestedPairs = KRAKEN_MARKETS.filter((market) => symbols.includes(market.symbol)).map(
+    (market) => market.requestPair,
+  );
   if (requestedPairs.length === 0) return { kind: "no-data", value: results };
 
   try {
     const { payload, transportOk } = await fetchCexJson<{
       error?: string[];
       result?: Record<string, { a?: string[]; b?: string[]; c?: string[] }>;
-    }>(
-      `https://api.kraken.com/0/public/Ticker?pair=${requestedPairs.join(",")}`,
-      signal,
-    );
+    }>(`https://api.kraken.com/0/public/Ticker?pair=${requestedPairs.join(",")}`, signal);
     if (!transportOk || !payload) {
       return { kind: "upstream-error", value: results, reason: "Kraken ticker HTTP error" };
     }
@@ -275,9 +303,7 @@ export async function fetchKrakenPrices(
     return { kind: "upstream-error", value: results, reason: errorMessageFor(err) };
   }
 
-  return results.size > 0
-    ? { kind: "ok", value: results }
-    : { kind: "no-data", value: results };
+  return results.size > 0 ? { kind: "ok", value: results } : { kind: "no-data", value: results };
 }
 
 export interface CexTickerBatch {
@@ -285,25 +311,22 @@ export interface CexTickerBatch {
   observedAtBySymbol: Map<string, number>;
 }
 
-export async function fetchBitstampPrices(
-  signal?: AbortSignal,
-): Promise<FetcherOutcome<CexTickerBatch>> {
+export async function fetchBitstampPrices(signal?: AbortSignal): Promise<FetcherOutcome<CexTickerBatch>> {
   const prices = new Map<string, number>();
   const observedAtBySymbol = new Map<string, number>();
   const value: CexTickerBatch = { prices, observedAtBySymbol };
 
   try {
-    const { payload: tickers, transportOk } = await fetchCexJson<Array<{
-      pair?: string;
-      market?: string;
-      bid?: string;
-      ask?: string;
-      last?: string;
-      timestamp?: string | number;
-    }>>(
-      "https://www.bitstamp.net/api/v2/ticker/",
-      signal,
-    );
+    const { payload: tickers, transportOk } = await fetchCexJson<
+      Array<{
+        pair?: string;
+        market?: string;
+        bid?: string;
+        ask?: string;
+        last?: string;
+        timestamp?: string | number;
+      }>
+    >("https://www.bitstamp.net/api/v2/ticker/", signal);
     if (!transportOk || !tickers) {
       return { kind: "upstream-error", value, reason: "Bitstamp ticker HTTP error" };
     }
@@ -327,9 +350,7 @@ export async function fetchBitstampPrices(
     return { kind: "upstream-error", value, reason: errorMessageFor(err) };
   }
 
-  return prices.size > 0
-    ? { kind: "ok", value }
-    : { kind: "no-data", value };
+  return prices.size > 0 ? { kind: "ok", value } : { kind: "no-data", value };
 }
 
 export async function fetchCoinbasePrices(
@@ -343,42 +364,44 @@ export async function fetchCoinbasePrices(
   let transportFailures = 0;
   let transportAttempts = 0;
 
-  await Promise.all(requestedProducts.map(async (product) => {
-    transportAttempts++;
-    try {
-      const response = await fetchWithRetry(
-        `${CEX_PROVIDER_AUDIT_CONFIG.coinbase.metadataUrl}/${product.productId}/ticker`,
-        {
-          signal,
-          headers: { Accept: "application/json", "User-Agent": USER_AGENT },
-        },
-        CEX_REQUEST_RETRIES,
-        { timeoutMs: CEX_REQUEST_TIMEOUT_MS },
-      );
-      if (!response?.ok) {
-        await cancelResponseBodyQuietly(response);
-        transportFailures++;
-        return;
-      }
-
-      const payload = await response.json() as { bid?: string; ask?: string; price?: string; time?: string };
-      const midpoint = midpointFromBidAsk(payload.bid, payload.ask);
-      const lastTrade = parsePositiveNumber(payload.price);
-      const price = midpoint ?? lastTrade;
-      if (price != null) {
-        const symbol = COINBASE_PRODUCT_TO_SYMBOL.get(product.productId) ?? product.symbol;
-        prices.set(symbol, price);
-        const observedAt = parseCoinbaseTime(payload.time);
-        if (observedAt != null) {
-          observedAtBySymbol.set(symbol, observedAt);
+  await Promise.all(
+    requestedProducts.map(async (product) => {
+      transportAttempts++;
+      try {
+        const response = await fetchWithRetry(
+          `${CEX_PROVIDER_AUDIT_CONFIG.coinbase.metadataUrl}/${product.productId}/ticker`,
+          {
+            signal,
+            headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+          },
+          CEX_REQUEST_RETRIES,
+          { timeoutMs: CEX_REQUEST_TIMEOUT_MS },
+        );
+        if (!response?.ok) {
+          await cancelResponseBodyQuietly(response);
+          transportFailures++;
+          return;
         }
+
+        const payload = (await response.json()) as { bid?: string; ask?: string; price?: string; time?: string };
+        const midpoint = midpointFromBidAsk(payload.bid, payload.ask);
+        const lastTrade = parsePositiveNumber(payload.price);
+        const price = midpoint ?? lastTrade;
+        if (price != null) {
+          const symbol = COINBASE_PRODUCT_TO_SYMBOL.get(product.productId) ?? product.symbol;
+          prices.set(symbol, price);
+          const observedAt = parseCoinbaseTime(payload.time);
+          if (observedAt != null) {
+            observedAtBySymbol.set(symbol, observedAt);
+          }
+        }
+      } catch (err) {
+        if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+        console.warn(`[cex-coinbase] ${product.productId} fetch failed:`, err);
+        transportFailures++;
       }
-    } catch (err) {
-      if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-      console.warn(`[cex-coinbase] ${product.productId} fetch failed:`, err);
-      transportFailures++;
-    }
-  }));
+    }),
+  );
 
   if (transportAttempts > 0 && transportFailures === transportAttempts) {
     return { kind: "upstream-error", value, reason: "all Coinbase product requests failed" };

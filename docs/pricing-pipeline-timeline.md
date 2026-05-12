@@ -1,6 +1,6 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.97` (2026-02-01 -> 2026-05-12).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.98` (2026-02-01 -> 2026-05-12).
 
 ---
 
@@ -8,6 +8,17 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 - Added a manual DIA exact-address probe for below-target source-depth rows; it records hit rate, freshness, source metadata, and agreement against Pharos prices without publishing prices or changing source-depth counts
 - DIA remains research-only pending false-positive review, capacity/circuit approval, and a separate methodology decision before any consensus or depeg-authority use
+
+---
+
+## v5.98 - Live-reserve NAV primary pricing (May 12, 2026)
+
+- Matched live-reserve NAV snapshots can now enter primary consensus as hard protocol price sources
+- `chainlink-nav` and `superstate-liquidity` read authoritative `reserve_composition` rows matched to `reserve_sync_state.last_success_at`
+- USD NAV rows publish directly, while non-USD NAV rows such as EUTBL convert through fresh/static FX references before entering USD consensus
+- `curve-dex` joins promoted DEX protocol lanes from `dex_prices.price_sources_json`
+- Binance `BFUSDUSDT` and `BFUSDUSDC` markets convert through tracked USDT/USDC USD pairs, with overlapping Binance-derived DEX aggregate promotion suppressed
+- `usyc-hashnote` and `ustb-superstate` now have verified Pyth feed metadata, and `syrupusdc-maple` includes Maple's verified Solana syrupUSDC mint for DEX discovery coverage
 
 ---
 

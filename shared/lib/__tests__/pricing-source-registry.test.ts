@@ -31,9 +31,12 @@ describe("pricing source registry", () => {
       "redstone",
       "curve-onchain",
       "curve-oracle",
+      "chainlink-nav",
+      "superstate-liquidity",
       "dex-promoted",
       "fluid-dex",
       "balancer-dex",
+      "curve-dex",
       "raydium-dex",
       "orca-dex",
       "meteora-dex",
@@ -80,6 +83,15 @@ describe("pricing source registry", () => {
       depegSourceFamily: "protocol:redeem",
       bypassesSoftValidationGuardrails: true,
       defaultObservedAtMode: "local_fetch",
+    });
+
+    expect(getPricingSourceRegistryEntry("chainlink-nav")).toMatchObject({
+      key: "chainlink-nav",
+      trustTier: "hard_protocol",
+      freshnessKind: "upstream",
+      requiresObservedAt: true,
+      depegSourceFamily: "protocol:chainlink-nav",
+      defaultWeight: 3,
     });
 
     expect(getPricingSourceRegistryEntry("zephyr-scanner")).toMatchObject({

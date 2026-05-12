@@ -27,6 +27,14 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     defaultWeight: 3,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
+    key: "curve-dex",
+    label: "Curve",
+    shortLabel: "Curve",
+    depegSourceFamily: "dex:curve",
+    maxTrustedAgeSec: 35 * 60,
+    defaultWeight: 3,
+  }),
+  definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
     key: "raydium-dex",
     label: "Raydium",
     shortLabel: "Raydium",

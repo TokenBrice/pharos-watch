@@ -1,6 +1,8 @@
 export const BINANCE_MARKETS = [
   { pair: "USDTUSD", symbol: "USDT" },
   { pair: "USDCUSD", symbol: "USDC" },
+  { pair: "BFUSDUSDT", symbol: "BFUSD", quoteSymbol: "USDT" },
+  { pair: "BFUSDUSDC", symbol: "BFUSD", quoteSymbol: "USDC" },
 ] as const;
 
 export const KRAKEN_MARKETS = [

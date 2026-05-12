@@ -27,7 +27,9 @@ import {
 import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../lib/curve-onchain";
 import { CURVE_POOL_CONFIGS } from "../../lib/curve-pool-configs";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import type { DlListQuote } from "../../lib/primary-price-collector";
+import type { PriceValidationReferences } from "../../lib/price-validation";
+import { normalizePegTypeFromCurrency } from "../../lib/price-validation";
+import type { DlListQuote, NavTelemetryQuote } from "../../lib/primary-price-collector";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { isUsableGeckoId } from "./enrich-prices-primary-shared";
 
@@ -39,6 +41,18 @@ const CRVUSD_PRICE_SELECTOR = "0xa035b1fe"; // price() — returns crvUSD price 
 
 export type PrimaryDexRows = Awaited<ReturnType<typeof loadDexPriceRows>>;
 export type PrimaryDexPriceSources = Awaited<ReturnType<typeof loadDexPriceSources>>;
+
+type NavTelemetryPriceSource = NavTelemetryQuote["source"];
+
+interface ReserveNavRow {
+  stablecoin_id: string;
+  fetched_at: number;
+  source: string;
+  metadata: string;
+  last_success_at: number | null;
+}
+
+const NAV_TELEMETRY_PRICE_SOURCES = new Set<NavTelemetryPriceSource>(["chainlink-nav", "superstate-liquidity"]);
 
 export interface PrimaryPricePlan {
   candidates: PeggedAsset[];
@@ -52,6 +66,7 @@ export interface PrimaryPricePlan {
   krakenSymbols: string[];
   shouldFetchBitstamp: boolean;
   redstoneSymbols: string[];
+  navPriceIds: string[];
   sourceAllowed: {
     cg: boolean;
     cgTicker: boolean;
@@ -87,6 +102,123 @@ export interface PrimaryConsensusQuoteMaps {
   curveObservedAtByCoinId: Map<string, number>;
   curveOraclePrice: number | null;
   curveOracleObservedAt: number | null;
+  navPrices: Map<string, NavTelemetryQuote>;
+}
+
+function isNavTelemetryPriceSource(value: string | null | undefined): value is NavTelemetryPriceSource {
+  return value != null && NAV_TELEMETRY_PRICE_SOURCES.has(value as NavTelemetryPriceSource);
+}
+
+function isNavTelemetryPriceEligible(
+  assetId: string,
+  metaById: Map<string, (typeof ACTIVE_STABLECOINS)[number]>,
+): boolean {
+  const adapter = metaById.get(assetId)?.liveReservesConfig?.adapter;
+  return isNavTelemetryPriceSource(adapter);
+}
+
+function parsePositiveFiniteNumber(value: unknown): number | null {
+  const numeric = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+function getMetadataRecord(value: string): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return typeof parsed === "object" && parsed != null && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveNavUsdRate(params: {
+  asset: PeggedAsset;
+  references?: PriceValidationReferences;
+  metaById: Map<string, (typeof ACTIVE_STABLECOINS)[number]>;
+}): number | null {
+  const meta = params.metaById.get(params.asset.id);
+  const pegType = normalizePegTypeFromCurrency(meta?.flags?.pegCurrency) ?? params.asset.pegType;
+  if (!pegType || pegType.includes("USD")) return 1;
+
+  const referenceType = params.references?.typeByPeg?.[pegType] ?? params.references?.type;
+  if (referenceType !== "fresh" && referenceType !== "static") return null;
+
+  const rate = params.references?.rates[pegType];
+  return typeof rate === "number" && Number.isFinite(rate) && rate > 0 ? rate : null;
+}
+
+async function loadReserveNavPriceQuotes(params: {
+  db: D1Database;
+  candidates: PeggedAsset[];
+  references?: PriceValidationReferences;
+  metaById?: Map<string, (typeof ACTIVE_STABLECOINS)[number]>;
+}): Promise<Map<string, NavTelemetryQuote>> {
+  const metaById = params.metaById ?? new Map(ACTIVE_STABLECOINS.map((meta) => [meta.id, meta]));
+  const eligibleIds = new Set(
+    params.candidates.filter((asset) => isNavTelemetryPriceEligible(asset.id, metaById)).map((asset) => asset.id),
+  );
+  if (eligibleIds.size === 0) return new Map();
+
+  try {
+    const rows = await params.db
+      .prepare(
+        `SELECT c.stablecoin_id, c.fetched_at, c.source, c.metadata, s.last_success_at
+           FROM reserve_composition c
+           JOIN reserve_sync_state s
+             ON s.stablecoin_id = c.stablecoin_id
+          WHERE c.source IN ('chainlink-nav', 'superstate-liquidity')
+            AND s.last_success_at = c.fetched_at`,
+      )
+      .all<ReserveNavRow>();
+
+    const assetById = new Map(params.candidates.map((asset) => [asset.id, asset]));
+    const quotes = new Map<string, NavTelemetryQuote>();
+    for (const row of rows.results ?? []) {
+      if (!eligibleIds.has(row.stablecoin_id)) continue;
+      if (row.last_success_at !== row.fetched_at) continue;
+      if (!isNavTelemetryPriceSource(row.source)) continue;
+
+      const asset = assetById.get(row.stablecoin_id);
+      if (!asset) continue;
+
+      const metadata = getMetadataRecord(row.metadata);
+      if (!metadata) continue;
+
+      const navPerToken = parsePositiveFiniteNumber(metadata.navPerToken);
+      const sourceTimestamp =
+        parsePositiveFiniteNumber(metadata.sourceTimestamp) ?? parsePositiveFiniteNumber(metadata.oracleUpdatedAt);
+      if (navPerToken == null || sourceTimestamp == null) continue;
+
+      const usdRate = resolveNavUsdRate({
+        asset,
+        references: params.references,
+        metaById,
+      });
+      if (usdRate == null) continue;
+
+      const price = navPerToken * usdRate;
+      if (!Number.isFinite(price) || price <= 0) continue;
+
+      quotes.set(row.stablecoin_id, {
+        source: row.source,
+        price,
+        observedAt: Math.floor(sourceTimestamp),
+        observedAtMode: "upstream",
+        metadata: {
+          reserveFetchedAt: row.fetched_at,
+          navPerToken,
+          navUsdRate: usdRate,
+        },
+      });
+    }
+    return quotes;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[primary-prices] Failed to load reserve NAV telemetry: ${msg}`);
+    return new Map();
+  }
 }
 
 async function runPrimaryProviderFetch(
@@ -127,7 +259,8 @@ export async function buildPrimaryPricePlan(
     const meta = metaById.get(asset.id);
     const symbolUpper = asset.symbol.toUpperCase();
     const hasValidGeckoId = isUsableGeckoId(asset.geckoId);
-    return hasValidGeckoId ||
+    return (
+      hasValidGeckoId ||
       (dlListPrices?.has(asset.id) ?? false) ||
       !!meta?.pythFeedId ||
       coinbaseKnownSet.has(symbolUpper) ||
@@ -135,8 +268,10 @@ export async function buildPrimaryPricePlan(
       bitstampKnownSet.has(symbolUpper) ||
       redstoneSymbolSet.has(asset.symbol) ||
       curveEligibleIds.has(asset.id) ||
+      isNavTelemetryPriceEligible(asset.id, metaById) ||
       dexRows.has(asset.id) ||
-      dexPriceSources.has(asset.id);
+      dexPriceSources.has(asset.id)
+    );
   });
 
   if (candidates.length === 0) {
@@ -152,6 +287,7 @@ export async function buildPrimaryPricePlan(
       krakenSymbols: [],
       shouldFetchBitstamp: false,
       redstoneSymbols: [],
+      navPriceIds: [],
       sourceAllowed: {
         cg: false,
         cgTicker: false,
@@ -205,11 +341,7 @@ export async function buildPrimaryPricePlan(
     console.warn("[primary-prices] All live primary fetch circuits are open; continuing with local DL/DEX inputs only");
   }
 
-  const geckoIds = [...new Set(
-    candidates
-      .map((asset) => asset.geckoId)
-      .filter(isUsableGeckoId),
-  )];
+  const geckoIds = [...new Set(candidates.map((asset) => asset.geckoId).filter(isUsableGeckoId))];
 
   const pythFeedIds = new Map<string, string>();
   for (const asset of candidates) {
@@ -223,9 +355,9 @@ export async function buildPrimaryPricePlan(
   const coinbaseSymbols = candidateSymbolsUpper.filter((symbol) => coinbaseKnownSet.has(symbol));
   const krakenSymbols = candidateSymbolsUpper.filter((symbol) => krakenKnownSet.has(symbol));
   const shouldFetchBitstamp = candidateSymbolsUpper.some((symbol) => bitstampKnownSet.has(symbol));
-  const redstoneSymbols = [...new Set(
-    candidates.map((asset) => asset.symbol).filter((symbol) => redstoneSymbolSet.has(symbol)),
-  )];
+  const redstoneSymbols = [
+    ...new Set(candidates.map((asset) => asset.symbol).filter((symbol) => redstoneSymbolSet.has(symbol))),
+  ];
 
   return {
     candidates,
@@ -239,6 +371,7 @@ export async function buildPrimaryPricePlan(
     krakenSymbols,
     shouldFetchBitstamp,
     redstoneSymbols,
+    navPriceIds: candidates.filter((asset) => isNavTelemetryPriceEligible(asset.id, metaById)).map((asset) => asset.id),
     sourceAllowed: {
       cg: cgAllowed,
       cgTicker: cgTickerAllowed,
@@ -260,11 +393,12 @@ export async function collectPrimaryProviderQuotes(params: {
   signal?: AbortSignal;
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  references?: PriceValidationReferences;
 }): Promise<{
   quoteMaps: PrimaryConsensusQuoteMaps;
   providerDiagnostics: PricingProviderAttemptDiagnostic[];
 }> {
-  const { plan, db, signal, coingeckoApiKey, chainRpcs } = params;
+  const { plan, db, signal, coingeckoApiKey, chainRpcs, references } = params;
   const {
     coinbaseSymbols,
     geckoIds,
@@ -272,6 +406,7 @@ export async function collectPrimaryProviderQuotes(params: {
     nowSec,
     pythFeedIds,
     redstoneSymbols,
+    navPriceIds,
     shouldFetchBitstamp,
     sourceAllowed,
   } = plan;
@@ -284,12 +419,16 @@ export async function collectPrimaryProviderQuotes(params: {
   const krakenPrices = new Map<string, number>();
   const bitstampPrices = new Map<string, number>();
   const coinbasePrices = new Map<string, number>();
-  const redstonePrices = new Map<string, { price: number; venueCount: number; venueAgreementPct: number; timestamp: number }>();
+  const redstonePrices = new Map<
+    string,
+    { price: number; venueCount: number; venueAgreementPct: number; timestamp: number }
+  >();
   const curvePrices = new Map<string, number>();
   const curveObservedAtByCoinId = new Map<string, number>();
   const cgTickerPrices = new Map<string, number>();
   const bitstampObservedAtBySymbol = new Map<string, number>();
   const coinbaseObservedAtBySymbol = new Map<string, number>();
+  const navPrices = new Map<string, NavTelemetryQuote>();
 
   let curveOraclePrice: number | null = null;
   let curveOracleObservedAt: number | null = null;
@@ -301,80 +440,72 @@ export async function collectPrimaryProviderQuotes(params: {
   const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
   const fetches: Promise<void>[] = [];
 
+  if (navPriceIds.length > 0) {
+    fetches.push(
+      (async () => {
+        const quotes = await loadReserveNavPriceQuotes({
+          db,
+          candidates: plan.candidates,
+          references,
+        });
+        for (const [coinId, quote] of quotes) {
+          navPrices.set(coinId, quote);
+        }
+      })(),
+    );
+  }
+
   if (sourceAllowed.cg) {
     fetches.push(
-      runPrimaryProviderFetch(
-        db,
-        signal,
-        CIRCUIT_SOURCE.CG_PRICES,
-        "CG price API",
-        async () => {
-          const outcome = await fetchCoingeckoSimplePrices(
-            geckoIds,
-            coingeckoApiKey ?? null,
-            signal,
-            nowSec,
-          );
-          for (const [geckoId, entry] of outcome.value) {
-            cgPrices.set(geckoId, entry.price);
-            if (entry.observedAt != null && entry.observedAtMode != null) {
-              cgObservedAtByGeckoId.set(geckoId, entry.observedAt);
-              cgObservedAtModeByGeckoId.set(geckoId, entry.observedAtMode);
-            }
+      runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.CG_PRICES, "CG price API", async () => {
+        const outcome = await fetchCoingeckoSimplePrices(geckoIds, coingeckoApiKey ?? null, signal, nowSec);
+        for (const [geckoId, entry] of outcome.value) {
+          cgPrices.set(geckoId, entry.price);
+          if (entry.observedAt != null && entry.observedAtMode != null) {
+            cgObservedAtByGeckoId.set(geckoId, entry.observedAt);
+            cgObservedAtModeByGeckoId.set(geckoId, entry.observedAtMode);
           }
-          if (outcome.value.size > 0) {
-            cgObservedAt = Math.floor(Date.now() / 1000);
-          }
-          return isSuccessfulOutcome(outcome);
-        },
-      ),
+        }
+        if (outcome.value.size > 0) {
+          cgObservedAt = Math.floor(Date.now() / 1000);
+        }
+        return isSuccessfulOutcome(outcome);
+      }),
     );
   }
 
   if (sourceAllowed.cgTicker && CG_TICKER_COINS.length > 0) {
     fetches.push(
-      runPrimaryProviderFetch(
-        db,
-        signal,
-        CIRCUIT_SOURCE.CG_TICKER,
-        "CG ticker API",
-        async () => {
-          const { prices, successfulResponses } = await fetchCgTickerPricesDetailed(
-            CG_TICKER_COINS,
-            coingeckoApiKey ?? null,
-            signal,
-          );
-          for (const [coinId, price] of prices) {
-            cgTickerPrices.set(coinId, price);
-          }
-          if (prices.size > 0) {
-            cgTickerObservedAt = Math.floor(Date.now() / 1000);
-          }
-          return successfulResponses > 0;
-        },
-      ),
+      runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.CG_TICKER, "CG ticker API", async () => {
+        const { prices, successfulResponses } = await fetchCgTickerPricesDetailed(
+          CG_TICKER_COINS,
+          coingeckoApiKey ?? null,
+          signal,
+        );
+        for (const [coinId, price] of prices) {
+          cgTickerPrices.set(coinId, price);
+        }
+        if (prices.size > 0) {
+          cgTickerObservedAt = Math.floor(Date.now() / 1000);
+        }
+        return successfulResponses > 0;
+      }),
     );
   }
 
   if (sourceAllowed.pyth && pythFeedIds.size > 0) {
     fetches.push(
-      runPrimaryProviderFetch(
-        db,
-        signal,
-        CIRCUIT_SOURCE.PYTH_PRICES,
-        "Pyth Hermes API",
-        async () => {
-          const outcome = await fetchPythPrices(pythFeedIds, signal);
-          for (const [coinId, result] of outcome.value) {
-            pythPrices.set(coinId, {
-              price: result.price,
-              confidenceBps: result.confidenceBps,
-              publishTime: result.publishTime,
-            });
-          }
-          return isSuccessfulOutcome(outcome);
-        },
-      ),
+      runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.PYTH_PRICES, "Pyth Hermes API", async () => {
+        const outcome = await fetchPythPrices(pythFeedIds, signal);
+        for (const [coinId, result] of outcome.value) {
+          pythPrices.set(coinId, {
+            price: result.price,
+            confidenceBps: result.confidenceBps,
+            publishTime: result.publishTime,
+          });
+        }
+        return isSuccessfulOutcome(outcome);
+      }),
     );
   }
 
@@ -453,24 +584,18 @@ export async function collectPrimaryProviderQuotes(params: {
 
   if (sourceAllowed.redstone && redstoneSymbols.length > 0) {
     fetches.push(
-      runPrimaryProviderFetch(
-        db,
-        signal,
-        CIRCUIT_SOURCE.REDSTONE_PRICES,
-        "RedStone API",
-        async () => {
-          const outcome = await fetchRedstonePrices(redstoneSymbols, signal);
-          for (const [symbol, result] of outcome.value) {
-            redstonePrices.set(symbol, {
-              price: result.price,
-              venueCount: result.venueCount,
-              venueAgreementPct: result.venueAgreementPct,
-              timestamp: result.timestamp,
-            });
-          }
-          return isSuccessfulOutcome(outcome);
-        },
-      ),
+      runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.REDSTONE_PRICES, "RedStone API", async () => {
+        const outcome = await fetchRedstonePrices(redstoneSymbols, signal);
+        for (const [symbol, result] of outcome.value) {
+          redstonePrices.set(symbol, {
+            price: result.price,
+            venueCount: result.venueCount,
+            venueAgreementPct: result.venueAgreementPct,
+            timestamp: result.timestamp,
+          });
+        }
+        return isSuccessfulOutcome(outcome);
+      }),
     );
   } else if (redstoneSymbols.length === 0) {
     fetches.push(recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.REDSTONE_PRICES));
@@ -478,22 +603,16 @@ export async function collectPrimaryProviderQuotes(params: {
 
   if (sourceAllowed.curve && CURVE_POOL_CONFIGS.length > 0) {
     fetches.push(
-      runPrimaryProviderFetch(
-        db,
-        signal,
-        CIRCUIT_SOURCE.CURVE_ONCHAIN,
-        "Curve on-chain",
-        async () => {
-          const outcome = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, signal, chainRpcs);
-          for (const [id, price] of outcome.value.prices) {
-            curvePrices.set(id, price);
-          }
-          for (const [id, observedAt] of outcome.value.observedAtByCoinId) {
-            curveObservedAtByCoinId.set(id, observedAt);
-          }
-          return isSuccessfulOutcome(outcome);
-        },
-      ),
+      runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.CURVE_ONCHAIN, "Curve on-chain", async () => {
+        const outcome = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, signal, chainRpcs);
+        for (const [id, price] of outcome.value.prices) {
+          curvePrices.set(id, price);
+        }
+        for (const [id, observedAt] of outcome.value.observedAtByCoinId) {
+          curveObservedAtByCoinId.set(id, observedAt);
+        }
+        return isSuccessfulOutcome(outcome);
+      }),
     );
   } else if (CURVE_POOL_CONFIGS.length === 0) {
     fetches.push(recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.CURVE_ONCHAIN));
@@ -501,27 +620,21 @@ export async function collectPrimaryProviderQuotes(params: {
 
   if (sourceAllowed.curveOracle) {
     fetches.push(
-      runPrimaryProviderFetch(
-        db,
-        signal,
-        CIRCUIT_SOURCE.CURVE_ORACLE,
-        "crvUSD oracle",
-        async () => {
-          const quote = await fetchCurveOracleEma(
-            "ethereum",
-            CRVUSD_PRICE_AGGREGATOR,
-            CRVUSD_PRICE_SELECTOR,
-            chainRpcs ?? new Map(),
-            signal,
-          );
-          if (!quote) return false;
-          const now = Math.floor(Date.now() / 1000);
-          if (now - quote.blockTimestamp > CURVE_ORACLE_MAX_STALENESS_SEC) return false;
-          curveOraclePrice = quote.price;
-          curveOracleObservedAt = quote.blockTimestamp;
-          return true;
-        },
-      ),
+      runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.CURVE_ORACLE, "crvUSD oracle", async () => {
+        const quote = await fetchCurveOracleEma(
+          "ethereum",
+          CRVUSD_PRICE_AGGREGATOR,
+          CRVUSD_PRICE_SELECTOR,
+          chainRpcs ?? new Map(),
+          signal,
+        );
+        if (!quote) return false;
+        const now = Math.floor(Date.now() / 1000);
+        if (now - quote.blockTimestamp > CURVE_ORACLE_MAX_STALENESS_SEC) return false;
+        curveOraclePrice = quote.price;
+        curveOracleObservedAt = quote.blockTimestamp;
+        return true;
+      }),
     );
   }
 
@@ -550,6 +663,7 @@ export async function collectPrimaryProviderQuotes(params: {
       curveObservedAtByCoinId,
       curveOraclePrice,
       curveOracleObservedAt,
+      navPrices,
     },
     providerDiagnostics,
   };

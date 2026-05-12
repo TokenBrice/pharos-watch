@@ -74,16 +74,8 @@ describe("buildPrimarySourceCandidates", () => {
       ],
     });
 
-    const {
-      sources,
-      hasPromotedDexProtocolSource,
-      dexCandidateTelemetry,
-      priceSourceConfidenceProfile,
-    } = buildPrimarySourceCandidates(
-      { id: "dusd-test", symbol: "DUSD" },
-      collected,
-      { nowSec: 1_700_000_030 },
-    );
+    const { sources, hasPromotedDexProtocolSource, dexCandidateTelemetry, priceSourceConfidenceProfile } =
+      buildPrimarySourceCandidates({ id: "dusd-test", symbol: "DUSD" }, collected, { nowSec: 1_700_000_030 });
 
     expect(hasPromotedDexProtocolSource).toBe(true);
     expect(sources.some((s) => s.source === "balancer-dex")).toBe(true);
@@ -99,6 +91,39 @@ describe("buildPrimarySourceCandidates", () => {
       freshestDexLaneAgeSec: 30,
       aggregateLaneOnly: false,
     });
+  });
+
+  it("accepts Curve as a promoted DEX protocol when a hard source agrees", () => {
+    const collected = makeCollected({
+      pythQuote: {
+        price: 1.096,
+        confidenceBps: 8,
+        publishTime: 1_700_000_000,
+      },
+      protocolSources: [
+        {
+          protocol: "curve",
+          price: 1.0959,
+          tvl: 60_000_000,
+          updatedAt: 1_700_000_000,
+          chain: "ethereum",
+        },
+      ],
+    });
+
+    const { sources, dexCandidateTelemetry } = buildPrimarySourceCandidates(
+      { id: "susds-sky", symbol: "sUSDS" },
+      collected,
+      { nowSec: 1_700_000_030 },
+    );
+
+    expect(sources.some((s) => s.source === "curve-dex")).toBe(true);
+    expect(dexCandidateTelemetry).toMatchObject([
+      {
+        sourceKey: "curve-dex",
+        status: "accepted",
+      },
+    ]);
   });
 
   it("records explicit exclusion reasons for unmapped and below-threshold DEX protocol candidates", () => {
@@ -168,17 +193,68 @@ describe("buildPrimarySourceCandidates", () => {
     });
   });
 
-  it("stamps Bitstamp source with observedAtMode=\"upstream\" when upstream observed-at is supplied", () => {
+  it("does not add aggregate DEX promotion when it overlaps an admitted Binance market source", () => {
+    const collected = makeCollected({
+      binancePrice: 0.9995,
+      binanceObservedAt: 1_700_000_000,
+      protocolSources: [
+        {
+          protocol: "binance",
+          price: 0.9995,
+          tvl: 8_000_000,
+          updatedAt: 1_700_000_000,
+          chain: "cex",
+        },
+      ],
+      dexAggregateQuote: {
+        dex_price_usd: 0.9995,
+        updated_at: 1_700_000_000,
+        source_pool_count: 2,
+        source_total_tvl: 8_000_000,
+      },
+    });
+
+    const { sources } = buildPrimarySourceCandidates({ id: "bfusd-binance", symbol: "BFUSD" }, collected, {
+      nowSec: 1_700_000_100,
+    });
+
+    expect(sources.map((source) => source.source)).toEqual(["binance"]);
+  });
+
+  it("admits fresh reserve NAV telemetry as a hard protocol source", () => {
+    const collected = makeCollected({
+      navQuote: {
+        source: "chainlink-nav",
+        price: 1.1248,
+        observedAt: 1_700_000_000,
+        observedAtMode: "upstream",
+      },
+    });
+
+    const { sources } = buildPrimarySourceCandidates({ id: "usyc-hashnote", symbol: "USYC" }, collected, {
+      nowSec: 1_700_000_100,
+    });
+
+    expect(sources).toMatchObject([
+      {
+        source: "chainlink-nav",
+        price: 1.1248,
+        observedAt: 1_700_000_000,
+        observedAtMode: "upstream",
+        weight: 3,
+      },
+    ]);
+  });
+
+  it('stamps Bitstamp source with observedAtMode="upstream" when upstream observed-at is supplied', () => {
     const collected = makeCollected({
       bitstampPrice: 0.9999,
       bitstampObservedAt: 1_776_439_395,
     });
 
-    const { sources } = buildPrimarySourceCandidates(
-      { id: "usdt-test", symbol: "USDT" },
-      collected,
-      { nowSec: 1_776_439_400 },
-    );
+    const { sources } = buildPrimarySourceCandidates({ id: "usdt-test", symbol: "USDT" }, collected, {
+      nowSec: 1_776_439_400,
+    });
 
     const bitstamp = sources.find((s) => s.source === "bitstamp");
     expect(bitstamp).toBeDefined();
@@ -186,17 +262,15 @@ describe("buildPrimarySourceCandidates", () => {
     expect(bitstamp?.observedAtMode).toBe("upstream");
   });
 
-  it("stamps Coinbase source with observedAtMode=\"upstream\" when upstream observed-at is supplied", () => {
+  it('stamps Coinbase source with observedAtMode="upstream" when upstream observed-at is supplied', () => {
     const collected = makeCollected({
       coinbasePrice: 0.9998,
       coinbaseObservedAt: 1_776_439_504,
     });
 
-    const { sources } = buildPrimarySourceCandidates(
-      { id: "usdt-test", symbol: "USDT" },
-      collected,
-      { nowSec: 1_776_439_510 },
-    );
+    const { sources } = buildPrimarySourceCandidates({ id: "usdt-test", symbol: "USDT" }, collected, {
+      nowSec: 1_776_439_510,
+    });
 
     const coinbase = sources.find((s) => s.source === "coinbase");
     expect(coinbase).toBeDefined();
@@ -212,11 +286,9 @@ describe("buildPrimarySourceCandidates", () => {
       coinbaseObservedAt: 1_776_438_050,
     });
 
-    const { sources } = buildPrimarySourceCandidates(
-      { id: "usdt-test", symbol: "USDT" },
-      collected,
-      { nowSec: 1_776_439_000 },
-    );
+    const { sources } = buildPrimarySourceCandidates({ id: "usdt-test", symbol: "USDT" }, collected, {
+      nowSec: 1_776_439_000,
+    });
 
     expect(sources.some((source) => source.source === "bitstamp")).toBe(false);
     expect(sources.some((source) => source.source === "coinbase")).toBe(false);

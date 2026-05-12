@@ -1,4 +1,8 @@
-import { getReferencePriceForContext, buildPriceValidationContext, type PriceValidationReferences } from "../../lib/price-validation";
+import {
+  getReferencePriceForContext,
+  buildPriceValidationContext,
+  type PriceValidationReferences,
+} from "../../lib/price-validation";
 import { isTrustedDexPriceRow } from "../../lib/depeg-trust-policy";
 import { computePriceConsensus } from "../../lib/price-consensus";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
@@ -36,12 +40,15 @@ export function buildPrimaryConsensusResults(params: {
   for (const asset of params.candidates) {
     const geckoId = isUsableGeckoId(asset.geckoId) ? asset.geckoId : null;
     const cgPrice = geckoId ? (params.quoteMaps.cgPrices.get(geckoId) ?? null) : null;
-    const cgObservedAtForAsset = geckoId && cgPrice != null
-      ? (params.quoteMaps.cgObservedAtByGeckoId.get(geckoId) ?? params.quoteMaps.cgObservedAt)
-      : null;
-    const cgObservedAtModeForAsset = geckoId && cgPrice != null
-      ? (params.quoteMaps.cgObservedAtModeByGeckoId.get(geckoId) ?? (params.quoteMaps.cgObservedAt != null ? "local_fetch" : null))
-      : null;
+    const cgObservedAtForAsset =
+      geckoId && cgPrice != null
+        ? (params.quoteMaps.cgObservedAtByGeckoId.get(geckoId) ?? params.quoteMaps.cgObservedAt)
+        : null;
+    const cgObservedAtModeForAsset =
+      geckoId && cgPrice != null
+        ? (params.quoteMaps.cgObservedAtModeByGeckoId.get(geckoId) ??
+          (params.quoteMaps.cgObservedAt != null ? "local_fetch" : null))
+        : null;
 
     const collectedQuotes: PrimaryCollectedQuotes = {
       cgPrice,
@@ -64,6 +71,7 @@ export function buildPrimaryConsensusResults(params: {
       curveObservedAt: params.quoteMaps.curveObservedAtByCoinId.get(asset.id) ?? null,
       curveOraclePrice: params.quoteMaps.curveOraclePrice,
       curveOracleObservedAt: params.quoteMaps.curveOracleObservedAt,
+      navQuote: params.quoteMaps.navPrices.get(asset.id),
       protocolSources: params.dexPriceSources.get(asset.id),
       dexAggregateQuote: (() => {
         const dexRow = params.dexRows.get(asset.id);
@@ -71,32 +79,28 @@ export function buildPrimaryConsensusResults(params: {
       })(),
     };
 
-    const {
-      sources,
-      hasPromotedDexProtocolSource,
-      dexCandidateTelemetry,
-      priceSourceConfidenceProfile,
-    } = buildPrimarySourceCandidates(asset, collectedQuotes, {
-      divergenceThresholdBps: DIVERGENCE_THRESHOLD_BPS,
-      nowSec: params.nowSec,
-    });
+    const { sources, hasPromotedDexProtocolSource, dexCandidateTelemetry, priceSourceConfidenceProfile } =
+      buildPrimarySourceCandidates(asset, collectedQuotes, {
+        divergenceThresholdBps: DIVERGENCE_THRESHOLD_BPS,
+        nowSec: params.nowSec,
+      });
 
     logDexCandidateTelemetry(dexCandidateTelemetry);
 
     if (hasPromotedDexProtocolSource && !sources.some((source) => source.source.endsWith("-dex"))) {
-      console.log(
-        `[primary-prices] ${asset.symbol}: suppressed promoted DEX source(s) that lacked corroboration`,
-      );
+      console.log(`[primary-prices] ${asset.symbol}: suppressed promoted DEX source(s) that lacked corroboration`);
     }
 
     params.stats.attempted++;
 
-    const context = params.validationContexts?.get(asset) ?? buildPriceValidationContext({
-      stablecoinId: String(asset.id),
-      pegType: asset.pegType,
-      navToken: asset.navToken,
-      commodityOunces: asset.commodityOunces,
-    });
+    const context =
+      params.validationContexts?.get(asset) ??
+      buildPriceValidationContext({
+        stablecoinId: String(asset.id),
+        pegType: asset.pegType,
+        navToken: asset.navToken,
+        commodityOunces: asset.commodityOunces,
+      });
     const pegRef = context.navToken ? null : getReferencePriceForContext(context, params.references);
     const consensus = computePriceConsensus(sources, pegRef, DIVERGENCE_THRESHOLD_BPS, {
       mode: context.navToken ? "nav" : "fixed",

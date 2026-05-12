@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v5.97`
+- **Current methodology version:** `v5.98`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -34,29 +34,32 @@ When an asset still has no usable current price after validation and fallback re
 
 ### Source Weights
 
-| Source | Weight | Module / Origin | Notes |
-|--------|--------|-----------------|-------|
-| CoinGecko `/simple/price` | 2 | built-in fetch path | Primary market-data voice; uses upstream `last_updated_at` freshness when available and drops stale rows outside the trusted age window |
-| CoinGecko ticker | 2 | `worker/src/lib/cg-ticker.ts` | Exchange-ticker corroboration path for the curated tracked subset |
-| DefiLlama stablecoins list | 1 | Typed quote extracted from DL stablecoins endpoint | Independent DL aggregation; carries observed-time metadata when available, otherwise the observation mode is `unknown` |
-| Pyth Hermes | 2 | `worker/src/lib/pyth.ts` | Oracle input with confidence intervals |
-| Binance spot | 2 | `worker/src/lib/cex-tickers.ts` | Batch venue input |
-| Kraken spot | 2 | `worker/src/lib/cex-tickers.ts` | Explicit-pair venue input with alias-safe symbol mapping |
-| Bitstamp spot | 1 | `worker/src/lib/cex-tickers.ts` | Lower-weight all-tickers corroboration venue |
-| Coinbase spot | 2 | `worker/src/lib/cex-tickers.ts` | Per-symbol venue input |
-| RedStone | 1 | `worker/src/lib/redstone.ts` | Fresh per-venue oracle snapshot with venue-agreement gating |
-| Curve on-chain | 3 | `worker/src/lib/curve-onchain.ts` | Highest-weight on-chain voice for supported pools |
-| Curve oracle (`crvusd-curve` only) | 3 | `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts` | Additional primary-consensus voice for crvUSD |
-| Trusted promoted DEX prices | 1 | `worker/src/lib/depeg-helpers.ts` | Only used when no promoted per-protocol DEX bridge source exists for the same asset |
-| Fluid DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | One aggregated Fluid price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
-| Balancer DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | One aggregated Balancer price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
-| Raydium DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | One aggregated Raydium price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
-| Orca DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | One aggregated Orca price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
-| Meteora DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | One aggregated Meteora price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
-| PancakeSwap DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | One aggregated PancakeSwap price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
-| Aerodrome Slipstream DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | One aggregated Aerodrome Slipstream price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
-| Velodrome Slipstream DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | One aggregated Velodrome Slipstream price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
-| GeckoTerminal pool probe | 1 | `worker/src/lib/geckoterminal-price-probe.ts` | Pool-level cross-check for weak CoinGecko / DL-list soft-source outcomes |
+| Source                                      | Weight | Module / Origin                                                                 | Notes                                                                                                                                          |
+| ------------------------------------------- | ------ | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| CoinGecko `/simple/price`                   | 2      | built-in fetch path                                                             | Primary market-data voice; uses upstream `last_updated_at` freshness when available and drops stale rows outside the trusted age window        |
+| CoinGecko ticker                            | 2      | `worker/src/lib/cg-ticker.ts`                                                   | Exchange-ticker corroboration path for the curated tracked subset                                                                              |
+| DefiLlama stablecoins list                  | 1      | Typed quote extracted from DL stablecoins endpoint                              | Independent DL aggregation; carries observed-time metadata when available, otherwise the observation mode is `unknown`                         |
+| Pyth Hermes                                 | 2      | `worker/src/lib/pyth.ts`                                                        | Oracle input with confidence intervals                                                                                                         |
+| Binance spot                                | 2      | `worker/src/lib/cex-tickers.ts`                                                 | Batch venue input                                                                                                                              |
+| Kraken spot                                 | 2      | `worker/src/lib/cex-tickers.ts`                                                 | Explicit-pair venue input with alias-safe symbol mapping                                                                                       |
+| Bitstamp spot                               | 1      | `worker/src/lib/cex-tickers.ts`                                                 | Lower-weight all-tickers corroboration venue                                                                                                   |
+| Coinbase spot                               | 2      | `worker/src/lib/cex-tickers.ts`                                                 | Per-symbol venue input                                                                                                                         |
+| RedStone                                    | 1      | `worker/src/lib/redstone.ts`                                                    | Fresh per-venue oracle snapshot with venue-agreement gating                                                                                    |
+| Curve on-chain                              | 3      | `worker/src/lib/curve-onchain.ts`                                               | Highest-weight on-chain voice for supported pools                                                                                              |
+| Curve oracle (`crvusd-curve` only)          | 3      | `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts`                     | Additional primary-consensus voice for crvUSD                                                                                                  |
+| Chainlink NAV reserve telemetry             | 3      | `reserve_composition` rows from the `chainlink-nav` live-reserve adapter        | Matched authoritative live-reserve snapshots; USD NAV publishes directly and non-USD NAV converts through fresh/static FX references           |
+| Superstate NAV reserve telemetry            | 3      | `reserve_composition` rows from the `superstate-liquidity` live-reserve adapter | USTB NAV telemetry from the Superstate live-reserve adapter, admitted only when the reserve snapshot matches reserve sync state                |
+| Trusted promoted DEX prices                 | 1      | `worker/src/lib/depeg-helpers.ts`                                               | Only used when no promoted per-protocol DEX bridge source exists for the same asset                                                            |
+| Fluid DEX (via `dex_prices`)                | 3      | `worker/src/lib/depeg-helpers.ts`                                               | One aggregated Fluid price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist                |
+| Balancer DEX (via `dex_prices`)             | 3      | `worker/src/lib/depeg-helpers.ts`                                               | One aggregated Balancer price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist             |
+| Curve DEX (via `dex_prices`)                | 3      | `worker/src/lib/depeg-helpers.ts`                                               | One aggregated Curve price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist                |
+| Raydium DEX (via `dex_prices`)              | 2      | `worker/src/lib/depeg-helpers.ts`                                               | One aggregated Raydium price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist              |
+| Orca DEX (via `dex_prices`)                 | 2      | `worker/src/lib/depeg-helpers.ts`                                               | One aggregated Orca price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist                 |
+| Meteora DEX (via `dex_prices`)              | 2      | `worker/src/lib/depeg-helpers.ts`                                               | One aggregated Meteora price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist              |
+| PancakeSwap DEX (via `dex_prices`)          | 2      | `worker/src/lib/depeg-helpers.ts`                                               | One aggregated PancakeSwap price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist          |
+| Aerodrome Slipstream DEX (via `dex_prices`) | 2      | `worker/src/lib/depeg-helpers.ts`                                               | One aggregated Aerodrome Slipstream price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
+| Velodrome Slipstream DEX (via `dex_prices`) | 2      | `worker/src/lib/depeg-helpers.ts`                                               | One aggregated Velodrome Slipstream price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
+| GeckoTerminal pool probe                    | 1      | `worker/src/lib/geckoterminal-price-probe.ts`                                   | Pool-level cross-check for weak CoinGecko / DL-list soft-source outcomes                                                                       |
 
 > **Historical note (v2.0→v2.1):** The DL coins API (`coins.llama.fi/prices/current/coingecko:{id}`) was removed from primary consensus because it returned CoinGecko-sourced data, creating illusory two-source agreement. It is still used in fallback enrichment via contract-address queries.
 
@@ -111,7 +114,7 @@ also corroborates it.
 
 ### Pool Challenge (Soft-Source Guard)
 
-After consensus, weak soft-source results where all relevant sources are **pool-challenge eligible** are challenged against current individual priced pools from the published challenger snapshot (`dex_price_challenger_snapshots` + `dex_price_challengers`) that meet the live $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. Eligible source families include CoinGecko, DefiLlama-list, `dex-promoted`, and promoted protocol-level DEX sources (`fluid-dex`, `balancer-dex`, `raydium-dex`, `orca-dex`, `meteora-dex`, `pancakeswap-dex`, `aerodrome-dex`, `velodrome-dex`) as long as no exempt hard source is present. NAV tokens are excluded from the pool challenge entirely: their fair value is their published NAV and the peg-aware divergence threshold does not map to a meaningful DEX-liquidity check, so diverging pools cannot downgrade or replace a NAV price. The divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). If ANY qualifying pool diverges from the weak result beyond the threshold:
+After consensus, weak soft-source results where all relevant sources are **pool-challenge eligible** are challenged against current individual priced pools from the published challenger snapshot (`dex_price_challenger_snapshots` + `dex_price_challengers`) that meet the live $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. Eligible source families include CoinGecko, DefiLlama-list, `dex-promoted`, and promoted protocol-level DEX sources (`fluid-dex`, `balancer-dex`, `curve-dex`, `raydium-dex`, `orca-dex`, `meteora-dex`, `pancakeswap-dex`, `aerodrome-dex`, `velodrome-dex`) as long as no exempt hard source is present. NAV tokens are excluded from the pool challenge entirely: their fair value is their published NAV and the peg-aware divergence threshold does not map to a meaningful DEX-liquidity check, so diverging pools cannot downgrade or replace a NAV price. The divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). If ANY qualifying pool diverges from the weak result beyond the threshold:
 
 1. Confidence is always downgraded to `low`.
 2. The price is **replaced** only when diverging protocol-level challenger prices span **≥2 independent protocols** — a single protocol's pools may share data-quality issues (vault-token counterparties, misconfigured pairs), and one rogue pool inside an otherwise agreeing protocol does not make that protocol count as corroborating disagreement. When replacement fires, Pharos first collapses each protocol to a TVL-weighted median price, then evaluates divergence and the final replacement from those protocol medians. When only one protocol diverges, the original price is preserved but confidence stays `low`.
@@ -148,6 +151,7 @@ Several live providers need normalization before their prices can safely enter c
 - **Kraken symbols:** Kraken uses explicit request-pair and response-key maps in `worker/src/lib/cex-tickers.ts`; `USDT/USD` returns `USDTZUSD`, so the integration does not rely on naive string slicing.
 - **Bitstamp ticker surface:** Bitstamp is fetched from the exchange-wide all-tickers endpoint and then filtered through an explicit tracked-pair allowlist so venue coverage stays deterministic.
 - **Coinbase symbols:** `fetchPrimaryPrices()` uppercases symbols before Coinbase lookup. Active pairs: USDT, DAI, PAXG, USDS, USD1, HONEY.
+- **Binance stable-quote conversion:** Binance direct markets may be configured with stablecoin quote assets when no USD pair exists. BFUSD uses `BFUSDUSDT` and `BFUSDUSDC`; the raw quote is multiplied by the same-run Binance USDT/USD or USDC/USD price before entering consensus as the single `binance` source. If the DEX bridge row also contains Binance orderbook evidence for the same asset, the overlapping aggregate `dex-promoted` lane is suppressed.
 - **RedStone symbols:** `worker/src/lib/redstone.ts` only queries the exact-case tracked subset in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` (21 symbols including `USDe`, `crvUSD`, and `fxUSD`). Unsupported symbols are filtered out before transport, and test coverage now guards the allowlist against stale untracked entries. Where metadata symbols differ from RedStone API symbols (e.g., `FRXUSD` → `frxUSD`, `EURC` → `EUROC`, `XAUT` → `XAUt`), the module translates via `REDSTONE_SYMBOL_CONFIG` entries (each carrying `metaSymbol` and `apiSymbol` fields) and keys results by metadata symbol so callers don't need to know the mapping.
 - **RedStone request shape:** RedStone requests are sent in sequential batches of 10 symbols; any symbol missing from a batch response is retried once as a single-symbol request.
 - **RedStone freshness + transparency gate:** RedStone entries are only admitted when they carry a timestamp newer than 5 minutes and a usable per-venue price breakdown. Timestamp-less or opaque aggregate-only responses are rejected.
@@ -171,8 +175,9 @@ Several live providers need normalization before their prices can safely enter c
 - **Curve on-chain sanity bound:** Implied prices from `get_dy` calls are capped at `< 10,000` (to accommodate commodity tokens like PAXG/XAUT at ~$2,900).
 - **Curve on-chain block-timestamp freshness:** Curve on-chain reads now pin `get_dy` calls to a single block number fetched up front and stamp each priced pair with that block's timestamp (`observedAtMode = "upstream"`). Runs older than 300 s of wall-clock time vs the block timestamp are rejected as `upstream-error` under the same 300-second ceiling shared with `curve-oracle`.
 - **Curve oracle staleness guard:** The `curve-oracle` voice (crvUSD `PriceAggregator.price()` EMA) is fetched against a resolved block number and its block timestamp is used to stamp `observedAt`. Reads with a block timestamp older than 5 minutes (`CURVE_ORACLE_MAX_STALENESS_SEC = 300`) are rejected before entering primary consensus, so a stale-replica RPC cannot single-source publish an EMA read minutes behind chain head. `curve-oracle` now uses its own `CIRCUIT_SOURCE.CURVE_ORACLE` breaker separately from the per-pool `curve-onchain` breaker, so an aggregator outage does not suppress per-pool Curve reads and vice versa.
+- **Live-reserve NAV telemetry:** Primary consensus can admit NAV prices already fetched by live-reserve adapters when the `reserve_composition` row is matched to `reserve_sync_state.last_success_at`. `chainlink-nav` and `superstate-liquidity` rows must expose a positive `metadata.navPerToken` and verified `sourceTimestamp` / `oracleUpdatedAt`. USD NAVs publish directly; non-USD NAVs first multiply by fresh or static FX references from the shared validation cache.
 - **Binance host cascade:** Binance ticker fetches no longer retry the same host on server-side failures. On HTTP 5xx, 429, or Worker-side 403/451, the fetcher short-circuits to the next host (`data-api.binance.vision` → `api.binance.com`) instead of consuming the Retry-After budget against a host that is already failing. Intra-host retries are reserved for transient network exceptions where the host itself has not answered.
-- **Direct-API DEX bridge:** per-protocol DEX prices are aggregated before primary-consensus admission. The currently registered promoted DEX sources are Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream, so each of those protocols can contribute at most one elevated source per asset.
+- **Direct-API DEX bridge:** per-protocol DEX prices are aggregated before primary-consensus admission. The currently registered promoted DEX sources are Fluid, Balancer, Curve, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream, so each of those protocols can contribute at most one elevated source per asset.
 - **DEX bridge overlap guard:** when a promoted per-protocol DEX bridge source exists for an asset, the overlapping `dex-promoted` aggregate is withheld so the same bridge observation family cannot self-confirm.
 - **Promoted DEX corroboration gate:** a lone promoted DEX protocol is admitted only when no non-DEX source exists, or when a hard market/oracle/protocol source agrees within the live threshold. Two or more promoted DEX protocols are admitted as candidate sources; consensus then determines agreement.
 - **DEX bridge freshness preservation:** primary pricing now keeps the per-source `updatedAt` values already stored inside `dex_prices.price_sources_json` when rebuilding promoted DEX sources. It only falls back to the row write time when a source-specific timestamp is missing or invalid, so freshness is no longer flattened across the entire bridge row. Each promoted protocol lane is then freshness-checked independently before candidate admission, so a fresh parent `dex_prices` row cannot carry a stale or future-skewed protocol lane into consensus.
@@ -194,32 +199,32 @@ After market/oracle consensus, `worker/src/lib/authoritative-price-sources.ts` c
 
 ### Current Scope
 
-| Asset | Source |
-|-------|--------|
-| `cusd-cap` | Cap `getBurnAmount(address,uint256)` |
-| `iusd-infinifi` | infiniFi `RedeemController.receiptToAsset(uint256)` |
-| `usdai-usd-ai` | inherits tracked `pyusd-paypal` pricing as a redeemable PYUSD wrapper |
-| `iusd-initia` | inherits tracked `ausd-agora` pricing as an AUSD-backed Initia wrapper |
-| `usdcx-movement` | inherits tracked `usdc-circle` pricing as a Circle xReserve-backed USDC wrapper |
-| `usdk-kast` | inherits tracked `wm-m0` pricing as a Solana M0 extension unit |
-| `xo-exodus` | inherits tracked `wm-m0` pricing as a Solana M0 extension unit |
-| `usdnr-nerona` | inherits tracked `wm-m0` pricing as an M0 extension unit |
-| `susdt-spark` | ERC-4626 `convertToAssets(1 share)` × tracked `usdt-tether` price |
-| `susdc-spark` | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price |
-| `steakusdt-steakhouse` | ERC-4626 `convertToAssets(1 share)` × tracked `usdt-tether` price |
-| `steakusdc-steakhouse` | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price |
-| `srusde-strata` | ERC-4626 `convertToAssets(1 share)` × tracked `usde-ethena` price |
-| `gtusdc-gauntlet` | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price |
-| `gtusdcp-gauntlet` | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price |
-| `yvusdc-yearn` | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price |
-| `savusd-avant` | ERC-4626 `convertToAssets(1 share)` × tracked `avusd-avant` price |
-| `susn-noon` | ERC-4626 `convertToAssets(1 share)` × tracked `usn-noon` price |
-| `syzusd-yuzu` | ERC-4626 `convertToAssets(1 share)` × tracked `yzusd-yuzu` price |
-| `stkgho-umbrella-aave` | ERC-4626 `convertToAssets(1 share)` × tracked `gho-aave` price |
-| `sbold-k3-capital` | ERC-4626 `convertToAssets(1 share)` × tracked `bold-liquity` price |
-| `ybold-yearn` | ERC-4626 `convertToAssets(1 share)` × tracked `bold-liquity` price |
-| `sgho-aave` | Aave legacy savings `previewRedeem(1 share)` × tracked `gho-aave` price |
-| `aa-falconx-mev-capital` | Idle CDO `virtualPrice(address tranche)` × tracked `usdc-circle` price |
+| Asset                    | Source                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------- |
+| `cusd-cap`               | Cap `getBurnAmount(address,uint256)`                                            |
+| `iusd-infinifi`          | infiniFi `RedeemController.receiptToAsset(uint256)`                             |
+| `usdai-usd-ai`           | inherits tracked `pyusd-paypal` pricing as a redeemable PYUSD wrapper           |
+| `iusd-initia`            | inherits tracked `ausd-agora` pricing as an AUSD-backed Initia wrapper          |
+| `usdcx-movement`         | inherits tracked `usdc-circle` pricing as a Circle xReserve-backed USDC wrapper |
+| `usdk-kast`              | inherits tracked `wm-m0` pricing as a Solana M0 extension unit                  |
+| `xo-exodus`              | inherits tracked `wm-m0` pricing as a Solana M0 extension unit                  |
+| `usdnr-nerona`           | inherits tracked `wm-m0` pricing as an M0 extension unit                        |
+| `susdt-spark`            | ERC-4626 `convertToAssets(1 share)` × tracked `usdt-tether` price               |
+| `susdc-spark`            | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
+| `steakusdt-steakhouse`   | ERC-4626 `convertToAssets(1 share)` × tracked `usdt-tether` price               |
+| `steakusdc-steakhouse`   | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
+| `srusde-strata`          | ERC-4626 `convertToAssets(1 share)` × tracked `usde-ethena` price               |
+| `gtusdc-gauntlet`        | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
+| `gtusdcp-gauntlet`       | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
+| `yvusdc-yearn`           | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
+| `savusd-avant`           | ERC-4626 `convertToAssets(1 share)` × tracked `avusd-avant` price               |
+| `susn-noon`              | ERC-4626 `convertToAssets(1 share)` × tracked `usn-noon` price                  |
+| `syzusd-yuzu`            | ERC-4626 `convertToAssets(1 share)` × tracked `yzusd-yuzu` price                |
+| `stkgho-umbrella-aave`   | ERC-4626 `convertToAssets(1 share)` × tracked `gho-aave` price                  |
+| `sbold-k3-capital`       | ERC-4626 `convertToAssets(1 share)` × tracked `bold-liquity` price              |
+| `ybold-yearn`            | ERC-4626 `convertToAssets(1 share)` × tracked `bold-liquity` price              |
+| `sgho-aave`              | Aave legacy savings `previewRedeem(1 share)` × tracked `gho-aave` price         |
+| `aa-falconx-mev-capital` | Idle CDO `virtualPrice(address tranche)` × tracked `usdc-circle` price          |
 
 When a live override validates successfully, the cached asset is written with:
 
@@ -344,12 +349,12 @@ The enrichment path is intentionally narrower than primary pricing:
 
 The final cached price can carry one of four confidence states:
 
-| Value | Meaning |
-|-------|---------|
-| `high` | 2 or more independent sources agree, or a validated authoritative override succeeded |
+| Value           | Meaning                                                                                                                                              |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `high`          | 2 or more independent sources agree, or a validated authoritative override succeeded                                                                 |
 | `single-source` | only one live source produced a usable price, or a 2-source agreeing cluster was downgraded because every agreeing member is a list-style aggregator |
-| `low` | multiple sources existed but failed to form a strong agreeing cluster |
-| `fallback` | price came from enrichment rather than primary consensus |
+| `low`           | multiple sources existed but failed to form a strong agreeing cluster                                                                                |
+| `fallback`      | price came from enrichment rather than primary consensus                                                                                             |
 
 Downstream consumers use these tags for display, depeg confirmation, and risk handling.
 
@@ -374,22 +379,22 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 
 ## File Index
 
-| File | Role |
-|------|------|
-| `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts` | Primary live-price collection, source assembly, consensus, GT probe, and pool challenge |
-| `worker/src/cron/sync-stablecoins/enrich-prices.ts` | Fallback enrichment orchestrator (`enrichMissingPrices()`) for still-missing prices |
-| `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` | Barrel re-export for individual pass runners (DefiLlama, CMC, Jupiter, DexScreener) |
-| `worker/src/lib/price-consensus.ts` | N-source clustering and confidence resolution |
-| `worker/src/lib/authoritative-price-sources.ts` | Redeem-quote live/historical override registry |
-| `worker/src/lib/pyth.ts` | Pyth Hermes integration and feed-ID normalization |
-| `worker/src/lib/redstone.ts` | Exact-case RedStone allowlist, batching, and retry behavior |
-| `worker/src/lib/cex-tickers.ts` | Binance, Kraken, Bitstamp, and Coinbase price fetchers |
-| `worker/src/lib/coingecko-simple-price.ts` | `fetchCoingeckoSimplePrices` helper — extracted from the orchestrator to normalize batch request shape, upstream-timestamp parsing, staleness drop, and breaker accounting for CoinGecko `/simple/price` |
-| `worker/src/lib/fetcher-result.ts` | `FetcherOutcome<T>` result type shared by CEX / oracle fetchers for uniform circuit-breaker accounting |
-| `worker/src/lib/chainlink-feeds.ts` | Curated Chainlink FX / commodity reference-feed reads |
-| `worker/src/lib/curve-onchain.ts` | Curve on-chain price reads |
-| `worker/src/lib/price-validation.ts` | Peg-aware reasonableness validation |
-| `worker/src/lib/pricing-circuit-map.ts` | Canonical `PRICING_SOURCE_TO_CIRCUIT` map plus CI contract test asserting every registry source has a declared breaker (or is explicitly null for synthesized / composite / cached sources) |
-| `shared/lib/pricing-pipeline-constants.ts` | Shared numeric constants for primary pricing (currently `DIVERGENCE_THRESHOLD_BPS = 50`) |
-| `shared/lib/pricing-pipeline-version.ts` | Methodology version metadata and changelog route |
-| `src/app/methodology/sections/core-sections-pricing.tsx` | Public longform pricing-pipeline methodology copy |
+| File                                                        | Role                                                                                                                                                                                                     |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts` | Primary live-price collection, source assembly, consensus, GT probe, and pool challenge                                                                                                                  |
+| `worker/src/cron/sync-stablecoins/enrich-prices.ts`         | Fallback enrichment orchestrator (`enrichMissingPrices()`) for still-missing prices                                                                                                                      |
+| `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts`  | Barrel re-export for individual pass runners (DefiLlama, CMC, Jupiter, DexScreener)                                                                                                                      |
+| `worker/src/lib/price-consensus.ts`                         | N-source clustering and confidence resolution                                                                                                                                                            |
+| `worker/src/lib/authoritative-price-sources.ts`             | Redeem-quote live/historical override registry                                                                                                                                                           |
+| `worker/src/lib/pyth.ts`                                    | Pyth Hermes integration and feed-ID normalization                                                                                                                                                        |
+| `worker/src/lib/redstone.ts`                                | Exact-case RedStone allowlist, batching, and retry behavior                                                                                                                                              |
+| `worker/src/lib/cex-tickers.ts`                             | Binance, Kraken, Bitstamp, and Coinbase price fetchers                                                                                                                                                   |
+| `worker/src/lib/coingecko-simple-price.ts`                  | `fetchCoingeckoSimplePrices` helper — extracted from the orchestrator to normalize batch request shape, upstream-timestamp parsing, staleness drop, and breaker accounting for CoinGecko `/simple/price` |
+| `worker/src/lib/fetcher-result.ts`                          | `FetcherOutcome<T>` result type shared by CEX / oracle fetchers for uniform circuit-breaker accounting                                                                                                   |
+| `worker/src/lib/chainlink-feeds.ts`                         | Curated Chainlink FX / commodity reference-feed reads                                                                                                                                                    |
+| `worker/src/lib/curve-onchain.ts`                           | Curve on-chain price reads                                                                                                                                                                               |
+| `worker/src/lib/price-validation.ts`                        | Peg-aware reasonableness validation                                                                                                                                                                      |
+| `worker/src/lib/pricing-circuit-map.ts`                     | Canonical `PRICING_SOURCE_TO_CIRCUIT` map plus CI contract test asserting every registry source has a declared breaker (or is explicitly null for synthesized / composite / cached sources)              |
+| `shared/lib/pricing-pipeline-constants.ts`                  | Shared numeric constants for primary pricing (currently `DIVERGENCE_THRESHOLD_BPS = 50`)                                                                                                                 |
+| `shared/lib/pricing-pipeline-version.ts`                    | Methodology version metadata and changelog route                                                                                                                                                         |
+| `src/app/methodology/sections/core-sections-pricing.tsx`    | Public longform pricing-pipeline methodology copy                                                                                                                                                        |
