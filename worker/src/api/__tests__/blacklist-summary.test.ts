@@ -138,6 +138,132 @@ describe("handleBlacklistSummary", () => {
     expect(body.stats.perCoinQuarterlyEventTypes.USDC[0]).toMatchObject({ blacklist: 0, unblacklist: 0, destroy: 1 });
   });
 
+  it("summarizes current-balance cache gaps without counting destroy rows as frozen", async () => {
+    const observedAt = 1_777_000_300;
+    const db = mockD1([
+      {
+        match: "GROUP BY stablecoin, event_type",
+        rows: [
+          { stablecoin: "USDC", event_type: "blacklist", n: 2, usd_sum: 500 },
+          { stablecoin: "USDT", event_type: "blacklist", n: 1, usd_sum: 300 },
+          { stablecoin: "USDT", event_type: "destroy", n: 1, usd_sum: 300 },
+        ],
+      },
+      {
+        match: "latest_event_type_by_balance",
+        rows: [
+          {
+            id: "USDC:base:0xgap",
+            stablecoin: "USDC",
+            chain_id: "base",
+            address: "0xgap",
+            timestamp: null,
+            config_key: null,
+            contract_address: null,
+          },
+          {
+            id: null,
+            stablecoin: "USDC",
+            chain_id: "ethereum",
+            address: "0xactive",
+            timestamp: 1_777_000_000,
+            config_key: null,
+            contract_address: null,
+          },
+          {
+            id: "USDT:tron:TRdestroyed",
+            stablecoin: "USDT",
+            chain_id: "tron",
+            address: "TRdestroyed",
+            timestamp: 1_777_000_100,
+            config_key: null,
+            contract_address: null,
+          },
+        ],
+      },
+      {
+        match: "COUNT(*) AS total",
+        rows: [],
+        first: { total: 4, max_ts: 1_777_000_100, recoverable_gap: 1, recent_30d: 0, recent_24h: 0 },
+      },
+      {
+        match: "FROM blacklist_current_balances",
+        rows: [
+          {
+            id: "USDC:base:0xgap",
+            stablecoin: "USDC",
+            chain_id: "base",
+            address: "0xgap",
+            amount_native: null,
+            amount_usd: null,
+            source: "current_balance",
+            status: "recoverable_pending",
+            observed_at: observedAt,
+            attempt_count: 2,
+            last_attempted_at: observedAt,
+            last_error_class: "rpc_timeout",
+          },
+          {
+            id: "USDC:ethereum:0xactive",
+            stablecoin: "USDC",
+            chain_id: "ethereum",
+            address: "0xactive",
+            amount_native: 500,
+            amount_usd: 500,
+            source: "current_balance",
+            status: "resolved",
+            observed_at: observedAt,
+            attempt_count: 1,
+            last_attempted_at: observedAt,
+            last_error_class: null,
+          },
+          {
+            id: "USDT:tron:TRdestroyed",
+            stablecoin: "USDT",
+            chain_id: "tron",
+            address: "TRdestroyed",
+            amount_native: 300,
+            amount_usd: 300,
+            source: "destroy_event",
+            status: "resolved",
+            observed_at: observedAt,
+            attempt_count: 1,
+            last_attempted_at: observedAt,
+            last_error_class: null,
+          },
+        ],
+      },
+      { match: "quarter_sort_key", rows: [] },
+      { match: "cron_runs", rows: [], first: { started_at: observedAt } },
+    ]);
+
+    const res = await handleBlacklistSummary(db);
+    const json = await res.json() as {
+      stats: {
+        activeAddressCount: number;
+        activeFrozenTotal: number;
+        activeAmountGapCount: number;
+        frozenAddresses: number;
+        perCoinFrozenAddressCount: Record<string, number>;
+        perCoinFrozenTotal: Record<string, number>;
+      };
+      chart: Array<{ total: number }>;
+      freezeLedgerMeta: { statusDistribution: Record<string, number>; sourceDistribution: Record<string, number> };
+    };
+
+    expect(json.stats.activeAddressCount).toBe(3);
+    expect(json.stats.activeFrozenTotal).toBe(500);
+    expect(json.stats.activeAmountGapCount).toBe(1);
+    expect(json.stats.frozenAddresses).toBe(2);
+    expect(json.stats.perCoinFrozenAddressCount.USDC).toBe(2);
+    expect(json.stats.perCoinFrozenAddressCount.USDT).toBe(0);
+    expect(json.stats.perCoinFrozenTotal.USDC).toBe(500);
+    expect(json.stats.perCoinFrozenTotal.USDT).toBe(0);
+    expect(json.chart[0]?.total).toBe(800);
+    expect(json.freezeLedgerMeta.statusDistribution.recoverable_pending).toBe(1);
+    expect(json.freezeLedgerMeta.sourceDistribution.destroy_event).toBe(1);
+  });
+
   it("derives perCoinBlacklistCounts and preserves required stats", async () => {
     const db = mockD1([
       {
