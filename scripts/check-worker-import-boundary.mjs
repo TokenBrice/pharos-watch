@@ -34,8 +34,10 @@ function formatMatches(matches) {
 }
 
 // Named cross-boundary validators that intentionally import worker sources to
-// assert invariants. Keep this list minimal and document why each entry exists
-// in the file's header comment.
+// assert invariants. Keep this list minimal and document why each entry exists.
+// Adding a new waiver is an architectural decision: prefer pushing shared
+// metadata into `shared/` and update MAX_BOUNDARY_WAIVERS only when the
+// architectural exception is reviewed.
 const BOUNDARY_WAIVERS = [
   {
     id: "frozen-invariants-lifecycle-registry-check",
@@ -43,6 +45,15 @@ const BOUNDARY_WAIVERS = [
     reason: "Freeze validation must assert frozen IDs are absent from worker registries and frontend compare fixtures.",
   },
 ];
+const MAX_BOUNDARY_WAIVERS = 1;
+if (BOUNDARY_WAIVERS.length > MAX_BOUNDARY_WAIVERS) {
+  console.error(
+    `[boundary] BOUNDARY_WAIVERS has ${BOUNDARY_WAIVERS.length} entries; cap is ${MAX_BOUNDARY_WAIVERS}. ` +
+      "Each waiver is an architectural exception — push shared metadata into `shared/` instead of growing the list, " +
+      "or raise MAX_BOUNDARY_WAIVERS with a documented review.",
+  );
+  process.exit(1);
+}
 const BOUNDARY_EXEMPT_FILES = new Set(BOUNDARY_WAIVERS.map((waiver) => waiver.file));
 
 function runBoundaryCheck(label, { excludeTests, rootDir, forbiddenPattern }) {
