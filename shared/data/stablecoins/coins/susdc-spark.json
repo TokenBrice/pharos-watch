@@ -1,0 +1,99 @@
+{
+  "id": "susdc-spark",
+  "name": "Spark Savings USDC",
+  "symbol": "spUSDC",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: spUSDC resolves to Upstream because the wrapper holds USDC as its only reserve, inheriting Circle's blacklist surface.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "usdc-circle",
+  "collateral": "USDC deposited into Spark's ERC-4626 savings vault V2, routed through Sky's PSM and savings rate to generate USDC-denominated yield",
+  "pegMechanism": "Deposit USDC to mint spUSDC; the share price appreciates against USDC as the Sky Savings Rate accrues. Withdrawals burn spUSDC for USDC subject to Spark vault liquidity",
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://spark.fi"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/sparkdotfi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.spark.fi"
+    },
+    {
+      "label": "Deployments",
+      "url": "https://github.com/sparkdotfi/spark-address-registry"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "native",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USDC deposited in Spark Savings vault",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Spark Savings USDC",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "susdc-spark",
+    "display": {
+      "url": "https://spark.fi",
+      "label": "Spark Savings USDC"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDC deposited in Spark Savings vault",
+        "risk": "low",
+        "coinId": "usdc-circle",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      }
+    }
+  }
+}

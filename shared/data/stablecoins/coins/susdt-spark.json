@@ -1,0 +1,94 @@
+{
+  "id": "susdt-spark",
+  "name": "Spark Savings USDT",
+  "symbol": "spUSDT",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: spUSDT resolves to Upstream because the wrapper holds USDT as its only reserve, inheriting Tether's blacklist surface.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "variantOf": "usdt-tether",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "usdt-tether",
+  "collateral": "USDT deposited into Spark's ERC-4626 savings vault V2, routed through Sky's PSM and savings rate to generate USDT-denominated yield",
+  "pegMechanism": "Deposit USDT to mint spUSDT; the share price appreciates against USDT as the Sky Savings Rate accrues. Withdrawals burn spUSDT for USDT subject to Spark vault liquidity",
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://spark.fi"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/sparkdotfi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.spark.fi"
+    },
+    {
+      "label": "Deployments",
+      "url": "https://github.com/sparkdotfi/spark-address-registry"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xe2e7a17dff93280dec073c995595155283e3c372",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "single-chain",
+  "collateralQuality": "native",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USDT deposited in Spark Savings vault",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Spark Savings USDT",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "susdt-spark",
+    "display": {
+      "url": "https://spark.fi",
+      "label": "Spark Savings USDT"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDT deposited in Spark Savings vault",
+        "risk": "low",
+        "coinId": "usdt-tether",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+      }
+    }
+  }
+}
