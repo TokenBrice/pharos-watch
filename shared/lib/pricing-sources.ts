@@ -30,7 +30,11 @@ export function createEmptyPriceSourceHealthDistribution(): Record<PriceSourceHe
 }
 
 export function getPricingSourceLabel(sourceKey: string): string {
-  return getPricingSourceRegistryEntry(sourceKey)?.label ?? sourceKey;
+  const parts = normalizePricingSourceKeys(sourceKey);
+  if (parts.length > 1) {
+    return parts.map((part) => getPricingSourceRegistryEntry(part)?.label ?? part).join(" + ");
+  }
+  return getPricingSourceRegistryEntry(parts[0] ?? sourceKey)?.label ?? sourceKey;
 }
 
 export function getPriceSourceHealthBucketShortLabel(bucketKey: PriceSourceHealthBucketKey): string {
@@ -46,4 +50,35 @@ export function splitCompositePriceSource(source: string): string[] {
     .split("+")
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
+}
+
+export function normalizePricingSourceKeys(
+  sourceKeys: readonly (string | null | undefined)[] | string | null | undefined,
+): string[] {
+  const rawSources = typeof sourceKeys === "string" || sourceKeys == null
+    ? [sourceKeys]
+    : sourceKeys;
+  const normalized: string[] = [];
+  for (const rawSource of rawSources) {
+    if (!rawSource) continue;
+    for (const part of splitCompositePriceSource(rawSource)) {
+      const key = part.toLowerCase();
+      if (key && !normalized.includes(key)) {
+        normalized.push(key);
+      }
+    }
+  }
+  return normalized;
+}
+
+export function getUnknownPricingSourceKeys(
+  sourceKeys: readonly (string | null | undefined)[] | string | null | undefined,
+): string[] {
+  return normalizePricingSourceKeys(sourceKeys)
+    .filter((sourceKey) => getPricingSourceRegistryEntry(sourceKey) == null);
+}
+
+export function isKnownPricingSourceOrComposite(sourceKey: string | null | undefined): boolean {
+  const parts = normalizePricingSourceKeys(sourceKey);
+  return parts.length > 0 && parts.every((part) => getPricingSourceRegistryEntry(part) != null);
 }

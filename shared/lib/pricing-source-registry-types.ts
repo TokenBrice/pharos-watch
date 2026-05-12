@@ -23,6 +23,7 @@ export interface PricingSourceRegistryEntry {
   label: string;
   shortLabel: string;
   trustTier: PricingSourceTrustTier;
+  depegSourceFamily: string;
   freshnessKind: PricingSourceFreshnessKind;
   maxTrustedAgeSec: number | null;
   defaultWeight: number;

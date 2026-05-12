@@ -1,6 +1,12 @@
 import type { PricingSourceRegistryEntry } from "./pricing-source-registry-types";
 
-type RequiredPricingSourceFields = "key" | "label" | "shortLabel" | "maxTrustedAgeSec" | "defaultWeight";
+type RequiredPricingSourceFields =
+  | "key"
+  | "label"
+  | "shortLabel"
+  | "depegSourceFamily"
+  | "maxTrustedAgeSec"
+  | "defaultWeight";
 type PricingSourcePreset = Omit<PricingSourceRegistryEntry, RequiredPricingSourceFields | "capabilities" | "isProtocolOverride" | "bypassesSoftValidationGuardrails">;
 type PricingSourceInput = Pick<PricingSourceRegistryEntry, RequiredPricingSourceFields>
   & Partial<Omit<PricingSourceRegistryEntry, RequiredPricingSourceFields>>;

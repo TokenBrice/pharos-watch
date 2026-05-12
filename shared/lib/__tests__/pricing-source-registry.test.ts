@@ -5,6 +5,12 @@ import {
   isPricingSourceProtocolOverride,
   isPricingSourceSoftGuardrailExempt,
 } from "../pricing-source-registry";
+import {
+  getPricingSourceLabel,
+  getUnknownPricingSourceKeys,
+  isKnownPricingSourceOrComposite,
+  normalizePricingSourceKeys,
+} from "../pricing-sources";
 
 describe("pricing source registry", () => {
   it("keeps registry order stable", () => {
@@ -53,6 +59,7 @@ describe("pricing source registry", () => {
       freshnessKind: "upstream",
       isReplaySafe: true,
       canBeDepegAuthoritative: false,
+      depegSourceFamily: "coingecko",
       defaultObservedAtMode: "local_fetch",
     });
 
@@ -63,12 +70,14 @@ describe("pricing source registry", () => {
       canBeDepegAuthoritative: true,
       canSingleSourceDepegAuthoritative: true,
       requiresObservedAt: true,
+      depegSourceFamily: "oracle:pyth",
       defaultObservedAtMode: "upstream",
     });
 
     expect(getPricingSourceRegistryEntry("protocol-redeem")).toMatchObject({
       key: "protocol-redeem",
       isProtocolOverride: true,
+      depegSourceFamily: "protocol:redeem",
       bypassesSoftValidationGuardrails: true,
       defaultObservedAtMode: "local_fetch",
     });
@@ -77,6 +86,7 @@ describe("pricing source registry", () => {
       key: "zephyr-scanner",
       trustTier: "hard_protocol",
       canBeDepegAuthoritative: false,
+      depegSourceFamily: "protocol:zephyr-scanner",
       defaultObservedAtMode: "local_fetch",
     });
 
@@ -97,6 +107,21 @@ describe("pricing source registry", () => {
       key: "dexscreener-search",
       isSearchDerived: true,
     });
+
+    expect(getPricingSourceRegistryEntry("coinmarketcap")).toMatchObject({
+      key: "coinmarketcap",
+      trustTier: "fallback_search",
+      isListAggregator: true,
+      canBeDepegAuthoritative: false,
+      depegSourceFamily: "coinmarketcap",
+    });
+
+    expect(getPricingSourceRegistryEntry("defillama-contract")).toMatchObject({
+      key: "defillama-contract",
+      isListAggregator: true,
+      canBeDepegAuthoritative: false,
+      depegSourceFamily: "defillama",
+    });
   });
 
   it("keeps helper predicates aligned with registry metadata", () => {
@@ -106,5 +131,12 @@ describe("pricing source registry", () => {
     expect(isPricingSourceSoftGuardrailExempt("cached")).toBe(false);
     expect(isPricingSourceProtocolOverride(null)).toBe(false);
     expect(isPricingSourceSoftGuardrailExempt(undefined)).toBe(false);
+  });
+
+  it("normalizes composite source labels without treating them as unknown keys", () => {
+    expect(normalizePricingSourceKeys("coingecko+geckoterminal")).toEqual(["coingecko", "geckoterminal"]);
+    expect(getPricingSourceLabel("coingecko+geckoterminal")).toBe("CoinGecko + GeckoTerminal");
+    expect(isKnownPricingSourceOrComposite("coingecko+geckoterminal")).toBe(true);
+    expect(getUnknownPricingSourceKeys("coingecko+not-a-source")).toEqual(["not-a-source"]);
   });
 });
