@@ -7,295 +7,25 @@ import type {
   ApiKeySelfServeRequestAdminSummary,
   ApiKeySelfServeStatus,
 } from "@shared/types";
-import { AlertCircle, CheckCircle2, RefreshCw, ShieldOff, Unlock } from "lucide-react";
+import { AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { postAdminJson } from "@/lib/admin-access";
 import { cn } from "@/lib/utils";
 import { useApiKeyRequests } from "@/hooks/use-api-key-requests";
-
-const STATUS_FILTERS: readonly ("all" | ApiKeySelfServeStatus)[] = [
-  "all",
-  "pending_verification",
-  "issued",
-  "rejected",
-  "blocked",
-  "expired",
-];
-
-const STATUS_LABELS: Record<"all" | ApiKeySelfServeStatus, string> = {
-  all: "All",
-  pending_verification: "Pending",
-  issued: "Issued",
-  rejected: "Rejected",
-  blocked: "Blocked",
-  expired: "Expired",
-};
+import {
+  API_KEY_REQUEST_ACTION_LABELS,
+  API_KEY_REQUEST_STATUS_FILTERS,
+  API_KEY_REQUEST_STATUS_LABELS,
+  buildApiKeyRequestSummary,
+  createApiKeyRequestIdempotencyKey,
+  describeRequester,
+} from "@/lib/api-key-request-admin-view-model";
+import type { ApiKeyRequestAction } from "@/lib/api-key-request-admin-view-model";
+import { ApiKeyRequestCard } from "./api-key-request-card";
 
 const EMPTY_REQUESTS: readonly ApiKeySelfServeRequestAdminSummary[] = [];
 const REQUEST_LIST_LIMIT = 50;
-const ACTION_LABELS = {
-  reject: "reject",
-  "release-claim": "release claim",
-} as const;
-
-function statusClassName(status: ApiKeySelfServeStatus): string {
-  switch (status) {
-    case "issued":
-      return "border-emerald-500/30 bg-emerald-500/12 text-emerald-700 dark:text-emerald-300";
-    case "pending_verification":
-      return "border-sky-500/30 bg-sky-500/12 text-sky-700 dark:text-sky-300";
-    case "rejected":
-    case "blocked":
-      return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300";
-    case "expired":
-      return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
-  }
-}
-
-function formatTime(epochSeconds: number | null): string {
-  if (epochSeconds == null) return "never";
-  return new Date(epochSeconds * 1000).toLocaleString();
-}
-
-function formatRelative(epochSeconds: number | null, nowSeconds: number): string {
-  if (epochSeconds == null) return "never";
-  const delta = epochSeconds - nowSeconds;
-  const abs = Math.abs(delta);
-  const minutes = Math.round(abs / 60);
-  if (minutes < 90) {
-    return delta >= 0 ? `in ${minutes}m` : `${minutes}m ago`;
-  }
-  const hours = Math.round(abs / 3600);
-  if (hours < 48) {
-    return delta >= 0 ? `in ${hours}h` : `${hours}h ago`;
-  }
-  const days = Math.round(abs / 86_400);
-  return delta >= 0 ? `in ${days}d` : `${days}d ago`;
-}
-
-function describeRequester(request: ApiKeySelfServeRequestAdminSummary): string {
-  return request.organization || request.requesterName || "Unlabeled requester";
-}
-
-function createIdempotencyKey(action: "reject" | "release-claim", requestId: string): string {
-  const randomPart =
-    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  return `api-key-request:${action}:${requestId}:${randomPart}`;
-}
-
-function hasActiveUnexpiredLinkedKey(
-  request: ApiKeySelfServeRequestAdminSummary,
-  generatedAt: number,
-): boolean {
-  return request.linkedKeyActive === true
-    && (request.linkedKeyExpiresAt == null || request.linkedKeyExpiresAt > generatedAt);
-}
-
-function canReleaseRequestClaim(
-  request: ApiKeySelfServeRequestAdminSummary,
-  generatedAt: number,
-): boolean {
-  return request.status !== "pending_verification"
-    && !hasActiveUnexpiredLinkedKey(request, generatedAt)
-    && request.claimStatus !== "released";
-}
-
-function describeNextAction(
-  request: ApiKeySelfServeRequestAdminSummary,
-  generatedAt: number,
-): string {
-  const hasLiveKey = hasActiveUnexpiredLinkedKey(request, generatedAt);
-  const canReleaseClaim = canReleaseRequestClaim(request, generatedAt);
-
-  if (request.status === "pending_verification") {
-    return request.emailVerified
-      ? "Email is verified; review risk context, then let issuance complete or reject if the requester should not receive access."
-      : "Waiting on email verification. Reject only when the requester or risk context is disqualifying.";
-  }
-
-  if (request.status === "issued") {
-    if (hasLiveKey) {
-      return "Live key is active. Rejecting this request also deactivates the linked key and releases the email claim.";
-    }
-    if (canReleaseClaim) {
-      return "Linked key is inactive or expired. Release the stale claim to unblock a future self-serve request.";
-    }
-    return "Issued request is settled. Review linked-key usage before rotating or deactivating from the key panel.";
-  }
-
-  if (request.status === "expired") {
-    return canReleaseClaim
-      ? "Verification expired with a retained claim. Release the stale claim if no manual follow-up is needed."
-      : "Verification expired and the claim is already clear.";
-  }
-
-  if (request.status === "blocked") {
-    return "Blocked by consistency or policy safeguards. Check risk reasons and linked key state before any manual follow-up.";
-  }
-
-  return canReleaseClaim
-    ? "Rejected request still has a retained claim. Release it if the email should be allowed to request again."
-    : "Rejected request is closed and the claim is clear.";
-}
-
-function describeReleaseClaimTitle(
-  request: ApiKeySelfServeRequestAdminSummary,
-  hasActiveUnexpiredKey: boolean,
-): string {
-  if (hasActiveUnexpiredKey) {
-    return "Release is blocked while the linked key is active and unexpired.";
-  }
-  if (request.status === "pending_verification") {
-    return "Pending verification claims should be rejected or allowed to expire.";
-  }
-  if (request.claimStatus === "released") {
-    return "Claim is already released.";
-  }
-  return "Release the retained email claim.";
-}
-
-function RequestCard({
-  request,
-  generatedAt,
-  busyRequestId,
-  onReject,
-  onReleaseClaim,
-}: {
-  request: ApiKeySelfServeRequestAdminSummary;
-  generatedAt: number;
-  busyRequestId: string | null;
-  onReject: (request: ApiKeySelfServeRequestAdminSummary) => void;
-  onReleaseClaim: (request: ApiKeySelfServeRequestAdminSummary) => void;
-}) {
-  const busy = busyRequestId === request.requestId;
-  const hasActiveUnexpiredKey = hasActiveUnexpiredLinkedKey(request, generatedAt);
-  const canReleaseClaim = canReleaseRequestClaim(request, generatedAt);
-  const canReject = request.status === "pending_verification" || request.status === "issued";
-  const rejectLabel = request.status === "issued" && hasActiveUnexpiredKey
-    ? "Reject + deactivate key"
-    : request.status === "pending_verification"
-      ? "Reject pending request"
-      : "Reject request";
-  const releaseClaimLabel = "Release stale claim";
-  const requesterLabel = describeRequester(request);
-  const releaseClaimTitle = describeReleaseClaimTitle(request, hasActiveUnexpiredKey);
-
-  return (
-    <article className="space-y-4 rounded-lg border border-border/60 bg-background/35 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-semibold", statusClassName(request.status))}>
-              {STATUS_LABELS[request.status]}
-            </span>
-          </div>
-          <h3 className="text-base font-semibold tracking-tight text-foreground">
-            {requesterLabel}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Created {formatRelative(request.createdAt, generatedAt)} - Claim {request.claimStatus ?? "none"}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={busy || !canReject}
-            title={canReject ? rejectLabel : "Only pending or issued requests can be rejected."}
-            onClick={() => onReject(request)}
-          >
-            <ShieldOff className="h-4 w-4" aria-hidden="true" />
-            {rejectLabel}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={busy || !canReleaseClaim}
-            title={releaseClaimTitle}
-            onClick={() => onReleaseClaim(request)}
-          >
-            <Unlock className="h-4 w-4" aria-hidden="true" />
-            {releaseClaimLabel}
-          </Button>
-        </div>
-      </div>
-
-      <div className="rounded-md border border-border/60 bg-background/40 px-3 py-2">
-        <div className="text-xs uppercase text-muted-foreground">Next action</div>
-        <p className="mt-1 text-sm leading-relaxed text-foreground">{describeNextAction(request, generatedAt)}</p>
-      </div>
-
-      <div className="grid gap-3 text-sm md:grid-cols-3">
-        <div>
-          <div className="text-xs uppercase text-muted-foreground">Cadence</div>
-          <div className="font-medium text-foreground">{request.expectedCadence ?? "unknown"}</div>
-        </div>
-        <div>
-          <div className="text-xs uppercase text-muted-foreground">Volume</div>
-          <div className="font-medium text-foreground">{request.expectedVolume ?? "not provided"}</div>
-        </div>
-        <div>
-          <div className="text-xs uppercase text-muted-foreground">Risk</div>
-          <div className="font-medium text-foreground">{request.riskScore}</div>
-        </div>
-      </div>
-
-      <details className="rounded-md border border-border/60 bg-background/40 px-3 py-2">
-        <summary className="cursor-pointer text-sm font-medium text-foreground">Use case and endpoints</summary>
-        <div className="mt-3 space-y-3">
-          <p className="text-sm leading-relaxed text-muted-foreground">{request.useCase}</p>
-          <div className="flex flex-wrap gap-2">
-            {request.intendedEndpoints.length > 0 ? request.intendedEndpoints.map((endpoint) => (
-              <span key={endpoint} className="rounded-md border border-border/60 bg-background px-2 py-1 font-mono text-xs text-muted-foreground">
-                {endpoint}
-              </span>
-            )) : (
-              <span className="text-xs text-muted-foreground">No endpoint list provided</span>
-            )}
-          </div>
-        </div>
-      </details>
-
-      {request.riskReasons.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {request.riskReasons.map((reason) => (
-            <span key={reason} className="rounded-md border border-amber-500/25 bg-amber-500/8 px-2 py-1 text-xs text-amber-700 dark:text-amber-300">
-              {reason}
-            </span>
-          ))}
-        </div>
-      ) : null}
-
-      <details className="rounded-md border border-border/60 bg-background/40 px-3 py-2">
-        <summary className="cursor-pointer text-sm font-medium text-foreground">Requester details</summary>
-        <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-2">
-          <div>Email: <span className="break-all">{request.email}</span></div>
-          <div>Name: {request.requesterName ?? "not provided"}</div>
-          <div>Organization: {request.organization ?? "not provided"}</div>
-          <div>Project: {request.projectUrl ?? "not provided"}</div>
-          <div>Terms: {request.acceptedTerms ? "accepted" : "missing"}</div>
-          <div>Email verified: {request.emailVerified ? "yes" : "no"}</div>
-        </div>
-      </details>
-
-      <div className="grid gap-2 border-t border-border/50 pt-3 text-xs text-muted-foreground md:grid-cols-2 xl:grid-cols-4">
-        <div>Created: {formatTime(request.createdAt)} ({formatRelative(request.createdAt, generatedAt)})</div>
-        <div>Verification expires: {formatTime(request.verificationExpiresAt)}</div>
-        <div>Issued: {formatTime(request.issuedAt)}</div>
-        <div>Key: {request.linkedKeyPrefix ?? "none"}</div>
-        <div>Claim: {request.claimStatus ?? "none"}</div>
-        <div>Self-serve expiry: {formatTime(request.selfServeExpiresAt)}</div>
-        <div>Updated: {formatTime(request.updatedAt)}</div>
-        <div>Rejected: {formatTime(request.rejectedAt)}</div>
-      </div>
-    </article>
-  );
-}
 
 export function ApiKeyRequestsPanel() {
   const [statusFilter, setStatusFilter] = useState<"all" | ApiKeySelfServeStatus>("pending_verification");
@@ -309,26 +39,16 @@ export function ApiKeyRequestsPanel() {
 
   const requests = data?.requests ?? EMPTY_REQUESTS;
   const generatedAt = data?.generatedAt ?? Math.floor(Date.now() / 1000);
-  const requestSummary = useMemo(() => {
-    const needsReview = requests.filter((request) => request.status === "pending_verification").length;
-    const risky = requests.filter((request) => request.riskScore >= 50 || request.riskReasons.length > 0).length;
-    const claimCleanup = requests.filter((request) => canReleaseRequestClaim(request, generatedAt)).length;
-    const activeKeys = requests.filter((request) => hasActiveUnexpiredLinkedKey(request, generatedAt)).length;
-
-    return [
-      { label: "Displayed", value: String(requests.length), detail: `up to ${REQUEST_LIST_LIMIT} ${STATUS_LABELS[statusFilter].toLowerCase()}` },
-      { label: "Needs review", value: String(needsReview), detail: "pending verification" },
-      { label: "Risk flags", value: String(risky), detail: "score >= 50 or reasons" },
-      { label: "Claim cleanup", value: String(claimCleanup), detail: "safe to release" },
-      { label: "Live linked keys", value: String(activeKeys), detail: "active and unexpired" },
-    ];
-  }, [generatedAt, requests, statusFilter]);
+  const requestSummary = useMemo(
+    () => buildApiKeyRequestSummary(requests, generatedAt, statusFilter, REQUEST_LIST_LIMIT),
+    [generatedAt, requests, statusFilter],
+  );
 
   function collectMutationReason(
     request: ApiKeySelfServeRequestAdminSummary,
-    action: "reject" | "release-claim",
+    action: ApiKeyRequestAction,
   ): string | null {
-    const label = ACTION_LABELS[action];
+    const label = API_KEY_REQUEST_ACTION_LABELS[action];
     const confirmed = window.confirm(
       `Confirm ${label} for ${describeRequester(request)}. This changes self-serve API access state.`,
     );
@@ -347,7 +67,7 @@ export function ApiKeyRequestsPanel() {
 
   async function runMutation(
     request: ApiKeySelfServeRequestAdminSummary,
-    action: "reject" | "release-claim",
+    action: ApiKeyRequestAction,
     reason: string,
   ) {
     setBusyRequestId(request.requestId);
@@ -360,9 +80,9 @@ export function ApiKeyRequestsPanel() {
       const result = await postAdminJson<ApiKeySelfServeAdminMutationResponse>(
         path,
         { reason },
-        { idempotencyKey: createIdempotencyKey(action, request.requestId) },
+        { idempotencyKey: createApiKeyRequestIdempotencyKey(action, request.requestId) },
       );
-      setMutationNotice(`Request marked ${STATUS_LABELS[result.status].toLowerCase()}; claim ${result.claimStatus ?? "none"}.`);
+      setMutationNotice(`Request marked ${API_KEY_REQUEST_STATUS_LABELS[result.status].toLowerCase()}; claim ${result.claimStatus ?? "none"}.`);
       await refetch();
     } catch (err) {
       setMutationError(err instanceof Error ? err.message : "API key request action failed");
@@ -371,7 +91,7 @@ export function ApiKeyRequestsPanel() {
     }
   }
 
-  function requestMutation(request: ApiKeySelfServeRequestAdminSummary, action: "reject" | "release-claim") {
+  function requestMutation(request: ApiKeySelfServeRequestAdminSummary, action: ApiKeyRequestAction) {
     setMutationError(null);
     const reason = collectMutationReason(request, action);
     if (!reason) return;
@@ -403,7 +123,7 @@ export function ApiKeyRequestsPanel() {
         ) : null}
 
         <div className="flex flex-wrap gap-2" role="group" aria-label="Request status filter">
-          {STATUS_FILTERS.map((status) => (
+          {API_KEY_REQUEST_STATUS_FILTERS.map((status) => (
             <Button
               key={status}
               type="button"
@@ -412,7 +132,7 @@ export function ApiKeyRequestsPanel() {
               aria-pressed={statusFilter === status}
               onClick={() => setStatusFilter(status)}
             >
-              {STATUS_LABELS[status]}
+              {API_KEY_REQUEST_STATUS_LABELS[status]}
             </Button>
           ))}
         </div>
@@ -448,7 +168,7 @@ export function ApiKeyRequestsPanel() {
         {!isLoading && !error && requests.length > 0 ? (
           <div className="space-y-3">
             {requests.map((request) => (
-              <RequestCard
+              <ApiKeyRequestCard
                 key={request.requestId}
                 request={request}
                 generatedAt={generatedAt}

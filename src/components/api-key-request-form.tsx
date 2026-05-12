@@ -1,9 +1,7 @@
 "use client";
 
 import {
-  SELF_SERVE_API_KEY_EXPIRY_SEC,
   SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
-  SELF_SERVE_MAX_ACTIVE_KEYS_PER_EMAIL,
   SELF_SERVE_USE_CASE_MAX_LENGTH,
   SELF_SERVE_USE_CASE_MIN_LENGTH,
 } from "@shared/lib/ops-limits";
@@ -15,48 +13,22 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
+  useApiKeyRequestFormState,
+} from "@/hooks/use-api-key-request-form-state";
+import {
+  API_KEY_REQUEST_CADENCE_OPTIONS,
+  API_KEY_REQUEST_ENDPOINT_OPTIONS,
+  API_KEY_REQUEST_EXPIRY_DAYS,
+  API_KEY_REQUEST_OWNERSHIP_LIMIT_LABEL,
+  API_KEY_REQUEST_SAMPLE_PATH,
   EMAIL_MAX_LENGTH,
   EXPECTED_VOLUME_MAX_LENGTH,
   NAME_MAX_LENGTH,
   ORGANIZATION_MAX_LENGTH,
   PROJECT_URL_MAX_LENGTH,
-  useApiKeyRequestFormState,
-} from "@/hooks/use-api-key-request-form-state";
-
-const ENDPOINT_OPTIONS = [
-  { path: "/api/stablecoins", label: "Stablecoin list" },
-  { path: "/api/stablecoin/:id", label: "Stablecoin detail" },
-  { path: "/api/peg-summary", label: "Peg summary" },
-  { path: "/api/depeg-events", label: "Depeg events" },
-  { path: "/api/dex-liquidity", label: "DEX liquidity" },
-  { path: "/api/yield-rankings", label: "Yield rankings" },
-  { path: "/api/report-cards", label: "Report cards" },
-  { path: "/api/chains", label: "Chains" },
-  { path: "unknown", label: "Not sure yet" },
-] as const;
-
-const CADENCE_OPTIONS: readonly { value: ApiKeySelfServeCadence; label: string }[] = [
-  { value: "hourly", label: "Hourly" },
-  { value: "every_5_min", label: "Every 5 minutes" },
-  { value: "every_1_min", label: "Every minute" },
-  { value: "manual", label: "Manual or ad hoc" },
-  { value: "other", label: "Other" },
-];
-
-const EXPIRY_DAYS = Math.round(SELF_SERVE_API_KEY_EXPIRY_SEC / 86_400);
-const SAMPLE_PATH = "/api/stablecoins";
-const OWNERSHIP_LIMIT_LABEL = SELF_SERVE_MAX_ACTIVE_KEYS_PER_EMAIL === 1
-  ? "One active key per email"
-  : `${SELF_SERVE_MAX_ACTIVE_KEYS_PER_EMAIL} active keys per email`;
-
-function endpointId(path: string): string {
-  return `endpoint-${path.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase()}`;
-}
-
-function formatExpiry(epochSeconds: number | null): string {
-  if (epochSeconds == null) return "No expiry";
-  return new Date(epochSeconds * 1000).toLocaleString();
-}
+  endpointId,
+  formatSelfServeExpiry,
+} from "@/lib/api-key-request-form-view-model";
 
 export function ApiKeyRequestForm() {
   const {
@@ -203,7 +175,7 @@ export function ApiKeyRequestForm() {
               onChange={(event) => setExpectedCadence(event.target.value as ApiKeySelfServeCadence)}
               disabled={requestStatus === "submitting"}
             >
-              {CADENCE_OPTIONS.map((option) => (
+              {API_KEY_REQUEST_CADENCE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -228,7 +200,7 @@ export function ApiKeyRequestForm() {
         <fieldset className="mt-4 space-y-3">
           <legend className="text-sm font-medium text-foreground">Intended Endpoints</legend>
           <div className="grid gap-2 sm:grid-cols-2">
-            {ENDPOINT_OPTIONS.map((option) => {
+            {API_KEY_REQUEST_ENDPOINT_OPTIONS.map((option) => {
               const id = endpointId(option.path);
               const checked = selectedEndpoints.includes(option.path);
               return (
@@ -306,7 +278,7 @@ export function ApiKeyRequestForm() {
             Send Verification Email
           </Button>
           <p className="text-xs text-muted-foreground">
-            Self-serve keys are limited to {SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE} rpm and expire after {EXPIRY_DAYS} days.
+            Self-serve keys are limited to {SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE} rpm and expire after {API_KEY_REQUEST_EXPIRY_DAYS} days.
           </p>
         </div>
       </form>
@@ -368,7 +340,7 @@ export function ApiKeyRequestForm() {
                   It is only displayed once after email verification.
                 </p>
                 <p className="mt-2 text-xs opacity-90">
-                  Prefix {issuedKey.key.keyPrefix} - Expires {formatExpiry(issuedKey.key.expiresAt)}
+                  Prefix {issuedKey.key.keyPrefix} - Expires {formatSelfServeExpiry(issuedKey.key.expiresAt)}
                 </p>
                 {!tokenSecured ? (
                   <p className="mt-2 text-xs font-medium opacity-95">
@@ -452,11 +424,11 @@ export function ApiKeyRequestForm() {
             </div>
             <div>
               <dt className="text-xs uppercase text-muted-foreground">Expiry</dt>
-              <dd className="font-mono text-lg font-semibold text-foreground">{EXPIRY_DAYS} days</dd>
+              <dd className="font-mono text-lg font-semibold text-foreground">{API_KEY_REQUEST_EXPIRY_DAYS} days</dd>
             </div>
             <div>
               <dt className="text-xs uppercase text-muted-foreground">Ownership</dt>
-              <dd className="font-medium text-foreground">{OWNERSHIP_LIMIT_LABEL}</dd>
+              <dd className="font-medium text-foreground">{API_KEY_REQUEST_OWNERSHIP_LIMIT_LABEL}</dd>
             </div>
             <div>
               <dt className="text-xs uppercase text-muted-foreground">Base URL</dt>
@@ -464,7 +436,7 @@ export function ApiKeyRequestForm() {
             </div>
           </dl>
           <p className="mt-4">
-            Use <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">X-API-Key</code> on protected public routes such as <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">{SAMPLE_PATH}</code>.
+            Use <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">X-API-Key</code> on protected public routes such as <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">{API_KEY_REQUEST_SAMPLE_PATH}</code>.
           </p>
         </section>
       </aside>
