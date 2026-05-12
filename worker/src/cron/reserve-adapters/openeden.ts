@@ -2,6 +2,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildRedemptionSnapshotMetadata,
   fetchJsonWithRetry,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
@@ -142,16 +143,16 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
       componentTotalUsd: componentTotal,
       immediateRedeemableUsd: payload.usdcAmount,
       ...(payload.usdoAmount > 0 ? { immediateRedeemableRatio: payload.usdcAmount / payload.usdoAmount } : {}),
-      redemption: {
+      ...buildRedemptionSnapshotMetadata({
         capacityUsd: payload.usdcAmount,
         ...(payload.usdoAmount > 0 ? { capacityRatioOfSupply: payload.usdcAmount / payload.usdoAmount } : {}),
-        capacityKind: "live-direct-bounded" as const,
-        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "unverified",
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        routeStatus: "open" as const,
+        routeStatus: "open",
         holderEligibility: "verified-customer",
         sourceUrls: ["https://openeden.com/usdo/transparency"],
-      },
+      }),
     },
   };
 }

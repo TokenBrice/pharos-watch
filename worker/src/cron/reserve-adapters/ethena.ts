@@ -4,6 +4,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   accumulateBucketedExposure,
   buildBucketSlices,
+  buildRedemptionSnapshotMetadata,
   fetchJsonWithRetry,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
@@ -159,15 +160,15 @@ export function adaptEthenaCollateral(
         computedTotalBackingAssetsInUsd > 0
           ? (unknownExposureUsd / computedTotalBackingAssetsInUsd) * 100
           : 0,
-      redemption: {
+      ...buildRedemptionSnapshotMetadata({
         capacityUsd: stableBucketUsd,
-        capacityKind: "live-proxy-validated" as const,
-        freshnessKind: lastUpdatedAt > 0 ? "verified-source-timestamp" as const : "unverified" as const,
+        capacityKind: "live-proxy-validated",
+        freshnessKind: lastUpdatedAt > 0 ? "verified-source-timestamp" : "unverified",
         ...(lastUpdatedAt > 0 ? { sourceTimestamp: lastUpdatedAt } : {}),
-        routeStatus: "open" as const,
+        routeStatus: "open",
         holderEligibility: "whitelisted-primary",
         sourceUrls: [sourceUrl],
-      },
+      }),
     },
   };
 }

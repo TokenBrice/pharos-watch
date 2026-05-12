@@ -3,6 +3,7 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildRedemptionSnapshotMetadata,
   buildUnknownExposureWarning,
   catchAndWarn,
   decimalNumberFromBigInt,
@@ -145,11 +146,11 @@ export function adaptJupUsdData(
       ...(unknownHoldingNames.size > 0 ? { unknownHoldingNames: Array.from(unknownHoldingNames).sort() } : {}),
       immediateRedeemableUsd: totalReserveUsd,
       ...(ratio != null ? { immediateRedeemableRatio: ratio } : {}),
-      redemption: {
+      ...buildRedemptionSnapshotMetadata({
         capacityUsd: totalReserveUsd,
         ...(ratio != null ? { capacityRatioOfSupply: ratio } : {}),
-        capacityKind: "live-direct-bounded" as const,
-        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "same-run-api" as const,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "same-run-api",
         routeStatus,
         ...(routeStatusReason ? { routeStatusReason } : {}),
         holderEligibility: "whitelisted-primary",
@@ -158,7 +159,7 @@ export function adaptJupUsdData(
           "https://api.jupusd.money/api/data",
           "https://api.jupusd.money/openapi.json",
         ],
-      },
+      }),
       ...(sourceTimestamp != null
         ? verifiedFreshnessMetadata(sourceTimestamp)
         : unverifiedFreshnessMetadata(

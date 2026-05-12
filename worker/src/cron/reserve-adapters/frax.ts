@@ -3,6 +3,7 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildRedemptionSnapshotMetadata,
   buildUnknownExposureWarning,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
@@ -211,14 +212,14 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse): Adapte
             "Frax balance-sheet response did not include asOfTimestamp",
           )),
       immediateRedeemableUsd: stableRedeemableUsd,
-      redemption: {
+      ...buildRedemptionSnapshotMetadata({
         capacityUsd: stableRedeemableUsd,
-        capacityKind: "live-proxy-validated" as const,
-        freshnessKind: sourceTimestamp != null ? ("verified-source-timestamp" as const) : ("unverified" as const),
+        capacityKind: "live-proxy-validated",
+        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "unverified",
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        routeStatus: "unknown" as const,
+        routeStatus: "unknown",
         sourceUrls: ["https://frax.com/transparency"],
-      },
+      }),
     },
   };
 }
@@ -349,14 +350,14 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
             "Frax FPI collateral response did not include updatedAtTimestampSec",
           )),
       immediateRedeemableUsd: stableRedeemableUsd,
-      redemption: {
+      ...buildRedemptionSnapshotMetadata({
         capacityUsd: stableRedeemableUsd,
-        capacityKind: "live-proxy-validated" as const,
-        freshnessKind: sourceTimestamp != null ? ("verified-source-timestamp" as const) : ("unverified" as const),
+        capacityKind: "live-proxy-validated",
+        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "unverified",
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        routeStatus: "unknown" as const,
+        routeStatus: "unknown",
         sourceUrls: ["https://frax.com/transparency"],
-      },
+      }),
     },
   };
 }

@@ -2,6 +2,7 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildRedemptionSnapshotMetadata,
   buildUnknownExposureWarning,
   fetchJsonWithRetry,
   normalizeSlices,
@@ -209,19 +210,19 @@ export async function fetchInfiniFiReserves(
       pendingRedemptionsUsd:
         payload.data.stats.asset.pendingRedemptionsAssetNormalized,
       ...(adapted.supplyUsd != null ? { supplyUsd: adapted.supplyUsd } : {}),
-      redemption: {
+      ...buildRedemptionSnapshotMetadata({
         capacityUsd: adapted.immediateRedeemableUsd,
         ...(adapted.supplyUsd != null && adapted.supplyUsd > 0
           ? { capacityRatioOfSupply: adapted.immediateRedeemableUsd / adapted.supplyUsd }
           : {}),
-        capacityKind: "live-queue" as const,
-        freshnessKind: "unverified" as const,
-        routeStatus: "unknown" as const,
+        capacityKind: "live-queue",
+        freshnessKind: "unverified",
+        routeStatus: "unknown",
         ...(payload.data.stats.asset.pendingRedemptionsAssetNormalized != null
           ? { queueDepthUsd: payload.data.stats.asset.pendingRedemptionsAssetNormalized }
           : {}),
         sourceUrls: [url],
-      },
+      }),
     },
   };
 }

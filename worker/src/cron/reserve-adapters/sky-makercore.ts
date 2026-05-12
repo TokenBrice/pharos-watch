@@ -2,6 +2,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildRedemptionSnapshotMetadata,
   fetchJsonWithRetry,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
@@ -185,15 +186,15 @@ export async function fetchSkyMakercoreReserves(
           )),
       unknownExposurePct: totalDebt > 0 ? (unknownDebt / totalDebt) * 100 : 0,
       details: { psmComposition: SKY_PSM_COMPOSITION_NOTE },
-      redemption: {
+      ...buildRedemptionSnapshotMetadata({
         capacityUsd: immediateRedeemableUsd,
-        capacityKind: "live-proxy-validated" as const,
-        freshnessKind: timestampSummary != null ? "verified-source-timestamp" as const : "unverified" as const,
+        capacityKind: "live-proxy-validated",
+        freshnessKind: timestampSummary != null ? "verified-source-timestamp" : "unverified",
         ...(timestampSummary != null ? { sourceTimestamp: timestampSummary.sourceTimestamp } : {}),
-        routeStatus: "open" as const,
+        routeStatus: "open",
         holderEligibility: "any-holder",
         sourceUrls: [primaryInput.url],
-      },
+      }),
     },
     ...(warnings.length > 0 ? { warnings } : {}),
   };

@@ -5,6 +5,7 @@ import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selector
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
 import {
+  buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
   fetchOnchainRawCall,
   fetchOnchainUint256,
@@ -207,21 +208,21 @@ export function adaptCapVaultState(args: {
         ...(asset.priceUsd != null ? { priceUsd: asset.priceUsd } : {}),
         ...(asset.configured === false ? { configured: false } : {}),
       })),
-      redemption: {
+      ...buildRedemptionSnapshotMetadata({
         capacityUsd: immediateRedeemableUsd,
         ...(args.supplyUsd != null && args.supplyUsd > 0
           ? { capacityRatioOfSupply: immediateRedeemableUsd / args.supplyUsd }
           : {}),
-        capacityKind: "live-direct-bounded" as const,
-        freshnessKind: "same-run-onchain" as const,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
         routeStatus: immediateRedeemableUsd > 0 && pausedAssets.length === 0
-          ? "open" as const
+          ? "open"
           : immediateRedeemableUsd > 0
-            ? "degraded" as const
-            : "paused" as const,
+            ? "degraded"
+            : "paused",
         holderEligibility: "any-holder",
         sourceUrls: ["https://docs.cap.app/concepts/vault"],
-      },
+      }),
     },
   };
 }
