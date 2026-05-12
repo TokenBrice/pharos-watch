@@ -2,6 +2,7 @@
 
 import { useId, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EVENT_LABELS } from "@shared/lib/classification";
 import { formatCompactCount } from "@shared/lib/format";
 import { BLACKLIST_STABLECOINS, type BlacklistSummaryResponse } from "@shared/types";
 
@@ -29,12 +30,6 @@ const EVENT_COLORS = {
   destroy: "#ef4444",
   blacklist: "#f97316",
   unblacklist: "oklch(0.78 0.16 240)",
-} as const;
-
-const EVENT_LABELS = {
-  destroy: "Wipe",
-  blacklist: "Freeze",
-  unblacklist: "Release",
 } as const;
 
 const VIEWBOX_WIDTH = 1000;

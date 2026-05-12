@@ -566,9 +566,9 @@ export const EVENT_BADGE_STYLES: Record<BlacklistEventType, string> = {
 };
 
 export const EVENT_LABELS: Record<BlacklistEventType, string> = {
-  blacklist: "Blacklist",
-  unblacklist: "Unblacklist",
-  destroy: "Destroy",
+  blacklist: "Freeze",
+  unblacklist: "Release",
+  destroy: "Wipe",
 };
 
 // ---------------------------------------------------------------------------
