@@ -61,8 +61,10 @@ describe("audit-pricing-provider-config", () => {
           result: {
             DAIUSD: { altname: "DAIUSD", wsname: "DAI/USD" },
             EURCUSD: { altname: "EURCUSD", wsname: "EURC/USD" },
+            EURRUSD: { altname: "EURRUSD", wsname: "EURR/USD" },
             PAXGUSD: { altname: "PAXGUSD", wsname: "PAXG/USD" },
             PYUSDUSD: { altname: "PYUSDUSD", wsname: "PYUSD/USD" },
+            TGBPUSD: { altname: "TGBPUSD", wsname: "TGBP/USD" },
             USD1USD: { altname: "USD1USD", wsname: "USD1/USD" },
             USDCUSD: { altname: "USDCUSD", wsname: "USDC/USD" },
             USDSUSD: { altname: "USDSUSD", wsname: "USDS/USD" },
