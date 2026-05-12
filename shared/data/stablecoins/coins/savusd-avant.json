@@ -68,7 +68,7 @@
     "yieldType": "nav-appreciation"
   },
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "erc4626-single-asset",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "savusd-avant",
@@ -81,6 +81,17 @@
         "kind": "onchain-evm",
         "chain": "avalanche",
         "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://avalanche-c-chain-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://api.avax.network/ext/bc/C/rpc",
+      "slice": {
+        "name": "avUSD savings vault shares",
+        "risk": "high",
+        "coinId": "avusd-avant",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x24de8771bc5ddb3362db529fc3358f2df3a0e346"
       }
     }
   }

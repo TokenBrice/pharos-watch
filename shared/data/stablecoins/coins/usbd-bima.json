@@ -77,6 +77,62 @@
       "risk": "high"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "evm-branch-balances",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usbd-bima",
+    "display": {
+      "url": "https://docs.bima.money/security/mainnet-addresses",
+      "label": "BIMA Mainnet Addresses"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com",
+      "branches": [
+        {
+          "name": "WBTC BIMA collateral wrapper",
+          "holder": "0xa20c3dc27c8c1a1adc92e3b443607914ed800ff2",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x59063fbe70d3b0f9312e5c89acdc476f5d2018e1",
+            "decimals": 18
+          },
+          "risk": "medium",
+          "priceUsd": 1
+        },
+        {
+          "name": "tacBTC BIMA collateral wrapper",
+          "holder": "0x29467211ad35f97cea26ae11da0c427836ec4c05",
+          "token": {
+            "chain": "ethereum",
+            "address": "0xdc0ccad18ca645a03870676c78a81524b4655197",
+            "decimals": 18
+          },
+          "risk": "medium",
+          "priceUsd": 1
+        },
+        {
+          "name": "strBTC BIMA collateral wrapper",
+          "holder": "0x5066dc39248e6696c0f2606a744a4482a3d36b97",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x856db20b0c326afee3bf64770f7d8d39bf232ce0",
+            "decimals": 18
+          },
+          "risk": "medium",
+          "priceUsd": 1
+        }
+      ]
+    }
+  },
   "yieldConfig": {
     "yieldSource": "BIMA savings (sUSBD)",
     "yieldType": "lending-vault"

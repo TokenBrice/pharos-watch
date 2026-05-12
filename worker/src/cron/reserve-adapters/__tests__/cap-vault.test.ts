@@ -268,12 +268,18 @@ describe("fetchCapVaultReserves", () => {
     },
   };
 
+  function encodeAddressArray(addresses: string[]): string {
+    const offset = "0000000000000000000000000000000000000000000000000000000000000020"; // 32
+    const length = addresses.length.toString(16).padStart(64, "0");
+    const encodedAddresses = addresses
+      .map((address) => address.toLowerCase().replace(/^0x/, "").padStart(64, "0"))
+      .join("");
+    return `0x${offset}${length}${encodedAddresses}`;
+  }
+
   // Encodes a single-address dynamic-array result for assets() = [assetAddress]
   function encodeSingleAddressArray(address: string): string {
-    const stripped = address.toLowerCase().replace(/^0x/, "").padStart(64, "0");
-    const offset = "0000000000000000000000000000000000000000000000000000000000000020"; // 32
-    const length = "0000000000000000000000000000000000000000000000000000000000000001";
-    return `0x${offset}${length}${stripped}`;
+    return encodeAddressArray([address]);
   }
 
   // Helper: fill the mock queue for assets(), totalSupply(), then per-asset calls.
@@ -392,5 +398,62 @@ describe("fetchCapVaultReserves", () => {
     const warning = result.warnings?.find((w) => w.code === "unknown-vault-asset");
     expect(warning).toBeDefined();
     expect(warning?.effect).toBe("degraded");
+  });
+
+  it("maps current cusd-cap WTGXX vault asset when explicitly configured", async () => {
+    const wtgxxAddress = "0x434558cb1ebe9950e8a66f1ef8a15a473dce7d8c";
+
+    vi.mocked(fetchOnchainRawCall)
+      .mockResolvedValueOnce(encodeAddressArray([assetAddress, wtgxxAddress]))
+      .mockResolvedValueOnce(encodedFalse)
+      .mockResolvedValueOnce(encodedFalse);
+
+    vi.mocked(fetchOnchainUint256)
+      .mockResolvedValueOnce(100_000000000000000000n) // vault totalSupply (18 decimals)
+      .mockResolvedValueOnce(6n) // USDC decimals
+      .mockResolvedValueOnce(50_000000n) // USDC totalSupplies
+      .mockResolvedValueOnce(0n) // USDC totalBorrows
+      .mockResolvedValueOnce(50_000000n) // USDC available
+      .mockResolvedValueOnce(18n) // WTGXX decimals
+      .mockResolvedValueOnce(50_000000000000000000n) // WTGXX totalSupplies
+      .mockResolvedValueOnce(0n) // WTGXX totalBorrows
+      .mockResolvedValueOnce(50_000000000000000000n); // WTGXX available
+
+    const result = await fetchCapVaultReserves(
+      coin,
+      {
+        ...config,
+        params: {
+          assets: [
+            {
+              address: assetAddress,
+              name: "USDC",
+              risk: "low",
+              coinId: "usdc-circle",
+              priceUsd: 1,
+            },
+            {
+              address: wtgxxAddress,
+              name: "WTGXX",
+              risk: "low",
+              depType: "collateral",
+              priceUsd: 1,
+            },
+          ],
+        },
+      },
+      signal,
+    );
+
+    expect(result.slices).toEqual([
+      { name: "USDC", pct: 50, risk: "low", coinId: "usdc-circle" },
+      { name: "WTGXX", pct: 50, risk: "low", depType: "collateral" },
+    ]);
+    expect(result.warnings?.some((warning) => warning.code === "unknown-vault-asset") ?? false).toBe(false);
+    expect(result.metadata).toMatchObject({
+      assetCount: 2,
+      totalReserveUsd: 100,
+      immediateRedeemableUsd: 100,
+    });
   });
 });

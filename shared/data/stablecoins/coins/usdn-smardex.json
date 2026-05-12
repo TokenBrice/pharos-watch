@@ -65,6 +65,42 @@
       "risk": "medium"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "evm-branch-balances",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usdn-smardex",
+    "display": {
+      "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol",
+      "label": "SMARDEX USDN vault"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com",
+      "branches": [
+        {
+          "name": "wstETH-backed USDN vault",
+          "holder": "0x656cb8c6d154aad29d8771384089be5b5141f01a",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "decimals": 18
+          },
+          "risk": "medium"
+        }
+      ],
+      "debtSelector": "0x18160ddd",
+      "debtContract": "0xde17a000ba631c5d7c2bd9fb692efea52d90dee2",
+      "debtDecimals": 18
+    }
+  },
   "yieldConfig": {
     "yieldSource": "SMARDEX USDN rebasing vault",
     "yieldType": "rebase"

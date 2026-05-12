@@ -69,6 +69,33 @@
       "depType": "wrapper"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "syzusd-yuzu",
+    "display": {
+      "url": "https://yuzu.money/",
+      "label": "Yuzu syzUSD ERC-4626 vault"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "plasma",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://rpc.plasma.to",
+      "slice": {
+        "name": "Yuzu USD staking vault shares",
+        "risk": "high",
+        "coinId": "yzusd-yuzu",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+      }
+    }
+  },
   "yieldConfig": {
     "yieldSource": "Yuzu staking (syzUSD)",
     "yieldType": "nav-appreciation"

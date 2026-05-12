@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   adaptMentoCdpComposition,
   adaptMentoReserveComposition,
+  extractMentoDashboardTimestamp,
+  fetchMentoReserves,
   parseMentoCdpComposition,
   parseMentoReserveComposition,
 } from "../mento";
@@ -17,7 +19,8 @@ const SAMPLE_PAYLOAD = {
       { symbol: "CELO", percentage: 15 },
       { symbol: "USDGLO", percentage: 5 },
       { symbol: "stETH", percentage: 3 },
-      { symbol: "USDT", percentage: 4 },
+      { symbol: "USDT", percentage: 3 },
+      { symbol: "USDT0", percentage: 1 },
       { symbol: "USDC", percentage: 2 },
       { symbol: "axlUSDC", percentage: 1 },
       { symbol: "AUSD", percentage: 4 },
@@ -80,7 +83,8 @@ describe("mento adapter", () => {
       { symbol: "CELO", percent: 15 },
       { symbol: "USDGLO", percent: 5 },
       { symbol: "stETH", percent: 3 },
-      { symbol: "USDT", percent: 4 },
+      { symbol: "USDT", percent: 3 },
+      { symbol: "USDT0", percent: 1 },
       { symbol: "USDC", percent: 2 },
       { symbol: "axlUSDC", percent: 1 },
       { symbol: "AUSD", percent: 4 },
@@ -102,6 +106,32 @@ describe("mento adapter", () => {
       { name: "ETH", pct: 1, risk: "very-low" },
     ]);
     expect(result.warnings).toBeUndefined();
+  });
+
+  it("maps USDT0 into the existing USDT reserve bucket without degrading", () => {
+    const usdt0Payload = {
+      collateral: {
+        assets: [
+          { symbol: "USDC", percentage: 50 },
+          { symbol: "USDT0", percentage: 25 },
+          { symbol: "WETH", percentage: 25 },
+        ],
+      },
+    };
+
+    const result = adaptMentoReserveComposition(usdt0Payload);
+    expect(result.slices).toContainEqual({ name: "USDT", pct: 25, risk: "low", coinId: "usdt-tether" });
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      stableReservePct: 75,
+      freshnessMode: "unverified",
+    });
+  });
+
+  it("extracts the dashboard reserve payload timestamp", () => {
+    expect(extractMentoDashboardTimestamp(
+      'troves\\":[{}],\\"timestamp\\":\\"2026-05-11T23:21:16.007Z\\"},\\"dataUpdateCount\\":1',
+    )).toBe(Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000));
   });
 
   it("emits a structural integrity warning when fewer than 3 reserve entries are parsed", () => {
@@ -184,6 +214,57 @@ describe("mento adapter", () => {
       totalDebtUsd: 102_821.25,
       collateralizationRatio: 213_427.5 / 102_821.25,
       freshnessMode: "unverified",
+    });
+  });
+
+  it("stamps reserve composition with verified dashboard freshness when available", async () => {
+    const result = await fetchMentoReserves(
+      { id: "cusd-celo" } as never,
+      {
+        adapter: "mento",
+        version: 2,
+        semantics: "protocol-reserve",
+        display: {
+          url: "https://reserve.mento.org/",
+          label: "Mento Reserves",
+        },
+        inputs: {
+          primary: {
+            kind: "http-json",
+            url: "https://example.com/mento/reserve",
+          },
+        },
+      },
+      new AbortController().signal,
+      {
+        requestCache: new Map<string, Promise<unknown>>([
+          [
+            "json-get:https://example.com/mento/reserve:12000:null",
+            Promise.resolve(SAMPLE_PAYLOAD),
+          ],
+          [
+            "text-get:https://reserve.mento.org/:12000",
+            Promise.resolve(
+              'troves\\":[{}],\\"timestamp\\":\\"2026-05-11T23:21:16.007Z\\"},\\"dataUpdateCount\\":1',
+            ),
+          ],
+        ]),
+      } as never,
+    );
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000),
+    });
+  });
+
+  it("stamps CDP composition with verified dashboard freshness when available", () => {
+    const sourceTimestamp = Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000);
+    const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "GBPm", sourceTimestamp);
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp,
     });
   });
 

@@ -470,6 +470,46 @@ describe("fetchEvmBranchBalancesReserves", () => {
     ]);
   });
 
+  it("does not emit USD peg warnings for explicit wrapper dependencies", async () => {
+    vi.mocked(fetchErc20Balance).mockResolvedValue(50_000_000_000_000_000_000n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(
+      new Map([["sUSDe branch", 1.23]]),
+    );
+
+    const config: LiveReservesConfig = {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        branches: [
+          {
+            name: "sUSDe branch",
+            holder: "0xAAA",
+            token: { chain: "ethereum", address: "0xBBB", decimals: 18 },
+            risk: "medium",
+            coinId: "usde-ethena",
+            depType: "wrapper",
+          },
+        ],
+      },
+    };
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+    expect(result.warnings).toBeUndefined();
+    expect(result.slices).toEqual([
+      {
+        name: "sUSDe branch",
+        pct: 100,
+        risk: "medium",
+        coinId: "usde-ethena",
+        depType: "wrapper",
+      },
+    ]);
+  });
+
   it("throws when a USD-pegged wrapper price is outside the 0.5-1.5 fatal band", async () => {
     vi.mocked(fetchErc20Balance).mockResolvedValue(50_000_000n);
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(
@@ -620,6 +660,64 @@ describe("fetchEvmBranchBalancesReserves", () => {
     expect(result.metadata?.totalDebtUsd).toBe(50000);
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.2, 2);
     // Healthy ratio → no undercollateralized warning.
+    expect(result.warnings?.some((w) => w.code === "undercollateralized") ?? false).toBe(false);
+  });
+
+  it("supports the USDN wstETH holder balance plus token supply debt shape", async () => {
+    vi.mocked(fetchErc20Balance).mockResolvedValueOnce(729_665_660_446_827_366_025n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["wstETH-backed USDN vault", 2879.58]]));
+    vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(1_256_625_428_863_930_548_011_778n);
+
+    const config: LiveReservesConfig = {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        branches: [
+          {
+            name: "wstETH-backed USDN vault",
+            holder: "0x656cb8c6d154aad29d8771384089be5b5141f01a",
+            token: {
+              chain: "ethereum",
+              address: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+              decimals: 18,
+            },
+            risk: "medium",
+          },
+        ],
+        debtSelector: "0x18160ddd",
+        debtContract: "0xde17a000ba631c5d7c2bd9fb692efea52d90dee2",
+        debtDecimals: 18,
+      },
+    };
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+
+    expect(fetchErc20Balance).toHaveBeenCalledWith(
+      expect.objectContaining({ chain: "ethereum" }),
+      "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+      "0x656cb8c6d154aad29d8771384089be5b5141f01a",
+      signal,
+      undefined,
+      undefined,
+      undefined,
+    );
+    expect(fetchOnchainUint256).toHaveBeenCalledWith(expect.objectContaining({
+      contract: "0xde17a000ba631c5d7c2bd9fb692efea52d90dee2",
+      data: "0x18160ddd",
+    }));
+    expect(result.slices).toEqual([
+      {
+        name: "wstETH-backed USDN vault",
+        pct: 100,
+        risk: "medium",
+      },
+    ]);
+    expect(result.metadata?.totalDebtUsd).toBeCloseTo(1_256_625.43, 2);
+    expect(result.metadata?.collateralizationRatio).toBeGreaterThan(1);
     expect(result.warnings?.some((w) => w.code === "undercollateralized") ?? false).toBe(false);
   });
 

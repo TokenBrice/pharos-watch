@@ -81,7 +81,14 @@ function extractReserveSectionHtml(html: string, coinType: string): string | nul
 function extractDisclosureTimestamp(html: string, coinType: string): number | null {
   const section = extractReserveSectionHtml(html, coinType) ?? html;
   const match = section.match(/\bAs of\s+([A-Za-z]{3,9}\s+\d{1,2},\s*\d{4})\b/i);
-  return parseTimestampLikeToUnixSeconds(match?.[1]);
+  const sectionTimestamp = parseTimestampLikeToUnixSeconds(match?.[1]);
+  if (sectionTimestamp != null) return sectionTimestamp;
+
+  const globalMatches = [...html.matchAll(/\bAs of\s+([A-Za-z]{3,9}\s+\d{1,2},\s*\d{4})\b/gi)]
+    .map((globalMatch) => parseTimestampLikeToUnixSeconds(globalMatch[1]))
+    .filter((timestamp): timestamp is number => timestamp != null);
+  const uniqueTimestamps = new Set(globalMatches);
+  return uniqueTimestamps.size === 1 ? globalMatches[0] : null;
 }
 
 export function adaptCircleTransparency(html: string, coinType: string): AdapterResult {

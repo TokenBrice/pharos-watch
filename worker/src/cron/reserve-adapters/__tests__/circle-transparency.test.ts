@@ -104,4 +104,34 @@ describe("adaptCircleTransparency", () => {
       sourceTimestamp: Date.UTC(2026, 3, 9) / 1000,
     });
   });
+
+  it("uses a unique global reserve disclosure date when the coin tab has no local date", () => {
+    const htmlWithoutLocalDate = EURC_AMOUNT_HTML.replace(/\bAs of\s+[A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}\b/gi, "");
+    const farPadding = "<div>" + "x".repeat(3_000) + "</div>";
+    const result = adaptCircleTransparency(
+      `<p>As of May 07, 2026</p>${farPadding}${htmlWithoutLocalDate}`,
+      "eurc",
+    );
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: Date.UTC(2026, 4, 7) / 1000,
+    });
+  });
+
+  it("does not use an ambiguous global reserve disclosure date", () => {
+    const htmlWithoutLocalDate = EURC_AMOUNT_HTML.replace(/\bAs of\s+[A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}\b/gi, "");
+    const farPadding = "<div>" + "x".repeat(3_000) + "</div>";
+    const result = adaptCircleTransparency(
+      `<p>As of May 07, 2026</p>${farPadding}${htmlWithoutLocalDate}${farPadding}<p>As of Apr 01, 2026</p>`,
+      "eurc",
+    );
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "unverified",
+      details: {
+        freshnessSource: "html-disclosure",
+      },
+    });
+  });
 });

@@ -67,6 +67,7 @@ export function readBranchBalanceParams(
 }
 
 function isUsdPeggedBranch(branch: BranchConfig): boolean {
+  if (branch.depType === "wrapper") return false;
   if (!branch.coinId) return false;
   const meta = TRACKED_META_BY_ID.get(branch.coinId);
   // Yield-bearing wrappers (sUSDe, sDAI, sfrxUSD) rise above $1 by design; the peg

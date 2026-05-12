@@ -64,7 +64,7 @@
     "yieldType": "nav-appreciation"
   },
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "erc4626-single-asset",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "srusde-strata",
@@ -77,6 +77,17 @@
         "kind": "onchain-evm",
         "chain": "ethereum",
         "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com",
+      "slice": {
+        "name": "Senior tranche USDe vault shares",
+        "risk": "high",
+        "coinId": "usde-ethena",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3"
       }
     }
   }

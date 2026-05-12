@@ -43,6 +43,8 @@
       }
     },
     "params": {
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com",
       "assets": [
         {
           "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
@@ -70,6 +72,13 @@
           "name": "BUIDL",
           "risk": "low",
           "coinId": "buidl-blackrock",
+          "priceUsd": 1
+        },
+        {
+          "address": "0x434558cb1ebe9950e8a66f1ef8a15a473dce7d8c",
+          "name": "WTGXX",
+          "risk": "low",
+          "depType": "collateral",
           "priceUsd": 1
         }
       ]

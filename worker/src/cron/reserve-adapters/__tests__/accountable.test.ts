@@ -4,6 +4,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { fetchAccountableReserves } from "../accountable";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
+import yzusd from "../../../../../shared/data/stablecoins/coins/yzusd-yuzu.json";
 
 const signal = AbortSignal.timeout(5_000);
 
@@ -238,5 +239,68 @@ describe("adaptAccountableTypeBreakdown", () => {
       code: "unmapped-bucket",
       effect: "degraded",
     });
+  });
+
+  it("maps the current Yuzu Accountable exposure buckets without unknown exposure warnings", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+    const primary = config.inputs.primary;
+    if (primary.kind !== "http-json") {
+      throw new Error("expected Yuzu Accountable primary input to be http-json");
+    }
+    const url = primary.url;
+
+    const result = await fetchAccountableReserves(
+      {} as never,
+      config,
+      signal,
+      {
+        requestCache: new Map([
+          [`json-get:${url}:12000:null`, Promise.resolve({
+            res: "ok",
+            data: {
+              collateralization: 1.101272,
+              ts: "2026-05-11T23:13:49.469Z",
+              reserves: {
+                exposure_split: {
+                  "[Securitize]_VBILL_Loop": { value: 10 },
+                  "[Superstate]_USTB_Loop": { value: 10 },
+                  "[Ethena]_USDe_Loop": { value: 10 },
+                  "[Ethena]_USDe": { value: 10 },
+                  "[Maple]_syrupUSDT_Loop": { value: 10 },
+                  "Liquidity_Buffer": { value: 10 },
+                  "[Paypal]_PYUSD_Loop": { value: 10 },
+                  "[Ethena]_sUSDe_Loop": { value: 10 },
+                  "[Aave]_USDT": { value: 10 },
+                  "[MegaEth]_USDm": { value: 10 },
+                  "[Maple]_syrupUSDC_Loop": { value: 10 },
+                  "[Sky]_SUSDS_Loop": { value: 10 },
+                  "Rest_of_Assets": { value: 10 },
+                  "[Aave]_Gho_Savings": { value: 10 },
+                  "[Paxos]_USDG": { value: 10 },
+                },
+              },
+            },
+          })],
+        ]),
+      },
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      bucket: "exposure_split",
+      breakdownCount: 15,
+      mappedBucketCount: 15,
+    });
+    expect(result.metadata?.unknownBucketCount).toBeUndefined();
+    expect(result.metadata?.unknownExposurePct).toBeUndefined();
+    expect(result.slices).toContainEqual({ name: "Ethena USDe loop", pct: 6.7, risk: "high" });
+    expect(result.slices).toContainEqual({ name: "Ethena USDe", pct: 6.7, risk: "high" });
+    expect(result.slices).toContainEqual({ name: "MegaETH USDm", pct: 6.7, risk: "low" });
+    expect(result.slices).toContainEqual({ name: "Sky sUSDS loop", pct: 6.7, risk: "high" });
+    expect(result.slices).toContainEqual({ name: "Paxos USDG", pct: 6.7, risk: "low" });
+    expect(validateAdapterOutput(result, {
+      adapter: getReserveAdapter("accountable") ?? undefined,
+      now: Date.UTC(2026, 4, 12) / 1000,
+    }).valid).toBe(true);
   });
 });

@@ -95,6 +95,32 @@
       "risk": "high"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "yousd-yield-optimizer",
+    "display": {
+      "url": "https://yo.xyz/",
+      "label": "yoUSD ERC-4626 vault"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "base",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://base-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://base.llamarpc.com",
+      "slice": {
+        "name": "USDC-denominated Yield Optimizer strategies",
+        "risk": "high",
+        "expectedAssetAddress": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+      }
+    }
+  },
   "yieldConfig": {
     "yieldSource": "Yield Optimizer strategies",
     "yieldType": "nav-appreciation"

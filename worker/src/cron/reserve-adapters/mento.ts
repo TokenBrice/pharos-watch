@@ -5,11 +5,14 @@ import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@share
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
+  fetchTextWithRetry,
+  parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
   reserveInfoWarning,
   slicesFromPercentages,
   slicesFromValues,
   unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
 import { requireJsonInput } from "./input-guards";
 
@@ -50,6 +53,8 @@ interface MentoReserveApiResponse {
     troves?: MentoCdpTroveApiEntry[];
   };
 }
+
+const MENTO_DASHBOARD_TIMESTAMP_PATTERN = /\\?"timestamp\\?"\s*:\s*\\?"([^"\\]+)\\?"/;
 
 interface TokenConfig {
   key: string;
@@ -94,6 +99,13 @@ const TOKEN_CONFIG: Record<string, TokenConfig> = {
     risk: getCanonicalReserveAssetRisk("stETH") ?? "low",
   },
   USDT: {
+    key: "USDT",
+    name: "USDT",
+    risk: "low",
+    coinId: "usdt-tether",
+    stableLike: true,
+  },
+  USDT0: {
     key: "USDT",
     name: "USDT",
     risk: "low",
@@ -228,7 +240,12 @@ export function parseMentoCdpComposition(payload: unknown, cdpStablecoin: MentoC
   return entries;
 }
 
-export function adaptMentoReserveComposition(payload: unknown): AdapterResult {
+export function extractMentoDashboardTimestamp(html: string): number | null {
+  const timestamp = html.match(MENTO_DASHBOARD_TIMESTAMP_PATTERN)?.[1];
+  return parseTimestampLikeToUnixSeconds(timestamp);
+}
+
+export function adaptMentoReserveComposition(payload: unknown, sourceTimestamp: number | null = null): AdapterResult {
   const entries = parseMentoReserveComposition(payload);
   const warnings: LiveReserveWarning[] = [];
 
@@ -301,16 +318,22 @@ export function adaptMentoReserveComposition(payload: unknown): AdapterResult {
     metadata: {
       entryCount: entries.length,
       totalPct,
-      ...unverifiedFreshnessMetadata(
-        "mento-analytics-api",
-        "Mento analytics API exposes reserve composition but not a trustworthy payload update timestamp",
-      ),
+      ...(sourceTimestamp != null
+        ? verifiedFreshnessMetadata(sourceTimestamp)
+        : unverifiedFreshnessMetadata(
+            "mento-analytics-api",
+            "Mento analytics API exposes reserve composition but not a trustworthy payload update timestamp",
+          )),
       stableReservePct: stablePct,
     },
   };
 }
 
-export function adaptMentoCdpComposition(payload: unknown, cdpStablecoin: MentoCdpStablecoin): AdapterResult {
+export function adaptMentoCdpComposition(
+  payload: unknown,
+  cdpStablecoin: MentoCdpStablecoin,
+  sourceTimestamp: number | null = null,
+): AdapterResult {
   const entries = parseMentoCdpComposition(payload, cdpStablecoin);
   const warnings: LiveReserveWarning[] = [];
 
@@ -367,12 +390,28 @@ export function adaptMentoCdpComposition(payload: unknown, cdpStablecoin: MentoC
       totalCollateralUsd,
       totalDebtUsd,
       ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
-      ...unverifiedFreshnessMetadata(
-        "mento-analytics-api",
-        "Mento analytics API exposes CDP collateral and debt but not a trustworthy payload update timestamp",
-      ),
+      ...(sourceTimestamp != null
+        ? verifiedFreshnessMetadata(sourceTimestamp)
+        : unverifiedFreshnessMetadata(
+            "mento-analytics-api",
+            "Mento analytics API exposes CDP collateral and debt but not a trustworthy payload update timestamp",
+          )),
     },
   };
+}
+
+async function fetchMentoDashboardTimestamp(
+  config: LiveReservesConfig,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<number | null> {
+  const url = config.display?.url;
+  if (!url) return null;
+  try {
+    return extractMentoDashboardTimestamp(await fetchTextWithRetry(url, signal, 12_000, ctx));
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchMentoReserves(
@@ -382,11 +421,14 @@ export async function fetchMentoReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "mento");
-  const payload = await fetchJsonWithRetry<MentoReserveApiResponse>(input.url, signal, 12_000, ctx);
+  const [payload, sourceTimestamp] = await Promise.all([
+    fetchJsonWithRetry<MentoReserveApiResponse>(input.url, signal, 12_000, ctx),
+    fetchMentoDashboardTimestamp(config, signal, ctx),
+  ]);
   const params = parseLiveReserveAdapterParams("mento", config.params);
   if (params.cdpStablecoin) {
-    return adaptMentoCdpComposition(payload, params.cdpStablecoin);
+    return adaptMentoCdpComposition(payload, params.cdpStablecoin, sourceTimestamp);
   }
 
-  return adaptMentoReserveComposition(payload);
+  return adaptMentoReserveComposition(payload, sourceTimestamp);
 }

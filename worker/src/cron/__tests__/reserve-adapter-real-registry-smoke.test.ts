@@ -44,12 +44,20 @@ describe("reserve adapter real-registry smoke", () => {
     const adapter = getReserveAdapter("mento");
     expect(adapter).not.toBeNull();
 
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify(SAMPLE_PAYLOAD), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    const sourceTimestamp = Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000);
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(SAMPLE_PAYLOAD), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response('troves\\":[{}],\\"timestamp\\":\\"2026-05-11T23:21:16.007Z\\"},\\"dataUpdateCount\\":1', {
+          status: 200,
+          headers: { "Content-Type": "text/html" },
+        }),
+      );
 
     const db = mockD1();
     const signal = AbortSignal.timeout(5_000);
@@ -60,7 +68,7 @@ describe("reserve adapter real-registry smoke", () => {
       adapter,
       runAdapter: (currentCoin, currentConfig, currentAdapter) =>
         currentAdapter.fetch(currentCoin, currentConfig, signal, {
-          nowSec: Math.floor(Date.now() / 1000),
+          nowSec: sourceTimestamp + 60,
           requestCache: new Map(),
         }),
       breakerCanFetch: new Map(),
@@ -70,13 +78,13 @@ describe("reserve adapter real-registry smoke", () => {
     expect(result).toMatchObject({
       status: "synced",
       breakerOutcome: true,
-      hasWarnings: true,
+      hasWarnings: false,
     });
-    expect(result.warningMessages).toContain("ceur-celo:freshness-unverified");
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(fetchSpy.mock.calls[0]?.[0]).toBe(
       "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve",
     );
+    expect(fetchSpy.mock.calls[1]?.[0]).toBe("https://reserve.mento.org/");
 
     const compositionInsert = db.getHistory().find((entry) =>
       entry.sql.includes("INSERT INTO reserve_composition (")
@@ -84,7 +92,7 @@ describe("reserve adapter real-registry smoke", () => {
     expect(compositionInsert).toBeDefined();
     expect(compositionInsert!.binds[0]).toBe("ceur-celo");
     expect(compositionInsert!.binds[3]).toBe("mento");
-    expect(compositionInsert!.binds[6]).toBe(1);
+    expect(compositionInsert!.binds[6]).toBe(0);
 
     const slices = JSON.parse(String(compositionInsert!.binds[1])) as Array<Record<string, unknown>>;
     expect(slices).toEqual(expect.arrayContaining([
@@ -95,17 +103,12 @@ describe("reserve adapter real-registry smoke", () => {
 
     const metadata = JSON.parse(String(compositionInsert!.binds[5])) as Record<string, unknown>;
     expect(metadata).toMatchObject({
-      freshnessMode: "unverified",
+      freshnessMode: "verified",
+      sourceTimestamp,
       stableReservePct: 81,
-      details: {
-        freshnessSource: "mento-analytics-api",
-      },
     });
     expect(typeof metadata.durationMs).toBe("number");
-    const warnings = JSON.parse(String(compositionInsert!.binds[7])) as Array<Record<string, unknown>>;
-    expect(warnings).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: "freshness-unverified", effect: "info", severity: "info" }),
-    ]));
+    expect(compositionInsert!.binds[7]).toBeNull();
 
     const attemptHistoryInsert = db.getHistory().find((entry) =>
       entry.sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history (")
