@@ -16,6 +16,7 @@ const pricing = createMethodologyVersion({
       impact: [
         "`usx-dforce` can now recover from `priceSource: missing` through its tracked Base USX contract when DexScreener publishes a sufficiently liquid exact-address market",
         "The change does not use stale CoinGecko rows and does not enable symbol search when exact tracked contracts exist",
+        "Metadata-derived DexScreener targets require the tracked-token symbol in the matched pool to equal the asset symbol, preventing wrapper quotes such as `cUSDO` from being accepted for `USDO`",
         "Existing upstream-provided addresses still take precedence; tracked metadata contracts are only used for addressless rows",
       ],
       commits: [],

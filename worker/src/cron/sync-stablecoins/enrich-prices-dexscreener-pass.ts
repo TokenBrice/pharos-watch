@@ -70,6 +70,7 @@ function isDexScreenerSearchPair(value: unknown): value is DexScreenerPair {
 interface DexScreenerTarget {
   chain: string;
   address: string;
+  expectedSymbol?: string;
 }
 
 const ADDRESS_CHAIN_ALIASES: Record<string, string> = {
@@ -105,17 +106,22 @@ function buildDexScreenerTargets(asset: PeggedAsset): DexScreenerTarget[] {
 
   const targets: DexScreenerTarget[] = [];
   const seen = new Set<string>();
-  const pushTarget = (chain: string | null, address: string) => {
+  const pushTarget = (chain: string | null, address: string, expectedSymbol?: string) => {
     if (!chain || !DS_CHAIN_MAP[chain]) return;
     const trimmedAddress = address.trim();
     const normalizedAddress = trimmedAddress.startsWith("0x")
       ? trimmedAddress.toLowerCase()
       : trimmedAddress;
     if (!normalizedAddress) return;
+    const normalizedExpectedSymbol = expectedSymbol?.trim();
     const key = `${chain}:${normalizedAddress}`;
     if (seen.has(key)) return;
     seen.add(key);
-    targets.push({ chain, address: normalizedAddress });
+    targets.push({
+      chain,
+      address: normalizedAddress,
+      ...(normalizedExpectedSymbol ? { expectedSymbol: normalizedExpectedSymbol } : {}),
+    });
   };
 
   if (rawAddress?.includes(":")) {
@@ -140,10 +146,17 @@ function buildDexScreenerTargets(asset: PeggedAsset): DexScreenerTarget[] {
   for (const deployment of deployments) {
     const address = deployment.address?.trim();
     if (!address) continue;
-    pushTarget(resolveChainId(deployment.chain), address);
+    pushTarget(resolveChainId(deployment.chain), address, asset.symbol);
   }
 
   return targets;
+}
+
+function getDexPairTrackedTokenSymbol(pair: Awaited<ReturnType<typeof fetchDsTokenPoolsWithStatus>>["pairs"][number], trackedAddress: string): string | null {
+  const tracked = trackedAddress.toLowerCase();
+  if (pair.baseToken.address.toLowerCase() === tracked) return pair.baseToken.symbol;
+  if (pair.quoteToken.address.toLowerCase() === tracked) return pair.quoteToken.symbol;
+  return null;
 }
 
 function medianDexPrice(prices: number[]): number | null {
@@ -154,7 +167,7 @@ function medianDexPrice(prices: number[]): number | null {
 
 function resolveDexScreenerAddressPrice(
   asset: PeggedAsset,
-  trackedAddress: string,
+  target: DexScreenerTarget,
   pairs: Awaited<ReturnType<typeof fetchDsTokenPoolsWithStatus>>["pairs"],
   fxRates: Record<string, number> | undefined,
 ): number | null {
@@ -162,7 +175,13 @@ function resolveDexScreenerAddressPrice(
     .map((pair) => {
       const tvl = pair.liquidity?.usd ?? 0;
       if (tvl < DEXSCREENER_MIN_LIQUIDITY_USD) return null;
-      return getDsTrackedTokenPriceUsd(pair, trackedAddress).priceUsd;
+      if (
+        target.expectedSymbol &&
+        getDexPairTrackedTokenSymbol(pair, target.address)?.toUpperCase() !== target.expectedSymbol.toUpperCase()
+      ) {
+        return null;
+      }
+      return getDsTrackedTokenPriceUsd(pair, target.address).priceUsd;
     })
     .filter((price): price is number => typeof price === "number" && Number.isFinite(price) && price > 0);
 
@@ -298,7 +317,7 @@ export async function runDexScreenerPass(
             });
           }
 
-          const exactPrice = resolveDexScreenerAddressPrice(entry.asset, target.address, pairs, fxRates);
+          const exactPrice = resolveDexScreenerAddressPrice(entry.asset, target, pairs, fxRates);
           if (exactPrice == null) continue;
 
           applyResolvedPrice(assets[entry.index], exactPrice, "dexscreener-exact", "fallback");

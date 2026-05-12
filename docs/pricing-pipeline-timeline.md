@@ -11,6 +11,7 @@ Internal changelog reconstructed from the machine-readable methodology version s
 - DexScreener exact fallback can now use curated tracked contract metadata when a DefiLlama stablecoin row has no address
 - `usx-dforce` can recover from `priceSource: missing` through its tracked Base USX contract when DexScreener publishes a sufficiently liquid exact-address market
 - The change does not use stale CoinGecko rows and does not enable symbol search when exact tracked contracts exist
+- Metadata-derived DexScreener targets require the matched pool token symbol to equal the asset symbol, preventing wrapper quotes such as `cUSDO` from being accepted for `USDO`
 - Existing upstream-provided addresses still take precedence; tracked metadata contracts are only used for addressless rows
 
 ---

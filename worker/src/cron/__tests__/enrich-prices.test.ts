@@ -692,6 +692,44 @@ describe("enrichMissingPrices", () => {
     );
   });
 
+  it("rejects metadata-derived DexScreener exact prices when the tracked token symbol differs", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdo-openeden",
+        name: "OpenDollar USDO",
+        symbol: "USDO",
+        price: 0,
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("api.dexscreener.com/tokens/v1/ethereum/0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe")) {
+        return new Response(JSON.stringify([
+          {
+            chainId: "ethereum",
+            dexId: "curve",
+            pairAddress: "0xpair",
+            baseToken: { address: "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe", name: "OpenEden cUSDO", symbol: "cUSDO" },
+            quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
+            priceUsd: "1.047",
+            priceNative: "1.047",
+            liquidity: { usd: 356_000, base: 178_000, quote: 178_000 },
+            volume: { h24: 267, h6: 100, h1: 10, m5: 1 },
+            pairCreatedAt: Date.now(),
+          },
+        ]), { status: 200 });
+      }
+      return new Response(JSON.stringify([]), { status: 200 });
+    }));
+
+    const result = await runDexScreenerPass(assets, undefined, undefined);
+
+    expect(result.resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
+  });
+
   it("records DexScreener search breaker state independently from exact token lookups", async () => {
     const db = mockD1([
       {
