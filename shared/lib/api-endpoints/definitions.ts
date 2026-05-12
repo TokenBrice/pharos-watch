@@ -617,6 +617,21 @@ const BASE_ENDPOINT_DEFINITIONS = [
     },
   },
   {
+    key: "backfill-yield-history",
+    path: API_PATHS.backfillYieldHistory(),
+    methods: ["POST"],
+    adminRequired: true,
+    mutatingAdmin: true,
+    cacheBypass: true,
+    probeGroup: "manual",
+    statusPageAction: {
+      label: "Backfill Yield History",
+      confirm: "Backfill protocol yield history?",
+      method: "POST",
+      acceptsStablecoinFilter: true,
+    },
+  },
+  {
     key: "backfill-stability-index",
     path: API_PATHS.backfillStabilityIndex(),
     methods: ["POST"],

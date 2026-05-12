@@ -111,6 +111,7 @@ export const API_PATHS = {
   backfillDepegs: () => "/api/backfill-depegs",
   backfillSupplyHistory: () => "/api/backfill-supply-history",
   backfillCgPrices: () => "/api/backfill-cg-prices",
+  backfillYieldHistory: () => "/api/backfill-yield-history",
   backfillStabilityIndex: () => "/api/backfill-stability-index",
   backfillMintBurnPrices: () => "/api/backfill-mint-burn-prices",
   backfillMintBurn: () => "/api/backfill-mint-burn",

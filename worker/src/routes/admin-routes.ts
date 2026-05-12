@@ -1,6 +1,7 @@
 import { handleBackfillDepegs } from "../api/backfill-depegs";
 import { handleBackfillSupplyHistory } from "../api/backfill-supply-history";
 import { handleBackfillStabilityIndex } from "../api/backfill-stability-index";
+import { handleBackfillYieldHistory } from "../api/backfill-yield-history";
 import { handleAuditDepegHistory } from "../api/audit-depeg-history";
 import { handleBackfillCgPrices } from "../api/backfill-cg-prices";
 import { handleBackfillMintBurnPrices } from "../api/backfill-mint-burn-prices";
@@ -49,6 +50,11 @@ export const ADMIN_STATIC_ROUTES = [
     "backfill-cg-prices",
     ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
       handleBackfillCgPrices(db, url, trustedAdmin, request, coingeckoApiKey),
+  )),
+  defineStaticRoute("backfill-yield-history", makeIdempotentAdminRoute(
+    "backfill-yield-history",
+    "backfill-yield-history",
+    ({ db, url, trustedAdmin, request }) => handleBackfillYieldHistory(db, url, trustedAdmin, request),
   )),
   defineStaticRoute("backfill-mint-burn-prices", makeIdempotentAdminRoute(
     "backfill-mint-burn-prices",
