@@ -56,4 +56,4 @@ export {
 export { probeOnchainTotalSupply, probeTrackedTokenSupply } from "./token-supply";
 export { buildRedemptionSnapshotMetadata, probeOptionalRedemptionRateBps } from "./redemption";
 export { getJsonPath } from "./json-path";
-export { catchAndWarn, reserveDegradedWarning, reserveInfoWarning } from "./warnings";
+export { catchAndWarn, reserveDegradedWarning, reserveFatalWarning, reserveInfoWarning } from "./warnings";
