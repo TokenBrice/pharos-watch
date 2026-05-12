@@ -547,20 +547,29 @@ describe("enrichMissingPrices", () => {
 
     mockFetch([
       {
-        match: "dexscreener.com",
-        body: {
-          pairs: [
-            {
-              baseToken: { symbol: "CJPY" },
-              quoteToken: { symbol: "USDT" },
-              priceUsd: "0.0005",
-              liquidity: { usd: 100_000 },
-              volume: { h24: 25_000 },
-              pairCreatedAt: maturePairCreatedAt(),
-              chainId: "ethereum",
+        match: "api.dexscreener.com/tokens/v1/ethereum/0x1cfa5641c01406ab8ac350ded7d735ec41298372",
+        body: [
+          {
+            chainId: "ethereum",
+            dexId: "uniswap",
+            pairAddress: "0xpair",
+            baseToken: {
+              address: "0x1cfa5641c01406ab8ac350ded7d735ec41298372",
+              name: "CJPY",
+              symbol: "CJPY",
             },
-          ],
-        },
+            quoteToken: {
+              address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+              name: "Tether USD",
+              symbol: "USDT",
+            },
+            priceUsd: "0.0005",
+            priceNative: "0.0005",
+            liquidity: { usd: 100_000, base: 125_000, quote: 125_000 },
+            volume: { h24: 25_000 },
+            pairCreatedAt: maturePairCreatedAt(),
+          },
+        ],
       },
     ]);
 
@@ -1706,7 +1715,9 @@ describe("enrichMissingPrices", () => {
     const result = await runDexScreenerPass(assets, undefined, db);
 
     expect(result.resolved).toBe(0);
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy.mock.calls[0]?.[0]).toContain("api.dexscreener.com/tokens/v1/ethereum/0x056fd409e1d7a124bd7017459dfea2f387b6d5cd");
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("latest/dex/search"))).toBe(false);
   });
 
   it("skips DexScreener symbol search for addressless assets without configured chains", async () => {
