@@ -73,6 +73,7 @@
     "check:cron-connections": "tsx scripts/check-cron-connection-budget.ts",
     "check:sql-safety": "node scripts/check-sql-interpolation-safety.mjs",
     "check:stablecoin-data": "tsx scripts/check-stablecoin-data.ts",
+    "check:build-size": "node scripts/report-build-size.mjs --check",
     "check:llms-txt": "tsx scripts/generate-llms-txt.ts --check",
     "refresh:html-fixtures": "tsx scripts/refresh-reserve-html-fixtures.ts",
     "seo:check": "node scripts/check-seo-static.mjs",

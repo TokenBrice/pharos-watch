@@ -60,6 +60,50 @@
   ! Cache-Control
   Cache-Control: public, max-age=86400
 
+/logos/*
+  ! Cache-Control
+  Cache-Control: public, max-age=604800, immutable
+
+/chains/*
+  ! Cache-Control
+  Cache-Control: public, max-age=604800, immutable
+
+/dexes/*
+  ! Cache-Control
+  Cache-Control: public, max-age=604800, immutable
+
+/featured/*
+  ! Cache-Control
+  Cache-Control: public, max-age=604800, immutable
+
+/maps/*
+  ! Cache-Control
+  Cache-Control: public, max-age=604800, immutable
+
+/pharos-icon.png
+  ! Cache-Control
+  Cache-Control: public, max-age=604800, immutable
+
+/pharos-icon.svg
+  ! Cache-Control
+  Cache-Control: public, max-age=604800, immutable
+
+/pharos-logo-full.png
+  ! Cache-Control
+  Cache-Control: public, max-age=604800, immutable
+
+/icon-300.png
+  ! Cache-Control
+  Cache-Control: public, max-age=604800, immutable
+
+/favicon-800.png
+  ! Cache-Control
+  Cache-Control: public, max-age=604800, immutable
+
+/favicon-800-telegram-chat.png
+  ! Cache-Control
+  Cache-Control: public, max-age=604800, immutable
+
 /_next/static/*
   ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable
