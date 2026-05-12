@@ -648,6 +648,50 @@ describe("enrichMissingPrices", () => {
     expect(fetchSpy.mock.calls[0]?.[0]).toContain("dexscreener.com");
   });
 
+  it("uses tracked contract metadata for addressless DexScreener exact fallback targets", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "usp-pareto-credit",
+        name: "Pareto USP",
+        symbol: "USP",
+        price: 0,
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    const fetchSpy = vi.fn(async (url: string) => {
+      if (url.includes("api.dexscreener.com/tokens/v1/ethereum/0x97ccc1c046d067ab945d3cf3cc6920d3b1e54c88")) {
+        return new Response(JSON.stringify([
+          {
+            chainId: "ethereum",
+            dexId: "curve",
+            pairAddress: "0xpair",
+            baseToken: { address: "0x97ccc1c046d067ab945d3cf3cc6920d3b1e54c88", name: "Pareto USP", symbol: "USP" },
+            quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
+            priceUsd: "0.911",
+            priceNative: "0.911",
+            liquidity: { usd: 250_000, base: 125_000, quote: 125_000 },
+            volume: { h24: 1_000, h6: 500, h1: 100, m5: 10 },
+            pairCreatedAt: Date.now(),
+          },
+        ]), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const result = await runDexScreenerPass(assets, undefined, undefined);
+
+    expect(result.resolved).toBe(1);
+    expect(assets[0].price).toBe(0.911);
+    expect(assets[0].priceSource).toBe("dexscreener-exact");
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining("api.dexscreener.com/tokens/v1/ethereum/0x97ccc1c046d067ab945d3cf3cc6920d3b1e54c88"),
+      expect.anything(),
+    );
+  });
+
   it("records DexScreener search breaker state independently from exact token lookups", async () => {
     const db = mockD1([
       {

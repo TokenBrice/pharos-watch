@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.08",
+  currentVersion: "5.09",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.09",
+      title: "Addressless DexScreener exact fallback from tracked metadata",
+      date: "2026-05-12",
+      effectiveAt: 1778587200,
+      summary:
+        "Extended DexScreener exact fallback to use curated tracked contract metadata when an upstream stablecoin row has no address, while preserving exact-address pricing, liquidity floors, and peg-aware validation.",
+      impact: [
+        "`usx-dforce` can now recover from `priceSource: missing` through its tracked Base USX contract when DexScreener publishes a sufficiently liquid exact-address market",
+        "The change does not use stale CoinGecko rows and does not enable symbol search when exact tracked contracts exist",
+        "Existing upstream-provided addresses still take precedence; tracked metadata contracts are only used for addressless rows",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.08",
       title: "DefiLlama EVM contract fallback casing normalization",

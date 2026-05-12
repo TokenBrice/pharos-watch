@@ -1,5 +1,6 @@
 import { resolveChainId } from "@shared/lib/chains";
 import { DS_CHAIN_MAP } from "@shared/lib/chain-provider-registry";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import {
   CIRCUIT_SOURCE,
   DEXSCREENER_MIN_LIQUIDITY_USD,
@@ -101,32 +102,45 @@ function buildAllowedDexSearchChains(asset: PeggedAsset): Set<string> {
 
 function buildDexScreenerTargets(asset: PeggedAsset): DexScreenerTarget[] {
   const rawAddress = asset.address?.trim();
-  if (!rawAddress) return [];
 
   const targets: DexScreenerTarget[] = [];
   const seen = new Set<string>();
   const pushTarget = (chain: string | null, address: string) => {
     if (!chain || !DS_CHAIN_MAP[chain]) return;
-    const normalizedAddress = address.trim();
+    const trimmedAddress = address.trim();
+    const normalizedAddress = trimmedAddress.startsWith("0x")
+      ? trimmedAddress.toLowerCase()
+      : trimmedAddress;
     if (!normalizedAddress) return;
-    const key = `${chain}:${normalizedAddress.toLowerCase()}`;
+    const key = `${chain}:${normalizedAddress}`;
     if (seen.has(key)) return;
     seen.add(key);
     targets.push({ chain, address: normalizedAddress });
   };
 
-  if (rawAddress.includes(":")) {
+  if (rawAddress?.includes(":")) {
     const [rawChain, ...rest] = rawAddress.split(":");
     pushTarget(resolveDexTargetChain(rawChain), rest.join(":").trim());
     return targets;
   }
 
-  for (const rawChain of asset.chains ?? []) {
-    pushTarget(resolveChainId(rawChain), rawAddress);
+  if (rawAddress) {
+    for (const rawChain of asset.chains ?? []) {
+      pushTarget(resolveChainId(rawChain), rawAddress);
+    }
+
+    if (targets.length === 0) {
+      pushTarget(rawAddress.startsWith("0x") ? "ethereum" : "solana", rawAddress);
+    }
+    return targets;
   }
 
-  if (targets.length === 0) {
-    pushTarget(rawAddress.startsWith("0x") ? "ethereum" : "solana", rawAddress);
+  const meta = ACTIVE_META_BY_ID.get(String(asset.id));
+  const deployments = [...(meta?.contracts ?? []), ...(meta?.tradedContracts ?? [])];
+  for (const deployment of deployments) {
+    const address = deployment.address?.trim();
+    if (!address) continue;
+    pushTarget(resolveChainId(deployment.chain), address);
   }
 
   return targets;

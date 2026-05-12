@@ -1,6 +1,17 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.08` (2026-02-01 -> 2026-05-12).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.09` (2026-02-01 -> 2026-05-12).
+
+---
+
+## v5.09 - Addressless DexScreener exact fallback from tracked metadata (May 12, 2026)
+
+**Commit:** `unreleased`
+
+- DexScreener exact fallback can now use curated tracked contract metadata when a DefiLlama stablecoin row has no address
+- `usx-dforce` can recover from `priceSource: missing` through its tracked Base USX contract when DexScreener publishes a sufficiently liquid exact-address market
+- The change does not use stale CoinGecko rows and does not enable symbol search when exact tracked contracts exist
+- Existing upstream-provided addresses still take precedence; tracked metadata contracts are only used for addressless rows
 
 ---
 
