@@ -1,8 +1,9 @@
 "use client";
 
+import { useId, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@shared/lib/format";
-import type { BlacklistSummaryResponse } from "@shared/types";
+import { formatCompactCount } from "@shared/lib/format";
+import { BLACKLIST_STABLECOINS, type BlacklistSummaryResponse } from "@shared/types";
 
 interface InterventionSeismographProps {
   stats: BlacklistSummaryResponse["stats"] | undefined;
@@ -10,106 +11,305 @@ interface InterventionSeismographProps {
   isLoading: boolean;
 }
 
-const COUNT_FORMATTER = new Intl.NumberFormat("en-US", {
-  maximumFractionDigits: 0,
-});
+interface QuarterPoint {
+  quarter: string;
+  blacklist: number;
+  unblacklist: number;
+  destroy: number;
+  total: number;
+}
 
-function formatCount(value: number): string {
-  return COUNT_FORMATTER.format(Number.isFinite(value) ? value : 0);
+const NOTABLE_QUAKES: ReadonlyArray<{ quarter: string; label: string }> = [
+  { quarter: "2022-Q3", label: "Tornado Cash" },
+  { quarter: "2023-Q1", label: "Silvergate" },
+  { quarter: "2023-Q4", label: "OFAC Hamas" },
+];
+
+const EVENT_COLORS = {
+  destroy: "#ef4444",
+  blacklist: "#f97316",
+  unblacklist: "oklch(0.78 0.16 240)",
+} as const;
+
+const EVENT_LABELS = {
+  destroy: "Wipe",
+  blacklist: "Freeze",
+  unblacklist: "Release",
+} as const;
+
+const VIEWBOX_WIDTH = 1000;
+const VIEWBOX_HEIGHT = 220;
+const PADDING_TOP = 28;
+const PADDING_BOTTOM = 28;
+const PLOT_HEIGHT = VIEWBOX_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
+const BASELINE_Y = VIEWBOX_HEIGHT - PADDING_BOTTOM;
+
+function buildQuarterPoints(stats: BlacklistSummaryResponse["stats"] | undefined): QuarterPoint[] {
+  if (!stats) return [];
+  const map = new Map<string, { blacklist: number; unblacklist: number; destroy: number }>();
+  for (const symbol of BLACKLIST_STABLECOINS) {
+    const points = stats.perCoinQuarterlyEventTypes[symbol] ?? [];
+    for (const point of points) {
+      const existing = map.get(point.quarter) ?? { blacklist: 0, unblacklist: 0, destroy: 0 };
+      existing.blacklist += point.blacklist;
+      existing.unblacklist += point.unblacklist;
+      existing.destroy += point.destroy;
+      map.set(point.quarter, existing);
+    }
+  }
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([quarter, counts]) => ({
+      quarter,
+      ...counts,
+      total: counts.blacklist + counts.unblacklist + counts.destroy,
+    }));
 }
 
 export function InterventionSeismograph({ stats, chart, isLoading }: InterventionSeismographProps) {
+  const titleId = useId();
+  const points = useMemo(() => buildQuarterPoints(stats), [stats]);
+
   if (isLoading) {
     return (
-      <section className="pharos-card-shell overflow-hidden">
-        <div className="pharos-panel-header space-y-2">
-          <Skeleton className="h-4 w-40" />
-          <Skeleton className="h-6 w-80 max-w-full" />
-        </div>
-        <div className="grid gap-0 lg:grid-cols-[1.1fr_1fr]">
-          <div className="space-y-2 border-border/60 p-4 sm:p-5 lg:border-r">
-            {Array.from({ length: 12 }).map((_, index) => (
-              <Skeleton key={index} className="h-5 w-full" />
-            ))}
+      <section className="pharos-card-shell p-4 sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-44" />
+            <Skeleton className="h-7 w-80 max-w-full" />
           </div>
-          <div className="grid gap-3 border-t border-border/60 p-4 sm:grid-cols-2 sm:p-5 lg:border-t-0">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-24 rounded-xl" />
-            ))}
-          </div>
+          <Skeleton className="h-10 w-44" />
         </div>
+        <Skeleton className="mt-5 h-44 w-full rounded-xl" />
       </section>
     );
   }
 
-  const visibleChart = (chart ?? []).filter((point) => point.total > 0);
-  const maxTotal = visibleChart.reduce((max, point) => Math.max(max, point.total), 0);
-  const recentPoint = visibleChart[visibleChart.length - 1] ?? null;
-  const peakPoint = visibleChart.reduce<BlacklistSummaryResponse["chart"][number] | null>(
+  const totalEvents = points.reduce((sum, point) => sum + point.total, 0);
+  const peakPoint = points.reduce<QuarterPoint | null>(
     (peak, point) => (!peak || point.total > peak.total ? point : peak),
     null,
   );
+  const peakDestroyQuarter = points.reduce<QuarterPoint | null>(
+    (peak, point) => (!peak || point.destroy > peak.destroy ? point : peak),
+    null,
+  );
+  const peakTotal = peakPoint?.total ?? 0;
+  const liveChartHasData = (chart ?? []).length > 0;
 
   return (
     <section
-      className="pharos-card-shell overflow-hidden animate-in fade-in duration-300"
-      aria-labelledby="intervention-seismograph-title"
+      aria-labelledby={titleId}
+      className="pharos-card-shell p-4 animate-in fade-in duration-300 sm:p-5"
     >
-      <div className="pharos-panel-header flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-1">
           <p className="pharos-kicker">Intervention Seismograph</p>
-          <h2 id="intervention-seismograph-title" className="pharos-section-title">
-            Freeze-ledger intensity by quarter
+          <h2 id={titleId} className="pharos-section-title">
+            Quarterly fissures across the freeze ledger
           </h2>
+          <p className="text-sm text-muted-foreground">
+            Every quarter where the ice cracked — freezes ground the trace, releases lift it, wipes pierce above.
+          </p>
         </div>
-        <p className="max-w-xl text-xs leading-relaxed text-muted-foreground">
-          Balance intensity is measured from tracked frozen totals; event counts stay separate from value at risk.
-        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:gap-3">
+          <SignalStat label="Events tracked" value={formatCompactCount(totalEvents)} />
+          <SignalStat
+            label="Peak quarter"
+            value={peakPoint?.quarter ?? "—"}
+            detail={peakPoint ? `${formatCompactCount(peakPoint.total)} events` : undefined}
+          />
+          <SignalStat
+            label="Largest wipe quarter"
+            value={peakDestroyQuarter && peakDestroyQuarter.destroy > 0 ? peakDestroyQuarter.quarter : "—"}
+            detail={
+              peakDestroyQuarter && peakDestroyQuarter.destroy > 0
+                ? `${formatCompactCount(peakDestroyQuarter.destroy)} wipes`
+                : undefined
+            }
+          />
+        </div>
       </div>
 
-      <div className="grid gap-0 lg:grid-cols-[1.1fr_1fr]">
-        <div className="border-border/60 p-4 sm:p-5 lg:border-r">
-          {visibleChart.length > 0 ? (
-            <div className="grid gap-1.5">
-              {visibleChart.slice(-18).map((point) => {
-                const width = maxTotal > 0 ? Math.max(4, (point.total / maxTotal) * 100) : 0;
-                return (
-                  <div key={point.quarter} className="grid grid-cols-[4.5rem_1fr_5.5rem] items-center gap-3">
-                    <span className="font-mono text-xs tabular-nums text-muted-foreground">{point.quarter}</span>
-                    <div className="h-3 rounded-full bg-muted">
-                      <div className="h-full rounded-full bg-red-500/75" style={{ width: `${width}%` }} />
-                    </div>
-                    <span className="text-right font-mono text-xs tabular-nums text-muted-foreground">
-                      {formatCurrency(point.total, 0)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex min-h-52 items-center justify-center text-sm text-muted-foreground">
-              No tracked frozen balance in the current summary.
-            </div>
-          )}
+      {points.length === 0 ? (
+        <div className="mt-5 flex h-44 items-center justify-center rounded-xl border border-border/70 bg-muted/20 text-sm text-muted-foreground">
+          {liveChartHasData
+            ? "No quarterly event-type breakdown is available yet."
+            : "No freeze-ledger quarter data yet."}
         </div>
+      ) : (
+        <SeismographSvg points={points} peakTotal={Math.max(1, peakTotal)} />
+      )}
 
-        <div className="grid gap-3 border-t border-border/60 p-4 sm:grid-cols-2 sm:p-5 lg:border-t-0">
-          <Metric label="Peak quarter" value={peakPoint?.quarter ?? "None"} detail={formatCurrency(peakPoint?.total ?? 0, 0)} />
-          <Metric label="Latest quarter" value={recentPoint?.quarter ?? "None"} detail={formatCurrency(recentPoint?.total ?? 0, 0)} />
-          <Metric label="Observed events" value={formatCount(stats?.recentCount ?? 0)} detail="Current summary window" />
-          <Metric label="24h events" value={formatCount(stats?.recentCount24h ?? 0)} detail="Latest supported tracker rows" />
-        </div>
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
+        <LegendSwatch color={EVENT_COLORS.blacklist} label={EVENT_LABELS.blacklist} />
+        <LegendSwatch color={EVENT_COLORS.destroy} label={EVENT_LABELS.destroy} />
+        <LegendSwatch color={EVENT_COLORS.unblacklist} label={EVENT_LABELS.unblacklist} />
+        <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">
+          horizon = magnitude of intervention
+        </span>
       </div>
     </section>
   );
 }
 
-function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {
+function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTotal: number }) {
+  const n = points.length;
+  const slotWidth = VIEWBOX_WIDTH / Math.max(n, 1);
+  const barWidth = Math.max(2, slotWidth * 0.78);
+  const slotPad = (slotWidth - barWidth) / 2;
+  const yForCount = (count: number) => BASELINE_Y - (count / peakTotal) * PLOT_HEIGHT;
+  const labelInterval = Math.max(1, Math.ceil(n / 6));
+
+  const annotations = NOTABLE_QUAKES.map((quake) => {
+    const index = points.findIndex((p) => p.quarter === quake.quarter);
+    if (index === -1) return null;
+    const point = points[index];
+    const x = index * slotWidth + slotWidth / 2;
+    const topY = yForCount(point.total);
+    return { ...quake, point, x, topY };
+  }).filter(
+    (entry): entry is { quarter: string; label: string; point: QuarterPoint; x: number; topY: number } =>
+      entry !== null,
+  );
+
+  const horizonPoints = points
+    .map((point, index) => {
+      const x0 = index * slotWidth + slotPad;
+      const x1 = x0 + barWidth;
+      const topY = yForCount(point.total);
+      return `${x0},${topY} ${x1},${topY}`;
+    })
+    .join(" ");
+  const horizonPath = `M ${horizonPoints}`;
+
   return (
-    <div className="rounded-xl border border-border/60 bg-background/60 p-3">
-      <p className="text-[11px] font-semibold uppercase text-muted-foreground">{label}</p>
-      <p className="mt-2 font-mono text-xl font-semibold tabular-nums text-foreground">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+    <div className="mt-5 overflow-hidden rounded-xl border border-border/70 bg-muted/20 p-3">
+      <svg
+        role="img"
+        aria-label="Quarterly intervention seismograph"
+        viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
+        preserveAspectRatio="none"
+        className="block h-44 w-full sm:h-56"
+      >
+        <defs>
+          <linearGradient id="seismograph-frost" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="oklch(0.78 0.16 240)" stopOpacity="0.07" />
+            <stop offset="100%" stopColor="oklch(0.78 0.16 240)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <rect x={0} y={PADDING_TOP - 4} width={VIEWBOX_WIDTH} height={PLOT_HEIGHT + 4} fill="url(#seismograph-frost)" />
+
+        <line
+          x1={0}
+          x2={VIEWBOX_WIDTH}
+          y1={BASELINE_Y}
+          y2={BASELINE_Y}
+          stroke="oklch(0.4 0.02 250)"
+          strokeWidth={0.5}
+          strokeDasharray="3 3"
+        />
+
+        {points.map((point, index) => {
+          const x = index * slotWidth + slotPad;
+          const layers: Array<{ key: keyof typeof EVENT_COLORS; count: number }> = [
+            { key: "destroy", count: point.destroy },
+            { key: "blacklist", count: point.blacklist },
+            { key: "unblacklist", count: point.unblacklist },
+          ];
+          let running = 0;
+          return layers.map((layer) => {
+            if (layer.count <= 0) return null;
+            const yTop = yForCount(running + layer.count);
+            const yBottom = yForCount(running);
+            const height = Math.max(0, yBottom - yTop);
+            running += layer.count;
+            return (
+              <rect
+                key={`${point.quarter}-${layer.key}`}
+                x={x}
+                y={yTop}
+                width={barWidth}
+                height={height}
+                fill={EVENT_COLORS[layer.key]}
+                opacity={0.88}
+              >
+                <title>{`${point.quarter} · ${EVENT_LABELS[layer.key]}: ${formatCompactCount(layer.count)}`}</title>
+              </rect>
+            );
+          });
+        })}
+
+        <path
+          d={horizonPath}
+          fill="none"
+          stroke="oklch(0.92 0.02 240)"
+          strokeWidth={1.25}
+          strokeLinecap="square"
+          strokeLinejoin="miter"
+        />
+
+        {annotations.map((annotation) => (
+          <g key={annotation.quarter}>
+            <line
+              x1={annotation.x}
+              x2={annotation.x}
+              y1={annotation.topY - 4}
+              y2={annotation.topY - 18}
+              stroke="oklch(0.92 0.02 240)"
+              strokeWidth={0.75}
+            />
+            <circle cx={annotation.x} cy={annotation.topY - 4} r={1.6} fill="oklch(0.92 0.02 240)" />
+            <text
+              x={annotation.x}
+              y={annotation.topY - 22}
+              textAnchor="middle"
+              fontSize={10}
+              fontFamily="ui-monospace, monospace"
+              fill="oklch(0.92 0.02 240)"
+            >
+              {annotation.label}
+            </text>
+          </g>
+        ))}
+
+        {points.map((point, index) => {
+          if (index % labelInterval !== 0 && index !== n - 1) return null;
+          const x = index * slotWidth + slotWidth / 2;
+          return (
+            <text
+              key={`tick-${point.quarter}`}
+              x={x}
+              y={BASELINE_Y + 14}
+              textAnchor="middle"
+              fontSize={10}
+              fontFamily="ui-monospace, monospace"
+              fill="oklch(0.6 0.02 250)"
+            >
+              {point.quarter}
+            </text>
+          );
+        })}
+      </svg>
     </div>
+  );
+}
+
+function SignalStat({ label, value, detail }: { label: string; value: string; detail?: string }) {
+  return (
+    <div className="rounded-lg border border-border/65 bg-background/65 px-3 py-2">
+      <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
+      <p className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-foreground">{value}</p>
+      {detail ? <p className="text-[10px] text-muted-foreground">{detail}</p> : null}
+    </div>
+  );
+}
+
+function LegendSwatch({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: color }} aria-hidden />
+      {label}
+    </span>
   );
 }
