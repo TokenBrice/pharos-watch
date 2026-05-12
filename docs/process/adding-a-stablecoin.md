@@ -2,7 +2,7 @@
 
 Reference for adding a tracked asset to Pharos.
 
-Current source of truth is the per-coin JSON registry under `shared/data/stablecoins/coins/*.json`, loaded through the generated runtime aggregate `shared/data/stablecoins/coins.generated.json`, and validated by `shared/lib/stablecoins/schema.ts`. Pre-launch entries are ordinary per-coin files with `status: "pre-launch"`. The older `shared/lib/stablecoins.ts`, helper-constructor paths, and legacy category-shard edit paths are obsolete; the Claude/Codex skills (`stablecoin-info-fetch`, `contract-populate`, `contract-enrich`, `reserve-research`, `write-ai-summaries`, `resilience-classify`, `pre-launch-update`, `coingecko-id-verif`) remain supported and can be used per their own triggers.
+Current source of truth is the per-coin JSON registry under `shared/data/stablecoins/coins/*.json`, loaded through the generated runtime aggregate `shared/data/stablecoins/coins.generated.json`, and validated by `shared/lib/stablecoins/schema.ts`. Pre-launch entries are ordinary per-coin files with `status: "pre-launch"`. The older `shared/lib/stablecoins.ts`, helper-constructor paths, and legacy category-shard edit paths are obsolete; the Claude/Codex skills (`stablecoin-addition-orchestrator`, `stablecoin-runtime-price-marketcap-gate`, `stablecoin-info-fetch`, `contract-populate`, `contract-enrich`, `reserve-research`, `write-ai-summaries`, `resilience-classify`, `pre-launch-update`, `coingecko-id-verif`) remain supported and can be used per their own triggers.
 
 > Completion gate: do not consider the job done until every phase below has been evaluated. The minimum normal diff is the per-coin registry JSON, regenerated `shared/data/stablecoins/coins.generated.json`, `shared/data/stablecoins/canonical-order.json`, `data/logos.json`, and `data/ai-summaries.json`. If the asset needs runtime coverage, also evaluate yield, live reserves, redemption backstops, mint/burn, Bluechip, and history-backfill branches.
 
@@ -74,18 +74,18 @@ If the asset is pre-launch, also collect:
 
 Do not expect pre-launch assets to show up in live worker-driven coverage until the status flips to active.
 
-### 0b. Create or update the per-coin registry file
+### 0b. Plan the per-coin registry file
 
-- Add or update exactly one JSON file under `shared/data/stablecoins/coins/`, normally named for the canonical stablecoin ID.
-- Set `status: "pre-launch"` in that per-coin file for upcoming assets, regardless of peg. Remove the pre-launch status once the asset activates and has enough live metadata for active public surfaces.
+- Identify exactly one JSON file under `shared/data/stablecoins/coins/`, normally named for the canonical stablecoin ID.
+- Plan `status: "pre-launch"` in that per-coin file for upcoming assets, regardless of peg. Remove the pre-launch status once the asset activates and has enough live metadata for active public surfaces.
+- Do not edit the registry yet unless you are updating an already-approved existing entry. New active additions should pass Phase 1 and have a Phase 2 research packet first.
 - Do not add entries to `pre-launch.json`, `usd-major.json`, `usd-minor.json`, `non-usd.json`, or `commodity.json`; those legacy shards are read-only compatibility shells and should remain empty.
-- After editing per-coin files, regenerate `shared/data/stablecoins/coins.generated.json`.
 
-### 0c. Update canonical order
+### 0c. Plan canonical order
 
 Every tracked asset, including pre-launch ones, must appear in `shared/data/stablecoins/canonical-order.json`.
 
-- Insert the new ID in its intended canonical position.
+- Decide the intended canonical position before editing.
 - Use current market cap / strategic ordering, not simple append-only ordering.
 - Pre-launch assets usually live near the tail, but they still need an explicit position.
 
@@ -101,6 +101,21 @@ Before tracking a coin, confirm it belongs on Pharos:
 | Is it meant to be price-stable or to appreciate from a stable base in a way Pharos explicitly models? | Yes -> proceed |
 | Is supply observable on-chain or through a credible third-party source? | Some supply observability is enough to track metadata; full history can come later |
 | Is circulating supply at least about $5M? | Soft threshold only. Smaller assets need a clear strategic reason |
+
+### 1a. Hard runtime data gate for active assets
+
+Active additions and pre-launch promotions must have both a fetchable current price path and a fetchable circulating/market-cap path before they are considered addable. Pre-launch entries are exempt until promotion.
+
+Record one accepted path in the research packet:
+
+| Path | Price requirement | Market-cap / supply requirement |
+|------|-------------------|---------------------------------|
+| DefiLlama stablecoins | `llamaId` resolves to the intended asset and the list/detail data exposes a price | DefiLlama list `circulating` is present; do not multiply list values by price |
+| CoinGecko supplemental fiat | `detailProvider: "coingecko"` plus verified `geckoId` returns a positive price through DefiLlama `coins.llama.fi` proxy or CoinGecko `/simple/price` | CoinGecko `usd_market_cap` is positive, or exactly one supported `contracts[]` deployment can support on-chain total-supply fallback |
+| Commodity supplemental | verified `geckoId` returns the commodity token price, with `commodityOunces` set when fractionalized | CoinGecko market cap is positive, or gold/protocol-backed assets have a `protocolSlug` whose DefiLlama protocol data exposes usable `mcap` |
+| Explicit runtime exception | documented source-specific path such as Zephyr Scanner or a maintained low-volume allowlist | same source exposes usable circulating supply or market-cap data |
+
+Do not treat a filled JSON profile, a static route, or `canonical-order.json` inclusion as sufficient. If the active asset cannot satisfy both columns, do not add it as active; track it as pre-launch/watchlist material or document the missing upstream path before continuing.
 
 Exclusions:
 
@@ -118,6 +133,8 @@ Important current taxonomy note:
 
 Do the research manually, or use the maintained skills when they match the task:
 
+- `stablecoin-addition-orchestrator`: run the full phase checklist and coordinate the supporting skills.
+- `stablecoin-runtime-price-marketcap-gate`: prove the hard active-asset price and market-cap path from Phase 1a.
 - `stablecoin-info-fetch`: audit/populate a single coin's detail fields (collateral, peg mechanism, jurisdiction, links, geckoId, contracts).
 - `contract-populate` / `contract-enrich`: resolve `contracts[]` across chains from CoinGecko + DefiLlama + explorer verification.
 - `reserve-research`: populate `reserves[]` composition for a single coin.
@@ -178,6 +195,8 @@ These skills do not replace review — they are research scaffolding. Always ver
 - Is the coin in DefiLlama stablecoins? If yes, what is its `llamaId`?
 - Is it on CoinGecko? If yes, what is its `geckoId`?
 - Does it have a stablecoin-specific CMC slug worth keeping as a fallback?
+- Which Phase 1a runtime data path admits it, and what are the expected initial `priceSource` and `supplySource` / market-cap source?
+- If relying on on-chain total-supply fallback, is there exactly one supported deployment (or a documented curated exception), and are decimals verified?
 - Does it have a Pyth feed?
 - Does it have a public reserves/transparency API or on-chain reserve proof?
 - Is there a meaningful redemption route worth modeling?
@@ -318,7 +337,7 @@ Add the new object to the asset's per-coin JSON file using current field names a
 - Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/generate-stablecoin-per-coin-asset.ts`.
 - Add the ID to `shared/data/stablecoins/canonical-order.json`.
 - Keep new keys canonical and consistent with the current schema.
-- For active assets, ensure there is a runtime cache admission path:
+- For active assets, ensure there is a runtime cache admission path and a Phase 1a price + market-cap gate record:
   - DefiLlama-tracked assets need `llamaId`.
   - Fiat assets not in DefiLlama need `detailProvider: "coingecko"` plus either `geckoId` or a supported on-chain total-supply contract.
   - Gold/silver assets need a `geckoId` for the commodity supplemental path.
@@ -330,6 +349,8 @@ Add the new object to the asset's per-coin JSON file using current field names a
 ## Phase 5 - Evaluate Downstream Coverage Branches
 
 Do not assume every branch applies. Evaluate each one explicitly.
+
+Record a short coverage decision note for every branch before validation: logo/summary, live reserves, yield, redemption backstop, mint/burn, Bluechip, price/discovery, and history backfill. Mark each as added, not applicable, or intentional gap with a reason. This prevents silent omissions from looking like completed work.
 
 ### 5a. Logo and summary
 
@@ -463,7 +484,7 @@ Notes:
 
 - `data/logos.json` currently contains legacy numeric keys. Ignore that for new work.
 - `scripts/fetch-logos.ts` exists, but the checked-in production map today is local `/logos/...` paths.
-- If no logo exists yet, the UI can fall back to initials, but a tracked addition should ideally still ship with a real logo.
+- If no logo exists yet, the UI can fall back to initials, but a tracked addition should ship with a real logo unless the coverage decision note records an explicit skipped reason.
 
 ### 6b. Editorial summary
 
@@ -494,6 +515,16 @@ Use `tags` sparingly for editorial categorization, not for core classification.
 ---
 
 ## Phase 7 - Validate
+
+Before running commands, confirm the addition-specific artifacts:
+
+- per-coin JSON exists and matches the canonical ID
+- `shared/data/stablecoins/coins.generated.json` was regenerated from the per-coin registry
+- `shared/data/stablecoins/canonical-order.json` includes the ID in the intended position
+- active assets have a documented Phase 1a price + market-cap path
+- `data/logos.json` has a canonical-ID key and the referenced local file exists, or the skip reason is documented
+- `data/ai-summaries.json` has a canonical-ID key, or the skip reason is documented
+- downstream coverage decision notes cover every Phase 5 branch
 
 For a normal stablecoin addition, run at least:
 

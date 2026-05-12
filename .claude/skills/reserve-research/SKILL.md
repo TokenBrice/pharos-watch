@@ -6,7 +6,7 @@ description: Research and populate reserve composition data for a single stablec
 # Reserve Composition Research
 
 ## Input
-User provides a stablecoin name, symbol, or ID from the tracked metadata JSON shards under `shared/data/stablecoins/`.
+User provides a stablecoin name, symbol, or ID from the tracked metadata JSON registry under `shared/data/stablecoins/coins/*.json`.
 
 ## Process
 
@@ -88,7 +88,7 @@ Wait for user approval before applying.
 
 After approval, use the Edit tool to add the `reserves` array to the coin's JSON object in the matching `shared/data/stablecoins/coins/*.json` file.
 
-Verify: `npm run build` succeeds.
+After applying data changes, regenerate `shared/data/stablecoins/coins.generated.json` and run `npm run check:stablecoin-data`. For full stablecoin additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`; `npm run build` alone is not sufficient.
 
 ## Quality Standards
 

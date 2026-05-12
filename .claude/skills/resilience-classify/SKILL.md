@@ -40,10 +40,10 @@ For each coin, determine the correct tier:
 
 | Sub-factor | Question | Tiers |
 |---|---|---|
-| `chainTier` | Where does the core protocol live and where is collateral held? | `ethereum` (100), `stage1-l2` (66), `established-alt-l1` (20), `unproven` (0) |
+| `chainTier` | Where does the core protocol live and where is collateral held? | `ethereum`, `stage1-l2`, `mature-alt-l1`, `established-alt-l1`, `unproven` |
 | `deploymentModel` | How does the token extend to other chains? | `single-chain` (×1.0), `canonical-bridge` (×0.85), `third-party-bridge` (×0.60), `native-multichain` (×0.40) |
 | `collateralQuality` | What are the trust assumptions in backing assets? | `native` (100), `eth-lst` (66), `rwa` (50), `alt-lst-bridged-or-mixed` (20), `exotic` (0) |
-| `custodyModel` | Who holds the collateral and can it be verified on-chain? | `onchain` (100), `institutional` (50), `cex` (0) |
+| `custodyModel` | Who holds the collateral and can it be verified on-chain? | `onchain`, `institutional-top`, `institutional-regulated`, `institutional-unregulated`, `institutional-sanctioned`, `cex` |
 
 **Classification rules:**
 - **chainTier**: Based on where the protocol's smart contracts and collateral vaults live, NOT where the token is bridged to
@@ -94,4 +94,4 @@ After user approval, edit the matching `shared/data/stablecoins/coins/*.json` en
 }
 ```
 
-Run `npm run build` to verify.
+Regenerate `shared/data/stablecoins/coins.generated.json` and run `npm run check:stablecoin-data`. For full stablecoin additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`; `npm run build` alone is not sufficient.

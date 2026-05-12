@@ -55,6 +55,8 @@ For each coin, the script:
 
 The **contract address lookup is the ground truth** -- it tells you exactly which CoinGecko ID maps to a given on-chain token.
 
+This verifies identity only. For active additions and pre-launch promotions, also run `stablecoin-runtime-price-marketcap-gate` to prove Pharos can fetch both current price and market cap / circulating supply.
+
 ## Interpreting Results
 
 - `VERDICT: Our geckoId is CORRECT` -- no action needed

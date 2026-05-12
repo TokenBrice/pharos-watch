@@ -1,12 +1,12 @@
 ---
 name: contract-populate
-description: Populate smart contract addresses for a stablecoin using CoinGecko detail_platforms data. Expands CHAIN_META for new chains. Merges without overwriting existing curated data. Run per-coin or batch.
+description: Populate smart contract addresses for a stablecoin using CoinGecko detail_platforms data. Uses only chain IDs already present in CHAIN_META and merges without overwriting existing curated data. Run per-coin or batch.
 user_invocable: true
 ---
 
 ## Contract Address Population
 
-Fetch and merge contract addresses from CoinGecko into the matching `shared/data/stablecoins/coins/*.json` entry. Expands `shared/lib/chains.ts` with new chains as discovered.
+Fetch and merge contract addresses from CoinGecko into the matching `shared/data/stablecoins/coins/*.json` entry. Unknown chains are reported, not added; chain-support expansion is a separate explicit task.
 
 ### Input
 
@@ -128,7 +128,7 @@ binancecoin              (BNB Beacon Chain / BEP2 — legacy, not smart contract
 1. Read `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json`) and locate the coin's entry
 2. Note the coin's `geckoId` — if missing, skip this coin and flag it
 3. Note all existing chains in the coin's `contracts` array (these are curated and will NOT be overwritten)
-4. Treat the runtime stablecoin re-export as import-only; contract metadata edits belong in the JSON shards and must match `shared/lib/stablecoins/schema.ts`
+4. Treat the runtime stablecoin re-export as import-only; contract metadata edits belong in the per-coin JSON registry and must match `shared/lib/stablecoins/schema.ts`
 
 #### Step 2 — Fetch CoinGecko data
 
@@ -149,53 +149,15 @@ For each entry in `detail_platforms`:
 2. **Check if chain already exists** in the coin's contracts
    - If yes → skip (preserve curated data)
 3. **Check if chain exists in `shared/lib/chains.ts`** (`CHAIN_META`)
-   - If no → add it (see "Adding New Chains" below)
+   - If no → report it as "unsupported chain" and skip it unless the user explicitly requested a separate chain-support change
 4. **Add the contract** to the coin's contracts array:
    - `chain`: our chain ID
    - `address`: from CG, lowercase for EVM chains, original case for non-EVM (Tron, Solana, Aptos, Sui, Near, Stellar, etc.)
    - `decimals`: from CG's `decimal_place` field. If `null`, try to determine from the token standard (most ERC-20s are 6 or 18). If truly unknown, flag and skip
 
-#### Step 4 — Adding new chains to `shared/lib/chains.ts`
+#### Step 4 — Unsupported chains
 
-When a chain ID is not in `CHAIN_META`, add it with:
-
-- `name`: Human-readable chain name (capitalize properly)
-- `explorerUrl`: Look up the standard block explorer for this chain. Common ones:
-  - ton: `https://tonviewer.com`
-  - zksync: `https://explorer.zksync.io`
-  - near: `https://nearblocks.io`
-  - algorand: `https://explorer.perawallet.app`
-  - stellar: `https://stellar.expert`
-  - starknet: `https://starkscan.co`
-  - hedera: `https://hashscan.io`
-  - sonic: `https://sonicscan.org`
-  - xdc: `https://xdcscan.io`
-  - sei: `https://seitrace.com`
-  - worldchain: `https://worldscan.org`
-  - unichain: `https://uniscan.xyz`
-  - polkadot: `https://polkadot.subscan.io`
-  - xrpl: `https://xrpscan.com`
-  - moonriver: `https://moonriver.moonscan.io`
-  - klaytn: `https://klaytnscope.com`
-  - plume: `https://explorer.plumenetwork.xyz`
-  - hyperevm: `https://purrsec.com`
-  - monad: `https://explorer.monad.xyz`
-  - mantle: `https://mantlescan.xyz`
-  - linea: `https://lineascan.build`
-  - scroll: `https://scrollscan.com`
-  - blast: `https://blastscan.io`
-  - mode: `https://modescan.io`
-  - manta: `https://pacific-explorer.manta.network`
-  - ronin: `https://app.roninchain.com`
-  - bob: `https://explorer.gobob.xyz`
-  - corn: `https://cornscan.io`
-  - berachain: `https://berascan.com`
-- `evmChainId`: Filled if known EVM chain, `null` for non-EVM. Common EVM chain IDs:
-  - zksync: 324, mantle: 5000, linea: 59144, scroll: 534352, blast: 81457, sonic: 146, mode: 34443, manta: 169, moonriver: 1285, klaytn: 8217, sei: 1329, worldchain: 480, unichain: 130, bob: 60808, berachain: 80094, corn: 21000000, plume: 98866, hyperevm: 999
-- `type`: `"evm"` for EVM chains, `"other"` for non-EVM (ton, near, algorand, stellar, starknet, polkadot, xrpl, solana, sui, aptos)
-- `logoPath`: `/chains/{chainId}.png` — the logo file won't exist yet, that's OK
-
-**Important**: Add chains to `chains.ts` in a logical position (group by type: EVM L1s, EVM L2s, non-EVM). Maintain the existing code style (2-space alignment, trailing comma pattern).
+When a mapped chain ID is not in `CHAIN_META`, do not modify `shared/lib/chains.ts` as part of this skill. Report the unsupported chain, the source platform name, supply or evidence if available, and whether a separate chain-support task is justified.
 
 #### Step 5 — Write changes
 
@@ -215,7 +177,7 @@ After each coin, report:
 - New chains added: {list with addresses}
 - Unmapped CG platforms skipped: {list}
 - Null decimals flagged: {list}
-- New CHAIN_META entries added: {list}
+- Unsupported chains skipped: {list}
 ```
 
 ### Batch Mode
@@ -223,7 +185,7 @@ After each coin, report:
 When processing multiple coins:
 - Process sequentially (CoinGecko rate limit: ~30 req/min on free tier)
 - After ALL coins are processed, present a single consolidated summary
-- After the batch, run `npm run build` to verify everything compiles
+- After the batch, regenerate `shared/data/stablecoins/coins.generated.json` and run `npm run check:stablecoin-data`; for full stablecoin additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`
 
 ### Quality Standards
 
@@ -231,7 +193,7 @@ When processing multiple coins:
 - **Lowercase EVM addresses** — verify CG returns lowercase, force it if not
 - **Skip null decimals** — unless the token standard makes it obvious (most ERC-20s are 6 or 18)
 - **Non-standard address formats are fine** — Stellar, XRP, Polkadot, etc. have their own formats. Store as-is from CoinGecko
-- **Log unmapped platforms** — these are opportunities to expand the mapping table
+- **Log unmapped platforms and unsupported chains** — these are opportunities for separate mapping or chain-support work
 
 ### What NOT to do
 
@@ -239,4 +201,4 @@ When processing multiple coins:
 - Don't add the same chain twice for a coin
 - Don't guess decimals — if CG returns null and it's unclear, skip
 - Don't modify any fields other than `contracts` in the stablecoin JSON entry
-- Don't modify any fields other than `CHAIN_META` in chains.ts
+- Don't modify `shared/lib/chains.ts` unless the user explicitly requested chain-support work outside this skill

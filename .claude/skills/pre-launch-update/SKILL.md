@@ -120,6 +120,8 @@ Approval is **per coin**, not bulk. For each coin with proposed changes, wait fo
 
 A coin is ready-to-promote only if **all three** of the following hold. Listing existence alone is not enough — CoinGecko accepts issuer-submitted preview listings with zero supply before a token is deployed, and those produce false positives.
 
+Before recommending promotion, also run `stablecoin-runtime-price-marketcap-gate` and record the accepted active runtime path. A promoted asset must have both a fetchable current price and a fetchable market-cap / circulating-supply path.
+
 1. **Listed externally with real supply:**
    - DefiLlama: entry on `https://stablecoins.llama.fi/stablecoins` with non-zero `circulating`, **OR**
    - CoinGecko: entry reachable via `https://api.coingecko.com/api/v3/search?query={symbol}` whose detail endpoint returns non-zero `market_data.market_cap.usd` **and** non-zero `circulating_supply`

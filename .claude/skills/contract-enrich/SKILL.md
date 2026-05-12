@@ -267,7 +267,7 @@ binancecoin              (BNB Beacon Chain / BEP2 — legacy)
 
 1. Read `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json`)
 2. For each stablecoin, extract: `id`, `symbol`, `name`, `llamaId`, `geckoId`, `contracts[]` (list of chain IDs already populated)
-3. Treat the runtime stablecoin re-export as import-only; contract metadata edits belong in the JSON shards and must match `shared/lib/stablecoins/schema.ts`
+3. Treat the runtime stablecoin re-export as import-only; contract metadata edits belong in the per-coin JSON registry and must match `shared/lib/stablecoins/schema.ts`
 
 ### Step 2 — Fetch DefiLlama data
 
@@ -307,7 +307,7 @@ Print a structured report:
 {SYMBOL} (llamaId: {id}, geckoId: {geckoId}): {N} missing chains
   - {DL chain name} → {internal chain ID} (${supply} supply)
   - {DL chain name} → [UNMAPPED] (${supply} supply)
-  - {DL chain name} → {internal chain ID} [NEW CHAIN] (${supply} supply)
+  - {DL chain name} → {internal chain ID} [UNSUPPORTED CHAIN] (${supply} supply)
   - {DL chain name} → {internal chain ID} [NO CG MAP] (${supply} supply)
 
 ...
@@ -315,7 +315,7 @@ Print a structured report:
 Summary:
   Total gaps: {N} across {M} coins
   On known chains (in CHAIN_META): {N}
-  On new chains (need CHAIN_META entry): {N}
+  On unsupported chains (separate CHAIN_META task needed): {N}
   On unmapped DL chains (need DL_CHAIN_MAP update): {N}
   Cannot auto-populate (no CG platform mapping): {N}
   On skipped dead chains: {N}
@@ -370,44 +370,11 @@ For each address found:
    - Hedera: `hashscan.io/mainnet/token/{address}`
 4. If verification fails (404, wrong token) → log and skip
 
-### Step 4 — Check for new chains
+### Step 4 — Check for unsupported chains
 
-If the gap chain is not in `CHAIN_META`:
-1. Add it to `shared/lib/chains.ts` following the pattern from contract-populate skill
-2. Use this reference table for common new chains:
+If the gap chain is not in `CHAIN_META`, do not add it during this skill. Log the chain as unsupported and skip population for that gap unless the user explicitly starts a separate chain-support task.
 
-Common new chains reference:
-
-```
-Chain ID       | Name          | Explorer URL                              | EVM Chain ID | Type
-───────────────|───────────────|───────────────────────────────────────────|──────────────|──────
-ronin          | Ronin         | https://app.roninchain.com                | 2020         | evm
-cronos         | Cronos        | https://cronoscan.com                     | 25           | evm
-lisk           | Lisk          | https://blockscout.lisk.com               | 1135         | evm
-rootstock      | Rootstock     | https://rootstock.blockscout.com          | 30           | evm
-pulsechain     | PulseChain    | https://scan.pulsechain.com               | 369          | evm
-eos            | EOS EVM       | https://explorer.evm.eosnetwork.com       | 17777        | evm
-conflux        | Conflux       | https://evm.confluxscan.io                | 1030         | evm
-zilliqa        | Zilliqa       | https://evmx.zilliqa.com                  | 32769        | evm
-iotex          | IoTeX         | https://iotexscan.io                      | 4689         | evm
-etherlink      | Etherlink     | https://explorer.etherlink.com            | 42793        | evm
-heco           | HECO          | https://hecoscan.io                       | 128          | evm
-okxchain       | OKX Chain     | https://www.oklink.com/oktc               | 66           | evm
-multiversx     | MultiversX    | https://explorer.multiversx.com           | null         | other
-injective      | Injective     | https://explorer.injective.network        | null         | other
-flow           | Flow          | https://flowscan.io                       | 747          | evm
-stacks         | Stacks        | https://explorer.hiro.so                  | null         | other
-vechain        | VeChain       | https://explore.vechain.org               | null         | other
-```
-
-3. Research the chain's:
-   - Human-readable name
-   - Block explorer URL
-   - EVM chain ID (if EVM), null otherwise
-   - Type: "evm" or "other" (use "tron" only for Tron)
-   - Logo path: `/chains/{chainId}.png`
-
-### Step 5 — Write to the stablecoin JSON shard
+### Step 5 — Write to the stablecoin per-coin JSON file
 
 1. Edit the coin's `contracts` array in the matching `shared/data/stablecoins/coins/*.json` entry using the Edit tool
 2. Append new entries after existing ones
@@ -424,20 +391,20 @@ vechain        | VeChain       | https://explore.vechain.org               | nul
 - Populated: {list with chain → address}
 - CG missing (skipped): {list}
 - Verification failed (skipped): {list}
-- New CHAIN_META entries added: {list}
+- Unsupported chains skipped: {list}
 - Null decimals flagged (skipped): {list}
 ```
 
 ### Step 7 — After all coins
 
-1. Run `npm run build` to verify everything compiles
+1. Regenerate `shared/data/stablecoins/coins.generated.json` and run `npm run check:stablecoin-data`; for full stablecoin additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`
 2. Print consolidated summary:
 
 ```
 === Enrichment Complete ===
 Coins processed: {N}
 New contracts added: {N} across {M} chains
-New CHAIN_META entries: {N}
+Unsupported chains skipped: {N}
 Skipped (CG missing): {N}
 Skipped (verification failed): {N}
 Skipped (null decimals): {N}
@@ -452,7 +419,7 @@ Build: PASS/FAIL
 - **Lowercase EVM addresses** — verify CG returns lowercase, force it if not
 - **Skip null decimals** — unless the token standard makes it obvious (most ERC-20s are 6 or 18)
 - **Non-standard address formats are fine** — Stellar, XRP, Polkadot, etc. have their own formats
-- **Log everything** — unmapped platforms, missing CG data, verification failures
+- **Log everything** — unmapped platforms, unsupported chains, missing CG data, verification failures
 - **Sequential CG requests** — respect ~30 req/min free tier rate limit
 - **Pause between phases** — always show gap report and get user approval before populating
 
@@ -462,7 +429,7 @@ Build: PASS/FAIL
 - Don't add the same chain twice for a coin
 - Don't guess decimals — if CG returns null and it's unclear, skip
 - Don't modify any fields other than `contracts` in the stablecoin JSON entry
-- Don't modify any fields other than `CHAIN_META` in chains.ts
+- Don't modify `shared/lib/chains.ts` unless the user explicitly requested chain-support work outside this skill
 - Don't skip block explorer verification — every address must be confirmed
 - Don't process coins without a `geckoId` — no CG lookup possible
 - Don't include chains below supply threshold even if CG has an address

@@ -25,6 +25,8 @@ The user provides a stablecoin **name**, **symbol**, or **ID** (ticker-issuer fo
 | `contracts` | Official docs > CoinGecko API > block explorer APIs | `{ chain, address, decimals }` — chains from `shared/lib/chains.ts` only |
 | `proofOfReserves` | Official site | `{ type, url, provider? }` — types: `"independent-audit"` / `"real-time"` / `"self-reported"` |
 
+This skill gathers metadata. It does not prove that an active asset is addable. For active additions and pre-launch promotions, run `stablecoin-runtime-price-marketcap-gate` before applying registry edits.
+
 ### Fetching strategy: APIs first, browser as fallback
 
 Many sites (CoinGecko, Etherscan, etc.) block plain HTTP requests with 403s. **Always prefer API endpoints over scraping web pages** — they're more reliable, structured, and rarely blocked.
@@ -117,7 +119,8 @@ After user approval:
    - Contract addresses: lowercase hex for EVM, original case for Tron and other non-EVM chains
    - Links order: Website, Twitter, Docs, Proof of Reserve (if applicable)
    - Keep entries concise
-4. Run `npm run build` to verify the edit compiles cleanly
+4. Regenerate `shared/data/stablecoins/coins.generated.json` after metadata edits
+5. Run `npm run check:stablecoin-data`; for full stablecoin additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`
 
 ### Quality Standards
 
