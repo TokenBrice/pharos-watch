@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 
 interface SovereigntyLatticeProps {
   coverage: BlacklistSummaryResponse["coverage"] | undefined;
@@ -19,6 +20,8 @@ interface LatticeRow {
   eventCount: number;
   frozenTotal: number;
 }
+
+const MOBILE_CHAIN_COLUMN_LIMIT = 4;
 
 const COUNT_FORMATTER = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
@@ -53,6 +56,8 @@ function buildRows(
 }
 
 export function SovereigntyLattice({ coverage, stats, chains, isLoading, onCellSelect }: SovereigntyLatticeProps) {
+  const isMobile = useIsMobile();
+
   if (isLoading) {
     return (
       <section className="pharos-card-shell overflow-hidden">
@@ -68,13 +73,18 @@ export function SovereigntyLattice({ coverage, stats, chains, isLoading, onCellS
   }
 
   const rows = buildRows(coverage, stats);
-  const visibleChains = chains.filter((chain) =>
-    rows.some((row) => row.supportedChains.has(chain.id)),
-  );
+  const visibleChains = chains.filter((chain) => rows.some((row) => row.supportedChains.has(chain.id)));
+  const chainColumnLimit = isMobile ? MOBILE_CHAIN_COLUMN_LIMIT : visibleChains.length;
+  const compactVisibleChains = visibleChains.slice(0, chainColumnLimit);
+  const hasMoreChains = compactVisibleChains.length < visibleChains.length;
+  const hiddenChains = hasMoreChains ? visibleChains.slice(compactVisibleChains.length) : [];
+  const hiddenChainIds = new Set(hiddenChains.map((chain) => chain.id));
+  const chainTrackDefinition = isMobile ? "minmax(0, 2rem)" : "minmax(2.5rem, 1fr)";
+  const gridTemplateColumns = `7rem repeat(${compactVisibleChains.length}, ${chainTrackDefinition}) ${hasMoreChains ? "2.5rem " : ""}5rem 6rem`;
 
   return (
     <section
-      className="pharos-card-shell overflow-hidden animate-in fade-in duration-300"
+      className="pharos-card-shell min-w-0 overflow-hidden animate-in fade-in duration-300"
       aria-labelledby="sovereignty-lattice-title"
     >
       <div className="pharos-panel-header flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
@@ -90,20 +100,29 @@ export function SovereigntyLattice({ coverage, stats, chains, isLoading, onCellS
         </p>
       </div>
 
-      <div className="overflow-x-auto p-4 sm:p-5">
+      <div className="min-w-0 max-w-full overflow-x-auto p-4 sm:p-5">
         {rows.length > 0 && visibleChains.length > 0 ? (
           <div
-            className="grid min-w-[820px] gap-1"
+            className="grid gap-1"
             style={{
-              gridTemplateColumns: `7rem repeat(${visibleChains.length}, minmax(2.5rem, 1fr)) 5rem 6rem`,
+              minWidth: isMobile ? "auto" : "820px",
+              gridTemplateColumns,
             }}
           >
             <div className="text-xs font-semibold uppercase text-muted-foreground">Stablecoin</div>
-            {visibleChains.map((chain) => (
-              <div key={chain.id} className="truncate text-center text-xs font-semibold uppercase text-muted-foreground">
+            {compactVisibleChains.map((chain) => (
+              <div
+                key={chain.id}
+                className="truncate text-center text-xs font-semibold uppercase text-muted-foreground"
+              >
                 {chain.name}
               </div>
             ))}
+            {hasMoreChains ? (
+              <div className="text-center text-xs font-semibold uppercase text-muted-foreground">
+                +{hiddenChains.length}
+              </div>
+            ) : null}
             <div className="text-right text-xs font-semibold uppercase text-muted-foreground">Events</div>
             <div className="text-right text-xs font-semibold uppercase text-muted-foreground">Frozen</div>
 
@@ -111,8 +130,10 @@ export function SovereigntyLattice({ coverage, stats, chains, isLoading, onCellS
               <LatticeRowCells
                 key={row.stablecoin}
                 row={row}
-                chains={visibleChains}
+                chains={compactVisibleChains}
+                hiddenChainIds={hiddenChainIds}
                 onCellSelect={onCellSelect}
+                hasMoreChains={hasMoreChains}
               />
             ))}
           </div>
@@ -129,12 +150,18 @@ export function SovereigntyLattice({ coverage, stats, chains, isLoading, onCellS
 function LatticeRowCells({
   row,
   chains,
+  hiddenChainIds,
   onCellSelect,
+  hasMoreChains,
 }: {
   row: LatticeRow;
   chains: BlacklistSummaryResponse["chains"];
   onCellSelect: SovereigntyLatticeProps["onCellSelect"];
+  hiddenChainIds: Set<string>;
+  hasMoreChains: boolean;
 }) {
+  const hiddenSupportedCount = [...row.supportedChains].filter((chainId) => hiddenChainIds.has(chainId)).length;
+
   return (
     <>
       <div className="flex h-9 items-center rounded-l-lg border border-border/60 bg-background/70 px-2 font-mono text-xs font-semibold text-foreground">
@@ -177,6 +204,11 @@ function LatticeRowCells({
           </button>
         );
       })}
+      {hasMoreChains ? (
+        <div className="flex h-9 items-center justify-center border border-border/60 bg-background/70 px-2 text-xs text-muted-foreground">
+          {hiddenSupportedCount > 0 ? `+${hiddenSupportedCount}` : ""}
+        </div>
+      ) : null}
       <div className="flex h-9 items-center justify-end border border-border/60 bg-background/70 px-2 font-mono text-xs tabular-nums text-muted-foreground">
         {formatCount(row.eventCount)}
       </div>

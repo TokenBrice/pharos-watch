@@ -54,9 +54,9 @@ export function FreezableSupplyMeter({ buckets, stats, isLoading }: FreezableSup
     );
   }
 
-  const orderedBuckets = BLACKLIST_STATUS_BUCKET_ORDER.map((key) => buckets?.find((bucket) => bucket.key === key)).filter(
-    (bucket): bucket is BlacklistStatusBucket => Boolean(bucket),
-  );
+  const orderedBuckets = BLACKLIST_STATUS_BUCKET_ORDER.map((key) =>
+    buckets?.find((bucket) => bucket.key === key),
+  ).filter((bucket): bucket is BlacklistStatusBucket => Boolean(bucket));
   const totalMarketCap = orderedBuckets.reduce((sum, bucket) => sum + bucket.marketCap, 0);
   const freezableMarketCap = orderedBuckets
     .filter((bucket) => FREEZABLE_BUCKETS.has(bucket.key))
@@ -89,7 +89,6 @@ export function FreezableSupplyMeter({ buckets, stats, isLoading }: FreezableSup
 
       <FreezeLineBar buckets={orderedBuckets} totalMarketCap={totalMarketCap} />
 
-
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {orderedBuckets.map((bucket) => {
           const share = totalMarketCap > 0 ? (bucket.marketCap / totalMarketCap) * 100 : 0;
@@ -102,7 +101,9 @@ export function FreezableSupplyMeter({ buckets, stats, isLoading }: FreezableSup
                     className="h-2.5 w-2.5 rounded-full"
                     style={{ backgroundColor: BLACKLIST_STATUS_BUCKET_COLORS[bucket.key] }}
                   />
-                  <span className="text-sm font-semibold text-foreground">{BLACKLIST_STATUS_BUCKET_LABELS[bucket.key]}</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {BLACKLIST_STATUS_BUCKET_LABELS[bucket.key]}
+                  </span>
                 </div>
                 <span className="font-mono text-xs tabular-nums text-muted-foreground">{formatShare(share)}</span>
               </div>
@@ -121,13 +122,7 @@ export function FreezableSupplyMeter({ buckets, stats, isLoading }: FreezableSup
   );
 }
 
-function FreezeLineBar({
-  buckets,
-  totalMarketCap,
-}: {
-  buckets: BlacklistStatusBucket[];
-  totalMarketCap: number;
-}) {
+function FreezeLineBar({ buckets, totalMarketCap }: { buckets: BlacklistStatusBucket[]; totalMarketCap: number }) {
   if (totalMarketCap <= 0) {
     return (
       <div className="mt-5 flex h-6 items-center justify-center rounded-full border border-border/70 bg-muted/30 text-[11px] text-muted-foreground">
@@ -136,7 +131,9 @@ function FreezeLineBar({
     );
   }
 
-  const segments = BLACKLIST_STATUS_BUCKET_ORDER.reduce<Array<{ key: BlacklistStatusBucketKey; left: number; width: number }>>((acc, key) => {
+  const segments = BLACKLIST_STATUS_BUCKET_ORDER.reduce<
+    Array<{ key: BlacklistStatusBucketKey; left: number; width: number }>
+  >((acc, key) => {
     const bucket = buckets.find((entry) => entry.key === key);
     const ratio = (bucket?.marketCap ?? 0) / totalMarketCap;
     const left = acc.reduce((sum, segment) => sum + segment.width, 0);
@@ -147,6 +144,9 @@ function FreezeLineBar({
   const freezableEnd = segments
     .filter((segment) => FREEZABLE_BUCKETS.has(segment.key))
     .reduce((sum, segment) => sum + segment.width, 0);
+  const safeFreezeLineLeft = Math.max(12, Math.min(88, freezableEnd));
+  const safeFreezeLineTransform =
+    freezableEnd <= 12 ? "translateX(0%)" : freezableEnd >= 88 ? "translateX(-100%)" : "translateX(-50%)";
 
   return (
     <div className="relative mt-5 h-6">
@@ -185,10 +185,13 @@ function FreezeLineBar({
         <div
           aria-hidden
           className="pointer-events-none absolute -top-1 h-[calc(100%+0.5rem)]"
-          style={{ left: `${freezableEnd}%` }}
+          style={{ left: `${safeFreezeLineLeft}%` }}
         >
           <div className="absolute -left-px h-full w-0.5 bg-frost-blue shadow-[0_0_6px_oklch(0.74_0.16_240_/_0.55)]" />
-          <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-sm border border-frost-blue/40 bg-background/90 px-1.5 py-px font-mono text-[9px] uppercase tracking-[0.14em] text-frost-blue">
+          <span
+            className="absolute -top-3.5 whitespace-nowrap rounded-sm border border-frost-blue/40 bg-background/90 px-1.5 py-px font-mono text-[9px] uppercase tracking-[0.14em] text-frost-blue"
+            style={{ left: 0, transform: safeFreezeLineTransform }}
+          >
             freeze line
           </span>
         </div>
