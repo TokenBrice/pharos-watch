@@ -223,7 +223,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - Adds `npm run build` and `npm run seo:check` only when the changed-file set is Pages-impacting, using the same matcher as `classify-deploy-changes.mjs`.
 - Adds Worker runtime typecheck plus Worker operational-script typecheck only when the changed-file set is worker-impacting.
 - After `npm run validate:prebuild` passes, runs independent Pages build/SEO, non-critical-test, critical-coverage, and Worker typecheck groups in parallel to reduce local wall time while keeping the same validation surface. If one parallel group fails, sibling groups are aborted and the failing command is reported explicitly. Set `MERGE_GATE_SERIAL=1` to use the older fully serial execution shape.
-- Supports `--staged`, `MERGE_GATE_BASE_REF=<ref>`, `MERGE_GATE_DRY_RUN=1`, and `MERGE_GATE_SERIAL=1`.
+- Supports `--staged`, `MERGE_GATE_BASE_REF=<ref>`, `MERGE_GATE_HEAD_REF=<ref>`, `MERGE_GATE_FULL_DEPLOY=1`, `MERGE_GATE_DRY_RUN=1`, and `MERGE_GATE_SERIAL=1`. The repo pre-push hook passes Git's exact pushed main ref range through `MERGE_GATE_BASE_REF` and `MERGE_GATE_HEAD_REF` so local classification matches the Cloudflare deploy workflow's push range.
 
 ### `run-validate-postbuild.mjs`
 

@@ -1,5 +1,13 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildExecutionBatches, buildCommandPlan, getChangedFiles, runExecutionBatches } from "../test-merge-gate.mjs";
+import {
+  buildExecutionBatches,
+  buildCommandPlan,
+  buildFullCommandPlan,
+  getChangedFiles,
+  runExecutionBatches,
+} from "../test-merge-gate.mjs";
 import { getCommandEnv } from "../test-merge-gate.mjs";
 import {
   buildCiValidateCommands,
@@ -36,6 +44,15 @@ describe("buildCommandPlan", () => {
 
   it("runs the full path for shared runtime changes", () => {
     expect(buildCommandPlan(["shared/lib/classification.ts"]).map((item) => item.cmd)).toEqual([
+      ...COMMON_VALIDATE_PREBUILD_COMMANDS,
+      ...PAGES_VALIDATE_COMMANDS,
+      ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
+      ...WORKER_VALIDATE_COMMANDS,
+    ]);
+  });
+
+  it("can force the full deploy validate path when the push base is unavailable", () => {
+    expect(buildFullCommandPlan().map((item) => item.cmd)).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...PAGES_VALIDATE_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
@@ -159,20 +176,22 @@ describe("buildCommandPlan", () => {
 });
 
 describe("getChangedFiles", () => {
-  it("passes the merge base ref to git as an argument", () => {
+  it("passes the base and head refs to git diff as a single range argument", () => {
     const calls: unknown[] = [];
     const execFile = (cmd: string, args: string[]) => {
       calls.push([cmd, args]);
-      if (args[0] === "merge-base") return "abc123\n";
       return "worker/src/api/status.ts\n";
     };
 
-    expect(getChangedFiles({ baseRef: "origin/main; touch /tmp/should-not-run", execFile })).toEqual([
-      "worker/src/api/status.ts",
-    ]);
+    expect(
+      getChangedFiles({
+        baseRef: "origin/main; touch /tmp/should-not-run",
+        execFile,
+        headRef: "HEAD && echo injected",
+      }),
+    ).toEqual(["worker/src/api/status.ts"]);
     expect(calls).toEqual([
-      ["git", ["merge-base", "origin/main; touch /tmp/should-not-run", "HEAD"]],
-      ["git", ["diff", "--name-only", "abc123...HEAD"]],
+      ["git", ["diff", "--name-only", "origin/main; touch /tmp/should-not-run...HEAD && echo injected"]],
     ]);
   });
 
@@ -185,6 +204,22 @@ describe("getChangedFiles", () => {
 
     expect(getChangedFiles({ stagedMode: true, execFile })).toEqual(["src/app/page.tsx"]);
     expect(calls).toEqual([["git", ["diff", "--name-only", "--cached"]]]);
+  });
+
+  it("rejects empty push bases unless the full deploy gate is requested by the caller", () => {
+    expect(() => getChangedFiles({ baseRef: "0000000000000000000000000000000000000000" })).toThrow(
+      "MERGE_GATE_FULL_DEPLOY=1",
+    );
+  });
+});
+
+describe("pre-push hook", () => {
+  it("passes exact main push refs into the local merge gate", () => {
+    const hook = readFileSync(resolve(process.cwd(), ".githooks/pre-push"), "utf8");
+
+    expect(hook).toContain('remote_ref" != "refs/heads/main"');
+    expect(hook).toContain('MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha"');
+    expect(hook).toContain('MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha"');
   });
 });
 

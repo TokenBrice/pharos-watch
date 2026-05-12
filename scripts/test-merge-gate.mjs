@@ -15,6 +15,8 @@ import {
   WORKER_VALIDATE_COMMANDS,
 } from "./lib/validate-contract.mjs";
 
+const ZERO_SHA = /^0+$/;
+
 export function normalizePath(path) {
   return normalizeRepoPath(path);
 }
@@ -60,7 +62,34 @@ export function buildCommandPlan(changedFiles) {
   return plan;
 }
 
-export function getChangedFiles({ stagedMode = false, baseRef = "origin/main", execFile = execFileSync } = {}) {
+export function buildFullCommandPlan(reason = "Full deploy path requested") {
+  const plan = [];
+
+  for (const cmd of COMMON_VALIDATE_PREBUILD_COMMANDS) {
+    addCommand(plan, cmd, reason);
+  }
+
+  for (const cmd of PAGES_VALIDATE_COMMANDS) {
+    addCommand(plan, cmd, reason);
+  }
+
+  for (const cmd of COMMON_VALIDATE_POSTBUILD_COMMANDS) {
+    addCommand(plan, cmd, reason);
+  }
+
+  for (const cmd of WORKER_VALIDATE_COMMANDS) {
+    addCommand(plan, cmd, reason);
+  }
+
+  return plan;
+}
+
+export function getChangedFiles({
+  stagedMode = false,
+  baseRef = "origin/main",
+  headRef = "HEAD",
+  execFile = execFileSync,
+} = {}) {
   if (stagedMode) {
     const raw = execFile("git", ["diff", "--name-only", "--cached"], { encoding: "utf8" });
     return raw
@@ -69,14 +98,21 @@ export function getChangedFiles({ stagedMode = false, baseRef = "origin/main", e
       .filter(Boolean);
   }
 
-  let mergeBase;
-  try {
-    mergeBase = execFile("git", ["merge-base", baseRef, "HEAD"], { encoding: "utf8" }).trim();
-  } catch {
-    throw new Error(`[merge-gate] Could not resolve merge-base with ${baseRef}. Set MERGE_GATE_BASE_REF explicitly.`);
+  if (!baseRef || ZERO_SHA.test(baseRef)) {
+    throw new Error(
+      "[merge-gate] Could not diff from an empty base ref. Set MERGE_GATE_FULL_DEPLOY=1 to force the full local gate.",
+    );
   }
 
-  const raw = execFile("git", ["diff", "--name-only", `${mergeBase}...HEAD`], { encoding: "utf8" });
+  let raw;
+  try {
+    raw = execFile("git", ["diff", "--name-only", `${baseRef}...${headRef}`], { encoding: "utf8" });
+  } catch {
+    throw new Error(
+      `[merge-gate] Could not diff ${baseRef}...${headRef}. Set MERGE_GATE_BASE_REF and MERGE_GATE_HEAD_REF explicitly.`,
+    );
+  }
+
   return raw
     .split(/\r?\n/g)
     .map((line) => normalizePath(line.trim()))
@@ -149,22 +185,29 @@ export async function runMergeGate({ argv = process.argv.slice(2), env = process
   const args = new Set(argv);
   const stagedMode = args.has("--staged");
   const baseRef = env.MERGE_GATE_BASE_REF ?? "origin/main";
+  const headRef = env.MERGE_GATE_HEAD_REF ?? "HEAD";
   const dryRun = env.MERGE_GATE_DRY_RUN === "1";
-  const changedFiles = getChangedFiles({ stagedMode, baseRef });
+  const forceFullDeploy = env.MERGE_GATE_FULL_DEPLOY === "1";
+  const changedFiles = forceFullDeploy ? [] : getChangedFiles({ stagedMode, baseRef, headRef });
 
-  console.log(`[merge-gate] Base ref: ${baseRef}`);
+  console.log(`[merge-gate] Base ref: ${forceFullDeploy ? "(full deploy fallback)" : baseRef}`);
+  console.log(`[merge-gate] Head ref: ${headRef}`);
   console.log(`[merge-gate] Mode: ${stagedMode ? "staged" : "merged-diff"}`);
   console.log(`[merge-gate] Changed files: ${changedFiles.length}`);
   for (const file of changedFiles) {
     console.log(`  - ${file}`);
   }
 
-  if (changedFiles.length === 0) {
+  if (!forceFullDeploy && changedFiles.length === 0) {
     console.log("[merge-gate] No changes detected; gate skipped.");
     return;
   }
 
-  const plan = buildCommandPlan(changedFiles);
+  const plan = forceFullDeploy
+    ? buildFullCommandPlan(
+        "Full deploy fallback requested; local merge gate mirrors the full deploy-path validate core",
+      )
+    : buildCommandPlan(changedFiles);
 
   if (plan.length === 0) {
     console.log("[merge-gate] No Pages or worker deploy surfaces changed; gate skipped.");

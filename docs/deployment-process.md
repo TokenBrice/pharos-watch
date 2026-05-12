@@ -50,12 +50,14 @@ git config core.hooksPath .githooks
 
 Hook behavior:
 
-1. Any push: runs `npm run test:merge-gate`.
-2. Push is blocked on failure.
+1. Pushes that update `refs/heads/main`: runs `npm run test:merge-gate` against the exact `remote_sha...local_sha` range Git sends to the hook, matching the `github.event.before...github.sha` range used by `.github/workflows/deploy-cloudflare.yml`.
+2. A new remote `main` push, where Git has no previous remote SHA, forces the full local deploy validate path.
+3. Other pushes fall back to the default local merge-gate range (`origin/main...HEAD`) so branch pushes still receive the existing safety check.
+4. Push is blocked on failure.
 
 ## What `test:merge-gate` Does
 
-`scripts/test-merge-gate.mjs` compares current `HEAD` to merge-base with `origin/main` and mirrors the deploy-path validate policy locally.
+`scripts/test-merge-gate.mjs` compares `MERGE_GATE_BASE_REF...MERGE_GATE_HEAD_REF` (default `origin/main...HEAD`) and mirrors the deploy-path validate policy locally. The pre-push hook sets those refs from Git's pushed main ref update so the local changed-file set matches the deploy workflow's push classifier.
 
 Default policy:
 
@@ -77,8 +79,10 @@ Pages-impacting files now use the same broad matcher as CI deploy classification
 
 Useful merge-gate controls:
 
-- `npm run test:merge-gate -- --staged` to diff staged files instead of `merge-base ... HEAD`
+- `npm run test:merge-gate -- --staged` to diff staged files instead of the default ref range
 - `MERGE_GATE_BASE_REF=<ref>` to override the default compare base (`origin/main`)
+- `MERGE_GATE_HEAD_REF=<ref>` to override the default compare head (`HEAD`)
+- `MERGE_GATE_FULL_DEPLOY=1` to force the full local deploy validate path when there is no usable base ref
 - `MERGE_GATE_DRY_RUN=1` to print the command plan without executing it
 - `MERGE_GATE_SERIAL=1` to run the plan serially for lower local resource pressure
 
