@@ -2,8 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -15,18 +13,16 @@ import {
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
+import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { useSafetyScoreHistory } from "@/hooks/api-hooks";
 import { CRON_24H } from "@/lib/cron-intervals";
+import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import {
   formatChartDate,
   formatDuration,
   formatTrackingSpanDays,
 } from "@shared/lib/format";
-import {
-  GRADE_RADAR_COLORS,
-  GRADE_THRESHOLDS,
-  gradeRange,
-} from "@shared/lib/report-cards";
+import { GRADE_THRESHOLDS } from "@shared/lib/report-cards";
 import type { ReportCardGrade, SafetyScoreHistoryPoint } from "@shared/types";
 
 // ---------------------------------------------------------------------------
@@ -146,9 +142,7 @@ export function SafetyScoreHistorySection({
       const end = i < history.length - 1 ? history[i + 1].date : nowSec;
       const duration = end - start;
       const pct = (duration / totalSpan) * 100;
-      const range = gradeRange(entry.grade);
-      const color =
-        GRADE_RADAR_COLORS[range] ?? GRADE_RADAR_COLORS.NR ?? "#71717a";
+      const color = getSafetyGradeMetadata(entry.grade).radarColor;
       return { grade: entry.grade, start, end, duration, pct, color, isLast: i === history.length - 1 };
     });
   }, [history, nowSec]);
@@ -184,10 +178,10 @@ export function SafetyScoreHistorySection({
         {stats && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <StatBox label="Best Grade">
-              <Badge variant="outline" className={`text-xs px-2 py-0.5 font-medium ${REPORT_CARD_GRADE_COLORS[stats.best.grade]}`} aria-label={`Safety grade ${stats.best.grade}${stats.best.score !== null ? `, score ${stats.best.score}` : ""}`}>{stats.best.grade}{stats.best.score !== null && <span className="ml-1 opacity-70" aria-hidden="true">({stats.best.score})</span>}</Badge>
+              <SafetyGradeBadge grade={stats.best.grade} score={stats.best.score} size="xs" />
             </StatBox>
             <StatBox label="Lowest Grade">
-              <Badge variant="outline" className={`text-xs px-2 py-0.5 font-medium ${REPORT_CARD_GRADE_COLORS[stats.worst.grade]}`} aria-label={`Safety grade ${stats.worst.grade}${stats.worst.score !== null ? `, score ${stats.worst.score}` : ""}`}>{stats.worst.grade}{stats.worst.score !== null && <span className="ml-1 opacity-70" aria-hidden="true">({stats.worst.score})</span>}</Badge>
+              <SafetyGradeBadge grade={stats.worst.grade} score={stats.worst.score} size="xs" />
             </StatBox>
             <StatBox label="Current Streak">
               <div className="flex items-center gap-1.5">
@@ -195,7 +189,7 @@ export function SafetyScoreHistorySection({
                   {formatTrackingSpanDays(stats.streakDays)}
                 </span>
                 <span className="text-sm text-muted-foreground">at</span>
-                <Badge variant="outline" className={`text-xs px-2 py-0.5 font-medium ${REPORT_CARD_GRADE_COLORS[stats.lastEntry.grade]}`} aria-label={`Safety grade ${stats.lastEntry.grade}${stats.lastEntry.score !== null ? `, score ${stats.lastEntry.score}` : ""}`}>{stats.lastEntry.grade}{stats.lastEntry.score !== null && <span className="ml-1 opacity-70" aria-hidden="true">({stats.lastEntry.score})</span>}</Badge>
+                <SafetyGradeBadge grade={stats.lastEntry.grade} score={stats.lastEntry.score} size="xs" />
               </div>
             </StatBox>
           </div>
@@ -253,7 +247,7 @@ export function SafetyScoreHistorySection({
                 <span className="text-sm font-medium">
                   {formatChartDate(point.date * 1000, "long")}
                 </span>
-                <Badge variant="outline" className={`text-xs px-2 py-0.5 font-medium ${REPORT_CARD_GRADE_COLORS[point.grade]}`} aria-label={`Safety grade ${point.grade}${point.score !== null ? `, score ${point.score}` : ""}`}>{point.grade}{point.score !== null && <span className="ml-1 opacity-70" aria-hidden="true">({point.score})</span>}</Badge>
+                <SafetyGradeBadge grade={point.grade} score={point.score} size="xs" />
               </div>
               <TransitionIndicator point={point} />
             </li>

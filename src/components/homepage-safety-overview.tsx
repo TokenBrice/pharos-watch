@@ -3,9 +3,16 @@
 import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { gradeRange, scoreToGrade } from "@shared/lib/report-cards";
+import { scoreToGrade } from "@shared/lib/report-cards";
 import { formatCurrency } from "@shared/lib/format";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import {
+  SAFETY_GRADE_RANGES,
+  createSafetyGradeRangeCounts,
+  getSafetyGradeMetadata,
+  getSafetyGradeRange,
+  type SafetyGradeRange,
+} from "@/lib/report-card-ui";
 import type { ReportCard, StablecoinData } from "@shared/types";
 
 interface HomepageSafetyOverviewProps {
@@ -14,75 +21,11 @@ interface HomepageSafetyOverviewProps {
   className?: string;
 }
 
-const GRADE_RANGES = ["A", "B", "C", "D", "F", "NR"] as const;
-
-const GRADE_BAR_COLORS: Record<(typeof GRADE_RANGES)[number], string> = {
-  A: "bg-emerald-500",
-  B: "bg-blue-500",
-  C: "bg-amber-500",
-  D: "bg-orange-500",
-  F: "bg-red-500",
-  NR: "bg-zinc-500",
-};
-
-const RANGE_PILL_CLASSES: Record<(typeof GRADE_RANGES)[number], string> = {
-  A: "border-emerald-600/35 bg-emerald-500/15 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
-  B: "border-blue-600/35 bg-blue-500/15 text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-300",
-  C: "border-amber-600/35 bg-amber-500/15 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300",
-  D: "border-orange-600/35 bg-orange-500/15 text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/15 dark:text-orange-300",
-  F: "border-red-600/35 bg-red-500/15 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300",
-  NR: "border-zinc-600/30 bg-zinc-500/15 text-zinc-700 dark:border-zinc-500/40 dark:bg-zinc-500/15 dark:text-zinc-300",
-};
-
-const PULSE_THEME: Record<(typeof GRADE_RANGES)[number], {
-  ring: string;
-  bg: string;
-  accent: string;
-  tagline: string;
-}> = {
-  A: {
-    ring: "border-emerald-500/35",
-    bg: "bg-emerald-500/10",
-    accent: "text-emerald-700 dark:text-emerald-300",
-    tagline: "High-grade assets dominate the market mix.",
-  },
-  B: {
-    ring: "border-blue-500/35",
-    bg: "bg-blue-500/10",
-    accent: "text-blue-700 dark:text-blue-300",
-    tagline: "Safety profile is balanced with moderate fragility.",
-  },
-  C: {
-    ring: "border-amber-500/35",
-    bg: "bg-amber-500/10",
-    accent: "text-amber-700 dark:text-amber-300",
-    tagline: "Quality mix is split; watch weaker structures.",
-  },
-  D: {
-    ring: "border-orange-500/35",
-    bg: "bg-orange-500/10",
-    accent: "text-orange-700 dark:text-orange-300",
-    tagline: "Risk pressure is elevated in lower-grade tiers.",
-  },
-  F: {
-    ring: "border-red-500/35",
-    bg: "bg-red-500/10",
-    accent: "text-red-700 dark:text-red-300",
-    tagline: "Failure-prone segment is meaningfully outsized.",
-  },
-  NR: {
-    ring: "border-zinc-500/35",
-    bg: "bg-zinc-500/10",
-    accent: "text-zinc-700 dark:text-zinc-300",
-    tagline: "Data coverage is incomplete for a full pulse read.",
-  },
-};
-
 interface LargestCard {
   id: string;
   symbol: string;
   grade: ReportCard["overallGrade"];
-  range: (typeof GRADE_RANGES)[number];
+  range: SafetyGradeRange;
   score: number | null;
   mcapUsd: number;
 }
@@ -102,16 +45,9 @@ export function HomepageSafetyOverview({ cards, peggedAssets, className }: Homep
   } = useMemo(() => {
     const active = (cards ?? []).filter((card) => !card.isDefunct);
 
-    const rangeCounts: Record<(typeof GRADE_RANGES)[number], number> = {
-      A: 0,
-      B: 0,
-      C: 0,
-      D: 0,
-      F: 0,
-      NR: 0,
-    };
+    const rangeCounts = createSafetyGradeRangeCounts();
     for (const card of active) {
-      const range = gradeRange(card.overallGrade) as (typeof GRADE_RANGES)[number];
+      const range = getSafetyGradeRange(card.overallGrade);
       rangeCounts[range] += 1;
     }
 
@@ -141,14 +77,14 @@ export function HomepageSafetyOverview({ cards, peggedAssets, className }: Homep
       : null;
     const marketPulse = weightedAverage ?? average;
     const marketGrade = scoreToGrade(marketPulse);
-    const marketRange = gradeRange(marketGrade) as (typeof GRADE_RANGES)[number];
+    const marketRange = getSafetyGradeRange(marketGrade);
 
     const largest: LargestCard[] = active
       .map((card) => ({
         id: card.id,
         symbol: card.symbol,
         grade: card.overallGrade,
-        range: gradeRange(card.overallGrade) as (typeof GRADE_RANGES)[number],
+        range: getSafetyGradeRange(card.overallGrade),
         score: card.overallScore,
         mcapUsd: mcapById.get(card.id) ?? 0,
       }))
@@ -180,7 +116,7 @@ export function HomepageSafetyOverview({ cards, peggedAssets, className }: Homep
     );
   }
 
-  const pulse = PULSE_THEME[pulseRange];
+  const pulse = getSafetyGradeMetadata(pulseRange).pulse;
   const strongPct = Math.round((strongCount / activeCards.length) * 100);
   const highRiskPct = Math.round((highRiskCount / activeCards.length) * 100);
   const ratedPct = Math.round((ratedCount / activeCards.length) * 100);
@@ -188,14 +124,14 @@ export function HomepageSafetyOverview({ cards, peggedAssets, className }: Homep
   return (
     <Card className={cn("min-h-[340px] overflow-hidden rounded-xl animate-in fade-in duration-300 sm:min-h-[390px]", className)}>
       <CardContent className="flex h-full flex-col justify-between gap-4 p-4">
-        <div className={cn("overflow-hidden rounded-xl border px-3 py-2", pulse.ring, pulse.bg)}>
+        <div className={cn("overflow-hidden rounded-xl border px-3 py-2", pulse.ringClassName, pulse.bgClassName)}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
                 MCAP-WEIGHTED Market Safety Pulse
               </p>
               <div className="mt-1 flex items-end gap-2">
-                <p className={cn("text-3xl font-black leading-none tracking-tight sm:text-4xl", pulse.accent)}>
+                <p className={cn("text-3xl font-black leading-none tracking-tight sm:text-4xl", pulse.accentClassName)}>
                   {pulseGrade}
                 </p>
                 <p className="font-mono text-xl font-bold leading-none tabular-nums sm:text-2xl">
@@ -231,13 +167,13 @@ export function HomepageSafetyOverview({ cards, peggedAssets, className }: Homep
             <span className="font-mono normal-case">{activeCards.length} coins</span>
           </div>
           <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted/30">
-            {GRADE_RANGES.map((range) => {
+            {SAFETY_GRADE_RANGES.map((range) => {
               const count = counts[range];
               if (count === 0) return null;
               return (
                 <div
                   key={range}
-                  className={GRADE_BAR_COLORS[range]}
+                  className={getSafetyGradeMetadata(range).barClassName}
                   style={{ width: `${(count / activeCards.length) * 100}%` }}
                   title={`${range}: ${count}`}
                 />
@@ -245,7 +181,7 @@ export function HomepageSafetyOverview({ cards, peggedAssets, className }: Homep
             })}
           </div>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
-            {GRADE_RANGES.map((range) => (
+            {SAFETY_GRADE_RANGES.map((range) => (
               <span key={range} className="font-mono">{range}:{counts[range]}</span>
             ))}
           </div>
@@ -259,7 +195,7 @@ export function HomepageSafetyOverview({ cards, peggedAssets, className }: Homep
                 <div key={card.id} className="rounded-lg border border-border/60 bg-background/35 px-2 py-2">
                   <div className="flex items-center justify-between gap-1.5">
                     <span className="font-mono text-[11px] font-semibold">{card.symbol}</span>
-                    <span className={cn("rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-none", RANGE_PILL_CLASSES[card.range])}>
+                    <span className={cn("rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-none", getSafetyGradeMetadata(card.range).pillClassName)}>
                       {card.grade}
                     </span>
                   </div>

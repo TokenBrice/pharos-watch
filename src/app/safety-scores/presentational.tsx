@@ -4,16 +4,14 @@ import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getSafetyGradeBadgeClassName, getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatCurrency } from "@shared/lib/format";
-import {
-  REPORT_CARD_GRADE_COLORS,
-} from "@shared/lib/report-cards";
 import type { ReportCard } from "@shared/types";
 import {
   GRADE_RANGES,
@@ -21,15 +19,6 @@ import {
   type GradeFilter,
   type SortKey,
 } from "./view-model";
-
-const GRADE_BAR_COLORS: Record<string, string> = {
-  A: "bg-emerald-500 hover:bg-emerald-400",
-  B: "bg-blue-500 hover:bg-blue-400",
-  C: "bg-amber-500 hover:bg-amber-400",
-  D: "bg-orange-500 hover:bg-orange-400",
-  F: "bg-red-500 hover:bg-red-400",
-  NR: "bg-muted-foreground/40 hover:bg-muted-foreground/50",
-};
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "overall", label: "Overall" },
@@ -41,15 +30,6 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "dependencyRisk", label: "Dep. Risk" },
   { key: "mcap", label: "MCap" },
 ];
-
-const GRADE_SECTION_DESCRIPTIONS: Record<string, string> = {
-  A: "Top tier - strong across all dimensions",
-  B: "Above average - solid fundamentals with minor gaps",
-  C: "Middle ground - meets baseline but has weaknesses",
-  D: "Below average - significant risk in multiple areas",
-  F: "Critical - major concerns across dimensions",
-  NR: "Not yet rated - insufficient data",
-};
 
 function GradeFilterButtons({
   gradeFilter,
@@ -84,7 +64,7 @@ function GradeFilterButtons({
             onClick={() => onChange(isActive ? "all" : range)}
             className={cn(
               "pharos-focus-ring rounded-full text-xs min-h-[44px] md:min-h-0",
-              isActive && REPORT_CARD_GRADE_COLORS[range as keyof typeof REPORT_CARD_GRADE_COLORS],
+              isActive && getSafetyGradeBadgeClassName(range),
             )}
           >
             {range} ({count})
@@ -120,12 +100,14 @@ function SortButtons({
 }
 
 function GradeSectionHeader({ grade, count }: { grade: string; count: number }) {
+  const metadata = getSafetyGradeMetadata(grade as ReportCard["overallGrade"]);
+
   return (
     <div className="col-span-full flex items-center gap-3 pt-4 first:pt-0 pharos-section-enter">
       <span
         className={cn(
           "flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold font-mono text-white",
-          GRADE_BAR_COLORS[grade]?.split(" ")[0] ?? "bg-muted",
+          metadata.sectionSwatchClassName,
         )}
       >
         {grade}
@@ -135,7 +117,7 @@ function GradeSectionHeader({ grade, count }: { grade: string; count: number }) 
           {count} {count === 1 ? "coin" : "coins"}
         </span>
         <span className="text-xs text-muted-foreground ml-2">
-          {GRADE_SECTION_DESCRIPTIONS[grade] ?? ""}
+          {metadata.sectionDescription}
         </span>
       </div>
       <div className="flex-1 border-t border-border/40" />
@@ -236,12 +218,7 @@ export function CoreSettlementStrip({
                     <p className="truncate text-xs text-muted-foreground">{card.name}</p>
                   </div>
                   <div className="text-right">
-                    <Badge
-                      variant="outline"
-                      className={cn("font-mono text-xs font-semibold", REPORT_CARD_GRADE_COLORS[card.overallGrade])}
-                    >
-                      {card.overallGrade}
-                    </Badge>
+                    <SafetyGradeBadge grade={card.overallGrade} size="xs" className="font-mono font-semibold" />
                     <div className="text-[10px] text-muted-foreground">
                       {profile ? `${formatCurrency(profile.marketCapUsd)} / ${profile.chainCount} chains` : ""}
                     </div>
@@ -306,7 +283,7 @@ export function SafetyLandscapeCard({
                     aria-pressed={isActive}
                     className={cn(
                       "pharos-focus-ring relative flex items-center justify-center text-sm font-semibold text-white transition-all duration-200",
-                      GRADE_BAR_COLORS[range],
+                      getSafetyGradeMetadata(range).interactiveBarClassName,
                       isActive ? "ring-2 ring-inset ring-white/50" : "hover:brightness-110",
                       pct < 12 ? "px-1" : "px-2",
                     )}
@@ -344,7 +321,7 @@ export function SafetyLandscapeCard({
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
-                  <span className={cn("h-2 w-2 rounded-full", GRADE_BAR_COLORS[range].split(" ")[0])} />
+                  <span className={cn("h-2 w-2 rounded-full", getSafetyGradeMetadata(range).sectionSwatchClassName)} />
                   <span className="font-medium">{range}</span>
                   <span className="tabular-nums opacity-70">{count}</span>
                 </button>

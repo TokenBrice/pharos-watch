@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import type { ReportCard, ReportCardGrade } from "@shared/types";
-import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { ReportCardRadar } from "./radar-chart";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -94,27 +93,19 @@ export function ReportCardMini({
         {/* Large grade badge — show before→after when simulated */}
         {isSimulated && originalGrade && originalGrade !== card.overallGrade ? (
           <div className="flex items-center gap-1.5">
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-base font-bold font-mono px-2 py-0.5 pharos-grade-pop",
-                REPORT_CARD_GRADE_COLORS[originalGrade]
-              )}
-              style={{ animationDelay: `${animIndex * 40}ms` }}
-            >
-              {originalGrade}
-            </Badge>
+            <SafetyGradeBadge
+              grade={originalGrade}
+              size="md"
+              animate
+              animationDelayMs={animIndex * 40}
+            />
             <span className="text-muted-foreground text-sm">&rarr;</span>
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-base font-bold font-mono px-2 py-0.5 pharos-grade-pop",
-                REPORT_CARD_GRADE_COLORS[card.overallGrade]
-              )}
-              style={{ animationDelay: `${animIndex * 40 + 80}ms` }}
-            >
-              {card.overallGrade}
-            </Badge>
+            <SafetyGradeBadge
+              grade={card.overallGrade}
+              size="md"
+              animate
+              animationDelayMs={animIndex * 40 + 80}
+            />
             {originalScore != null && card.overallScore != null && (
               <span className="text-xs font-medium text-red-700 dark:text-red-400">
                 {"\u25BC"}
@@ -124,16 +115,12 @@ export function ReportCardMini({
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-xl font-bold font-mono px-3 py-1 pharos-grade-pop",
-                REPORT_CARD_GRADE_COLORS[card.overallGrade]
-              )}
-              style={{ animationDelay: `${animIndex * 40}ms` }}
-            >
-              {card.overallGrade}
-            </Badge>
+            <SafetyGradeBadge
+              grade={card.overallGrade}
+              size="lg"
+              animate
+              animationDelayMs={animIndex * 40}
+            />
             {/* Trend indicator */}
             <TrendIndicator trend={trend} score={card.overallScore ?? undefined} />
           </div>

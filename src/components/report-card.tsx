@@ -3,14 +3,13 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import type { ReportCard as ReportCardType, DimensionKey } from "@shared/types";
 import {
-  REPORT_CARD_GRADE_COLORS,
   DIMENSION_LABELS,
   DIMENSION_ORDER,
   METHODOLOGY_VERSION,
 } from "@shared/lib/report-cards";
+import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { ReportCardRadar } from "./radar-chart";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import Link from "next/link";
@@ -19,30 +18,15 @@ import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title
 import { MethodologyCardActions, MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { cn } from "@/lib/utils";
 import { parseDimensionDetail } from "@/lib/report-card-parsing";
+import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 
 // ---------------------------------------------------------------------------
 // Grade Glow Component
 // ---------------------------------------------------------------------------
 
-const GRADE_GLOW_COLORS: Record<string, string> = {
-  A: 'oklch(0.5 0.2 145 / 0.53)',
-  B: 'oklch(0.5 0.16 250 / 0.45)',
-  C: 'oklch(0.55 0.18 85 / 0.45)',
-  D: 'oklch(0.55 0.2 55 / 0.53)',
-  F: 'oklch(0.5 0.22 25 / 0.6)',
-};
-
-const GRADE_BORDER_HEX: Record<string, string> = {
-  A: 'oklch(0.65 0.22 145 / 0.6)',
-  B: 'oklch(0.6 0.18 250 / 0.55)',
-  C: 'oklch(0.65 0.2 85 / 0.55)',
-  D: 'oklch(0.6 0.22 55 / 0.6)',
-  F: 'oklch(0.55 0.24 25 / 0.65)',
-};
-
-function GradeGlow({ grade }: { grade: string }) {
-  const color = GRADE_GLOW_COLORS[grade] || GRADE_GLOW_COLORS.B;
+function GradeGlow({ grade }: { grade: ReportCardType["overallGrade"] }) {
+  const color = getSafetyGradeMetadata(grade).glowColor;
   
   return (
     <div 
@@ -92,8 +76,7 @@ interface DimensionRowProps {
 
 function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowProps) {
   const [expanded, setExpanded] = useState(false);
-  const dimRange = dim.grade.charAt(0);
-  const dimBorder = GRADE_BORDER_HEX[dimRange] ?? 'transparent';
+  const dimBorder = getSafetyGradeMetadata(dim.grade).borderColor;
   const hasDetails = (dimKey === "resilience" || dimKey === "decentralization" || dimKey === "dependencyRisk" || dimKey === "liquidity") && dim.score !== null;
   const detailsId = `report-card-${card.id}-${dimKey}-details`;
 
@@ -129,12 +112,7 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
             )}
           </div>
           <div className="flex items-center gap-3">
-            <Badge
-              variant="outline"
-              className={`text-xs font-semibold ${REPORT_CARD_GRADE_COLORS[dim.grade]}`}
-            >
-              {dim.grade}
-            </Badge>
+            <SafetyGradeBadge grade={dim.grade} size="sm" />
             <span className="w-14 text-right text-sm tabular-nums text-muted-foreground">
               {dim.score !== null ? (
                 <>
@@ -272,19 +250,14 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
     return (
       <Card
         className="overflow-hidden"
-        style={{ borderTopWidth: '3px', borderTopColor: GRADE_BORDER_HEX.F }}
+        style={{ borderTopWidth: "3px", borderTopColor: getSafetyGradeMetadata("F").borderColor }}
       >
         <CardHeader>
           <DetailSectionTitle>Safety Score</DetailSectionTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
-            <Badge
-              variant="outline"
-              className={`text-2xl px-4 py-2 font-bold ${REPORT_CARD_GRADE_COLORS.F}`}
-            >
-              F
-            </Badge>
+            <SafetyGradeBadge grade="F" size="defunct" />
             <div>
               <p className="text-lg font-medium text-muted-foreground">Defunct</p>
               <p className="text-sm text-muted-foreground">
@@ -297,8 +270,7 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
     );
   }
 
-  const gradeRange = card.overallGrade.charAt(0);
-  const topBorderColor = GRADE_BORDER_HEX[gradeRange] ?? GRADE_BORDER_HEX.B;
+  const topBorderColor = getSafetyGradeMetadata(card.overallGrade).borderColor;
   const pegDrag =
     card.baseScore != null && card.uncappedOverallScore != null
       ? Math.max(0, card.baseScore - card.uncappedOverallScore)
@@ -334,12 +306,7 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
             <div className="relative flex flex-col items-center gap-3 pt-4 pb-2 px-6">
               <GradeGlow grade={card.overallGrade} />
               <div className="flex items-center gap-4">
-                <Badge
-                  variant="outline"
-                  className={`text-5xl px-7 py-3 font-extrabold tracking-tight shadow-lg ${REPORT_CARD_GRADE_COLORS[card.overallGrade]}`}
-                >
-                  {card.overallGrade}
-                </Badge>
+                <SafetyGradeBadge grade={card.overallGrade} size="hero" />
                 {card.overallScore !== null && (
                   <div className="flex flex-col">
                     <span className="text-3xl font-bold font-mono tabular-nums tracking-tight text-foreground">
