@@ -158,24 +158,24 @@ describe("coverage filtering", () => {
     expect(sorted.map((row) => row.id)).toEqual(["alpha", "beta", "delta", "gamma"]);
   });
 
-  it.each<[CoverageFilterKey, string]>([
-    ["redemption", "beta"],
-    ["live-reserves", "beta"],
-    ["yield", "beta"],
-    ["flows", "gamma"],
-    ["blacklist", "beta"],
-    ["weak-price", "alpha"],
-    ["missing-safety", ""],
-    ["missing-dex", "alpha"],
-    ["missing-live-reserves", "alpha,gamma,delta"],
-    ["missing-flows", "alpha,beta,delta"],
-    ["missing-dependency", ""],
-    ["full-available", ""],
-    ["full-headline", ""],
-  ])("matches %s coverage against the expected row", (filter, expectedId) => {
+  it.each<[CoverageFilterKey, string[]]>([
+    ["redemption", ["beta"]],
+    ["live-reserves", ["beta"]],
+    ["yield", ["beta"]],
+    ["flows", ["gamma"]],
+    ["blacklist", ["beta"]],
+    ["weak-price", ["alpha"]],
+    ["missing-safety", []],
+    ["missing-dex", ["alpha"]],
+    ["missing-live-reserves", ["alpha", "gamma", "delta"]],
+    ["missing-flows", ["alpha", "beta", "delta"]],
+    ["missing-dependency", []],
+    ["full-available", []],
+    ["full-headline", []],
+  ])("matches %s coverage against the expected rows", (filter, expectedIds) => {
     const matches = rows.filter((row) => matchesCoverageFilter(row, filter));
 
-    expect(matches.map((row) => row.id).join(",")).toEqual(expectedId);
+    expect(matches.map((row) => row.id)).toEqual(expectedIds);
   });
 
   it("filters by search across names and tickers with trimming and case folding", () => {
