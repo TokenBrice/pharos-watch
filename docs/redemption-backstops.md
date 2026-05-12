@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.995`
+- **Current methodology version:** `v3.996`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v3.995` update: Non-USD and commodity coverage adds source-reviewed redemption routes for GLDY, VNXAU, XAGm, EUROe, GBPm, JPYm, and CHFm, including Mento CDP collateral exits.
+Latest `v3.996` update: Stablecoin audit coverage adds source-reviewed redemption routes for audited wrappers, Nest vaults, DUSD, mRe7YIELD, DJED, and SMARDEX USDN, while refreshing OnRe and Hyperbeat route terms.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
@@ -20,8 +20,8 @@ There is no standalone changelog page yet. The public methodology link currently
 
 Configured coverage is defined statically behind the thin facade in `shared/lib/redemption-backstops.ts`, with route-family modules under `shared/lib/redemption-backstop-configs/`.
 
-- **Configured coins:** 222
-- **Route families:** 110 `offchain-issuer`, 42 `stablecoin-redeem`, 26 `collateral-redeem`, 28 `queue-redeem`, 9 `psm-swap`, 7 `basket-redeem`
+- **Configured coins:** 238
+- **Route families:** 112 `offchain-issuer`, 50 `stablecoin-redeem`, 28 `collateral-redeem`, 32 `queue-redeem`, 9 `psm-swap`, 7 `basket-redeem`
 - **No discovery layer:** only coins present in `REDEMPTION_BACKSTOP_CONFIGS` are modeled
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.

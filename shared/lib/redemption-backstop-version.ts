@@ -1,9 +1,25 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.995",
+  currentVersion: "3.996",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.996",
+      title: "Stablecoin audit route coverage expansion",
+      date: "2026-05-12",
+      effectiveAt: 1778590800,
+      summary:
+        "Comprehensive review of recently added stablecoins adds source-reviewed redemption routes for audited wrappers, Nest vaults, DUSD, mRe7YIELD, DJED, and SMARDEX USDN while refreshing OnRe and Hyperbeat route terms.",
+      impact: [
+        "USDCx, Spark Savings USDT/USDC, Gauntlet USDC Core/Prime, Yearn yvUSDC, Aave sGHO, and the MEV Capital Falcon senior tranche now carry modeled protocol redemption or NAV-exit routes",
+        "DUSD and mRe7YIELD now carry offchain/platform redemption routes; DJED and SMARDEX USDN now carry collateral-redemption routes; nTBILL, nBASIS, nOPAL, and nWISDOM now carry queued Nest redemption routes",
+        "OnRe redemption terms now reflect weekly capacity up to 2.5% NAV and a 25 bps fee, while hbUSDT reflects instant 0.5% or classic no-fee redemption timing",
+        "Coverage rises to 238 configured redemption routes, with route-family totals now at 112 offchain-issuer, 50 stablecoin-redeem, 28 collateral-redeem, 32 queue-redeem, 9 psm-swap, and 7 basket-redeem",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.995",
       title: "Non-USD and commodity coverage expansion",

@@ -14,6 +14,7 @@ const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const REVIEWED_WRAPPER_QUEUE_AT = "2026-04-21";
 const REVIEWED_PHASE_4_COVERAGE_AT = "2026-05-10";
 const REVIEWED_YIELD_EXPANSION_AT = "2026-05-11";
+const REVIEWED_STABLECOIN_AUDIT_AT = "2026-05-12";
 const reviewedQueueRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_QUEUE_REDEMPTION_AT);
 
 export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
@@ -446,15 +447,19 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "onyc-onre": {
     ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+    capacityModel: { kind: "supply-ratio", ratio: 0.025, confidence: "documented-bound", basis: "strategy-buffer" },
     accessModel: "issuer-api",
     settlementModel: "days",
     executionModel: "rules-based-nav",
-    outputAssetType: "mixed-collateral",
-    costModel: documentedVariableFee("OnRe docs describe quarterly redemptions with notice and possible pro-rata fulfillment"),
+    outputAssetType: "stable-basket",
+    costModel: fixedFee(25, "OnRe docs list a 25 bps redemption fee"),
+    reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
     docs: [
-      sourceRef("OnRe liquidity and redemption", "https://docs.onre.finance/getting-started/the-onchain-yield-coin-onyc/liquidity-and-redemption", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("OnRe redemptions", "https://docs.onre.finance/for-capital-providers/redemptions", ["route", "capacity", "fees", "access", "settlement"]),
       sourceRef("OnRe transparency", "https://app.onre.finance/earn/transparency", ["capacity"]),
+    ],
+    notes: [
+      "OnRe currently documents weekly redemption capacity up to 2.5% of NAV, a target liquidity reserve up to 20% of NAV, and payouts in USDC or USDG for verified/accredited holders.",
     ],
   },
   "apyusd-apyx": {
@@ -490,7 +495,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     totalScoreCap: 65,
     costModel: fixedFee(2.5, "Strata docs list a 2.5 bps senior redemption fee"),
     docs: [
-      sourceRef("Strata Ethena USDe market", "https://docs.strata.markets/markets/ethena-usde", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Strata srUSDe docs", "https://docs.strata.money/using-strata/srusde", ["route", "capacity", "fees", "access", "settlement"]),
       sourceRef("Strata FAQ", "https://docs.strata.markets/resources/faqs", ["settlement"]),
     ],
   },
@@ -509,11 +514,63 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
     settlementModel: "days",
     executionModel: "rules-based-nav",
-    costModel: documentedVariableFee("Hyperbeat docs describe instant redemption to USDT0 with a 0.5% fee when liquidity exists, or classic redemption within 48 hours with no fee"),
+    costModel: documentedVariableFee("Hyperbeat docs describe instant redemption to USDT0 with a 0.5% fee when liquidity exists, or classic redemption within three working days with no fee"),
     docs: [
       sourceRef("Hyperbeat USDT vault", "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault", ["route", "capacity", "fees", "access", "settlement"]),
       sourceRef("Hyperbeat addresses", "https://docs.hyperbeat.org/resources/addresses", ["route"]),
     ],
+  },
+  "ntbill-nest": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    accessModel: "issuer-api",
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee("Nest docs describe nTBILL redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee"),
+    docs: [
+      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", ["route", "capacity", "fees", "access", "settlement"]),
+    ],
+    notes: ["Nest docs list an expected nTBILL redemption window of 1-3 business days."],
+  },
+  "nbasis-nest": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    accessModel: "issuer-api",
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee("Nest docs describe nBASIS redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee"),
+    docs: [
+      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", ["route", "capacity", "fees", "access", "settlement"]),
+    ],
+    notes: ["Nest docs list an expected nBASIS redemption window of 3-5 business days."],
+  },
+  "nopal-nest": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    accessModel: "issuer-api",
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee("Nest docs describe nOPAL redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee"),
+    docs: [
+      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", ["route", "capacity", "fees", "access", "settlement"]),
+    ],
+    notes: ["Nest docs list an expected nOPAL redemption window from minutes to 7 business days."],
+  },
+  "nwisdom-nest": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    accessModel: "issuer-api",
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee("Nest docs describe nWISDOM redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee"),
+    docs: [
+      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", ["route", "capacity", "fees", "access", "settlement"]),
+    ],
+    notes: ["Nest docs list an expected nWISDOM redemption window from minutes to 7 business days."],
   },
 };
 

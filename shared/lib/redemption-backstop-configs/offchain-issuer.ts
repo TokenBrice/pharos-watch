@@ -17,6 +17,7 @@ const REVIEWED_ISSUER_API_EXPANSION_AT = "2026-04-03";
 const REVIEWED_MAJOR_ISSUER_REDEMPTION_AT = "2026-04-16";
 const REVIEWED_NON_USD_BATCH_AT = "2026-05-05";
 const REVIEWED_COVERAGE_EXPANSION_AT = "2026-05-11";
+const REVIEWED_STABLECOIN_AUDIT_AT = "2026-05-12";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
@@ -179,7 +180,7 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "Bridge-supported pathUSD exchange/redemption uses Bridge rails; public materials reviewed do not publish one fixed pathUSD redemption fee",
     ),
     docs: [
-      sourceRef("Tempo pathUSD docs", "https://docs.tempo.xyz/protocol/exchange/quote-tokens#pathusd", ["route", "access", "fees"]),
+      sourceRef("Tempo pathUSD docs", "https://docs.tempo.xyz/protocol/exchange/pathUSD", ["route", "access", "fees"]),
       sourceRef("Bridge FAQ", "https://bridge.xyz/faq", ["capacity", "settlement", "fees"]),
     ],
     notes: [
@@ -219,6 +220,38 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       sourceRef("Stablecorp balances API", "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json", ["capacity"]),
     ],
     notes: ["Modeled as issuer redemption for qualified holders under QCAD Digital Trust and authorized partner rails"],
+  },
+  "dusd-fluid": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    settlementModel: "days",
+    routeStatus: "open",
+    costModel: documentedVariableFee(
+      "Fluid materials describe bank-account mint/redeem flows for DUSD; public materials reviewed do not publish one fixed redemption fee",
+    ),
+    docs: [
+      sourceRef("Fluid DUSD", "https://fluid.ch/dusd/", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Fluid app mint/redeem guide", "https://medium.com/fluidfi/how-to-use-the-web-app-and-mint-redeem-digitaldollar-dusd-5183c8dcfb6", ["route", "capacity", "fees", "access", "settlement"]),
+    ],
+    notes: [
+      "Modeled as verified-user bank-rail redemption, not as an on-chain permissionless stablecoin swap; reserve visibility still depends on Fluid's self-reported on-chain treasury balance.",
+    ],
+  },
+  "mre7yield-midas": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    settlementModel: "days",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mRe7YIELD redemption fee",
+    ),
+    docs: [
+      sourceRef("Midas mRe7YIELD", "https://docs.midas.app/tokens/mre7yield", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Midas smart contracts", "https://docs.midas.app/protocol-mechanics/smart-contracts", ["route", "access"]),
+    ],
+    notes: [
+      "mRe7YIELD is a NAV-accreting strategy token, so the route is modeled as issuer/platform NAV redemption rather than same-day stablecoin par liquidity.",
+    ],
   },
   "pyusd-paypal": {
     ...issuerBase,

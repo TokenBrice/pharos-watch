@@ -15,6 +15,7 @@ const REVIEWED_ZCHF_BRIDGE_AT = "2026-04-06";
 const REVIEWED_WRAPPER_REDEMPTION_AT = "2026-04-21";
 const REVIEWED_STABLECOIN_BATCH_AT = "2026-05-05";
 const REVIEWED_YIELD_EXPANSION_AT = "2026-05-11";
+const REVIEWED_STABLECOIN_AUDIT_AT = "2026-05-12";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
@@ -647,6 +648,100 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     docs: [
       sourceRef("Noon USN and sUSN", "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn", ["route", "capacity", "fees", "access", "settlement"]),
       sourceRef("Noon minting and redemption", "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/minting-and-redemption", ["route", "access"]),
+    ],
+  },
+  "usdcx-movement": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    executionModel: "deterministic-onchain",
+    costModel: documentedVariableFee("Circle xReserve docs describe 1:1 USDCx burn/release against USDC; public materials reviewed do not publish a separate fixed redemption fee"),
+    docs: [
+      sourceRef("Circle xReserve", "https://www.circle.com/xreserve", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Movement USDCx announcement", "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin", ["route", "capacity", "access"]),
+    ],
+    notes: [
+      "USDCx exits into tracked Circle USDC through the xReserve contract; final fiat redemption remains Circle's issuer route.",
+    ],
+  },
+  "susdt-spark": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee("Spark savings vault withdrawals redeem spUSDT for USDT at the live vault exchange rate; no separate fixed protocol fee was identified in reviewed public docs"),
+    docs: [
+      sourceRef("Spark docs", "https://docs.spark.fi/", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Spark app", "https://spark.fi/", ["route"]),
+    ],
+  },
+  "susdc-spark": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee("Spark savings vault withdrawals redeem spUSDC for USDC at the live vault exchange rate; no separate fixed protocol fee was identified in reviewed public docs"),
+    docs: [
+      sourceRef("Spark docs", "https://docs.spark.fi/", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Spark app", "https://spark.fi/", ["route"]),
+    ],
+  },
+  "gtusdc-gauntlet": {
+    ...stablecoinRedeemBase,
+    capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "heuristic", basis: "strategy-buffer" },
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee("MetaMorpho vault withdrawals redeem to USDC when vault liquidity is available; public docs reviewed do not publish one fixed redemption fee"),
+    reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
+    docs: [
+      sourceRef("Morpho vault docs", "https://docs.morpho.org/curation/overview", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Gauntlet USDC Core vault", "https://app.morpho.org/ethereum/vault/0xdd0f28e19c1780eb6396170735d45153d261490d/gauntlet-usdc-core", ["route", "capacity", "access"]),
+    ],
+  },
+  "gtusdcp-gauntlet": {
+    ...stablecoinRedeemBase,
+    capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "heuristic", basis: "strategy-buffer" },
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee("MetaMorpho vault withdrawals redeem to USDC when vault liquidity is available; public docs reviewed do not publish one fixed redemption fee"),
+    reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
+    docs: [
+      sourceRef("Morpho vault docs", "https://docs.morpho.org/curation/overview", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Gauntlet USDC Prime vault", "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime", ["route", "capacity", "access"]),
+    ],
+  },
+  "yvusdc-yearn": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee("Yearn v3 vault withdrawals redeem yvUSDC-1 to USDC at the live vault exchange rate; public docs reviewed do not publish one fixed redemption fee"),
+    docs: [
+      sourceRef("Yearn v3 USDC vault", "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Yearn docs", "https://docs.yearn.fi/", ["route", "capacity", "fees", "access", "settlement"]),
+    ],
+  },
+  "sgho-aave": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee("Aave sGHO previewRedeem path exits to GHO at the contract exchange rate; public docs reviewed do not publish a separate fixed redemption fee"),
+    docs: [
+      sourceRef("Aave sGHO guide", "https://aave.com/docs/aave-v3/guides/sgho", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Aave sGHO governance configuration", "https://governance.aave.com/t/arfc-sgho-launch-configuration/24346", ["route", "capacity", "access"]),
+    ],
+    notes: [
+      "This route models the current legacy sGHO/stkGHO-compatible contract's previewRedeem exit into GHO, not the separate Aave Umbrella stkGHO safety-module cooldown route.",
+    ],
+  },
+  "aa-falconx-mev-capital": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    accessModel: "whitelisted-onchain",
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee("Idle Perpetual Yield Tranches expose CDO tranche redemption mechanics; public materials reviewed do not publish one fixed senior-tranche redemption fee"),
+    docs: [
+      sourceRef("Idle Yield Tranches methods", "https://docs.idle.finance/developers/yield-tranches/methods", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Pareto credit vault addresses", "https://docs.pareto.credit/developers/addresses/product/credit-vaults", ["route", "capacity", "access"]),
+    ],
+    notes: [
+      "Modeled as a NAV tranche exit to underlying USDC exposure, with whitelist and CDO-liquidity constraints rather than an issuer fiat redemption route.",
     ],
   },
   "weusd-picwe": {

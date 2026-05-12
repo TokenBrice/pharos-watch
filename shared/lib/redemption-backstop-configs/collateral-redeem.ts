@@ -15,6 +15,7 @@ const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
 const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const REVIEWED_HIVE_HBD_AT = "2026-05-05";
 const REVIEWED_MENTO_CDP_AT = "2026-05-11";
+const REVIEWED_STABLECOIN_AUDIT_AT = "2026-05-12";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
@@ -297,6 +298,34 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     ),
     notes: [
       "HBD is modeled as a protocol conversion route rather than a fiat issuer rail: holders can convert HBD through Hive mechanics, but the output and haircut behavior depend on protocol debt-ratio conditions",
+    ],
+  },
+  "djed-coti": {
+    ...collateralRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    outputAssetType: "mixed-collateral",
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee("Djed app/docs describe burning DJED against ADA reserves subject to reserve-ratio rules; public materials reviewed do not publish one global fixed redemption fee"),
+    docs: [
+      sourceRef("Djed app", "https://app.djed.xyz/", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Djed mainnet announcement", "https://cotinetwork.medium.com/djed-is-now-available-on-mainnet-9a2ac66daea4", ["route", "capacity", "fees", "access", "settlement"]),
+    ],
+    notes: [
+      "Modeled as Cardano protocol collateral redemption into ADA reserves, with SHEN reserve-ratio constraints rather than issuer fiat redemption.",
+    ],
+  },
+  "usdn-smardex": {
+    ...collateralRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    outputAssetType: "bluechip-collateral",
+    costModel: documentedVariableFee("SMARDEX docs describe USDN burn/redemption for underlying vault value, with oracle validation and imbalance restrictions rather than one fixed redemption fee"),
+    docs: [
+      sourceRef("SMARDEX USDN protocol", "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol", ["route", "capacity", "fees", "access", "settlement"]),
+    ],
+    notes: [
+      "Modeled as a collateral redemption route into wstETH-backed vault value; protocol imbalance and validation windows can delay or restrict execution.",
     ],
   },
 };
