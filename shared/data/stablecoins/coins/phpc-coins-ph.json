@@ -1,0 +1,82 @@
+{
+  "id": "phpc-coins-ph",
+  "name": "PHPC Stablecoin",
+  "symbol": "PHPC",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "PHP",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Philippine peso cash, time deposits, and short-term money market instruments held in custodial banking institutions selected by Coins.ph; reserves maintained at 100% of circulating PHPC during the BSP regulatory sandbox",
+  "pegMechanism": "1:1 fiat-collateralized: Coins.ph users mint PHPC by depositing PHP and redeem PHPC for PHP through the Coins.ph platform; at the end of the BSP sandbox period any remaining PHPC is reimbursed 100% by the issuer",
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://coins.ph/phpc-whitepaper"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/coinsph"
+    },
+    {
+      "label": "Docs",
+      "url": "https://support.coins.ph/hc/en-us/articles/33977644340121-Convert-your-PHP-to-PHPC-Stablecoin"
+    },
+    {
+      "label": "BSP Approval",
+      "url": "https://coins.ph/blog/bsp-grants-coins-ph-approval-to-pilot-phpc-stablecoin/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Philippines",
+    "regulator": "Bangko Sentral ng Pilipinas",
+    "license": "BSP Regulatory Sandbox (VASP)"
+  },
+  "contracts": [
+    {
+      "chain": "polygon",
+      "address": "0x87a25dc121db52369f4a9971f664ae5e372cf69a",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "PHPC Whitepaper",
+        "url": "https://coins.ph/phpc-whitepaper"
+      },
+      {
+        "label": "Coins.ph Help Center",
+        "url": "https://support.coins.ph/hc/en-us/articles/33977644340121-Convert-your-PHP-to-PHPC-Stablecoin"
+      }
+    ],
+    "evidence": "Explicit Possible retained: BSP-licensed VASP issuer with centralized governance; contract source not independently reviewed for admin freeze, blacklist, pause, or upgrade authority.",
+    "reviewer": "Pharos lane D Wave 3 non-USD review",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "stage1-l2",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "PHP cash, time deposits, and short-term money market instruments at custodial banks",
+      "pct": 100,
+      "risk": "low"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "BSP regulatory sandbox",
+      "message": "PHPC is issued under the Bangko Sentral ng Pilipinas Regulatory Sandbox Framework. Coins.ph also deploys PHPC on Ronin Network, which is not yet tracked by Pharos; Polygon supply is the canonical observable surface."
+    }
+  ]
+}

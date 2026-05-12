@@ -1663,5 +1663,15 @@
     "title": "Senior tranche on MEV Capital's Falcon USDC strategy",
     "text": "AA_FalconXUSDC is the senior (AA) tranche of a Pareto/Idle CDO over an MEV-Capital-curated Morpho vault routed into Falcon Finance's USDf strategies. The Ethereum tranche holds about $76M of USDC and accrues value against USDC as borrower interest flows in; junior tranches absorb losses first, but exit liquidity depends on USDf's mint/burn rails. The peg-like framing only holds while Falcon USDf maintains liquidity — sustained USDf stress can degrade redemption pricing even when the senior class is structurally protected.",
     "updatedAt": "2026-05-12"
+  },
+  "eura-angle": {
+    "title": "Once the largest EUR stablecoin, now in orderly wind-down through 2027",
+    "text": "EURA is Angle Protocol's euro-pegged stablecoin (ex-agEUR), originally an over-collateralized DAO-governed design backed by a diversified euro-denominated basket inside the Angle Transmuter price-stability module. Following community governance vote AIP-112, Angle is sunsetting both EURA and USDA: holders can redeem EURA 1:1 for EURC through the Transmuter on Ethereum until 2027-03-01, after which the guardian multisig will recover remaining reserves and airdrop them pro-rata via Merkl. Circulating supply has fallen to roughly $2-3M across seven EVM deployments (Ethereum, Arbitrum, Polygon, Base, BSC, Celo, Gnosis), and the Angle team has redirected operations to the Merkl incentive platform. Pharos tracks EURA as a methodology-relevant historical anchor for the EUR-decentralised category and surfaces an explicit wind-down notice so the redemption deadline is visible on the detail page.",
+    "updatedAt": "2026-05-12"
+  },
+  "phpc-coins-ph": {
+    "title": "BSP-sandboxed Philippine peso stablecoin from Coins.ph",
+    "text": "PHPC is a Philippine peso-pegged stablecoin issued by Coins.ph, a BSP-licensed Virtual Asset Service Provider, under the Bangko Sentral ng Pilipinas Regulatory Sandbox Framework approved in May 2024. PHPC is backed 1:1 by Philippine peso cash, time deposits, and short-term money market instruments held in custodial banks selected by Coins.ph, and is minted and redeemed exclusively through the Coins.ph platform with full reimbursement guaranteed at the end of the sandbox window. The token is deployed on Polygon and Ronin Network; Pharos currently tracks the Polygon deployment because Ronin is not yet a supported chain. As the second active PHP-pegged issuer alongside the already-tracked PHT-pht, PHPC completes the Philippines-regulated stablecoin slice. Circulating supply is in the low single-digit USD millions, reflecting the sandbox-only operating scope.",
+    "updatedAt": "2026-05-12"
   }
 }
