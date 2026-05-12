@@ -40,6 +40,21 @@ describe("PRICING_SOURCE_TO_CIRCUIT contract", () => {
       enforced: true,
       enforcementPath: "direct-provider",
     });
+    expect(PRICING_SOURCE_CIRCUIT_METADATA["dexpaprika-address"]).toMatchObject({
+      circuit: CIRCUIT_SOURCE.DEXPAPRIKA_PRICES,
+      enforced: true,
+      enforcementPath: "direct-provider",
+    });
+    expect(PRICING_SOURCE_CIRCUIT_METADATA["moralis-address"]).toMatchObject({
+      circuit: CIRCUIT_SOURCE.MORALIS_PRICES,
+      enforced: true,
+      enforcementPath: "direct-provider",
+    });
+    expect(PRICING_SOURCE_CIRCUIT_METADATA["birdeye-address"]).toMatchObject({
+      circuit: CIRCUIT_SOURCE.BIRDEYE_PRICES,
+      enforced: true,
+      enforcementPath: "direct-provider",
+    });
     expect(PRICING_SOURCE_CIRCUIT_METADATA["coingecko-native-implied"]).toMatchObject({
       circuit: null,
       enforced: false,

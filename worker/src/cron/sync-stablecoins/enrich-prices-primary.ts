@@ -3,6 +3,7 @@ import { throwIfAborted } from "../../lib/abort";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DlListQuote } from "../../lib/primary-price-collector";
+import type { AddressPriceProviderRuntimeConfig } from "../../lib/address-price-providers";
 import { createValidationContextResolver, type ValidationContextResolver } from "./pricing";
 import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
 import type { PriceValidationStats } from "./enrich-prices-primary-shared";
@@ -32,6 +33,10 @@ export async function fetchPrimaryPrices(
   chainRpcs?: Map<string, ChainRpcConfig>,
   dlListPrices?: Map<string, number | DlListQuote>,
   validationContexts?: ValidationContextResolver,
+  options?: {
+    previousAssetsById?: Map<string, PeggedAsset>;
+    addressProvider?: AddressPriceProviderRuntimeConfig;
+  },
 ): Promise<{
   results: Map<string, PrimaryPriceResult>;
   stats: PriceValidationStats;
@@ -56,7 +61,7 @@ export async function fetchPrimaryPrices(
   const contexts = validationContexts ?? createValidationContextResolver();
   const results = new Map<string, PrimaryPriceResult>();
   const stats: PriceValidationStats = { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 };
-  const plan = await buildPrimaryPricePlan(assets, db, dlListPrices);
+  const plan = await buildPrimaryPricePlan(assets, db, dlListPrices, options);
 
   if (plan.candidates.length === 0) {
     logDexPriceSourceLoadTelemetry(plan.dexPriceSourceTelemetry);

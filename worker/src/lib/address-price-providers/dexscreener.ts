@@ -1,0 +1,134 @@
+import { DEXSCREENER_MIN_LIQUIDITY_USD } from "../constants";
+import { getDsTrackedTokenPriceUsd, type DsPair } from "../dexscreener";
+import {
+  chunk,
+  fetchProviderJson,
+  groupTargetsByProviderChain,
+  incrementReason,
+  isRecord,
+  median,
+} from "./shared";
+import type { AddressPriceProviderRunResult, AddressPriceQuote, AddressPriceTarget } from "./types";
+import type { PricingProviderRejectionReason } from "../pricing-provider-diagnostics";
+
+const DEXSCREENER_ADDRESS_MAX_REQUESTS = 10;
+
+function isDsPair(value: unknown): value is DsPair {
+  if (!isRecord(value)) return false;
+  return typeof value.chainId === "string" &&
+    typeof value.dexId === "string" &&
+    typeof value.pairAddress === "string" &&
+    isRecord(value.baseToken) &&
+    typeof value.baseToken.address === "string" &&
+    typeof value.baseToken.symbol === "string" &&
+    isRecord(value.quoteToken) &&
+    typeof value.quoteToken.address === "string" &&
+    typeof value.quoteToken.symbol === "string";
+}
+
+function getTrackedTokenSymbol(pair: DsPair, targetAddress: string): string | null {
+  const tracked = targetAddress.toLowerCase();
+  if (pair.baseToken.address.toLowerCase() === tracked) return pair.baseToken.symbol;
+  if (pair.quoteToken.address.toLowerCase() === tracked) return pair.quoteToken.symbol;
+  return null;
+}
+
+function buildDexScreenerQuotes(
+  targets: AddressPriceTarget[],
+  pairs: DsPair[],
+  nowSec: number,
+  rejectedTargets: Partial<Record<PricingProviderRejectionReason, number>>,
+): AddressPriceQuote[] {
+  const quotes: AddressPriceQuote[] = [];
+  for (const target of targets) {
+    const targetAddress = target.address.toLowerCase();
+    const usablePairs = pairs.filter((pair) => {
+      const trackedSymbol = getTrackedTokenSymbol(pair, targetAddress);
+      if (!trackedSymbol) return false;
+      if (trackedSymbol.toUpperCase() !== target.symbol.toUpperCase()) return false;
+      const liquidity = pair.liquidity?.usd;
+      return typeof liquidity === "number" && Number.isFinite(liquidity) && liquidity >= DEXSCREENER_MIN_LIQUIDITY_USD;
+    });
+    const prices = usablePairs
+      .map((pair) => getDsTrackedTokenPriceUsd(pair, targetAddress).priceUsd)
+      .filter((price): price is number => typeof price === "number" && Number.isFinite(price) && price > 0);
+    const priceUsd = median(prices);
+    if (priceUsd == null) {
+      incrementReason(rejectedTargets, "missing-quote");
+      continue;
+    }
+    const liquidityUsd = usablePairs.reduce((sum, pair) => sum + (pair.liquidity?.usd ?? 0), 0);
+    quotes.push({
+      stablecoinId: target.stablecoinId,
+      source: "dexscreener-address",
+      chain: target.chain,
+      address: target.address,
+      priceUsd,
+      observedAt: nowSec,
+      observedAtMode: "local_fetch",
+      liquidityUsd,
+      volume24hUsd: usablePairs.reduce((sum, pair) => sum + (pair.volume?.h24 ?? 0), 0),
+      poolCount: usablePairs.length,
+      metadata: {
+        providerChainId: target.providerChainId,
+        dexIds: [...new Set(usablePairs.map((pair) => pair.dexId))],
+        pairAddresses: usablePairs.slice(0, 5).map((pair) => pair.pairAddress),
+      },
+    });
+  }
+  return quotes;
+}
+
+export async function runDexScreenerAddressProvider(
+  targets: AddressPriceTarget[],
+  signal: AbortSignal | undefined,
+  nowSec: number,
+  deadlineMs: number,
+): Promise<AddressPriceProviderRunResult> {
+  const diagnostics: AddressPriceProviderRunResult["diagnostics"] = [];
+  const quotes: AddressPriceQuote[] = [];
+  const rejectedTargets: AddressPriceProviderRunResult["rejectedTargets"] = {};
+  let successfulRequests = 0;
+  let attemptedRequests = 0;
+
+  const grouped = groupTargetsByProviderChain(targets);
+  for (const [providerChainId, chainTargets] of grouped) {
+    for (const batch of chunk(chainTargets, 30)) {
+      if (attemptedRequests >= DEXSCREENER_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
+      attemptedRequests += 1;
+      const url = `https://api.dexscreener.com/tokens/v1/${providerChainId}/${batch.map((target) => target.address).join(",")}`;
+      const { json, diagnostic } = await fetchProviderJson({
+        provider: "dexscreener-address",
+        url,
+        candidateCount: batch.length,
+        signal,
+      });
+      if (Array.isArray(json)) {
+        const pairs = json.filter(isDsPair);
+        const batchQuotes = buildDexScreenerQuotes(batch, pairs, nowSec, rejectedTargets);
+        quotes.push(...batchQuotes);
+        diagnostic.responseRowCount = pairs.length;
+        diagnostic.matchedCount = batchQuotes.length;
+        diagnostic.resolvedCount = batchQuotes.length;
+        diagnostic.rejectionReasonCounts = Object.keys(rejectedTargets).length ? rejectedTargets : undefined;
+        diagnostic.success = true;
+        successfulRequests += 1;
+      } else if (json != null) {
+        diagnostic.errorClass = "invalid-shape";
+        diagnostic.errorMessage = "Expected DexScreener token-address response array";
+        diagnostic.rejectionReasonCounts = { "invalid-shape": 1 };
+      }
+      diagnostics.push(diagnostic);
+    }
+  }
+
+  return {
+    quotes,
+    diagnostics,
+    attemptedTargets: Math.min(targets.length, DEXSCREENER_ADDRESS_MAX_REQUESTS * 30),
+    matchedTargets: quotes.length,
+    rejectedTargets,
+    successfulRequests,
+    attemptedRequests,
+  };
+}

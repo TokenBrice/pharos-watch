@@ -1,4 +1,5 @@
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { AddressPriceProviderRuntimeConfig } from "../../lib/address-price-providers";
 import type { PriceCacheWriteEntry } from "../../lib/db-cache";
 import { createEmptyGtProbeStats } from "../../lib/geckoterminal-price-probe";
 import { syncViaCoingeckoFallback } from "./fallback";
@@ -47,6 +48,7 @@ interface StablecoinsIntakeStageOptions extends CronStageContext {
   jupiterApiKey?: string | null;
   alertWebhookUrl?: string | null;
   coingeckoApiKey?: string | null;
+  addressPriceProvider?: AddressPriceProviderRuntimeConfig;
   chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
@@ -142,6 +144,7 @@ interface StablecoinsPricingStageOptions extends CronStageContext {
   cmcApiKey?: string;
   jupiterApiKey?: string | null;
   coingeckoApiKey?: string | null;
+  addressPriceProvider?: AddressPriceProviderRuntimeConfig;
   chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
@@ -189,6 +192,11 @@ export async function runStablecoinsPricingStage(
     options.coingeckoApiKey,
     options.chainRpcs,
     dlListPrices,
+    undefined,
+    {
+      previousAssetsById: options.previousAssetsById,
+      addressProvider: options.addressPriceProvider,
+    },
   );
   applyConsensusResults({
     assets: options.assets,

@@ -42,6 +42,12 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
       runtime.chainRpcs,
       reportProgress,
       runtime.env.JUPITER_API_KEY,
+      {
+        enabledProviders: runtime.env.ADDRESS_PRICE_PROVIDERS_ENABLED,
+        alchemyApiKey: runtime.env.ALCHEMY_API_KEY,
+        moralisApiKey: runtime.env.MORALIS_API_KEY,
+        birdeyeApiKey: runtime.env.BIRDEYE_API_KEY,
+      },
     ),
   );
   const stablecoinsCapabilities = parseStablecoinsCapabilities(stablecoinsResult);

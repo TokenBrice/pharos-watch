@@ -1,0 +1,194 @@
+import { USER_AGENT } from "../constants";
+import { fetchWithRetry } from "../fetch-retry";
+import {
+  endpointLabel,
+  errorClassFor,
+  errorMessageFor,
+  readResponseSnippet,
+  type PricingProviderAttemptDiagnostic,
+  type PricingProviderDiagnosticSource,
+  type PricingProviderRejectionReason,
+} from "../pricing-provider-diagnostics";
+import type {
+  AddressPriceProviderKey,
+  AddressPriceProviderRunResult,
+  AddressPriceTarget,
+} from "./types";
+
+export const ADDRESS_PROVIDER_MIN_LIQUIDITY_USD = 50_000;
+export const ADDRESS_PROVIDER_RUN_BUDGET_MS = 90_000;
+
+const ADDRESS_PROVIDER_TIMEOUT_MS = 5_000;
+const ADDRESS_PROVIDER_MAX_RETRIES = 0;
+const PASSTHROUGH_STATUSES = [400, 401, 403, 404, 408, 409, 418, 425, 429, 451, 500, 502, 503, 504];
+
+export function hasValue(value: string | null | undefined): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+export function normalizeAddressForKey(address: string): string {
+  const trimmed = address.trim();
+  return trimmed.startsWith("0x") ? trimmed.toLowerCase() : trimmed;
+}
+
+export function parseObservedAt(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return Math.floor(value > 10_000_000_000 ? value / 1000 : value);
+  }
+  if (typeof value !== "string" || value.trim().length === 0) return null;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    return Math.floor(numeric > 10_000_000_000 ? numeric / 1000 : numeric);
+  }
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : null;
+}
+
+export function parsePositiveNumber(value: unknown): number | null {
+  const numeric = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+export function parseNonNegativeNumber(value: unknown): number | null {
+  const numeric = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+  return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+}
+
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value != null && !Array.isArray(value);
+}
+
+export function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
+export function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((left, right) => left - right);
+  return sorted[Math.floor(sorted.length / 2)] ?? null;
+}
+
+export function incrementReason(
+  reasons: Partial<Record<PricingProviderRejectionReason, number>>,
+  reason: PricingProviderRejectionReason,
+  count = 1,
+): void {
+  reasons[reason] = (reasons[reason] ?? 0) + count;
+}
+
+export function groupTargetsByProviderChain(targets: AddressPriceTarget[]): Map<string, AddressPriceTarget[]> {
+  const grouped = new Map<string, AddressPriceTarget[]>();
+  for (const target of targets) {
+    const list = grouped.get(target.providerChainId) ?? [];
+    list.push(target);
+    grouped.set(target.providerChainId, list);
+  }
+  return grouped;
+}
+
+export function getTokenAddressFromRecord(record: Record<string, unknown>): string | null {
+  const value = record.address ?? record.tokenAddress ?? record.token_address;
+  return typeof value === "string" && value.trim() ? normalizeAddressForKey(value) : null;
+}
+
+export async function fetchProviderJson(params: {
+  provider: AddressPriceProviderKey;
+  url: string;
+  endpoint?: string;
+  init?: RequestInit;
+  candidateCount: number;
+  signal?: AbortSignal;
+}): Promise<{ json: unknown | null; diagnostic: PricingProviderAttemptDiagnostic }> {
+  const baseDiagnostic: PricingProviderAttemptDiagnostic = {
+    source: params.provider as PricingProviderDiagnosticSource,
+    stage: "primary",
+    endpoint: params.endpoint ?? endpointLabel(params.url),
+    status: null,
+    ok: false,
+    success: false,
+    candidateCount: params.candidateCount,
+  };
+
+  const response = await fetchWithRetry(
+    params.url,
+    {
+      ...params.init,
+      headers: {
+        Accept: "application/json",
+        "User-Agent": USER_AGENT,
+        ...params.init?.headers,
+      },
+      signal: params.signal,
+    },
+    ADDRESS_PROVIDER_MAX_RETRIES,
+    {
+      timeoutMs: ADDRESS_PROVIDER_TIMEOUT_MS,
+      passthroughStatuses: PASSTHROUGH_STATUSES,
+    },
+  );
+  if (!response) {
+    return {
+      json: null,
+      diagnostic: {
+        ...baseDiagnostic,
+        errorClass: "no-response",
+        rejectionReasonCounts: { "upstream-error": 1 },
+      },
+    };
+  }
+
+  const diagnostic: PricingProviderAttemptDiagnostic = {
+    ...baseDiagnostic,
+    status: response.status,
+    ok: response.ok,
+  };
+
+  if (!response.ok) {
+    diagnostic.snippet = await readResponseSnippet(response);
+    diagnostic.rejectionReasonCounts = { "non-ok": 1 };
+    return { json: null, diagnostic };
+  }
+
+  try {
+    return { json: await response.json(), diagnostic };
+  } catch (error) {
+    return {
+      json: null,
+      diagnostic: {
+        ...diagnostic,
+        errorClass: errorClassFor(error),
+        errorMessage: errorMessageFor(error),
+        rejectionReasonCounts: { "malformed-json": 1 },
+      },
+    };
+  }
+}
+
+export function emptyProviderResult(
+  provider: AddressPriceProviderKey,
+  candidateCount: number,
+  reason: PricingProviderRejectionReason,
+): AddressPriceProviderRunResult {
+  return {
+    quotes: [],
+    diagnostics: [{
+      source: provider as PricingProviderDiagnosticSource,
+      stage: "primary",
+      endpoint: provider,
+      status: null,
+      ok: true,
+      success: true,
+      candidateCount,
+      rejectionReasonCounts: { [reason]: candidateCount },
+    }],
+    attemptedTargets: 0,
+    matchedTargets: 0,
+    rejectedTargets: { [reason]: candidateCount },
+    successfulRequests: 0,
+    attemptedRequests: 0,
+  };
+}

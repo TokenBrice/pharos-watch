@@ -19,6 +19,16 @@ import { isSuccessfulOutcome } from "../../lib/fetcher-result";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../../lib/redstone";
 import {
+  ADDRESS_PROVIDER_CIRCUIT_SOURCE,
+  buildAddressPriceTargetsByProvider,
+  collectAddressPriceProviderQuotes,
+  resolveEnabledAddressPriceProviders,
+  type AddressPriceProviderKey,
+  type AddressPriceProviderRuntimeConfig,
+  type AddressPriceQuote,
+  type AddressPriceTarget,
+} from "../../lib/address-price-providers";
+import {
   createDexPriceSourceLoadTelemetry,
   loadDexPriceRows,
   loadDexPriceSources,
@@ -67,6 +77,9 @@ export interface PrimaryPricePlan {
   shouldFetchBitstamp: boolean;
   redstoneSymbols: string[];
   navPriceIds: string[];
+  addressProviders: AddressPriceProviderKey[];
+  addressProviderTargets: Map<AddressPriceProviderKey, AddressPriceTarget[]>;
+  addressProviderConfig?: AddressPriceProviderRuntimeConfig;
   sourceAllowed: {
     cg: boolean;
     cgTicker: boolean;
@@ -78,6 +91,7 @@ export interface PrimaryPricePlan {
     redstone: boolean;
     curve: boolean;
     curveOracle: boolean;
+    addressProviders: Record<AddressPriceProviderKey, boolean>;
   };
 }
 
@@ -103,6 +117,7 @@ export interface PrimaryConsensusQuoteMaps {
   curveOraclePrice: number | null;
   curveOracleObservedAt: number | null;
   navPrices: Map<string, NavTelemetryQuote>;
+  addressProviderQuotes: Map<string, AddressPriceQuote[]>;
 }
 
 function isNavTelemetryPriceSource(value: string | null | undefined): value is NavTelemetryPriceSource {
@@ -241,12 +256,28 @@ export async function buildPrimaryPricePlan(
   assets: PeggedAsset[],
   db: D1Database,
   dlListPrices?: Map<string, number | DlListQuote>,
+  options?: {
+    previousAssetsById?: Map<string, PeggedAsset>;
+    addressProvider?: AddressPriceProviderRuntimeConfig;
+  },
 ): Promise<PrimaryPricePlan> {
   const metaById = new Map(ACTIVE_STABLECOINS.map((meta) => [meta.id, meta]));
   const nowSec = Math.floor(Date.now() / 1000);
   const dexPriceSourceTelemetry = createDexPriceSourceLoadTelemetry();
   const dexRows = await loadDexPriceRows(db);
   const dexPriceSources = await loadDexPriceSources(db, undefined, dexPriceSourceTelemetry);
+  const addressProviders = resolveEnabledAddressPriceProviders(options?.addressProvider);
+  const addressProviderTargets = buildAddressPriceTargetsByProvider({
+    assets,
+    previousAssetsById: options?.previousAssetsById,
+    providers: addressProviders,
+  });
+  const addressProviderCandidateIds = new Set<string>();
+  for (const targets of addressProviderTargets.values()) {
+    for (const target of targets) {
+      addressProviderCandidateIds.add(target.stablecoinId);
+    }
+  }
 
   const coinbaseKnownSet = new Set(COINBASE_KNOWN_SYMBOLS);
   const krakenKnownSet = new Set(KRAKEN_KNOWN_SYMBOLS);
@@ -270,7 +301,8 @@ export async function buildPrimaryPricePlan(
       curveEligibleIds.has(asset.id) ||
       isNavTelemetryPriceEligible(asset.id, metaById) ||
       dexRows.has(asset.id) ||
-      dexPriceSources.has(asset.id)
+      dexPriceSources.has(asset.id) ||
+      addressProviderCandidateIds.has(asset.id)
     );
   });
 
@@ -288,6 +320,9 @@ export async function buildPrimaryPricePlan(
       shouldFetchBitstamp: false,
       redstoneSymbols: [],
       navPriceIds: [],
+      addressProviders,
+      addressProviderTargets,
+      addressProviderConfig: options?.addressProvider,
       sourceAllowed: {
         cg: false,
         cgTicker: false,
@@ -299,6 +334,7 @@ export async function buildPrimaryPricePlan(
         redstone: false,
         curve: false,
         curveOracle: false,
+        addressProviders: Object.fromEntries(addressProviders.map((provider) => [provider, false])) as Record<AddressPriceProviderKey, boolean>,
       },
     };
   }
@@ -314,6 +350,7 @@ export async function buildPrimaryPricePlan(
     redstoneAllowed,
     curveAllowed,
     curveOracleAllowed,
+    ...addressProviderAllowedValues
   ] = await Promise.all([
     shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_PRICES),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_TICKER),
@@ -325,7 +362,11 @@ export async function buildPrimaryPricePlan(
     shouldAttemptFetch(db, CIRCUIT_SOURCE.REDSTONE_PRICES),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_ONCHAIN),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_ORACLE),
+    ...addressProviders.map((provider) => shouldAttemptFetch(db, ADDRESS_PROVIDER_CIRCUIT_SOURCE[provider])),
   ]);
+  const addressProvidersAllowed = Object.fromEntries(
+    addressProviders.map((provider, index) => [provider, addressProviderAllowedValues[index] ?? false]),
+  ) as Record<AddressPriceProviderKey, boolean>;
 
   if (
     !cgAllowed &&
@@ -336,7 +377,8 @@ export async function buildPrimaryPricePlan(
     !coinbaseAllowed &&
     !redstoneAllowed &&
     !curveAllowed &&
-    !curveOracleAllowed
+    !curveOracleAllowed &&
+    !Object.values(addressProvidersAllowed).some(Boolean)
   ) {
     console.warn("[primary-prices] All live primary fetch circuits are open; continuing with local DL/DEX inputs only");
   }
@@ -372,6 +414,9 @@ export async function buildPrimaryPricePlan(
     shouldFetchBitstamp,
     redstoneSymbols,
     navPriceIds: candidates.filter((asset) => isNavTelemetryPriceEligible(asset.id, metaById)).map((asset) => asset.id),
+    addressProviders,
+    addressProviderTargets,
+    addressProviderConfig: options?.addressProvider,
     sourceAllowed: {
       cg: cgAllowed,
       cgTicker: cgTickerAllowed,
@@ -383,6 +428,7 @@ export async function buildPrimaryPricePlan(
       redstone: redstoneAllowed,
       curve: curveAllowed,
       curveOracle: curveOracleAllowed,
+      addressProviders: addressProvidersAllowed,
     },
   };
 }
@@ -429,6 +475,7 @@ export async function collectPrimaryProviderQuotes(params: {
   const bitstampObservedAtBySymbol = new Map<string, number>();
   const coinbaseObservedAtBySymbol = new Map<string, number>();
   const navPrices = new Map<string, NavTelemetryQuote>();
+  const addressProviderQuotes = new Map<string, AddressPriceQuote[]>();
 
   let curveOraclePrice: number | null = null;
   let curveOracleObservedAt: number | null = null;
@@ -641,6 +688,24 @@ export async function collectPrimaryProviderQuotes(params: {
   await Promise.all(fetches);
   throwIfAborted(signal);
 
+  if (plan.addressProviders.length > 0 && plan.addressProviderConfig) {
+    const addressProviderResult = await collectAddressPriceProviderQuotes({
+      targetsByProvider: plan.addressProviderTargets,
+      providers: plan.addressProviders,
+      sourceAllowed: sourceAllowed.addressProviders,
+      config: plan.addressProviderConfig,
+      signal,
+      nowSec,
+    });
+    for (const [coinId, quotes] of addressProviderResult.quotesByStablecoinId) {
+      addressProviderQuotes.set(coinId, quotes);
+    }
+    providerDiagnostics.push(...addressProviderResult.diagnostics);
+    for (const [provider, ok] of addressProviderResult.providerOutcomes) {
+      await recordOutcome(db, ADDRESS_PROVIDER_CIRCUIT_SOURCE[provider], ok);
+    }
+  }
+
   return {
     quoteMaps: {
       cgPrices,
@@ -664,6 +729,7 @@ export async function collectPrimaryProviderQuotes(params: {
       curveOraclePrice,
       curveOracleObservedAt,
       navPrices,
+      addressProviderQuotes,
     },
     providerDiagnostics,
   };

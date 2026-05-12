@@ -1,6 +1,7 @@
 import type { PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
+import type { AddressPriceQuote } from "./address-price-providers";
 import type { SourcePrice } from "./price-consensus";
 import { validatePricingSourceFreshness, type PricingSourceFreshnessRejectReason } from "./pricing-source-freshness";
 
@@ -120,6 +121,7 @@ export interface PrimaryCollectedQuotes {
   curveOraclePrice: number | null;
   curveOracleObservedAt: number | null;
   navQuote?: NavTelemetryQuote;
+  addressProviderQuotes?: AddressPriceQuote[];
   protocolSources?: DexProtocolSourceQuote[];
   dexAggregateQuote?: DexAggregateQuote;
 }
@@ -350,6 +352,27 @@ export function buildPrimarySourceCandidates(
     });
     if (redstoneSource) {
       sources.push(redstoneSource);
+    }
+  }
+
+  for (const quote of collected.addressProviderQuotes ?? []) {
+    const source = buildSourcePrice({
+      source: quote.source,
+      price: quote.priceUsd,
+      observedAt: quote.observedAt,
+      observedAtMode: quote.observedAtMode,
+      nowSec,
+      metadata: {
+        chain: quote.chain,
+        address: quote.address,
+        liquidityUsd: quote.liquidityUsd,
+        volume24hUsd: quote.volume24hUsd,
+        poolCount: quote.poolCount,
+        ...quote.metadata,
+      },
+    });
+    if (source) {
+      sources.push(source);
     }
   }
 

@@ -28,6 +28,7 @@ export async function syncStablecoins(
   chainRpcs?: Map<string, ChainRpcConfig>,
   reportProgress?: CronProgressReporter,
   jupiterApiKey?: string | null,
+  addressPriceProvider?: Parameters<typeof runStablecoinsPricingStage>[0]["addressPriceProvider"],
 ): Promise<CronResult> {
   const startAbort = returnIfAborted(signal, "start");
   if (startAbort) return startAbort;
@@ -50,17 +51,11 @@ export async function syncStablecoins(
     }
     throw new Error(intake.errorMessage);
   }
-  const {
-    assets,
-    rawAssetCount,
-    droppedMalformedAssets,
-    canonicalDeduplication,
-  } = intake;
-  const previousAssetsById = intake.previousAssetsById;
+  const { assets, rawAssetCount, droppedMalformedAssets, canonicalDeduplication } = intake;
   const pricingStage = await runStablecoinsPricingStage({
     db,
     assets,
-    previousAssetsById,
+    previousAssetsById: intake.previousAssetsById,
     syncStartSec,
     fxFallbackRates: intake.fxFallbackRates,
     validationReferences: intake.validationReferences,
@@ -69,6 +64,7 @@ export async function syncStablecoins(
     signal,
     coingeckoApiKey,
     chainRpcs,
+    addressPriceProvider,
     reportProgress,
   });
   if ("enrichStats" in pricingStage === false) return pricingStage;
@@ -135,7 +131,7 @@ export async function syncStablecoins(
     rawAssetCount,
     droppedMalformedAssets,
     priceCacheEntries,
-    previousAssetsById,
+    previousAssetsById: intake.previousAssetsById,
     returnIfAborted,
     abortResult,
     reportProgress,

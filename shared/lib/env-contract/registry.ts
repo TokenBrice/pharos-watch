@@ -140,10 +140,37 @@ export const ENV_BINDINGS = [
   {
     key: "ALCHEMY_API_KEY",
     valueType: "string",
-    description: "Alchemy credential used for primary chain RPC endpoints.",
+    description: "Alchemy credential used for primary chain RPC endpoints and, when enabled, Alchemy Prices API address-price augmentation.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 12, status: "optional" },
+    },
+  },
+  {
+    key: "MORALIS_API_KEY",
+    valueType: "string",
+    description: "Moralis credential used for optional exact-address token-price augmentation.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 13, status: "optional" },
+    },
+  },
+  {
+    key: "BIRDEYE_API_KEY",
+    valueType: "string",
+    description: "Birdeye credential used for optional targeted Solana exact-address token-price augmentation.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 14, status: "optional" },
+    },
+  },
+  {
+    key: "ADDRESS_PRICE_PROVIDERS_ENABLED",
+    valueType: "string",
+    description: "Optional comma-separated allowlist for exact-address price providers; unset auto-enables no-key providers plus configured key-backed providers. Use `none` to disable.",
+    example: { section: "workerOptional", value: "dexscreener-address,dexpaprika-address,moralis-address,birdeye-address" },
+    runtimes: {
+      worker: { order: 15, status: "optional" },
     },
   },
   {
@@ -152,7 +179,7 @@ export const ENV_BINDINGS = [
     description: "The Graph credential used by DEX liquidity subgraph reads.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 13, status: "optional" },
+      worker: { order: 16, status: "optional" },
     },
   },
   {
@@ -161,7 +188,7 @@ export const ENV_BINDINGS = [
     description: "Webhook URL used for Discord/Slack-style error alerts.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 14, status: "optional" },
+      worker: { order: 17, status: "optional" },
     },
   },
   {
@@ -170,7 +197,7 @@ export const ENV_BINDINGS = [
     description: "Anthropic credential used for daily digest generation.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 15, status: "optional" },
+      worker: { order: 18, status: "optional" },
     },
   },
   {
@@ -179,7 +206,7 @@ export const ENV_BINDINGS = [
     description: "CoinMarketCap credential used by the price-fallback pass.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 16, status: "optional" },
+      worker: { order: 19, status: "optional" },
     },
   },
   {
@@ -188,7 +215,7 @@ export const ENV_BINDINGS = [
     description: "Jupiter credential used by the Solana price-fallback pass against `api.jup.ag`.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 17, status: "optional" },
+      worker: { order: 20, status: "optional" },
     },
   },
   {
@@ -197,7 +224,7 @@ export const ENV_BINDINGS = [
     description: "CoinGecko credential used for price enrichment and depeg confirmation.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 18, status: "optional" },
+      worker: { order: 21, status: "optional" },
     },
   },
   {
@@ -287,7 +314,7 @@ export const ENV_BINDINGS = [
     description: "Twitter/X digest delivery credential.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 21, status: "optional" },
+      worker: { order: 22, status: "optional" },
     },
   },
   {
@@ -296,7 +323,7 @@ export const ENV_BINDINGS = [
     description: "Twitter/X digest delivery credential.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 22, status: "optional" },
+      worker: { order: 23, status: "optional" },
     },
   },
   {
@@ -305,7 +332,7 @@ export const ENV_BINDINGS = [
     description: "Twitter/X digest delivery credential.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 23, status: "optional" },
+      worker: { order: 24, status: "optional" },
     },
   },
   {
@@ -314,7 +341,7 @@ export const ENV_BINDINGS = [
     description: "Twitter/X digest delivery credential.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 24, status: "optional" },
+      worker: { order: 25, status: "optional" },
     },
   },
   {
@@ -323,7 +350,7 @@ export const ENV_BINDINGS = [
     description: "Telegram bot credential used for digest delivery and alert dispatch.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 25, status: "optional" },
+      worker: { order: 26, status: "optional" },
     },
   },
   {
@@ -332,7 +359,7 @@ export const ENV_BINDINGS = [
     description: "Optional previous Telegram bot token marker used for rotation consistency checks.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 26, status: "optional" },
+      worker: { order: 27, status: "optional" },
     },
   },
   {
@@ -341,7 +368,7 @@ export const ENV_BINDINGS = [
     description: "Telegram target chat/channel for digest posts and announcements.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 27, status: "optional" },
+      worker: { order: 28, status: "optional" },
     },
   },
   {
@@ -350,7 +377,7 @@ export const ENV_BINDINGS = [
     description: "Telegram webhook secret used to authenticate the webhook lane.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 28, status: "optional" },
+      worker: { order: 29, status: "optional" },
     },
   },
   {
@@ -359,7 +386,7 @@ export const ENV_BINDINGS = [
     description: "Optional overlap Telegram webhook secret accepted during secret rotation.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 29, status: "optional" },
+      worker: { order: 30, status: "optional" },
     },
   },
   {
@@ -368,7 +395,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn runtime disable list by stablecoin ID (CSV).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 30, status: "optional" },
+      worker: { order: 31, status: "optional" },
     },
   },
   {
@@ -377,7 +404,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn runtime disable list by symbol (CSV).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 31, status: "optional" },
+      worker: { order: 32, status: "optional" },
     },
   },
   {
@@ -386,7 +413,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn health-check major-symbols override (CSV).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 32, status: "optional" },
+      worker: { order: 33, status: "optional" },
     },
   },
   {
@@ -395,7 +422,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn stale-warning threshold override (seconds).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 33, status: "optional" },
+      worker: { order: 34, status: "optional" },
     },
   },
   {
@@ -404,7 +431,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn stale-critical threshold override (seconds).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 34, status: "optional" },
+      worker: { order: 35, status: "optional" },
     },
   },
   {
@@ -413,7 +440,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn stale-alert dedupe cooldown override (seconds).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 35, status: "optional" },
+      worker: { order: 36, status: "optional" },
     },
   },
   {
@@ -422,7 +449,7 @@ export const ENV_BINDINGS = [
     description: "Open Exchange Rates credential used for FX cross-validation.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 36, status: "optional" },
+      worker: { order: 37, status: "optional" },
     },
   },
   {
@@ -431,7 +458,7 @@ export const ENV_BINDINGS = [
     description: "Cloudflare account scope used by admin D1 status metrics.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 37, status: "optional" },
+      worker: { order: 38, status: "optional" },
     },
   },
   {
@@ -440,7 +467,7 @@ export const ENV_BINDINGS = [
     description: "Cloudflare API token with D1 status/analytics read access for admin metrics.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 38, status: "optional" },
+      worker: { order: 39, status: "optional" },
     },
   },
   {
@@ -449,7 +476,7 @@ export const ENV_BINDINGS = [
     description: "Target D1 database ID used by admin D1 status metrics.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 39, status: "optional" },
+      worker: { order: 40, status: "optional" },
     },
   },
   {
@@ -458,7 +485,7 @@ export const ENV_BINDINGS = [
     description: "Global worker kill switch; when `true`, non-`OPTIONS` traffic returns `503` maintenance responses.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 40, status: "optional" },
+      worker: { order: 41, status: "optional" },
     },
   },
   {

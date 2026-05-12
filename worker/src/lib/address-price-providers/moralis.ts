@@ -1,0 +1,128 @@
+import type {
+  AddressPriceProviderRuntimeConfig,
+  AddressPriceProviderRunResult,
+  AddressPriceQuote,
+  AddressPriceTarget,
+} from "./types";
+import {
+  ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
+  chunk,
+  emptyProviderResult,
+  fetchProviderJson,
+  getTokenAddressFromRecord,
+  groupTargetsByProviderChain,
+  incrementReason,
+  isRecord,
+  parseNonNegativeNumber,
+  parsePositiveNumber,
+} from "./shared";
+
+const MORALIS_ADDRESS_MAX_REQUESTS = 10;
+
+export async function runMoralisAddressProvider(
+  targets: AddressPriceTarget[],
+  config: AddressPriceProviderRuntimeConfig,
+  signal: AbortSignal | undefined,
+  nowSec: number,
+  deadlineMs: number,
+): Promise<AddressPriceProviderRunResult> {
+  const apiKey = config.moralisApiKey?.trim();
+  if (!apiKey) return emptyProviderResult("moralis-address", targets.length, "missing-provider");
+  const diagnostics: AddressPriceProviderRunResult["diagnostics"] = [];
+  const quotes: AddressPriceQuote[] = [];
+  const rejectedTargets: AddressPriceProviderRunResult["rejectedTargets"] = {};
+  let successfulRequests = 0;
+  let attemptedRequests = 0;
+
+  for (const [providerChainId, chainTargets] of groupTargetsByProviderChain(targets)) {
+    for (const batch of chunk(chainTargets, 30)) {
+      if (attemptedRequests >= MORALIS_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
+      attemptedRequests += 1;
+      const url = `https://deep-index.moralis.io/api/v2.2/erc20/prices?chain=${encodeURIComponent(providerChainId)}`;
+      const { json, diagnostic } = await fetchProviderJson({
+        provider: "moralis-address",
+        url,
+        init: {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-API-Key": apiKey,
+          },
+          body: JSON.stringify({
+            tokens: batch.map((target) => ({ token_address: target.address })),
+          }),
+        },
+        candidateCount: batch.length,
+        signal,
+      });
+      const rows = Array.isArray(json)
+        ? json
+        : isRecord(json) && Array.isArray(json.result)
+          ? json.result
+          : isRecord(json) && Array.isArray(json.data)
+            ? json.data
+            : null;
+      if (rows) {
+        const targetByAddress = new Map(batch.map((target) => [target.address.toLowerCase(), target]));
+        for (const row of rows) {
+          if (!isRecord(row)) continue;
+          const address = getTokenAddressFromRecord(row);
+          if (!address) continue;
+          const target = targetByAddress.get(address.toLowerCase());
+          if (!target) continue;
+          const priceUsd = parsePositiveNumber(row.usdPrice ?? row.usd_price);
+          const liquidityUsd = parseNonNegativeNumber(row.pairTotalLiquidityUsd ?? row.liquidityUsd);
+          if (!priceUsd) {
+            incrementReason(rejectedTargets, "missing-quote");
+            continue;
+          }
+          if (row.possibleSpam === true) {
+            incrementReason(rejectedTargets, "price-rejected");
+            continue;
+          }
+          if (liquidityUsd != null && liquidityUsd < ADDRESS_PROVIDER_MIN_LIQUIDITY_USD) {
+            incrementReason(rejectedTargets, "price-rejected");
+            continue;
+          }
+          quotes.push({
+            stablecoinId: target.stablecoinId,
+            source: "moralis-address",
+            chain: target.chain,
+            address: target.address,
+            priceUsd,
+            observedAt: nowSec,
+            observedAtMode: "local_fetch",
+            ...(liquidityUsd != null ? { liquidityUsd } : {}),
+            metadata: {
+              providerChainId,
+              exchangeName: row.exchangeName,
+              exchangeAddress: row.exchangeAddress,
+              pairAddress: row.pairAddress,
+              verifiedContract: row.verifiedContract,
+              securityScore: row.securityScore,
+            },
+          });
+        }
+        diagnostic.responseRowCount = rows.length;
+        diagnostic.matchedCount = quotes.filter((quote) => quote.source === "moralis-address").length;
+        diagnostic.success = true;
+        successfulRequests += 1;
+      } else if (json != null) {
+        diagnostic.errorClass = "invalid-shape";
+        diagnostic.errorMessage = "Expected Moralis token price array";
+        diagnostic.rejectionReasonCounts = { "invalid-shape": 1 };
+      }
+      diagnostics.push(diagnostic);
+    }
+  }
+
+  return {
+    quotes,
+    diagnostics,
+    attemptedTargets: Math.min(targets.length, MORALIS_ADDRESS_MAX_REQUESTS * 30),
+    matchedTargets: quotes.length,
+    rejectedTargets,
+    successfulRequests,
+    attemptedRequests,
+  };
+}

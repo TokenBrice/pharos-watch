@@ -46,6 +46,12 @@ describe("pricing source registry", () => {
       "jupiter",
       "coinmarketcap",
       "dexscreener-exact",
+      "dexscreener-address",
+      "dexpaprika-address",
+      "alchemy-address",
+      "moralis-address",
+      "birdeye-address",
+      "geckoterminal-address",
       "dexscreener-search",
       "defillama-contract",
       "protocol-redeem",
@@ -114,6 +120,24 @@ describe("pricing source registry", () => {
       key: "dexscreener-exact",
       isSearchDerived: false,
     });
+
+    for (const key of [
+      "dexscreener-address",
+      "dexpaprika-address",
+      "alchemy-address",
+      "moralis-address",
+      "birdeye-address",
+      "geckoterminal-address",
+    ]) {
+      expect(getPricingSourceRegistryEntry(key)).toMatchObject({
+        key,
+        trustTier: "fallback_search",
+        isReplaySafe: false,
+        canBeDepegAuthoritative: false,
+        canSingleSourceDepegAuthoritative: false,
+        isSearchDerived: false,
+      });
+    }
 
     expect(getPricingSourceRegistryEntry("dexscreener-search")).toMatchObject({
       key: "dexscreener-search",
