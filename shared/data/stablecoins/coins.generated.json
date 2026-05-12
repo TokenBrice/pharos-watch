@@ -2276,6 +2276,13 @@
         "url": "https://data.chain.link/feeds/polygon/mainnet/bib01-por",
         "label": "Chainlink LedgerLens PoR (Polygon)"
       },
+      "scoring": {
+        "maxSourceAgeSec": 4000000,
+        "allowedDegradedWarningCodes": [
+          "por-reserve-under-supply",
+          "partial-supply-read-failure"
+        ]
+      },
       "adapter": "chainlink-por",
       "inputs": {
         "primary": {
@@ -3244,6 +3251,9 @@
       "display": {
         "url": "https://www.btcfi.one/",
         "label": "Website"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
       },
       "adapter": "btcfi",
       "inputs": {
@@ -4341,6 +4351,9 @@
         "url": "https://reserve.mento.org/",
         "label": "Reserve"
       },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
       "adapter": "mento",
       "inputs": {
         "primary": {
@@ -4643,6 +4656,9 @@
       "display": {
         "url": "https://reserve.mento.org/",
         "label": "Mento Reserve"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
       },
       "adapter": "mento",
       "inputs": {
@@ -5384,6 +5400,9 @@
         "url": "https://reserve.mento.org/",
         "label": "Reserve"
       },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
       "adapter": "mento",
       "inputs": {
         "primary": {
@@ -5788,6 +5807,9 @@
       "display": {
         "url": "https://app.deuro.com/",
         "label": "App"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
       },
       "adapter": "collateral-positions-api",
       "inputs": {
@@ -8413,6 +8435,9 @@
         "url": "https://www.firstdigitallabs.com/transparency",
         "label": "First Digital Labs Transparency"
       },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
       "adapter": "fdusd-transparency",
       "inputs": {
         "primary": {
@@ -9792,6 +9817,9 @@
       "display": {
         "url": "https://reserve.mento.org/",
         "label": "Mento Reserve"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
       },
       "adapter": "mento",
       "inputs": {
@@ -12246,6 +12274,9 @@
         "url": "https://stats.infinifi.xyz/",
         "label": "Stats"
       },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
       "adapter": "infinifi",
       "inputs": {
         "primary": {
@@ -12603,6 +12634,9 @@
       "display": {
         "url": "https://reserve.mento.org/",
         "label": "Mento Reserve"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
       },
       "adapter": "mento",
       "inputs": {
@@ -16250,6 +16284,11 @@
       "display": {
         "url": "https://www.nest.credit/",
         "label": "Nest Credit API"
+      },
+      "scoring": {
+        "allowedDegradedWarningCodes": [
+          "nest-nav-coverage-gap"
+        ]
       },
       "adapter": "nest-vault-positions",
       "inputs": {
@@ -20042,6 +20081,13 @@
         "url": "https://app.reservoir.xyz/reserves",
         "label": "Proof of Reserves"
       },
+      "scoring": {
+        "maxSourceAgeSec": 4000000,
+        "allowedDegradedWarningCodes": [
+          "unknown-position",
+          "source-total-gap"
+        ]
+      },
       "adapter": "reservoir",
       "inputs": {
         "primary": {
@@ -21134,6 +21180,11 @@
       "display": {
         "url": "https://app.usd.ai/reserves",
         "label": "USD.AI Reserves"
+      },
+      "scoring": {
+        "allowedDegradedWarningCodes": [
+          "usdai-share-coverage-gap"
+        ]
       },
       "adapter": "usdai-proof-of-reserves",
       "inputs": {
@@ -22790,6 +22841,13 @@
       "display": {
         "url": "https://data.chain.link/feeds/ethereum/mainnet/tusd-por",
         "label": "Chainlink PoR"
+      },
+      "scoring": {
+        "allowedDegradedWarningCodes": [
+          "por-reserve-over-supply",
+          "partial-supply-read-failure",
+          "por-supply-chain-omitted"
+        ]
       },
       "adapter": "chainlink-por",
       "inputs": {
@@ -26048,6 +26106,9 @@
         "url": "https://usdh.com/reserves",
         "label": "USDH Reserves"
       },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
       "adapter": "usdh-native-markets",
       "inputs": {
         "primary": {
@@ -29293,6 +29354,9 @@
         "url": "https://ondo.finance/usdy",
         "label": "Ondo NAV Oracle"
       },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
       "adapter": "chainlink-nav",
       "inputs": {
         "primary": {
@@ -30613,6 +30677,9 @@
         "url": "https://attestation.solstice.finance/",
         "label": "Solstice Attestation"
       },
+      "scoring": {
+        "maxSourceAgeSec": 700000
+      },
       "adapter": "solstice-attestation",
       "inputs": {
         "primary": {
@@ -30806,6 +30873,9 @@
       "display": {
         "url": "https://accountable.xsy.fi/",
         "label": "Accountable"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
       },
       "adapter": "accountable",
       "inputs": {
@@ -32352,6 +32422,13 @@
         "url": "https://app.reservoir.xyz/reserves",
         "label": "Proof of Reserves"
       },
+      "scoring": {
+        "maxSourceAgeSec": 4000000,
+        "allowedDegradedWarningCodes": [
+          "unknown-position",
+          "source-total-gap"
+        ]
+      },
       "adapter": "reservoir",
       "inputs": {
         "primary": {
@@ -33220,6 +33297,9 @@
       "display": {
         "url": "https://www.straitsx.com/xsgd",
         "label": "StraitsX"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
       },
       "adapter": "attestation-pdf-index",
       "inputs": {
@@ -34473,6 +34553,9 @@
         "url": "https://app.frankencoin.com/",
         "label": "App"
       },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
       "adapter": "collateral-positions-api",
       "inputs": {
         "primary": {
@@ -34660,5 +34743,191 @@
         "message": "Goal3 documents zkUSD as algorithmically over-collateralized by assets held in the sportsbook, but the specific accepted collateral assets and collateralization ratio are not published. The only documented holder exit is 1:1 redemption to USDC through the Goal3 Portal."
       }
     ]
+  },
+  {
+    "id": "zsd-zephyr-protocol",
+    "detailProvider": "coingecko",
+    "name": "Zephyr Stable Dollar",
+    "symbol": "ZSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "ZEPH base-coin collateral held by the Zephyr Protocol reserve; the protocol targets overcollateralization before allowing new ZSD minting",
+    "pegMechanism": "Users mint or redeem ZSD against ZEPH through Zephyr's Djed-inspired reserve mechanism, with oracle pricing and reserve-ratio constraints maintaining the dollar target",
+    "geckoId": "zephyr-protocol-stable-dollar",
+    "protocolSlug": "zephyr-protocol",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+      "provider": "Zephyr Scanner"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://zephyrprotocol.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/zephyr_org"
+      },
+      {
+        "label": "Docs",
+        "url": "https://zephyrprotocol.com/documentation"
+      },
+      {
+        "label": "Whitepaper",
+        "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/ZephyrProtocol/zephyr"
+      },
+      {
+        "label": "Reserve snapshots",
+        "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": false,
+      "sources": [
+        {
+          "label": "Docs",
+          "url": "https://zephyrprotocol.com/documentation"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/ZephyrProtocol/zephyr"
+        }
+      ],
+      "evidence": "Zephyr documentation presents ZSD as a native asset on a Monero-derived protocol and does not identify an issuer-controlled freeze, blacklist, pause, privileged burn, or proxy-upgrade control surface for holder balances.",
+      "reviewer": "Codex metadata pass",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "reserves": [
+      {
+        "name": "ZEPH protocol reserve collateral",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "protocol-reserve",
+      "breakerScope": "zephyr-scanner-zsd",
+      "display": {
+        "url": "https://zephyrprotocol.com/yield",
+        "label": "Zephyr Scanner"
+      },
+      "adapter": "zephyr-scanner",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Unsupported private chain",
+        "message": "ZSD primarily circulates as a native Zephyr asset on a Monero-derived chain, which is not a configured Pharos chain, so no contract is stored."
+      }
+    ]
+  },
+  {
+    "id": "zys-zephyr-protocol",
+    "detailProvider": "coingecko",
+    "name": "Zephyr Yield Share",
+    "symbol": "ZYS",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "zsd-zephyr-protocol",
+    "collateral": "ZSD held in the Zephyr Protocol yield reserve; each ZYS share represents a claim on the protocol's ZSD yield reserve balance",
+    "pegMechanism": "ZYS is a NAV-style yield-share token rather than a flat one-dollar stablecoin. Its share price moves against ZSD as protocol yield accrues into the ZSD yield reserve.",
+    "protocolSlug": "zephyr-protocol",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+      "provider": "Zephyr Scanner"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://zephyrprotocol.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/zephyr_org"
+      },
+      {
+        "label": "Docs",
+        "url": "https://zephyrprotocol.com/documentation"
+      },
+      {
+        "label": "Yield dashboard",
+        "url": "https://zephyrprotocol.com/yield"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/ZephyrProtocol/zephyr"
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": false,
+      "sources": [
+        {
+          "label": "Docs",
+          "url": "https://zephyrprotocol.com/documentation"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/ZephyrProtocol/zephyr"
+        }
+      ],
+      "evidence": "Zephyr documentation presents ZYS as a protocol-native asset on the same Monero-derived chain as ZSD and does not identify an issuer-controlled freeze, blacklist, pause, privileged burn, or proxy-upgrade control surface for holder balances.",
+      "reviewer": "Codex metadata pass",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "variantOf": "zsd-zephyr-protocol",
+    "variantKind": "savings-passthrough",
+    "reserves": [
+      {
+        "name": "ZSD yield reserve backing ZYS shares",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "zsd-zephyr-protocol",
+        "depType": "wrapper"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Native private-chain yield share",
+        "message": "ZYS is tracked as Zephyr's yield-share wrapper over ZSD, not as base ZSD itself. Pharos sources supply, price, and APY from Zephyr Scanner because CoinGecko and DefiLlama do not expose this wrapper."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Zephyr Scanner ZYS returns",
+      "yieldType": "nav-appreciation"
+    }
   }
 ]

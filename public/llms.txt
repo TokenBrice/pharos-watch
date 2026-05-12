@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 310 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 312 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -349,6 +349,8 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Nest Wisdom Vault (nWISDOM)](https://pharos.watch/stablecoin/nwisdom-nest/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [eUSD (eUSD)](https://pharos.watch/stablecoin/eusd-telcoin/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Freedom Dollar (FUSD)](https://pharos.watch/stablecoin/fusd-freedom-dollar/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Zephyr Stable Dollar (ZSD)](https://pharos.watch/stablecoin/zsd-zephyr-protocol/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Zephyr Yield Share (ZYS)](https://pharos.watch/stablecoin/zys-zephyr-protocol/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [YieldFi yUSD (YUSD)](https://pharos.watch/stablecoin/yusd-yieldfi/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [SoulPeg USD (spUSD)](https://pharos.watch/stablecoin/spusd-soulpeg/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Unity USD (UUSD)](https://pharos.watch/stablecoin/uusd-anything-labs/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.

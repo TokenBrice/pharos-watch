@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-The stablecoin registry currently contains 338 tracked metadata entries. Report-card snapshots score the 310 active tracked assets plus the 91 cemetery assets; frozen-archive tracked entries are emitted as stub `F` cards, while pre-launch entries remain outside the snapshot until they launch.
+The stablecoin registry currently contains 340 tracked metadata entries. Report-card snapshots score the 312 active tracked assets plus the 91 cemetery assets; frozen-archive tracked entries are emitted as stub `F` cards, while pre-launch entries remain outside the snapshot until they launch.
 
 ## Methodology Versioning
 
@@ -398,7 +398,7 @@ Users simulate a grade downgrade for any upstream coin and watch cascading grade
 
 - **Coin selector**: Filtered to coins appearing as `from` in `dependencyGraph.edges`, sorted by dependent count.
 - **Grade selector**: Only downgrades from the coin's current grade to F.
-- **Recomputation**: `computeStressedGrades()` injects a synthetic score, walks all transitive downstream dependencies, and recomputes only the Dependency Risk dimension for affected downstream coins in dependency order. The current snapshot size is 404 cards (310 active tracked assets plus 91 cemetery entries plus 3 frozen archives; pre-launch tracked assets are excluded) × 5 dimensions, which remains comfortably sub-millisecond in practice.
+- **Recomputation**: `computeStressedGrades()` injects a synthetic score, walks all transitive downstream dependencies, and recomputes only the Dependency Risk dimension for affected downstream coins in dependency order. The current snapshot size is 406 cards (312 active tracked assets plus 91 cemetery entries plus 3 frozen archives; pre-launch tracked assets are excluded) × 5 dimensions, which remains comfortably sub-millisecond in practice.
 - **Two display modes**: Portfolio mode (dollar-denominated, scoped to held coins in impact table) vs ecosystem mode (all affected coins with market cap).
 - **Card grid simulation**: ALL affected coins show dashed amber borders + "Simulated" badge regardless of portfolio mode. Unaffected cards dimmed. Sticky banner with clear button.
 
