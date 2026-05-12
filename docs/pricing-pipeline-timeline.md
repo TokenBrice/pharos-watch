@@ -1,8 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.91` (2026-02-01 -> 2026-05-12).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.92` (2026-02-01 -> 2026-05-12).
 
 ---
+
+## v5.92 - Expanded NAV-wrapper authoritative pricing (May 12, 2026)
+
+- Expanded protocol-backed authoritative pricing to newly tracked NAV wrappers, added tracked-base inheritance for Initia iUSD and Movement USDCx, and admitted Spark Savings USDC through curated on-chain supplemental supply before pricing overrides run
+- `susdc-spark`, `gtusdcp-gauntlet`, `steakusdt-steakhouse`, `steakusdc-steakhouse`, `srusde-strata`, `savusd-avant`, `susn-noon`, and `syzusd-yuzu` now use guarded ERC-4626 `convertToAssets(1 share)` pricing when their tracked parent assets are fresh and replay-safe
+- `iusd-initia` now inherits tracked `ausd-agora` pricing, `usdcx-movement` inherits tracked `usdc-circle` pricing, and `sgho-aave` uses a protocol-specific `previewRedeem(uint256)` quote against tracked `gho-aave`
+- `susdc-spark` can now appear in the stablecoins sync even without a DefiLlama or CoinGecko market row by using curated Ethereum vault supply, after which the authoritative NAV override supplies the live price
+- Existing parent-trust gates, parent provenance metadata, and NAV ratio bounds are unchanged
 
 ## v5.91 - Post-probe authoritative override refresh (May 12, 2026)
 

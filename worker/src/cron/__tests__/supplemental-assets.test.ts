@@ -3,11 +3,12 @@ import type { StablecoinMeta } from "@shared/types/core";
 import {
   resolveSupplementalPrice,
   selectSingleOnChainSupplyContract,
+  selectSupplementalOnChainSupplyContract,
 } from "../sync-stablecoins/supplemental-assets";
 
-function makeMeta(contracts: StablecoinMeta["contracts"]): StablecoinMeta {
+function makeMeta(contracts: StablecoinMeta["contracts"], id = "test-stablecoin"): StablecoinMeta {
   return {
-    id: "test-stablecoin",
+    id,
     name: "Test Stablecoin",
     symbol: "TEST",
     detailProvider: "coingecko",
@@ -55,6 +56,20 @@ describe("selectSingleOnChainSupplyContract", () => {
       { chain: "tron", address: "TEST.TRON", decimals: 6 },
       { chain: "ethereum", address: "0x0000000000000000000000000000000000000001", decimals: 6 },
     ]))).toBeNull();
+  });
+
+  it("allows curated multi-chain supplemental assets to use a configured supply chain", () => {
+    const ethereumContract = { chain: "ethereum", address: "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d", decimals: 6 };
+    const avalancheContract = { chain: "avalanche", address: "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d", decimals: 6 };
+
+    expect(selectSingleOnChainSupplyContract(makeMeta([
+      ethereumContract,
+      avalancheContract,
+    ], "susdc-spark"))).toBeNull();
+    expect(selectSupplementalOnChainSupplyContract(makeMeta([
+      ethereumContract,
+      avalancheContract,
+    ], "susdc-spark"))).toBe(ethereumContract);
   });
 });
 

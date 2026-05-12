@@ -23,6 +23,12 @@ const GOLD_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.flags.pe
 const SILVER_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.flags.pegCurrency === "SILVER");
 const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko");
 
+const CURATED_ONCHAIN_SUPPLY_CONTRACTS: Record<string, { chain: string; rpcUrl?: string; fallbackRpcUrl?: string }> = {
+  // No upstream market row exists for Spark Savings USDC yet, but the Ethereum
+  // vault supply plus the guarded protocol-redeem price keeps the asset visible.
+  "susdc-spark": { chain: "ethereum" },
+};
+
 function pegTypeKey(meta: StablecoinMeta): string {
   return `pegged${meta.flags.pegCurrency}`;
 }
@@ -385,6 +391,18 @@ export function selectSingleOnChainSupplyContract(meta: StablecoinMeta): NonNull
   return contract && isSupportedOnChainSupplyContract(contract) ? contract : null;
 }
 
+export function selectSupplementalOnChainSupplyContract(
+  meta: StablecoinMeta,
+): NonNullable<StablecoinMeta["contracts"]>[number] | null {
+  const curated = CURATED_ONCHAIN_SUPPLY_CONTRACTS[meta.id];
+  if (curated) {
+    const contract = meta.contracts?.find((entry) => entry.chain === curated.chain);
+    return contract && isSupportedOnChainSupplyContract(contract) ? contract : null;
+  }
+
+  return selectSingleOnChainSupplyContract(meta);
+}
+
 /** Fetch totalSupply from one unambiguous on-chain contract and return mcap = supply × price. */
 async function fetchOnChainMcap(
   meta: StablecoinMeta,
@@ -392,9 +410,10 @@ async function fetchOnChainMcap(
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
 ): Promise<number | null> {
-  const supplyContract = selectSingleOnChainSupplyContract(meta);
+  const curated = CURATED_ONCHAIN_SUPPLY_CONTRACTS[meta.id];
+  const supplyContract = selectSupplementalOnChainSupplyContract(meta);
   if (!supplyContract) {
-    if ((meta.contracts?.length ?? 0) > 1) {
+    if (!curated && (meta.contracts?.length ?? 0) > 1) {
       console.warn(`[fiat-cg] ${meta.symbol}: skipping on-chain supply fallback because multiple contracts could undercount global supply`);
     }
     return null;
@@ -415,8 +434,8 @@ async function fetchOnChainMcap(
       supplySignal,
       "fiat-cg",
       undefined,
-      chainRpc?.rpcUrl,
-      chainRpc?.fallbackRpcUrl,
+      curated?.rpcUrl ?? chainRpc?.rpcUrl,
+      curated?.fallbackRpcUrl ?? chainRpc?.fallbackRpcUrl,
     );
     if (raw > 0n) {
       const decimals = supplyContract.decimals ?? (supplyContract.chain === "solana" ? 6 : 18);

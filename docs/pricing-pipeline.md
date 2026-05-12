@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v5.91`
+- **Current methodology version:** `v5.92`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -199,14 +199,25 @@ After market/oracle consensus, `worker/src/lib/authoritative-price-sources.ts` c
 | `cusd-cap` | Cap `getBurnAmount(address,uint256)` |
 | `iusd-infinifi` | infiniFi `RedeemController.receiptToAsset(uint256)` |
 | `usdai-usd-ai` | inherits tracked `pyusd-paypal` pricing as a redeemable PYUSD wrapper |
+| `iusd-initia` | inherits tracked `ausd-agora` pricing as an AUSD-backed Initia wrapper |
+| `usdcx-movement` | inherits tracked `usdc-circle` pricing as a Circle xReserve-backed USDC wrapper |
 | `usdk-kast` | inherits tracked `wm-m0` pricing as a Solana M0 extension unit |
 | `xo-exodus` | inherits tracked `wm-m0` pricing as a Solana M0 extension unit |
 | `usdnr-nerona` | inherits tracked `wm-m0` pricing as an M0 extension unit |
 | `susdt-spark` | ERC-4626 `convertToAssets(1 share)` × tracked `usdt-tether` price |
+| `susdc-spark` | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price |
+| `steakusdt-steakhouse` | ERC-4626 `convertToAssets(1 share)` × tracked `usdt-tether` price |
+| `steakusdc-steakhouse` | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price |
+| `srusde-strata` | ERC-4626 `convertToAssets(1 share)` × tracked `usde-ethena` price |
 | `gtusdc-gauntlet` | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price |
+| `gtusdcp-gauntlet` | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price |
 | `yvusdc-yearn` | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price |
+| `savusd-avant` | ERC-4626 `convertToAssets(1 share)` × tracked `avusd-avant` price |
+| `susn-noon` | ERC-4626 `convertToAssets(1 share)` × tracked `usn-noon` price |
+| `syzusd-yuzu` | ERC-4626 `convertToAssets(1 share)` × tracked `yzusd-yuzu` price |
 | `stkgho-umbrella-aave` | ERC-4626 `convertToAssets(1 share)` × tracked `gho-aave` price |
 | `sbold-k3-capital` | ERC-4626 `convertToAssets(1 share)` × tracked `bold-liquity` price |
+| `sgho-aave` | Aave legacy savings `previewRedeem(1 share)` × tracked `gho-aave` price |
 | `aa-falconx-mev-capital` | Idle CDO `virtualPrice(address tranche)` × tracked `usdc-circle` price |
 
 When a live override validates successfully, the cached asset is written with:
@@ -226,6 +237,8 @@ local fetch.
 Current tracked-base inheritance paths are:
 
 - `usdai-usd-ai -> pyusd-paypal`
+- `iusd-initia -> ausd-agora`
+- `usdcx-movement -> usdc-circle`
 - `usdk-kast -> wm-m0`
 - `xo-exodus -> wm-m0`
 - `usdnr-nerona -> wm-m0`

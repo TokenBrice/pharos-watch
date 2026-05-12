@@ -114,6 +114,29 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
       risk: "low",
     };
   }
+  if (slug === "janus-henderson-fund" || symbol === "JTRSY") {
+    return {
+      value,
+      name: "Janus Henderson Anemoy Treasury Fund (JTRSY)",
+      risk: "very-low",
+      coinId: "jtrsy-anemoy",
+    };
+  }
+  if (slug === "superstate-ustb" || symbol === "USTB") {
+    return {
+      value,
+      name: "Superstate USTB Treasury Fund",
+      risk: "very-low",
+      coinId: "ustb-superstate",
+    };
+  }
+  if (slug === "superstate-uscc" || symbol === "USCC") {
+    return {
+      value,
+      name: "Superstate USCC cash-and-carry fund",
+      risk: "low",
+    };
+  }
   return {
     value,
     name: "Nest private and structured credit vaults",

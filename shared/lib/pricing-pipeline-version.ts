@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.91",
+  currentVersion: "5.92",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.92",
+      title: "Expanded NAV-wrapper authoritative pricing",
+      date: "2026-05-12",
+      effectiveAt: 1778590800,
+      summary:
+        "Expanded protocol-backed authoritative pricing to newly tracked NAV wrappers, added tracked-base inheritance for Initia iUSD and Movement USDCx, and admitted Spark Savings USDC through curated on-chain supplemental supply before pricing overrides run.",
+      impact: [
+        "`susdc-spark`, `gtusdcp-gauntlet`, `steakusdt-steakhouse`, `steakusdc-steakhouse`, `srusde-strata`, `savusd-avant`, `susn-noon`, and `syzusd-yuzu` now use guarded ERC-4626 `convertToAssets(1 share)` pricing when their tracked parent assets are fresh and replay-safe",
+        "`iusd-initia` now inherits tracked `ausd-agora` pricing, `usdcx-movement` inherits tracked `usdc-circle` pricing, and `sgho-aave` uses a protocol-specific `previewRedeem(uint256)` quote against tracked `gho-aave`",
+        "`susdc-spark` can now appear in the stablecoins sync even without a DefiLlama or CoinGecko market row by using curated Ethereum vault supply, after which the authoritative NAV override supplies the live price",
+        "Existing parent-trust gates, parent provenance metadata, and NAV ratio bounds are unchanged",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.91",
       title: "Post-probe authoritative override refresh",

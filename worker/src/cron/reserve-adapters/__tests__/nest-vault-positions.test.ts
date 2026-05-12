@@ -31,7 +31,9 @@ describe("fetchNestVaultPositionsReserves", () => {
             ],
             yieldAssets: [
               { slug: "nest-treasury-vault", tokens: [{ symbol: "nTBILL", position: { value: 125 } }] },
-              { slug: "nest-opal-vault", tokens: [{ symbol: "nOPAL", position: { value: 700 } }] },
+              { slug: "superstate-ustb", tokens: [{ symbol: "USTB", position: { value: 300 } }] },
+              { slug: "janus-henderson-fund", tokens: [{ symbol: "JTRSY", position: { value: 100 } }] },
+              { slug: "nest-opal-vault", tokens: [{ symbol: "nOPAL", position: { value: 300 } }] },
             ],
           },
         },
@@ -62,9 +64,11 @@ describe("fetchNestVaultPositionsReserves", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "Nest private and structured credit vaults", pct: 70, risk: "high" },
+      { name: "Superstate USTB Treasury Fund", pct: 30, risk: "very-low", coinId: "ustb-superstate" },
+      { name: "Nest private and structured credit vaults", pct: 30, risk: "high" },
       { name: "Nest Treasury vault (nTBILL)", pct: 12.5, risk: "low" },
       { name: "Liquid USDC balances", pct: 10, risk: "low", coinId: "usdc-circle" },
+      { name: "Janus Henderson Anemoy Treasury Fund (JTRSY)", pct: 10, risk: "very-low", coinId: "jtrsy-anemoy" },
       { name: "Liquid USDT balances", pct: 5, risk: "low", coinId: "usdt-tether" },
       { name: "pUSD liquid balance", pct: 2.5, risk: "high" },
     ]);

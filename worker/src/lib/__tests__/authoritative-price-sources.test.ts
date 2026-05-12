@@ -35,6 +35,13 @@ vi.mock("@shared/lib/stablecoins", () => ({
       },
     ],
     [
+      "ausd-agora",
+      {
+        id: "ausd-agora",
+        geckoId: "agora-dollar",
+      },
+    ],
+    [
       "usdai-usd-ai",
       {
         id: "usdai-usd-ai",
@@ -293,6 +300,65 @@ describe("authoritative-price-sources", () => {
       observedAt: nowSec - 60,
       metadata: {
         inheritedFrom: "wm-m0",
+        parentReplaySafe: true,
+      },
+    });
+  });
+
+  it("returns live inherited overrides for AUSD and USDC extension assets", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "iusd-initia",
+        name: "Initia iUSD",
+        symbol: "iUSD",
+        circulating: { peggedUSD: 54_000_000 },
+      },
+      {
+        id: "usdcx-movement",
+        name: "Movement USDCx",
+        symbol: "USDCx",
+        circulating: { peggedUSD: 6_000_000 },
+      },
+      {
+        id: "ausd-agora",
+        name: "Agora AUSD",
+        symbol: "AUSD",
+        price: 1.000012,
+        priceSource: "coingecko+pyth",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
+        circulating: { peggedUSD: 120_000_000 },
+      },
+      {
+        id: "usdc-circle",
+        name: "USDC",
+        symbol: "USDC",
+        price: 0.99998,
+        priceSource: "coingecko+pyth",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
+        circulating: { peggedUSD: 61_000_000_000 },
+      },
+    ]);
+
+    expect(overrides.get("iusd-initia")).toMatchObject({
+      price: 1.000012,
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: {
+        inheritedFrom: "ausd-agora",
+        parentReplaySafe: true,
+      },
+    });
+    expect(overrides.get("usdcx-movement")).toMatchObject({
+      price: 0.99998,
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: {
+        inheritedFrom: "usdc-circle",
         parentReplaySafe: true,
       },
     });
@@ -753,6 +819,126 @@ describe("authoritative-price-sources", () => {
     });
     // 1.01 assets per share * $0.9999 parent = ~$1.009899
     expect(override?.price).toBeCloseTo(1.01 * 0.9999, 4);
+  });
+
+  it("prices audited ERC-4626 NAV vaults from their configured parent assets", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const cases = [
+      {
+        id: "susdc-spark",
+        parentId: "usdc-circle",
+        parentSymbol: "USDC",
+        vault: "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
+        chain: "ethereum",
+        outputRaw: 1_022_324n,
+        expectedRatio: 1.022324,
+      },
+      {
+        id: "gtusdcp-gauntlet",
+        parentId: "usdc-circle",
+        parentSymbol: "USDC",
+        vault: "0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
+        chain: "ethereum",
+        outputRaw: 1_021_717n,
+        expectedRatio: 1.021717,
+      },
+      {
+        id: "steakusdt-steakhouse",
+        parentId: "usdt-tether",
+        parentSymbol: "USDT",
+        vault: "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
+        chain: "ethereum",
+        outputRaw: 1_013_670n,
+        expectedRatio: 1.01367,
+      },
+      {
+        id: "srusde-strata",
+        parentId: "usde-ethena",
+        parentSymbol: "USDe",
+        vault: "0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003",
+        chain: "ethereum",
+        outputRaw: 1_020_871_205_300_000_000n,
+        expectedRatio: 1.0208712,
+      },
+    ];
+
+    for (const testCase of cases) {
+      fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${testCase.outputRaw.toString(16).padStart(64, "0")}`);
+
+      const overrides = await fetchAuthoritativeLivePriceOverrides([
+        {
+          id: testCase.id,
+          name: testCase.id,
+          symbol: testCase.id,
+          circulating: { peggedUSD: 1_000_000 },
+        },
+        {
+          id: testCase.parentId,
+          name: testCase.parentSymbol,
+          symbol: testCase.parentSymbol,
+          price: 1,
+          priceSource: "coingecko+pyth",
+          priceConfidence: "high",
+          priceObservedAt: nowSec - 60,
+          priceObservedAtMode: "upstream",
+        },
+      ]);
+
+      expect(fetchEvmCallHexAtBlockMock).toHaveBeenLastCalledWith(
+        testCase.chain,
+        testCase.vault,
+        expect.stringMatching(/^0x07a2d13a/),
+        "latest",
+        expect.any(Object),
+      );
+      expect(overrides.get(testCase.id)).toMatchObject({
+        source: "protocol-redeem",
+        confidence: "high",
+        metadata: {
+          inheritedFrom: testCase.parentId,
+        },
+      });
+      expect(overrides.get(testCase.id)?.price).toBeCloseTo(testCase.expectedRatio, 6);
+    }
+  });
+
+  it("prices legacy Aave sGHO from previewRedeem() x tracked GHO price", async () => {
+    const oneGhoRaw = (1_000_000_000_000_000_000n).toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneGhoRaw}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "sgho-aave",
+        name: "Aave Savings GHO",
+        symbol: "sGHO",
+        circulating: { peggedUSD: 4_000_000 },
+      },
+      {
+        id: "gho-aave",
+        name: "GHO",
+        symbol: "GHO",
+        price: 0.9997,
+        priceSource: "coingecko+pyth",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
+      },
+    ]);
+
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
+      "ethereum",
+      "0x1a88df1cfe15af22b3c4c783d4e6f7f9e0c1885d",
+      expect.stringMatching(/^0x4cdad506/),
+      "latest",
+      expect.any(Object),
+    );
+    expect(overrides.get("sgho-aave")).toMatchObject({
+      price: 0.9997,
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: { inheritedFrom: "gho-aave" },
+    });
   });
 
   it("skips ERC-4626 NAV override when parent price is stale or untrusted", async () => {
