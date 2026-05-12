@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v5.93`
+- **Current methodology version:** `v5.94`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -293,6 +293,14 @@ The lane is registered in `shared/lib/pricing-source-registry-aggregators.ts` wi
 - The cache TTL flows from the registry entry through `getPriceCacheMaxAgeSec` automatically; no separate cache-policy code path.
 
 The lane is gated to the `fetchFiatCoinGeckoTokens` path. Strict CoinGecko admission everywhere else is untouched.
+
+### Zephyr Scanner supplemental lane
+
+`zsd-zephyr-protocol` and `zys-zephyr-protocol` are native Zephyr-chain assets, so Pharos cannot derive supply from a supported EVM/Solana contract. The supplemental fiat-CoinGecko path fetches `https://zephyrprotocol.com/api/v1/livestats` once per run when either asset is active:
+
+- ZSD uses official `zsd_circ` for circulating supply and keeps CoinGecko as the preferred market price when available; if CoinGecko is missing, the protocol's reported `zsd_price` is used as a scoped `zephyr-scanner` fallback.
+- ZYS uses official `zys_circ` and `zys_price` because neither CoinGecko nor DefiLlama exposes the yield-share wrapper.
+- The emitted `zephyr-scanner` pricing source is registered as protocol telemetry with no dedicated circuit breaker and is only reachable from this narrow supplemental path.
 
 The enrichment path is intentionally narrower than primary pricing:
 

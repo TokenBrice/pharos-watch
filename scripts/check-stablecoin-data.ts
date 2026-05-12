@@ -24,6 +24,10 @@ import {
 
 const RESERVE_TOTAL_TOLERANCE = 0.5;
 const RESERVE_TOTAL_ALLOWLIST = new Set<string>();
+const ZEPHYR_SCANNER_SUPPLY_IDS = new Set([
+  "zsd-zephyr-protocol",
+  "zys-zephyr-protocol",
+]);
 
 let errorCount = 0;
 
@@ -76,6 +80,7 @@ function getRuntimeAdmissionIssue(coin: StablecoinMeta): string | null {
   if (isCommodity && coin.geckoId) return null;
 
   if (coin.detailProvider === "coingecko") {
+    if (ZEPHYR_SCANNER_SUPPLY_IDS.has(coin.id)) return null;
     if (coin.geckoId || hasSupportedOnchainSupplyContract(coin)) return null;
 
     return (

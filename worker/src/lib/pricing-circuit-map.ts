@@ -76,6 +76,9 @@ export const PRICING_SOURCE_CIRCUIT_METADATA: Record<string, PricingCircuitMetad
   // special
   "defillama-contract": direct(CIRCUIT_SOURCE.DL_COINS, "DefiLlama coins.llama.fi contract fallback."),
   "protocol-redeem": synthesized("Authoritative protocol override or inherited tracked-base price; no dedicated pricing-source circuit."),
+  "zephyr-scanner": synthesized(
+    "Zephyr Scanner live-stats price telemetry is fetched inside the supplemental Zephyr asset path; no dedicated pricing-source circuit is registered.",
+  ),
   "pool-tvl-weighted": synthesized("Synthesized post-challenge replacement across retained pool rows."),
   "cached": cache("Read from price_cache; no outbound fetch."),
 } as const;

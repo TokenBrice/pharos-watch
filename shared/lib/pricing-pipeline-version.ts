@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.93",
+  currentVersion: "5.94",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.94",
+      title: "Zephyr Scanner supplemental pricing",
+      date: "2026-05-12",
+      effectiveAt: 1778594800,
+      summary:
+        "ZSD and ZYS now use Zephyr Scanner live-stats telemetry for official native-chain supply, with ZYS also using the protocol-published NAV price because no CoinGecko or DefiLlama market row exists for the yield-share wrapper.",
+      impact: [
+        "`zsd-zephyr-protocol` keeps CoinGecko as the preferred market price when available, but its circulating supply is sourced from Zephyr's official `zsd_circ` value instead of CoinGecko market cap",
+        "`zys-zephyr-protocol` is admitted through the supplemental Zephyr Scanner path using official ZYS circulation and share price, so the yield wrapper can appear in `/api/stablecoins` without a supported chain contract",
+        "`zephyr-scanner` is registered as an explicit pricing source with no dedicated breaker; the fetch remains scoped to the supplemental Zephyr asset path",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.93",
       title: "Jupiter sparse response breaker accounting",

@@ -56,8 +56,8 @@ describe("tracked stablecoin metadata", () => {
     expect(nonUsd).toHaveLength(0);
     expect(commodity).toHaveLength(0);
     expect(preLaunch).toHaveLength(0);
-    expect(perCoinGenerated).toHaveLength(338);
-    expect(canonicalOrder).toHaveLength(338);
+    expect(perCoinGenerated).toHaveLength(340);
+    expect(canonicalOrder).toHaveLength(340);
     expect(
       usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
     ).toBe(canonicalOrder.length);
@@ -89,8 +89,8 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
-    expect(TRACKED_STABLECOINS).toHaveLength(338);
-    expect(ACTIVE_STABLECOINS).toHaveLength(310);
+    expect(TRACKED_STABLECOINS).toHaveLength(340);
+    expect(ACTIVE_STABLECOINS).toHaveLength(312);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "usdpt-western-union",
       "roughrider-bnd",
@@ -163,6 +163,7 @@ describe("tracked stablecoin metadata", () => {
       "susn-noon",
       "syzusd-yuzu",
       "msy-main-street",
+      "zys-zephyr-protocol",
       "said-gaib",
       "apyusd-apyx",
       "hbusdt-hyperbeat",

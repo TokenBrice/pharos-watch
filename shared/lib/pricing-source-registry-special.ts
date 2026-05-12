@@ -18,6 +18,15 @@ export const PRICING_SOURCE_REGISTRY_SPECIAL = [
     isProtocolOverride: true,
     bypassesSoftValidationGuardrails: true,
   }),
+  definePricingSource(PRICING_SOURCE_PRESETS.hardProtocol, {
+    key: "zephyr-scanner",
+    label: "Zephyr Scanner",
+    shortLabel: "Zephyr",
+    maxTrustedAgeSec: 4 * 60 * 60,
+    defaultWeight: 2,
+    canBeDepegAuthoritative: false,
+    canSingleSourceDepegAuthoritative: false,
+  }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
     key: "pool-tvl-weighted",
     label: "Pool TVL-weighted",

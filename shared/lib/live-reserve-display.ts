@@ -61,6 +61,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   "usd1-bundle-oracle": "live",
   "usdd-data-platform": "live",
   yamato: "live",
+  "zephyr-scanner": "proof",
 };
 
 const RESERVE_DISPLAY_BADGE_LABELS: Record<ReserveDisplayBadgeKind, string> = {

@@ -71,10 +71,21 @@ interface ZephyrSnapshotResult {
 }
 
 interface ZephyrSnapshotPayload {
+  total?: number;
+  limit?: number;
+  order?: string;
   results?: ZephyrSnapshotResult[];
 }
 
 type ZephyrScannerPayload = ZephyrLiveStatsPayload | ZephyrSnapshotPayload;
+
+function isZephyrSnapshotPayload(payload: ZephyrScannerPayload): payload is ZephyrSnapshotPayload {
+  return "results" in payload;
+}
+
+function isZephyrLiveStatsPayload(payload: ZephyrScannerPayload): payload is ZephyrLiveStatsPayload {
+  return !isZephyrSnapshotPayload(payload);
+}
 
 function positiveDecimalAtoms(value: unknown, decimals: number): number | null {
   if (typeof value !== "string" || !/^\d+$/.test(value.trim())) return null;
@@ -88,7 +99,7 @@ function positiveFixedPoint(value: unknown, decimals: number): number | null {
 }
 
 function requirePositive(value: number | null | undefined, label: string): number {
-  if (!Number.isFinite(value) || (value ?? 0) <= 0) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     throw new Error(`zephyr-scanner missing positive ${label}`);
   }
   return value;
@@ -214,10 +225,13 @@ function adaptLiveStats(payload: ZephyrLiveStatsPayload): AdapterResult {
 }
 
 export function adaptZephyrScanner(payload: ZephyrScannerPayload): AdapterResult {
-  if ("results" in payload) {
+  if (isZephyrSnapshotPayload(payload) && payload.results != null && payload.results.length > 0) {
     return adaptSnapshot(payload);
   }
-  return adaptLiveStats(payload);
+  if (isZephyrLiveStatsPayload(payload)) {
+    return adaptLiveStats(payload);
+  }
+  throw new Error("zephyr-scanner payload did not include a valid snapshot or live-stats format");
 }
 
 export async function fetchZephyrScannerReserves(

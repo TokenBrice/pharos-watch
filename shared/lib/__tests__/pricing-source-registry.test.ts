@@ -40,6 +40,7 @@ describe("pricing source registry", () => {
       "dexscreener-search",
       "defillama-contract",
       "protocol-redeem",
+      "zephyr-scanner",
       "pool-tvl-weighted",
       "cached",
     ]);
@@ -69,6 +70,13 @@ describe("pricing source registry", () => {
       key: "protocol-redeem",
       isProtocolOverride: true,
       bypassesSoftValidationGuardrails: true,
+      defaultObservedAtMode: "local_fetch",
+    });
+
+    expect(getPricingSourceRegistryEntry("zephyr-scanner")).toMatchObject({
+      key: "zephyr-scanner",
+      trustTier: "hard_protocol",
+      canBeDepegAuthoritative: false,
       defaultObservedAtMode: "local_fetch",
     });
 

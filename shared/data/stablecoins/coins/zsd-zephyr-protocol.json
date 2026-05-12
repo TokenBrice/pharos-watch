@@ -15,6 +15,15 @@
   "detailProvider": "coingecko",
   "geckoId": "zephyr-protocol-stable-dollar",
   "protocolSlug": "zephyr-protocol",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+    "provider": "Zephyr Scanner"
+  },
+  "chainTier": "unproven",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
   "links": [
     {
       "label": "Website",
@@ -35,6 +44,10 @@
     {
       "label": "GitHub",
       "url": "https://github.com/ZephyrProtocol/zephyr"
+    },
+    {
+      "label": "Reserve snapshots",
+      "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
     }
   ],
   "blacklistabilityReview": {
@@ -60,6 +73,22 @@
       "risk": "high"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "zephyr-scanner",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "zephyr-scanner-zsd",
+    "display": {
+      "url": "https://zephyrprotocol.com/yield",
+      "label": "Zephyr Scanner"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
+      }
+    }
+  },
   "notices": [
     {
       "type": "info",

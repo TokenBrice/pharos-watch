@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "7.45",
+  currentVersion: "7.46",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "7.46",
+    title: "Zephyr ZYS direct yield source",
+    date: "2026-05-12",
+    effectiveAt: 1778594800,
+    summary:
+      "Zephyr yield is now attributed to the tracked ZYS yield-share wrapper rather than base ZSD, using Zephyr Scanner's historical-return API as a direct protocol source.",
+    impact: [
+      "`zys-zephyr-protocol` is tracked as a yield-bearing NAV wrapper over `zsd-zephyr-protocol`",
+      "`protocol-api:zys-zephyr-protocol` reads Zephyr Scanner one-day effective APY and publishes it as `Zephyr Scanner ZYS returns`",
+      "`zsd-zephyr-protocol` remains non-yield-bearing so the base stablecoin does not receive the wrapper's APY row",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "7.45",
     title: "USG Yield Ownership Correction",

@@ -67,12 +67,12 @@ export const DATA_SOURCE_GROUPS = [
   {
     label: "Supply & Price",
     sources:
-      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, Jupiter Price API, Pyth Network, Binance, Kraken, Bitstamp, Coinbase, RedStone, Curve on-chain, Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome Slipstream, and direct protocol redemption quotes for selected redeemable assets such as Cap cUSD and infiniFi iUSD; CoinGecko also repairs total supply for tracked DefiLlama-backed assets when known deployments are missing from DefiLlama chain coverage",
+      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, Jupiter Price API, Pyth Network, Binance, Kraken, Bitstamp, Coinbase, RedStone, Curve on-chain, Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome Slipstream, Zephyr Scanner, and direct protocol redemption quotes for selected redeemable assets such as Cap cUSD and infiniFi iUSD; CoinGecko also repairs total supply for tracked DefiLlama-backed assets when known deployments are missing from DefiLlama chain coverage",
   },
   {
     label: "Reserve Transparency",
     sources:
-      "Issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, issuer attestation indexes, and direct on-chain vault/accounting reads (including live reserve composition feeds from providers such as Anzen, Ethena, Falcon, Frankencoin, Hashnote, infiniFi, M0, Mento Reserve / analytics API, OpenEden, Origin, Blast, Nest Credit, Re, Resupply, Reserve Protocol, USDD, USD.AI, USD1 Chainlink bundle oracle, Accountable, Hyperbeat, Tether, Frax, Circle, First Digital Labs, Ripple, SG-FORGE, Paxos, Sky/MakerDAO, Chainlink PoR/NAV oracles, StraitsX, Kinesis, Quantoz, Yamato, Aave GHO, BIMA, SMARDEX, f(x), Asymmetry, JupUSD, USDGO, Yield Optimizer, Yuzu, Solstice, River, Alloy, and Curve/Yield Basis reserve reads where available)",
+      "Issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, issuer attestation indexes, and direct on-chain vault/accounting reads (including live reserve composition feeds from providers such as Anzen, Ethena, Falcon, Frankencoin, Hashnote, infiniFi, M0, Mento Reserve / analytics API, OpenEden, Origin, Blast, Nest Credit, Re, Resupply, Reserve Protocol, USDD, USD.AI, USD1 Chainlink bundle oracle, Accountable, Hyperbeat, Tether, Frax, Circle, First Digital Labs, Ripple, SG-FORGE, Paxos, Sky/MakerDAO, Chainlink PoR/NAV oracles, StraitsX, Kinesis, Quantoz, Yamato, Aave GHO, BIMA, SMARDEX, f(x), Asymmetry, JupUSD, USDGO, Yield Optimizer, Yuzu, Solstice, River, Alloy, Zephyr Scanner, and Curve/Yield Basis reserve reads where available)",
   },
   {
     label: "On-chain Reads & Events",
@@ -87,7 +87,7 @@ export const DATA_SOURCE_GROUPS = [
   {
     label: "DEX Data",
     sources:
-      "DeFiLlama Yields & Protocols, protocol-native yield APIs and deterministic on-chain yield readers (Hashnote, Ondo, Morpho, Pendle, Yearn Kong, Beefy, Aave V3, Compound V3, BIMA Earn, Curve scrvUSD current-rate, B.Protocol LQTY-only), Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, Aerodrome and Velodrome Sugar view contracts, GeckoTerminal, DexScreener; dead or deprecated DEX slugs such as Bunni are blocked from runtime pricing and liquidity inputs rather than treated as live venues",
+      "DeFiLlama Yields & Protocols, protocol-native yield APIs and deterministic on-chain yield readers (Hashnote, Ondo, Morpho, Pendle, Yearn Kong, Beefy, Aave V3, Compound V3, BIMA Earn, Curve scrvUSD current-rate, B.Protocol LQTY-only, Zephyr Scanner), Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, Aerodrome and Velodrome Sugar view contracts, GeckoTerminal, DexScreener; dead or deprecated DEX slugs such as Bunni are blocked from runtime pricing and liquidity inputs rather than treated as live venues",
   },
   { label: "AI Generation", sources: "Anthropic Claude (daily digest and Monday weekly recap)" },
 ] as const;

@@ -1,0 +1,87 @@
+{
+  "id": "zys-zephyr-protocol",
+  "name": "Zephyr Yield Share",
+  "symbol": "ZYS",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "zsd-zephyr-protocol",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "zsd-zephyr-protocol",
+  "collateral": "ZSD held in the Zephyr Protocol yield reserve; each ZYS share represents a claim on the protocol's ZSD yield reserve balance",
+  "pegMechanism": "ZYS is a NAV-style yield-share token rather than a flat one-dollar stablecoin. Its share price moves against ZSD as protocol yield accrues into the ZSD yield reserve.",
+  "detailProvider": "coingecko",
+  "protocolSlug": "zephyr-protocol",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+    "provider": "Zephyr Scanner"
+  },
+  "chainTier": "unproven",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://zephyrprotocol.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/zephyr_org"
+    },
+    {
+      "label": "Docs",
+      "url": "https://zephyrprotocol.com/documentation"
+    },
+    {
+      "label": "Yield dashboard",
+      "url": "https://zephyrprotocol.com/yield"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/ZephyrProtocol/zephyr"
+    }
+  ],
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://zephyrprotocol.com/documentation"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/ZephyrProtocol/zephyr"
+      }
+    ],
+    "evidence": "Zephyr documentation presents ZYS as a protocol-native asset on the same Monero-derived chain as ZSD and does not identify an issuer-controlled freeze, blacklist, pause, privileged burn, or proxy-upgrade control surface for holder balances.",
+    "reviewer": "Codex metadata pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "reserves": [
+    {
+      "name": "ZSD yield reserve backing ZYS shares",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "zsd-zephyr-protocol",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Zephyr Scanner ZYS returns",
+    "yieldType": "nav-appreciation"
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Native private-chain yield share",
+      "message": "ZYS is tracked as Zephyr's yield-share wrapper over ZSD, not as base ZSD itself. Pharos sources supply, price, and APY from Zephyr Scanner because CoinGecko and DefiLlama do not expose this wrapper."
+    }
+  ]
+}

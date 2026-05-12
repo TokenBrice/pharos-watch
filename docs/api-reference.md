@@ -915,7 +915,7 @@ Results are ordered by `startedAt` descending (most recent first).
 | Field                 | Type      | Description                                                             |
 | --------------------- | --------- | ----------------------------------------------------------------------- |
 | `version`             | `string`  | Methodology version attributed from the latest returned event timestamp |
-| `versionLabel`        | `string`  | Display label (e.g. `"v5.93"`)                                          |
+| `versionLabel`        | `string`  | Display label (e.g. `"v5.94"`)                                          |
 | `currentVersion`      | `string`  | Latest methodology version                                              |
 | `currentVersionLabel` | `string`  | Display label for latest methodology version                            |
 | `changelogPath`       | `string`  | Relative URL to the methodology changelog page                          |
@@ -2229,8 +2229,8 @@ For the five tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, 
   },
   "history": [YieldHistoryPoint, "..."],
   "methodology": {
-    "version": "7.45",
-    "currentVersion": "7.45",
+    "version": "7.46",
+    "currentVersion": "7.46",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }

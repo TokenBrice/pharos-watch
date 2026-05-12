@@ -50,13 +50,13 @@ describe("adaptZephyrScanner", () => {
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
       sourceTimestamp: 1710000000,
-      totalReserveUsd: 1_221_858.966103193,
-      supplyUsd: 385_036.8129144406,
+      totalReserveUsd: 1_221_858.9661031931,
+      supplyUsd: 385_036.81291444064,
       collateralizationRatio: 3.173356,
       reserveAssetAmount: 3_838_581.0555380915,
       reserveAssetPriceUsd: 0.31831006,
       reserveRatioMovingAverage: 3.218013,
-      zsdYieldReserve: 315_747.15984220205,
+      zsdYieldReserve: 315_747.159842202,
       reserveHeight: 773828,
       hardForkVersion: 11,
     });

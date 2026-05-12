@@ -1,6 +1,14 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.45` (2026-03-01 -> 2026-05-08).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.46` (2026-03-01 -> 2026-05-12).
+
+---
+
+## v7.46 - Zephyr ZYS direct yield source (May 12, 2026)
+
+- `zys-zephyr-protocol` is tracked as a yield-bearing NAV wrapper over `zsd-zephyr-protocol`
+- `protocol-api:zys-zephyr-protocol` reads Zephyr Scanner one-day effective APY and publishes it as `Zephyr Scanner ZYS returns`
+- `zsd-zephyr-protocol` remains non-yield-bearing so the base stablecoin does not receive the wrapper's APY row
 
 ---
 

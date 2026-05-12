@@ -1231,7 +1231,12 @@
   },
   "zsd-zephyr-protocol": {
     "title": "The Zephyr Privacy Dollar",
-    "text": "Zephyr Stable Dollar is a protocol-native private-chain stablecoin admitted through CoinGecko rather than a supported Pharos contract path. Its Djed-inspired design mints and redeems ZSD against ZEPH reserve collateral, with reserve-ratio constraints intended to preserve overcollateralization. The privacy-chain architecture means Pharos does not attach a token contract or run live reserve sync today. The asset is therefore tracked with a high-risk native-collateral reserve slice and an unsupported-chain notice.",
+    "text": "Zephyr Stable Dollar is a protocol-native private-chain stablecoin admitted through CoinGecko plus Zephyr Scanner telemetry rather than a supported Pharos contract path. Its Djed-inspired design mints and redeems ZSD against ZEPH reserve collateral, with reserve-ratio constraints intended to preserve overcollateralization. Pharos sources ZSD supply and reserve ratio data from Zephyr's official API, but keeps the reserve slice high risk because the backing asset is volatile native ZEPH on an unsupported private chain.",
+    "updatedAt": "2026-05-12"
+  },
+  "zys-zephyr-protocol": {
+    "title": "The Zephyr Yield Share",
+    "text": "Zephyr Yield Share is the NAV-style wrapper for Zephyr's ZSD yield reserve, not the base stablecoin itself. ZYS supply, price, and APY come from Zephyr Scanner because CoinGecko and DefiLlama do not expose the wrapper as a market row. Pharos tracks it separately so yield is attributed to the actual yield-share token while base ZSD remains non-yield-bearing. The entry inherits Zephyr's private-chain and ZEPH-collateral risk through its ZSD reserve dependency.",
     "updatedAt": "2026-05-12"
   },
   "iusd-indigo-protocol": {

@@ -1,6 +1,15 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.93` (2026-02-01 -> 2026-05-12).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.94` (2026-02-01 -> 2026-05-12).
+
+---
+
+## v5.94 - Zephyr Scanner supplemental pricing (May 12, 2026)
+
+- ZSD and ZYS now use Zephyr Scanner live-stats telemetry for official native-chain supply
+- `zsd-zephyr-protocol` keeps CoinGecko as the preferred market price when available, but no longer relies on CoinGecko market cap for supply
+- `zys-zephyr-protocol` uses official ZYS circulation and share price because neither CoinGecko nor DefiLlama exposes the yield-share wrapper
+- `zephyr-scanner` is registered as an explicit pricing source with no dedicated breaker; the fetch remains scoped to the supplemental Zephyr asset path
 
 ---
 

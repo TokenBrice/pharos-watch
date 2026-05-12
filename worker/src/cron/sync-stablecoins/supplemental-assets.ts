@@ -15,9 +15,9 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { probeTrackedTokenSupply } from "../reserve-adapters/helpers";
 import type { DefiLlamaCoinPrice, PeggedAsset } from "./enrich-prices";
 import {
-  buildZephyrZsdPeggedAsset,
-  fetchZephyrZsdStats,
-  ZEPHYR_ZSD_ASSET_ID,
+  buildZephyrProtocolPeggedAsset,
+  fetchZephyrProtocolStats,
+  isZephyrScannerAssetId,
 } from "./zephyr-zsd";
 
 const COMMODITY_TOKENS = ACTIVE_STABLECOINS.filter(
@@ -470,10 +470,10 @@ async function fetchFiatCoinGeckoTokens(
   throwIfAborted(signal);
 
   try {
-    const hasZephyrZsd = FIAT_CG_METAS.some((meta) => meta.id === ZEPHYR_ZSD_ASSET_ID);
-    const [priceData, zephyrZsdStats] = await Promise.all([
+    const hasZephyrScannerAsset = FIAT_CG_METAS.some((meta) => isZephyrScannerAssetId(meta.id));
+    const [priceData, zephyrProtocolStats] = await Promise.all([
       fetchSupplementalPriceData(FIAT_CG_METAS, "fiat-cg", signal),
-      hasZephyrZsd ? fetchZephyrZsdStats(signal) : Promise.resolve(null),
+      hasZephyrScannerAsset ? fetchZephyrProtocolStats(signal) : Promise.resolve(null),
     ]);
 
     const mcapMap: Record<string, number> = {};
@@ -511,12 +511,12 @@ async function fetchFiatCoinGeckoTokens(
         const usdPegDefault = meta.flags.pegCurrency === "USD" ? 1.0 : undefined;
         const priceForSupply = priceResolution?.price ?? pegReferencePrice ?? usdPegDefault;
 
-        if (meta.id === ZEPHYR_ZSD_ASSET_ID) {
-          if (!zephyrZsdStats) {
+        if (isZephyrScannerAssetId(meta.id)) {
+          if (!zephyrProtocolStats) {
             console.log(`[fiat-cg] No Zephyr scanner supply for ${meta.symbol}, skipping`);
             return null;
           }
-          return buildZephyrZsdPeggedAsset(meta, zephyrZsdStats, priceResolution, nowSec);
+          return buildZephyrProtocolPeggedAsset(meta, zephyrProtocolStats, priceResolution, nowSec);
         }
 
         let mcap = mcapMap[meta.id];

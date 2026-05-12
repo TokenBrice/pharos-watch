@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.45`
+- **Current methodology version:** `v7.46`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -34,6 +34,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 - published `lending-opportunity` suggestions now explicitly exclude Resolv / `USR`, `stUSR`, and `wstUSR`-linked venues across both supplemental protocol APIs and auto-discovered DeFiLlama lending pools, so impaired wrapper ecosystems do not surface as recommended base-asset yield routes
 - yield-bearing assets with no live runtime source now publish as explicit intentional manifest gaps rather than appearing as covered entries with zero strategies; this currently includes `bd-basedollar`, `pusd-polaris`, and `trusd-tori`
 - `usg-tangent` is not marked `yieldBearing`: USG is the borrowable stablecoin, while sUSG is the separate savings wrapper that accrues protocol revenue
+- Zephyr yield is attributed to `zys-zephyr-protocol`, the tracked ZYS yield-share NAV wrapper. Base `zsd-zephyr-protocol` stays non-yield-bearing.
 - explicit and deterministic lending candidates are ignored unless the target asset is in the active stablecoin universe, so pre-launch metadata cannot surface on the live yield leaderboard before launch
 - deterministic on-chain bootstrap seed rows still persist exchange-rate anchors, but they are excluded from rolling APY, excess-yield, stability, and PYS stats once real on-chain APY samples exist
 
@@ -223,8 +224,11 @@ Published lending-opportunity suggestions also apply an explicit venue exclusion
 | `lusd-liquity` | `B.Protocol LQTY-only source` | deterministic on-chain LQTY-only source reader |
 | `usyc-hashnote` | `Hashnote USYC` | Hashnote protocol API |
 | `usdy-ondo-finance` | `Ondo USDY oracle` | on-chain Ondo oracle with historical anchor rows |
+| `zys-zephyr-protocol` | `Zephyr Scanner ZYS returns` | `https://zephyrprotocol.com/api/v1/historicalreturns` |
 
 The BIMA adapter uses the protocol's published Ethereum earn feed, selects the USBD savings row, maps `amountTVL` to `sourceTvlUsd`, and uses the higher of `unboostedAPR` / `boostedAPR` as the current APY. Low-signal rows with negligible TVL or effectively zero APR are dropped instead of being published as meaningful yield. These rows are source-keyed as `protocol-api:bima-susbd` and participate in the same confidence-weighted arbitration as other curated sources.
+
+The Zephyr adapter reads the protocol's historical-return API and publishes the one-day effective APY only for `zys-zephyr-protocol`. This keeps base ZSD non-yield-bearing while still showing the native ZYS yield-share return on `/yield`.
 
 ### Tier 3: Price-Derived APY
 
