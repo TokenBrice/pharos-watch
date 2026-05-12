@@ -1,5 +1,35 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV722Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.22")}
+      accent="border-l-cyan-500"
+    >
+      <p>
+        More RWA NAV tokens and tracked savings wrappers now use direct independent reserve feeds instead of curated
+        validation or weak liveness probes.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          WTGXX, VBILL, ACRED, USTBL, EUTBL, and JTRSY now use timestamped Chainlink NAV feeds for score-grade reserve
+          freshness.
+        </li>
+        <li>
+          USDCV now uses the SG Forge CoinVertible reserve parser, aligning it with EURCV&apos;s independent attestation
+          path.
+        </li>
+        <li>
+          sUSDD and sUSN now use ERC-4626{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">totalAssets()</code>/
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">asset()</code> wrapper reads so their live reserve
+          slices inherit tracked USDD and USN parent links.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV720Entry() {
   return (
     <VersionCard

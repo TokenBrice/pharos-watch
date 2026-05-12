@@ -33,7 +33,12 @@ export const LIVE_RESERVE_ADAPTER_PROVENANCE = {
     nextReview: "2026-11-12",
   },
   "cap-vault": { status: "active", rationale: ACTIVE_RATIONALE },
-  "centrifuge-vault": { status: "active", rationale: ACTIVE_RATIONALE },
+  "centrifuge-vault": {
+    status: "parked",
+    rationale: "Centrifuge vault implementation is retained, but tracked Anemoy/JTRSY coverage now uses Chainlink NAV.",
+    parkedSince: "2026-05-12",
+    nextReview: "2026-11-12",
+  },
   "chainlink-nav": { status: "active", rationale: ACTIVE_RATIONALE },
   "chainlink-por": { status: "active", rationale: ACTIVE_RATIONALE },
   "circle-transparency": { status: "active", rationale: ACTIVE_RATIONALE },

@@ -444,6 +444,72 @@ describe("handleBlacklistSummary", () => {
     expect(json.stats.frozenAddresses).toBe(1);
   });
 
+  it("uses timestamp and id tie-breaks when deriving latest active identities", async () => {
+    const db = mockD1([
+      {
+        match: "GROUP BY stablecoin, event_type",
+        rows: [
+          { stablecoin: "USDC", event_type: "blacklist", n: 2, usd_sum: 0 },
+          { stablecoin: "USDC", event_type: "unblacklist", n: 2, usd_sum: 0 },
+        ],
+      },
+      {
+        match: "latest_event_type",
+        rows: [
+          makeBlacklistRow({
+            id: "z-blacklist",
+            stablecoin: "USDC",
+            chain_id: "ethereum",
+            chain_name: "Ethereum",
+            event_type: "blacklist",
+            address: "0xstays-frozen",
+            timestamp: 1_700_100_000,
+          }),
+          makeBlacklistRow({
+            id: "a-unblacklist",
+            stablecoin: "USDC",
+            chain_id: "ethereum",
+            chain_name: "Ethereum",
+            event_type: "unblacklist",
+            address: "0xstays-frozen",
+            timestamp: 1_700_100_000,
+          }),
+          makeBlacklistRow({
+            id: "a-blacklist",
+            stablecoin: "USDC",
+            chain_id: "ethereum",
+            chain_name: "Ethereum",
+            event_type: "blacklist",
+            address: "0xgets-unfrozen",
+            timestamp: 1_700_200_000,
+          }),
+          makeBlacklistRow({
+            id: "z-unblacklist",
+            stablecoin: "USDC",
+            chain_id: "ethereum",
+            chain_name: "Ethereum",
+            event_type: "unblacklist",
+            address: "0xgets-unfrozen",
+            timestamp: 1_700_200_000,
+          }),
+        ],
+      },
+      {
+        match: "COUNT(*) AS total",
+        rows: [],
+        first: { total: 4, max_ts: 1_700_200_000, recoverable_gap: 0, recent_30d: 0, recent_24h: 0 },
+      },
+      { match: "FROM blacklist_current_balances", rows: [] },
+      { match: "quarter_sort_key", rows: [] },
+      { match: "cron_runs", rows: [], first: { started_at: null } },
+    ]);
+
+    const res = await handleBlacklistSummary(db);
+    const json = await res.json() as { stats: { frozenAddresses: number; perCoinFrozenAddressCount: Record<string, number> } };
+    expect(json.stats.frozenAddresses).toBe(1);
+    expect(json.stats.perCoinFrozenAddressCount.USDC).toBe(1);
+  });
+
   it("uses compact chronological history for blacklist to destroy summaries", async () => {
     const blacklistedAt = 1_704_067_200; // Q1 '24
     const destroyedAt = 1_712_534_400; // Q2 '24
