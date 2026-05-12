@@ -231,6 +231,20 @@ describe("handleBlacklistSummary", () => {
             last_attempted_at: observedAt,
             last_error_class: null,
           },
+          {
+            id: "USDC:polygon:0xother",
+            stablecoin: "USDC",
+            chain_id: "polygon",
+            address: "0xother",
+            amount_native: 25,
+            amount_usd: 25,
+            source: "reconciled_snapshot",
+            status: "resolved",
+            observed_at: observedAt,
+            attempt_count: 1,
+            last_attempted_at: observedAt,
+            last_error_class: null,
+          },
         ],
       },
       { match: "quarter_sort_key", rows: [] },
@@ -251,17 +265,18 @@ describe("handleBlacklistSummary", () => {
       freezeLedgerMeta: { statusDistribution: Record<string, number>; sourceDistribution: Record<string, number> };
     };
 
-    expect(json.stats.activeAddressCount).toBe(3);
-    expect(json.stats.activeFrozenTotal).toBe(500);
+    expect(json.stats.activeAddressCount).toBe(4);
+    expect(json.stats.activeFrozenTotal).toBe(525);
     expect(json.stats.activeAmountGapCount).toBe(1);
-    expect(json.stats.frozenAddresses).toBe(2);
-    expect(json.stats.perCoinFrozenAddressCount.USDC).toBe(2);
+    expect(json.stats.frozenAddresses).toBe(3);
+    expect(json.stats.perCoinFrozenAddressCount.USDC).toBe(3);
     expect(json.stats.perCoinFrozenAddressCount.USDT).toBe(0);
-    expect(json.stats.perCoinFrozenTotal.USDC).toBe(500);
+    expect(json.stats.perCoinFrozenTotal.USDC).toBe(525);
     expect(json.stats.perCoinFrozenTotal.USDT).toBe(0);
-    expect(json.chart[0]?.total).toBe(800);
+    expect(json.chart[0]?.total).toBe(825);
     expect(json.freezeLedgerMeta.statusDistribution.recoverable_pending).toBe(1);
     expect(json.freezeLedgerMeta.sourceDistribution.destroy_event).toBe(1);
+    expect(json.freezeLedgerMeta.sourceDistribution.reconciled_snapshot).toBe(1);
   });
 
   it("derives perCoinBlacklistCounts and preserves required stats", async () => {
@@ -618,12 +633,30 @@ describe("handleBlacklistSummary", () => {
             address: "0xgets-unfrozen",
             timestamp: 1_700_200_000,
           }),
+          makeBlacklistRow({
+            id: "z-older-blacklist",
+            stablecoin: "USDC",
+            chain_id: "ethereum",
+            chain_name: "Ethereum",
+            event_type: "blacklist",
+            address: "0xlater-still-frozen",
+            timestamp: 1_700_050_000,
+          }),
+          makeBlacklistRow({
+            id: "a-newer-blacklist",
+            stablecoin: "USDC",
+            chain_id: "ethereum",
+            chain_name: "Ethereum",
+            event_type: "blacklist",
+            address: "0xlater-still-frozen",
+            timestamp: 1_700_300_000,
+          }),
         ],
       },
       {
         match: "COUNT(*) AS total",
         rows: [],
-        first: { total: 4, max_ts: 1_700_200_000, recoverable_gap: 0, recent_30d: 0, recent_24h: 0 },
+        first: { total: 6, max_ts: 1_700_300_000, recoverable_gap: 0, recent_30d: 0, recent_24h: 0 },
       },
       { match: "FROM blacklist_current_balances", rows: [] },
       { match: "quarter_sort_key", rows: [] },
@@ -632,8 +665,8 @@ describe("handleBlacklistSummary", () => {
 
     const res = await handleBlacklistSummary(db);
     const json = await res.json() as { stats: { frozenAddresses: number; perCoinFrozenAddressCount: Record<string, number> } };
-    expect(json.stats.frozenAddresses).toBe(1);
-    expect(json.stats.perCoinFrozenAddressCount.USDC).toBe(1);
+    expect(json.stats.frozenAddresses).toBe(2);
+    expect(json.stats.perCoinFrozenAddressCount.USDC).toBe(2);
   });
 
   it("uses compact chronological history for blacklist to destroy summaries", async () => {
