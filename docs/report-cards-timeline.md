@@ -1,6 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.20 (2026-02-25 → 2026-05-11). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.21 (2026-02-25 → 2026-05-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.21 — crvUSD direct on-chain LLAMMA reserve reads (2026-05-12)
+
+- `crvusd-curve` now reads Curve ControllerFactory markets and LLAMMA band balances directly on-chain, so its live reserve snapshot can use `freshnessMode: not-applicable`
+- `bands_y` collateral balances drive BTC, tBTC, ETH, and LST reserve buckets; `bands_x` crvUSD soft-liquidation inventory is retained as metadata instead of being counted as external collateral
+- Yield Basis exposure remains included through the existing on-chain factory and LT emergency-withdraw preview path
 
 ## v7.20 — Expanded Dilutable admin-mint classification with source provenance (2026-05-11)
 

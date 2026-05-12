@@ -1794,5 +1794,20 @@
     "obituary": "The Fedz launched FUSD as a synthetic dollar on Arbitrum (contract 0x894341be568eae3697408c420f1d0acfce6e55f9) and traded near peg through late 2025. By May 2026 the protocol's homepage no longer resolved, no DefiLlama TVL was indexed, and 24h on-DEX volume had collapsed to ~$100 against ~$1.5M circulating. No exploit or formal wind-down announcement was made — Pharos categorizes this as abandonment based on the loss of project infrastructure and the ~7% sustained depeg with no redemption path.",
     "sourceUrl": "https://www.coingecko.com/en/coins/fusd-by-the-fedz",
     "sourceLabel": "CoinGecko (issuer site offline)"
+  },
+  {
+    "id": "usdh-hubble-2026-05",
+    "name": "Hubble USDH",
+    "symbol": "USDH",
+    "llamaId": "65",
+    "geckoId": "usdh",
+    "pegCurrency": "USD",
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-05",
+    "peakMcap": 14000000,
+    "epitaph": "First Solana CDP, last one standing",
+    "obituary": "Hubble Protocol launched USDH in 2022 as one of the earliest Solana CDP stablecoins, peaking near $14M. By May 2026 CoinGecko reports a $0 market cap, on-DEX volume has collapsed, and the redemption pool no longer offers a credible exit. The asset is treated as wound down; future coverage scans should skip it. Symbol collides with Native Markets USDH (tracked) and Hermetica USDH (tracked).",
+    "sourceUrl": "https://www.coingecko.com/en/coins/usdh",
+    "sourceLabel": "CoinGecko"
   }
 ]

@@ -4252,7 +4252,7 @@
       }
     ],
     "liveReservesConfig": {
-      "version": 2,
+      "version": 3,
       "semantics": "collateral-mix",
       "breakerScope": "crvusd-curve",
       "display": {
@@ -4262,8 +4262,9 @@
       "adapter": "crvusd",
       "inputs": {
         "primary": {
-          "kind": "http-json",
-          "url": "https://prices.curve.finance/v1/crvusd/markets"
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
         }
       }
     }
@@ -6515,7 +6516,7 @@
     },
     "collateral": "Euro deposits held in segregated accounts with credit institutions and high-quality liquid assets (HQLA) denominated in EUR, separated from Monerium's own funds; over 100% backing maintained as required under MiCA",
     "pegMechanism": "Mint-and-burn: EURe is minted when users deposit EUR via SEPA bank transfer after KYC/AML verification, and burned upon redemption back to EUR; peg maintained by licensed EMI with 1:1 backing",
-    "geckoId": "monerium-eur-money",
+    "geckoId": "monerium-eur-money-2",
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://monerium.com/financial-information/"
@@ -11133,7 +11134,7 @@
     },
     "collateral": "Japanese-yen reserve assets held for the legacy prepaid-payment JPYC v1 token series",
     "pegMechanism": "Legacy prepaid-payment JPYC token series redeemable through JPYC processes before migration to the newer funds-transfer-token contracts",
-    "geckoId": "jpyc",
+    "geckoId": "jpycoin",
     "protocolSlug": "jpyc",
     "links": [
       {

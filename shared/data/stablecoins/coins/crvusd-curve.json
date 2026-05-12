@@ -131,7 +131,7 @@
   ],
   "liveReservesConfig": {
     "adapter": "crvusd",
-    "version": 2,
+    "version": 3,
     "semantics": "collateral-mix",
     "breakerScope": "crvusd-curve",
     "display": {
@@ -140,8 +140,9 @@
     },
     "inputs": {
       "primary": {
-        "kind": "http-json",
-        "url": "https://prices.curve.finance/v1/crvusd/markets"
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
       }
     }
   }

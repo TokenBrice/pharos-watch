@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.20",
+  currentVersion: "7.21",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.21",
+      title: "crvUSD direct on-chain LLAMMA reserve reads",
+      date: "2026-05-12",
+      effectiveAt: 1778544000,
+      summary:
+        "crvUSD reserve scoring can now use direct Curve ControllerFactory and LLAMMA band reads with latest-state on-chain freshness instead of the timestampless Curve markets API.",
+      impact: [
+        "`crvusd-curve` reads LLAMMA `bands_y` collateral balances directly via Multicall3 and keeps Yield Basis exposure on the existing on-chain factory path",
+        "`bands_x` crvUSD soft-liquidation inventory is retained in snapshot metadata instead of being counted as external collateral",
+        "The adapter emits `freshnessMode: \"not-applicable\"`, allowing clean crvUSD snapshots to qualify as score-grade live reserve inputs",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.20",
       title: "Expanded Dilutable admin-mint classification with source provenance",

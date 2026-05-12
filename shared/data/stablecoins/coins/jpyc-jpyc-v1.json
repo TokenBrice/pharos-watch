@@ -13,7 +13,7 @@
   "collateral": "Japanese-yen reserve assets held for the legacy prepaid-payment JPYC v1 token series",
   "pegMechanism": "Legacy prepaid-payment JPYC token series redeemable through JPYC processes before migration to the newer funds-transfer-token contracts",
   "detailProvider": "coingecko",
-  "geckoId": "jpyc",
+  "geckoId": "jpycoin",
   "protocolSlug": "jpyc",
   "links": [
     {

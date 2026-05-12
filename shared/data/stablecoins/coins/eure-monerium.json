@@ -14,7 +14,7 @@
   "pegMechanism": "Mint-and-burn: EURe is minted when users deposit EUR via SEPA bank transfer after KYC/AML verification, and burned upon redemption back to EUR; peg maintained by licensed EMI with 1:1 backing",
   "llamaId": "101",
   "detailProvider": "defillama",
-  "geckoId": "monerium-eur-money",
+  "geckoId": "monerium-eur-money-2",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://monerium.com/financial-information/"
