@@ -10,6 +10,12 @@
 
 ---
 
+## Review log
+
+- 2026-05-12: Follow-up score-grade batch added `sgho-wrapper`, Reservoir AUSD/USDC strategy classification, USD.AI latest scoped proof-row freshness, and a weekly mRe7YIELD Chainlink NAV cadence. These are expected to improve score-grade live reserve coverage after Worker deploy and the next reserve/report-card sync, without counting `static-validated` or `weak-live-probe` sources as score-grade live inputs.
+
+---
+
 ## Scope
 
 This tracker is the single place Phase 7 collects deferred reserve coverage work. It excludes coins already handled by active Phase 4 tasks (MIM, LisUSD, BUIDL-if-feed-exists, PYUSD, pUSD, USDat, USDtb, FPI, CJPY, USDK, ebUSD) to avoid duplication; resolved items remain below only as historical feasibility notes.

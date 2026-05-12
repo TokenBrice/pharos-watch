@@ -1,6 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.22 (2026-02-25 → 2026-05-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.23 (2026-02-25 → 2026-05-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.23 — sGHO and Reservoir reserve coverage refinements (2026-05-12)
+
+- `sgho-aave` now uses a dedicated live reserve adapter that reads `previewRedeem(totalSupply)` from the legacy sGHO/stkGHO-compatible contract
+- Reservoir reserve classification now maps AUSD and Steakhouse Prime USDC strategy rows from the live balance-sheet API, removing unknown-exposure degradation for clean srUSD/wsrUSD snapshots
+- USD.AI reserve freshness now uses the latest scoped proof-row timestamp while preserving oldest/latest spread metadata, and mRe7YIELD permits a weekly Chainlink NAV update cadence
 
 ## v7.22 — Additional independent NAV and wrapper reserve feeds (2026-05-12)
 

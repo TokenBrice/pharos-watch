@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.22",
+  currentVersion: "7.23",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.23",
+      title: "sGHO and Reservoir reserve coverage refinements",
+      date: "2026-05-12",
+      effectiveAt: 1778605200,
+      summary:
+        "Additional reserve-sync refinements promote clean independent snapshots for sGHO, Reservoir savings variants, USD.AI, and weekly NAV feeds without widening the score-grade evidence policy.",
+      impact: [
+        "sGHO now has a dedicated live reserve adapter that reads the legacy savings contract's `previewRedeem(totalSupply)` path instead of forcing the non-ERC-4626 contract through the generic wrapper adapter",
+        "Reservoir reserve classification now maps AUSD and Steakhouse Prime USDC strategy rows from the live balance-sheet API, eliminating the prior unknown-exposure degradation for srUSD/wsrUSD when the source payload is otherwise clean",
+        "USD.AI reserve freshness now stamps the latest scoped proof-row timestamp while retaining oldest/latest spread metadata, and mRe7YIELD allows a weekly Chainlink NAV update cadence",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.22",
       title: "Additional independent NAV and wrapper reserve feeds",

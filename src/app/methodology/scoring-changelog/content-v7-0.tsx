@@ -1,5 +1,33 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV723Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.23")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        Reserve-sync refinements promote additional clean independent snapshots without widening score-grade evidence
+        policy to static or weak-probe sources.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          sGHO now reads the legacy savings contract&apos;s{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">previewRedeem(totalSupply)</code> path directly.
+        </li>
+        <li>
+          Reservoir srUSD/wsrUSD snapshots now map AUSD and Steakhouse Prime USDC strategy rows from the live
+          balance-sheet API instead of treating them as unknown exposure.
+        </li>
+        <li>
+          USD.AI now stamps the latest scoped proof-row timestamp while preserving oldest/latest spread metadata, and
+          mRe7YIELD allows a weekly Chainlink NAV cadence.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV722Entry() {
   return (
     <VersionCard

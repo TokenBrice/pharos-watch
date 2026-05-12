@@ -6,12 +6,12 @@ The stablecoin registry currently contains 340 tracked metadata entries. Report-
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.22`
+- **Current methodology version:** `v7.23`
 - **Runtime/version source:** `shared/lib/safety-score-version-data.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
-## Overall Grade (v7.22)
+## Overall Grade (v7.23)
 
 Four-step computation:
 
@@ -22,7 +22,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.22 adds independent NAV and wrapper reserve feeds for WTGXX, VBILL, ACRED, USTBL, EUTBL, JTRSY, USDCV, sUSDD, and sUSN. The previous v7.21 crvUSD reserve scoring upgrade remains active, using direct ControllerFactory/LLAMMA on-chain reads.
+Current-version note: v7.23 adds score-grade reserve coverage refinements for sGHO, srUSD/wsrUSD, USD.AI, and mRe7YIELD. The previous v7.22 NAV and wrapper reserve feed expansion remains active for WTGXX, VBILL, ACRED, USTBL, EUTBL, JTRSY, USDCV, sUSDD, and sUSN.
 
 ## Dimensions
 
