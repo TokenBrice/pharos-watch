@@ -162,6 +162,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
   - `/compare/`
   - `/portfolio/`
 - Tracked-variant browse ownership stays on the homepage query state (`/?variant=...`). The repo does not ship a dedicated `/stablecoins/variants/*` family.
+- Legacy numeric stablecoin URLs from the pre-canonical-ID era (`/stablecoin/<DefiLlama id>/`) redirect to the matching canonical `/stablecoin/[id]/` route through `functions/stablecoin/[[path]].ts`.
 - Private operator routes marked `noindex,nofollow`:
   - `/admin/`
   - `/admin-api/`
