@@ -10216,6 +10216,16 @@
         "chain": "arbitrum",
         "address": "0x589d35656641d6ab57a545f08cf473ecd9b6d5f7",
         "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "Crn4x1Y2HUKko7ox2EZMT6N2t2ZyH7eKtwkBGVnhEq1g",
+        "decimals": 6
+      },
+      {
+        "chain": "stellar",
+        "address": "GYEN-GDF6VOEGRWLOZ64PQQGKD2IYWA22RLT37GJKS2EJXZHT2VLAGWLC5TOB-1",
+        "decimals": 7
       }
     ],
     "blacklistabilityReview": {
@@ -10253,7 +10263,14 @@
         "label": "JPY fiat reserves",
         "risk": "very-low"
       }
-    }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "2021 depeg and 2026 class-action settlement",
+        "message": "GYEN suffered multiple de-pegging events shortly after its 2021 launch (notably hitting >1.5x its peg in May 2021), causing material holder losses on Coinbase. A class action filed in 2022 (Donovan v. Coinbase / GMO Trust) led to a $6.75M proposed settlement; motion for final approval was filed on April 17, 2026 with a final-approval hearing set for May 27, 2026. Settlement class covers GYEN purchasers in New York or California between Dec 29, 2020 and Oct 10, 2025. Methodology-relevant historical record of peg failure for an otherwise NYDFS-supervised issuer."
+      }
+    ]
   },
   {
     "id": "hbd-hive",
