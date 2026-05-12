@@ -13,7 +13,7 @@ The tracker now has two distinct amount layers:
 
 - `blacklist_events` stores event-time amounts only when Pharos can justify them historically
 - `blacklist_current_balances` stores last-known successful persistent freeze-ledger snapshots used by the public frozen-total summary
-- the `/freezewatch` intervention ledger appears after the summary stats and before the status charts, keeping resolved exposure buckets separate from observed supported event history
+- the `/freezewatch` tracked frozen total chart appears after the exposure summary and before the event ledger
 - the `/freezewatch` status charts now support on-page drilldown into the matching stablecoin subset for each blacklistability bucket
 - the `/freezewatch` summary cards now include an unfreezable market-share stat: blacklist-status `No` market cap divided by total tracked stablecoin market cap
 
@@ -25,16 +25,9 @@ Every stablecoin ID wired into `CONTRACT_CONFIGS` must resolve to direct `Freeza
 
 Implementation note: `EURC` is live-supported with mirror-zero suppression. Circle often mirrors the same blacklist action across both USDC and EURC; rows classified as zero-balance mirrors stay auditable in storage but are excluded from public `/api/blacklist` events, active records, and frozen-value aggregates.
 
-## Visible `/freezewatch` Ledger Contract
+## Visible `/freezewatch` Exposure Contract
 
-The public `/freezewatch` page renders `BlacklistInterventionLedger` directly below the stats cards. It is a visible summary strip, not a methodology change, and uses only data already present in the page controller:
-
-- `blacklistStatusBuckets` from `buildBlacklistStatusBuckets()` for resolved blacklist/freeze exposure buckets
-- `summary.stats.perCoinTotalEvents` for stablecoin symbols with observed supported events
-- `summary.stats.perCoinFrozenTotal` and `summary.stats.perCoinDestroyedTotal` for exact symbol-level USD context
-- `summary.chart` for peak and latest tracked frozen-quarter context
-
-The exposure block uses the same five-status resolved model as report-card-backed product surfaces:
+The public `/freezewatch` exposure summary uses `blacklistStatusBuckets` from `buildBlacklistStatusBuckets()` and the same five-status resolved model as report-card-backed product surfaces:
 
 - `yes` means direct issuer blacklist, freeze, seizure, or equivalent holder-facing control.
 - `dilutable` means no holder-balance freeze control is known, but an admin can mint without bound and dilute holders.
@@ -42,7 +35,7 @@ The exposure block uses the same five-status resolved model as report-card-backe
 - `possible` is reserved for curated direct token/vault pause, freeze, blacklist, or mutable holder-facing control surfaces that are not confirmed active direct blacklist controls.
 - `no` means no resolved exposure in the current model.
 
-The observed-event block is separate from those exposure buckets. Event counts are observed supported tracker history, not policy probability, and the current summary payload is symbol-level only; the UI must not label those rows as contract-level event totals. Count and USD values must be visible in the ledger rows themselves, with hover states treated as supplemental only.
+Observed event history stays in the event ledger. Event counts are observed supported tracker history, not policy probability, and the current summary payload is symbol-level only; the UI must not label those rows as contract-level event totals.
 
 ---
 
@@ -892,7 +885,7 @@ Both endpoints now emit freshness headers from the same 6-hourly `sync-blacklist
 | BlacklistFilters | `src/components/blacklist-filters.tsx` | Stablecoin, chain, event type dropdowns                                                         |
 | Search           | (inline)                               | Server-backed address search                                                                    |
 | BlacklistTable   | `src/components/blacklist-table.tsx`   | Server-sorted, 50 rows per page                                                                 |
-| BlacklistStats   | `src/components/blacklist-stats.tsx`   | Unfreezable market share, last-known freeze-ledger totals, destroyed funds, and snapshot/data-quality callouts |
+| BlacklistStats   | `src/components/blacklist-stats.tsx`   | Unfreezable market share, last-known freeze-ledger totals, and wiped value                      |
 | BlacklistChart   | `src/components/blacklist-chart.tsx`   | Quarterly stacked bar chart of tracked freeze-ledger balances by stablecoin, attributed to blacklist quarter |
 | CSV export       | (inline)                               | Download the currently loaded table page as CSV, after server-side filters/sort/search/pagination |
 

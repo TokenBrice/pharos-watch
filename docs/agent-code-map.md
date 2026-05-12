@@ -219,7 +219,6 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/balance-bar.tsx` - BalanceBar
 - `src/components/blacklist-chart.tsx` - BlacklistChart, getBlacklistChartCoins, getBlacklistTooltipSummary
 - `src/components/blacklist-filters.tsx` - BlacklistFilters
-- `src/components/blacklist-intervention-ledger.tsx` - BlacklistInterventionContextRow, BlacklistInterventionEventRow, BlacklistInterventionExposureRow, BlacklistInterventionLedger, BlacklistInterventionLedgerModel, buildBlacklistInterventionLedgerModel
 - `src/components/blacklist-stats.tsx` - BlacklistStats
 - `src/components/blacklist-status-charts.tsx` - BlacklistStatusCharts
 - `src/components/blacklist-status-drilldown.tsx` - BlacklistStatusDrilldown
