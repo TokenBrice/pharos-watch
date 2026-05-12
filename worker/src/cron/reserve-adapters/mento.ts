@@ -403,13 +403,18 @@ export function adaptMentoCdpComposition(
 async function fetchMentoDashboardTimestamp(
   config: LiveReservesConfig,
   signal: AbortSignal,
+  warnings: LiveReserveWarning[],
   ctx?: AdapterContext,
 ): Promise<number | null> {
   const url = config.display?.url;
   if (!url) return null;
   try {
     return extractMentoDashboardTimestamp(await fetchTextWithRetry(url, signal, 12_000, ctx));
-  } catch {
+  } catch (error) {
+    warnings.push(reserveInfoWarning(
+      "mento-dashboard-timestamp-failed",
+      `Mento dashboard timestamp fetch failed (${url}): ${error instanceof Error ? error.message : String(error)}`,
+    ));
     return null;
   }
 }
@@ -421,14 +426,16 @@ export async function fetchMentoReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "mento");
+  const dashboardWarnings: LiveReserveWarning[] = [];
   const [payload, sourceTimestamp] = await Promise.all([
     fetchJsonWithRetry<MentoReserveApiResponse>(input.url, signal, 12_000, ctx),
-    fetchMentoDashboardTimestamp(config, signal, ctx),
+    fetchMentoDashboardTimestamp(config, signal, dashboardWarnings, ctx),
   ]);
   const params = parseLiveReserveAdapterParams("mento", config.params);
-  if (params.cdpStablecoin) {
-    return adaptMentoCdpComposition(payload, params.cdpStablecoin, sourceTimestamp);
-  }
-
-  return adaptMentoReserveComposition(payload, sourceTimestamp);
+  const result = params.cdpStablecoin
+    ? adaptMentoCdpComposition(payload, params.cdpStablecoin, sourceTimestamp)
+    : adaptMentoReserveComposition(payload, sourceTimestamp);
+  return dashboardWarnings.length > 0
+    ? { ...result, warnings: [...(result.warnings ?? []), ...dashboardWarnings] }
+    : result;
 }

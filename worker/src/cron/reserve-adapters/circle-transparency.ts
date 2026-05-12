@@ -1,11 +1,12 @@
 import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchPrimaryHtmlInput,
   htmlLayoutChangedError,
   parseTimestampLikeToUnixSeconds,
+  reserveInfoWarning,
   slicesFromPercentages,
   slicesFromValues,
   unverifiedFreshnessMetadata,
@@ -35,8 +36,11 @@ const EURC_SLICES: CircleSliceConfig[] = [
 
 function extractAttrValue(html: string, attr: string): number | null {
   // Match data-attr="value" or data-attr='value' with optional whitespace around "=".
+  // Numeric value must be a clean positive decimal: digits with at most one
+  // decimal section. Rejects "4.7.18" or stray dots that parseFloat would
+  // silently truncate to a wrong slice value.
   // eslint-disable-next-line security/detect-non-literal-regexp -- attr is selected from adapter-owned config constants.
-  const re = new RegExp(`${attr}\\s*=\\s*["']([\\d.]+)["']`, "i");
+  const re = new RegExp(`${attr}\\s*=\\s*["'](\\d+(?:\\.\\d+)?)["']`, "i");
   const m = html.match(re);
   if (!m) return null;
   const val = parseFloat(m[1]);
@@ -78,7 +82,11 @@ function extractReserveSectionHtml(html: string, coinType: string): string | nul
   return html.slice(windowStart, windowEnd);
 }
 
-function extractDisclosureTimestamp(html: string, coinType: string): number | null {
+function extractDisclosureTimestamp(
+  html: string,
+  coinType: string,
+  warnings: LiveReserveWarning[],
+): number | null {
   const section = extractReserveSectionHtml(html, coinType) ?? html;
   const match = section.match(/\bAs of\s+([A-Za-z]{3,9}\s+\d{1,2},\s*\d{4})\b/i);
   const sectionTimestamp = parseTimestampLikeToUnixSeconds(match?.[1]);
@@ -88,12 +96,21 @@ function extractDisclosureTimestamp(html: string, coinType: string): number | nu
     .map((globalMatch) => parseTimestampLikeToUnixSeconds(globalMatch[1]))
     .filter((timestamp): timestamp is number => timestamp != null);
   const uniqueTimestamps = new Set(globalMatches);
-  return uniqueTimestamps.size === 1 ? globalMatches[0] : null;
+  if (uniqueTimestamps.size === 1) return globalMatches[0];
+  if (uniqueTimestamps.size >= 2) {
+    warnings.push(reserveInfoWarning(
+      "circle-disclosure-timestamp-ambiguous",
+      `Circle ${coinType.toUpperCase()} reserve page exposes ${uniqueTimestamps.size} distinct "As of" dates ` +
+        "outside the disclosure window; freshness downgraded to unverified until the layout is reviewed.",
+    ));
+  }
+  return null;
 }
 
 export function adaptCircleTransparency(html: string, coinType: string): AdapterResult {
   const sliceConfigs = coinType === "eurc" ? EURC_SLICES : USDC_SLICES;
   const missingAttrs: string[] = [];
+  const warnings: LiveReserveWarning[] = [];
 
   const entries: Array<{ name: string; value: number; risk: "very-low" }> = [];
 
@@ -122,7 +139,7 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
   const useAbsoluteValues = !looksLikePercentages
     && displayAmountRelativeDiff != null
     && displayAmountRelativeDiff <= CIRCLE_ABSOLUTE_MODE_MAX_RELATIVE_DIFF;
-  const sourceTimestamp = extractDisclosureTimestamp(html, coinType);
+  const sourceTimestamp = extractDisclosureTimestamp(html, coinType, warnings);
 
   const slices = useAbsoluteValues
     ? slicesFromValues(
@@ -144,6 +161,7 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
 
   return {
     slices,
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       coinType,
       sliceCount: entries.length,

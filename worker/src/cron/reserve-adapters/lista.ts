@@ -1,5 +1,5 @@
 import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   requireOnchainInput,
@@ -41,7 +41,11 @@ export async function fetchListaReserves(
   const input = requireOnchainInput(config.inputs.primary, ADAPTER_KEY);
   const params = readBranchBalanceParams(config, ADAPTER_KEY);
   const balances = await fetchBranchBalances(input, params, signal, ctx);
-  const priceMap = await fetchBranchPriceMap(balances, signal, ctx);
+  const priceMapWarnings: LiveReserveWarning[] = [];
+  const priceMap = await fetchBranchPriceMap(balances, signal, priceMapWarnings, ctx);
 
-  return adaptListaReserves({ balances, priceMap });
+  const result = adaptListaReserves({ balances, priceMap });
+  return priceMapWarnings.length > 0
+    ? { ...result, warnings: [...(result.warnings ?? []), ...priceMapWarnings] }
+    : result;
 }

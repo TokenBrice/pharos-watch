@@ -54,7 +54,8 @@ export async function fetchEvmBranchBalancesReserves(
       : Promise.resolve(null),
   ]);
 
-  const priceMap = await fetchBranchPriceMap(balances, signal, ctx);
+  const priceMapWarnings: LiveReserveWarning[] = [];
+  const priceMap = await fetchBranchPriceMap(balances, signal, priceMapWarnings, ctx);
 
   const baseMetadata = redemptionFeeBps != null
     ? buildRedemptionSnapshotMetadata({
@@ -91,15 +92,19 @@ export async function fetchEvmBranchBalancesReserves(
         ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
       },
     });
-    return warnings.length > 0
-      ? { ...result, warnings: [...(result.warnings ?? []), ...warnings] }
+    const merged = [...warnings, ...priceMapWarnings];
+    return merged.length > 0
+      ? { ...result, warnings: [...(result.warnings ?? []), ...merged] }
       : result;
   }
 
-  return adaptBranchBalanceReserves({
+  const result = adaptBranchBalanceReserves({
     adapterKey: ADAPTER_KEY,
     balances,
     priceMap,
     metadata: baseMetadata,
   });
+  return priceMapWarnings.length > 0
+    ? { ...result, warnings: [...(result.warnings ?? []), ...priceMapWarnings] }
+    : result;
 }

@@ -12,6 +12,7 @@ import {
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   reserveDegradedWarning,
+  reserveInfoWarning,
   slicesFromValues,
   valueUsdFromBigIntPrice,
 } from "./helpers";
@@ -88,7 +89,10 @@ function findUnderlyingContract(
   return first ? { chain: first.chain, address: first.address } : null;
 }
 
-async function loadCachedStablecoinPricesById(ctx?: AdapterContext): Promise<Map<string, number>> {
+async function loadCachedStablecoinPricesById(
+  warnings: LiveReserveWarning[],
+  ctx?: AdapterContext,
+): Promise<Map<string, number>> {
   if (!ctx?.db) return new Map();
 
   return getCachedRequest("stablecoins-cache:branch-prices", async () => {
@@ -100,7 +104,16 @@ async function loadCachedStablecoinPricesById(ctx?: AdapterContext): Promise<Map
     if (!hasUsableStablecoinsPayload(loaded)) return new Map<string, number>();
 
     const now = ctx.nowSec ?? Math.floor(Date.now() / 1000);
-    if (loaded.updatedAt == null || loaded.updatedAt <= 0 || now - loaded.updatedAt > STABLECOINS_CACHE_BRANCH_PRICE_MAX_AGE_SEC) {
+    if (loaded.updatedAt == null || loaded.updatedAt <= 0) {
+      return new Map<string, number>();
+    }
+    const ageSec = now - loaded.updatedAt;
+    if (ageSec > STABLECOINS_CACHE_BRANCH_PRICE_MAX_AGE_SEC) {
+      warnings.push(reserveInfoWarning(
+        "branch-price-cache-stale",
+        `Branch-price cache is ${ageSec}s old (> ${STABLECOINS_CACHE_BRANCH_PRICE_MAX_AGE_SEC}s threshold); ` +
+          "tracked-coin fallback prices unavailable until next stablecoins-cache refresh.",
+      ));
       return new Map<string, number>();
     }
 
@@ -117,6 +130,7 @@ async function loadCachedStablecoinPricesById(ctx?: AdapterContext): Promise<Map
 async function fetchCachedTrackedBranchPrices(
   branches: BranchBalanceEntry[],
   priceMap: Map<string, number>,
+  warnings: LiveReserveWarning[],
   ctx?: AdapterContext,
 ): Promise<Map<string, number>> {
   const branchesNeedingCachedPrices = branches.filter(({ branch, balanceRaw }) =>
@@ -128,7 +142,7 @@ async function fetchCachedTrackedBranchPrices(
   );
   if (branchesNeedingCachedPrices.length === 0) return new Map();
 
-  const cachedPricesById = await loadCachedStablecoinPricesById(ctx);
+  const cachedPricesById = await loadCachedStablecoinPricesById(warnings, ctx);
   const cachedBranchPrices = new Map<string, number>();
   for (const { branch } of branchesNeedingCachedPrices) {
     const price = branch.coinId ? cachedPricesById.get(branch.coinId) : undefined;
@@ -164,6 +178,7 @@ export async function fetchBranchBalances(
 export async function fetchBranchPriceMap(
   balances: BranchBalanceEntry[],
   signal: AbortSignal,
+  warnings: LiveReserveWarning[],
   ctx?: AdapterContext,
 ): Promise<Map<string, number>> {
   const branchesNeedingPrices = balances
@@ -210,7 +225,7 @@ export async function fetchBranchPriceMap(
     }
   }
 
-  const cachedTrackedPrices = await fetchCachedTrackedBranchPrices(branchesNeedingPrices, wrapperPriceMap, ctx);
+  const cachedTrackedPrices = await fetchCachedTrackedBranchPrices(branchesNeedingPrices, wrapperPriceMap, warnings, ctx);
   for (const [name, price] of cachedTrackedPrices) {
     if (!wrapperPriceMap.has(name)) {
       wrapperPriceMap.set(name, price);

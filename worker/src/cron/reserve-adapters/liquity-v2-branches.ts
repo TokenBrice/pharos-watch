@@ -194,7 +194,8 @@ export async function fetchLiquityV2BranchReserves(
     throw new Error(`${ADAPTER_KEY} could not read active-pool debt for: ${unreadableDebtBranches.join(", ")}`);
   }
 
-  const priceMap = await fetchBranchPriceMap(balances, signal, ctx);
+  const priceMapWarnings: LiveReserveWarning[] = [];
+  const priceMap = await fetchBranchPriceMap(balances, signal, priceMapWarnings, ctx);
   const snapshot = { balances, debts, redemptionFeeBps };
   const result = adaptBranchBalanceReserves({
     adapterKey: ADAPTER_KEY,
@@ -202,7 +203,7 @@ export async function fetchLiquityV2BranchReserves(
     priceMap,
     metadata: buildLiquityV2RedemptionMetadata(snapshot, debtDecimals),
   });
-  const warnings = buildLiquityV2Warnings(snapshot);
+  const warnings = [...buildLiquityV2Warnings(snapshot), ...priceMapWarnings];
   return warnings.length > 0
     ? { ...result, warnings: [...(result.warnings ?? []), ...warnings] }
     : result;
