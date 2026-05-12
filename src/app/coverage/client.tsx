@@ -22,13 +22,7 @@ export default function CoveragePageClient() {
         <CoverageMatrixDataStateCard state={model.isStablecoinDataUnavailable ? "error" : "loading"} />
       ) : (
         <>
-          <CoverageFeatureSnapshotCard
-            featureSummaries={model.featureSummaries}
-            sourceDepthProgress={model.sourceDepthProgress}
-            widestFeature={model.widestFeature}
-            narrowestFeature={model.narrowestFeature}
-            mostConcentratedFeature={model.mostConcentratedFeature}
-          />
+          <CoverageFeatureSnapshotCard {...model} />
           <CoveragePricingSourcesCard
             pricingSources={model.pricingSources}
             authoritativeSources={model.authoritativeSources}
