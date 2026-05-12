@@ -4,8 +4,10 @@ import type {
   ReportCardDimension,
   DependencyWeight,
   VariantKind,
+  ReportCardDetailItem,
 } from "../types";
 import { scoreToGrade } from "./report-card-core";
+import { joinReportCardDetail } from "./report-card-detail";
 
 const SELF_BACKED_SCORE_BY_GOVERNANCE: Record<GovernanceType, number> = {
   decentralized: 90,
@@ -46,6 +48,7 @@ export function scoreDependencyRisk(
       grade: scoreToGrade(selfScore),
       score: selfScore,
       detail: `Self-backed: ${GOVERNANCE_DETAIL_LABEL[governance]} (${selfScore})`,
+      detailItems: [{ label: "Self-backed", value: GOVERNANCE_DETAIL_LABEL[governance], detail: `${selfScore}` }],
     };
   }
 
@@ -75,6 +78,7 @@ export function scoreDependencyRisk(
       grade: scoreToGrade(UNAVAILABLE_DEPENDENCY_SCORE),
       score: UNAVAILABLE_DEPENDENCY_SCORE,
       detail: "Upstream dependency scores unavailable",
+      detailItems: [{ label: "Upstream", value: "Dependency scores unavailable" }],
     };
   }
 
@@ -97,10 +101,9 @@ export function scoreDependencyRisk(
   const totalWeight = Math.min(1, rawTotal);
   const selfBackedFraction = 1 - totalWeight;
   const normalizer = rawTotal > 1 ? rawTotal : 1;
-  const blendedScore = resolved.reduce(
-    (sum, dependency) => sum + dependency.score * (dependency.weight / normalizer),
-    0,
-  ) + selfBackedFraction * selfBackedScore;
+  const blendedScore =
+    resolved.reduce((sum, dependency) => sum + dependency.score * (dependency.weight / normalizer), 0) +
+    selfBackedFraction * selfBackedScore;
 
   let score = blendedScore;
   const weakDependencies = resolved.filter((dependency) => dependency.score < 75);
@@ -112,14 +115,11 @@ export function scoreDependencyRisk(
   for (const dependency of resolved) {
     if (dependency.type === "wrapper") {
       const wrapperPenalty =
-        args.variantParentId != null &&
-        args.variantKind != null &&
-        dependency.id === args.variantParentId
+        args.variantParentId != null && args.variantKind != null && dependency.id === args.variantParentId
           ? VARIANT_WRAPPER_PENALTY[args.variantKind]
           : 3;
       ceiling = Math.min(ceiling, dependency.score - wrapperPenalty);
-    }
-    else if (dependency.type === "mechanism") ceiling = Math.min(ceiling, dependency.score);
+    } else if (dependency.type === "mechanism") ceiling = Math.min(ceiling, dependency.score);
   }
   if (ceiling < Infinity) {
     score = Math.min(score, ceiling);
@@ -142,14 +142,24 @@ export function scoreDependencyRisk(
   }
   parts.push(`Self-backed: ${GOVERNANCE_DETAIL_LABEL[governance]} (${selfBackedScore})`);
   if (weakDependencies.length > 0) {
-    parts.push(`Penalty: ${weakDependencies.length} weak dep${weakDependencies.length === 1 ? "" : "s"} below 75 (-10)`);
+    parts.push(
+      `Penalty: ${weakDependencies.length} weak dep${weakDependencies.length === 1 ? "" : "s"} below 75 (-10)`,
+    );
   }
   if (ceiling < Infinity) {
-    const ceilingType = resolved.some((dependency) => dependency.type === "wrapper")
-      ? "wrapper"
-      : "mechanism-critical";
+    const ceilingType = resolved.some((dependency) => dependency.type === "wrapper") ? "wrapper" : "mechanism-critical";
     parts.push(`Ceiling: ${ceilingType} dependency ceiling (${Math.round(ceiling)})`);
   }
 
-  return { grade: scoreToGrade(score), score, detail: parts.join(". ") };
+  const detailItems: ReportCardDetailItem[] = parts.map((part) => {
+    const separator = part.indexOf(": ");
+    if (separator === -1) return { label: "Detail", value: part, detail: part };
+    return {
+      label: part.slice(0, separator),
+      value: part.slice(separator + 2),
+      detail: part,
+    };
+  });
+
+  return { grade: scoreToGrade(score), score, detail: joinReportCardDetail(detailItems), detailItems };
 }

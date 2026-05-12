@@ -1,28 +1,27 @@
 import { z } from "zod";
 import {
-  BluechipGrade,
   BluechipGradeSchema,
-  ChainTier,
   ChainTierSchema,
-  CollateralQuality,
   CollateralQualitySchema,
-  CustodyModel,
   CustodyModelSchema,
   DependencyTypeSchema,
-  DependencyWeight,
-  DeploymentModel,
   DeploymentModelSchema,
-  GovernanceQuality,
   GovernanceQualitySchema,
-  GovernanceType,
   GovernanceTypeSchema,
-  VariantKind,
   VARIANT_KIND_VALUES,
 } from "./core";
-import {
-  RedemptionModelConfidenceSchema,
-  RedemptionRouteFamilySchema,
-} from "./redemption";
+import type {
+  BluechipGrade,
+  ChainTier,
+  CollateralQuality,
+  CustodyModel,
+  DependencyWeight,
+  DeploymentModel,
+  GovernanceQuality,
+  GovernanceType,
+  VariantKind,
+} from "./core";
+import { RedemptionModelConfidenceSchema, RedemptionRouteFamilySchema } from "./redemption";
 import { DependencyWeightSchema } from "./stablecoin-meta-schemas";
 
 export type ReportCardGrade = "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F" | "NR";
@@ -48,8 +47,18 @@ const ReportCardDimensionSchema = z.object({
   grade: ReportCardGradeSchema,
   score: z.number().nullable(),
   detail: z.string(),
+  detailItems: z
+    .array(
+      z.object({
+        label: z.string(),
+        value: z.string(),
+        detail: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 export type ReportCardDimension = z.infer<typeof ReportCardDimensionSchema>;
+export type ReportCardDetailItem = NonNullable<ReportCardDimension["detailItems"]>[number];
 
 export { DependencyWeightSchema };
 
@@ -153,10 +162,12 @@ const ReportCardsMethodologySchema = z.object({
   }),
   pegMultiplierExponent: z.number(),
   activeDepegSeveritySource: z.string().optional(),
-  activeDepegCaps: z.object({
-    d: z.object({ thresholdBps: z.number(), score: z.number() }),
-    f: z.object({ thresholdBps: z.number(), score: z.number() }),
-  }).optional(),
+  activeDepegCaps: z
+    .object({
+      d: z.object({ thresholdBps: z.number(), score: z.number() }),
+      f: z.object({ thresholdBps: z.number(), score: z.number() }),
+    })
+    .optional(),
   thresholds: z.array(z.object({ grade: ReportCardGradeSchema, min: z.number() })),
 });
 
@@ -191,10 +202,12 @@ export const ReportCardsResponseSchema = z.object({
   updatedAt: z.number(),
   liquidityStale: z.boolean().optional(),
   redemptionStale: z.boolean().optional(),
-  inputFreshness: z.object({
-    dexLiquidity: ReportCardsFreshnessEntrySchema,
-    redemptionBackstops: ReportCardsFreshnessEntrySchema,
-  }).optional(),
+  inputFreshness: z
+    .object({
+      dexLiquidity: ReportCardsFreshnessEntrySchema,
+      redemptionBackstops: ReportCardsFreshnessEntrySchema,
+    })
+    .optional(),
   collateralDriftCoins: z.array(CollateralDriftEntrySchema).optional(),
   liveToFallbackCoins: z.array(z.string()).optional(),
 });

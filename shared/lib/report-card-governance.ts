@@ -2,9 +2,11 @@ import type {
   GovernanceQuality,
   GovernanceType,
   ReportCardDimension,
+  ReportCardDetailItem,
   StablecoinMeta,
 } from "../types";
 import { scoreToGrade } from "./report-card-core";
+import { joinReportCardDetail } from "./report-card-detail";
 import { inferGovernanceQuality } from "./report-card-policy";
 import { chainInfraLabel, chainInfraScore, resolveResilienceFactors } from "./report-card-resilience";
 
@@ -26,10 +28,7 @@ const GOVERNANCE_QUALITY_LABEL: Record<GovernanceQuality, string> = {
   wrapper: "Wrapper (inherits upstream)",
 };
 
-export function resolveGovernanceQuality(
-  governance: GovernanceType,
-  meta?: StablecoinMeta,
-): GovernanceQuality {
+export function resolveGovernanceQuality(governance: GovernanceType, meta?: StablecoinMeta): GovernanceQuality {
   if (meta?.governanceQuality) return meta.governanceQuality;
   const base = inferGovernanceQuality(governance);
   if (base === "single-entity" && meta) {
@@ -42,10 +41,7 @@ export function resolveGovernanceQuality(
   return base;
 }
 
-export function scoreDecentralization(
-  governance: GovernanceType,
-  meta?: StablecoinMeta,
-): ReportCardDimension {
+export function scoreDecentralization(governance: GovernanceType, meta?: StablecoinMeta): ReportCardDimension {
   const quality = resolveGovernanceQuality(governance, meta);
   let score = GOVERNANCE_QUALITY_SCORE[quality];
 
@@ -77,9 +73,16 @@ export function scoreDecentralization(
     quality !== "regulated-entity" &&
     quality !== "wrapper";
 
-  const detail = factors && penaltyApplied
-    ? `Governance: ${GOVERNANCE_QUALITY_LABEL[quality]} (${governanceScore}). Chain: ${chainInfraLabel(factors.chainTier, factors.deploymentModel)} (${penalty})`
-    : `Governance: ${GOVERNANCE_QUALITY_LABEL[quality]} (${governanceScore})`;
+  const detailItems: ReportCardDetailItem[] = [
+    { label: "Governance", value: GOVERNANCE_QUALITY_LABEL[quality], detail: `${governanceScore}` },
+  ];
+  if (factors && penaltyApplied) {
+    detailItems.push({
+      label: "Chain",
+      value: chainInfraLabel(factors.chainTier, factors.deploymentModel),
+      detail: `${penalty}`,
+    });
+  }
 
-  return { grade: scoreToGrade(score), score, detail };
+  return { grade: scoreToGrade(score), score, detail: joinReportCardDetail(detailItems), detailItems };
 }

@@ -3,6 +3,7 @@ import type {
   PegSummaryCoin,
   RedemptionBackstopEntry,
   ReportCardDimension,
+  ReportCardDetailItem,
   StablecoinMeta,
 } from "../types";
 import {
@@ -12,6 +13,7 @@ import {
 } from "./redemption-backstop-scoring";
 import { ACTIVE_DEPEG_CAP_F_BPS } from "./report-card-active-depeg";
 import { scoreToGrade } from "./report-card-core";
+import { joinReportCardDetail } from "./report-card-detail";
 
 interface PegStabilityFacts {
   score: number;
@@ -22,11 +24,7 @@ interface PegStabilityFacts {
   yieldBearing: boolean;
 }
 
-function buildPegStabilityFacts(
-  peg: PegSummaryCoin,
-  meta: StablecoinMeta,
-  label: string,
-): PegStabilityFacts {
+function buildPegStabilityFacts(peg: PegSummaryCoin, meta: StablecoinMeta, label: string): PegStabilityFacts {
   return {
     score: Math.round(Math.max(0, Math.min(100, peg.pegScore ?? 0))),
     label,
@@ -37,11 +35,7 @@ function buildPegStabilityFacts(
   };
 }
 
-function buildPegStabilityDimension(
-  peg: PegSummaryCoin,
-  meta: StablecoinMeta,
-  label: string,
-): ReportCardDimension {
+function buildPegStabilityDimension(peg: PegSummaryCoin, meta: StablecoinMeta, label: string): ReportCardDimension {
   const facts = buildPegStabilityFacts(peg, meta, label);
   const score = facts.score;
 
@@ -62,7 +56,24 @@ function buildPegStabilityDimension(
     detail += " (yield-bearing — expected price appreciation excluded)";
   }
 
-  return { grade: scoreToGrade(score), score, detail };
+  const detailItems: ReportCardDetailItem[] = parts.map((part) => {
+    const separator = part.indexOf(": ");
+    if (separator === -1) return { label: "Detail", value: part, detail: part };
+    return {
+      label: part.slice(0, separator),
+      value: part.slice(separator + 2),
+      detail: part,
+    };
+  });
+  if (facts.yieldBearing) {
+    detailItems.push({
+      label: "Adjustment",
+      value: "Yield-bearing",
+      detail: "yield-bearing — expected price appreciation excluded",
+    });
+  }
+
+  return { grade: scoreToGrade(score), score, detail, detailItems };
 }
 
 export function scorePegStability(
@@ -75,18 +86,34 @@ export function scorePegStability(
 ): ReportCardDimension {
   if (!peg || peg.pegScore === null) {
     if (meta.flags.navToken) {
-      return { grade: "NR", score: null, detail: "NAV token - peg tracking not applicable" };
+      return {
+        grade: "NR",
+        score: null,
+        detail: "NAV token - peg tracking not applicable",
+        detailItems: [{ label: "Peg tracking", value: "Not applicable", detail: "NAV token" }],
+      };
     }
-    return { grade: "NR", score: null, detail: "Insufficient peg tracking data" };
+    return {
+      grade: "NR",
+      score: null,
+      detail: "Insufficient peg tracking data",
+      detailItems: [{ label: "Peg tracking", value: "Insufficient data" }],
+    };
   }
 
   if (peg.currentDeviationBps === null && peg.eventCount === 0 && !options?.inheritedFromReference) {
-    return { grade: "NR", score: null, detail: "No price data available for peg evaluation" };
+    return {
+      grade: "NR",
+      score: null,
+      detail: "No price data available for peg evaluation",
+      detailItems: [{ label: "Peg tracking", value: "No price data available" }],
+    };
   }
 
-  const label = options?.inheritedFromReference && options.pegReferenceMeta
-    ? `Peg reference (${options.pegReferenceMeta.symbol})`
-    : "Peg score";
+  const label =
+    options?.inheritedFromReference && options.pegReferenceMeta
+      ? `Peg reference (${options.pegReferenceMeta.symbol})`
+      : "Peg score";
   return buildPegStabilityDimension(peg, meta, label);
 }
 
@@ -101,16 +128,19 @@ type RedemptionLiquidityInput = Pick<
   | "capacitySemantics"
   | "capacityProfile"
   | "routeExitCorrelation"
-> & Partial<Pick<
-  RedemptionBackstopEntry,
-  | "routeStatus"
-  | "routeStatusReason"
-  | "capacityConfidence"
-  | "capacityKind"
-  | "sourceMode"
-  | "accessModel"
-  | "settlementModel"
->>;
+> &
+  Partial<
+    Pick<
+      RedemptionBackstopEntry,
+      | "routeStatus"
+      | "routeStatusReason"
+      | "capacityConfidence"
+      | "capacityKind"
+      | "sourceMode"
+      | "accessModel"
+      | "settlementModel"
+    >
+  >;
 
 function formatCapacityUsd(value: number): string {
   if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
@@ -237,7 +267,7 @@ function buildLiquidityScoringFacts(
     redemptionEligibleForLiquidity,
     redemptionExclusionReason,
     redemptionScore,
-  effectiveScore: computeEffectiveExitScore(
+    effectiveScore: computeEffectiveExitScore(
       dexScore,
       eligibleRedemptionScore,
       redemption
@@ -264,20 +294,22 @@ export function scoreLiquidity(
   const facts = buildLiquidityScoringFacts(liq, redemption, options);
 
   if (facts.effectiveScore === null) {
+    const detail = facts.hasConfiguredRedemption
+      ? facts.hasImpairedRedemption
+        ? "DEX liquidity unavailable. Redemption route is configured but currently impaired by market or route-availability evidence"
+        : facts.hasLowConfidenceRedemption
+          ? "DEX liquidity unavailable. A low-confidence redemption route exists, but it is excluded from Safety Score liquidity until evidence improves"
+          : !facts.hasResolvedRedemption
+            ? "DEX liquidity unavailable. Redemption route is configured but currently unrated"
+            : facts.redemptionExclusionReason
+              ? `DEX liquidity unavailable. Redemption route is configured but not used for Safety Score liquidity (${facts.redemptionExclusionReason})`
+              : "DEX liquidity unavailable. Redemption route is configured but currently unrated"
+      : "No DEX liquidity data";
     return {
       grade: "NR",
       score: null,
-      detail: facts.hasConfiguredRedemption
-        ? facts.hasImpairedRedemption
-          ? "DEX liquidity unavailable. Redemption route is configured but currently impaired by market or route-availability evidence"
-          : facts.hasLowConfidenceRedemption
-          ? "DEX liquidity unavailable. A low-confidence redemption route exists, but it is excluded from Safety Score liquidity until evidence improves"
-          : !facts.hasResolvedRedemption
-          ? "DEX liquidity unavailable. Redemption route is configured but currently unrated"
-          : facts.redemptionExclusionReason
-          ? `DEX liquidity unavailable. Redemption route is configured but not used for Safety Score liquidity (${facts.redemptionExclusionReason})`
-          : "DEX liquidity unavailable. Redemption route is configured but currently unrated"
-        : "No DEX liquidity data",
+      detail,
+      detailItems: [{ label: "Liquidity", value: detail }],
     };
   }
 
@@ -325,5 +357,15 @@ export function scoreLiquidity(
     parts.push("Redemption route configured but currently unrated");
   }
 
-  return { grade: scoreToGrade(score), score, detail: parts.join(". ") };
+  const detailItems: ReportCardDetailItem[] = parts.map((part) => {
+    const separator = part.indexOf(": ");
+    if (separator === -1) return { label: "Detail", value: part, detail: part };
+    return {
+      label: part.slice(0, separator),
+      value: part.slice(separator + 2),
+      detail: part,
+    };
+  });
+
+  return { grade: scoreToGrade(score), score, detail: joinReportCardDetail(detailItems), detailItems };
 }

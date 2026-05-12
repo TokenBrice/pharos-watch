@@ -4,114 +4,34 @@ import type {
   CustodyModel,
   DeploymentModel,
   ReportCardDimension,
-  ReserveRisk,
   ReserveSlice,
+  ReportCardDetailItem,
   StablecoinMeta,
 } from "../types";
 import { scoreToGrade } from "./report-card-core";
-import { inferResilienceDefaults } from "./report-card-policy";
+import { joinReportCardDetail } from "./report-card-detail";
 import {
-  getBlacklistStatusLabel,
-  type BlacklistStatus,
-} from "./report-card-blacklist-risk";
+  CHAIN_TIER_LABEL,
+  CHAIN_TIER_SCORE,
+  COLLATERAL_QUALITY_LABEL,
+  COLLATERAL_QUALITY_SCORE,
+  CUSTODY_MODEL_LABEL,
+  CUSTODY_MODEL_SCORE,
+  DEPLOYMENT_MODEL_LABEL,
+  DEPLOYMENT_MULT,
+  RESERVE_QUALITY_SCORE,
+  collateralScoreLabel,
+  inferResilienceDefaults,
+} from "./report-card-policy";
+import { getBlacklistStatusLabel, type BlacklistStatus } from "./report-card-blacklist-risk";
 
 export { inferResilienceDefaults } from "./report-card-policy";
-
-const CHAIN_TIER_SCORE: Record<ChainTier, number> = {
-  ethereum: 100,
-  "stage1-l2": 66,
-  "mature-alt-l1": 45,
-  "established-alt-l1": 20,
-  unproven: 0,
-};
-
-const DEPLOYMENT_MULT: Record<DeploymentModel, number> = {
-  "single-chain": 1.0,
-  "canonical-bridge": 0.9,
-  "native-multichain": 0.75,
-  "third-party-bridge": 0.6,
-};
-
-const COLLATERAL_QUALITY_SCORE: Record<CollateralQuality, number> = {
-  native: 100,
-  rwa: 50,
-  "eth-lst": 66,
-  "alt-lst-bridged-or-mixed": 20,
-  exotic: 0,
-};
-
-const RESERVE_QUALITY_SCORE: Record<ReserveRisk, number> = {
-  "very-low": 100,
-  low: 75,
-  medium: 50,
-  high: 25,
-  "very-high": 5,
-};
-
-const COLLATERAL_QUALITY_DISPLAY: [number, string][] = [
-  [88, "Very low risk"],
-  [62, "Low risk"],
-  [37, "Medium risk"],
-  [15, "High risk"],
-  [0, "Very high risk"],
-];
-
-const CUSTODY_MODEL_SCORE: Record<CustodyModel, number> = {
-  onchain: 100,
-  "institutional-top": 80,
-  "institutional-regulated": 55,
-  "institutional-unregulated": 30,
-  "institutional-sanctioned": 5,
-  cex: 0,
-};
-
-const CHAIN_TIER_LABEL: Record<ChainTier, string> = {
-  ethereum: "Ethereum mainnet",
-  "stage1-l2": "Stage 1+ L2",
-  "mature-alt-l1": "Mature alt-L1",
-  "established-alt-l1": "Established alt-L1",
-  unproven: "Unproven chain",
-};
-
-const DEPLOYMENT_MODEL_LABEL: Record<DeploymentModel, string> = {
-  "single-chain": "",
-  "canonical-bridge": "canonical bridge",
-  "third-party-bridge": "third-party bridge",
-  "native-multichain": "native multichain",
-};
-
-const COLLATERAL_QUALITY_LABEL: Record<CollateralQuality, string> = {
-  native: "Native assets (ETH/BTC)",
-  rwa: "Real-world assets (off-chain)",
-  "eth-lst": "Ethereum LSTs",
-  "alt-lst-bridged-or-mixed": "Alt-L1 LSTs / Bridged / Mixed",
-  exotic: "Exotic / opaque strategy",
-};
-
-const CUSTODY_MODEL_LABEL: Record<CustodyModel, string> = {
-  onchain: "Fully on-chain",
-  "institutional-top": "Top-tier custodian",
-  "institutional-regulated": "Regulated custodian",
-  "institutional-unregulated": "Unregulated custodian",
-  "institutional-sanctioned": "Sanctioned custodian",
-  cex: "CEX / off-exchange custody",
-};
 
 export function computeCollateralQualityFromReserves(reserves: ReserveSlice[]): number {
   const totalPct = reserves.reduce((sum, reserve) => sum + reserve.pct, 0);
   if (totalPct === 0) return 0;
-  const weighted = reserves.reduce(
-    (sum, reserve) => sum + reserve.pct * (RESERVE_QUALITY_SCORE[reserve.risk] ?? 0),
-    0,
-  );
+  const weighted = reserves.reduce((sum, reserve) => sum + reserve.pct * (RESERVE_QUALITY_SCORE[reserve.risk] ?? 0), 0);
   return Math.round(weighted / totalPct);
-}
-
-function collateralScoreLabel(score: number): string {
-  for (const [threshold, label] of COLLATERAL_QUALITY_DISPLAY) {
-    if (score >= threshold) return label;
-  }
-  return "Very high risk";
 }
 
 export function chainInfraScore(tier: ChainTier, model: DeploymentModel): number {
@@ -158,11 +78,11 @@ export function scoreResilience(
     : COLLATERAL_QUALITY_LABEL[factors.collateralQuality];
 
   const score = Math.round((collateralScore + custodyScore) / 2);
-  const parts = [
-    `Collateral: ${collateralLabel} (${collateralScore})`,
-    `Custody: ${CUSTODY_MODEL_LABEL[factors.custodyModel]} (${custodyScore})`,
-    `Blacklist: ${blacklistLabel} (descriptive only)`,
+  const detailItems: ReportCardDetailItem[] = [
+    { label: "Collateral", value: collateralLabel, detail: `${collateralScore}` },
+    { label: "Custody", value: CUSTODY_MODEL_LABEL[factors.custodyModel], detail: `${custodyScore}` },
+    { label: "Blacklist", value: blacklistLabel, detail: "descriptive only" },
   ];
 
-  return { grade: scoreToGrade(score), score, detail: parts.join(". ") };
+  return { grade: scoreToGrade(score), score, detail: joinReportCardDetail(detailItems), detailItems };
 }

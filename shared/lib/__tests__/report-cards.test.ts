@@ -1016,6 +1016,11 @@ describe("scoreResilience (v6 — 2-factor)", () => {
     });
     const result = scoreResilience(meta as never, true);
     expect(result.detail).toContain("descriptive only");
+    expect(result.detailItems).toEqual([
+      { label: "Collateral", value: "Very low risk", detail: "100" },
+      { label: "Custody", value: "Top-tier custodian", detail: "80" },
+      { label: "Blacklist", value: "Yes", detail: "descriptive only" },
+    ]);
   });
 
   it("produces correct scores for all 6 custody model tiers", () => {

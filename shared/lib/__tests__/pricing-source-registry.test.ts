@@ -11,6 +11,13 @@ import {
   isKnownPricingSourceOrComposite,
   normalizePricingSourceKeys,
 } from "../pricing-sources";
+import {
+  countDepegAuthoritativeSources,
+  getPriceCacheMaxAgeSec,
+  hasDepegAuthoritativeSource,
+  isPoolChallengeEligibleConsensus,
+  isReplaySafePriceSource,
+} from "../pricing-source-policy";
 
 describe("pricing source registry", () => {
   it("keeps registry order stable", () => {
@@ -174,5 +181,24 @@ describe("pricing source registry", () => {
     expect(getPricingSourceLabel("coingecko+geckoterminal")).toBe("CoinGecko + GeckoTerminal");
     expect(isKnownPricingSourceOrComposite("coingecko+geckoterminal")).toBe(true);
     expect(getUnknownPricingSourceKeys("coingecko+not-a-source")).toEqual(["not-a-source"]);
+  });
+
+  it("keeps shared policy helpers aligned with registry metadata", () => {
+    for (const entry of PRICING_SOURCE_REGISTRY) {
+      expect(isReplaySafePriceSource(entry.key), entry.key).toBe(entry.isReplaySafe);
+      expect(isPoolChallengeEligibleConsensus([entry.key]), entry.key).toBe(!entry.isPoolChallengeExempt);
+    }
+
+    expect(isReplaySafePriceSource(null)).toBe(false);
+    expect(isPoolChallengeEligibleConsensus([])).toBe(false);
+    expect(isPoolChallengeEligibleConsensus(["not-a-source"])).toBe(false);
+  });
+
+  it("expands composite source labels before applying shared policy", () => {
+    expect(getPriceCacheMaxAgeSec("coingecko+pyth", 6 * 3600)).toBe(5 * 60);
+    expect(getPriceCacheMaxAgeSec("coingecko+not-a-source", 6 * 3600)).toBe(0);
+    expect(hasDepegAuthoritativeSource(["coingecko+geckoterminal"])).toBe(false);
+    expect(countDepegAuthoritativeSources(["coingecko+pyth"])).toBe(1);
+    expect(isPoolChallengeEligibleConsensus(["coingecko+geckoterminal"])).toBe(true);
   });
 });

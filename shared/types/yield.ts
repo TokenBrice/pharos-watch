@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { MethodologyEnvelope, MethodologyEnvelopeSchema, YieldType, YieldTypeSchema } from "./core";
-import { ReportCardGrade, ReportCardGradeSchema } from "./report-cards";
+import { MethodologyEnvelopeSchema, YieldTypeSchema } from "./core";
+import type { MethodologyEnvelope, YieldType } from "./core";
+import { ReportCardGradeSchema } from "./report-cards";
+import type { ReportCardGrade } from "./report-cards";
 
 export type YieldBenchmarkKey = "USD" | "EUR" | "CHF";
 export type YieldBenchmarkSelectionMode = "native" | "fallback-usd" | "manual-override";
@@ -301,11 +303,15 @@ export const YieldRankingsResponseSchema: z.ZodType<YieldRankingsResponse> = z.o
   medianApy: z.number(),
   updatedAt: z.number(),
   provenance: YieldRankingsProvenanceSchema.nullable().optional(),
-  warnings: z.array(z.object({
-    code: z.string(),
-    message: z.string(),
-    reasons: z.array(z.string()).optional(),
-  })).optional(),
+  warnings: z
+    .array(
+      z.object({
+        code: z.string(),
+        message: z.string(),
+        reasons: z.array(z.string()).optional(),
+      }),
+    )
+    .optional(),
 });
 
 export interface YieldHistoryResponse {
