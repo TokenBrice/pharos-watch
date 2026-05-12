@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
 - **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 231 active live-enabled stablecoins across 53 registered adapters; 231 tracked metadata entries have live reserve configs. These counts are active/configured stablecoin entries, not raw source JSON files. 51 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
+- **Current coverage:** 231 active live-enabled stablecoins across 54 registered adapters; 231 tracked metadata entries have live reserve configs. These counts are active/configured stablecoin entries, not raw source JSON files. 51 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -393,7 +393,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `circle-transparency`      | `http-html`                                      | `attestation-mix`                                     | 2                |
 | `collateral-positions-api` | `http-json`                                      | `collateral-mix`                                      | 2                |
 | `crvusd`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `curated-validated`        | `onchain-evm` / `onchain-solana`                 | `attestation-mix` / `collateral-mix` / `single-asset` | 63               |
+| `curated-validated`        | `onchain-evm` / `onchain-solana`                 | `attestation-mix` / `collateral-mix` / `single-asset` | 62               |
 | `dola-inverse`             | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `erc4626-single-asset`     | `onchain-evm`                                    | `single-asset`                                        | 23               |
 | `ethena`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
@@ -416,6 +416,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `origin-vault-balances`    | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
 | `quantoz-transparency`     | `http-html`                                      | `attestation-mix`                                     | 2                |
 | `re-metrics`               | `http-html`                                      | `collateral-mix`                                      | 1                |
+| `resupply-pairs`           | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
 | `reserve-protocol-dtf`     | `http-json` / `onchain-evm`                     | `collateral-mix`                                      | 1                |
 | `reservoir`                | `http-json`                                      | `protocol-reserve`                                    | 2                |
 | `ripple-transparency`      | `http-html`                                      | `attestation-mix`                                     | 1                |
@@ -438,6 +439,13 @@ timestampless fallback reads, but score-grade configs can use the direct
 `basketsNeeded()`, BasketHandler `quote(...)` / `fullyCollateralized()`, and
 AssetRegistry asset plugins for component prices and collateral status, so its
 freshness mode is `not-applicable`.
+
+`resupply-pairs` reads the reviewed Resupply pair allowlist from config, then
+each pair's current on-chain accounting and collateral vault conversion to
+aggregate positive collateral assets by reviewed underlying stablecoin
+(`crvUSD` / `frxUSD`). It fails closed on unmapped positive-collateral pairs
+and uses `freshnessMode: not-applicable` because the source is latest Ethereum
+state.
 
 Adapter key intent is tracked in `shared/lib/live-reserve-adapter-provenance.ts` and covered by the registry tests. Every registered key has one of these statuses:
 

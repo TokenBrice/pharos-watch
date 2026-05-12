@@ -35,6 +35,7 @@ import { fetchOpenEdenUsdoReserves } from "./openeden";
 import { fetchOriginVaultBalancesReserves } from "./origin-vault-balances";
 import { fetchQuantozTransparencyReserves } from "./quantoz-transparency";
 import { fetchReMetricsReserves } from "./re-metrics";
+import { fetchResupplyPairsReserves } from "./resupply-pairs";
 import { fetchReserveProtocolDtfReserves } from "./reserve-protocol-dtf";
 import { fetchReservoirReserves } from "./reservoir";
 import { fetchRippleTransparencyReserves } from "./ripple-transparency";
@@ -94,6 +95,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   "origin-vault-balances": fetchOriginVaultBalancesReserves,
   "quantoz-transparency": fetchQuantozTransparencyReserves,
   "re-metrics": fetchReMetricsReserves,
+  "resupply-pairs": fetchResupplyPairsReserves,
   "reserve-protocol-dtf": fetchReserveProtocolDtfReserves,
   reservoir: fetchReservoirReserves,
   "ripple-transparency": fetchRippleTransparencyReserves,

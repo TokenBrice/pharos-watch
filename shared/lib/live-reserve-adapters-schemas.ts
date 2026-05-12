@@ -88,6 +88,7 @@ export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = {
   "origin-vault-balances": ["onchain-evm"],
   "quantoz-transparency": ["http-html"],
   "re-metrics": ["http-html"],
+  "resupply-pairs": ["onchain-evm"],
   "reserve-protocol-dtf": ["http-json", "onchain-evm"],
   reservoir: ["http-json"],
   "ripple-transparency": ["http-html"],
@@ -285,6 +286,32 @@ const reserveProtocolDtfParamsSchema = z
     assets: z.array(reserveProtocolDtfAssetSchema).optional(),
     rpcUrl: AbsoluteUrlSchema.optional(),
     fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict();
+
+const resupplyUnderlyingSchema = z
+  .object({
+    address: z.string(),
+    name: z.string(),
+    risk: LiveReserveRiskSchema,
+    coinId: z.string().optional(),
+    depType: LiveReserveDependencyTypeSchema.optional(),
+  })
+  .strict();
+
+const resupplyPairSchema = z
+  .object({
+    key: z.string(),
+    address: z.string(),
+  })
+  .strict();
+
+const resupplyPairsParamsSchema = z
+  .object({
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    pairs: z.array(resupplyPairSchema).min(1),
+    underlyings: z.array(resupplyUnderlyingSchema).min(1),
   })
   .strict();
 
@@ -546,6 +573,7 @@ export const adapterParamsSchemas = {
   "origin-vault-balances": originVaultBalancesParamsSchema,
   "quantoz-transparency": quantozTransparencyParamsSchema,
   "re-metrics": noParamsSchema,
+  "resupply-pairs": resupplyPairsParamsSchema,
   "reserve-protocol-dtf": reserveProtocolDtfParamsSchema,
   reservoir: noParamsSchema,
   "ripple-transparency": noParamsSchema,

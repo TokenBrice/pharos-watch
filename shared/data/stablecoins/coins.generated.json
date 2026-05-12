@@ -16098,19 +16098,85 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "collateral-mix",
       "breakerScope": "reusd-resupply",
       "display": {
-        "url": "https://resupply.fi",
-        "label": "Resupply"
+        "url": "https://resupply.fi/supply",
+        "label": "Resupply markets"
       },
-      "adapter": "curated-validated",
+      "adapter": "resupply-pairs",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
+      },
+      "params": {
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://eth.llamarpc.com",
+        "pairs": [
+          {
+            "key": "PAIR_CURVELEND_SFRXUSD_CRVUSD",
+            "address": "0xC5184cccf85b81EDdc661330acB3E41bd89F34A1"
+          },
+          {
+            "key": "PAIR_CURVELEND_SDOLA_CRVUSD",
+            "address": "0x27AB448a75d548ECfF73f8b4F36fCc9496768797"
+          },
+          {
+            "key": "PAIR_CURVELEND_SUSDE_CRVUSD",
+            "address": "0x39Ea8e7f44E9303A7441b1E1a4F5731F1028505C"
+          },
+          {
+            "key": "PAIR_CURVELEND_USDE_CRVUSD",
+            "address": "0x3b037329Ff77B5863e6a3c844AD2a7506ABe5706"
+          },
+          {
+            "key": "PAIR_CURVELEND_WBTC_CRVUSD",
+            "address": "0x2d8ecd48b58e53972dBC54d8d0414002B41Abc9D"
+          },
+          {
+            "key": "PAIR_CURVELEND_WETH_CRVUSD",
+            "address": "0xCF1deb0570c2f7dEe8C07A7e5FA2bd4b2B96520D"
+          },
+          {
+            "key": "PAIR_CURVELEND_WSTETH_CRVUSD",
+            "address": "0x4A7c64932d1ef0b4a2d430ea10184e3B87095E33"
+          },
+          {
+            "key": "PAIR_FRAXLEND_SFRXETH_FRXUSD",
+            "address": "0x3F2b20b8E8Ce30bb52239d3dFADf826eCFE6A5f7"
+          },
+          {
+            "key": "PAIR_FRAXLEND_SUSDE_FRXUSD",
+            "address": "0x212589B06EBBA4d89d9deFcc8DDc58D80E141EA0"
+          },
+          {
+            "key": "PAIR_FRAXLEND_WBTC_FRXUSD",
+            "address": "0xb5575Fe3d3b7877415A166001F67C2Df94D4e6c1"
+          },
+          {
+            "key": "PAIR_FRAXLEND_SCRVUSD_FRXUSD",
+            "address": "0x24CCBd9130ec24945916095eC54e9acC7382c864"
+          }
+        ],
+        "underlyings": [
+          {
+            "address": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+            "name": "Curve crvUSD lending markets",
+            "risk": "high",
+            "coinId": "crvusd-curve",
+            "depType": "collateral"
+          },
+          {
+            "address": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+            "name": "Frax frxUSD lending markets",
+            "risk": "high",
+            "coinId": "frxusd-frax",
+            "depType": "collateral"
+          }
+        ]
       }
     }
   },

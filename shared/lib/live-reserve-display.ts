@@ -43,6 +43,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   "origin-vault-balances": "live",
   "quantoz-transparency": "live",
   "re-metrics": "live",
+  "resupply-pairs": "live",
   "reserve-protocol-dtf": "live",
   reservoir: "live",
   "ripple-transparency": "live",

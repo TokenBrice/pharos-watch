@@ -460,6 +460,16 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
+  "resupply-pairs": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
+    },
+  },
   "reserve-protocol-dtf": {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",

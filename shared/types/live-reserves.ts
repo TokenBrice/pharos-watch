@@ -46,6 +46,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "origin-vault-balances",
   "quantoz-transparency",
   "re-metrics",
+  "resupply-pairs",
   "reserve-protocol-dtf",
   "reservoir",
   "ripple-transparency",

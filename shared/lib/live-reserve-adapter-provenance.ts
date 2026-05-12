@@ -61,6 +61,7 @@ export const LIVE_RESERVE_ADAPTER_PROVENANCE = {
   "origin-vault-balances": { status: "active", rationale: ACTIVE_RATIONALE },
   "quantoz-transparency": { status: "active", rationale: ACTIVE_RATIONALE },
   "re-metrics": { status: "active", rationale: ACTIVE_RATIONALE },
+  "resupply-pairs": { status: "active", rationale: ACTIVE_RATIONALE },
   "reserve-protocol-dtf": { status: "active", rationale: ACTIVE_RATIONALE },
   reservoir: { status: "active", rationale: ACTIVE_RATIONALE },
   "ripple-transparency": { status: "active", rationale: ACTIVE_RATIONALE },
