@@ -7,9 +7,9 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/data/dead-stablecoins.json",
-  "sourceChecksum": "sha256:c61d7be1cfef33611513e9236ba5764143712ee6be8f12ec75d60c5df4cd3d05",
+  "sourceChecksum": "sha256:e8897111f1a41d676bce36447bb1b56e77343480ef9a26062aea45e8ad8d7407",
   "recordsOrderedBy": "deathDate descending, then peakMcapUsd descending, then symbol ascending",
-  "rowCount": 93,
+  "rowCount": 94,
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
@@ -36,6 +36,26 @@
     "pharosUrl": "Canonical Pharos URL: the frozen detail page when archived data is available, otherwise the cemetery anchor."
   },
   "rows": [
+    {
+      "id": "usdh-hubble-2026-05",
+      "name": "Hubble USDH",
+      "symbol": "USDH",
+      "llamaId": "65",
+      "logoUrl": null,
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-05",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 14000000,
+      "epitaph": "First Solana CDP, last one standing",
+      "obituary": "Hubble Protocol launched USDH in 2022 as one of the earliest Solana CDP stablecoins, peaking near $14M. By May 2026 CoinGecko reports a $0 market cap, on-DEX volume has collapsed, and the redemption pool no longer offers a credible exit. The asset is treated as wound down; future coverage scans should skip it. Symbol collides with Native Markets USDH (tracked) and Hermetica USDH (tracked).",
+      "sourceUrl": "https://www.coingecko.com/en/coins/usdh",
+      "sourceLabel": "CoinGecko",
+      "archivedDataAvailable": false,
+      "contracts": [],
+      "pharosUrl": "https://pharos.watch/cemetery/#usdh-hubble-2026-05"
+    },
     {
       "id": "fusd-fedz-2026-05",
       "name": "The Fedz FUSD",
