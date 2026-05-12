@@ -83,6 +83,9 @@
     "version": 1,
     "semantics": "attestation-mix",
     "breakerScope": "xsgd-straitsx",
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
     "display": {
       "url": "https://www.straitsx.com/xsgd",
       "label": "StraitsX"

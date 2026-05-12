@@ -139,6 +139,13 @@ const riskRecordSchema = z.record(z.string(), LiveReserveRiskSchema);
 
 const noParamsSchema = z.object({}).strict();
 
+const liveReserveScoringPolicySchema = z
+  .object({
+    maxSourceAgeSec: z.number().positive().optional(),
+    allowedDegradedWarningCodes: z.array(z.string().min(1)).optional(),
+  })
+  .strict();
+
 const usd1BundleOracleParamsSchema = z
   .object({
     rpcUrl: AbsoluteUrlSchema.optional(),
@@ -525,6 +532,7 @@ export const baseLiveReserveConfigSchema = z.object({
   semantics: LiveReserveSemanticsSchema,
   breakerScope: z.string().min(1).optional(),
   display: LiveReserveDisplaySchema.optional(),
+  scoring: liveReserveScoringPolicySchema.optional(),
 });
 
 const abracadabraCauldronSchema = z

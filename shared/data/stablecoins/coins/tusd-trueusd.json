@@ -96,6 +96,13 @@
     "adapter": "chainlink-por",
     "version": 1,
     "semantics": "attestation-mix",
+    "scoring": {
+      "allowedDegradedWarningCodes": [
+        "por-reserve-over-supply",
+        "partial-supply-read-failure",
+        "por-supply-chain-omitted"
+      ]
+    },
     "breakerScope": "tusd-archblock",
     "display": {
       "url": "https://data.chain.link/feeds/ethereum/mainnet/tusd-por",

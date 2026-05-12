@@ -35,6 +35,7 @@ interface ResolvedReserveBucket {
 }
 
 type WeightMode = "share" | "amount";
+const SHARE_TOTAL_SCALE = 1_000_000_000_000_000_000n;
 
 function quoteUnsafeIntegerWeightFields(raw: string): string {
   return raw.replace(
@@ -68,6 +69,13 @@ function shareToPct(share: bigint): number {
 
 function hasFullShareCoverage(totalShare: bigint): boolean {
   return totalShare > 0n && Math.abs(shareToPct(totalShare) - 100) <= PERCENTAGE_TOLERANCE_PCT;
+}
+
+function createPartialShareCoverageWarning(totalShareDeclared: bigint): LiveReserveWarning {
+  return reserveDegradedWarning(
+    "usdai-share-coverage-gap",
+    `USD.AI share-bearing rows cover only ${shareToPct(totalShareDeclared).toFixed(1)}% of reserves`,
+  );
 }
 
 function pluralizeEntries(count: number): string {
@@ -180,18 +188,31 @@ export function adaptUsdAiProofOfReserves(
     (acc, entry) => acc + (entry.amount && entry.amount > 0n ? entry.amount : 0n),
     0n,
   );
-  const weightMode: WeightMode = hasFullShareCoverage(totalShareDeclared)
-    ? "share"
-    : totalShareDeclared === 0n && totalAmountDeclared > 0n
-      ? "amount"
-      : (() => {
-          if (totalShareDeclared > 0n) {
-            throw new Error(
-              `usdai-proof-of-reserves share-bearing rows cover only ${shareToPct(totalShareDeclared).toFixed(1)}% of reserves`,
-            );
-          }
-          throw new Error("usdai-proof-of-reserves payload contained no usable share or amount weights");
-        })();
+  let syntheticUndisclosedShare = 0n;
+  const weightMode: WeightMode = (() => {
+    if (hasFullShareCoverage(totalShareDeclared)) {
+      return "share";
+    }
+
+    if (totalAmountDeclared > 0n) {
+      if (totalShareDeclared > 0n) {
+        warnings.push(createPartialShareCoverageWarning(totalShareDeclared));
+      }
+      return "amount";
+    }
+
+    if (totalShareDeclared > 0n) {
+      if (totalShareDeclared < SHARE_TOTAL_SCALE) {
+        warnings.push(createPartialShareCoverageWarning(totalShareDeclared));
+        syntheticUndisclosedShare = SHARE_TOTAL_SCALE - totalShareDeclared;
+        return "share";
+      }
+      throw new Error(
+        `usdai-proof-of-reserves share-bearing rows cover only ${shareToPct(totalShareDeclared).toFixed(1)}% of reserves`,
+      );
+    }
+    throw new Error("usdai-proof-of-reserves payload contained no usable share or amount weights");
+  })();
   const ignoredAmountOnlyEntries = weightMode === "share"
     ? parsedEntries.filter((entry) => entry.share == null && entry.amount != null && entry.amount > 0n)
     : [];
@@ -277,6 +298,20 @@ export function adaptUsdAiProofOfReserves(
     });
   }
 
+  if (syntheticUndisclosedShare > 0n) {
+    sliceInputs.push({
+      name: "Undisclosed USD.AI reserve buckets",
+      pct: weightToPct(syntheticUndisclosedShare),
+      risk: "high",
+    });
+    warnings.push(
+      reserveDegradedWarning(
+        "usdai-share-coverage-gap",
+        `USD.AI payload disclosed only ${shareToPct(totalShareDeclared).toFixed(1)}% of reserves; the remainder is undisclosed`,
+      ),
+    );
+  }
+
   if (unknownShare > 0n) {
     sliceInputs.push({
       name: "Unmapped USD.AI reserve buckets",
@@ -310,6 +345,7 @@ export function adaptUsdAiProofOfReserves(
       `USD.AI proof-row source timestamps span ${sourceTimestampSummary.sourceTimestampSpreadSec} seconds`,
     ));
   }
+  const unknownExposureWeight = unknownShare + syntheticUndisclosedShare;
 
   return {
     slices,
@@ -325,7 +361,7 @@ export function adaptUsdAiProofOfReserves(
       ...(chains.size > 0 ? { chains: Array.from(chains).sort((a, b) => a - b) } : {}),
       ...(unknownTypes.size > 0 ? { unknownReserveTypes: Array.from(unknownTypes).sort() } : {}),
       ...(ignoredAmountOnlyEntries.length > 0 ? { ignoredMissingShareEntryCount: ignoredAmountOnlyEntries.length } : {}),
-      ...(totalWeight > 0n ? { unknownExposurePct: weightToPct(unknownShare) } : {}),
+      ...(totalWeight > 0n || syntheticUndisclosedShare > 0n ? { unknownExposurePct: weightToPct(unknownExposureWeight) } : {}),
       ...(sourceTimestamp != null
         ? verifiedFreshnessMetadata(sourceTimestamp)
         : unverifiedFreshnessMetadata(

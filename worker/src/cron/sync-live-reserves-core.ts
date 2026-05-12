@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { raceWithTimeout } from "@shared/lib/timeout-signal";
+import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterResult, ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { shouldAttemptFetch } from "../lib/circuit-breaker";
 import { hasDegradingWarnings, hasFatalWarnings, validateAdapterOutput } from "./reserve-adapters/validate";
@@ -42,6 +43,16 @@ export type ReserveAdapterRunner = (
 ) => Promise<AdapterResult>;
 
 const D1_WRITE_FINALIZE_TIMEOUT_MS = 30_000;
+
+function getScoringRelevantWarnings(
+  warnings: readonly LiveReserveWarning[],
+  config: LiveReserveConfig,
+): LiveReserveWarning[] {
+  const allowedCodes = new Set(config.scoring?.allowedDegradedWarningCodes ?? []);
+  return warnings.filter((warning) =>
+    warning.effect !== "degraded" || !allowedCodes.has(warning.code),
+  );
+}
 
 export async function syncReserveCoin(args: {
   db: D1Database;
@@ -123,7 +134,11 @@ export async function syncReserveCoin(args: {
     adapterStartMs = Date.now();
     const result = await runAdapter(coin, config, adapter);
     const durationMs = Date.now() - adapterStartMs;
-    const validation = validateAdapterOutput(result, { adapter, now: attemptStartedAt });
+    const validation = validateAdapterOutput(result, {
+      adapter,
+      now: attemptStartedAt,
+      maxSourceAgeSec: config.scoring?.maxSourceAgeSec ?? undefined,
+    });
     if (!validation.valid) {
       const message = validation.warnings.map((warning) => warning.message).join("; ");
       console.warn(`[sync-live-reserves] Adapter output invalid for ${coin.id}: ${message}`);
@@ -147,19 +162,28 @@ export async function syncReserveCoin(args: {
       return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
     }
 
+    const scoringAllowsUnverifiedFreshness = config.scoring?.maxSourceAgeSec != null
+      && result.metadata?.freshnessMode === "unverified";
+    const snapshotMetadata = {
+      ...(result.metadata ?? {}),
+      ...(scoringAllowsUnverifiedFreshness ? { scoringAllowsUnverifiedFreshness: true } : {}),
+      durationMs,
+    };
+
     const compositionRecord: ReserveCompositionRecord = {
       stablecoinId: coin.id,
       slices: result.slices,
       fetchedAt: attemptStartedAt,
       source: config.adapter,
       attemptId,
-      metadata: { ...(result.metadata ?? {}), durationMs },
+      metadata: snapshotMetadata,
       warningCount: warnings.length,
       warnings,
       adapterSourceModel: adapter.sourceModel,
       adapterEvidenceClass: adapter.evidenceClass,
     };
 
+    const scoringRelevantWarnings = getScoringRelevantWarnings(warnings, config);
     const successState = buildReserveSyncStateRecord({
       stablecoinId: coin.id,
       config,
@@ -168,7 +192,7 @@ export async function syncReserveCoin(args: {
       previousLastSuccessAttemptId: prevSuccessAttemptId,
       attemptId,
       now: attemptStartedAt,
-      status: hasDegradingWarnings(warnings) ? "degraded" : "ok",
+      status: hasDegradingWarnings(scoringRelevantWarnings) ? "degraded" : "ok",
       warnings,
       metadata: {
         warningEffects: {
@@ -176,6 +200,7 @@ export async function syncReserveCoin(args: {
           degraded: warnings.filter((warning) => warning.effect === "degraded").length,
           fatal: warnings.filter((warning) => warning.effect === "fatal").length,
         },
+        scoringAllowsUnverifiedFreshness,
         durationMs,
       },
       lastSuccessAt: attemptStartedAt,

@@ -24,6 +24,7 @@ interface ValidationResult {
 interface ValidationOptions {
   adapter?: ReserveAdapterDefinition;
   now?: number;
+  maxSourceAgeSec?: number;
 }
 
 const PCT_SUM_WARNING_TOLERANCE = 0.5;
@@ -376,7 +377,7 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
     );
   }
 
-  const maxSourceAgeSec = options?.adapter?.validation?.maxSourceAgeSec;
+  const maxSourceAgeSec = options?.maxSourceAgeSec ?? options?.adapter?.validation?.maxSourceAgeSec;
   if (maxSourceAgeSec != null && sourceTimestamp != null) {
     const ageSec = now - sourceTimestamp;
     if (ageSec > maxSourceAgeSec) {

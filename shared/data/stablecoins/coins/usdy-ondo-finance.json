@@ -130,6 +130,9 @@
     "adapter": "chainlink-nav",
     "version": 1,
     "semantics": "single-asset",
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
     "breakerScope": "usdy-ondo",
     "display": {
       "url": "https://ondo.finance/usdy",

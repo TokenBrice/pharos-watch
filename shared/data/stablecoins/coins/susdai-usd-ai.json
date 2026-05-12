@@ -87,6 +87,9 @@
     "adapter": "usdai-proof-of-reserves",
     "version": 2,
     "semantics": "collateral-mix",
+    "scoring": {
+      "allowedDegradedWarningCodes": ["usdai-share-coverage-gap"]
+    },
     "breakerScope": "susdai-usd-ai",
     "display": {
       "url": "https://app.usd.ai/reserves",

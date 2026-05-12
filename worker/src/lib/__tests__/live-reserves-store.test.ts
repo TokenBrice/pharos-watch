@@ -91,7 +91,7 @@ describe("live-reserves-store", () => {
     });
   });
 
-  it("does not mark explicitly unverified timestamped snapshots as scoring eligible", async () => {
+  it("does not mark unverified snapshots without explicit scoring exceptions as scoring eligible", async () => {
     const db = mockD1([
       {
         match: "reserve_composition",
@@ -131,6 +131,52 @@ describe("live-reserves-store", () => {
       evidenceClass: "independent",
       freshnessMode: "unverified",
       scoringEligible: false,
+    });
+  });
+
+  it("marks unverified snapshots with explicit freshness exceptions as scoring eligible", async () => {
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          slices: JSON.stringify(LIVE_SLICES),
+          fetched_at: 1_000,
+          source: "infinifi",
+          metadata: JSON.stringify({
+            freshnessMode: "unverified",
+            sourceTimestamp: 1_000,
+            scoringAllowsUnverifiedFreshness: true,
+          }),
+          adapter_source_model: "dynamic-mix",
+          adapter_evidence_class: "independent",
+        },
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          adapter_key: "infinifi",
+          breaker_key: "live-reserves:infinifi",
+          last_attempted_at: 1_000,
+          last_success_at: 1_000,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+        },
+      },
+    ]);
+
+    const result = await resolveReserveResult(db, "iusd-infinifi", 1_200);
+
+    expect(result?.provenance).toMatchObject({
+      evidenceClass: "independent",
+      freshnessMode: "unverified",
+      scoringEligible: true,
     });
   });
 

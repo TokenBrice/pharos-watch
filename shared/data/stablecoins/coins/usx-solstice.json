@@ -71,6 +71,9 @@
     "version": 1,
     "semantics": "protocol-reserve",
     "breakerScope": "usx-solstice",
+    "scoring": {
+      "maxSourceAgeSec": 700000
+    },
     "display": {
       "url": "https://attestation.solstice.finance/",
       "label": "Solstice Attestation"

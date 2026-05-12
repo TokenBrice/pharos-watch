@@ -106,6 +106,9 @@
     "adapter": "collateral-positions-api",
     "version": 1,
     "semantics": "collateral-mix",
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
     "breakerScope": "deuro-deuro",
     "display": {
       "url": "https://app.deuro.com/",

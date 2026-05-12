@@ -64,6 +64,9 @@
     "adapter": "btcfi",
     "version": 1,
     "semantics": "collateral-mix",
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
     "breakerScope": "btcusd-btcfi",
     "display": {
       "url": "https://www.btcfi.one/",

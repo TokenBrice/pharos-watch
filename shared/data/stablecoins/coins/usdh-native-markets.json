@@ -97,6 +97,9 @@
     "version": 1,
     "semantics": "attestation-mix",
     "breakerScope": "usdh-native-markets",
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
     "display": {
       "url": "https://usdh.com/reserves",
       "label": "USDH Reserves"

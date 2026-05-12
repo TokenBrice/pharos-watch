@@ -91,6 +91,9 @@
     "adapter": "collateral-positions-api",
     "version": 2,
     "semantics": "collateral-mix",
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
     "breakerScope": "zchf-frankencoin",
     "display": {
       "url": "https://app.frankencoin.com/",

@@ -122,7 +122,7 @@ describe("usdai-proof-of-reserves adapter", () => {
       { type: "DEAL", name: "NVIDIA B300 [1]", chain: 42161, amount: 9_007_199_254_740_993 },
     ];
     expect(() => adaptUsdAiProofOfReserves(parsedShareOnly)).toThrow(
-      /usdai-proof-of-reserves share-bearing rows cover only/,
+      /missing a valid share/,
     );
 
     // Same input forced into amount-only weighting (no share present) causes a missing-amount throw.
@@ -133,6 +133,33 @@ describe("usdai-proof-of-reserves adapter", () => {
     expect(() => adaptUsdAiProofOfReserves(amountOnly)).toThrow(
       /usdai-proof-of-reserves entry is missing a valid amount/,
     );
+  });
+
+  it("treats partial-share-only payloads as degraded (with undisclosed bucket)", () => {
+    const result = adaptUsdAiProofOfReserves([
+      {
+        type: "TBILL",
+        name: "PYUSD",
+        chain: 42161,
+        share: "13000000000000000",
+      },
+    ]);
+
+    expect(result.slices).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "PYUSD (PayPal USD)", pct: 1.3, risk: "low", coinId: "pyusd-paypal" }),
+      expect.objectContaining({ name: "Undisclosed USD.AI reserve buckets", pct: 98.7, risk: "high" }),
+    ]));
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "usdai-share-coverage-gap",
+      effect: "degraded",
+    }));
+    expect(result.metadata).toMatchObject({
+      weightingBasis: "share",
+      unknownExposurePct: 98.7,
+      apiEntryCount: 1,
+      liquidBucketCount: 1,
+      dealCount: 0,
+    });
   });
 
   it("groups live PYUSD and deal exposures into readable reserve slices", () => {
@@ -276,6 +303,28 @@ describe("usdai-proof-of-reserves adapter", () => {
       freshnessMode: "unverified",
       liquidReserveLabels: ["PYUSD (PayPal USD)"],
       chains: [42161],
+    });
+  });
+
+  it("falls back to amount weights when shares are partial and marks coverage as degraded", () => {
+    const result = adaptUsdAiProofOfReserves([
+      { type: "TBILL", name: "PYUSD", chain: 42161, share: "944000000000000000", amount: "9440" },
+      { type: "DEAL", name: "NVIDIA B300 [9]", chain: 42161, share: "30000000000000000", amount: "560" },
+    ]);
+
+    expect(result.slices).toEqual([
+      { name: "PYUSD (PayPal USD)", pct: 94.4, risk: "low", coinId: "pyusd-paypal" },
+      { name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: 5.6, risk: "high" },
+    ]);
+    expect(result.warnings).toContainEqual(
+      expect.objectContaining({
+        code: "usdai-share-coverage-gap",
+        effect: "degraded",
+      }),
+    );
+    expect(result.metadata).toMatchObject({
+      apiEntryCount: 2,
+      weightingBasis: "amount",
     });
   });
 

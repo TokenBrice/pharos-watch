@@ -133,6 +133,7 @@ export interface LiveReserveWarning {
 export interface LiveReserveSnapshotMetadata extends Record<string, unknown> {
   sourceTimestamp?: number;
   freshnessMode?: LiveReserveFreshnessMode;
+  scoringAllowsUnverifiedFreshness?: boolean;
   unknownExposurePct?: number;
   yieldBasisCollateralUsd?: number;
   yieldBasisCollateralPct?: number;
@@ -177,6 +178,11 @@ export interface LiveReserveAdapterValidationPolicy {
   allowedFreshnessModes?: LiveReserveFreshnessMode[];
 }
 
+export interface LiveReserveScoringPolicy {
+  maxSourceAgeSec?: number;
+  allowedDegradedWarningCodes?: string[];
+}
+
 export interface LiveReserveDisplay {
   url?: string;
   label?: string;
@@ -188,6 +194,7 @@ export interface LiveReservesConfig {
   semantics: LiveReserveSemantics;
   breakerScope?: string;
   display?: LiveReserveDisplay;
+  scoring?: LiveReserveScoringPolicy;
   inputs: {
     primary: LiveReserveInput;
     fallbacks?: LiveReserveInput[];
@@ -277,6 +284,7 @@ export const LiveReserveSnapshotMetadataSchema: z.ZodType<LiveReserveSnapshotMet
   .object({
     sourceTimestamp: z.number().finite().optional(),
     freshnessMode: z.enum(LIVE_RESERVE_FRESHNESS_MODE_VALUES).optional(),
+    scoringAllowsUnverifiedFreshness: z.boolean().optional(),
     unknownExposurePct: z.number().finite().optional(),
     yieldBasisCollateralUsd: z.number().finite().optional(),
     yieldBasisCollateralPct: z.number().finite().optional(),

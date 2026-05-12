@@ -81,6 +81,11 @@
     "adapter": "nest-vault-positions",
     "version": 1,
     "semantics": "collateral-mix",
+    "scoring": {
+      "allowedDegradedWarningCodes": [
+        "nest-nav-coverage-gap"
+      ]
+    },
     "breakerScope": "nwisdom-nest",
     "display": {
       "url": "https://www.nest.credit/",

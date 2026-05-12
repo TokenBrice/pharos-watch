@@ -104,6 +104,13 @@
     "adapter": "chainlink-por",
     "version": 1,
     "semantics": "attestation-mix",
+    "scoring": {
+      "maxSourceAgeSec": 4000000,
+      "allowedDegradedWarningCodes": [
+        "por-reserve-under-supply",
+        "partial-supply-read-failure"
+      ]
+    },
     "breakerScope": "bib01-backed",
     "display": {
       "url": "https://data.chain.link/feeds/polygon/mainnet/bib01-por",

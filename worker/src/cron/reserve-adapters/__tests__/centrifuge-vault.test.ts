@@ -198,6 +198,11 @@ describe("fetchCentrifugeVaultReserves", () => {
   it("falls back to ERC-20 totalSupply liveness when totalAssets is unavailable", async () => {
     fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      if (body.params[0].data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
       if (body.params[0].data === "0x01e1d114") {
         return jsonResponse({ error: { code: 3, message: "execution reverted" } });
       }
@@ -234,6 +239,52 @@ describe("fetchCentrifugeVaultReserves", () => {
       chain: "ethereum",
       contractAddress: JTRSY_VAULT,
       totalSupplyRaw: "1031884381315470",
+      details: {
+        proofKind: "centrifuge-vault-total-supply-liveness",
+        totalAssetsUnavailable: true,
+      },
+    });
+  });
+
+  it("falls back when both totalAssets and totalSupply are unavailable", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      if (body.params[0].data === "0x01e1d114" || body.params[0].data === "0x18160ddd") {
+        return jsonResponse({ error: { code: 3, message: "execution reverted" } });
+      }
+      return null;
+    });
+
+    const { fetchCentrifugeVaultReserves } = await import("../centrifuge-vault");
+
+    const result = await fetchCentrifugeVaultReserves(
+      makeCoin(),
+      makeConfig(),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.slices).toEqual([
+      {
+        name: "U.S. Treasury bills via Janus Henderson Anemoy fund",
+        pct: 100,
+        risk: "very-low",
+      },
+    ]);
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: "centrifuge-vault-asset-unavailable",
+        effect: "info",
+      }),
+      expect.objectContaining({
+        code: "centrifuge-vault-total-assets-unavailable",
+        effect: "info",
+      }),
+    ]));
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "not-applicable",
+      chain: "ethereum",
+      contractAddress: JTRSY_VAULT,
       details: {
         proofKind: "centrifuge-vault-total-supply-liveness",
         totalAssetsUnavailable: true,

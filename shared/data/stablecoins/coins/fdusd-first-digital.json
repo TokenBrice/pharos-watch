@@ -101,6 +101,9 @@
     "adapter": "fdusd-transparency",
     "version": 1,
     "semantics": "attestation-mix",
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
     "breakerScope": "fdusd-first-digital",
     "display": {
       "url": "https://www.firstdigitallabs.com/transparency",

@@ -35,6 +35,9 @@ export function hasConsistentSnapshotState(
 
 export function hasScoringEligibleLiveReserveFreshness(metadata: LiveReserveSnapshotMetadata): boolean {
   if (metadata.freshnessMode === "unverified") {
+    if (metadata.scoringAllowsUnverifiedFreshness === true) {
+      return true;
+    }
     return false;
   }
 
