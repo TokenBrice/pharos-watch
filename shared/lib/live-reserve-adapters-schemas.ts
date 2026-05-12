@@ -88,7 +88,7 @@ export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = {
   "origin-vault-balances": ["onchain-evm"],
   "quantoz-transparency": ["http-html"],
   "re-metrics": ["http-html"],
-  "reserve-protocol-dtf": ["http-json"],
+  "reserve-protocol-dtf": ["http-json", "onchain-evm"],
   reservoir: ["http-json"],
   "ripple-transparency": ["http-html"],
   "sgforge-coinvertible": ["http-html"],
@@ -283,6 +283,8 @@ const reserveProtocolDtfAssetSchema = z
 const reserveProtocolDtfParamsSchema = z
   .object({
     assets: z.array(reserveProtocolDtfAssetSchema).optional(),
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
   })
   .strict();
 

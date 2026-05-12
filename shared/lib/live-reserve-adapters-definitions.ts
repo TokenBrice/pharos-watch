@@ -468,7 +468,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
-      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+      allowedFreshnessModes: UNVERIFIED_OR_NOT_APPLICABLE_FRESHNESS,
     },
   },
   reservoir: {

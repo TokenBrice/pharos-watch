@@ -416,7 +416,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `origin-vault-balances`    | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
 | `quantoz-transparency`     | `http-html`                                      | `attestation-mix`                                     | 2                |
 | `re-metrics`               | `http-html`                                      | `collateral-mix`                                      | 1                |
-| `reserve-protocol-dtf`     | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `reserve-protocol-dtf`     | `http-json` / `onchain-evm`                     | `collateral-mix`                                      | 1                |
 | `reservoir`                | `http-json`                                      | `protocol-reserve`                                    | 2                |
 | `ripple-transparency`      | `http-html`                                      | `attestation-mix`                                     | 1                |
 | `river-protocol-info`      | `http-json`                                      | `protocol-reserve`                                    | 1                |
@@ -431,6 +431,13 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `usdd-data-platform`       | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `usdh-native-markets`      | `http-html`                                      | `attestation-mix`                                     | 1                |
 | `yamato`                   | `onchain-evm`                                    | `single-asset`                                        | 1                |
+
+`reserve-protocol-dtf` keeps its legacy Reserve discovery API path for
+timestampless fallback reads, but score-grade configs can use the direct
+`onchain-evm` path. The direct path reads the RToken `main()`,
+`basketsNeeded()`, BasketHandler `quote(...)` / `fullyCollateralized()`, and
+AssetRegistry asset plugins for component prices and collateral status, so its
+freshness mode is `not-applicable`.
 
 Adapter key intent is tracked in `shared/lib/live-reserve-adapter-provenance.ts` and covered by the registry tests. Every registered key has one of these statuses:
 

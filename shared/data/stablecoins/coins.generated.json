@@ -21176,8 +21176,9 @@
       "adapter": "reserve-protocol-dtf",
       "inputs": {
         "primary": {
-          "kind": "http-json",
-          "url": "https://api.reserve.org/discover/dtfs"
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
         }
       },
       "params": {
@@ -21213,7 +21214,9 @@
             "depType": "collateral",
             "blacklistable": true
           }
-        ]
+        ],
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://eth.llamarpc.com"
       }
     },
     "yieldConfig": {

@@ -104,11 +104,14 @@
     },
     "inputs": {
       "primary": {
-        "kind": "http-json",
-        "url": "https://api.reserve.org/discover/dtfs"
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
       }
     },
     "params": {
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com",
       "assets": [
         {
           "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
