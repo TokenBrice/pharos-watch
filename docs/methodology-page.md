@@ -89,9 +89,9 @@ For the safety-score changelog specifically, update both:
 - **Pricing pipeline source weights / consensus threshold:** `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/price-consensus.ts`
 - **Safety score base weights / peg multiplier:** `shared/lib/report-cards.ts`
 - **PSI caps, formula, and bands:** `worker/src/lib/stability-index.ts`
-- **Liquidity component weights:** `worker/src/cron/dex-liquidity/pool-helpers.ts`
+- **Liquidity component weights:** `shared/lib/liquidity-score-weights.ts`, `worker/src/cron/dex-liquidity/pool-helpers.ts`
 - **Pressure Shift / gauge bands / flight-to-quality:** `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`
-- **DEWS weights / signal thresholds / bands:** `worker/src/lib/dews.ts`
+- **DEWS weights / signal thresholds / bands:** `shared/lib/dews-config.ts`, `worker/src/lib/dews.ts`
 - **Peg score blend / penalties / min history:** `shared/lib/peg-score.ts`
 
 ## Changelog
