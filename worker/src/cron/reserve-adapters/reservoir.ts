@@ -169,10 +169,13 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
 
   const totalLiabilities = Number(payload.totalLiabilities);
   const supplyUsd = Number.isFinite(totalLiabilities) && totalLiabilities > 0 ? totalLiabilities : null;
-  const immediateRedeemableUsd = RESERVOIR_STABLE_BUCKET_KEYS.reduce(
+  const stableBucketUsd = RESERVOIR_STABLE_BUCKET_KEYS.reduce(
     (sum, key) => sum + (classified.bucketTotals.get(key) ?? 0),
     0,
   );
+  const immediateRedeemableUsd = supplyUsd != null
+    ? Math.min(stableBucketUsd, supplyUsd)
+    : stableBucketUsd;
 
   return {
     slices: classified.slices,

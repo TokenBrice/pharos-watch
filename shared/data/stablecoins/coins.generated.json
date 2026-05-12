@@ -14970,7 +14970,8 @@
         "oracleAddress": "0x0a2a51f2f206447de3e3a80fcf92240244722395",
         "tokenAddress": "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf",
         "assetLabel": "Re7-managed DeFi yield strategy NAV",
-        "assetRisk": "high"
+        "assetRisk": "high",
+        "maxOracleAgeSec": 604800
       }
     },
     "yieldConfig": {
@@ -19719,11 +19720,36 @@
         "depType": "wrapper"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "sgho-aave",
+      "display": {
+        "url": "https://aave.com/docs/aave-v3/guides/sgho",
+        "label": "Aave sGHO"
+      },
+      "adapter": "sgho-wrapper",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "GHO deposited in Aave Savings module",
+          "risk": "low",
+          "coinId": "gho-aave",
+          "depType": "wrapper"
+        }
+      }
+    },
     "notices": [
       {
         "type": "info",
         "title": "Legacy savings contract",
-        "message": "The tracked Aave sGHO contract currently resolves as stkGHO-compatible rather than a full ERC-4626 vault. Pharos uses `previewRedeem` for price discovery and avoids the generic ERC-4626 reserve adapter until the replacement savings vault exposes standard asset and totalAssets methods."
+        "message": "The tracked Aave sGHO contract currently resolves as stkGHO-compatible rather than a full ERC-4626 vault. Pharos uses `previewRedeem` for price discovery and live reserve telemetry, and avoids the generic ERC-4626 reserve adapter until the replacement savings vault exposes standard asset and totalAssets methods."
       }
     ],
     "yieldConfig": {
@@ -21200,6 +21226,7 @@
       },
       "scoring": {
         "allowedDegradedWarningCodes": [
+          "source-timestamp-spread",
           "usdai-share-coverage-gap"
         ]
       },

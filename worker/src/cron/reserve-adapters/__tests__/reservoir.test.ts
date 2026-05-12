@@ -30,7 +30,7 @@ describe("adaptReservoirReserves", () => {
       { name: "USDC positions", pct: 5, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
     ]);
     // All stable buckets count toward immediate redemption capacity, not just USDC.
-    expect(immediateRedeemableUsd).toBe(100);
+    expect(immediateRedeemableUsd).toBe(95);
     expect(supplyUsd).toBe(95);
     expect(unknownExposurePct).toBe(0);
   });
@@ -61,7 +61,7 @@ describe("adaptReservoirReserves", () => {
       { name: "AUSD lending markets", pct: 60, risk: "medium", coinId: "ausd-agora", depType: "wrapper" },
       { name: "USDC positions", pct: 40, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
     ]);
-    expect(immediateRedeemableUsd).toBe(100);
+    expect(immediateRedeemableUsd).toBe(95);
     expect(unknownExposurePct).toBe(0);
   });
 
