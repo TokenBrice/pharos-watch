@@ -26,6 +26,7 @@ const TEST_COUNTS: Record<PegCurrency, number> = {
   CNY: 0,
   CNH: 0,
   MXN: 0,
+  VND: 0,
   UAH: 0,
   ARS: 0,
   IDR: 0,

@@ -115,6 +115,7 @@ function getFiatPegRegion(peg: PegCurrency): AltPegRegion {
     case "CNY":
     case "PHP":
     case "KGS":
+    case "VND":
       return "Asia";
     case "BRL":
     case "CAD":

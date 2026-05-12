@@ -25,6 +25,7 @@ const ALL_SLUGS: Record<PegCurrency, string> = {
   CNY: "cny",
   CNH: "cnh",
   MXN: "mxn",
+  VND: "vnd",
   UAH: "uah",
   ARS: "ars",
   KGS: "kgs",

@@ -342,6 +342,17 @@ export const PEG_METADATA = {
     },
     chart: { label: "MXN", textColor: "text-green-700 dark:text-green-400", bgColor: "bg-green-500", hex: "#22c55e" },
   },
+  VND: {
+    label: "the Vietnamese Dong",
+    shortLabel: "Vietnamese Dong",
+    filterTag: "vnd-peg",
+    filterLabel: "VND",
+    badge: {
+      label: "VND Peg",
+      cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+    },
+    chart: { label: "VND", textColor: "text-amber-700 dark:text-amber-400", bgColor: "bg-amber-500", hex: "#f59e0b" },
+  },
   UAH: {
     label: "the Ukrainian Hryvnia",
     shortLabel: "Ukrainian Hryvnia",

@@ -48,6 +48,7 @@ function pegTypeFromCurrency(pegCurrency: string): string | null {
     case "ARS": return "peggedARS";
     case "KGS": return "peggedKGS";
     case "NGN": return "peggedNGN";
+    case "VND": return "peggedVND";
     case "GOLD": return "peggedGOLD";
     case "SILVER": return "peggedSILVER";
     case "VAR": return "peggedVAR";

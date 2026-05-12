@@ -31,6 +31,7 @@ const SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES = new Map<string, string[]>([
   ["RUB", ["rub"]],
   ["SGD", ["sgd"]],
   ["TRY", ["try"]],
+  ["VND", ["vnd"]],
   ["ZAR", ["zar"]],
 ]);
 

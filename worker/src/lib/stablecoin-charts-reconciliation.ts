@@ -65,6 +65,8 @@ function pegTypeFromCurrency(pegCurrency: string): string | null {
       return "peggedKGS";
     case "NGN":
       return "peggedNGN";
+    case "VND":
+      return "peggedVND";
     case "GOLD":
       return "peggedGOLD";
     case "SILVER":

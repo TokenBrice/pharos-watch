@@ -4,7 +4,7 @@
   "symbol": "VNDC",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "OTHER",
+    "pegCurrency": "VND",
     "governance": "centralized",
     "yieldBearing": false,
     "rwa": true,

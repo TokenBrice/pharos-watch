@@ -47,6 +47,7 @@ export const SECONDARY_PEG_TO_FX: Record<string, string> = {
   ARS: "ARS",
   KGS: "KGS",
   NGN: "NGN",
+  VND: "VND",
 };
 
 /** Maps coin ID → historical FX code override for OTHER-pegged coins */

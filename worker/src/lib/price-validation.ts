@@ -148,7 +148,8 @@ function classifyPegClass(pegCurrency: string | undefined, pegType: string | und
     pegType.includes("KGS") ||
     pegType.includes("NGN") ||
     pegType.includes("UAH") ||
-    pegType.includes("ARS")
+    pegType.includes("ARS") ||
+    pegType.includes("VND")
   ) {
     return "fiat_fx";
   }
