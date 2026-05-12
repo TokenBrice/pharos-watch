@@ -1,9 +1,25 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.98",
+  currentVersion: "5.99",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.99",
+      title: "Free exact-address price augmentation",
+      date: "2026-05-12",
+      effectiveAt: 1778625600,
+      summary:
+        "Targeted exact-address price providers now augment primary consensus for assets with missing prices or below-target source depth, using only free/no-payment lanes and canonical chain-address identity.",
+      impact: [
+        "DexScreener exact token endpoint, DexPaprika, GeckoTerminal simple token prices, Alchemy Prices, Moralis token prices, and Birdeye Solana prices can contribute weight-1 soft primary-consensus candidates",
+        "Targets are built only from canonical `asset.address`, `contracts`, or `tradedContracts` metadata and require exact chain+address identity; symbol search remains confined to the existing final DexScreener fallback pass",
+        "`ADDRESS_PRICE_PROVIDERS_ENABLED` can restrict or disable the provider set, while unset auto-enables no-key providers plus configured key-backed providers",
+        "The new sources are non-replay-safe and non-depeg-authoritative on their own, so they improve source depth without weakening depeg confirmation rules",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.98",
       title: "Live-reserve NAV primary pricing",

@@ -1,6 +1,6 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.98` (2026-02-01 -> 2026-05-12).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.99` (2026-02-01 -> 2026-05-12).
 
 ---
 
@@ -8,6 +8,16 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 - Added a manual DIA exact-address probe for below-target source-depth rows; it records hit rate, freshness, source metadata, and agreement against Pharos prices without publishing prices or changing source-depth counts
 - DIA remains research-only pending false-positive review, capacity/circuit approval, and a separate methodology decision before any consensus or depeg-authority use
+
+---
+
+## v5.99 - Free exact-address price augmentation (May 12, 2026)
+
+- Added targeted exact-address primary augmentation for assets whose previous publication had fewer than 3 consensus sources or no price
+- Current provider set is DexScreener exact token endpoint, DexPaprika, GeckoTerminal simple token price, Alchemy Prices, Moralis token prices, and Birdeye for Solana
+- Targets come only from canonical `asset.address`, `contracts`, or `tradedContracts` metadata and require exact chain+address identity; symbol search remains confined to the existing final DexScreener fallback pass
+- The new sources are weight-1 soft fallback/search-family voices: they can improve source depth and normal corroboration but are non-replay-safe and cannot single-source confirm depegs
+- `ADDRESS_PRICE_PROVIDERS_ENABLED` can restrict the provider set or disable it with `none`; unset auto-enables no-key providers plus configured key-backed providers
 
 ---
 

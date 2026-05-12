@@ -68,7 +68,10 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `ETHERSCAN_API_KEY` | `string` | optional | - | - | Etherscan API credential used by blacklist sync and USDS status reads. |
 | `TRONGRID_API_KEY` | `string` | optional | - | - | TronGrid API credential used by the Tron blacklist-sync lane. |
 | `DRPC_API_KEY` | `string` | optional | - | - | dRPC credential used for L2 archive-node balance lookups. |
-| `ALCHEMY_API_KEY` | `string` | optional | - | - | Alchemy credential used for primary chain RPC endpoints. |
+| `ALCHEMY_API_KEY` | `string` | optional | - | - | Alchemy credential used for primary chain RPC endpoints and, when enabled, Alchemy Prices API address-price augmentation. |
+| `MORALIS_API_KEY` | `string` | optional | - | - | Moralis credential used for optional exact-address token-price augmentation. |
+| `BIRDEYE_API_KEY` | `string` | optional | - | - | Birdeye credential used for optional targeted Solana exact-address token-price augmentation. |
+| `ADDRESS_PRICE_PROVIDERS_ENABLED` | `string` | optional | - | - | Optional comma-separated allowlist for exact-address price providers; unset auto-enables no-key providers plus configured key-backed providers. Use `none` to disable. |
 | `GRAPH_API_KEY` | `string` | optional | - | - | The Graph credential used by DEX liquidity subgraph reads. |
 | `ALERT_WEBHOOK_URL` | `string` | optional | - | - | Webhook URL used for Discord/Slack-style error alerts. |
 | `ANTHROPIC_API_KEY` | `string` | optional | - | - | Anthropic credential used for daily digest generation. |
@@ -738,6 +741,12 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `CMC_PRICES`                         | `coinmarketcap-prices`        | `enrich-prices` pass 2 fallback                                                                                           |
 | `DEXSCREENER_PRICES`                 | `dexscreener-prices`          | `enrich-prices` exact token-address DexScreener fallback                                                                  |
 | `DEXSCREENER_SEARCH`                 | `dexscreener-search`          | `enrich-prices` addressless unique-symbol DexScreener search fallback                                                     |
+| `DEXSCREENER_ADDRESS_PRICES`         | `dexscreener-address-prices`  | `enrich-prices` targeted exact-address primary augmentation                                                               |
+| `DEXPAPRIKA_PRICES`                  | `dexpaprika-prices`           | `enrich-prices` targeted exact-address primary augmentation                                                               |
+| `ALCHEMY_PRICES`                     | `alchemy-prices`              | `enrich-prices` targeted exact-address primary augmentation                                                               |
+| `MORALIS_PRICES`                     | `moralis-prices`              | `enrich-prices` targeted exact-address primary augmentation                                                               |
+| `BIRDEYE_PRICES`                     | `birdeye-prices`              | `enrich-prices` targeted Solana exact-address primary augmentation                                                        |
+| `GECKO_TERMINAL_ADDRESS_PRICES`      | `geckoterminal-address-prices` | `enrich-prices` targeted exact-address primary augmentation                                                               |
 | `TREASURY_RATES`                     | `treasury-rates`              | `fetch-tbill-rate`                                                                                                        |
 | `ETHERSCAN`                          | `etherscan`                   | `sync-blacklist`                                                                                                          |
 | `TRONGRID`                           | `trongrid`                    | `sync-blacklist` (Tron chains)                                                                                            |

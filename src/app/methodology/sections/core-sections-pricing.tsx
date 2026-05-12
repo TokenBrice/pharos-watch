@@ -32,9 +32,11 @@ export function PricingPipelineMethodologySection() {
         <p>
           <strong className="text-foreground">Source diversity.</strong>{" "}
           Kraken and Bitstamp extend the direct venue set. Fresh RedStone prices need timestamped multi-venue breakdowns.
-          The primary promoted DEX bridge now spans Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, Aerodrome
-          Slipstream, and Velodrome Slipstream, with structured source-filter telemetry and DEX lane confidence profiles
-          attached when those lanes participate. DEX bridge identity is canonical-only at runtime, so
+          The primary promoted DEX bridge now spans Fluid, Balancer, Curve, Raydium, Orca, Meteora, PancakeSwap,
+          Aerodrome Slipstream, and Velodrome Slipstream, with structured source-filter telemetry and DEX lane confidence
+          profiles attached when those lanes participate. Targeted exact-address augmentation can add DexScreener,
+          DexPaprika, GeckoTerminal, Alchemy Prices, Moralis, and Solana Birdeye quotes for assets with missing prices or
+          below-target source depth. DEX bridge and address-provider identity are canonical-only at runtime, so
           addressed unknown tokens are dropped instead of being reinterpreted by symbol, promoted protocol DEX prices
           only enter consensus when they are corroborated or no non-DEX voices exist, and direct-API quote legs prefer
           tracked live stablecoin prices instead of unconditional{" "}
@@ -124,7 +126,7 @@ export function PricingPipelineMethodologySection() {
         <MethodologyFacts
           facts={[
             { label: "Update cadence", value: "15m refresh" },
-            { label: "Sources", value: "14+ live voices" },
+            { label: "Sources", value: "20+ live voices" },
             { label: "Output", value: "Price + confidence tag per asset" },
           ]}
         />
@@ -166,7 +168,7 @@ export function PricingPipelineMethodologySection() {
               <MethodologyDiagramCard title="Aggregators" subtitle={<><span>CoinGecko (w2)</span><br /><span>DL list (w1)</span></>} />
               <MethodologyDiagramCard title="Exchanges" subtitle={<><span>Binance (w2), Kraken (w2)</span><br /><span>Coinbase (w2), Bitstamp (w1)</span></>} />
               <MethodologyDiagramCard title="Oracles" subtitle={<><span>Pyth (w2)</span><br /><span>RedStone (w1)</span></>} />
-              <MethodologyDiagramCard title="On-chain" subtitle={<><span>Curve (w3)</span><br /><span>DEX agg (w1), protocol DEX (w2-w3), GT (w1)</span></>} />
+              <MethodologyDiagramCard title="On-chain" subtitle={<><span>Curve (w3)</span><br /><span>DEX agg/address (w1), protocol DEX (w2-w3), GT (w1)</span></>} />
             </div>
             <MethodologyDiagramArrow />
             <MethodologyDiagramCard className="w-80" title="N-Source Consensus" subtitle="Pairwise clusters; publish cluster median, keep best member for provenance" />
@@ -185,7 +187,7 @@ export function PricingPipelineMethodologySection() {
               <MethodologyDiagramCard title="Aggregators" titleClassName="text-xs text-foreground font-medium" subtitle="CG (w2), DL-list (w1)" subtitleClassName="text-xs text-muted-foreground" />
               <MethodologyDiagramCard title="Exchanges" titleClassName="text-xs text-foreground font-medium" subtitle="BN (w2), KR (w2), CB (w2), BS (w1)" subtitleClassName="text-xs text-muted-foreground" />
               <MethodologyDiagramCard title="Oracles" titleClassName="text-xs text-foreground font-medium" subtitle="Pyth (w2), RS (w1)" subtitleClassName="text-xs text-muted-foreground" />
-              <MethodologyDiagramCard title="On-chain" titleClassName="text-xs text-foreground font-medium" subtitle="Curve (w3), DEX agg (w1), protocol DEX (w2-w3), GT (w1)" subtitleClassName="text-xs text-muted-foreground" />
+              <MethodologyDiagramCard title="On-chain" titleClassName="text-xs text-foreground font-medium" subtitle="Curve (w3), DEX/address (w1), protocol DEX (w2-w3), GT (w1)" subtitleClassName="text-xs text-muted-foreground" />
             </div>
             <MethodologyDiagramArrow />
             <MethodologyDiagramCard className="w-full" title="N-Source Consensus" subtitle="Pairwise clusters; publish cluster median, keep best member for provenance" />
@@ -224,8 +226,9 @@ export function PricingPipelineMethodologySection() {
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Curve on-chain</td><td className="py-2 pr-4">3</td><td className="py-2 pr-4">On-chain</td><td className="py-2">StableSwap implied prices via <code className="text-xs">get_dy()</code></td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Curve oracle</td><td className="py-2 pr-4">3</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Additional primary-consensus voice for <code className="text-xs">crvusd-curve</code></td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">DEX pools</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Aggregate DEX voice, but withheld when overlapping protocol-level DEX bridge data exists</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Protocol DEX APIs</td><td className="py-2 pr-4">2-3</td><td className="py-2 pr-4">On-chain / pool-state API</td><td className="py-2">Primary-consensus protocol promotion currently supports Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream when the protocol lane survives registry, TVL, freshness, and corroboration gates.</td></tr>
+                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Protocol DEX APIs</td><td className="py-2 pr-4">2-3</td><td className="py-2 pr-4">On-chain / pool-state API</td><td className="py-2">Primary-consensus protocol promotion currently supports Fluid, Balancer, Curve, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream when the protocol lane survives registry, TVL, freshness, and corroboration gates.</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">GeckoTerminal</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Pool-level cross-check for weak CG / DL-list soft-source outcomes (&ge;$10K TVL)</td></tr>
+                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Exact-address providers</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">Market / on-chain</td><td className="py-2">Targeted DexScreener, DexPaprika, GeckoTerminal, Alchemy Prices, Moralis, and Solana Birdeye quotes for missing or below-depth assets; exact chain+address only and non-depeg-authoritative on their own</td></tr>
                 </tbody>
               </table>
             </div>
