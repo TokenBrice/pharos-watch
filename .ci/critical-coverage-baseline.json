@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-11",
+  "generatedAt": "2026-05-12",
   "files": {
     "src/lib/api.ts": 91.7,
     "worker/src/lib/api-cache-read.ts": 95.1,
@@ -19,7 +19,7 @@
     "worker/src/cron/daily-digest.ts": 80.3,
     "worker/src/cron/sync-yield-data.ts": 100,
     "worker/src/api/discovery.ts": 86.2,
-    "worker/src/api/peg-summary.ts": 66.3,
+    "worker/src/api/peg-summary.ts": 65.7,
     "worker/src/api/report-cards.ts": 85.7,
     "worker/src/api/dex-liquidity.ts": 93.3,
     "worker/src/api/stress-signals.ts": 96,

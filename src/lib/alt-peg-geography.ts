@@ -29,6 +29,7 @@ export const PEG_COUNTRY_MAP: Partial<Record<PegCurrency, readonly Iso2[]>> = {
   MXN: ["MX"],
   ZAR: ["ZA"],
   AUD: ["AU"],
+  VND: ["VN"],
 };
 
 export interface CountryFill {
