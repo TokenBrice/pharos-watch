@@ -33726,6 +33726,114 @@
     }
   },
   {
+    "id": "ybold-yearn",
+    "detailProvider": "coingecko",
+    "name": "Yearn BOLD",
+    "symbol": "yBOLD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "bold-liquity",
+    "collateral": "BOLD deposited into Yearn's tokenized Liquity V2 Stability Pool strategy, allocated across Liquity V2 Stability Pools to earn liquidation fees and protocol interest",
+    "pegMechanism": "ERC-4626 Yearn vault shares represent BOLD deployed into Liquity V2 Stability Pools; yBOLD can be redeemed for underlying BOLD without a withdrawal fee or waiting period, inheriting BOLD peg and Liquity Stability Pool execution risk",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://yearn.fi/v3/1/0x9f4330700a36b29952869fac9b33f45eedd8a3d8"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/yearnfi"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/yearn/yBOLD"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "blacklistabilityReview": {
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Docs",
+          "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/yearn/yBOLD"
+        }
+      ],
+      "evidence": "Yearn documents yBOLD as transferable and redeemable, but the tokenized strategy remains an actively managed vault wrapper with Yearn strategy smart-contract risk and documented privileged-rights lifecycle. Pharos treats direct holder-blacklist exposure as unproven while retaining Possible for vault-control uncertainty.",
+      "reviewer": "Codex yBOLD tracking pass",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "infrastructures": [
+      "liquity-v2"
+    ],
+    "variantOf": "bold-liquity",
+    "variantKind": "strategy-vault",
+    "reserves": [
+      {
+        "name": "BOLD deployed into Liquity V2 Stability Pools",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "bold-liquity",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "ybold-yearn",
+      "display": {
+        "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold",
+        "label": "Yearn yBOLD"
+      },
+      "adapter": "erc4626-single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "BOLD deployed into Liquity V2 Stability Pools",
+          "risk": "medium",
+          "coinId": "bold-liquity",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0x6440f144b7e50d6a8439336510312d2f54beb01d"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Yearn yBOLD Stability Pool vault",
+      "yieldType": "lending-vault"
+    }
+  },
+  {
     "id": "ylds-figure",
     "llamaId": "272",
     "detailProvider": "defillama",

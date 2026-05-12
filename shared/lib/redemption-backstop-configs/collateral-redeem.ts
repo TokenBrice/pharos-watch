@@ -1,10 +1,10 @@
 import type { RedemptionBackstopConfig } from "./shared";
+import { defineBackstopRegistry, defineBatch, type RedemptionBackstopRegistryEntry } from "./factory";
 import {
   applyTrackedReviewedDocs,
   collateralRedeemBase,
   documentedBoundSupplyFull,
   documentedVariableFee,
-  expandIds,
   fixedFee,
   LIQUITY_STYLE_REDEMPTION_FEE,
   NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
@@ -19,6 +19,31 @@ const REVIEWED_STABLECOIN_AUDIT_AT = "2026-05-12";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
+const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/collateral-redeem.ts";
+const BASE_COLLATERAL_REDEEM_IDS = [
+  "bold-liquity",
+  "lusd-liquity",
+  "feusd-felix",
+  "meusd-mezo",
+  "nect-beraborrow",
+  "fxusd-f-x-protocol",
+  "usdq-quill",
+  "usdk-orki",
+] as const;
+const BASE_COLLATERAL_OVERRIDE_REASON =
+  "Reviewed collateral-specific route replaces the shared collateral redemption default.";
+
+function defineCollateralRecordEntries(
+  configs: Record<string, RedemptionBackstopConfig>,
+): RedemptionBackstopRegistryEntry[] {
+  const baseIds = new Set<string>(BASE_COLLATERAL_REDEEM_IDS);
+  return Object.entries(configs).map(([id, config]) => ({
+    id,
+    config,
+    sourceFilePath: SOURCE_FILE_PATH,
+    ...(baseIds.has(id) ? { overrideReason: BASE_COLLATERAL_OVERRIDE_REASON } : {}),
+  }));
+}
 
 const mentoCdpRedeemConfig: RedemptionBackstopConfig = {
   ...collateralRedeemBase,
@@ -45,12 +70,12 @@ const mentoCdpRedeemConfig: RedemptionBackstopConfig = {
   ],
 };
 
-export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
-  ...expandIds(
-    ["bold-liquity", "lusd-liquity", "feusd-felix", "meusd-mezo", "nect-beraborrow", "fxusd-f-x-protocol", "usdq-quill", "usdk-orki"],
-    collateralRedeemBase,
-  ),
-  ...expandIds(["gbpm-mento", "jpym-mento", "chfm-mento"], mentoCdpRedeemConfig),
+export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = defineBackstopRegistry([
+  ...defineBatch(BASE_COLLATERAL_REDEEM_IDS, collateralRedeemBase, { sourceFilePath: SOURCE_FILE_PATH }),
+  ...defineBatch(["gbpm-mento", "jpym-mento", "chfm-mento"], mentoCdpRedeemConfig, {
+    sourceFilePath: SOURCE_FILE_PATH,
+  }),
+  ...defineCollateralRecordEntries({
   "bold-liquity": {
     ...collateralRedeemBase,
     capacityModel: { kind: "reserve-sync-metadata" },
@@ -399,7 +424,8 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       "Modeled as a collateral redemption route into wstETH-backed vault value; protocol imbalance and validation windows can delay or restrict execution.",
     ],
   },
-};
+  }),
+]);
 
 applyTrackedReviewedDocs(COLLATERAL_REDEEM_BACKSTOP_CONFIGS, [
   "feusd-felix",
