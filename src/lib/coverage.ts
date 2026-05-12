@@ -4,6 +4,7 @@ import type { BlacklistStatus } from "@shared/lib/report-cards";
 import { getReserves } from "@shared/lib/reserve-templates";
 import { COVERAGE_FEATURES } from "@/lib/coverage-features";
 import type {
+  CoverageBreakdownItem,
   CoverageFeatureDefinition,
   CoverageFeatureKey,
   CoverageFeatureSummary,
@@ -20,6 +21,7 @@ import type {
 import { BLACKLIST_STABLECOINS } from "@shared/types";
 
 export type {
+  CoverageBreakdownItem,
   CoverageFeatureDefinition,
   CoverageFeatureKey,
   CoverageFeatureSummary,
@@ -694,18 +696,29 @@ export function resolveDependencyCoverage(hasDependencyCoverage: boolean, dataAv
   );
 }
 
+function item(key: string, label: string, count: number): CoverageBreakdownItem {
+  return { key, label, count };
+}
+
 function buildCoverageBreakdown(
   featureKey: CoverageFeatureKey,
   breakdownMap: Map<string, number>,
   availableCount: number,
   totalCount: number,
   rows?: CoverageRow[],
-) {
+): CoverageBreakdownItem[] {
+  const get = (kind: string) => breakdownMap.get(kind) ?? 0;
+
   if (featureKey === "price") {
-    const base = `tracked ${breakdownMap.get("tracked") ?? 0} · price-only ${breakdownMap.get("price-only") ?? 0}`;
-    const unavailable = breakdownMap.get("data-unavailable") ?? 0;
-    const baseWithAvailability = unavailable > 0 ? `${base} · data n/a ${unavailable}` : base;
-    if (!rows) return base;
+    const items: CoverageBreakdownItem[] = [
+      item("tracked", "tracked", get("tracked")),
+      item("price-only", "price-only", get("price-only")),
+    ];
+    const unavailable = get("data-unavailable");
+    if (unavailable > 0) {
+      items.push(item("data-unavailable", "data n/a", unavailable));
+    }
+    if (!rows) return items;
 
     // Source-depth distribution
     let deep = 0; // 5+ sources
@@ -719,38 +732,80 @@ function buildCoverageBreakdown(
       else shallow++;
     }
     if (deep + mid + shallow > 0) {
-      return `${baseWithAvailability} · 5+ sources: ${deep} · 3-4: ${mid} · 1-2: ${shallow}`;
+      items.push(item("sources-5-plus", "5+ sources:", deep));
+      items.push(item("sources-3-4", "3-4:", mid));
+      items.push(item("sources-1-2", "1-2:", shallow));
     }
-    return baseWithAvailability;
+    return items;
   }
   if (featureKey === "dex") {
-    return `primary ${breakdownMap.get("primary") ?? 0} · mixed ${breakdownMap.get("mixed") ?? 0} · fallback ${breakdownMap.get("fallback") ?? 0} · data n/a ${breakdownMap.get("data-unavailable") ?? 0}`;
+    return [
+      item("primary", "primary", get("primary")),
+      item("mixed", "mixed", get("mixed")),
+      item("fallback", "fallback", get("fallback")),
+      item("data-unavailable", "data n/a", get("data-unavailable")),
+    ];
   }
   if (featureKey === "reserves") {
-    return `score-grade ${breakdownMap.get("live") ?? 0} · configured ${breakdownMap.get("live-configured") ?? 0} · checking ${breakdownMap.get("checking") ?? 0} · curated-validated ${breakdownMap.get("curated-validated") ?? 0} · proof ${breakdownMap.get("proof") ?? 0} · curated ${breakdownMap.get("curated") ?? 0} · estimated ${breakdownMap.get("estimated") ?? 0}`;
+    return [
+      item("live", "score-grade", get("live")),
+      item("live-configured", "configured", get("live-configured")),
+      item("checking", "checking", get("checking")),
+      item("curated-validated", "curated-validated", get("curated-validated")),
+      item("proof", "proof", get("proof")),
+      item("curated", "curated", get("curated")),
+      item("estimated", "estimated", get("estimated")),
+    ];
   }
   if (featureKey === "redemption") {
-    return `heuristic ${breakdownMap.get("modeled-heuristic") ?? 0} · configured ${breakdownMap.get("configured-unrated") ?? 0} · issuer ${breakdownMap.get("offchain-issuer") ?? 0} · psm ${breakdownMap.get("psm-swap") ?? 0} · queue ${breakdownMap.get("queue-redeem") ?? 0} · collateral ${breakdownMap.get("collateral-redeem") ?? 0} · stable ${breakdownMap.get("stablecoin-redeem") ?? 0} · basket ${breakdownMap.get("basket-redeem") ?? 0} · data n/a ${breakdownMap.get("data-unavailable") ?? 0}`;
+    return [
+      item("modeled-heuristic", "heuristic", get("modeled-heuristic")),
+      item("configured-unrated", "configured", get("configured-unrated")),
+      item("offchain-issuer", "issuer", get("offchain-issuer")),
+      item("psm-swap", "psm", get("psm-swap")),
+      item("queue-redeem", "queue", get("queue-redeem")),
+      item("collateral-redeem", "collateral", get("collateral-redeem")),
+      item("stablecoin-redeem", "stable", get("stablecoin-redeem")),
+      item("basket-redeem", "basket", get("basket-redeem")),
+      item("data-unavailable", "data n/a", get("data-unavailable")),
+    ];
   }
   if (featureKey === "flows") {
-    return `full ${breakdownMap.get("full") ?? 0} · partial ${breakdownMap.get("partial-history") ?? 0} · lagging ${breakdownMap.get("lagging") ?? 0} · bootstrapping ${breakdownMap.get("bootstrapping") ?? 0} · data n/a ${breakdownMap.get("data-unavailable") ?? 0}`;
+    return [
+      item("full", "full", get("full")),
+      item("partial-history", "partial", get("partial-history")),
+      item("lagging", "lagging", get("lagging")),
+      item("bootstrapping", "bootstrapping", get("bootstrapping")),
+      item("data-unavailable", "data n/a", get("data-unavailable")),
+    ];
   }
   if (featureKey === "safety") {
-    return `rated ${breakdownMap.get("rated") ?? 0} · NR ${breakdownMap.get("nr") ?? 0} · data n/a ${breakdownMap.get("data-unavailable") ?? 0}`;
+    return [
+      item("rated", "rated", get("rated")),
+      item("nr", "NR", get("nr")),
+      item("data-unavailable", "data n/a", get("data-unavailable")),
+    ];
   }
   if (featureKey === "blacklist") {
-    const live = breakdownMap.get("live") ?? 0;
-    const yes = breakdownMap.get("yes") ?? 0;
-    const dilutable = breakdownMap.get("dilutable") ?? 0;
-    const upstream = breakdownMap.get("upstream") ?? 0;
-    const possible = breakdownMap.get("possible") ?? 0;
-    const no = breakdownMap.get("no") ?? 0;
-    const unavailable = breakdownMap.get("data-unavailable") ?? 0;
-    const base = `live ${live} · yes ${yes} · dilutable ${dilutable} · upstream ${upstream} · possible ${possible} · no ${no}`;
-    return unavailable > 0 ? `${base} · data n/a ${unavailable}` : base;
+    const unavailable = get("data-unavailable");
+    const items: CoverageBreakdownItem[] = [
+      item("live", "live", get("live")),
+      item("yes", "yes", get("yes")),
+      item("dilutable", "dilutable", get("dilutable")),
+      item("upstream", "upstream", get("upstream")),
+      item("possible", "possible", get("possible")),
+      item("no", "no", get("no")),
+    ];
+    if (unavailable > 0) {
+      items.push(item("data-unavailable", "data n/a", unavailable));
+    }
+    return items;
   }
 
-  return `${availableCount} covered · ${totalCount - availableCount} uncovered`;
+  return [
+    item("covered", "covered", availableCount),
+    item("uncovered", "uncovered", totalCount - availableCount),
+  ];
 }
 
 export function buildCoverageFeatureSummary(

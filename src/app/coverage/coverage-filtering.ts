@@ -39,68 +39,79 @@ export function matchesCoverageFilter(row: CoverageRow, filter: CoverageFilterKe
   return FILTER_MATCHERS[filter](row);
 }
 
+type SortKeySpec = {
+  key: ((row: CoverageRow) => number) | keyof CoverageRow;
+  direction: "asc" | "desc";
+};
+
+function readNumeric(row: CoverageRow, key: SortKeySpec["key"]): number {
+  if (typeof key === "function") return key(row);
+  return row[key] as number;
+}
+
+function compareByKeys(a: CoverageRow, b: CoverageRow, specs: SortKeySpec[]): number {
+  for (const spec of specs) {
+    const left = readNumeric(a, spec.key);
+    const right = readNumeric(b, spec.key);
+    if (left !== right) {
+      return spec.direction === "asc" ? left - right : right - left;
+    }
+  }
+  return 0;
+}
+
+const MARKET_CAP_DESC: SortKeySpec = { key: "marketCapUsd", direction: "desc" };
+
 export function sortCoverageRows(rows: CoverageRow[], sort: CoverageSortKey): CoverageRow[] {
   const cloned = [...rows];
   if (sort === "name") {
     return cloned.sort((left, right) => left.name.localeCompare(right.name));
   }
   if (sort === "most-covered") {
-    return cloned.sort((left, right) => {
-      if (right.coverageCount !== left.coverageCount) {
-        return right.coverageCount - left.coverageCount;
-      }
-      if (right.advancedCoverageCount !== left.advancedCoverageCount) {
-        return right.advancedCoverageCount - left.advancedCoverageCount;
-      }
-      return right.marketCapUsd - left.marketCapUsd;
-    });
+    return cloned.sort((left, right) =>
+      compareByKeys(left, right, [
+        { key: "coverageCount", direction: "desc" },
+        { key: "advancedCoverageCount", direction: "desc" },
+        MARKET_CAP_DESC,
+      ]),
+    );
   }
   if (sort === "least-covered") {
-    return cloned.sort((left, right) => {
-      if (left.coverageCount !== right.coverageCount) {
-        return left.coverageCount - right.coverageCount;
-      }
-      if (left.headlineCoverageCount !== right.headlineCoverageCount) {
-        return left.headlineCoverageCount - right.headlineCoverageCount;
-      }
-      return right.marketCapUsd - left.marketCapUsd;
-    });
+    return cloned.sort((left, right) =>
+      compareByKeys(left, right, [
+        { key: "coverageCount", direction: "asc" },
+        { key: "headlineCoverageCount", direction: "asc" },
+        MARKET_CAP_DESC,
+      ]),
+    );
   }
   if (sort === "most-headline") {
-    return cloned.sort((left, right) => {
-      if (right.headlineCoverageCount !== left.headlineCoverageCount) {
-        return right.headlineCoverageCount - left.headlineCoverageCount;
-      }
-      if (right.coverageCount !== left.coverageCount) {
-        return right.coverageCount - left.coverageCount;
-      }
-      return right.marketCapUsd - left.marketCapUsd;
-    });
+    return cloned.sort((left, right) =>
+      compareByKeys(left, right, [
+        { key: "headlineCoverageCount", direction: "desc" },
+        { key: "coverageCount", direction: "desc" },
+        MARKET_CAP_DESC,
+      ]),
+    );
   }
   if (sort === "least-headline") {
-    return cloned.sort((left, right) => {
-      if (left.headlineCoverageCount !== right.headlineCoverageCount) {
-        return left.headlineCoverageCount - right.headlineCoverageCount;
-      }
-      if (left.coverageCount !== right.coverageCount) {
-        return left.coverageCount - right.coverageCount;
-      }
-      return right.marketCapUsd - left.marketCapUsd;
-    });
+    return cloned.sort((left, right) =>
+      compareByKeys(left, right, [
+        { key: "headlineCoverageCount", direction: "asc" },
+        { key: "coverageCount", direction: "asc" },
+        MARKET_CAP_DESC,
+      ]),
+    );
   }
   const featureSortKey = FEATURE_SORT_KEYS[sort];
   if (featureSortKey) {
-    return cloned.sort((left, right) => {
-      const leftStatus = left.statuses[featureSortKey];
-      const rightStatus = right.statuses[featureSortKey];
-      if (leftStatus.sortRank !== rightStatus.sortRank) {
-        return leftStatus.sortRank - rightStatus.sortRank;
-      }
-      if (left.headlineCoverageCount !== right.headlineCoverageCount) {
-        return left.headlineCoverageCount - right.headlineCoverageCount;
-      }
-      return right.marketCapUsd - left.marketCapUsd;
-    });
+    return cloned.sort((left, right) =>
+      compareByKeys(left, right, [
+        { key: (row) => row.statuses[featureSortKey].sortRank, direction: "asc" },
+        { key: "headlineCoverageCount", direction: "asc" },
+        MARKET_CAP_DESC,
+      ]),
+    );
   }
   return cloned.sort((left, right) => {
     if (right.marketCapUsd !== left.marketCapUsd) {

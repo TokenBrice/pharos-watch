@@ -333,7 +333,13 @@ describe("coverage helpers", () => {
     expect(summary.totalCount).toBe(2);
     expect(summary.coveragePct).toBe(50);
     expect(summary.mcapSharePct).toBe(80);
-    expect(summary.breakdown).toBe("tracked 1 · price-only 1 · 5+ sources: 0 · 3-4: 1 · 1-2: 0");
+    expect(summary.breakdown).toEqual([
+      { key: "tracked", label: "tracked", count: 1 },
+      { key: "price-only", label: "price-only", count: 1 },
+      { key: "sources-5-plus", label: "5+ sources:", count: 0 },
+      { key: "sources-3-4", label: "3-4:", count: 1 },
+      { key: "sources-1-2", label: "1-2:", count: 0 },
+    ]);
   });
 
   it("sets sourceCount and sourceNames on tracked price coverage when consensusSources provided", () => {
@@ -393,9 +399,9 @@ describe("coverage helpers", () => {
 
     const summary = buildCoverageFeatureSummary(COVERAGE_FEATURES.find((f) => f.key === "price")!, rows, 1_000);
 
-    expect(summary.breakdown).toContain("tracked 2");
-    expect(summary.breakdown).toContain("5+ sources: 1");
-    expect(summary.breakdown).toContain("1-2: 1");
+    expect(summary.breakdown).toContainEqual({ key: "tracked", label: "tracked", count: 2 });
+    expect(summary.breakdown).toContainEqual({ key: "sources-5-plus", label: "5+ sources:", count: 1 });
+    expect(summary.breakdown).toContainEqual({ key: "sources-1-2", label: "1-2:", count: 1 });
   });
 
   it("uses score-grade live reserves as the headline metric for reserve summaries", () => {
@@ -500,9 +506,15 @@ describe("coverage helpers", () => {
     expect(summary.mcapSharePct).toBe(70);
     expect(summary.shareLabel).toBe("Score-grade live reserve market-cap reach");
     expect(summary.coverageLabel).toBe("25% with score-grade live reserves");
-    expect(summary.breakdown).toBe(
-      "score-grade 1 · configured 0 · checking 0 · curated-validated 1 · proof 1 · curated 1 · estimated 0",
-    );
+    expect(summary.breakdown).toEqual([
+      { key: "live", label: "score-grade", count: 1 },
+      { key: "live-configured", label: "configured", count: 0 },
+      { key: "checking", label: "checking", count: 0 },
+      { key: "curated-validated", label: "curated-validated", count: 1 },
+      { key: "proof", label: "proof", count: 1 },
+      { key: "curated", label: "curated", count: 1 },
+      { key: "estimated", label: "estimated", count: 0 },
+    ]);
   });
 
   it("breaks down redemption coverage by route family", () => {
@@ -570,9 +582,17 @@ describe("coverage helpers", () => {
     expect(summary.mcapSharePct).toBe(80);
     expect(summary.coverageLabel).toBe("50% with strong redemption coverage");
     expect(summary.shareLabel).toBe("Strong redemption market-cap reach");
-    expect(summary.breakdown).toBe(
-      "heuristic 1 · configured 0 · issuer 1 · psm 1 · queue 0 · collateral 0 · stable 0 · basket 0 · data n/a 0",
-    );
+    expect(summary.breakdown).toEqual([
+      { key: "modeled-heuristic", label: "heuristic", count: 1 },
+      { key: "configured-unrated", label: "configured", count: 0 },
+      { key: "offchain-issuer", label: "issuer", count: 1 },
+      { key: "psm-swap", label: "psm", count: 1 },
+      { key: "queue-redeem", label: "queue", count: 0 },
+      { key: "collateral-redeem", label: "collateral", count: 0 },
+      { key: "stablecoin-redeem", label: "stable", count: 0 },
+      { key: "basket-redeem", label: "basket", count: 0 },
+      { key: "data-unavailable", label: "data n/a", count: 0 },
+    ]);
   });
 
   it("summarizes blacklist status across every coin and surfaces live tracker coverage", () => {
@@ -640,6 +660,13 @@ describe("coverage helpers", () => {
     expect(summary.mcapSharePct).toBe(100);
     expect(summary.coverageLabel).toBe("100% with resolved blacklist status");
     expect(summary.shareLabel).toBe("Resolved status market-cap reach");
-    expect(summary.breakdown).toBe("live 1 · yes 1 · dilutable 0 · upstream 0 · possible 1 · no 1");
+    expect(summary.breakdown).toEqual([
+      { key: "live", label: "live", count: 1 },
+      { key: "yes", label: "yes", count: 1 },
+      { key: "dilutable", label: "dilutable", count: 0 },
+      { key: "upstream", label: "upstream", count: 0 },
+      { key: "possible", label: "possible", count: 1 },
+      { key: "no", label: "no", count: 1 },
+    ]);
   });
 });

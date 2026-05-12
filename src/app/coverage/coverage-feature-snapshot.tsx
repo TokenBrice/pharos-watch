@@ -15,7 +15,7 @@ export interface CoverageFeatureSnapshotRowProps {
 export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotRowProps) {
   const Icon = FEATURE_ICON[summary.feature.key];
   const accent = FEATURE_ACCENT_CLASSES[summary.feature.key];
-  const breakdownItems = summary.breakdown.split("\u00b7").map((item) => item.trim());
+  const breakdownItems = summary.breakdown;
 
   return (
     <li
@@ -82,21 +82,20 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
         <div className="pharos-kicker">Breakdown</div>
         <div className="mt-2 flex flex-wrap gap-2">
           {breakdownItems.map((item, index) => {
-            const statusKey = item.split(/\s+/)[0]?.toLowerCase() ?? "";
             const blacklistChip =
-              summary.feature.key === "blacklist" && statusKey in BLACKLIST_BREAKDOWN_CHIP_CLASS
-                ? BLACKLIST_BREAKDOWN_CHIP_CLASS[statusKey as BlacklistBreakdownStatusKind]
+              summary.feature.key === "blacklist" && item.key in BLACKLIST_BREAKDOWN_CHIP_CLASS
+                ? BLACKLIST_BREAKDOWN_CHIP_CLASS[item.key as BlacklistBreakdownStatusKind]
                 : undefined;
             return (
               <span
-                key={`${summary.feature.key}-${item}`}
+                key={`${summary.feature.key}-${item.key}`}
                 className={cn(
                   "rounded-full border px-2.5 py-1 text-[11px] font-medium",
                   blacklistChip ??
                     (index === 0 ? accent.chip : "border-border/60 bg-background/45 text-muted-foreground"),
                 )}
               >
-                {item}
+                {item.label} {item.count}
               </span>
             );
           })}

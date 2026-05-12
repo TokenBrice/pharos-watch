@@ -41,6 +41,12 @@ export interface CoverageFeatureDefinition {
   external?: boolean;
 }
 
+export interface CoverageBreakdownItem {
+  key: string;
+  label: string;
+  count: number;
+}
+
 export interface CoverageFeatureSummary {
   feature: CoverageFeatureDefinition;
   availableCount: number;
@@ -51,7 +57,7 @@ export interface CoverageFeatureSummary {
   countLabel: string;
   coverageLabel: string;
   shareLabel: string;
-  breakdown: string;
+  breakdown: CoverageBreakdownItem[];
 }
 
 export interface CoverageRow {
