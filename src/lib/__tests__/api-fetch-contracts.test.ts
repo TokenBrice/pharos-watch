@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
-import { StablecoinChartResponseSchema, StablecoinReservesResponseSchema } from "@shared/types";
+import { z } from "zod";import { StablecoinChartResponseSchema } from "@shared/types/digest";
+import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import { ReportCardsResponseSchema } from "@shared/types/report-cards";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import {
@@ -234,6 +234,7 @@ describe("api contract validation policy", () => {
   it("routes browser data requests through same-origin site-data on the site and ops hosts", () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
     expect(buildRequestUrl("/api/stablecoins")).toBe("/_site-data/stablecoins");
+    expect(buildRequestUrl("/api/public-status-history?limit=10")).toBe("/_site-data/public-status-history?limit=10");
     expect(buildRequestUrl("/api/public-status-history")).toBe("/_site-data/public-status-history");
     expect(buildRequestUrl("/api/telegram-pulse")).toBe("/_site-data/telegram-pulse");
 
@@ -241,6 +242,15 @@ describe("api contract validation policy", () => {
     expect(buildRequestUrl("/api/stablecoins")).toBe("/_site-data/stablecoins");
     expect(buildRequestUrl("/api/public-status-history")).toBe("/_site-data/public-status-history");
     expect(buildRequestUrl("/api/telegram-pulse")).toBe("/_site-data/telegram-pulse");
+  });
+
+  it("keeps browser public POST and non-site-data GET routes off the site-data proxy", () => {
+    vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
+
+    expect(buildRequestUrl("/api/api-key-requests", { method: "POST" })).toBe("/api/api-key-requests");
+    expect(buildRequestUrl("/api/api-key-requests/verify", { method: "POST" })).toBe("/api/api-key-requests/verify");
+    expect(buildRequestUrl("/api/feedback", { method: "POST" })).toBe("/api/feedback");
+    expect(buildRequestUrl("/api/og/stablecoin/usdt-tether")).toBe("/api/og/stablecoin/usdt-tether");
   });
 
   it("keeps admin and explicit-base requests off the site-data proxy", () => {
@@ -263,6 +273,20 @@ describe("api contract validation policy", () => {
     const [, init] = fetchSpy.mock.calls[0] ?? [];
     const headers = new Headers((init as RequestInit | undefined)?.headers);
     expect(headers.get("Accept")).toContain(PHAROS_WEB_ACCEPT_MARKER);
+  });
+
+  it("passes request methods into browser URL lane selection", async () => {
+    vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await apiRequest("/api/api-key-requests", { method: "POST" });
+
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe("/api/api-key-requests");
   });
 
   it("propagates caller-provided AbortSignal through the shared request helper", async () => {

@@ -1,5 +1,10 @@
 import { resolveApiRequestRouteMetric } from "@shared/lib/request-attribution";
-import { resolveSiteDataUpstreamPath } from "@shared/lib/site-data-routes";
+import {
+  SITE_DATA_ALLOWED_METHOD,
+  SITE_DATA_PROXY_SECRET_HEADER,
+  isSiteDataAllowedMethod,
+  resolveSiteDataUpstreamPath,
+} from "@shared/lib/site-data-lane";
 import {
   jsonError,
   buildUpstreamHeaders as buildUpstreamHeadersShared,
@@ -18,7 +23,6 @@ import {
   resolveWildcardProxyPath,
 } from "../lib/upstream-proxy";
 
-const SITE_PROXY_HEADER = "X-Pharos-Site-Proxy-Secret";
 const FORWARDED_REQUEST_HEADERS = [
   "Accept",
   "If-None-Match",
@@ -53,7 +57,7 @@ interface SiteDataProxyContext {
 }
 
 function methodNotAllowed(): Response {
-  return jsonError(405, "Method not allowed", { Allow: "GET" });
+  return jsonError(405, "Method not allowed", { Allow: SITE_DATA_ALLOWED_METHOD });
 }
 
 function resolveRequestedPath(params: SiteDataProxyContext["params"]): string | null {
@@ -70,7 +74,7 @@ function buildUpstreamHeaders(
   }
 
   return buildUpstreamHeadersShared(request, FORWARDED_REQUEST_HEADERS, {
-    [SITE_PROXY_HEADER]: secret,
+    [SITE_DATA_PROXY_SECRET_HEADER]: secret,
   });
 }
 
@@ -140,7 +144,7 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
     return rejected;
   }
 
-  if (request.method !== "GET") {
+  if (!isSiteDataAllowedMethod(request.method)) {
     return methodNotAllowed();
   }
 

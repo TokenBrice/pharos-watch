@@ -54,4 +54,31 @@ describe("evaluateAccessGate", () => {
     expect(result.requestLane).toBe("site-api");
     expect(result.isSiteProxy).toBe(false);
   });
+
+  it("keeps site-api path rejection ahead of method rejection", async () => {
+    const request = new Request("https://site-api.pharos.watch/api/api-key-requests", {
+      method: "POST",
+      headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
+    });
+
+    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv() as never);
+
+    expect(result.response?.status).toBe(404);
+    expect(result.requestLane).toBe("site-api");
+    expect(result.isSiteProxy).toBe(false);
+  });
+
+  it("returns 405 for non-GET requests to allowed site-api paths", async () => {
+    const request = new Request("https://site-api.pharos.watch/api/stablecoins", {
+      method: "POST",
+      headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
+    });
+
+    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv() as never);
+
+    expect(result.response?.status).toBe(405);
+    expect(result.response?.headers.get("Allow")).toBe("GET");
+    expect(result.requestLane).toBe("site-api");
+    expect(result.isSiteProxy).toBe(false);
+  });
 });

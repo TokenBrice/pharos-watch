@@ -1,6 +1,11 @@
-import { getPublicApiAccess, isAdminLikePath, isCacheBypassPath, isSiteDataAllowedPath } from "@shared/lib/api-endpoints";
+import { getPublicApiAccess, isAdminLikePath, isCacheBypassPath } from "@shared/lib/api-endpoints";
 import { API_KEY_DEPENDENCY_RETRY_AFTER_SEC } from "@shared/lib/ops-limits";
 import { OPS_API_HOSTNAME, SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
+import {
+  SITE_DATA_ALLOWED_METHOD,
+  isSiteDataAllowedApiPath,
+  isSiteDataAllowedMethod,
+} from "@shared/lib/site-data-lane";
 import { errorResponse } from "../../lib/api-utils";
 import {
   authenticateApiKey,
@@ -76,18 +81,23 @@ export async function evaluateAccessGate(
     if (!hasSiteProxyCredential) {
       return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "site-api", response: errorResponse(401, "Unauthorized") };
     }
-    if (!isSiteDataAllowedPath(url.pathname)) {
+    if (!isSiteDataAllowedApiPath(url.pathname)) {
       return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "site-api", response: notFoundResponse() };
     }
-    if (request.method !== "GET") {
+    if (!isSiteDataAllowedMethod(request.method)) {
       const response = errorResponse(405, "Method not allowed");
-      response.headers.set("Allow", "GET");
+      response.headers.set("Allow", SITE_DATA_ALLOWED_METHOD);
       return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "site-api", response };
     }
     return { isAdmin, isSiteProxy: true, apiKey: null, requestLane: "site-api", response: null };
   }
 
-  if (isPreviewRequest && hasSiteProxyCredential && request.method === "GET" && isSiteDataAllowedPath(url.pathname)) {
+  if (
+    isPreviewRequest
+    && hasSiteProxyCredential
+    && isSiteDataAllowedMethod(request.method)
+    && isSiteDataAllowedApiPath(url.pathname)
+  ) {
     return { isAdmin, isSiteProxy: true, apiKey: null, requestLane: "site-api", response: null };
   }
 

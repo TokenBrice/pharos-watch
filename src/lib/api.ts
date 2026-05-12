@@ -1,15 +1,15 @@
 import type { ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
-import { toSiteDataPath } from "@shared/lib/site-data-routes";
+import {
+  isSiteDataAllowedUiHostname,
+  resolveSiteDataProxyPath,
+} from "@shared/lib/site-data-lane";
 import { classifyFreshnessRatio } from "@shared/lib/status-thresholds";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
-import { isSiteDataUiHostname, resolvePublicApiBase } from "@shared/lib/runtime-origins";
-import { ApiMetaSchema, type ApiMeta } from "@shared/types/api-meta";
-import {
-  StablecoinReservesResponseSchema,
-  type StablecoinReservesResponse,
-} from "@shared/types";
+import { resolvePublicApiBase } from "@shared/lib/runtime-origins";
+import { ApiMetaSchema, type ApiMeta } from "@shared/types/api-meta";import type { StablecoinReservesResponse } from "@shared/types";
+import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 
 export type { ApiMeta } from "@shared/types/api-meta";
 
@@ -33,26 +33,32 @@ export function buildApiUrl(path: string): string {
   return `${API_BASE}${path}`;
 }
 
-function shouldUseSiteDataProxy(
+function resolveSiteDataRequestPath(
   path: string,
+  method: string | null | undefined,
   hostname?: string | null,
   envBase: string | undefined = process.env.NEXT_PUBLIC_API_BASE,
-): boolean {
-  if (!path.startsWith("/api/") || path.startsWith("/api/admin/")) {
-    return false;
-  }
+): string | null {
   if ((envBase ?? "").trim()) {
-    return false;
+    return null;
   }
-  return Boolean(hostname && isSiteDataUiHostname(hostname));
+  if (!hostname || !isSiteDataAllowedUiHostname(hostname)) {
+    return null;
+  }
+  return resolveSiteDataProxyPath(path, method);
 }
 
-export function buildRequestUrl(path: string): string {
+function resolveRequestMethod(init?: Pick<RequestInit, "method"> | string | null): string | undefined {
+  return typeof init === "string" ? init : init?.method;
+}
+
+export function buildRequestUrl(path: string, init?: Pick<RequestInit, "method"> | string | null): string {
   if (path.startsWith("/api/admin/")) {
     return path;
   }
-  if (shouldUseSiteDataProxy(path, getBrowserHostname())) {
-    return toSiteDataPath(path);
+  const siteDataPath = resolveSiteDataRequestPath(path, resolveRequestMethod(init), getBrowserHostname());
+  if (siteDataPath) {
+    return siteDataPath;
   }
   return buildApiUrl(path);
 }
@@ -116,7 +122,7 @@ export async function apiRequest(
   const timeoutMs = resolveApiRequestTimeoutMs(options);
 
   if (timeoutMs == null) {
-    return fetch(buildRequestUrl(path), requestInit);
+    return fetch(buildRequestUrl(path, requestInit), requestInit);
   }
 
   const timeout = createTimeoutSignal({
@@ -126,7 +132,7 @@ export async function apiRequest(
   });
 
   try {
-    return await fetch(buildRequestUrl(path), {
+    return await fetch(buildRequestUrl(path, requestInit), {
       ...(requestInit ?? {}),
       signal: timeout.signal,
     });
