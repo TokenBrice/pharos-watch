@@ -11,7 +11,7 @@ import { downloadCsv } from "@/lib/csv-export";
 import { getNextSortState } from "@/hooks/use-sort";
 import { formatAddress, formatEventDate, formatCurrency } from "@shared/lib/format";
 import { isGoldBlacklistStablecoin } from "@shared/lib/blacklist";
-import { EVENT_BADGE_STYLES } from "@shared/lib/classification";
+import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import type { BlacklistEvent, BlacklistSortDirection, BlacklistSortKey } from "@shared/types";
 
 function formatBlacklistAmountCell(evt: BlacklistEvent): string {
@@ -23,12 +23,6 @@ function formatBlacklistAmountCell(evt: BlacklistEvent): string {
   if (evt.amountStatus === "permanently_unavailable") return "N/A";
   return "\u2014";
 }
-
-const FREEZE_EVENT_LABELS: Record<BlacklistEvent["eventType"], string> = {
-  blacklist: "Freeze",
-  unblacklist: "Release",
-  destroy: "Wipe",
-};
 
 const AMOUNT_STATUS_TOOLTIPS: Record<string, string> = {
   recoverable_pending: "Amount not yet recovered from historical balance — backfill pass pending.",
@@ -110,7 +104,7 @@ export function BlacklistTable({
         { header: "Date", accessor: (row) => formatEventDate(row.timestamp) },
         { header: "Stablecoin", accessor: (row) => row.stablecoin },
         { header: "Chain", accessor: (row) => row.chainName },
-        { header: "Event", accessor: (row) => FREEZE_EVENT_LABELS[row.eventType] ?? row.eventType },
+        { header: "Event", accessor: (row) => EVENT_LABELS[row.eventType] ?? row.eventType },
         { header: "Address", accessor: (row) => row.address },
         {
           header: "Amount (Native)",
@@ -221,7 +215,7 @@ export function BlacklistTable({
           <TableCell>{evt.chainName}</TableCell>
           <TableCell>
             <Badge variant="outline" className={EVENT_BADGE_STYLES[evt.eventType] ?? ""}>
-              {FREEZE_EVENT_LABELS[evt.eventType] ?? evt.eventType}
+              {EVENT_LABELS[evt.eventType] ?? evt.eventType}
             </Badge>
           </TableCell>
           <TableCell className="hidden md:table-cell">
