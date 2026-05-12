@@ -106,6 +106,7 @@ export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = {
   "usd1-bundle-oracle": ["onchain-evm"],
   "usdd-data-platform": ["http-json"],
   yamato: ["onchain-evm"],
+  "zephyr-scanner": ["http-json"],
 } as const satisfies Record<LiveReserveAdapterKey, readonly LiveReserveInputKind[]>;
 
 function createInputSchemaForKinds(kinds: readonly LiveReserveInputKind[]): z.ZodTypeAny {
@@ -608,6 +609,7 @@ export const adapterParamsSchemas = {
   "usd1-bundle-oracle": usd1BundleOracleParamsSchema,
   "usdd-data-platform": noParamsSchema,
   yamato: yamatoParamsSchema,
+  "zephyr-scanner": noParamsSchema,
 } as const satisfies Record<LiveReserveAdapterKey, z.ZodTypeAny>;
 
 export type LiveReserveAdapterParamsByKey = {

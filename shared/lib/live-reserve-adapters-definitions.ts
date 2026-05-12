@@ -652,6 +652,17 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
+  "zephyr-scanner": {
+    sourceModel: "single-bucket",
+    evidenceClass: "weak-live-probe",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_PROTOCOL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
+  },
 } as const satisfies Record<
   LiveReserveAdapterKey,
   {

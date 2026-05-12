@@ -64,6 +64,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "usd1-bundle-oracle",
   "usdd-data-platform",
   "yamato",
+  "zephyr-scanner",
 ] as const;
 
 export const LIVE_RESERVE_SOURCE_MODEL_VALUES = ["dynamic-mix", "validated-static", "single-bucket"] as const;

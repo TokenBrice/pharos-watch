@@ -85,4 +85,8 @@ export const LIVE_RESERVE_ADAPTER_PROVENANCE = {
   "usd1-bundle-oracle": { status: "active", rationale: ACTIVE_RATIONALE },
   "usdd-data-platform": { status: "active", rationale: ACTIVE_RATIONALE },
   yamato: { status: "active", rationale: ACTIVE_RATIONALE },
+  "zephyr-scanner": {
+    status: "staged",
+    rationale: "Implemented for Zephyr ZSD reserve telemetry; no tracked active coin metadata binds it in this worktree.",
+  },
 } as const satisfies Record<LiveReserveAdapterKey, LiveReserveAdapterProvenance>;

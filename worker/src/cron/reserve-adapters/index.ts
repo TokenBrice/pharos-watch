@@ -54,6 +54,7 @@ import { fetchUsdAiProofOfReserves } from "./usdai-proof-of-reserves";
 import { fetchUsd1BundleOracleReserves } from "./usd1-bundle-oracle";
 import { fetchUsddDataPlatformReserves } from "./usdd-data-platform";
 import { fetchYamatoReserves } from "./yamato";
+import { fetchZephyrScannerReserves } from "./zephyr-scanner";
 import type { AdapterFn, ReserveAdapterDefinition } from "./types";
 
 export type { AdapterContext, AdapterResult, AdapterFn, ReserveAdapterDefinition } from "./types";
@@ -114,6 +115,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   "usd1-bundle-oracle": fetchUsd1BundleOracleReserves,
   "usdd-data-platform": fetchUsddDataPlatformReserves,
   yamato: fetchYamatoReserves,
+  "zephyr-scanner": fetchZephyrScannerReserves,
 };
 
 const ADAPTERS = Object.fromEntries(
