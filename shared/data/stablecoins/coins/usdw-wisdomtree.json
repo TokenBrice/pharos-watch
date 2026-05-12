@@ -1,0 +1,95 @@
+{
+  "id": "usdw-wisdomtree",
+  "name": "WisdomTree Dollar Token",
+  "symbol": "USDW",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash and short-duration U.S. Treasury bills held in segregated accounts under WisdomTree Digital Trust Company, a New York-chartered limited-purpose trust company supervised by NYDFS",
+  "pegMechanism": "1:1 USD-pegged stablecoin issued by WisdomTree Digital Trust; primary mint and redemption operate through WisdomTree Connect with USD-wire settlement and dealer-facilitated USDC routes",
+  "detailProvider": "coingecko",
+  "geckoId": "wisdomtree-dollar-token",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.wisdomtree.com/digital-funds/usdw",
+    "provider": "WisdomTree Digital Trust (monthly reserve reports)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.wisdomtree.com/digital-funds/usdw"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/WisdomTreeFunds"
+    },
+    {
+      "label": "WisdomTree Connect",
+      "url": "https://www.wisdomtree.com/connect"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "NYDFS",
+    "license": "WisdomTree Digital Trust Company (NY limited-purpose trust charter)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x2e5f7dbed4aa799b13c737992562b7e8742b3a32",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "WisdomTree Connect terms",
+        "url": "https://www.wisdomtree.com/connect"
+      }
+    ],
+    "evidence": "WisdomTree Digital Trust acts as transfer agent for USDW with permissioned issuance and freeze authority under NYDFS supervision.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "U.S. Treasury Bills",
+      "pct": 85,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash and bank deposits",
+      "pct": 15,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "usdw-wisdomtree",
+    "display": {
+      "url": "https://www.wisdomtree.com/digital-funds/usdw",
+      "label": "WisdomTree USDW disclosures"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    }
+  }
+}

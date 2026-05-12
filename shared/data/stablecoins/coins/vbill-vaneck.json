@@ -1,0 +1,106 @@
+{
+  "id": "vbill-vaneck",
+  "name": "VanEck Treasury Fund",
+  "symbol": "VBILL",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Short-duration U.S. Treasury bills held by a BVI Professional Fund advised by Van Eck Associates; tokenization, transfer agency, and KYC by Securitize with State Street as fund administrator",
+  "pegMechanism": "NAV-accreting institutional T-bill share token; instant mint and redemption at daily NAV through Securitize Markets against USDC, AUSD, or USD wire; Chainlink NAVLink oracle is integrated by Aave Horizon (oracle address not yet wired into Pharos)",
+  "detailProvider": "coingecko",
+  "geckoId": "vaneck-treasury-fund",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund",
+    "provider": "Securitize / Van Eck Associates (daily NAV and holdings disclosures)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/vaneck_us"
+    },
+    {
+      "label": "Securitize Markets",
+      "url": "https://markets.securitize.io/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands",
+    "regulator": "BVI FSC",
+    "license": "BVI Professional Fund"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Securitize VBILL page",
+        "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund"
+      }
+    ],
+    "evidence": "Securitize operates VBILL with permissioned token transfers restricted to KYC-onboarded institutional holders and retains transfer-agent freeze and burn authority on behalf of Van Eck Associates.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "U.S. Treasury Bills",
+      "pct": 95,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash and repurchase agreements",
+      "pct": 5,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "vbill-vaneck",
+    "display": {
+      "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund",
+      "label": "Securitize VBILL fund page"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "VanEck Treasury Fund (T-bill NAV accretion)",
+    "yieldType": "nav-appreciation"
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Securitize-administered NAV token",
+      "message": "VBILL is institutional only via Securitize Markets and also issues on Avalanche, BNB Chain, and Solana via Wormhole. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+{
+  "id": "acred-apollo-securitize",
+  "name": "Apollo Diversified Credit Securitize Fund",
+  "symbol": "ACRED",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Feeder share into Apollo Diversified Credit Fund, a multi-strategy private credit portfolio including direct lending, structured credit, performing credit, and dislocated credit; administered by Securitize",
+  "pegMechanism": "NAV-accreting ERC-4626 fund share token; subscription and redemption are institutional-only at monthly fund NAV through Securitize Markets, with an on-demand liquidity pool sized up to roughly 5% of NAV; RedStone publishes the NAV oracle used by integrations",
+  "detailProvider": "coingecko",
+  "geckoId": "apollo-diversified-credit-securitize-fund",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
+    "provider": "Securitize / Apollo (NAV statements published per fund cadence)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/apolloglobal"
+    },
+    {
+      "label": "Securitize Markets",
+      "url": "https://markets.securitize.io/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "SEC",
+    "license": "Securitize-administered feeder; access restricted to qualified purchasers"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x17418038ecf73ba4026c4f428547bf099706f27b",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Securitize ACRED page",
+        "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+      }
+    ],
+    "evidence": "Securitize operates ACRED with permissioned token transfers restricted to KYC-onboarded qualified purchasers and retains transfer-agent freeze and burn authority on behalf of Apollo.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "Apollo Diversified Credit Fund strategy book (direct lending, structured and performing credit, dislocated credit)",
+      "pct": 95,
+      "risk": "high"
+    },
+    {
+      "name": "Cash and stablecoin liquidity buffer",
+      "pct": 5,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "acred-apollo-securitize",
+    "display": {
+      "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
+      "label": "Securitize ACRED fund page"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Apollo Diversified Credit Fund (private credit strategy NAV)",
+    "yieldType": "nav-appreciation"
+  },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Private credit, not Treasuries",
+      "message": "ACRED is a feeder into Apollo Diversified Credit Fund, which holds direct lending and structured credit positions. Risk profile is medium-to-high and closer to syrupUSDC than to BUIDL or BENJI. Token transfers are permissioned and redemption is monthly at NAV via Securitize Markets, with an on-demand pool sized to ~5% of NAV. ACRED is also issued on Aptos, Avalanche, Ink, Polygon, Solana, and Sei via Wormhole; Pharos tracks only the Ethereum supply contract pending per-chain verification."
+    }
+  ]
+}

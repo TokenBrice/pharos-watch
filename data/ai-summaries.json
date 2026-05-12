@@ -1548,5 +1548,30 @@
     "title": "Cosmos-native crypto-backed stable with sub-$5M strategic coverage",
     "text": "Inter Stable Token (IST) is the Agoric platform's native fee token and an overcollateralized crypto-backed stablecoin governed via Inter Protocol. IST is minted two ways: through vault positions collateralized by IBC-bridged ATOM and stATOM with a stability fee and Dutch-auction liquidations, and through a Parity Stability Module (PSM) that swaps approved IBC stablecoins (USDC, USDT, DAI) for IST 1:1. Total circulating supply is ~$1.4M across Agoric native, Osmosis, Archway, and Secret Network deployments — well below Pharos's $5M soft threshold, but tracked as a strategic Cosmos-ecosystem entry where overcollateralized fiat-pegged designs remain rare. Pharos uses DefiLlama as the primary supply feed; coverage today reflects the Osmosis IBC slice only until upstream tracking broadens to Agoric native.",
     "updatedAt": "2026-05-11"
+  },
+  "benji-franklin-templeton": {
+    "title": "The Onchain '40 Act Money Market Fund",
+    "text": "BENJI is Franklin Templeton's tokenised share class of FOBXX, the Franklin OnChain U.S. Government Money Fund — a Securities Act of 1933 and Investment Company Act of 1940 registered money market fund custodied at BNY Mellon. The token holds a stable $1.00 NAV; yield is distributed by rebasing the holder's share count on-chain rather than letting the price drift, which makes BENJI behave like a par-redeemable dollar even though it is legally a fund share. With roughly $2 billion in assets across Stellar (primary), Polygon, Arbitrum, Avalanche, Aptos, Base, Solana, BNB Chain, Canton, and Ethereum, it is the largest tokenised '40 Act MMF in market. Pharos currently tracks the Ethereum supply contract and runs reserves on a curated weekly snapshot of the official Franklin Templeton factsheet pending per-chain verification and oracle availability.",
+    "updatedAt": "2026-05-12"
+  },
+  "wtgxx-wisdomtree": {
+    "title": "WisdomTree's 24/7 Dealer-Traded Treasury Fund",
+    "text": "WTGXX is the digital share class of WisdomTree's Government Money Market Digital Fund, a '40 Act-registered money market fund that received SEC approval in early 2026 to support 24/7 dealer trading at a fixed $1.00 NAV — making it one of the most stable-coin-like tokenised MMFs in market. Subscriptions and redemptions are gated to WisdomTree Connect users with USDC dealer settlement and USD-wire alternatives; holdings are short-duration U.S. government obligations, repos, and cash. Around $857 million of AUM sits across Ethereum, Arbitrum, Avalanche, Base, Optimism, Plume, and Stellar; Pharos tracks the Ethereum supply contract first and runs a curated weekly snapshot of the official WisdomTree fund factsheet for reserves.",
+    "updatedAt": "2026-05-12"
+  },
+  "usdw-wisdomtree": {
+    "title": "WisdomTree Digital Trust's Companion Dollar",
+    "text": "USDW is the NYDFS-regulated dollar token issued by WisdomTree Digital Trust Company, the New York limited-purpose trust company that complements WisdomTree's '40 Act MMF (WTGXX). Unlike WTGXX, USDW does not pay yield to holders; it functions as a settlement-grade dollar with monthly reserve attestations and access through WisdomTree Connect. Reserves are held in U.S. Treasury bills and cash; WisdomTree Digital Trust retains transfer-agent freeze and burn authority. Pharos tracks the Ethereum supply contract as a curated-validated asset until reserve reporting expands.",
+    "updatedAt": "2026-05-12"
+  },
+  "vbill-vaneck": {
+    "title": "VanEck's Securitize-Administered Treasury Share",
+    "text": "VBILL is the on-chain share token of the VanEck Treasury Fund, a BVI Professional Fund advised by Van Eck Associates and administered by Securitize on Ethereum with bridged Wormhole deployments on Avalanche, BNB Chain, and Solana. The token is NAV-accreting (price drifts upward with T-bill yield) rather than rebasing; subscription minimums of $100k/$1M apply by chain and redemption settles through Securitize Markets against USDC, AUSD, or USD wire. A Chainlink NAVLink oracle publishes daily NAV for Aave Horizon and other integrations; Pharos tracks the Ethereum supply contract with a curated reserves snapshot pending oracle wiring.",
+    "updatedAt": "2026-05-12"
+  },
+  "acred-apollo-securitize": {
+    "title": "Private Credit, Not Treasuries",
+    "text": "ACRED is the on-chain feeder share into Apollo Diversified Credit Fund, a multi-strategy private credit portfolio combining direct lending, structured credit, performing credit, and dislocated credit. Unlike BUIDL or BENJI, the collateral is illiquid private credit rather than T-bills — risk profile is medium-to-high and closer to syrupUSDC than to a stable-NAV vehicle. ACRED is NAV-accreting; primary redemption is monthly at fund NAV through Securitize Markets, supplemented by an on-demand liquidity pool sized to roughly 5% of NAV, and RedStone publishes a NAV oracle used by integrations. Pharos tracks the Ethereum supply contract and flags this asset as a private-credit NAV token rather than a par stablecoin.",
+    "updatedAt": "2026-05-12"
   }
 }

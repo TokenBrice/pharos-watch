@@ -1,0 +1,111 @@
+{
+  "id": "wtgxx-wisdomtree",
+  "name": "WisdomTree Government Money Market Digital Fund",
+  "symbol": "WTGXX",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "U.S. government obligations, cash, and repurchase agreements held by WisdomTree Digital Government Money Market Fund; '40 Act-registered money market fund administered by WisdomTree Asset Management and recorded natively on-chain via the WisdomTree Connect platform",
+  "pegMechanism": "$1.00 stable NAV money market share; SEC-approved 24/7 dealer trading at fixed $1 intraday (Feb 2026); primary subscription and redemption are gated to WisdomTree Connect users with USDC dealer settlement and USD-wire alternatives",
+  "detailProvider": "coingecko",
+  "geckoId": "wisdomtree-government-money-market-digital-fund",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",
+    "provider": "WisdomTree Asset Management (daily NAV and holdings published on fund page)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/WisdomTreeFunds"
+    },
+    {
+      "label": "WisdomTree Connect",
+      "url": "https://www.wisdomtree.com/connect"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "SEC",
+    "license": "Investment Company Act of 1940 (registered money market fund)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x1fecf3d9d4fee7f2c02917a66028a48c6706c179",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "WisdomTree Digital Funds prospectus",
+        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+      }
+    ],
+    "evidence": "WisdomTree acts as transfer agent for WTGXX with permissioned token transfers restricted to WisdomTree Connect-onboarded holders, giving the issuer freeze and burn authority over WTGXX balances.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "U.S. Government Securities",
+      "pct": 65,
+      "risk": "very-low"
+    },
+    {
+      "name": "Repurchase Agreements",
+      "pct": 30,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash",
+      "pct": 5,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "wtgxx-wisdomtree",
+    "display": {
+      "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",
+      "label": "WisdomTree WTGXX fund page"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "WisdomTree WTGXX U.S. government money market fund",
+    "yieldType": "nav-appreciation"
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Multi-chain fund with limited on-chain telemetry",
+      "message": "WTGXX is the digital share token of WisdomTree's '40 Act government money market fund, also deployed on Arbitrum, Avalanche, Base, Optimism, Plume, and Stellar via WisdomTree Connect. Pharos currently tracks only the Ethereum supply contract pending per-chain verification; live reserves use a curated weekly snapshot of the WisdomTree fund factsheet."
+    }
+  ]
+}

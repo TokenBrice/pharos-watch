@@ -85,6 +85,112 @@
     }
   },
   {
+    "id": "acred-apollo-securitize",
+    "detailProvider": "coingecko",
+    "name": "Apollo Diversified Credit Securitize Fund",
+    "symbol": "ACRED",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Feeder share into Apollo Diversified Credit Fund, a multi-strategy private credit portfolio including direct lending, structured credit, performing credit, and dislocated credit; administered by Securitize",
+    "pegMechanism": "NAV-accreting ERC-4626 fund share token; subscription and redemption are institutional-only at monthly fund NAV through Securitize Markets, with an on-demand liquidity pool sized up to roughly 5% of NAV; RedStone publishes the NAV oracle used by integrations",
+    "geckoId": "apollo-diversified-credit-securitize-fund",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
+      "provider": "Securitize / Apollo (NAV statements published per fund cadence)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/apolloglobal"
+      },
+      {
+        "label": "Securitize Markets",
+        "url": "https://markets.securitize.io/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "SEC",
+      "license": "Securitize-administered feeder; access restricted to qualified purchasers"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x17418038ecf73ba4026c4f428547bf099706f27b",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Securitize ACRED page",
+          "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+        }
+      ],
+      "evidence": "Securitize operates ACRED with permissioned token transfers restricted to KYC-onboarded qualified purchasers and retains transfer-agent freeze and burn authority on behalf of Apollo.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Apollo Diversified Credit Fund strategy book (direct lending, structured and performing credit, dislocated credit)",
+        "pct": 95,
+        "risk": "high"
+      },
+      {
+        "name": "Cash and stablecoin liquidity buffer",
+        "pct": 5,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "acred-apollo-securitize",
+      "display": {
+        "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
+        "label": "Securitize ACRED fund page"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Private credit, not Treasuries",
+        "message": "ACRED is a feeder into Apollo Diversified Credit Fund, which holds direct lending and structured credit positions. Risk profile is medium-to-high and closer to syrupUSDC than to BUIDL or BENJI. Token transfers are permissioned and redemption is monthly at NAV via Securitize Markets, with an on-demand pool sized to ~5% of NAV. ACRED is also issued on Aptos, Avalanche, Ink, Polygon, Solana, and Sei via Wormhole; Pharos tracks only the Ethereum supply contract pending per-chain verification."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Apollo Diversified Credit Fund (private credit strategy NAV)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "aeur-anchored-coins",
     "llamaId": "147",
     "detailProvider": "defillama",
@@ -1621,6 +1727,117 @@
         "sourceUrl": "https://github.com/basedollar/basedollar/pull/98"
       }
     ]
+  },
+  {
+    "id": "benji-franklin-templeton",
+    "detailProvider": "coingecko",
+    "name": "Franklin OnChain U.S. Government Money Fund",
+    "symbol": "BENJI",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "U.S. government securities, cash, and repurchase agreements held by the Franklin OnChain U.S. Government Money Fund (FOBXX); '40 Act-registered money market fund custodied by BNY Mellon with Franklin Templeton as transfer agent and Benji as the on-chain share record",
+    "pegMechanism": "Single fund, multi-chain BENJI token tracking FOBXX's stable $1.00 NAV; rebasing share count records distributed yield directly on-chain; subscriptions and redemptions are gated to KYC-verified Benji wallets with USD-wire and Benji-to-USDC settlement paths",
+    "geckoId": "franklin-onchain-u-s-government-money-fund",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX",
+      "provider": "Franklin Templeton (daily fund holdings and NAV factsheet)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/FTI_Global"
+      },
+      {
+        "label": "Benji App",
+        "url": "https://benji.franklintempleton.com/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "SEC",
+      "license": "Investment Company Act of 1940 (registered money market fund)"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x3ddc84940ab509c11b20b76b466933f40b750dc9",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "FOBXX prospectus",
+          "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
+        }
+      ],
+      "evidence": "Franklin Templeton operates Benji as the fund's transfer agent with permissioned token transfers restricted to KYC-verified holders, giving the issuer freeze and burn authority over BENJI balances.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "U.S. Government Securities",
+        "pct": 60,
+        "risk": "very-low"
+      },
+      {
+        "name": "Repurchase Agreements",
+        "pct": 35,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash",
+        "pct": 5,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "benji-franklin-templeton",
+      "display": {
+        "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX",
+        "label": "Franklin Templeton FOBXX fund page"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Multi-chain fund with limited on-chain telemetry",
+        "message": "BENJI is the multi-chain share token of Franklin Templeton's FOBXX money market fund. The fund is also deployed on Stellar (primary), Polygon, Arbitrum, Avalanche, Aptos, Base, Solana, BNB Chain, and Canton, but Pharos currently tracks only the Ethereum supply contract pending per-chain verification. Live reserves use a curated weekly snapshot of the official fund factsheet until an on-chain NAV oracle becomes available."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Franklin Templeton FOBXX U.S. government money market fund",
+      "yieldType": "rebase"
+    }
   },
   {
     "id": "bfusd-binance",
@@ -26560,6 +26777,101 @@
     ]
   },
   {
+    "id": "usdw-wisdomtree",
+    "detailProvider": "coingecko",
+    "name": "WisdomTree Dollar Token",
+    "symbol": "USDW",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Cash and short-duration U.S. Treasury bills held in segregated accounts under WisdomTree Digital Trust Company, a New York-chartered limited-purpose trust company supervised by NYDFS",
+    "pegMechanism": "1:1 USD-pegged stablecoin issued by WisdomTree Digital Trust; primary mint and redemption operate through WisdomTree Connect with USD-wire settlement and dealer-facilitated USDC routes",
+    "geckoId": "wisdomtree-dollar-token",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.wisdomtree.com/digital-funds/usdw",
+      "provider": "WisdomTree Digital Trust (monthly reserve reports)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.wisdomtree.com/digital-funds/usdw"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/WisdomTreeFunds"
+      },
+      {
+        "label": "WisdomTree Connect",
+        "url": "https://www.wisdomtree.com/connect"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "NYDFS",
+      "license": "WisdomTree Digital Trust Company (NY limited-purpose trust charter)"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x2e5f7dbed4aa799b13c737992562b7e8742b3a32",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "WisdomTree Connect terms",
+          "url": "https://www.wisdomtree.com/connect"
+        }
+      ],
+      "evidence": "WisdomTree Digital Trust acts as transfer agent for USDW with permissioned issuance and freeze authority under NYDFS supervision.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "U.S. Treasury Bills",
+        "pct": 85,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash and bank deposits",
+        "pct": 15,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "attestation-mix",
+      "breakerScope": "usdw-wisdomtree",
+      "display": {
+        "url": "https://www.wisdomtree.com/digital-funds/usdw",
+        "label": "WisdomTree USDW disclosures"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    }
+  },
+  {
     "id": "usdx-hex-trust",
     "llamaId": "263",
     "detailProvider": "defillama",
@@ -28482,6 +28794,112 @@
     ]
   },
   {
+    "id": "vbill-vaneck",
+    "detailProvider": "coingecko",
+    "name": "VanEck Treasury Fund",
+    "symbol": "VBILL",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Short-duration U.S. Treasury bills held by a BVI Professional Fund advised by Van Eck Associates; tokenization, transfer agency, and KYC by Securitize with State Street as fund administrator",
+    "pegMechanism": "NAV-accreting institutional T-bill share token; instant mint and redemption at daily NAV through Securitize Markets against USDC, AUSD, or USD wire; Chainlink NAVLink oracle is integrated by Aave Horizon (oracle address not yet wired into Pharos)",
+    "geckoId": "vaneck-treasury-fund",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund",
+      "provider": "Securitize / Van Eck Associates (daily NAV and holdings disclosures)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/vaneck_us"
+      },
+      {
+        "label": "Securitize Markets",
+        "url": "https://markets.securitize.io/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "British Virgin Islands",
+      "regulator": "BVI FSC",
+      "license": "BVI Professional Fund"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Securitize VBILL page",
+          "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund"
+        }
+      ],
+      "evidence": "Securitize operates VBILL with permissioned token transfers restricted to KYC-onboarded institutional holders and retains transfer-agent freeze and burn authority on behalf of Van Eck Associates.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "U.S. Treasury Bills",
+        "pct": 95,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash and repurchase agreements",
+        "pct": 5,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "vbill-vaneck",
+      "display": {
+        "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund",
+        "label": "Securitize VBILL fund page"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Securitize-administered NAV token",
+        "message": "VBILL is institutional only via Securitize Markets and also issues on Avalanche, BNB Chain, and Solana via Wormhole. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "VanEck Treasury Fund (T-bill NAV accretion)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "vchf-vnx",
     "llamaId": "157",
     "detailProvider": "defillama",
@@ -29627,6 +30045,117 @@
     },
     "yieldConfig": {
       "yieldSource": "Reservoir savings vault (srUSD)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "wtgxx-wisdomtree",
+    "detailProvider": "coingecko",
+    "name": "WisdomTree Government Money Market Digital Fund",
+    "symbol": "WTGXX",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "U.S. government obligations, cash, and repurchase agreements held by WisdomTree Digital Government Money Market Fund; '40 Act-registered money market fund administered by WisdomTree Asset Management and recorded natively on-chain via the WisdomTree Connect platform",
+    "pegMechanism": "$1.00 stable NAV money market share; SEC-approved 24/7 dealer trading at fixed $1 intraday (Feb 2026); primary subscription and redemption are gated to WisdomTree Connect users with USDC dealer settlement and USD-wire alternatives",
+    "geckoId": "wisdomtree-government-money-market-digital-fund",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",
+      "provider": "WisdomTree Asset Management (daily NAV and holdings published on fund page)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/WisdomTreeFunds"
+      },
+      {
+        "label": "WisdomTree Connect",
+        "url": "https://www.wisdomtree.com/connect"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "SEC",
+      "license": "Investment Company Act of 1940 (registered money market fund)"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x1fecf3d9d4fee7f2c02917a66028a48c6706c179",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "WisdomTree Digital Funds prospectus",
+          "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+        }
+      ],
+      "evidence": "WisdomTree acts as transfer agent for WTGXX with permissioned token transfers restricted to WisdomTree Connect-onboarded holders, giving the issuer freeze and burn authority over WTGXX balances.",
+      "reviewer": "Codex RWA expansion review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "U.S. Government Securities",
+        "pct": 65,
+        "risk": "very-low"
+      },
+      {
+        "name": "Repurchase Agreements",
+        "pct": 30,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash",
+        "pct": 5,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "wtgxx-wisdomtree",
+      "display": {
+        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",
+        "label": "WisdomTree WTGXX fund page"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Multi-chain fund with limited on-chain telemetry",
+        "message": "WTGXX is the digital share token of WisdomTree's '40 Act government money market fund, also deployed on Arbitrum, Avalanche, Base, Optimism, Plume, and Stellar via WisdomTree Connect. Pharos currently tracks only the Ethereum supply contract pending per-chain verification; live reserves use a curated weekly snapshot of the WisdomTree fund factsheet."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "WisdomTree WTGXX U.S. government money market fund",
       "yieldType": "nav-appreciation"
     }
   },

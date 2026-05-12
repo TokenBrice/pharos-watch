@@ -1,0 +1,111 @@
+{
+  "id": "benji-franklin-templeton",
+  "name": "Franklin OnChain U.S. Government Money Fund",
+  "symbol": "BENJI",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "U.S. government securities, cash, and repurchase agreements held by the Franklin OnChain U.S. Government Money Fund (FOBXX); '40 Act-registered money market fund custodied by BNY Mellon with Franklin Templeton as transfer agent and Benji as the on-chain share record",
+  "pegMechanism": "Single fund, multi-chain BENJI token tracking FOBXX's stable $1.00 NAV; rebasing share count records distributed yield directly on-chain; subscriptions and redemptions are gated to KYC-verified Benji wallets with USD-wire and Benji-to-USDC settlement paths",
+  "detailProvider": "coingecko",
+  "geckoId": "franklin-onchain-u-s-government-money-fund",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX",
+    "provider": "Franklin Templeton (daily fund holdings and NAV factsheet)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/FTI_Global"
+    },
+    {
+      "label": "Benji App",
+      "url": "https://benji.franklintempleton.com/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "SEC",
+    "license": "Investment Company Act of 1940 (registered money market fund)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x3ddc84940ab509c11b20b76b466933f40b750dc9",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "FOBXX prospectus",
+        "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
+      }
+    ],
+    "evidence": "Franklin Templeton operates Benji as the fund's transfer agent with permissioned token transfers restricted to KYC-verified holders, giving the issuer freeze and burn authority over BENJI balances.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "U.S. Government Securities",
+      "pct": 60,
+      "risk": "very-low"
+    },
+    {
+      "name": "Repurchase Agreements",
+      "pct": 35,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash",
+      "pct": 5,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "benji-franklin-templeton",
+    "display": {
+      "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX",
+      "label": "Franklin Templeton FOBXX fund page"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Franklin Templeton FOBXX U.S. government money market fund",
+    "yieldType": "rebase"
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Multi-chain fund with limited on-chain telemetry",
+      "message": "BENJI is the multi-chain share token of Franklin Templeton's FOBXX money market fund. The fund is also deployed on Stellar (primary), Polygon, Arbitrum, Avalanche, Aptos, Base, Solana, BNB Chain, and Canton, but Pharos currently tracks only the Ethereum supply contract pending per-chain verification. Live reserves use a curated weekly snapshot of the official fund factsheet until an on-chain NAV oracle becomes available."
+    }
+  ]
+}
