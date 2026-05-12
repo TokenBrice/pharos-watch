@@ -103,7 +103,7 @@
   "liveReservesConfig": {
     "adapter": "chainlink-por",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "attestation-mix",
     "breakerScope": "bib01-backed",
     "display": {
       "url": "https://data.chain.link/feeds/polygon/mainnet/bib01-por",
