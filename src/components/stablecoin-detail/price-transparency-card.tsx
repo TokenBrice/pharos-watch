@@ -29,6 +29,10 @@ interface SourceInfo {
   label: string;
 }
 
+function formatSourceDepthTargetLabel(sourceCount: number): string {
+  return sourceCount >= 3 ? "3+/3" : `${sourceCount}/3`;
+}
+
 export function PriceTransparencyCard({
   coinData,
   consensusSources,
@@ -58,6 +62,13 @@ export function PriceTransparencyCard({
   const usedSources = sources.filter((s) => s.status === "used");
   const availableSources = sources.filter((s) => s.status === "available");
   const noDataSources = sources.filter((s) => s.status === "no-data");
+  const sourceDepthCount = effectiveConsensusSources.length;
+  const sourceDepthTone =
+    sourceDepthCount >= 3
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+      : sourceDepthCount === 2
+        ? "border-amber-500/32 bg-amber-500/12 text-amber-700 dark:text-amber-300"
+        : "border-border/60 bg-muted/40 text-muted-foreground";
 
   return (
     <Card className="rounded-xl" id="price-transparency">
@@ -82,6 +93,13 @@ export function PriceTransparencyCard({
                 : CONFIDENCE_LEVEL_COLORS[coinData.priceConfidence as keyof typeof CONFIDENCE_LEVEL_COLORS] ?? "text-muted-foreground")}
             >
               {hasNoPrice ? "no consensus" : coinData.priceConfidence ?? "—"}
+            </Badge>
+            <Badge
+              variant="outline"
+              className={cn("text-[11px] uppercase tabular-nums", sourceDepthTone)}
+              title="Candidate source-depth target"
+            >
+              Sources {formatSourceDepthTargetLabel(sourceDepthCount)}
             </Badge>
           </div>
           <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">

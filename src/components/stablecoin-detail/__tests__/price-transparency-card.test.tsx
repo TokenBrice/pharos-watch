@@ -62,6 +62,7 @@ describe("PriceTransparencyCard", () => {
     // Check summary shows correct counts
     expect(screen.getByText("3 used")).toBeTruthy();
     expect(screen.getByText("1 available")).toBeTruthy();
+    expect(screen.getByText("Sources 3+/3")).toBeTruthy();
 
     // Check used sources are displayed with "Used" badges
     const krakenRow = screen.getByText("Kraken").closest("div");
@@ -93,5 +94,6 @@ describe("PriceTransparencyCard", () => {
     
     // Check confidence badge (appears in summary and DEX check)
     expect(screen.getAllByText("high").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Sources 1/3")).toBeTruthy();
   });
 });
