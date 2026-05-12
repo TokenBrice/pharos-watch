@@ -18,6 +18,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "btcfi",
   "buck-io-transparency",
   "cap-vault",
+  "centrifuge-vault",
   "chainlink-nav",
   "chainlink-por",
   "circle-transparency",

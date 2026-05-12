@@ -15,6 +15,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   btcfi: "live",
   "buck-io-transparency": "live",
   "cap-vault": "live",
+  "centrifuge-vault": "live",
   "chainlink-nav": "live",
   "chainlink-por": "live",
   "circle-transparency": "live",

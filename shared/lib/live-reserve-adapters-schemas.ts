@@ -60,6 +60,7 @@ export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = {
   btcfi: ["http-json"],
   "buck-io-transparency": ["http-html"],
   "cap-vault": ["onchain-evm"],
+  "centrifuge-vault": ["onchain-evm"],
   "chainlink-nav": ["onchain-evm"],
   "chainlink-por": ["onchain-evm"],
   "circle-transparency": ["http-html"],
@@ -349,6 +350,22 @@ const erc4626SingleAssetParamsSchema = z
   })
   .strict();
 
+const centrifugeVaultSliceSchema = z
+  .object({
+    name: z.string(),
+    risk: LiveReserveRiskSchema,
+  })
+  .strict();
+
+const centrifugeVaultParamsSchema = z
+  .object({
+    assetAddress: z.string(),
+    slice: centrifugeVaultSliceSchema,
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict();
+
 const originVaultAssetSchema = z
   .object({
     address: z.string(),
@@ -545,6 +562,7 @@ export const adapterParamsSchemas = {
   btcfi: btcfiParamsSchema,
   "buck-io-transparency": noParamsSchema,
   "cap-vault": capVaultParamsSchema,
+  "centrifuge-vault": centrifugeVaultParamsSchema,
   "chainlink-nav": chainlinkNavParamsSchema,
   "chainlink-por": chainlinkPorParamsSchema,
   "circle-transparency": circleTransparencyParamsSchema,

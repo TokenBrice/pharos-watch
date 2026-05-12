@@ -9,6 +9,7 @@ import { fetchBlastUsdbYieldManagerReserves } from "./blast-usdb-yield-manager";
 import { fetchBtcfiReserves } from "./btcfi";
 import { fetchBuckIoTransparencyReserves } from "./buck-io-transparency";
 import { fetchCapVaultReserves } from "./cap-vault";
+import { fetchCentrifugeVaultReserves } from "./centrifuge-vault";
 import { fetchCircleReserves } from "./circle-transparency";
 import { fetchChainlinkNavReserves } from "./chainlink-nav";
 import { fetchChainlinkPorReserves } from "./chainlink-por";
@@ -67,6 +68,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   btcfi: fetchBtcfiReserves,
   "buck-io-transparency": fetchBuckIoTransparencyReserves,
   "cap-vault": fetchCapVaultReserves,
+  "centrifuge-vault": fetchCentrifugeVaultReserves,
   "chainlink-nav": fetchChainlinkNavReserves,
   "circle-transparency": fetchCircleReserves,
   "chainlink-por": fetchChainlinkPorReserves,
