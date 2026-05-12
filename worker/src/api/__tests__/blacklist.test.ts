@@ -215,6 +215,17 @@ describe("handleBlacklist", () => {
     expect(res.status).toBe(400);
   });
 
+  it("accepts valid eventType filters before pagination", async () => {
+    let dataBinds: unknown[] = [];
+    const db = makeDbWithDataBindCapture((args) => {
+      dataBinds = args;
+    });
+
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?eventType=destroy"));
+    expect(res.status).toBe(200);
+    expect(dataBinds).toContain("destroy");
+  });
+
   it("rejects invalid sortBy with 400", async () => {
     const db = mockD1([]);
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?sortBy=amount"));
