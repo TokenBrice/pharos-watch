@@ -71,9 +71,9 @@
     "disposition": "queued-p4",
     "notes": "Surfaced after Phase 6 reduced larger hotspots. The yield client still combines filter state, table shaping, and interaction handling in one route shell; split view-model and table controls in the next yield UI cleanup pass."
   },
-  "src/app/compare/client.tsx": {
+  "src/components/homepage-client.tsx": {
     "disposition": "queued-p4",
-    "notes": "Surfaced after stablecoin detail and chains reductions. The compare client still owns selection state, URL wiring, metrics, and table rendering; split compare state/model helpers before expanding the comparison surface."
+    "notes": "Surfaced after global shell and homepage runtime reductions. The homepage client still coordinates hero state, PSI/digest/table sections, mode controls, and multiple lightweight data views; split section orchestration and interaction state before expanding the homepage surface."
   },
   "shared/lib/redemption-backstop-configs/validation.ts": {
     "disposition": "queued-p4",
