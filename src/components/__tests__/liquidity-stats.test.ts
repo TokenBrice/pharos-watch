@@ -3,7 +3,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createElement, type ImgHTMLAttributes } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LiquidityStats } from "@/components/liquidity-stats";
-import { DEX_GLOBAL_KEY, type DexLiquidityData } from "@shared/types";
+import type { DexLiquidityData } from "@shared/types";
+import { DEX_GLOBAL_KEY } from "@shared/types/market";
 
 vi.mock("next/image", () => ({
   default: (props: ImgHTMLAttributes<HTMLImageElement>) => createElement("img", { ...props, alt: props.alt ?? "" }),
@@ -13,42 +14,44 @@ afterEach(() => cleanup());
 
 describe("LiquidityStats", () => {
   it("renders the exit route map with disclosed tail routes", () => {
-    const { container } = render(createElement(LiquidityStats, {
-      stats: {
-        totalTvl: 10_000,
-        totalVol: 2_500,
-        avgScore: 72,
-        withLiquidity: 4,
-        highConfidenceCoverage: 3,
-        fallbackCoverage: 1,
-        totalTracked: 6,
-        agg7dChange: null,
-        avgBalance: null,
-        avgOrganic: null,
-      },
-      liquidityMap: {
-        [DEX_GLOBAL_KEY]: {
-          totalTvlUsd: 10_000,
-          totalVolume24hUsd: 2_500,
-          protocolTvl: {
-            curve: 3_000,
-            fluid: 2_000,
-            balancer: 1_500,
-            orca: 1_000,
-            raydium: 900,
-            aerodrome: 700,
-            quickswap: 400,
-          },
-          chainTvl: {
-            ethereum: 6_000,
-            base: 2_000,
-            arbitrum: 1_000,
-          },
-          poolCount: 42,
-          concentrationHhi: 0.31,
-        } as DexLiquidityData,
-      },
-    }));
+    const { container } = render(
+      createElement(LiquidityStats, {
+        stats: {
+          totalTvl: 10_000,
+          totalVol: 2_500,
+          avgScore: 72,
+          withLiquidity: 4,
+          highConfidenceCoverage: 3,
+          fallbackCoverage: 1,
+          totalTracked: 6,
+          agg7dChange: null,
+          avgBalance: null,
+          avgOrganic: null,
+        },
+        liquidityMap: {
+          [DEX_GLOBAL_KEY]: {
+            totalTvlUsd: 10_000,
+            totalVolume24hUsd: 2_500,
+            protocolTvl: {
+              curve: 3_000,
+              fluid: 2_000,
+              balancer: 1_500,
+              orca: 1_000,
+              raydium: 900,
+              aerodrome: 700,
+              quickswap: 400,
+            },
+            chainTvl: {
+              ethereum: 6_000,
+              base: 2_000,
+              arbitrum: 1_000,
+            },
+            poolCount: 42,
+            concentrationHhi: 0.31,
+          } as DexLiquidityData,
+        },
+      }),
+    );
 
     expect(screen.getByText("Exit Route Map")).toBeTruthy();
     expect(screen.getByTestId("exit-route-instrument").getAttribute("role")).toBe("img");
@@ -70,38 +73,40 @@ describe("LiquidityStats", () => {
   });
 
   it("updates the selected route panel from chain and throat interactions", () => {
-    render(createElement(LiquidityStats, {
-      stats: {
-        totalTvl: 10_000,
-        totalVol: 2_500,
-        avgScore: 72,
-        withLiquidity: 4,
-        highConfidenceCoverage: 3,
-        fallbackCoverage: 1,
-        totalTracked: 6,
-        agg7dChange: null,
-        avgBalance: 72,
-        avgOrganic: 63,
-      },
-      liquidityMap: {
-        [DEX_GLOBAL_KEY]: {
-          totalTvlUsd: 10_000,
-          totalVolume24hUsd: 2_500,
-          protocolTvl: {
-            curve: 4_000,
-            fluid: 2_000,
-          },
-          chainTvl: {
-            ethereum: 5_000,
-            base: 2_000,
-          },
-          poolCount: 42,
-          concentrationHhi: 0.31,
-          weightedBalanceRatio: 0.72,
-          organicFraction: 0.63,
-        } as DexLiquidityData,
-      },
-    }));
+    render(
+      createElement(LiquidityStats, {
+        stats: {
+          totalTvl: 10_000,
+          totalVol: 2_500,
+          avgScore: 72,
+          withLiquidity: 4,
+          highConfidenceCoverage: 3,
+          fallbackCoverage: 1,
+          totalTracked: 6,
+          agg7dChange: null,
+          avgBalance: 72,
+          avgOrganic: 63,
+        },
+        liquidityMap: {
+          [DEX_GLOBAL_KEY]: {
+            totalTvlUsd: 10_000,
+            totalVolume24hUsd: 2_500,
+            protocolTvl: {
+              curve: 4_000,
+              fluid: 2_000,
+            },
+            chainTvl: {
+              ethereum: 5_000,
+              base: 2_000,
+            },
+            poolCount: 42,
+            concentrationHhi: 0.31,
+            weightedBalanceRatio: 0.72,
+            organicFraction: 0.63,
+          } as DexLiquidityData,
+        },
+      }),
+    );
 
     fireEvent.focus(screen.getByTestId("chain-lane-base"));
     expect(screen.getByTestId("selected-exit-route-panel").textContent).toContain("Base");

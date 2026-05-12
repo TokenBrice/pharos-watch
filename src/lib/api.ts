@@ -1,14 +1,12 @@
 import type { ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
-import {
-  isSiteDataAllowedUiHostname,
-  resolveSiteDataProxyPath,
-} from "@shared/lib/site-data-lane";
+import { isSiteDataAllowedUiHostname, resolveSiteDataProxyPath } from "@shared/lib/site-data-lane";
 import { classifyFreshnessRatio } from "@shared/lib/status-thresholds";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { resolvePublicApiBase } from "@shared/lib/runtime-origins";
-import { ApiMetaSchema, type ApiMeta } from "@shared/types/api-meta";import type { StablecoinReservesResponse } from "@shared/types";
+import { ApiMetaSchema, type ApiMeta } from "@shared/types/api-meta";
+import type { StablecoinReservesResponse } from "@shared/types";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 
 export type { ApiMeta } from "@shared/types/api-meta";
@@ -86,10 +84,7 @@ export interface ApiRequestOptions {
   timeoutMs?: number | null;
 }
 
-function resolveApiRequestSignal(
-  init?: RequestInit,
-  options?: ApiRequestOptions,
-): AbortSignal | undefined {
+function resolveApiRequestSignal(init?: RequestInit, options?: ApiRequestOptions): AbortSignal | undefined {
   return options?.signal ?? init?.signal ?? undefined;
 }
 
@@ -109,11 +104,7 @@ function resolveApiRequestTimeoutMs(options?: ApiRequestOptions): number | null 
   return Math.max(1, Math.ceil(options.timeoutMs));
 }
 
-export async function apiRequest(
-  path: string,
-  init?: RequestInit,
-  options?: ApiRequestOptions,
-): Promise<Response> {
+export async function apiRequest(path: string, init?: RequestInit, options?: ApiRequestOptions): Promise<Response> {
   const parentSignal = resolveApiRequestSignal(init, options);
   const requestInit = withPublicApiAcceptMarker(path, {
     ...init,
@@ -167,15 +158,12 @@ export class ApiFetchError extends Error {
   }
 }
 
-function formatIssues(
-  issues: readonly { path: readonly PropertyKey[]; message: string }[],
-): string {
+function formatIssues(issues: readonly { path: readonly PropertyKey[]; message: string }[]): string {
   return issues.map((i) => `${i.path.map(String).join(".")}: ${i.message}`).join(", ");
 }
 
 function isFreshnessWarningHeader(warningHeader: string): boolean {
-  return /(?:^|,\s*)110\b/.test(warningHeader)
-    || /Response is (?:degraded|stale)/i.test(warningHeader);
+  return /(?:^|,\s*)110\b/.test(warningHeader) || /Response is (?:degraded|stale)/i.test(warningHeader);
 }
 
 function getBodyWarning(data: unknown): string | null {
@@ -205,12 +193,7 @@ function resolveContractMode(
   return mode ?? "strict";
 }
 
-function validateApiPayload<T>(
-  path: string,
-  data: unknown,
-  schema?: ZodType<T>,
-  contractMode?: ApiContractMode,
-): T {
+function validateApiPayload<T>(path: string, data: unknown, schema?: ZodType<T>, contractMode?: ApiContractMode): T {
   if (!schema) {
     return data as T;
   }
@@ -308,7 +291,11 @@ export async function apiFetchWithMeta<T>(
     if (ageHeader) {
       const age = Number(ageHeader);
       if (Number.isFinite(age) && age >= 0) {
-        meta = { updatedAt: Math.floor(Date.now() / 1000) - age, ageSeconds: age, status: classifyFreshnessRatio(age / maxAgeSec) };
+        meta = {
+          updatedAt: Math.floor(Date.now() / 1000) - age,
+          ageSeconds: age,
+          status: classifyFreshnessRatio(age / maxAgeSec),
+        };
       }
     }
   }

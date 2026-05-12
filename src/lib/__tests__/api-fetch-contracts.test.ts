@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { z } from "zod";import { StablecoinChartResponseSchema } from "@shared/types/digest";
+import { z } from "zod";
+import { StablecoinChartResponseSchema } from "@shared/types/digest";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import { ReportCardsResponseSchema } from "@shared/types/report-cards";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
@@ -27,11 +28,11 @@ describe("api contract validation policy", () => {
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      })
+      }),
     );
 
     await expect(
-      apiFetch("/api/stablecoins", z.object({ peggedAssets: z.array(z.object({ id: z.string() })) }))
+      apiFetch("/api/stablecoins", z.object({ peggedAssets: z.array(z.object({ id: z.string() })) })),
     ).rejects.toBeInstanceOf(SchemaValidationError);
   });
 
@@ -41,13 +42,10 @@ describe("api contract validation policy", () => {
       new Response(JSON.stringify(body), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      })
+      }),
     );
 
-    const result = await apiFetch(
-      "/api/peg-summary",
-      z.object({ summary: z.null(), coins: z.array(z.unknown()) })
-    );
+    const result = await apiFetch("/api/peg-summary", z.object({ summary: z.null(), coins: z.array(z.unknown()) }));
 
     expect(result).toEqual(body);
   });
@@ -69,12 +67,12 @@ describe("api contract validation policy", () => {
       new Response(JSON.stringify({ something: "unexpected" }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      })
+      }),
     );
 
-    await expect(
-      apiFetch("/api/daily-digest", z.object({ digest: z.string() }))
-    ).rejects.toBeInstanceOf(SchemaValidationError);
+    await expect(apiFetch("/api/daily-digest", z.object({ digest: z.string() }))).rejects.toBeInstanceOf(
+      SchemaValidationError,
+    );
   });
 
   it("keeps permissive behavior only when warn mode is explicit", async () => {
@@ -84,15 +82,10 @@ describe("api contract validation policy", () => {
       new Response(JSON.stringify(raw), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      })
+      }),
     );
 
-    const result = await apiFetch(
-      "/api/daily-digest",
-      z.object({ digest: z.string() }),
-      undefined,
-      "warn",
-    );
+    const result = await apiFetch("/api/daily-digest", z.object({ digest: z.string() }), undefined, "warn");
 
     expect(result).toEqual(raw);
     expect(warn).toHaveBeenCalledOnce();
@@ -108,11 +101,11 @@ describe("api contract validation policy", () => {
       new Response(JSON.stringify(bodyWithMeta), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      })
+      }),
     );
 
     await expect(
-      apiFetchWithMeta("/api/stablecoins", z.object({ peggedAssets: z.array(z.unknown()) }))
+      apiFetchWithMeta("/api/stablecoins", z.object({ peggedAssets: z.array(z.unknown()) })),
     ).rejects.toBeInstanceOf(SchemaValidationError);
   });
 
@@ -127,12 +120,12 @@ describe("api contract validation policy", () => {
       new Response(JSON.stringify(bodyWithMeta), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      })
+      }),
     );
 
     const result = await apiFetchWithMeta(
       "/api/peg-summary",
-      z.object({ summary: z.null(), coins: z.array(z.unknown()) })
+      z.object({ summary: z.null(), coins: z.array(z.unknown()) }),
     );
 
     expect(result.data).toEqual({ summary: null, coins: [] });
@@ -159,15 +152,13 @@ describe("api contract validation policy", () => {
   });
 
   it("validates stablecoin chart points before chart consumers use them", () => {
-    expect(StablecoinChartResponseSchema.parse([
-      { date: 1771977600, totalCirculatingUSD: { peggedUSD: 1, peggedEUR: 2 } },
-    ])).toEqual([
-      { date: 1771977600, totalCirculatingUSD: { peggedUSD: 1, peggedEUR: 2 } },
-    ]);
+    expect(
+      StablecoinChartResponseSchema.parse([{ date: 1771977600, totalCirculatingUSD: { peggedUSD: 1, peggedEUR: 2 } }]),
+    ).toEqual([{ date: 1771977600, totalCirculatingUSD: { peggedUSD: 1, peggedEUR: 2 } }]);
 
-    expect(() => StablecoinChartResponseSchema.parse([
-      { date: "1771977600", totalCirculatingUSD: { peggedUSD: 1 } },
-    ])).toThrow();
+    expect(() =>
+      StablecoinChartResponseSchema.parse([{ date: "1771977600", totalCirculatingUSD: { peggedUSD: 1 } }]),
+    ).toThrow();
   });
 
   it("parses valid stablecoin reserve payloads with open metadata details", () => {
@@ -292,13 +283,14 @@ describe("api contract validation policy", () => {
   it("propagates caller-provided AbortSignal through the shared request helper", async () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
     vi.useFakeTimers();
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => (
-      new Promise<Response>((_resolve, reject) => {
-        init?.signal?.addEventListener("abort", () => {
-          reject(init.signal?.reason ?? new DOMException("caller aborted", "AbortError"));
-        });
-      })
-    ));
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(init.signal?.reason ?? new DOMException("caller aborted", "AbortError"));
+          });
+        }),
+    );
     const controller = new AbortController();
 
     const requestPromise = apiRequest("/api/stablecoins", { signal: controller.signal });
@@ -316,13 +308,14 @@ describe("api contract validation policy", () => {
   it("applies the default shared API timeout when callers do not provide one", async () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
     vi.useFakeTimers();
-    vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => (
-      new Promise<Response>((_resolve, reject) => {
-        init?.signal?.addEventListener("abort", () => {
-          reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
-        });
-      })
-    ));
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
+          });
+        }),
+    );
 
     const requestPromise = apiRequest("/api/stablecoins");
     const rejection = expect(requestPromise).rejects.toMatchObject({
@@ -337,13 +330,14 @@ describe("api contract validation policy", () => {
   it("allows callers to override the shared timeout through apiFetch options", async () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
     vi.useFakeTimers();
-    vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => (
-      new Promise<Response>((_resolve, reject) => {
-        init?.signal?.addEventListener("abort", () => {
-          reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
-        });
-      })
-    ));
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
+          });
+        }),
+    );
 
     const requestPromise = apiFetch("/api/stablecoins", undefined, undefined, undefined, { timeoutMs: 250 });
     const rejection = expect(requestPromise).rejects.toMatchObject({
@@ -360,7 +354,7 @@ describe("api contract validation policy", () => {
       new Response(JSON.stringify({ error: "nope" }), {
         status: 503,
         headers: { "Content-Type": "application/json" },
-      })
+      }),
     );
 
     await expect(apiFetch("/api/stablecoins")).rejects.toBeInstanceOf(ApiFetchError);
@@ -368,7 +362,9 @@ describe("api contract validation policy", () => {
 
   it("returns null for 404 when nullOn404 is true", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(new Response("Not found", { status: 404 }));
-    const result = await apiFetch("/api/stablecoin-reserves/test", undefined, undefined, undefined, { nullOn404: true });
+    const result = await apiFetch("/api/stablecoin-reserves/test", undefined, undefined, undefined, {
+      nullOn404: true,
+    });
     expect(result).toBeNull();
   });
 
@@ -402,15 +398,18 @@ describe("api contract validation policy", () => {
 
   it("fetchStablecoinReserves throws SchemaValidationError on malformed 200 payloads", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({
-        stablecoinId: "iusd-infinifi",
-        mode: "live",
-        reserves: [{ name: "Test Farm", pct: "100", risk: "low" }],
-        estimated: false,
-      }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      new Response(
+        JSON.stringify({
+          stablecoinId: "iusd-infinifi",
+          mode: "live",
+          reserves: [{ name: "Test Farm", pct: "100", risk: "low" }],
+          estimated: false,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
     );
 
     await expect(fetchStablecoinReserves("iusd-infinifi")).rejects.toBeInstanceOf(SchemaValidationError);
@@ -429,9 +428,9 @@ describe("api contract validation policy", () => {
         headers: {
           "Content-Type": "application/json",
           "X-Data-Age": "11000",
-          "Warning": '110 - "Response is stale (11000s old, max 900s)"',
+          Warning: '110 - "Response is stale (11000s old, max 900s)"',
         },
-      })
+      }),
     );
 
     const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, 900, "warn");
@@ -450,13 +449,7 @@ describe("api contract validation policy", () => {
       }),
     );
 
-    const result = await apiFetchWithMeta(
-      "/api/daily-digest",
-      z.object({ ok: z.boolean() }),
-      undefined,
-      900,
-      "warn",
-    );
+    const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, 900, "warn");
 
     expect(result.meta).toMatchObject({
       ageSeconds: 0,
@@ -467,37 +460,34 @@ describe("api contract validation policy", () => {
 
   it("downgrades fresh _meta to degraded when a Warning header is present", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({
-        _meta: {
-          updatedAt: 200,
-          ageSeconds: 20,
-          status: "fresh",
-          dependencies: {
-            reportCards: {
-              updatedAt: 100,
-              ageSeconds: 120,
-              status: "stale",
-              reason: "stale cache",
+      new Response(
+        JSON.stringify({
+          _meta: {
+            updatedAt: 200,
+            ageSeconds: 20,
+            status: "fresh",
+            dependencies: {
+              reportCards: {
+                updatedAt: 100,
+                ageSeconds: 120,
+                status: "stale",
+                reason: "stale cache",
+              },
             },
           },
+          ok: true,
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            Warning: '110 - "Response is degraded (20s old, max 600s)"',
+          },
         },
-        ok: true,
-      }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          Warning: '110 - "Response is degraded (20s old, max 600s)"',
-        },
-      })
+      ),
     );
 
-    const result = await apiFetchWithMeta(
-      "/api/chains",
-      z.object({ ok: z.boolean() }),
-      undefined,
-      600,
-      "warn",
-    );
+    const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }), undefined, 600, "warn");
 
     expect(result.meta).toEqual({
       updatedAt: 200,
@@ -517,25 +507,22 @@ describe("api contract validation policy", () => {
 
   it("keeps fresh _meta fresh for non-freshness advisory warnings", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({
-        _meta: { updatedAt: 200, ageSeconds: 20, status: "fresh" },
-        ok: true,
-      }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          Warning: '199 - "Latest sync-dex-liquidity run shows medium quality drift"',
+      new Response(
+        JSON.stringify({
+          _meta: { updatedAt: 200, ageSeconds: 20, status: "fresh" },
+          ok: true,
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            Warning: '199 - "Latest sync-dex-liquidity run shows medium quality drift"',
+          },
         },
-      })
+      ),
     );
 
-    const result = await apiFetchWithMeta(
-      "/api/dex-liquidity",
-      z.object({ ok: z.boolean() }),
-      undefined,
-      3600,
-      "warn",
-    );
+    const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined, 3600, "warn");
 
     expect(result.meta).toEqual({
       updatedAt: 200,
@@ -547,22 +534,25 @@ describe("api contract validation policy", () => {
 
   it("preserves body-level API warnings in meta-aware fetches", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({
-        current: null,
-        history: [],
-        warning: "Yield history freshness lookup failed; falling back to cache metadata.",
-        methodology: {
-          version: "7.45",
-          currentVersion: "7.45",
-          changelogPath: "/methodology/yield-changelog/",
+      new Response(
+        JSON.stringify({
+          current: null,
+          history: [],
+          warning: "Yield history freshness lookup failed; falling back to cache metadata.",
+          methodology: {
+            version: "7.45",
+            currentVersion: "7.45",
+            changelogPath: "/methodology/yield-changelog/",
+          },
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "X-Data-Age": "60",
+          },
         },
-      }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "X-Data-Age": "60",
-        },
-      })
+      ),
     );
 
     const result = await apiFetchWithMeta(
@@ -597,15 +587,10 @@ describe("api contract validation policy", () => {
           "Content-Type": "application/json",
           "X-Data-Age": "1122",
         },
-      })
+      }),
     );
 
-    const result = await apiFetchWithMeta(
-      "/api/dex-liquidity",
-      z.object({ ok: z.boolean() }),
-      undefined,
-      1800,
-    );
+    const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined, 1800);
     expect(result.meta?.status).toBe("fresh");
     expect(result.meta?.ageSeconds).toBe(1122);
   });

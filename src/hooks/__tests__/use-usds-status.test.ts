@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { UsdsStatusResponseSchema } from "@shared/types";
+import { UsdsStatusResponseSchema } from "@shared/types/digest";
 
 const { useApiQueryMock } = vi.hoisted(() => ({
   useApiQueryMock: vi.fn(),

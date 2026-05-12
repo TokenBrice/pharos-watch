@@ -1,4 +1,5 @@
-import { UsdsStatusResponseSchema, type UsdsStatusResponse } from "@shared/types";
+import type { UsdsStatusResponse } from "@shared/types";
+import { UsdsStatusResponseSchema } from "@shared/types/digest";
 import { shouldSkipFreshCache, setCacheIfNewer, type CacheWriteResult } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { fetchEtherscanProxyHex } from "../lib/evm-rpc";
@@ -141,7 +142,9 @@ export async function syncUsdsStatus(
     };
   }
   await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, true);
-  console.log(cacheResult.written ? "[usds-status] Cache updated" : "[usds-status] Cache update skipped; newer row exists");
+  console.log(
+    cacheResult.written ? "[usds-status] Cache updated" : "[usds-status] Cache update skipped; newer row exists",
+  );
   return {
     itemCount: cacheResult.written ? 1 : 0,
     metadata: JSON.stringify({

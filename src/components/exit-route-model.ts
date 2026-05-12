@@ -10,7 +10,7 @@ import {
 } from "@/lib/dex-display-constants";
 import { CHAIN_META } from "@shared/lib/chains";
 import type { DexLiquidityData } from "@shared/types";
-import { DEX_GLOBAL_KEY } from "@shared/types";
+import { DEX_GLOBAL_KEY } from "@shared/types/market";
 import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
 
 const MAX_EXIT_ROUTE_ITEMS = 5;
@@ -201,16 +201,17 @@ export function selectionKey(kind: ExitRouteSelectionKind, key: string): string 
   return `${kind}:${key}`;
 }
 
-export function selectionFromRoute(kind: "protocol" | "chain", route: LiquidityExitRouteItem): LiquidityExitRouteSelection {
+export function selectionFromRoute(
+  kind: "protocol" | "chain",
+  route: LiquidityExitRouteItem,
+): LiquidityExitRouteSelection {
   return {
     kind,
     key: route.key,
     label: route.label,
     valueUsd: route.valueUsd,
     sharePct: route.sharePct,
-    detail: kind === "protocol"
-      ? `#${route.rank} protocol door by DEX TVL`
-      : `#${route.rank} chain lane by DEX TVL`,
+    detail: kind === "protocol" ? `#${route.rank} protocol door by DEX TVL` : `#${route.rank} chain lane by DEX TVL`,
   };
 }
 
@@ -313,9 +314,7 @@ function buildExitRouteItems(
   if (total <= 0) return [];
   const shareBase = denominatorUsd && denominatorUsd > 0 ? denominatorUsd : total;
   const visibleEntries = sortedEntries.slice(0, MAX_EXIT_ROUTE_ITEMS);
-  const omittedTotal = sortedEntries
-    .slice(MAX_EXIT_ROUTE_ITEMS)
-    .reduce((sum, [, value]) => sum + value, 0);
+  const omittedTotal = sortedEntries.slice(MAX_EXIT_ROUTE_ITEMS).reduce((sum, [, value]) => sum + value, 0);
 
   const routes = visibleEntries.map(([key, value], index) => {
     const logo = logoForKey?.(key);
@@ -385,12 +384,14 @@ export function buildLiquidityExitRouteModel(
     denominatorUsd: globalData.totalTvlUsd,
   });
   const concentrationHhi = globalData.concentrationHhi ?? computeHhi(globalData.protocolTvl ?? {});
-  const weightedBalancePct = globalData.weightedBalanceRatio == null
-    ? aggregateStats?.avgBalance ?? null
-    : Math.round(globalData.weightedBalanceRatio * 100);
-  const organicPct = globalData.organicFraction == null
-    ? aggregateStats?.avgOrganic ?? null
-    : Math.round(globalData.organicFraction * 100);
+  const weightedBalancePct =
+    globalData.weightedBalanceRatio == null
+      ? (aggregateStats?.avgBalance ?? null)
+      : Math.round(globalData.weightedBalanceRatio * 100);
+  const organicPct =
+    globalData.organicFraction == null
+      ? (aggregateStats?.avgOrganic ?? null)
+      : Math.round(globalData.organicFraction * 100);
   const interpretation =
     concentrationHhi == null
       ? "Route concentration is not scored for this snapshot."

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { StablecoinListResponseSchema } from "@shared/types";
+import { StablecoinListResponseSchema } from "@shared/types/market";
 
 describe("StablecoinListResponseSchema compatibility", () => {
   it("normalizes snake_case gecko IDs and nullable historical buckets", () => {

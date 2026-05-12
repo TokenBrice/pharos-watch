@@ -1,11 +1,7 @@
 import type { BlacklistStatus } from "@shared/lib/report-cards";
 import type { StablecoinMeta } from "@shared/types";
-import { BLACKLIST_STABLECOINS } from "@shared/types";
-import type {
-  CoverageBreakdownItem,
-  CoverageRow,
-  CoverageStatus,
-} from "@/lib/coverage-types";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import type { CoverageBreakdownItem, CoverageRow, CoverageStatus } from "@/lib/coverage-types";
 import {
   breakdownItem,
   createDataUnavailableStatus,
@@ -16,10 +12,7 @@ import {
 
 const BLACKLIST_SYMBOLS = new Set<string>(BLACKLIST_STABLECOINS);
 
-function hasBlacklistTrackerCoverage(
-  coin: StablecoinMeta,
-  blacklistStatus: BlacklistStatus | null = null,
-): boolean {
+function hasBlacklistTrackerCoverage(coin: StablecoinMeta, blacklistStatus: BlacklistStatus | null = null): boolean {
   if (blacklistStatus !== null && blacklistStatus !== true) {
     return false;
   }
@@ -135,8 +128,7 @@ export const BLACKLIST_STATUS_KINDS: readonly string[] = [
 export const BLACKLIST_LEGEND_ITEMS: readonly CoverageLegendItem[] = [
   {
     term: "Live",
-    description:
-      "Direct freeze controls are confirmed and live blacklist event tracking is published for this issuer.",
+    description: "Direct freeze controls are confirmed and live blacklist event tracking is published for this issuer.",
     kinds: ["live"],
   },
   {

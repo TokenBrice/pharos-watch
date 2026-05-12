@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import {
-  MintBurnFlowsResponseSchema,
-  StressSignalsAllResponseSchema,
-  YieldRankingsResponseSchema,
-} from "@shared/types";
+import { StressSignalsAllResponseSchema } from "@shared/types/market";
+import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
+import { YieldRankingsResponseSchema } from "@shared/types/yield";
 import { mergeDepegSeconds, worstDeviation } from "@shared/lib/peg-utils";
 import type { DepegEvent } from "@shared/types";
 
-function makeDepegEvent(overrides: Partial<DepegEvent> & Pick<DepegEvent, "startedAt" | "peakDeviationBps">): DepegEvent {
+function makeDepegEvent(
+  overrides: Partial<DepegEvent> & Pick<DepegEvent, "startedAt" | "peakDeviationBps">,
+): DepegEvent {
   return {
     id: 1,
     stablecoinId: "usdt-tether",

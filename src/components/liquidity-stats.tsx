@@ -11,16 +11,11 @@ import {
 import { buildProtocolBreakdown } from "@/components/liquidity-stats-model";
 import { MetricStatCard } from "@/components/metric-stat-card";
 import { formatCurrency } from "@shared/lib/format";
-import {
-  PROTOCOL_LOGOS,
-  CHAIN_COLORS,
-  prettifyProtocol,
-  normalizeChain,
-} from "@/lib/dex-display-constants";
+import { PROTOCOL_LOGOS, CHAIN_COLORS, prettifyProtocol, normalizeChain } from "@/lib/dex-display-constants";
 import { CHAIN_META } from "@shared/lib/chains";
 import { getScoreColor } from "@/lib/severity-colors";
 import type { DexLiquidityData } from "@shared/types";
-import { DEX_GLOBAL_KEY } from "@shared/types";
+import { DEX_GLOBAL_KEY } from "@shared/types/market";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { LiquidityExitRouteMap } from "@/components/exit-route-map";
 import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
@@ -48,9 +43,7 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
   return (
     <Card className="rounded-xl border-l-[3px] border-l-sky-500">
       <CardHeader className="pb-2">
-        <CardTitle className="pharos-kicker">
-          Chain TVL Breakdown
-        </CardTitle>
+        <CardTitle className="pharos-kicker">Chain TVL Breakdown</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <BreakdownBar
@@ -96,9 +89,7 @@ function ProtocolAggregateBar({ data }: { data: Record<string, DexLiquidityData>
   return (
     <Card className="rounded-xl border-l-[3px] border-l-violet-500">
       <CardHeader className="pb-2">
-        <CardTitle className="pharos-kicker">
-          Protocol TVL Breakdown
-        </CardTitle>
+        <CardTitle className="pharos-kicker">Protocol TVL Breakdown</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <BreakdownBar

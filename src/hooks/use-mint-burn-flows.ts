@@ -11,52 +11,35 @@ import {
   useApiQueryWithMeta,
 } from "./use-api-query";
 import { CRON_MINT_BURN } from "@/lib/cron-intervals";
+import type { MintBurnFlowsResponse, MintBurnPerCoinResponse, MintBurnEventsResponse } from "@shared/types";
 import {
   MintBurnFlowsResponseSchema,
   MintBurnPerCoinResponseSchema,
   MintBurnEventsResponseSchema,
-  type MintBurnFlowsResponse,
-  type MintBurnPerCoinResponse,
-  type MintBurnEventsResponse,
-} from "@shared/types";
-import {
-  normalizeToSignedFlowIntensity,
-  type FlowIntensitySemantics,
-} from "@/lib/flow-intensity";
+} from "@shared/types/mint-burn";
+import { normalizeToSignedFlowIntensity, type FlowIntensitySemantics } from "@/lib/flow-intensity";
 import { inferHas24hActivity } from "@/lib/mint-burn-coin-helpers";
-import {
-  getNetFlowDirection24h,
-  getPressureShiftState,
-} from "@shared/lib/mint-burn-signals";
+import { getNetFlowDirection24h, getPressureShiftState } from "@shared/lib/mint-burn-signals";
 
 const MINT_BURN_META_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows;
 
-function resolveFlowSemantics(
-  response: MintBurnFlowsResponse,
-): FlowIntensitySemantics {
+function resolveFlowSemantics(response: MintBurnFlowsResponse): FlowIntensitySemantics {
   return response.gauge.intensitySemantics ?? "midpoint-v1";
 }
 
-function normalizeMintBurnFlowsResponse(
-  response: MintBurnFlowsResponse,
-): MintBurnFlowsResponse {
+function normalizeMintBurnFlowsResponse(response: MintBurnFlowsResponse): MintBurnFlowsResponse {
   const semantics = resolveFlowSemantics(response);
 
   return {
     ...response,
     gauge: {
       ...response.gauge,
-      score:
-        response.gauge.score === null
-          ? null
-          : normalizeToSignedFlowIntensity(response.gauge.score, semantics),
+      score: response.gauge.score === null ? null : normalizeToSignedFlowIntensity(response.gauge.score, semantics),
       intensitySemantics: "signed-v2",
     },
     coins: response.coins.map((coin) => {
       const normalizedLegacyScore =
-        coin.flowIntensity === null
-          ? null
-          : normalizeToSignedFlowIntensity(coin.flowIntensity, semantics);
+        coin.flowIntensity === null ? null : normalizeToSignedFlowIntensity(coin.flowIntensity, semantics);
       const normalizedPressureShiftScore =
         coin.pressureShiftScore === undefined
           ? normalizedLegacyScore
@@ -69,12 +52,10 @@ function normalizeMintBurnFlowsResponse(
         ...coin,
         flowIntensity: normalizedLegacyScore,
         pressureShiftScore: normalizedPressureShiftScore,
-        pressureShiftState:
-          coin.pressureShiftState
-          ?? getPressureShiftState(normalizedPressureShiftScore),
+        pressureShiftState: coin.pressureShiftState ?? getPressureShiftState(normalizedPressureShiftScore),
         netFlowDirection24h:
-          coin.netFlowDirection24h
-          ?? getNetFlowDirection24h({
+          coin.netFlowDirection24h ??
+          getNetFlowDirection24h({
             netFlow24hUsd: coin.netFlow24hUsd,
             has24hActivity,
           }),
@@ -105,11 +86,7 @@ export function useMintBurnFlows(hours = 24) {
   };
 }
 
-export function mintBurnFlowsCoinQueryOptions(
-  stablecoinId: string,
-  hours = 24,
-  opts?: { enabled?: boolean },
-) {
+export function mintBurnFlowsCoinQueryOptions(stablecoinId: string, hours = 24, opts?: { enabled?: boolean }) {
   return createApiPollingQueryOptionsWithMeta<MintBurnPerCoinResponse>(
     ["mint-burn-flows", stablecoinId, hours],
     API_PATHS.mintBurnFlows({ stablecoin: stablecoinId, hours: hours !== 24 ? hours : undefined }),
@@ -123,11 +100,7 @@ export function mintBurnFlowsCoinQueryOptions(
 }
 
 /** Per-coin flows — returns flat object with chains[], hourly[]. Requires stablecoinId. */
-export function useMintBurnFlowsCoin(
-  stablecoinId: string,
-  hours = 24,
-  opts?: { enabled?: boolean },
-) {
+export function useMintBurnFlowsCoin(stablecoinId: string, hours = 24, opts?: { enabled?: boolean }) {
   return unwrapApiQueryWithMetaResult(
     useQuery<{ data: MintBurnPerCoinResponse; meta: ApiMeta | null }, Error>(
       mintBurnFlowsCoinQueryOptions(stablecoinId, hours, opts),
@@ -143,7 +116,7 @@ export function useMintBurnEvents(
     scope?: "all" | "counted";
     limit?: number;
     offset?: number;
-  }
+  },
 ) {
   const params = new URLSearchParams({ stablecoin: stablecoinId });
   if (opts?.direction) params.set("direction", opts.direction);

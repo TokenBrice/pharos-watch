@@ -2,7 +2,8 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { BLACKLIST_STABLECOINS, type BlacklistSummaryResponse } from "@shared/types";
+import type { BlacklistSummaryResponse } from "@shared/types";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { BlacklistStats } from "@/components/blacklist-stats";
 
 afterEach(() => {

@@ -3,7 +3,8 @@
 import { useEffect, useRef } from "react";
 import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints";
-import { DepegEventsResponseSchema, type DepegEventsResponse } from "@shared/types";
+import type { DepegEventsResponse } from "@shared/types";
+import { DepegEventsResponseSchema } from "@shared/types/market";
 import { apiFetchWithMeta } from "@/lib/api";
 import { CRON_15MIN } from "@/lib/cron-intervals";
 import { getPollingWindow } from "./use-api-query";
@@ -36,15 +37,16 @@ export function depegEventsInfiniteQueryOptions(stablecoinId?: string) {
     staleTime,
     refetchInterval,
     retry: 2,
-    queryFn: async ({ pageParam, signal }) => apiFetchWithMeta<DepegEventsResponse>(
-      buildDepegEventsPath({
-        stablecoinId,
-        limit: DEPEG_EVENTS_PAGE_SIZE,
-        offset: pageParam,
-      }),
-      DepegEventsResponseSchema,
-      { signal },
-    ),
+    queryFn: async ({ pageParam, signal }) =>
+      apiFetchWithMeta<DepegEventsResponse>(
+        buildDepegEventsPath({
+          stablecoinId,
+          limit: DEPEG_EVENTS_PAGE_SIZE,
+          offset: pageParam,
+        }),
+        DepegEventsResponseSchema,
+        { signal },
+      ),
     getNextPageParam: (lastPage, allPages) => {
       const loaded = allPages.reduce((sum, page) => sum + page.data.events.length, 0);
       return loaded < lastPage.data.total ? loaded : undefined;
@@ -82,14 +84,7 @@ export function useInfiniteDepegEvents({
       retryCountRef.current = 0;
     }
     void fetchNextPage();
-  }, [
-    autoLoadAll,
-    enabled,
-    error,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  ]);
+  }, [autoLoadAll, enabled, error, fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const events = query.data?.pages.flatMap((page) => page.data.events) ?? [];
   const total = query.data?.pages[0]?.data.total ?? 0;

@@ -16,7 +16,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { LiquidityRow } from "@/components/liquidity-table";
 import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
 import type { PegCurrency } from "@shared/types";
-import { DEX_GLOBAL_KEY } from "@shared/types";
+import { DEX_GLOBAL_KEY } from "@shared/types/market";
 import { PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -44,8 +44,15 @@ export function LiquidityClient() {
   const { data: logos } = useLogos();
   const { getParam, setParam } = useUrlFilters();
   const rawPeg = getParam("peg", "all");
-  const pegFilter: PegCurrency | "all" = rawPeg === "all" || rawPeg in PEG_LABELS_SHORT ? rawPeg as PegCurrency | "all" : "all";
-  const setPegFilter = useCallback((v: PegCurrency | "all") => { trackEvent("filter_applied", { page: "liquidity", filter_type: "peg", filter_value: v }); setParam("peg", v); }, [setParam]);
+  const pegFilter: PegCurrency | "all" =
+    rawPeg === "all" || rawPeg in PEG_LABELS_SHORT ? (rawPeg as PegCurrency | "all") : "all";
+  const setPegFilter = useCallback(
+    (v: PegCurrency | "all") => {
+      trackEvent("filter_applied", { page: "liquidity", filter_type: "peg", filter_value: v });
+      setParam("peg", v);
+    },
+    [setParam],
+  );
   const router = useRouter();
 
   // Search: local state for instant input, deferred value for filtering,
@@ -59,19 +66,20 @@ export function LiquidityClient() {
       setParam("q", deferredSearch);
       if (deferredSearch) trackSearch("liquidity", deferredSearch.length);
     }, 300);
-    return () => { if (urlSyncTimer.current) clearTimeout(urlSyncTimer.current); };
+    return () => {
+      if (urlSyncTimer.current) clearTimeout(urlSyncTimer.current);
+    };
   }, [deferredSearch, setParam]);
 
   // Combine tracked stablecoins with liquidity data, applying filters
   const rows = useMemo((): LiquidityRow[] => {
     if (!liquidityMap) return [];
     const q = deferredSearch.toLowerCase().trim();
-    return ACTIVE_STABLECOINS
-      .filter((meta) => {
-        if (pegFilter !== "all" && meta.flags.pegCurrency !== pegFilter) return false;
-        if (q && !meta.name.toLowerCase().includes(q) && !meta.symbol.toLowerCase().includes(q)) return false;
-        return true;
-      })
+    return ACTIVE_STABLECOINS.filter((meta) => {
+      if (pegFilter !== "all" && meta.flags.pegCurrency !== pegFilter) return false;
+      if (q && !meta.name.toLowerCase().includes(q) && !meta.symbol.toLowerCase().includes(q)) return false;
+      return true;
+    })
       .map((meta) => ({
         meta,
         liq: liquidityMap[meta.id],
@@ -79,14 +87,8 @@ export function LiquidityClient() {
       .filter((r): r is LiquidityRow => r.liq != null);
   }, [liquidityMap, pegFilter, deferredSearch]);
 
-  const scoredRows = useMemo(
-    () => rows.filter((row) => row.liq.liquidityScore != null),
-    [rows],
-  );
-  const unratedRows = useMemo(
-    () => rows.filter((row) => row.liq.liquidityScore == null),
-    [rows],
-  );
+  const scoredRows = useMemo(() => rows.filter((row) => row.liq.liquidityScore != null), [rows]);
+  const unratedRows = useMemo(() => rows.filter((row) => row.liq.liquidityScore == null), [rows]);
 
   // Summary stats computed from full (unfiltered) data
   const summaryStats = useMemo((): LiquidityStatsData | null => {
@@ -100,8 +102,8 @@ export function LiquidityClient() {
     let withLiquidity = 0;
     let highConfidenceCoverage = 0;
     let fallbackCoverage = 0;
-    let tvlForChange = 0;    // current TVL only for coins with 7d change data
-    let totalPrevTvl = 0;    // previous TVL for those same coins
+    let tvlForChange = 0; // current TVL only for coins with 7d change data
+    let totalPrevTvl = 0; // previous TVL for those same coins
     let totalBalance = 0;
     let balanceWeight = 0;
     let totalOrganic = 0;
@@ -151,9 +153,12 @@ export function LiquidityClient() {
     };
   }, [liquidityMap]);
 
-  const handleRowClick = useCallback((id: string) => {
-    router.push(buildStablecoinUrl(id));
-  }, [router]);
+  const handleRowClick = useCallback(
+    (id: string) => {
+      router.push(buildStablecoinUrl(id));
+    },
+    [router],
+  );
   const handleRetry = useCallback(() => {
     void refetch();
   }, [refetch]);
@@ -165,8 +170,12 @@ export function LiquidityClient() {
         <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i} className="rounded-xl">
-              <CardHeader className="pb-1"><Skeleton className="h-3 w-24" /></CardHeader>
-              <CardContent><Skeleton className="h-8 w-32" /></CardContent>
+              <CardHeader className="pb-1">
+                <Skeleton className="h-3 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-32" />
+              </CardContent>
             </Card>
           ))}
         </div>
@@ -185,14 +194,15 @@ export function LiquidityClient() {
         showFreshnessBanner={showDataHealthBanner}
       />
       {meta?.warning && (
-        <div role="alert" className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+        <div
+          role="alert"
+          className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300"
+        >
           {formatWarningMessage(meta.warning)}
         </div>
       )}
 
-      {summaryStats && liquidityMap && (
-        <LiquidityStats stats={summaryStats} liquidityMap={liquidityMap} />
-      )}
+      {summaryStats && liquidityMap && <LiquidityStats stats={summaryStats} liquidityMap={liquidityMap} />}
 
       {/* Filters + Leaderboard */}
       <div className="space-y-3">
@@ -207,7 +217,13 @@ export function LiquidityClient() {
               aria-label="Filter by peg currency"
             >
               {PEG_FILTERS.map((f) => (
-                <ToggleGroupItem key={f.value} value={f.value} variant="outline" size="sm" className="text-xs min-h-[44px] md:min-h-0">
+                <ToggleGroupItem
+                  key={f.value}
+                  value={f.value}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs min-h-[44px] md:min-h-0"
+                >
                   {f.label}
                 </ToggleGroupItem>
               ))}
@@ -223,12 +239,7 @@ export function LiquidityClient() {
           </div>
         </div>
 
-        <LiquidityTable
-          rows={scoredRows}
-          logos={logos}
-          searchQuery={deferredSearch}
-          onRowClick={handleRowClick}
-        />
+        <LiquidityTable rows={scoredRows} logos={logos} searchQuery={deferredSearch} onRowClick={handleRowClick} />
       </div>
 
       {unratedRows.length > 0 && (
@@ -236,15 +247,11 @@ export function LiquidityClient() {
           <div className="space-y-1">
             <h2 className="pharos-kicker">Unrated / Not Observed</h2>
             <p className="text-sm text-muted-foreground">
-              These assets are tracked, but the current liquidity pipeline has not observed enough DEX coverage to assign a Liquidity Score.
+              These assets are tracked, but the current liquidity pipeline has not observed enough DEX coverage to
+              assign a Liquidity Score.
             </p>
           </div>
-          <LiquidityTable
-            rows={unratedRows}
-            logos={logos}
-            searchQuery={deferredSearch}
-            onRowClick={handleRowClick}
-          />
+          <LiquidityTable rows={unratedRows} logos={logos} searchQuery={deferredSearch} onRowClick={handleRowClick} />
         </div>
       )}
     </div>

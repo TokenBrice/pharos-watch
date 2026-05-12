@@ -1,10 +1,6 @@
 "use client";
-
-import {
-  PUBLIC_STATUS_HISTORY_WINDOWS,
-  type PublicStatusHistoryWindow,
-  type PublicStatusTransition,
-} from "@shared/types";
+import type { PublicStatusHistoryWindow, PublicStatusTransition } from "@shared/types";
+import { PUBLIC_STATUS_HISTORY_WINDOWS } from "@shared/types/status";
 import { getStatusTone } from "@/lib/status-dashboard-model";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -64,10 +60,18 @@ export function PublicTransitionTimeline({
               <caption className="sr-only">Public status transition history</caption>
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
-                  <th scope="col" className="pb-2 font-medium">Time</th>
-                  <th scope="col" className="pb-2 font-medium">Transition</th>
-                  <th scope="col" className="pb-2 font-medium">Type</th>
-                  <th scope="col" className="pb-2 font-medium">Reason</th>
+                  <th scope="col" className="pb-2 font-medium">
+                    Time
+                  </th>
+                  <th scope="col" className="pb-2 font-medium">
+                    Transition
+                  </th>
+                  <th scope="col" className="pb-2 font-medium">
+                    Type
+                  </th>
+                  <th scope="col" className="pb-2 font-medium">
+                    Reason
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -76,7 +80,7 @@ export function PublicTransitionTimeline({
                   return (
                     <tr key={transition.id} className="border-b last:border-0">
                       <td className="py-2.5 font-mono text-xs text-muted-foreground">
-                        {new Date(transition.at * 1000).toLocaleString(undefined, { timeZoneName: 'short' })}
+                        {new Date(transition.at * 1000).toLocaleString(undefined, { timeZoneName: "short" })}
                       </td>
                       <td className="py-2.5">
                         <span className="font-mono text-xs">
@@ -84,7 +88,9 @@ export function PublicTransitionTimeline({
                         </span>
                       </td>
                       <td className="py-2.5">
-                        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${toTone.badgeClassName}`}>
+                        <span
+                          className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${toTone.badgeClassName}`}
+                        >
                           {TYPE_LABELS[transition.transitionType] ?? transition.transitionType}
                         </span>
                       </td>

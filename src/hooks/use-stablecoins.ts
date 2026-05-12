@@ -2,12 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints";
-import {
-  StablecoinListResponseSchema,
-  SupplyHistoryResponseSchema,
-  type StablecoinListResponse,
-  type SupplyHistoryPoint,
-} from "@shared/types";
+import type { StablecoinListResponse, SupplyHistoryPoint } from "@shared/types";
+import { StablecoinListResponseSchema, SupplyHistoryResponseSchema } from "@shared/types/market";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { createApiPollingQueryOptions, useApiQueryWithMeta } from "./use-api-query";
 import { CRON_15MIN, CRON_1H } from "@/lib/cron-intervals";
@@ -15,13 +11,10 @@ import { CRON_15MIN, CRON_1H } from "@/lib/cron-intervals";
 export type { SupplyHistoryPoint } from "@shared/types";
 
 export function useStablecoins() {
-  return useApiQueryWithMeta<StablecoinListResponse>(
-    ["stablecoins"], API_PATHS.stablecoins(), CRON_15MIN,
-    {
-      schema: StablecoinListResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stablecoins,
-    },
-  );
+  return useApiQueryWithMeta<StablecoinListResponse>(["stablecoins"], API_PATHS.stablecoins(), CRON_15MIN, {
+    schema: StablecoinListResponseSchema,
+    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stablecoins,
+  });
 }
 
 export function supplyHistoryQueryOptions(id: string, days = 1825) {

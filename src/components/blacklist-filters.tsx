@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { BLACKLIST_STABLECOINS, type BlacklistStablecoin, type BlacklistEventType } from "@shared/types";
+import type { BlacklistStablecoin, BlacklistEventType } from "@shared/types";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 
 interface BlacklistFiltersProps {
   chains: Array<{ id: string; name: string }>;

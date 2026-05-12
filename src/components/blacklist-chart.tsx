@@ -9,7 +9,8 @@ import { formatCurrency } from "@shared/lib/format";
 import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { CategoricalXAxis, ChartGrid, MonoYAxis } from "@/components/chart-primitives";
-import { BLACKLIST_STABLECOINS, type BlacklistSummaryResponse, type BlacklistStablecoin } from "@shared/types";
+import type { BlacklistSummaryResponse, BlacklistStablecoin } from "@shared/types";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 
 const CHART_HEIGHT = "h-[220px] sm:h-[280px]";
 

@@ -14,7 +14,8 @@ import {
   throatLabelForCrowding,
 } from "@/components/exit-route-model";
 import { buildProtocolBreakdown } from "@/components/liquidity-stats-model";
-import { DEX_GLOBAL_KEY, type DexLiquidityData } from "@shared/types";
+import type { DexLiquidityData } from "@shared/types";
+import { DEX_GLOBAL_KEY } from "@shared/types/market";
 
 describe("buildProtocolBreakdown", () => {
   it("caps the protocol legend at 10 entries by grouping everything after the top 9", () => {
@@ -128,24 +129,27 @@ describe("buildLiquidityExitRouteModel", () => {
   });
 
   it("uses total DEX TVL as the route-share denominator when bucket totals drift", () => {
-    const model = buildLiquidityExitRouteModel({
-      [DEX_GLOBAL_KEY]: {
-        totalTvlUsd: 10_000,
-        totalVolume24hUsd: 2_500,
-        protocolTvl: {
-          curve: 5_000,
-          fluid: 3_000,
-        },
-        chainTvl: {
-          ethereum: 4_000,
-          base: 1_000,
-        },
-        poolCount: 42,
-        concentrationHhi: null,
-        weightedBalanceRatio: null,
-        organicFraction: null,
-      } as DexLiquidityData,
-    }, { avgBalance: 71, avgOrganic: 54 });
+    const model = buildLiquidityExitRouteModel(
+      {
+        [DEX_GLOBAL_KEY]: {
+          totalTvlUsd: 10_000,
+          totalVolume24hUsd: 2_500,
+          protocolTvl: {
+            curve: 5_000,
+            fluid: 3_000,
+          },
+          chainTvl: {
+            ethereum: 4_000,
+            base: 1_000,
+          },
+          poolCount: 42,
+          concentrationHhi: null,
+          weightedBalanceRatio: null,
+          organicFraction: null,
+        } as DexLiquidityData,
+      },
+      { avgBalance: 71, avgOrganic: 54 },
+    );
 
     expect(model?.topProtocol).toMatchObject({ key: "curve", sharePct: 50 });
     expect(model?.topChain).toMatchObject({ key: "ethereum", sharePct: 40 });
@@ -198,9 +202,11 @@ describe("buildLiquidityExitRouteModel", () => {
 
   it("does not build an exit map without global TVL", () => {
     expect(buildLiquidityExitRouteModel({})).toBeNull();
-    expect(buildLiquidityExitRouteModel({
-      [DEX_GLOBAL_KEY]: { totalTvlUsd: 0 } as DexLiquidityData,
-    })).toBeNull();
+    expect(
+      buildLiquidityExitRouteModel({
+        [DEX_GLOBAL_KEY]: { totalTvlUsd: 0 } as DexLiquidityData,
+      }),
+    ).toBeNull();
   });
 
   it("keeps visual encodings monotonic, clamped, and resilient to invalid inputs", () => {

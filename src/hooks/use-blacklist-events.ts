@@ -4,16 +4,9 @@ import { API_PATHS } from "@shared/lib/api-endpoints";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CRON_BLACKLIST } from "@/lib/cron-intervals";
 import { useApiQueryWithMeta } from "./use-api-query";
-import {
-  buildBlacklistEventsPath,
-  type FetchBlacklistEventsParams,
-} from "@/lib/blacklist-api";
-import {
-  BlacklistResponseSchema,
-  BlacklistSummaryResponseSchema,
-  type BlacklistResponse,
-  type BlacklistSummaryResponse,
-} from "@shared/types";
+import { buildBlacklistEventsPath, type FetchBlacklistEventsParams } from "@/lib/blacklist-api";
+import type { BlacklistResponse, BlacklistSummaryResponse } from "@shared/types";
+import { BlacklistResponseSchema, BlacklistSummaryResponseSchema } from "@shared/types/market";
 
 export function useBlacklistSummary(options?: { enabled?: boolean }) {
   return useApiQueryWithMeta<BlacklistSummaryResponse>(

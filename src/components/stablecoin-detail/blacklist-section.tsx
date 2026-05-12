@@ -7,7 +7,8 @@ import { BlacklistDetailStats } from "./blacklist-detail-stats";
 import { BlacklistDetailChart } from "./blacklist-detail-chart";
 import { BlacklistDetailEventFeed } from "./blacklist-detail-event-feed";
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
-import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types";
+import type { BlacklistStablecoin } from "@shared/types";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 
 interface BlacklistSectionProps {
   stablecoinId: string;
@@ -42,10 +43,7 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
           ) : (
             <div className="space-y-4">
               <BlacklistDetailStats symbol={symbol} stats={summary.stats} isLoading={false} />
-              <BlacklistDetailChart
-                data={summary.stats.perCoinQuarterlyEventTypes[symbol]}
-                isLoading={false}
-              />
+              <BlacklistDetailChart data={summary.stats.perCoinQuarterlyEventTypes[symbol]} isLoading={false} />
             </div>
           )}
         </Card>

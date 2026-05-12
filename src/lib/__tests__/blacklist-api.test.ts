@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchBlacklistEvents, fetchBlacklistSummary } from "../blacklist-api";
-import { BLACKLIST_STABLECOINS } from "@shared/types";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import type { BlacklistEvent, BlacklistResponse, BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 
 function makeEvent(id: number): BlacklistEvent {
@@ -40,12 +40,14 @@ function jsonResponse(body: BlacklistResponse | BlacklistSummaryResponse): Respo
 }
 
 function makeLegacySummaryWithoutCurrentFreshness(): BlacklistSummaryResponse {
-  const zeroByCoin = Object.fromEntries(
-    BLACKLIST_STABLECOINS.map((s) => [s, 0]),
-  ) as Record<BlacklistStablecoin, number>;
-  const emptyQuarterly = Object.fromEntries(
-    BLACKLIST_STABLECOINS.map((s) => [s, []]),
-  ) as Record<BlacklistStablecoin, Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>>;
+  const zeroByCoin = Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
+    BlacklistStablecoin,
+    number
+  >;
+  const emptyQuarterly = Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, []])) as Record<
+    BlacklistStablecoin,
+    Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>
+  >;
 
   return {
     stats: {
@@ -165,24 +167,30 @@ describe("blacklist-api", () => {
         recentCount: 4,
         recentCount24h: 1,
         recoverableGapCount: 0,
-        perCoinBlacklistCounts: Object.fromEntries(
-          BLACKLIST_STABLECOINS.map((s) => [s, 0]),
-        ) as Record<BlacklistStablecoin, number>,
-        perCoinTotalEvents: Object.fromEntries(
-          BLACKLIST_STABLECOINS.map((s) => [s, 0]),
-        ) as Record<BlacklistStablecoin, number>,
-        perCoinFrozenAddressCount: Object.fromEntries(
-          BLACKLIST_STABLECOINS.map((s) => [s, 0]),
-        ) as Record<BlacklistStablecoin, number>,
-        perCoinFrozenTotal: Object.fromEntries(
-          BLACKLIST_STABLECOINS.map((s) => [s, 0]),
-        ) as Record<BlacklistStablecoin, number>,
-        perCoinDestroyedTotal: Object.fromEntries(
-          BLACKLIST_STABLECOINS.map((s) => [s, 0]),
-        ) as Record<BlacklistStablecoin, number>,
-        perCoinQuarterlyEventTypes: Object.fromEntries(
-          BLACKLIST_STABLECOINS.map((s) => [s, []]),
-        ) as Record<BlacklistStablecoin, Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>>,
+        perCoinBlacklistCounts: Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
+          BlacklistStablecoin,
+          number
+        >,
+        perCoinTotalEvents: Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
+          BlacklistStablecoin,
+          number
+        >,
+        perCoinFrozenAddressCount: Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
+          BlacklistStablecoin,
+          number
+        >,
+        perCoinFrozenTotal: Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
+          BlacklistStablecoin,
+          number
+        >,
+        perCoinDestroyedTotal: Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
+          BlacklistStablecoin,
+          number
+        >,
+        perCoinQuarterlyEventTypes: Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, []])) as Record<
+          BlacklistStablecoin,
+          Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>
+        >,
       },
       chart: [],
       chains: [{ id: "ethereum", name: "Ethereum" }],

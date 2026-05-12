@@ -4,7 +4,8 @@ import { useId, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EVENT_LABELS } from "@shared/lib/classification";
 import { formatCompactCount } from "@shared/lib/format";
-import { BLACKLIST_STABLECOINS, type BlacklistSummaryResponse } from "@shared/types";
+import type { BlacklistSummaryResponse } from "@shared/types";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 
 interface InterventionSeismographProps {
   stats: BlacklistSummaryResponse["stats"] | undefined;

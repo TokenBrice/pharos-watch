@@ -3,7 +3,7 @@ import { mockD1 } from "./helpers/mock-d1";
 import { makeYieldHistoryRow } from "./helpers/fixtures";
 import { handleYieldHistory } from "../yield-history";
 import { YIELD_HISTORY_OWNERSHIP_HANDOFFS } from "../../lib/yield-history-ownership-handoffs";
-import { YieldHistoryResponseSchema } from "@shared/types";
+import { YieldHistoryResponseSchema } from "@shared/types/yield";
 
 describe("handleYieldHistory", () => {
   afterEach(() => {
@@ -41,7 +41,7 @@ describe("handleYieldHistory", () => {
     const db = mockD1([{ match: "yield_history", rows: [] }]);
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
     expect(res.status).toBe(200);
-    const body = await res.json() as { current: null; history: unknown[] };
+    const body = (await res.json()) as { current: null; history: unknown[] };
     expect(body.current).toBeNull();
     expect(body.history).toEqual([]);
   });
@@ -85,7 +85,7 @@ describe("handleYieldHistory", () => {
       new URL(`https://x/api/yield-history?stablecoin=usdt-tether&sourceKey=${encodeURIComponent("aave-v3:usdt")}`),
     );
     expect(res.status).toBe(200);
-    const body = await res.json() as { history: Array<{ sourceKey: string }> };
+    const body = (await res.json()) as { history: Array<{ sourceKey: string }> };
     expect(body.history[0]?.sourceKey).toBe("aave-v3:usdt");
   });
 
@@ -115,7 +115,7 @@ describe("handleYieldHistory", () => {
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
 
     expect(res.status).toBe(200);
-    const body = await res.json() as {
+    const body = (await res.json()) as {
       current: { apy: number } | null;
       history: Array<{ apy: number }>;
     };
@@ -153,7 +153,7 @@ describe("handleYieldHistory", () => {
     );
 
     expect(res.status).toBe(200);
-    const body = await res.json() as {
+    const body = (await res.json()) as {
       current: { apy: number } | null;
       history: Array<{ apy: number }>;
     };
@@ -181,7 +181,7 @@ describe("handleYieldHistory", () => {
 
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
     expect(res.status).toBe(200);
-    const body = await res.json() as { history: Array<{ sourceKey: string; sourceSwitch: boolean }> };
+    const body = (await res.json()) as { history: Array<{ sourceKey: string; sourceSwitch: boolean }> };
     expect(body.history[0]).toMatchObject({ sourceKey: "legacy-best", sourceSwitch: false });
     expect(body.history[1]).toMatchObject({ sourceKey: "rate-derived", sourceSwitch: true });
   });
@@ -205,7 +205,7 @@ describe("handleYieldHistory", () => {
 
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=lusd-liquity"));
     expect(res.status).toBe(200);
-    const body = await res.json() as { history: Array<{ sourceKey: string; sourceSwitch: boolean }> };
+    const body = (await res.json()) as { history: Array<{ sourceKey: string; sourceSwitch: boolean }> };
     expect(body.history[0]).toMatchObject({ sourceKey: "onchain:lusd-liquity", sourceSwitch: false });
     expect(body.history[1]).toMatchObject({ sourceKey: "onchain:lusd-liquity", sourceSwitch: false });
   });
@@ -217,7 +217,7 @@ describe("handleYieldHistory", () => {
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
 
     expect(res.status).toBe(200);
-    const body = await res.json() as { history: Array<{ warningSignals: string[] }> };
+    const body = (await res.json()) as { history: Array<{ warningSignals: string[] }> };
     expect(body.history[0]?.warningSignals).toEqual([]);
   });
 
@@ -233,7 +233,7 @@ describe("handleYieldHistory", () => {
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usde-ethena"));
     expect(res.status).toBe(200);
 
-    const body = await res.json() as { current: null; history: unknown[] };
+    const body = (await res.json()) as { current: null; history: unknown[] };
     expect(body.current).toBeNull();
     expect(body.history).toEqual([]);
   });
@@ -253,7 +253,7 @@ describe("handleYieldHistory", () => {
         );
 
         expect(res.status, `${stablecoinId}:${sourceKey}`).toBe(200);
-        const body = await res.json() as { current: null; history: unknown[] };
+        const body = (await res.json()) as { current: null; history: unknown[] };
         expect(body.current, `${stablecoinId}:${sourceKey}`).toBeNull();
         expect(body.history, `${stablecoinId}:${sourceKey}`).toEqual([]);
       }
@@ -323,7 +323,7 @@ describe("handleYieldHistory", () => {
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
     expect(res.status).toBe(200);
 
-    const body = await res.json() as { warning?: string };
+    const body = (await res.json()) as { warning?: string };
     expect(body.warning).toContain("freshness lookup failed");
     expect(() => YieldHistoryResponseSchema.parse(body)).not.toThrow();
 

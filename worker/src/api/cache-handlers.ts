@@ -1,7 +1,8 @@
 import type { ReportCard } from "@shared/types/report-cards";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { UsdsStatusResponseSchema, type UsdsStatusResponse } from "@shared/types";
+import type { UsdsStatusResponse } from "@shared/types";
+import { UsdsStatusResponseSchema } from "@shared/types/digest";
 import { YieldRankingsResponseSchema, type YieldRanking, type YieldRankingsResponse } from "@shared/types/yield";
 import { BluechipRatingsMapSchema, StablecoinListResponseSchema } from "@shared/types/market";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
@@ -109,11 +110,7 @@ function hydrateYieldRankingsWithLiveSafety(
   payload: YieldRankingsResponse,
   cards: ReportCard[],
 ): { payload: YieldRankingsResponse; degradationReasons: string[] } {
-  const reportCardById = new Map(
-    cards
-      .filter((card) => !card.isDefunct)
-      .map((card) => [card.id, card]),
-  );
+  const reportCardById = new Map(cards.filter((card) => !card.isDefunct).map((card) => [card.id, card]));
 
   const rankings = payload.rankings
     .map((row) => {
@@ -129,17 +126,17 @@ function hydrateYieldRankingsWithLiveSafety(
         yieldToRisk: 101 - safetyInputScore > 0 ? row.apy30d / (101 - safetyInputScore) : null,
         provenance: row.provenance
           ? {
-            ...row.provenance,
-            usedDefaultSafety: card?.overallScore == null,
-            safetyProvenance: card?.overallScore == null
-              ? "default-safety" as const
-              : "live-report-card" as const,
-          }
+              ...row.provenance,
+              usedDefaultSafety: card?.overallScore == null,
+              safetyProvenance:
+                card?.overallScore == null ? ("default-safety" as const) : ("live-report-card" as const),
+            }
           : null,
       };
     })
     .sort((a, b) => {
-      const scoreDiff = (b.pharosYieldScore ?? Number.NEGATIVE_INFINITY) - (a.pharosYieldScore ?? Number.NEGATIVE_INFINITY);
+      const scoreDiff =
+        (b.pharosYieldScore ?? Number.NEGATIVE_INFINITY) - (a.pharosYieldScore ?? Number.NEGATIVE_INFINITY);
       if (scoreDiff !== 0) return scoreDiff;
       const apyDiff = b.currentApy - a.currentApy;
       if (apyDiff !== 0) return apyDiff;
@@ -148,40 +145,38 @@ function hydrateYieldRankingsWithLiveSafety(
 
   const coveredCount = rankings.filter((row) => row.provenance?.safetyProvenance === "live-report-card").length;
   const trackedCount = rankings.length;
-  const coverageRatio = trackedCount > 0
-    ? Number((coveredCount / trackedCount).toFixed(4))
-    : 1;
+  const coverageRatio = trackedCount > 0 ? Number((coveredCount / trackedCount).toFixed(4)) : 1;
   const degradationReasons = coverageRatio < 0.75 ? ["low-row-safety-coverage"] : [];
 
   return {
     degradationReasons,
     payload: {
-    ...payload,
-    ...(degradationReasons.length > 0
-      ? {
-          warnings: [
-            ...(payload.warnings ?? []),
-            {
-              code: "yield-safety-hydration-degraded",
-              message: "Live safety hydration coverage is degraded for public yield rankings.",
-              reasons: degradationReasons,
+      ...payload,
+      ...(degradationReasons.length > 0
+        ? {
+            warnings: [
+              ...(payload.warnings ?? []),
+              {
+                code: "yield-safety-hydration-degraded",
+                message: "Live safety hydration coverage is degraded for public yield rankings.",
+                reasons: degradationReasons,
+              },
+            ],
+          }
+        : {}),
+      rankings,
+      provenance: payload.provenance
+        ? {
+            ...payload.provenance,
+            safetySnapshot: {
+              ...payload.provenance.safetySnapshot,
+              coveredCount,
+              trackedCount,
+              coverageRatio,
+              reason: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
             },
-          ],
-        }
-      : {}),
-    rankings,
-    provenance: payload.provenance
-      ? {
-        ...payload.provenance,
-        safetySnapshot: {
-          ...payload.provenance.safetySnapshot,
-          coveredCount,
-          trackedCount,
-          coverageRatio,
-          reason: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
-        },
-      }
-      : payload.provenance,
+          }
+        : payload.provenance,
     },
   };
 }
@@ -191,14 +186,17 @@ function buildYieldRankingsResponse(
   cached: { updatedAt: number },
   warningReasons: string[],
 ): Response {
-  const warning = warningReasons.length > 0
-    ? `199 - "Yield safety hydration degraded: ${warningReasons.join(",")}"`
-    : null;
-  const headers = addFreshnessHeaders({
-    "Content-Type": "application/json",
-    "Cache-Control": CACHE_PROFILES.standard,
-    ...(warning ? { Warning: warning } : {}),
-  }, cached.updatedAt, YIELD_RANKINGS_MAX_AGE_SEC);
+  const warning =
+    warningReasons.length > 0 ? `199 - "Yield safety hydration degraded: ${warningReasons.join(",")}"` : null;
+  const headers = addFreshnessHeaders(
+    {
+      "Content-Type": "application/json",
+      "Cache-Control": CACHE_PROFILES.standard,
+      ...(warning ? { Warning: warning } : {}),
+    },
+    cached.updatedAt,
+    YIELD_RANKINGS_MAX_AGE_SEC,
+  );
   if (warning && headers.Warning && !headers.Warning.includes(warning)) {
     headers.Warning = `${headers.Warning}, ${warning}`;
   }
@@ -246,11 +244,7 @@ export const handleYieldRankings = createCacheHandler(
             },
           ],
         };
-        return buildYieldRankingsResponse(
-          degradedPayload,
-          cached,
-          ["live-report-card-hydration-failed"],
-        );
+        return buildYieldRankingsResponse(degradedPayload, cached, ["live-report-card-hydration-failed"]);
       }
     },
   },

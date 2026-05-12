@@ -8,15 +8,15 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { buildBlacklistStatusBuckets, type BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
 import { buildReportCardMap } from "@/lib/stablecoin-lookups";
-import {
-  BLACKLIST_STABLECOINS,
-  type BlacklistStablecoin,
-  type BlacklistEventType,
-  type BlacklistSortDirection,
-  type BlacklistSortKey,
-  type ReportCard,
-  type StablecoinData,
+import type {
+  BlacklistStablecoin,
+  BlacklistEventType,
+  BlacklistSortDirection,
+  BlacklistSortKey,
+  ReportCard,
+  StablecoinData,
 } from "@shared/types";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { type BlacklistStatusBucketKey } from "@/lib/blacklist-status-buckets";
 
 const PAGE_SIZE = 50;
@@ -25,13 +25,7 @@ const VALID_STABLECOINS = new Set<BlacklistStablecoin | "all">(["all", ...BLACKL
 const VALID_EVENT_TYPES = new Set(["all", "blacklist", "unblacklist", "destroy"]);
 const VALID_SORT_KEYS = new Set<BlacklistSortKey>(["date", "stablecoin", "chain", "event"]);
 const VALID_SORT_DIRECTIONS = new Set<BlacklistSortDirection>(["asc", "desc"]);
-const VALID_STATUS_BUCKETS = new Set<BlacklistStatusBucketKey>([
-  "yes",
-  "dilutable",
-  "upstream",
-  "possible",
-  "no",
-]);
+const VALID_STATUS_BUCKETS = new Set<BlacklistStatusBucketKey>(["yes", "dilutable", "upstream", "possible", "no"]);
 
 export type FreezeWatchPageFilters = {
   stablecoinFilter: BlacklistStablecoin | "all";
@@ -93,14 +87,8 @@ export function useFreezeWatchPageController() {
     refetch: refetchSummary,
     meta: summaryMeta,
   } = useBlacklistSummary();
-  const {
-    data: stablecoinData,
-    isLoading: supportStablecoinsLoading,
-  } = useStablecoins();
-  const {
-    data: reportCardsData,
-    isLoading: supportReportCardsLoading,
-  } = useReportCards();
+  const { data: stablecoinData, isLoading: supportStablecoinsLoading } = useStablecoins();
+  const { data: reportCardsData, isLoading: supportReportCardsLoading } = useReportCards();
   const { searchParams, replaceParams } = useUrlFilters();
   const parsedFilters = useMemo(() => parseFreezeWatchPageFilters(searchParams.toString()), [searchParams]);
   const reportCardMap = useMemo(
