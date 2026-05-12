@@ -1459,6 +1459,94 @@ describe("dispatchTelegramAlerts", () => {
     expect(mockSendToChat.mock.calls[0]?.[1]).toContain("worsening");
   });
 
+  it("suppresses fresh global depeg alerts below the configured bps step", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") return { value: "{}", updatedAt: now - 60 };
+      if (key === "alert:depeg-snapshot") return { value: "{}", updatedAt: now - 60 };
+      if (key === "alert:safety-snapshot") return { value: "{}", updatedAt: now - 60 };
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      {
+        match: "FROM depeg_events WHERE ended_at IS NULL",
+        rows: [{ stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: 125, start_price: 0.9875, peg_reference: 1 }],
+      },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "sub.alert_depeg = 1", rows: [] },
+      {
+        match: "WHERE global_alert_depeg = 1",
+        rows: [{
+          chat_id: "global-123",
+          last_active_at: now,
+          global_depeg_worsening_bps_step: 250,
+        }],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventsDetected: { depegTriggered: number; depeg: number };
+      messagesSent: number;
+      subscribersNotified: number;
+    };
+
+    expect(metadata.eventsDetected.depeg).toBe(1);
+    expect(metadata.eventsDetected.depegTriggered).toBe(1);
+    expect(metadata.messagesSent).toBe(0);
+    expect(metadata.subscribersNotified).toBe(0);
+    expect(mockSendToChat).not.toHaveBeenCalled();
+  });
+
+  it("sends fresh global depeg alerts when the configured bps step is met", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") return { value: "{}", updatedAt: now - 60 };
+      if (key === "alert:depeg-snapshot") return { value: "{}", updatedAt: now - 60 };
+      if (key === "alert:safety-snapshot") return { value: "{}", updatedAt: now - 60 };
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      {
+        match: "FROM depeg_events WHERE ended_at IS NULL",
+        rows: [{ stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: 260, start_price: 0.974, peg_reference: 1 }],
+      },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "sub.alert_depeg = 1", rows: [] },
+      {
+        match: "WHERE global_alert_depeg = 1",
+        rows: [{
+          chat_id: "global-123",
+          last_active_at: now,
+          global_depeg_worsening_bps_step: 250,
+        }],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventsDetected: { depegTriggered: number };
+      messagesSent: number;
+      subscribersNotified: number;
+    };
+
+    expect(metadata.eventsDetected.depegTriggered).toBe(1);
+    expect(metadata.messagesSent).toBe(1);
+    expect(metadata.subscribersNotified).toBe(1);
+    expect(mockSendToChat.mock.calls[0]?.[0]).toBe("global-123");
+    expect(mockSendToChat.mock.calls[0]?.[1]).toContain("below peg by 2.6%");
+  });
+
   it("emits global worsening depeg alerts when the configured global bps step is crossed", async () => {
     const now = Math.floor(Date.now() / 1000);
 

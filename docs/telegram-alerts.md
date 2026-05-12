@@ -128,7 +128,7 @@ Current actions:
 - `settings:c:<stablecoinId>:<setting>:<value>` — apply a per-coin setting where `setting:value` uses short codes to stay within Telegram's 64-byte callback_data limit:
   - `db:A|W|D|0` — DEWS min band `ALERT`, `WARNING`, `DANGER`, or off
   - `sm:a|d|u|0` — Safety mode `all`, `downgrade-only`, `upgrade-only`, or off
-  - `ds:100|250|500|0` — Depeg worsening step in bps, or off (also clears `alert_depeg` for the coin)
+  - `ds:100|250|500|0` — Depeg severity gate and worsening step in bps, or off (also clears `alert_depeg` for the coin)
   - `lc:1|0` — Launch on/off
 
 Settings callbacks edit the message in place via `editMessageText`. If the edit fails (e.g. the message is too old or content is unchanged) the handler falls back to a fresh `sendMessage` so the user still sees the new state.
@@ -182,16 +182,16 @@ Wizard state is persisted as a row in `telegram_pending_disambiguation` with `ac
 | `/why <ticker>` | Explains the current Safety Score, weakest dimensions, and key risk notes for one coin |
 | `/coverage <ticker>` | Shows which Pharos data surfaces currently cover one coin |
 | `/subscribe <types> <targets>` | Enables one or more alert types and subscribes the chat to one or more explicit coins or preset watchlists |
-| `/subscribe <targets> depeg-step <value>` | Enables depeg alerts for explicit coins or preset watchlists and stores a worsening-step threshold (`100`, `250`, `500`, or `off`) |
+| `/subscribe <targets> depeg-step <value>` | Enables depeg alerts for explicit coins or preset watchlists and stores a depeg severity gate plus worsening-step threshold (`100`, `250`, `500`, or `off`) |
 | `/subscribe <types> all` | Enables one or more alert types across all tracked stablecoins (always gated; see below) |
 | `/unsubscribe <targets>` | Removes explicit coin subscriptions and can also remove the coins covered by a preset watchlist |
 | `/unsubscribe all` | Clears all per-coin subscriptions, disables every current alert flag including launch, and clears the global depeg worsening step (always gated; see below) |
 
 Bulk `/subscribe` and `/unsubscribe` calls are gated behind an inline `[ Confirm ] [ Cancel ]` keyboard when the resolved coin set exceeds 10 coins or the literal `all` token is used. The deferred command is stored in `telegram_pending_disambiguation` with `action_type = 'confirm-bulk'` and inherits the standard 5-minute TTL. Tapping Confirm executes the original command; Cancel (or `/cancel`) clears the pending state without side effects. Confirmation is initiator-locked: only the user who started the bulk command may complete or cancel it.
-| `/set <ticker> <setting> <value>` | Tunes per-coin settings such as DEWS floor, safety direction mode, launch on/off, or depeg worsening step |
-| `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`, `launch`) or sets the global depeg worsening step |
+| `/set <ticker> <setting> <value>` | Tunes per-coin settings such as DEWS floor, safety direction mode, launch on/off, or depeg severity and worsening step |
+| `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`, `launch`) or sets the global depeg severity and worsening-step threshold |
 | `/settings` | Opens an inline-keyboard view of chat-level settings: quiet hours toggle, snooze clear, and global alert toggles for DEWS / depeg / safety / launch. Each tap edits the message in place via `editMessageText` so the user sees a single self-updating panel. |
-| `/settings <ticker>` | Opens a per-coin inline keyboard with DEWS min band (`ALERT/WARNING/DANGER/off`), safety mode (`all/downgrade-only/upgrade-only/off`), depeg worsening step (`100/250/500/off`), and launch on/off rows. A `← Back to chat settings` button returns to the chat-level view. |
+| `/settings <ticker>` | Opens a per-coin inline keyboard with DEWS min band (`ALERT/WARNING/DANGER/off`), safety mode (`all/downgrade-only/upgrade-only/off`), depeg severity and worsening step (`100/250/500/off`), and launch on/off rows. A `← Back to chat settings` button returns to the chat-level view. |
 | `/mute <start>-<end>` | Enables quiet hours interpreted in the chat's `/timezone` (defaults to UTC; messages still deliver, notifications are silenced) |
 | `/timezone <IANA-zone>` | Sets the chat's IANA timezone for resolving quiet hours locally (e.g. `Europe/Paris`). Sending `/timezone` with no argument shows the current zone and an inline keyboard of common zones. NULL = UTC, the historical behavior. |
 | `/unsnooze` | Clears active alert snooze immediately |
@@ -240,9 +240,9 @@ Additional alert controls:
 
 - `dews_min_band`: optional per-coin floor (`ALERT` default, or `WARNING` / `DANGER`)
 - `safety_mode`: `all`, `downgrade-only`, or `upgrade-only`
-- `depeg_worsening_bps_step`: optional per-coin worsening follow-up step (`100`, `250`, `500`)
-- `telegram_preset_subscriptions.depeg_worsening_bps_step`: optional dynamic preset worsening follow-up step (`100`, `250`, `500`)
-- `global_depeg_worsening_bps_step`: optional all-stablecoin depeg worsening follow-up step (`100`, `250`, `500`)
+- `depeg_worsening_bps_step`: optional per-coin depeg severity gate and worsening follow-up step (`100`, `250`, `500`)
+- `telegram_preset_subscriptions.depeg_worsening_bps_step`: optional dynamic preset depeg severity gate and worsening follow-up step (`100`, `250`, `500`)
+- `global_depeg_worsening_bps_step`: optional all-stablecoin depeg severity gate and worsening follow-up step (`100`, `250`, `500`)
 - `global_alert_*`: subscriber-level flags that subscribe the chat to every tracked stablecoin for that alert type, including `launch`
 - quiet hours: subscriber-level hour window that forces `disable_notification = true`, interpreted in the subscriber's `timezone` column (NULL = UTC)
 
@@ -257,7 +257,7 @@ Global all-stablecoin safety follows are intentionally narrower than per-coin sa
 
 This policy applies only to the global `safety all` tier. Explicit per-coin safety follows still honor the coin's configured `safety_mode`.
 
-Global all-stablecoin depeg follows can also carry a worsening-step threshold through `/set all depeg-step 100|250|500`. A value of `off` clears the threshold while leaving global depeg alerts enabled. Preset subscriptions can set the same per-coin threshold in one command, for example `/subscribe usd-top-50 depeg-step 250`.
+Global all-stablecoin depeg follows can also carry a severity threshold through `/set all depeg-step 100|250|500`. A configured value gates fresh depeg and resolution notifications below that peak deviation and also controls worsening follow-up milestones. A value of `off` clears the threshold while leaving global depeg alerts enabled. Preset subscriptions can set the same per-coin threshold in one command, for example `/subscribe usd-top-50 depeg-step 250`.
 
 ### Ticker Resolution
 
@@ -373,8 +373,9 @@ Filtering is subscription-aware:
 - DEWS compares `newBand` against the coin's `dews_min_band`
 - Per-coin safety changes respect the coin's `safety_mode`
 - Global all-stablecoin safety follows accept downgrades only, with a materiality filter when scores are present (`oldScore - newScore >= 3`; scoreless downgrades still pass through)
+- Fresh depeg and resolution notifications with a configured `depeg_worsening_bps_step` require the event's deviation to meet that bps threshold
 - Depeg worsening follows the coin's `depeg_worsening_bps_step`
-- Global depeg worsening follows the subscriber's `global_depeg_worsening_bps_step`
+- Global depeg uses the subscriber's `global_depeg_worsening_bps_step` for both the initial severity gate and worsening follow-ups
 - Quiet hours force `disable_notification = true`
 - Chats with `alert_snooze_until_ts > now` are fully skipped for the run. The count of currently-snoozed chats (whether or not they would have received an alert this run) surfaces as `chatsWithActiveSnooze` in dispatch metadata.
 - Per-coin snoozes live on `telegram_subscriptions.alert_snooze_until_ts` (added in `worker/migrations/0119_telegram_subscription_snooze.sql`). The dispatcher filters them out at the subscriber-row SELECT and also loads a `Map<stablecoinId, Set<chatId>>` of active per-coin snoozes so the global fan-out lane suppresses the same (chat, stablecoin) pair. Per-coin snooze and chat-level snooze stack — either active suppresses fan-out.

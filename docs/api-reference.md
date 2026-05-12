@@ -2743,10 +2743,11 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 - `/presets` — List the preset watchlist catalog and example commands
 - `/subscribe <types> <targets>` — Subscribe to alerts for explicit coins or preset watchlists (types: dews, depeg, safety, launch)
 - `/subscribe <types> all` — Enable one or more alert types across all tracked stablecoins
+- `/subscribe <targets> depeg-step <value>` — Enable depeg alerts with a severity gate and worsening-step threshold (`100`, `250`, `500`, or `off`)
 - `/unsubscribe <targets>` — Remove explicit coin subscriptions or the concrete coin rows covered by a preset watchlist
 - `/unsubscribe all` — Remove all per-coin subscriptions, disable every current alert flag including launch, and clear the global depeg worsening step
-- `/set <ticker> <setting> <value>` — Tune per-coin thresholds and modes
-- `/set all <setting> <value>` — Toggle global all-stablecoin alert types
+- `/set <ticker> <setting> <value>` — Tune per-coin thresholds and modes, including depeg severity and worsening steps
+- `/set all <setting> <value>` — Toggle global all-stablecoin alert types or set the global depeg severity and worsening-step threshold
 - `/mute <start>-<end>` — Enable UTC quiet hours
 - `/unmutehours` — Disable quiet hours
 - `/status <ticker>` — Read-only per-coin status summary

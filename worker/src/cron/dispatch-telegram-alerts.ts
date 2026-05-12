@@ -191,6 +191,11 @@ function crossesDepegWorseningStep(
   return Math.floor(previousDeviationBps / step) < Math.floor(currentDeviationBps / step);
 }
 
+function meetsDepegStepThreshold(deviationBps: number, step: number | null): boolean {
+  if (step == null || step <= 0) return true;
+  return deviationBps >= step;
+}
+
 async function loadSubscriberRowsBatch(
   db: D1Database,
   stablecoinIds: string[],
@@ -693,7 +698,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       globalDepegSubs,
       alertsByChat,
       (alerts) => alerts.depegTriggered,
-      undefined,
+      (sub, event) => meetsDepegStepThreshold(event.deviationBps, sub.depeg_worsening_bps_step),
       perCoinSnoozeMap,
     );
     routeAlertEvents(
@@ -702,7 +707,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       globalDepegSubs,
       alertsByChat,
       (alerts) => alerts.depegResolved,
-      undefined,
+      (sub, event) => meetsDepegStepThreshold(event.peakDeviationBps, sub.depeg_worsening_bps_step),
       perCoinSnoozeMap,
     );
     routeAlertEvents(

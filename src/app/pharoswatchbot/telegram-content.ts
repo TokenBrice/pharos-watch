@@ -63,7 +63,7 @@ View on Pharos: pharos.watch/stablecoin/usdt-tether`,
   {
     key: "depeg",
     label: "Depeg Events",
-    tagline: "Fires on the depeg, every worsening step (100/250/500 bps), and again on resolution.",
+    tagline: "Fires on depegs that meet your step (100/250/500 bps), worsening milestones, and resolution.",
     content: `Depeg Detected
 
 USDC — below peg by 1.2% (120 bps)
@@ -116,7 +116,7 @@ export const TELEGRAM_COMMAND_GROUPS = [
       {
         command: "/subscribe <targets> depeg-step <value>",
         description:
-          "Enable depeg alerts and re-alert on each worsening milestone. <value> must be 100, 250, or 500 bps.",
+          "Enable depeg alerts, gate them by severity, and re-alert on each worsening milestone. <value> must be 100, 250, or 500 bps.",
         example: "/subscribe usd-top50 depeg-step 250",
       },
       {
@@ -155,7 +155,7 @@ export const TELEGRAM_COMMAND_GROUPS = [
       {
         command: "/set all <setting> <value>",
         description:
-          "Global toggle for dews, depeg, safety, or launch. safety globally supports all/off only (downgrades, 3-point filter when scored). depeg-step <bps> sets the global worsening step.",
+          "Global toggle for dews, depeg, safety, or launch. safety globally supports all/off only (downgrades, 3-point filter when scored). depeg-step <bps> sets the global severity gate and worsening step.",
         example: "/set all depeg-step 250",
       },
       {
