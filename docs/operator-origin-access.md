@@ -365,6 +365,7 @@ Verification:
 - public UI: `pharos.watch`
 - operator UI: `ops.pharos.watch`
 - public API: `api.pharos.watch`
+- website data API: `site-api.pharos.watch`
 - operator API: `ops-api.pharos.watch`
 
 ### Access posture

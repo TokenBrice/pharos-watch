@@ -48,7 +48,7 @@ The public self-serve request form lives at `https://pharos.watch/api/`. It send
 
 The worker stores only the key prefix plus a peppered HMAC of the secret portion. Admin callers create, rotate, and deactivate keys through the operator lane (`ops.pharos.watch` / `ops-api.pharos.watch`); plaintext tokens are returned only once at creation/rotation time. Self-serve issuance uses the same storage model and returns the plaintext token only once after verification.
 
-For protected cacheable `GET` routes, the worker keeps a bounded isolate-local verified-key cache and a bounded isolate-local fallback limiter. During a brief D1 auth/limiter outage, a recently verified key can continue to read those cached routes; unknown or not-yet-verified keys still fail closed.
+For protected cacheable `GET` routes, the worker keeps a bounded isolate-local verified-key cache and a bounded isolate-local fallback limiter. During a brief D1 auth/limiter outage, a recently verified non-self-serve key can continue to read those cached routes; self-serve, unknown, or not-yet-verified keys still fail closed.
 
 ---
 
@@ -127,15 +127,20 @@ The frontend `apiFetchWithMeta()` helper (in `src/lib/api.ts`) reads `_meta` fro
 
 These profiles apply while the dataset is within its generic freshness runway. Once a cache-backed response exceeds `8x` its endpoint max age, the worker overrides that response to `Cache-Control: no-store` until a fresh response is generated.
 
-| Profile  | `Cache-Control`                        | Used by                                                                                                                                                                                                                                                                                                                           |
-| -------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| realtime | `public, s-maxage=60, max-age=10`      | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                                                                                                                                                                                |
-| standard | `public, s-maxage=300, max-age=60`     | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                                                                                                                                                |
-| custom   | `public, s-maxage=300, max-age=300`    | dex-liquidity (browser-side max-age extended to match CDN TTL)                                                                                                                                                                                                                                                                    |
-| per-coin | `public, s-maxage=300, max-age=10`     | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                                                                        |
-| slow     | `public, s-maxage=3600, max-age=300`   | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, non-usd-share                                                                                                                                                                                                                       |
-| archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                                                                                                                                                                                   |
-| no-store | `no-store`                             | health plus all admin GET routes after router override (`status`, `status-history`, `request-source-stats`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `discovery-candidates`, `status-probe-history`) |
+| Profile              | `Cache-Control`                        | Used by                                                                                                                                                                                                                                                                                                                           |
+| -------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| realtime             | `public, s-maxage=60, max-age=10`      | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                                                                                                                                                                                |
+| standard             | `public, s-maxage=300, max-age=60`     | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                                                                                                                                                |
+| custom               | `public, s-maxage=300, max-age=300`    | dex-liquidity (browser-side max-age extended to match CDN TTL)                                                                                                                                                                                                                                                                    |
+| per-coin             | `public, s-maxage=300, max-age=10`     | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                                                                        |
+| slow                 | `public, s-maxage=3600, max-age=300`   | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, non-usd-share                                                                                                                                                                                                                       |
+| archive              | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                                                                                                                                                                                   |
+| public-status        | `public, max-age=60`                   | public-status-history                                                                                                                                                                                                                                                                                                             |
+| og-image             | `public, max-age=900, s-maxage=900`    | dynamic Open Graph images                                                                                                                                                                                                                                                                                                         |
+| reserve-live         | `public, s-maxage=3600, max-age=300`   | stablecoin-reserves live mode                                                                                                                                                                                                                                                                                                     |
+| reserve-live-stale   | `public, s-maxage=1800, max-age=120`   | stablecoin-reserves live-stale mode                                                                                                                                                                                                                                                                                               |
+| reserve-fallback     | `public, s-maxage=300, max-age=60`     | stablecoin-reserves curated/template/unavailable fallback modes                                                                                                                                                                                                                                                                   |
+| no-store             | `no-store`                             | health plus all admin GET routes after router override (`status`, `status-history`, `request-source-stats`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `discovery-candidates`, `status-probe-history`) |
 
 `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The self-serve API-key endpoints explicitly return no-store responses so verification tokens and plaintext API keys are never cacheable.
 
@@ -188,7 +193,7 @@ Rate-limited responses include the retry delay in the HTTP `Retry-After` header 
 
 `POST /api/feedback` also has a form-specific limiter. Its `429` body is `{ "error": "Too many submissions. Please wait a few minutes." }`, and it should be handled as a local submission throttle rather than as a public API quota response. If the feedback limiter's D1 dependency is unavailable, the endpoint returns `503 Service Unavailable` with `{ "error": "Feedback service temporarily unavailable. Please try again." }` and `Retry-After: 60`.
 
-API-key authentication and per-key limiter storage normally rely on D1. For protected cacheable `GET` routes, the worker can continue serving a recently verified key during a brief D1 outage by reusing its bounded verified-key cache and a bounded isolate-local fallback limiter. Unknown or not-yet-verified keys still fail closed with `503 Service Unavailable`, `{ "error": "Public API temporarily unavailable" }`, and `Retry-After: 60`. Best-effort API-key usage timestamp updates do not fail otherwise successful reads.
+API-key authentication and per-key limiter storage normally rely on D1. For protected cacheable `GET` routes, the worker can continue serving a recently verified non-self-serve key during a brief D1 outage by reusing its bounded verified-key cache and a bounded isolate-local fallback limiter. Self-serve keys are refused when their D1 lookup is unavailable because revocation and claim state cannot be rechecked from stale isolate cache. Unknown or not-yet-verified keys still fail closed with `503 Service Unavailable`, `{ "error": "Public API temporarily unavailable" }`, and `Retry-After: 60`. Best-effort API-key usage timestamp updates do not fail otherwise successful reads.
 
 ### Retry Guidance
 
@@ -245,6 +250,7 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/backfill-supply-history`
 - `POST /api/backfill-stability-index`
 - `POST /api/backfill-cg-prices`
+- `POST /api/backfill-yield-history`
 - `POST /api/backfill-mint-burn-prices`
 - `POST /api/backfill-mint-burn`
 - `POST /api/reclassify-atomic-roundtrips`
@@ -610,7 +616,7 @@ When present, `provenance` has:
 | `freshnessMode`   | `"verified" \| "unverified" \| "not-applicable" \| undefined` | Explicit freshness policy when the adapter emits one                                                              |
 | `scoringEligible` | `boolean`                                                     | Whether this exact snapshot is currently eligible for collateral-quality passthrough                              |
 
-**Response (404):** unknown or non-canonical IDs are rejected by the shared ID resolver with `{ "error": "Unknown stablecoin" }`; known active coins without live reserve support, or with no resolved reserve result, return `{ "error": "Not found" }`.
+**Response (404):** unknown or non-canonical IDs, known active coins without live reserve support, and live-enabled coins with no resolved reserve result return `{ "error": "Not found" }`.
 
 ---
 
@@ -3410,6 +3416,18 @@ Backfills historical market prices for the PSI-eligible universe. The endpoint f
 | `stablecoin` | `string`  | —       | Process a single stablecoin ID      |
 | `batchSize`  | `integer` | `10`    | Coins per batch                     |
 | `batch`      | `integer` | `0`     | Batch offset for chunked processing |
+
+### `POST /api/backfill-yield-history`
+
+Backfills protocol API yield-history rows for the curated target set used by yield intelligence. The current target set is limited to Zephyr ZYS (`zys-zephyr-protocol`) through the protocol API source.
+
+**Query parameters**
+
+| Param        | Type      | Default | Description                              |
+| ------------ | --------- | ------- | ---------------------------------------- |
+| `stablecoin` | `string`  | —       | Process a single supported stablecoin ID |
+| `batchSize`  | `integer` | `10`    | Coins per batch                          |
+| `batch`      | `integer` | `0`     | Batch offset for chunked processing      |
 
 ### `POST /api/backfill-mint-burn-prices`
 

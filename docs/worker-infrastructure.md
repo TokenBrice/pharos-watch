@@ -296,6 +296,7 @@ These router-dispatched admin routes honor an optional `Idempotency-Key` header:
 - `POST /api/backfill-supply-history`
 - `POST /api/backfill-stability-index`
 - `POST /api/backfill-cg-prices`
+- `POST /api/backfill-yield-history`
 - `POST /api/backfill-mint-burn-prices`
 - `POST /api/backfill-mint-burn`
 - `POST /api/reclassify-atomic-roundtrips`
