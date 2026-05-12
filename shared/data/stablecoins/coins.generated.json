@@ -23138,6 +23138,11 @@
         "chain": "arbitrum",
         "address": "0x41ca7586cc1311807b4605fbb748a3b8862b42b5",
         "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -31581,6 +31586,7 @@
     "collateral": "Short-duration U.S. Treasury Bills and government agency securities (weighted average maturity ~28 days), held in a segregated non-rehypothecated account at The Bank of New York Mellon; holdings disclosed publicly on a daily basis; sub-advised by Federated Hermes",
     "pegMechanism": "NAV-accreting fund share token (not pegged to $1); price launched at ~$10/share and appreciates continuously as Treasury income accrues; subscription and redemption at daily NAV in USDC or USD; NAV calculated by NAV Fund Services each NYSE/Federal Reserve business day",
     "geckoId": "superstate-short-duration-us-government-securities-fund-ustb",
+    "pythFeedId": "0xdea78edd10cd7ae4524cc1744216788746306623bc3553014eeab6062860795d",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://superstate.com/assets/ustb",
@@ -32004,6 +32010,7 @@
     "collateral": "Short-term U.S. Treasury bills and reverse repo agreements held in segregated prime brokerage accounts",
     "pegMechanism": "Same-day subscription and redemption via USDC at NAV-based token price",
     "geckoId": "hashnote-usyc",
+    "pythFeedId": "0x01cb900802d74a2e3d36bd9bf100523532b650c47dcac2e8202ba1e972eab305",
     "links": [
       {
         "label": "Website",

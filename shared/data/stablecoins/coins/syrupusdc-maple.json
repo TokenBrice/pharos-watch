@@ -49,6 +49,11 @@
       "chain": "arbitrum",
       "address": "0x41ca7586cc1311807b4605fbb748a3b8862b42b5",
       "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj",
+      "decimals": 6
     }
   ],
   "blacklistabilityReview": {
