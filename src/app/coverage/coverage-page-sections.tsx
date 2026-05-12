@@ -57,54 +57,98 @@ export function CoverageFeatureSnapshotCard({
   narrowestFeature,
   mostConcentratedFeature,
 }: Pick<CoveragePageModel, "featureSummaries" | "widestFeature" | "narrowestFeature" | "mostConcentratedFeature">) {
-  return (
-    <Card className="rounded-[1.6rem] border border-border/70 bg-card/85 shadow-[0_18px_44px_oklch(0_0_0_/0.14)]">
-      <CardHeader className="space-y-5">
-        <div className="max-w-3xl space-y-2">
-          <p className="pharos-kicker">Feature Snapshot</p>
-          <CardTitle as="h2" className="text-2xl tracking-tight">
-            Start with the breadth, not the coin list
-          </CardTitle>
-          <CardDescription className="leading-relaxed">
-            Count coverage shows how wide each Pharos surface reaches. Market-cap share shows whether that coverage is
-            spread across the field or concentrated in the majors.
-          </CardDescription>
-        </div>
+  const activeCoinTotal = featureSummaries.reduce((total, summary) => Math.max(total, summary.totalCount), 0);
+  const averageCoveragePct =
+    featureSummaries.length > 0
+      ? featureSummaries.reduce((sum, summary) => sum + summary.coveragePct, 0) / featureSummaries.length
+      : 0;
 
-        <div className="grid gap-3 xl:grid-cols-3">
-          {widestFeature ? (
-            <FeatureSnapshotInsight
-              label="Widest today"
-              accent={widestFeature.feature.key}
-              title={widestFeature.feature.label}
-              detail={<>Reaches {widestFeature.coveragePct.toFixed(0)}% of active coins.</>}
-            />
-          ) : null}
-          {narrowestFeature ? (
-            <FeatureSnapshotInsight
-              label="Narrowest today"
-              accent={narrowestFeature.feature.key}
-              title={narrowestFeature.feature.label}
-              detail={<>Reaches {narrowestFeature.coveragePct.toFixed(0)}% of active coins.</>}
-            />
-          ) : null}
-          {mostConcentratedFeature ? (
-            <FeatureSnapshotInsight
-              label="Major-heavy"
-              accent={mostConcentratedFeature.feature.key}
-              title={mostConcentratedFeature.feature.label}
-              detail={
-                <>
-                  Reaches {mostConcentratedFeature.mcapSharePct?.toFixed(0) ?? "0"}% of active market cap with only{" "}
-                  {mostConcentratedFeature.coveragePct.toFixed(0)}% active-coin coverage.
-                </>
-              }
-            />
-          ) : null}
+  return (
+    <Card className="overflow-hidden rounded-xl border border-border/80 bg-card/90 shadow-[0_22px_54px_oklch(0_0_0_/0.18)]">
+      <CardHeader className="border-b border-border/70 bg-muted/20 px-4 py-4 sm:px-5">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)] lg:items-end">
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <p className="pharos-kicker">Coverage Overview</p>
+              <CardTitle as="h2" className="text-xl font-semibold tracking-tight sm:text-2xl">
+                Coverage control panel
+              </CardTitle>
+            </div>
+            <div className="grid max-w-xl grid-cols-2 gap-2 sm:grid-cols-3">
+              <div className="rounded-lg border border-border/70 bg-background/55 px-3 py-2">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Universe
+                </div>
+                <div className="mt-1 font-mono text-2xl font-semibold leading-none tabular-nums text-foreground">
+                  {activeCoinTotal}
+                </div>
+                <div className="mt-1 text-[11px] text-muted-foreground">active coins</div>
+              </div>
+              <div className="rounded-lg border border-border/70 bg-background/55 px-3 py-2">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Avg. Reach
+                </div>
+                <div className="mt-1 font-mono text-2xl font-semibold leading-none tabular-nums text-foreground">
+                  {averageCoveragePct.toFixed(0)}%
+                </div>
+                <div className="mt-1 text-[11px] text-muted-foreground">headline rules</div>
+              </div>
+              <div className="col-span-2 rounded-lg border border-border/70 bg-background/55 px-3 py-2 sm:col-span-1">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Surfaces
+                </div>
+                <div className="mt-1 font-mono text-2xl font-semibold leading-none tabular-nums text-foreground">
+                  {featureSummaries.length}
+                </div>
+                <div className="mt-1 text-[11px] text-muted-foreground">tracked items</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            {widestFeature ? (
+              <FeatureSnapshotInsight
+                label="Widest"
+                accent={widestFeature.feature.key}
+                title={widestFeature.feature.shortLabel}
+                detail={
+                  <>
+                    {widestFeature.availableCount}/{widestFeature.totalCount} | {widestFeature.coveragePct.toFixed(0)}%
+                  </>
+                }
+              />
+            ) : null}
+            {narrowestFeature ? (
+              <FeatureSnapshotInsight
+                label="Tightest"
+                accent={narrowestFeature.feature.key}
+                title={narrowestFeature.feature.shortLabel}
+                detail={
+                  <>
+                    {narrowestFeature.availableCount}/{narrowestFeature.totalCount} |{" "}
+                    {narrowestFeature.coveragePct.toFixed(0)}%
+                  </>
+                }
+              />
+            ) : null}
+            {mostConcentratedFeature ? (
+              <FeatureSnapshotInsight
+                label="Cap Skew"
+                accent={mostConcentratedFeature.feature.key}
+                title={mostConcentratedFeature.feature.shortLabel}
+                detail={
+                  <>
+                    {mostConcentratedFeature.mcapSharePct?.toFixed(0) ?? "0"}% cap |{" "}
+                    {mostConcentratedFeature.coveragePct.toFixed(0)}% count
+                  </>
+                }
+              />
+            ) : null}
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
-        <ul className="space-y-3">
+      <CardContent className="p-0">
+        <ul className="divide-y divide-border/65">
           {featureSummaries.map((summary) => (
             <CoverageFeatureSnapshotRow key={summary.feature.key} summary={summary} />
           ))}
@@ -274,7 +318,13 @@ export function CoverageMatrixCard(
 
           <div aria-label="Coverage filters" className="flex flex-wrap items-center gap-2">
             {filterGroups.map((group, groupIndex) => (
-              <div key={groupIndex} className={cn("flex flex-wrap items-center gap-2", groupIndex < filterGroups.length - 1 && "border-r border-border/40 pr-2 mr-1")}>
+              <div
+                key={groupIndex}
+                className={cn(
+                  "flex flex-wrap items-center gap-2",
+                  groupIndex < filterGroups.length - 1 && "border-r border-border/40 pr-2 mr-1",
+                )}
+              >
                 {group.map((option) => (
                   <button
                     key={option.key}
@@ -324,8 +374,8 @@ export function CoverageMatrixCard(
             role="status"
             className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed text-amber-800 dark:text-amber-200"
           >
-            Some feature feeds are unavailable, so affected cells are marked Data n/a, or Checking for reserve
-            sync, instead of being counted as coverage gaps: {unavailableFeatureLabels}.
+            Some feature feeds are unavailable, so affected cells are marked Data n/a, or Checking for reserve sync,
+            instead of being counted as coverage gaps: {unavailableFeatureLabels}.
           </div>
         ) : null}
 
@@ -340,7 +390,9 @@ export function CoverageMatrixCard(
           <div className="space-y-5 border-t border-border/60 px-4 py-4">
             {getLegendGroups().map((group) => (
               <div key={group.label}>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{group.label}</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {group.label}
+                </p>
                 <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   {group.items.map((item) => (
                     <div key={item.term} className="rounded-xl border border-border/60 bg-background/45 px-3 py-3">

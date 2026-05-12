@@ -151,21 +151,246 @@ export const FEATURE_ACCENT_CLASSES: Record<
   },
 };
 
-export type BlacklistBreakdownStatusKind =
-  | "live"
-  | "yes"
-  | "dilutable"
-  | "upstream"
-  | "possible"
-  | "no";
+export type BlacklistBreakdownStatusKind = "live" | "yes" | "dilutable" | "upstream" | "possible" | "no";
 
 export const BLACKLIST_BREAKDOWN_CHIP_CLASS: Record<BlacklistBreakdownStatusKind, string> = {
-  live: "border-blue-500/30 bg-blue-500/12 text-blue-800 dark:text-blue-200",
+  live: "border-rose-500/30 bg-rose-500/12 text-rose-800 dark:text-rose-200",
   yes: "border-red-500/30 bg-red-500/12 text-red-800 dark:text-red-200",
   dilutable: "border-purple-500/30 bg-purple-500/12 text-purple-800 dark:text-purple-200",
   upstream: "border-orange-500/30 bg-orange-500/12 text-orange-800 dark:text-orange-200",
   possible: "border-amber-500/30 bg-amber-500/12 text-amber-800 dark:text-amber-200",
   no: "border-emerald-500/30 bg-emerald-500/12 text-emerald-800 dark:text-emerald-200",
+};
+
+export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
+  Record<CoverageFeatureKey, Record<string, { chip: string; bar: string; barText?: string }>>
+> = {
+  price: {
+    tracked: {
+      chip: "border-sky-500/28 bg-sky-500/10 text-sky-800 dark:text-sky-200",
+      bar: "bg-sky-400/85",
+      barText: "text-slate-950",
+    },
+    "price-only": {
+      chip: "border-blue-500/24 bg-blue-500/10 text-blue-800 dark:text-blue-200",
+      bar: "bg-blue-400/75",
+      barText: "text-slate-950",
+    },
+    "sources-5-plus": {
+      chip: "border-emerald-500/26 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
+      bar: "bg-emerald-400/85",
+      barText: "text-slate-950",
+    },
+    "sources-3-4": {
+      chip: "border-sky-500/26 bg-sky-500/10 text-sky-800 dark:text-sky-200",
+      bar: "bg-sky-400/85",
+      barText: "text-slate-950",
+    },
+    "sources-1-2": {
+      chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
+      bar: "bg-amber-400/85",
+      barText: "text-slate-950",
+    },
+    "data-unavailable": {
+      chip: "border-border/70 bg-muted/60 text-muted-foreground",
+      bar: "bg-muted-foreground/35",
+    },
+  },
+  safety: {
+    rated: {
+      chip: "border-emerald-500/28 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
+      bar: "bg-emerald-400/85",
+      barText: "text-slate-950",
+    },
+    nr: {
+      chip: "border-border/70 bg-muted/60 text-muted-foreground",
+      bar: "bg-muted-foreground/35",
+    },
+    "data-unavailable": {
+      chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
+      bar: "bg-amber-400/75",
+    },
+  },
+  dex: {
+    primary: {
+      chip: "border-emerald-500/28 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
+      bar: "bg-emerald-400/85",
+      barText: "text-slate-950",
+    },
+    mixed: {
+      chip: "border-cyan-500/28 bg-cyan-500/10 text-cyan-800 dark:text-cyan-200",
+      bar: "bg-cyan-400/85",
+      barText: "text-slate-950",
+    },
+    fallback: {
+      chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
+      bar: "bg-amber-400/85",
+      barText: "text-slate-950",
+    },
+    "data-unavailable": {
+      chip: "border-border/70 bg-muted/60 text-muted-foreground",
+      bar: "bg-muted-foreground/35",
+    },
+  },
+  reserves: {
+    live: {
+      chip: "border-emerald-500/28 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
+      bar: "bg-emerald-400/85",
+      barText: "text-slate-950",
+    },
+    "live-configured": {
+      chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
+      bar: "bg-amber-400/80",
+      barText: "text-slate-950",
+    },
+    checking: {
+      chip: "border-yellow-500/28 bg-yellow-500/12 text-yellow-800 dark:text-yellow-200",
+      bar: "bg-yellow-400/80",
+      barText: "text-slate-950",
+    },
+    "curated-validated": {
+      chip: "border-sky-500/28 bg-sky-500/10 text-sky-800 dark:text-sky-200",
+      bar: "bg-sky-400/80",
+      barText: "text-slate-950",
+    },
+    proof: {
+      chip: "border-violet-500/28 bg-violet-500/10 text-violet-800 dark:text-violet-200",
+      bar: "bg-violet-400/80",
+    },
+    curated: {
+      chip: "border-blue-500/26 bg-blue-500/10 text-blue-800 dark:text-blue-200",
+      bar: "bg-blue-400/80",
+      barText: "text-slate-950",
+    },
+    estimated: {
+      chip: "border-orange-500/28 bg-orange-500/12 text-orange-800 dark:text-orange-200",
+      bar: "bg-orange-400/80",
+      barText: "text-slate-950",
+    },
+  },
+  redemption: {
+    "modeled-heuristic": {
+      chip: "border-amber-500/30 bg-amber-500/12 text-amber-800 dark:text-amber-200",
+      bar: "bg-amber-400/80",
+      barText: "text-slate-950",
+    },
+    "configured-unrated": {
+      chip: "border-orange-500/30 bg-orange-500/12 text-orange-800 dark:text-orange-200",
+      bar: "bg-orange-400/80",
+      barText: "text-slate-950",
+    },
+    "offchain-issuer": {
+      chip: "border-rose-500/28 bg-rose-500/10 text-rose-800 dark:text-rose-200",
+      bar: "bg-rose-400/85",
+    },
+    "psm-swap": {
+      chip: "border-sky-500/28 bg-sky-500/10 text-sky-800 dark:text-sky-200",
+      bar: "bg-sky-400/85",
+      barText: "text-slate-950",
+    },
+    "queue-redeem": {
+      chip: "border-violet-500/28 bg-violet-500/10 text-violet-800 dark:text-violet-200",
+      bar: "bg-violet-400/85",
+    },
+    "collateral-redeem": {
+      chip: "border-blue-500/28 bg-blue-500/10 text-blue-800 dark:text-blue-200",
+      bar: "bg-blue-400/85",
+      barText: "text-slate-950",
+    },
+    "stablecoin-redeem": {
+      chip: "border-emerald-500/28 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
+      bar: "bg-emerald-400/85",
+      barText: "text-slate-950",
+    },
+    "basket-redeem": {
+      chip: "border-teal-500/28 bg-teal-500/10 text-teal-800 dark:text-teal-200",
+      bar: "bg-teal-400/85",
+      barText: "text-slate-950",
+    },
+    "data-unavailable": {
+      chip: "border-border/70 bg-muted/60 text-muted-foreground",
+      bar: "bg-muted-foreground/35",
+    },
+  },
+  yield: {
+    covered: {
+      chip: "border-teal-500/28 bg-teal-500/10 text-teal-800 dark:text-teal-200",
+      bar: "bg-teal-400/85",
+      barText: "text-slate-950",
+    },
+    uncovered: {
+      chip: "border-border/70 bg-muted/60 text-muted-foreground",
+      bar: "bg-muted-foreground/35",
+    },
+  },
+  flows: {
+    full: {
+      chip: "border-indigo-500/28 bg-indigo-500/10 text-indigo-800 dark:text-indigo-200",
+      bar: "bg-indigo-400/85",
+    },
+    "partial-history": {
+      chip: "border-sky-500/28 bg-sky-500/10 text-sky-800 dark:text-sky-200",
+      bar: "bg-sky-400/80",
+      barText: "text-slate-950",
+    },
+    lagging: {
+      chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
+      bar: "bg-amber-400/80",
+      barText: "text-slate-950",
+    },
+    bootstrapping: {
+      chip: "border-violet-500/28 bg-violet-500/10 text-violet-800 dark:text-violet-200",
+      bar: "bg-violet-400/80",
+    },
+    "data-unavailable": {
+      chip: "border-border/70 bg-muted/60 text-muted-foreground",
+      bar: "bg-muted-foreground/35",
+    },
+  },
+  blacklist: {
+    live: {
+      chip: BLACKLIST_BREAKDOWN_CHIP_CLASS.live,
+      bar: "bg-rose-400/90",
+    },
+    yes: {
+      chip: BLACKLIST_BREAKDOWN_CHIP_CLASS.yes,
+      bar: "bg-red-500/90",
+    },
+    dilutable: {
+      chip: BLACKLIST_BREAKDOWN_CHIP_CLASS.dilutable,
+      bar: "bg-purple-400/85",
+    },
+    upstream: {
+      chip: BLACKLIST_BREAKDOWN_CHIP_CLASS.upstream,
+      bar: "bg-orange-400/85",
+      barText: "text-slate-950",
+    },
+    possible: {
+      chip: BLACKLIST_BREAKDOWN_CHIP_CLASS.possible,
+      bar: "bg-amber-400/85",
+      barText: "text-slate-950",
+    },
+    no: {
+      chip: BLACKLIST_BREAKDOWN_CHIP_CLASS.no,
+      bar: "bg-emerald-400/85",
+      barText: "text-slate-950",
+    },
+    "data-unavailable": {
+      chip: "border-border/70 bg-muted/60 text-muted-foreground",
+      bar: "bg-muted-foreground/35",
+    },
+  },
+  dependency: {
+    covered: {
+      chip: "border-frost-blue/28 bg-frost-blue/10 text-sky-800 dark:text-sky-200",
+      bar: "bg-frost-blue/85",
+      barText: "text-slate-950",
+    },
+    uncovered: {
+      chip: "border-border/70 bg-muted/60 text-muted-foreground",
+      bar: "bg-muted-foreground/35",
+    },
+  },
 };
 
 export const AUTHORITATIVE_ACCENT = {
@@ -328,13 +553,12 @@ const FEATURE_KEY_BY_CATEGORY: Record<Exclude<LegendCategory, "general">, Covera
 // COVERAGE_FEATURE_LEGEND_ITEMS, preserving the public LegendItem shape.
 const LEGEND_ITEMS: readonly LegendItem[] = [
   ...GENERAL_LEGEND_ITEMS,
-  ...(Object.keys(FEATURE_KEY_BY_CATEGORY) as Array<Exclude<LegendCategory, "general">>).flatMap(
-    (category) =>
-      COVERAGE_FEATURE_LEGEND_ITEMS[FEATURE_KEY_BY_CATEGORY[category]].map((item) => ({
-        term: item.term,
-        category,
-        description: item.description,
-      })),
+  ...(Object.keys(FEATURE_KEY_BY_CATEGORY) as Array<Exclude<LegendCategory, "general">>).flatMap((category) =>
+    COVERAGE_FEATURE_LEGEND_ITEMS[FEATURE_KEY_BY_CATEGORY[category]].map((item) => ({
+      term: item.term,
+      category,
+      description: item.description,
+    })),
   ),
 ];
 
@@ -342,10 +566,8 @@ export function getLegendGroups(): ReadonlyArray<{
   label: string;
   items: ReadonlyArray<LegendItem>;
 }> {
-  return LEGEND_CATEGORY_ORDER
-    .map((category) => ({
-      label: LEGEND_CATEGORY_LABELS[category],
-      items: LEGEND_ITEMS.filter((item) => item.category === category),
-    }))
-    .filter((group) => group.items.length > 0);
+  return LEGEND_CATEGORY_ORDER.map((category) => ({
+    label: LEGEND_CATEGORY_LABELS[category],
+    items: LEGEND_ITEMS.filter((item) => item.category === category),
+  })).filter((group) => group.items.length > 0);
 }
