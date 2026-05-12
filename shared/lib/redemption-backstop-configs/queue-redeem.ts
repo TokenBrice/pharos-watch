@@ -43,6 +43,32 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     },
     costModel: fixedFee(0, "Tracked protocol metadata describes 1:1 mint/redeem against USDC with no fees"),
   },
+  "acred-apollo-securitize": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    accessModel: "issuer-api",
+    settlementModel: "queued",
+    executionModel: "rules-based-nav",
+    outputAssetType: "nav",
+    costModel: fixedFee(0, "RWA.xyz lists 0% ACRED redemption fees"),
+    docs: [
+      sourceRef(
+        "Apollo / Securitize ACRED launch",
+        "https://www.nasdaq.com/press-release/apollo-and-securitize-announce-partnership-and-launch-tokenized-access-credit-fund",
+        ["route", "access", "settlement"],
+      ),
+      sourceRef("RWA.xyz ACRED profile", "https://app.rwa.xyz/assets/ACRED", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+    ],
+    notes: [
+      "Securitize launch materials describe ACRED as offering native redemptions at daily NAV for qualifying Securitize Markets investors, while public RWA.xyz metadata lists quarterly redemption timing; Pharos therefore models the route as queued documented-bound NAV redemption rather than immediate liquidity",
+    ],
+  },
   "usdf-falcon": {
     ...queueRedeemBase,
     accessModel: "whitelisted-onchain",
@@ -571,6 +597,32 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", ["route", "capacity", "fees", "access", "settlement"]),
     ],
     notes: ["Nest docs list an expected nWISDOM redemption window from minutes to 7 business days."],
+  },
+  "busd0-usual": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    settlementModel: "queued",
+    costModel: documentedVariableFee(
+      "Usual docs describe permissionless bUSD0 redemption into USD0: early par exit requires the matching rt-bUSD0 token, while bUSD0 alone redeems at maturity; public docs reviewed do not publish a separate redemption fee",
+    ),
+    docs: [
+      sourceRef("Usual bUSD0 docs", "https://docs.usual.money/usual-products/yield-products/usd-products/bond-usd0", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef(
+        "Usual bUSD0 fact sheet",
+        "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0",
+        ["route", "capacity", "fees", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      "Before June 11, 2028, par redemption requires recombining bUSD0 with rt-bUSD0; bUSD0-only redemption is modeled as documented-bound eventual capacity because the standalone bond leg does not redeem at par until maturity",
+      "Secondary-market exits and optional governance floor redemption are excluded from the modeled route",
+    ],
   },
 };
 

@@ -13,6 +13,7 @@ const REVIEWED_BASKET_REDEMPTION_AT = "2026-03-23";
 const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const REVIEWED_ROUTE_TUNING_AT = "2026-04-04";
 const REVIEWED_RESERVE_PROTOCOL_DTF_AT = "2026-05-05";
+const REVIEWED_STABLECOIN_AUDIT_AT = "2026-05-12";
 const reviewedBasketRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_BASKET_REDEMPTION_AT,
 );
@@ -128,6 +129,25 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
     notes: [
       "The reviewed 16% bound matches the tracked USDT PSM reserve share and does not claim the full collateralized USDD system is instantly redeemable through the PSM",
+    ],
+  },
+  "ist-agoric": {
+    ...psmSwapBase,
+    capacityModel: { kind: "supply-ratio", ratio: 0.6, confidence: "documented-bound", basis: "psm-balance-share" },
+    costModel: documentedVariableFee(
+      "Inter Protocol docs describe 1:1 PSM trades between IST and approved external stable tokens, but public docs reviewed do not publish a numeric redemption fee",
+    ),
+    reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
+    docs: [
+      sourceRef(
+        "Inter Protocol Parity Stability Module",
+        "https://docs.inter.trade/inter-protocol-system-documentation/parity-stability-module",
+        ["route", "capacity", "fees", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      "The reviewed 60% bound matches tracked metadata's PSM stablecoin-reserve share and does not claim the overcollateralized vault portion is instantly redeemable through the PSM",
+      "PSM output is an approved external stable token selected by governance; IBC transfer and venue-specific wrapper risk are outside this route score",
     ],
   },
   "pmusd-precious-metals": {

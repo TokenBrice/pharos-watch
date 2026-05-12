@@ -728,6 +728,96 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       "This route models the current legacy sGHO/stkGHO-compatible contract's previewRedeem exit into GHO, not the separate Aave Umbrella stkGHO safety-module cooldown route.",
     ],
   },
+  "stusds-sky": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    docs: [
+      sourceRef("Sky stUSDS docs", "https://developers.skyeco.com/protocol/tokens/stusds/", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Sky protocol token routes", "https://developers.sky.money/quick-start/protocol-token-routes/", ["route", "capacity"]),
+    ],
+    notes: [
+      "stUSDS is an ERC-4626 risk-capital wrapper over USDS: holders can deposit USDS to receive stUSDS or withdraw USDS with their stUSDS balance.",
+      "The wrapper leg exits into USDS; downstream USDS par-exit quality remains governed by Sky's PSM route, while stUSDS holder value can reflect module liquidity and slashing risk.",
+    ],
+  },
+  "stcusd-cap": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee("stcUSD withdraws to cUSD at the live vault exchange rate; public docs reviewed do not publish a separate fixed stcUSD redemption fee"),
+    docs: [
+      sourceRef("Cap stcUSD mechanics", "https://docs.cap.app/protocol-overview/stcusd-mechanics", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Cap cUSD mechanics", "https://docs.cap.app/protocol-overview/cusd-mechanics", ["route", "capacity"]),
+      sourceRef("Cap vault", "https://docs.cap.app/concepts/vault", ["route", "capacity", "fees"]),
+    ],
+    notes: [
+      "stcUSD is modeled as the wrapper exit into cUSD; final cUSD par exit inherits Cap's proportional reserve-basket redemption route.",
+    ],
+  },
+  "sbold-k3-capital": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee("sBOLD ERC-4626 withdraw/redeem returns BOLD at the vault exchange rate; public docs reviewed do not publish one fixed redemption fee"),
+    docs: [
+      sourceRef("K3 sBOLD introduction", "https://k3-capital.gitbook.io/sbold/introducing-sbold", ["route", "capacity"]),
+      sourceRef("K3 sBOLD technical details", "https://k3-capital.gitbook.io/sbold/technical-details", ["route", "capacity", "fees"]),
+      sourceRef("K3 sBOLD interactions", "https://k3-capital.gitbook.io/sbold/technical-details/interactions", ["route", "capacity", "access", "settlement"]),
+    ],
+    notes: [
+      "sBOLD exits into BOLD through ERC-4626 withdrawal/redeem mechanics; downstream BOLD par exit remains Liquity's collateral-redemption route.",
+      "K3 docs note deposit and withdrawal operations can be temporarily restricted when accumulated collateral exposure exceeds configured operational limits.",
+    ],
+  },
+  "msy-main-street": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    executionModel: "rules-based-nav",
+    totalScoreCap: 65,
+    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    docs: [
+      sourceRef("Main Street staking model", "https://mainstreet-finance.gitbook.io/mainstreet.finance/staking-model", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Main Street msY vault", "https://mainstreet-finance.gitbook.io/mainstreet.finance/msusd-and-strategy-vaults/strategy-vaults/msy-the-options-box-spread", ["route", "capacity"]),
+      sourceRef("Main Street redemption process", "https://mainstreet-finance.gitbook.io/mainstreet.finance/msusd-and-strategy-vaults/redemption-process", ["route", "capacity", "settlement"]),
+    ],
+    notes: [
+      "msY exits to msUSD at the live staking exchange rate; final USDC redemption inherits Main Street's primary-market capacity limits and cooldown.",
+      "Config-level cap reflects that the wrapper exit alone does not return holders to USDC, and downstream msUSD redemption can be capped or delayed during strategy unwinds.",
+    ],
+  },
+  "yusd-yieldfi": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    settlementModel: "queued",
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee("YieldFi docs describe yToken redemption requests processed after a cooldown by keeper automation; public docs reviewed do not publish one fixed redemption fee"),
+    docs: [
+      sourceRef("YieldFi yUSD", "https://docs.yield.fi/technical-docs/ytokens/yusd", ["route", "capacity"]),
+      sourceRef("YieldFi smart contract interaction", "https://docs.yield.fi/technical-docs/smart-contract-interaction", ["route", "capacity", "access", "settlement"]),
+      sourceRef("YieldFi fees", "https://docs.yield.fi/fees", ["fees"]),
+    ],
+    notes: [
+      "yUSD is an ERC-4626 vault over USDC; redemption burns shares immediately but underlying USDC is delivered through a queued request after the cooldown period.",
+    ],
+  },
+  "said-gaib": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    settlementModel: "queued",
+    executionModel: "rules-based-nav",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee("sAID exits to AID through a monthly FIFO withdrawal cycle at unstaking NAV; public docs reviewed do not publish one fixed unstaking fee"),
+    docs: [
+      sourceRef("GAIB sAID docs", "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("GAIB AID docs", "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid", ["route", "access"]),
+    ],
+    notes: [
+      "sAID is not a $1-pegged wrapper; this route models the holder-exercisable withdrawal into AID at unstaking NAV, including possible unrealized-loss haircuts.",
+      "Final AID redemption into supported stablecoins remains whitelisted for primary-market users, while regular users generally exit AID through app or DEX liquidity.",
+    ],
+  },
   "aa-falconx-mev-capital": {
     ...stablecoinRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),

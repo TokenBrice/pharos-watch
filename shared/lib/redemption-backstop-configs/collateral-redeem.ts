@@ -272,6 +272,26 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       "On-chain redemption redeems 1 CJPY for 1 JPY worth of ETH from the riskiest pledge, providing a permissionless hard floor",
     ],
   },
+  "uusd-youves": {
+    ...collateralRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    outputAssetType: "mixed-collateral",
+    costModel: fixedFee(
+      625,
+      "Holder conversion price is 0.9375 of target value, implying a 6.25% haircut before collateral market-price conversion",
+    ),
+    docs: [
+      sourceRef("Youves holder conversion right", "https://docs.youves.com/syntheticAssets/stableTokens/incentiveFeatures/userConversionRights/Holder-Conversion-Right/", ["route", "capacity", "access", "settlement"]),
+      sourceRef("Youves conversion terms", "https://docs.youves.com/syntheticAssets/stableTokens/incentiveFeatures/userConversionRights/User-Conversion-Terms/", ["route", "fees", "settlement"]),
+      sourceRef("Youves collateral management", "https://docs.youves.com/syntheticAssets/stableTokens/collateralManagement/Collateral-Management-Details", ["capacity"]),
+    ],
+    notes: [
+      "Youves is modeled through the holder conversion right, not borrower repayment: uUSD holders can announce conversion and sell locked uUSD against eligible collateral after the 24-hour window unless a minter volunteers sooner",
+      "Vaults above the holder conversion barrier cannot be selected, so the route is a documented stress-floor mechanism with execution constraints rather than an instant redeem-all buffer",
+    ],
+  },
   "fpi-frax": {
     ...collateralRedeemBase,
     ...reviewedDirectRedemptionSupplyFull,
@@ -312,6 +332,24 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     ],
     notes: [
       "Modeled as Cardano protocol collateral redemption into ADA reserves, with SHEN reserve-ratio constraints rather than issuer fiat redemption.",
+    ],
+  },
+  "zsd-zephyr-protocol": {
+    ...collateralRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    executionModel: "rules-based-nav",
+    outputAssetType: "mixed-collateral",
+    costModel: documentedVariableFee(
+      "Zephyr conversion fees are absorbed by reserves and depend on protocol conversion-rate mechanics rather than a single published fixed bps fee",
+    ),
+    docs: [
+      sourceRef("Zephyr repository overview", "https://github.com/ZephyrProtocol/zephyr", ["route", "capacity", "fees"]),
+      sourceRef("Zephyr conversions dashboard", "https://zephyrprotocol.com/network/conversions", ["route", "fees"]),
+      sourceRef("Zephyr integration documentation", "https://zephyrprotocol.com/documentation", ["route", "access", "settlement"]),
+    ],
+    notes: [
+      "Zephyr implements a Djed-inspired native reserve where users can mint or redeem ZSD against ZEPH base-coin collateral, with oracle and reserve-ratio rules governing execution",
+      "Modeled as protocol collateral redemption into ZEPH rather than issuer fiat redemption; Pharos does not currently have native Zephyr-chain reserve telemetry, so capacity remains source-reviewed documented-bound",
     ],
   },
   "usdn-smardex": {
