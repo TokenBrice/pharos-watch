@@ -207,6 +207,7 @@ export function CoverageMatrixCard(
   >,
 ) {
   const isMobileLayout = useIsMobile(768);
+  const filterGroups = getFilterGroups();
   const unavailableFeatureLabels = model.unavailableFeatures
     .map((key) => COVERAGE_FEATURES.find((feature) => feature.key === key)?.shortLabel ?? key)
     .join(", ");
@@ -272,8 +273,8 @@ export function CoverageMatrixCard(
           </div>
 
           <div aria-label="Coverage filters" className="flex flex-wrap items-center gap-2">
-            {getFilterGroups().map((group, groupIndex) => (
-              <div key={groupIndex} className={cn("flex flex-wrap items-center gap-2", groupIndex < getFilterGroups().length - 1 && "border-r border-border/40 pr-2 mr-1")}>
+            {filterGroups.map((group, groupIndex) => (
+              <div key={groupIndex} className={cn("flex flex-wrap items-center gap-2", groupIndex < filterGroups.length - 1 && "border-r border-border/40 pr-2 mr-1")}>
                 {group.map((option) => (
                   <button
                     key={option.key}
