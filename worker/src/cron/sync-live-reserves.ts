@@ -1,7 +1,12 @@
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { getReserveAdapter, type AdapterContext, type AdapterResult, type ReserveAdapterDefinition } from "./reserve-adapters/index";
-import { recordOutcomeSafe } from "../lib/circuit-breaker";
+import {
+  filterStaleLiveReserveCircuitStates,
+  getCircuitStates,
+  recoverBreakerOnNoCandidate,
+  recordOutcomeSafe,
+} from "../lib/circuit-breaker";
 import { reportCronProgress } from "../lib/cron-progress";
 import {
   cleanupStaleLiveReserveArtifacts,
@@ -346,6 +351,17 @@ async function runReserveCoinQueue(args: {
   };
 }
 
+async function recoverNoCandidateLiveReserveBreakers(db: D1Database): Promise<void> {
+  const circuits = await getCircuitStates(db);
+  const configuredCircuits = filterStaleLiveReserveCircuitStates(circuits);
+  for (const source of Object.keys(circuits)) {
+    if (!source.startsWith("live-reserves:") || Object.hasOwn(configuredCircuits, source)) {
+      continue;
+    }
+    await recoverBreakerOnNoCandidate(db, source);
+  }
+}
+
 async function finalizeReserveSyncRun(args: {
   db: D1Database;
   total: number;
@@ -377,6 +393,12 @@ async function finalizeReserveSyncRun(args: {
   // Deferred breaker outcome recording: worst outcome per key wins.
   for (const [key, success] of args.breakerOutcomes) {
     await recordOutcomeSafe(args.db, key, success);
+  }
+
+  try {
+    await recoverNoCandidateLiveReserveBreakers(args.db);
+  } catch (error) {
+    console.warn("[sync-live-reserves] Failed to recover stale live-reserve circuit breakers:", error);
   }
 
   try {

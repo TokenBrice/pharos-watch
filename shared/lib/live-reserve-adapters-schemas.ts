@@ -64,7 +64,7 @@ export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = {
   "chainlink-por": ["onchain-evm"],
   "circle-transparency": ["http-html"],
   "collateral-positions-api": ["http-json"],
-  crvusd: ["http-json"],
+  crvusd: ["http-json", "onchain-evm"],
   "curated-validated": ["onchain-evm", "onchain-solana"],
   "dola-inverse": ["http-json"],
   "erc4626-single-asset": ["onchain-evm"],

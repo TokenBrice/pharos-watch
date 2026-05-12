@@ -3,7 +3,11 @@ import {
   USER_AGENT,
 } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
+import {
+  getCircuitRecord,
+  recordOutcomeSafe,
+  shouldAttemptFetch,
+} from "../../lib/circuit-breaker";
 import { getCache, setCache } from "../../lib/db-cache";
 import { CmcCategoryResponseSchema } from "../../lib/schemas";
 import {
@@ -54,7 +58,22 @@ export async function runCmcPass(
     .map((asset, index) => ({ asset, index }))
     .filter((entry) => hasMissingPrice(entry.asset));
   if (missingAfterPass1b.length === 0) {
-    return { resolved, failures: [] };
+    if (db) {
+      const record = await getCircuitRecord(db, CIRCUIT_SOURCE.CMC_PRICES);
+      if (record.state !== "closed") {
+        diagnostics.push({
+          source: "coinmarketcap",
+          stage: "no-candidates",
+          endpoint: "pro-api.coinmarketcap.com/v1/cryptocurrency/category",
+          status: null,
+          ok: true,
+          success: true,
+          candidateCount: 0,
+        });
+        await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, true);
+      }
+    }
+    return diagnostics.length > 0 ? { resolved, failures: [], diagnostics } : { resolved, failures: [] };
   }
 
   const cmcAllowed =

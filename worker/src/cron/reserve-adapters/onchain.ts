@@ -46,6 +46,7 @@ interface EvmMulticall3Options {
   fallbackRpcUrl?: string;
   chain?: string;
   timeoutMs?: number;
+  multicallBatchSize?: number;
 }
 
 async function runWithRpcFallback<T>(
@@ -113,6 +114,7 @@ export async function fetchOnchainMulticall3(options: EvmMulticall3Options): Pro
         signal: options.signal,
         timeoutMs: options.timeoutMs ?? 10_000,
         chainRpcs: options.ctx?.chainRpcs,
+        multicallBatchSize: options.multicallBatchSize,
       },
     );
   });

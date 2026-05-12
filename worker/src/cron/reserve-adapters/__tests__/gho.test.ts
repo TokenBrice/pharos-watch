@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { adaptGhoFacilitators, type GhoFacilitatorData } from "../gho";
+import {
+  adaptGhoFacilitators,
+  allocateResidualByBucketLevel,
+  buildGhoRedemptionMetadata,
+  buildGhoSlices,
+  type GhoFacilitatorData,
+  type GhoFacilitatorSnapshot,
+  type GhoTrackedModuleSnapshot,
+} from "../gho";
 
 const SAMPLE: GhoFacilitatorData = {
   facilitators: [
@@ -133,5 +141,141 @@ describe("adaptGhoFacilitators", () => {
     expect(result.metadata?.redemptionFeeBps).toBe(10);
     expect(result.metadata?.buyFeeBpsMin).toBe(7);
     expect(result.metadata?.buyFeeBpsMax).toBe(10);
+  });
+});
+
+const FACILITATOR_A: GhoFacilitatorSnapshot = {
+  address: "0xaaa0000000000000000000000000000000000000",
+  label: "CoreGhoDirectMinter",
+  bucketLevel: 100n,
+  bucketCapacity: 200n,
+};
+const FACILITATOR_B: GhoFacilitatorSnapshot = {
+  address: "0xbbb0000000000000000000000000000000000000",
+  label: "GhoFlashMinter",
+  bucketLevel: 300n,
+  bucketCapacity: 500n,
+};
+const FACILITATOR_ZERO: GhoFacilitatorSnapshot = {
+  address: "0xccc0000000000000000000000000000000000000",
+  label: "InactiveFacilitator",
+  bucketLevel: 0n,
+  bucketCapacity: 100n,
+};
+
+describe("allocateResidualByBucketLevel", () => {
+  it("returns empty when residual is non-positive", () => {
+    expect(allocateResidualByBucketLevel([FACILITATOR_A, FACILITATOR_B], 0n)).toEqual([]);
+    expect(allocateResidualByBucketLevel([FACILITATOR_A, FACILITATOR_B], -10n)).toEqual([]);
+  });
+
+  it("returns empty when no facilitator has a positive bucketLevel", () => {
+    expect(allocateResidualByBucketLevel([FACILITATOR_ZERO], 1_000n)).toEqual([]);
+  });
+
+  it("splits residual proportionally and folds rounding dust into the last share", () => {
+    // 1000 across 100 + 300 = 250 + 750 — exact.
+    const exact = allocateResidualByBucketLevel([FACILITATOR_A, FACILITATOR_B], 1_000n);
+    expect(exact).toHaveLength(2);
+    expect(exact[0]?.share).toBe(250n);
+    expect(exact[1]?.share).toBe(750n);
+
+    // 1001: floor(1001 * 100 / 400) = 250; last absorbs dust → 751.
+    const dust = allocateResidualByBucketLevel([FACILITATOR_A, FACILITATOR_B], 1_001n);
+    expect(dust[0]?.share).toBe(250n);
+    expect(dust[1]?.share).toBe(751n);
+    // Invariant: sum equals input residual.
+    expect(dust.reduce((sum, a) => sum + a.share, 0n)).toBe(1_001n);
+  });
+
+  it("skips facilitators with bucketLevel === 0 when computing shares", () => {
+    const result = allocateResidualByBucketLevel(
+      [FACILITATOR_A, FACILITATOR_ZERO, FACILITATOR_B],
+      1_000n,
+    );
+    expect(result).toHaveLength(2);
+    expect(result.map((a) => a.facilitator.label)).toEqual([
+      "CoreGhoDirectMinter",
+      "GhoFlashMinter",
+    ]);
+  });
+});
+
+describe("buildGhoSlices", () => {
+  const trackedActive: GhoTrackedModuleSnapshot = {
+    address: "0xddd0000000000000000000000000000000000000",
+    label: "stataUSDC GSM",
+    coinId: "usdc-circle",
+    risk: "low",
+    currentBackingGho: 10n * 10n ** 18n,
+    swappable: true,
+    isFrozen: false,
+    isSeized: false,
+    buyFeeBps: 7,
+  };
+  const trackedZero: GhoTrackedModuleSnapshot = { ...trackedActive, label: "Empty GSM", currentBackingGho: 0n };
+
+  it("skips zero-backing tracked modules and forwards coinId on the rest", () => {
+    const { values, unknownResidualRaw } = buildGhoSlices([trackedActive, trackedZero], [], 0n);
+    expect(values).toHaveLength(1);
+    expect(values[0]).toMatchObject({ name: "stataUSDC GSM", risk: "low", coinId: "usdc-circle" });
+    expect(unknownResidualRaw).toBe(0n);
+  });
+
+  it("attributes residual to facilitators and accumulates only unknown-label shares", () => {
+    const allocations = [
+      { facilitator: FACILITATOR_A, share: 100n * 10n ** 18n }, // aave-v3-direct → medium
+      { facilitator: FACILITATOR_B, share: 200n * 10n ** 18n }, // flashminter → high, NOT unknown
+      {
+        facilitator: { ...FACILITATOR_A, label: "MysteryParty" },
+        share: 300n * 10n ** 18n, // unknown → high
+      },
+    ];
+    const { values, unknownResidualRaw } = buildGhoSlices([], allocations, 600n * 10n ** 18n);
+    expect(values).toHaveLength(3);
+    expect(values.find((v) => v.name === "CoreGhoDirectMinter")?.risk).toBe("medium");
+    expect(values.find((v) => v.name === "GhoFlashMinter")?.risk).toBe("high");
+    expect(values.find((v) => v.name === "MysteryParty")?.risk).toBe("high");
+    // Only the "MysteryParty" share counts toward unknown exposure.
+    expect(unknownResidualRaw).toBe(300n * 10n ** 18n);
+  });
+
+  it("synthesizes a single high-risk residual slice when no facilitator allocations exist but residual is positive", () => {
+    const residual = 50n * 10n ** 18n;
+    const { values, unknownResidualRaw } = buildGhoSlices([], [], residual);
+    expect(values).toHaveLength(1);
+    expect(values[0]).toMatchObject({
+      name: "Residual facilitators / reserve buffer",
+      risk: "high",
+    });
+    expect(unknownResidualRaw).toBe(residual);
+  });
+});
+
+describe("buildGhoRedemptionMetadata", () => {
+  it("marks routeStatus open when immediateRedeemableRaw is positive and includes optional fields", () => {
+    const block = buildGhoRedemptionMetadata({
+      immediateRedeemableRaw: 1n,
+      immediateRedeemableUsd: 42,
+      immediateRedeemableRatio: 0.5,
+      redemptionFeeBps: 12,
+    });
+    expect(block.routeStatus).toBe("open");
+    expect(block.capacityUsd).toBe(42);
+    expect(block.capacityRatioOfSupply).toBe(0.5);
+    expect(block.feeBps).toBe(12);
+    expect(block.capacityKind).toBe("live-direct");
+    expect(block.freshnessKind).toBe("same-run-onchain");
+    expect(block.sourceUrls).toEqual(["https://aave.com/help/gho-stablecoin/stability-module"]);
+  });
+
+  it("marks routeStatus paused when immediateRedeemableRaw is zero and omits optional fields when undefined", () => {
+    const block = buildGhoRedemptionMetadata({
+      immediateRedeemableRaw: 0n,
+      immediateRedeemableUsd: 0,
+    });
+    expect(block.routeStatus).toBe("paused");
+    expect("capacityRatioOfSupply" in block).toBe(false);
+    expect("feeBps" in block).toBe(false);
   });
 });

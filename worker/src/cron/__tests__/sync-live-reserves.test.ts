@@ -7,15 +7,21 @@ import { buildChainRpcs } from "../../lib/chain-registry";
 const getReserveAdapterMock = vi.fn();
 const shouldAttemptFetchMock = vi.fn();
 const recordOutcomeSafeMock = vi.fn();
+const recoverNoCandidateMock = vi.fn();
 
 vi.mock("../reserve-adapters/index", () => ({
   getReserveAdapter: getReserveAdapterMock,
 }));
 
-vi.mock("../../lib/circuit-breaker", () => ({
-  shouldAttemptFetch: shouldAttemptFetchMock,
-  recordOutcomeSafe: recordOutcomeSafeMock,
-}));
+vi.mock("../../lib/circuit-breaker", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../lib/circuit-breaker")>();
+  return {
+    ...original,
+    shouldAttemptFetch: shouldAttemptFetchMock,
+    recordOutcomeSafe: recordOutcomeSafeMock,
+    recoverBreakerOnNoCandidate: recoverNoCandidateMock,
+  };
+});
 
 describe("syncLiveReserves", () => {
   const configuredCoinCount = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig).length;
@@ -92,6 +98,7 @@ describe("syncLiveReserves", () => {
     vi.resetModules();
     shouldAttemptFetchMock.mockResolvedValue(true);
     recordOutcomeSafeMock.mockResolvedValue(undefined);
+    recoverNoCandidateMock.mockClear();
   });
 
   it("keeps public RPC live-reserve inputs resolvable", () => {
@@ -341,6 +348,31 @@ describe("syncLiveReserves", () => {
 
     expect(visitedByRun.get(1)?.[0]).toBe(configuredIds[0]);
     expect(visitedByRun.get(2)?.[0]).toBe(firstRunMetadata.nextCursorStablecoinId);
+  });
+
+  it("recovers stale live-reserve circuit breakers with no configured candidates", async () => {
+    const staleBreakerKey = "live-reserves:removed-adapter-key";
+    const staleState = JSON.stringify({
+      state: "open",
+      consecutiveFailures: 3,
+      lastFailureAt: Math.floor(Date.now() / 1000) - 30,
+      lastSuccessAt: null,
+      openedAt: Math.floor(Date.now() / 1000) - 30,
+    });
+    mockAdapterRegistry(async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }));
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1([
+      {
+        match: "key LIKE 'circuit:%'",
+        rows: [{ key: `circuit:${staleBreakerKey}`, value: staleState }],
+      },
+    ]);
+
+    await syncLiveReserves(db, new AbortController().signal, {});
+
+    const staleRecoveryCalls = recoverNoCandidateMock.mock.calls.filter((call) => call[1] === staleBreakerKey);
+    expect(staleRecoveryCalls).toHaveLength(1);
   });
 
   it("classifies parser drift in sync attempt metadata", async () => {

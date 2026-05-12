@@ -1205,6 +1205,60 @@ describe("enrichMissingPrices", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("closes a stale CMC circuit when no fallback candidates remain", async () => {
+    const openedAt = Math.floor(Date.now() / 1000) - 3600;
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.CMC_PRICES}`],
+        rows: [
+          {
+            key: `circuit:${CIRCUIT_SOURCE.CMC_PRICES}`,
+            value: JSON.stringify({
+              state: "open",
+              consecutiveFailures: 3,
+              lastFailureAt: openedAt,
+              lastSuccessAt: null,
+              openedAt,
+            }),
+            updated_at: openedAt,
+          },
+        ],
+      },
+    ]);
+    const assets: PeggedAsset[] = [
+      {
+        id: "usbd-bima", name: "USBD", symbol: "USBD", price: 1,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    const fetchSpy = mockFetch();
+
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(result.diagnostics?.[0]).toMatchObject({
+      source: "coinmarketcap",
+      stage: "no-candidates",
+      status: null,
+      ok: true,
+      success: true,
+      candidateCount: 0,
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    const circuitWrite = db
+      .getHistory()
+      .find((entry) =>
+        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.CMC_PRICES}`
+      );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+      state: "closed",
+      consecutiveFailures: 0,
+    });
+  });
+
   it("skips the CMC breaker check when no assets are missing", async () => {
     const assets: PeggedAsset[] = [
       {
@@ -1213,7 +1267,26 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    const db = mockD1([], { requireMatch: true });
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.CMC_PRICES}`],
+        rows: [
+          {
+            key: `circuit:${CIRCUIT_SOURCE.CMC_PRICES}`,
+            value: JSON.stringify({
+              state: "closed",
+              consecutiveFailures: 0,
+              lastFailureAt: null,
+              lastSuccessAt: now,
+              openedAt: null,
+            }),
+            updated_at: now,
+          },
+        ],
+      },
+    ]);
 
     await expect(runCmcPass(assets, "test-cmc-key", undefined, db)).resolves.toEqual({
       resolved: 0,

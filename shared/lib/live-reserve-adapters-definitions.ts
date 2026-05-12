@@ -32,6 +32,11 @@ const CONFIG_COLLATERAL_V2 = {
   allowedVersions: [2],
 } as const satisfies LiveReserveAdapterConfigValidationPolicy;
 
+const CONFIG_COLLATERAL_V2_V3 = {
+  allowedSemantics: ["collateral-mix"],
+  allowedVersions: [2, 3],
+} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+
 const CONFIG_COLLATERAL_V1_V2 = {
   allowedSemantics: ["collateral-mix"],
   allowedVersions: [1, 2],
@@ -220,11 +225,11 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V2,
+    configValidation: CONFIG_COLLATERAL_V2_V3,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
-      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+      allowedFreshnessModes: UNVERIFIED_OR_NOT_APPLICABLE_FRESHNESS,
     },
   },
   "curated-validated": {

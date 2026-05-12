@@ -8,6 +8,7 @@ vi.mock("../helpers", async (importOriginal) => {
     ...actual,
     fetchDefiLlamaPrices: vi.fn(),
     fetchJsonWithRetry: vi.fn(),
+    fetchOnchainMulticall3: vi.fn(),
   };
 });
 
@@ -15,15 +16,30 @@ vi.mock("../../../lib/evm-rpc", () => ({
   fetchEvmCallHexAtBlock: vi.fn(),
 }));
 
-import { fetchDefiLlamaPrices, fetchJsonWithRetry } from "../helpers";
+import { fetchDefiLlamaPrices, fetchJsonWithRetry, fetchOnchainMulticall3 } from "../helpers";
 import { fetchEvmCallHexAtBlock } from "../../../lib/evm-rpc";
-import { adaptCrvUsd, fetchCrvUsdReserves } from "../crvusd";
+import { adaptCrvUsd, adaptCrvUsdOnchain, fetchCrvUsdReserves } from "../crvusd";
 
 const YIELD_BASIS_FACTORY = "0x370a449febb9411c95bf897021377fe0b7d100c0";
+const CURVE_CONTROLLER_FACTORY = "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC";
 const BTC_ASSET = "0x00000000000000000000000000000000000000b0";
 const BTC_LT = "0x00000000000000000000000000000000000000b1";
 const ETH_ASSET = "0x00000000000000000000000000000000000000e0";
 const ETH_LT = "0x00000000000000000000000000000000000000e1";
+const LLAMMA_AMM = "0x00000000000000000000000000000000000000a1";
+const LLAMMA_CONTROLLER = "0x00000000000000000000000000000000000000a2";
+const CURVE_FACTORY_ABI = parseAbi([
+  "function n_collaterals() view returns (uint256)",
+  "function collaterals(uint256) view returns (address)",
+  "function controllers(uint256) view returns (address)",
+  "function amms(uint256) view returns (address)",
+]);
+const CURVE_AMM_ABI = parseAbi([
+  "function min_band() view returns (int256)",
+  "function max_band() view returns (int256)",
+  "function bands_x(int256) view returns (uint256)",
+  "function bands_y(int256) view returns (uint256)",
+]);
 const FACTORY_ABI = parseAbi([
   "function market_count() view returns (uint256)",
   "function markets(uint256) view returns (address asset_token, address cryptopool, address amm, address lt, address price_oracle, address virtual_pool, address staker)",
@@ -119,6 +135,40 @@ describe("adaptCrvUsd", () => {
     const lstBucket = slices.find((s) => s.name.includes("wstETH"));
     expect(lstBucket).toBeDefined();
     expect(lstBucket!.risk).toBeDefined();
+  });
+
+  it("uses not-applicable freshness for direct LLAMMA onchain exposures", () => {
+    const result = adaptCrvUsdOnchain(
+      [
+        {
+          marketId: 0,
+          symbol: "WBTC",
+          collateralAddress: BTC_ASSET,
+          ammAddress: LLAMMA_AMM,
+          collateralUsd: 100,
+          softLiquidatedCrvUsdUsd: 2,
+          minBand: 0,
+          maxBand: 1,
+          bandCount: 2,
+        },
+      ],
+      [{ marketId: 1, symbol: "WETH", usd: 50 }],
+    );
+
+    expect(result.slices).toEqual([
+      { name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 66.7, risk: "medium" },
+      { name: "ETH", pct: 33.3, risk: "very-low" },
+    ]);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "not-applicable",
+      directCollateralUsd: 100,
+      yieldBasisCollateralUsd: 50,
+      softLiquidatedCrvUsdUsd: 2,
+      bandReadCount: 2,
+      details: {
+        proofKind: "curve-llamma-direct-onchain",
+      },
+    });
   });
 });
 
@@ -230,5 +280,111 @@ describe("fetchCrvUsdReserves", () => {
       yieldBasisCollateralUsd: 300,
     });
     expect(fetchEvmCallHexAtBlock).toHaveBeenCalled();
+  });
+
+  it("loads direct LLAMMA bands onchain when configured for onchain input", async () => {
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([[BTC_ASSET, 10]]));
+    vi.mocked(fetchOnchainMulticall3).mockResolvedValue([
+      {
+        label: "0:y:0",
+        success: true,
+        returnData: encodeFunctionResult({ abi: CURVE_AMM_ABI, functionName: "bands_y", result: 5n * 10n ** 18n }),
+      },
+      {
+        label: "0:x:0",
+        success: true,
+        returnData: encodeFunctionResult({ abi: CURVE_AMM_ABI, functionName: "bands_x", result: 1n * 10n ** 18n }),
+      },
+      {
+        label: "0:y:1",
+        success: true,
+        returnData: encodeFunctionResult({ abi: CURVE_AMM_ABI, functionName: "bands_y", result: 5n * 10n ** 18n }),
+      },
+      {
+        label: "0:x:1",
+        success: true,
+        returnData: encodeFunctionResult({ abi: CURVE_AMM_ABI, functionName: "bands_x", result: 1n * 10n ** 18n }),
+      },
+    ]);
+    vi.mocked(fetchEvmCallHexAtBlock).mockImplementation(async (_chain, address, data) => {
+      const normalizedAddress = address.toLowerCase();
+      const callData = data as `0x${string}`;
+
+      if (normalizedAddress === CURVE_CONTROLLER_FACTORY.toLowerCase()) {
+        const decoded = decodeFunctionData({ abi: CURVE_FACTORY_ABI, data: callData });
+        if (decoded.functionName === "n_collaterals") {
+          return encodeFunctionResult({ abi: CURVE_FACTORY_ABI, functionName: "n_collaterals", result: 1n });
+        }
+        if (decoded.functionName === "collaterals") {
+          return encodeFunctionResult({ abi: CURVE_FACTORY_ABI, functionName: "collaterals", result: BTC_ASSET });
+        }
+        if (decoded.functionName === "controllers") {
+          return encodeFunctionResult({ abi: CURVE_FACTORY_ABI, functionName: "controllers", result: LLAMMA_CONTROLLER });
+        }
+        if (decoded.functionName === "amms") {
+          return encodeFunctionResult({ abi: CURVE_FACTORY_ABI, functionName: "amms", result: LLAMMA_AMM });
+        }
+      }
+
+      if (normalizedAddress === BTC_ASSET) {
+        const decoded = decodeFunctionData({ abi: ERC20_ABI, data: callData });
+        if (decoded.functionName === "symbol") {
+          return encodeFunctionResult({ abi: ERC20_ABI, functionName: "symbol", result: "WBTC" });
+        }
+      }
+
+      if (normalizedAddress === LLAMMA_AMM.toLowerCase()) {
+        const decoded = decodeFunctionData({ abi: CURVE_AMM_ABI, data: callData });
+        if (decoded.functionName === "min_band") {
+          return encodeFunctionResult({ abi: CURVE_AMM_ABI, functionName: "min_band", result: 0n });
+        }
+        if (decoded.functionName === "max_band") {
+          return encodeFunctionResult({ abi: CURVE_AMM_ABI, functionName: "max_band", result: 1n });
+        }
+      }
+
+      if (normalizedAddress === YIELD_BASIS_FACTORY) {
+        const decoded = decodeFunctionData({ abi: FACTORY_ABI, data: callData });
+        if (decoded.functionName === "market_count") {
+          return encodeFunctionResult({ abi: FACTORY_ABI, functionName: "market_count", result: 0n });
+        }
+      }
+
+      return null;
+    });
+
+    const config: LiveReservesConfig = {
+      adapter: "crvusd",
+      version: 3,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: {
+          kind: "onchain-evm",
+          chain: "ethereum",
+          rpcMode: "public-rpc",
+        },
+      },
+    };
+
+    const result = await fetchCrvUsdReserves({} as never, config, signal);
+
+    expect(result.slices).toEqual([
+      { name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" },
+    ]);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "not-applicable",
+      directMarketCount: 1,
+      directActiveMarketCount: 1,
+      directCollateralUsd: 100,
+      softLiquidatedCrvUsdUsd: 2,
+      bandReadCount: 2,
+    });
+    expect(fetchOnchainMulticall3).toHaveBeenCalledWith(expect.objectContaining({
+      calls: expect.arrayContaining([
+        expect.objectContaining({ label: "0:y:0" }),
+        expect.objectContaining({ label: "0:x:1" }),
+      ]),
+      multicallBatchSize: 500,
+    }));
   });
 });
