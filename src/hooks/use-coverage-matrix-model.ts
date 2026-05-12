@@ -123,6 +123,39 @@ export function useCoverageMatrixModel() {
     [rows, totalMcapUsd],
   );
 
+  const sourceDepthProgress = useMemo(() => {
+    let atTargetCount = 0;
+    let exactTwoCount = 0;
+    let belowTargetCount = 0;
+    let atTargetMcapUsd = 0;
+    let exactTwoMcapUsd = 0;
+
+    for (const row of rows) {
+      const sourceCount = row.statuses.price.sourceCount ?? 0;
+      if (sourceCount >= 3) {
+        atTargetCount++;
+        atTargetMcapUsd += row.marketCapUsd;
+      } else {
+        belowTargetCount++;
+        if (sourceCount === 2) {
+          exactTwoCount++;
+          exactTwoMcapUsd += row.marketCapUsd;
+        }
+      }
+    }
+
+    const totalCount = rows.length;
+    return {
+      totalCount,
+      atTargetCount,
+      exactTwoCount,
+      belowTargetCount,
+      atTargetPct: totalCount > 0 ? (atTargetCount / totalCount) * 100 : 0,
+      atTargetMcapPct: totalMcapUsd > 0 ? (atTargetMcapUsd / totalMcapUsd) * 100 : null,
+      exactTwoMcapPct: totalMcapUsd > 0 ? (exactTwoMcapUsd / totalMcapUsd) * 100 : null,
+    };
+  }, [rows, totalMcapUsd]);
+
   const { pricingSources, authoritativeSources } = useMemo(() => {
     const consensusMap = new Map<string, number>();
     const authMap = new Map<string, number>();
@@ -198,6 +231,7 @@ export function useCoverageMatrixModel() {
   return {
     rows,
     featureSummaries,
+    sourceDepthProgress,
     pricingSources,
     authoritativeSources,
     widestFeature,

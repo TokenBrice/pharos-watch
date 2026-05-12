@@ -9,6 +9,7 @@ export function useCoveragePageModel() {
   const {
     rows,
     featureSummaries,
+    sourceDepthProgress,
     pricingSources,
     authoritativeSources,
     widestFeature,
@@ -32,6 +33,7 @@ export function useCoveragePageModel() {
     logos,
     rows,
     featureSummaries,
+    sourceDepthProgress,
     pricingSources,
     authoritativeSources,
     widestFeature,

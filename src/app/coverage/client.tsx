@@ -24,6 +24,7 @@ export default function CoveragePageClient() {
         <>
           <CoverageFeatureSnapshotCard
             featureSummaries={model.featureSummaries}
+            sourceDepthProgress={model.sourceDepthProgress}
             widestFeature={model.widestFeature}
             narrowestFeature={model.narrowestFeature}
             mostConcentratedFeature={model.mostConcentratedFeature}

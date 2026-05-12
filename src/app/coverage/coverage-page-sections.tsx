@@ -53,10 +53,14 @@ export function CoverageMatrixDataStateCard({ state }: { state: "loading" | "err
 
 export function CoverageFeatureSnapshotCard({
   featureSummaries,
+  sourceDepthProgress,
   widestFeature,
   narrowestFeature,
   mostConcentratedFeature,
-}: Pick<CoveragePageModel, "featureSummaries" | "widestFeature" | "narrowestFeature" | "mostConcentratedFeature">) {
+}: Pick<
+  CoveragePageModel,
+  "featureSummaries" | "sourceDepthProgress" | "widestFeature" | "narrowestFeature" | "mostConcentratedFeature"
+>) {
   const activeCoinTotal = featureSummaries.reduce((total, summary) => Math.max(total, summary.totalCount), 0);
   const averageCoveragePct =
     featureSummaries.length > 0
@@ -107,7 +111,23 @@ export function CoverageFeatureSnapshotCard({
             </dl>
           </div>
 
-          <div className="grid gap-2.5 sm:grid-cols-3">
+          <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+            <FeatureSnapshotInsight
+              label="Source target"
+              accent="price"
+              title="3+ sources"
+              detail={
+                <>
+                  <span className="text-foreground">
+                    {sourceDepthProgress.atTargetCount}/{sourceDepthProgress.totalCount}
+                  </span>
+                  <span className="mx-1.5 text-muted-foreground/60">·</span>
+                  {sourceDepthProgress.atTargetMcapPct == null
+                    ? "n/a"
+                    : `${sourceDepthProgress.atTargetMcapPct.toFixed(0)}% cap`}
+                </>
+              }
+            />
             {widestFeature ? (
               <FeatureSnapshotInsight
                 label="Widest reach"

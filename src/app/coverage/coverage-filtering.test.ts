@@ -54,7 +54,7 @@ const rows: CoverageRow[] = [
     headlineCoverageCount: 1,
     advancedCoverageCount: 1,
     statuses: {
-      price: { ...status("tracked", true, 2), sourceCount: 1 },
+      price: { ...status("tracked", true, 2), sourceCount: 2 },
       safety: status("tracked", true),
       dex: status("none", false),
       reserves: status("none", false),
@@ -165,6 +165,7 @@ describe("coverage filtering", () => {
     ["flows", ["gamma"]],
     ["blacklist", ["beta"]],
     ["weak-price", ["alpha"]],
+    ["price-2-sources", ["alpha"]],
     ["missing-safety", []],
     ["missing-dex", ["alpha"]],
     ["missing-live-reserves", ["alpha", "gamma", "delta"]],

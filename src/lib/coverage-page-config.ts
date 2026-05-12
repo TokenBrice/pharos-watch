@@ -20,6 +20,7 @@ export type CoverageFilterKey =
   | "flows"
   | "blacklist"
   | "weak-price"
+  | "price-2-sources"
   | "missing-safety"
   | "missing-dex"
   | "missing-live-reserves"
@@ -402,6 +403,7 @@ export const FILTER_OPTIONS: ReadonlyArray<{
   { key: "missing-safety", group: "gap", label: "No Safety" },
   { key: "missing-dex", group: "gap", label: "No DEX" },
   { key: "missing-live-reserves", group: "gap", label: "No Reserves" },
+  { key: "price-2-sources", group: "gap", label: "2 sources" },
   { key: "weak-price", group: "gap", label: "Weak price" },
   { key: "missing-flows", group: "gap", label: "No Flows" },
   { key: "missing-dependency", group: "gap", label: "No Dependency" },
