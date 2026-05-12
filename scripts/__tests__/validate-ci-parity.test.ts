@@ -11,6 +11,11 @@ import {
   WORKER_VALIDATE_COMMANDS,
 } from "../lib/validate-contract.mjs";
 import {
+  GENERATED_ARTIFACT_REGISTRY,
+  buildGeneratedArtifactCommands,
+  getNoncriticalTestGeneratedPrerequisites,
+} from "../lib/automation-registry.mjs";
+import {
   buildCriticalCoverageArgs,
   buildNoncriticalTestArgs,
   CRITICAL_TEST_FILES,
@@ -21,6 +26,7 @@ import {
   getPostPrebuildCommandEnv,
   runPostPrebuildValidation,
 } from "../run-validate-postbuild.mjs";
+import { buildGeneratedArtifactExecutionBatches } from "../run-generated-artifacts.mjs";
 
 function extractRunSteps(yaml) {
   const lines = yaml.split(/\r?\n/g);
@@ -142,6 +148,7 @@ describe("validate-ci parity", () => {
     };
 
     expect(packageJson.scripts["validate:prebuild"]).toBe("node scripts/run-validate-prebuild.mjs");
+    expect(packageJson.scripts.prebuild).toBe("node scripts/run-generated-artifacts.mjs");
     expect(packageJson.scripts["test:noncritical"]).toBe("node scripts/run-noncritical-tests.mjs");
     expect(packageJson.scripts["coverage:critical"]).toBe("node scripts/run-critical-coverage.mjs");
     expect(VALIDATE_PREBUILD_COMMANDS).toEqual([
@@ -175,6 +182,34 @@ describe("validate-ci parity", () => {
       "npm run check:world-map",
       "npm run check:worker-boundary",
     ]);
+  });
+
+  it("preserves generated artifact order through the shared prebuild registry and runner", () => {
+    const expectedCommands = [
+      "tsx scripts/generate-sitemap-dates.ts",
+      "tsx scripts/generate-docs-metadata.ts",
+      "tsx scripts/generate-cemetery-dataset.ts",
+      "tsx scripts/generate-postman-collection.ts",
+      "tsx scripts/generate-openapi-spec.ts",
+      "tsx scripts/generate-llms-txt.ts",
+    ];
+
+    expect(GENERATED_ARTIFACT_REGISTRY.map((artifact) => artifact.id)).toEqual([
+      "sitemap-dates",
+      "docs-metadata",
+      "cemetery-dataset",
+      "postman",
+      "openapi",
+      "llms-txt",
+    ]);
+    expect(buildGeneratedArtifactCommands()).toEqual(expectedCommands);
+    expect(getNoncriticalTestGeneratedPrerequisites()).toEqual([
+      "scripts/generate-sitemap-dates.ts",
+      "scripts/generate-docs-metadata.ts",
+    ]);
+    expect(
+      buildGeneratedArtifactExecutionBatches().map((batch) => batch.map((unit) => unit.commands)),
+    ).toEqual(expectedCommands.map((cmd) => [[cmd]]));
   });
 
   it("keeps the prebuild runner bounded while preserving the shared command set", () => {

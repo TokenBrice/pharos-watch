@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { pathToFileURL } from "node:url";
+import { assert, sleep } from "./lib/smoke-runtime.mjs";
 
 const DEFAULT_OPS_UI_URL = process.env.SMOKE_OPS_UI_URL ?? "https://ops.pharos.watch/admin/";
 const DEFAULT_OPS_API_BASE = process.env.SMOKE_OPS_API_BASE ?? "https://ops-api.pharos.watch";
@@ -12,10 +13,6 @@ const OPS_UI_PROXY_RETRY_DELAY_MS = 2_000;
 const DIRECT_OPS_JSON_RETRY_STATUSES = new Set([500, 502, 503, 504]);
 const DIRECT_OPS_JSON_RETRY_COUNT = 2;
 const DIRECT_OPS_JSON_RETRY_DELAY_MS = 2_000;
-
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
-}
 
 function requireEnv(name) {
   const value = (process.env[name] ?? "").trim();
@@ -57,10 +54,6 @@ async function fetchText(url, headers) {
   const response = await fetch(url, { headers, redirect: "manual" });
   const body = await response.text();
   return { response, body };
-}
-
-function sleep(delayMs) {
-  return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
 export async function fetchJson(url, headers, fetchImpl = fetch, requestInit = {}) {

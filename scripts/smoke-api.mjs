@@ -2,6 +2,13 @@
 
 import path from "path";
 import { fileURLToPath } from "url";
+import {
+  assert,
+  formatError,
+  parseNonNegativeInt,
+  parsePositiveInt,
+  sleep,
+} from "./lib/smoke-runtime.mjs";
 
 export const STRICT_CONTRACT_SMOKE_PATHS = [
   "/api/stablecoins",
@@ -56,16 +63,6 @@ function parseBoolean(value, fallback) {
   return /^(1|true|yes|on)$/i.test(value.trim());
 }
 
-function parsePositiveInt(value, fallback) {
-  const parsed = Number.parseInt(value ?? "", 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-function parseNonNegativeInt(value, fallback) {
-  const parsed = Number.parseInt(value ?? "", 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
-}
-
 function ensureBaseUrl(input) {
   const trimmed = (input ?? "").trim();
   if (!trimmed) {
@@ -104,10 +101,6 @@ async function fetchJson(baseUrl, endpointPath, timeoutMs) {
   return { url, status: res.status, body };
 }
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 function isRetryableStatus(status) {
   return status === 408 || status === 429 || status >= 500;
 }
@@ -117,10 +110,6 @@ function isRetryableError(error) {
     error instanceof TypeError ||
     (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError"))
   );
-}
-
-function formatError(error) {
-  return error instanceof Error ? error.message : String(error);
 }
 
 async function fetchJsonWithRetry(baseUrl, endpointPath, timeoutMs, retryCount, retryDelayMs) {
@@ -151,10 +140,6 @@ async function fetchJsonWithRetry(baseUrl, endpointPath, timeoutMs, retryCount, 
   }
 
   throw new Error(`${endpointPath} request failed after ${totalAttempts} attempts: ${formatError(lastError)}`);
-}
-
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
 }
 
 function isFiniteNumber(value) {

@@ -18,6 +18,7 @@ describe("scanSqlInterpolationSafety", () => {
   it("accepts safe fixtures and flags unsafe worker and root script interpolation", () => {
     const report = scanSqlInterpolationSafety([fileURLToPath(FIXTURE_ROOT)], process.cwd());
 
+    expect(report.scannedFiles).toHaveLength(6);
     expect(report.violations).toHaveLength(3);
     expect(report.violations.map((violation) => violation.file)).toEqual([
       "scripts/__tests__/fixtures/sql-safety/scripts/unsafe-root-script.ts",

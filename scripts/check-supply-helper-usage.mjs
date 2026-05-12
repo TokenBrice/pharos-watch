@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-import { readFileSync, readdirSync } from "node:fs";
-import { extname, join, relative } from "node:path";
+import { readFileSync } from "node:fs";
+import { relative } from "node:path";
 import { pathToFileURL } from "node:url";
+import { collectSourceFiles, resolveSourceRoot } from "./lib/source-files.mjs";
 
 export const DEFAULT_SUPPLY_HELPER_ROOTS = ["src/app", "src/components", "worker/src/api"];
 
@@ -23,23 +24,6 @@ export const SUPPLY_HELPER_WAIVERS = [
 const SUPPLY_IMPORT_RE = /import\s+\{[^}]*\bsumPegBuckets\b[^}]*\}\s+from\s+["']@shared\/lib\/supply["']/s;
 const SUPPLY_EXTENSIONS = new Set([".ts", ".tsx"]);
 
-function collectSourceFiles(dir, files = []) {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (entry.isDirectory()) {
-      if (entry.name === "__tests__" || entry.name === "__mocks__" || entry.name === "node_modules") continue;
-      collectSourceFiles(join(dir, entry.name), files);
-      continue;
-    }
-    if (!entry.isFile()) continue;
-    if (SUPPLY_EXTENSIONS.has(extname(entry.name))) files.push(join(dir, entry.name));
-  }
-  return files;
-}
-
-function resolveRoot(root, cwd) {
-  return root.startsWith("/") ? root : join(cwd, root);
-}
-
 export function scanSupplyHelperUsage({
   roots = DEFAULT_SUPPLY_HELPER_ROOTS,
   waivers = SUPPLY_HELPER_WAIVERS,
@@ -50,8 +34,8 @@ export function scanSupplyHelperUsage({
   const violations = [];
 
   for (const root of roots) {
-    const resolvedRoot = resolveRoot(root, cwd);
-    const files = collectSourceFiles(resolvedRoot);
+    const resolvedRoot = resolveSourceRoot(root, cwd);
+    const files = collectSourceFiles(resolvedRoot, { extensions: SUPPLY_EXTENSIONS });
     scannedFiles.push(...files);
 
     for (const file of files) {

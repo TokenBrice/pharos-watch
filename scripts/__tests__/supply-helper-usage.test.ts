@@ -31,6 +31,7 @@ describe("supply helper usage check", () => {
 
     const report = scanSupplyHelperUsage({ cwd, roots: ["src/app"] });
 
+    expect(report.scannedFiles).toHaveLength(1);
     expect(report.violations).toEqual([
       {
         file: "src/app/demo/page.tsx",
@@ -49,6 +50,7 @@ describe("supply helper usage check", () => {
 
     const report = scanSupplyHelperUsage({ cwd, roots: ["worker/src/api"] });
 
+    expect(report.scannedFiles).toHaveLength(1);
     expect(report.violations).toEqual([]);
   });
 });

@@ -1,157 +1,22 @@
+import { DEPLOY_IMPACT_REGISTRY } from "./automation-registry.mjs";
+
 export function normalizeRepoPath(path) {
   return path.replaceAll("\\", "/");
 }
 
-const WORKER_CHANGE_PREFIXES = [
-  "shared/",
-  "worker/",
-];
+const FULL_DEPLOY_INFRA_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.fullDeployInfra.exactPaths);
+const FULL_DEPLOY_GUARDRAIL_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.fullDeployGuardrails.exactPaths);
+const PAGES_ONLY_INFRA_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.pages.workflowOnlyExactPaths);
+const PAGES_CHANGE_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.pages.exactPaths);
+const WORKER_CHANGE_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.worker.exactPaths);
+const WORKER_PROMOTION_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.workerPromotion.exactPaths);
+const WORKER_PROMOTION_SHARED_EXCLUDED_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.workerPromotion.sharedExcludedPaths);
+const WORKER_ROOT_RUNTIME_PACKAGES = new Set(DEPLOY_IMPACT_REGISTRY.workerRootRuntimePackages);
 
-const WORKER_PROMOTION_EXACT_PATHS = new Set([
-  "worker/package.json",
-  "worker/tsconfig.json",
-  "worker/wrangler.toml",
-]);
-
-const WORKER_PROMOTION_PREFIXES = [
-  "worker/assets/",
-  "worker/migrations/",
-  "worker/src/",
-];
-
-const WORKER_ROOT_RUNTIME_PACKAGES = new Set([
-  "@adraffy/ens-normalize",
-  "@cf-wasm/resvg",
-  "@noble/ciphers",
-  "@noble/curves",
-  "@noble/hashes",
-  "@resvg/resvg-wasm",
-  "@resvg/resvg-wasm-legacy",
-  "@scure/base",
-  "@scure/bip32",
-  "@scure/bip39",
-  "@shuding/opentype.js",
-  "abitype",
-  "base64-js",
-  "camelize",
-  "color-name",
-  "css-background-parser",
-  "css-box-shadow",
-  "css-color-keywords",
-  "css-gradient-parser",
-  "css-to-react-native",
-  "emoji-regex-xs",
-  "escape-html",
-  "eventemitter3",
-  "fflate",
-  "hex-rgb",
-  "isows",
-  "linebreak",
-  "ox",
-  "pako",
-  "parse-css-color",
-  "postcss-value-parser",
-  "react",
-  "satori",
-  "string.prototype.codepointat",
-  "tiny-inflate",
-  "unicode-trie",
-  "viem",
-  "ws",
-  "yoga-layout",
-  "zod",
-]);
-
-const WORKER_PROMOTION_SHARED_EXCLUDED_PATHS = new Set([
-  "shared/lib/pharosville-api-contract.ts",
-  "shared/lib/public-docs.ts",
-  "shared/types/pharosville.ts",
-]);
-
-const PAGES_CHANGE_PREFIXES = [
-  "data/",
-  "functions/",
-  "public/",
-  "shared/",
-  "src/",
-];
-
-const FULL_DEPLOY_INFRA_PATHS = new Set([
-  ".github/workflows/deploy-cloudflare.yml",
-  ".github/workflows/validate-ci.yml",
-  "package-lock.json",
-  "package.json",
-  "scripts/classify-deploy-changes.mjs",
-]);
-
-const FULL_DEPLOY_INFRA_PREFIXES = [
-  ".github/actions/",
-  "scripts/lib/",
-];
-
-const FULL_DEPLOY_GUARDRAIL_EXACT_PATHS = new Set([
-  "scripts/audit-pricing-provider-config.ts",
-  "scripts/check-critical-coverage.mjs",
-  "scripts/check-cron-abort-contract.mjs",
-  "scripts/check-cron-connection-budget.ts",
-  "scripts/check-cron-schedule-sync.ts",
-  "scripts/check-doc-source-paths.mjs",
-  "scripts/check-doc-counts.mjs",
-  "scripts/check-doc-sync.ts",
-  "scripts/check-duplicate-exports.mjs",
-  "scripts/check-env-contract.mjs",
-  "scripts/check-hotspot-ratchet.mjs",
-  "scripts/check-redemption-backstops.ts",
-  "scripts/check-seo-static.mjs",
-  "scripts/check-shared-cycles.mjs",
-  "scripts/check-sql-interpolation-safety.mjs",
-  "scripts/check-stablecoin-data.ts",
-  "scripts/check-unused-code.mjs",
-  "scripts/check-verified-doc-links.mjs",
-  "scripts/check-worker-import-boundary.mjs",
-  "scripts/check-worker-migrations.mjs",
-  "scripts/generate-cemetery-dataset.ts",
-  "scripts/rollback-pages-deployment.mjs",
-  "scripts/run-critical-coverage.mjs",
-  "scripts/run-noncritical-tests.mjs",
-  "scripts/run-validate-postbuild.mjs",
-  "scripts/run-validate-prebuild.mjs",
-  "scripts/smoke-api.mjs",
-  "scripts/smoke-ops.mjs",
-  "scripts/smoke-transport.mjs",
-  "scripts/smoke-ui.mjs",
-  "scripts/test-merge-gate.mjs",
-]);
-
-const PAGES_ONLY_INFRA_PATHS = new Set([
-  ".github/workflows/pages-prepare.yml",
-  ".github/workflows/pages-publish.yml",
-  ".github/workflows/pages-release.yml",
-  ".github/workflows/rebuild-pages.yml",
-]);
-
-const WORKER_CHANGE_EXACT_PATHS = new Set([
-  "scripts/check-cron-schedule-sync.ts",
-  "scripts/check-worker-import-boundary.mjs",
-  "scripts/check-worker-migrations.mjs",
-  "scripts/smoke-api.mjs",
-]);
-
-const PAGES_CHANGE_EXACT_PATHS = new Set([
-  "next.config.ts",
-  "postcss.config.mjs",
-  "scripts/check-seo-static.mjs",
-  "scripts/build-world-map-svg.ts",
-  "scripts/generate-docs-metadata.ts",
-  "scripts/generate-llms-txt.ts",
-  "scripts/generate-markdown-exports.ts",
-  "scripts/generate-openapi-spec.ts",
-  "scripts/generate-postman-collection.ts",
-  "scripts/serve-static-export.mjs",
-  "scripts/smoke-ui.mjs",
-  "scripts/sync-digests.ts",
-  "tsconfig.json",
-]);
+const FULL_DEPLOY_INFRA_PREFIXES = DEPLOY_IMPACT_REGISTRY.fullDeployInfra.prefixes;
+const PAGES_CHANGE_PREFIXES = DEPLOY_IMPACT_REGISTRY.pages.prefixes;
+const WORKER_CHANGE_PREFIXES = DEPLOY_IMPACT_REGISTRY.worker.prefixes;
+const WORKER_PROMOTION_PREFIXES = DEPLOY_IMPACT_REGISTRY.workerPromotion.prefixes;
 
 function isTestPath(file) {
   return /(^|\/)__tests__\/.*\.(test|spec)\.[cm]?[jt]sx?$/.test(file)

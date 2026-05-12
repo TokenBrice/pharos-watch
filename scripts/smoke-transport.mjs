@@ -1,19 +1,10 @@
 #!/usr/bin/env node
 
+import { assert, parsePositiveInt } from "./lib/smoke-runtime.mjs";
+
 const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_API_URL = "http://api.pharos.watch/api/health?smoke=transport";
 const DEFAULT_SITE_API_URL = "http://site-api.pharos.watch/api/stablecoins?limit=1&smoke=transport";
-
-function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message);
-  }
-}
-
-function parsePositiveInt(value, fallback) {
-  const parsed = Number.parseInt(value ?? "", 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
 
 function parseArgs(argv) {
   const args = {

@@ -9,6 +9,7 @@ import {
   hasWorkerPromotionImpact,
   normalizeChangedFiles,
 } from "../classify-deploy-changes.mjs";
+import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
 
 describe("normalizeChangedFiles", () => {
   it("normalizes separators and removes blank lines", () => {
@@ -131,6 +132,7 @@ describe("hasDeployImpact", () => {
       "scripts/check-sql-interpolation-safety.mjs",
       "scripts/generate-cemetery-dataset.ts",
       "scripts/run-critical-coverage.mjs",
+      "scripts/run-generated-artifacts.mjs",
       "scripts/run-noncritical-tests.mjs",
       "scripts/run-validate-postbuild.mjs",
       "scripts/run-validate-prebuild.mjs",
@@ -152,6 +154,19 @@ describe("hasDeployImpact", () => {
     expect(hasPagesDeployImpact([file])).toBe(true);
     expect(hasWorkerDeployImpact([file])).toBe(false);
     expect(hasWorkerPromotionImpact([file])).toBe(false);
+  });
+
+  it("derives deploy support impact from the structured automation registry", () => {
+    const registryDeploySupportFiles = [
+      ...DEPLOY_IMPACT_REGISTRY.fullDeployInfra.exactPaths,
+      ...DEPLOY_IMPACT_REGISTRY.fullDeployGuardrails.exactPaths,
+    ];
+
+    for (const file of registryDeploySupportFiles) {
+      expect(hasDeployImpact([file]), file).toBe(true);
+      expect(hasPagesDeployImpact([file]), file).toBe(true);
+      expect(hasWorkerDeployImpact([file]), file).toBe(true);
+    }
   });
 });
 

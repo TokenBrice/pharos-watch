@@ -1,14 +1,12 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import { getNoncriticalTestGeneratedPrerequisites } from "./lib/automation-registry.mjs";
 import { buildNoncriticalTestArgs } from "./lib/critical-test-files.mjs";
 import { localBin } from "./lib/local-bin.mjs";
 import { withCiVitestArgs } from "./lib/vitest-ci-args.mjs";
 
-const generatedPrerequisites = [
-  "scripts/generate-sitemap-dates.ts",
-  "scripts/generate-docs-metadata.ts",
-];
+const generatedPrerequisites = getNoncriticalTestGeneratedPrerequisites();
 
 for (const script of generatedPrerequisites) {
   const generated = spawnSync(localBin("tsx"), [script], {

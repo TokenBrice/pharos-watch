@@ -1,31 +1,13 @@
 #!/usr/bin/env node
-import { readFileSync, readdirSync } from "node:fs";
-import { extname, join, relative } from "node:path";
+import { readFileSync } from "node:fs";
+import { relative } from "node:path";
 import { pathToFileURL } from "node:url";
+import { collectSourceFiles, resolveSourceRoot } from "./lib/source-files.mjs";
 
 export const DEFAULT_SQL_SAFETY_ROOTS = ["worker/src", "worker/scripts", "scripts"];
 export const SQL_INTERPOLATION_PATTERN = /`\s*(?:(?:SELECT|DELETE|UPDATE|INSERT)[^`]*(?:FROM|INTO|UPDATE|JOIN)\s+\$\{|(?:SELECT|DELETE|UPDATE)[^`]*(?:WHERE|AND|OR|SET)\s+[\w.]+\s*=\s*['"]?\$\{)/i;
 export const SQL_SAFETY_PATTERN = /(?:\/\/\s*SAFETY:|\.has\(|throw\s+new\s+Error)/;
 export const SQL_SAFETY_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]);
-
-function resolveScanRoot(root, cwd = process.cwd()) {
-  return root.startsWith("/") ? root : join(cwd, root);
-}
-
-function collectSqlSafetyFiles(dir, files = []) {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (entry.isDirectory()) {
-      if (entry.name === "__tests__" || entry.name === "__mocks__" || entry.name === "node_modules") continue;
-      collectSqlSafetyFiles(join(dir, entry.name), files);
-      continue;
-    }
-    if (!entry.isFile()) continue;
-    if (SQL_SAFETY_EXTENSIONS.has(extname(entry.name))) {
-      files.push(join(dir, entry.name));
-    }
-  }
-  return files;
-}
 
 function hasSqlSafetySignal(context) {
   return SQL_SAFETY_PATTERN.test(context);
@@ -36,8 +18,8 @@ export function scanSqlInterpolationSafety(roots = DEFAULT_SQL_SAFETY_ROOTS, cwd
   const violations = [];
 
   for (const root of roots) {
-    const resolvedRoot = resolveScanRoot(root, cwd);
-    const files = collectSqlSafetyFiles(resolvedRoot);
+    const resolvedRoot = resolveSourceRoot(root, cwd);
+    const files = collectSourceFiles(resolvedRoot, { extensions: SQL_SAFETY_EXTENSIONS });
     scannedFiles.push(...files);
 
     for (const file of files) {

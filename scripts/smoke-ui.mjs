@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 
 import { pathToFileURL } from "url";
+import {
+  assert,
+  parseNonNegativeInt,
+  parsePositiveInt,
+} from "./lib/smoke-runtime.mjs";
 
 const DEFAULT_URL = process.env.SMOKE_UI_URL ?? "https://pharos.watch";
 const DEFAULT_MODE = process.env.SMOKE_UI_MODE ?? "local";
@@ -47,10 +52,6 @@ function parseArgs(argv) {
     }
   }
   return args;
-}
-
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
 }
 
 function ensureUrl(input) {
@@ -138,19 +139,11 @@ function getExpectedGaId() {
 }
 
 function readPositiveIntEnv(key, fallback) {
-  const parsed = Number.parseInt(process.env[key] ?? "", 10);
-  if (Number.isFinite(parsed) && parsed > 0) {
-    return parsed;
-  }
-  return fallback;
+  return parsePositiveInt(process.env[key], fallback);
 }
 
 function readNonNegativeIntEnv(key, fallback) {
-  const parsed = Number.parseInt(process.env[key] ?? "", 10);
-  if (Number.isFinite(parsed) && parsed >= 0) {
-    return parsed;
-  }
-  return fallback;
+  return parseNonNegativeInt(process.env[key], fallback);
 }
 
 export function getOverflowWorkerCount(mode, routeCount, skipOverflow = false) {
