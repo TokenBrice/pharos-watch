@@ -510,6 +510,58 @@ Adapter helpers now live in a small helper family, with `worker/src/cron/reserve
 
 `worker/src/cron/reserve-adapters/evm.ts` provides hex-level EVM call helpers for ERC-4626 vault introspection.
 
+### Adding a New Adapter
+
+To register a new adapter for a coin's `liveReservesConfig.adapter`, edit these eight surfaces in order. The registry test at `worker/src/cron/reserve-adapters/__tests__/registry.test.ts` will fail if any of (1)–(4) drift; (5)–(8) are caught by validators or surface gaps in the next sync.
+
+1. **Adapter fetch function** — add `worker/src/cron/reserve-adapters/<key>.ts` exporting `async function fetch<Name>Reserves(coin, config, signal, ctx?): Promise<AdapterResult>`. Adapter contract lives in `worker/src/cron/reserve-adapters/types.ts` (`AdapterFn`, `AdapterContext`, `AdapterResult`). Use helpers from `./helpers` rather than rebuilding fetch/parse/freshness primitives.
+2. **Registry wiring** — import the fetch function and add it to `ADAPTER_FNS` in `worker/src/cron/reserve-adapters/index.ts`.
+3. **Adapter key union** — append the new key to `LIVE_RESERVE_ADAPTER_KEYS` in `shared/types/live-reserves.ts:11`. The `LiveReserveAdapterKey` union (`:97`) is derived from this array.
+4. **Adapter definition** — add an entry to `LIVE_RESERVE_ADAPTER_DEFINITIONS` in `shared/lib/live-reserve-adapters-definitions.ts:90` declaring `sourceModel`, `evidenceClass`, `sharedSourceMode`, `redemptionTelemetry`, and optional `validation`. Determines whether the adapter renders as `Live`, `Curated-Validated`, or `Proof` and which freshness invariants run.
+5. **Provenance entry** — add the adapter to `LIVE_RESERVE_ADAPTER_PROVENANCE` in `shared/lib/live-reserve-adapter-provenance.ts:14` (source URLs, license, review cadence, parked/active state).
+6. **Params schema** — add a Zod schema to `adapterParamsSchemas` in `shared/lib/live-reserve-adapters-schemas.ts:511`. `parseLiveReserveAdapterParams("<key>", config.params)` resolves to this schema in the adapter body. Also extend `LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS` at `:53` if the adapter takes a primary input kind not yet declared.
+7. **Test + fixture** — add `worker/src/cron/reserve-adapters/__tests__/<key>.test.ts`. HTTP-html adapters need a captured fixture in `__tests__/fixtures/<key>.html`; HTTP-json adapters fixture the payload inline; on-chain adapters mock `fetchOnchainRawCall` / `fetchOnchainUint256` returns.
+8. **Documentation** — register the adapter in the Adapter Registry table above, refresh `docs/trackers/reserve-coverage.md` if it changes per-coin coverage, and add a one-line note in this file's helper/adapter notes section if it introduces non-obvious semantics.
+
+Minimal scaffold (HTTP-json single-asset shape):
+
+```ts
+import type { StablecoinMeta } from "@shared/types/core";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import type { AdapterContext, AdapterResult } from "./types";
+import {
+  fetchJsonWithRetry,
+  parseTimestampLikeToUnixSeconds,
+  requireJsonInput,
+  unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
+} from "./helpers";
+
+interface MyAdapterPayload { totalReserves: number; updatedAt?: string }
+
+export async function fetchMyAdapterReserves(
+  _coin: StablecoinMeta,
+  config: LiveReservesConfig,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<AdapterResult> {
+  const input = requireJsonInput(config.inputs.primary, "my-adapter");
+  const params = parseLiveReserveAdapterParams("my-adapter", config.params);
+  const payload = await fetchJsonWithRetry<MyAdapterPayload>(input.url, signal, 12_000, ctx);
+  const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.updatedAt);
+
+  return {
+    slices: [{ name: params.assetLabel, pct: 100, risk: params.assetRisk }],
+    metadata: {
+      ...(sourceTimestamp != null
+        ? verifiedFreshnessMetadata(sourceTimestamp)
+        : unverifiedFreshnessMetadata("issuer-api", "payload has no source timestamp")),
+    },
+  };
+}
+```
+
 ---
 
 ## Frontend Consumers
