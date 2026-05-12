@@ -1673,5 +1673,15 @@
     "title": "BSP-sandboxed Philippine peso stablecoin from Coins.ph",
     "text": "PHPC is a Philippine peso-pegged stablecoin issued by Coins.ph, a BSP-licensed Virtual Asset Service Provider, under the Bangko Sentral ng Pilipinas Regulatory Sandbox Framework approved in May 2024. PHPC is backed 1:1 by Philippine peso cash, time deposits, and short-term money market instruments held in custodial banks selected by Coins.ph, and is minted and redeemed exclusively through the Coins.ph platform with full reimbursement guaranteed at the end of the sandbox window. The token is deployed on Polygon and Ronin Network; Pharos currently tracks the Polygon deployment because Ronin is not yet a supported chain. As the second active PHP-pegged issuer alongside the already-tracked PHT-pht, PHPC completes the Philippines-regulated stablecoin slice. Circulating supply is in the low single-digit USD millions, reflecting the sandbox-only operating scope.",
     "updatedAt": "2026-05-12"
+  },
+  "vndc-jade-labs": {
+    "title": "Vietnam's most-trafficked VND stablecoin with weak attestation",
+    "text": "VNDC is a Vietnamese dong-pegged stablecoin issued by Jade Labs (the company behind ONUS Finance), the only credible on-chain VND instrument with material market presence. The issuer self-reports 1:1 fiat backing and operates mint/redemption flows through Vietnamese banking partners and the ONUS app, but no independent attestation cadence is published and aggregator-reported market cap has historically diverged from observable on-chain Polygon and BSC supply. Pharos lists VNDC across Polygon and BNB Smart Chain at zero decimals (the contracts mint whole-unit VNDC); the issuer's third ONUS-chain deployment is not in scope until that chain is tracked. The detail page carries an explicit attestation warning so users do not infer the reported $50M aggregate as fully verifiable.",
+    "updatedAt": "2026-05-12"
+  },
+  "mmxn-moneta-digital": {
+    "title": "Mexico's retail-focused MXN stablecoin with self-reported reserves",
+    "text": "Moneta Digital (MMXN) is a Mexican peso-pegged stablecoin issued by Moneta Digital, a Mexico-registered virtual asset entity targeting the US-Mexico remittance corridor and domestic crypto-peso liquidity. MMXN is multi-chain (Ethereum ERC-20, Tron TRC-20, with additional Polygon and BSC deployments per the issuer) and uses ERC20Mintable/Burnable/Pausable patterns that give the issuer discretionary supply control. Reserves are self-disclosed against MXN bank balances; unlike the already-tracked MXNB-Juno (operated under CNBV-licensed IFPE NVIO with formal quarterly attestations), Moneta Digital does not publish an institutional audit cadence. Pharos tracks MMXN at roughly $1.4M circulating with several million USD of daily trading volume, surfacing the weaker-attestation gap as an explicit caveat on the detail page so users understand the comparison with regulated MXN issuers.",
+    "updatedAt": "2026-05-12"
   }
 }

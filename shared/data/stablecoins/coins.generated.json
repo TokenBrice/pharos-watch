@@ -13489,6 +13489,84 @@
     }
   },
   {
+    "id": "mmxn-moneta-digital",
+    "detailProvider": "coingecko",
+    "name": "Moneta Digital",
+    "symbol": "MMXN",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "MXN",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Mexican peso fiat reserves held in regulated and liquid bank reserves; Moneta Digital is registered with the Tax Administration Service (SAT) for virtual-asset exchange and discloses reserves through periodic third-party accounting attestations",
+    "pegMechanism": "Issuer-managed 1:1 mint and redemption against MXN deposits; users can redeem MMXN for fiat pesos via the TruBit platform with SPEI bank settlement",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://monetadigital.com/",
+      "provider": "Moneta Digital issuer disclosure"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://monetadigital.com/"
+      },
+      {
+        "label": "Etherscan",
+        "url": "https://etherscan.io/token/0x95c2e7cbc7ae370e28160bd04297c53f96d092b4"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Mexico"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x95c2e7cbc7ae370e28160bd04297c53f96d092b4",
+        "decimals": 6
+      },
+      {
+        "chain": "tron",
+        "address": "TY7copxkSQZBym6eTGMEdrqPHaNNsmjxKe",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "blacklistabilityReview": {
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Etherscan contract source",
+          "url": "https://etherscan.io/token/0x95c2e7cbc7ae370e28160bd04297c53f96d092b4#code"
+        }
+      ],
+      "evidence": "Explicit Possible retained: centralized issuer with discretionary mint/burn/pause authority on the ERC-20 contract (ERC20Mintable, ERC20Burnable, ERC20Pausable); holder-balance freeze surface not independently confirmed.",
+      "reviewer": "Pharos lane D Wave 3 non-USD review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Mexican peso bank reserves (issuer self-reported)",
+        "pct": 100,
+        "risk": "medium"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Weaker attestation than tracked MXNB",
+        "message": "Moneta Digital self-reports MXN reserves without the formal quarterly audit cadence published by Bitso/Juno for MXNB. Reserve sufficiency and circulating supply consistency should be reviewed via on-chain explorers (Etherscan and Tronscan) until an independent attestation source is verified."
+      }
+    ]
+  },
+  {
     "id": "mnee-mnee",
     "llamaId": "284",
     "detailProvider": "defillama",
@@ -29603,6 +29681,89 @@
         "risk": "very-low"
       }
     }
+  },
+  {
+    "id": "vndc-jade-labs",
+    "detailProvider": "coingecko",
+    "name": "VNDC",
+    "symbol": "VNDC",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "OTHER",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Vietnamese dong reserves self-reported by Jade Labs (the VNDC issuer) and tracked across Polygon and BNB Smart Chain deployments; no formal independent attestation is published",
+    "pegMechanism": "1:1 fiat-collateralized issuer mint and redemption operated by Jade Labs through the ONUS and VNDC Hub platforms; users on-ramp/off-ramp VND through Vietnamese banking partners",
+    "geckoId": "vndc",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://vndc.io/",
+      "provider": "Jade Labs / VNDC issuer disclosure"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://vndc.io/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/onusfinance"
+      },
+      {
+        "label": "Issuer Platform",
+        "url": "https://goonus.io/en/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Vietnam"
+    },
+    "contracts": [
+      {
+        "chain": "polygon",
+        "address": "0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa",
+        "decimals": 0
+      },
+      {
+        "chain": "bsc",
+        "address": "0xa276dc434a366c62ef010585b3885d0c85154389",
+        "decimals": 0
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "blacklistabilityReview": {
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Website",
+          "url": "https://vndc.io/"
+        }
+      ],
+      "evidence": "Explicit Possible retained: centralized issuer with discretionary mint/redeem authority; contract source not independently audited and ONUS deployment retains administrative pause and reissue privileges.",
+      "reviewer": "Pharos lane D Wave 3 non-USD review",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "stage1-l2",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Vietnamese dong reserves (issuer self-reported)",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Attestation gap and peg-currency placeholder",
+        "message": "VNDC is pegged to the Vietnamese dong, but Pharos does not yet support VND as a first-class peg currency, so the asset is tracked under pegCurrency: \"OTHER\" pending a coordinated VND addition across formatting, FX, and price-validation pipelines. Separately, aggregator-reported market cap (~$50M) does not consistently match on-chain Polygon/BSC supply, and reserves are self-disclosed by the issuer without independent audit cadence."
+      }
+    ]
   },
   {
     "id": "vnxau-vnx",
