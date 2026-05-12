@@ -355,7 +355,7 @@ async function recoverNoCandidateLiveReserveBreakers(db: D1Database): Promise<vo
   const circuits = await getCircuitStates(db);
   const configuredCircuits = filterStaleLiveReserveCircuitStates(circuits);
   for (const source of Object.keys(circuits)) {
-    if (!source.startsWith("live-reserves:") || Object.hasOwn(configuredCircuits, source)) {
+    if (!source.startsWith("live-reserves:") || Object.prototype.hasOwnProperty.call(configuredCircuits, source)) {
       continue;
     }
     await recoverBreakerOnNoCandidate(db, source);
