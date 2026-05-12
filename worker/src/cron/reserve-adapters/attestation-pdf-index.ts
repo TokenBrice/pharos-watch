@@ -3,6 +3,7 @@ import { DEPENDENCY_TYPE_VALUES } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  escapeRegExp,
   fetchPrimaryHtmlInput,
   htmlLayoutChangedError,
   requireHtmlInput,
@@ -119,7 +120,7 @@ function stripTags(value: string): string {
 }
 
 function readHtmlAttribute(tag: string, name: string): string | null {
-  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedName = escapeRegExp(name);
   // eslint-disable-next-line security/detect-non-literal-regexp -- attribute name is escaped before constructing the bounded matcher.
   const regex = new RegExp(String.raw`\b${escapedName}\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))`, "i");
   const match = tag.match(regex);
