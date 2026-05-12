@@ -433,5 +433,12 @@
   "ntbill-nest": "/logos/ntbill-nest.png",
   "nbasis-nest": "/logos/nbasis-nest.png",
   "nopal-nest": "/logos/nopal-nest.png",
-  "nwisdom-nest": "/logos/nwisdom-nest.png"
+  "nwisdom-nest": "/logos/nwisdom-nest.png",
+  "susdc-spark": "/logos/susdc-spark.png",
+  "susdt-spark": "/logos/susdt-spark.png",
+  "sgho-aave": "/logos/sgho-aave.png",
+  "gtusdcp-gauntlet": "/logos/gtusdcp-gauntlet.png",
+  "gtusdc-gauntlet": "/logos/gtusdc-gauntlet.png",
+  "yvusdc-yearn": "/logos/yvusdc-yearn.png",
+  "aa-falconx-mev-capital": "/logos/aa-falconx-mev-capital.png"
 }

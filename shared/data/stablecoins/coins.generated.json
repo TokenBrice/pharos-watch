@@ -85,109 +85,86 @@
     }
   },
   {
-    "id": "acred-apollo-securitize",
+    "id": "aa-falconx-mev-capital",
     "detailProvider": "coingecko",
-    "name": "Apollo Diversified Credit Securitize Fund",
-    "symbol": "ACRED",
+    "name": "MEV Capital Falcon USDC Senior Tranche",
+    "symbol": "AA_FalconXUSDC",
     "flags": {
-      "backing": "rwa-backed",
+      "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "centralized",
+      "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": true,
+      "rwa": false,
       "navToken": true
     },
-    "collateral": "Feeder share into Apollo Diversified Credit Fund, a multi-strategy private credit portfolio including direct lending, structured credit, performing credit, and dislocated credit; administered by Securitize",
-    "pegMechanism": "NAV-accreting ERC-4626 fund share token; subscription and redemption are institutional-only at monthly fund NAV through Securitize Markets, with an on-demand liquidity pool sized up to roughly 5% of NAV; RedStone publishes the NAV oracle used by integrations",
-    "geckoId": "apollo-diversified-credit-securitize-fund",
-    "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
-      "provider": "Securitize / Apollo (NAV statements published per fund cadence)"
-    },
+    "pegReferenceId": "usdc-circle",
+    "collateral": "Senior (AA) tranche of an Idle CDO over MEV-Capital-curated Morpho lending markets routed into Falcon Finance's USDf collateral; the senior class has first claim on USDC collected from interest and exit liquidity",
+    "pegMechanism": "Pareto Idle CDO senior tranche shares appreciate against USDC as borrower interest accrues; redemption depends on USDf exit liquidity through Falcon's mint/burn rails and on Morpho market liquidity. Tranche economics absorb losses junior-first, but exit pricing tracks USDf solvency",
     "links": [
       {
-        "label": "Website",
-        "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+        "label": "Pareto vault",
+        "url": "https://pareto.credit/vaults/1/0xC26A6Fa2C37b38E549a4a1807543801Db684f99C"
       },
       {
-        "label": "Twitter",
-        "url": "https://x.com/apolloglobal"
+        "label": "MEV Capital",
+        "url": "https://mevcapital.com"
       },
       {
-        "label": "Securitize Markets",
-        "url": "https://markets.securitize.io/"
+        "label": "Falcon Finance",
+        "url": "https://falcon.finance"
+      },
+      {
+        "label": "Idle docs",
+        "url": "https://docs.idle.finance/products/perpetual-yield-tranches"
       }
     ],
-    "jurisdiction": {
-      "country": "United States",
-      "regulator": "SEC",
-      "license": "Securitize-administered feeder; access restricted to qualified purchasers"
-    },
     "contracts": [
       {
         "chain": "ethereum",
-        "address": "0x17418038ecf73ba4026c4f428547bf099706f27b",
-        "decimals": 6
+        "address": "0xc26a6fa2c37b38e549a4a1807543801db684f99c",
+        "decimals": 18
       }
     ],
-    "canBeBlacklisted": true,
+    "dependencies": [
+      {
+        "id": "usdf-falcon",
+        "weight": 1,
+        "type": "mechanism"
+      }
+    ],
     "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "Securitize ACRED page",
-          "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
-        }
-      ],
-      "evidence": "Securitize operates ACRED with permissioned token transfers restricted to KYC-onboarded qualified purchasers and retains transfer-agent freeze and burn authority on behalf of Apollo.",
-      "reviewer": "Codex RWA expansion review",
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: AA_FalconXUSDC resolves to Upstream because USDC and USDf collateral inside the senior tranche inherit Circle and Falcon admin surfaces.",
+      "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "ethereum",
-    "deploymentModel": "third-party-bridge",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "variantOf": "usdc-circle",
+    "variantKind": "strategy-vault",
     "reserves": [
       {
-        "name": "Apollo Diversified Credit Fund strategy book (direct lending, structured and performing credit, dislocated credit)",
-        "pct": 95,
-        "risk": "high"
-      },
-      {
-        "name": "Cash and stablecoin liquidity buffer",
-        "pct": 5,
-        "risk": "low"
+        "name": "USDC routed through MEV-Capital Falcon strategy (USDf-collateralised Morpho markets)",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
       }
     ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "single-asset",
-      "breakerScope": "acred-apollo-securitize",
-      "display": {
-        "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
-        "label": "Securitize ACRED fund page"
-      },
-      "adapter": "curated-validated",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
-        }
-      }
-    },
     "notices": [
       {
         "type": "warning",
-        "title": "Private credit, not Treasuries",
-        "message": "ACRED is a feeder into Apollo Diversified Credit Fund, which holds direct lending and structured credit positions. Risk profile is medium-to-high and closer to syrupUSDC than to BUIDL or BENJI. Token transfers are permissioned and redemption is monthly at NAV via Securitize Markets, with an on-demand pool sized to ~5% of NAV. ACRED is also issued on Aptos, Avalanche, Ink, Polygon, Solana, and Sei via Wormhole; Pharos tracks only the Ethereum supply contract pending per-chain verification."
+        "title": "Exit liquidity depends on Falcon USDf",
+        "message": "AA_FalconXUSDC is the senior tranche of a CDO over Falcon Finance USDf-collateralised Morpho markets. USDC redemption rates and exit timing are tied to USDf's mint/burn liquidity; sustained USDf stress can degrade vault liquidity even when the senior tranche absorbs no principal loss."
       }
     ],
     "yieldConfig": {
-      "yieldSource": "Apollo Diversified Credit Fund (private credit strategy NAV)",
-      "yieldType": "nav-appreciation"
+      "yieldSource": "MEV Capital Falcon USDC Senior tranche",
+      "yieldType": "lending-vault"
     }
   },
   {
@@ -1669,107 +1646,6 @@
     }
   },
   {
-    "id": "bc3m-backed",
-    "detailProvider": "coingecko",
-    "name": "Backed GOVIES 0-6 months EURO investment grade",
-    "symbol": "bC3M",
-    "flags": {
-      "backing": "rwa-backed",
-      "pegCurrency": "EUR",
-      "governance": "centralized",
-      "yieldBearing": true,
-      "rwa": true,
-      "navToken": true
-    },
-    "collateral": "Tracker certificate fully backed by the AMUNDI ETF GOVIES 0-6 MONTHS EUROMTS INVESTMENT GRADE UCITS ETF, held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
-    "pegMechanism": "EUR-denominated NAV-accreting tracker token (not pegged to €1); price reflects the underlying short-term Eurozone government bond ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
-    "geckoId": "backed-govies-0-6-months-euro-investment-grade",
-    "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://app.backed.fi/issuance",
-      "provider": "Backed Finance (monthly attestations and on-chain reserve dashboard)"
-    },
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://backed.fi/"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/BackedFi"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.backed.fi/"
-      }
-    ],
-    "jurisdiction": {
-      "country": "Switzerland",
-      "regulator": "FINMA",
-      "license": "Swiss DLT Act registered uncertificated securities"
-    },
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
-        "decimals": 18
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "Backed Finance documentation",
-          "url": "https://docs.backed.fi/"
-        }
-      ],
-      "evidence": "Backed Assets retains transfer-agent freeze and burn authority over bC3M balances under its Swiss DLT Act framework and operates KYC-gated primary issuance.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "native-multichain",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
-    "reserves": [
-      {
-        "name": "AMUNDI ETF GOVIES 0-6 Months Euro Investment Grade UCITS ETF",
-        "pct": 100,
-        "risk": "very-low"
-      }
-    ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "single-asset",
-      "breakerScope": "bc3m-backed",
-      "display": {
-        "url": "https://app.backed.fi/issuance",
-        "label": "Backed Finance issuance dashboard"
-      },
-      "adapter": "curated-validated",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
-        }
-      }
-    },
-    "notices": [
-      {
-        "type": "info",
-        "title": "Multi-chain Backed product",
-        "message": "bC3M is also issued on Base, BNB Chain, Polygon, and Gnosis (same contract address pattern as Backed's other tokens). Pharos currently tracks the Ethereum supply contract pending per-chain verification."
-      }
-    ],
-    "yieldConfig": {
-      "yieldSource": "AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF NAV accretion",
-      "yieldType": "nav-appreciation"
-    }
-  },
-  {
     "id": "bd-basedollar",
     "detailProvider": "defillama",
     "name": "Base Dollar",
@@ -1828,117 +1704,6 @@
         "sourceUrl": "https://github.com/basedollar/basedollar/pull/98"
       }
     ]
-  },
-  {
-    "id": "benji-franklin-templeton",
-    "detailProvider": "coingecko",
-    "name": "Franklin OnChain U.S. Government Money Fund",
-    "symbol": "BENJI",
-    "flags": {
-      "backing": "rwa-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized",
-      "yieldBearing": true,
-      "rwa": true,
-      "navToken": true
-    },
-    "collateral": "U.S. government securities, cash, and repurchase agreements held by the Franklin OnChain U.S. Government Money Fund (FOBXX); '40 Act-registered money market fund custodied by BNY Mellon with Franklin Templeton as transfer agent and Benji as the on-chain share record",
-    "pegMechanism": "Single fund, multi-chain BENJI token tracking FOBXX's stable $1.00 NAV; rebasing share count records distributed yield directly on-chain; subscriptions and redemptions are gated to KYC-verified Benji wallets with USD-wire and Benji-to-USDC settlement paths",
-    "geckoId": "franklin-onchain-u-s-government-money-fund",
-    "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX",
-      "provider": "Franklin Templeton (daily fund holdings and NAV factsheet)"
-    },
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/FTI_Global"
-      },
-      {
-        "label": "Benji App",
-        "url": "https://benji.franklintempleton.com/"
-      }
-    ],
-    "jurisdiction": {
-      "country": "United States",
-      "regulator": "SEC",
-      "license": "Investment Company Act of 1940 (registered money market fund)"
-    },
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x3ddc84940ab509c11b20b76b466933f40b750dc9",
-        "decimals": 18
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "FOBXX prospectus",
-          "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
-        }
-      ],
-      "evidence": "Franklin Templeton operates Benji as the fund's transfer agent with permissioned token transfers restricted to KYC-verified holders, giving the issuer freeze and burn authority over BENJI balances.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "native-multichain",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
-    "reserves": [
-      {
-        "name": "U.S. Government Securities",
-        "pct": 60,
-        "risk": "very-low"
-      },
-      {
-        "name": "Repurchase Agreements",
-        "pct": 35,
-        "risk": "very-low"
-      },
-      {
-        "name": "Cash",
-        "pct": 5,
-        "risk": "very-low"
-      }
-    ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "single-asset",
-      "breakerScope": "benji-franklin-templeton",
-      "display": {
-        "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX",
-        "label": "Franklin Templeton FOBXX fund page"
-      },
-      "adapter": "curated-validated",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
-        }
-      }
-    },
-    "notices": [
-      {
-        "type": "info",
-        "title": "Multi-chain fund with limited on-chain telemetry",
-        "message": "BENJI is the multi-chain share token of Franklin Templeton's FOBXX money market fund. The fund is also deployed on Stellar (primary), Polygon, Arbitrum, Avalanche, Aptos, Base, Solana, BNB Chain, and Canton, but Pharos currently tracks only the Ethereum supply contract pending per-chain verification. Live reserves use a curated weekly snapshot of the official fund factsheet until an on-chain NAV oracle becomes available."
-      }
-    ],
-    "yieldConfig": {
-      "yieldSource": "Franklin Templeton FOBXX U.S. government money market fund",
-      "yieldType": "rebase"
-    }
   },
   {
     "id": "bfusd-binance",
@@ -2015,130 +1780,6 @@
     "yieldConfig": {
       "yieldSource": "Binance BFUSD daily APR / rewards",
       "yieldType": "governance-set"
-    }
-  },
-  {
-    "id": "bib01-backed",
-    "detailProvider": "coingecko",
-    "name": "Backed IB01 Treasury Bond 0-1yr",
-    "symbol": "bIB01",
-    "flags": {
-      "backing": "rwa-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized",
-      "yieldBearing": true,
-      "rwa": true,
-      "navToken": true
-    },
-    "collateral": "Tracker certificate fully backed by the BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01), held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
-    "pegMechanism": "NAV-accreting tracker token (not pegged to $1); price reflects the underlying iShares 0-1yr T-bill ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
-    "geckoId": "backed-ib01-treasury-bond-0-1yr",
-    "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://app.backed.fi/issuance",
-      "provider": "Backed Finance (monthly attestations and on-chain reserve dashboard)"
-    },
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://backed.fi/"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/BackedFi"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.backed.fi/"
-      }
-    ],
-    "jurisdiction": {
-      "country": "Switzerland",
-      "regulator": "FINMA",
-      "license": "Swiss DLT Act registered uncertificated securities"
-    },
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
-        "decimals": 18
-      },
-      {
-        "chain": "base",
-        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
-        "decimals": 18
-      },
-      {
-        "chain": "bsc",
-        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
-        "decimals": 18
-      },
-      {
-        "chain": "polygon",
-        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
-        "decimals": 18
-      },
-      {
-        "chain": "arbitrum",
-        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
-        "decimals": 18
-      },
-      {
-        "chain": "gnosis",
-        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
-        "decimals": 18
-      },
-      {
-        "chain": "avalanche",
-        "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
-        "decimals": 18
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "Backed Finance documentation",
-          "url": "https://docs.backed.fi/"
-        }
-      ],
-      "evidence": "Backed Assets retains transfer-agent freeze and burn authority over bIB01 balances under its Swiss DLT Act framework and operates KYC-gated primary issuance.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "native-multichain",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
-    "reserves": [
-      {
-        "name": "BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01)",
-        "pct": 100,
-        "risk": "very-low"
-      }
-    ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "single-asset",
-      "breakerScope": "bib01-backed",
-      "display": {
-        "url": "https://app.backed.fi/issuance",
-        "label": "Backed Finance issuance dashboard"
-      },
-      "adapter": "curated-validated",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
-        }
-      }
-    },
-    "yieldConfig": {
-      "yieldSource": "iShares 0-1yr Treasury Bond ETF (IB01) NAV accretion",
-      "yieldType": "nav-appreciation"
     }
   },
   {
@@ -4694,7 +4335,7 @@
       }
     ],
     "liveReservesConfig": {
-      "version": 3,
+      "version": 2,
       "semantics": "collateral-mix",
       "breakerScope": "crvusd-curve",
       "display": {
@@ -4704,9 +4345,8 @@
       "adapter": "crvusd",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-json",
+          "url": "https://prices.curve.finance/v1/crvusd/markets"
         }
       }
     }
@@ -6958,7 +6598,7 @@
     },
     "collateral": "Euro deposits held in segregated accounts with credit institutions and high-quality liquid assets (HQLA) denominated in EUR, separated from Monerium's own funds; over 100% backing maintained as required under MiCA",
     "pegMechanism": "Mint-and-burn: EURe is minted when users deposit EUR via SEPA bank transfer after KYC/AML verification, and burned upon redemption back to EUR; peg maintained by licensed EMI with 1:1 backing",
-    "geckoId": "monerium-eur-money-2",
+    "geckoId": "monerium-eur-money",
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://monerium.com/financial-information/"
@@ -7882,112 +7522,6 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
-  },
-  {
-    "id": "eutbl-spiko",
-    "detailProvider": "coingecko",
-    "name": "Spiko EU T-Bills Money Market Fund",
-    "symbol": "EUTBL",
-    "flags": {
-      "backing": "rwa-backed",
-      "pegCurrency": "EUR",
-      "governance": "centralized",
-      "yieldBearing": true,
-      "rwa": true,
-      "navToken": true
-    },
-    "collateral": "Short-dated Eurozone sovereign Treasury bills (issued by AAA / strong-Member-State issuers) with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
-    "pegMechanism": "EUR-denominated NAV-accreting share token tracking the variable-NAV money market fund; primary mint and redemption settle same-day at fund NAV with a €1k minimum; Chainlink CCIP relays issuance between Ethereum, Arbitrum, and Polygon",
-    "geckoId": "spiko-eu-t-bills-money-market-fund",
-    "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://www.spiko.io/",
-      "provider": "Spiko (daily NAV and fund holdings disclosures)"
-    },
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.spiko.io/"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/spiko_eu"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.spiko.io/"
-      }
-    ],
-    "jurisdiction": {
-      "country": "France",
-      "regulator": "AMF",
-      "license": "UCITS Short-Term VNAV Money Market Fund"
-    },
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
-        "decimals": 5
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "Spiko website",
-          "url": "https://www.spiko.io/"
-        }
-      ],
-      "evidence": "Spiko acts as transfer agent for EUTBL with permissioned ERC-1967 upgradeable proxy and KYC-gated transfers, retaining freeze and burn authority over fund shares.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "third-party-bridge",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
-    "reserves": [
-      {
-        "name": "Eurozone short-term Treasury Bills",
-        "pct": 95,
-        "risk": "very-low"
-      },
-      {
-        "name": "Cash and bank deposits",
-        "pct": 5,
-        "risk": "very-low"
-      }
-    ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "single-asset",
-      "breakerScope": "eutbl-spiko",
-      "display": {
-        "url": "https://www.spiko.io/",
-        "label": "Spiko fund page"
-      },
-      "adapter": "curated-validated",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
-        }
-      }
-    },
-    "notices": [
-      {
-        "type": "info",
-        "title": "Multi-chain EU-regulated MMF",
-        "message": "EUTBL is also issued on Arbitrum and Polygon via Chainlink CCIP. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
-      }
-    ],
-    "yieldConfig": {
-      "yieldSource": "Spiko EU T-Bills MMF (Eurozone Treasury bill NAV)",
-      "yieldType": "nav-appreciation"
     }
   },
   {
@@ -9981,6 +9515,194 @@
     }
   },
   {
+    "id": "gtusdc-gauntlet",
+    "detailProvider": "coingecko",
+    "name": "Gauntlet USDC Core",
+    "symbol": "gtUSDC",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usdc-circle",
+    "collateral": "USDC deposited into a Gauntlet-curated MetaMorpho vault on Morpho Blue; the curator allocates across conservative USDC lending markets backed by blue-chip crypto and real-world asset collateral",
+    "pegMechanism": "ERC-4626 MetaMorpho vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem vault shares for available USDC liquidity or wait for Morpho market liquidity to return",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://app.morpho.org/ethereum/vault/0xdd0f28e19c1780eb6396170735d45153d261490d"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/gauntlet_xyz"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.morpho.org/curation/overview"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xdd0f28e19c1780eb6396170735d45153d261490d",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: gtUSDC resolves to Upstream because the vault holds USDC routed through Morpho markets, inheriting Circle's blacklist surface.",
+      "reviewer": "Codex inferred-status backfill",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "variantOf": "usdc-circle",
+    "variantKind": "strategy-vault",
+    "reserves": [
+      {
+        "name": "USDC deposited into Gauntlet-curated Morpho lending markets",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "gtusdc-gauntlet",
+      "display": {
+        "url": "https://app.morpho.org/ethereum/vault/0xdd0f28e19c1780eb6396170735d45153d261490d",
+        "label": "Morpho Gauntlet USDC Core"
+      },
+      "adapter": "erc4626-single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "USDC deposited into Gauntlet-curated Morpho lending markets",
+          "risk": "medium",
+          "coinId": "usdc-circle",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Gauntlet USDC Core MetaMorpho vault",
+      "yieldType": "lending-vault"
+    }
+  },
+  {
+    "id": "gtusdcp-gauntlet",
+    "detailProvider": "coingecko",
+    "name": "Gauntlet USDC Prime",
+    "symbol": "gtUSDCp",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usdc-circle",
+    "collateral": "USDC deposited into a Gauntlet-curated MetaMorpho V2 vault on Morpho Blue; the curator allocates across permissioned USDC lending markets backed by blue-chip crypto and real-world asset collateral",
+    "pegMechanism": "ERC-4626 MetaMorpho V2 vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem vault shares for available USDC liquidity or wait for Morpho market liquidity to return",
+    "geckoId": "gauntlet-usdc-prime",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/gauntlet_xyz"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.morpho.org/curation/overview"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: gtUSDCp resolves to Upstream because the vault holds USDC routed through Morpho markets, inheriting Circle's blacklist surface.",
+      "reviewer": "Codex inferred-status backfill",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "variantOf": "usdc-circle",
+    "variantKind": "strategy-vault",
+    "reserves": [
+      {
+        "name": "USDC deposited into Gauntlet-curated Morpho lending markets",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "gtusdcp-gauntlet",
+      "display": {
+        "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime",
+        "label": "Morpho Gauntlet USDC Prime"
+      },
+      "adapter": "erc4626-single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "USDC deposited into Gauntlet-curated Morpho lending markets",
+          "risk": "medium",
+          "coinId": "usdc-circle",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Gauntlet USDC Prime MetaMorpho vault",
+      "yieldType": "lending-vault"
+    }
+  },
+  {
     "id": "gusd-gate",
     "llamaId": "306",
     "detailProvider": "defillama",
@@ -10216,16 +9938,6 @@
         "chain": "arbitrum",
         "address": "0x589d35656641d6ab57a545f08cf473ecd9b6d5f7",
         "decimals": 6
-      },
-      {
-        "chain": "solana",
-        "address": "Crn4x1Y2HUKko7ox2EZMT6N2t2ZyH7eKtwkBGVnhEq1g",
-        "decimals": 6
-      },
-      {
-        "chain": "stellar",
-        "address": "GYEN-GDF6VOEGRWLOZ64PQQGKD2IYWA22RLT37GJKS2EJXZHT2VLAGWLC5TOB-1",
-        "decimals": 7
       }
     ],
     "blacklistabilityReview": {
@@ -10263,14 +9975,7 @@
         "label": "JPY fiat reserves",
         "risk": "very-low"
       }
-    },
-    "notices": [
-      {
-        "type": "warning",
-        "title": "2021 depeg and 2026 class-action settlement",
-        "message": "GYEN suffered multiple de-pegging events shortly after its 2021 launch (notably hitting >1.5x its peg in May 2021), causing material holder losses on Coinbase. A class action filed in 2022 (Donovan v. Coinbase / GMO Trust) led to a $6.75M proposed settlement; motion for final approval was filed on April 17, 2026 with a final-approval hearing set for May 27, 2026. Settlement class covers GYEN purchasers in New York or California between Dec 29, 2020 and Oct 10, 2025. Methodology-relevant historical record of peg failure for an otherwise NYDFS-supervised issuer."
-      }
-    ]
+    }
   },
   {
     "id": "hbd-hive",
@@ -11699,7 +11404,7 @@
     },
     "collateral": "Japanese-yen reserve assets held for the legacy prepaid-payment JPYC v1 token series",
     "pegMechanism": "Legacy prepaid-payment JPYC token series redeemable through JPYC processes before migration to the newer funds-transfer-token contracts",
-    "geckoId": "jpycoin",
+    "geckoId": "jpyc",
     "protocolSlug": "jpyc",
     "links": [
       {
@@ -12061,113 +11766,6 @@
         "sourceUrl": "https://coinpaper.com/16814/what-is-sbi-holdings-actually-building-with-ripple-xrp-and-rlusd-in-2026"
       }
     ]
-  },
-  {
-    "id": "jtrsy-anemoy",
-    "detailProvider": "coingecko",
-    "name": "Janus Henderson Anemoy Treasury Fund",
-    "symbol": "JTRSY",
-    "flags": {
-      "backing": "rwa-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized",
-      "yieldBearing": true,
-      "rwa": true,
-      "navToken": true
-    },
-    "collateral": "Short-duration U.S. Treasury bills selected and managed by Janus Henderson as sub-advisor inside Anemoy's BVI Professional Fund, tokenised through Centrifuge as ERC-7540 vault shares",
-    "pegMechanism": "NAV-accreting fund share token; same-day subscription and redemption at fund NAV for whitelisted non-U.S. Professional Investors via the Centrifuge issuer rail; S&P assigns AA+f / S1+ to the fund",
-    "geckoId": "anemoy-janus-henderson-treasury-fund",
-    "protocolSlug": "centrifuge",
-    "proofOfReserves": {
-      "type": "independent-audit",
-      "url": "https://centrifuge.io/pools/jtrsy",
-      "provider": "Centrifuge on-chain NAV publishing with Janus Henderson sub-advisory; S&P AA+f / S1+ rating"
-    },
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://centrifuge.io/pools/jtrsy"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/centrifuge"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.centrifuge.io/"
-      }
-    ],
-    "jurisdiction": {
-      "country": "British Virgin Islands",
-      "regulator": "BVI FSC",
-      "license": "BVI Professional Fund"
-    },
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
-        "decimals": 6
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "Centrifuge JTRSY pool",
-          "url": "https://centrifuge.io/pools/jtrsy"
-        }
-      ],
-      "evidence": "Anemoy / Centrifuge operate JTRSY with permissioned ERC-7540 vault transfers restricted to whitelisted Professional Investors and retain freeze and burn authority over fund shares.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "native-multichain",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
-    "reserves": [
-      {
-        "name": "U.S. Treasury Bills (Janus Henderson sub-advised)",
-        "pct": 97,
-        "risk": "very-low"
-      },
-      {
-        "name": "Cash and equivalents",
-        "pct": 3,
-        "risk": "very-low"
-      }
-    ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "single-asset",
-      "breakerScope": "jtrsy-anemoy",
-      "display": {
-        "url": "https://centrifuge.io/pools/jtrsy",
-        "label": "Centrifuge JTRSY pool"
-      },
-      "adapter": "curated-validated",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
-        }
-      }
-    },
-    "notices": [
-      {
-        "type": "info",
-        "title": "Centrifuge V3 multi-chain availability",
-        "message": "JTRSY is also distributed across Centrifuge V3 to additional chains. Pharos currently tracks the Ethereum supply contract pending per-chain verification; on-chain NAV publishing from Centrifuge can later replace the curated snapshot."
-      }
-    ],
-    "yieldConfig": {
-      "yieldSource": "Janus Henderson Anemoy Treasury Fund (T-bill NAV accretion)",
-      "yieldType": "nav-appreciation"
-    }
   },
   {
     "id": "jupusd-jupiter",
@@ -14732,113 +14330,6 @@
     ]
   },
   {
-    "id": "nbasis-nest",
-    "detailProvider": "coingecko",
-    "name": "Nest Basis Vault",
-    "symbol": "nBASIS",
-    "flags": {
-      "backing": "crypto-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized-dependent",
-      "yieldBearing": true,
-      "rwa": false,
-      "navToken": true
-    },
-    "collateral": "Basis-trade strategy book combining tokenised T-bill collateral (Superstate USTB / USCC) on Plume with perpetual short positions; risk-managed and rebalanced by Nest",
-    "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the basis-trade strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
-    "geckoId": "nest-basis-vault",
-    "protocolSlug": "nest-credit",
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.nest.credit/"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/NestCredit"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.nest.credit/"
-      }
-    ],
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
-        "decimals": 6
-      },
-      {
-        "chain": "plume",
-        "address": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
-        "decimals": 6
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "Docs",
-          "url": "https://docs.nest.credit/"
-        }
-      ],
-      "evidence": "Nest retains issuer / admin authority over vault shares with permissioned issuance and freeze surfaces beyond reserve-only exposure.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "native-multichain",
-    "collateralQuality": "exotic",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "single-entity",
-    "reserves": [
-      {
-        "name": "Superstate USTB / USCC Treasury and credit collateral",
-        "pct": 95,
-        "risk": "very-low",
-        "coinId": "ustb-superstate"
-      },
-      {
-        "name": "Stablecoin liquidity buffer",
-        "pct": 5,
-        "risk": "low",
-        "coinId": "usdc-circle"
-      }
-    ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "collateral-mix",
-      "breakerScope": "nbasis-nest",
-      "display": {
-        "url": "https://www.nest.credit/",
-        "label": "Nest Credit API"
-      },
-      "adapter": "nest-vault-positions",
-      "inputs": {
-        "primary": {
-          "kind": "http-json",
-          "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/positions"
-        }
-      },
-      "params": {
-        "priceUrl": "https://api.nest.credit/v1/vaults/nest-basis-vault/price",
-        "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-basis-vault/last-price-update"
-      }
-    },
-    "notices": [
-      {
-        "type": "warning",
-        "title": "Active strategy, not par stablecoin",
-        "message": "nBASIS runs a basis-trade strategy whose value drifts with funding-rate performance. It is closer in profile to Midas mRe7YIELD than to a 1:1 stablecoin, and Pharos lists it because its primary reference is the U.S. dollar."
-      }
-    ],
-    "yieldConfig": {
-      "yieldSource": "Nest Basis Vault NAV (basis-trade strategy)",
-      "yieldType": "nav-appreciation"
-    }
-  },
-  {
     "id": "nect-beraborrow",
     "llamaId": "329",
     "detailProvider": "defillama",
@@ -14943,230 +14434,6 @@
       "params": {
         "rpcUrl": "https://rpc.berachain.com"
       }
-    }
-  },
-  {
-    "id": "nopal-nest",
-    "detailProvider": "coingecko",
-    "name": "Nest BlackOpal LiquidStone II Vault",
-    "symbol": "nOPAL",
-    "flags": {
-      "backing": "crypto-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized-dependent",
-      "yieldBearing": true,
-      "rwa": false,
-      "navToken": true
-    },
-    "collateral": "BlackOpal LiquidStone II tokenised credit positions plus stablecoin and Treasury liquidity buffers held inside the Nest vault",
-    "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the BlackOpal LiquidStone II credit strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
-    "geckoId": "nest-opal-vault",
-    "protocolSlug": "nest-credit",
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.nest.credit/"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/NestCredit"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.nest.credit/"
-      }
-    ],
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
-        "decimals": 6
-      },
-      {
-        "chain": "plume",
-        "address": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
-        "decimals": 6
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "Docs",
-          "url": "https://docs.nest.credit/"
-        }
-      ],
-      "evidence": "Nest retains issuer / admin authority over vault shares with permissioned issuance and freeze surfaces beyond reserve-only exposure.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "native-multichain",
-    "collateralQuality": "exotic",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "single-entity",
-    "reserves": [
-      {
-        "name": "BlackOpal LiquidStone II tokenised credit positions",
-        "pct": 90,
-        "risk": "high"
-      },
-      {
-        "name": "Nest Treasury Vault (nTBILL) liquidity buffer",
-        "pct": 5,
-        "risk": "low"
-      },
-      {
-        "name": "Stablecoin liquidity buffer (USDC / pUSD)",
-        "pct": 5,
-        "risk": "low",
-        "coinId": "usdc-circle"
-      }
-    ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "collateral-mix",
-      "breakerScope": "nopal-nest",
-      "display": {
-        "url": "https://www.nest.credit/",
-        "label": "Nest Credit API"
-      },
-      "adapter": "nest-vault-positions",
-      "inputs": {
-        "primary": {
-          "kind": "http-json",
-          "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/positions"
-        }
-      },
-      "params": {
-        "priceUrl": "https://api.nest.credit/v1/vaults/nest-opal-vault/price",
-        "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-opal-vault/last-price-update"
-      }
-    },
-    "notices": [
-      {
-        "type": "warning",
-        "title": "Private credit strategy, not par stablecoin",
-        "message": "nOPAL holds BlackOpal LiquidStone II tokenised credit positions. The token references a dollar base but behaves like a credit vault share rather than a 1:1 par stablecoin."
-      }
-    ],
-    "yieldConfig": {
-      "yieldSource": "Nest BlackOpal LiquidStone II Vault NAV",
-      "yieldType": "nav-appreciation"
-    }
-  },
-  {
-    "id": "ntbill-nest",
-    "detailProvider": "coingecko",
-    "name": "Nest Treasury Vault",
-    "symbol": "nTBILL",
-    "flags": {
-      "backing": "rwa-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized-dependent",
-      "yieldBearing": true,
-      "rwa": true,
-      "navToken": true
-    },
-    "collateral": "Tokenised short-duration U.S. Treasury exposure routed by Nest into Superstate USTB / USCC and Janus Henderson JTRSY positions, plus stablecoin liquidity buffers",
-    "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying Treasury fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
-    "geckoId": "nest-treasury-vault",
-    "protocolSlug": "nest-credit",
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.nest.credit/"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/NestCredit"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.nest.credit/"
-      }
-    ],
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
-        "decimals": 6
-      },
-      {
-        "chain": "plume",
-        "address": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
-        "decimals": 6
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "Docs",
-          "url": "https://docs.nest.credit/"
-        }
-      ],
-      "evidence": "Nest retains issuer / admin authority over vault shares with permissioned issuance and freeze surfaces beyond reserve-only exposure.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "native-multichain",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
-    "reserves": [
-      {
-        "name": "Superstate USTB / USCC Treasury and credit positions",
-        "pct": 70,
-        "risk": "very-low",
-        "coinId": "ustb-superstate"
-      },
-      {
-        "name": "Janus Henderson Anemoy Treasury Fund (JTRSY)",
-        "pct": 25,
-        "risk": "very-low",
-        "coinId": "jtrsy-anemoy"
-      },
-      {
-        "name": "Stablecoin liquidity buffer (USDC / pUSD)",
-        "pct": 5,
-        "risk": "low",
-        "coinId": "usdc-circle"
-      }
-    ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "collateral-mix",
-      "breakerScope": "ntbill-nest",
-      "display": {
-        "url": "https://www.nest.credit/",
-        "label": "Nest Credit API"
-      },
-      "adapter": "nest-vault-positions",
-      "inputs": {
-        "primary": {
-          "kind": "http-json",
-          "url": "https://api.nest.credit/v1/vaults/nest-treasury-vault/positions"
-        }
-      },
-      "params": {
-        "priceUrl": "https://api.nest.credit/v1/vaults/nest-treasury-vault/price",
-        "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-treasury-vault/last-price-update"
-      }
-    },
-    "notices": [
-      {
-        "type": "info",
-        "title": "NAV-style dollar asset",
-        "message": "nTBILL is a Nest vault share whose value tracks the underlying Treasury fund book. It behaves like a vault share rather than a hard 1:1 par stablecoin."
-      }
-    ],
-    "yieldConfig": {
-      "yieldSource": "Nest Treasury Vault NAV",
-      "yieldType": "nav-appreciation"
     }
   },
   {
@@ -15283,117 +14550,6 @@
     "yieldConfig": {
       "yieldSource": "Neutrl savings (sNUSD)",
       "yieldType": "lending-vault"
-    }
-  },
-  {
-    "id": "nwisdom-nest",
-    "detailProvider": "coingecko",
-    "name": "Nest Wisdom Vault",
-    "symbol": "nWISDOM",
-    "flags": {
-      "backing": "rwa-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized-dependent",
-      "yieldBearing": true,
-      "rwa": true,
-      "navToken": true
-    },
-    "collateral": "WisdomTree tokenised fund shares (xCRDYX and similar WisdomTree Connect products) plus Nest Treasury Vault (nTBILL) and stablecoin liquidity buffers",
-    "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying WisdomTree fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
-    "geckoId": "nest-wisdom-vault",
-    "protocolSlug": "nest-credit",
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.nest.credit/"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/NestCredit"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.nest.credit/"
-      }
-    ],
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
-        "decimals": 6
-      },
-      {
-        "chain": "plume",
-        "address": "0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
-        "decimals": 6
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "Docs",
-          "url": "https://docs.nest.credit/"
-        }
-      ],
-      "evidence": "Nest retains issuer / admin authority over vault shares with permissioned issuance and freeze surfaces beyond reserve-only exposure.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "native-multichain",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
-    "reserves": [
-      {
-        "name": "WisdomTree tokenised fund shares (xCRDYX and WisdomTree Connect products)",
-        "pct": 95,
-        "risk": "very-low"
-      },
-      {
-        "name": "Nest Treasury Vault (nTBILL) liquidity buffer",
-        "pct": 3,
-        "risk": "low"
-      },
-      {
-        "name": "Stablecoin liquidity buffer (USDC / pUSD)",
-        "pct": 2,
-        "risk": "low",
-        "coinId": "usdc-circle"
-      }
-    ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "collateral-mix",
-      "breakerScope": "nwisdom-nest",
-      "display": {
-        "url": "https://www.nest.credit/",
-        "label": "Nest Credit API"
-      },
-      "adapter": "nest-vault-positions",
-      "inputs": {
-        "primary": {
-          "kind": "http-json",
-          "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/positions"
-        }
-      },
-      "params": {
-        "priceUrl": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/price",
-        "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/last-price-update"
-      }
-    },
-    "notices": [
-      {
-        "type": "info",
-        "title": "NAV-style dollar asset",
-        "message": "nWISDOM is a Nest vault share whose value tracks the underlying WisdomTree fund book. It behaves like a vault share rather than a hard 1:1 par stablecoin."
-      }
-    ],
-    "yieldConfig": {
-      "yieldSource": "Nest Wisdom Vault NAV (WisdomTree-backed strategy)",
-      "yieldType": "nav-appreciation"
     }
   },
   {
@@ -18709,6 +17865,72 @@
     }
   },
   {
+    "id": "sgho-aave",
+    "detailProvider": "coingecko",
+    "name": "Aave Savings GHO",
+    "symbol": "sGHO",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "gho-aave",
+    "collateral": "GHO deposited into Aave's non-slashable Savings GHO module; reward emissions accrue to depositors in GHO at the Aave-governance-set savings rate",
+    "pegMechanism": "Deposit GHO to mint sGHO at a 1:1 conversion; the contract distributes GHO rewards to holders over time. Withdrawals burn sGHO for GHO without slashing risk (distinct from the slashable Umbrella stkGHO safety module)",
+    "geckoId": "aave-stkgho",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://aave.com"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/aave"
+      },
+      {
+        "label": "Docs",
+        "url": "https://aave.com/docs/aave-v3/guides/sgho"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x1a88df1cfe15af22b3c4c783d4e6f7f9e0c1885d",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: sGHO resolves to Upstream because deposits remain GHO and inherit Aave-governance-controlled GHO admin authorities.",
+      "reviewer": "Codex inferred-status backfill",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "native",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "variantOf": "gho-aave",
+    "variantKind": "savings-passthrough",
+    "reserves": [
+      {
+        "name": "GHO deposited in Aave Savings module",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "gho-aave",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Aave Savings GHO",
+      "yieldType": "governance-set"
+    }
+  },
+  {
     "id": "silk-shade-protocol",
     "llamaId": "113",
     "detailProvider": "defillama",
@@ -19179,110 +18401,6 @@
     "yieldConfig": {
       "yieldSource": "Strata senior USDe tranche",
       "yieldType": "nav-appreciation"
-    }
-  },
-  {
-    "id": "stbt-matrixdock",
-    "detailProvider": "coingecko",
-    "name": "Matrixdock Short-Term Treasury Bill",
-    "symbol": "STBT",
-    "flags": {
-      "backing": "rwa-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized",
-      "yieldBearing": true,
-      "rwa": true,
-      "navToken": false
-    },
-    "collateral": "U.S. Treasury securities maturing within six months and reverse repurchase agreements collateralised by U.S. Treasuries; custodied through prime brokerage relationships and administered by Matrixdock (Matrixport, Singapore)",
-    "pegMechanism": "$1.00 rebasing share token; daily T-bill yield is distributed by adjusting holder balances rather than the unit price; institutional KYC mint and redemption at same-day NAV via Matrixdock with a $100k minimum; Chainlink Proof-of-Reserve feed publishes the underlying reserve attestation",
-    "geckoId": "matrixdock-short-term-treasury-bill",
-    "proofOfReserves": {
-      "type": "real-time",
-      "url": "https://www.matrixdock.com/stbt",
-      "provider": "Chainlink Proof of Reserve (Matrixdock T-Bill PoR feed)"
-    },
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.matrixdock.com/stbt"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/Matrixdock_"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.matrixdock.com/"
-      }
-    ],
-    "jurisdiction": {
-      "country": "Singapore",
-      "regulator": "MAS",
-      "license": "Singapore MAS exemption (institutional / accredited investors only)"
-    },
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x530824da86689c9c17cdc2871ff29b058345b44a",
-        "decimals": 18
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "Matrixdock STBT page",
-          "url": "https://www.matrixdock.com/stbt"
-        }
-      ],
-      "evidence": "Matrixdock retains transfer-agent freeze and burn authority over STBT balances under its institutional KYC framework.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "single-chain",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
-    "reserves": [
-      {
-        "name": "U.S. Treasury Bills",
-        "pct": 70,
-        "risk": "very-low"
-      },
-      {
-        "name": "Reverse Repo Agreements (UST-collateralised)",
-        "pct": 28,
-        "risk": "very-low"
-      },
-      {
-        "name": "Cash and equivalents",
-        "pct": 2,
-        "risk": "very-low"
-      }
-    ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "single-asset",
-      "breakerScope": "stbt-matrixdock",
-      "display": {
-        "url": "https://www.matrixdock.com/stbt",
-        "label": "Matrixdock STBT page (Chainlink PoR feed)"
-      },
-      "adapter": "curated-validated",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
-        }
-      }
-    },
-    "yieldConfig": {
-      "yieldSource": "Matrixdock STBT (short-term U.S. Treasury bill rebase)",
-      "yieldType": "rebase"
     }
   },
   {
@@ -20284,6 +19402,105 @@
     }
   },
   {
+    "id": "susdc-spark",
+    "detailProvider": "coingecko",
+    "name": "Spark Savings USDC",
+    "symbol": "spUSDC",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usdc-circle",
+    "collateral": "USDC deposited into Spark's ERC-4626 savings vault V2, routed through Sky's PSM and savings rate to generate USDC-denominated yield",
+    "pegMechanism": "Deposit USDC to mint spUSDC; the share price appreciates against USDC as the Sky Savings Rate accrues. Withdrawals burn spUSDC for USDC subject to Spark vault liquidity",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://spark.fi"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/sparkdotfi"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.spark.fi"
+      },
+      {
+        "label": "Deployments",
+        "url": "https://github.com/sparkdotfi/spark-address-registry"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
+        "decimals": 6
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
+        "decimals": 6
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: spUSDC resolves to Upstream because the wrapper holds USDC as its only reserve, inheriting Circle's blacklist surface.",
+      "reviewer": "Codex inferred-status backfill",
+      "reviewedAt": "2026-05-12"
+    },
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "native",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "variantOf": "usdc-circle",
+    "variantKind": "savings-passthrough",
+    "reserves": [
+      {
+        "name": "USDC deposited in Spark Savings vault",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "susdc-spark",
+      "display": {
+        "url": "https://spark.fi",
+        "label": "Spark Savings USDC"
+      },
+      "adapter": "erc4626-single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "USDC deposited in Spark Savings vault",
+          "risk": "low",
+          "coinId": "usdc-circle",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Spark Savings USDC",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "susdd-tron-dao-reserve",
     "detailProvider": "coingecko",
     "name": "Savings USDD",
@@ -20579,6 +19796,100 @@
     },
     "yieldConfig": {
       "yieldSource": "Sky Savings Rate (sUSDS)",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "susdt-spark",
+    "detailProvider": "coingecko",
+    "name": "Spark Savings USDT",
+    "symbol": "spUSDT",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usdt-tether",
+    "collateral": "USDT deposited into Spark's ERC-4626 savings vault V2, routed through Sky's PSM and savings rate to generate USDT-denominated yield",
+    "pegMechanism": "Deposit USDT to mint spUSDT; the share price appreciates against USDT as the Sky Savings Rate accrues. Withdrawals burn spUSDT for USDT subject to Spark vault liquidity",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://spark.fi"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/sparkdotfi"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.spark.fi"
+      },
+      {
+        "label": "Deployments",
+        "url": "https://github.com/sparkdotfi/spark-address-registry"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xe2e7a17dff93280dec073c995595155283e3c372",
+        "decimals": 6
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: spUSDT resolves to Upstream because the wrapper holds USDT as its only reserve, inheriting Tether's blacklist surface.",
+      "reviewer": "Codex inferred-status backfill",
+      "reviewedAt": "2026-05-12"
+    },
+    "deploymentModel": "single-chain",
+    "collateralQuality": "native",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "variantOf": "usdt-tether",
+    "variantKind": "savings-passthrough",
+    "reserves": [
+      {
+        "name": "USDT deposited in Spark Savings vault",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "usdt-tether",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "susdt-spark",
+      "display": {
+        "url": "https://spark.fi",
+        "label": "Spark Savings USDT"
+      },
+      "adapter": "erc4626-single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "USDT deposited in Spark Savings vault",
+          "risk": "low",
+          "coinId": "usdt-tether",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Spark Savings USDT",
       "yieldType": "nav-appreciation"
     }
   },
@@ -27778,101 +27089,6 @@
     ]
   },
   {
-    "id": "usdw-wisdomtree",
-    "detailProvider": "coingecko",
-    "name": "WisdomTree Dollar Token",
-    "symbol": "USDW",
-    "flags": {
-      "backing": "rwa-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized",
-      "yieldBearing": false,
-      "rwa": false,
-      "navToken": false
-    },
-    "collateral": "Cash and short-duration U.S. Treasury bills held in segregated accounts under WisdomTree Digital Trust Company, a New York-chartered limited-purpose trust company supervised by NYDFS",
-    "pegMechanism": "1:1 USD-pegged stablecoin issued by WisdomTree Digital Trust; primary mint and redemption operate through WisdomTree Connect with USD-wire settlement and dealer-facilitated USDC routes",
-    "geckoId": "wisdomtree-dollar-token",
-    "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://www.wisdomtree.com/digital-funds/usdw",
-      "provider": "WisdomTree Digital Trust (monthly reserve reports)"
-    },
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.wisdomtree.com/digital-funds/usdw"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/WisdomTreeFunds"
-      },
-      {
-        "label": "WisdomTree Connect",
-        "url": "https://www.wisdomtree.com/connect"
-      }
-    ],
-    "jurisdiction": {
-      "country": "United States",
-      "regulator": "NYDFS",
-      "license": "WisdomTree Digital Trust Company (NY limited-purpose trust charter)"
-    },
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x2e5f7dbed4aa799b13c737992562b7e8742b3a32",
-        "decimals": 18
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "WisdomTree Connect terms",
-          "url": "https://www.wisdomtree.com/connect"
-        }
-      ],
-      "evidence": "WisdomTree Digital Trust acts as transfer agent for USDW with permissioned issuance and freeze authority under NYDFS supervision.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "native-multichain",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
-    "reserves": [
-      {
-        "name": "U.S. Treasury Bills",
-        "pct": 85,
-        "risk": "very-low"
-      },
-      {
-        "name": "Cash and bank deposits",
-        "pct": 15,
-        "risk": "very-low"
-      }
-    ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "attestation-mix",
-      "breakerScope": "usdw-wisdomtree",
-      "display": {
-        "url": "https://www.wisdomtree.com/digital-funds/usdw",
-        "label": "WisdomTree USDW disclosures"
-      },
-      "adapter": "curated-validated",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
-        }
-      }
-    }
-  },
-  {
     "id": "usdx-hex-trust",
     "llamaId": "263",
     "detailProvider": "defillama",
@@ -29243,112 +28459,6 @@
     }
   },
   {
-    "id": "ustbl-spiko",
-    "detailProvider": "coingecko",
-    "name": "Spiko US T-Bills Money Market Fund",
-    "symbol": "USTBL",
-    "flags": {
-      "backing": "rwa-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized",
-      "yieldBearing": true,
-      "rwa": true,
-      "navToken": true
-    },
-    "collateral": "Short-dated U.S. Treasury bills with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
-    "pegMechanism": "USD-denominated NAV-accreting share token tracking the variable-NAV money market fund; primary mint and redemption settle same-day at fund NAV with a $1k minimum; Chainlink CCIP relays issuance between Ethereum, Arbitrum, and Polygon",
-    "geckoId": "spiko-us-t-bills-money-market-fund",
-    "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://www.spiko.io/",
-      "provider": "Spiko (daily NAV and fund holdings disclosures)"
-    },
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.spiko.io/"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/spiko_eu"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.spiko.io/"
-      }
-    ],
-    "jurisdiction": {
-      "country": "France",
-      "regulator": "AMF",
-      "license": "UCITS Short-Term VNAV Money Market Fund"
-    },
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
-        "decimals": 5
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "Spiko website",
-          "url": "https://www.spiko.io/"
-        }
-      ],
-      "evidence": "Spiko acts as transfer agent for USTBL with permissioned ERC-1967 upgradeable proxy and KYC-gated transfers, retaining freeze and burn authority over fund shares.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "third-party-bridge",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
-    "reserves": [
-      {
-        "name": "U.S. Treasury Bills",
-        "pct": 95,
-        "risk": "very-low"
-      },
-      {
-        "name": "Cash and bank deposits",
-        "pct": 5,
-        "risk": "very-low"
-      }
-    ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "single-asset",
-      "breakerScope": "ustbl-spiko",
-      "display": {
-        "url": "https://www.spiko.io/",
-        "label": "Spiko fund page"
-      },
-      "adapter": "curated-validated",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
-        }
-      }
-    },
-    "notices": [
-      {
-        "type": "info",
-        "title": "Multi-chain EU-regulated MMF",
-        "message": "USTBL is also issued on Arbitrum and Polygon via Chainlink CCIP. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
-      }
-    ],
-    "yieldConfig": {
-      "yieldSource": "Spiko US T-Bills MMF (U.S. Treasury bill NAV)",
-      "yieldType": "nav-appreciation"
-    }
-  },
-  {
     "id": "usx-dforce",
     "llamaId": "44",
     "detailProvider": "coingecko",
@@ -29899,112 +29009,6 @@
         "risk": "high"
       }
     ]
-  },
-  {
-    "id": "vbill-vaneck",
-    "detailProvider": "coingecko",
-    "name": "VanEck Treasury Fund",
-    "symbol": "VBILL",
-    "flags": {
-      "backing": "rwa-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized",
-      "yieldBearing": true,
-      "rwa": true,
-      "navToken": true
-    },
-    "collateral": "Short-duration U.S. Treasury bills held by a BVI Professional Fund advised by Van Eck Associates; tokenization, transfer agency, and KYC by Securitize with State Street as fund administrator",
-    "pegMechanism": "NAV-accreting institutional T-bill share token; instant mint and redemption at daily NAV through Securitize Markets against USDC, AUSD, or USD wire; Chainlink NAVLink oracle is integrated by Aave Horizon (oracle address not yet wired into Pharos)",
-    "geckoId": "vaneck-treasury-fund",
-    "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund",
-      "provider": "Securitize / Van Eck Associates (daily NAV and holdings disclosures)"
-    },
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/vaneck_us"
-      },
-      {
-        "label": "Securitize Markets",
-        "url": "https://markets.securitize.io/"
-      }
-    ],
-    "jurisdiction": {
-      "country": "British Virgin Islands",
-      "regulator": "BVI FSC",
-      "license": "BVI Professional Fund"
-    },
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
-        "decimals": 6
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "Securitize VBILL page",
-          "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund"
-        }
-      ],
-      "evidence": "Securitize operates VBILL with permissioned token transfers restricted to KYC-onboarded institutional holders and retains transfer-agent freeze and burn authority on behalf of Van Eck Associates.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "third-party-bridge",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
-    "reserves": [
-      {
-        "name": "U.S. Treasury Bills",
-        "pct": 95,
-        "risk": "very-low"
-      },
-      {
-        "name": "Cash and repurchase agreements",
-        "pct": 5,
-        "risk": "very-low"
-      }
-    ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "single-asset",
-      "breakerScope": "vbill-vaneck",
-      "display": {
-        "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund",
-        "label": "Securitize VBILL fund page"
-      },
-      "adapter": "curated-validated",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
-        }
-      }
-    },
-    "notices": [
-      {
-        "type": "info",
-        "title": "Securitize-administered NAV token",
-        "message": "VBILL is institutional only via Securitize Markets and also issues on Avalanche, BNB Chain, and Solana via Wormhole. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
-      }
-    ],
-    "yieldConfig": {
-      "yieldSource": "VanEck Treasury Fund (T-bill NAV accretion)",
-      "yieldType": "nav-appreciation"
-    }
   },
   {
     "id": "vchf-vnx",
@@ -31152,195 +30156,6 @@
     },
     "yieldConfig": {
       "yieldSource": "Reservoir savings vault (srUSD)",
-      "yieldType": "nav-appreciation"
-    }
-  },
-  {
-    "id": "wstbt-matrixdock",
-    "detailProvider": "coingecko",
-    "name": "Wrapped Matrixdock STBT",
-    "symbol": "wSTBT",
-    "flags": {
-      "backing": "rwa-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized-dependent",
-      "yieldBearing": true,
-      "rwa": true,
-      "navToken": true
-    },
-    "pegReferenceId": "stbt-matrixdock",
-    "collateral": "1:1 wrapper around Matrixdock STBT (short-term U.S. Treasury bills and Treasury-collateralised reverse repos); yield accrues into the wrapper's exchange rate rather than rebasing supply",
-    "pegMechanism": "Non-rebasing NAV-accreting wrapper around STBT used on Curve and other AMMs; mint and redeem against STBT via the wstbt contract; underlying redemption against U.S. dollars runs through Matrixdock at NAV",
-    "geckoId": "wrapped-stbt",
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.matrixdock.com/stbt"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/Matrixdock_"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.matrixdock.com/"
-      }
-    ],
-    "jurisdiction": {
-      "country": "Singapore",
-      "regulator": "MAS",
-      "license": "Singapore MAS exemption (institutional / accredited investors only)"
-    },
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x288a8005c53632d920045b7c7c2e54a3f1bc4c83",
-        "decimals": 18
-      }
-    ],
-    "dependencies": [
-      {
-        "id": "stbt-matrixdock",
-        "weight": 1,
-        "type": "wrapper"
-      }
-    ],
-    "blacklistabilityReview": {
-      "reviewedStatus": "inherited",
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: wSTBT resolves to Upstream because the wrapper variant inherits freeze and transfer surface from STBT.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "single-chain",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
-    "variantOf": "stbt-matrixdock",
-    "variantKind": "savings-passthrough",
-    "reserves": [
-      {
-        "name": "Matrixdock STBT (short-term U.S. Treasury bills and reverse repos)",
-        "pct": 100,
-        "risk": "very-low",
-        "coinId": "stbt-matrixdock",
-        "depType": "wrapper"
-      }
-    ],
-    "yieldConfig": {
-      "yieldSource": "Matrixdock STBT NAV accretion (wrapped, non-rebasing)",
-      "yieldType": "nav-appreciation"
-    }
-  },
-  {
-    "id": "wtgxx-wisdomtree",
-    "detailProvider": "coingecko",
-    "name": "WisdomTree Government Money Market Digital Fund",
-    "symbol": "WTGXX",
-    "flags": {
-      "backing": "rwa-backed",
-      "pegCurrency": "USD",
-      "governance": "centralized",
-      "yieldBearing": true,
-      "rwa": true,
-      "navToken": true
-    },
-    "collateral": "U.S. government obligations, cash, and repurchase agreements held by WisdomTree Digital Government Money Market Fund; '40 Act-registered money market fund administered by WisdomTree Asset Management and recorded natively on-chain via the WisdomTree Connect platform",
-    "pegMechanism": "$1.00 stable NAV money market share; SEC-approved 24/7 dealer trading at fixed $1 intraday (Feb 2026); primary subscription and redemption are gated to WisdomTree Connect users with USDC dealer settlement and USD-wire alternatives",
-    "geckoId": "wisdomtree-government-money-market-digital-fund",
-    "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",
-      "provider": "WisdomTree Asset Management (daily NAV and holdings published on fund page)"
-    },
-    "links": [
-      {
-        "label": "Website",
-        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
-      },
-      {
-        "label": "Twitter",
-        "url": "https://x.com/WisdomTreeFunds"
-      },
-      {
-        "label": "WisdomTree Connect",
-        "url": "https://www.wisdomtree.com/connect"
-      }
-    ],
-    "jurisdiction": {
-      "country": "United States",
-      "regulator": "SEC",
-      "license": "Investment Company Act of 1940 (registered money market fund)"
-    },
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x1fecf3d9d4fee7f2c02917a66028a48c6706c179",
-        "decimals": 18
-      }
-    ],
-    "canBeBlacklisted": true,
-    "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sources": [
-        {
-          "label": "WisdomTree Digital Funds prospectus",
-          "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
-        }
-      ],
-      "evidence": "WisdomTree acts as transfer agent for WTGXX with permissioned token transfers restricted to WisdomTree Connect-onboarded holders, giving the issuer freeze and burn authority over WTGXX balances.",
-      "reviewer": "Codex RWA expansion review",
-      "reviewedAt": "2026-05-12"
-    },
-    "chainTier": "ethereum",
-    "deploymentModel": "native-multichain",
-    "collateralQuality": "rwa",
-    "custodyModel": "institutional-regulated",
-    "governanceQuality": "regulated-entity",
-    "reserves": [
-      {
-        "name": "U.S. Government Securities",
-        "pct": 65,
-        "risk": "very-low"
-      },
-      {
-        "name": "Repurchase Agreements",
-        "pct": 30,
-        "risk": "very-low"
-      },
-      {
-        "name": "Cash",
-        "pct": 5,
-        "risk": "very-low"
-      }
-    ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "single-asset",
-      "breakerScope": "wtgxx-wisdomtree",
-      "display": {
-        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",
-        "label": "WisdomTree WTGXX fund page"
-      },
-      "adapter": "curated-validated",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "etherscan-proxy"
-        }
-      }
-    },
-    "notices": [
-      {
-        "type": "info",
-        "title": "Multi-chain fund with limited on-chain telemetry",
-        "message": "WTGXX is the digital share token of WisdomTree's '40 Act government money market fund, also deployed on Arbitrum, Avalanche, Base, Optimism, Plume, and Stellar via WisdomTree Connect. Pharos currently tracks only the Ethereum supply contract pending per-chain verification; live reserves use a curated weekly snapshot of the WisdomTree fund factsheet."
-      }
-    ],
-    "yieldConfig": {
-      "yieldSource": "WisdomTree WTGXX U.S. government money market fund",
       "yieldType": "nav-appreciation"
     }
   },
@@ -32862,6 +31677,97 @@
     "yieldConfig": {
       "yieldSource": "YieldFi yUSD strategies",
       "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "yvusdc-yearn",
+    "detailProvider": "coingecko",
+    "name": "Yearn v3 USDC Vault",
+    "symbol": "yvUSDC-1",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usdc-circle",
+    "collateral": "USDC allocated by Yearn v3 strategy allocator across whitelisted yield strategies (Aave, Compound, Morpho, Sky and similar protocols) selected by Yearn governance",
+    "pegMechanism": "ERC-4626 Yearn v3 vault shares accrue value against USDC as the underlying strategies generate yield; redemptions return USDC subject to the v3 queue and strategy liquidity",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/yearnfi"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
+        "decimals": 6
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: yvUSDC-1 resolves to Upstream because Yearn v3 strategies hold USDC across whitelisted protocols, inheriting Circle's blacklist surface.",
+      "reviewer": "Codex inferred-status backfill",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "variantOf": "usdc-circle",
+    "variantKind": "strategy-vault",
+    "reserves": [
+      {
+        "name": "USDC routed through Yearn v3 strategy allocator",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "yvusdc-yearn",
+      "display": {
+        "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
+        "label": "Yearn v3 USDC"
+      },
+      "adapter": "erc4626-single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "USDC routed through Yearn v3 strategy allocator",
+          "risk": "medium",
+          "coinId": "usdc-circle",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Yearn v3 USDC vault",
+      "yieldType": "lending-vault"
     }
   },
   {
