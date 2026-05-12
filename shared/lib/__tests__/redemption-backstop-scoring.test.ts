@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
+  applyCapacityConstraintScoreEffects,
   computeEffectiveExitScore,
   computeCapacityScore,
+  computeModeledExitSizeUsd,
   computeRedemptionBackstopScore,
   isStrongLiveDirectRoute,
 } from "../redemption-backstop-scoring";
@@ -60,6 +62,41 @@ describe("computeEffectiveExitScore", () => {
     expect(computeEffectiveExitScore(NaN, null)).toBeNull();
     expect(computeEffectiveExitScore(null, Infinity)).toBeNull();
     expect(computeEffectiveExitScore(undefined, undefined)).toBeNull();
+  });
+
+  it("scales redemption contribution by executable capacity and confidence", () => {
+    expect(
+      computeEffectiveExitScore(40, 90, {
+        circulatingSupplyUsd: 1_000_000_000,
+        currentExecutableCapacityUsd: 1_000_000,
+        routeExitCorrelation: "unknown",
+        modelConfidence: "medium",
+      }),
+    ).toBe(40);
+  });
+
+  it("applies diversification bonus only for independent issuer rails", () => {
+    const sharedBacking = computeEffectiveExitScore(70, 80, {
+      circulatingSupplyUsd: 100_000_000,
+      currentExecutableCapacityUsd: 25_000_000,
+      routeExitCorrelation: "same-stablecoin-pool-backing",
+      modelConfidence: "high",
+    });
+    const independent = computeEffectiveExitScore(70, 80, {
+      circulatingSupplyUsd: 100_000_000,
+      currentExecutableCapacityUsd: 25_000_000,
+      routeExitCorrelation: "independent-issuer-rail",
+      modelConfidence: "high",
+    });
+
+    expect(sharedBacking).toBe(80);
+    expect(independent).toBe(87);
+  });
+
+  it("models exit size as five percent of supply with floor and cap", () => {
+    expect(computeModeledExitSizeUsd(1_000_000)).toBe(100_000);
+    expect(computeModeledExitSizeUsd(100_000_000)).toBe(5_000_000);
+    expect(computeModeledExitSizeUsd(10_000_000_000)).toBe(25_000_000);
   });
 });
 
@@ -157,6 +194,46 @@ describe("computeCapacityScore", () => {
   it("handles USD beyond top breakpoint without overflow", () => {
     const huge = computeCapacityScore({ immediateCapacityUsd: 1_000_000_000_000, immediateCapacityRatio: null });
     expect(huge.absoluteCapacityScore).toBe(100);
+  });
+
+  it("uses tier-floor scoring for fixed USD capacity when supply is missing", () => {
+    const result = computeCapacityScore({
+      immediateCapacityUsd: 5_000_000,
+      immediateCapacityRatio: null,
+      absoluteOnlyMode: "tier-floor",
+    });
+    expect(result.absoluteCapacityScore).toBe(40);
+    expect(result.score).toBe(40);
+  });
+});
+
+describe("applyCapacityConstraintScoreEffects", () => {
+  it("does not penalize missing optional telemetry", () => {
+    expect(
+      applyCapacityConstraintScoreEffects({
+        capacityScore: 80,
+        scoringCapacityUsd: 10_000_000,
+      }),
+    ).toEqual({ score: 80, capsApplied: [] });
+  });
+
+  it("penalizes adverse live queue, delay, minimum size, and eligibility telemetry", () => {
+    const result = applyCapacityConstraintScoreEffects({
+      capacityScore: 80,
+      scoringCapacityUsd: 10_000_000,
+      settlementDelaySec: 172_800,
+      queueDepthUsd: 12_000_000,
+      minRedeemUsd: 100_000,
+      liveHolderEligibility: "whitelisted-primary",
+    });
+
+    expect(result.score).toBeLessThan(80);
+    expect(result.capsApplied).toEqual([
+      "settlement-delay-penalty",
+      "queue-depth-penalty",
+      "minimum-size-penalty",
+      "live-holder-eligibility-penalty",
+    ]);
   });
 });
 

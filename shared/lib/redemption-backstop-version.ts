@@ -1,9 +1,26 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.997",
+  currentVersion: "4.0",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "4.0",
+      title: "Current-capacity scoring and evidence-aware route quality",
+      date: "2026-05-12",
+      effectiveAt: 1778605200,
+      summary:
+        "Redemption Backstop v4 separates current executable capacity from eventual redeemability, adds fixed-USD capacity and size-aware costs, and makes route status, confidence, and effective-exit blending more explicit and conservative.",
+      impact: [
+        "Standalone route scoring now uses current executable capacity while `eventualRedeemabilityScore` preserves long-tail legal or protocol route quality as separate context",
+        "Capacity profiles expose immediate, daily-limited, queued, eventual, and scoring capacity fields; fixed public USD buffers can be modeled without encoding arbitrary supply ratios",
+        "Effective-exit blending now scales redemption uplift by modeled exit size, current capacity, confidence, and DEX/redemption correlation, with diversification bonus reserved for plausibly independent issuer rails",
+        "Route-status evidence remains a four-hour snapshot from live-reserve metadata, reviewed static policy, and market-implied depeg overlays; no new outbound route-status fetches are added to the redemption sync",
+        "Registry validation now runs through a shared manifest/validator, emits deterministic audit reports, and is paired with v4 active-gap and heuristic-route coverage audit tooling",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.997",
       title: "Redemption coverage expansion and documented-bound upgrades",

@@ -8,6 +8,7 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import {
   loadRedemptionBackstopMap,
   loadRedemptionBackstopSnapshot,
+  normalizeRedemptionBackstopRunMetadata,
   RedemptionBackstopSnapshotUnavailableError,
   resolveSnapshotMethodologyVersion,
   upsertRedemptionBackstopSnapshots,
@@ -49,6 +50,16 @@ function makeRealisticRow(overrides: Record<string, unknown> = {}) {
       routeStatus: "open",
       routeStatusSource: "static-config",
       holderEligibility: "verified-customer",
+      capacityProfile: {
+        immediateUsd: 10_000_000,
+        dailyLimitUsd: 5_000_000,
+        queuedUsd: 12_000_000,
+        eventualUsd: null,
+        scoringUsd: 5_000_000,
+        scoringHorizon: "daily",
+        capacityProfileConfidence: "heuristic",
+        modeledExitSizeUsd: 1_000_000,
+      },
       capacityKind: "live-proxy-validated",
       freshnessKind: "verified-source-timestamp",
       sourceTimestamp: 1_699_999_900,
@@ -58,6 +69,22 @@ function makeRealisticRow(overrides: Record<string, unknown> = {}) {
       dailyLimitUsd: 5_000_000,
       minRedeemUsd: 100_000,
       liveHolderEligibility: "whitelisted-primary",
+      eventualRedeemabilityScore: 72,
+      confidenceDetails: {
+        capacityEvidenceQuality: 40,
+        feeEvidenceQuality: 50,
+        routeStatusFreshness: 60,
+        holderCohortBreadth: 70,
+        sourceQuality: 80,
+        reviewedDocAgeDays: 30,
+        reasons: ["heuristic capacity"],
+      },
+      costScenarioScores: {
+        retail: 30,
+        activeUser: 40,
+        institutional: null,
+      },
+      routeExitCorrelation: "independent-issuer-rail",
       capsApplied: ["offchain-route-cap"],
       feeDescription: "EEA burn fee is 0 bps; other Circle redemption fees may vary",
       docs: { label: "Reserve feed", url: "https://example.com/reserves", provenance: "proof-of-reserves" },
@@ -66,6 +93,52 @@ function makeRealisticRow(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+const LEGACY_V3997_REDEMPTION_BACKSTOP_ROW = makeRealisticRow({
+  stablecoin_id: "usdc-circle",
+  methodology_version: "3.997",
+  details_json: JSON.stringify({
+    resolutionState: "resolved",
+    capacityConfidence: "documented-bound",
+    capacitySemantics: "eventual-only",
+    feeConfidence: "fixed",
+    feeModelKind: "fixed-bps",
+    modelConfidence: "medium",
+    routeStatus: "open",
+    routeStatusSource: "static-config",
+    holderEligibility: "verified-customer",
+    legacyExtraField: { keepReadersTolerant: true },
+  }),
+});
+
+const LEGACY_V3997_REDEMPTION_BACKSTOP_HISTORY_ROW = {
+  stablecoin_id: "usdc-circle",
+  snapshot_date: 1_746_748_800,
+  score: 65,
+  effective_exit_score: 58,
+  dex_liquidity_score: 44,
+  updated_at: 1_746_800_000,
+  methodology_version: "3.997",
+  details_json: LEGACY_V3997_REDEMPTION_BACKSTOP_ROW.details_json,
+  snapshot_run_id: "legacy-run",
+};
+
+const LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW = {
+  run_id: "legacy-run",
+  completed_at: 1_746_800_010,
+  status: "completed",
+  expected_count: 1,
+  written_count: 1,
+  min_updated_at: 1_746_800_000,
+  max_updated_at: 1_746_800_000,
+  methodology_version: "3.997",
+  metadata_json: JSON.stringify({
+    configured: 264,
+    resolved: 249,
+    unresolved: 15,
+    legacyExtraField: "ignored by typed consumers",
+  }),
+};
 
 describe("loadRedemptionBackstopMap", () => {
   it("keeps the row and drops malformed details JSON", async () => {
@@ -140,6 +213,11 @@ describe("loadRedemptionBackstopMap", () => {
     expect(entry!.routeStatus).toBe("open");
     expect(entry!.routeStatusSource).toBe("static-config");
     expect(entry!.holderEligibility).toBe("verified-customer");
+    expect(entry!.capacityProfile).toMatchObject({
+      immediateUsd: 10_000_000,
+      scoringHorizon: "daily",
+      capacityProfileConfidence: "heuristic",
+    });
     expect(entry!.capacityKind).toBe("live-proxy-validated");
     expect(entry!.freshnessKind).toBe("verified-source-timestamp");
     expect(entry!.sourceTimestamp).toBe(1_699_999_900);
@@ -149,6 +227,10 @@ describe("loadRedemptionBackstopMap", () => {
     expect(entry!.dailyLimitUsd).toBe(5_000_000);
     expect(entry!.minRedeemUsd).toBe(100_000);
     expect(entry!.liveHolderEligibility).toBe("whitelisted-primary");
+    expect(entry!.eventualRedeemabilityScore).toBe(72);
+    expect(entry!.confidenceDetails?.reasons).toEqual(["heuristic capacity"]);
+    expect(entry!.costScenarioScores).toEqual({ retail: 30, activeUser: 40, institutional: null });
+    expect(entry!.routeExitCorrelation).toBe("independent-issuer-rail");
     expect(entry!.capsApplied).toEqual(["offchain-route-cap"]);
     expect(entry!.feeDescription).toBe("EEA burn fee is 0 bps; other Circle redemption fees may vary");
     expect(entry!.docs).toEqual({
@@ -383,6 +465,8 @@ describe("loadRedemptionBackstopMap", () => {
               routeStatus: "broken",
               routeStatusSource: "bad-source",
               holderEligibility: "nope",
+              capacityProfile: { scoringHorizon: "bad", capacityProfileConfidence: "heuristic" },
+              confidenceDetails: { capacityEvidenceQuality: 101 },
               capacityKind: "bad-kind",
               freshnessKind: "bad-freshness",
               sourceTimestamp: -1,
@@ -392,6 +476,9 @@ describe("loadRedemptionBackstopMap", () => {
               dailyLimitUsd: -1,
               minRedeemUsd: -1,
               liveHolderEligibility: "not-eligible",
+              eventualRedeemabilityScore: -1,
+              costScenarioScores: { retail: "free" },
+              routeExitCorrelation: "too-close",
               notes: ["valid", 123],
               capsApplied: ["valid-cap", false],
               docs: { url: "not-a-url" },
@@ -414,6 +501,8 @@ describe("loadRedemptionBackstopMap", () => {
     expect(entry!.routeStatus).toBe("unknown");
     expect(entry!.routeStatusSource).toBe("static-config");
     expect(entry!.holderEligibility).toBe("unknown");
+    expect(entry!.capacityProfile).toBeUndefined();
+    expect(entry!.confidenceDetails).toBeUndefined();
     expect(entry!.capacityKind).toBeUndefined();
     expect(entry!.freshnessKind).toBeUndefined();
     expect(entry!.sourceTimestamp).toBeUndefined();
@@ -423,9 +512,82 @@ describe("loadRedemptionBackstopMap", () => {
     expect(entry!.dailyLimitUsd).toBeUndefined();
     expect(entry!.minRedeemUsd).toBeUndefined();
     expect(entry!.liveHolderEligibility).toBeUndefined();
+    expect(entry!.eventualRedeemabilityScore).toBeUndefined();
+    expect(entry!.costScenarioScores).toBeUndefined();
+    expect(entry!.routeExitCorrelation).toBeUndefined();
     expect(entry!.notes).toBeUndefined();
     expect(entry!.capsApplied).toBeUndefined();
     expect(entry!.docs).toBeUndefined();
+  });
+
+  it("reads frozen v3.997 current/history/run fixture shapes without v4 optional fields", async () => {
+    expect(LEGACY_V3997_REDEMPTION_BACKSTOP_HISTORY_ROW.snapshot_date).toBe(1_746_748_800);
+
+    const db = mockD1([
+      {
+        match: "FROM redemption_backstop_runs",
+        rows: [LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW],
+      },
+      {
+        match: "WHERE snapshot_run_id = ?",
+        matchBinds: ["legacy-run"],
+        rows: [LEGACY_V3997_REDEMPTION_BACKSTOP_ROW],
+      },
+    ]);
+
+    const result = await loadRedemptionBackstopSnapshot(db);
+    const entry = result.map["usdc-circle"];
+
+    expect(result.runId).toBe("legacy-run");
+    expect(result.latestUpdatedAt).toBe(1_746_800_000);
+    expect(entry).toMatchObject({
+      stablecoinId: "usdc-circle",
+      methodologyVersion: "3.997",
+      resolutionState: "resolved",
+      routeStatus: "open",
+      routeStatusSource: "static-config",
+    });
+    expect(entry.capacityProfile).toBeUndefined();
+    expect(entry.confidenceDetails).toBeUndefined();
+    expect(entry.routeExitCorrelation).toBeUndefined();
+  });
+
+  it("normalizes run metadata for completed, running, failed, and legacy manifests", () => {
+    expect(
+      normalizeRedemptionBackstopRunMetadata(LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW.metadata_json),
+    ).toMatchObject({
+      configured: 264,
+      resolved: 249,
+      unresolved: 15,
+    });
+    expect(
+      normalizeRedemptionBackstopRunMetadata(
+        JSON.stringify({
+          registryHash: "abc123",
+          familyCounts: { "offchain-issuer": 124, broken: "many" },
+          strongProxyCount: 249,
+          heuristicCount: 15,
+          validatorVersion: 4,
+          configMethodologyVersion: "4.0",
+          v4ScoringParametersHash: "def456",
+          routeStatusProducer: "live-reserve-adapters-plus-static-policy",
+          routeStatusProducerFetches: false,
+          failure: { message: "boom" },
+        }),
+      ),
+    ).toMatchObject({
+      registryHash: "abc123",
+      familyCounts: { "offchain-issuer": 124 },
+      strongProxyCount: 249,
+      heuristicCount: 15,
+      validatorVersion: 4,
+      configMethodologyVersion: "4.0",
+      v4ScoringParametersHash: "def456",
+      routeStatusProducer: "live-reserve-adapters-plus-static-policy",
+      routeStatusProducerFetches: false,
+    });
+    expect(normalizeRedemptionBackstopRunMetadata("not-json")).toEqual({});
+    expect(normalizeRedemptionBackstopRunMetadata(null)).toEqual({});
   });
 
   it("writes current/history rows under a completed run manifest", async () => {

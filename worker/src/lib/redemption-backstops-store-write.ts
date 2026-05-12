@@ -1,4 +1,4 @@
-import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import { RedemptionBackstopDetailsSchema, type RedemptionBackstopEntry } from "@shared/types/redemption";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { batchExecute } from "./db";
 import { runWithOverloadRetry } from "./cron-lease";
@@ -6,39 +6,48 @@ import { runWithOverloadRetry } from "./cron-lease";
 export type RedemptionBackstopSnapshotRecord = RedemptionBackstopEntry;
 
 function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
-  return JSON.stringify({
-    resolutionState: record.resolutionState,
-    capacityConfidence: record.capacityConfidence,
-    ...(record.capacityBasis ? { capacityBasis: record.capacityBasis } : {}),
-    capacitySemantics: record.capacitySemantics,
-    feeConfidence: record.feeConfidence,
-    feeModelKind: record.feeModelKind,
-    modelConfidence: record.modelConfidence,
-    routeStatus: record.routeStatus,
-    routeStatusSource: record.routeStatusSource,
-    ...(record.routeStatusReason ? { routeStatusReason: record.routeStatusReason } : {}),
-    ...(record.routeStatusReviewedAt ? { routeStatusReviewedAt: record.routeStatusReviewedAt } : {}),
-    holderEligibility: record.holderEligibility,
-    routeFamily: record.routeFamily,
-    provider: record.provider,
-    sourceMode: record.sourceMode,
-    immediateCapacityUsd: record.immediateCapacityUsd,
-    immediateCapacityRatio: record.immediateCapacityRatio,
-    ...(record.capacityKind ? { capacityKind: record.capacityKind } : {}),
-    ...(record.freshnessKind ? { freshnessKind: record.freshnessKind } : {}),
-    ...(record.sourceTimestamp != null ? { sourceTimestamp: record.sourceTimestamp } : {}),
-    ...(record.sourceUrls ? { sourceUrls: record.sourceUrls } : {}),
-    ...(record.settlementDelaySec != null ? { settlementDelaySec: record.settlementDelaySec } : {}),
-    ...(record.queueDepthUsd != null ? { queueDepthUsd: record.queueDepthUsd } : {}),
-    ...(record.dailyLimitUsd != null ? { dailyLimitUsd: record.dailyLimitUsd } : {}),
-    ...(record.minRedeemUsd != null ? { minRedeemUsd: record.minRedeemUsd } : {}),
-    ...(record.liveHolderEligibility ? { liveHolderEligibility: record.liveHolderEligibility } : {}),
-    feeBps: record.feeBps,
-    ...(record.docs ? { docs: record.docs } : {}),
-    ...(record.notes ? { notes: record.notes } : {}),
-    ...(record.capsApplied ? { capsApplied: record.capsApplied } : {}),
-    ...(record.feeDescription ? { feeDescription: record.feeDescription } : {}),
-  });
+  return JSON.stringify(
+    RedemptionBackstopDetailsSchema.parse({
+      resolutionState: record.resolutionState,
+      capacityConfidence: record.capacityConfidence,
+      ...(record.capacityBasis ? { capacityBasis: record.capacityBasis } : {}),
+      capacitySemantics: record.capacitySemantics,
+      ...(record.capacityProfile ? { capacityProfile: record.capacityProfile } : {}),
+      feeConfidence: record.feeConfidence,
+      feeModelKind: record.feeModelKind,
+      modelConfidence: record.modelConfidence,
+      ...(record.confidenceDetails ? { confidenceDetails: record.confidenceDetails } : {}),
+      routeStatus: record.routeStatus,
+      routeStatusSource: record.routeStatusSource,
+      ...(record.routeStatusReason ? { routeStatusReason: record.routeStatusReason } : {}),
+      ...(record.routeStatusReviewedAt ? { routeStatusReviewedAt: record.routeStatusReviewedAt } : {}),
+      holderEligibility: record.holderEligibility,
+      routeFamily: record.routeFamily,
+      provider: record.provider,
+      sourceMode: record.sourceMode,
+      immediateCapacityUsd: record.immediateCapacityUsd,
+      immediateCapacityRatio: record.immediateCapacityRatio,
+      ...(record.eventualRedeemabilityScore != null
+        ? { eventualRedeemabilityScore: record.eventualRedeemabilityScore }
+        : {}),
+      ...(record.capacityKind ? { capacityKind: record.capacityKind } : {}),
+      ...(record.freshnessKind ? { freshnessKind: record.freshnessKind } : {}),
+      ...(record.sourceTimestamp != null ? { sourceTimestamp: record.sourceTimestamp } : {}),
+      ...(record.sourceUrls ? { sourceUrls: record.sourceUrls } : {}),
+      ...(record.settlementDelaySec != null ? { settlementDelaySec: record.settlementDelaySec } : {}),
+      ...(record.queueDepthUsd != null ? { queueDepthUsd: record.queueDepthUsd } : {}),
+      ...(record.dailyLimitUsd != null ? { dailyLimitUsd: record.dailyLimitUsd } : {}),
+      ...(record.minRedeemUsd != null ? { minRedeemUsd: record.minRedeemUsd } : {}),
+      ...(record.liveHolderEligibility ? { liveHolderEligibility: record.liveHolderEligibility } : {}),
+      feeBps: record.feeBps,
+      ...(record.costScenarioScores ? { costScenarioScores: record.costScenarioScores } : {}),
+      ...(record.routeExitCorrelation ? { routeExitCorrelation: record.routeExitCorrelation } : {}),
+      ...(record.docs ? { docs: record.docs } : {}),
+      ...(record.notes ? { notes: record.notes } : {}),
+      ...(record.capsApplied ? { capsApplied: record.capsApplied } : {}),
+      ...(record.feeDescription ? { feeDescription: record.feeDescription } : {}),
+    }),
+  );
 }
 
 function buildCurrentUpsert(
@@ -255,12 +264,7 @@ function buildRunFailedUpdate(
         WHERE run_id = ?
           AND status = 'running'`,
     )
-    .bind(
-      args.completedAt,
-      args.writtenCount,
-      JSON.stringify(args.metadata),
-      args.runId,
-    );
+    .bind(args.completedAt, args.writtenCount, JSON.stringify(args.metadata), args.runId);
 }
 
 function resolveRunBounds(records: RedemptionBackstopSnapshotRecord[]): {

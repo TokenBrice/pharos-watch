@@ -1,44 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { resolveCapacityConfidence, resolveFeeConfidence } from "@shared/lib/redemption-backstop-confidence";
-import { COLLATERAL_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/collateral-redeem";
-import { OFFCHAIN_ISSUER_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/offchain-issuer";
-import { PSM_AND_BASKET_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/psm-and-basket";
-import { QUEUE_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/queue-redeem";
+import { REDEMPTION_BACKSTOP_CONFIG_MANIFEST } from "@shared/lib/redemption-backstop-configs";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
-import { STABLECOIN_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/stablecoin-redeem";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstops";
-import type { RedemptionAccessModel, RedemptionExecutionModel, RedemptionRouteFamily, RedemptionSettlementModel } from "@shared/types";
+import type {
+  RedemptionAccessModel,
+  RedemptionExecutionModel,
+  RedemptionRouteFamily,
+  RedemptionSettlementModel,
+} from "@shared/types";
 
 const entries = Object.entries(REDEMPTION_BACKSTOP_CONFIGS);
-const familyModules = [
-  {
-    name: "offchain-issuer",
-    configs: OFFCHAIN_ISSUER_BACKSTOP_CONFIGS,
-    allowedRouteFamilies: new Set(["offchain-issuer"]),
-  },
-  {
-    name: "psm-and-basket",
-    configs: PSM_AND_BASKET_BACKSTOP_CONFIGS,
-    allowedRouteFamilies: new Set(["basket-redeem", "psm-swap"]),
-  },
-  {
-    name: "collateral-redeem",
-    configs: COLLATERAL_REDEEM_BACKSTOP_CONFIGS,
-    allowedRouteFamilies: new Set(["collateral-redeem"]),
-  },
-  {
-    name: "queue-redeem",
-    configs: QUEUE_REDEEM_BACKSTOP_CONFIGS,
-    allowedRouteFamilies: new Set(["queue-redeem"]),
-  },
-  {
-    name: "stablecoin-redeem",
-    configs: STABLECOIN_REDEEM_BACKSTOP_CONFIGS,
-    allowedRouteFamilies: new Set(["stablecoin-redeem"]),
-  },
-] as const;
+const familyModules = REDEMPTION_BACKSTOP_CONFIG_MANIFEST;
 
 describe("redemption backstop config consistency", () => {
   it("every config parses through the shared schema", () => {
@@ -157,7 +132,10 @@ describe("redemption backstop config consistency", () => {
   it("family modules only contain their declared route families", () => {
     const violations = familyModules.flatMap((moduleEntry) =>
       Object.entries(moduleEntry.configs)
-        .filter(([, config]) => !moduleEntry.allowedRouteFamilies.has(config.routeFamily))
+        .filter(([, config]) => {
+          const allowedRouteFamilies: readonly RedemptionRouteFamily[] = moduleEntry.allowedRouteFamilies;
+          return !allowedRouteFamilies.includes(config.routeFamily);
+        })
         .map(([id, config]) => `${moduleEntry.name}:${id}:${config.routeFamily}`),
     );
 
@@ -190,8 +168,7 @@ describe("redemption backstop config consistency", () => {
     const violations = entries
       .filter(
         ([, c]) =>
-          (c.routeFamily === "stablecoin-redeem" || c.routeFamily === "psm-swap") &&
-          c.executionModel === "opaque",
+          (c.routeFamily === "stablecoin-redeem" || c.routeFamily === "psm-swap") && c.executionModel === "opaque",
       )
       .map(([id, c]) => `${id}: ${c.routeFamily} + opaque`);
     expect(violations).toEqual([]);
@@ -207,9 +184,7 @@ describe("redemption backstop config consistency", () => {
   it("supply-ratio values are between 0 and 1", () => {
     const violations = entries
       .filter(
-        ([, c]) =>
-          c.capacityModel.kind === "supply-ratio" &&
-          (c.capacityModel.ratio <= 0 || c.capacityModel.ratio > 1),
+        ([, c]) => c.capacityModel.kind === "supply-ratio" && (c.capacityModel.ratio <= 0 || c.capacityModel.ratio > 1),
       )
       .map(([id, c]) => `${id}: ratio=${c.capacityModel.kind === "supply-ratio" ? c.capacityModel.ratio : "?"}`);
     expect(violations).toEqual([]);
@@ -257,7 +232,10 @@ describe("redemption backstop config consistency", () => {
 
   it("documented-bound routes always carry reviewedAt and explicit docs", () => {
     const violations = entries
-      .filter(([, c]) => c.capacityModel.confidence === "documented-bound" && (!c.reviewedAt || !c.docs || c.docs.length === 0))
+      .filter(
+        ([, c]) =>
+          c.capacityModel.confidence === "documented-bound" && (!c.reviewedAt || !c.docs || c.docs.length === 0),
+      )
       .map(([id, c]) => `${id}: reviewedAt=${c.reviewedAt ?? "missing"} docs=${c.docs?.length ?? 0}`);
     expect(violations).toEqual([]);
   });

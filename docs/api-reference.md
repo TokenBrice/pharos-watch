@@ -2003,6 +2003,8 @@ Rows written by the current worker are grouped by a completed snapshot run manif
 
 `routeStatus` / `routeStatusSource` describe current route availability separately from the static route shape. Normal rows use `routeStatus: "open"` and `routeStatusSource: "static-config"`. A severe active depeg (`>=2500 bps`) can publish `routeStatus: "degraded"` and `routeStatusSource: "market-implied"` for static or non-live-direct routes; those impaired rows have `score = null`, `effectiveExitScore = null`, and `modelConfidence = "low"`. `holderEligibility` describes the modeled holder cohort, such as `any-holder`, `verified-customer`, `whitelisted-primary`, `pre-incident-holder`, `issuer-discretionary`, or `unknown`.
 
+For v4-compatible snapshots, route-status and capacity telemetry remain part of the four-hour `sync-redemption-backstops` snapshot. The worker does not fetch a separate real-time route-status feed during this sync; route status comes from live-reserve adapter metadata, static reviewed policy, and market-implied severe-depeg overlays.
+
 Top-level fields:
 
 | Field         | Type                                      | Description                                                                                  |
@@ -2032,8 +2034,10 @@ Top-level fields:
 | `capacityConfidence`     | `string`                                        | `live-direct`, `live-proxy`, `documented-bound`, `heuristic`, or legacy `dynamic` fidelity tag for the capacity model |
 | `capacityBasis`          | `string \| undefined`                           | Typed basis for the modeled capacity, such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `live-direct-telemetry`, or `live-proxy-buffer` |
 | `capacitySemantics`      | `string`                                        | `immediate-bounded` or `eventual-only`, distinguishing current redeemable buffer from eventual redeemability |
+| `capacityProfile`        | `object \| undefined`                           | Optional v4 capacity profile separating immediate, daily, queued, eventual, and scoring capacity with a `scoringHorizon` and `capacityProfileConfidence` |
 | `capacityKind`           | `string \| undefined`                           | Optional adapter-declared live evidence shape, such as `live-direct-bounded`, `live-queue`, `live-proxy-validated`, `documented-bound`, `documented-eventual`, or `heuristic`. Context only; not Safety eligibility by itself |
 | `freshnessKind`          | `string \| undefined`                           | Optional adapter-declared redemption freshness evidence, such as `verified-source-timestamp`, `same-run-onchain`, `same-run-api`, `reviewed-static`, or `unverified` |
+| `confidenceDetails`      | `object \| undefined`                           | Optional v4 confidence rollup dimensions for capacity evidence, fee evidence, route-status freshness, holder-cohort breadth, and source quality |
 | `sourceTimestamp`        | `number \| undefined`                           | Optional source timestamp emitted by a live reserve adapter for the redemption telemetry |
 | `sourceUrls`             | `string[] \| undefined`                         | Optional source URLs emitted by a live reserve adapter for the redemption telemetry |
 | `settlementDelaySec`     | `number \| undefined`                           | Optional adapter-emitted settlement delay constraint in seconds |
@@ -2041,6 +2045,7 @@ Top-level fields:
 | `dailyLimitUsd`          | `number \| undefined`                           | Optional adapter-emitted daily redemption limit in USD |
 | `minRedeemUsd`           | `number \| undefined`                           | Optional adapter-emitted minimum redemption size in USD |
 | `liveHolderEligibility`  | `string \| undefined`                           | Optional adapter-emitted holder eligibility context when it differs from or sharpens the static model |
+| `eventualRedeemabilityScore` | `number \| null \| undefined`                | Optional v4 long-tail legal/protocol redeemability score, separate from current executable exit capacity |
 | `feeConfidence`          | `string`                                        | `fixed`, `formula`, or `undisclosed-reviewed` fidelity tag for the fee model                                |
 | `feeModelKind`           | `string`                                        | `fixed-bps`, `formula`, `documented-variable`, or `undisclosed-reviewed`                                    |
 | `modelConfidence`        | `string`                                        | Overall route-fidelity rollup: `high`, `medium`, or `low`                                                   |
@@ -2048,6 +2053,8 @@ Top-level fields:
 | `immediateCapacityRatio` | `number \| null`                                | Immediate redeemable capacity as a share of supply. `null` when not separately quantified                   |
 | `feeBps`                 | `number \| null`                                | Explicit bounded fee when configured                                                                        |
 | `feeDescription`         | `string \| undefined`                           | Docs-backed fee description for variable, conditional, flat-minimum, or undisclosed redemption schedules    |
+| `costScenarioScores`     | `object \| undefined`                           | Optional v4 cost scores for retail, active-user, and institutional route-size scenarios                     |
+| `routeExitCorrelation`   | `string \| undefined`                           | Optional v4 correlation tag for DEX-vs-redemption independence, such as `independent-issuer-rail`, `same-stablecoin-pool-backing`, `same-protocol-liquidity`, `wrapper-to-parent-dependency`, or `unknown` |
 | `queueEnabled`           | `boolean`                                       | Whether the modeled route is explicitly queued/serial                                                       |
 | `docs`                   | `{ label?: string, url?: string, reviewedAt?: string, provenance?: string, sources?: { label: string, url: string, supports?: string[] }[] } \| undefined` | Optional documentation / transparency metadata. `reviewedAt` is the route-review date, while `provenance` is `config-reviewed`, `live-reserve-display`, `proof-of-reserves`, or `preferred-link` |
 | `notes`                  | `string[] \| undefined`                         | Runtime notes such as stale reserve metadata fallback                                                       |
@@ -2743,11 +2750,10 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 - `/presets` — List the preset watchlist catalog and example commands
 - `/subscribe <types> <targets>` — Subscribe to alerts for explicit coins or preset watchlists (types: dews, depeg, safety, launch)
 - `/subscribe <types> all` — Enable one or more alert types across all tracked stablecoins
-- `/subscribe <targets> depeg-step <value>` — Enable depeg alerts with a severity gate and worsening-step threshold (`100`, `250`, `500`, or `off`)
 - `/unsubscribe <targets>` — Remove explicit coin subscriptions or the concrete coin rows covered by a preset watchlist
 - `/unsubscribe all` — Remove all per-coin subscriptions, disable every current alert flag including launch, and clear the global depeg worsening step
-- `/set <ticker> <setting> <value>` — Tune per-coin thresholds and modes, including depeg severity and worsening steps
-- `/set all <setting> <value>` — Toggle global all-stablecoin alert types or set the global depeg severity and worsening-step threshold
+- `/set <ticker> <setting> <value>` — Tune per-coin thresholds and modes
+- `/set all <setting> <value>` — Toggle global all-stablecoin alert types
 - `/mute <start>-<end>` — Enable UTC quiet hours
 - `/unmutehours` — Disable quiet hours
 - `/status <ticker>` — Read-only per-coin status summary

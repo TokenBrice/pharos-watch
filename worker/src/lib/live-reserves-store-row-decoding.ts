@@ -6,10 +6,12 @@ import type {
   LiveReserveRedemptionCapacityKind,
   LiveReserveRedemptionFreshnessKind,
   LiveReserveRedemptionRouteStatus,
+  LiveReserveRedemptionRouteStatusSource,
   LiveReserveSnapshotMetadata,
   LiveReserveSourceModel,
   LiveReserveWarning,
 } from "@shared/types/live-reserves";
+import { RedemptionHolderEligibilitySchema } from "@shared/types/redemption";
 import type { ReserveSlice } from "@shared/types/core";
 import { decodeJsonString } from "./cache-json";
 import { shouldUseLegacySnapshotFallback } from "./live-reserves-store-legacy";
@@ -51,6 +53,13 @@ const VALID_REDEMPTION_ROUTE_STATUSES = new Set<LiveReserveRedemptionRouteStatus
   "paused",
   "cohort-limited",
   "unknown",
+]);
+const VALID_REDEMPTION_ROUTE_STATUS_SOURCES = new Set<LiveReserveRedemptionRouteStatusSource>([
+  "static-config",
+  "market-implied",
+  "operator-notice",
+  "protocol-api",
+  "onchain",
 ]);
 const STORED_SLICE_SUM_TOLERANCE = 2;
 
@@ -167,20 +176,41 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
     } else {
       delete redemption.routeStatus;
     }
+    if (
+      typeof rawRedemption.routeStatusSource === "string" &&
+      VALID_REDEMPTION_ROUTE_STATUS_SOURCES.has(
+        rawRedemption.routeStatusSource as LiveReserveRedemptionRouteStatusSource,
+      )
+    ) {
+      redemption.routeStatusSource = rawRedemption.routeStatusSource as LiveReserveRedemptionRouteStatusSource;
+    } else {
+      delete redemption.routeStatusSource;
+    }
     if (typeof rawRedemption.routeStatusReason === "string") {
       redemption.routeStatusReason = rawRedemption.routeStatusReason;
     } else {
       delete redemption.routeStatusReason;
     }
-    if (typeof rawRedemption.holderEligibility === "string") {
-      redemption.holderEligibility = rawRedemption.holderEligibility;
+    if (typeof rawRedemption.routeStatusReviewedAt === "string") {
+      redemption.routeStatusReviewedAt = rawRedemption.routeStatusReviewedAt;
+    } else {
+      delete redemption.routeStatusReviewedAt;
+    }
+    const holderEligibility = RedemptionHolderEligibilitySchema.safeParse(rawRedemption.holderEligibility);
+    if (holderEligibility.success) {
+      redemption.holderEligibility = holderEligibility.data;
     } else {
       delete redemption.holderEligibility;
     }
     if (Array.isArray(rawRedemption.sourceUrls)) {
-      redemption.sourceUrls = rawRedemption.sourceUrls.filter(
-        (url): url is string => typeof url === "string" && isHttpUrl(url),
-      );
+      const seen = new Set<string>();
+      redemption.sourceUrls = rawRedemption.sourceUrls.flatMap((url) => {
+        if (typeof url !== "string" || !isHttpUrl(url)) return [];
+        const normalizedUrl = new URL(url).toString();
+        if (seen.has(normalizedUrl)) return [];
+        seen.add(normalizedUrl);
+        return [normalizedUrl];
+      });
     } else {
       delete redemption.sourceUrls;
     }

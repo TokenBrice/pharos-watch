@@ -3,6 +3,7 @@ import type {
   LiveReserveRedemptionTelemetry,
   LiveReserveSnapshotMetadata,
 } from "@shared/types/live-reserves";
+import type { RedemptionHolderEligibility } from "@shared/types/redemption";
 import type { AdapterContext } from "./types";
 import { fetchOnchainRateBps, type OnchainRateProbe } from "./onchain";
 
@@ -13,7 +14,7 @@ type BuildRedemptionSnapshotMetadataOptions = Omit<LiveReserveRedemptionTelemetr
 };
 
 interface DocumentedRedemptionTelemetryOptions {
-  holderEligibility?: string;
+  holderEligibility?: RedemptionHolderEligibility;
 }
 
 export function buildDocumentedRedemptionTelemetry(

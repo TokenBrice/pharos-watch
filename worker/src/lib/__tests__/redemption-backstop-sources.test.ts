@@ -51,9 +51,14 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.capacitySemantics).toBe("eventual-only");
     expect(entry.immediateCapacityUsd).toBeNull();
     expect(entry.immediateCapacityRatio).toBeNull();
-    expect(entry.score).not.toBeNull();
-    expect(entry.score).toBeLessThanOrEqual(65); // offchain-issuer cap
-    expect(entry.capsApplied).toContain("offchain-route-cap");
+    expect(entry.score).toBeNull();
+    expect(entry.capacityScore).toBeNull();
+    expect(entry.eventualRedeemabilityScore).toBeLessThanOrEqual(65); // offchain-issuer cap
+    expect(entry.capacityProfile).toMatchObject({
+      eventualUsd: 100_000_000,
+      scoringUsd: null,
+      scoringHorizon: "eventual",
+    });
   });
 
   it("returns missing-cache when supply is null for supply-full model", async () => {
@@ -103,7 +108,7 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.score).not.toBeNull();
   });
 
-  it("applies queue-redeem cap", async () => {
+  it("keeps eventual-only queue routes out of current-exit scoring", async () => {
     const entry = await buildRedemptionBackstopEntry(
       mockD1(),
       "test-coin",
@@ -121,9 +126,10 @@ describe("buildRedemptionBackstopEntry", () => {
       now,
     );
 
-    expect(entry.score).not.toBeNull();
-    expect(entry.score!).toBeLessThanOrEqual(70);
-    expect(entry.capsApplied).toContain("queue-route-cap");
+    expect(entry.score).toBeNull();
+    expect(entry.capacityScore).toBeNull();
+    expect(entry.eventualRedeemabilityScore).toBeLessThanOrEqual(70);
+    expect(entry.capacityProfile?.scoringHorizon).toBe("eventual");
   });
 
   it("scores fixed 0 bps fee as 100", async () => {
@@ -732,7 +738,7 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.effectiveExitScore).toBeNull();
   });
 
-  it("computes effective exit score blending liquidity and redemption", async () => {
+  it("does not add current-exit uplift for eventual-only redemption", async () => {
     const entry = await buildRedemptionBackstopEntry(
       mockD1(),
       "test-coin",
@@ -750,9 +756,9 @@ describe("buildRedemptionBackstopEntry", () => {
       now,
     );
 
-    expect(entry.effectiveExitScore).not.toBeNull();
-    // With liquidity=40 and a high redemption score, blend should exceed pure liquidity
-    expect(entry.effectiveExitScore!).toBeGreaterThan(40);
+    expect(entry.effectiveExitScore).toBe(40);
+    expect(entry.score).toBeNull();
+    expect(entry.eventualRedeemabilityScore).not.toBeNull();
   });
 
   it("marks static redemption routes impaired during severe active depegs", async () => {

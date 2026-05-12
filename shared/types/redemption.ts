@@ -86,6 +86,7 @@ export const RedemptionCapacityBasisSchema = z.enum([
   "issuer-term-redemption",
   "full-system-eventual",
   "daily-limit",
+  "fixed-buffer",
   "hot-buffer",
   "psm-balance-share",
   "strategy-buffer",
@@ -110,6 +111,21 @@ export type RedemptionFeeModelKind = z.infer<typeof RedemptionFeeModelKindSchema
 
 export const RedemptionModelConfidenceSchema = z.enum(["high", "medium", "low"]);
 export type RedemptionModelConfidence = z.infer<typeof RedemptionModelConfidenceSchema>;
+
+export const RedemptionCapacityScoringHorizonSchema = z.enum(["immediate", "daily", "queued", "eventual", "unknown"]);
+export type RedemptionCapacityScoringHorizon = z.infer<typeof RedemptionCapacityScoringHorizonSchema>;
+
+export const RedemptionRouteExitCorrelationSchema = z.enum([
+  "independent-issuer-rail",
+  "same-stablecoin-pool-backing",
+  "same-protocol-liquidity",
+  "wrapper-to-parent-dependency",
+  "unknown",
+]);
+export type RedemptionRouteExitCorrelation = z.infer<typeof RedemptionRouteExitCorrelationSchema>;
+
+export const RedemptionFeeScenarioSchema = z.enum(["normal", "stress"]);
+export type RedemptionFeeScenario = z.infer<typeof RedemptionFeeScenarioSchema>;
 
 export const RedemptionDocSourceSupportSchema = z.enum(["route", "capacity", "fees", "access", "settlement"]);
 export type RedemptionDocSourceSupport = z.infer<typeof RedemptionDocSourceSupportSchema>;
@@ -171,6 +187,36 @@ export const RedemptionDocsSchema = z.object({
   sources: z.array(RedemptionDocSourceSchema).optional(),
 });
 
+export const RedemptionCapacityProfileSchema = z.object({
+  immediateUsd: z.number().nonnegative().nullable().optional(),
+  dailyLimitUsd: z.number().nonnegative().nullable().optional(),
+  queuedUsd: z.number().nonnegative().nullable().optional(),
+  eventualUsd: z.number().nonnegative().nullable().optional(),
+  scoringUsd: z.number().nonnegative().nullable().optional(),
+  scoringHorizon: RedemptionCapacityScoringHorizonSchema,
+  capacityProfileConfidence: RedemptionCapacityConfidenceSchema,
+  modeledExitSizeUsd: z.number().positive().optional(),
+});
+export type RedemptionCapacityProfile = z.infer<typeof RedemptionCapacityProfileSchema>;
+
+export const RedemptionCostScenarioScoresSchema = z.object({
+  retail: z.number().nullable().optional(),
+  activeUser: z.number().nullable().optional(),
+  institutional: z.number().nullable().optional(),
+});
+export type RedemptionCostScenarioScores = z.infer<typeof RedemptionCostScenarioScoresSchema>;
+
+export const RedemptionConfidenceDetailsSchema = z.object({
+  capacityEvidenceQuality: z.number().min(0).max(100),
+  feeEvidenceQuality: z.number().min(0).max(100),
+  routeStatusFreshness: z.number().min(0).max(100),
+  holderCohortBreadth: z.number().min(0).max(100),
+  sourceQuality: z.number().min(0).max(100),
+  reviewedDocAgeDays: z.number().nonnegative().nullable().optional(),
+  reasons: z.array(z.string()).optional(),
+});
+export type RedemptionConfidenceDetails = z.infer<typeof RedemptionConfidenceDetailsSchema>;
+
 export const RedemptionBackstopEntrySchema = z.object({
   stablecoinId: z.string(),
   score: z.number().nullable(),
@@ -198,11 +244,14 @@ export const RedemptionBackstopEntrySchema = z.object({
   capacityConfidence: RedemptionCapacityConfidenceSchema,
   capacityBasis: RedemptionCapacityBasisSchema.optional(),
   capacitySemantics: RedemptionCapacitySemanticsSchema,
+  capacityProfile: RedemptionCapacityProfileSchema.optional(),
   feeConfidence: RedemptionFeeConfidenceSchema,
   feeModelKind: RedemptionFeeModelKindSchema,
   modelConfidence: RedemptionModelConfidenceSchema,
+  confidenceDetails: RedemptionConfidenceDetailsSchema.optional(),
   immediateCapacityUsd: z.number().nullable(),
   immediateCapacityRatio: z.number().nullable(),
+  eventualRedeemabilityScore: z.number().nullable().optional(),
   capacityKind: RedemptionLiveCapacityKindSchema.optional(),
   freshnessKind: RedemptionLiveFreshnessKindSchema.optional(),
   sourceTimestamp: z.number().optional(),
@@ -214,6 +263,8 @@ export const RedemptionBackstopEntrySchema = z.object({
   liveHolderEligibility: RedemptionHolderEligibilitySchema.optional(),
   feeBps: z.number().nullable(),
   feeDescription: z.string().optional(),
+  costScenarioScores: RedemptionCostScenarioScoresSchema.optional(),
+  routeExitCorrelation: RedemptionRouteExitCorrelationSchema.optional(),
   queueEnabled: z.boolean(),
   methodologyVersion: z.string(),
   updatedAt: z.number(),
@@ -222,6 +273,48 @@ export const RedemptionBackstopEntrySchema = z.object({
   capsApplied: z.array(z.string()).optional(),
 });
 export type RedemptionBackstopEntry = z.infer<typeof RedemptionBackstopEntrySchema>;
+
+export const RedemptionBackstopDetailsSchema = RedemptionBackstopEntrySchema.pick({
+  resolutionState: true,
+  capacityConfidence: true,
+  capacityBasis: true,
+  capacitySemantics: true,
+  capacityProfile: true,
+  feeConfidence: true,
+  feeModelKind: true,
+  modelConfidence: true,
+  confidenceDetails: true,
+  routeStatus: true,
+  routeStatusSource: true,
+  routeStatusReason: true,
+  routeStatusReviewedAt: true,
+  holderEligibility: true,
+  routeFamily: true,
+  provider: true,
+  sourceMode: true,
+  immediateCapacityUsd: true,
+  immediateCapacityRatio: true,
+  eventualRedeemabilityScore: true,
+  capacityKind: true,
+  freshnessKind: true,
+  sourceTimestamp: true,
+  sourceUrls: true,
+  settlementDelaySec: true,
+  queueDepthUsd: true,
+  dailyLimitUsd: true,
+  minRedeemUsd: true,
+  liveHolderEligibility: true,
+  feeBps: true,
+  costScenarioScores: true,
+  routeExitCorrelation: true,
+  docs: true,
+  notes: true,
+  capsApplied: true,
+  feeDescription: true,
+})
+  .partial()
+  .passthrough();
+export type RedemptionBackstopDetails = z.infer<typeof RedemptionBackstopDetailsSchema>;
 
 export const RedemptionBackstopMapSchema = z.record(z.string(), RedemptionBackstopEntrySchema);
 export type RedemptionBackstopMap = Record<string, RedemptionBackstopEntry>;

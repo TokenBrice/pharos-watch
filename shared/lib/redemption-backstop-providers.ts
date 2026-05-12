@@ -7,6 +7,7 @@ import type {
 export const REDEMPTION_BACKSTOP_PROVIDER_IDS = {
   SUPPLY_FULL_MODEL: "supply-full-model",
   SUPPLY_RATIO_MODEL: "supply-ratio-model",
+  FIXED_USD_MODEL: "fixed-usd-model",
   RESERVE_SYNC_METADATA: "reserve-sync-metadata",
   RESERVE_SYNC_FALLBACK: "reserve-sync-fallback",
   SYNC_ERROR: "sync-error",
@@ -22,6 +23,7 @@ export type RedemptionBackstopProviderCapability =
 export type RedemptionBackstopProviderCapacitySource =
   | "supply-full"
   | "supply-ratio"
+  | "fixed-usd"
   | "live-reserve-metadata"
   | "configured-fallback-ratio"
   | "none";
@@ -74,6 +76,16 @@ export const REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS: Record<
     defaultCapacitySemantics: "immediate-bounded",
     severeDepegScoreability: "not-scoreable",
   },
+  [REDEMPTION_BACKSTOP_PROVIDER_IDS.FIXED_USD_MODEL]: {
+    id: REDEMPTION_BACKSTOP_PROVIDER_IDS.FIXED_USD_MODEL,
+    capability: "capacity-source",
+    capacitySource: "fixed-usd",
+    defaultSourceMode: "static",
+    provenanceClass: "reviewed-config-fallback",
+    defaultCapacityConfidence: "documented-bound",
+    defaultCapacitySemantics: "immediate-bounded",
+    severeDepegScoreability: "not-scoreable",
+  },
   [REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA]: {
     id: REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA,
     capability: "capacity-source",
@@ -114,6 +126,7 @@ export const REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS: Record<
 export type RedemptionCapacityModelProviderKind =
   | "supply-full"
   | "supply-ratio"
+  | "fixed-usd"
   | "reserve-sync-metadata";
 
 export function getRedemptionBackstopProviderDefinition(
@@ -133,6 +146,8 @@ export function getProviderIdForCapacityModelKind(
       return REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_FULL_MODEL;
     case "supply-ratio":
       return REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_RATIO_MODEL;
+    case "fixed-usd":
+      return REDEMPTION_BACKSTOP_PROVIDER_IDS.FIXED_USD_MODEL;
     case "reserve-sync-metadata":
       return REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA;
   }

@@ -52,6 +52,15 @@ describe("resolveCapacityBasis", () => {
         }),
       ).toBe("strategy-buffer");
     });
+
+    it("returns fixed-buffer for fixed USD capacity without an explicit basis", () => {
+      expect(
+        resolveCapacityBasis("psm-swap", {
+          kind: "fixed-usd",
+          amountUsd: 5_000_000,
+        }),
+      ).toBe("fixed-buffer");
+    });
   });
 
   describe("supply-full fallbacks (no explicit basis)", () => {
@@ -108,6 +117,64 @@ describe("resolveCapacityBasis", () => {
         resolveCapacityBasis(null, { kind: "supply-ratio", ratio: 0.1 }),
       ).toBe("hot-buffer");
     });
+  });
+});
+
+describe("resolveRedemptionCapacity — fixed USD capacity", () => {
+  const now = 1_780_000_000;
+  const db = {} as D1Database;
+
+  it("resolves a fixed USD buffer and derives ratio from supply", async () => {
+    const result = await resolveRedemptionCapacity(
+      db,
+      "dusd-alto",
+      { kind: "fixed-usd", amountUsd: 5_000_000, confidence: "documented-bound" },
+      100_000_000,
+      now,
+    );
+
+    expect(result.immediateCapacityUsd).toBe(5_000_000);
+    expect(result.immediateCapacityRatio).toBe(0.05);
+    expect(result.scoringCapacityUsd).toBe(5_000_000);
+    expect(result.scoringCapacityRatio).toBe(0.05);
+    expect(result.capacityProfile).toMatchObject({
+      immediateUsd: 5_000_000,
+      scoringUsd: 5_000_000,
+      scoringHorizon: "immediate",
+    });
+  });
+
+  it("clamps fixed USD capacity above current supply", async () => {
+    const result = await resolveRedemptionCapacity(
+      db,
+      "dusd-alto",
+      { kind: "fixed-usd", amountUsd: 5_000_000, confidence: "documented-bound" },
+      1_000_000,
+      now,
+    );
+
+    expect(result.immediateCapacityUsd).toBe(1_000_000);
+    expect(result.immediateCapacityRatio).toBe(1);
+    expect(result.scoringCapacityUsd).toBe(1_000_000);
+    expect(result.notes.some((note) => /exceeds current supply/i.test(note))).toBe(true);
+  });
+
+  it("keeps fixed USD capacity visible when supply is missing", async () => {
+    const result = await resolveRedemptionCapacity(
+      db,
+      "dusd-alto",
+      { kind: "fixed-usd", amountUsd: 5_000_000, confidence: "documented-bound" },
+      null,
+      now,
+    );
+
+    expect(result.resolutionState).toBe("resolved");
+    expect(result.immediateCapacityUsd).toBe(5_000_000);
+    expect(result.immediateCapacityRatio).toBeNull();
+    expect(result.capacityScoreMode).toBe("tier-floor");
+    expect(result.notes).toContain(
+      "Stablecoins cache missing current supply; fixed USD capacity is visible with conservative bounded scoring",
+    );
   });
 });
 

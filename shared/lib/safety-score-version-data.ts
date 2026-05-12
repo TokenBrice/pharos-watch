@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.23",
+  currentVersion: "7.24",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.24",
+      title: "Capacity-aware redemption effective-exit blending",
+      date: "2026-05-12",
+      effectiveAt: 1778605200,
+      summary:
+        "Liquidity / Exit now consumes Redemption Backstop v4 current-capacity semantics, scaling redemption uplift by executable capacity, model confidence, and independence from DEX liquidity.",
+      impact: [
+        "Eventual-only issuer or protocol routes remain visible as redemption coverage but no longer create redemption-only Safety liquidity uplift when current executable capacity is not modeled",
+        "Redemption contribution to `effectiveExitScore` is discounted when current capacity is small relative to the modeled exit size or when route confidence is medium/low",
+        "The diversification bonus is reserved for plausibly independent issuer rails; wrappers, same-protocol routes, same stablecoin-pool/backing paths, and unknown correlations receive no extra independence bonus",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.23",
       title: "sGHO and Reservoir reserve coverage refinements",

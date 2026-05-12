@@ -17,6 +17,7 @@ export interface ResolvedRedemptionCost {
   feeDescription?: string;
   feeConfidence: RedemptionBackstopEntry["feeConfidence"];
   feeModelKind: RedemptionBackstopEntry["feeModelKind"];
+  costScenarioScores?: RedemptionBackstopEntry["costScenarioScores"];
   notes: string[];
 }
 
@@ -30,6 +31,7 @@ export interface RedemptionStaticFields {
   feeDescription?: string;
   feeConfidence: RedemptionBackstopEntry["feeConfidence"];
   feeModelKind: RedemptionBackstopEntry["feeModelKind"];
+  costScenarioScores?: RedemptionBackstopEntry["costScenarioScores"];
   docs?: RedemptionBackstopEntry["docs"];
   queueEnabled: boolean;
   notes: string[];
@@ -42,6 +44,11 @@ export const REDEMPTION_FEE_SCORE_BREAKPOINTS = [
 ] as const;
 
 const REDEMPTION_FEE_SCORE_HIGH_FEE_FALLBACK = 40;
+const COST_SCENARIO_SIZES_USD = {
+  retail: 1_000,
+  activeUser: 10_000,
+  institutional: 1_000_000,
+} as const;
 
 export function resolveBoundedFeeScore(feeBps: number): number {
   for (const { maxFeeBps, score } of REDEMPTION_FEE_SCORE_BREAKPOINTS) {
@@ -50,7 +57,56 @@ export function resolveBoundedFeeScore(feeBps: number): number {
   return REDEMPTION_FEE_SCORE_HIGH_FEE_FALLBACK;
 }
 
-function resolveRedemptionCost(
+function resolveScenarioFeeBps(costModel: RedemptionCostModel, fallbackFeeBps: number | null): number | null {
+  const normalFeeBps =
+    fallbackFeeBps ??
+    costModel.feeBpsMax ??
+    costModel.feeBpsMin ??
+    (costModel.kind === "fee-bps" ? costModel.feeBps : null);
+  if (costModel.feeScenario === "stress" && costModel.stressFeeBps != null) return costModel.stressFeeBps;
+  return normalFeeBps;
+}
+
+export function resolveCostScenarioScores(
+  costModel: RedemptionCostModel,
+  fallbackFeeBps: number | null,
+): NonNullable<RedemptionBackstopEntry["costScenarioScores"]> | undefined {
+  const feeBps = resolveScenarioFeeBps(costModel, fallbackFeeBps);
+  const fixedCostUsd = (costModel.flatFeeUsd ?? 0) + (costModel.gasOrBridgeCostUsd ?? 0);
+  const hasScenarioCost =
+    feeBps != null ||
+    fixedCostUsd > 0 ||
+    costModel.minFeeUsd != null ||
+    costModel.stressFeeBps != null ||
+    costModel.feeBpsMin != null ||
+    costModel.feeBpsMax != null;
+  if (!hasScenarioCost) return undefined;
+
+  return {
+    retail: resolveScenarioScore(COST_SCENARIO_SIZES_USD.retail, feeBps, fixedCostUsd, costModel.minFeeUsd),
+    activeUser: resolveScenarioScore(COST_SCENARIO_SIZES_USD.activeUser, feeBps, fixedCostUsd, costModel.minFeeUsd),
+    institutional: resolveScenarioScore(
+      COST_SCENARIO_SIZES_USD.institutional,
+      feeBps,
+      fixedCostUsd,
+      costModel.minFeeUsd,
+    ),
+  };
+}
+
+function resolveScenarioScore(
+  scenarioSizeUsd: number,
+  feeBps: number | null,
+  fixedCostUsd: number,
+  minFeeUsd: number | undefined,
+): number | null {
+  const percentageFeeUsd = feeBps != null ? (scenarioSizeUsd * Math.max(0, feeBps)) / 10_000 : 0;
+  const variableCostUsd = Math.max(percentageFeeUsd, minFeeUsd ?? 0);
+  const effectiveFeeBps = ((variableCostUsd + fixedCostUsd) / scenarioSizeUsd) * 10_000;
+  return resolveBoundedFeeScore(effectiveFeeBps);
+}
+
+export function resolveRedemptionCost(
   stablecoinId: string,
   costModel: RedemptionCostModel,
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
@@ -72,6 +128,7 @@ function resolveRedemptionCost(
       feeBps,
       feeConfidence,
       feeModelKind,
+      costScenarioScores: resolveCostScenarioScores(costModel, feeBps),
       ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
       notes: [],
     };
@@ -84,6 +141,7 @@ function resolveRedemptionCost(
       feeBps,
       feeConfidence,
       feeModelKind,
+      costScenarioScores: resolveCostScenarioScores(costModel, feeBps),
       ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
       notes:
         feeBps !== Math.max(0, costModel.feeBps)
@@ -93,12 +151,16 @@ function resolveRedemptionCost(
   }
 
   if (costModel.kind === "dynamic-or-unclear") {
-    const score = costModel.feeDescription && costModel.confidence !== "undisclosed-reviewed" ? 60 : 40;
+    const scenarioScores = resolveCostScenarioScores(costModel, null);
+    const score =
+      scenarioScores?.activeUser ??
+      (costModel.feeDescription && costModel.confidence !== "undisclosed-reviewed" ? 60 : 40);
     return {
       score,
       feeBps: null,
       feeConfidence,
       feeModelKind,
+      costScenarioScores: scenarioScores,
       ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
       notes:
         feeConfidence === "formula" && liveMetadata.updatedAt != null && liveMetadata.feeReason
@@ -109,10 +171,11 @@ function resolveRedemptionCost(
 
   const feeBps = Math.max(0, costModel.feeBps);
   return {
-    score: resolveBoundedFeeScore(feeBps),
+    score: resolveCostScenarioScores(costModel, feeBps)?.activeUser ?? resolveBoundedFeeScore(feeBps),
     feeBps,
     feeConfidence,
     feeModelKind,
+    costScenarioScores: resolveCostScenarioScores(costModel, feeBps),
     ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
     notes: [],
   };
@@ -136,6 +199,7 @@ export function resolveRedemptionStaticFields(
     feeDescription,
     feeConfidence,
     feeModelKind,
+    costScenarioScores,
     notes,
   } = resolveRedemptionCost(stablecoinId, config.costModel, reserveSnapshotMetadata, now);
 
@@ -146,6 +210,7 @@ export function resolveRedemptionStaticFields(
     feeDescription,
     feeConfidence,
     feeModelKind,
+    costScenarioScores,
     docs: resolveRedemptionDocs(stablecoinId, config),
     queueEnabled: config.routeFamily === "queue-redeem" || config.settlementModel === "queued",
     notes,

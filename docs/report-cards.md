@@ -6,12 +6,12 @@ The stablecoin registry currently contains 340 tracked metadata entries. Report-
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.23`
+- **Current methodology version:** `v7.24`
 - **Runtime/version source:** `shared/lib/safety-score-version-data.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
-## Overall Grade (v7.23)
+## Overall Grade (v7.24)
 
 Four-step computation:
 
@@ -22,7 +22,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.23 adds score-grade reserve coverage refinements for sGHO, srUSD/wsrUSD, USD.AI, and mRe7YIELD. The previous v7.22 NAV and wrapper reserve feed expansion remains active for WTGXX, VBILL, ACRED, USTBL, EUTBL, JTRSY, USDCV, sUSDD, and sUSN.
+Current-version note: v7.24 makes redemption-backed Liquidity / Exit uplift capacity-aware, confidence-aware, and correlation-aware through Redemption Backstop v4. Eventual-only route quality remains visible, but Safety liquidity now requires current executable redemption capacity for redemption-only uplift.
 
 ## Dimensions
 
@@ -54,16 +54,17 @@ Current-version note: v7.23 adds score-grade reserve coverage refinements for sG
 
 - The public DEX liquidity dataset stays unchanged and fully market-based (see [DEX Liquidity Score](./dex-liquidity.md))
 - Report cards use `effectiveExitScore`, not raw `liquidityScore`
-- `effectiveExitScore` uses a best-path model:
-  - `effectiveExitScore = round(min(100, max(liquidityScore, redemptionBackstopScore) + min(liquidityScore, redemptionBackstopScore) × 0.10))`
+- `effectiveExitScore` uses the Redemption Backstop v4 capacity-aware best-path model:
+  - redemption contribution is scaled by current executable capacity versus modeled exit size (`min(max(supply × 5%, $100k), $25M)`) and by model confidence
+  - the 10% diversification bonus applies only when the redemption route is plausibly independent from the DEX path (`independent-issuer-rail`)
 - If only DEX liquidity exists, `effectiveExitScore = liquidityScore`
-- If only eligible immediate/live/queue-style redemption exists, `effectiveExitScore = redemptionBackstopScore` (route family caps are the guardrails, including queue-redeem <= 70)
-- Documented offchain-issuer eventual exits do not replace missing DEX liquidity; they can only add the primary-market exit bonus when DEX liquidity is already present.
+- If only eligible current-capacity redemption exists, `effectiveExitScore` uses the capacity/confidence-adjusted redemption score
+- Documented offchain-issuer eventual exits remain visible but do not replace missing DEX liquidity without current executable capacity.
 - Redemption uplift is only used when the redemption route is resolved, above the low-confidence / heuristic tier, and not currently impaired by route-availability evidence
 - Eventual-only redemption routes remain visible in the dimension detail. They do not replace missing DEX liquidity, but documented-bound offchain issuer routes can add a capped primary-market exit bonus when DEX liquidity is already available
 - Queue-like redemption routes can improve Liquidity / Exit when resolved and current, but their redemption contribution is capped before the best-path blend so delayed exits cannot behave like instant liquidity
 - During severe active depegs (`activeDepegBps >= 2500`), redemption uplift requires live-direct dynamic permissionless redemption capacity with atomic or immediate settlement; static, documented-bound, live-proxy, issuer/API, queue, and estimated routes stay visible but do not uplift Liquidity / Exit until live-open evidence returns
-- Live reserve redemption telemetry can further constrain scoring: nested `freshnessKind: "unverified"` fails closed unless route-specific lower-bound approval exists, proxy/queue capacity kinds cannot qualify as severe-depeg live-direct evidence, and adapter-emitted daily limits cap the usable capacity score
+- Live reserve redemption telemetry can further constrain scoring: nested `freshnessKind: "unverified"` fails closed unless route-specific lower-bound approval exists, proxy/queue capacity kinds cannot qualify as severe-depeg live-direct evidence, and adapter-emitted daily limits, queue depth, settlement delay, minimum size, and holder eligibility can lower the usable capacity score
 - Low-confidence redemption routes stay visible in the dimension detail, but they do not improve the Safety Score liquidity score
 - Formula-based routes with live on-chain fee telemetry can use the current redemption fee bps for cost scoring while remaining labeled as formula models
 - When DEX liquidity is stale (age beyond `CRON_INTERVALS["sync-dex-liquidity"] * 2`), the last-known score still feeds effective-exit scoring; staleness is surfaced via `liquidityStale` and `inputFreshness.dexLiquidity.stale` so consumers can warn on age without losing the dimension. Scoring only falls back to redemption-only or `NR` when no DEX snapshot exists at all

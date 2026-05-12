@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   deriveModelConfidence,
+  deriveModelConfidenceWithDetails,
   inferStoredCapacityConfidence,
   inferStoredCapacitySemantics,
   inferStoredFeeConfidence,
@@ -192,6 +193,68 @@ describe("deriveModelConfidence", () => {
         }),
       ).toBe("medium");
     }
+  });
+
+  it("keeps stale documented-bound confidence medium when current route-status evidence exists", () => {
+    const result = deriveModelConfidenceWithDetails({
+      resolutionState: "resolved",
+      capacityConfidence: "documented-bound",
+      feeConfidence: "formula",
+      routeStatus: "open",
+      routeStatusSource: "operator-notice",
+      holderEligibility: "any-holder",
+      sourceMode: "static",
+      reviewedAt: "2024-01-01",
+      now: 1_780_000_000,
+    });
+
+    expect(result.modelConfidence).toBe("medium");
+    expect(result.confidenceDetails.reviewedDocAgeDays).toBeGreaterThan(365);
+  });
+
+  it("discounts stale documented-bound routes without current route-status evidence to low", () => {
+    expect(
+      deriveModelConfidenceWithDetails({
+        resolutionState: "resolved",
+        capacityConfidence: "documented-bound",
+        feeConfidence: "formula",
+        routeStatus: "open",
+        routeStatusSource: "static-config",
+        holderEligibility: "any-holder",
+        sourceMode: "static",
+        reviewedAt: "2024-01-01",
+        now: 1_780_000_000,
+      }).modelConfidence,
+    ).toBe("low");
+  });
+
+  it("keeps live-proxy with undisclosed fees below direct high confidence", () => {
+    expect(
+      deriveModelConfidenceWithDetails({
+        resolutionState: "resolved",
+        capacityConfidence: "live-proxy",
+        feeConfidence: "undisclosed-reviewed",
+        routeStatus: "open",
+        routeStatusSource: "protocol-api",
+        holderEligibility: "any-holder",
+        sourceMode: "dynamic",
+        freshnessKind: "same-run-api",
+      }).modelConfidence,
+    ).toBe("medium");
+  });
+
+  it("returns low for unknown route status without direct live telemetry", () => {
+    expect(
+      deriveModelConfidenceWithDetails({
+        resolutionState: "resolved",
+        capacityConfidence: "documented-bound",
+        feeConfidence: "fixed",
+        routeStatus: "unknown",
+        routeStatusSource: "static-config",
+        holderEligibility: "any-holder",
+        sourceMode: "static",
+      }).modelConfidence,
+    ).toBe("low");
   });
 });
 

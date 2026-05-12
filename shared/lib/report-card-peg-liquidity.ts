@@ -99,6 +99,8 @@ type RedemptionLiquidityInput = Pick<
   | "resolutionState"
   | "modelConfidence"
   | "capacitySemantics"
+  | "capacityProfile"
+  | "routeExitCorrelation"
 > & Partial<Pick<
   RedemptionBackstopEntry,
   | "routeStatus"
@@ -235,9 +237,17 @@ function buildLiquidityScoringFacts(
     redemptionEligibleForLiquidity,
     redemptionExclusionReason,
     redemptionScore,
-    effectiveScore: computeEffectiveExitScore(
+  effectiveScore: computeEffectiveExitScore(
       dexScore,
       eligibleRedemptionScore,
+      redemption
+        ? {
+            modeledExitSizeUsd: redemption.capacityProfile?.modeledExitSizeUsd,
+            currentExecutableCapacityUsd: redemption.capacityProfile?.scoringUsd ?? redemption.immediateCapacityUsd,
+            routeExitCorrelation: redemption.routeExitCorrelation,
+            modelConfidence: redemption.modelConfidence,
+          }
+        : undefined,
     ),
     hasConfiguredRedemption: !!redemption,
     hasResolvedRedemption: redemption?.resolutionState === "resolved",

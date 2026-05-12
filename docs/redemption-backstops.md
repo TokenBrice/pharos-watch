@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.997`
+- **Current methodology version:** `v4.0`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v3.997` update: Redemption coverage expansion adds reviewed issuer, wrapper, queue, PSM, collateral, and protocol-conversion routes, and promotes older reviewed routes whose public terms now support documented-bound capacity.
+Latest `v4.0` update: Redemption scoring now separates current executable capacity from eventual redeemability, adds fixed-USD capacity and size-aware fee scenarios, and makes effective-exit blending capacity-, confidence-, and correlation-aware.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
@@ -49,7 +49,7 @@ Status semantics:
 - `degraded` when at least one row is written but any configured route fails, is missing from cache, hits a non-`missing-capacity`/non-`impaired` unresolved state, the `missing-capacity` tail exceeds that tolerance budget, or the reused DEX liquidity snapshot is stale
 - `error` when zero routes resolve to a usable scored row because of route failures, cache misses, or blocking unresolved states
 
-Cron metadata includes `synced`, `resolved`, `unresolved`, `unresolvedMissingCapacity`, `unresolvedCritical`, `availabilityDegraded`, `missingCapacityOkThreshold`, `coverageRatio`, `failed`, `configured`, `dynamic`, `estimated`, `static`, `liquidityStale`, and `severeActiveDepegThresholdBps`, plus `failedIds`, `availabilityDegradedIds`, or `missingFromCache` when relevant. `availabilityDegraded`/`availabilityDegradedIds` are row-level route-availability signals and do not by themselves degrade the cron run.
+Cron metadata includes `synced`, `resolved`, `unresolved`, `unresolvedMissingCapacity`, `unresolvedCritical`, `availabilityDegraded`, `missingCapacityOkThreshold`, `coverageRatio`, `failed`, `configured`, `dynamic`, `estimated`, `static`, `liquidityStale`, `severeActiveDepegThresholdBps`, registry/run manifest fields (`registryHash`, `familyCounts`, `strongProxyCount`, `heuristicCount`, `validatorVersion`, `configMethodologyVersion`, `v4ScoringParametersHash`), and route-status producer fields (`routeStatusProducer`, `routeStatusProducerFetches`, `routeStatusOverrideCount`), plus capped `failedIds`, `availabilityDegradedIds`, or `missingFromCache` when relevant. `availabilityDegraded`/`availabilityDegradedIds` are row-level route-availability signals and do not by themselves degrade the cron run.
 
 ---
 
@@ -83,14 +83,17 @@ An optional per-config `totalScoreCap` can apply an additional `config-cap`.
 
 ### Effective Exit Score
 
-`computeEffectiveExitScore()` uses a best-path model to combine modeled redemption quality with observable DEX liquidity:
+`computeEffectiveExitScore()` uses a capacity-aware best-path model to combine modeled redemption quality with observable DEX liquidity:
 
-- If both exist: `min(100, max(dexLiquidity, redemptionScore) + min(dexLiquidity, redemptionScore) × 0.10)`
+- Model exit size defaults to `min(max(circulatingSupplyUsd × 0.05, 100_000), 25_000_000)`.
+- Redemption contribution is multiplied by `min(1, currentExecutableCapacityUsd / modeledExitSizeUsd)` when current capacity is known.
+- Redemption contribution is also discounted by model confidence (`high = 1`, `medium = 0.75`, `low = 0.35`) when v4 options are present.
+- If both DEX and redemption exist, the best path wins. The `0.10` diversification bonus applies only when `routeExitCorrelation = independent-issuer-rail`.
 - If only DEX liquidity exists: passthrough DEX liquidity
-- If only redemption exists: passthrough redemption score (route family caps are the guardrails)
+- If only redemption exists: passthrough the capacity/confidence-adjusted redemption score
 - If neither exists: `null`
 
-The redemption-backstop cron materializes raw `effectiveExitScore` on every resolved row using the last-known DEX liquidity input, even when that input is stale relative to the `CRON_INTERVALS["sync-dex-liquidity"] * 2` freshness budget. When no DEX liquidity exists, the raw `/api/redemption-backstops` score can still be redemption-only for resolved routes, including offchain-issuer routes whose route-family cap is the guardrail. Stale DEX input still marks the cron run `degraded` and flips `metadata.liquidityStale = true` for operational visibility. Report cards then apply their own confidence and availability gating on top, so stale redemption snapshots and low-confidence redemption routes stay visible on redemption surfaces but do not uplift Safety Score liquidity. In the report-card Liquidity / Exit dimension, documented offchain issuer routes with eventual-only capacity can add only the primary-market exit bonus when DEX liquidity is already available; they do not replace missing DEX liquidity for Safety Score scoring.
+The redemption-backstop cron materializes raw `effectiveExitScore` on every resolved row using the last-known DEX liquidity input, even when that input is stale relative to the `CRON_INTERVALS["sync-dex-liquidity"] * 2` freshness budget. Stale DEX input still marks the cron run `degraded` and flips `metadata.liquidityStale = true` for operational visibility. Report cards then apply their own confidence and availability gating on top, so stale redemption snapshots and low-confidence redemption routes stay visible on redemption surfaces but do not uplift Safety Score liquidity. In v4, eventual-only routes expose `eventualRedeemabilityScore` for route-quality context but do not create redemption-only Safety liquidity uplift without current executable capacity.
 
 Severe active depegs add a current-exercisability gate on top of the static route score. When an open `depeg_events` row has `abs(peak_deviation_bps) >= 2500`, a static, estimated, live-proxy, issuer/API, queue, or documented-bound redemption route is marked `impaired` unless it has live-direct dynamic permissionless redemption capacity with atomic or immediate settlement. For configured tracked wrappers whose metadata keeps `pegReferenceId === variantOf`, that impairment now also propagates from the parent stablecoin's open severe-depeg row. This prevents stale route documentation from producing a strong par-exit score while the market is indicating that broad redemption is not currently clearing.
 
@@ -112,6 +115,7 @@ Each configured coin declares:
 - `capacityModel`
 - `costModel`
 - optional `costModel.feeDescription`
+- optional `routeExitCorrelation`
 - optional `totalScoreCap`
 - optional `notes`
 
@@ -123,9 +127,12 @@ Capacity resolution happens in `worker/src/lib/redemption-backstop-sources.ts`.
 
 | Capacity model          | Resolution                                                                                                                            |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `supply-full`           | Scores against full current supply as eventual redeemability, but leaves `immediateCapacity*` empty because immediate buffer is not separately quantified |
-| `supply-ratio`          | Immediate modeled capacity equals `supplyUsd * ratio`; this is heuristic unless the config explicitly opts into stronger confidence |
-| `reserve-sync-metadata` | Reads normalized `reserve_composition.metadata.redemption.capacityUsd` / `capacityRatioOfSupply` when present, falling back to legacy `immediateRedeemableUsd` / `immediateRedeemableRatio`, from the latest fresh live snapshot only when the adapter explicitly exposes redemption-capacity telemetry and the snapshot carries scoring-grade freshness evidence; degraded snapshots still fail closed by default, but specific lower-bound-only warning classes can be allowlisted per route when they indicate reserve completeness limits rather than broken telemetry. Routes can also fall back to a reviewed configured ratio when public docs publish a hard primary-market buffer floor. |
+| `supply-full`           | Exposes full current supply as `eventualRedeemabilityScore`, but leaves current scoring capacity empty because immediate buffer is not separately quantified |
+| `supply-ratio`          | Immediate modeled capacity equals `supplyUsd * ratio`, optionally capped by a documented daily limit; this is heuristic unless the config explicitly opts into stronger confidence |
+| `fixed-usd`             | Immediate modeled capacity equals a reviewed absolute USD buffer, clamped to current supply when supply is known; missing-supply rows keep the USD amount visible but use conservative absolute-tier scoring |
+| `reserve-sync-metadata` | Reads normalized `reserve_composition.metadata.redemption.capacityUsd` / `capacityRatioOfSupply` when present, falling back to legacy `immediateRedeemableUsd` / `immediateRedeemableRatio`, from the latest fresh live snapshot only when the adapter explicitly exposes redemption-capacity telemetry and the snapshot carries scoring-grade freshness evidence; degraded snapshots still fail closed by default, but specific lower-bound-only warning classes can be allowlisted per route when they indicate reserve completeness limits rather than broken telemetry. Routes can also fall back to a reviewed configured ratio or USD amount when public docs publish a hard primary-market buffer floor. |
+
+Rows may include `capacityProfile`, which separates `immediateUsd`, `dailyLimitUsd`, `queuedUsd`, `eventualUsd`, `scoringUsd`, `scoringHorizon`, and `capacityProfileConfidence`. Legacy `immediateCapacityUsd`, `immediateCapacityRatio`, and `capacityScore` remain populated for compatibility.
 
 Live reserve adapters can now emit a nested `metadata.redemption` object for new redemption-specific telemetry. The validator rejects malformed or unsupported redemption telemetry before persistence, including negative capacity, capacity ratios outside `0..1`, negative fees, capacity fields from adapters that declare no capacity support, fee fields from adapters that declare no fee support, or direct-capacity tiers emitted by proxy-only adapters. Legacy flat metadata remains readable while existing adapters are migrated to the nested contract.
 
@@ -153,6 +160,7 @@ Provider identifiers are defined in `shared/lib/redemption-backstop-providers.ts
 | ------------------------- | -------------------------- | ------------------- | ------------------ | -------------------- | -------------------------------------- |
 | `supply-full-model`       | Full supply model          | `estimated`         | `heuristic`        | `eventual-only`      | Not scoreable                          |
 | `supply-ratio-model`      | Configured supply ratio    | `estimated`         | `heuristic`        | `immediate-bounded`  | Not scoreable                          |
+| `fixed-usd-model`         | Fixed reviewed USD buffer  | `static`            | `documented-bound` | `immediate-bounded`  | Not scoreable                          |
 | `reserve-sync-metadata`   | Live reserve metadata      | `dynamic`           | `dynamic`          | `immediate-bounded`  | Requires strong live-direct route      |
 | `reserve-sync-fallback`   | Reviewed fallback ratio    | `estimated`         | `heuristic`        | `immediate-bounded`  | Not scoreable                          |
 | `sync-error`              | Failure sentinel           | `static`            | `heuristic`        | `immediate-bounded`  | Not scoreable                          |
@@ -200,9 +208,13 @@ Each row also carries:
   - `undisclosed-reviewed` when docs were reviewed but only descriptive fee information is available
 - `feeModelKind`:
   - `fixed-bps`, `formula`, `documented-variable`, or `undisclosed-reviewed`
-- `modelConfidence`:
+  - `modelConfidence`:
   - `high`, `medium`, or `low` rollups used by the API and detail page to communicate fidelity
-  - currently `low` for heuristic-capacity routes, unresolved rows, and impaired rows
+  - `low` for heuristic-capacity routes, unresolved rows, impaired rows, unclear holder eligibility, stale docs without current route-status evidence, or unknown route status without direct live telemetry
+  - `confidenceDetails` can expose the component evidence scores and rollup reasons
+- `routeExitCorrelation`:
+  - `independent-issuer-rail`, `same-stablecoin-pool-backing`, `same-protocol-liquidity`, `wrapper-to-parent-dependency`, or `unknown`
+  - only `independent-issuer-rail` earns the v4 effective-exit diversification bonus
 
 ### Docs / Notes
 
@@ -226,7 +238,7 @@ Each row also carries:
   - flat minimums or bank/network charges that do not map cleanly to one global bps number
   - cases where public docs were reviewed but no numeric redemption-fee schedule is published
 - If live formula telemetry is missing, the route falls back to the reviewed-formula bucket rather than pretending a fixed fee is known
-- `costScore` remains driven by the existing bounded-fee buckets; descriptive variable-fee routes still use the conservative variable / unclear bucket
+- `costScore` uses the active-user scenario by default when v4 fee-shape inputs are present; optional `costScenarioScores` exposes retail, active-user, and institutional route-size scores
 
 ---
 

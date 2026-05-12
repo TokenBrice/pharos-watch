@@ -7,27 +7,39 @@ import type {
   RedemptionDocSourceSupport,
   RedemptionExecutionModel,
   RedemptionFeeConfidence,
+  RedemptionFeeScenario,
   RedemptionFeeModelKind,
   RedemptionHolderEligibility,
   RedemptionOutputAssetType,
+  RedemptionRouteExitCorrelation,
   RedemptionRouteStatus,
   RedemptionRouteFamily,
   RedemptionSettlementModel,
 } from "../../types";
 
+interface RedemptionCostScenarioConfig {
+  flatFeeUsd?: number;
+  minFeeUsd?: number;
+  feeBpsMin?: number;
+  feeBpsMax?: number;
+  gasOrBridgeCostUsd?: number;
+  stressFeeBps?: number;
+  feeScenario?: RedemptionFeeScenario;
+}
+
 export type RedemptionCostModel =
-  | {
+  | ({
       kind: "fee-bps";
       feeBps: number;
       feeDescription?: string;
       confidence?: RedemptionFeeConfidence;
-    }
-  | {
+    } & RedemptionCostScenarioConfig)
+  | ({
       kind: "dynamic-or-unclear";
       feeDescription?: string;
       confidence?: Exclude<RedemptionFeeConfidence, "fixed">;
       feeModelKind?: Exclude<RedemptionFeeModelKind, "fixed-bps">;
-    };
+    } & RedemptionCostScenarioConfig);
 
 export type RedemptionCapacityModel =
   | {
@@ -38,12 +50,21 @@ export type RedemptionCapacityModel =
   | {
       kind: "supply-ratio";
       ratio: number;
+      dailyLimitUsd?: number;
+      confidence?: RedemptionCapacityConfidence;
+      basis?: RedemptionCapacityBasis;
+    }
+  | {
+      kind: "fixed-usd";
+      amountUsd: number;
+      dailyLimitUsd?: number;
       confidence?: RedemptionCapacityConfidence;
       basis?: RedemptionCapacityBasis;
     }
   | {
       kind: "reserve-sync-metadata";
       fallbackRatio?: number;
+      fallbackUsd?: number;
       confidence?: RedemptionCapacityConfidence;
       basis?: RedemptionCapacityBasis;
     };
@@ -58,6 +79,7 @@ export interface RedemptionBackstopConfig {
   costModel: RedemptionCostModel;
   holderEligibility?: RedemptionHolderEligibility;
   routeStatus?: Extract<RedemptionRouteStatus, "open" | "unknown">;
+  routeExitCorrelation?: RedemptionRouteExitCorrelation;
   /**
    * Per-config escape hatch for routes whose documented rail composes with a
    * downstream rail the holder still has to exercise — e.g., a permissionless

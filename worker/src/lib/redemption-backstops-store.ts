@@ -1,5 +1,6 @@
 import type {
   RedemptionBackstopEntry,
+  RedemptionBackstopDetails,
   RedemptionBackstopMap,
   RedemptionBackstopsResponse,
   RedemptionRouteFamily,
@@ -11,9 +12,13 @@ import type {
 } from "@shared/types/redemption";
 import {
   RedemptionBackstopEntrySchema,
+  RedemptionBackstopDetailsSchema,
+  RedemptionCapacityProfileSchema,
   RedemptionCapacityBasisSchema,
   RedemptionCapacityConfidenceSchema,
   RedemptionCapacitySemanticsSchema,
+  RedemptionConfidenceDetailsSchema,
+  RedemptionCostScenarioScoresSchema,
   RedemptionDocsSchema,
   RedemptionFeeConfidenceSchema,
   RedemptionFeeModelKindSchema,
@@ -22,6 +27,7 @@ import {
   RedemptionLiveFreshnessKindSchema,
   RedemptionModelConfidenceSchema,
   RedemptionResolutionStateSchema,
+  RedemptionRouteExitCorrelationSchema,
   RedemptionRouteStatusSchema,
   RedemptionRouteStatusSourceSchema,
 } from "@shared/types/redemption";
@@ -86,11 +92,29 @@ export interface RedemptionBackstopLoadResult {
 interface RedemptionBackstopRunRow {
   run_id: string;
   completed_at: number | null;
+  status?: string;
   expected_count: number;
   written_count: number;
   min_updated_at: number | null;
   max_updated_at: number | null;
   methodology_version: string;
+  metadata_json?: string | null;
+  metadata?: RedemptionBackstopRunMetadata;
+}
+
+export interface RedemptionBackstopRunMetadata {
+  registryHash?: string;
+  familyCounts?: Record<string, number>;
+  strongProxyCount?: number;
+  heuristicCount?: number;
+  resolved?: number;
+  unresolved?: number;
+  validatorVersion?: number;
+  configMethodologyVersion?: string;
+  v4ScoringParametersHash?: string;
+  routeStatusProducer?: string;
+  routeStatusProducerFetches?: boolean;
+  [key: string]: unknown;
 }
 
 export class RedemptionBackstopSnapshotUnavailableError extends Error {
@@ -102,37 +126,6 @@ export class RedemptionBackstopSnapshotUnavailableError extends Error {
     this.cause = options?.cause;
   }
 }
-
-type RedemptionBackstopDetails = Partial<
-  Pick<
-    RedemptionBackstopEntry,
-    | "docs"
-    | "notes"
-    | "capsApplied"
-    | "feeDescription"
-    | "capacityBasis"
-    | "resolutionState"
-    | "capacityConfidence"
-    | "capacitySemantics"
-    | "capacityKind"
-    | "freshnessKind"
-    | "sourceTimestamp"
-    | "sourceUrls"
-    | "settlementDelaySec"
-    | "queueDepthUsd"
-    | "dailyLimitUsd"
-    | "minRedeemUsd"
-    | "liveHolderEligibility"
-    | "feeConfidence"
-    | "feeModelKind"
-    | "modelConfidence"
-    | "routeStatus"
-    | "routeStatusSource"
-    | "routeStatusReason"
-    | "routeStatusReviewedAt"
-    | "holderEligibility"
-  >
->;
 
 function pickStringArray(value: unknown): string[] | undefined {
   if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) return undefined;
@@ -182,6 +175,7 @@ function pickValidDetails(raw: Record<string, unknown>): RedemptionBackstopDetai
   result.resolutionState = pickSchemaValue(RedemptionResolutionStateSchema, raw.resolutionState);
   result.capacityConfidence = pickSchemaValue(RedemptionCapacityConfidenceSchema, raw.capacityConfidence);
   result.capacitySemantics = pickSchemaValue(RedemptionCapacitySemanticsSchema, raw.capacitySemantics);
+  result.capacityProfile = pickSchemaValue(RedemptionCapacityProfileSchema, raw.capacityProfile);
   result.capacityKind = pickSchemaValue(RedemptionLiveCapacityKindSchema, raw.capacityKind);
   result.freshnessKind = pickSchemaValue(RedemptionLiveFreshnessKindSchema, raw.freshnessKind);
   result.sourceTimestamp = pickNonNegativeFiniteNumber(raw.sourceTimestamp);
@@ -194,11 +188,15 @@ function pickValidDetails(raw: Record<string, unknown>): RedemptionBackstopDetai
   result.feeConfidence = pickSchemaValue(RedemptionFeeConfidenceSchema, raw.feeConfidence);
   result.feeModelKind = pickSchemaValue(RedemptionFeeModelKindSchema, raw.feeModelKind);
   result.modelConfidence = pickSchemaValue(RedemptionModelConfidenceSchema, raw.modelConfidence);
+  result.confidenceDetails = pickSchemaValue(RedemptionConfidenceDetailsSchema, raw.confidenceDetails);
   result.routeStatus = pickSchemaValue(RedemptionRouteStatusSchema, raw.routeStatus);
   result.routeStatusSource = pickSchemaValue(RedemptionRouteStatusSourceSchema, raw.routeStatusSource);
   if (typeof raw.routeStatusReason === "string") result.routeStatusReason = raw.routeStatusReason;
   if (typeof raw.routeStatusReviewedAt === "string") result.routeStatusReviewedAt = raw.routeStatusReviewedAt;
   result.holderEligibility = pickSchemaValue(RedemptionHolderEligibilitySchema, raw.holderEligibility);
+  result.eventualRedeemabilityScore = pickNonNegativeFiniteNumber(raw.eventualRedeemabilityScore);
+  result.costScenarioScores = pickSchemaValue(RedemptionCostScenarioScoresSchema, raw.costScenarioScores);
+  result.routeExitCorrelation = pickSchemaValue(RedemptionRouteExitCorrelationSchema, raw.routeExitCorrelation);
   return result;
 }
 
@@ -207,7 +205,59 @@ function parseDetails(value: string | null): RedemptionBackstopDetails {
   const decoded = decodeJsonString<RedemptionBackstopDetails, "json-parse-failed">(value, {
     mode: "best-effort",
     parseErrorReason: "json-parse-failed",
-    normalize: (parsed) => ({ ok: true, payload: pickValidDetails(parsed as Record<string, unknown>) }),
+    normalize: (parsed) => {
+      const raw = parsed as Record<string, unknown>;
+      const parsedDetails = RedemptionBackstopDetailsSchema.safeParse(raw);
+      return { ok: true, payload: parsedDetails.success ? parsedDetails.data : pickValidDetails(raw) };
+    },
+  });
+  return decoded.payload ?? {};
+}
+
+export function normalizeRedemptionBackstopRunMetadata(
+  value: string | null | undefined,
+): RedemptionBackstopRunMetadata {
+  if (!value) return {};
+  const decoded = decodeJsonString<RedemptionBackstopRunMetadata, "json-parse-failed" | "invalid-payload">(value, {
+    mode: "best-effort",
+    parseErrorReason: "json-parse-failed",
+    normalize: (parsed) => {
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return { ok: false, reason: "invalid-payload" };
+      }
+      const raw = parsed as Record<string, unknown>;
+      const familyCounts =
+        raw.familyCounts && typeof raw.familyCounts === "object" && !Array.isArray(raw.familyCounts)
+          ? Object.fromEntries(
+              Object.entries(raw.familyCounts as Record<string, unknown>).flatMap(([family, count]) =>
+                typeof count === "number" && Number.isFinite(count) && count >= 0 ? [[family, count]] : [],
+              ),
+            )
+          : undefined;
+      return {
+        ok: true,
+        payload: {
+          ...raw,
+          ...(typeof raw.registryHash === "string" ? { registryHash: raw.registryHash } : {}),
+          ...(familyCounts ? { familyCounts } : {}),
+          ...(typeof raw.strongProxyCount === "number" ? { strongProxyCount: raw.strongProxyCount } : {}),
+          ...(typeof raw.heuristicCount === "number" ? { heuristicCount: raw.heuristicCount } : {}),
+          ...(typeof raw.resolved === "number" ? { resolved: raw.resolved } : {}),
+          ...(typeof raw.unresolved === "number" ? { unresolved: raw.unresolved } : {}),
+          ...(typeof raw.validatorVersion === "number" ? { validatorVersion: raw.validatorVersion } : {}),
+          ...(typeof raw.configMethodologyVersion === "string"
+            ? { configMethodologyVersion: raw.configMethodologyVersion }
+            : {}),
+          ...(typeof raw.v4ScoringParametersHash === "string"
+            ? { v4ScoringParametersHash: raw.v4ScoringParametersHash }
+            : {}),
+          ...(typeof raw.routeStatusProducer === "string" ? { routeStatusProducer: raw.routeStatusProducer } : {}),
+          ...(typeof raw.routeStatusProducerFetches === "boolean"
+            ? { routeStatusProducerFetches: raw.routeStatusProducerFetches }
+            : {}),
+        },
+      };
+    },
   });
   return decoded.payload ?? {};
 }
@@ -321,7 +371,7 @@ async function getRecentCompletedRedemptionBackstopRuns(
     const rows = await db
       .prepare(
         `SELECT run_id, completed_at, expected_count, written_count, min_updated_at,
-                max_updated_at, methodology_version
+                max_updated_at, methodology_version, status, metadata_json
            FROM redemption_backstop_runs
           WHERE status = 'completed'
           ORDER BY completed_at DESC
@@ -329,7 +379,12 @@ async function getRecentCompletedRedemptionBackstopRuns(
       )
       .bind(limit)
       .all<RedemptionBackstopRunRow>();
-    return (rows.results ?? []).filter((row) => typeof row.run_id === "string" && row.run_id.length > 0);
+    return (rows.results ?? [])
+      .filter((row) => typeof row.run_id === "string" && row.run_id.length > 0)
+      .map((row) => ({
+        ...row,
+        metadata: normalizeRedemptionBackstopRunMetadata(row.metadata_json),
+      }));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (message.toLowerCase().includes("no such table")) return [];

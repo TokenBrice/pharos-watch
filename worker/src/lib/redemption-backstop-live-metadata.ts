@@ -90,6 +90,13 @@ function coerceString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
+function coerceReviewedAtDate(value: unknown): string | null {
+  const date = coerceString(value);
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date ? date : null;
+}
+
 function coerceUrlArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   const urls: string[] = [];
@@ -362,6 +369,6 @@ export function readRedemptionBackstopLiveMetadata(
     routeStatus: coerceRouteStatus(redemptionTelemetry.routeStatus),
     routeStatusSource: coerceRouteStatusSource(redemptionTelemetry.routeStatusSource),
     routeStatusReason: coerceString(redemptionTelemetry.routeStatusReason),
-    routeStatusReviewedAt: coerceString(redemptionTelemetry.routeStatusReviewedAt),
+    routeStatusReviewedAt: coerceReviewedAtDate(redemptionTelemetry.routeStatusReviewedAt),
   };
 }

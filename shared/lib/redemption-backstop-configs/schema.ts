@@ -5,9 +5,11 @@ import {
   RedemptionCapacityConfidenceSchema,
   RedemptionDocSourceSupportSchema,
   RedemptionExecutionModelSchema,
+  RedemptionFeeScenarioSchema,
   RedemptionFeeModelKindSchema,
   RedemptionHolderEligibilitySchema,
   RedemptionOutputAssetTypeSchema,
+  RedemptionRouteExitCorrelationSchema,
   RedemptionRouteFamilySchema,
   RedemptionSettlementModelSchema,
 } from "../../types";
@@ -30,16 +32,35 @@ const RedemptionCapacityModelSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("supply-ratio"),
     ratio: RatioSchema,
+    dailyLimitUsd: z.number().nonnegative().optional(),
+    confidence: RedemptionCapacityConfidenceSchema.optional(),
+    basis: RedemptionCapacityBasisSchema.optional(),
+  }),
+  z.strictObject({
+    kind: z.literal("fixed-usd"),
+    amountUsd: z.number().nonnegative(),
+    dailyLimitUsd: z.number().nonnegative().optional(),
     confidence: RedemptionCapacityConfidenceSchema.optional(),
     basis: RedemptionCapacityBasisSchema.optional(),
   }),
   z.strictObject({
     kind: z.literal("reserve-sync-metadata"),
     fallbackRatio: RatioSchema.optional(),
+    fallbackUsd: z.number().nonnegative().optional(),
     confidence: RedemptionCapacityConfidenceSchema.optional(),
     basis: RedemptionCapacityBasisSchema.optional(),
   }),
 ]);
+
+const RedemptionCostShapeSchema = {
+  flatFeeUsd: z.number().nonnegative().optional(),
+  minFeeUsd: z.number().nonnegative().optional(),
+  feeBpsMin: z.number().nonnegative().optional(),
+  feeBpsMax: z.number().nonnegative().optional(),
+  gasOrBridgeCostUsd: z.number().nonnegative().optional(),
+  stressFeeBps: z.number().nonnegative().optional(),
+  feeScenario: RedemptionFeeScenarioSchema.optional(),
+};
 
 const RedemptionCostModelSchema = z.discriminatedUnion("kind", [
   z.strictObject({
@@ -47,12 +68,14 @@ const RedemptionCostModelSchema = z.discriminatedUnion("kind", [
     feeBps: z.number().nonnegative(),
     feeDescription: z.string().min(1).optional(),
     confidence: z.literal("fixed").optional(),
+    ...RedemptionCostShapeSchema,
   }),
   z.strictObject({
     kind: z.literal("dynamic-or-unclear"),
     feeDescription: z.string().min(1).optional(),
     confidence: z.enum(["formula", "undisclosed-reviewed"]).optional(),
     feeModelKind: RedemptionFeeModelKindSchema.exclude(["fixed-bps"]).optional(),
+    ...RedemptionCostShapeSchema,
   }),
 ]);
 
@@ -67,6 +90,7 @@ export const RedemptionBackstopConfigSchema = z
     costModel: RedemptionCostModelSchema,
     holderEligibility: RedemptionHolderEligibilitySchema.optional(),
     routeStatus: z.enum(["open", "unknown"]).optional(),
+    routeExitCorrelation: RedemptionRouteExitCorrelationSchema.optional(),
     totalScoreCap: z.number().gt(0).lte(100).optional(),
     docs: z.array(RedemptionDocSourceSchema).optional(),
     reviewedAt: z.string().regex(REVIEWED_AT_PATTERN, "Expected YYYY-MM-DD").optional(),

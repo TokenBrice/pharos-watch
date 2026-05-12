@@ -2,8 +2,11 @@ import type {
   RedemptionAccessModel,
   RedemptionCapacityConfidence,
   RedemptionExecutionModel,
+  RedemptionHolderEligibility,
   RedemptionLiveCapacityKind,
+  RedemptionModelConfidence,
   RedemptionOutputAssetType,
+  RedemptionRouteExitCorrelation,
   RedemptionRouteFamily,
   RedemptionSettlementModel,
   RedemptionSourceMode,
@@ -139,13 +142,17 @@ function interpolateScore(
 export function computeCapacityScore(args: {
   immediateCapacityUsd: number | null;
   immediateCapacityRatio: number | null;
+  absoluteOnlyMode?: "interpolated" | "tier-floor";
 }): {
   score: number | null;
   coverageRatioScore: number | null;
   absoluteCapacityScore: number | null;
 } {
   const coverageRatioScore = interpolateScore(args.immediateCapacityRatio, COVERAGE_RATIO_BREAKPOINTS);
-  const absoluteCapacityScore = interpolateScore(args.immediateCapacityUsd, ABSOLUTE_CAPACITY_BREAKPOINTS);
+  const absoluteCapacityScore =
+    args.absoluteOnlyMode === "tier-floor"
+      ? scoreAbsoluteCapacityTierFloor(args.immediateCapacityUsd)
+      : interpolateScore(args.immediateCapacityUsd, ABSOLUTE_CAPACITY_BREAKPOINTS);
 
   if (coverageRatioScore == null && absoluteCapacityScore == null) {
     return {
@@ -163,6 +170,92 @@ export function computeCapacityScore(args: {
     coverageRatioScore,
     absoluteCapacityScore,
   };
+}
+
+function scoreAbsoluteCapacityTierFloor(value: number | null | undefined): number | null {
+  if (value == null || !Number.isFinite(value) || value < 0) return null;
+  let floor: number = ABSOLUTE_CAPACITY_BREAKPOINTS[0].score;
+  for (const breakpoint of ABSOLUTE_CAPACITY_BREAKPOINTS) {
+    if (value < breakpoint.value) break;
+    floor = breakpoint.score;
+  }
+  return floor;
+}
+
+export function applyCapacityConstraintScoreEffects(args: {
+  capacityScore: number | null;
+  scoringCapacityUsd: number | null;
+  settlementDelaySec?: number;
+  queueDepthUsd?: number;
+  minRedeemUsd?: number;
+  liveHolderEligibility?: RedemptionHolderEligibility;
+}): {
+  score: number | null;
+  capsApplied: string[];
+} {
+  if (args.capacityScore == null) return { score: null, capsApplied: [] };
+
+  let score = args.capacityScore;
+  const capsApplied: string[] = [];
+
+  if (args.settlementDelaySec != null) {
+    const delayMultiplier =
+      args.settlementDelaySec <= 3_600
+        ? 1
+        : args.settlementDelaySec <= 86_400
+          ? 0.9
+          : args.settlementDelaySec <= 604_800
+            ? 0.75
+            : 0.6;
+    if (delayMultiplier < 1) {
+      score *= delayMultiplier;
+      capsApplied.push("settlement-delay-penalty");
+    }
+  }
+
+  if (args.queueDepthUsd != null && args.queueDepthUsd > 0 && args.scoringCapacityUsd != null && args.scoringCapacityUsd > 0) {
+    const backlogRatio = args.queueDepthUsd / args.scoringCapacityUsd;
+    const queueMultiplier = backlogRatio >= 1 ? 0.65 : backlogRatio >= 0.5 ? 0.8 : 0.9;
+    score *= queueMultiplier;
+    capsApplied.push("queue-depth-penalty");
+  }
+
+  if (args.minRedeemUsd != null) {
+    const minRedeemMultiplier = args.minRedeemUsd > 1_000_000 ? 0.75 : args.minRedeemUsd > 10_000 ? 0.9 : 1;
+    if (minRedeemMultiplier < 1) {
+      score *= minRedeemMultiplier;
+      capsApplied.push("minimum-size-penalty");
+    }
+  }
+
+  if (args.liveHolderEligibility != null) {
+    const holderMultiplier = resolveLiveHolderEligibilityMultiplier(args.liveHolderEligibility);
+    if (holderMultiplier < 1) {
+      score *= holderMultiplier;
+      capsApplied.push("live-holder-eligibility-penalty");
+    }
+  }
+
+  return {
+    score: Math.round(Math.max(0, Math.min(100, score))),
+    capsApplied,
+  };
+}
+
+function resolveLiveHolderEligibilityMultiplier(holderEligibility: RedemptionHolderEligibility): number {
+  switch (holderEligibility) {
+    case "any-holder":
+      return 1;
+    case "verified-customer":
+      return 0.9;
+    case "whitelisted-primary":
+    case "pre-incident-holder":
+      return 0.85;
+    case "issuer-discretionary":
+      return 0.6;
+    case "unknown":
+      return 0.85;
+  }
 }
 
 export function computeRedemptionBackstopScore(args: {
@@ -216,23 +309,79 @@ export function computeRedemptionBackstopScore(args: {
 export function computeEffectiveExitScore(
   liquidityScore: number | null | undefined,
   redemptionBackstopScore: number | null | undefined,
+  options?: {
+    circulatingSupplyUsd?: number | null;
+    modeledExitSizeUsd?: number | null;
+    currentExecutableCapacityUsd?: number | null;
+    routeExitCorrelation?: RedemptionRouteExitCorrelation;
+    modelConfidence?: RedemptionModelConfidence;
+  },
 ): number | null {
   const liquidity =
     liquidityScore != null && Number.isFinite(liquidityScore) ? Math.max(0, Math.min(100, liquidityScore)) : null;
-  const redemption =
+  const rawRedemption =
     redemptionBackstopScore != null && Number.isFinite(redemptionBackstopScore)
       ? Math.max(0, Math.min(100, redemptionBackstopScore))
       : null;
+  const redemption =
+    rawRedemption != null && options
+      ? rawRedemption * resolveEffectiveExitCapacityFactor(options) * resolveEffectiveExitConfidenceFactor(options.modelConfidence)
+      : rawRedemption;
+  const roundedRedemption = redemption != null ? Math.round(Math.max(0, Math.min(100, redemption))) : null;
 
-  if (liquidity != null && redemption != null) {
-    const bestPath = Math.max(liquidity, redemption);
-    const bonus = Math.min(liquidity, redemption) * EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR;
+  if (liquidity != null && roundedRedemption != null) {
+    const bestPath = Math.max(liquidity, roundedRedemption);
+    const bonus =
+      options?.routeExitCorrelation === "independent-issuer-rail"
+        ? Math.min(liquidity, roundedRedemption) * EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR
+        : options
+          ? 0
+          : Math.min(liquidity, roundedRedemption) * EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR;
     return Math.round(Math.min(100, bestPath + bonus));
   }
 
   if (liquidity != null) return Math.round(liquidity);
-  if (redemption != null) return Math.round(redemption);
+  if (roundedRedemption != null) return roundedRedemption;
   return null;
+}
+
+export function computeModeledExitSizeUsd(circulatingSupplyUsd: number | null | undefined): number | null {
+  if (circulatingSupplyUsd == null || !Number.isFinite(circulatingSupplyUsd) || circulatingSupplyUsd <= 0) {
+    return null;
+  }
+  return Math.min(Math.max(circulatingSupplyUsd * 0.05, 100_000), 25_000_000);
+}
+
+function resolveEffectiveExitCapacityFactor(options: {
+  circulatingSupplyUsd?: number | null;
+  modeledExitSizeUsd?: number | null;
+  currentExecutableCapacityUsd?: number | null;
+}): number {
+  const modeledExitSizeUsd =
+    options.modeledExitSizeUsd != null && Number.isFinite(options.modeledExitSizeUsd) && options.modeledExitSizeUsd > 0
+      ? options.modeledExitSizeUsd
+      : computeModeledExitSizeUsd(options.circulatingSupplyUsd);
+  if (
+    modeledExitSizeUsd == null ||
+    options.currentExecutableCapacityUsd == null ||
+    !Number.isFinite(options.currentExecutableCapacityUsd)
+  ) {
+    return 1;
+  }
+  return Math.max(0, Math.min(1, options.currentExecutableCapacityUsd / modeledExitSizeUsd));
+}
+
+function resolveEffectiveExitConfidenceFactor(modelConfidence: RedemptionModelConfidence | undefined): number {
+  switch (modelConfidence) {
+    case "high":
+      return 1;
+    case "medium":
+      return 0.75;
+    case "low":
+      return 0.35;
+    default:
+      return 1;
+  }
 }
 
 export const REDEMPTION_ROUTE_FAMILY_LABELS: Record<RedemptionRouteFamily, string> = {

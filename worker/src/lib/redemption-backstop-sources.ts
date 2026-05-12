@@ -1,12 +1,15 @@
 import { sumPegBuckets } from "@shared/lib/supply";
 import {
+  deriveModelConfidenceWithDetails,
   deriveModelConfidence,
   resolveCapacityConfidence,
   resolveCapacitySemantics,
 } from "@shared/lib/redemption-backstop-confidence";
 import {
+  applyCapacityConstraintScoreEffects,
   computeCapacityScore,
   computeEffectiveExitScore,
+  computeModeledExitSizeUsd,
   computeRedemptionBackstopScore,
   isStrongLiveDirectRoute,
   REDEMPTION_ACCESS_SCORES,
@@ -27,6 +30,7 @@ import {
   resolveReserveSyncCapacityConfidence,
   type RedemptionBackstopBuildOptions,
 } from "./redemption-backstop-capacity";
+import { mergeRedemptionRouteStatus, type RedemptionRouteStatusEvidence } from "./redemption-backstop-route-status";
 import { resolveRedemptionStaticFields } from "./redemption-backstop-cost";
 
 function resolveStaticFields(
@@ -94,6 +98,15 @@ export async function buildRedemptionBackstopEntry(
   const capacityScoring = computeCapacityScore({
     immediateCapacityUsd: capacity.scoringCapacityUsd,
     immediateCapacityRatio: capacity.scoringCapacityRatio,
+    absoluteOnlyMode: capacity.capacityScoreMode,
+  });
+  const constrainedCapacityScoring = applyCapacityConstraintScoreEffects({
+    capacityScore: capacityScoring.score,
+    scoringCapacityUsd: capacity.scoringCapacityUsd,
+    settlementDelaySec: capacity.settlementDelaySec,
+    queueDepthUsd: capacity.queueDepthUsd,
+    minRedeemUsd: capacity.minRedeemUsd,
+    liveHolderEligibility: capacity.liveHolderEligibility,
   });
   const staticFields = resolveStaticFields(stablecoinId, config, reserveSnapshotMetadata, now);
   const scored = computeRedemptionBackstopScore({
@@ -101,42 +114,37 @@ export async function buildRedemptionBackstopEntry(
     accessScore: staticFields.accessScore,
     settlementScore: staticFields.settlementScore,
     executionCertaintyScore: staticFields.executionCertaintyScore,
-    capacityScore: capacityScoring.score,
+    capacityScore: constrainedCapacityScoring.score,
     outputAssetQualityScore: staticFields.outputAssetQualityScore,
     costScore: staticFields.costScore,
     totalScoreCap: config.totalScoreCap,
   });
+  const eventualCapacityScoring = computeCapacityScore({
+    immediateCapacityUsd: capacity.eventualCapacityUsd ?? null,
+    immediateCapacityRatio: capacity.eventualCapacityRatio ?? null,
+  });
+  const eventualRedeemabilityScore =
+    eventualCapacityScoring.score == null
+      ? null
+      : computeRedemptionBackstopScore({
+          routeFamily: config.routeFamily,
+          accessScore: staticFields.accessScore,
+          settlementScore: staticFields.settlementScore,
+          executionCertaintyScore: staticFields.executionCertaintyScore,
+          capacityScore: eventualCapacityScoring.score,
+          outputAssetQualityScore: staticFields.outputAssetQualityScore,
+          costScore: staticFields.costScore,
+          totalScoreCap: config.totalScoreCap,
+        }).score;
   let resolutionState: RedemptionBackstopEntry["resolutionState"] =
     scored.score != null
       ? "resolved"
-      : capacity.resolutionState === "resolved"
+      : capacity.resolutionState === "resolved" && eventualRedeemabilityScore == null
         ? "missing-capacity"
         : capacity.resolutionState;
   let score = scored.score;
-  let capsApplied = scored.capsApplied;
-  let routeStatus: RedemptionBackstopEntry["routeStatus"] =
-    resolutionState === "resolved" ? (config.routeStatus ?? "open") : "unknown";
-  let routeStatusSource: RedemptionBackstopEntry["routeStatusSource"] = "static-config";
-  let routeStatusReason: RedemptionBackstopEntry["routeStatusReason"];
-  let routeStatusReviewedAt: RedemptionBackstopEntry["routeStatusReviewedAt"];
-  if (resolutionState === "resolved" && capacity.routeStatus) {
-    routeStatus = capacity.routeStatus;
-    routeStatusSource = capacity.routeStatusSource ?? "protocol-api";
-    routeStatusReason = capacity.routeStatusReason;
-    routeStatusReviewedAt = capacity.routeStatusReviewedAt;
-  }
-  const liveRouteStatusImpaired =
-    resolutionState === "resolved" &&
-    capacity.routeStatus != null &&
-    capacity.routeStatus !== "open" &&
-    capacity.routeStatus !== "unknown";
-  if (liveRouteStatusImpaired) {
-    resolutionState = "impaired";
-    score = null;
-    capsApplied = [...capsApplied, "live-route-status-impairment"];
-  }
+  let capsApplied = [...constrainedCapacityScoring.capsApplied, ...scored.capsApplied];
   const holderEligibility = config.holderEligibility ?? resolveDefaultHolderEligibility(config);
-  const routeAvailability = options.routeAvailability;
   const hasStrongLiveDirectRoute = isStrongLiveDirectRoute({
     capacityConfidence: capacity.capacityConfidence,
     capacityKind: capacity.capacityKind,
@@ -144,31 +152,75 @@ export async function buildRedemptionBackstopEntry(
     accessModel: config.accessModel,
     settlementModel: config.settlementModel,
   });
-  const routeImpaired = resolutionState === "resolved" && routeAvailability != null && !hasStrongLiveDirectRoute;
+  const staticRouteStatus: RedemptionRouteStatusEvidence = {
+    routeStatus: resolutionState === "resolved" ? (config.routeStatus ?? "open") : "unknown",
+    routeStatusSource: "static-config",
+  };
+  const liveRouteStatus: RedemptionRouteStatusEvidence | null = capacity.routeStatus
+    ? {
+        routeStatus: capacity.routeStatus,
+        routeStatusSource: capacity.routeStatusSource ?? "protocol-api",
+        ...(capacity.routeStatusReason ? { routeStatusReason: capacity.routeStatusReason } : {}),
+        ...(capacity.routeStatusReviewedAt ? { routeStatusReviewedAt: capacity.routeStatusReviewedAt } : {}),
+      }
+    : null;
+  const mergedRouteStatus = mergeRedemptionRouteStatus({
+    staticEvidence: staticRouteStatus,
+    liveEvidence: liveRouteStatus,
+    feedEvidence: options.routeStatusFeed ?? null,
+    severeMarketImplied: options.routeAvailability ?? null,
+    allowSevereMarketOpenException: hasStrongLiveDirectRoute,
+  });
+  const routeStatus = mergedRouteStatus.routeStatus;
+  const routeStatusSource = mergedRouteStatus.routeStatusSource;
+  const routeStatusReason = mergedRouteStatus.routeStatusReason;
+  const routeStatusReviewedAt = mergedRouteStatus.routeStatusReviewedAt;
 
-  if (routeImpaired) {
+  if (resolutionState === "resolved" && mergedRouteStatus.impaired) {
     resolutionState = "impaired";
     score = null;
-    routeStatus = routeAvailability.routeStatus;
-    routeStatusSource = routeAvailability.routeStatusSource;
-    routeStatusReason = routeAvailability.routeStatusReason;
-    routeStatusReviewedAt = routeAvailability.routeStatusReviewedAt;
-    capsApplied = [...capsApplied, "market-implied-depeg-impairment"];
+    const translatedCaps = mergedRouteStatus.capsApplied.map((cap) =>
+      cap === "route-status-impairment" ? "live-route-status-impairment" : cap,
+    );
+    capsApplied = [...capsApplied, ...translatedCaps];
   }
 
-  const effectiveExitScore =
-    resolutionState === "resolved" ? computeEffectiveExitScore(dexLiquidityScore, score) : null;
+  const routeExitCorrelation = config.routeExitCorrelation ?? inferDefaultRouteExitCorrelation(config);
+  const modeledExitSizeUsd = computeModeledExitSizeUsd(supplyUsd);
+  const capacityProfile = capacity.capacityProfile
+    ? {
+        ...capacity.capacityProfile,
+        ...(modeledExitSizeUsd != null ? { modeledExitSizeUsd } : {}),
+      }
+    : undefined;
   const capacityBasis = resolveCapacityBasis(config.routeFamily, config.capacityModel, capacity.capacityConfidence);
-  const modelConfidence = deriveModelConfidence({
+  const confidence = deriveModelConfidenceWithDetails({
     resolutionState,
     capacityConfidence: capacity.capacityConfidence,
     feeConfidence: staticFields.feeConfidence,
+    routeStatus,
+    routeStatusSource,
+    reviewedAt: config.reviewedAt,
+    holderEligibility,
+    sourceMode: capacity.sourceMode,
+    freshnessKind: capacity.freshnessKind,
+    now,
   });
+  const modelConfidence = confidence.modelConfidence;
+  const effectiveExitScore =
+    resolutionState === "resolved"
+      ? computeEffectiveExitScore(dexLiquidityScore, score, {
+          circulatingSupplyUsd: supplyUsd,
+          currentExecutableCapacityUsd: capacity.scoringCapacityUsd,
+          routeExitCorrelation,
+          modelConfidence,
+        })
+      : null;
   const notes = dedupNotes([
     ...(config.notes ?? []),
     ...capacity.notes,
     ...staticFields.notes,
-    ...(routeStatusReason ? [routeStatusReason] : []),
+    ...mergedRouteStatus.notes,
   ]);
 
   return {
@@ -179,7 +231,7 @@ export async function buildRedemptionBackstopEntry(
     accessScore: staticFields.accessScore,
     settlementScore: staticFields.settlementScore,
     executionCertaintyScore: staticFields.executionCertaintyScore,
-    capacityScore: capacityScoring.score,
+    capacityScore: constrainedCapacityScoring.score,
     outputAssetQualityScore: staticFields.outputAssetQualityScore,
     costScore: staticFields.costScore,
     routeFamily: config.routeFamily,
@@ -201,8 +253,11 @@ export async function buildRedemptionBackstopEntry(
     feeConfidence: staticFields.feeConfidence,
     feeModelKind: staticFields.feeModelKind,
     modelConfidence,
+    confidenceDetails: confidence.confidenceDetails,
     immediateCapacityUsd: capacity.immediateCapacityUsd,
     immediateCapacityRatio: capacity.immediateCapacityRatio,
+    ...(capacityProfile ? { capacityProfile } : {}),
+    eventualRedeemabilityScore,
     ...(capacity.capacityKind ? { capacityKind: capacity.capacityKind } : {}),
     ...(capacity.freshnessKind ? { freshnessKind: capacity.freshnessKind } : {}),
     ...(capacity.sourceTimestamp != null ? { sourceTimestamp: capacity.sourceTimestamp } : {}),
@@ -214,6 +269,8 @@ export async function buildRedemptionBackstopEntry(
     ...(capacity.liveHolderEligibility ? { liveHolderEligibility: capacity.liveHolderEligibility } : {}),
     feeBps: staticFields.feeBps,
     feeDescription: staticFields.feeDescription,
+    ...(staticFields.costScenarioScores ? { costScenarioScores: staticFields.costScenarioScores } : {}),
+    routeExitCorrelation,
     queueEnabled: staticFields.queueEnabled,
     methodologyVersion: REDEMPTION_BACKSTOP_VERSION,
     updatedAt: now,
@@ -221,6 +278,20 @@ export async function buildRedemptionBackstopEntry(
     notes,
     capsApplied,
   };
+}
+
+function inferDefaultRouteExitCorrelation(
+  config: Pick<RedemptionBackstopConfig, "routeFamily" | "outputAssetType">,
+): RedemptionBackstopEntry["routeExitCorrelation"] {
+  if (config.routeFamily === "offchain-issuer") return "independent-issuer-rail";
+  if (config.routeFamily === "psm-swap") return "same-stablecoin-pool-backing";
+  if (config.routeFamily === "stablecoin-redeem" && config.outputAssetType === "stable-single") {
+    return "wrapper-to-parent-dependency";
+  }
+  if (config.routeFamily === "basket-redeem" || config.routeFamily === "collateral-redeem") {
+    return "same-protocol-liquidity";
+  }
+  return "unknown";
 }
 
 function dedupNotes(notes: readonly string[]): string[] {

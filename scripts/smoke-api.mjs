@@ -252,9 +252,17 @@ const REDEMPTION_ENUMS = {
     "live-proxy-buffer",
   ]),
   capacitySemantics: new Set(["immediate-bounded", "eventual-only"]),
+  capacityScoringHorizon: new Set(["immediate", "daily", "queued", "eventual", "unknown"]),
   feeConfidence: new Set(["fixed", "formula", "undisclosed-reviewed"]),
   feeModelKind: new Set(["fixed-bps", "formula", "documented-variable", "undisclosed-reviewed"]),
   modelConfidence: new Set(["high", "medium", "low"]),
+  routeExitCorrelation: new Set([
+    "independent-issuer-rail",
+    "same-stablecoin-pool-backing",
+    "same-protocol-liquidity",
+    "wrapper-to-parent-dependency",
+    "unknown",
+  ]),
   docSupport: new Set(["route", "capacity", "fees", "access", "settlement"]),
 };
 
@@ -340,11 +348,63 @@ function assertRedemptionEntry(key, entry) {
     REDEMPTION_ENUMS.capacitySemantics,
     `${pathPrefix}.capacitySemantics is invalid`,
   );
+  if (entry.capacityProfile != null) {
+    assert(
+      entry.capacityProfile && typeof entry.capacityProfile === "object" && !Array.isArray(entry.capacityProfile),
+      `${pathPrefix}.capacityProfile is invalid`,
+    );
+    assertOptionalNonNegativeNumber(entry.capacityProfile.immediateUsd, `${pathPrefix}.capacityProfile.immediateUsd`);
+    assertOptionalNonNegativeNumber(entry.capacityProfile.dailyLimitUsd, `${pathPrefix}.capacityProfile.dailyLimitUsd`);
+    assertOptionalNonNegativeNumber(entry.capacityProfile.queuedUsd, `${pathPrefix}.capacityProfile.queuedUsd`);
+    assertOptionalNonNegativeNumber(entry.capacityProfile.eventualUsd, `${pathPrefix}.capacityProfile.eventualUsd`);
+    assertOptionalNonNegativeNumber(entry.capacityProfile.scoringUsd, `${pathPrefix}.capacityProfile.scoringUsd`);
+    assertKnownEnum(
+      entry.capacityProfile.scoringHorizon,
+      REDEMPTION_ENUMS.capacityScoringHorizon,
+      `${pathPrefix}.capacityProfile.scoringHorizon is invalid`,
+    );
+    assertKnownEnum(
+      entry.capacityProfile.capacityProfileConfidence,
+      REDEMPTION_ENUMS.capacityConfidence,
+      `${pathPrefix}.capacityProfile.capacityProfileConfidence is invalid`,
+    );
+    assertOptionalNonNegativeNumber(
+      entry.capacityProfile.modeledExitSizeUsd,
+      `${pathPrefix}.capacityProfile.modeledExitSizeUsd`,
+    );
+  }
   assertKnownEnum(entry.feeConfidence, REDEMPTION_ENUMS.feeConfidence, `${pathPrefix}.feeConfidence is invalid`);
   assertKnownEnum(entry.feeModelKind, REDEMPTION_ENUMS.feeModelKind, `${pathPrefix}.feeModelKind is invalid`);
   assertKnownEnum(entry.modelConfidence, REDEMPTION_ENUMS.modelConfidence, `${pathPrefix}.modelConfidence is invalid`);
+  if (entry.confidenceDetails != null) {
+    assert(
+      entry.confidenceDetails && typeof entry.confidenceDetails === "object" && !Array.isArray(entry.confidenceDetails),
+      `${pathPrefix}.confidenceDetails is invalid`,
+    );
+    for (const field of [
+      "capacityEvidenceQuality",
+      "feeEvidenceQuality",
+      "routeStatusFreshness",
+      "holderCohortBreadth",
+      "sourceQuality",
+    ]) {
+      assertOptionalScore(entry.confidenceDetails[field], `${pathPrefix}.confidenceDetails.${field}`);
+    }
+    assertOptionalNonNegativeNumber(
+      entry.confidenceDetails.reviewedDocAgeDays,
+      `${pathPrefix}.confidenceDetails.reviewedDocAgeDays`,
+    );
+    if (entry.confidenceDetails.reasons != null) {
+      assert(Array.isArray(entry.confidenceDetails.reasons), `${pathPrefix}.confidenceDetails.reasons is not an array`);
+      assert(
+        entry.confidenceDetails.reasons.every((reason) => typeof reason === "string"),
+        `${pathPrefix}.confidenceDetails.reasons contains a non-string`,
+      );
+    }
+  }
   assertOptionalNonNegativeNumber(entry.immediateCapacityUsd, `${pathPrefix}.immediateCapacityUsd`);
   assertOptionalRatio(entry.immediateCapacityRatio, `${pathPrefix}.immediateCapacityRatio`);
+  assertOptionalScore(entry.eventualRedeemabilityScore, `${pathPrefix}.eventualRedeemabilityScore`);
   assertOptionalNonNegativeNumber(entry.sourceTimestamp, `${pathPrefix}.sourceTimestamp`);
   if (entry.sourceUrls != null) {
     assert(Array.isArray(entry.sourceUrls), `${pathPrefix}.sourceUrls is not an array`);
@@ -365,6 +425,24 @@ function assertRedemptionEntry(key, entry) {
     );
   }
   assertOptionalNonNegativeNumber(entry.feeBps, `${pathPrefix}.feeBps`);
+  if (entry.costScenarioScores != null) {
+    assert(
+      entry.costScenarioScores &&
+        typeof entry.costScenarioScores === "object" &&
+        !Array.isArray(entry.costScenarioScores),
+      `${pathPrefix}.costScenarioScores is invalid`,
+    );
+    assertOptionalScore(entry.costScenarioScores.retail, `${pathPrefix}.costScenarioScores.retail`);
+    assertOptionalScore(entry.costScenarioScores.activeUser, `${pathPrefix}.costScenarioScores.activeUser`);
+    assertOptionalScore(entry.costScenarioScores.institutional, `${pathPrefix}.costScenarioScores.institutional`);
+  }
+  if (entry.routeExitCorrelation != null) {
+    assertKnownEnum(
+      entry.routeExitCorrelation,
+      REDEMPTION_ENUMS.routeExitCorrelation,
+      `${pathPrefix}.routeExitCorrelation is invalid`,
+    );
+  }
   assert(typeof entry.queueEnabled === "boolean", `${pathPrefix}.queueEnabled is not boolean`);
   assert(
     typeof entry.methodologyVersion === "string" && entry.methodologyVersion.length > 0,

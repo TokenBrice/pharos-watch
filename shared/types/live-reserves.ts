@@ -2,6 +2,8 @@ import { z } from "zod";
 import type { DependencyType } from "./dependency-types";
 import { RESERVE_RISK_VALUES, ReserveSliceSchema, type ReserveRisk, type ReserveSlice } from "./reserves";
 import {
+  RedemptionHolderEligibilitySchema,
+  type RedemptionHolderEligibility,
   RedemptionLiveCapacityKindValues,
   RedemptionLiveFreshnessKindValues,
   RedemptionRouteStatusSchema,
@@ -164,7 +166,7 @@ export interface LiveReserveRedemptionTelemetry extends Record<string, unknown> 
   routeStatusSource?: LiveReserveRedemptionRouteStatusSource;
   routeStatusReason?: string;
   routeStatusReviewedAt?: string;
-  holderEligibility?: string;
+  holderEligibility?: RedemptionHolderEligibility;
   settlementDelaySec?: number;
   queueDepthUsd?: number;
   dailyLimitUsd?: number;
@@ -271,7 +273,7 @@ export const LiveReserveRedemptionTelemetrySchema: z.ZodType<LiveReserveRedempti
     routeStatusSource: RedemptionRouteStatusSourceSchema.optional(),
     routeStatusReason: z.string().optional(),
     routeStatusReviewedAt: z.string().optional(),
-    holderEligibility: z.string().optional(),
+    holderEligibility: RedemptionHolderEligibilitySchema.optional(),
     settlementDelaySec: z.number().finite().optional(),
     queueDepthUsd: z.number().finite().optional(),
     dailyLimitUsd: z.number().finite().optional(),

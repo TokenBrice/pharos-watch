@@ -11,6 +11,7 @@ import {
 describe("redemption backstop provider definitions", () => {
   it("defines every provider ID emitted by redemption backstop sync", () => {
     expect(Object.keys(REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS).sort()).toEqual([
+      "fixed-usd-model",
       "reserve-sync-fallback",
       "reserve-sync-metadata",
       "supply-full-model",
@@ -25,6 +26,9 @@ describe("redemption backstop provider definitions", () => {
     );
     expect(getProviderIdForCapacityModelKind("supply-ratio")).toBe(
       REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_RATIO_MODEL,
+    );
+    expect(getProviderIdForCapacityModelKind("fixed-usd")).toBe(
+      REDEMPTION_BACKSTOP_PROVIDER_IDS.FIXED_USD_MODEL,
     );
     expect(getProviderIdForCapacityModelKind("reserve-sync-metadata")).toBe(
       REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA,
@@ -47,6 +51,14 @@ describe("redemption backstop provider definitions", () => {
       defaultCapacityConfidence: "dynamic",
       defaultCapacitySemantics: "immediate-bounded",
       severeDepegScoreability: "requires-strong-live-direct-route",
+    });
+    expect(REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS["fixed-usd-model"]).toMatchObject({
+      capacitySource: "fixed-usd",
+      defaultSourceMode: "static",
+      provenanceClass: "reviewed-config-fallback",
+      defaultCapacityConfidence: "documented-bound",
+      defaultCapacitySemantics: "immediate-bounded",
+      severeDepegScoreability: "not-scoreable",
     });
     expect(REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS["sync-error"]).toMatchObject({
       capability: "failure-sentinel",
@@ -86,6 +98,7 @@ describe("redemption backstop provider definitions", () => {
   it("preserves legacy readback semantics inference by provider", () => {
     expect(inferProviderCapacitySemantics({ provider: "supply-full-model" })).toBe("eventual-only");
     expect(inferProviderCapacitySemantics({ provider: "supply-ratio-model" })).toBe("immediate-bounded");
+    expect(inferProviderCapacitySemantics({ provider: "fixed-usd-model" })).toBe("immediate-bounded");
     expect(inferProviderCapacitySemantics({ provider: "reserve-sync-metadata" })).toBe("immediate-bounded");
     expect(inferProviderCapacitySemantics({ provider: "unknown-provider" })).toBe("immediate-bounded");
   });

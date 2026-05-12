@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   REDEMPTION_FEE_SCORE_BREAKPOINTS,
+  resolveCostScenarioScores,
   resolveBoundedFeeScore,
 } from "../redemption-backstop-cost";
 
@@ -59,5 +60,38 @@ describe("REDEMPTION_FEE_SCORE_BREAKPOINTS", () => {
     const topBreakpoint =
       REDEMPTION_FEE_SCORE_BREAKPOINTS[REDEMPTION_FEE_SCORE_BREAKPOINTS.length - 1];
     expect(resolveBoundedFeeScore(topBreakpoint.maxFeeBps + 1)).toBe(40);
+  });
+});
+
+describe("resolveCostScenarioScores", () => {
+  it("makes high flat fees expensive for retail users", () => {
+    const scores = resolveCostScenarioScores(
+      {
+        kind: "fee-bps",
+        feeBps: 0,
+        flatFeeUsd: 25,
+      },
+      0,
+    );
+
+    expect(scores?.retail).toBe(40);
+    expect(scores?.activeUser).toBe(80);
+    expect(scores?.institutional).toBe(100);
+  });
+
+  it("uses documented fee ranges for scenario scoring", () => {
+    const scores = resolveCostScenarioScores(
+      {
+        kind: "dynamic-or-unclear",
+        confidence: "formula",
+        feeBpsMin: 5,
+        feeBpsMax: 75,
+        feeDescription: "5-75 bps depending on utilization",
+      },
+      null,
+    );
+
+    expect(scores?.activeUser).toBe(60);
+    expect(scores?.institutional).toBe(60);
   });
 });

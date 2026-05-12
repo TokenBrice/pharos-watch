@@ -1,6 +1,13 @@
 import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confidence";
+import { REDEMPTION_BACKSTOP_VERSION } from "@shared/lib/redemption-backstop-version";
+import {
+  EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR,
+  REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
+  REDEMPTION_ROUTE_FAMILY_CAPS,
+} from "@shared/lib/redemption-backstop-scoring";
 import type { CronResult } from "../lib/cron-logger";
 import { batchExecute } from "../lib/db";
 import { runWithOverloadRetry } from "../lib/cron-lease";
@@ -16,6 +23,11 @@ import {
   formatRouteAvailabilityReviewedAt,
   loadSevereActiveDepegAvailabilityMap,
 } from "../lib/redemption-backstop-availability";
+import {
+  countStaticRedemptionRouteStatusOverrides,
+  loadStaticRedemptionRouteStatusFeedMap,
+  REDEMPTION_ROUTE_STATUS_PRODUCER,
+} from "../lib/redemption-backstop-route-status";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 
 const MISSING_CAPACITY_OK_RATIO = 0.01;
@@ -27,10 +39,76 @@ function getAllowedMissingCapacityCount(configuredCount: number): number {
   return Math.max(1, Math.ceil(configuredCount * MISSING_CAPACITY_OK_RATIO));
 }
 
-async function pruneRemovedRedemptionBackstops(
-  db: D1Database,
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([left], [right]) =>
+      left.localeCompare(right),
+    );
+    return `{${entries.map(([key, item]) => `${JSON.stringify(key)}:${stableStringify(item)}`).join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "undefined";
+}
+
+function stableHash(value: unknown): string {
+  const input = stableStringify(value);
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+function capStringList(values: readonly string[], limit = 25): string[] {
+  return values.slice(0, limit);
+}
+
+function buildRegistryMetadata(
   configuredIds: readonly string[],
-): Promise<void> {
+  configById: Map<string, ReturnType<typeof getRedemptionBackstopConfig>>,
+) {
+  const familyCounts: Record<string, number> = {};
+  let strongProxyCount = 0;
+  let heuristicCount = 0;
+  const registryDigest = configuredIds.map((stablecoinId) => {
+    const config = configById.get(stablecoinId);
+    if (!config) return [stablecoinId, "missing"];
+    familyCounts[config.routeFamily] = (familyCounts[config.routeFamily] ?? 0) + 1;
+    const confidence = resolveCapacityConfidence(config.capacityModel);
+    if (confidence === "heuristic") {
+      heuristicCount += 1;
+    } else {
+      strongProxyCount += 1;
+    }
+    return [
+      stablecoinId,
+      config.routeFamily,
+      config.accessModel,
+      config.settlementModel,
+      config.executionModel,
+      config.outputAssetType,
+      config.capacityModel.kind,
+      confidence,
+    ];
+  });
+
+  return {
+    registryHash: stableHash(registryDigest),
+    familyCounts,
+    strongProxyCount,
+    heuristicCount,
+    validatorVersion: 4,
+    configMethodologyVersion: REDEMPTION_BACKSTOP_VERSION,
+    v4ScoringParametersHash: stableHash({
+      componentWeights: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
+      routeFamilyCaps: REDEMPTION_ROUTE_FAMILY_CAPS,
+      effectiveExitDiversificationFactor: EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR,
+    }),
+  };
+}
+
+async function pruneRemovedRedemptionBackstops(db: D1Database, configuredIds: readonly string[]): Promise<void> {
   const configuredIdSet = new Set(configuredIds);
   const existingRows = await runWithOverloadRetry(() =>
     db.prepare("SELECT stablecoin_id FROM redemption_backstop").all<{ stablecoin_id: string }>(),
@@ -43,7 +121,9 @@ async function pruneRemovedRedemptionBackstops(
 
   await batchExecute(
     db,
-    staleIds.map((stablecoinId) => db.prepare("DELETE FROM redemption_backstop WHERE stablecoin_id = ?").bind(stablecoinId)),
+    staleIds.map((stablecoinId) =>
+      db.prepare("DELETE FROM redemption_backstop WHERE stablecoin_id = ?").bind(stablecoinId),
+    ),
   );
 }
 
@@ -69,10 +149,9 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   const { map: dexLiquidityMap, latestUpdatedAt } = await loadDexLiquiditySnapshot(db);
   const reserveSnapshotMetadataById = await loadReserveSnapshotMetadataMap(db, configuredIds);
   const now = Math.floor(Date.now() / 1000);
-  const routeAvailabilityById = await loadSevereActiveDepegAvailabilityMap(
-    db,
-    formatRouteAvailabilityReviewedAt(now),
-  );
+  const routeAvailabilityById = await loadSevereActiveDepegAvailabilityMap(db, formatRouteAvailabilityReviewedAt(now));
+  const routeStatusFeedById = loadStaticRedemptionRouteStatusFeedMap(configuredIds);
+  const registryMetadata = buildRegistryMetadata(configuredIds, configById);
 
   // Staleness is tracked for operational visibility (degraded-run signal +
   // metadata) but no longer suppresses effectiveExitScore. Aligns with the
@@ -105,6 +184,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
         resolved = await resolveRedemptionBackstopEntry(db, asset, dexLiquidityScore, now, {
           reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
           routeAvailability,
+          routeStatusFeed: routeStatusFeedById.get(stablecoinId) ?? null,
         });
       } else {
         const config = configById.get(stablecoinId);
@@ -112,6 +192,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
           resolved = await buildRedemptionBackstopEntry(db, stablecoinId, config, null, dexLiquidityScore, now, {
             reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
             routeAvailability,
+            routeStatusFeed: routeStatusFeedById.get(stablecoinId) ?? null,
           });
         }
       }
@@ -126,16 +207,6 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
       }
     }
   }
-
-  await upsertRedemptionBackstopSnapshots(db, snapshots, {
-    expectedCount: configuredIds.length,
-    metadata: {
-      configured: configuredIds.length,
-      liquidityStale,
-      severeActiveDepegThresholdBps: REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS,
-    },
-  });
-  await pruneRemovedRedemptionBackstops(db, configuredIds);
 
   const dynamicCount = snapshots.filter((entry) => entry.sourceMode === "dynamic").length;
   const estimatedCount = snapshots.filter((entry) => entry.sourceMode === "estimated").length;
@@ -159,36 +230,50 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   const missingCapacityWithinTolerance = missingCapacityCount <= allowedMissingCapacityCount;
   const hasBlockingUnresolved = failedIds.length > 0 || missingFromCache.length > 0 || criticalUnresolvedCount > 0;
   const hasDegradedSyncSignal = hasBlockingUnresolved || !missingCapacityWithinTolerance || liquidityStale;
+  const runMetadata = {
+    synced: snapshots.length,
+    failed: failedIds.length,
+    configured: configuredIds.length,
+    resolved: resolvedCount,
+    unresolved: unresolvedCount,
+    unresolvedMissingCapacity: missingCapacityCount,
+    unresolvedCritical: criticalUnresolvedCount,
+    availabilityDegraded: availabilityDegradedCount,
+    severeActiveDepegThresholdBps: REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS,
+    missingCapacityOkThreshold: allowedMissingCapacityCount,
+    coverageRatio,
+    dynamic: dynamicCount,
+    estimated: estimatedCount,
+    static: staticCount,
+    liquidityStale,
+    routeStatusProducer: REDEMPTION_ROUTE_STATUS_PRODUCER.model,
+    routeStatusProducerFetches: REDEMPTION_ROUTE_STATUS_PRODUCER.fetchesDuringRedemptionSync,
+    routeStatusOverrideCount: countStaticRedemptionRouteStatusOverrides(),
+    ...registryMetadata,
+    ...(failedIds.length > 0 ? { failedIds: capStringList(failedIds), failedIdsTruncated: failedIds.length > 25 } : {}),
+    ...(availabilityDegradedIds.length > 0
+      ? {
+          availabilityDegradedIds: capStringList(availabilityDegradedIds),
+          availabilityDegradedIdsTruncated: availabilityDegradedIds.length > 25,
+        }
+      : {}),
+    ...(missingFromCache.length > 0
+      ? { missingFromCache: capStringList(missingFromCache), missingFromCacheTruncated: missingFromCache.length > 25 }
+      : {}),
+  };
+
+  await upsertRedemptionBackstopSnapshots(db, snapshots, {
+    expectedCount: configuredIds.length,
+    metadata: runMetadata,
+  });
+  await pruneRemovedRedemptionBackstops(db, configuredIds);
 
   const status: CronResult["status"] =
-    resolvedCount === 0 && hasBlockingUnresolved
-      ? "error"
-      : hasDegradedSyncSignal
-        ? "degraded"
-        : "ok";
+    resolvedCount === 0 && hasBlockingUnresolved ? "error" : hasDegradedSyncSignal ? "degraded" : "ok";
 
   return {
     status,
     itemCount: snapshots.length,
-    metadata: JSON.stringify({
-      synced: snapshots.length,
-      failed: failedIds.length,
-      configured: configuredIds.length,
-      resolved: resolvedCount,
-      unresolved: unresolvedCount,
-      unresolvedMissingCapacity: missingCapacityCount,
-      unresolvedCritical: criticalUnresolvedCount,
-      availabilityDegraded: availabilityDegradedCount,
-      severeActiveDepegThresholdBps: REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS,
-      missingCapacityOkThreshold: allowedMissingCapacityCount,
-      coverageRatio,
-      dynamic: dynamicCount,
-      estimated: estimatedCount,
-      static: staticCount,
-      liquidityStale,
-      ...(failedIds.length > 0 ? { failedIds } : {}),
-      ...(availabilityDegradedIds.length > 0 ? { availabilityDegradedIds } : {}),
-      ...(missingFromCache.length > 0 ? { missingFromCache } : {}),
-    }),
+    metadata: JSON.stringify(runMetadata),
   };
 }

@@ -1,6 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.23 (2026-02-25 → 2026-05-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.24 (2026-02-25 → 2026-05-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.24 — Capacity-aware redemption effective-exit blending (2026-05-12)
+
+- Liquidity / Exit now consumes Redemption Backstop v4 current-capacity semantics instead of treating eventual route quality as current executable exit capacity
+- Redemption contribution is scaled by executable capacity relative to modeled exit size and by model confidence
+- The DEX/redemption diversification bonus now applies only to plausibly independent issuer rails; wrappers, same-protocol paths, same stablecoin-pool/backing routes, and unknown correlations do not receive the extra independence uplift
 
 ## v7.23 — sGHO and Reservoir reserve coverage refinements (2026-05-12)
 

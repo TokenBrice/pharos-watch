@@ -139,39 +139,41 @@ describe("syncRedemptionBackstops", () => {
       updatedAt: now,
       capsApplied: [],
     });
-    buildFailedRedemptionBackstopEntryMock.mockImplementation((stablecoinId: string, _config: unknown, failedAt: number) => ({
-      stablecoinId,
-      score: null,
-      effectiveExitScore: null,
-      dexLiquidityScore: null,
-      accessScore: 100,
-      settlementScore: 100,
-      executionCertaintyScore: 80,
-      capacityScore: null,
-      outputAssetQualityScore: 80,
-      costScore: 40,
-      routeFamily: "basket-redeem",
-      accessModel: "permissionless-onchain",
-      settlementModel: "atomic",
-      executionModel: "deterministic-basket",
-      outputAssetType: "stable-basket",
-      provider: "sync-error",
-      sourceMode: "static",
-      resolutionState: "failed",
-      capacityConfidence: "heuristic",
-      capacitySemantics: "eventual-only",
-      feeConfidence: "undisclosed-reviewed",
-      feeModelKind: "undisclosed-reviewed",
-      modelConfidence: "low",
-      immediateCapacityUsd: null,
-      immediateCapacityRatio: null,
-      feeBps: null,
-      queueEnabled: false,
-      methodologyVersion: "1.0",
-      updatedAt: failedAt,
-      capsApplied: [],
-      notes: ["Latest redemption-backstop sync failed"],
-    }));
+    buildFailedRedemptionBackstopEntryMock.mockImplementation(
+      (stablecoinId: string, _config: unknown, failedAt: number) => ({
+        stablecoinId,
+        score: null,
+        effectiveExitScore: null,
+        dexLiquidityScore: null,
+        accessScore: 100,
+        settlementScore: 100,
+        executionCertaintyScore: 80,
+        capacityScore: null,
+        outputAssetQualityScore: 80,
+        costScore: 40,
+        routeFamily: "basket-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-basket",
+        outputAssetType: "stable-basket",
+        provider: "sync-error",
+        sourceMode: "static",
+        resolutionState: "failed",
+        capacityConfidence: "heuristic",
+        capacitySemantics: "eventual-only",
+        feeConfidence: "undisclosed-reviewed",
+        feeModelKind: "undisclosed-reviewed",
+        modelConfidence: "low",
+        immediateCapacityUsd: null,
+        immediateCapacityRatio: null,
+        feeBps: null,
+        queueEnabled: false,
+        methodologyVersion: "1.0",
+        updatedAt: failedAt,
+        capsApplied: [],
+        notes: ["Latest redemption-backstop sync failed"],
+      }),
+    );
     upsertRedemptionBackstopSnapshotsMock.mockResolvedValue(undefined);
     resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
       Promise.resolve(makeResolvedSnapshot(asset.id, now)),
@@ -232,13 +234,19 @@ describe("syncRedemptionBackstops", () => {
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(2);
     expect(upsertRedemptionBackstopSnapshotsMock).toHaveBeenCalledTimes(1);
-    expect(db.getHistory().some((entry) => entry.sql.includes("SELECT stablecoin_id FROM redemption_backstop"))).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("SELECT stablecoin_id FROM redemption_backstop"))).toBe(
+      true,
+    );
 
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, number>;
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.resolved).toBe(2);
     expect(metadata.unresolved).toBe(0);
     expect(metadata.dynamic).toBe(1);
     expect(metadata.estimated).toBe(1);
+    expect(metadata.routeStatusProducer).toBe("live-reserve-adapters-plus-static-policy");
+    expect(metadata.routeStatusProducerFetches).toBe(false);
+    expect(typeof metadata.registryHash).toBe("string");
+    expect(typeof metadata.v4ScoringParametersHash).toBe("string");
   });
 
   it("passes severe active depeg availability into builders without degrading the cron", async () => {
@@ -303,9 +311,7 @@ describe("syncRedemptionBackstops", () => {
       kind: "ok",
       updatedAt: now,
       payload: {
-        peggedAssets: [
-          makeAsset({ id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 } }),
-        ],
+        peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 } })],
       },
     });
     resolveRedemptionBackstopEntryMock.mockResolvedValueOnce(
@@ -386,7 +392,7 @@ describe("syncRedemptionBackstops", () => {
       null,
       47,
       expect.any(Number),
-      { reserveSnapshotMetadata: null, routeAvailability: null },
+      expect.objectContaining({ reserveSnapshotMetadata: null, routeAvailability: null, routeStatusFeed: null }),
     );
     expect(upsertRedemptionBackstopSnapshotsMock).toHaveBeenCalledWith(
       expect.anything(),
@@ -541,7 +547,9 @@ describe("syncRedemptionBackstops", () => {
       Promise.resolve(makeResolvedSnapshot(asset.id, now)),
     );
 
-    const db = mockD1([{ match: "SELECT stablecoin_id FROM redemption_backstop", rows: [{ stablecoin_id: "legacy-removed" }] }]);
+    const db = mockD1([
+      { match: "SELECT stablecoin_id FROM redemption_backstop", rows: [{ stablecoin_id: "legacy-removed" }] },
+    ]);
     const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
     const result = await syncRedemptionBackstops(db, new AbortController().signal);
 
