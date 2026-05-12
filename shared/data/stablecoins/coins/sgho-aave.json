@@ -1,0 +1,66 @@
+{
+  "id": "sgho-aave",
+  "name": "Aave Savings GHO",
+  "symbol": "sGHO",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: sGHO resolves to Upstream because deposits remain GHO and inherit Aave-governance-controlled GHO admin authorities.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "variantOf": "gho-aave",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "gho-aave",
+  "collateral": "GHO deposited into Aave's non-slashable Savings GHO module; reward emissions accrue to depositors in GHO at the Aave-governance-set savings rate",
+  "pegMechanism": "Deposit GHO to mint sGHO at a 1:1 conversion; the contract distributes GHO rewards to holders over time. Withdrawals burn sGHO for GHO without slashing risk (distinct from the slashable Umbrella stkGHO safety module)",
+  "detailProvider": "coingecko",
+  "geckoId": "aave-stkgho",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://aave.com"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/aave"
+    },
+    {
+      "label": "Docs",
+      "url": "https://aave.com/docs/aave-v3/guides/sgho"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x1a88df1cfe15af22b3c4c783d4e6f7f9e0c1885d",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "native",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "GHO deposited in Aave Savings module",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "gho-aave",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Aave Savings GHO",
+    "yieldType": "governance-set"
+  }
+}

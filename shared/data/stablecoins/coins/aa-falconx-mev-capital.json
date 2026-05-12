@@ -1,0 +1,83 @@
+{
+  "id": "aa-falconx-mev-capital",
+  "name": "MEV Capital Falcon USDC Senior Tranche",
+  "symbol": "AA_FalconXUSDC",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: AA_FalconXUSDC resolves to Upstream because USDC and USDf collateral inside the senior tranche inherit Circle and Falcon admin surfaces.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdc-circle",
+  "collateral": "Senior (AA) tranche of an Idle CDO over MEV-Capital-curated Morpho lending markets routed into Falcon Finance's USDf collateral; the senior class has first claim on USDC collected from interest and exit liquidity",
+  "pegMechanism": "Pareto Idle CDO senior tranche shares appreciate against USDC as borrower interest accrues; redemption depends on USDf exit liquidity through Falcon's mint/burn rails and on Morpho market liquidity. Tranche economics absorb losses junior-first, but exit pricing tracks USDf solvency",
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Pareto vault",
+      "url": "https://pareto.credit/vaults/1/0xC26A6Fa2C37b38E549a4a1807543801Db684f99C"
+    },
+    {
+      "label": "MEV Capital",
+      "url": "https://mevcapital.com"
+    },
+    {
+      "label": "Falcon Finance",
+      "url": "https://falcon.finance"
+    },
+    {
+      "label": "Idle docs",
+      "url": "https://docs.idle.finance/products/perpetual-yield-tranches"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xc26a6fa2c37b38e549a4a1807543801db684f99c",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "dependencies": [
+    {
+      "id": "usdf-falcon",
+      "weight": 1,
+      "type": "mechanism"
+    }
+  ],
+  "reserves": [
+    {
+      "name": "USDC routed through MEV-Capital Falcon strategy (USDf-collateralised Morpho markets)",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "MEV Capital Falcon USDC Senior tranche",
+    "yieldType": "lending-vault"
+  },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Exit liquidity depends on Falcon USDf",
+      "message": "AA_FalconXUSDC is the senior tranche of a CDO over Falcon Finance USDf-collateralised Morpho markets. USDC redemption rates and exit timing are tied to USDf's mint/burn liquidity; sustained USDf stress can degrade vault liquidity even when the senior tranche absorbs no principal loss."
+    }
+  ]
+}
