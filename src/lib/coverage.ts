@@ -383,7 +383,14 @@ export function resolveDexCoverage(
   return createPresetStatus(DEX_STATUS_PRESETS[coverageClass ?? "unknown"] ?? DEX_STATUS_PRESETS.unknown);
 }
 
-export function resolveReserveCoverage(coin: StablecoinMeta, liveReserveFresh: boolean | null = true): CoverageStatus {
+export function resolveReserveCoverage(
+  coin: StablecoinMeta,
+  liveReserveFresh: boolean | null = true,
+  dataAvailable = true,
+): CoverageStatus {
+  if (!dataAvailable) {
+    return createDataUnavailableStatus("Reserve view");
+  }
   if (coin.liveReservesConfig) {
     const badgeKind = getReserveDisplayBadgeKindForAdapter(coin.liveReservesConfig.adapter);
     if (badgeKind === "live") {
@@ -831,7 +838,7 @@ export function buildCoverageRow({
     price: resolvePriceCoverage(coin, hasPegCoverage, consensusSources, priceConfidence, hasData("price")),
     safety: resolveSafetyCoverage(safetyScore, hasData("safety")),
     dex: resolveDexCoverage(dexCoverageClass, hasData("dex")),
-    reserves: resolveReserveCoverage(coin, liveReserveFresh),
+    reserves: resolveReserveCoverage(coin, liveReserveFresh, hasData("reserves")),
     redemption: resolveRedemptionCoverage(redemptionEntry, hasData("redemption")),
     yield: resolveYieldCoverage(hasYieldCoverage, hasData("yield")),
     flows: resolveFlowCoverage(flowCoverageStatus, hasData("flows")),

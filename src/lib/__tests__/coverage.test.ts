@@ -154,6 +154,20 @@ describe("coverage helpers", () => {
     expect(resolveReserveCoverage(makeCoin()).kind).toBe("estimated");
   });
 
+  it("marks reserve coverage unavailable when the coverage row has no reserve data", () => {
+    const status = resolveReserveCoverage(
+      makeCoin({
+        reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
+      }),
+      true,
+      false,
+    );
+
+    expect(status.kind).toBe("data-unavailable");
+    expect(status.available).toBe(false);
+    expect(status.label).toBe("Data n/a");
+  });
+
   it("does not count configured live reserve adapters as fresh live coverage without current live data", () => {
     const liveConfiguredCoin = makeCoin({
       liveReservesConfig: {
