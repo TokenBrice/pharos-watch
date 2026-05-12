@@ -210,8 +210,33 @@
     },
     "contracts": [
       {
+        "chain": "aptos",
+        "address": "0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88",
+        "decimals": 6
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x7c64925002bfa705834b118a923e9911bee32875",
+        "decimals": 6
+      },
+      {
         "chain": "ethereum",
         "address": "0x17418038ecf73ba4026c4f428547bf099706f27b",
+        "decimals": 6
+      },
+      {
+        "chain": "ink",
+        "address": "0x53ad50d3b6fcacb8965d3a49cb722917c7dae1f3",
+        "decimals": 6
+      },
+      {
+        "chain": "polygon",
+        "address": "0xfce60bbc52a5705cec5b445501fbaf3274dc43d0",
+        "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8",
         "decimals": 6
       }
     ],
@@ -266,7 +291,7 @@
       {
         "type": "warning",
         "title": "Private credit, not Treasuries",
-        "message": "ACRED is a feeder into Apollo Diversified Credit Fund, which holds direct lending and structured credit positions. Risk profile is medium-to-high and closer to syrupUSDC than to BUIDL or BENJI. Token transfers are permissioned and redemption is monthly at NAV via Securitize Markets, with an on-demand pool sized to ~5% of NAV. ACRED is also issued on Aptos, Avalanche, Ink, Polygon, Solana, and Sei via Wormhole; Pharos tracks only the Ethereum supply contract pending per-chain verification."
+        "message": "ACRED is a feeder into Apollo Diversified Credit Fund, which holds direct lending and structured credit positions. Risk profile is medium-to-high and closer to syrupUSDC than to BUIDL or BENJI. Token transfers are permissioned and redemption is monthly at NAV via Securitize Markets, with an on-demand pool sized to ~5% of NAV. Pharos tracks the Ethereum, Aptos, Avalanche, Ink, Polygon, and Solana deployments; the Sei issuance via Wormhole is not yet integrated."
       }
     ],
     "yieldConfig": {
@@ -1955,9 +1980,44 @@
     },
     "contracts": [
       {
+        "chain": "aptos",
+        "address": "0x4705f33d665762a5371d3b8786e63749814e749295ea73269b379c84b756d83a",
+        "decimals": 9
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xb9e4765bce2609bc1949592059b17ea72fee6c6a",
+        "decimals": 18
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xe08b4c1005603427420e64252a8b120cace4d122",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x60cfc2b186a4cf647486e42c42b11cc6d571d1e4",
+        "decimals": 18
+      },
+      {
         "chain": "ethereum",
         "address": "0x3ddc84940ab509c11b20b76b466933f40b750dc9",
         "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0x408a634b8a8f0de729b48574a3a7ec3fe820b00a",
+        "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "5Tu84fKBpe9vfXeotjvfvWdWbAjy3hqsExvuHgFqFxA1",
+        "decimals": 9
+      },
+      {
+        "chain": "stellar",
+        "address": "BENJI-GBHNGLLIE3KWGKCHIKMHJ5HVZHYIK7WTBE4QF5PLAKL4CJGSEU7HZIW5",
+        "decimals": 7
       }
     ],
     "canBeBlacklisted": true,
@@ -2016,7 +2076,7 @@
       {
         "type": "info",
         "title": "Multi-chain fund with limited on-chain telemetry",
-        "message": "BENJI is the multi-chain share token of Franklin Templeton's FOBXX money market fund. The fund is also deployed on Stellar (primary), Polygon, Arbitrum, Avalanche, Aptos, Base, Solana, BNB Chain, and Canton, but Pharos currently tracks only the Ethereum supply contract pending per-chain verification. Live reserves use a curated weekly snapshot of the official fund factsheet until an on-chain NAV oracle becomes available."
+        "message": "BENJI is the multi-chain share token of Franklin Templeton's FOBXX money market fund. Pharos tracks the Ethereum, Stellar, Polygon, Arbitrum, Avalanche, Aptos, Base, and Solana deployments; BNB Chain and Canton issuances are not yet integrated. Live reserves use a curated weekly snapshot of the official fund factsheet until an on-chain NAV oracle becomes available."
       }
     ],
     "yieldConfig": {
@@ -8129,7 +8189,7 @@
       "navToken": true
     },
     "collateral": "Short-dated Eurozone sovereign Treasury bills (issued by AAA / strong-Member-State issuers) with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
-    "pegMechanism": "EUR-denominated NAV-accreting share token tracking the variable-NAV money market fund; primary mint and redemption settle same-day at fund NAV with a €1k minimum; Chainlink CCIP relays issuance between Ethereum, Arbitrum, and Polygon",
+    "pegMechanism": "EUR-denominated NAV-accreting share token (ISIN FR001400ODL1) of the Spiko SICAV short-term VNAV money market sub-fund authorised by the AMF, backed primarily by French and German Eurozone sovereign T-bills (and other top-rated Member-State issuers such as the Netherlands) with a regulatory weighted-average maturity ceiling under 60 days; subscription and redemption are KYC-gated to allowlisted wallets through Spiko's transfer agent with a daily 11:30 Paris cutoff settling at the day's published NAV (T+0 / next-business-day for late orders) and a €1k minimum; cross-chain issuance on Ethereum, Arbitrum, and Polygon is relayed through Chainlink CCIP. Prospectus: https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
     "geckoId": "spiko-eu-t-bills-money-market-fund",
     "proofOfReserves": {
       "type": "self-reported",
@@ -8157,7 +8217,17 @@
     },
     "contracts": [
       {
+        "chain": "arbitrum",
+        "address": "0xcbeb19549054cc0a6257a77736fc78c367216ce7",
+        "decimals": 5
+      },
+      {
         "chain": "ethereum",
+        "address": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "decimals": 5
+      },
+      {
+        "chain": "polygon",
         "address": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
         "decimals": 5
       }
@@ -8213,7 +8283,7 @@
       {
         "type": "info",
         "title": "Multi-chain EU-regulated MMF",
-        "message": "EUTBL is also issued on Arbitrum and Polygon via Chainlink CCIP. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+        "message": "EUTBL is issued on Ethereum, Arbitrum, and Polygon, with cross-chain transfers relayed via Chainlink CCIP."
       }
     ],
     "yieldConfig": {
@@ -10227,6 +10297,7 @@
     "pegReferenceId": "usdc-circle",
     "collateral": "USDC deposited into a Gauntlet-curated MetaMorpho vault on Morpho Blue; the curator allocates across conservative USDC lending markets backed by blue-chip crypto and real-world asset collateral",
     "pegMechanism": "ERC-4626 MetaMorpho vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem vault shares for available USDC liquidity or wait for Morpho market liquidity to return",
+    "geckoId": "gauntlet-usdc-prime-morpho-vault",
     "links": [
       {
         "label": "Website",
@@ -14459,8 +14530,8 @@
       "rwa": true,
       "navToken": false
     },
-    "collateral": "Mexican peso fiat reserves held in regulated and liquid bank reserves; Moneta Digital is registered with the Tax Administration Service (SAT) for virtual-asset exchange and discloses reserves through periodic third-party accounting attestations",
-    "pegMechanism": "Issuer-managed 1:1 mint and redemption against MXN deposits; users can redeem MMXN for fiat pesos via the TruBit platform with SPEI bank settlement",
+    "collateral": "Mexican peso fiat reserves self-reported by Moneta Digital and held in undisclosed Mexican banking partners; no SAT (Tax Administration Service) registration is independently verified for the issuer and no third-party accounting attestation cadence is currently published",
+    "pegMechanism": "Issuer-managed 1:1 mint and redemption against MXN deposits, operated directly by Moneta Digital with TruBit as a SPEI-bank off-ramp partner; reserve composition and bank custodians are self-reported by the issuer with no independent attestation, audit cadence, or proof-of-reserves feed",
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://monetadigital.com/",
@@ -14516,11 +14587,33 @@
         "risk": "medium"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "mmxn-moneta-digital",
+      "display": {
+        "url": "https://monetadigital.com/",
+        "label": "Moneta Digital issuer disclosure"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      }
+    },
     "notices": [
       {
         "type": "warning",
         "title": "Weaker attestation than tracked MXNB",
         "message": "Moneta Digital self-reports MXN reserves without the formal quarterly audit cadence published by Bitso/Juno for MXNB. Reserve sufficiency and circulating supply consistency should be reviewed via on-chain explorers (Etherscan and Tronscan) until an independent attestation source is verified."
+      },
+      {
+        "type": "warning",
+        "title": "Curated reserves are self-reported",
+        "message": "The curated-validated live-reserves adapter currently points at the issuer website root because no third-party attestation page has been verified for MMXN. Until an independent auditor or proof-of-reserves feed is published, the reserve composition reflects Moneta Digital's own disclosure only."
       }
     ]
   },
@@ -15538,7 +15631,7 @@
     "chainTier": "ethereum",
     "deploymentModel": "native-multichain",
     "collateralQuality": "exotic",
-    "custodyModel": "institutional-regulated",
+    "custodyModel": "cex",
     "governanceQuality": "single-entity",
     "reserves": [
       {
@@ -17006,11 +17099,33 @@
         "risk": "low"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "phpc-coins-ph",
+      "display": {
+        "url": "https://coins.ph/blog/bsp-grants-coins-ph-approval-to-pilot-phpc-stablecoin/",
+        "label": "Coins.ph BSP sandbox approval disclosure"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "polygon",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
     "notices": [
       {
         "type": "info",
         "title": "BSP regulatory sandbox",
         "message": "PHPC is issued under the Bangko Sentral ng Pilipinas Regulatory Sandbox Framework. Coins.ph also deploys PHPC on Ronin Network, which is not yet tracked by Pharos; Polygon supply is the canonical observable surface."
+      },
+      {
+        "type": "warning",
+        "title": "Curated reserves are self-reported",
+        "message": "The curated-validated live-reserves adapter currently points at Coins.ph's BSP sandbox announcement because no independent third-party attestation page for PHPC reserves has been verified. Reserve composition reflects Coins.ph's own sandbox disclosure until an external auditor or proof-of-reserves feed is published."
       }
     ]
   },
@@ -30303,7 +30418,7 @@
       "navToken": true
     },
     "collateral": "Short-dated U.S. Treasury bills with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
-    "pegMechanism": "USD-denominated NAV-accreting share token tracking the variable-NAV money market fund; primary mint and redemption settle same-day at fund NAV with a $1k minimum; Chainlink CCIP relays issuance between Ethereum, Arbitrum, and Polygon",
+    "pegMechanism": "USD-denominated NAV-accreting share token (ISIN FR001400ODM9) of the Spiko SICAV short-term VNAV money market sub-fund authorised by the AMF, backed exclusively by short-dated U.S. Treasury bills with a regulatory weighted-average maturity ceiling under 60 days; subscription and redemption are KYC-gated to allowlisted wallets through Spiko's transfer agent with a daily 11:30 Paris cutoff settling at the day's published NAV (T+0 / next-business-day for late orders) and a $1k minimum; cross-chain issuance on Ethereum, Arbitrum, and Polygon is relayed through Chainlink CCIP. Prospectus: https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
     "geckoId": "spiko-us-t-bills-money-market-fund",
     "proofOfReserves": {
       "type": "self-reported",
@@ -30331,7 +30446,17 @@
     },
     "contracts": [
       {
+        "chain": "arbitrum",
+        "address": "0x021289588cd81dc1ac87ea91e91607eef68303f5",
+        "decimals": 5
+      },
+      {
         "chain": "ethereum",
+        "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "decimals": 5
+      },
+      {
+        "chain": "polygon",
         "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
         "decimals": 5
       }
@@ -30387,7 +30512,7 @@
       {
         "type": "info",
         "title": "Multi-chain EU-regulated MMF",
-        "message": "USTBL is also issued on Arbitrum and Polygon via Chainlink CCIP. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+        "message": "USTBL is issued on Ethereum, Arbitrum, and Polygon, with cross-chain transfers relayed via Chainlink CCIP."
       }
     ],
     "yieldConfig": {
@@ -30989,8 +31114,23 @@
     },
     "contracts": [
       {
+        "chain": "avalanche",
+        "address": "0x7f4546ef315efc65336187fe3765ea779ac90183",
+        "decimals": 6
+      },
+      {
+        "chain": "bsc",
+        "address": "0x14d72634328c4d03bba184a48081df65f1911279",
+        "decimals": 6
+      },
+      {
         "chain": "ethereum",
         "address": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
+        "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1",
         "decimals": 6
       }
     ],
@@ -31045,7 +31185,7 @@
       {
         "type": "info",
         "title": "Securitize-administered NAV token",
-        "message": "VBILL is institutional only via Securitize Markets and also issues on Avalanche, BNB Chain, and Solana via Wormhole. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+        "message": "VBILL is institutional only via Securitize Markets and issues on Ethereum, Avalanche, BNB Chain, and Solana via Wormhole. Pharos tracks all four deployments."
       }
     ],
     "yieldConfig": {
@@ -31465,7 +31605,7 @@
       "navToken": false
     },
     "collateral": "Vietnamese dong reserves self-reported by Jade Labs (the VNDC issuer) and tracked across Polygon and BNB Smart Chain deployments; no formal independent attestation is published",
-    "pegMechanism": "1:1 fiat-collateralized issuer mint and redemption operated by Jade Labs through the ONUS and VNDC Hub platforms; users on-ramp/off-ramp VND through Vietnamese banking partners",
+    "pegMechanism": "1:1 fiat-collateralized issuer mint and redemption operated by Jade Labs through the ONUS and VNDC Hub platforms with VND on/off-ramps via Vietnamese banking partners; reserve backing is self-reported by Jade Labs with no third-party attestation, audit cadence, or proof-of-reserves feed currently published",
     "geckoId": "vndc",
     "proofOfReserves": {
       "type": "self-reported",
@@ -31526,11 +31666,33 @@
         "risk": "high"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "vndc-jade-labs",
+      "display": {
+        "url": "https://vndc.io/",
+        "label": "Jade Labs / VNDC issuer disclosure"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "polygon",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
     "notices": [
       {
         "type": "warning",
-        "title": "Attestation gap and peg-currency placeholder",
-        "message": "VNDC is pegged to the Vietnamese dong, but Pharos does not yet support VND as a first-class peg currency, so the asset is tracked under pegCurrency: \"OTHER\" pending a coordinated VND addition across formatting, FX, and price-validation pipelines. Separately, aggregator-reported market cap (~$50M) does not consistently match on-chain Polygon/BSC supply, and reserves are self-disclosed by the issuer without independent audit cadence."
+        "title": "Market cap and supply inconsistency",
+        "message": "Aggregator-reported market cap (~$50M) does not consistently match on-chain Polygon/BSC supply, and reserves are self-disclosed by Jade Labs without an independent audit cadence."
+      },
+      {
+        "type": "warning",
+        "title": "Curated reserves are self-reported",
+        "message": "The curated-validated live-reserves adapter points at the Jade Labs / VNDC issuer website because no third-party attestation page has been verified. Reserve composition reflects the issuer's own disclosure only until an independent auditor or proof-of-reserves feed is published."
       }
     ]
   },
