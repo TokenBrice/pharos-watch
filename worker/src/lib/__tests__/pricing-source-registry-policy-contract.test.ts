@@ -52,10 +52,16 @@ describe("pricing-source registry ↔ policy contract", () => {
   it("keeps fallback/search lanes non-authoritative", () => {
     const fallbackEntries = PRICING_SOURCE_REGISTRY.filter((entry) => entry.trustTier === "fallback_search");
     expect(fallbackEntries.map((entry) => entry.key).sort()).toEqual([
+      "alchemy-address",
+      "birdeye-address",
       "coinmarketcap",
+      "dexpaprika-address",
+      "dexscreener-address",
       "dexscreener-exact",
       "dexscreener-search",
+      "geckoterminal-address",
       "jupiter",
+      "moralis-address",
     ]);
 
     for (const entry of fallbackEntries) {
