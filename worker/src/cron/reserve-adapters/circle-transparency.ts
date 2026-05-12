@@ -3,6 +3,7 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  escapeRegExp,
   fetchPrimaryHtmlInput,
   htmlLayoutChangedError,
   parseTimestampLikeToUnixSeconds,
@@ -45,10 +46,6 @@ function extractAttrValue(html: string, attr: string): number | null {
   if (!m) return null;
   const val = parseFloat(m[1]);
   return Number.isFinite(val) && val > 0 ? val : null;
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function extractTagById(html: string, id: string): string | null {

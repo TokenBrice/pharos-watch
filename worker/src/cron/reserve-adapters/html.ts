@@ -6,6 +6,12 @@ export function htmlParseError(adapterName: string, detail: string): Error {
   return new Error(`${adapterName}: parse-failed: ${detail}`);
 }
 
+/** Escape regex metacharacters so a user-controlled or layout-driven string
+ *  can be safely interpolated into a constructed regex. */
+export function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function decodeEscapedJsonFragment(fragment: string): string {
   return fragment
     .replace(/\\\\/g, "\\")

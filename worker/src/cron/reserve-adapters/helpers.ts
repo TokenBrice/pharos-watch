@@ -29,7 +29,7 @@ export {
   verifiedFreshnessMetadata,
 } from "./freshness";
 export type { SourceTimestampSummary } from "./freshness";
-export { htmlLayoutChangedError, htmlParseError } from "./html";
+export { escapeRegExp, htmlLayoutChangedError, htmlParseError } from "./html";
 export { fetchJsonPostWithRetry, fetchJsonWithRetry, fetchPrimaryHtmlInput, fetchTextWithRetry } from "./request";
 export { fetchDefiLlamaPrices } from "./defillama";
 export {
