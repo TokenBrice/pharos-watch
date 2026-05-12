@@ -40,8 +40,33 @@
   },
   "contracts": [
     {
+      "chain": "aptos",
+      "address": "0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x7c64925002bfa705834b118a923e9911bee32875",
+      "decimals": 6
+    },
+    {
       "chain": "ethereum",
       "address": "0x17418038ecf73ba4026c4f428547bf099706f27b",
+      "decimals": 6
+    },
+    {
+      "chain": "ink",
+      "address": "0x53ad50d3b6fcacb8965d3a49cb722917c7dae1f3",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0xfce60bbc52a5705cec5b445501fbaf3274dc43d0",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8",
       "decimals": 6
     }
   ],
@@ -100,7 +125,7 @@
     {
       "type": "warning",
       "title": "Private credit, not Treasuries",
-      "message": "ACRED is a feeder into Apollo Diversified Credit Fund, which holds direct lending and structured credit positions. Risk profile is medium-to-high and closer to syrupUSDC than to BUIDL or BENJI. Token transfers are permissioned and redemption is monthly at NAV via Securitize Markets, with an on-demand pool sized to ~5% of NAV. ACRED is also issued on Aptos, Avalanche, Ink, Polygon, Solana, and Sei via Wormhole; Pharos tracks only the Ethereum supply contract pending per-chain verification."
+      "message": "ACRED is a feeder into Apollo Diversified Credit Fund, which holds direct lending and structured credit positions. Risk profile is medium-to-high and closer to syrupUSDC than to BUIDL or BENJI. Token transfers are permissioned and redemption is monthly at NAV via Securitize Markets, with an on-demand pool sized to ~5% of NAV. Pharos tracks the Ethereum, Aptos, Avalanche, Ink, Polygon, and Solana deployments; the Sei issuance via Wormhole is not yet integrated."
     }
   ]
 }

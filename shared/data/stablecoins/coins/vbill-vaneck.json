@@ -40,8 +40,23 @@
   },
   "contracts": [
     {
+      "chain": "avalanche",
+      "address": "0x7f4546ef315efc65336187fe3765ea779ac90183",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0x14d72634328c4d03bba184a48081df65f1911279",
+      "decimals": 6
+    },
+    {
       "chain": "ethereum",
       "address": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1",
       "decimals": 6
     }
   ],
@@ -100,7 +115,7 @@
     {
       "type": "info",
       "title": "Securitize-administered NAV token",
-      "message": "VBILL is institutional only via Securitize Markets and also issues on Avalanche, BNB Chain, and Solana via Wormhole. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+      "message": "VBILL is institutional only via Securitize Markets and issues on Ethereum, Avalanche, BNB Chain, and Solana via Wormhole. Pharos tracks all four deployments."
     }
   ]
 }
