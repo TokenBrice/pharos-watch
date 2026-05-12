@@ -227,15 +227,11 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 
 ## v5.1 - Protocol-native BIMA savings fallback for USBD (Mar 24, 2026)
 
-**Commit:** `unreleased`
-
 - `usbd-bima` now resolves through BIMA's public `earn/pools` feed when no usable DeFiLlama `sUSBD` wrapper pool is available
 - Protocol-owned earn APIs are now treated as curated yield sources in the arbitration layer
 - The source-link registry and public about-page data-source copy now include BIMA's earn surface
 
 ## v5.0 - Richer freshness provenance and curated lending source links (Mar 24, 2026)
-
-**Commit:** `unreleased`
 
 - Rankings provenance now exposes source-observation age and comparison-anchor timing for derived sources such as price-derived and on-chain APYs
 - This removes the prior optimistic `age = 0` behavior for derived rows whose underlying snapshots may be materially older than the sync run
@@ -243,15 +239,11 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 
 ## v4.9 - Publish-safe retention and deterministic adapter quarantine (Mar 24, 2026)
 
-**Commit:** `unreleased`
-
 - Yield rankings payloads are now preflighted before live-row mutation, reducing DB/cache divergence risk when publication would fail
 - Degraded runs now retain prior current rows by skipping destructive yield cleanup instead of pruning optimistically under impaired inputs
 - `dusd-dtrinity` and `reusd-re-protocol` were removed from the generic Tier 1 ERC-4626 reader until protocol-specific deterministic adapters exist
 
 ## v4.8 - Explicit edge-case overrides for remaining high-signal lending markets (Mar 24, 2026)
-
-**Commit:** `unreleased`
 
 - Polaris pUSD now resolves through a deterministic Silo v2 lending override, fixing the prior bypass-only configuration gap
 - Added deterministic exact-symbol lending overrides for USDX, USDO, and USDM
@@ -261,8 +253,6 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 
 ## v4.7 - Early NAV fallback support and deeper long-tail lending coverage (Mar 24, 2026)
 
-**Commit:** `unreleased`
-
 - Price-derived APY now uses the oldest available 7-45 day price anchor instead of requiring a strict 30-day sample, improving early NAV-token coverage
 - Auto-discovered lending floors moved from `$500K / 0.5%` to `$100K / 0.1%` to capture still-meaningful long-tail markets
 - Added More Markets and SmarDex USDN to the curated lending allowlist, plus an explicit Polaris pUSD safety bypass for vetted yield-bearing coverage
@@ -270,8 +260,6 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 ---
 
 ## v4.6 - Rate-derived treasury expansion and broader lending discovery (Mar 24, 2026)
-
-**Commit:** `unreleased`
 
 - Added rate-derived Treasury fallback coverage for `usyc-hashnote` and `thbill-theo`
 - Expanded the curated lending allowlist with live-observed protocols including Loopscale, Vesper, Lista Lending, Liqwid, Overnight, Lagoon, and NAVI Lending
@@ -281,8 +269,6 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 
 ## v4.5 - Fail-closed source validation and retained-market benchmark continuity (Mar 23, 2026)
 
-**Commit:** `unreleased`
-
 - Direct DeFiLlama yield fetches now degrade when the payload shape is invalid or when the response contains zero relevant stablecoin pools
 - Yield sync now surfaces full deterministic Tier 1 outages as degraded runs instead of quietly publishing as if on-chain coverage were optional for that cycle
 - Retained Treasury benchmark fallbacks preserve the last market-derived benchmark fields across degraded streaks, and rankings-cache publication blocks on severe shrink relative to the previous cache
@@ -290,8 +276,6 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 ---
 
 ## v4.4 - On-chain rate bootstrapping and pipeline hardening (Mar 20, 2026)
-
-**Commit:** `unreleased`
 
 - On-chain rate configs now emit a seed row with `currentApy: 0` and `exchangeRate` when no previous rate exists, breaking a bootstrapping deadlock that prevented all 13 Tier 1 vaults from ever computing APY
 - `buildOnChainSourceKey()` consolidated from 3 duplicate definitions (sync-yield-data, resolve, sources) into a single export from yield-helpers
@@ -302,8 +286,6 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 
 ## v4.3 - Wrapper-preserving ingestion and hydration hardening (Mar 19, 2026)
 
-**Commit:** `unreleased`
-
 - Wrapper-relevant DeFiLlama pools are now preserved through pre-filtering even when upstream `stablecoin` flags are false
 - Deterministic on-chain rows now use `onchain:<stablecoinId>` source keys so source-aware history cannot collide with curated pool UUIDs
 - `/api/yield-rankings` retains rows with fallback safety (`40` / `NR`) when report-card hydration is incomplete instead of dropping coverage
@@ -313,8 +295,6 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 
 ## v4.2 - Source-aware history and confidence-weighted arbitration (Mar 10, 2026)
 
-**Commit:** `unreleased`
-
 - `yield_history` now persists per-source rows with best-source markers instead of a single mixed best series
 - 7d and 30d APY metrics are computed from source-specific history, preventing source-switch contamination
 - Rankings now include provenance for benchmark freshness, safety coverage, source-switch state, and selection reasoning
@@ -323,8 +303,6 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 ---
 
 ## v4.1 - Conservative LUSD Stability Pool source (Mar 7, 2026)
-
-**Commit:** `unreleased`
 
 - Added a deterministic LUSD source using Liquity Stability Pool deposits and CommunityIssuance totals
 - APR converts projected LQTY emissions to USD using CoinGecko spot price and intentionally excludes ETH liquidation gains

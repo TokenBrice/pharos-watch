@@ -6,8 +6,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 
 ## v5.6 - Staged discovery TVL sanity ceiling (May 7, 2026)
 
-**Commit:** `unreleased`
-
 - Secondary discovery rows now reject non-finite, negative, or impossible pool TVL values before staging
 - The scoring merge applies the same TVL sanity ceiling to already-staged rows, so stale malformed discovery data cannot affect global TVL, drift diagnostics, retained-pool scoring, or DEX price observations
 - Valid high-liquidity rows below the ceiling still flow through the existing dedupe, protocol-cap, and retained-pool quality gates
@@ -15,8 +13,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 ---
 
 ## v5.5 - Absolute TVL Depth fallback recalibration and Slipstream sqrt_ratio price (Apr 17, 2026)
-
-**Commit:** `unreleased`
 
 - Absolute TVL Depth fallback (used when a coin has no live `circulatingUsd`) now mirrors the ratio formula's anchor via a $1B implied reference mcap: `35 * log10(tvl / 700_000)` replaces the legacy `20 * log10(tvl / 100_000) + 20`
 - Yields: $700K → 0, $5M → 30, $140M → 80, ~$500M → clamps at 100 — parity with the ratio branch at 0.07%/0.5%/14%/50% depth of a $1B reference coin
@@ -29,8 +25,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 
 ## v5.4 - Curve enrichment scoping and staged UUID dedupe (Apr 14, 2026)
 
-**Commit:** `unreleased`
-
 - Curve API enrichment is now applied only to Curve DeFiLlama rows; non-Curve pools that share the same token symbols no longer inherit Curve registry metadata, balance ratios, token prices, or metapool-adjusted TVL
 - Provider ids with underscores or provider suffixes, such as CoinGecko `uniswap_v3` and `uniswap-v4-ethereum`, normalize to the same pool-identity protocol family as DeFiLlama ids
 - Staged discovery can now skip a staged exact pool-id row when it uniquely matches one primary DeFiLlama UUID row by chain, protocol, token set, and pool-shape family
@@ -39,8 +33,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 ---
 
 ## v5.3 - PancakeSwap trailing-hour volume window (Apr 8, 2026)
-
-**Commit:** `unreleased`
 
 - PancakeSwap V3 direct volume now sums official `poolHourDatas.volumeUSD` buckets across a bounded trailing 24-hour window instead of reading the latest `poolDayDatas` row as if it were rolling 24h volume
 - Intraday PancakeSwap volume no longer undercounts until UTC rollover just because the current UTC day bucket is only partially populated
@@ -51,8 +43,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 
 ## v5.2 - Orderbook ticker contract refresh and Balancer exact-address identity (Apr 8, 2026)
 
-**Commit:** `unreleased`
-
 - CoinGecko orderbook fallback no longer depends on the deprecated `trust_score` field, which CoinGecko now returns as `null`
 - Orderbook ticker intake now validates freshness, finite USD price/volume, and exchange identity directly from observed payload fields instead of a legacy trust badge
 - Balancer direct pools now use the API's exact `address` field for identity and dedupe instead of the 32-byte vault pool id, restoring exact-id confirmation against staged discovery and overlap checks
@@ -60,8 +50,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 ---
 
 ## v5.1 - Authoritative protocol confirmation for staged discovery (Apr 7, 2026)
-
-**Commit:** `unreleased`
 
 - Staged discovery rows can no longer invent new pools inside protocol families that already have a clean protocol-native direct source
 - When a direct protocol-native fetch succeeds cleanly on a supported chain, staged GT/CG/DS rows for Balancer, Fluid, Raydium, Orca, Meteora, PancakeSwap, Aerodrome, and Velodrome must match an authoritative exact pool id or they are excluded
@@ -71,8 +59,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 ---
 
 ## v5.0 - Size-aware scoring: relative TVL depth, recalibrated volume, quality retention (Apr 5, 2026)
-
-**Commit:** `unreleased`
 
 - All scoring dimensions are now size-independent. TVL Depth measures effective TVL relative to market cap instead of absolute dollar value. Volume Activity has a recalibrated curve with a realistic ceiling (tops out at ~32% V/T instead of ~500%). Pool Quality measures venue quality retention ratio (qualityAdjustedTvl / totalTvl, rescaled) instead of absolute quality-adjusted TVL.
 - TVL Depth uses effective-TVL-to-market-cap ratio on a log scale (`35 × log10(ratio / 0.0007)`), with absolute fallback for coins without market cap data
@@ -85,8 +71,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 
 ## v4.9 - Blocked dead Bunni DEX inputs (Apr 3, 2026)
 
-**Commit:** `unreleased`
-
 - Bunni is now blocked during crawl intake and DeFiLlama pool processing instead of being treated as a live DEX venue
 - Retained-pool filters and challenger publication ignore Bunni even if stale rows or unexpected inputs survive earlier gates
 - Liquidity scores, `dexPriceUsd`, and downstream DEX cross-checks no longer count Bunni TVL, pool counts, or protocol medians
@@ -94,8 +78,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 ---
 
 ## v4.8 - Direct-source duplicate hardening for Balancer and staged exact ids (Apr 3, 2026)
-
-**Commit:** `unreleased`
 
 - All protocol-native direct API pool addresses now reserve their exact ids for later staged/fallback dedupe, even when the direct row itself falls below the scoring floor
 - GeckoTerminal / CoinGecko discovery rows can no longer resurrect the same exact pool with incompatible TVL semantics just because the authoritative direct row was sub-threshold
@@ -105,8 +87,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 
 ## v4.7 - Retained-pool DEX price publication (Apr 3, 2026)
 
-**Commit:** `unreleased`
-
 - `dex_prices` is now computed from the final retained priced-pool surface after dedupe, caps, and scoring filters
 - Pools that are skipped as duplicates or dropped by retained-pool quality filters can no longer keep influencing `dexPriceUsd` or `price_sources_json`
 - The published DEX price bridge now matches the same retained pool surface used by challenger publication and liquidity UI detail
@@ -114,8 +94,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 ---
 
 ## v4.6 - Protocol-native DEX coverage expansion (Mar 24, 2026)
-
-**Commit:** `unreleased`
 
 - Meteora DLMM now enters the direct-API merge path with measured TVL, 24h volume, balances, and fee data
 - PancakeSwap V3 now adds protocol-native primary coverage across BSC and supported EVM chains through official Graph subgraphs
@@ -128,8 +106,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 
 ## v4.5 - Coverage recall hardening and measurement-aware confidence (Mar 24, 2026)
 
-**Commit:** `unreleased`
-
 - GeckoTerminal and CoinGecko Onchain token crawls now read multiple bounded pages instead of truncating after page 1
 - DexScreener and CoinGecko tickers fallback now trigger for weak partial coverage, not only for pure zero-pool / no-price rows
 - Synthetic orderbook fallback rows now keep explicit provenance and no longer spoof themselves as organic `USDC` pairs
@@ -141,8 +117,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 
 ## v4.4 - Chain-aware pool identity dedupe and challenger snapshot publishing (Mar 19, 2026)
 
-**Commit:** `unreleased`
-
 - Direct API and staged/fallback pools now resolve tracked assets by `chain + address` first, with chain-scoped symbol fallback only when unique
 - Cross-source pool dedupe now uses exact pool ids first and derived token-shape matches only when they are unique on both sides, instead of collapsing every same-pair pool through a coarse fingerprint
 - Repeated sightings of the same physical pool across direct API, staged, and fallback sources now collapse before `dex_prices` weighting
@@ -153,8 +127,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 
 ## v4.3 - Fluid DexReservesResolver balance integration (Mar 18, 2026)
 
-**Commit:** `unreleased`
-
 - Fluid pools on Ethereum, Arbitrum, Base, and Polygon now read balances from the official DexReservesResolver instead of staying on a neutral-balance fallback
 - Fluid fee detail now comes from the on-chain pool config and is normalized to basis-point badges in the top-pools UI
 - Measured Fluid balance ratios now feed pool quality, effective TVL, weighted balance ratio, and stress calculations on resolver-backed chains
@@ -164,8 +136,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 
 ## v4.2 - Measured direct-API balance health and normalized pool-detail metadata (Mar 18, 2026)
 
-**Commit:** `unreleased`
-
 - Balancer, Raydium, and Orca direct-API pools now preserve measured balance ratios and fee detail through scoring instead of merging with neutral placeholders
 - Balancer weighted pools normalize pool balance against target token weights rather than raw reserve symmetry
 - Orca vault balances are normalized from raw token units before balance-health calculation
@@ -174,8 +144,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 ---
 
 ## v4.1 - Direct API precedence, primary-grade coverage, and fetcher hardening (Mar 18, 2026)
-
-**Commit:** `unreleased`
 
 - Direct API pools now replace overlapping DeFiLlama pools before scoring via address/fingerprint dedup, instead of being appended after fallback sources
 - Direct API sources now merge before staged discovery and DexScreener/CG-ticker recovery paths, preventing lower-confidence sources from claiming the same pool first
@@ -188,8 +156,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 
 ## v4.0 - Log-scale volume, cross-chain removal, durability rebalance (Mar 10, 2026)
 
-**Commit:** `unreleased`
-
 - Volume activity moved from a linear scale to `33.3 * log10(vtRatio / 0.005)`, lifting mid-market scores without letting extreme churn dominate
 - The cross-chain component was removed from the composite score, with its weight redistributed to TVL depth and pool quality
 - Durability weights were rebalanced to `15% organic fraction`, `35% TVL stability`, `25% volume consistency`, and `25% maturity`
@@ -199,8 +165,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 
 ## v3.4 - Retained-pool recomputation and trusted staged-price hardening (Mar 9, 2026)
 
-**Commit:** `unreleased`
-
 - Aggregate score inputs are now recomputed from the retained pool set after filtering and TVL caps, preventing dropped pools from leaking stale influence
 - HHI now uses the full retained pool set before display truncation, and global 7d volume is deduped by physical pool
 - Staged discovery merges now preserve raw DEX metadata and pool-quality multipliers while deduping against token-pair fingerprints
@@ -209,8 +173,6 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 ---
 
 ## v3.3 - Separated discovery pipeline with staged pool confidence decay (Mar 9, 2026)
-
-**Commit:** `unreleased`
 
 - Discovery sources now run on a dedicated half-hourly trigger (`6,36 * * * *`) with a 12-minute shared run budget instead of sharing a short scoring-run budget
 - Individual discovery candidates are capped by a 25-second per-coin crawl budget so one slow asset cannot consume the full run

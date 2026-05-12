@@ -25,6 +25,19 @@ function buildParameters(endpoint: PublicApiArtifactEndpoint) {
   })) ?? [];
 }
 
+function buildErrorResponses(endpoint: PublicApiArtifactEndpoint) {
+  return {
+    "400": { description: "Bad request" },
+    ...(endpoint.security === "none"
+      ? {}
+      : {
+        "401": { description: "Missing or invalid API key" },
+        "429": { description: "Rate limit exceeded" },
+      }),
+    "503": { description: "Service unavailable or cache not populated" },
+  };
+}
+
 function buildOperation(endpoint: PublicApiArtifactEndpoint) {
   return {
     tags: endpoint.tags,
@@ -45,10 +58,7 @@ function buildOperation(endpoint: PublicApiArtifactEndpoint) {
           },
         },
       },
-      "400": { description: "Bad request" },
-      "401": { description: "Missing or invalid API key" },
-      "429": { description: "Rate limit exceeded" },
-      "503": { description: "Service unavailable or cache not populated" },
+      ...buildErrorResponses(endpoint),
     },
   };
 }

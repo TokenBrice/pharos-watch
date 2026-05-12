@@ -87,8 +87,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v5.91 - Post-probe authoritative override refresh (May 12, 2026)
 
-**Commit:** `unreleased`
-
 - Protocol-backed authoritative price overrides are recomputed after fallback enrichment and GeckoTerminal probing instead of reusing the pre-enrichment override map
 - `usdk-kast` and `xo-exodus` can recover from `priceSource: missing` when `wm-m0` becomes a fresh high-confidence parent during the same sync run
 - The parent-trust guard remains unchanged: low-confidence, stale, cached, or non-replay-safe parent prices still cannot upgrade into `protocol-redeem` child prices
@@ -97,8 +95,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v5.09 - Addressless DexScreener exact fallback from tracked metadata (May 12, 2026)
-
-**Commit:** `unreleased`
 
 - DexScreener exact fallback can now use curated tracked contract metadata when a DefiLlama stablecoin row has no address
 - `usx-dforce` can recover from `priceSource: missing` through its tracked Base USX contract when DexScreener publishes a sufficiently liquid exact-address market
@@ -110,8 +106,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v5.08 - DefiLlama EVM contract fallback casing normalization (May 12, 2026)
 
-**Commit:** `unreleased`
-
 - Normalized EVM address casing before DefiLlama `/coins` contract fallback lookups so checksummed metadata addresses match lower-case upstream price keys
 - `usg-tangent` can now recover from `priceSource: missing` when DefiLlama publishes the live USG contract quote under a lower-case EVM address
 - The exact-symbol guard remains in place, so `stkGHO` is still not accepted for `sgho-aave`
@@ -121,8 +115,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v5.07 - Idle CDO virtualPrice authoritative price provider (May 12, 2026)
 
-**Commit:** `unreleased`
-
 - Added an Idle Perpetual Yield Tranches authoritative price provider that reads `virtualPrice(address tranche)` on the CDO contract and multiplies the underlying-denominated NAV by the tracked parent asset's live price
 - `aa-falconx-mev-capital` now publishes a `protocol-redeem` high-confidence NAV from the CDO `virtualPrice` reading and the tracked `usdc-circle` parent price
 - The provider reuses parent-trust gating, parent provenance metadata, and the 0.5-10.0 NAV bound from the ERC-4626 NAV lane
@@ -130,8 +122,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v5.06 - ERC-4626 NAV authoritative price provider (May 12, 2026)
-
-**Commit:** `unreleased`
 
 - Added a generic ERC-4626 NAV authoritative price provider that prices wrapper vault tokens from on-chain `convertToAssets(1 share)` times the tracked parent's live price
 - `susdt-spark`, `gtusdc-gauntlet`, `yvusdc-yearn`, `stkgho-umbrella-aave`, and `sbold-k3-capital` now publish `protocol-redeem` high-confidence prices when their parents already price through consensus
@@ -141,8 +131,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v5.05 - Authenticated Jupiter gateway support (May 11, 2026)
 
-**Commit:** `unreleased`
-
 - `sync-stablecoins` can now pass `JUPITER_API_KEY` through the Solana fallback pass so official Jupiter Price API V3 requests include the `x-api-key` header
 - The change does not promote Jupiter in source ordering: it remains a bounded fallback for tracked Solana mints that are still missing after primary consensus, authoritative overrides, DefiLlama contract lookup, and CoinMarketCap enrichment
 - Jupiter responses still require the documented V3 quote fields, a fresh Solana block reference, and peg-aware validation before any fallback price is accepted
@@ -150,8 +138,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v5.04 - Source freshness and independent corroboration hardening (May 10, 2026)
-
-**Commit:** `unreleased`
 
 - Primary candidate admission now uses a registry-backed freshness gate for timestamped sources, including stale and future-skew rejection for Bitstamp, Coinbase, oracles, Curve, CoinGecko-derived rows, and promoted DEX protocol lanes
 - Promoted DEX protocol lanes are freshness-checked per source before admission, so a fresh parent `dex_prices` row cannot carry a stale protocol-level price into consensus
@@ -166,8 +152,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v5.03 - DEX source telemetry and direct-API fetch hardening (May 5, 2026)
 
-**Commit:** `unreleased`
-
 - DEX source admission now emits structured skip reasons for stale bridge rows, malformed source snapshots, missing pricing-source registry mappings, below-threshold protocol TVL, and promoted DEX candidates rejected for lacking corroboration
 - DEX-inclusive stablecoin prices can expose `priceSourceConfidenceProfile`, summarizing accepted protocol DEX lane count, freshest DEX lane age, and aggregate-only reliance
 - Direct DEX API fetches now share a bounded `15 s` request policy, run independent protocol fetches with concurrency `2`, and use deterministic pagination caps with resume markers instead of silent truncation
@@ -176,8 +160,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v5.02 - ARS, KGS, and NGN non-USD peg hardening (May 5, 2026)
-
-**Commit:** `unreleased`
 
 - WARS (ARS) and cNGN (NGN) can validate weak live USD marks against direct native-peg and daily FX references; KGST (KGS) uses daily FX references plus deterministic bounds because CoinGecko does not expose a native `kgs` quote
 - KGS and NGN use the same `fawazahmed0` secondary FX cadence semantics as CNH, RUB, UAH, and ARS for live sync and historical backfills
@@ -188,8 +170,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v5.01 - MYR and KRW peg-currency support (Apr 29, 2026)
 
-**Commit:** `unreleased`
-
 - FX cron requests MYR and KRW from Frankfurter and validates them against per-peg bounds
 - Native-peg implied-price lane corroborates MYR / KRW depegs via direct CoinGecko `myr` / `krw` quotes
 - Stablecoin charts reconciliation, price-validation `classifyPegClass`, and FX cadence metadata cover the new pegs so MYRC and KRWQ can be tracked through the existing Frankfurter / `fawazahmed0` / ExchangeRate-API FX lane and the CoinGecko native-peg corroboration lane
@@ -197,8 +177,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v5.0 - Pricing pipeline comprehensive hardening (Apr 17, 2026)
-
-**Commit:** `unreleased`
 
 - Pool challenge replacement now updates `allPrices` so severe-downside corroboration carry-through uses the replacement source instead of stale pre-replacement candidates
 - `curve-oracle` now enforces a 5-minute on-chain staleness guard using the aggregator block timestamp and records against its own dedicated circuit breaker
@@ -218,8 +196,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v4.38 - Corroborated severe-depeg pool challenge protection (Apr 15, 2026)
 
-**Commit:** `unreleased`
-
 - Pool challenge still downgrades confidence when large DEX protocol groups disagree with a selected severe-depeg primary price
 - Pool challenge no longer replaces that selected price when at least two live candidate sources independently corroborate severe downside and at least one of them is depeg-authoritative
 - The same severe-downside candidate evidence satisfies the temporal-jump guard when the previous trusted price was near peg
@@ -228,8 +204,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v4.37 - Severe-depeg corroboration continuity through validation (Apr 15, 2026)
-
-**Commit:** `unreleased`
 
 - Primary severe-downside corroboration evidence is now preserved through the later prevalidation and post-enrichment validation passes when the selected primary price remains unchanged
 - Low-confidence severe depeg prices can stay published when multiple live candidate sources independently confirm the downside even if they do not form a tight high-confidence cluster
@@ -240,8 +214,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v4.36 - Blocked Binance host accounting (Apr 15, 2026)
 
-**Commit:** `unreleased`
-
 - Binance all-host 403/451 blocks from Worker egress are now recorded as no-contribution provider blocks rather than source outages
 - Diagnostics still persist every attempted Binance endpoint, status, and snippet so operators can see the provider-edge block
 - Binance contributes zero prices in this state; consensus continues through the remaining hard venue/oracle/protocol inputs
@@ -249,8 +221,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v4.35 - No-candidate Jupiter breaker recovery (Apr 15, 2026)
-
-**Commit:** `unreleased`
 
 - Jupiter no-candidate runs now close stale-open breaker state without making an external provider health request
 - This reflects that authoritative pricing removed all current Jupiter fallback candidates, so a provider-edge block is not part of the active pricing path
@@ -260,8 +230,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v4.34 - Binance host failover for Worker egress (Apr 15, 2026)
 
-**Commit:** `unreleased`
-
 - Binance ticker fetches now try `data-api.binance.vision` first and fall back to `api.binance.com` before recording a failed source outcome
 - The fallback was added after production Worker diagnostics showed HTTP 403 from the market-data mirror while local provider audits still saw healthy `USDTUSD` and `USDCUSD` Binance markets
 - Binance diagnostics preserve each attempted endpoint so operators can distinguish mirror-specific blocks from parser/config problems
@@ -269,8 +237,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v4.33 - Jupiter official gateway fallback (Apr 15, 2026)
-
-**Commit:** `unreleased`
 
 - Jupiter fallback and health probes now use `https://api.jup.ag/price/v3` instead of the Lite gateway
 - This follows repeated Worker-side Cloudflare 403 block pages from `lite-api.jup.ag` while the official V3 gateway continued returning the same response shape
@@ -280,8 +246,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v4.32 - Provider diagnostics and authoritative fallback gating (Apr 14, 2026)
 
-**Commit:** `unreleased`
-
 - Binance and Jupiter price attempts now persist compact diagnostics into `sync-stablecoins` cron metadata, including endpoint, status, candidate counts, parsed/response counts, matched counts, and sanitized non-OK snippets
 - Protocol-backed live overrides are pre-applied before fallback enrichment and re-applied after GeckoTerminal probing, so known redeemable wrappers and extension assets do not hit fallback sources before their authoritative price is available
 - Jupiter can run a bounded health probe when a previously open circuit has no remaining fallback candidates, allowing a stale-open breaker to recover once the provider is reachable
@@ -289,8 +253,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v4.31 - Curated-contract price fallback and USDnr M0 inheritance (Apr 13, 2026)
-
-**Commit:** `unreleased`
 
 - DefiLlama contract-price fallback now tries curated tracked `contracts` metadata when the upstream stablecoin row has no `address`
 - `ctusd-citrea` can resolve through its fresh DefiLlama `citrea:<contract>` quote without relying on stale CoinGecko rows or symbol search
@@ -300,8 +262,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v4.3 - CoinGecko simple-price upstream freshness gate (Apr 11, 2026)
 
-**Commit:** `unreleased`
-
 - CoinGecko `/simple/price` requests now include `last_updated_at`
 - Rows with a CoinGecko upstream timestamp older than the source trust window are excluded from primary consensus instead of being stamped as fresh local fetches
 - When CoinGecko omits the timestamp despite the request, the row remains local-fetch provenance for backwards compatibility with partial responses
@@ -309,8 +269,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v4.2 - Inherited wM pricing for M0 extension assets (Apr 10, 2026)
-
-**Commit:** `unreleased`
 
 - `usdk-kast` and `xo-exodus` now inherit tracked `wm-m0` pricing through the authoritative `protocol-redeem` lane when the parent rail is available
 - Historical depeg backfills for those extension assets replay the tracked `wm-m0` market series instead of relying on missing or thin child-market history
@@ -320,8 +278,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v4.1 - Split DexScreener exact-vs-search breaker accounting (Apr 8, 2026)
 
-**Commit:** `unreleased`
-
 - DexScreener pass 4 now keeps separate breaker state for exact token-address lookups and the last-resort symbol-search endpoint
 - `dexscreener-prices` now reflects `/tokens/v1/{chainId}/{address}` availability only, while `dexscreener-search` tracks `/latest/dex/search`
 - This prevents a flaky search endpoint from opening the same breaker that guards otherwise healthy exact-address recovery
@@ -329,8 +285,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v4.0 - DexScreener request-budget walk-through for skipped fallback candidates (Apr 8, 2026)
-
-**Commit:** `unreleased`
 
 - DexScreener pass 4 now spends its `10`-request budget on actual outgoing DexScreener calls instead of pre-slicing the first ten missing assets
 - Higher-rank addressless rows that are skipped because their symbol is not unique no longer crowd out later exact-target or unique-symbol fallback candidates such as `CHFAU` or `ctUSD`
@@ -340,8 +294,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v3.99 - Native-peg live publication guard and fill lane for non-USD fiat assets (Apr 7, 2026)
 
-**Commit:** `unreleased`
-
 - Supported non-USD fiat assets can now replace materially divergent weak or mixed-source USD publications when a fresh direct native CoinGecko quote plus fresh FX reference implies a better live USD mark
 - The same native lane can now fill a missing live price for supported non-USD fiat assets instead of falling straight to replay cache or `N/A`
 - Native-implied live prices remain a fresh fallback-validation lane rather than a replay-safe consensus source, so they are not written into `price_cache` for later replay publication
@@ -349,8 +301,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v3.98 - Daily-confirmed native-peg replay for non-USD fiat backfills (Apr 7, 2026)
-
-**Commit:** `unreleased`
 
 - Historical CoinGecko market-chart replay now carries the configured CoinGecko API key through the backfill/admin path so native-fiat history can use authenticated transport consistently during broad repairs
 - Supported non-USD fiat backfills now replay native-fiat history at daily cadence with a two-point confirmation window across a 36-hour gap tolerance instead of opening on isolated thin hourly prints
@@ -360,8 +310,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v3.97 - Generalized native-peg safeguards for non-USD fiat replay and routing (Apr 7, 2026)
 
-**Commit:** `unreleased`
-
 - Supported non-USD fiat assets such as EUR, CHF, GBP, JPY, SGD, AUD, CAD, BRL, IDR, TRY, ZAR, PHP, MXN, RUB, and CNH/CNY can now consult fresh direct CoinGecko native-peg quotes before downstream depeg logic trusts `USD price / FX reference` on its own
 - Historical backfill now prefers direct CoinGecko native-fiat history for those supported pegs and compares that series to the native `1.0` peg before it falls back to USD-denominated history
 - The published cached USD price path still does not add a second CoinGecko-derived consensus source; this remains a downstream validation and historical replay hardening change
@@ -369,8 +317,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v3.96 - Direct native-peg BRL corroboration for downstream depeg routing (Apr 7, 2026)
-
-**Commit:** `unreleased`
 
 - Supported fiat-pegged assets such as `BRZ` can now consult a fresh direct CoinGecko native-peg quote before downstream depeg logic trusts `USD price / FX reference` on its own
 - Pending depeg confirmation now uses that direct native quote first when it exists, instead of relying only on a derived USD comparison
@@ -380,8 +326,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v3.95 - USDAI inherits PYUSD redemption pricing (Apr 6, 2026)
 
-**Commit:** `unreleased`
-
 - Base `usdai-usd-ai` now inherits tracked `pyusd-paypal` pricing in the authoritative override layer instead of trusting thin USDAI secondary-market prints
 - Historical USDAI depeg backfills now replay the tracked PYUSD market series, so wrapper-specific CoinGecko/DefiLlama history no longer manufactures long false depeg streaks
 - This keeps USDAI PegScore aligned with the token's documented instant-redemption semantics rather than with noise from sparse wrapper venues
@@ -389,8 +333,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v3.94 - Blocked dead Bunni DEX inputs (Apr 3, 2026)
-
-**Commit:** `unreleased`
 
 - Bunni is now blocked from DEX crawl intake and DeFiLlama pool processing instead of being treated as a live venue
 - Retained-pool filtering, challenger publication, and `dex_prices` publication all ignore Bunni even if stale or staged rows try to reintroduce it
@@ -400,8 +342,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v3.93 - RedStone USR provider-config drift cleanup (Apr 3, 2026)
 
-**Commit:** `unreleased`
-
 - Removed `USR` from the exact-case RedStone tracked subset after the live RedStone API stopped returning that symbol
 - The RedStone pricing lane no longer spends transport budget retrying a symbol the provider does not currently serve
 - Provider-config audit and merge-gate validation now pass without masking real RedStone coverage drift
@@ -409,8 +349,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v3.92 - Retained-pool DEX bridge publication (Apr 3, 2026)
-
-**Commit:** `unreleased`
 
 - `dex_prices` now publishes only from the final retained priced-pool set after the full liquidity scoring filters run
 - Raw discovery observations that fail dedupe or retained-pool admission can no longer leak into promoted DEX bridge sources or `dexPriceCheck`
@@ -420,8 +358,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v3.91 - Protocol-level pool-challenge divergence gating (Apr 2, 2026)
 
-**Commit:** `unreleased`
-
 - Pool challenge divergence is now evaluated from one TVL-weighted median price per protocol, not from any single challenger pool
 - A lone bad pool can no longer make an otherwise agreeing protocol count as independent corroboration for price replacement
 - Replacement still requires at least two protocol-level challenger medians to diverge, and the final replacement price is still the TVL-weighted median across those corroborating protocol groups
@@ -430,8 +366,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v3.9 - Explicit source semantics, cluster-median publication, and fallback identity hardening (Mar 30, 2026)
-
-**Commit:** `unreleased`
 
 - Pricing sources now carry explicit freshness kind, max trusted age, upstream-timestamp support, single-source authority, and market-capability metadata in the canonical registry
 - High-confidence consensus now publishes the winning cluster median instead of one agreeing member's raw price
@@ -446,8 +380,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v3.8 - Validated DefiLlama fallback admission and exact-target DexScreener gating (Mar 30, 2026)
 
-**Commit:** `unreleased`
-
 - DefiLlama pass 1 and pass 1b now validate quotes against peg-aware bounds before marking an asset as resolved
 - An unreasonable DL contract quote can no longer block later CoinMarketCap, Jupiter, or DexScreener fallbacks in the same run
 - DexScreener symbol search is now disabled whenever the asset already has a canonical exact chain+address lookup path
@@ -456,8 +388,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v3.7 - Protocol-aware DEX hardening estimators and provider-config cleanup (Mar 24, 2026)
-
-**Commit:** `unreleased`
 
 - GeckoTerminal probing now collapses pools to one TVL-weighted-median price per protocol before taking the cross-protocol weighted median
 - Pool challenge replacement now uses corroborating divergent protocol groups instead of a raw all-pool weighted mean
@@ -469,8 +399,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v3.6 - Explicit source freshness provenance for live prices (Mar 24, 2026)
 
-**Commit:** `unreleased`
-
 - Stablecoin payloads, peg-summary outputs, and `price_cache` rows now preserve `priceObservedAtMode` alongside `priceObservedAt`
 - Primary consensus now carries freshness provenance per source and resolves a conservative effective mode for the selected price
 - Hard single-source prices remain depeg-authoritative only when they retain source-native freshness provenance
@@ -481,8 +409,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v3.5 - Independent FX recovery during cached fallback (Mar 23, 2026)
 
-**Commit:** `unreleased`
-
 - Cached-fallback FX runs now keep probing Open Exchange Rates, Chainlink reference feeds, and gold-api.com instead of freezing those recovery paths until Frankfurter recovers
 - A single stale intraday peg can no longer trap the whole FX lane in repeated cached fallback when an independent overlay source can refresh it
 - If those independent probes restore fresh full-set fiat coverage, the run exits cached fallback immediately and resets the fallback streak
@@ -492,8 +418,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v3.4 - Replay-safe trusted-price continuity for confirmed depegs (Mar 23, 2026)
 
-**Commit:** `unreleased`
-
 - Previous-trusted severe-depeg continuity now also consults fresh replay-safe `price_cache` rows instead of relying only on the immediately previous stablecoins publication
 - A temporarily `low` or unusable stablecoins run no longer causes the next fallback-validation pass to forget an already corroborated open depeg
 - Cached replay can therefore keep publishing the last fresh authoritative depeg price through brief corroboration gaps instead of flapping to `N/A` on detail surfaces
@@ -502,8 +426,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v3.3 - Source-aware trust, observed-time freshness, and weak-price jump quarantine (Mar 22, 2026)
-
-**Commit:** `unreleased`
 
 - Pricing source capabilities now come from one canonical registry shared by consensus, replay safety, pool challenge, GT probing, status health, and depeg trust classification
 - Cached stablecoin payloads now preserve `priceObservedAt` and `priceSyncedAt`; compatibility `priceUpdatedAt` now reflects the true observation timestamp instead of the sync write time
@@ -519,8 +441,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v3.2 - Identity-safe enrichment, severe-downside publication guards, and replay-safe DEX quote derivation (Mar 22, 2026)
 
-**Commit:** `unreleased`
-
 - Primary pricing candidates are no longer gated on `geckoId`; tracked assets can still enter consensus through non-CoinGecko voices
 - DefiLlama pass 1b now probes only tracked alternate deployments instead of synthesizing same-address identities across chains
 - CoinMarketCap and DexScreener symbol fallbacks now require uniqueness within the tracked registry
@@ -535,8 +455,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v3.1 - Canonical DEX token identity and non-overlapping DEX consensus (Mar 22, 2026)
 
-**Commit:** `unreleased`
-
 - Runtime DEX parsing no longer learns new token ownership from DeFiLlama or subgraph symbol strings
 - Addressed unknown tokens are dropped instead of falling back to symbol matches in price-bearing DEX paths
 - DeFiLlama pools with `underlyingTokens` now match tracked assets by canonical addresses only
@@ -547,8 +465,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v3.0 - Cadence-valid FX carry-forward semantics (Mar 20, 2026)
 
-**Commit:** `unreleased`
-
 - FX refreshes now treat already-current daily references as a successful live carry-forward when they are still within expected source cadence
 - Failed Frankfurter or mirror transports no longer automatically mark the published FX state as cached fallback when the underlying daily reference is still current
 - Per-peg metadata preserves source dates and cadence semantics during carry-forward runs
@@ -557,8 +473,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v2.9 - Jupiter V3 freshness fix and exact DexScreener address fallback (Mar 20, 2026)
-
-**Commit:** `unreleased`
 
 - Jupiter fallback no longer rejects V3 quotes solely because optional `createdAt` metadata is old
 - Jupiter recovery continues to rely on liquidity gating and peg-aware validation
@@ -569,8 +483,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v2.8 - Tertiary full-set FX fallback for multi-source outages (Mar 20, 2026)
 
-**Commit:** `unreleased`
-
 - Added ExchangeRate-API as a tertiary live full-set FX fallback
 - Frankfurter remains preferred for the core fiat set
 - The secondary `fawazahmed0/currency-api` mirrors still cover CNH/RUB/UAH/ARS and can backstop the wider fiat set
@@ -580,8 +492,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v2.7 - Secondary FX full-set live fallback for Frankfurter outages (Mar 20, 2026)
 
-**Commit:** `unreleased`
-
 - Expanded the dated secondary FX mirror path so it can backstop the wider fiat reference set
 - Prevents immediate cached-only FX runs during Frankfurter outages when the secondary feed is healthy
 - Preserves daily source-date semantics in per-peg FX metadata during that live fallback path
@@ -589,8 +499,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v2.6 - Published DEX challenger snapshots and durable FX freshness metadata (Mar 19, 2026)
-
-**Commit:** `unreleased`
 
 - Pool challenge and depeg confirmation now read dedicated challenger snapshots instead of depending on the visible top-pools subset
 - Challenger coverage is persisted per stablecoin and falls back safely during migration gaps
@@ -601,8 +509,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v2.5 - Kraken and Bitstamp primary pricing, Jupiter Solana fallback, Chainlink reference overlays (Mar 19, 2026)
 
-**Commit:** `unreleased`
-
 - Added Kraken and Bitstamp as additional primary CEX pricing voices
 - Added a Jupiter Price API fallback pass for unresolved Solana assets
 - Added curated Chainlink EUR/USD, GBP/USD, JPY/USD, XAU/USD, and XAG/USD overlays for FX and commodity validation
@@ -611,8 +517,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v2.4 - Pairwise consensus hardening, RedStone freshness gate, authoritative override ordering (Mar 19, 2026)
-
-**Commit:** `unreleased`
 
 - Consensus agreement now requires pairwise clustering instead of allowing transitive-source chains
 - Fixed-peg assets stay on fixed-peg rules when peg references are temporarily unavailable
@@ -623,8 +527,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v2.3 - Per-protocol DEX bridge aggregation and top-pool challenge source split (Mar 18, 2026)
 
-**Commit:** `unreleased`
-
 - DEX bridge persistence now stores one aggregated price source per protocol instead of repeating individual pools
 - Pool challenge reads large current pools from `dex_liquidity.top_pools_json` instead of the consensus bridge payload
 - Non-USD tracked stablecoin pairs now use peg-reference-aware conversion in direct-API DEX pricing
@@ -632,8 +534,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v2.2 - Pool confirmation fix, peg-type-aware challenge, source quality gating (Mar 17, 2026)
-
-**Commit:** `unreleased`
 
 - Added pool-level individual prices as a fourth depeg-confirmation source
 - Made the pool-challenge threshold peg-type-aware
@@ -645,8 +545,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v2.1 - Consensus honesty: independent DL list price, GeckoTerminal probe, pool challenge (Mar 16, 2026)
 
-**Commit:** `unreleased`
-
 - Removed the DefiLlama coins API from primary consensus because it mirrored CoinGecko data
 - Added DefiLlama stablecoins-list pricing as an independent aggregator voice
 - Added a GeckoTerminal pool probe for CoinGecko-only single-source assets
@@ -656,8 +554,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## v2.0 - Multi-source consensus with oracle, CEX, and on-chain pricing (Mar 14, 2026)
 
-**Commit:** `unreleased`
-
 - Replaced 2-source cross-validation with an 8-source weighted consensus system
 - Added Pyth, Binance, Coinbase, RedStone, Curve on-chain pricing, and promoted DEX observations
 - Introduced clustering-based consensus, price-confidence tagging, and the 4-pass enrichment pipeline
@@ -665,8 +561,6 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ---
 
 ## v1.0 - Initial 2-source price cross-validation (Feb 1, 2026)
-
-**Commit:** `unreleased`
 
 - Launched baseline pricing with CoinGecko as primary and DefiLlama as cross-validation
 - Used simple comparison logic instead of clustering

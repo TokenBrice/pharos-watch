@@ -14,6 +14,7 @@ export interface MethodologyChangelogEntry {
   effectiveAt: number;
   summary: string;
   impact: readonly string[];
+  /** Real commit hashes only. Empty means commit provenance was not recorded. */
   commits: readonly string[];
   reconstructed: boolean;
 }

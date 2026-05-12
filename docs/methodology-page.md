@@ -53,6 +53,8 @@ When changing any methodology surface, update the runtime implementation, the de
 
 If a versioned methodology changes, bump the corresponding version module in `shared/lib/*-version.ts` so badges/changelog links stay consistent.
 
+Commit provenance in `shared/lib/*-version.ts` uses real commit hashes only. Use `commits: []` when provenance was not recorded; public changelog routes and timeline docs should omit `Commit(s)` lines for those entries rather than using `unreleased` as a placeholder.
+
 Also update `src/app/methodology/page.tsx` whenever its FAQ structured-data answers, metadata copy, or reader-guide copy changes. Those claims are runtime-facing even when the shell layout itself is unchanged.
 
 If section IDs or changelog paths change, also update `src/lib/methodology-context.ts` so in-app "View methodology" and "Version history" links keep resolving to the correct anchor/route.

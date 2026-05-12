@@ -80,7 +80,9 @@ export function MethodologyVersionCard({
             </span>
           ) : null}
           <span className="rounded-full border border-border/60 bg-background/50 px-3 py-1">
-            {entry.commits.length} commit{entry.commits.length === 1 ? "" : "s"}
+            {entry.commits.length > 0
+              ? `${entry.commits.length} commit${entry.commits.length === 1 ? "" : "s"}`
+              : "Commit provenance not recorded"}
           </span>
         </div>
         <ul className="flex flex-wrap gap-2 text-xs">

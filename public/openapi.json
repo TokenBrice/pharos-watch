@@ -98,12 +98,6 @@
           "400": {
             "description": "Bad request"
           },
-          "401": {
-            "description": "Missing or invalid API key"
-          },
-          "429": {
-            "description": "Rate limit exceeded"
-          },
           "503": {
             "description": "Service unavailable or cache not populated"
           }

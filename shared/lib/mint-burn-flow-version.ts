@@ -146,7 +146,7 @@ const mintBurnFlow = createMethodologyVersion({
       "The `/flows` page now labels the feature as Ethereum-only and visually marks partial-history or lagging coverage states",
       "Flow freshness headers now follow successful sync timestamps instead of latest event timestamps, avoiding false staleness during quiet periods",
     ],
-    commits: ["unreleased"],
+    commits: [],
     reconstructed: false,
   },
   {
@@ -164,7 +164,7 @@ const mintBurnFlow = createMethodologyVersion({
       "Unpriced event rows now render native token amounts instead of false dollar values",
       "`minAmount` filtering is now strictly USD-only when `amountUsd` is available",
     ],
-    commits: ["unreleased"],
+    commits: [],
     reconstructed: false,
   },
   {
@@ -180,7 +180,7 @@ const mintBurnFlow = createMethodologyVersion({
       "Coins with less than $50K absolute 24h flow now return NR instead of a potentially misleading pressure shift score",
       "New observability counters in cron metadata: atomicRoundtripsDetected, nullPricesHealed",
     ],
-    commits: ["unreleased"],
+    commits: [],
     reconstructed: false,
   },
   {
@@ -196,7 +196,7 @@ const mintBurnFlow = createMethodologyVersion({
       "Frontend printer and shredder visuals now key off actual net flow direction instead of score sign",
       "Methodology and product copy now distinguish current direction from pressure-versus-baseline context",
     ],
-    commits: ["unreleased"],
+    commits: [],
     reconstructed: true,
   },
   {
@@ -212,7 +212,7 @@ const mintBurnFlow = createMethodologyVersion({
       "Bank Run Gauge now excludes those NR windows from the market-cap-weighted composite",
       "Frontend flow-intensity UI now displays NR explicitly for null values",
     ],
-    commits: ["unreleased"],
+    commits: [],
     reconstructed: true,
   },
   {
@@ -228,7 +228,7 @@ const mintBurnFlow = createMethodologyVersion({
       "Band thresholds were remapped around zero while retaining existing band labels",
       "Frontend midpoint conversion shim was removed; UI now consumes canonical signed API values directly",
     ],
-    commits: ["unreleased"],
+    commits: [],
     reconstructed: true,
   },
   {

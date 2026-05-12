@@ -6,8 +6,6 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 
 ## v6.11 - yBOLD extended transfer coverage (May 12, 2026)
 
-**Commit:** `unreleased`
-
 - Added Yearn BOLD (`ybold-yearn`) to the extended Ethereum mint/burn registry.
 - The config uses the checked-in yBOLD Ethereum ERC-20 vault-share contract metadata and standard zero-address `Transfer` events.
 - yBOLD share issuance/redemption is tracked separately from base BOLD flow because the wrapper has distinct vault-share supply dynamics.
@@ -16,8 +14,6 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 ---
 
 ## v6.1 - USG extended transfer coverage (May 8, 2026)
-
-**Commit:** `unreleased`
 
 - Added Tangent USD (`usg-tangent`) to the extended Ethereum mint/burn registry.
 - The config uses the verified USG ERC-20 contract's standard zero-address `Transfer` events from reviewed deployment block `24,442,033`.
@@ -85,8 +81,6 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 
 ## v5.2 - GYD retirement from active mint/burn coverage (Apr 14, 2026)
 
-**Commit:** `unreleased`
-
 - GYD mint/burn tracking was removed after the cross-chain contract incident moved the asset out of the active stablecoin registry and into the cemetery dataset
 - Current public flow scope now excludes GYD from active config selection; historical rows remain in D1 if previously ingested
 - Registry counts and flow documentation now reflect the active config surface after the GYD retirement
@@ -94,8 +88,6 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 ---
 
 ## v5.1 - Canonical-chain mint/burn scope for native issuance tracking (Apr 8, 2026)
-
-**Commit:** `unreleased`
 
 - USDai mint/burn tracking now runs on native Arbitrum instead of treating Ethereum-side LayerZero bridge flow as primary issuance/redemption
 - Aggregate and per-coin public APIs now read only configured `(stablecoin_id, chain_id)` pairs, so stale non-canonical historical rows no longer leak into counted flow metrics
@@ -106,8 +98,6 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 
 ## v5.0 - Bridge-transfer flow exclusion for omnichain tokens (Apr 8, 2026)
 
-**Commit:** `unreleased`
-
 - Bridge-aware classification now excludes mint-side bridge transfers as well as burn-side bridge transfers from counted economic-flow aggregates
 - USDai's Ethereum tracker now recognizes its documented LayerZero OFT / OAdapter path instead of treating equal bridge mints and burns as economic issuance/redemption
 - Bridge classification now runs after all parsed rows for the config chunk are assembled, so the classifier can see bridge mints and burns together
@@ -116,8 +106,6 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 ---
 
 ## v4.9 - Deterministic repair loops and adapter provenance disclosures (Mar 24, 2026)
-
-**Commit:** `unreleased`
 
 - Historical price repair now values unpriced rows from event-day `supply_history` instead of reusing current `price_cache` snapshots
 - NULL-price healing and atomic-roundtrip sweeping now process deterministic ordered backlogs instead of relying on implicit D1 row order
@@ -128,8 +116,6 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 
 ## v4.8 - Ethereum coverage wave for long-tail mint/burn tracking (Mar 24, 2026)
 
-**Commit:** `unreleased`
-
 - Added 40 new Ethereum transfer-based contract configs for tracked assets that already had shared Ethereum metadata
 - Restored several previously removed long-tail assets now judged worth tracking again given current market-cap and product relevance
 - Expanded potential public `/flows` coverage from the low 80s into the low 120s once the extended lane backfills the added assets
@@ -137,8 +123,6 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 ---
 
 ## v4.7 - Closed-day baseline, fixed aggregate 24h semantics, and coverage disclosures (Mar 10, 2026)
-
-**Commit:** `unreleased`
 
 - Pressure Shift now compares live 24-hour flows against the last 30 fully closed UTC-day baselines instead of mixing the active day into the baseline
 - Aggregate `GET /api/mint-burn-flows?hours=N` keeps per-coin 24h fields fixed to the canonical 24-hour window while only `hourly[]` respects `hours`
@@ -150,8 +134,6 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 
 ## v4.6 - Safe-frontier ingestion and counted event-history alignment (Mar 9, 2026)
 
-**Commit:** `unreleased`
-
 - Sync-state advancement now stops at the shared safe coverage frontier when any event definition is only partially scanned
 - Missing block timestamps now cap advancement at the earliest unresolved block instead of silently skipping rows forever
 - `GET /api/mint-burn-events` now exposes `flowType` and supports `scope=counted` for rows that participate in aggregates
@@ -162,8 +144,6 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 
 ## v4.5 - Data quality: noise filtering, auto-heal, and activity gating (Mar 9, 2026)
 
-**Commit:** `unreleased`
-
 - Same-transaction mint+burn pairs for the same stablecoin are now flagged as `atomic_roundtrip` and excluded from all flow aggregates
 - `sync-mint-burn` now auto-heals recent `amount_usd IS NULL` rows within a 48-hour window using `price_cache`
 - Coins with less than $50K of absolute 24h flow now return `NR` for pressure shift instead of a misleading score
@@ -172,8 +152,6 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 ---
 
 ## v4.4 - Two-signal flow semantics and baseline-aware interpretation (Mar 7, 2026)
-
-**Commit:** `unreleased`
 
 - Per-coin flow UI now separates raw 24h net flow from baseline-relative pressure shift
 - API now exposes `pressureShiftScore`, `pressureShiftState`, `netFlowDirection24h`, `has24hActivity`, and baseline context fields
@@ -184,8 +162,6 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 
 ## v4.3 - NR gating for no-activity flow windows (Mar 4, 2026)
 
-**Commit:** `unreleased`
-
 - Coins with no mint/burn activity in the active 24h window now publish `null` Flow Intensity (`NR`) instead of a synthetic neutral value
 - Bank Run Gauge excludes those NR windows from the market-cap-weighted composite
 - Frontend flow-intensity UI now renders NR explicitly for null windows
@@ -193,8 +169,6 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 ---
 
 ## v4.2 - Signed zero-baseline flow-intensity semantics (Mar 4, 2026)
-
-**Commit:** `unreleased`
 
 - Flow Intensity Score moved from midpoint `0-100` to signed `-100 to +100` semantics
 - Bank Run Gauge score moved to signed `-100 to +100` with neutral baseline at `0`

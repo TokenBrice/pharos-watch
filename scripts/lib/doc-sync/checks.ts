@@ -65,11 +65,50 @@ import {
   SAFETY_SCORE_VERSION_LABEL,
 } from "./methodology-manifest";
 
+const METHODOLOGY_PROVENANCE_FILES = [
+  "docs/blacklist-tracker-timeline.md",
+  "docs/chain-health-timeline.md",
+  "docs/depeg-dews-timeline.md",
+  "docs/liquidity-score-timeline.md",
+  "docs/mint-burn-flows-timeline.md",
+  "docs/pricing-pipeline-timeline.md",
+  "docs/report-cards-timeline.md",
+  "docs/stability-index-timeline.md",
+  "docs/yield-intelligence-timeline.md",
+  "shared/lib/blacklist-tracker-version.ts",
+  "shared/lib/chain-health-version.ts",
+  "shared/lib/depeg-dews-version.ts",
+  "shared/lib/liquidity-score-version.ts",
+  "shared/lib/methodology-version.ts",
+  "shared/lib/mint-burn-flow-version.ts",
+  "shared/lib/pricing-pipeline-version.ts",
+  "shared/lib/redemption-backstop-version.ts",
+  "shared/lib/safety-score-version-data.ts",
+  "shared/lib/safety-score-version.ts",
+  "shared/lib/stability-index-version.ts",
+  "shared/lib/yield-methodology-version.ts",
+] as const;
+
 function checkMethodologyVersions(failures: Failure[]): void {
   for (const check of METHODOLOGY_DOC_VERSION_CHECKS) {
     const doc = read(check.file);
     const found = findLineValue(doc, /Current methodology version:\*\*\s*`([^`]+)`/);
     expectEqual(failures, check.file, "methodology version", found, check.expectedVersionLabel);
+  }
+}
+
+function checkMethodologyCommitProvenance(failures: Failure[]): void {
+  for (const file of METHODOLOGY_PROVENANCE_FILES) {
+    const doc = read(file);
+    const found = doc.match(/\*\*Commit(?:s)?:\*\* `unreleased`|commits:\s*\["unreleased"\]/)?.[0] ?? null;
+    if (found !== null) {
+      failures.push({
+        file,
+        label: "methodology commit provenance",
+        expected: "real commit hashes or omitted provenance",
+        found,
+      });
+    }
   }
 }
 
@@ -489,6 +528,7 @@ export function runDocSyncChecks(): Failure[] {
   const failures: Failure[] = [];
 
   checkMethodologyVersions(failures);
+  checkMethodologyCommitProvenance(failures);
   checkReportCardsDoc(failures);
   checkDepegDoc(failures);
   checkDewsDoc(failures);

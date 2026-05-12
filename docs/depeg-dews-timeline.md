@@ -13,8 +13,6 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 ---
 ## v5.97 — Source-family confirmation and zero-event backfill parity (May 11, 2026)
 
-**Commit:** `unreleased`
-
 - Pending confirmation now chooses off-chain confirmers by primary `agreeSources` source family, stores canonical confirmer keys, and ignores same-family CoinGecko/DefiLlama circular evidence
 - Aggregate DEX pending confirmation requires at least two independent fresh protocol groups, while pool challengers count distinct protocol/source-family groups with the existing `>= $5M` single-pool exception preserved
 - Promoted pending rows use the refreshed peg reference and include trustworthy confirmer prices when computing peak severity
@@ -24,16 +22,12 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 ---
 ## v5.96 — ARS native-peg and KGS FX corroboration (May 5, 2026)
 
-**Commit:** `unreleased`
-
 - Direct native-peg corroboration now includes ARS where CoinGecko exposes a supported quote currency
 - KGST (KGS) depeg checks use the secondary daily FX mirror and deterministic bounds because CoinGecko does not expose a native `kgs` quote
 - Historical replay behavior is unchanged except that assets with native ARS market history can prefer that direct native series when available
 
 ---
 ## v5.95 — Cross-asset contagion amplifier (Apr 18, 2026)
-
-**Commit:** `unreleased`
 
 - DEWS now applies a bounded per-peg-type contagion amplifier (max `1.2x`) derived from the same cycle's first-pass `DANGER` / `WARNING` bands, stacked on top of the existing systemic PSI amplifier
 - A tracked stablecoin entering `DANGER` or `WARNING` now raises other same-peg-type coins' scores by up to 15% under the current bump constants (`1.15x` / `1.08x`); the defensive hard cap remains 20%
@@ -42,8 +36,6 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 
 ---
 ## v5.94 — Pool-confirmation hardening, backfill atomicity, confirmation-provenance surfacing (Apr 18, 2026)
-
-**Commit:** `unreleased`
 
 - Pool-only pending promotion now requires 2 pools or a single pool with `>= $5M` TVL; single-pool manipulation can no longer unilaterally promote a pending depeg
 - Historical backfill delete+insert share a single D1 batch, so a worker interruption during backfill no longer leaves a coin with zero depeg rows
@@ -54,16 +46,12 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 ---
 ## v5.93 — Blacklist signal coverage follows direct EVM wave (Apr 15, 2026)
 
-**Commit:** `unreleased`
-
 - DEWS blacklist-activity input now follows the direct EVM blacklist tracker expansion
 - FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, and BUIDL receive blacklist-event count signals when otherwise DEWS-eligible
 - Non-USD amount valuation remains owned by the blacklist tracker ledger; DEWS uses event counts only
 
 ---
 ## v5.92 — Blacklist signal coverage follows first-wave tracker expansion (Apr 15, 2026)
-
-**Commit:** `unreleased`
 
 - DEWS blacklist-activity input now follows the expanded live blacklist tracker symbol set
 - USDG, RLUSD, U, USDTB, and A7A5 receive blacklist-event count signals when they are otherwise DEWS-eligible
@@ -72,8 +60,6 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 ---
 ## v5.91 — Conservative DEWS freshness and zero-supply current-row retirement (Apr 11, 2026)
 
-**Commit:** `unreleased`
-
 - Aggregate `/api/stress-signals` responses now keep `updatedAt` as the newest returned row and expose `oldestComputedAt` as a body-only lag diagnostic
 - Aggregate freshness headers continue to use `updatedAt`, while consumers that need per-coin lag detection can inspect `oldestComputedAt`
 - The DEWS cron now retires current `stress_signals` rows for PSI-eligible assets that are explicitly present in the stablecoins cache with zero current circulating supply
@@ -81,8 +67,6 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 
 ---
 ## v5.9 — Direction-true confirmation, pending refreshes, and DEWS live-trust alignment (Apr 8, 2026)
-
-**Commit:** `unreleased`
 
 - Pending depeg rows now refresh live first/last/peak state while they wait for confirmation instead of behaving like write-once snapshots
 - Pending promotion now requires same-direction corroboration; opposite-side native/off-chain/CEX/DEX/pool evidence rejects the candidate instead of confirming it
@@ -93,16 +77,12 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 ---
 ## v5.8 — Daily-confirmed native-peg historical replay (Apr 7, 2026)
 
-**Commit:** `unreleased`
-
 - Supported non-USD fiat historical replay now treats native-fiat CoinGecko history as a day-scale confirmation lane instead of trusting thin hourly native prints on their own
 - Historical native-fiat replay now uses daily points plus a two-point confirmation window across 36 hours before opening normal non-USD fiat backfill events
 - Extreme single-point native crashes of 5,000 bps or more are still preserved, and the admin/backfill path now carries the configured CoinGecko API key through historical market-chart replay during large repairs
 
 ---
 ## v5.7 — Launch-date peg-score anchors for older tracked assets (Apr 7, 2026)
-
-**Commit:** `unreleased`
 
 - PegScore tracking windows now prefer a curated launch date when the asset metadata provides one, falling back to the earliest `supply_history` snapshot only when no launch date is curated
 - This prevents older tracked assets with late `supply_history` coverage from appearing artificially young in the peg-score window
@@ -111,15 +91,11 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 ---
 ## v5.6 — Generalized native-peg routing and replay for non-USD fiat assets (Apr 7, 2026)
 
-**Commit:** `unreleased`
-
 - Fresh direct native-peg quotes can now veto, sustain, or resolve live depeg state across the supported non-USD fiat set instead of remaining effectively BRL-only
 - Pending depeg confirmation now prefers that same direct native quote first whenever CoinGecko exposes the matching fiat pair
 - Historical backfill now replays supported non-USD fiat assets against direct native fiat history and a native `1.0` peg when available, removing large classes of synthetic backfill rows caused only by USD/FX mismatch
 
 ## v5.5 — Direct native-peg corroboration for BRL depeg routing (Apr 7, 2026)
-
-**Commit:** `unreleased`
 
 - Fresh direct native-peg quotes can now veto or resolve BRZ-style live depeg mutations when the USD/FX-derived signal disagrees
 - Pending depeg confirmation now prefers the fresh direct native quote over a weaker derived USD cross-check when that native pair exists
@@ -127,23 +103,17 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 
 ## v5.4 — Thin-fiat peg-reference fail-closed and corroborated primary recovery (Apr 7, 2026)
 
-**Commit:** `unreleased`
-
 - Thin non-USD fiat peg groups with fewer than 3 contributors now fail closed for live depeg mutations unless cached FX fallback is available
 - Fresh non-cached multi-source primary agreement can now retire an already-open live row once the coin is back inside threshold
 - Prevents BRL-style peer-median reference glitches from both opening false live rows and leaving them stuck open after FX fallback normalizes
 
 ## v5.3 — DEWS flow baseline continuity on quiet 24-hour windows (Apr 6, 2026)
 
-**Commit:** `unreleased`
-
 - DEWS no longer drops the mint/burn flow signal just because the latest 24-hour window has zero activity
 - Coins with >= 7 days of mint/burn history now keep the flow signal available as long as the 30-day baseline exists
 - A quiet day now contributes zero flow stress instead of redistributing the flow weight away from the final score
 
 ## v5.2 — Corroborated DEX recovery gating for live depeg state (Apr 3, 2026)
-
-**Commit:** `unreleased`
 
 - Aggregate DEX bridge rows no longer count as sufficient evidence on their own for ambiguous-primary recoveries or recovery-style event suppression
 - DEX-assisted recovery now requires at least 2 corroborating protocol-level DEX groups inside threshold
@@ -153,15 +123,11 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 
 ## v5.1 — Ongoing depeg continuity over DEX-only contradiction (Mar 31, 2026)
 
-**Commit:** `unreleased`
-
 - Same-direction DEX disagreement no longer auto-closes an already-open depeg event
 - Open events now stay continuous until the normal recovery path confirms resolution below threshold
 - Prevents repeated event splitting when aggregate DEX pricing temporarily snaps back toward peg while the stablecoin remains clearly depegged elsewhere
 
 ## v5.0 — DEWS blacklist coverage parity and thin-peg FX fallback parity (Mar 28, 2026)
-
-**Commit:** `unreleased`
 
 - DEWS blacklist coverage now derives from the shared supported blacklist symbol set instead of a stale hardcoded subset
 - `PYUSD` and `USD1` now receive the same DEWS blacklist-activity signal treatment as `USDC`, `USDT`, `PAXG`, and `XAUT`
@@ -171,8 +137,6 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 
 ## v4.9 — Bootstrap sentinel and core-liquidity freshness gating (Mar 23, 2026)
 
-**Commit:** `unreleased`
-
 - DEWS bootstrap grace is now a one-time state transition, persisted via a dedicated `dews:bootstrap-complete` sentinel after the first successful publication
 - Only explicitly optional missing tables are bootstrap-allowed before that first success; core dependencies no longer inherit stablecoins-cache freshness as a proxy for readiness
 - `dex_liquidity` freshness is now enforced as a core source-health prerequisite; stale rows degrade the run and are recorded in metadata, but DEWS rows that meet signal coverage are still written
@@ -181,8 +145,6 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 
 ## v4.8 — Contradicted live depegs now retire into pending confirmation (Mar 22, 2026)
 
-**Commit:** `unreleased`
-
 - Opposite-direction live depeg rows no longer remain active just because the correcting primary price is still `confirm_required`
 - When a low-confidence/cached/stale/fallback primary price flips across the peg, detection closes the stale live row immediately
 - The replacement move still respects the two-stage guardrail by routing into `depeg_pending` until confirmation arrives
@@ -190,8 +152,6 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 ---
 
 ## v4.7 — Early peg score: minimum data threshold lowered from 30 to 7 days (Mar 21, 2026)
-
-**Commit:** `unreleased`
 
 - Peg score minimum tracking threshold reduced from 30 days to 7 days — coins now receive a composite score after their first week of history
 - Scores based on 7–30 days of data are labelled "Early score" in the detail-page hero card (amber text, tooltip explaining limited history)
@@ -203,8 +163,6 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 
 ## v4.6 — Confidence-aware routing, extreme-move confirmation, and provenance surfacing (Mar 10, 2026)
 
-**Commit:** `unreleased`
-
 - Cached, fallback, low-confidence, and stale primary prices now require confirmation before they can directly mutate live depeg state
 - Extreme moves no longer get dropped simply for crossing the old `<0.5x` / `>2x` peg guardrail; they enter a dedicated confirmation lane instead
 - `/api/peg-summary` and `/depeg` now surface primary price provenance/trust plus backend freshness metadata, and `/depeg` can page beyond the first 100 events
@@ -212,8 +170,6 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 ---
 
 ## v4.5 — Trusted DEX-price gating for depeg suppression, confirmation, and UI checks (Mar 9, 2026)
-
-**Commit:** `unreleased`
 
 - Depeg suppression and pending-confirmation promotion now require fresh DEX rows backed by at least `$1M` of aggregate source TVL
 - Public DEX price-check UI exposure now requires fresh data backed by at least `$250K` of aggregate source TVL
