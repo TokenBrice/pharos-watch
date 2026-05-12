@@ -85,10 +85,15 @@ export function RedemptionBackstopCard({
         {/* ── Capacity card (earns the card treatment — has detail) ── */}
         <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
           <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-            Immediate Capacity
+            {viewModel.capacitySummary.title}
           </p>
           <p className="mt-1 text-sm font-medium">{viewModel.capacitySummary.headline}</p>
           <p className="mt-1 text-xs text-muted-foreground">{viewModel.capacitySummary.detail}</p>
+          {viewModel.routeExitCorrelationLabel ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Exit correlation: <span className="text-foreground">{viewModel.routeExitCorrelationLabel}</span>
+            </p>
+          ) : null}
           {viewModel.telemetryContext.length > 0 ? (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {viewModel.telemetryContext.map((item) => (
@@ -111,7 +116,42 @@ export function RedemptionBackstopCard({
           </p>
           <p className="mt-1 text-sm font-medium">{viewModel.feeSummary.headline}</p>
           <p className="mt-1 text-xs text-muted-foreground">{viewModel.feeSummary.detail}</p>
+          {viewModel.costScenarioContext.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {viewModel.costScenarioContext.map((item) => (
+                <Badge
+                  key={`${item.label}:${item.value}`}
+                  variant="outline"
+                  className="border-border/60 bg-background/60 text-[11px] font-normal text-muted-foreground"
+                >
+                  {item.label}: {item.value}
+                </Badge>
+              ))}
+            </div>
+          ) : null}
         </div>
+
+        {viewModel.confidenceContext.length > 0 ? (
+          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+            <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+              Confidence Detail
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {viewModel.confidenceContext.map((item) => (
+                <Badge
+                  key={`${item.label}:${item.value}`}
+                  variant="outline"
+                  className="border-border/60 bg-background/60 text-[11px] font-normal text-muted-foreground"
+                >
+                  {item.label}: {item.value}
+                </Badge>
+              ))}
+            </div>
+            {viewModel.confidenceReasons.length > 0 ? (
+              <p className="mt-2 text-xs text-muted-foreground">{viewModel.confidenceReasons.join(". ")}</p>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* ── colorize + distill: Sub-scores collapsed with color ── */}
         <details className="group">

@@ -50,14 +50,14 @@ describe("PharosWatchBotPage", () => {
     expect(TELEGRAM_PAGE_DESCRIPTION).not.toContain("pre-launch launches");
   });
 
-  it("renders primary CTAs, command reference, 343 tracked count, and JSON-LD", () => {
+  it("renders primary CTAs, command reference, tracked count, and JSON-LD", () => {
     const { container } = render(<PharosWatchBotPage />);
 
     expect(screen.getAllByRole("heading", { name: "PharosWatchBot" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: /open bot/i }).length).toBeGreaterThan(0);
     expect(screen.getByText("Command Reference")).toBeTruthy();
     expect(screen.getAllByText("/brief").length).toBeGreaterThan(0);
-    expect(screen.getByText("340")).toBeTruthy();
+    expect(screen.getByText("341")).toBeTruthy();
     expect(screen.getByText("tracked stablecoins across active, frozen, and pre-launch coverage")).toBeTruthy();
 
     const jsonLd = [...container.querySelectorAll('script[type="application/ld+json"]')]

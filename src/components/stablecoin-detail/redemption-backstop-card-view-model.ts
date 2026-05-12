@@ -16,6 +16,7 @@ type FeeSummary = {
 };
 
 type CapacitySummary = {
+  title: string;
   headline: string;
   detail: string;
 };
@@ -43,6 +44,11 @@ type DocSourceViewModel = {
 };
 
 type TelemetryContextItem = {
+  label: string;
+  value: string;
+};
+
+type OptionalMetricItem = {
   label: string;
   value: string;
 };
@@ -174,6 +180,15 @@ function getFeeSummary(entry: RedemptionBackstopEntry): FeeSummary {
 }
 
 function getCapacitySummary(entry: RedemptionBackstopEntry): CapacitySummary {
+  const scoringHorizon = entry.capacityProfile?.scoringHorizon;
+  const title =
+    scoringHorizon === "daily"
+      ? "Daily Capacity"
+      : scoringHorizon === "queued"
+        ? "Queued Capacity"
+        : scoringHorizon === "eventual" || entry.capacitySemantics === "eventual-only"
+          ? "Eventual Redeemability"
+          : "Immediate Capacity";
   const capacityUsd =
     entry.immediateCapacityUsd != null &&
     Number.isFinite(entry.immediateCapacityUsd) &&
@@ -198,19 +213,30 @@ function getCapacitySummary(entry: RedemptionBackstopEntry): CapacitySummary {
 
   if (entry.capacitySemantics === "eventual-only") {
     return {
+      title,
       headline: "Not separately quantified",
       detail: `${capacityEvidence} Modeled as eventual redeemability of current supply, not as an immediate cash buffer.`,
     };
   }
 
   if (capacityUsd || capacityRatio) {
+    const horizonDetail =
+      scoringHorizon === "daily"
+        ? " Current modeled capacity is daily-limited."
+        : scoringHorizon === "queued"
+          ? " Current modeled capacity is queue-limited."
+          : scoringHorizon === "eventual"
+            ? " Capacity is modeled as eventual redeemability rather than current same-size liquidity."
+            : " Current modeled immediate redeemable capacity.";
     return {
+      title,
       headline: [capacityUsd, capacityRatio].filter(Boolean).join(" · "),
-      detail: `${capacityEvidence} Current modeled immediate redeemable capacity.`,
+      detail: `${capacityEvidence}${horizonDetail}`,
     };
   }
 
   return {
+    title,
     headline: "Unavailable",
     detail: `${capacityEvidence} Current snapshot did not produce a usable immediate-capacity estimate.`,
   };
@@ -218,6 +244,10 @@ function getCapacitySummary(entry: RedemptionBackstopEntry): CapacitySummary {
 
 function formatTelemetryKind(value: string): string {
   return value.replaceAll("-", " ");
+}
+
+function formatScoreValue(value: number): string {
+  return `${Math.round(value)}/100`;
 }
 
 function formatDuration(seconds: number): string {
@@ -228,6 +258,28 @@ function formatDuration(seconds: number): string {
 
 function buildTelemetryContext(entry: RedemptionBackstopEntry): TelemetryContextItem[] {
   const items: TelemetryContextItem[] = [];
+  if (entry.capacityProfile) {
+    items.push({ label: "Horizon", value: formatTelemetryKind(entry.capacityProfile.scoringHorizon) });
+    items.push({
+      label: "Profile confidence",
+      value: formatTelemetryKind(entry.capacityProfile.capacityProfileConfidence),
+    });
+    if (entry.capacityProfile.scoringUsd != null) {
+      items.push({ label: "Scoring capacity", value: formatCurrency(entry.capacityProfile.scoringUsd, 1) });
+    }
+    if (entry.capacityProfile.eventualUsd != null) {
+      items.push({ label: "Eventual capacity", value: formatCurrency(entry.capacityProfile.eventualUsd, 1) });
+    }
+    if (entry.capacityProfile.queuedUsd != null) {
+      items.push({ label: "Queued capacity", value: formatCurrency(entry.capacityProfile.queuedUsd, 1) });
+    }
+    if (entry.capacityProfile.modeledExitSizeUsd != null) {
+      items.push({ label: "Modeled exit", value: formatCurrency(entry.capacityProfile.modeledExitSizeUsd, 1) });
+    }
+  }
+  if (entry.eventualRedeemabilityScore != null) {
+    items.push({ label: "Eventual score", value: formatScoreValue(entry.eventualRedeemabilityScore) });
+  }
   if (entry.capacityKind) {
     items.push({ label: "Capacity evidence", value: formatTelemetryKind(entry.capacityKind) });
   }
@@ -248,6 +300,34 @@ function buildTelemetryContext(entry: RedemptionBackstopEntry): TelemetryContext
   }
   if (entry.liveHolderEligibility) {
     items.push({ label: "Live eligibility", value: formatTelemetryKind(entry.liveHolderEligibility) });
+  }
+  return items;
+}
+
+function buildCostScenarioContext(entry: RedemptionBackstopEntry): OptionalMetricItem[] {
+  const scenarios = entry.costScenarioScores;
+  if (!scenarios) return [];
+  return [
+    scenarios.retail != null ? { label: "Retail cost", value: formatScoreValue(scenarios.retail) } : null,
+    scenarios.activeUser != null ? { label: "Active-user cost", value: formatScoreValue(scenarios.activeUser) } : null,
+    scenarios.institutional != null
+      ? { label: "Institutional cost", value: formatScoreValue(scenarios.institutional) }
+      : null,
+  ].filter((item): item is OptionalMetricItem => item != null);
+}
+
+function buildConfidenceContext(entry: RedemptionBackstopEntry): OptionalMetricItem[] {
+  const details = entry.confidenceDetails;
+  if (!details) return [];
+  const items: OptionalMetricItem[] = [
+    { label: "Capacity evidence", value: formatScoreValue(details.capacityEvidenceQuality) },
+    { label: "Fee evidence", value: formatScoreValue(details.feeEvidenceQuality) },
+    { label: "Route freshness", value: formatScoreValue(details.routeStatusFreshness) },
+    { label: "Holder breadth", value: formatScoreValue(details.holderCohortBreadth) },
+    { label: "Source quality", value: formatScoreValue(details.sourceQuality) },
+  ];
+  if (details.reviewedDocAgeDays != null) {
+    items.push({ label: "Reviewed docs age", value: `${Math.round(details.reviewedDocAgeDays)}d` });
   }
   return items;
 }
@@ -321,8 +401,12 @@ export function buildRedemptionBackstopCardViewModel(entry: RedemptionBackstopEn
     accessLabel: REDEMPTION_ACCESS_LABELS[entry.accessModel],
     settlementLabel: REDEMPTION_SETTLEMENT_LABELS[entry.settlementModel],
     outputAssetLabel: REDEMPTION_OUTPUT_ASSET_LABELS[entry.outputAssetType],
+    routeExitCorrelationLabel: entry.routeExitCorrelation ? formatTelemetryKind(entry.routeExitCorrelation) : null,
     capacitySummary: getCapacitySummary(entry),
     telemetryContext: buildTelemetryContext(entry),
+    costScenarioContext: buildCostScenarioContext(entry),
+    confidenceContext: buildConfidenceContext(entry),
+    confidenceReasons: entry.confidenceDetails?.reasons ?? [],
     feeSummary: getFeeSummary(entry),
     filteredNotes: buildFilteredNotes(entry),
     docSources: buildDocSources(entry),

@@ -1,5 +1,33 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV724Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.24")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        Liquidity / Exit now consumes Redemption Backstop v4 current-capacity semantics instead of treating every
+        configured redemption route as full-strength liquidity.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Eventual-only routes remain visible as redemption coverage but do not create redemption-only Safety liquidity
+          uplift without modeled current executable capacity.
+        </li>
+        <li>
+          Redemption contribution is scaled by current capacity and confidence before it can improve the effective-exit
+          score.
+        </li>
+        <li>
+          The diversification bonus is reserved for plausibly independent issuer rails rather than correlated wrappers,
+          same-protocol routes, or unknown-correlation exits.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV723Entry() {
   return (
     <VersionCard

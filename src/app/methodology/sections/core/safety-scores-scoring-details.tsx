@@ -134,14 +134,23 @@ export function SafetyScoresScoringDetails() {
         <p>
           The standalone Liquidity Score remains a pure DEX market-depth metric. Safety Scores use an
           <span className="text-foreground font-medium"> effective exit score</span> for the Liquidity dimension,
-          built on a best-path model: exit quality equals the best available exit path, with a modest
-          diversification bonus for having a second viable path.
+          built on a best-path model: exit quality equals the best available exit path after redemption is adjusted
+          for current executable capacity and route confidence.
         </p>
         <p className="font-mono">
-          effectiveExit = round(min(100, max(dex, redemption) + min(dex, redemption) &times; 0.10))
+          modeledExitUsd = min(max(supplyUsd &times; 0.05, 100000), 25000000)
+        </p>
+        <p className="font-mono">
+          adjustedRedemption = redemption &times; capacityFactor &times; confidenceFactor
+        </p>
+        <p className="font-mono">
+          effectiveExit = round(min(100, max(dex, adjustedRedemption) + independentBonus))
         </p>
         <p>
-          If only DEX liquidity exists, it is used directly. Eligible immediate, live, or queue-style redemption can stand alone when DEX liquidity is absent, with route family caps and component scoring as guardrails. Documented offchain issuer routes with eventual-only capacity do not replace missing DEX liquidity; they can only add the primary-market bonus when DEX liquidity already exists.
+          <code className="text-xs">capacityFactor</code> is capped at 1.0 from current executable capacity divided by the modeled exit size. Confidence factors are 1.0 for high-confidence routes, 0.75 for medium-confidence routes, and 0.35 for low-confidence routes. The 10% secondary-path bonus is only applied when the redemption rail is independent from the DEX liquidity path, such as an issuer primary-market rail.
+        </p>
+        <p>
+          If only DEX liquidity exists, it is used directly. Eligible immediate, live, or queue-style redemption can stand alone when DEX liquidity is absent, with route family caps and component scoring as guardrails. Documented offchain issuer routes with eventual-only capacity do not replace missing DEX liquidity; they can only add the independent primary-market bonus when DEX liquidity already exists.
         </p>
         <p>
           Redemption backstops are scored across access, settlement, execution certainty, capacity, output-asset quality, and cost. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score liquidity dimension. Documented offchain issuer exits with eventual-only capacity can add a primary-market bonus only when DEX liquidity already exists; they do not replace missing DEX liquidity. Severe active depegs also disable static or non-live-direct redemption uplift unless current live-open redemption evidence exists. Last-known DEX inputs still feed effective-exit scoring when the liquidity cron is stale, with staleness surfaced through <code className="text-xs">liquidityStale</code> / <code className="text-xs">inputFreshness.dexLiquidity.stale</code>. Materially stale or missing redemption snapshots are suppressed from Safety Score liquidity; normal 4-hourly redemption-sync lag remains inside the scoring freshness runway. Redemption metadata emitted by a live reserve adapter ages out with the reserve snapshot; if it is stale or degraded, the route stays visible but does not score as current capacity.

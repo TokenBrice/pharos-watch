@@ -91,9 +91,61 @@ describe("RedemptionBackstopCard", () => {
   it("renders eventual-only capacity without pretending it is immediate", () => {
     const html = renderToStaticMarkup(<RedemptionBackstopCard entry={BASE_ENTRY} />);
 
-    expect(html).toContain("Immediate Capacity");
+    expect(html).toContain("Eventual Redeemability");
     expect(html).toContain("Not separately quantified");
     expect(html).toContain("eventual redeemability");
+  });
+
+  it("renders v4 capacity horizon, exit correlation, cost scenarios, and confidence detail", () => {
+    const html = renderToStaticMarkup(
+      <RedemptionBackstopCard
+        entry={{
+          ...BASE_ENTRY,
+          capacitySemantics: "immediate-bounded",
+          capacityConfidence: "live-direct",
+          immediateCapacityUsd: 4_000_000,
+          immediateCapacityRatio: 0.08,
+          routeExitCorrelation: "independent-issuer-rail",
+          eventualRedeemabilityScore: 82,
+          capacityProfile: {
+            immediateUsd: 4_000_000,
+            dailyLimitUsd: 1_500_000,
+            queuedUsd: 12_000_000,
+            eventualUsd: 20_000_000,
+            scoringUsd: 1_500_000,
+            scoringHorizon: "daily",
+            capacityProfileConfidence: "live-direct",
+            modeledExitSizeUsd: 2_000_000,
+          },
+          costScenarioScores: {
+            retail: 40,
+            activeUser: 80,
+            institutional: 100,
+          },
+          confidenceDetails: {
+            capacityEvidenceQuality: 90,
+            feeEvidenceQuality: 70,
+            routeStatusFreshness: 80,
+            holderCohortBreadth: 60,
+            sourceQuality: 95,
+            reviewedDocAgeDays: 12,
+            reasons: ["live telemetry reviewed"],
+          },
+        }}
+      />,
+    );
+
+    expect(html).toContain("Daily Capacity");
+    expect(html).toContain("Current modeled capacity is daily-limited");
+    expect(html).toContain("Exit correlation:");
+    expect(html).toContain("independent issuer rail");
+    expect(html).toContain("Scoring capacity:");
+    expect(html).toContain("Modeled exit:");
+    expect(html).toContain("Eventual score:");
+    expect(html).toContain("Retail cost:");
+    expect(html).toContain("Institutional cost:");
+    expect(html).toContain("Confidence Detail");
+    expect(html).toContain("live telemetry reviewed");
   });
 
   it("renders configured-but-unrated state when the route has no usable score", () => {
