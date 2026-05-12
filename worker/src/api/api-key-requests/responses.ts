@@ -2,8 +2,11 @@ import type {
   ApiKeySelfServeIssueResponse,
   ApiKeySelfServePendingResponse,
 } from "@shared/types";
-import { SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
-import { jsonResponse } from "../../lib/api-utils";
+import {
+  SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
+  SELF_SERVE_DEPENDENCY_RETRY_AFTER_SEC,
+} from "@shared/lib/ops-limits";
+import { errorResponse, jsonResponse } from "../../lib/api-utils";
 
 const SELF_SERVE_BASE_URL = "https://api.pharos.watch" as const;
 const SELF_SERVE_RETRY_GUIDANCE = "Respect Retry-After on 429 responses and add jitter to polling intervals.";
@@ -53,4 +56,16 @@ export function pendingPublicResponse(): Response {
     message: SELF_SERVE_PENDING_MESSAGE,
   };
   return jsonResponse(responseBody, { status: 202, noStore: true });
+}
+
+export function selfServeError(status: number, message: string, retryAfterSec?: number): Response {
+  return errorResponse(status, message, { noStore: true, retryAfterSec });
+}
+
+export function selfServeUnavailable(): Response {
+  return selfServeError(
+    503,
+    "API key self-serve is temporarily unavailable. Please try again.",
+    SELF_SERVE_DEPENDENCY_RETRY_AFTER_SEC,
+  );
 }
