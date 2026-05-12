@@ -9,6 +9,7 @@ import {
 import { RedemptionHolderEligibilitySchema } from "@shared/types/redemption";
 import type { ReserveAdapterDefinition } from "./types";
 import { isReserveRisk } from "./helpers";
+import { reserveDegradedWarning, reserveFatalWarning, reserveInfoWarning } from "./warnings";
 
 interface ValidationInput {
   slices: ReserveSlice[];
@@ -29,18 +30,6 @@ const PCT_SUM_WARNING_TOLERANCE = 0.5;
 const PCT_SUM_ERROR_TOLERANCE = 2;
 export const MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC = 10 * 60;
 const REVIEWED_AT_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
-function infoWarning(code: string, message: string): LiveReserveWarning {
-  return { code, message, severity: "info", effect: "info" };
-}
-
-function degradedWarning(code: string, message: string): LiveReserveWarning {
-  return { code, message, severity: "warning", effect: "degraded" };
-}
-
-function fatalWarning(code: string, message: string): LiveReserveWarning {
-  return { code, message, severity: "warning", effect: "fatal" };
-}
 
 function getFiniteMetadataNumber(metadata: Record<string, unknown> | undefined, key: string): number | null {
   const value = metadata?.[key];
@@ -92,7 +81,7 @@ function validateNonNegativeRedemptionNumber(
     return null;
   }
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
-    return fatalWarning(code, `${label} is invalid${adapterLabel}`);
+    return reserveFatalWarning(code, `${label} is invalid${adapterLabel}`);
   }
   return null;
 }
@@ -123,7 +112,7 @@ function validateFutureTimestamp(
     return null;
   }
 
-  return fatalWarning(
+  return reserveFatalWarning(
     "future-source-timestamp",
     `${label} is ${value - now}s in the future${describeAdapter(adapter)} ` +
       `(max ${MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC}s)`,
@@ -156,19 +145,19 @@ function validateRedemptionTelemetry(
   const adapterFee = adapter?.redemptionTelemetry?.fee ?? "none";
 
   if (hasNegativeNumber(capacityUsdValues)) {
-    warnings.push(fatalWarning("invalid-redemption-capacity-usd", `Redemption capacity is negative${adapterLabel}`));
+    warnings.push(reserveFatalWarning("invalid-redemption-capacity-usd", `Redemption capacity is negative${adapterLabel}`));
   }
   if (hasOutOfRangeRatio(capacityRatioValues)) {
     warnings.push(
-      fatalWarning("invalid-redemption-capacity-ratio", `Redemption capacity ratio is outside 0-1${adapterLabel}`),
+      reserveFatalWarning("invalid-redemption-capacity-ratio", `Redemption capacity ratio is outside 0-1${adapterLabel}`),
     );
   }
   if (hasNegativeNumber(feeBpsValues)) {
-    warnings.push(fatalWarning("invalid-redemption-fee-bps", `Redemption fee bps is negative${adapterLabel}`));
+    warnings.push(reserveFatalWarning("invalid-redemption-fee-bps", `Redemption fee bps is negative${adapterLabel}`));
   }
   if (hasCapacityTelemetry && adapterCapacity === "none") {
     warnings.push(
-      fatalWarning(
+      reserveFatalWarning(
         "unsupported-redemption-capacity-telemetry",
         `Adapter emitted redemption capacity despite declaring no capacity telemetry${adapterLabel}`,
       ),
@@ -176,7 +165,7 @@ function validateRedemptionTelemetry(
   }
   if (hasFeeTelemetry && adapterFee === "none") {
     warnings.push(
-      fatalWarning(
+      reserveFatalWarning(
         "unsupported-redemption-fee-telemetry",
         `Adapter emitted redemption fee despite declaring no fee telemetry${adapterLabel}`,
       ),
@@ -186,12 +175,12 @@ function validateRedemptionTelemetry(
   const capacityKind = redemption?.capacityKind;
   if (capacityKind != null && !isKnownValue(LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES, capacityKind)) {
     warnings.push(
-      fatalWarning("invalid-redemption-capacity-kind", `Redemption capacity kind is invalid${adapterLabel}`),
+      reserveFatalWarning("invalid-redemption-capacity-kind", `Redemption capacity kind is invalid${adapterLabel}`),
     );
   } else if (capacityKind === "live-direct" || capacityKind === "live-direct-bounded") {
     if (adapterCapacity !== "direct") {
       warnings.push(
-        fatalWarning(
+        reserveFatalWarning(
           "redemption-capacity-kind-mismatch",
           `Adapter emitted ${capacityKind} capacity without direct telemetry capability${adapterLabel}`,
         ),
@@ -200,7 +189,7 @@ function validateRedemptionTelemetry(
   } else if (capacityKind === "live-proxy-validated" || capacityKind === "live-queue") {
     if (adapterCapacity !== "proxy") {
       warnings.push(
-        fatalWarning(
+        reserveFatalWarning(
           "redemption-capacity-kind-mismatch",
           `Adapter emitted ${capacityKind} capacity without proxy telemetry capability${adapterLabel}`,
         ),
@@ -215,7 +204,7 @@ function validateRedemptionTelemetry(
       getFiniteMetadataNumber(redemption ?? undefined, "dailyLimitUsd") != null;
     if (!hasQueueSemantics) {
       warnings.push(
-        degradedWarning(
+        reserveDegradedWarning(
           "redemption-queue-semantics-missing",
           `Queue redemption capacity omitted queue depth, settlement delay, or daily limit metadata${adapterLabel}`,
         ),
@@ -226,7 +215,7 @@ function validateRedemptionTelemetry(
   const freshnessKind = redemption?.freshnessKind;
   if (freshnessKind != null && !isKnownValue(LIVE_RESERVE_REDEMPTION_FRESHNESS_KIND_VALUES, freshnessKind)) {
     warnings.push(
-      fatalWarning("invalid-redemption-freshness-kind", `Redemption freshness kind is invalid${adapterLabel}`),
+      reserveFatalWarning("invalid-redemption-freshness-kind", `Redemption freshness kind is invalid${adapterLabel}`),
     );
   }
   // Skip the redemption-capacity-unverified degrade when the adapter's policy
@@ -240,7 +229,7 @@ function validateRedemptionTelemetry(
     allowedFreshnessModes[0] === "unverified";
   if (hasCapacityTelemetry && freshnessKind === "unverified" && !freshnessPolicyIsUnverifiedOnly) {
     warnings.push(
-      degradedWarning(
+      reserveDegradedWarning(
         "redemption-capacity-unverified",
         `Redemption capacity telemetry is marked unverified${adapterLabel}`,
       ),
@@ -254,7 +243,7 @@ function validateRedemptionTelemetry(
       routeStatus as (typeof LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES)[number],
     )
   ) {
-    warnings.push(fatalWarning("invalid-redemption-route-status", `Redemption route status is invalid${adapterLabel}`));
+    warnings.push(reserveFatalWarning("invalid-redemption-route-status", `Redemption route status is invalid${adapterLabel}`));
   }
 
   const routeStatusSource = redemption?.routeStatusSource;
@@ -265,7 +254,7 @@ function validateRedemptionTelemetry(
     )
   ) {
     warnings.push(
-      fatalWarning(
+      reserveFatalWarning(
         "invalid-redemption-route-status-source",
         `Redemption route status source is invalid${adapterLabel}`,
       ),
@@ -275,14 +264,14 @@ function validateRedemptionTelemetry(
   const routeStatusReviewedAt = redemption?.routeStatusReviewedAt;
   if (routeStatusReviewedAt != null && typeof routeStatusReviewedAt !== "string") {
     warnings.push(
-      fatalWarning(
+      reserveFatalWarning(
         "invalid-redemption-route-reviewed-at",
         `Redemption route status review timestamp is invalid${adapterLabel}`,
       ),
     );
   } else if (typeof routeStatusReviewedAt === "string" && !isValidReviewedAtDate(routeStatusReviewedAt)) {
     warnings.push(
-      fatalWarning(
+      reserveFatalWarning(
         "invalid-redemption-route-reviewed-at",
         `Redemption route status review timestamp must be YYYY-MM-DD${adapterLabel}`,
       ),
@@ -292,7 +281,7 @@ function validateRedemptionTelemetry(
   const holderEligibility = redemption?.holderEligibility;
   if (holderEligibility != null && !isKnownValue(RedemptionHolderEligibilitySchema.options, holderEligibility)) {
     warnings.push(
-      fatalWarning("invalid-redemption-holder-eligibility", `Redemption holder eligibility is invalid${adapterLabel}`),
+      reserveFatalWarning("invalid-redemption-holder-eligibility", `Redemption holder eligibility is invalid${adapterLabel}`),
     );
   }
 
@@ -312,7 +301,7 @@ function validateRedemptionTelemetry(
   if (sourceUrls != null) {
     if (!Array.isArray(sourceUrls) || sourceUrls.some((url) => typeof url !== "string" || !isValidUrl(url))) {
       warnings.push(
-        fatalWarning("invalid-redemption-source-urls", `Redemption source URLs are invalid${adapterLabel}`),
+        reserveFatalWarning("invalid-redemption-source-urls", `Redemption source URLs are invalid${adapterLabel}`),
       );
     }
   }
@@ -322,7 +311,7 @@ function validateRedemptionTelemetry(
 
 export function validateAdapterOutput(input: ValidationInput, options?: ValidationOptions): ValidationResult {
   if (input.slices.length === 0) {
-    return { valid: false, warnings: [fatalWarning("empty-slices", "Adapter returned zero reserve slices")] };
+    return { valid: false, warnings: [reserveFatalWarning("empty-slices", "Adapter returned zero reserve slices")] };
   }
 
   const warnings: LiveReserveWarning[] = [];
@@ -347,19 +336,19 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
     if (!Number.isFinite(slice.pct) || slice.pct <= 0) {
       return {
         valid: false,
-        warnings: [fatalWarning("invalid-pct", `Slice "${slice.name}" has invalid pct: ${slice.pct}`)],
+        warnings: [reserveFatalWarning("invalid-pct", `Slice "${slice.name}" has invalid pct: ${slice.pct}`)],
       };
     }
     if (slice.pct > 100) {
       return {
         valid: false,
-        warnings: [fatalWarning("invalid-pct", `Slice "${slice.name}" has pct above 100: ${slice.pct}`)],
+        warnings: [reserveFatalWarning("invalid-pct", `Slice "${slice.name}" has pct above 100: ${slice.pct}`)],
       };
     }
     if (!isReserveRisk(slice.risk)) {
       return {
         valid: false,
-        warnings: [fatalWarning("invalid-risk", `Slice "${slice.name}" has invalid risk: ${slice.risk}`)],
+        warnings: [reserveFatalWarning("invalid-risk", `Slice "${slice.name}" has invalid risk: ${slice.risk}`)],
       };
     }
   }
@@ -371,7 +360,7 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
     return {
       valid: false,
       warnings: [
-        fatalWarning(
+        reserveFatalWarning(
           "pct-sum-deviation",
           `Slice percentages sum to ${sum.toFixed(1)}%${adapterLabel} (expected 100% ± ${PCT_SUM_ERROR_TOLERANCE}%)`,
         ),
@@ -380,7 +369,7 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
   }
   if (deviation > PCT_SUM_WARNING_TOLERANCE) {
     warnings.push(
-      degradedWarning(
+      reserveDegradedWarning(
         "pct-sum-deviation",
         `Slice percentages sum to ${sum.toFixed(1)}%${adapterLabel} (expected 100% ± ${PCT_SUM_WARNING_TOLERANCE}%)`,
       ),
@@ -392,7 +381,7 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
     const ageSec = now - sourceTimestamp;
     if (ageSec > maxSourceAgeSec) {
       warnings.push(
-        degradedWarning(
+        reserveDegradedWarning(
           "stale-source-data",
           `Upstream reserve source timestamp is ${ageSec}s old${adapterLabel} (max ${maxSourceAgeSec}s)`,
         ),
@@ -404,7 +393,7 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
   const unknownExposurePct = getFiniteMetadataNumber(input.metadata, "unknownExposurePct");
   if (maxUnknownExposurePct != null && unknownExposurePct != null && unknownExposurePct > maxUnknownExposurePct) {
     warnings.push(
-      degradedWarning(
+      reserveDegradedWarning(
         "material-unknown-exposure",
         `Unknown reserve exposure is ${unknownExposurePct.toFixed(2)}%${adapterLabel} ` +
           `(max ${maxUnknownExposurePct.toFixed(2)}%)`,
@@ -421,7 +410,7 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
     !allowedFreshnessModes.includes(freshnessMode as (typeof allowedFreshnessModes)[number])
   ) {
     warnings.push(
-      degradedWarning(
+      reserveDegradedWarning(
         "freshness-mode-disallowed",
         `Live reserve output emitted freshnessMode=${freshnessMode}${adapterLabel}, allowed modes: ${allowedFreshnessModes.join(", ")}`,
       ),
@@ -433,7 +422,7 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
       return {
         valid: false,
         warnings: [
-          fatalWarning(
+          reserveFatalWarning(
             "verified-freshness-missing-source-timestamp",
             `Independent live reserve output marked freshness as verified without sourceTimestamp${adapterLabel}`,
           ),
@@ -443,7 +432,7 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
 
     if (sourceTimestamp != null && freshnessMode == null) {
       warnings.push(
-        degradedWarning(
+        reserveDegradedWarning(
           "freshness-mode-missing",
           `Independent live reserve output is missing freshnessMode despite providing sourceTimestamp${adapterLabel}`,
         ),
@@ -452,7 +441,7 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
 
     if (sourceTimestamp == null && freshnessMode == null) {
       warnings.push(
-        degradedWarning(
+        reserveDegradedWarning(
           "freshness-metadata-missing",
           `Independent live reserve output omitted explicit freshness metadata${adapterLabel}`,
         ),
@@ -470,7 +459,7 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
         freshnessReason.length === 0
       ) {
         warnings.push(
-          infoWarning(
+          reserveInfoWarning(
             "freshness-reason-missing",
             `Independent live reserve output marked freshness as unverified without operator-facing reason metadata${adapterLabel}`,
           ),
@@ -481,7 +470,7 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
 
   if (maxSourceAgeSec != null && sourceTimestamp == null && freshnessMode === "unverified") {
     warnings.push(
-      infoWarning(
+      reserveInfoWarning(
         "freshness-unverified",
         `Upstream reserve source timestamp is unavailable${adapterLabel}; freshness remains unverified`,
       ),

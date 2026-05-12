@@ -10,6 +10,7 @@ import {
   normalizeSlices,
   reserveDegradedWarning,
   unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
 
 /* ---------- v2 balance-sheet API types ---------- */
@@ -204,7 +205,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse): Adapte
       ...(sourceTotalGapPct > 0 ? { sourceTotalGapPct } : {}),
       assetCount: bySymbol.size,
       ...(sourceTimestamp != null
-        ? { sourceTimestamp, freshnessMode: "verified" as const }
+        ? verifiedFreshnessMetadata(sourceTimestamp)
         : unverifiedFreshnessMetadata(
             "frax-balance-sheet-api",
             "Frax balance-sheet response did not include asOfTimestamp",
@@ -342,7 +343,7 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
       liabilityCount: payload.liabilities?.length ?? 0,
       ...(payload.updatedAtBlock != null ? { updatedAtBlock: payload.updatedAtBlock } : {}),
       ...(sourceTimestamp != null
-        ? { sourceTimestamp, freshnessMode: "verified" as const }
+        ? verifiedFreshnessMetadata(sourceTimestamp)
         : unverifiedFreshnessMetadata(
             "frax-fpi-collateral-api",
             "Frax FPI collateral response did not include updatedAtTimestampSec",

@@ -7,3 +7,7 @@ export function reserveInfoWarning(code: string, message: string): LiveReserveWa
 export function reserveDegradedWarning(code: string, message: string): LiveReserveWarning {
   return { code, message, severity: "warning", effect: "degraded" };
 }
+
+export function reserveFatalWarning(code: string, message: string): LiveReserveWarning {
+  return { code, message, severity: "warning", effect: "fatal" };
+}

@@ -7,6 +7,7 @@ import {
   requireJsonInputFromConfig,
   slicesFromValues,
   unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
 import { buildBrowserHeaders } from "./request";
 
@@ -129,7 +130,7 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
     slices,
     metadata: {
       ...(sourceTimestamp != null
-        ? { sourceTimestamp, freshnessMode: "verified" as const }
+        ? verifiedFreshnessMetadata(sourceTimestamp)
         : unverifiedFreshnessMetadata(
           "issuer-api",
           "OpenEden reserve composition payload does not include a trustworthy source timestamp",
