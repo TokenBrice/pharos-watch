@@ -80,7 +80,6 @@ jobs:
         with:
           node-version: 24
           cache-npm: "false"
-          install-deps: "false"
       - run: npm run test:smoke-ui -- --url https://pharos.watch --mode live
 
   smoke-ops:
