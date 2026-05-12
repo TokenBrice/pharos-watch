@@ -142,6 +142,10 @@ const BLACKLIST_BREAKDOWN_CHIP_CLASS: Record<BlacklistBreakdownStatusKind, strin
   no: "border-emerald-500/30 bg-emerald-500/12 text-emerald-800 dark:text-emerald-200",
 };
 
+export const COVERAGE_GAP_CHIP_CLASS = "border-border/70 bg-muted/60 text-muted-foreground";
+export const COVERAGE_GAP_BAR_CLASS =
+  "bg-muted-foreground/35 bg-[repeating-linear-gradient(135deg,transparent_0_5px,oklch(1_0_0_/0.08)_5px_10px)]";
+
 export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
   Record<CoverageFeatureKey, Record<string, { chip: string; bar: string; barText?: string }>>
 > = {
@@ -172,8 +176,8 @@ export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
       barText: "text-slate-950",
     },
     "data-unavailable": {
-      chip: "border-border/70 bg-muted/60 text-muted-foreground",
-      bar: "bg-muted-foreground/35",
+      chip: COVERAGE_GAP_CHIP_CLASS,
+      bar: COVERAGE_GAP_BAR_CLASS,
     },
   },
   safety: {
@@ -183,8 +187,8 @@ export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
       barText: "text-slate-950",
     },
     nr: {
-      chip: "border-border/70 bg-muted/60 text-muted-foreground",
-      bar: "bg-muted-foreground/35",
+      chip: COVERAGE_GAP_CHIP_CLASS,
+      bar: COVERAGE_GAP_BAR_CLASS,
     },
     "data-unavailable": {
       chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
@@ -208,8 +212,8 @@ export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
       barText: "text-slate-950",
     },
     "data-unavailable": {
-      chip: "border-border/70 bg-muted/60 text-muted-foreground",
-      bar: "bg-muted-foreground/35",
+      chip: COVERAGE_GAP_CHIP_CLASS,
+      bar: COVERAGE_GAP_BAR_CLASS,
     },
   },
   reserves: {
@@ -288,8 +292,8 @@ export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
       barText: "text-slate-950",
     },
     "data-unavailable": {
-      chip: "border-border/70 bg-muted/60 text-muted-foreground",
-      bar: "bg-muted-foreground/35",
+      chip: COVERAGE_GAP_CHIP_CLASS,
+      bar: COVERAGE_GAP_BAR_CLASS,
     },
   },
   yield: {
@@ -299,8 +303,8 @@ export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
       barText: "text-slate-950",
     },
     uncovered: {
-      chip: "border-border/70 bg-muted/60 text-muted-foreground",
-      bar: "bg-muted-foreground/35",
+      chip: COVERAGE_GAP_CHIP_CLASS,
+      bar: COVERAGE_GAP_BAR_CLASS,
     },
   },
   flows: {
@@ -323,8 +327,8 @@ export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
       bar: "bg-violet-400/80",
     },
     "data-unavailable": {
-      chip: "border-border/70 bg-muted/60 text-muted-foreground",
-      bar: "bg-muted-foreground/35",
+      chip: COVERAGE_GAP_CHIP_CLASS,
+      bar: COVERAGE_GAP_BAR_CLASS,
     },
   },
   blacklist: {
@@ -356,8 +360,8 @@ export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
       barText: "text-slate-950",
     },
     "data-unavailable": {
-      chip: "border-border/70 bg-muted/60 text-muted-foreground",
-      bar: "bg-muted-foreground/35",
+      chip: COVERAGE_GAP_CHIP_CLASS,
+      bar: COVERAGE_GAP_BAR_CLASS,
     },
   },
   dependency: {
@@ -367,8 +371,8 @@ export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
       barText: "text-slate-950",
     },
     uncovered: {
-      chip: "border-border/70 bg-muted/60 text-muted-foreground",
-      bar: "bg-muted-foreground/35",
+      chip: COVERAGE_GAP_CHIP_CLASS,
+      bar: COVERAGE_GAP_BAR_CLASS,
     },
   },
 };

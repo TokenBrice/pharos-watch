@@ -1,10 +1,14 @@
 import type { CoverageBreakdownItem, CoverageFeatureKey, CoverageFeatureSummary } from "@/lib/coverage";
-import { COVERAGE_BREAKDOWN_VISUAL_CLASSES, FEATURE_ACCENT_CLASSES, FEATURE_ICON } from "@/lib/coverage-page-config";
+import {
+  COVERAGE_BREAKDOWN_VISUAL_CLASSES,
+  COVERAGE_GAP_BAR_CLASS,
+  FEATURE_ACCENT_CLASSES,
+  FEATURE_ICON,
+} from "@/lib/coverage-page-config";
 import { cn } from "@/lib/utils";
 import { CoverageFeatureLink } from "./coverage-feature-link";
 
 const PRICE_SOURCE_DEPTH_KEYS = new Set(["sources-5-plus", "sources-3-4", "sources-1-2"]);
-const DEFAULT_MUTED_BAR_CLASS = "bg-muted-foreground/35";
 const BAR_TEXT_CLASS = "text-white [text-shadow:0_1px_2px_oklch(0_0_0_/0.75)]";
 const BAR_LABEL_MIN_PCT = 8;
 const BAR_LABELS: Partial<Record<string, string>> = {
@@ -34,7 +38,7 @@ const BAR_LABELS: Partial<Record<string, string>> = {
   "stablecoin-redeem": "stable",
   "basket-redeem": "basket",
   covered: "covered",
-  uncovered: "gap",
+  uncovered: "not covered",
   full: "full",
   "partial-history": "partial",
   lagging: "lag",
@@ -73,6 +77,7 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
   const barItems = getStackedBarItems(summary);
   const stackedCount = barItems.reduce((total, item) => total + item.count, 0);
   const missingCount = Math.max(summary.totalCount - stackedCount, 0);
+  const missingPct = summary.totalCount > 0 ? (missingCount / summary.totalCount) * 100 : 0;
   const marketCapLabel = summary.mcapSharePct == null ? "n/a" : `${summary.mcapSharePct.toFixed(0)}%`;
   const segmentLabel = [
     ...barItems.map((item) => `${item.label} ${item.count}`),
@@ -150,13 +155,23 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
           {missingCount > 0 ? (
             <div
               className={cn(
-                "h-full border-r border-card/80 bg-background/80 last:border-r-0",
-                "bg-[repeating-linear-gradient(135deg,transparent_0_5px,oklch(1_0_0_/0.04)_5px_10px)]",
-                barItems.length === 0 && DEFAULT_MUTED_BAR_CLASS,
+                "flex h-full min-w-0 items-center justify-center border-r border-card/80 px-1.5 last:border-r-0",
+                COVERAGE_GAP_BAR_CLASS,
               )}
               style={{ flexGrow: missingCount, flexBasis: 0 }}
-              title={`Not covered: ${missingCount}`}
-            />
+              title={`not covered: ${missingCount}`}
+            >
+              {missingPct >= BAR_LABEL_MIN_PCT ? (
+                <span
+                  className={cn(
+                    "truncate text-[10px] font-semibold leading-none tracking-[0.02em] tabular-nums",
+                    BAR_TEXT_CLASS,
+                  )}
+                >
+                  not covered {missingCount}
+                </span>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </div>
