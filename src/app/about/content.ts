@@ -226,12 +226,12 @@ export function getTrackedFeatures({
       linkLabel: "Open cemetery",
     },
     {
-      title: "Blacklist Tracker",
+      title: "FreezeWatch",
       description:
-        "Tracks issuer-intervention events (freeze, unfreeze, pause, block, and wipe) across supported contracts and chains, with chain-specific amount provenance where available.",
+        "Live view of issuer-intervention events (freeze, unfreeze, pause, block, and wipe) across supported contracts and chains, with chain-specific amount provenance where available.",
       icon: ShieldAlert,
-      href: "/blacklist/",
-      linkLabel: "Open blacklist tracker",
+      href: "/freezewatch/",
+      linkLabel: "Open FreezeWatch",
     },
     {
       title: "Peg Tracker",

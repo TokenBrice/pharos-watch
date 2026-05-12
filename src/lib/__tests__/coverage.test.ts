@@ -599,7 +599,7 @@ describe("coverage helpers", () => {
     ]);
   });
 
-  it("summarizes blacklist status across every coin and surfaces live tracker coverage", () => {
+  it("summarizes freezable status across every coin and surfaces live tracker coverage", () => {
     const rows = [
       buildCoverageRow({
         coin: makeCoin({ id: "tracked", symbol: "USDC" }),
@@ -662,7 +662,7 @@ describe("coverage helpers", () => {
     expect(summary.totalCount).toBe(4);
     expect(summary.coveragePct).toBe(100);
     expect(summary.mcapSharePct).toBe(100);
-    expect(summary.coverageLabel).toBe("100% with resolved blacklist status");
+    expect(summary.coverageLabel).toBe("100% with resolved freezable status");
     expect(summary.shareLabel).toBe("Resolved status market-cap reach");
     expect(summary.breakdown).toEqual([
       { key: "live", label: "live", count: 1 },

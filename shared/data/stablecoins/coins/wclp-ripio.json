@@ -1,0 +1,99 @@
+{
+  "id": "wclp-ripio",
+  "llamaId": "381",
+  "detailProvider": "defillama",
+  "name": "Ripio wCLP",
+  "symbol": "WCLP",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "OTHER",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Chilean-peso cash and liquid local-currency instruments backing Ripio wCLP at a one Chilean peso target",
+  "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WCLP = 1 CLP through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
+  "geckoId": "chilean-peso",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/ripioapp"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Chile"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+      "decimals": 18
+    },
+    {
+      "chain": "worldchain",
+      "address": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Website",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      }
+    ],
+    "evidence": "Ripio wCLP is centrally issued across multiple EVM chains; the public source confirms issuer-managed wFIAT mechanics but does not prove a holder-level blacklist path.",
+    "reviewer": "Codex coverage expansion",
+    "reviewedAt": "2026-05-12"
+  },
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Chilean-peso cash and local-currency liquid instruments",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Peg grouped as Other",
+      "message": "CLP is not yet a first-class Pharos peg-currency enum, so WCLP is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
+    },
+    {
+      "type": "info",
+      "title": "No per-token attestation located",
+      "message": "Ripio describes wFIAT local-currency backing, but no reliable public per-token reserve attestation was found for WCLP during this addition. Curated reserves remain conservative until source coverage improves."
+    }
+  ]
+}

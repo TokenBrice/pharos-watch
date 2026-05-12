@@ -18,9 +18,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/alt-pegs/client.tsx` - AltPegsClient
 - `src/app/alt-pegs/page.tsx` - route /alt-pegs; metadata
 - `src/app/api/page.tsx` - route /api; default:ApiAccessPage, metadata
-- `src/app/blacklist/client.tsx` - default:BlacklistClient
-- `src/app/blacklist/error.tsx`
-- `src/app/blacklist/page.tsx` - route /blacklist; default:BlacklistPage, metadata
+- `src/app/blacklist/page.tsx` - route /blacklist; default:LegacyBlacklistPage, metadata
 - `src/app/cemetery/error.tsx`
 - `src/app/cemetery/page.tsx` - route /cemetery; default:CemeteryPage, metadata
 - `src/app/chains/[chain]/client.tsx` - ChainProfileClient
@@ -46,6 +44,9 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/flows/client.tsx` - default:FlowsClient
 - `src/app/flows/error.tsx`
 - `src/app/flows/page.tsx` - route /flows; default:FlowsPage, metadata
+- `src/app/freezewatch/client.tsx` - default:FreezeWatchClient
+- `src/app/freezewatch/error.tsx`
+- `src/app/freezewatch/page.tsx` - route /freezewatch; default:FreezeWatchPage, metadata
 - `src/app/funding/page.tsx` - route /funding; default:FundingPage, metadata
 - `src/app/layout.tsx` - default:RootLayout, metadata, viewport
 - `src/app/liquidity/client.tsx` - LiquidityClient
@@ -190,7 +191,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/constants.ts` - CATEGORY_LINKS, DAY_HOURS, NINETY_DAYS_HOURS, NINETY_DAYS_MS, TABLE_PAGE_SIZE, THIRTY_DAYS_HOURS
 - `src/lib/contagion-layout.ts` - CORE_LANE_HALF_WIDTH, CORE_LANE_MARGIN, CORE_PAIR_X_JITTER, CORE_PAIR_Y_OFFSET, CORE_RING_RADIUS_X, CORE_RING_RADIUS_Y
 - `src/lib/coverage-features.ts` - COVERAGE_FEATURES, COVERAGE_FEATURE_LEGEND_ITEMS, GENERAL_LEGEND_STATUS_KINDS
-- `src/lib/coverage-page-config.ts` - AUTHORITATIVE_ACCENT, BLACKLIST_BREAKDOWN_CHIP_CLASS, BlacklistBreakdownStatusKind, CoverageFilterGroup, CoverageFilterKey, CoverageSortKey
+- `src/lib/coverage-page-config.ts` - AUTHORITATIVE_ACCENT, BlacklistBreakdownStatusKind, COVERAGE_BREAKDOWN_VISUAL_CLASSES, COVERAGE_GAP_BAR_CLASS, CoverageFilterGroup, CoverageFilterKey
 - `src/lib/coverage-types.ts` - CoverageBreakdownItem, CoverageFeatureDefinition, CoverageFeatureKey, CoverageFeatureSummary, CoverageRow, CoverageStatus
 - `src/lib/coverage.ts` - COVERAGE_BADGE_TONE_CLASS, COVERAGE_FEATURES, buildCoverageFeatureSummary, buildCoverageRow, countAvailableFeatures, resolveBlacklistCoverage
 - `src/lib/cron-intervals.ts` - CRON_15MIN, CRON_1H, CRON_1MIN, CRON_24H, CRON_30MIN, CRON_BLACKLIST
@@ -249,7 +250,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/contagion-graph-model.ts` - TYPE_COLORS, TYPE_DASH, gradeColor
 - `src/components/contagion-graph-tooltips.tsx` - buildEdgeTooltipElement, buildNodeTooltipElement, buildTooltipAnnouncement
 - `src/components/contagion-graph.tsx` - ContagionGraph
-- ... 229 more files omitted; use `rg --files src/components` for the full list.
+- ... 232 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -328,12 +329,12 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/methodology-version.ts` - MethodologyChangelogEntry, MethodologyVersion, MethodologyVersionConfig, compareMethodologyVersions, createMethodologyVersion, toMethodologyVersionLabel
 - `shared/lib/mint-burn-flow-version.ts` - MINT_BURN_FLOW_METHODOLOGY_CHANGELOG, MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH, MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL
 - `shared/lib/mint-burn-signals.ts` - COIN_FLOW_COMPOSITE_STATE_VALUES, CoinFlowCompositeState, NET_FLOW_DIRECTION_24H_VALUES, NetFlowDirection24h, PRESSURE_SHIFT_STABLE_BAND_MAX, PRESSURE_SHIFT_STATE_VALUES
-- ... 83 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 95 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
-- `shared/data/stablecoins/canonical-order.json` - 341 entries
-- `shared/data/stablecoins/coins.generated.json` - 341 entries
+- `shared/data/stablecoins/canonical-order.json` - 360 entries
+- `shared/data/stablecoins/coins.generated.json` - 360 entries
 - `shared/data/stablecoins/coins/a7a5-old-vector.json` - 16 keys
 - `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 23 keys
 - `shared/data/stablecoins/coins/acred-apollo-securitize.json` - 23 keys
@@ -346,6 +347,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/audd-novatti.json` - 18 keys
 - `shared/data/stablecoins/coins/audf-forte.json` - 16 keys
 - `shared/data/stablecoins/coins/audm-macropod.json` - 23 keys
+- `shared/data/stablecoins/coins/audm-mento.json` - 20 keys
 - `shared/data/stablecoins/coins/audx-aussie-dollar-token.json` - 20 keys
 - `shared/data/stablecoins/coins/ausd-agora.json` - 19 keys
 - `shared/data/stablecoins/coins/ausdt-tether-alloy.json` - 21 keys
@@ -364,15 +366,14 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/brl-itau.json` - 17 keys
 - `shared/data/stablecoins/coins/brl1-brl1.json` - 21 keys
 - `shared/data/stablecoins/coins/brla-brla-digital.json` - 20 keys
+- `shared/data/stablecoins/coins/brlm-mento.json` - 20 keys
 - `shared/data/stablecoins/coins/brlv-crown.json` - 21 keys
 - `shared/data/stablecoins/coins/brz-transfero.json` - 18 keys
 - `shared/data/stablecoins/coins/btcusd-btcfi.json` - 17 keys
 - `shared/data/stablecoins/coins/buck-buck-assets.json` - 24 keys
 - `shared/data/stablecoins/coins/buck-bucket-protocol.json` - 16 keys
 - `shared/data/stablecoins/coins/buidl-blackrock.json` - 19 keys
-- `shared/data/stablecoins/coins/busd0-usual.json` - 21 keys
-- `shared/data/stablecoins/coins/cadc-cad-coin.json` - 17 keys
-- ... 306 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
+- ... 328 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
 
 ## Worker routing
 
@@ -456,6 +457,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/backfill-price-sources.ts` - HistoricalMarketBackfillGranularity, HistoricalMarketBackfillRange, HistoricalMarketMergeReason, HistoricalMarketPolicyAdjustment, HistoricalMarketPriceSeriesResult, HistoricalMarketSeriesStats
 - `worker/src/api/backfill-stability-index.ts` - handleBackfillStabilityIndex
 - `worker/src/api/backfill-supply-history.ts` - handleBackfillSupplyHistory
+- `worker/src/api/backfill-yield-history.ts` - handleBackfillYieldHistory
 - `worker/src/api/blacklist-summary.ts` - handleBlacklistSummary
 - `worker/src/api/blacklist.ts` - handleBlacklist
 - `worker/src/api/cache-handlers.ts` - handleBluechipRatings, handleStablecoinCharts, handleStablecoins, handleUsdsStatus, handleYieldRankings
@@ -480,8 +482,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/health.ts` - handleHealth
 - `worker/src/api/mint-burn-events.ts` - handleMintBurnEvents
 - `worker/src/api/mint-burn-flows-shared.ts` - BASELINE_WINDOW_DAYS, DailyBaselineRow, ETHEREUM_CHAIN_ID, EventRow, FLOW_CACHE_PREFIX, FLOW_DEFAULT_WINDOW_HOURS
-- `worker/src/api/mint-burn-flows.ts` - handleMintBurnFlows, refreshAggregateMintBurnFlowCache
-- ... 65 more files omitted; use `rg --files worker/src/api` for the full list.
+- ... 66 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 
@@ -565,7 +566,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/fetch-slipstream.ts` - fetchSlipstreamPools, getSlipstreamPoolFeeBps, sqrtRatioToSpotPrice
 - `worker/src/cron/dex-liquidity/geckoterminal-shared.ts` - fetchGtTokenPools, getGtPoolKind, getGtPoolType, parseGtPool
 - `worker/src/cron/dex-liquidity/index.ts` - syncDexLiquidity
-- ... 232 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 236 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -629,13 +630,16 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/depeg-signals.ts` - DepegDirection, DepegSignal, DirectionalSignalStatus, classifyDirectionalSignal, coerceDepegDirection, deriveDepegSignal
 - `worker/src/lib/depeg-trust-policy.ts` - DexPriceTrustTier, DexTrustPolicy, OffchainDepegConfirmerKey, chooseIndependentOffchainDepegConfirmer, classifyPrimaryDepegTrust, getDexTrustPolicy
 - `worker/src/lib/dews.ts` - DEWSInput, DEWSResult, PoolEntry, SignalResult, computeDEWS, getThreatBand
-- ... 147 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 149 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 
+- `scripts/__tests__/audit-dia-provider-poc.test.ts`
+- `scripts/__tests__/audit-price-source-depth.test.ts`
 - `scripts/__tests__/audit-pricing-provider-config.test.ts`
 - `scripts/__tests__/blacklistability-review.test.ts`
 - `scripts/__tests__/check-critical-coverage.test.ts`
+- `scripts/__tests__/check-redemption-backstops.test.ts`
 - `scripts/__tests__/check-worker-migrations.test.ts`
 - `scripts/__tests__/classify-deploy-changes.test.ts`
 - `scripts/__tests__/command-runner.test.ts`
@@ -648,6 +652,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/fixtures/sql-safety/worker/src/unsafe-worker-src.ts` - buildUnsafeWorkerSrcQuery
 - `scripts/__tests__/freeze-stablecoin.test.ts`
 - `scripts/__tests__/generate-markdown-exports.test.ts`
+- `scripts/__tests__/generate-redemption-coverage-audit.test.ts`
 - `scripts/__tests__/public-api-artifact-catalog.test.ts`
 - `scripts/__tests__/remote-d1.test.ts`
 - `scripts/__tests__/rollback-pages-deployment.test.ts`
@@ -663,7 +668,11 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/validate-ci-parity.test.ts`
 - `scripts/__tests__/vitest-ci-args.test.ts`
 - `scripts/__tests__/worker-boundary-waivers.test.ts`
+- `scripts/audit-dia-provider-poc.ts` - DIA_CHAIN_MAP, DiaAuditReport, DiaProbeResult, DiaProbeTarget, DiaQuotation, parseDiaQuotation
+- `scripts/audit-price-source-depth.ts` - AuditInput, AuditStablecoinMeta, CandidateTriage, DEPTH_BUCKETS, DepthBucket, DepthDistribution
 - `scripts/audit-pricing-provider-config.ts` - AuditSection, auditBinance, auditBitstamp, auditCoinbase, auditKraken, auditOptionalSourceShapes
+- `scripts/audit-redemption-registry-parity.ts`
+- `scripts/audit-redemption-v4-score-diff.ts`
 - `scripts/build-world-map-svg.ts`
 - `scripts/check-agent-doc-sync.mjs`
 - `scripts/check-critical-coverage.mjs` - getChangedFilesFromGit, isAllZeroSha, parseChangedFilesFromEnv, runCriticalCoverageCheck
@@ -685,12 +694,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/check-supply-helper-usage.mjs` - DEFAULT_SUPPLY_HELPER_ROOTS, SUPPLY_HELPER_WAIVERS, main, printSupplyHelperUsageReport, scanSupplyHelperUsage
 - `scripts/check-unused-code.mjs`
 - `scripts/check-verified-doc-links.mjs`
-- `scripts/check-worker-import-boundary.mjs`
-- `scripts/check-worker-migrations.mjs` - LEGACY_DUPLICATE_PREFIX_ALLOWLIST, REQUIRED_ROLLOUT_SAFETY_MODE, ROLLOUT_SAFETY_ENFORCEMENT_PREFIX, UNSAFE_ROLLOUT_ADD_COLUMN_LABEL, UNSAFE_ROLLOUT_SAFETY_PATTERNS, findDuplicatePrefixes
-- `scripts/classify-deploy-changes.mjs` - classifyDeployChanges, emitGithubOutputs, normalizeChangedFiles
-- `scripts/data/m49-to-iso2.ts` - M49_TO_ISO2
-- `scripts/dev-api-proxy.mjs`
-- `scripts/fetch-logos.ts`
-- `scripts/fix-commodity-depeg-median.ts`
-- `scripts/fix-non-usd-depeg-fx.ts`
-- ... 46 more files omitted; use `rg --files scripts` for the full list.
+- ... 55 more files omitted; use `rg --files scripts` for the full list.

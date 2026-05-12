@@ -1,0 +1,128 @@
+{
+  "id": "ghsm-mento",
+  "llamaId": "372",
+  "detailProvider": "defillama",
+  "name": "Mento Ghanaian Cedi",
+  "symbol": "GHSm",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "OTHER",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
+  "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit GHSm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+  "geckoId": "cghs",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://reserve.mento.org/",
+    "provider": "Mento Reserve dashboard"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.mento.org/"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/MentoLabs"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "celo",
+      "address": "0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313",
+      "decimals": 18
+    }
+  ],
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "GHSm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
+    "reviewer": "Codex coverage expansion",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "established-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
+      "pct": 43,
+      "risk": "low",
+      "coinId": "susds-sky"
+    },
+    {
+      "name": "CELO",
+      "pct": 17,
+      "risk": "high"
+    },
+    {
+      "name": "EURC",
+      "pct": 14,
+      "risk": "low",
+      "coinId": "eurc-circle"
+    },
+    {
+      "name": "USDC",
+      "pct": 11,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "USDT",
+      "pct": 7,
+      "risk": "low",
+      "coinId": "usdt-tether"
+    },
+    {
+      "name": "axlEUROC",
+      "pct": 5,
+      "risk": "medium"
+    },
+    {
+      "name": "stETH",
+      "pct": 2,
+      "risk": "low"
+    },
+    {
+      "name": "AUSD and smaller reserve assets",
+      "pct": 1,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "mento",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
+    "breakerScope": "mento-reserve",
+    "display": {
+      "url": "https://reserve.mento.org/",
+      "label": "Mento Reserve"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      }
+    }
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Peg grouped as Other",
+      "message": "GHS is not yet a first-class Pharos peg-currency enum, so GHSm is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
+    }
+  ]
+}

@@ -33,7 +33,7 @@ const VALID_STATUS_BUCKETS = new Set<BlacklistStatusBucketKey>([
   "no",
 ]);
 
-export type BlacklistPageFilters = {
+export type FreezeWatchPageFilters = {
   stablecoinFilter: BlacklistStablecoin | "all";
   chainFilter: string;
   eventTypeFilter: BlacklistEventType | "all";
@@ -44,7 +44,7 @@ export type BlacklistPageFilters = {
   statusBucket: BlacklistStatusBucketKey | null;
 };
 
-export function parseBlacklistPageFilters(search: string): BlacklistPageFilters {
+export function parseFreezeWatchPageFilters(search: string): FreezeWatchPageFilters {
   const params = new URLSearchParams(search);
   const rawStablecoin = params.get("stablecoin") ?? "all";
   const rawChain = params.get("chain") ?? params.get("chainId") ?? "all";
@@ -84,7 +84,7 @@ export function parseBlacklistPageFilters(search: string): BlacklistPageFilters 
   };
 }
 
-export function useBlacklistPageController() {
+export function useFreezeWatchPageController() {
   const {
     data: summary,
     isLoading: summaryLoading,
@@ -102,7 +102,7 @@ export function useBlacklistPageController() {
     isLoading: supportReportCardsLoading,
   } = useReportCards();
   const { searchParams, replaceParams } = useUrlFilters();
-  const parsedFilters = useMemo(() => parseBlacklistPageFilters(searchParams.toString()), [searchParams]);
+  const parsedFilters = useMemo(() => parseFreezeWatchPageFilters(searchParams.toString()), [searchParams]);
   const reportCardMap = useMemo(
     () => buildReportCardMap(reportCardsData?.cards) as Record<string, ReportCard> | undefined,
     [reportCardsData?.cards],
@@ -160,8 +160,8 @@ export function useBlacklistPageController() {
   const freshnessMeta = summaryMeta ?? pageMeta;
 
   const updateFilters = useCallback(
-    (updates: Partial<BlacklistPageFilters>) => {
-      const next: BlacklistPageFilters = {
+    (updates: Partial<FreezeWatchPageFilters>) => {
+      const next: FreezeWatchPageFilters = {
         ...parsedFilters,
         ...updates,
       };
@@ -204,7 +204,7 @@ export function useBlacklistPageController() {
 
   const handleStablecoinChange = useCallback(
     (v: BlacklistStablecoin | "all") => {
-      trackEvent("filter_applied", { page: "blacklist", filter_type: "stablecoin", filter_value: v });
+      trackEvent("filter_applied", { page: "freezewatch", filter_type: "stablecoin", filter_value: v });
       updateFilters({ stablecoinFilter: v, page: 1 });
     },
     [updateFilters],
@@ -212,7 +212,7 @@ export function useBlacklistPageController() {
 
   const handleChainChange = useCallback(
     (v: string) => {
-      trackEvent("filter_applied", { page: "blacklist", filter_type: "chain", filter_value: v });
+      trackEvent("filter_applied", { page: "freezewatch", filter_type: "chain", filter_value: v });
       updateFilters({ chainFilter: v, page: 1 });
     },
     [updateFilters],
@@ -220,7 +220,7 @@ export function useBlacklistPageController() {
 
   const handleEventTypeChange = useCallback(
     (v: BlacklistEventType | "all") => {
-      trackEvent("filter_applied", { page: "blacklist", filter_type: "event_type", filter_value: v });
+      trackEvent("filter_applied", { page: "freezewatch", filter_type: "event_type", filter_value: v });
       updateFilters({ eventTypeFilter: v, page: 1 });
     },
     [updateFilters],
@@ -231,7 +231,7 @@ export function useBlacklistPageController() {
       setSearchInput(v);
       if (searchSyncTimer.current) clearTimeout(searchSyncTimer.current);
       searchSyncTimer.current = setTimeout(() => {
-        trackSearch("blacklist", v.length);
+        trackSearch("freezewatch", v.length);
         updateFilters({ searchQuery: v, page: 1 });
       }, 300);
     },
@@ -241,7 +241,7 @@ export function useBlacklistPageController() {
   const handleSortChange = useCallback(
     (nextSortKey: BlacklistSortKey, nextSortDirection: BlacklistSortDirection) => {
       trackEvent("sort_changed", {
-        page: "blacklist",
+        page: "freezewatch",
         sort_by: `${nextSortKey}:${nextSortDirection}`,
       });
       updateFilters({ sortKey: nextSortKey, sortDirection: nextSortDirection, page: 1 });
@@ -251,7 +251,7 @@ export function useBlacklistPageController() {
 
   const handleStatusBucketChange = useCallback(
     (status: BlacklistStatusBucketKey) => {
-      trackEvent("filter_applied", { page: "blacklist", filter_type: "blacklist_status", filter_value: status });
+      trackEvent("filter_applied", { page: "freezewatch", filter_type: "blacklist_status", filter_value: status });
       updateFilters({ statusBucket: status });
     },
     [updateFilters],

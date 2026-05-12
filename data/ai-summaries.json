@@ -1708,5 +1708,100 @@
     "title": "Stablecoins Strapped to the Credit Card",
     "text": "Nubank's stablecoin pilot is structurally interesting because the entry point is not a wallet or a remittance corridor but the credit card. Vice-chair Roberto Campos Neto — Brazil's central bank governor through 2024 — announced at Meridian 2025 that Nubank would test dollar-pegged stablecoin payments on credit-card rails, framed inside a larger plan to tokenize deposits and issue credit against tokenized assets. Nubank already integrated USDC inside its app in 2023 and has 100M-plus customers across Brazil, Mexico, and Colombia, which is the actual asset here: distribution. The unresolved product question is whether Nubank issues its own dollar stablecoin or routes through an existing one; Campos Neto's framing leaves both open. Pharos opens the placeholder against the own-issuance interpretation; the entry will be retired if the pilot resolves as a USDC/PYUSD integration rather than a new Nubank-issued token.",
     "updatedAt": "2026-05-12"
+  },
+  "moveusd-cfx": {
+    "title": "CFX's Solana Deposit Dollar",
+    "text": "MoveUSD is the largest clean coverage addition in this batch, with DefiLlama reporting roughly $120M in circulating supply and a live Solana price path. The token is best read as a CFX-issued dollar settlement instrument rather than a permissionless DeFi-native stablecoin: minting and redemption run through the issuer, while the SPL mint gives Pharos a concrete on-chain supply anchor. Reserves are described as USD deposits, cash equivalents, and marketable U.S. Treasury securities, but no independently audited reserve feed is wired into Pharos yet. The detail page carries a tokenized-deposit caveat so users do not confuse the high market cap with open retail redemption coverage.",
+    "updatedAt": "2026-05-12"
+  },
+  "hlusd-hela": {
+    "title": "HeLa's Native Runtime Dollar",
+    "text": "HLUSD is the native dollar stablecoin for the HeLa ecosystem, admitted through CoinGecko because the HeLa chain is not yet a supported Pharos contract platform. CoinGecko reports a positive price and market cap, which is enough for runtime coverage, but contract-level supply and issuer reserve telemetry remain outside the current model. The asset is therefore classified as a centralized-dependent RWA-backed USD coin with an explicit unsupported-chain notice. The unusually high trading volume relative to supply makes it useful coverage, but also a candidate for follow-up once HeLa chain support or better reserve documentation exists.",
+    "updatedAt": "2026-05-12"
+  },
+  "xmd-metal-dollar": {
+    "title": "A Stablecoin Basket on XPR Network",
+    "text": "Metal Dollar is a basket-backed dollar token on XPR Network, with public materials pointing to USDC, PYUSD, and Paxos-dollar components as the reserve set. Pharos admits it through CoinGecko's price and market-cap path because XPR Network is not currently supported for contract coverage. The structure gives XMD upstream exposure to centralized stablecoin issuers while leaving direct holder-control semantics hard to verify from Pharos' chain set. It is a useful basket-stablecoin addition, but reserve composition and redemption depth should be reviewed again before any dependency weights are made more granular.",
+    "updatedAt": "2026-05-12"
+  },
+  "vusd-virtue": {
+    "title": "IOTA-Backed CDP Dollar",
+    "text": "Virtue USD is an overcollateralized IOTA ecosystem stablecoin backed by IOTA and stIOTA positions. CoinGecko resolves the IOTA object and reports a positive market cap, but IOTA itself is not yet a Pharos-supported chain, so the registry intentionally excludes contracts for now. That means Pharos can show price, market-cap, and risk metadata, while on-chain supply, mint/burn, and contract authority analysis remain future work. The collateral profile is high-risk compared with fiat-backed stablecoins because peg defense ultimately depends on volatile IOTA-family collateral and liquidation mechanics.",
+    "updatedAt": "2026-05-12"
+  },
+  "stusd-stoneyield": {
+    "title": "A Yield Wrapper Wearing a Dollar Label",
+    "text": "StoneYield USD is tracked as a BNB Chain yield-bearing stable wrapper, not as a plain fiat dollar. The BSC contract is verified through CoinGecko and the reserve model points to USDC and yield-bearing USDC strategy positions routed through StoneYield's managed protocol layer. That makes the token's stability depend on stablecoin collateral plus strategy execution and withdrawal liquidity, so Pharos marks it as both yield-bearing and a NAV token. Runtime price and market cap are available, but yield telemetry is currently static metadata rather than an integrated pool adapter.",
+    "updatedAt": "2026-05-12"
+  },
+  "lvusd-leverup": {
+    "title": "Monad Perps Collateral in Stablecoin Form",
+    "text": "LeverUp USD is a small Monad stablecoin tied to LeverUp's liquidity layer for perpetuals and margin trading. CoinGecko reports a live price and market cap, and the Monad contract is included because Pharos already has a Monad chain entry. The risk profile is not comparable to a cash-backed issuer coin: collateral and redemption are tied to a trading engine that references USDC and MON, and public reserve depth is still thin. Pharos therefore treats lvUSD as a notice-heavy crypto-backed stable asset rather than a conventional dollar reserve token.",
+    "updatedAt": "2026-05-12"
+  },
+  "nusd-nexus": {
+    "title": "Legacy Synapse Bridge Liquidity",
+    "text": "Nexus USD is a legacy Synapse bridge-liquidity stable asset backed by a pool of DAI, USDC, and USDT. It is included because DefiLlama still returns both a current price and circulating supply, but the product model is closer to bridge routing infrastructure than to a standalone modern issuer. The upstream reserve basket gives NUSD inherited freezability and stablecoin dependency risk. Contract coverage is intentionally omitted until the active Synapse deployment set is freshly verified across chains.",
+    "updatedAt": "2026-05-12"
+  },
+  "brlm-mento": {
+    "title": "Mento's Brazilian Real Rail",
+    "text": "BRLm expands Mento coverage into Brazilian real-denominated settlement on Celo. Unlike the existing Mento CDP rows, this entry uses the reserve-wide Mento dashboard feed because the current CDP trove API only covers GBPm, JPYm, and CHFm. The reserve mix is diversified but still exposed to sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller assets, so Pharos classifies collateral quality as mixed rather than fiat-reserve grade. BRLm is small in absolute supply, but strategically useful because it adds another BRL rail from an already-modeled issuer family.",
+    "updatedAt": "2026-05-12"
+  },
+  "phpm-mento": {
+    "title": "PUSO Joins the PHP Set",
+    "text": "PHPm, marketed by Mento as PUSO, is a Celo-based Philippine peso stablecoin with live DefiLlama price and circulating-supply coverage. It uses Mento's oracle-priced swap and reserve architecture rather than a bank-deposit PHP reserve, so the collateral stack is the same mixed Mento reserve basket used across the reserve-backed Mento family. Pharos already tracks other PHP-pegged issuers, making PHPm useful as an ecosystem-completion and regional-coverage addition. The live reserve feed is shared with the broader Mento reserve dashboard rather than a PHPm-specific attestation.",
+    "updatedAt": "2026-05-12"
+  },
+  "kesm-mento": {
+    "title": "First Kenyan Shilling Stablecoin Coverage",
+    "text": "KESm is the first Kenyan shilling-denominated stable asset in Pharos, admitted through DefiLlama's price and circulating-supply path. The token runs on Celo and uses the same Mento reserve-backed FX mechanism as the newer Mento local-currency suite. Because KES is not yet a first-class Pharos peg currency, the asset is grouped under OTHER until a broader peg-infrastructure update is justified. The reserve risk remains driven by the Mento mix, especially CELO exposure and upstream centralized stablecoins.",
+    "updatedAt": "2026-05-12"
+  },
+  "copm-mento": {
+    "title": "Colombian Peso Coverage via Celo",
+    "text": "COPm adds Colombian peso stablecoin coverage through Mento's Celo deployment. DefiLlama supplies the runtime price and circulating value, while the contract is verified from the Celo token-contract table. Pharos maps COP to OTHER for now because the peg enum does not yet include Colombian peso support. The addition is intentionally small-cap but strategically useful because it gives the dashboard a first COP reference before deciding whether a full COP peg tranche is worth building.",
+    "updatedAt": "2026-05-12"
+  },
+  "cadm-mento": {
+    "title": "A Tiny CAD Rail from Mento",
+    "text": "CADm is Mento's Canadian dollar stable asset on Celo, added mainly for ecosystem completion rather than market size. It passes the DefiLlama runtime gate and uses a verified Celo contract, but circulating supply remains tiny compared with larger CAD stablecoin issuers already tracked by Pharos. The collateral story is Mento reserve exposure rather than Canadian-dollar bank reserves. That means resilience depends on Celo, Mento governance, and the mixed reserve basket behind the broader Mento system.",
+    "updatedAt": "2026-05-12"
+  },
+  "audm-mento": {
+    "title": "Mento's AUD Completes Another Local Rail",
+    "text": "AUDm is the Mento Australian dollar asset on Celo, distinct from the already tracked Macropod AUDM despite the shared ticker style. It is admitted through DefiLlama and a verified Celo contract, with live reserve visibility through the shared Mento dashboard. The supply is small, so the value is mainly comparative: users can now see Mento's AUD rail beside larger AUD issuers and the rest of the Mento FX set. Reserves remain mixed and on-chain rather than an Australian-dollar banking stack.",
+    "updatedAt": "2026-05-12"
+  },
+  "ghsm-mento": {
+    "title": "Ghanaian Cedi Coverage, Grouped as Other",
+    "text": "GHSm brings Ghanaian cedi exposure into Pharos through Mento's Celo stablecoin suite. DefiLlama provides the runtime price and supply path, while CoinGecko's active slug resolves as cGHS rather than the stale DefiLlama gecko hint. Like KESm and COPm, GHSm is grouped under OTHER because GHS is not yet a first-class Pharos peg currency. It is very small, but it extends coverage into a currency region otherwise missing from the dashboard.",
+    "updatedAt": "2026-05-12"
+  },
+  "zarm-mento": {
+    "title": "Mento's Smaller ZAR Stablecoin",
+    "text": "ZARm is a Celo-based South African rand stable asset from Mento. Pharos already tracks a larger ZAR issuer, so ZARm is mainly an ecosystem-completion row that lets users compare Mento's local-currency model across regions. The token passes the DefiLlama price and supply gate and uses the verified Celo contract. Reserve quality is inherited from the shared Mento reserve mix rather than from rand-denominated bank collateral.",
+    "updatedAt": "2026-05-12"
+  },
+  "wbrl-ripio": {
+    "title": "Ripio's Wrapped Brazilian Real",
+    "text": "WBRL is part of Ripio's wFIAT suite: local-currency stablecoins issued across Ethereum, Base, World Chain, BNB Chain, Polygon, and Gnosis. It passes DefiLlama's price and circulating-supply gate and gives Pharos a second BRL rail from a Latin American issuer, alongside larger BRL assets already tracked. The contract address is consistent across supported EVM chains, simplifying token discovery. The weak point is reserve transparency: Ripio describes local-currency backing, but no reliable per-token WBRL attestation was located during this pass.",
+    "updatedAt": "2026-05-12"
+  },
+  "wclp-ripio": {
+    "title": "First Chilean Peso Runtime Row",
+    "text": "WCLP is Ripio's Chilean peso wFIAT token and gives Pharos its first CLP-denominated runtime asset. DefiLlama returns a live price and circulating value, while the same token address is deployed across the supported EVM set used by Ripio's suite. CLP is grouped under OTHER until Pharos adds a first-class Chilean peso peg surface. Reserve metadata stays conservative because public materials describe the backing model but do not provide a per-token attestation feed.",
+    "updatedAt": "2026-05-12"
+  },
+  "wcop-ripio": {
+    "title": "Ripio's Colombian Peso wFIAT Token",
+    "text": "WCOP is the Ripio wFIAT Colombian peso token, added through DefiLlama's price and supply coverage with verified supported-chain deployments. It overlaps thematically with Mento COPm but uses a different issuer model: off-chain local-currency backing and multi-chain EVM issuance rather than Celo's Mento reserve. COP is still grouped under OTHER pending broader peg-currency support. The main open gap is reserve evidence, since Ripio's public page does not provide a reliable per-token WCOP attestation.",
+    "updatedAt": "2026-05-12"
+  },
+  "wpen-ripio": {
+    "title": "Peruvian Sol Coverage from Ripio",
+    "text": "WPEN adds Peruvian sol exposure to Pharos through Ripio's local-currency stablecoin suite. DefiLlama supplies the runtime price and circulating-supply path, and Ripio's same-address EVM deployment pattern lets Pharos track contracts on Ethereum, Base, World Chain, BNB Chain, Polygon, and Gnosis. PEN is grouped under OTHER because it is not yet a first-class peg currency in the repo. Like the rest of the new Ripio rows, reserve transparency is the limiting factor: the backing model is described, but no per-token attestation feed was found.",
+    "updatedAt": "2026-05-12"
   }
 }

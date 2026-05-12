@@ -44,7 +44,7 @@ export function useSidebarNavSignals() {
     () => ({
       "/depeg": getDepegNavSignal(pegSummary),
       "/stability-index": getStabilityIndexNavSignal(stabilityIndex),
-      "/blacklist": getBlacklistNavSignal(blacklistSummary),
+      "/freezewatch": getBlacklistNavSignal(blacklistSummary),
       "/status": getStatusNavSignal(health),
       "/digest": getDigestNavSignal(dailyDigest?.generatedAt, seenDigestGeneratedAt),
     }),

@@ -82,7 +82,7 @@ const coreDataLinks = [
   ],
   ["Chains", absolute("/chains/"), "Per-chain stablecoin distribution and health."],
   ["Flows", absolute("/flows/"), "Mint/burn flow dashboards."],
-  ["Blacklist Tracker", absolute("/blacklist/"), "Issuer freeze events and exposure."],
+  ["FreezeWatch", absolute("/freezewatch/"), "Issuer freeze events and exposure."],
   ["Dependency Map", absolute("/dependency-map/"), "Inter-stablecoin dependency graph."],
   ["Coverage", absolute("/coverage/"), "What Pharos tracks and what it does not."],
   ["Cemetery", absolute("/cemetery/"), `${DEAD_STABLECOINS.length} defunct stablecoins and their causes of death.`],

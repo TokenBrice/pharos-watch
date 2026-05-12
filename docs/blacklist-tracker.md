@@ -13,21 +13,21 @@ The tracker now has two distinct amount layers:
 
 - `blacklist_events` stores event-time amounts only when Pharos can justify them historically
 - `blacklist_current_balances` stores last-known successful persistent freeze-ledger snapshots used by the public frozen-total summary
-- the `/blacklist` intervention ledger appears after the summary stats and before the status charts, keeping resolved exposure buckets separate from observed supported event history
-- the `/blacklist` status charts now support on-page drilldown into the matching stablecoin subset for each blacklistability bucket
-- the `/blacklist` summary cards now include an unfreezable market-share stat: blacklist-status `No` market cap divided by total tracked stablecoin market cap
+- the `/freezewatch` intervention ledger appears after the summary stats and before the status charts, keeping resolved exposure buckets separate from observed supported event history
+- the `/freezewatch` status charts now support on-page drilldown into the matching stablecoin subset for each blacklistability bucket
+- the `/freezewatch` summary cards now include an unfreezable market-share stat: blacklist-status `No` market cap divided by total tracked stablecoin market cap
 
 **Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, USDP, TUSD, NUSD, EURCV, USDA, USAT, AEUR, XUSD, XAUm, JPYC, FRXUSD, FIDD.
 
 **Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, USDP, TUSD, NUSD, EURCV, USDA, USAT, AEUR, XUSD, XAUM, JPYC, FRXUSD, FIDD via `BLACKLIST_STABLECOINS` in `shared/types/market.ts` (re-exported through `shared/types/index.ts`).
 
-Every stablecoin ID wired into `CONTRACT_CONFIGS` must resolve to direct `Freezable: Yes` in shared metadata/report-card status. `worker/src/lib/__tests__/blacklist-contracts.test.ts` guards this so direct tracker coverage does not show as only upstream-inherited exposure on `/blacklist`.
+Every stablecoin ID wired into `CONTRACT_CONFIGS` must resolve to direct `Freezable: Yes` in shared metadata/report-card status. `worker/src/lib/__tests__/blacklist-contracts.test.ts` guards this so direct tracker coverage does not show as only upstream-inherited exposure on `/freezewatch`.
 
-Implementation note: `EURC` is live-supported with mirror-zero suppression. Circle often mirrors the same blacklist action across both USDC and EURC; rows classified as zero-balance mirrors stay auditable in storage but are excluded from public `/blacklist` events, active records, and frozen-value aggregates.
+Implementation note: `EURC` is live-supported with mirror-zero suppression. Circle often mirrors the same blacklist action across both USDC and EURC; rows classified as zero-balance mirrors stay auditable in storage but are excluded from public `/api/blacklist` events, active records, and frozen-value aggregates.
 
-## Visible `/blacklist` Ledger Contract
+## Visible `/freezewatch` Ledger Contract
 
-The public `/blacklist` page renders `BlacklistInterventionLedger` directly below the stats cards. It is a visible summary strip, not a methodology change, and uses only data already present in the page controller:
+The public `/freezewatch` page renders `BlacklistInterventionLedger` directly below the stats cards. It is a visible summary strip, not a methodology change, and uses only data already present in the page controller:
 
 - `blacklistStatusBuckets` from `buildBlacklistStatusBuckets()` for resolved blacklist/freeze exposure buckets
 - `summary.stats.perCoinTotalEvents` for stablecoin symbols with observed supported events
@@ -883,9 +883,9 @@ All blacklist admin endpoints are routed in `worker/src/routes/registry.ts` and 
 The summary hook loads aggregate cards/chart/filter metadata from the dedicated summary endpoint. The page hook fetches only the currently requested table slice, including server-side filtering, sorting, search, and pagination.
 Both endpoints now emit freshness headers from the same 6-hourly `sync-blacklist` writer timestamp, so the shared stale-data banner does not warn before the next scheduled blacklist run is actually late.
 
-### Page: /blacklist
+### Page: /freezewatch
 
-**File:** `src/app/blacklist/page.tsx`
+**File:** `src/app/freezewatch/page.tsx`
 
 | Component        | File                                   | Description                                                                                     |
 | ---------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -921,7 +921,7 @@ The block consists of:
 
 - **BlacklistDetailStats** — three `MetricStatCard`s showing `perCoinFrozenAddressCount`, `perCoinFrozenTotal` (USD), and `perCoinDestroyedTotal` (USD).
 - **BlacklistDetailChart** — quarterly stacked bars with three event-type series (blacklist / unblacklist / destroy), driven by `perCoinQuarterlyEventTypes[symbol]`.
-- **BlacklistDetailEventFeed** — latest 10 events for the coin via `useBlacklistEventsPage({ stablecoin: symbol, limit: 10, offset: 0 })`, with a "See all events →" footer link to `/blacklist?stablecoin=<symbol>`.
+- **BlacklistDetailEventFeed** — latest 10 events for the coin via `useBlacklistEventsPage({ stablecoin: symbol, limit: 10, offset: 0 })`, with a "See all events →" footer link to `/freezewatch?stablecoin=<symbol>`.
 
 Source files: `src/components/stablecoin-detail/blacklist-section.tsx`, `blacklist-detail-stats.tsx`, `blacklist-detail-chart.tsx`, `blacklist-detail-event-feed.tsx`.
 
@@ -982,7 +982,7 @@ Gating is driven by the view model (`src/lib/stablecoin-detail-view-model.ts` �
 | `worker/migrations/0076_blacklist_provenance_and_amount_semantics.sql` | Adds amount provenance and semantics columns                                  |
 | `worker/migrations/0077_blacklist_amount_recovery_telemetry.sql` | Adds recovery-attempt telemetry for unresolved amount rows                       |
 | `src/hooks/use-blacklist-events.ts`                        | TanStack Query hook                                                                        |
-| `src/app/blacklist/page.tsx`                               | Blacklist page with filters, stats, chart, table                                           |
+| `src/app/freezewatch/page.tsx`                              | FreezeWatch page with filters, stats, chart, table                                         |
 | `src/components/blacklist-filters.tsx`                     | Filter UI (stablecoin, chain, event type)                                                  |
 | `src/components/blacklist-table.tsx`                       | Sortable paginated table                                                                   |
 | `src/components/blacklist-stats.tsx`                       | Summary statistics cards                                                                   |

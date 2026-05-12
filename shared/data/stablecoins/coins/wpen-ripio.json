@@ -1,0 +1,99 @@
+{
+  "id": "wpen-ripio",
+  "llamaId": "384",
+  "detailProvider": "defillama",
+  "name": "Ripio wPEN",
+  "symbol": "WPEN",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "OTHER",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Peruvian-sol cash and liquid local-currency instruments backing Ripio wPEN at a one Peruvian sol target",
+  "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WPEN = 1 PEN through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
+  "geckoId": "peruvian-sol",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/ripioapp"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Peru"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+      "decimals": 18
+    },
+    {
+      "chain": "worldchain",
+      "address": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Website",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      }
+    ],
+    "evidence": "Ripio wPEN is centrally issued across multiple EVM chains; the public source confirms issuer-managed wFIAT mechanics but does not prove a holder-level blacklist path.",
+    "reviewer": "Codex coverage expansion",
+    "reviewedAt": "2026-05-12"
+  },
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Peruvian-sol cash and local-currency liquid instruments",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Peg grouped as Other",
+      "message": "PEN is not yet a first-class Pharos peg-currency enum, so WPEN is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
+    },
+    {
+      "type": "info",
+      "title": "No per-token attestation located",
+      "message": "Ripio describes wFIAT local-currency backing, but no reliable public per-token reserve attestation was found for WPEN during this addition. Curated reserves remain conservative until source coverage improves."
+    }
+  ]
+}

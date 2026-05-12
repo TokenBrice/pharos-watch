@@ -156,7 +156,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
   - `/about/api/`
   - `/api/`
   - `/changelog/`
-  - major feature pages with standalone static copy (`/start/`, `/alt-pegs/`, `/upcoming/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/pharoswatchbot/`, `/funding/`, `/status/`, `/about/`, `/privacy/`)
+  - major feature pages with standalone static copy (`/start/`, `/alt-pegs/`, `/upcoming/`, `/freezewatch/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/pharoswatchbot/`, `/funding/`, `/status/`, `/about/`, `/privacy/`)
 - `/telegram` and `/telegram/*` are legacy aliases that redirect to canonical `/pharoswatchbot/` paths and are not sitemap entries.
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`

@@ -70,7 +70,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/about/`                                       | [about-page.md](./about-page.md)                                                                                                                      |
 | `/about/api/`                                   | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
 | `/api/`                                         | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
-| `/blacklist/`                                   | [blacklist-tracker.md](./blacklist-tracker.md)                                                                                                        |
+| `/freezewatch/`                                 | [blacklist-tracker.md](./blacklist-tracker.md)                                                                                                        |
 | `/cemetery/`                                    | [cemetery-and-compare.md](./cemetery-and-compare.md)                                                                                                  |
 | `/changelog/`                                   | [architecture.md](./architecture.md)                                                                                                                  |
 | `/chains/`                                      | [chains-page.md](./chains-page.md), [chain-health.md](./chain-health.md), [api-reference.md](./api-reference.md)                                      |

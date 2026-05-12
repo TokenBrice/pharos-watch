@@ -199,8 +199,8 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - Verifies homepage is not in outage/empty state (`Failed to load data` or `Failed to load this dataset`, `stablecoins:404`, `Data not yet available` or `Waiting for first sync`, `Connection issue` or `Unable to reach the Pharos data API right now.`, `No stablecoin data available`, missing rows/ticker).
 - Homepage data wait retries once on timeout by default (configurable via `SMOKE_UI_RETRY_COUNT` / `SMOKE_UI_RETRY_DELAY_MS`) and includes a compact DOM text preview in timeout diagnostics.
 - Local mode runs mobile overflow checks at `390x844` on a default critical route set:
-  - `/`, `/alt-pegs/`, `/dependency-map/`, `/flows/`, `/yield/`, `/liquidity/`, `/depeg/`, `/blacklist/`, `/stability-index/`, `/safety-scores/`, `/api/`
-- Live mode keeps the homepage/GA checks and a narrow canary overflow route set (`/yield/`, `/alt-pegs/`, `/blacklist/`, `/stability-index/` by default; override with `SMOKE_UI_CANARY_ROUTE`) unless `--skip-overflow` is set.
+  - `/`, `/alt-pegs/`, `/dependency-map/`, `/flows/`, `/yield/`, `/liquidity/`, `/depeg/`, `/freezewatch/`, `/stability-index/`, `/safety-scores/`, `/api/`
+- Live mode keeps the homepage/GA checks and a narrow canary overflow route set (`/yield/`, `/alt-pegs/`, `/freezewatch/`, `/stability-index/` by default; override with `SMOKE_UI_CANARY_ROUTE`) unless `--skip-overflow` is set.
 - Overflow detection samples layout multiple times and retries once before failing, which filters transient layout jitter while still catching sustained overflow regressions.
 - Override checked routes via `SMOKE_UI_OVERFLOW_ROUTES` (comma-separated), choose `--mode local|live`, tune overflow parallelism with `SMOKE_UI_OVERFLOW_WORKERS` (`1`-`6`; default `2` local and `1` live), or skip overflow checks with `--skip-overflow`.
 

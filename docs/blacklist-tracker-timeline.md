@@ -275,4 +275,4 @@ Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.
 ## Notes
 
 - Blacklist Tracker did not initially ship with explicit version tags; versions above are reconstructed from behavior-affecting commit boundaries.
-- Canonical methodology metadata is encoded in `shared/lib/blacklist-tracker-version.ts` and is already surfaced through the blacklist API envelope plus the `/blacklist/` page shell.
+- Canonical methodology metadata is encoded in `shared/lib/blacklist-tracker-version.ts` and is already surfaced through the blacklist API envelope plus the `/freezewatch/` page shell.

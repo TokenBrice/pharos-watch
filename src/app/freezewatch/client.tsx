@@ -14,13 +14,16 @@ import { BlacklistFilters } from "@/components/blacklist-filters";
 import { BlacklistTable } from "@/components/blacklist-table";
 import { TablePagination } from "@/components/table-pagination";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { FreezableSupplyMeter } from "@/components/freezewatch/freezable-supply-meter";
+import { InterventionSeismograph } from "@/components/freezewatch/intervention-seismograph";
+import { SovereigntyLattice } from "@/components/freezewatch/sovereignty-lattice";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/blacklist-tracker-version";
-import { useBlacklistPageController } from "./view-model";
+import { useFreezeWatchPageController } from "./view-model";
 
-export default function BlacklistClient() {
+export default function FreezeWatchClient() {
   const {
     summary,
     summaryLoading,
@@ -59,13 +62,13 @@ export default function BlacklistClient() {
     pageLoading,
     events,
     pageSize,
-  } = useBlacklistPageController();
+  } = useFreezeWatchPageController();
 
   return (
     <FeaturePageShell
-      breadcrumbName="Blacklist Tracker"
-      path="/blacklist/"
-      title="Blacklist Tracker"
+      breadcrumbName="FreezeWatch"
+      path="/freezewatch/"
+      title="FreezeWatch"
       statusBadge={{
         status: "mature",
         version: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
@@ -75,8 +78,8 @@ export default function BlacklistClient() {
         changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
       }}
       leadParagraphs={[
-        "Issuer intervention, from freeze to wipe.",
-        "Circle, Tether, Paxos, and other centralized issuers can freeze, unblock, pause, or destroy balances when their contracts give them that control. This tracker records those on-chain actions across supported contracts and chains so you can see which addresses were affected, when it happened, and how much value was involved.",
+        "Issuer control over your stablecoin balance — live.",
+        "Circle, Tether, Paxos, and other centralized issuers can freeze, unblock, pause, or destroy balances when their contracts give them that control. FreezeWatch records those on-chain actions across supported contracts and chains so you can see which addresses were affected, when it happened, and how much value was involved.",
       ]}
     >
       <QueryErrorNotice
@@ -89,6 +92,29 @@ export default function BlacklistClient() {
       />
       <StaleDataBanner
         queries={[{ preset: "blacklist", dataUpdatedAt, error, hasData: !!summary || events.length > 0, meta: freshnessMeta }]}
+      />
+
+      <FreezableSupplyMeter
+        buckets={blacklistStatusBuckets}
+        stats={summary?.stats}
+        isLoading={summaryLoading || supportDataLoading}
+      />
+
+      <InterventionSeismograph
+        stats={summary?.stats}
+        chart={summary?.chart}
+        isLoading={summaryLoading}
+      />
+
+      <SovereigntyLattice
+        coverage={summary?.coverage}
+        stats={summary?.stats}
+        chains={summary?.chains ?? []}
+        isLoading={summaryLoading}
+        onCellSelect={({ stablecoin, chainId }) => {
+          handleStablecoinChange(stablecoin);
+          handleChainChange(chainId);
+        }}
       />
 
       <BlacklistStats

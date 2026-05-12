@@ -1,9 +1,26 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.992",
+  currentVersion: "3.993",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.993",
+    title: "FreezeWatch rebrand and primary-nav promotion",
+    date: "2026-05-12",
+    effectiveAt: 1778544000, // 2026-05-12T00:00:00Z
+    summary:
+      "Promotes the Blacklist Tracker surface to a primary navigation hero under the FreezeWatch name, adding three issuer-sovereignty visualizations (Freezable Supply Meter, Intervention Seismograph, Sovereignty Lattice) above the existing intervention ledger. Event ingestion, status resolution, and the underlying coverage manifest are unchanged.",
+    impact: [
+      "Page moved from `/blacklist/` to `/freezewatch/` with a 301 redirect; sitemap priority raised to 0.85",
+      "Primary navigation gains a 7th entry (`FreezeWatch`), replacing the `Blacklist` entry in the TRACK group",
+      "User-facing copy on the surface refers to freeze interventions and issuer freezes; internal data model, table names, cron jobs, and API endpoints continue to use the `blacklist` term",
+      "Three new client-side components render above the legacy intervention ledger: Freezable Supply Meter (sovereignty headline), Intervention Seismograph (quarterly cadence), Sovereignty Lattice (issuer × chain coverage grid)",
+      "Analytics page identifier changed from `blacklist` to `freezewatch` for filter, sort, and search events emitted by the page",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.992",
     title: "Public contract clarification",

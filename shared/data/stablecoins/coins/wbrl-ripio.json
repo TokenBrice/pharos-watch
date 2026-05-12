@@ -1,0 +1,94 @@
+{
+  "id": "wbrl-ripio",
+  "llamaId": "380",
+  "detailProvider": "defillama",
+  "name": "Ripio wBRL",
+  "symbol": "WBRL",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "BRL",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Brazilian-real cash and liquid local-currency instruments backing Ripio wBRL at a one Brazilian real target",
+  "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WBRL = 1 BRL through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
+  "geckoId": "brazilian-real",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/ripioapp"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Brazil"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+      "decimals": 18
+    },
+    {
+      "chain": "worldchain",
+      "address": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Website",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      }
+    ],
+    "evidence": "Ripio wBRL is centrally issued across multiple EVM chains; the public source confirms issuer-managed wFIAT mechanics but does not prove a holder-level blacklist path.",
+    "reviewer": "Codex coverage expansion",
+    "reviewedAt": "2026-05-12"
+  },
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Brazilian-real cash and local-currency liquid instruments",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "No per-token attestation located",
+      "message": "Ripio describes wFIAT local-currency backing, but no reliable public per-token reserve attestation was found for WBRL during this addition. Curated reserves remain conservative until source coverage improves."
+    }
+  ]
+}

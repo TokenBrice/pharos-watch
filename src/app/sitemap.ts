@@ -69,10 +69,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.6,
     },
     {
-      url: `${SITE_URL}/blacklist/`,
+      url: `${SITE_URL}/freezewatch/`,
       lastModified: now,
       changeFrequency: "daily",
-      priority: 0.8,
+      priority: 0.85,
     },
     {
       url: `${SITE_URL}/depeg/`,

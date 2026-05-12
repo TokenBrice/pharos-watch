@@ -17,7 +17,7 @@ const DEFAULT_OVERFLOW_RETRY_EXTRA_WAIT_MS = 2000;
 const DEFAULT_LOCAL_OVERFLOW_WORKERS = 2;
 const DEFAULT_LIVE_OVERFLOW_WORKERS = 1;
 const MAX_OVERFLOW_WORKERS = 6;
-const DEFAULT_LIVE_CANARY_ROUTES = ["/yield/", "/alt-pegs/", "/blacklist/", "/stability-index/"];
+const DEFAULT_LIVE_CANARY_ROUTES = ["/yield/", "/alt-pegs/", "/freezewatch/", "/stability-index/"];
 const OVERFLOW_ROUTE_DEFAULTS = [
   "/",
   "/alt-pegs/",
@@ -26,7 +26,7 @@ const OVERFLOW_ROUTE_DEFAULTS = [
   "/yield/",
   "/liquidity/",
   "/depeg/",
-  "/blacklist/",
+  "/freezewatch/",
   "/stability-index/",
   "/safety-scores/",
   "/api/",

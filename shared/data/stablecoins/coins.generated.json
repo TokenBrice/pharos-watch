@@ -1133,6 +1133,127 @@
     }
   },
   {
+    "id": "audm-mento",
+    "llamaId": "361",
+    "detailProvider": "defillama",
+    "name": "Mento Australian Dollar",
+    "symbol": "AUDm",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "AUD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
+    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit AUDm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "geckoId": "celo-australian-dollar",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://reserve.mento.org/",
+      "provider": "Mento Reserve dashboard"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.mento.org/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/MentoLabs"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "celo",
+        "address": "0x7175504c455076f15c04a2f90a8e352281f492f9",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "AUDm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
+        "pct": 43,
+        "risk": "low",
+        "coinId": "susds-sky"
+      },
+      {
+        "name": "CELO",
+        "pct": 17,
+        "risk": "high"
+      },
+      {
+        "name": "EURC",
+        "pct": 14,
+        "risk": "low",
+        "coinId": "eurc-circle"
+      },
+      {
+        "name": "USDC",
+        "pct": 11,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      },
+      {
+        "name": "USDT",
+        "pct": 7,
+        "risk": "low",
+        "coinId": "usdt-tether"
+      },
+      {
+        "name": "axlEUROC",
+        "pct": 5,
+        "risk": "medium"
+      },
+      {
+        "name": "stETH",
+        "pct": 2,
+        "risk": "low"
+      },
+      {
+        "name": "AUSD and smaller reserve assets",
+        "pct": 1,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "mento-reserve",
+      "display": {
+        "url": "https://reserve.mento.org/",
+        "label": "Mento Reserve"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
+      "adapter": "mento",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      }
+    }
+  },
+  {
     "id": "audx-aussie-dollar-token",
     "detailProvider": "coingecko",
     "name": "Aussie Dollar Token",
@@ -2960,6 +3081,127 @@
     ]
   },
   {
+    "id": "brlm-mento",
+    "llamaId": "199",
+    "detailProvider": "defillama",
+    "name": "Mento Brazilian Real",
+    "symbol": "BRLm",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "BRL",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
+    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit BRLm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "geckoId": "celo-real-creal",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://reserve.mento.org/",
+      "provider": "Mento Reserve dashboard"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.mento.org/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/MentoLabs"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "celo",
+        "address": "0xe8537a3d056da446677b9e9d6c5db704eaab4787",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "BRLm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
+        "pct": 43,
+        "risk": "low",
+        "coinId": "susds-sky"
+      },
+      {
+        "name": "CELO",
+        "pct": 17,
+        "risk": "high"
+      },
+      {
+        "name": "EURC",
+        "pct": 14,
+        "risk": "low",
+        "coinId": "eurc-circle"
+      },
+      {
+        "name": "USDC",
+        "pct": 11,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      },
+      {
+        "name": "USDT",
+        "pct": 7,
+        "risk": "low",
+        "coinId": "usdt-tether"
+      },
+      {
+        "name": "axlEUROC",
+        "pct": 5,
+        "risk": "medium"
+      },
+      {
+        "name": "stETH",
+        "pct": 2,
+        "risk": "low"
+      },
+      {
+        "name": "AUSD and smaller reserve assets",
+        "pct": 1,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "mento-reserve",
+      "display": {
+        "url": "https://reserve.mento.org/",
+        "label": "Mento Reserve"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
+      "adapter": "mento",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      }
+    }
+  },
+  {
     "id": "brlv-crown",
     "detailProvider": "coingecko",
     "name": "Crown BRLV",
@@ -3890,6 +4132,127 @@
         "sourceUrl": "https://www.businesswire.com/news/home/20260504197679/en/Tetra-Digital-Group-Launches-CADD-Canadas-First-CAD-Backed-Stablecoin-Issued-by-a-Financial-Institution"
       }
     ]
+  },
+  {
+    "id": "cadm-mento",
+    "llamaId": "360",
+    "detailProvider": "defillama",
+    "name": "Mento Canadian Dollar",
+    "symbol": "CADm",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "CAD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
+    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit CADm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "geckoId": "celo-canadian-dollar",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://reserve.mento.org/",
+      "provider": "Mento Reserve dashboard"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.mento.org/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/MentoLabs"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "celo",
+        "address": "0xff4ab19391af240c311c54200a492233052b6325",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "CADm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
+        "pct": 43,
+        "risk": "low",
+        "coinId": "susds-sky"
+      },
+      {
+        "name": "CELO",
+        "pct": 17,
+        "risk": "high"
+      },
+      {
+        "name": "EURC",
+        "pct": 14,
+        "risk": "low",
+        "coinId": "eurc-circle"
+      },
+      {
+        "name": "USDC",
+        "pct": 11,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      },
+      {
+        "name": "USDT",
+        "pct": 7,
+        "risk": "low",
+        "coinId": "usdt-tether"
+      },
+      {
+        "name": "axlEUROC",
+        "pct": 5,
+        "risk": "medium"
+      },
+      {
+        "name": "stETH",
+        "pct": 2,
+        "risk": "low"
+      },
+      {
+        "name": "AUSD and smaller reserve assets",
+        "pct": 1,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "mento-reserve",
+      "display": {
+        "url": "https://reserve.mento.org/",
+        "label": "Mento Reserve"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
+      "adapter": "mento",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      }
+    }
   },
   {
     "id": "cash-phantom",
@@ -4891,6 +5254,134 @@
         "risk": "medium"
       }
     }
+  },
+  {
+    "id": "copm-mento",
+    "llamaId": "362",
+    "detailProvider": "defillama",
+    "name": "Mento Colombian Peso",
+    "symbol": "COPm",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "OTHER",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
+    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit COPm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "geckoId": "ccop",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://reserve.mento.org/",
+      "provider": "Mento Reserve dashboard"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.mento.org/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/MentoLabs"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "celo",
+        "address": "0x8a567e2ae79ca692bd748ab832081c45de4041ea",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "COPm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
+        "pct": 43,
+        "risk": "low",
+        "coinId": "susds-sky"
+      },
+      {
+        "name": "CELO",
+        "pct": 17,
+        "risk": "high"
+      },
+      {
+        "name": "EURC",
+        "pct": 14,
+        "risk": "low",
+        "coinId": "eurc-circle"
+      },
+      {
+        "name": "USDC",
+        "pct": 11,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      },
+      {
+        "name": "USDT",
+        "pct": 7,
+        "risk": "low",
+        "coinId": "usdt-tether"
+      },
+      {
+        "name": "axlEUROC",
+        "pct": 5,
+        "risk": "medium"
+      },
+      {
+        "name": "stETH",
+        "pct": 2,
+        "risk": "low"
+      },
+      {
+        "name": "AUSD and smaller reserve assets",
+        "pct": 1,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "mento-reserve",
+      "display": {
+        "url": "https://reserve.mento.org/",
+        "label": "Mento Reserve"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
+      "adapter": "mento",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Peg grouped as Other",
+        "message": "COP is not yet a first-class Pharos peg-currency enum, so COPm is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
+      }
+    ]
   },
   {
     "id": "crvusd-curve",
@@ -10083,6 +10574,134 @@
     }
   },
   {
+    "id": "ghsm-mento",
+    "llamaId": "372",
+    "detailProvider": "defillama",
+    "name": "Mento Ghanaian Cedi",
+    "symbol": "GHSm",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "OTHER",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
+    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit GHSm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "geckoId": "cghs",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://reserve.mento.org/",
+      "provider": "Mento Reserve dashboard"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.mento.org/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/MentoLabs"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "celo",
+        "address": "0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "GHSm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
+        "pct": 43,
+        "risk": "low",
+        "coinId": "susds-sky"
+      },
+      {
+        "name": "CELO",
+        "pct": 17,
+        "risk": "high"
+      },
+      {
+        "name": "EURC",
+        "pct": 14,
+        "risk": "low",
+        "coinId": "eurc-circle"
+      },
+      {
+        "name": "USDC",
+        "pct": 11,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      },
+      {
+        "name": "USDT",
+        "pct": 7,
+        "risk": "low",
+        "coinId": "usdt-tether"
+      },
+      {
+        "name": "axlEUROC",
+        "pct": 5,
+        "risk": "medium"
+      },
+      {
+        "name": "stETH",
+        "pct": 2,
+        "risk": "low"
+      },
+      {
+        "name": "AUSD and smaller reserve assets",
+        "pct": 1,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "mento-reserve",
+      "display": {
+        "url": "https://reserve.mento.org/",
+        "label": "Mento Reserve"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
+      "adapter": "mento",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Peg grouped as Other",
+        "message": "GHS is not yet a first-class Pharos peg-currency enum, so GHSm is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
+      }
+    ]
+  },
+  {
     "id": "gldy-streamex",
     "detailProvider": "commodity",
     "name": "Streamex Gold Yield",
@@ -11237,6 +11856,69 @@
       {
         "date": "2026-H1",
         "setOn": "2026-05-12"
+      }
+    ]
+  },
+  {
+    "id": "hlusd-hela",
+    "detailProvider": "coingecko",
+    "name": "HeLa USD",
+    "symbol": "HLUSD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Fiat and fiat-equivalent reserve assets supporting the HeLa ecosystem's HLUSD stablecoin at a one U.S. dollar target",
+    "pegMechanism": "Issuer- and ecosystem-managed stablecoin used as the HeLa runtime settlement asset, with external pricing and market-cap coverage supplied by CoinGecko",
+    "geckoId": "hela-usd",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.helalabs.com/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.stablehodl.com/overview/about-hlusd"
+      },
+      {
+        "label": "Governance",
+        "url": "https://docs.helalabs.com/hlusd/stablecoin-governance"
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "blacklistabilityReview": {
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Website",
+          "url": "https://www.helalabs.com/"
+        }
+      ],
+      "evidence": "HLUSD is managed by the HeLa ecosystem and its native chain is not yet modeled in Pharos contracts; available sources do not prove a direct holder blacklist path, so admin-control risk is retained as possible.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Fiat and fiat-equivalent reserves",
+        "pct": 100,
+        "risk": "medium"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Native chain not yet supported",
+        "message": "CoinGecko lists HLUSD without a supported Pharos contract platform. Runtime coverage uses the CoinGecko price and market-cap path while contract coverage remains intentionally absent."
       }
     ]
   },
@@ -13290,6 +13972,134 @@
     }
   },
   {
+    "id": "kesm-mento",
+    "llamaId": "367",
+    "detailProvider": "defillama",
+    "name": "Mento Kenyan Shilling",
+    "symbol": "KESm",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "OTHER",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
+    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit KESm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "geckoId": "celo-kenyan-shilling",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://reserve.mento.org/",
+      "provider": "Mento Reserve dashboard"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.mento.org/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/MentoLabs"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "celo",
+        "address": "0x456a3d042c0dbd3db53d5489e98dfb038553b0d0",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "KESm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
+        "pct": 43,
+        "risk": "low",
+        "coinId": "susds-sky"
+      },
+      {
+        "name": "CELO",
+        "pct": 17,
+        "risk": "high"
+      },
+      {
+        "name": "EURC",
+        "pct": 14,
+        "risk": "low",
+        "coinId": "eurc-circle"
+      },
+      {
+        "name": "USDC",
+        "pct": 11,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      },
+      {
+        "name": "USDT",
+        "pct": 7,
+        "risk": "low",
+        "coinId": "usdt-tether"
+      },
+      {
+        "name": "axlEUROC",
+        "pct": 5,
+        "risk": "medium"
+      },
+      {
+        "name": "stETH",
+        "pct": 2,
+        "risk": "low"
+      },
+      {
+        "name": "AUSD and smaller reserve assets",
+        "pct": 1,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "mento-reserve",
+      "display": {
+        "url": "https://reserve.mento.org/",
+        "label": "Mento Reserve"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
+      "adapter": "mento",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Peg grouped as Other",
+        "message": "KES is not yet a first-class Pharos peg-currency enum, so KESm is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
+      }
+    ]
+  },
+  {
     "id": "kgst-kyrgyz-som",
     "detailProvider": "coingecko",
     "name": "Kyrgyz Som Stablecoin",
@@ -14103,6 +14913,72 @@
     }
   },
   {
+    "id": "lvusd-leverup",
+    "detailProvider": "coingecko",
+    "name": "LeverUp USD",
+    "symbol": "lvUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "USDC and MON collateral supporting LeverUp's liquidity-layer stablecoin for perpetuals and margin trading",
+    "pegMechanism": "Synthetic stablecoin used inside LeverUp's Monad liquidity layer, with mint, burn, and redemption mechanics tied to the protocol's collateral and trading engine",
+    "geckoId": "leverup-usd",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://leverup.xyz/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "monad",
+        "address": "0xfd44b35139ae53fff7d8f2a9869c503d987f00d1",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "blacklistabilityReview": {
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Docs",
+          "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
+        }
+      ],
+      "evidence": "lvUSD is tied to a managed perpetuals liquidity layer on a new chain; available sources do not prove a direct blacklist function, but admin and protocol-control risk remain unresolved.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "governanceQuality": "multisig",
+    "reserves": [
+      {
+        "name": "USDC and MON liquidity-layer collateral",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Perpetuals liquidity-layer stablecoin",
+        "message": "lvUSD is included through CoinGecko price and market-cap coverage, but its collateral and redemption model are tied to LeverUp's trading system rather than a conventional issuer reserve."
+      }
+    ]
+  },
+  {
     "id": "m-m0",
     "llamaId": "213",
     "detailProvider": "defillama",
@@ -14873,6 +15749,76 @@
         }
       }
     }
+  },
+  {
+    "id": "moveusd-cfx",
+    "llamaId": "389",
+    "detailProvider": "defillama",
+    "name": "CFX MoveUSD",
+    "symbol": "MOVEUSD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "USD deposits, cash-equivalent instruments, and marketable U.S. Treasury securities supporting the CFX-issued MoveUSD token at a 1:1 U.S. dollar target",
+    "pegMechanism": "Issuer-managed mint and redemption route for approved CFX customers, with MOVEUSD intended to trade and settle at one U.S. dollar on Solana",
+    "links": [
+      {
+        "label": "Docs",
+        "url": "https://docs.moveusd.com/docs/what-is-moveusd"
+      },
+      {
+        "label": "Market Page",
+        "url": "https://perena.org/stablecoins/moveusd"
+      },
+      {
+        "label": "Token",
+        "url": "https://www.solflare.com/prices/moveusd/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "solana",
+        "address": "3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "blacklistabilityReview": {
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Docs",
+          "url": "https://docs.moveusd.com/docs/what-is-moveusd"
+        }
+      ],
+      "evidence": "MoveUSD is issuer-managed on Solana and public docs describe a centralized CFX issuance and redemption process; available registry sources do not prove a holder-level freeze path.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "mature-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "USD deposits, cash equivalents, and marketable U.S. Treasury securities",
+        "pct": 100,
+        "risk": "low"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Tokenized-deposit profile",
+        "message": "MoveUSD is tracked because DefiLlama reports a current price and circulating supply, but its public materials present it as a CFX-issued stable token for approved customers rather than an open DeFi-native stablecoin."
+      }
+    ]
   },
   {
     "id": "mre7yield-midas",
@@ -16217,6 +17163,75 @@
     }
   },
   {
+    "id": "nusd-nexus",
+    "llamaId": "18",
+    "detailProvider": "defillama",
+    "name": "Nexus USD",
+    "symbol": "NUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Synapse stable-swap pool assets backed by DAI, USDC, and USDT liquidity across supported bridge deployments",
+    "pegMechanism": "Bridge-liquidity stable asset minted and redeemed through Synapse pool routes, with the dollar peg inherited from the underlying stablecoin basket and pool arbitrage",
+    "links": [
+      {
+        "label": "DefiLlama",
+        "url": "https://stablecoins.llama.fi/stablecoin/18"
+      },
+      {
+        "label": "Wiki",
+        "url": "https://wiki.defillama.com/wiki/NUSD"
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "NUSD inherits upstream freeze exposure because the modeled reserve basket references DAI, USDC, and USDT stablecoin liquidity.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "stage1-l2",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "multisig",
+    "reserves": [
+      {
+        "name": "DAI liquidity",
+        "pct": 34,
+        "risk": "low",
+        "coinId": "dai-makerdao",
+        "depType": "collateral"
+      },
+      {
+        "name": "USDC liquidity",
+        "pct": 33,
+        "risk": "low",
+        "coinId": "usdc-circle",
+        "depType": "collateral"
+      },
+      {
+        "name": "USDT liquidity",
+        "pct": 33,
+        "risk": "low",
+        "coinId": "usdt-tether",
+        "depType": "collateral"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Legacy bridge-liquidity asset",
+        "message": "NUSD is included because DefiLlama still returns a live price and circulating supply, but it represents a legacy Synapse bridge liquidity stable asset rather than a standalone modern issuer token. Contract coverage is intentionally omitted pending fresh Synapse deployment verification."
+      }
+    ]
+  },
+  {
     "id": "nwisdom-nest",
     "detailProvider": "coingecko",
     "name": "Nest Wisdom Vault",
@@ -17119,6 +18134,131 @@
         "sourceUrl": "https://polarisfinance.io/blog/path-to-the-north-star/"
       }
     ]
+  },
+  {
+    "id": "phpm-mento",
+    "llamaId": "359",
+    "detailProvider": "defillama",
+    "name": "Mento Philippine Peso",
+    "symbol": "PHPm",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "PHP",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
+    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit PHPm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "geckoId": "puso",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://reserve.mento.org/",
+      "provider": "Mento Reserve dashboard"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.mento.org/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/MentoLabs"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "PUSO Launch Note",
+        "url": "https://www.mento.org/blog/introducing-puso-the-first-decentralized-philippine-peso-stablecoin"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "celo",
+        "address": "0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "PHPm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
+        "pct": 43,
+        "risk": "low",
+        "coinId": "susds-sky"
+      },
+      {
+        "name": "CELO",
+        "pct": 17,
+        "risk": "high"
+      },
+      {
+        "name": "EURC",
+        "pct": 14,
+        "risk": "low",
+        "coinId": "eurc-circle"
+      },
+      {
+        "name": "USDC",
+        "pct": 11,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      },
+      {
+        "name": "USDT",
+        "pct": 7,
+        "risk": "low",
+        "coinId": "usdt-tether"
+      },
+      {
+        "name": "axlEUROC",
+        "pct": 5,
+        "risk": "medium"
+      },
+      {
+        "name": "stETH",
+        "pct": 2,
+        "risk": "low"
+      },
+      {
+        "name": "AUSD and smaller reserve assets",
+        "pct": 1,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "mento-reserve",
+      "display": {
+        "url": "https://reserve.mento.org/",
+        "label": "Mento Reserve"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
+      "adapter": "mento",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      }
+    }
   },
   {
     "id": "pht-pht",
@@ -20616,6 +21756,82 @@
     "yieldConfig": {
       "yieldSource": "Aave Umbrella stkGHO rewards",
       "yieldType": "governance-set"
+    }
+  },
+  {
+    "id": "stusd-stoneyield",
+    "detailProvider": "coingecko",
+    "name": "StoneYield USD",
+    "symbol": "stUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "collateral": "USDC and yield-bearing USDC positions routed through StoneYield's protocol contracts and Venus-linked strategy layer",
+    "pegMechanism": "StoneYield wrapper token designed to maintain one-dollar accounting against deposited stablecoin assets while strategy yield accrues through the protocol's managed vault structure",
+    "geckoId": "stoneyield-usd",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://stoneyield.io"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.stoneyield.io/"
+      },
+      {
+        "label": "Contract Design",
+        "url": "https://docs.stoneyield.io/docs/protocol/contract-design"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "bsc",
+        "address": "0x806dd21af6de051fb811760a5768d04a99160eb9",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "blacklistabilityReview": {
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Docs",
+          "url": "https://docs.stoneyield.io/"
+        }
+      ],
+      "evidence": "StoneYield USD is a managed yield wrapper on BNB Chain; docs identify protocol controls, but available sources do not prove an active holder-balance blacklist function.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "multisig",
+    "reserves": [
+      {
+        "name": "USDC and yield-bearing USDC strategy positions",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "collateral"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Yield wrapper, not a plain cash stablecoin",
+        "message": "stUSD is tracked because CoinGecko returns a live price and market cap, but its structure is a managed yield wrapper around stablecoin strategies rather than a simple fiat-backed dollar token."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "StoneYield protocol",
+      "yieldType": "lending-vault"
     }
   },
   {
@@ -31875,6 +33091,65 @@
     }
   },
   {
+    "id": "vusd-virtue",
+    "detailProvider": "coingecko",
+    "name": "Virtue USD",
+    "symbol": "VUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Overcollateralized IOTA and stIOTA positions backing VUSD debt inside the Virtue Money protocol",
+    "pegMechanism": "CDP-style mint: users borrow VUSD against IOTA or stIOTA collateral and repay debt to unlock collateral, with liquidation and redemption mechanics supporting the U.S. dollar peg",
+    "geckoId": "virtue-usd",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://virtue.money/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.virtue.money/overview/what-is-vusd"
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "blacklistabilityReview": {
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Docs",
+          "url": "https://docs.virtue.money/overview/what-is-vusd"
+        }
+      ],
+      "evidence": "Virtue is a crypto-collateralized protocol, but the IOTA deployment is not yet represented in Pharos contract metadata and available sources do not prove the absence of admin or pause surfaces.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "governanceQuality": "multisig",
+    "reserves": [
+      {
+        "name": "IOTA and stIOTA collateral",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "IOTA contract excluded",
+        "message": "CoinGecko verifies the IOTA VUSD object, but IOTA is not yet a supported Pharos chain. Runtime coverage uses the CoinGecko supplemental path and leaves contracts[] empty."
+      }
+    ]
+  },
+  {
     "id": "wars-argentine-peso",
     "llamaId": "379",
     "detailProvider": "defillama",
@@ -31986,6 +33261,298 @@
         "risk": "high"
       }
     }
+  },
+  {
+    "id": "wbrl-ripio",
+    "llamaId": "380",
+    "detailProvider": "defillama",
+    "name": "Ripio wBRL",
+    "symbol": "WBRL",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "BRL",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Brazilian-real cash and liquid local-currency instruments backing Ripio wBRL at a one Brazilian real target",
+    "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WBRL = 1 BRL through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
+    "geckoId": "brazilian-real",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/ripioapp"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Brazil"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "decimals": 18
+      },
+      {
+        "chain": "worldchain",
+        "address": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "decimals": 18
+      },
+      {
+        "chain": "gnosis",
+        "address": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "blacklistabilityReview": {
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Website",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        }
+      ],
+      "evidence": "Ripio wBRL is centrally issued across multiple EVM chains; the public source confirms issuer-managed wFIAT mechanics but does not prove a holder-level blacklist path.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Brazilian-real cash and local-currency liquid instruments",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "No per-token attestation located",
+        "message": "Ripio describes wFIAT local-currency backing, but no reliable public per-token reserve attestation was found for WBRL during this addition. Curated reserves remain conservative until source coverage improves."
+      }
+    ]
+  },
+  {
+    "id": "wclp-ripio",
+    "llamaId": "381",
+    "detailProvider": "defillama",
+    "name": "Ripio wCLP",
+    "symbol": "WCLP",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "OTHER",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Chilean-peso cash and liquid local-currency instruments backing Ripio wCLP at a one Chilean peso target",
+    "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WCLP = 1 CLP through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
+    "geckoId": "chilean-peso",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/ripioapp"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Chile"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "decimals": 18
+      },
+      {
+        "chain": "worldchain",
+        "address": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "decimals": 18
+      },
+      {
+        "chain": "gnosis",
+        "address": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "blacklistabilityReview": {
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Website",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        }
+      ],
+      "evidence": "Ripio wCLP is centrally issued across multiple EVM chains; the public source confirms issuer-managed wFIAT mechanics but does not prove a holder-level blacklist path.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Chilean-peso cash and local-currency liquid instruments",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Peg grouped as Other",
+        "message": "CLP is not yet a first-class Pharos peg-currency enum, so WCLP is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
+      },
+      {
+        "type": "info",
+        "title": "No per-token attestation located",
+        "message": "Ripio describes wFIAT local-currency backing, but no reliable public per-token reserve attestation was found for WCLP during this addition. Curated reserves remain conservative until source coverage improves."
+      }
+    ]
+  },
+  {
+    "id": "wcop-ripio",
+    "llamaId": "382",
+    "detailProvider": "defillama",
+    "name": "Ripio wCOP",
+    "symbol": "WCOP",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "OTHER",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Colombian-peso cash and liquid local-currency instruments backing Ripio wCOP at a one Colombian peso target",
+    "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WCOP = 1 COP through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
+    "geckoId": "colombian-peso",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/ripioapp"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Colombia"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "decimals": 18
+      },
+      {
+        "chain": "worldchain",
+        "address": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "decimals": 18
+      },
+      {
+        "chain": "gnosis",
+        "address": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "blacklistabilityReview": {
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Website",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        }
+      ],
+      "evidence": "Ripio wCOP is centrally issued across multiple EVM chains; the public source confirms issuer-managed wFIAT mechanics but does not prove a holder-level blacklist path.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Colombian-peso cash and local-currency liquid instruments",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Peg grouped as Other",
+        "message": "COP is not yet a first-class Pharos peg-currency enum, so WCOP is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
+      },
+      {
+        "type": "info",
+        "title": "No per-token attestation located",
+        "message": "Ripio describes wFIAT local-currency backing, but no reliable public per-token reserve attestation was found for WCOP during this addition. Curated reserves remain conservative until source coverage improves."
+      }
+    ]
   },
   {
     "id": "wemix-dollar-wemix",
@@ -32328,6 +33895,105 @@
         }
       }
     }
+  },
+  {
+    "id": "wpen-ripio",
+    "llamaId": "384",
+    "detailProvider": "defillama",
+    "name": "Ripio wPEN",
+    "symbol": "WPEN",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "OTHER",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Peruvian-sol cash and liquid local-currency instruments backing Ripio wPEN at a one Peruvian sol target",
+    "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WPEN = 1 PEN through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
+    "geckoId": "peruvian-sol",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/ripioapp"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Peru"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "decimals": 18
+      },
+      {
+        "chain": "worldchain",
+        "address": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "decimals": 18
+      },
+      {
+        "chain": "gnosis",
+        "address": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "blacklistabilityReview": {
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Website",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        }
+      ],
+      "evidence": "Ripio wPEN is centrally issued across multiple EVM chains; the public source confirms issuer-managed wFIAT mechanics but does not prove a holder-level blacklist path.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Peruvian-sol cash and local-currency liquid instruments",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Peg grouped as Other",
+        "message": "PEN is not yet a first-class Pharos peg-currency enum, so WPEN is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
+      },
+      {
+        "type": "info",
+        "title": "No per-token attestation located",
+        "message": "Ripio describes wFIAT local-currency backing, but no reliable public per-token reserve attestation was found for WPEN during this addition. Curated reserves remain conservative until source coverage improves."
+      }
+    ]
   },
   {
     "id": "wsrusd-reservoir",
@@ -33192,6 +34858,73 @@
         "type": "info",
         "title": "Native gas-token supply",
         "message": "xDAI is native to Gnosis Chain; the configured contract is listed as a traded wrapper rather than a canonical supply contract."
+      }
+    ]
+  },
+  {
+    "id": "xmd-metal-dollar",
+    "detailProvider": "coingecko",
+    "name": "Metal Dollar",
+    "symbol": "XMD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Reserve basket of dollar stablecoins used by Metal Dollar, including USDC, PYUSD, and Paxos-dollar components such as USDP / XPAX",
+    "pegMechanism": "Basket-backed stablecoin index on XPR Network, with mint and redeem flows intended to keep XMD near one U.S. dollar against the underlying stablecoin basket",
+    "geckoId": "metal-dollar",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.metallicus.com/metal-dollar"
+      },
+      {
+        "label": "Mint",
+        "url": "https://metaldollar.com/mint"
+      },
+      {
+        "label": "Treasury",
+        "url": "https://metaldollar.com/treasury-cryptos"
+      },
+      {
+        "label": "Docs",
+        "url": "https://help.xprnetwork.org/hc/en-us/articles/26897441891735-What-is-Metal-Dollar-XMD"
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "blacklistabilityReview": {
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Docs",
+          "url": "https://help.xprnetwork.org/hc/en-us/articles/26897441891735-What-is-Metal-Dollar-XMD"
+        }
+      ],
+      "evidence": "XMD runs on an unsupported non-EVM network and is backed by freezable centralized stablecoins; available Pharos sources do not prove a direct holder blacklist path on the XMD token itself.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "USDC, PYUSD, and Paxos dollar stablecoin basket",
+        "pct": 100,
+        "risk": "low"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "XPR Network contract gap",
+        "message": "CoinGecko resolves XMD on XPR Network, which is not currently a Pharos-supported chain. Runtime coverage uses CoinGecko price and market cap, while contract-level coverage is intentionally skipped."
       }
     ]
   },
@@ -34555,6 +36288,127 @@
     "yieldConfig": {
       "yieldSource": "Yuzu savings (syzUSD)",
       "yieldType": "lending-vault"
+    }
+  },
+  {
+    "id": "zarm-mento",
+    "llamaId": "368",
+    "detailProvider": "defillama",
+    "name": "Mento South African Rand",
+    "symbol": "ZARm",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "ZAR",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
+    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit ZARm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "geckoId": "celo-south-african-rand",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://reserve.mento.org/",
+      "provider": "Mento Reserve dashboard"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.mento.org/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/MentoLabs"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "celo",
+        "address": "0x4c35853a3b4e647fd266f4de678dcc8fec410bf6",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "ZARm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
+      "reviewer": "Codex coverage expansion",
+      "reviewedAt": "2026-05-12"
+    },
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
+        "pct": 43,
+        "risk": "low",
+        "coinId": "susds-sky"
+      },
+      {
+        "name": "CELO",
+        "pct": 17,
+        "risk": "high"
+      },
+      {
+        "name": "EURC",
+        "pct": 14,
+        "risk": "low",
+        "coinId": "eurc-circle"
+      },
+      {
+        "name": "USDC",
+        "pct": 11,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      },
+      {
+        "name": "USDT",
+        "pct": 7,
+        "risk": "low",
+        "coinId": "usdt-tether"
+      },
+      {
+        "name": "axlEUROC",
+        "pct": 5,
+        "risk": "medium"
+      },
+      {
+        "name": "stETH",
+        "pct": 2,
+        "risk": "low"
+      },
+      {
+        "name": "AUSD and smaller reserve assets",
+        "pct": 1,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "mento-reserve",
+      "display": {
+        "url": "https://reserve.mento.org/",
+        "label": "Mento Reserve"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
+      "adapter": "mento",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      }
     }
   },
   {

@@ -9,15 +9,17 @@ describe("nav-config", () => {
       "/safety-scores",
       "/yield",
       "/alt-pegs",
+      "/freezewatch",
       "/pharoswatchbot",
     ]);
     expect(PRIMARY_NAV_ITEMS.find((item) => item.href === "/alt-pegs")?.label).toBe("Non-USD Stables");
     expect(PRIMARY_NAV_ITEMS.at(-1)).toMatchObject({ href: "/pharoswatchbot", label: "PharosWatchBot" });
 
-    // PharosWatchBot is a main route now, immediately after the Non-USD Stable
-    // market-structure page. Digest and Status stay in MONITOR.
+    // FreezeWatch and PharosWatchBot are main routes now, immediately after
+    // the Non-USD Stable market-structure page. Digest and Status stay in MONITOR.
     const dataGroup = NAV_GROUPS.find((group) => group.key === "data");
     const monitorGroup = NAV_GROUPS.find((group) => group.key === "monitor");
+    expect(dataGroup?.items.some((item) => item.href === "/freezewatch")).toBe(false);
     expect(dataGroup?.items.some((item) => item.href === "/pharoswatchbot")).toBe(false);
     expect(monitorGroup?.items.some((item) => item.href === "/pharoswatchbot")).toBe(false);
   });
@@ -36,7 +38,6 @@ describe("nav-config", () => {
       "Liquidity",
       "Depeg",
       "Mint/Burn Flows",
-      "Blacklist",
       "Chains",
       "Cemetery",
     ]);

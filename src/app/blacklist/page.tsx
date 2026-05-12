@@ -1,26 +1,30 @@
 import type { Metadata } from "next";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import BlacklistClient from "./client";
+import FreezeWatchClient from "../freezewatch/client";
 
 export const metadata: Metadata = {
-  title: "Blacklist Tracker",
+  title: "FreezeWatch",
   description:
-    "Track issuer freezes, unfreezes, blocks, pauses, denylist changes, and token wipes across supported stablecoin contracts and chains.",
+    "Live view of issuer control over your stablecoin balance: freezes, unfreezes, blocks, pauses, denylist changes, and token wipes across supported contracts and chains.",
   alternates: {
-    canonical: "/blacklist/",
+    canonical: "/freezewatch/",
   },
   openGraph: {
-    title: "Blacklist Tracker",
+    title: "FreezeWatch",
     description:
-      "Track issuer freezes, unfreezes, blocks, pauses, denylist changes, and token wipes across supported stablecoin contracts and chains.",
-    url: "/blacklist/",
+      "Live view of issuer control over your stablecoin balance: freezes, unfreezes, blocks, pauses, denylist changes, and token wipes across supported contracts and chains.",
+    url: "/freezewatch/",
     images: [{ url: `${SITE_URL}/og-blacklist.png`, width: 1200, height: 628 }],
   },
+  robots: {
+    index: false,
+    follow: true,
+  },
   twitter: {
-    images: [{ url: `${SITE_URL}/og-blacklist.png`, width: 1200, height: 628 }],
+    card: "summary_large_image",
   },
 };
 
-export default function BlacklistPage() {
-  return <BlacklistClient />;
+export default function LegacyBlacklistPage() {
+  return <FreezeWatchClient />;
 }

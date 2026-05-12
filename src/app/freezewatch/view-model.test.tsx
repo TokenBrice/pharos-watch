@@ -3,8 +3,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  parseBlacklistPageFilters,
-  useBlacklistPageController,
+  parseFreezeWatchPageFilters,
+  useFreezeWatchPageController,
 } from "./view-model";
 
 const { useBlacklistSummaryMock, useBlacklistEventsPageMock, replaceParamsMock, trackEventMock, trackSearchMock } = vi.hoisted(() => ({
@@ -48,9 +48,9 @@ vi.mock("@/hooks/api-hooks", () => ({
   }),
 }));
 
-describe("parseBlacklistPageFilters", () => {
+describe("parseFreezeWatchPageFilters", () => {
   it("normalizes accepted values and falls back for invalid input", () => {
-    const filters = parseBlacklistPageFilters(
+    const filters = parseFreezeWatchPageFilters(
       "?stablecoin=usdt&chain=tron&event=destroy&sortBy=event&sortDirection=asc&page=2&q=abc&status=yes",
     );
 
@@ -67,7 +67,7 @@ describe("parseBlacklistPageFilters", () => {
   });
 
   it("treats invalid filters and sentinel query values as defaults", () => {
-    const filters = parseBlacklistPageFilters("?stablecoin=bad&page=0&q=all&status=unknown");
+    const filters = parseFreezeWatchPageFilters("?stablecoin=bad&page=0&q=all&status=unknown");
 
     expect(filters.stablecoinFilter).toBe("all");
     expect(filters.page).toBe(1);
@@ -76,13 +76,13 @@ describe("parseBlacklistPageFilters", () => {
   });
 
   it("accepts chainId as a URL alias for chain", () => {
-    const filters = parseBlacklistPageFilters("?chainId=ethereum");
+    const filters = parseFreezeWatchPageFilters("?chainId=ethereum");
 
     expect(filters.chainFilter).toBe("ethereum");
   });
 });
 
-describe("useBlacklistPageController", () => {
+describe("useFreezeWatchPageController", () => {
   beforeEach(() => {
     currentSearch = "?stablecoin=usdt&chain=tron&event=destroy&sortBy=event&sortDirection=asc&page=2&q=abc&status=yes";
     useBlacklistSummaryMock.mockReset();
@@ -128,7 +128,7 @@ describe("useBlacklistPageController", () => {
   });
 
   it("derives page state, updates URL filters, and preserves pagination semantics", () => {
-    const { result, rerender } = renderHook(() => useBlacklistPageController());
+    const { result, rerender } = renderHook(() => useFreezeWatchPageController());
 
     expect(useBlacklistEventsPageMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -159,7 +159,7 @@ describe("useBlacklistPageController", () => {
     expect(nextSearch.get("page")).toBeNull();
     expect(nextSearch.get("q")).toBe("abc");
     expect(trackEventMock).toHaveBeenCalledWith("filter_applied", {
-      page: "blacklist",
+      page: "freezewatch",
       filter_type: "stablecoin",
       filter_value: "all",
     });
@@ -178,7 +178,7 @@ describe("useBlacklistPageController", () => {
 
   it("debounces search updates and scrolls the drilldown when the status bucket changes", () => {
     vi.useFakeTimers();
-    const { result, rerender } = renderHook(() => useBlacklistPageController());
+    const { result, rerender } = renderHook(() => useFreezeWatchPageController());
     const drilldownEl = document.createElement("div");
     drilldownEl.scrollIntoView = vi.fn();
     result.current.drilldownRef.current = drilldownEl;
@@ -197,7 +197,7 @@ describe("useBlacklistPageController", () => {
     act(() => {
       vi.advanceTimersByTime(1);
     });
-    expect(trackSearchMock).toHaveBeenCalledWith("blacklist", "0xdeadbeef".length);
+    expect(trackSearchMock).toHaveBeenCalledWith("freezewatch", "0xdeadbeef".length);
     expect(new URLSearchParams(currentSearch).get("q")).toBe("0xdeadbeef");
 
     currentSearch = "?status=possible";
@@ -219,7 +219,7 @@ describe("useBlacklistPageController", () => {
       refetch: vi.fn(),
       meta: { preset: "blacklist" },
     });
-    const { result } = renderHook(() => useBlacklistPageController());
+    const { result } = renderHook(() => useFreezeWatchPageController());
     expect(result.current.clampedPage).toBe(1);
   });
 
@@ -232,14 +232,14 @@ describe("useBlacklistPageController", () => {
       refetch: vi.fn(),
       meta: { preset: "blacklist" },
     });
-    const { result } = renderHook(() => useBlacklistPageController());
+    const { result } = renderHook(() => useFreezeWatchPageController());
     expect(result.current.rangeStart).toBe(0);
     expect(result.current.rangeEnd).toBe(0);
   });
 
   it("resets page to 1 when applying a new filter", () => {
     currentSearch = "?page=3";
-    const { result } = renderHook(() => useBlacklistPageController());
+    const { result } = renderHook(() => useFreezeWatchPageController());
     act(() => result.current.handleStablecoinChange("USDC"));
     const nextParams = new URLSearchParams(currentSearch);
     expect(nextParams.get("page")).toBeNull();

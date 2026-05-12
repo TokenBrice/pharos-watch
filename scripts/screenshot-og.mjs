@@ -28,7 +28,7 @@ const PAGES = [
   { path: '/liquidity',       file: 'og-liquidity.png'      },
   { path: '/safety-scores',   file: 'og-safety-scores.png'  },
   { path: '/yield',           file: 'og-yield.png'          },
-  { path: '/blacklist',       file: 'og-blacklist.png'      },
+  { path: '/freezewatch',     file: 'og-blacklist.png'      },
   { path: '/stability-index', file: 'og-stability-index.png'},
   { path: '/dependency-map',  file: 'og-dependency-map.png' },
   { path: '/digest',          file: 'og-digest.png'          },

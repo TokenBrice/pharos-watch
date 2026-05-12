@@ -302,9 +302,9 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
         icon: ArrowUpDown,
       },
       {
-        title: "Blacklist Tracker",
+        title: "FreezeWatch",
         description: "Issuer intervention and freeze events across supported chains.",
-        href: "/blacklist/",
+        href: "/freezewatch/",
         icon: ShieldBan,
       },
       {
