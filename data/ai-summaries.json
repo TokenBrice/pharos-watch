@@ -1608,5 +1608,25 @@
     "title": "Backed's EUR Govt Bond Tracker",
     "text": "bC3M is Backed Finance's EUR-denominated tokenised tracker certificate fully backed by the AMUNDI GOVIES 0-6 Months Euro Investment Grade UCITS ETF. The token is NAV-accreting in euros, giving Pharos one of the few EUR-pegged RWA assets backed by short-duration Eurozone government bonds. Same Swiss DLT Act framework as bIB01, same KYC-gated primary issuance through Backed, same Uniswap / CoW secondary liquidity surfaces. Pharos tracks the Ethereum supply contract first; Backed also publishes the asset on Base, BNB Chain, Polygon, and Gnosis using its multi-chain deployment pattern.",
     "updatedAt": "2026-05-12"
+  },
+  "ntbill-nest": {
+    "title": "Nest's On-Plume Treasury Vault",
+    "text": "nTBILL is Nest Credit's Treasury vault on Plume: a vault share whose value tracks a curated book of Superstate USTB / USCC and Janus Henderson JTRSY positions, plus a small stablecoin liquidity buffer. The token is NAV-accreting and primary mint/redeem runs through Nest at vault NAV. Reserves are sourced live from the Nest Credit positions API, the same adapter used by inALPHA. Pharos tracks nTBILL because it references a dollar base, but the token behaves like a tokenised fund-of-funds share rather than a par-redeemable stablecoin.",
+    "updatedAt": "2026-05-12"
+  },
+  "nbasis-nest": {
+    "title": "Nest's Basis-Trade Vault",
+    "text": "nBASIS is Nest Credit's basis-trade strategy vault: tokenised T-bill collateral combined with perpetual short positions, rebalanced by Nest. Closer in profile to Ethena USDe or Midas mRe7YIELD than to a par stablecoin — the token's value drifts with funding-rate performance rather than holding $1. Pharos lists it because the strategy references the dollar as its base and the Nest Credit positions API publishes live NAV, but the methodology treats nBASIS as a strategy vault with high collateral-quality risk and a NAV-token notice.",
+    "updatedAt": "2026-05-12"
+  },
+  "nopal-nest": {
+    "title": "Nest's BlackOpal Credit Vault",
+    "text": "nOPAL is Nest Credit's BlackOpal LiquidStone II vault: tokenised private-credit positions plus a small Treasury and stablecoin liquidity buffer. Like other Nest vaults, the token is NAV-accreting and primary access runs through Nest at vault NAV. Pharos flags nOPAL as a private-credit vault share rather than a par stablecoin; the high-risk reserve slice reflects the underlying LiquidStone II credit positions.",
+    "updatedAt": "2026-05-12"
+  },
+  "nwisdom-nest": {
+    "title": "Nest's WisdomTree-Backed Vault",
+    "text": "nWISDOM is Nest Credit's vault built around WisdomTree's tokenised fund shares (xCRDYX and related WisdomTree Connect products) with a small nTBILL and stablecoin liquidity buffer. Yield accretes through the underlying WisdomTree fund NAV; primary mint/redeem runs through Nest at vault NAV. Pharos tracks it on the same live reserves pattern as inALPHA, with the understanding that the token is a vault share rather than a par stablecoin.",
+    "updatedAt": "2026-05-12"
   }
 }

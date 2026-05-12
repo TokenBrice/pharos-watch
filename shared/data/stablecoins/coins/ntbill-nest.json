@@ -1,0 +1,113 @@
+{
+  "id": "ntbill-nest",
+  "name": "Nest Treasury Vault",
+  "symbol": "nTBILL",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Tokenised short-duration U.S. Treasury exposure routed by Nest into Superstate USTB / USCC and Janus Henderson JTRSY positions, plus stablecoin liquidity buffers",
+  "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying Treasury fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
+  "detailProvider": "coingecko",
+  "geckoId": "nest-treasury-vault",
+  "protocolSlug": "nest-credit",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.nest.credit/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/NestCredit"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.nest.credit/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+      "decimals": 6
+    },
+    {
+      "chain": "plume",
+      "address": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.nest.credit/"
+      }
+    ],
+    "evidence": "Nest retains issuer / admin authority over vault shares with permissioned issuance and freeze surfaces beyond reserve-only exposure.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "Superstate USTB / USCC Treasury and credit positions",
+      "pct": 70,
+      "risk": "very-low",
+      "coinId": "ustb-superstate"
+    },
+    {
+      "name": "Janus Henderson Anemoy Treasury Fund (JTRSY)",
+      "pct": 25,
+      "risk": "very-low",
+      "coinId": "jtrsy-anemoy"
+    },
+    {
+      "name": "Stablecoin liquidity buffer (USDC / pUSD)",
+      "pct": 5,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "nest-vault-positions",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "ntbill-nest",
+    "display": {
+      "url": "https://www.nest.credit/",
+      "label": "Nest Credit API"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.nest.credit/v1/vaults/nest-treasury-vault/positions"
+      }
+    },
+    "params": {
+      "priceUrl": "https://api.nest.credit/v1/vaults/nest-treasury-vault/price",
+      "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-treasury-vault/last-price-update"
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Nest Treasury Vault NAV",
+    "yieldType": "nav-appreciation"
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "NAV-style dollar asset",
+      "message": "nTBILL is a Nest vault share whose value tracks the underlying Treasury fund book. It behaves like a vault share rather than a hard 1:1 par stablecoin."
+    }
+  ]
+}

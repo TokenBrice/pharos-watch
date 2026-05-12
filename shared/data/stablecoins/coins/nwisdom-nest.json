@@ -1,0 +1,111 @@
+{
+  "id": "nwisdom-nest",
+  "name": "Nest Wisdom Vault",
+  "symbol": "nWISDOM",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "WisdomTree tokenised fund shares (xCRDYX and similar WisdomTree Connect products) plus Nest Treasury Vault (nTBILL) and stablecoin liquidity buffers",
+  "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying WisdomTree fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
+  "detailProvider": "coingecko",
+  "geckoId": "nest-wisdom-vault",
+  "protocolSlug": "nest-credit",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.nest.credit/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/NestCredit"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.nest.credit/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+      "decimals": 6
+    },
+    {
+      "chain": "plume",
+      "address": "0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.nest.credit/"
+      }
+    ],
+    "evidence": "Nest retains issuer / admin authority over vault shares with permissioned issuance and freeze surfaces beyond reserve-only exposure.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "WisdomTree tokenised fund shares (xCRDYX and WisdomTree Connect products)",
+      "pct": 95,
+      "risk": "very-low"
+    },
+    {
+      "name": "Nest Treasury Vault (nTBILL) liquidity buffer",
+      "pct": 3,
+      "risk": "low"
+    },
+    {
+      "name": "Stablecoin liquidity buffer (USDC / pUSD)",
+      "pct": 2,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "nest-vault-positions",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "nwisdom-nest",
+    "display": {
+      "url": "https://www.nest.credit/",
+      "label": "Nest Credit API"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/positions"
+      }
+    },
+    "params": {
+      "priceUrl": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/price",
+      "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/last-price-update"
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Nest Wisdom Vault NAV (WisdomTree-backed strategy)",
+    "yieldType": "nav-appreciation"
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "NAV-style dollar asset",
+      "message": "nWISDOM is a Nest vault share whose value tracks the underlying WisdomTree fund book. It behaves like a vault share rather than a hard 1:1 par stablecoin."
+    }
+  ]
+}
