@@ -11,7 +11,7 @@
     "navToken": true
   },
   "collateral": "Short-dated U.S. Treasury bills with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
-  "pegMechanism": "USD-denominated NAV-accreting share token tracking the variable-NAV money market fund; primary mint and redemption settle same-day at fund NAV with a $1k minimum; Chainlink CCIP relays issuance between Ethereum, Arbitrum, and Polygon",
+  "pegMechanism": "USD-denominated NAV-accreting share token (ISIN FR001400ODM9) of the Spiko SICAV short-term VNAV money market sub-fund authorised by the AMF, backed exclusively by short-dated U.S. Treasury bills with a regulatory weighted-average maturity ceiling under 60 days; subscription and redemption are KYC-gated to allowlisted wallets through Spiko's transfer agent with a daily 11:30 Paris cutoff settling at the day's published NAV (T+0 / next-business-day for late orders) and a $1k minimum; cross-chain issuance on Ethereum, Arbitrum, and Polygon is relayed through Chainlink CCIP. Prospectus: https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
   "detailProvider": "coingecko",
   "geckoId": "spiko-us-t-bills-money-market-fund",
   "proofOfReserves": {
@@ -40,7 +40,17 @@
   },
   "contracts": [
     {
+      "chain": "arbitrum",
+      "address": "0x021289588cd81dc1ac87ea91e91607eef68303f5",
+      "decimals": 5
+    },
+    {
       "chain": "ethereum",
+      "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+      "decimals": 5
+    },
+    {
+      "chain": "polygon",
       "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
       "decimals": 5
     }
@@ -100,7 +110,7 @@
     {
       "type": "info",
       "title": "Multi-chain EU-regulated MMF",
-      "message": "USTBL is also issued on Arbitrum and Polygon via Chainlink CCIP. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+      "message": "USTBL is issued on Ethereum, Arbitrum, and Polygon, with cross-chain transfers relayed via Chainlink CCIP."
     }
   ]
 }
