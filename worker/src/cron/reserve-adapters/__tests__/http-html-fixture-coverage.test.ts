@@ -1,5 +1,5 @@
 import { readdirSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { LIVE_RESERVE_ADAPTER_KEYS } from "@shared/types/live-reserves";

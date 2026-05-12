@@ -2,6 +2,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  escapeRegExp,
   fetchPrimaryHtmlInput,
   htmlLayoutChangedError,
   parseTimestampLikeToUnixSeconds,
@@ -32,7 +33,7 @@ function extractLabeledAmount(html: string, label: string): number | null {
   // The Buck transparency page emits:
   //   <span class="font-light">USDC in reserves</span>
   //   <span class="font-[350] text-black">$150.00K</span>
-  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedLabel = escapeRegExp(label);
   // eslint-disable-next-line security/detect-non-literal-regexp -- label is adapter-owned and escaped.
   const re = new RegExp(
     `<span[^>]*>\\s*${escapedLabel}\\s*</span>\\s*<span[^>]*>\\s*([^<]+?)\\s*</span>`,
@@ -44,7 +45,7 @@ function extractLabeledAmount(html: string, label: string): number | null {
 }
 
 function extractLabeledText(html: string, label: string): string | null {
-  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedLabel = escapeRegExp(label);
   // eslint-disable-next-line security/detect-non-literal-regexp -- label is adapter-owned and escaped.
   const re = new RegExp(
     `<span[^>]*>\\s*${escapedLabel}\\s*</span>\\s*<span[^>]*>\\s*([^<]+?)\\s*</span>`,
