@@ -56,8 +56,8 @@ describe("tracked stablecoin metadata", () => {
     expect(nonUsd).toHaveLength(0);
     expect(commodity).toHaveLength(0);
     expect(preLaunch).toHaveLength(0);
-    expect(perCoinGenerated).toHaveLength(311);
-    expect(canonicalOrder).toHaveLength(311);
+    expect(perCoinGenerated).toHaveLength(343);
+    expect(canonicalOrder).toHaveLength(343);
     expect(
       usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
     ).toBe(canonicalOrder.length);
@@ -84,13 +84,13 @@ describe("tracked stablecoin metadata", () => {
     const preLaunchCoins = perCoinGenerated.filter((coin) => coin.status === "pre-launch");
 
     expect(legacyShellCoins).toEqual([]);
-    expect(preLaunchCoins).toHaveLength(19);
+    expect(preLaunchCoins).toHaveLength(25);
     expect(preLaunchCoins.every((coin) => coin.status === "pre-launch")).toBe(true);
   });
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
-    expect(TRACKED_STABLECOINS).toHaveLength(311);
-    expect(ACTIVE_STABLECOINS).toHaveLength(289);
+    expect(TRACKED_STABLECOINS).toHaveLength(343);
+    expect(ACTIVE_STABLECOINS).toHaveLength(315);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "usdpt-western-union",
       "roughrider-bnd",
@@ -110,6 +110,12 @@ describe("tracked stablecoin metadata", () => {
       "arc-anq",
       "brl-b3",
       "usdf-flipcash",
+      "hkdr-rd-technologies",
+      "brd-volpon",
+      "krw1-bdacs",
+      "rusd-revolut",
+      "brl-itau",
+      "usd-nubank",
       "krw-imbank",
     ]);
   });
@@ -128,16 +134,23 @@ describe("tracked stablecoin metadata", () => {
       .map((coin) => coin.id);
 
     expect(variantIds).toEqual([
+      "susdt-spark",
       "steakusdt-steakhouse",
+      "susdc-spark",
+      "gtusdcp-gauntlet",
+      "gtusdc-gauntlet",
+      "yvusdc-yearn",
       "steakusdc-steakhouse",
       "srusde-strata",
       "susde-ethena",
       "susds-sky",
       "stusds-sky",
       "sdai-sky",
+      "aa-falconx-mev-capital",
       "susdd-tron-dao-reserve",
       "susdai-usd-ai",
       "busd0-usual",
+      "sgho-aave",
       "stkgho-umbrella-aave",
       "stcusd-cap",
       "scrvusd-curve",
@@ -150,6 +163,7 @@ describe("tracked stablecoin metadata", () => {
       "susn-noon",
       "syzusd-yuzu",
       "msy-main-street",
+      "wstbt-matrixdock",
       "said-gaib",
       "apyusd-apyx",
       "hbusdt-hyperbeat",

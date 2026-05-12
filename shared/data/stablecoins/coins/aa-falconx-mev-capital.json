@@ -11,7 +11,7 @@
     "navToken": true
   },
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
     "evidence": "Inferred review retained: AA_FalconXUSDC resolves to Upstream because USDC and USDf collateral inside the senior tranche inherit Circle and Falcon admin surfaces.",
     "reviewer": "Codex inferred-status backfill",
@@ -79,5 +79,6 @@
       "title": "Exit liquidity depends on Falcon USDf",
       "message": "AA_FalconXUSDC is the senior tranche of a CDO over Falcon Finance USDf-collateralised Morpho markets. USDC redemption rates and exit timing are tied to USDf's mint/burn liquidity; sustained USDf stress can degrade vault liquidity even when the senior tranche absorbs no principal loss."
     }
-  ]
+  ],
+  "canBeBlacklisted": true
 }

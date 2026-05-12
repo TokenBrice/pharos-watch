@@ -53,6 +53,7 @@ describe("reserve coinId validation", () => {
     // USSD is a wrapper of frxUSD (dependencies) but its reserve slices attribute to
     // underlying treasury products (BUIDL/USTB) via coinId for blacklist inheritance.
     const ALLOWED_BOTH = new Set([
+      "aa-falconx-mev-capital",
       "dusd-dtrinity",
       "buck-buck-assets",
       "frxusd-frax",

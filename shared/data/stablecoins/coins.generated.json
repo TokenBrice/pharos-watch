@@ -132,8 +132,9 @@
         "type": "mechanism"
       }
     ],
+    "canBeBlacklisted": true,
     "blacklistabilityReview": {
-      "reviewedStatus": "inherited",
+      "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
       "evidence": "Inferred review retained: AA_FalconXUSDC resolves to Upstream because USDC and USDf collateral inside the senior tranche inherit Circle and Falcon admin surfaces.",
       "reviewer": "Codex inferred-status backfill",
@@ -10247,8 +10248,9 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": true,
     "blacklistabilityReview": {
-      "reviewedStatus": "inherited",
+      "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
       "evidence": "Inferred review retained: gtUSDC resolves to Upstream because the vault holds USDC routed through Morpho markets, inheriting Circle's blacklist surface.",
       "reviewer": "Codex inferred-status backfill",
@@ -10344,8 +10346,9 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": true,
     "blacklistabilityReview": {
-      "reviewedStatus": "inherited",
+      "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
       "evidence": "Inferred review retained: gtUSDCp resolves to Upstream because the vault holds USDC routed through Morpho markets, inheriting Circle's blacklist surface.",
       "reviewer": "Codex inferred-status backfill",
@@ -11006,9 +11009,9 @@
     "governanceQuality": "regulated-entity",
     "status": "pre-launch",
     "announcedDate": "2024-07",
-    "expectedLaunchDate": "2026-H1",
+    "expectedLaunchDate": "2026-H2",
     "launchPhase": "auditing",
-    "launchPhaseDetail": "Issued by RD InnoTech Limited (a subsidiary of RD Technologies, founded by former HKMA chief executive Norman Chan); admitted to the HKMA stablecoin issuer sandbox in the first July 2024 cohort; testing digital asset trading and cross-border trade payments, partnership with ZA Bank for regulated use cases; HKMA chief executive Eddie Yue signalled the first wave of fiat-referenced stablecoin licences in March 2026 will be limited to 'a very small number' of issuers and RD InnoTech is widely cited as a leading candidate; HK$25M minimum paid-up capital and 100%+ reserve backing requirements already met under sandbox conditions",
+    "launchPhaseDetail": "Issued by RD InnoTech Limited (a subsidiary of RD Technologies, founded by former HKMA chief executive Norman Chan); admitted to the HKMA stablecoin issuer sandbox in the first July 2024 cohort. Raised $40M in Series A2 (July 30 2025, led by ZA Global) and signed a Memorandum of Understanding with ZA Bank for HKDR reserve custody and potential distribution pending regulatory approval — the first major collaboration between a licensed HK virtual bank and a stablecoin development company. Hong Kong Stablecoins Ordinance took effect August 1 2025; 36 formal applications were received by the September deadline. HKMA granted its first two stablecoin licences on April 10 2026 to Anchorpoint Financial (FRS01) and HSBC (FRS02) — RD InnoTech was not in the first batch. HSBC plans its HKD stablecoin launch for H2 2026; a second licence wave is expected and RD InnoTech, with its early sandbox participation, $40M war chest, and ZA Bank partnership, remains among the credible next-round candidates. HK$25M minimum paid-up capital and 100%+ reserve backing requirements already met under sandbox conditions.",
     "featuredContent": [
       {
         "type": "article",
@@ -11030,6 +11033,13 @@
         "title": "Hong Kong signals caution in stablecoin license rollout",
         "description": "HKMA chief executive Eddie Yue signals only a 'very small number' of stablecoin licences will be granted in the first wave, targeting March 2026 issuance.",
         "source": "Asia Times"
+      },
+      {
+        "type": "article",
+        "url": "https://www.theblock.co/post/364778/hong-kongs-rd-technologies-raises-40-million",
+        "title": "Hong Kong fintech RD Technologies raises $40 million ahead of stablecoin licensing rollout",
+        "description": "Series A2 round closes one day before the Stablecoins Ordinance takes effect; ZA Bank MOU adds reserve custody and potential distribution angle.",
+        "source": "The Block"
       }
     ],
     "milestones": [
@@ -11048,11 +11058,45 @@
         "sourceUrl": "https://www.prnewswire.com/news-releases/rd-technologies-celebrates-passage-of-stablecoins-ordinance-in-hong-kong-302462073.html"
       },
       {
+        "date": "2025-07-30",
+        "type": "milestone",
+        "title": "RD Technologies closes $40M Series A2 financing",
+        "description": "Eight-investor round led by ZA Global alongside China Harbour, Bright Venture, Hivemind Capital, HSG, Eternal Digital, CMSC Partners, and Guotai Junan International PE; announced one day before the Stablecoins Ordinance licensing regime took effect.",
+        "sourceUrl": "https://www.prnewswire.com/news-releases/rd-technologies-secures-us40-million-in-series-a2-financing-302517161.html"
+      },
+      {
+        "date": "2025-07-30",
+        "type": "partnership",
+        "title": "ZA Bank signs MOU for HKDR reserve custody and potential distribution",
+        "description": "ZA Bank (subsidiary of ZA Global, Hong Kong's first licensed virtual bank) will explore reserve asset custody services and a potential distribution role for HKDR, pending regulatory approval; first major collaboration between a licensed HK virtual bank and a stablecoin development company.",
+        "sourceUrl": "https://www.prnewswire.com/news-releases/rd-technologies-secures-us40-million-in-series-a2-financing-302517161.html"
+      },
+      {
+        "date": "2025-08-01",
+        "type": "regulatory",
+        "title": "Hong Kong Stablecoins Ordinance licensing regime takes effect",
+        "description": "HKMA formally opens licensing for issuers of fiat-referenced stablecoins; 36 formal applications received by the September 30 2025 deadline.",
+        "sourceUrl": "https://www.davispolk.com/insights/client-update/hong-kongs-licensing-and-regulatory-framework-stablecoins-now-effect"
+      },
+      {
         "date": "2026-02-15",
         "type": "regulatory",
         "title": "HKMA confirms first batch of stablecoin licences targeted for March 2026",
         "description": "Eddie Yue signals stability over speed and limits initial licences to 'a very small number'; RD InnoTech named among credible candidates given early sandbox participation.",
         "sourceUrl": "https://asiatimes.com/2026/02/hong-kong-signals-caution-in-stablecoin-license-rollout/"
+      },
+      {
+        "date": "2026-04-10",
+        "type": "regulatory",
+        "title": "HKMA grants first two stablecoin licences to HSBC and Anchorpoint Financial; RD InnoTech not in first batch",
+        "description": "HKMA awards FRS01 to Anchorpoint Financial Limited and FRS02 to HSBC after receiving 36 applications. RD InnoTech was among the 5 original sandbox participants but was not licensed in this first wave. HSBC plans H2 2026 for its HKD stablecoin launch.",
+        "sourceUrl": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
+      }
+    ],
+    "dateHistory": [
+      {
+        "date": "2026-H1",
+        "setOn": "2026-05-12"
       }
     ]
   },
@@ -13353,7 +13397,7 @@
     "announcedDate": "2025-09",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
-    "launchPhaseDetail": "Pilot phase following successful September 2025 proof of concept; not yet in public circulation. BDACS is South Korea's regulated digital-asset custodian; Woori Bank holds the won reserves and participated directly in the PoC. Initial deployment on Avalanche (cited by KISA for reliability in public-sector use); multi-chain expansion planned. February 2026 Plume partnership positions KRW1 as Korean institutional settlement rail for tokenized RWA. Commercial launch contingent on Korea's forthcoming Digital Asset Basic Act framework where BDACS is positioning KRW1 as the leading technical standard.",
+    "launchPhaseDetail": "Pilot phase following successful September 2025 proof of concept; not yet in public circulation. BDACS is South Korea's regulated digital-asset custodian; Woori Bank holds the won reserves and participated directly in the PoC. Initial deployment on Avalanche (cited by KISA for reliability in public-sector use); KRW1 expanded to Polygon in December 2025 for broader payments, remittances, and enterprise reach. October 2025 MoU with Circle positions KRW1 for deployment on Arc (Circle's new Layer 1), where it joins national stablecoin issuers from Japan, Brazil, Mexico, and the Philippines. February 2026 Plume partnership positions KRW1 as Korean institutional settlement rail for tokenized RWA. The Bank of Korea nominee (April 2026) signalled CBDC and bank-issued deposit tokens should lead Korea's digital money system, with private stablecoins in a secondary role — a headwind for commercial launch timing. Commercial launch contingent on Korea's forthcoming Digital Asset Basic Act framework.",
     "featuredContent": [
       {
         "type": "article",
@@ -13375,6 +13419,20 @@
         "title": "The Korea Won Stablecoin 2026 Race: 6 Players Competing for Asia's Next Financial Frontier",
         "description": "Comparative analysis of KRW1's institutional-RWA settlement positioning versus retail-bank consortium plans under Korea's pending Digital Asset Basic Act.",
         "source": "Seoulz"
+      },
+      {
+        "type": "article",
+        "url": "https://cointelegraph.com/news/south-korea-bdacs-krw1-stablecoin-circle-arc",
+        "title": "South Korea's BDACS to launch KRW1 stablecoin on Circle's Arc blockchain",
+        "description": "BDACS signs MoU with Circle to bring KRW1 to Arc's public testnet; KRW1 becomes the first Korea-based issuer on the network alongside Japan, Brazil, Mexico, and Philippines issuers.",
+        "source": "CoinTelegraph"
+      },
+      {
+        "type": "article",
+        "url": "https://crypto.news/bdacs-brings-krw-stablecoin-krw1-to-polygon/",
+        "title": "BDACS brings KRW stablecoin KRW1 to Polygon",
+        "description": "Multi-chain expansion to Polygon in December 2025; selected for speed, low fees, and enterprise integrations with Stripe, Circle, and Mastercard.",
+        "source": "crypto.news"
       }
     ],
     "milestones": [
@@ -13391,6 +13449,20 @@
         "title": "KRW1 proof-of-concept goes live on Avalanche with Woori Bank",
         "description": "Successful PoC validates fiat deposits, on-chain issuance, and real-time banking-API reserve attestation; not yet in public circulation.",
         "sourceUrl": "https://www.prnewswire.com/news-releases/bdacs-launches-krw1--the-first-fully-krw-backed-stablecoin-developed-with-woori-bank-on-avalanche-302259560.html"
+      },
+      {
+        "date": "2025-10-29",
+        "type": "partnership",
+        "title": "BDACS signs MoU with Circle to bring KRW1 to Arc blockchain",
+        "description": "BDACS and Circle formalize collaboration to deploy KRW1 on Arc, Circle's new Layer 1 blockchain (public testnet); KRW1 becomes the first Korea-based issuer on the network, joining issuers from Japan, Brazil, Mexico, and the Philippines.",
+        "sourceUrl": "https://cointelegraph.com/news/south-korea-bdacs-krw1-stablecoin-circle-arc"
+      },
+      {
+        "date": "2025-12-05",
+        "type": "milestone",
+        "title": "KRW1 launches on Polygon network",
+        "description": "Multi-chain expansion following the Avalanche PoC; Polygon selected for high throughput, low fees, and integrations with Stripe, Circle, and Mastercard, enabling payments, remittances, and enterprise use cases.",
+        "sourceUrl": "https://crypto.news/bdacs-brings-krw-stablecoin-krw1-to-polygon/"
       },
       {
         "date": "2026-02-11",
@@ -18361,7 +18433,7 @@
     "announcedDate": "2025-10-23",
     "expectedLaunchDate": "2026",
     "launchPhase": "announced",
-    "launchPhaseDetail": "Companion to the already-tracked RGBP (Revolut GBP). Revolut secured a MiCA CASP licence from Cyprus (CySEC) on Oct 23 2025 and operates an existing EMI licence in Lithuania, the legal foundations for issuing e-money tokens under MiCA Title IV. The Cyprus announcement bundled a 'Crypto 2.0' platform that includes '1:1 conversion between stablecoins and USD' without spreads, fuelling industry expectation of a Revolut-issued USD EMT in 2026 (EU counsel quoted by Decrypt as 'plausible'). Specific ticker, chain selection, and reserve disclosure model not yet publicly confirmed; commercial design must navigate MiCA EMT issuer constraints (EMI/credit-institution-only) and any UK Bank-of-England restrictions on cross-group stablecoin issuance.",
+    "launchPhaseDetail": "Companion to the already-tracked RGBP (Revolut GBP). Revolut secured a MiCA CASP licence from Cyprus (CySEC) on Oct 23 2025 and operates an existing EMI licence in Lithuania — the legal foundations for issuing e-money tokens under MiCA Title IV. In October 2025, Revolut launched fee-free 1:1 USD↔stablecoin swaps (USDC/USDT on Ethereum, Solana, and Tron) for its 65M users; stablecoin payment volumes on the platform surged 156% in 2025 to ~$10.5B. In February 2026, the FCA selected Revolut as one of 4 firms (from 20 applicants) for a UK stablecoin payment testing pilot covering payments, wholesale settlement, and crypto trading — results will inform the FCA's crypto framework targeting October 2027. A Revolut-branded proprietary USD stablecoin has not been officially confirmed; Polymarket puts the probability at ~25% by year-end 2026. Specific ticker, chain selection, and reserve disclosure model remain unannounced.",
     "featuredContent": [
       {
         "type": "article",
@@ -18399,6 +18471,13 @@
         "title": "EU counsel describes a Revolut USD/EUR stablecoin in 2026 as 'plausible' under MiCA",
         "description": "Decrypt reports Revolut's Lithuanian EMI provides the EMT issuer foundation; Cyprus CASP licence is the service-provider side; sources say Revolut has been working on its own stablecoin for over a year.",
         "sourceUrl": "https://decrypt.co/345674/revolut-secures-mica-license-in-cyprus-is-a-stablecoin-next"
+      },
+      {
+        "date": "2026-02-25",
+        "type": "regulatory",
+        "title": "FCA selects Revolut for UK stablecoin payment testing pilot",
+        "description": "Revolut is one of 4 firms chosen from 20 applicants to trial stablecoin products in real-world UK conditions from Q1 2026; use cases include stablecoin payments, wholesale settlement, and crypto trading. Results will inform the FCA's crypto regulatory framework targeting October 2027.",
+        "sourceUrl": "https://paymentexpert.com/2026/02/26/fca-revolut-stablecoin-payment-test/"
       }
     ]
   },
@@ -21234,8 +21313,9 @@
         "decimals": 6
       }
     ],
+    "canBeBlacklisted": true,
     "blacklistabilityReview": {
-      "reviewedStatus": "inherited",
+      "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
       "evidence": "Inferred review retained: spUSDC resolves to Upstream because the wrapper holds USDC as its only reserve, inheriting Circle's blacklist surface.",
       "reviewer": "Codex inferred-status backfill",
@@ -21627,8 +21707,9 @@
         "decimals": 6
       }
     ],
+    "canBeBlacklisted": true,
     "blacklistabilityReview": {
-      "reviewedStatus": "inherited",
+      "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
       "evidence": "Inferred review retained: spUSDT resolves to Upstream because the wrapper holds USDT as its only reserve, inheriting Tether's blacklist surface.",
       "reviewer": "Codex inferred-status backfill",
@@ -32446,15 +32527,9 @@
         "decimals": 18
       }
     ],
-    "dependencies": [
-      {
-        "id": "stbt-matrixdock",
-        "weight": 1,
-        "type": "wrapper"
-      }
-    ],
+    "canBeBlacklisted": true,
     "blacklistabilityReview": {
-      "reviewedStatus": "inherited",
+      "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
       "evidence": "Inferred review retained: wSTBT resolves to Upstream because the wrapper variant inherits freeze and transfer surface from STBT.",
       "reviewer": "Codex RWA expansion review",
@@ -34149,8 +34224,9 @@
         "decimals": 6
       }
     ],
+    "canBeBlacklisted": true,
     "blacklistabilityReview": {
-      "reviewedStatus": "inherited",
+      "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
       "evidence": "Inferred review retained: yvUSDC-1 resolves to Upstream because Yearn v3 strategies hold USDC across whitelisted protocols, inheriting Circle's blacklist surface.",
       "reviewer": "Codex inferred-status backfill",

@@ -11,7 +11,7 @@
     "navToken": true
   },
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
     "evidence": "Inferred review retained: spUSDT resolves to Upstream because the wrapper holds USDT as its only reserve, inheriting Tether's blacklist surface.",
     "reviewer": "Codex inferred-status backfill",
@@ -90,5 +90,6 @@
         "expectedAssetAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
       }
     }
-  }
+  },
+  "canBeBlacklisted": true
 }

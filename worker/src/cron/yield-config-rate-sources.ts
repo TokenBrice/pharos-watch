@@ -168,6 +168,7 @@ export const INTENTIONAL_GAP_REASONS: Record<string, string> = {
   "brd-volpon": "pre-launch yield-bearing BRL asset with no reliable runtime yield source yet",
   "gldy-streamex": "gold leasing yield is issuer-distributed; no reliable runtime APY source is wired yet",
   "pusd-polaris": "asset with no reliable runtime yield source yet",
+  "stbt-matrixdock": "Matrixdock STBT rebases daily off T-bill yield distributed off-chain; no public APY oracle wired yet",
   "stkgho-umbrella-aave": "Umbrella rewards are external emissions over a 1:1 GHO staking receipt; no reliable APY source is wired yet",
   "trusd-tori": "pre-launch asset with no reliable runtime yield source yet",
 };

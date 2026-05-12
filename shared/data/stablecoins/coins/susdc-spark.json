@@ -11,7 +11,7 @@
     "navToken": true
   },
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
     "evidence": "Inferred review retained: spUSDC resolves to Upstream because the wrapper holds USDC as its only reserve, inheriting Circle's blacklist surface.",
     "reviewer": "Codex inferred-status backfill",
@@ -95,5 +95,6 @@
         "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
       }
     }
-  }
+  },
+  "canBeBlacklisted": true
 }

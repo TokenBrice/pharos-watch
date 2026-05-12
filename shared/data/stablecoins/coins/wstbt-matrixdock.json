@@ -18,7 +18,7 @@
   "variantOf": "stbt-matrixdock",
   "variantKind": "savings-passthrough",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
     "evidence": "Inferred review retained: wSTBT resolves to Upstream because the wrapper variant inherits freeze and transfer surface from STBT.",
     "reviewer": "Codex RWA expansion review",
@@ -55,13 +55,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "dependencies": [
-    {
-      "id": "stbt-matrixdock",
-      "type": "wrapper",
-      "weight": 1
-    }
-  ],
   "reserves": [
     {
       "name": "Matrixdock STBT (short-term U.S. Treasury bills and reverse repos)",
@@ -74,5 +67,6 @@
   "yieldConfig": {
     "yieldSource": "Matrixdock STBT NAV accretion (wrapped, non-rebasing)",
     "yieldType": "nav-appreciation"
-  }
+  },
+  "canBeBlacklisted": true
 }

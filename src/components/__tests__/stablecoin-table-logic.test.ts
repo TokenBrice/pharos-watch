@@ -161,12 +161,15 @@ describe("buildTrackedIdSet", () => {
     expect(allVariants.has("stusds-sky")).toBe(true);
     expect(allVariants.has("busd0-usual")).toBe(true);
     expect(allVariants.has("usds-sky")).toBe(false);
-    expect(allVariants.size).toBe(25);
+    expect(allVariants.size).toBe(33);
 
     const strategy = buildTrackedIdSet(["variant-strategy-vault"]);
     expect(strategy).toEqual(new Set([
+      "aa-falconx-mev-capital",
       "apyusd-apyx",
       "fxsave-f-x-protocol",
+      "gtusdc-gauntlet",
+      "gtusdcp-gauntlet",
       "hbusdt-hyperbeat",
       "savusd-avant",
       "susdai-usd-ai",
@@ -176,6 +179,7 @@ describe("buildTrackedIdSet", () => {
       "syzusd-yuzu",
       "msy-main-street",
       "said-gaib",
+      "yvusdc-yearn",
     ]));
 
     const riskAbsorption = buildTrackedIdSet(["variant-risk-absorption"]);
