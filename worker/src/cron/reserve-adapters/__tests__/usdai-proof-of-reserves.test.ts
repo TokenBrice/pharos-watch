@@ -69,15 +69,15 @@ describe("usdai-proof-of-reserves adapter", () => {
     });
   });
 
-  it("accepts safe-integer numeric amount values without regex preprocessing", () => {
+  it("accepts raw numeric amount values after preserving them as strings", () => {
     const raw = JSON.stringify([
       { type: "TBILL", name: "PYUSD", chain: 42161, amount: 9440 },
       { type: "DEAL", name: "NVIDIA B300 [1]", chain: 42161, amount: 560 },
     ]);
 
     const parsed = parseUsdAiProofOfReserves(raw);
-    expect(parsed[0].amount).toBe(9440);
-    expect(typeof parsed[0].amount).toBe("number");
+    expect(parsed[0].amount).toBe("9440");
+    expect(typeof parsed[0].amount).toBe("string");
 
     const result = adaptUsdAiProofOfReserves(parsed);
     expect(result.slices).toEqual([
@@ -89,11 +89,33 @@ describe("usdai-proof-of-reserves adapter", () => {
     });
   });
 
-  it("rejects unsafe-integer numeric amount values rather than silently mis-coercing them", () => {
-    // Q-NEW-7 contract: with the regex preprocessing gone, parseIntegerLike
-    // must drop numbers that have already lost precision in JS. The downstream
-    // adapter then surfaces a clear "missing a valid amount" error rather than
-    // computing slices from a corrupted value.
+  it("preserves large numeric share and amount fields from the live API payload", () => {
+    const raw = `[
+      {"type":"TBILL","name":"PYUSD","chain":42161,"amount":255497995783104000000000000,"share":806489349701830000},
+      {"type":"DEAL","name":"H200 [75]","chain":42161,"amount":61340534611896000000000000,"share":193510650298169860}
+    ]`;
+
+    const parsed = parseUsdAiProofOfReserves(raw);
+
+    expect(parsed[0].share).toBe("806489349701830000");
+    expect(parsed[0].amount).toBe("255497995783104000000000000");
+
+    const result = adaptUsdAiProofOfReserves(parsed);
+    expect(result.slices).toEqual([
+      { name: "PYUSD (PayPal USD)", pct: 80.6, risk: "low", coinId: "pyusd-paypal" },
+      { name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: 19.4, risk: "high" },
+    ]);
+    expect(result.metadata).toMatchObject({
+      weightingBasis: "share",
+      declaredSharePct: 100,
+    });
+  });
+
+  it("rejects unsafe-integer numeric values that are already parsed as JS numbers", () => {
+    // Direct adapter callers can still pass JS numbers that have already lost
+    // precision. The raw API parser quotes large numeric literals before JSON
+    // parsing, while the adapter rejects unsafe parsed numbers instead of
+    // computing slices from corrupted values.
     const parsedShareOnly = [
       { type: "TBILL", name: "PYUSD", chain: 42161, share: "944000000000000000" },
       // amount is a JSON number above MAX_SAFE_INTEGER — would lose precision if accepted.
@@ -103,7 +125,7 @@ describe("usdai-proof-of-reserves adapter", () => {
       /usdai-proof-of-reserves share-bearing rows cover only/,
     );
 
-    // Same input forced into amount-only weighting (no share present) → missing-amount throw.
+    // Same input forced into amount-only weighting (no share present) causes a missing-amount throw.
     const amountOnly = [
       { type: "TBILL", name: "PYUSD", chain: 42161, amount: 9_007_199_254_740_993 },
       { type: "DEAL", name: "NVIDIA B300 [1]", chain: 42161, amount: 560 },

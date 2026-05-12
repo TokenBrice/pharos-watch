@@ -1,6 +1,14 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.92` (2026-02-01 -> 2026-05-12).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.93` (2026-02-01 -> 2026-05-12).
+
+---
+
+## v5.93 - Jupiter sparse response breaker accounting (May 12, 2026)
+
+- Jupiter V3 sparse no-quote rows now count as healthy empty coverage instead of malformed provider responses
+- The `jupiter-prices` breaker still records failures for non-OK responses and malformed envelopes, but a decimals-only row for an unsupported mint no longer opens the circuit
+- Quoted rows still require `usdPrice`, `decimals`, fresh `blockId`, optional liquidity gating, and peg-aware validation before a price can be accepted
 
 ---
 

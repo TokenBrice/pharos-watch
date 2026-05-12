@@ -9,6 +9,7 @@ import {
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   reserveDegradedWarning,
+  reserveInfoWarning,
 } from "./helpers";
 
 // ERC-4626 selectors (also supported by ERC-7540, which is a superset).
@@ -55,13 +56,48 @@ export async function fetchCentrifugeVaultReserves(
       timeoutMs: timeout,
     });
 
-  const [assetResult, totalAssetsResult] = await Promise.all([
+  const [assetResult, totalAssetsResult, totalSupplyResult] = await Promise.all([
     call(ERC4626_ASSET_SELECTOR),
     call(ERC4626_TOTAL_ASSETS_SELECTOR),
+    call(TOTAL_SUPPLY_SELECTOR),
   ]);
 
+  const totalSupplyRaw = totalSupplyResult ? BigInt(totalSupplyResult) : undefined;
+
   if (!totalAssetsResult) {
-    throw new Error(`ERC-7540 totalAssets() call failed for ${coin.id}`);
+    if (totalSupplyRaw == null || totalSupplyRaw <= 0n) {
+      throw new Error(`ERC-7540 totalAssets() call failed for ${coin.id}`);
+    }
+
+    return {
+      slices: [
+        {
+          name: params.slice.name,
+          pct: 100,
+          risk: params.slice.risk,
+        },
+      ],
+      warnings: [
+        reserveInfoWarning(
+          "centrifuge-vault-total-assets-unavailable",
+          "Centrifuge vault totalAssets() was unavailable; validated token liveness with ERC-20 totalSupply()",
+        ),
+      ],
+      metadata: {
+        ...notApplicableFreshnessMetadata({
+          proofKind: "centrifuge-vault-total-supply-liveness",
+          totalAssetsUnavailable: true,
+        }),
+        chain: primaryInput.chain,
+        contractAddress,
+        totalSupplyRaw: totalSupplyRaw.toString(),
+        redemption: {
+          capacityKind: "documented-eventual" as const,
+          freshnessKind: "same-run-onchain" as const,
+          routeStatus: "unknown" as const,
+        },
+      },
+    };
   }
   const totalAssetsRaw = BigInt(totalAssetsResult);
   if (totalAssetsRaw <= 0n) {
@@ -83,12 +119,9 @@ export async function fetchCentrifugeVaultReserves(
   const warnings: LiveReserveWarning[] = [];
 
   // NAV cross-check: convertToAssets(totalSupply) vs totalAssets().
-  const totalSupplyResult = await call(TOTAL_SUPPLY_SELECTOR);
   let collateralizationRatio: number | undefined;
   let convertToAssetsRaw: bigint | undefined;
-  let totalSupplyRaw: bigint | undefined;
-  if (totalSupplyResult) {
-    totalSupplyRaw = BigInt(totalSupplyResult);
+  if (totalSupplyRaw != null) {
     if (totalSupplyRaw > 0n) {
       const convertResult = await call(
         `${ERC4626_CONVERT_TO_ASSETS_SELECTOR}${encodeUint256Arg(totalSupplyRaw)}`,

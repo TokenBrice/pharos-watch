@@ -195,6 +195,52 @@ describe("fetchCentrifugeVaultReserves", () => {
     expect(result.metadata?.redemption?.routeStatus).toBe("degraded");
   });
 
+  it("falls back to ERC-20 totalSupply liveness when totalAssets is unavailable", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      if (body.params[0].data === "0x01e1d114") {
+        return jsonResponse({ error: { code: 3, message: "execution reverted" } });
+      }
+      if (body.params[0].data === "0x18160ddd") {
+        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000003aa7e4dff618e" });
+      }
+      return null;
+    });
+
+    const { fetchCentrifugeVaultReserves } = await import("../centrifuge-vault");
+
+    const result = await fetchCentrifugeVaultReserves(
+      makeCoin(),
+      makeConfig(),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.slices).toEqual([
+      {
+        name: "U.S. Treasury bills via Janus Henderson Anemoy fund",
+        pct: 100,
+        risk: "very-low",
+      },
+    ]);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "centrifuge-vault-total-assets-unavailable",
+        effect: "info",
+      }),
+    ]);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "not-applicable",
+      chain: "ethereum",
+      contractAddress: JTRSY_VAULT,
+      totalSupplyRaw: "1031884381315470",
+      details: {
+        proofKind: "centrifuge-vault-total-supply-liveness",
+        totalAssetsUnavailable: true,
+      },
+    });
+  });
+
   it("throws when asset() cannot be read", async () => {
     fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };

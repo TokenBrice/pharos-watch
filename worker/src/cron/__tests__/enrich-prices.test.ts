@@ -1251,6 +1251,55 @@ describe("enrichMissingPrices", () => {
     });
   });
 
+  it("does not open the Jupiter breaker for sparse no-quote V3 rows", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.JUPITER_PRICES}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    mockFetch([
+      {
+        match: "api.jup.ag/price/v3",
+        body: {
+          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
+            decimals: 6,
+            createdAt: "2026-02-18T15:12:44Z",
+          },
+        },
+      },
+    ]);
+
+    const result = await runJupiterPass(assets, undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(result.diagnostics?.[0]).toMatchObject({
+      source: "jupiter",
+      success: true,
+      responseRowCount: 1,
+      rejectionReasonCounts: { "missing-quote": 1 },
+    });
+    const circuitWrite = db
+      .getHistory()
+      .find((entry) =>
+        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.JUPITER_PRICES}`
+      );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+      state: "closed",
+      consecutiveFailures: 0,
+    });
+  });
+
   it("reports Jupiter non-OK responses in pass diagnostics", async () => {
     const assets: PeggedAsset[] = [
       {

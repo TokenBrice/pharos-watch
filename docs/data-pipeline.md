@@ -87,7 +87,7 @@ Primary pricing also includes a few source-specific normalization rules that are
 - **Coinbase** uses uppercased product symbols.
 - **RedStone** uses exact-case tracked symbols only. The worker filters requests through `REDSTONE_TRACKED_SYMBOL_ALLOWLIST`, sends them in sequential batches of 10, and retries any batch-dropped symbol individually once.
 - **RedStone admission** now requires at least 2 venues and at least 60% venue agreement before the quote can enter primary consensus.
-- **Breaker accounting for sparse responses** is data-aware: Pyth and RedStone only count as successful breaker outcomes when they return at least one usable price, not merely a 200 transport response.
+- **Breaker accounting for sparse responses** is data-aware: Pyth and RedStone only count as successful breaker outcomes when they return at least one usable price, while Jupiter treats documented V3 sparse no-quote rows as healthy empty coverage because they indicate provider reachability but no usable quote for that mint.
 - **CEX freshness semantics** are explicit: Binance and Kraken use local-fetch observation times; Bitstamp and Coinbase publish upstream-observed timestamps when the upstream response provides them. Registry metadata records whether each feed is last-trade-only or exposes bid/ask-style spot data.
 
 These rules live in `worker/src/lib/pyth.ts`, `worker/src/lib/redstone.ts`, and the `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts` module.
@@ -118,7 +118,7 @@ The registry lives in `worker/src/lib/authoritative-price-sources.ts` and suppor
 1. **Pass 1:** Canonical tracked contract identity -> DefiLlama coins API, but only quotes that pass peg-aware validation can claim the asset
 2. **Pass 1b:** Tracked alternate deployment fallback (tries exact tracked deployment ids via DefiLlama coins API under the same validation gate)
 3. **Pass 2:** CoinMarketCap category batch (`cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=300&convert=USD`) — prefers per-asset `cmcSlug` matching before symbol fallback, covering all CMC-listed stablecoins in one call (rate-limited to 1 call/hour via D1 cache timestamp, single 10s attempt)
-4. **Pass 3:** Jupiter Price API for tracked Solana mints (sends `JUPITER_API_KEY` as `x-api-key` when configured, liquidity-gated and peg-aware; V3 responses are not rejected solely because optional `createdAt` metadata is old)
+4. **Pass 3:** Jupiter Price API for tracked Solana mints (sends `JUPITER_API_KEY` as `x-api-key` when configured, liquidity-gated and peg-aware when a quote exists; sparse V3 no-quote rows are treated as healthy empty coverage rather than provider failure)
 5. **Pass 4:** DexScreener exact token-address pool lookups when a resolvable chain+address exists. Successful exact-address enrichments publish `priceSource = "dexscreener-exact"`. Symbol search is reserved for addressless assets with a unique tracked symbol under the same >$50K liquidity and peg-aware validation gates; successful search enrichments publish `priceSource = "dexscreener-search"`. The pass is capped at 10 total requests per run, no retries, 5s per-request timeout, and 45s total pass budget. Under that cap, exact-target assets and larger circulating names are prioritized first.
 
 Note: DexScreener's **batch token API** (`/tokens/v1/{chainId}/{addresses}`) is also used in `syncDexLiquidity()` for DEX-implied price observations. Price enrichment now reuses the same exact-address surface before falling back to search.

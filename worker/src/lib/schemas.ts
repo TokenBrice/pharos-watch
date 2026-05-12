@@ -45,18 +45,29 @@ export const CmcCategoryResponseSchema = z.object({
     .optional(),
 });
 
+const JupiterQuotedPriceEntrySchema = z.object({
+  usdPrice: z.number(),
+  decimals: z.number().int().nonnegative(),
+  blockId: z.number().int().positive(),
+  priceChange24h: z.number().nullable().optional(),
+  createdAt: z.union([z.string(), z.number()]).optional(),
+  liquidity: z.number().nullable().optional(),
+});
+
+const JupiterSparsePriceEntrySchema = z.object({
+  // Jupiter returns sparse entries for unsupported / no-quote mints. These are
+  // healthy provider responses, just not usable prices.
+  usdPrice: z.null().optional(),
+  decimals: z.number().int().nonnegative(),
+  blockId: z.number().int().positive().optional(),
+  priceChange24h: z.number().nullable().optional(),
+  createdAt: z.union([z.string(), z.number()]).optional(),
+  liquidity: z.number().nullable().optional(),
+});
+
 export const JupiterPriceResponseSchema = z.record(
   z.string(),
-  z.object({
-    // Jupiter omits usdPrice for low-liquidity tokens but still returns the
-    // entry; treat as optional and let the consumer skip missing prices.
-    usdPrice: z.number().nullable().optional(),
-    decimals: z.number().int().nonnegative(),
-    blockId: z.number().int().positive(),
-    priceChange24h: z.number().nullable().optional(),
-    createdAt: z.union([z.string(), z.number()]).optional(),
-    liquidity: z.number().nullable().optional(),
-  }),
+  z.union([JupiterQuotedPriceEntrySchema, JupiterSparsePriceEntrySchema]),
 );
 
 export const SolanaSlotResponseSchema = z.object({

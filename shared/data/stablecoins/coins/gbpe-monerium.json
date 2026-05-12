@@ -95,7 +95,7 @@
     "inputs": {
       "primary": {
         "kind": "onchain-evm",
-        "chain": "ethereum",
+        "chain": "gnosis",
         "rpcMode": "public-rpc"
       }
     }

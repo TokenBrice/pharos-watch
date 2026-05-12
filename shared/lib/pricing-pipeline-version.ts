@@ -3,9 +3,23 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.92",
+  currentVersion: "5.93",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.93",
+      title: "Jupiter sparse response breaker accounting",
+      date: "2026-05-12",
+      effectiveAt: 1778592200,
+      summary:
+        "Jupiter V3 sparse no-quote rows now count as healthy empty coverage instead of malformed provider responses, preventing unsupported tracked Solana mints from opening the fallback breaker.",
+      impact: [
+        "`jupiter-prices` still records failures for non-OK responses and malformed envelopes, but decimals-only rows for unsupported mints no longer open the circuit",
+        "Quoted rows still require `usdPrice`, `decimals`, fresh `blockId`, optional liquidity gating, and peg-aware validation before a price can be accepted",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.92",
       title: "Expanded NAV-wrapper authoritative pricing",

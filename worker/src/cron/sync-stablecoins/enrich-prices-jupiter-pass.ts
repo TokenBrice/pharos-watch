@@ -37,8 +37,8 @@ const SOLANA_SLOT_RPC_URL = "https://api.mainnet-beta.solana.com";
 const SOLANA_SLOT_REQUEST_TIMEOUT_MS = 3_000;
 
 interface JupiterPriceEntry {
-  usdPrice: number;
-  blockId: number;
+  usdPrice?: number | null;
+  blockId?: number;
   decimals: number;
   priceChange24h?: number | null;
   liquidity?: number | null;
@@ -107,6 +107,17 @@ export async function runJupiterPass(
     }
 
     successfulCalls += 1;
+    const batchHasUsableQuoteShape = batch.some((entry) => {
+      const payload = data[entry.mint];
+      return (
+        payload?.usdPrice != null
+        && Number.isFinite(payload.usdPrice)
+        && payload.usdPrice > 0
+        && typeof payload.blockId === "number"
+      );
+    });
+    if (!batchHasUsableQuoteShape) continue;
+
     const currentSlot = await getCurrentSolanaSlot();
     if (currentSlot == null) {
       console.warn("[enrich] Jupiter block freshness check skipped because Solana slot reference is unavailable");
@@ -115,9 +126,10 @@ export async function runJupiterPass(
     for (const entry of batch) {
       const payload = data[entry.mint];
       const usdPrice = payload?.usdPrice;
+      const blockId = payload?.blockId;
       const liquidity = payload?.liquidity;
       if (usdPrice == null || !Number.isFinite(usdPrice) || usdPrice <= 0) continue;
-      if (!isFreshJupiterBlock(payload.blockId, currentSlot)) continue;
+      if (blockId == null || !isFreshJupiterBlock(blockId, currentSlot)) continue;
       if (liquidity != null && (!Number.isFinite(liquidity) || liquidity < JUPITER_MIN_LIQUIDITY_USD)) continue;
 
       if (!isReasonablePrice(
@@ -207,6 +219,12 @@ async function fetchJupiterPrices(
     }
     const data = parsed.data as Record<string, JupiterPriceEntry>;
     diagnostic.responseRowCount = Object.keys(data).length;
+    const missingQuoteRows = Object.values(data).filter((entry) => (
+      entry.usdPrice == null || entry.blockId == null
+    )).length;
+    if (missingQuoteRows > 0) {
+      diagnostic.rejectionReasonCounts = { "missing-quote": missingQuoteRows };
+    }
     diagnostic.success = true;
     return { data, diagnostic };
   } catch (err) {

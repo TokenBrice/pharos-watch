@@ -36,6 +36,13 @@ interface ResolvedReserveBucket {
 
 type WeightMode = "share" | "amount";
 
+function quoteUnsafeIntegerWeightFields(raw: string): string {
+  return raw.replace(
+    /("(?:share|amount)"\s*:\s*)(\d+)(?=\s*[,}])/g,
+    (_match, prefix: string, value: string) => `${prefix}"${value}"`,
+  );
+}
+
 function parseIntegerLike(value: unknown): bigint | null {
   if (typeof value === "string" && /^\d+$/.test(value.trim())) {
     return BigInt(value.trim());
@@ -128,7 +135,7 @@ export function extractUsdAiProofPageTimestamp(html: string): number | null {
 export function parseUsdAiProofOfReserves(raw: string): UsdAiProofOfReservesEntry[] {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw) as unknown;
+    parsed = JSON.parse(quoteUnsafeIntegerWeightFields(raw)) as unknown;
   } catch (error) {
     throw new Error(
       `usdai-proof-of-reserves payload is malformed: ${error instanceof Error ? error.message : String(error)}`,
