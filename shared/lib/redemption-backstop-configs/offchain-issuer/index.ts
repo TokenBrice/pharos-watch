@@ -72,21 +72,24 @@ applyTrackedReviewedDocs(OFFCHAIN_ISSUER_BACKSTOP_CONFIGS, [
   "kag-kinesis",
 ]);
 
-applyTrackedReviewedDocs(OFFCHAIN_ISSUER_BACKSTOP_CONFIGS, [
-  "zarp-zarp",
-  "cetes-etherfuse",
-  "cgo-comtech",
-  "dgld-gold-token-sa",
-], REVIEWED_REMEDIATION_AT);
+applyTrackedReviewedDocs(
+  OFFCHAIN_ISSUER_BACKSTOP_CONFIGS,
+  ["zarp-zarp", "cetes-etherfuse", "cgo-comtech", "dgld-gold-token-sa"],
+  REVIEWED_REMEDIATION_AT,
+);
 
-applyTrackedReviewedDocs(OFFCHAIN_ISSUER_BACKSTOP_CONFIGS, [
-  "audx-aussie-dollar-token",
-  "brl1-brl1",
-  "cngn-compliant-naira",
-  "kgst-kyrgyz-som",
-  "reur-royal-euro",
-  "wars-argentine-peso",
-  "eusd-telcoin",
-  "jpyc-jpyc-v1",
-  "rusd-royal-dollar",
-], REVIEWED_NON_USD_BATCH_AT);
+applyTrackedReviewedDocs(
+  OFFCHAIN_ISSUER_BACKSTOP_CONFIGS,
+  [
+    "audx-aussie-dollar-token",
+    "brl1-brl1",
+    "cngn-compliant-naira",
+    "kgst-kyrgyz-som",
+    "reur-royal-euro",
+    "wars-argentine-peso",
+    "eusd-telcoin",
+    "jpyc-jpyc-v1",
+    "rusd-royal-dollar",
+  ],
+  REVIEWED_NON_USD_BATCH_AT,
+);

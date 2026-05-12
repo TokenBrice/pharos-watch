@@ -1,10 +1,6 @@
 import { defineBatch, type RedemptionBackstopRegistryEntry } from "../factory";
 import { documentedBoundSupplyFull, issuerBase } from "../shared";
-import {
-  reviewedDirectRedemptionSupplyFull,
-  REVIEWED_NON_USD_BATCH_AT,
-  REVIEWED_REMEDIATION_AT,
-} from "./shared";
+import { reviewedDirectRedemptionSupplyFull, REVIEWED_NON_USD_BATCH_AT, REVIEWED_REMEDIATION_AT } from "./shared";
 
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/offchain-issuer/base-batches.ts";
 

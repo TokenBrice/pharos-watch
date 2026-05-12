@@ -675,8 +675,7 @@ describe("loadRedemptionBackstopMap", () => {
     expect(history.some((entry) => entry.sql.includes("UPDATE redemption_backstop_runs"))).toBe(true);
     expect(
       history.some(
-        (entry) =>
-          entry.sql.includes("INSERT INTO redemption_backstop_run_rows") && entry.binds.includes("run-test"),
+        (entry) => entry.sql.includes("INSERT INTO redemption_backstop_run_rows") && entry.binds.includes("run-test"),
       ),
     ).toBe(true);
     expect(

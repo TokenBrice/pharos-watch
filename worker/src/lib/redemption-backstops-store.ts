@@ -440,10 +440,7 @@ async function queryRedemptionBackstopMap(db: D1Database, runId?: string | null)
   }
 }
 
-async function queryRedemptionBackstopMapFromRunRows(
-  db: D1Database,
-  runId: string,
-): Promise<RedemptionBackstopMap> {
+async function queryRedemptionBackstopMapFromRunRows(db: D1Database, runId: string): Promise<RedemptionBackstopMap> {
   let rows: D1Result<RedemptionBackstopRow>;
   try {
     rows = await db
@@ -520,7 +517,7 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
         }
 
         let map: RedemptionBackstopMap;
-        let source: "run-rows" | "legacy-current";
+        let source: "run-rows" | "legacy-current" = "run-rows";
         try {
           const result = await queryCompletedRedemptionBackstopRunMap(db, run.run_id);
           map = result.map;
@@ -533,9 +530,7 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
 
         const rowCount = Object.keys(map).length;
         if (rowCount !== run.written_count) {
-          rejectionReasons.push(
-            `${run.run_id}: ${source} row count mismatch (${rowCount}/${run.written_count})`,
-          );
+          rejectionReasons.push(`${run.run_id}: ${source} row count mismatch (${rowCount}/${run.written_count})`);
           continue;
         }
 
@@ -621,7 +616,8 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<
           medium: 0.75,
           low: 0.35,
         },
-        diversificationPolicy: "Only independent issuer rails receive the secondary-path diversification bonus in v4 snapshots.",
+        diversificationPolicy:
+          "Only independent issuer rails receive the secondary-path diversification bonus in v4 snapshots.",
       },
       routeFamilyCaps: {
         queueRedeem: REDEMPTION_ROUTE_FAMILY_CAPS.queueRedeem,

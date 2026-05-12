@@ -16,10 +16,7 @@ import {
   buildRedemptionBackstopRegistry,
   type RedemptionBackstopConfigManifestEntry,
 } from "./manifest";
-import {
-  REDEMPTION_BACKSTOP_POLICY_ENTRIES,
-  type RedemptionBackstopPolicyEntry,
-} from "./policies";
+import { REDEMPTION_BACKSTOP_POLICY_ENTRIES, type RedemptionBackstopPolicyEntry } from "./policies";
 
 export type RedemptionRegistryFindingSeverity = "error" | "warning";
 
@@ -467,13 +464,10 @@ function validateRedemptionBackstopPolicies(findings: RedemptionRegistryFinding[
     const policyKey = `${entry.kind}:${entry.stablecoinId}:${warningCode ?? ""}`;
 
     if (seen.has(policyKey)) {
-      addFinding(
-        findings,
-        "error",
-        "duplicate-redemption-policy",
-        `Duplicate redemption policy entry ${policyKey}.`,
-        { stablecoinId: entry.stablecoinId, filePath: "shared/lib/redemption-backstop-configs/policies.ts" },
-      );
+      addFinding(findings, "error", "duplicate-redemption-policy", `Duplicate redemption policy entry ${policyKey}.`, {
+        stablecoinId: entry.stablecoinId,
+        filePath: "shared/lib/redemption-backstop-configs/policies.ts",
+      });
     }
     seen.add(policyKey);
 
@@ -626,99 +620,99 @@ function validateStaticConfigSourceFile(
   sourceTextByPath: ReadonlyMap<string, string>,
   findings: RedemptionRegistryFinding[],
 ): void {
-    const sourceText = sourceTextByPath.get(filePath);
-    if (sourceText == null) return;
-    const sourceFile = ts.createSourceFile(filePath, sourceText, ts.ScriptTarget.Latest, true);
-    const registryEntries: { id: string; kind: "expandIds" | "property" }[] = [];
+  const sourceText = sourceTextByPath.get(filePath);
+  if (sourceText == null) return;
+  const sourceFile = ts.createSourceFile(filePath, sourceText, ts.ScriptTarget.Latest, true);
+  const registryEntries: { id: string; kind: "expandIds" | "property" }[] = [];
 
-    function visit(node: ts.Node): void {
-      if (
-        ts.isVariableDeclaration(node) &&
-        ts.isIdentifier(node.name) &&
-        node.name.text.endsWith("BACKSTOP_CONFIGS") &&
-        node.initializer &&
-        ts.isObjectLiteralExpression(node.initializer)
-      ) {
-        for (const property of node.initializer.properties) {
-          if (
-            ts.isSpreadAssignment(property) &&
-            ts.isCallExpression(property.expression) &&
-            property.expression.expression.getText(sourceFile) === "expandIds"
-          ) {
-            const ids = collectStringArray(property.expression.arguments[0]);
-            if (!ids) {
-              const { line, character } = sourceFile.getLineAndCharacterOfPosition(property.getStart(sourceFile));
-              addFinding(
-                findings,
-                "error",
-                "expand-ids-inline-array-required",
-                `${filePath}:${line + 1}:${character + 1}: expandIds() must use an inline string array for overwrite checks.`,
-                { family: moduleEntry.name, filePath },
-              );
-              continue;
-            }
-            registryEntries.push(...ids.map((id) => ({ id, kind: "expandIds" as const })));
+  function visit(node: ts.Node): void {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text.endsWith("BACKSTOP_CONFIGS") &&
+      node.initializer &&
+      ts.isObjectLiteralExpression(node.initializer)
+    ) {
+      for (const property of node.initializer.properties) {
+        if (
+          ts.isSpreadAssignment(property) &&
+          ts.isCallExpression(property.expression) &&
+          property.expression.expression.getText(sourceFile) === "expandIds"
+        ) {
+          const ids = collectStringArray(property.expression.arguments[0]);
+          if (!ids) {
+            const { line, character } = sourceFile.getLineAndCharacterOfPosition(property.getStart(sourceFile));
+            addFinding(
+              findings,
+              "error",
+              "expand-ids-inline-array-required",
+              `${filePath}:${line + 1}:${character + 1}: expandIds() must use an inline string array for overwrite checks.`,
+              { family: moduleEntry.name, filePath },
+            );
             continue;
           }
+          registryEntries.push(...ids.map((id) => ({ id, kind: "expandIds" as const })));
+          continue;
+        }
 
-          if (ts.isPropertyAssignment(property)) {
-            const id = propertyNameText(property.name);
-            if (id) {
-              registryEntries.push({ id, kind: "property" });
-            }
+        if (ts.isPropertyAssignment(property)) {
+          const id = propertyNameText(property.name);
+          if (id) {
+            registryEntries.push({ id, kind: "property" });
           }
         }
       }
+    }
 
-      if (ts.isObjectLiteralExpression(node)) {
-        const objectKeys = new Map<string, ts.PropertyName>();
-        for (const property of node.properties) {
-          if (
-            ts.isPropertyAssignment(property) ||
-            ts.isShorthandPropertyAssignment(property) ||
-            ts.isMethodDeclaration(property)
-          ) {
-            const key = propertyNameText(property.name);
-            if (!key) continue;
-            const previous = objectKeys.get(key);
-            if (previous) {
-              const { line, character } = sourceFile.getLineAndCharacterOfPosition(property.name.getStart(sourceFile));
-              const previousPosition = sourceFile.getLineAndCharacterOfPosition(previous.getStart(sourceFile));
-              addFinding(
-                findings,
-                "error",
-                "duplicate-object-key",
-                `${filePath}:${line + 1}:${character + 1}: duplicate object key "${key}" previously declared at line ${previousPosition.line + 1}.`,
-                { stablecoinId: key, family: moduleEntry.name, filePath },
-              );
-              continue;
-            }
-            objectKeys.set(key, property.name);
+    if (ts.isObjectLiteralExpression(node)) {
+      const objectKeys = new Map<string, ts.PropertyName>();
+      for (const property of node.properties) {
+        if (
+          ts.isPropertyAssignment(property) ||
+          ts.isShorthandPropertyAssignment(property) ||
+          ts.isMethodDeclaration(property)
+        ) {
+          const key = propertyNameText(property.name);
+          if (!key) continue;
+          const previous = objectKeys.get(key);
+          if (previous) {
+            const { line, character } = sourceFile.getLineAndCharacterOfPosition(property.name.getStart(sourceFile));
+            const previousPosition = sourceFile.getLineAndCharacterOfPosition(previous.getStart(sourceFile));
+            addFinding(
+              findings,
+              "error",
+              "duplicate-object-key",
+              `${filePath}:${line + 1}:${character + 1}: duplicate object key "${key}" previously declared at line ${previousPosition.line + 1}.`,
+              { stablecoinId: key, family: moduleEntry.name, filePath },
+            );
+            continue;
           }
+          objectKeys.set(key, property.name);
         }
       }
-
-      ts.forEachChild(node, visit);
     }
 
-    visit(sourceFile);
+    ts.forEachChild(node, visit);
+  }
 
-    const seenInModule = new Map<string, "expandIds" | "property">();
-    for (const entry of registryEntries) {
-      const previous = seenInModule.get(entry.id);
-      if (previous) {
-        if (!getBackstopRegistryOverrideReasons(moduleEntry.configs).has(entry.id)) {
-          addFinding(
-            findings,
-            "error",
-            "unapproved-config-overwrite",
-            `${moduleEntry.name} overwrites "${entry.id}" via ${previous}->${entry.kind}; use defineBackstopRegistry with an overrideReason if intentional.`,
-            { stablecoinId: entry.id, family: moduleEntry.name, filePath },
-          );
-        }
+  visit(sourceFile);
+
+  const seenInModule = new Map<string, "expandIds" | "property">();
+  for (const entry of registryEntries) {
+    const previous = seenInModule.get(entry.id);
+    if (previous) {
+      if (!getBackstopRegistryOverrideReasons(moduleEntry.configs).has(entry.id)) {
+        addFinding(
+          findings,
+          "error",
+          "unapproved-config-overwrite",
+          `${moduleEntry.name} overwrites "${entry.id}" via ${previous}->${entry.kind}; use defineBackstopRegistry with an overrideReason if intentional.`,
+          { stablecoinId: entry.id, family: moduleEntry.name, filePath },
+        );
       }
-      seenInModule.set(entry.id, entry.kind);
     }
+    seenInModule.set(entry.id, entry.kind);
+  }
 }
 
 function propertyNameText(name: ts.PropertyName | ts.BindingName): string | undefined {

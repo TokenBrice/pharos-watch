@@ -42,7 +42,11 @@ export function defineBatch(
   config: RedemptionBackstopConfig,
   options?: { sourceFilePath?: string },
 ): RedemptionBackstopRegistryEntry[] {
-  return ids.map((id) => ({ id, config, sourceFilePath: options?.sourceFilePath }));
+  return ids.map((id) => ({
+    id,
+    config,
+    ...(options?.sourceFilePath ? { sourceFilePath: options.sourceFilePath } : {}),
+  }));
 }
 
 export function defineOverride(
@@ -67,7 +71,7 @@ export function defineOverride(
       ...(overrides.notes ? { notes: [...overrides.notes] } : {}),
     },
     overrideReason: reason,
-    sourceFilePath: options?.sourceFilePath,
+    ...(options?.sourceFilePath ? { sourceFilePath: options.sourceFilePath } : {}),
   };
 }
 

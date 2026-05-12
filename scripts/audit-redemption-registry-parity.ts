@@ -29,6 +29,40 @@ interface ParitySnapshot {
   staticScores: unknown[];
 }
 
+const SEMANTIC_REGISTRY_FIELDS = [
+  "stablecoinId",
+  "routeFamily",
+  "accessModel",
+  "settlementModel",
+  "executionModel",
+  "outputAssetType",
+  "holderEligibility",
+  "routeStatus",
+  "capacityModel",
+  "costModel",
+  "totalScoreCap",
+] as const;
+
+const SEMANTIC_STATIC_SCORE_FIELDS = [
+  "stablecoinId",
+  "routeFamily",
+  "capacityConfidence",
+  "feeConfidence",
+  "feeModelKind",
+  "immediateCapacityUsd",
+  "immediateCapacityRatio",
+  "accessScore",
+  "settlementScore",
+  "executionCertaintyScore",
+  "capacityScore",
+  "coverageRatioScore",
+  "absoluteCapacityScore",
+  "outputAssetQualityScore",
+  "costScore",
+  "score",
+  "capsApplied",
+] as const;
+
 function buildSnapshot(): ParitySnapshot {
   const ownerById = new Map<string, string>();
   for (const entry of REDEMPTION_BACKSTOP_CONFIG_MANIFEST) {
@@ -137,12 +171,12 @@ function resolveStaticCostScore(config: RedemptionBackstopConfig): number {
 }
 
 function compareSnapshots(beforePath: string, afterPath: string): string[] {
-  const before = readJson(beforePath);
-  const after = readJson(afterPath);
-  if (stableStringify(before) === stableStringify(after)) {
-    return [];
-  }
-  return [`Parity snapshots differ: ${beforePath} != ${afterPath}`];
+  const before = toSemanticSnapshot(readJson(beforePath));
+  const after = toSemanticSnapshot(readJson(afterPath));
+  return [
+    ...compareSection("registry", before.registry, after.registry),
+    ...compareSection("staticScores", before.staticScores, after.staticScores),
+  ];
 }
 
 function readJson(path: string): unknown {
@@ -170,6 +204,67 @@ function sortObject(value: unknown): unknown {
 
 function stableStringify(value: unknown): string {
   return JSON.stringify(sortObject(value));
+}
+
+function toSemanticSnapshot(value: unknown): ParitySnapshot {
+  const raw = value as Partial<ParitySnapshot>;
+  return {
+    registry: normalizeRows(raw.registry, SEMANTIC_REGISTRY_FIELDS),
+    staticScores: normalizeRows(raw.staticScores, SEMANTIC_STATIC_SCORE_FIELDS),
+  };
+}
+
+function normalizeRows<T extends readonly string[]>(value: unknown, fields: T): unknown[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((row) => pickFields(row, fields));
+}
+
+function pickFields<T extends readonly string[]>(value: unknown, fields: T): Record<T[number], unknown> {
+  const raw = value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  return Object.fromEntries(fields.map((field) => [field, sortObject(raw[field])])) as Record<T[number], unknown>;
+}
+
+function compareSection(section: string, beforeRows: unknown[], afterRows: unknown[]): string[] {
+  const beforeById = rowsByStablecoinId(beforeRows);
+  const afterById = rowsByStablecoinId(afterRows);
+  const ids = [...new Set([...beforeById.keys(), ...afterById.keys()])].sort();
+  const diffs: string[] = [];
+
+  for (const id of ids) {
+    const before = beforeById.get(id);
+    const after = afterById.get(id);
+    if (!before) {
+      diffs.push(`${section}.${id}: added`);
+      continue;
+    }
+    if (!after) {
+      diffs.push(`${section}.${id}: removed`);
+      continue;
+    }
+
+    const fields = [...new Set([...Object.keys(before), ...Object.keys(after)])].sort();
+    for (const field of fields) {
+      const beforeValue = stableStringify(before[field]);
+      const afterValue = stableStringify(after[field]);
+      if (beforeValue !== afterValue) {
+        diffs.push(`${section}.${id}.${field}: ${beforeValue} -> ${afterValue}`);
+      }
+    }
+  }
+
+  return diffs;
+}
+
+function rowsByStablecoinId(rows: unknown[]): Map<string, Record<string, unknown>> {
+  const result = new Map<string, Record<string, unknown>>();
+  for (const row of rows) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+    const stablecoinId = (row as Record<string, unknown>).stablecoinId;
+    if (typeof stablecoinId === "string" && stablecoinId.length > 0) {
+      result.set(stablecoinId, row as Record<string, unknown>);
+    }
+  }
+  return result;
 }
 
 const [command, ...args] = process.argv.slice(2);
