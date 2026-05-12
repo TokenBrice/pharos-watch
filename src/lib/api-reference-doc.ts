@@ -53,7 +53,24 @@ export interface ApiReferenceDocument {
   sections: ApiReferenceSection[];
 }
 
+export interface ApiReferenceEndpointSummary {
+  id: string;
+  method: "GET" | "POST" | null;
+  path: string;
+  title: string;
+}
+
 const API_REFERENCE_PATH = path.join(process.cwd(), "docs/api-reference.md");
+const CONCISE_API_REFERENCE_SECTION_IDS = new Set([
+  "surface-split",
+  "public-api-auth",
+  "stablecoin-ids",
+  "response-headers",
+  "response-body-freshness-meta",
+  "cache-control-profiles",
+  "polling-guidance",
+  "rate-limits",
+]);
 
 function slugifyHeading(value: string) {
   return value
@@ -378,3 +395,23 @@ export const loadApiReferenceDocument = cache(async (): Promise<ApiReferenceDocu
   const markdown = await fs.readFile(API_REFERENCE_PATH, "utf8");
   return parseApiReferenceDocument(markdown);
 });
+
+export function getConciseApiReferenceSections(document: ApiReferenceDocument): ApiReferenceSection[] {
+  return document.sections.filter((section) => CONCISE_API_REFERENCE_SECTION_IDS.has(section.id));
+}
+
+export function getPublicApiEndpointSummaries(document: ApiReferenceDocument): ApiReferenceEndpointSummary[] {
+  const publicEndpoints = document.sections.find((section) => section.id === "public-endpoints");
+  if (!publicEndpoints) return [];
+
+  return publicEndpoints.subsections.map((section) => {
+    const title = section.title.replaceAll("`", "");
+    const path = title.replace(/^(GET|POST)\s+/, "");
+    return {
+      id: section.id,
+      method: section.method,
+      path,
+      title,
+    };
+  });
+}

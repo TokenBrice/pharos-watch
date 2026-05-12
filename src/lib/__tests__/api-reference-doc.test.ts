@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { loadApiReferenceDocument } from "@/lib/api-reference-doc";
+import {
+  getConciseApiReferenceSections,
+  getPublicApiEndpointSummaries,
+  loadApiReferenceDocument,
+} from "@/lib/api-reference-doc";
 
 describe("loadApiReferenceDocument", () => {
   it("loads the checked-in API reference into navigable sections", async () => {
@@ -19,6 +23,30 @@ describe("loadApiReferenceDocument", () => {
     expect(publicEndpoints).toBeDefined();
     expect(publicEndpoints?.subsections.length).toBeGreaterThan(10);
     expect(publicEndpoints?.subsections[0]?.title).toBe("`GET /api/stablecoins`");
+  });
+
+  it("builds a concise section set for /about/api without embedding full endpoint docs", async () => {
+    const document = await loadApiReferenceDocument();
+    const conciseSections = getConciseApiReferenceSections(document);
+
+    expect(conciseSections.map((section) => section.id)).toContain("surface-split");
+    expect(conciseSections.map((section) => section.id)).toContain("public-api-auth");
+    expect(conciseSections.some((section) => section.id === "public-endpoints")).toBe(false);
+    expect(conciseSections.some((section) => section.id === "admin-endpoints")).toBe(false);
+  });
+
+  it("extracts a public endpoint directory from the canonical reference", async () => {
+    const document = await loadApiReferenceDocument();
+    const endpoints = getPublicApiEndpointSummaries(document);
+
+    expect(endpoints.length).toBeGreaterThan(10);
+    expect(endpoints[0]).toEqual({
+      id: "get-api-stablecoins",
+      method: "GET",
+      path: "/api/stablecoins",
+      title: "GET /api/stablecoins",
+    });
+    expect(endpoints.some((endpoint) => endpoint.path === "/api/status")).toBe(false);
   });
 
   it("keeps escaped pipe unions inside one table cell", async () => {

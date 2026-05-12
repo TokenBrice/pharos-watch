@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import StablecoinDetailClient from "./client";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 
 const { useStablecoinDetailViewModelMock } = vi.hoisted(() => ({
   useStablecoinDetailViewModelMock: vi.fn(),
@@ -138,7 +139,7 @@ describe("StablecoinDetailClient", () => {
   it("renders the parent variants card inside the single overview section", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const { container } = render(
-      <StablecoinDetailClient id={coin.id} summary={null} coin={coin} />,
+      <StablecoinDetailClient id={coin.id} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
     );
 
     const overviewSections = container.querySelectorAll("#overview");
@@ -177,7 +178,7 @@ describe("StablecoinDetailClient", () => {
     }));
 
     const { container } = render(
-      <StablecoinDetailClient id={coin.id} summary={null} coin={coin} />,
+      <StablecoinDetailClient id={coin.id} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
     );
 
     const overviewSections = container.querySelectorAll("#overview");
@@ -214,7 +215,7 @@ describe("StablecoinDetailClient", () => {
       isNavToken: true,
     }));
 
-    render(<StablecoinDetailClient id={coin.id} summary={null} coin={coin} />);
+    render(<StablecoinDetailClient id={coin.id} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
 
     const browseLink = screen.getByRole("link", { name: "Browse all tracked variants" });
     expect(browseLink.getAttribute("href")).toBe("/?variant=variant-tracked");

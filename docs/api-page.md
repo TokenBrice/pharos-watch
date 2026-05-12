@@ -16,7 +16,7 @@ Route contract for the public API access and reference surfaces for external Pha
 - **Reference source of truth:** `docs/api-reference.md`
 - **Navigation rail:** `src/components/api-reference-layout.tsx` and `src/components/api-reference-sidebar.tsx`
 
-Both routes are static build-time pages. `/api/` renders the self-serve key request and verification flow. `/about/api/` reads the checked-in API reference markdown from `docs/api-reference.md`, parses the supported markdown subset (paragraphs, lists, tables, code fences, rules, H2/H3 headings), and renders that content inside the public site chrome.
+Both routes are static build-time pages. `/api/` renders the self-serve key request and verification flow. `/about/api/` reads the checked-in API reference markdown from `docs/api-reference.md`, parses the supported markdown subset (paragraphs, lists, tables, code fences, rules, H2/H3 headings), and renders a concise public integration guide plus an endpoint directory inside the public site chrome. The exhaustive HTTP contract remains canonical at `/docs/api-reference/`.
 
 ---
 
@@ -39,7 +39,7 @@ The default self-serve key policy is:
 - one active or pending self-serve key claim per normalized email
 - request details visible only in the private `ops.pharos.watch/admin-api/` UI
 
-The reference page is presentation and navigation around the canonical contract, not a second hand-maintained API spec. Admin sections remain in `docs/api-reference.md` for maintainers but are hidden from `/about/api/`.
+The reference page is presentation and navigation around the canonical contract, not a second hand-maintained API spec. It renders only selected overview sections from `docs/api-reference.md` plus a route directory derived from the canonical public endpoint section. Full endpoint field tables, examples, edge cases, and admin sections remain in `docs/api-reference.md` and `/docs/api-reference/`.
 
 ---
 
@@ -65,8 +65,8 @@ The route renders:
    - `/postman/pharos-api.postman_environment.json`
 6. A visible API access FAQ rendered with matching `FAQPage` JSON-LD
 7. A `Before You Call The API` section rendered from the intro portion of `docs/api-reference.md`
-8. A top-level scrollspy rail driven by the rendered H2 sections from the markdown doc, excluding the hidden admin auth/idempotency and admin endpoint sections
-9. H3 endpoint subsections rendered as article cards and exposed as collapsible subsection links in the API navigation rail
+8. A top-level scrollspy rail driven by the concise rendered H2 sections and the endpoint directory
+9. An endpoint directory derived from the canonical public endpoint H3 headings, with a clear link to `/docs/api-reference/#public-endpoints` for exhaustive field tables and examples
 
 ---
 

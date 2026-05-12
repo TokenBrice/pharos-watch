@@ -3,10 +3,10 @@
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 
 interface StablecoinDetailLoadingShellProps {
-  coin: StablecoinMeta;
+  coin: StablecoinStaticMeta;
   logoSrc?: string;
   description: string;
   statusLabel: string;

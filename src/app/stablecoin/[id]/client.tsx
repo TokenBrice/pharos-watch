@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { FeedbackModal } from "@/components/feedback-modal";
@@ -22,13 +22,12 @@ import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-a
 import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useStablecoinDetailViewModel, type StablecoinDetailSummary } from "@/hooks/use-stablecoin-detail-view-model";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
-import { deriveDependencies } from "@shared/lib/dependency-derivation";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
-import type { BlacklistStablecoin, StablecoinMeta } from "@shared/types";
+import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
+import type { BlacklistStablecoin } from "@shared/types";
 
 function DetailSectionSkeleton({ className }: { className: string }) {
   return <Skeleton className={className} />;
@@ -111,7 +110,7 @@ const DETAIL_SECTION_DEFS = {
   explore: { id: "explore-next", label: "Explore" },
 } as const;
 
-function DetailLoadingShell({ coin, logoSrc }: { coin: StablecoinMeta; logoSrc?: string }) {
+function DetailLoadingShell({ coin, logoSrc }: { coin: StablecoinStaticMeta; logoSrc?: string }) {
   return (
     <div className="space-y-6">
       <StablecoinDetailLoadingShell
@@ -151,20 +150,14 @@ function DetailLoadingShell({ coin, logoSrc }: { coin: StablecoinMeta; logoSrc?:
 interface StablecoinDetailClientProps {
   id: string;
   summary: StablecoinDetailSummary | null;
-  coin: StablecoinMeta;
+  staticCoin: StablecoinStaticMeta;
   logoSrc?: string;
 }
 
-export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: StablecoinDetailClientProps) {
+export default function StablecoinDetailClient({ id, summary, staticCoin, logoSrc }: StablecoinDetailClientProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const viewModel = useStablecoinDetailViewModel({ id, summary, coin, logoSrc });
-  const hasCollateralUsage = useMemo(() => {
-    return TRACKED_STABLECOINS.some((c) => {
-      if (c.id === id) return false;
-      if (c.variantOf === id) return false;
-      return deriveDependencies(c).some((dep) => dep.id === id);
-    });
-  }, [id]);
+  const viewModel = useStablecoinDetailViewModel({ id, summary, logoSrc });
+  const hasCollateralUsage = staticCoin.hasCollateralUsage;
   const { data: depegHistoryData } = useInfiniteDepegEvents({
     stablecoinId: id,
     enabled: viewModel.status === "ready" && !viewModel.isNavToken,
@@ -172,7 +165,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
   });
 
   if (viewModel.status === "loading") {
-    return <DetailLoadingShell coin={coin} logoSrc={logoSrc} />;
+    return <DetailLoadingShell coin={staticCoin} logoSrc={logoSrc} />;
   }
 
   if (viewModel.status === "list-error") {

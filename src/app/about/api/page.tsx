@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Globe, KeyRound, ShieldCheck } from "lucide-react";
+import { BookOpen, Globe, KeyRound, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CopyButton } from "@/components/copy-button";
 import { FaqSection } from "@/components/faq-section";
@@ -9,7 +9,14 @@ import type { SidebarSection } from "@/components/api-reference-sidebar";
 import type { FaqItem } from "@/lib/faq";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { loadApiReferenceDocument, type MarkdownBlock, type ApiReferenceSection } from "@/lib/api-reference-doc";
+import {
+  getConciseApiReferenceSections,
+  getPublicApiEndpointSummaries,
+  loadApiReferenceDocument,
+  type ApiReferenceEndpointSummary,
+  type MarkdownBlock,
+  type ApiReferenceSection,
+} from "@/lib/api-reference-doc";
 
 export const metadata = buildPageMetadata({
   title: "Pharos API Reference",
@@ -256,18 +263,72 @@ function SectionRenderer({ section }: { section: ApiReferenceSection }) {
 
 const HIDDEN_SECTIONS = new Set(["admin-auth-and-idempotency", "admin-endpoints"]);
 
+function EndpointDirectory({ endpoints }: { endpoints: ApiReferenceEndpointSummary[] }) {
+  return (
+    <section className="rounded-[1.5rem] border border-border/60 bg-card/70 px-4 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:px-5 sm:py-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-2">
+          <p className="pharos-kicker">Endpoint Directory</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Public API routes</h2>
+          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            This page keeps the route list scannable. The canonical field tables, examples, and edge-case contracts live in the{" "}
+            <Link href="/docs/api-reference/#public-endpoints" className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground">
+              full API reference
+            </Link>
+            .
+          </p>
+        </div>
+        <Link
+          href="/docs/api-reference/"
+          className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-full border border-border/60 px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/60"
+        >
+          <BookOpen className="h-4 w-4" aria-hidden="true" />
+          Full reference
+        </Link>
+      </div>
+
+      <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {endpoints.map((endpoint) => (
+          <Link
+            key={endpoint.id}
+            href="/docs/api-reference/#public-endpoints"
+            className="pharos-focus-ring flex min-w-0 items-center gap-2 rounded-xl border border-border/55 bg-background/45 px-3 py-2 text-sm hover:bg-muted/45"
+          >
+            {endpoint.method ? (
+              <span
+                className={cn(
+                  "inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono text-[11px] font-bold leading-tight",
+                  endpoint.method === "GET" && "border-emerald-500/25 bg-emerald-500/15 text-emerald-500",
+                  endpoint.method === "POST" && "border-amber-500/25 bg-amber-500/15 text-amber-500",
+                )}
+              >
+                {endpoint.method}
+              </span>
+            ) : null}
+            <code className="truncate font-mono text-[0.82rem] text-foreground">{endpoint.path}</code>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default async function AboutApiPage() {
   const document = await loadApiReferenceDocument();
-  const publicSections = document.sections.filter((s) => !HIDDEN_SECTIONS.has(s.id));
-  const sidebarSections: SidebarSection[] = publicSections.map((section) => ({
-    id: section.id,
-    label: stripMarkdownHeadingFormatting(section.title),
-    subsections: section.subsections.map((sub) => ({
-      id: sub.id,
-      label: stripMarkdownHeadingFormatting(sub.title).replace(/^(GET|POST)\s+/, ""),
-      method: sub.method,
+  const conciseSections = getConciseApiReferenceSections(document).filter((s) => !HIDDEN_SECTIONS.has(s.id));
+  const endpoints = getPublicApiEndpointSummaries(document);
+  const sidebarSections: SidebarSection[] = [
+    ...conciseSections.map((section) => ({
+      id: section.id,
+      label: stripMarkdownHeadingFormatting(section.title),
+      subsections: section.subsections.map((sub) => ({
+        id: sub.id,
+        label: stripMarkdownHeadingFormatting(sub.title).replace(/^(GET|POST)\s+/, ""),
+        method: sub.method,
+      })),
     })),
-  }));
+    { id: "endpoint-directory", label: "Endpoint Directory", subsections: [] },
+  ];
 
   return (
     <div className="mx-auto w-full max-w-[76rem] space-y-8">
@@ -424,9 +485,12 @@ export default async function AboutApiPage() {
 
       {/* Zone 2: Two-column reference body */}
       <ApiReferenceLayout sections={sidebarSections}>
-        {publicSections.map((section) => (
+        {conciseSections.map((section) => (
           <SectionRenderer key={section.id} section={section} />
         ))}
+        <div id="endpoint-directory">
+          <EndpointDirectory endpoints={endpoints} />
+        </div>
       </ApiReferenceLayout>
     </div>
   );

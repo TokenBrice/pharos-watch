@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import StablecoinDetailClient from "./client";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
 import type { StablecoinMeta, StablecoinObituary } from "@shared/types";
 
@@ -152,7 +153,7 @@ describe("StablecoinDetailClient (frozen)", () => {
   it("renders the FrozenStateBanner alongside the hero when status === frozen", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(makeFrozenViewModel(coin));
-    render(<StablecoinDetailClient id={coin.id} summary={null} coin={coin} />);
+    render(<StablecoinDetailClient id={coin.id} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
     expect(screen.getByRole("heading", { name: /Sunset by issuer\./ })).toBeTruthy();
     expect(screen.getByRole("link", { name: /cemetery/i })).toBeTruthy();
   });
@@ -160,7 +161,7 @@ describe("StablecoinDetailClient (frozen)", () => {
   it("renders FrozenDataNote labels above each chart section", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(makeFrozenViewModel(coin));
-    render(<StablecoinDetailClient id={coin.id} summary={null} coin={coin} />);
+    render(<StablecoinDetailClient id={coin.id} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
     const notes = screen.getAllByText(/no longer collects new metrics/i);
     // Market chart, Distribution, Liquidity, History — non-flow / non-blacklist
     // sections render unconditionally for this fixture.
