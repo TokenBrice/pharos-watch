@@ -270,6 +270,8 @@ Operationally, missing-price enrichment runs before the slower GeckoTerminal sof
 
 Provider attempt diagnostics for fallback providers are persisted into `sync-stablecoins` cron metadata. Those diagnostics include the sanitized endpoint, HTTP status when available, candidate/response/match counts, parse or rejection reason counts, and short non-OK snippets so operators can distinguish provider transport failures from schema drift, rejected quotes, and successful responses that simply carry no usable tracked prices.
 
+DIA is currently research-only. `npm run audit:dia-provider -- --input agents/source-depth-baseline-YYYY-MM-DD.json` probes DIA's exact-address `GET /v1/assetQuotation/{blockchain}/{address}` endpoint for below-target rows and records hit rate, timestamp quality, source metadata, and agreement vs the current Pharos price. The probe does not publish prices, change `consensusSources`, alter circuit state, or participate in depeg confirmation. Any future production integration requires false-positive review, capacity/circuit approval, and a methodology update.
+
 Jupiter fallback uses the official `https://api.jup.ag/price/v3` gateway and sends `x-api-key` when `JUPITER_API_KEY` is configured. The previous Lite gateway is no longer used after Worker egress received repeated Cloudflare 403 block pages from that host.
 
 Binance ticker fetches try the market-data mirror first (`data-api.binance.vision`) and then fall back to the main public API host (`api.binance.com`) before recording the source as failed. Both hosts use the same tracked `USDTUSD` / `USDCUSD` market mapping.

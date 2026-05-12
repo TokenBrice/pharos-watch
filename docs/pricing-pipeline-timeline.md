@@ -4,6 +4,13 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ---
 
+## Operator research - DIA audit-only provider probe (May 12, 2026)
+
+- Added a manual DIA exact-address probe for below-target source-depth rows; it records hit rate, freshness, source metadata, and agreement against Pharos prices without publishing prices or changing source-depth counts
+- DIA remains research-only pending false-positive review, capacity/circuit approval, and a separate methodology decision before any consensus or depeg-authority use
+
+---
+
 ## v5.97 - Registry source-family normalization (May 12, 2026)
 
 - Pricing source registry entries now carry explicit `depegSourceFamily` metadata, and downstream policy expands composite source labels before applying replay-safety, pool-challenge, fallback-only, depeg-authority, and severe-downside corroboration checks
