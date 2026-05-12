@@ -150,7 +150,15 @@ export const FEATURE_ACCENT_CLASSES: Record<
   },
 };
 
-export const BLACKLIST_BREAKDOWN_CHIP_CLASS: Record<string, string> = {
+export type BlacklistBreakdownStatusKind =
+  | "live"
+  | "yes"
+  | "dilutable"
+  | "upstream"
+  | "possible"
+  | "no";
+
+export const BLACKLIST_BREAKDOWN_CHIP_CLASS: Record<BlacklistBreakdownStatusKind, string> = {
   live: "border-blue-500/30 bg-blue-500/12 text-blue-800 dark:text-blue-200",
   yes: "border-red-500/30 bg-red-500/12 text-red-800 dark:text-red-200",
   dilutable: "border-purple-500/30 bg-purple-500/12 text-purple-800 dark:text-purple-200",
