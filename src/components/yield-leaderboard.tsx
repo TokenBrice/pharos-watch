@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
 import { TableCell, TableRow } from "@/components/ui/table";
 import {
@@ -67,16 +67,29 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [sheetRankingId, setSheetRankingId] = useState<string | null>(null);
-  const sheetRanking = sheetRankingId ? rankings.find((r) => r.id === sheetRankingId) ?? null : null;
+  const sheetRanking = useMemo(
+    () => (sheetRankingId ? rankings.find((r) => r.id === sheetRankingId) ?? null : null),
+    [rankings, sheetRankingId],
+  );
 
-  const typeFiltered = rankings.filter((ranking) => activeLabels.has(getYieldTypeLabel(ranking.yieldType)));
-  const warningFiltered = hideWarnings
-    ? typeFiltered.filter((ranking) => ranking.warningSignals.length === 0)
-    : typeFiltered;
+  const typeFiltered = useMemo(
+    () => rankings.filter((ranking) => activeLabels.has(getYieldTypeLabel(ranking.yieldType))),
+    [rankings, activeLabels],
+  );
+  const warningFiltered = useMemo(
+    () => (hideWarnings
+      ? typeFiltered.filter((ranking) => ranking.warningSignals.length === 0)
+      : typeFiltered),
+    [hideWarnings, typeFiltered],
+  );
 
-  const searchFiltered = searchQuery.trim()
-    ? warningFiltered.filter((ranking) => matchesYieldSearch(ranking, searchQuery))
-    : warningFiltered;
+  const normalizedSearchQuery = searchQuery.trim();
+  const searchFiltered = useMemo(
+    () => (normalizedSearchQuery
+      ? warningFiltered.filter((ranking) => matchesYieldSearch(ranking, normalizedSearchQuery))
+      : warningFiltered),
+    [normalizedSearchQuery, warningFiltered],
+  );
 
   const {
     sortKey,
@@ -101,10 +114,32 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
     resetPageOnTotalChange: true,
   });
   const prefetch = usePrefetchStablecoin();
-  const visibleExpandedId =
-    expandedId !== null && paginated.some((row) => row.id === expandedId)
-      ? expandedId
-      : null;
+  const visibleExpandedId = useMemo(
+    () => (expandedId !== null && paginated.some((row) => row.id === expandedId) ? expandedId : null),
+    [expandedId, paginated],
+  );
+  const handleToggleLabel = useCallback((label: string) => {
+    setActiveLabels((previous) => {
+      const next = new Set(previous);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  }, []);
+  const handleSelectRanking = useCallback((rankingId: string) => {
+    setSearchQuery("");
+    setSearchOpen(false);
+    setExpandedId(rankingId);
+    requestAnimationFrame(() => {
+      document.getElementById(`yield-row-${rankingId}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+  }, []);
+  const handleToggleExpanded = useCallback((stablecoinId: string) => {
+    setExpandedId((current) => (current === stablecoinId ? null : stablecoinId));
+  }, []);
 
   return (
     <TooltipProvider>
@@ -125,28 +160,11 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
             hideWarnings={hideWarnings}
             searchOpen={searchOpen}
             searchQuery={searchQuery}
-            onToggleLabel={(label) => {
-              setActiveLabels((previous) => {
-                const next = new Set(previous);
-                if (next.has(label)) next.delete(label);
-                else next.add(label);
-                return next;
-              });
-            }}
+            onToggleLabel={handleToggleLabel}
             onHideWarningsChange={setHideWarnings}
             onSearchQueryChange={setSearchQuery}
             onSearchOpenChange={setSearchOpen}
-            onSelectRanking={(rankingId) => {
-              setSearchQuery("");
-              setSearchOpen(false);
-              setExpandedId(rankingId);
-              requestAnimationFrame(() => {
-                document.getElementById(`yield-row-${rankingId}`)?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "center",
-                });
-              });
-            }}
+            onSelectRanking={handleSelectRanking}
           />
         }
         pagination={sorted.length > 0 ? {
@@ -172,9 +190,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
             columnCount={COLUMN_COUNT}
             expanded={visibleExpandedId === row.id}
             onPrefetch={prefetch}
-            onToggleExpanded={(stablecoinId) => {
-              setExpandedId((current) => (current === stablecoinId ? null : stablecoinId));
-            }}
+            onToggleExpanded={handleToggleExpanded}
             onOpenSourceSheet={setSheetRankingId}
           />
         ))}

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { computeBandCounts, getAggregateFreshnessTimestamp, resolveRadarClick } from "@/components/dews-summary";
+import {
+  buildDewsSummaryViewModel,
+  computeBandCounts,
+  getAggregateFreshnessTimestamp,
+  resolveRadarClick,
+} from "@/components/dews-summary-model";
 
 describe("computeBandCounts", () => {
   it("counts each known threat band and ignores unknown values", () => {
@@ -60,5 +65,29 @@ describe("getAggregateFreshnessTimestamp", () => {
 
   it("falls back to updatedAt for older API responses", () => {
     expect(getAggregateFreshnessTimestamp({ updatedAt: 1_775_898_800 })).toBe(1_775_898_800);
+  });
+});
+
+describe("buildDewsSummaryViewModel", () => {
+  it("derives radar structures together for a single memoized render path", () => {
+    const viewModel = buildDewsSummaryViewModel(
+      {
+        updatedAt: 1_775_898_800,
+        signals: {
+          usdc: { score: 8, band: "CALM" },
+          usdt: { score: 20, band: "WATCH" },
+          frax: { score: 66, band: "WARNING" },
+        },
+      },
+      { usdt: "/logos/usdt.png" },
+      new Map([["usdt", 1_000_000_000]]),
+    );
+
+    expect(viewModel.totalCount).toBe(3);
+    expect(viewModel.bandCounts.WARNING).toBe(1);
+    expect(viewModel.highest).toBe("WARNING");
+    expect(viewModel.elevated.map((coin) => coin.id)).toEqual(["usdt", "frax"]);
+    expect(viewModel.calmDots).toHaveLength(1);
+    expect(viewModel.updatedAtLabel.length).toBeGreaterThan(0);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
+import { memo, useState, useEffect, useCallback, useMemo, useRef, type CSSProperties } from "react";
 import Image from "next/image";
 import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
@@ -173,7 +173,7 @@ function Tombstone({
   index: number;
   onSelect: (coinId: string) => void;
   flowerCount: number;
-  onPayRespects: () => void;
+  onPayRespects: (coinId: string) => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const tombRef = useRef<HTMLDivElement>(null);
@@ -201,10 +201,10 @@ function Tombstone({
   const handleF = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "f" || e.key === "F") {
-        onPayRespects();
+        onPayRespects(coin.id);
       }
     },
-    [onPayRespects],
+    [coin.id, onPayRespects],
   );
 
   useEffect(() => {
@@ -280,7 +280,7 @@ function Tombstone({
           e.preventDefault();
           onSelect(coin.id);
         } else if (e.key === "f" || e.key === "F") {
-          onPayRespects();
+          onPayRespects(coin.id);
         }
       }}
     >
@@ -433,6 +433,8 @@ function Tombstone({
   );
 }
 
+const MemoizedTombstone = memo(Tombstone);
+
 interface CemeteryTombstonesProps {
   coins: CemeteryEntry[];
   onSelect: (coinId: string) => void;
@@ -440,7 +442,7 @@ interface CemeteryTombstonesProps {
 
 export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps) {
   const [flowers, setFlowers] = useState<Record<string, number>>({});
-  const sections = buildCemeteryYearSections(coins);
+  const sections = useMemo(() => buildCemeteryYearSections(coins), [coins]);
 
   const handlePayRespects = useCallback((coinId: string) => {
     setFlowers((prev) => {
@@ -469,13 +471,13 @@ export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps)
                 {section.coins.length > 0 && (
                   <div className={styles.gravesGrid}>
                     {section.coins.map((coin, i) => (
-                      <Tombstone
+                      <MemoizedTombstone
                         key={coin.id}
                         coin={coin}
                         index={i}
                         onSelect={onSelect}
                         flowerCount={flowers[coin.id] ?? 0}
-                        onPayRespects={() => handlePayRespects(coin.id)}
+                        onPayRespects={handlePayRespects}
                       />
                     ))}
                   </div>

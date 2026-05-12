@@ -91,28 +91,34 @@ export function buildChainHarborEntries(
   return sorted.map((chain) => buildChainHarborEntry(chain, globalTotalUsd, maxSupply));
 }
 
-export function buildChainHarborModel(
-  chains: ChainSummary[],
+export function buildChainHarborModelFromEntries(
+  allEntries: readonly ChainHarborEntry[],
   globalTotalUsd: number,
 ): ChainHarborModel {
-  const allEntries = buildChainHarborEntries(chains, globalTotalUsd);
   const entries = allEntries.slice(0, MAX_HARBORS);
   const topSupply = entries.reduce((sum, entry) => sum + entry.totalUsd, 0);
-  const scored = chains
-    .map((chain) => chain.healthScore)
+  const scored = allEntries
+    .map((entry) => entry.healthScore)
     .filter((score): score is number => score != null);
 
   return {
     totalUsd: globalTotalUsd,
-    harborCount: chains.length,
+    harborCount: allEntries.length,
     entries,
     topSharePct: globalTotalUsd > 0 ? (topSupply / globalTotalUsd) * 100 : 0,
     largestHarbor: entries[0] ?? null,
-    fragileHarbors: chains.filter((chain) => chain.healthBand === "fragile" || chain.healthBand === "concentrated").length,
+    fragileHarbors: allEntries.filter((entry) => entry.healthBand === "fragile" || entry.healthBand === "concentrated").length,
     averageHealthScore: scored.length > 0
       ? Math.round(scored.reduce((sum, score) => sum + score, 0) / scored.length)
       : null,
   };
+}
+
+export function buildChainHarborModel(
+  chains: ChainSummary[],
+  globalTotalUsd: number,
+): ChainHarborModel {
+  return buildChainHarborModelFromEntries(buildChainHarborEntries(chains, globalTotalUsd), globalTotalUsd);
 }
 
 export const HARBOR_MAX = MAX_HARBORS;

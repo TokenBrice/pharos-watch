@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, memo, useMemo } from "react";
 import { AlertTriangle, ChevronDown } from "lucide-react";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { TableCell, TableRow } from "@/components/ui/table";
@@ -31,7 +31,7 @@ interface YieldLeaderboardTableRowProps {
   onOpenSourceSheet: (stablecoinId: string) => void;
 }
 
-export function YieldLeaderboardTableRow({
+function YieldLeaderboardTableRowBase({
   row,
   index,
   pageStartIndex,
@@ -55,7 +55,23 @@ export function YieldLeaderboardTableRow({
     effectiveYield,
     yieldEfficiency,
     sustainabilityMult,
-  } = computePysBreakdown(row.apy30d, safetyScore, row.yieldStability, row.benchmarkRate);
+  } = useMemo(
+    () => computePysBreakdown(row.apy30d, safetyScore, row.yieldStability, row.benchmarkRate),
+    [row.apy30d, row.benchmarkRate, row.yieldStability, safetyScore],
+  );
+  const benchmarkReferenceText = useMemo(() => getYieldBenchmarkReferenceText(row), [row]);
+  const availableSources = useMemo(
+    () => [
+      ...(row.provenance?.sourceKey
+        ? [{ sourceKey: row.provenance.sourceKey, yieldSource: row.yieldSource }]
+        : []),
+      ...(row.altSources ?? []).map((source) => ({
+        sourceKey: source.sourceKey,
+        yieldSource: source.yieldSource,
+      })),
+    ],
+    [row],
+  );
 
   return (
     <Fragment key={row.id}>
@@ -168,7 +184,7 @@ export function YieldLeaderboardTableRow({
                 </span>
               ) : null}
             </div>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">{getYieldBenchmarkReferenceText(row)}</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">{benchmarkReferenceText}</p>
           </div>
         </TableCell>
         <TableCell className="hidden text-center sm:table-cell">
@@ -289,15 +305,7 @@ export function YieldLeaderboardTableRow({
                   benchmarkIsFallback={row.benchmarkSelectionMode === "fallback-usd" || row.benchmarkIsFallback}
                   medianApy={medianApy}
                   compact
-                  availableSources={[
-                    ...(row.provenance?.sourceKey
-                      ? [{ sourceKey: row.provenance.sourceKey, yieldSource: row.yieldSource }]
-                      : []),
-                    ...(row.altSources ?? []).map((source) => ({
-                      sourceKey: source.sourceKey,
-                      yieldSource: source.yieldSource,
-                    })),
-                  ]}
+                  availableSources={availableSources}
                 />
               </div>
               <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-background/55 px-3 py-3">
@@ -316,7 +324,7 @@ export function YieldLeaderboardTableRow({
                 </div>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Benchmark</p>
-                  <p className="mt-0.5 text-xs text-foreground">{getYieldBenchmarkReferenceText(row)}</p>
+                  <p className="mt-0.5 text-xs text-foreground">{benchmarkReferenceText}</p>
                 </div>
                 {warningSignalCount > 0 ? (
                   <div>
@@ -349,3 +357,6 @@ export function YieldLeaderboardTableRow({
     </Fragment>
   );
 }
+
+export const YieldLeaderboardTableRow = memo(YieldLeaderboardTableRowBase);
+YieldLeaderboardTableRow.displayName = "YieldLeaderboardTableRow";

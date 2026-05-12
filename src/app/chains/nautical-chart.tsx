@@ -1,11 +1,12 @@
 "use client";
 
+import { useCallback, useMemo } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
 import { Anchor, Activity, ShipWheel } from "lucide-react";
 import type { ChainSummary } from "@shared/types/chains";
 import { cn } from "@/lib/utils";
 import { formatCompactUsd } from "@shared/lib/format";
-import { buildChainHarborModel } from "./harbor-map";
+import { buildChainHarborModel, type ChainHarborModel } from "./harbor-map";
 import { aggregateSkyBand, hullWidth } from "./nautical-scene-math";
 import {
   LIGHTHOUSE_ZONE,
@@ -36,14 +37,18 @@ export function NauticalChart({
   globalTotalUsd,
   selectedChainId,
   onSelectChain,
+  harborModel,
 }: {
   chains: ChainSummary[];
   globalTotalUsd: number;
   selectedChainId?: string | null;
   onSelectChain?: (chainId: string) => void;
+  harborModel?: ChainHarborModel;
 }) {
-  const model = buildChainHarborModel(chains, globalTotalUsd);
-  if (model.entries.length === 0) return null;
+  const model = useMemo(
+    () => harborModel ?? buildChainHarborModel(chains, globalTotalUsd),
+    [chains, globalTotalUsd, harborModel],
+  );
 
   const activeChainId = selectedChainId ?? model.largestHarbor?.id ?? null;
   const sky = aggregateSkyBand(model.entries);
@@ -52,23 +57,34 @@ export function NauticalChart({
   const chartLabel = `Nautical chart of ${topCount} largest stablecoin ${topCount === 1 ? "chain" : "chains"}`;
   const laneWidth = (SCENE_WIDTH - PIER_X - LIGHTHOUSE_ZONE) / Math.max(topCount, 1);
 
-  const remaining = [...chains].sort((a, b) => b.totalUsd - a.totalUsd).slice(topCount);
-  const maxCargoUsd = Math.max(0, ...model.entries.flatMap((entry) => entry.cargos.map((cargo) => cargo.cargoUsd)));
+  const remaining = useMemo(
+    () => [...chains].sort((a, b) => b.totalUsd - a.totalUsd).slice(topCount),
+    [chains, topCount],
+  );
+  const maxCargoUsd = useMemo(
+    () => Math.max(0, ...model.entries.flatMap((entry) => entry.cargos.map((cargo) => cargo.cargoUsd))),
+    [model.entries],
+  );
 
-  const geometries = model.entries.map((entry, i) => {
-    const hullW = hullWidth(entry.totalUsd, maxSupply, laneWidth * 1.1);
-    const x = PIER_X + i * laneWidth + (laneWidth - hullW) / 2;
-    const supplyScale = maxSupply > 0 ? Math.max(0.1, Math.min(1, Math.sqrt(entry.totalUsd / maxSupply))) : 0.1;
-    return { entry, geom: shipDimensions(entry, x, hullW, WATERLINE_Y - 18, supplyScale) };
-  });
+  const geometries = useMemo(
+    () => model.entries.map((entry, i) => {
+      const hullW = hullWidth(entry.totalUsd, maxSupply, laneWidth * 1.1);
+      const x = PIER_X + i * laneWidth + (laneWidth - hullW) / 2;
+      const supplyScale = maxSupply > 0 ? Math.max(0.1, Math.min(1, Math.sqrt(entry.totalUsd / maxSupply))) : 0.1;
+      return { entry, geom: shipDimensions(entry, x, hullW, WATERLINE_Y - 18, supplyScale) };
+    }),
+    [laneWidth, maxSupply, model.entries],
+  );
   const activeGeometry = geometries.find(({ entry }) => entry.id === activeChainId) ?? geometries[0];
   const beamTargetX = activeGeometry ? activeGeometry.geom.deckLeft + activeGeometry.geom.hullW / 2 : PIER_X;
   const beamTargetY = activeGeometry ? activeGeometry.geom.hullTop - 42 : WATERLINE_Y - 96;
-  const handleShipKeyDown = (event: KeyboardEvent<SVGGElement>, chainId: string) => {
+  const handleShipKeyDown = useCallback((event: KeyboardEvent<SVGGElement>, chainId: string) => {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
     onSelectChain?.(chainId);
-  };
+  }, [onSelectChain]);
+
+  if (model.entries.length === 0) return null;
 
   return (
     <section className="pharos-card-shell overflow-hidden" aria-labelledby="chain-nautical-heading">

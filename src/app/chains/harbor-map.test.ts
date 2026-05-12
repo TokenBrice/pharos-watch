@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { createElement, type ImgHTMLAttributes } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ChainSummary } from "@shared/types/chains";
+import { buildChainHarborEntries, buildChainHarborModel, buildChainHarborModelFromEntries } from "./harbor-map";
 import { HarborList as ChainHarborMap } from "./harbor-list";
 import { NauticalChart } from "./nautical-chart";
 
@@ -103,5 +104,17 @@ describe("chain harbor DOM smokes", () => {
     const yValues = [...(beam?.getAttribute("d") ?? "").matchAll(/[ML]\s+[-\d.]+\s+([-\d.]+)/g)]
       .map((match) => Number(match[1]));
     expect(Math.min(...yValues)).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("chain harbor model helpers", () => {
+  it("builds the same aggregate model from precomputed entries", () => {
+    const chains = [
+      makeChain({ id: "ethereum", name: "Ethereum", totalUsd: 60, healthScore: 90, healthBand: "robust" }),
+      makeChain({ id: "base", name: "Base", totalUsd: 25, healthScore: 70, healthBand: "mixed" }),
+    ];
+    const entries = buildChainHarborEntries(chains, 100);
+
+    expect(buildChainHarborModelFromEntries(entries, 100)).toEqual(buildChainHarborModel(chains, 100));
   });
 });

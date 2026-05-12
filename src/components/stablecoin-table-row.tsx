@@ -107,6 +107,7 @@ function StablecoinVirtualRowBase({
   const blacklistSource = blacklistStatus === "dilutable" ? meta?.canBeBlacklistedSource : undefined;
   const change24h = prevDay > 0 ? ((circulating - prevDay) / prevDay) * 100 : 0;
   const change7d = prevWeek > 0 ? ((circulating - prevWeek) / prevWeek) * 100 : 0;
+  const supplySparklineValues = [prevWeek, prevDay, circulating];
 
   const riskLevel = getStablecoinTableRowRiskLevel(coin, pegScores, reportCards);
   const riskClass = riskLevel === "depeg" ? "pharos-row-risk-depeg" :
@@ -269,7 +270,7 @@ function StablecoinVirtualRowBase({
             {prevWeek > 0 ? (
               <>
                 <span className="hidden sm:inline">
-                  <MiniSparkline values={[getPrevWeekRaw(coin), getPrevDayRaw(coin), getCirculatingRaw(coin)]} />
+                  <MiniSparkline values={supplySparklineValues} />
                 </span>
                 {change7d >= 0 ? "↑" : "↓"} {formatPercentChange(circulating, prevWeek)}
               </>

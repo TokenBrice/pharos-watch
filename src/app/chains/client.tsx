@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
 import { formatSignedPercent } from "@shared/lib/format";
-import { findCanonicalChainData, type RawChainCirculating } from "@shared/lib/chain-circulating";
+import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { CHAIN_META } from "@shared/lib/chains";
 import { formatCompactUsd } from "@shared/lib/format";
@@ -25,7 +25,7 @@ import type { HealthBand, ChainSummary } from "@shared/types/chains";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { logosById } from "@/lib/logos";
 import { NauticalChart } from "./nautical-chart";
-import { buildChainHarborEntries, HARBOR_MAX } from "./harbor-map";
+import { buildChainHarborEntries, buildChainHarborModelFromEntries, HARBOR_MAX } from "./harbor-map";
 import { nextHarborSweepId } from "./nautical-scene-math";
 import { SelectedHarborPanel } from "./selected-harbor-panel";
 
@@ -74,27 +74,45 @@ function sortChains(chains: ChainSummary[], key: ChainSortKey, dir: "asc" | "des
   });
 }
 
-function deriveTopStablecoinsForChain(
-  chain: ChainSummary,
+function deriveTopStablecoinsByChain(
+  chains: readonly ChainSummary[],
   stablecoins: readonly StablecoinData[],
-): NonNullable<ChainSummary["topStablecoins"]> {
-  const allCargos = stablecoins.flatMap((asset) => {
-    const chainData = findCanonicalChainData(asset.chainCirculating as RawChainCirculating, chain.id);
-    if (!chainData || chainData.current <= 0) return [];
-    return [{
-      id: asset.id,
-      symbol: asset.symbol,
-      supplyUsd: chainData.current,
-    }];
-  });
+): Map<string, NonNullable<ChainSummary["topStablecoins"]>> {
+  const chainIds = new Set(chains.map((chain) => chain.id));
+  const cargosByChain = new Map<string, Array<{ id: string; symbol: string; supplyUsd: number }>>();
+  const totalsByChain = new Map<string, number>();
 
-  const totalUsd = allCargos.reduce((sum, cargo) => sum + cargo.supplyUsd, 0);
-  if (totalUsd <= 0) return [];
+  for (const asset of stablecoins) {
+    for (const [chainId, chainData] of canonicalizeChainCirculating(asset.chainCirculating)) {
+      if (!chainIds.has(chainId) || chainData.current <= 0) continue;
+      let cargos = cargosByChain.get(chainId);
+      if (!cargos) {
+        cargos = [];
+        cargosByChain.set(chainId, cargos);
+      }
+      cargos.push({
+        id: asset.id,
+        symbol: asset.symbol,
+        supplyUsd: chainData.current,
+      });
+      totalsByChain.set(chainId, (totalsByChain.get(chainId) ?? 0) + chainData.current);
+    }
+  }
 
-  return allCargos.sort((a, b) => b.supplyUsd - a.supplyUsd).slice(0, 5).map((cargo) => ({
-    ...cargo,
-    share: cargo.supplyUsd / totalUsd,
-  }));
+  const topByChain = new Map<string, NonNullable<ChainSummary["topStablecoins"]>>();
+  for (const [chainId, cargos] of cargosByChain) {
+    const totalUsd = totalsByChain.get(chainId) ?? 0;
+    if (totalUsd <= 0) continue;
+    topByChain.set(
+      chainId,
+      cargos.sort((a, b) => b.supplyUsd - a.supplyUsd).slice(0, 5).map((cargo) => ({
+        ...cargo,
+        share: cargo.supplyUsd / totalUsd,
+      })),
+    );
+  }
+
+  return topByChain;
 }
 
 function attachTopStablecoinCargo(
@@ -102,12 +120,13 @@ function attachTopStablecoinCargo(
   stablecoins: readonly StablecoinData[] | undefined,
 ): ChainSummary[] {
   if (!stablecoins?.length) return [...chains];
+  const fallbackCargoByChain = deriveTopStablecoinsByChain(chains, stablecoins);
 
   return chains.map((chain) => {
     const expectedCargoCount = Math.min(chain.stablecoinCount, 5);
     if ((chain.topStablecoins?.length ?? 0) >= expectedCargoCount) return chain;
 
-    const topStablecoins = deriveTopStablecoinsForChain(chain, stablecoins);
+    const topStablecoins = fallbackCargoByChain.get(chain.id) ?? [];
     return topStablecoins.length > 0 ? { ...chain, topStablecoins } : chain;
   });
 }
@@ -118,27 +137,33 @@ export function ChainsLeaderboardClient() {
   const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<ChainSortKey>("totalUsd", "desc");
   const router = useRouter();
   const [selectedChainId, setSelectedChainId] = useState<string | null>(null);
+  const chains = data?.chains;
+  const globalTotalUsd = data?.globalTotalUsd;
 
   const sorted = useMemo(() => {
-    if (!data?.chains) return [];
-    return sortChains(data.chains, sortKey, sortDirection);
-  }, [data, sortKey, sortDirection]);
+    if (!chains) return [];
+    return sortChains(chains, sortKey, sortDirection);
+  }, [chains, sortKey, sortDirection]);
 
   // Top chains by supply for dominance breakdown (independent of table sort)
   const topBySupply = useMemo(() => {
-    if (!data?.chains) return [];
-    return [...data.chains].sort((a, b) => b.totalUsd - a.totalUsd).slice(0, 5);
-  }, [data]);
+    if (!chains) return [];
+    return [...chains].sort((a, b) => b.totalUsd - a.totalUsd).slice(0, 5);
+  }, [chains]);
 
   const chartChains = useMemo(() => {
-    if (!data?.chains) return [];
-    return attachTopStablecoinCargo(data.chains, stablecoinsQuery.data?.peggedAssets);
-  }, [data, stablecoinsQuery.data]);
+    if (!chains) return [];
+    return attachTopStablecoinCargo(chains, stablecoinsQuery.data?.peggedAssets);
+  }, [chains, stablecoinsQuery.data?.peggedAssets]);
 
   const harborEntries = useMemo(() => {
-    if (!data) return [];
-    return buildChainHarborEntries(chartChains, data.globalTotalUsd);
-  }, [chartChains, data]);
+    if (globalTotalUsd == null) return [];
+    return buildChainHarborEntries(chartChains, globalTotalUsd);
+  }, [chartChains, globalTotalUsd]);
+  const harborModel = useMemo(() => {
+    if (globalTotalUsd == null) return undefined;
+    return buildChainHarborModelFromEntries(harborEntries, globalTotalUsd);
+  }, [harborEntries, globalTotalUsd]);
 
   const selectedHarbor = useMemo(() => {
     return harborEntries.find((entry) => entry.id === selectedChainId)
@@ -332,6 +357,7 @@ export function ChainsLeaderboardClient() {
         globalTotalUsd={data.globalTotalUsd}
         selectedChainId={selectedHarbor?.id ?? selectedChainId}
         onSelectChain={setSelectedChainId}
+        harborModel={harborModel}
       />
 
       <SelectedHarborPanel entry={selectedHarbor} />

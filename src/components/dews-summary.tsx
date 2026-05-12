@@ -11,11 +11,7 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { THREAT_BAND_HEX, THREAT_BAND_LABELS } from "@shared/lib/classification";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import type { ThreatBand } from "@shared/lib/classification";
-import {
-  highestBand,
-  sweepDuration,
-  pulseDuration,
-} from "@/lib/dews-radar-utils";
+import { sweepDuration, pulseDuration } from "@/lib/dews-radar-utils";
 import {
   CX,
   CY,
@@ -29,11 +25,8 @@ import {
   SPOKES,
   WAKE_PATH,
   mcapDotRadius,
-  computePositions,
-  computeCalmDots,
-  computeBandCounts,
   resolveRadarClick,
-  getAggregateFreshnessTimestamp,
+  buildDewsSummaryViewModel,
   type BandCounts,
   type CalmDot,
   type ElevatedCoin,
@@ -451,11 +444,17 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
   const { data, isLoading, error } = useStressSignals();
   const { data: stablecoinsData } = useStablecoins();
   const router = useRouter();
+  const peggedAssets = stablecoinsData?.peggedAssets;
 
   const mcapById = useMemo(() => {
-    if (!stablecoinsData?.peggedAssets) return undefined;
-    return new Map(stablecoinsData.peggedAssets.map((c) => [c.id, getCirculatingRaw(c)]));
-  }, [stablecoinsData]);
+    if (!peggedAssets) return undefined;
+    return new Map(peggedAssets.map((c) => [c.id, getCirculatingRaw(c)]));
+  }, [peggedAssets]);
+
+  const viewModel = useMemo(() => {
+    if (!data?.signals || Object.keys(data.signals).length === 0) return null;
+    return buildDewsSummaryViewModel(data, logos, mcapById);
+  }, [data, logos, mcapById]);
 
   if (isLoading) {
     return (
@@ -478,21 +477,16 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
     return <QueryErrorNotice error={error} />;
   }
 
-  if (!data?.signals || Object.keys(data.signals).length === 0) return null;
+  if (!viewModel) return null;
 
-  const totalCount = Object.keys(data.signals).length;
-  const elevated = computePositions(data.signals, logos, mcapById);
-  const calmDots = computeCalmDots(data.signals);
-  const bandCounts = computeBandCounts(data.signals);
-  const highest = highestBand(elevated.map((c) => c.band));
-  const freshnessTimestamp = getAggregateFreshnessTimestamp(data);
-  const updatedAtLabel = new Date(freshnessTimestamp * 1000).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-  });
+  const {
+    totalCount,
+    elevated,
+    calmDots,
+    bandCounts,
+    highest,
+    updatedAtLabel,
+  } = viewModel;
 
   return (
     <Card className={cn(className, showHeader ? "flex flex-col" : undefined)}>

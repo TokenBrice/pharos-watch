@@ -1,5 +1,6 @@
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import {
+  highestBand,
   scoreToRadius,
   deterministicOffset,
   deterministicRadiusOffset,
@@ -75,6 +76,15 @@ export interface RadarClickOutcome {
 export interface DewsAggregateFreshnessLike {
   updatedAt: number;
   oldestComputedAt?: number | null;
+}
+
+export interface DewsSummaryViewModel {
+  totalCount: number;
+  elevated: ElevatedCoin[];
+  calmDots: CalmDot[];
+  bandCounts: BandCounts;
+  highest: ThreatBand;
+  updatedAtLabel: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -181,4 +191,28 @@ export function resolveRadarClick(
 
 export function getAggregateFreshnessTimestamp(data: DewsAggregateFreshnessLike): number {
   return data.oldestComputedAt ?? data.updatedAt;
+}
+
+export function buildDewsSummaryViewModel(
+  data: DewsAggregateFreshnessLike & { signals: Record<string, { score: number; band: string }> },
+  logos: Record<string, string> | undefined,
+  mcapById?: Map<string, number>,
+): DewsSummaryViewModel {
+  const elevated = computePositions(data.signals, logos, mcapById);
+  const freshnessTimestamp = getAggregateFreshnessTimestamp(data);
+
+  return {
+    totalCount: Object.keys(data.signals).length,
+    elevated,
+    calmDots: computeCalmDots(data.signals),
+    bandCounts: computeBandCounts(data.signals),
+    highest: highestBand(elevated.map((coin) => coin.band)),
+    updatedAtLabel: new Date(freshnessTimestamp * 1000).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+    }),
+  };
 }

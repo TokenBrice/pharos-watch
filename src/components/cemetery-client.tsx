@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CEMETERY_ENTRIES as DEAD_STABLECOINS } from "@shared/lib/cemetery-merged";
 import { CemeteryTombstones } from "@/components/cemetery-tombstones";
@@ -22,7 +22,7 @@ export function CemeteryClient() {
   // Clear highlight timer on unmount
   useEffect(() => () => { if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current); }, []);
 
-  const orderedCoins = sortCemeteryCoins(DEAD_STABLECOINS, sortMode);
+  const orderedCoins = useMemo(() => sortCemeteryCoins(DEAD_STABLECOINS, sortMode), [sortMode]);
 
   const handleToggle = useCallback((coinId: string) => {
     setExpanded((prev) => {
