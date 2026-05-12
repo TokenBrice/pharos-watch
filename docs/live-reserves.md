@@ -450,10 +450,12 @@ Adapter key intent is tracked in `shared/lib/live-reserve-adapter-provenance.ts`
 
 Current unbound registered adapters are explicit:
 
-| Adapter                | Status   | Rationale                                                                                                            |
-| ---------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
-| `buck-io-transparency` | `parked` | BUCK.fi transparency implementation is retained, but no tracked active coin currently binds it.                      |
-| `tether`               | `parked` | Tether issuer summary adapter is retained, while current Tether assets use curated-validated or single-asset probes. |
+| Adapter                | Status   | Rationale                                                                                                            | Parked since | Next review |
+| ---------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- | ------------ | ----------- |
+| `buck-io-transparency` | `parked` | BUCK.fi transparency implementation is retained, but no tracked active coin currently binds it.                      | 2026-05-12   | 2026-11-12  |
+| `tether`               | `parked` | Tether issuer summary adapter is retained, while current Tether assets use curated-validated or single-asset probes. | 2026-05-12   | 2026-11-12  |
+
+`parked` and `retired` adapters carry `parkedSince` and `nextReview` ISO dates in `shared/lib/live-reserve-adapter-provenance.ts`. Default cadence is a six-month review window; when `nextReview` passes, the adapter is up for one of: revival under an active coin binding, status downgrade to `retired`, or full removal alongside its tests and fixtures. The registry test asserts both fields are populated for every non-active entry.
 
 `collateral-positions-api` can now optionally attach direct redemption-capacity telemetry alongside the collateral mix when a reviewed bridge-backed stable exit exists. `zchf-frankencoin` uses this path to publish the current VCHF StablecoinBridge inventory as `immediateRedeemableUsd` for redemption-backstop modeling without changing the reserve-slice composition itself.
 

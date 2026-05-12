@@ -83,6 +83,26 @@ describe("adapter registry completeness", () => {
     }
   });
 
+  it("parked and retired adapter entries declare parkedSince and nextReview", () => {
+    const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+    for (const key of LIVE_RESERVE_ADAPTER_KEYS) {
+      const provenance = LIVE_RESERVE_ADAPTER_PROVENANCE[key] as {
+        status: string;
+        parkedSince?: string;
+        nextReview?: string;
+      };
+      if (provenance.status !== "parked" && provenance.status !== "retired") continue;
+      expect(
+        provenance.parkedSince,
+        `${key} is ${provenance.status}; set parkedSince to the YYYY-MM-DD it left active status.`,
+      ).toMatch(isoDatePattern);
+      expect(
+        provenance.nextReview,
+        `${key} is ${provenance.status}; set nextReview to the YYYY-MM-DD by which to re-evaluate.`,
+      ).toMatch(isoDatePattern);
+    }
+  });
+
   it("active adapter provenance matches live-reserve metadata usage", () => {
     const configuredKeys = new Set(
       ACTIVE_STABLECOINS

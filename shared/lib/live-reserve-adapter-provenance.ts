@@ -7,6 +7,13 @@ export type LiveReserveAdapterStatus = (typeof LIVE_RESERVE_ADAPTER_STATUS_VALUE
 export interface LiveReserveAdapterProvenance {
   status: LiveReserveAdapterStatus;
   rationale: string;
+  /** ISO date (YYYY-MM-DD) the adapter entered its current non-active status.
+   *  Required for `parked` and `retired` entries so contributors can see how
+   *  long the implementation has been carried unbound. */
+  parkedSince?: string;
+  /** ISO date (YYYY-MM-DD) by which the parked/retired adapter should be
+   *  re-evaluated. Drives the sunset policy in docs/live-reserves.md. */
+  nextReview?: string;
 }
 
 const ACTIVE_RATIONALE = "Bound by at least one active stablecoin liveReservesConfig.";
@@ -22,6 +29,8 @@ export const LIVE_RESERVE_ADAPTER_PROVENANCE = {
   "buck-io-transparency": {
     status: "parked",
     rationale: "BUCK.fi transparency implementation is retained, but no tracked active coin currently binds it.",
+    parkedSince: "2026-05-12",
+    nextReview: "2026-11-12",
   },
   "cap-vault": { status: "active", rationale: ACTIVE_RATIONALE },
   "chainlink-nav": { status: "active", rationale: ACTIVE_RATIONALE },
@@ -65,6 +74,8 @@ export const LIVE_RESERVE_ADAPTER_PROVENANCE = {
     status: "parked",
     rationale:
       "Tether issuer summary adapter is retained, while current Tether assets use curated-validated or single-asset reserve probes.",
+    parkedSince: "2026-05-12",
+    nextReview: "2026-11-12",
   },
   "usdgo-transparency": { status: "active", rationale: ACTIVE_RATIONALE },
   "usdh-native-markets": { status: "active", rationale: ACTIVE_RATIONALE },
