@@ -1,6 +1,17 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.09` (2026-02-01 -> 2026-05-12).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.91` (2026-02-01 -> 2026-05-12).
+
+---
+
+## v5.91 - Post-probe authoritative override refresh (May 12, 2026)
+
+**Commit:** `unreleased`
+
+- Protocol-backed authoritative price overrides are recomputed after fallback enrichment and GeckoTerminal probing instead of reusing the pre-enrichment override map
+- `usdk-kast` and `xo-exodus` can recover from `priceSource: missing` when `wm-m0` becomes a fresh high-confidence parent during the same sync run
+- The parent-trust guard remains unchanged: low-confidence, stale, cached, or non-replay-safe parent prices still cannot upgrade into `protocol-redeem` child prices
+- The earlier pre-enrichment override pass is retained so assets with already trusted parents still avoid unnecessary fallback probing
 
 ---
 

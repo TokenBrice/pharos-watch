@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.09",
+  currentVersion: "5.91",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.91",
+      title: "Post-probe authoritative override refresh",
+      date: "2026-05-12",
+      effectiveAt: 1778587800,
+      summary:
+        "Recomputed protocol-backed authoritative price overrides after fallback enrichment and GeckoTerminal probing so newly trusted parent prices can unlock dependent wrapper prices in the same sync run.",
+      impact: [
+        "`usdk-kast` and `xo-exodus` can recover from `priceSource: missing` when `wm-m0` becomes a fresh high-confidence parent through primary consensus or GeckoTerminal probing during the same run",
+        "The parent-trust guard remains unchanged: low-confidence, stale, cached, or non-replay-safe parent prices still cannot upgrade into `protocol-redeem` child prices",
+        "The earlier pre-enrichment override pass is retained, but the final completion pass no longer reuses its stale override map after source enrichment has changed asset prices",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.09",
       title: "Addressless DexScreener exact fallback from tracked metadata",
