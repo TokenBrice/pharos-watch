@@ -1,14 +1,10 @@
 import {
   withErrorHandler,
-  addFreshnessHeaders,
   errorResponse,
   parseEnumParam,
   parseOptionalEnumParam,
-  parseQueryParams,
-  jsonResponse,
-  getLatestSuccessfulCronTimestamp,
   buildMethodologyEnvelope,
-  fetchPaginatedEvents,
+  buildPaginatedEventResponse,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { CHAIN_META } from "@shared/lib/chains";
@@ -20,10 +16,7 @@ import {
 } from "@shared/lib/blacklist-tracker-version";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import {
-  getSupportedBlacklistChainIds,
-  getSupportedBlacklistChainNames,
-} from "../lib/blacklist-coverage-manifest";
+import { getSupportedBlacklistChainIds, getSupportedBlacklistChainNames } from "../lib/blacklist-coverage-manifest";
 import {
   BLACKLIST_STABLECOINS,
   type BlacklistEvent,
@@ -64,13 +57,6 @@ function isBlacklistStablecoin(value: string): value is BlacklistStablecoin {
 
 export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
-  const numericParams = parseQueryParams(params, {
-    limit: { type: "int", default: 1000, min: 0, max: 1000, rangePolicy: "reject" },
-    offset: { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER, rangePolicy: "reject" },
-  });
-  if (numericParams instanceof Response) return numericParams;
-  const limit = numericParams.limit === 0 ? 1000 : numericParams.limit;
-  const { offset } = numericParams;
   const stablecoin = params.get("stablecoin");
   const chain = params.get("chain");
   const chainId = params.get("chainId");
@@ -122,45 +108,46 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
     filterBindings.push(`%${escaped}%`);
   }
 
-  const { events, total } = await fetchPaginatedEvents<BlacklistEventRow, BlacklistEvent>(db, {
+  return buildPaginatedEventResponse<BlacklistEventRow, BlacklistEvent>(db, {
     tableName: "blacklist_events",
     orderBy: BLACKLIST_ORDER_BY[sortBy][sortDirection],
     conditions,
     filterBindings,
-    limit,
-    offset,
     mapRow: mapBlacklistEventRow,
-  });
-
-  const latestTs =
-    events.length > 0 ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity) : Math.floor(Date.now() / 1000);
-  const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "sync-blacklist", latestTs);
-  const latestEvent = events.reduce<BlacklistEvent | null>(
-    (latest, event) => latest == null || event.timestamp > latest.timestamp ? event : latest,
-    null,
-  );
-  const methodologyVersion = latestEvent?.methodologyVersion ?? getBlacklistTrackerMethodologyVersionAt(latestTs);
-  const methodologyVersionLabel = toMethodologyVersionLabel(methodologyVersion);
-
-  return jsonResponse(
-    {
-      events,
-      total,
-      methodology: buildMethodologyEnvelope({
-        version: methodologyVersion,
-        versionLabel: methodologyVersionLabel,
-        currentVersion: BLACKLIST_TRACKER_METHODOLOGY_VERSION,
-        currentVersionLabel: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-        changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
-        asOf: latestTs,
-      }),
+    searchParams: params,
+    pagination: {
+      defaultLimit: 1000,
+      minLimit: 0,
+      maxLimit: 1000,
+      zeroLimitAsDefault: true,
     },
-    addFreshnessHeaders(
-      {
-        "Cache-Control": CACHE_PROFILES.realtime,
-      },
-      freshnessTs,
-      API_FRESHNESS_MAX_AGE_SEC.blacklist,
-    ),
-  );
+    freshness: {
+      producerJob: "sync-blacklist",
+      maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.blacklist,
+      fallbackTimestamp: (events) =>
+        events.length > 0
+          ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity)
+          : Math.floor(Date.now() / 1000),
+    },
+    cacheControl: CACHE_PROFILES.realtime,
+    buildExtraBody: (events, _total, latestTs) => {
+      const latestEvent = events.reduce<BlacklistEvent | null>(
+        (latest, event) => (latest == null || event.timestamp > latest.timestamp ? event : latest),
+        null,
+      );
+      const methodologyVersion = latestEvent?.methodologyVersion ?? getBlacklistTrackerMethodologyVersionAt(latestTs);
+      const methodologyVersionLabel = toMethodologyVersionLabel(methodologyVersion);
+
+      return {
+        methodology: buildMethodologyEnvelope({
+          version: methodologyVersion,
+          versionLabel: methodologyVersionLabel,
+          currentVersion: BLACKLIST_TRACKER_METHODOLOGY_VERSION,
+          currentVersionLabel: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
+          changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
+          asOf: latestTs,
+        }),
+      };
+    },
+  });
 });

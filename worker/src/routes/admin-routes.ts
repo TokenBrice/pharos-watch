@@ -6,9 +6,9 @@ import { handleAuditDepegHistory } from "../api/audit-depeg-history";
 import { handleBackfillCgPrices } from "../api/backfill-cg-prices";
 import { handleBackfillMintBurnPrices } from "../api/backfill-mint-burn-prices";
 import { handleBackfillMintBurn } from "../api/backfill-mint-burn";
-import { handleReclassifyAtomicRoundtrips } from "../api/reclassify-atomic-roundtrips";
+import { handleReclassifyAtomicRoundtripsTrusted } from "../api/reclassify-atomic-roundtrips";
 import { handleBackfillDEWS } from "../api/backfill-dews";
-import { handleRemediateBlacklistAmountGaps } from "../api/remediate-blacklist-amount-gaps";
+import { handleRemediateBlacklistAmountGapsTrusted } from "../api/remediate-blacklist-amount-gaps";
 import { handleBackfillBlacklistCurrentBalances } from "../api/backfill-blacklist-current-balances";
 import { handleResetCronLease } from "../api/admin-reset-cron-lease";
 import { handleResetCircuitBreaker } from "../api/admin-reset-circuit-breaker";
@@ -70,7 +70,7 @@ export const ADMIN_STATIC_ROUTES = [
   defineStaticRoute("reclassify-atomic-roundtrips", makeIdempotentAdminRoute(
     "reclassify-atomic-roundtrips",
     "reclassify-atomic-roundtrips",
-    ({ db, url, trustedAdmin, request }) => handleReclassifyAtomicRoundtrips(db, url, trustedAdmin, request),
+    ({ db, url }) => handleReclassifyAtomicRoundtripsTrusted(db, url),
   )),
   defineStaticRoute("backfill-dews", makeConditionalIdempotentAdminRoute(
     "backfill-dews",
@@ -81,8 +81,8 @@ export const ADMIN_STATIC_ROUTES = [
   defineStaticRoute("remediate-blacklist-amount-gaps", makeIdempotentAdminRoute(
     "route-remediate-blacklist-amount-gaps",
     "remediate-blacklist-amount-gaps",
-    ({ db, url, trustedAdmin, request, chainRpcs }) =>
-      handleRemediateBlacklistAmountGaps(db, url, trustedAdmin, request, chainRpcs),
+    ({ db, url, request, chainRpcs }) =>
+      handleRemediateBlacklistAmountGapsTrusted(db, url, request, chainRpcs),
   )),
   defineStaticRoute("backfill-blacklist-current-balances", makeIdempotentAdminRoute(
     "route-backfill-blacklist-current-balances",

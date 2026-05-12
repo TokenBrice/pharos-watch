@@ -46,6 +46,52 @@ describe("router contract: strict frontend paths are routable", () => {
     expect(result).toBeNull();
   });
 
+  it("returns a router-level JSON 500 when an unwrapped route handler throws", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.resetModules();
+    vi.doMock("../../routes/registry", () => ({
+      ROUTER_STATIC_PATHS: [],
+      getRouteDependencies: () => [],
+      getRouteMatch: () => ({
+        dependencies: [],
+        handle: async () => {
+          throw new Error("boom");
+        },
+      }),
+    }));
+
+    try {
+      const { route: routeWithMock } = await import("../../router");
+      const response = await routeWithMock(makeRouteCtx({
+        url: new URL("https://api.pharos.watch/api/health"),
+      }));
+      expect(response).not.toBeNull();
+      expect(response!.status).toBe(500);
+      expect(response!.headers.get("Content-Type")).toBe("application/json");
+      await expect(response!.json()).resolves.toEqual({ error: "Internal Server Error" });
+      expect(consoleError).toHaveBeenCalledWith(
+        expect.stringContaining("[router] Error in /api/health:"),
+        expect.any(Error),
+      );
+    } finally {
+      vi.doUnmock("../../routes/registry");
+      vi.resetModules();
+      consoleError.mockRestore();
+    }
+  });
+
+  it("preserves intentional non-JSON dynamic OG responses", async () => {
+    const malformedOgPath = "https://api.pharos.watch/api/og/stablecoin/%E0%A4%A";
+    const response = await route(makeRouteCtx({
+      url: new URL(malformedOgPath),
+      request: new Request(malformedOgPath),
+    }));
+    expect(response).not.toBeNull();
+    expect(response!.status).toBe(400);
+    expect(response!.headers.get("Content-Type")).toBe("text/plain");
+    await expect(response!.text()).resolves.toBe("Malformed URI");
+  });
+
   it("keeps router static paths registered in endpoint definitions", () => {
     const registeredPaths = new Set(ENDPOINT_DEFINITIONS.map((endpoint) => endpoint.path));
 

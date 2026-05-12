@@ -84,6 +84,15 @@ export async function handleRemediateBlacklistAmountGaps(
   const authErr = await requireAdmin(request, trustedAdmin);
   if (authErr) return authErr;
 
+  return handleRemediateBlacklistAmountGapsTrusted(db, url, request, chainRpcs);
+}
+
+export async function handleRemediateBlacklistAmountGapsTrusted(
+  db: D1Database,
+  url: URL,
+  request: Request | undefined,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Promise<Response> {
   const body = await parseOptionalRequestJsonObject(request);
   if (body instanceof Response) return body;
   const dryRun = parseBooleanInput(body.dryRun ?? url.searchParams.get("dryRun"), true);

@@ -2,11 +2,8 @@ import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
 import {
   withErrorHandler,
   resolveOrReject,
-  parseQueryParams,
-  jsonFreshResponse,
-  getLatestSuccessfulCronTimestamp,
   buildMethodologyEnvelope,
-  fetchPaginatedEvents,
+  buildPaginatedEventResponse,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -18,60 +15,55 @@ import {
 } from "@shared/lib/depeg-dews-version";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 
-export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1Database, url: URL): Promise<Response> => {
-  const params = url.searchParams;
-  const parsed = parseQueryParams(params, {
-    limit: { type: "int", default: 100, min: 1, max: 1000, rangePolicy: "reject" },
-    offset: { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER, rangePolicy: "reject" },
-  });
-  if (parsed instanceof Response) return parsed;
-  const { limit, offset } = parsed;
-  const stablecoin = params.get("stablecoin");
-  const active = params.get("active");
+export const handleDepegEvents = withErrorHandler(
+  "depeg-events",
+  async (db: D1Database, url: URL): Promise<Response> => {
+    const params = url.searchParams;
+    const stablecoin = params.get("stablecoin");
+    const active = params.get("active");
 
-  const conditions: string[] = [];
-  const filterBindings: (string | number)[] = [];
+    const conditions: string[] = [];
+    const filterBindings: (string | number)[] = [];
 
-  if (stablecoin) {
-    const resolved = resolveOrReject(stablecoin);
-    if (resolved instanceof Response) {
-      return resolved;
+    if (stablecoin) {
+      const resolved = resolveOrReject(stablecoin);
+      if (resolved instanceof Response) {
+        return resolved;
+      }
+      conditions.push("stablecoin_id = ?");
+      filterBindings.push(resolved.canonicalId);
     }
-    conditions.push("stablecoin_id = ?");
-    filterBindings.push(resolved.canonicalId);
-  }
-  if (active === "true") {
-    conditions.push("ended_at IS NULL");
-  }
+    if (active === "true") {
+      conditions.push("ended_at IS NULL");
+    }
 
-  const { events, total } = await fetchPaginatedEvents<DepegRow, ReturnType<typeof rowToDepegEvent>>(db, {
-    tableName: "depeg_events",
-    orderBy: "started_at DESC",
-    conditions,
-    filterBindings,
-    limit,
-    offset,
-    mapRow: rowToDepegEvent,
-  });
-
-  const latestEventTs = events.length > 0 ? events[0].startedAt : Math.floor(Date.now() / 1000);
-  const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "sync-stablecoins", latestEventTs);
-  const methodologyVersion = getDepegDewsMethodologyVersionAt(latestEventTs);
-
-  return jsonFreshResponse({
-    events,
-    total,
-    methodology: buildMethodologyEnvelope({
-      version: methodologyVersion,
-      versionLabel: toMethodologyVersionLabel(methodologyVersion),
-      currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
-      currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
-      changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
-      asOf: latestEventTs,
-    }),
-  }, {
-    cacheControl: CACHE_PROFILES.realtime,
-    updatedAt: freshnessTs,
-    maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegEvents,
-  });
-});
+    return buildPaginatedEventResponse<DepegRow, ReturnType<typeof rowToDepegEvent>>(db, {
+      tableName: "depeg_events",
+      orderBy: "started_at DESC",
+      conditions,
+      filterBindings,
+      mapRow: rowToDepegEvent,
+      searchParams: params,
+      pagination: { defaultLimit: 100, minLimit: 1, maxLimit: 1000 },
+      freshness: {
+        producerJob: "sync-stablecoins",
+        maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegEvents,
+        fallbackTimestamp: (events) => (events.length > 0 ? events[0].startedAt : Math.floor(Date.now() / 1000)),
+      },
+      cacheControl: CACHE_PROFILES.realtime,
+      buildExtraBody: (_events, _total, latestEventTs) => {
+        const methodologyVersion = getDepegDewsMethodologyVersionAt(latestEventTs);
+        return {
+          methodology: buildMethodologyEnvelope({
+            version: methodologyVersion,
+            versionLabel: toMethodologyVersionLabel(methodologyVersion),
+            currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
+            currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+            changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+            asOf: latestEventTs,
+          }),
+        };
+      },
+    });
+  },
+);

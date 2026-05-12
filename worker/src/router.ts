@@ -9,7 +9,7 @@ import {
   ROUTER_STATIC_PATHS,
   getRouteDependencies as getRegisteredRouteDependencies,
 } from "./routes/registry";
-import type { FullRouteContext, RouteDependency } from "./routes/shared";
+import type { FullRouteContext, RouteDependency, RouteMatch } from "./routes/shared";
 
 function addAdminGetNoStoreHeader(path: string, request: Request | undefined, response: Response): Response {
   if (request?.method !== "GET") return response;
@@ -24,6 +24,26 @@ export function getRouteDependencies(url: URL): readonly RouteDependency[] | nul
   return getRegisteredRouteDependencies(url.pathname);
 }
 
+function getRouteErrorLabel(routeMatch: RouteMatch, path: string): string {
+  return routeMatch.endpoint?.key ?? routeMatch.endpoint?.path ?? path;
+}
+
+async function handleRouteWithErrorBoundary(
+  routeCtx: FullRouteContext,
+  routeMatch: RouteMatch,
+  path: string,
+): Promise<Response> {
+  let response: Response;
+  try {
+    response = await routeMatch.handle(routeCtx);
+  } catch (err) {
+    console.error(`[router] Error in ${getRouteErrorLabel(routeMatch, path)}:`, err);
+    response = errorResponse(500, "Internal Server Error");
+  }
+
+  return addAdminGetNoStoreHeader(routeMatch.endpoint?.path ?? path, routeCtx.request, response);
+}
+
 export function route(routeCtx: FullRouteContext): Promise<Response> | null {
   const path = routeCtx.url.pathname;
   const methodValidation = validateEndpointMethod(routeCtx.url, routeCtx.request.method);
@@ -35,8 +55,7 @@ export function route(routeCtx: FullRouteContext): Promise<Response> | null {
 
   const routeMatch = getRouteMatch(path);
   if (routeMatch) {
-    return routeMatch.handle(routeCtx)
-      .then((response) => addAdminGetNoStoreHeader(routeMatch.endpoint?.path ?? path, routeCtx.request, response));
+    return handleRouteWithErrorBoundary(routeCtx, routeMatch, path);
   }
 
   return null;

@@ -34,10 +34,7 @@ export {
   type NumericRangePolicy,
   type ParamSpec,
 } from "./api-params";
-export {
-  buildMethodologyEnvelope,
-  type MethodologyEnvelopeInput,
-} from "./api-methodology";
+export { buildMethodologyEnvelope, type MethodologyEnvelopeInput } from "./api-methodology";
 export {
   handleStablecoinHistoryRequest,
   parseStablecoinHistoryQuery,
@@ -52,4 +49,4 @@ export {
   safeJsonParseWithContext,
   type CachedJsonReadResult,
 } from "./api-cache-read";
-export { fetchPaginatedEvents } from "./api-pagination";
+export { buildPaginatedEventResponse, fetchPaginatedEvents, parsePaginatedEventParams } from "./api-pagination";

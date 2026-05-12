@@ -1,14 +1,11 @@
 import {
   withErrorHandler,
-  addFreshnessHeaders,
   errorResponse,
   parseEnumParam,
+  parseFloatParam,
   parseOptionalEnumParam,
-  parseQueryParams,
   parseRequiredStablecoinIdParam,
-  jsonResponse,
-  getLatestSuccessfulCronTimestamp,
-  fetchPaginatedEvents,
+  buildPaginatedEventResponse,
 } from "../lib/api-utils";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CACHE_PROFILES } from "../lib/constants";
@@ -65,13 +62,10 @@ export const handleMintBurnEvents = withErrorHandler(
     if (burnType instanceof Response) return burnType;
     const scope = parseEnumParam(params.get("scope"), VALID_SCOPES, "scope", "all");
     if (scope instanceof Response) return scope;
-    const numericParams = parseQueryParams(params, {
-      minAmount: { type: "float", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER, rangePolicy: "reject" },
-      limit: { type: "int", default: 50, min: 1, max: 500, rangePolicy: "reject" },
-      offset: { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER, rangePolicy: "reject" },
+    const minAmount = parseFloatParam(params.get("minAmount"), 0, 0, Number.MAX_SAFE_INTEGER, "minAmount", {
+      rangePolicy: "reject",
     });
-    if (numericParams instanceof Response) return numericParams;
-    const { minAmount, limit, offset } = numericParams;
+    if (minAmount instanceof Response) return minAmount;
 
     // Build WHERE conditions
     const conditions: string[] = ["stablecoin_id = ?", `chain_id IN (${chainInClause.sql})`];
@@ -94,62 +88,64 @@ export const handleMintBurnEvents = withErrorHandler(
       filterBindings.push(minAmount);
     }
 
-    const { events, total } = await fetchPaginatedEvents<EventRow, {
-      id: string;
-      stablecoinId: string;
-      symbol: string;
-      chainId: string;
-      direction: "mint" | "burn";
-      flowType: EventRow["flow_type"];
-      amount: number;
-      amountUsd: number | null;
-      burnType: EventRow["burn_type"];
-      burnReviewReason: string | null;
-      counterparty: string | null;
-      txHash: string;
-      blockNumber: number;
-      timestamp: number;
-      explorerTxUrl: string;
-      priceUsed: number | null;
-      priceTimestamp: number | null;
-      priceSource: string | null;
-    }>(db, {
+    return buildPaginatedEventResponse<
+      EventRow,
+      {
+        id: string;
+        stablecoinId: string;
+        symbol: string;
+        chainId: string;
+        direction: "mint" | "burn";
+        flowType: EventRow["flow_type"];
+        amount: number;
+        amountUsd: number | null;
+        burnType: EventRow["burn_type"];
+        burnReviewReason: string | null;
+        counterparty: string | null;
+        txHash: string;
+        blockNumber: number;
+        timestamp: number;
+        explorerTxUrl: string;
+        priceUsed: number | null;
+        priceTimestamp: number | null;
+        priceSource: string | null;
+      }
+    >(db, {
       tableName: "mint_burn_events",
       orderBy: "timestamp DESC",
       conditions,
       filterBindings,
-      limit,
-      offset,
       mapRow: (row) => ({
-      id: row.id,
-      stablecoinId: row.stablecoin_id,
-      symbol: row.symbol,
-      chainId: row.chain_id,
-      direction: row.direction as "mint" | "burn",
-      flowType: row.flow_type,
-      amount: row.amount,
-      amountUsd: row.amount_usd,
-      burnType: row.burn_type,
-      burnReviewReason: row.burn_review_reason,
-      counterparty: row.counterparty,
-      txHash: row.tx_hash,
-      blockNumber: row.block_number,
-      timestamp: row.timestamp,
-      explorerTxUrl: row.explorer_tx_url,
-      priceUsed: row.price_used,
-      priceTimestamp: row.price_timestamp,
-      priceSource: row.price_source,
+        id: row.id,
+        stablecoinId: row.stablecoin_id,
+        symbol: row.symbol,
+        chainId: row.chain_id,
+        direction: row.direction as "mint" | "burn",
+        flowType: row.flow_type,
+        amount: row.amount,
+        amountUsd: row.amount_usd,
+        burnType: row.burn_type,
+        burnReviewReason: row.burn_review_reason,
+        counterparty: row.counterparty,
+        txHash: row.tx_hash,
+        blockNumber: row.block_number,
+        timestamp: row.timestamp,
+        explorerTxUrl: row.explorer_tx_url,
+        priceUsed: row.price_used,
+        priceTimestamp: row.price_timestamp,
+        priceSource: row.price_source,
       }),
+      searchParams: params,
+      pagination: { defaultLimit: 50, minLimit: 1, maxLimit: 500 },
+      freshness: {
+        producerJob: "sync-mint-burn",
+        maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnEvents,
+        fallbackTimestamp: (events) =>
+          events.length > 0
+            ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity)
+            : Math.floor(Date.now() / 1000),
+      },
+      cacheControl: CACHE_PROFILES.realtime,
     });
-
-    const latestTs =
-      events.length > 0
-        ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity)
-        : Math.floor(Date.now() / 1000);
-    const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "sync-mint-burn", latestTs);
-
-    return jsonResponse({ events, total }, addFreshnessHeaders({
-      "Cache-Control": CACHE_PROFILES.realtime,
-    }, freshnessTs, API_FRESHNESS_MAX_AGE_SEC.mintBurnEvents));
   },
 );

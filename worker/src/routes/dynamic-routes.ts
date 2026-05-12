@@ -12,7 +12,13 @@ import { handleApiKeyDeactivate, handleApiKeyRotate, handleApiKeyUpdate } from "
 import { handleApiKeyRequestReject, handleApiKeyRequestReleaseClaim } from "../api/api-key-requests";
 import { handleAdminTelegramChat } from "../api/admin-telegram-chat";
 import { errorResponse, resolveOrReject } from "../lib/api-utils";
-import { defineDynamicRoute, type DynamicRouteDefinition, type RouteDependency, type RouteMatch } from "./shared";
+import {
+  defineDynamicRoute,
+  type DynamicRouteDefinition,
+  type FullRouteContext,
+  type RouteDependency,
+  type RouteMatch,
+} from "./shared";
 
 function resolveDynamicStablecoinRoute(
   match: RegExpMatchArray,
@@ -31,12 +37,23 @@ function resolveDynamicStablecoinRoute(
   return handler(resolved.canonicalId);
 }
 
-type DynamicEndpointDescriptorKey =
-  | DynamicAdminEndpointMatch["key"]
-  | "stablecoin-summary"
-  | "stablecoin-reserves"
-  | "stablecoin-detail"
-  | "og-image";
+type DynamicEndpointDescriptorKey = Parameters<typeof getDynamicEndpointDescriptorByKey>[0];
+type DynamicAdminEndpointKey = DynamicAdminEndpointMatch["key"];
+type ExpandedDynamicAdminEndpointMatch<T extends DynamicAdminEndpointMatch = DynamicAdminEndpointMatch> =
+  T extends { key: infer Key }
+    ? Key extends DynamicAdminEndpointKey
+      ? Omit<T, "key"> & { key: Key }
+      : never
+    : never;
+type DynamicAdminEndpointFor<Key extends DynamicAdminEndpointKey> =
+  Extract<ExpandedDynamicAdminEndpointMatch, { key: Key }>;
+type DynamicAdminRouteBinding<Key extends DynamicAdminEndpointKey> = {
+  dependencies: readonly RouteDependency[];
+  handle: (routeCtx: FullRouteContext, dynamicAdminEndpoint: DynamicAdminEndpointFor<Key>) => Promise<Response>;
+};
+type DynamicAdminRouteBindingMap = {
+  [Key in DynamicAdminEndpointKey]: DynamicAdminRouteBinding<Key>;
+};
 
 function requireDynamicEndpointDescriptor(key: DynamicEndpointDescriptorKey) {
   const descriptor = getDynamicEndpointDescriptorByKey(key);
@@ -82,80 +99,89 @@ const DYNAMIC_ROUTE_DEFINITIONS = [
   ),
 ] as const satisfies readonly DynamicRouteDefinition[];
 
-const DYNAMIC_ADMIN_ROUTE_DEPENDENCIES = {
-  "discovery-candidate-dismiss": requireDynamicEndpointDescriptor("discovery-candidate-dismiss").routeDependencies,
-  "api-key-update": requireDynamicEndpointDescriptor("api-key-update").routeDependencies,
-  "api-key-deactivate": requireDynamicEndpointDescriptor("api-key-deactivate").routeDependencies,
-  "api-key-rotate": requireDynamicEndpointDescriptor("api-key-rotate").routeDependencies,
-  "api-key-request-reject": requireDynamicEndpointDescriptor("api-key-request-reject").routeDependencies,
-  "api-key-request-release-claim": requireDynamicEndpointDescriptor("api-key-request-release-claim").routeDependencies,
-  "admin-telegram-chat": requireDynamicEndpointDescriptor("admin-telegram-chat").routeDependencies,
-} as const satisfies Record<DynamicAdminEndpointMatch["key"], readonly RouteDependency[]>;
+function defineDynamicAdminRouteBinding<Key extends DynamicAdminEndpointKey>(
+  key: Key,
+  handle: DynamicAdminRouteBinding<Key>["handle"],
+): DynamicAdminRouteBinding<Key> {
+  return {
+    dependencies: requireDynamicEndpointDescriptor(key).routeDependencies,
+    handle,
+  };
+}
+
+const DYNAMIC_ADMIN_ROUTE_BINDINGS = {
+  "discovery-candidate-dismiss": defineDynamicAdminRouteBinding(
+    "discovery-candidate-dismiss",
+    (routeCtx, dynamicAdminEndpoint) =>
+      handleDiscoveryCandidateDismiss(routeCtx, dynamicAdminEndpoint.candidateId),
+  ),
+  "api-key-update": defineDynamicAdminRouteBinding(
+    "api-key-update",
+    (routeCtx, dynamicAdminEndpoint) =>
+      handleApiKeyUpdate(routeCtx.db, dynamicAdminEndpoint.apiKeyId, routeCtx.trustedAdmin, routeCtx.request),
+  ),
+  "api-key-deactivate": defineDynamicAdminRouteBinding(
+    "api-key-deactivate",
+    (routeCtx, dynamicAdminEndpoint) =>
+      handleApiKeyDeactivate(routeCtx.db, dynamicAdminEndpoint.apiKeyId, routeCtx.trustedAdmin, routeCtx.request),
+  ),
+  "api-key-rotate": defineDynamicAdminRouteBinding(
+    "api-key-rotate",
+    (routeCtx, dynamicAdminEndpoint) => handleApiKeyRotate(
+      routeCtx.db,
+      dynamicAdminEndpoint.apiKeyId,
+      routeCtx.trustedAdmin,
+      routeCtx.request,
+      routeCtx.apiKeyHashPepper,
+    ),
+  ),
+  "api-key-request-reject": defineDynamicAdminRouteBinding(
+    "api-key-request-reject",
+    (routeCtx, dynamicAdminEndpoint) => handleApiKeyRequestReject(
+      routeCtx.db,
+      dynamicAdminEndpoint.requestId,
+      routeCtx.trustedAdmin,
+      routeCtx.request,
+    ),
+  ),
+  "api-key-request-release-claim": defineDynamicAdminRouteBinding(
+    "api-key-request-release-claim",
+    (routeCtx, dynamicAdminEndpoint) => handleApiKeyRequestReleaseClaim(
+      routeCtx.db,
+      dynamicAdminEndpoint.requestId,
+      routeCtx.trustedAdmin,
+      routeCtx.request,
+    ),
+  ),
+  "admin-telegram-chat": defineDynamicAdminRouteBinding(
+    "admin-telegram-chat",
+    (routeCtx, dynamicAdminEndpoint) => handleAdminTelegramChat(
+      routeCtx.db,
+      dynamicAdminEndpoint.chatId,
+      routeCtx.trustedAdmin,
+      routeCtx.request,
+    ),
+  ),
+} satisfies DynamicAdminRouteBindingMap;
+
+export const DYNAMIC_ADMIN_ROUTE_HANDLER_KEYS = Object.freeze(
+  Object.keys(DYNAMIC_ADMIN_ROUTE_BINDINGS) as DynamicAdminEndpointKey[],
+);
+
+function bindDynamicAdminRouteMatch<Key extends DynamicAdminEndpointKey>(
+  dynamicAdminEndpoint: DynamicAdminEndpointFor<Key>,
+): RouteMatch {
+  const binding = DYNAMIC_ADMIN_ROUTE_BINDINGS[dynamicAdminEndpoint.key] as unknown as DynamicAdminRouteBinding<Key>;
+  return {
+    dependencies: binding.dependencies,
+    handle: (routeCtx) => binding.handle(routeCtx, dynamicAdminEndpoint),
+  };
+}
 
 export function getDynamicRouteMatch(path: string): RouteMatch | null {
   const dynamicAdminEndpoint = matchDynamicAdminEndpoint(path);
-  if (dynamicAdminEndpoint?.key === "discovery-candidate-dismiss") {
-    return {
-      dependencies: DYNAMIC_ADMIN_ROUTE_DEPENDENCIES[dynamicAdminEndpoint.key],
-      handle: (routeCtx) => handleDiscoveryCandidateDismiss(routeCtx, dynamicAdminEndpoint.candidateId),
-    };
-  }
-  if (dynamicAdminEndpoint?.key === "api-key-update") {
-    return {
-      dependencies: DYNAMIC_ADMIN_ROUTE_DEPENDENCIES[dynamicAdminEndpoint.key],
-      handle: (routeCtx) => handleApiKeyUpdate(routeCtx.db, dynamicAdminEndpoint.apiKeyId, routeCtx.trustedAdmin, routeCtx.request),
-    };
-  }
-  if (dynamicAdminEndpoint?.key === "api-key-deactivate") {
-    return {
-      dependencies: DYNAMIC_ADMIN_ROUTE_DEPENDENCIES[dynamicAdminEndpoint.key],
-      handle: (routeCtx) => handleApiKeyDeactivate(routeCtx.db, dynamicAdminEndpoint.apiKeyId, routeCtx.trustedAdmin, routeCtx.request),
-    };
-  }
-  if (dynamicAdminEndpoint?.key === "api-key-rotate") {
-    return {
-      dependencies: DYNAMIC_ADMIN_ROUTE_DEPENDENCIES[dynamicAdminEndpoint.key],
-      handle: (routeCtx) => handleApiKeyRotate(
-        routeCtx.db,
-        dynamicAdminEndpoint.apiKeyId,
-        routeCtx.trustedAdmin,
-        routeCtx.request,
-        routeCtx.apiKeyHashPepper,
-      ),
-    };
-  }
-  if (dynamicAdminEndpoint?.key === "api-key-request-reject") {
-    return {
-      dependencies: DYNAMIC_ADMIN_ROUTE_DEPENDENCIES[dynamicAdminEndpoint.key],
-      handle: (routeCtx) => handleApiKeyRequestReject(
-        routeCtx.db,
-        dynamicAdminEndpoint.requestId,
-        routeCtx.trustedAdmin,
-        routeCtx.request,
-      ),
-    };
-  }
-  if (dynamicAdminEndpoint?.key === "api-key-request-release-claim") {
-    return {
-      dependencies: DYNAMIC_ADMIN_ROUTE_DEPENDENCIES[dynamicAdminEndpoint.key],
-      handle: (routeCtx) => handleApiKeyRequestReleaseClaim(
-        routeCtx.db,
-        dynamicAdminEndpoint.requestId,
-        routeCtx.trustedAdmin,
-        routeCtx.request,
-      ),
-    };
-  }
-  if (dynamicAdminEndpoint?.key === "admin-telegram-chat") {
-    return {
-      dependencies: DYNAMIC_ADMIN_ROUTE_DEPENDENCIES[dynamicAdminEndpoint.key],
-      handle: (routeCtx) => handleAdminTelegramChat(
-        routeCtx.db,
-        dynamicAdminEndpoint.chatId,
-        routeCtx.trustedAdmin,
-        routeCtx.request,
-      ),
-    };
+  if (dynamicAdminEndpoint) {
+    return bindDynamicAdminRouteMatch(dynamicAdminEndpoint);
   }
 
   for (const definition of DYNAMIC_ROUTE_DEFINITIONS) {

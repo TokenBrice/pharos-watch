@@ -4,9 +4,13 @@ import type { FeedbackEnv } from "../../api/feedback";
 import type { Env } from "../../lib/env";
 import type { TelegramCreds } from "../../lib/telegram";
 import { buildRouteContext } from "../../handlers/http/context";
-import { getDynamicRouteMatch } from "../dynamic-routes";
+import { DYNAMIC_ADMIN_ROUTE_HANDLER_KEYS, getDynamicRouteMatch } from "../dynamic-routes";
 import { defineDynamicRoute, defineStaticRoute, type RouteContextFor } from "../shared";
-import { getDynamicEndpointDescriptorByKey, type EndpointDependenciesForKey } from "@shared/lib/api-endpoints";
+import {
+  DYNAMIC_ENDPOINT_DESCRIPTORS,
+  getDynamicEndpointDescriptorByKey,
+  type EndpointDependenciesForKey,
+} from "@shared/lib/api-endpoints";
 import type { CloudflareD1StatusBindings } from "../../lib/env";
 
 describe("route context typing", () => {
@@ -133,6 +137,16 @@ describe("route context typing", () => {
     expect(getDynamicRouteMatch("/api/api-keys/7/rotate")?.dependencies).toEqual(["apiKeyHashPepper"]);
     expect(getDynamicRouteMatch("/api/api-key-requests-admin/akr_abc12345/reject")?.dependencies).toEqual([]);
     expect(getDynamicRouteMatch("/api/api-key-requests-admin/akr_abc12345/release-claim")?.dependencies).toEqual([]);
+    expect(getDynamicRouteMatch("/api/admin-telegram-chat/-12345")?.dependencies).toEqual([]);
+  });
+
+  it("keeps dynamic admin handler bindings exhaustive against shared descriptors", () => {
+    const adminDescriptorKeys = DYNAMIC_ENDPOINT_DESCRIPTORS
+      .filter((descriptor) => descriptor.adminRequired)
+      .map((descriptor) => descriptor.key)
+      .sort();
+
+    expect([...DYNAMIC_ADMIN_ROUTE_HANDLER_KEYS].sort()).toEqual(adminDescriptorKeys);
   });
 
   it("keeps the shared dynamic descriptor table aligned with worker dependency hydration", () => {
@@ -156,6 +170,9 @@ describe("route context typing", () => {
     );
     expect(getDynamicEndpointDescriptorByKey("api-key-request-release-claim")?.routeDependencies).toEqual(
       getDynamicRouteMatch("/api/api-key-requests-admin/akr_abc12345/release-claim")?.dependencies,
+    );
+    expect(getDynamicEndpointDescriptorByKey("admin-telegram-chat")?.routeDependencies).toEqual(
+      getDynamicRouteMatch("/api/admin-telegram-chat/-12345")?.dependencies,
     );
   });
 });

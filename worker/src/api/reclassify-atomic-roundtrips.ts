@@ -61,6 +61,13 @@ export async function handleReclassifyAtomicRoundtrips(
   const authErr = await requireAdmin(request, trustedAdmin);
   if (authErr) return authErr;
 
+  return handleReclassifyAtomicRoundtripsTrusted(db, url);
+}
+
+export async function handleReclassifyAtomicRoundtripsTrusted(
+  db: D1Database,
+  url: URL,
+): Promise<Response> {
   const since = resolveSince(url);
   if (since instanceof Response) return since;
   const stablecoinId = resolveStablecoinId(url);
