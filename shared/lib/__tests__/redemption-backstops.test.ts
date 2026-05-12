@@ -581,15 +581,6 @@ describe("getRedemptionBackstopConfig", () => {
   });
 
   it("marks the remaining lower-cap docs tranche as reviewed documented-bound", () => {
-    expect(getRedemptionBackstopConfig("pusd-pleasing")).toMatchObject({
-      routeFamily: "offchain-issuer",
-      accessModel: "issuer-api",
-      settlementModel: "days",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
-      costModel: { kind: "dynamic-or-unclear" },
-      reviewedAt: "2026-03-23",
-    });
-
     expect(getRedemptionBackstopConfig("pgold-pleasing")).toMatchObject({
       routeFamily: "offchain-issuer",
       settlementModel: "days",
@@ -611,7 +602,7 @@ describe("getRedemptionBackstopConfig", () => {
       reviewedAt: "2026-03-23",
     });
 
-    for (const id of ["pusd-pleasing", "pgold-pleasing", "apxusd-apyx"] as const) {
+    for (const id of ["pgold-pleasing", "apxusd-apyx"] as const) {
       expect(getRedemptionBackstopConfig(id)?.docs?.length).toBeGreaterThan(0);
     }
   });

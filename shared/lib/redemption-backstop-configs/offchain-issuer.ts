@@ -85,7 +85,6 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "usat-tether",
       "usdtb-ethena",
       "pusd-plume",
-      "pusd-pleasing",
       "gusd-gate",
       "usyc-hashnote",
       "ustb-superstate",
@@ -762,27 +761,6 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       sourceRef("Anzens website", "https://www.anzens.com/", ["route", "capacity", "settlement"]),
     ],
     notes: ["Tracked metadata describes redemption through bank transfers rather than an instant onchain stablecoin withdrawal rail"],
-  },
-  "pusd-pleasing": {
-    ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
-    settlementModel: "days",
-    costModel: documentedVariableFee(
-      "Pleasing docs describe PUSD as redeemable 1:1 into USDT after security screening, with quote-based trading fees embedded in the spot flow and gas charged separately",
-    ),
-    docs: [
-      sourceRef(
-        "Pleasing spot trading",
-        "https://pleasing.gitbook.io/docs/solutions/interactive-blocks",
-        ["route", "settlement", "fees"],
-      ),
-      sourceRef(
-        "Pleasing AML/CFT policy",
-        "https://pleasing.gitbook.io/docs/legal/aml-cft-and-sanctions-policy",
-        ["access"],
-      ),
-    ],
-    notes: ["The modeled backstop is Pleasing's documented PUSD-to-USDT off-ramp, which settles only after source-of-funds and compliance screening rather than as an instant onchain swap"],
   },
   "cash-phantom": {
     ...issuerBase,

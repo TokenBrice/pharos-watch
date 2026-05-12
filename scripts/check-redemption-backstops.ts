@@ -74,7 +74,6 @@ const INTENTIONAL_REDEMPTION_CONFIG_OVERRIDES = new Set([
   "offchain-issuer:eurau-allunity:expandIds->property",
   "offchain-issuer:chfau-allunity:expandIds->property",
   "offchain-issuer:usda-anzens:expandIds->property",
-  "offchain-issuer:pusd-pleasing:expandIds->property",
   "offchain-issuer:cash-phantom:expandIds->property",
   "offchain-issuer:mnee-mnee:expandIds->property",
   "offchain-issuer:sbc-brale:expandIds->property",

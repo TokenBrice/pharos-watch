@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 312 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 310 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -169,7 +169,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [rwaUSDi (rwaUSDi)](https://pharos.watch/stablecoin/rwausdi-multipli/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Avant USD (avUSD)](https://pharos.watch/stablecoin/avusd-avant/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Avant Staked USD (savUSD)](https://pharos.watch/stablecoin/savusd-avant/): centralized stablecoin backed by real-world assets pegged to US Dollar.
-- [Pleasing USD (PUSD)](https://pharos.watch/stablecoin/pusd-pleasing/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Re Protocol reUSD (reUSD)](https://pharos.watch/stablecoin/reusd-re-protocol/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [pmUSD (pmUSD)](https://pharos.watch/stablecoin/pmusd-precious-metals/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Anzen USDz (USDz)](https://pharos.watch/stablecoin/usdz-anzen/): centralized stablecoin backed by real-world assets pegged to US Dollar.
@@ -339,7 +338,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Stablecorp QCAD (QCAD)](https://pharos.watch/stablecoin/qcad-stablecorp/): centralized stablecoin backed by real-world assets pegged to Canadian Dollar.
 - [CAD Digital (CADD)](https://pharos.watch/stablecoin/cadd-cad-digital/): centralized stablecoin backed by real-world assets pegged to Canadian Dollar.
 - [PHT Stablecoin (PHT)](https://pharos.watch/stablecoin/pht-pht/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Philippine Peso.
-- [PHPC Stablecoin (PHPC)](https://pharos.watch/stablecoin/phpc-coins-ph/): centralized stablecoin backed by real-world assets pegged to Philippine Peso.
 - [Etherfuse CETES (CETES)](https://pharos.watch/stablecoin/cetes-etherfuse/): centralized stablecoin backed by real-world assets pegged to Mexican Peso.
 - [Maple syrupUSDC (syrupUSDC)](https://pharos.watch/stablecoin/syrupusdc-maple/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Maple syrupUSDT (syrupUSDT)](https://pharos.watch/stablecoin/syrupusdt-maple/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
