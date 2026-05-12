@@ -60,7 +60,7 @@ export async function crawlCoin(
 
   await crawlGeckoTerminalPoolsStage({
     coinTargets,
-    cgQueriedChains: coinGeckoStage.queriedChains,
+    cgPriceObservationTargets: coinGeckoStage.priceObservationTargets,
     context,
   });
 

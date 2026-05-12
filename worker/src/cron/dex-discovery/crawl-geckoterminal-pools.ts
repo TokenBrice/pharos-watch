@@ -34,14 +34,14 @@ const defaultGeckoTerminalPoolsStageDependencies: GeckoTerminalPoolsStageDepende
 
 interface CrawlGeckoTerminalPoolsStageOptions {
   coinTargets: ContractDeployment[];
-  cgQueriedChains: Set<string>;
+  cgPriceObservationTargets: Set<string>;
   context: CrawlStageContext;
   dependencies?: GeckoTerminalPoolsStageDependencies;
 }
 
 export async function crawlGeckoTerminalPoolsStage({
   coinTargets,
-  cgQueriedChains,
+  cgPriceObservationTargets,
   context,
   dependencies = defaultGeckoTerminalPoolsStageDependencies,
 }: CrawlGeckoTerminalPoolsStageOptions): Promise<void> {
@@ -52,7 +52,7 @@ export async function crawlGeckoTerminalPoolsStage({
     const registry = CHAIN_REGISTRY[chain];
     const gtNetwork = GT_CHAIN_MAP[chain] ?? registry?.geckoTerminal;
     if (!gtNetwork) continue;
-    if (cgQueriedChains.has(chain)) continue;
+    if (cgPriceObservationTargets.has(makeChainAddressKey(chain, address))) continue;
     gtTokens.push({
       sourceChain: gtNetwork,
       ourChain: chain,

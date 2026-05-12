@@ -8,6 +8,7 @@ import { RATE_LIMITS } from "../../lib/rate-limit";
 import { classifyCgPool, parseCgPool } from "../dex-liquidity/coingecko-onchain-shared";
 import { normalizeProtocol } from "../dex-liquidity/pool-helpers";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
+import { makeChainAddressKey } from "../dex-liquidity/token-resolution";
 import {
   DISCOVERY_STAGE_TIMEOUT_MS,
   type CrawlStageContext,
@@ -16,6 +17,7 @@ import {
 
 export interface CoinGeckoPoolsStageResult {
   queriedChains: Set<string>;
+  priceObservationTargets: Set<string>;
   unresolvedChains: string[];
   stoppedEarly: boolean;
 }
@@ -50,6 +52,7 @@ export async function crawlCoinGeckoPoolsStage({
   dependencies = defaultCoinGeckoPoolsStageDependencies,
 }: CrawlCoinGeckoPoolsStageOptions): Promise<CoinGeckoPoolsStageResult> {
   const queriedChains = new Set<string>();
+  const priceObservationTargets = new Set<string>();
   const unresolvedChains: string[] = [];
   const apiKey = cgApiKey?.trim() ? cgApiKey : null;
 
@@ -66,7 +69,7 @@ export async function crawlCoinGeckoPoolsStage({
   }
 
   if (!apiKey || !cgOnchainAllowed) {
-    return { queriedChains, unresolvedChains, stoppedEarly: false };
+    return { queriedChains, priceObservationTargets, unresolvedChains, stoppedEarly: false };
   }
 
   let cgRequests = 0;
@@ -74,7 +77,7 @@ export async function crawlCoinGeckoPoolsStage({
   for (const { chain, address } of coinTargets) {
     throwIfAborted(context.signal);
     if (context.timeExceeded()) {
-      return { queriedChains, unresolvedChains, stoppedEarly: true };
+      return { queriedChains, priceObservationTargets, unresolvedChains, stoppedEarly: true };
     }
 
     const registry = CHAIN_REGISTRY[chain];
@@ -90,6 +93,7 @@ export async function crawlCoinGeckoPoolsStage({
     }
     cgRequests++;
     queriedChains.add(chain);
+    const targetKey = makeChainAddressKey(chain, address);
 
     try {
       const result = await dependencies.fetchCgTokenPoolsWithStatus(
@@ -169,6 +173,7 @@ export async function crawlCoinGeckoPoolsStage({
             chain,
             protocol: dexId,
           });
+          priceObservationTargets.add(targetKey);
         }
       }
     } catch (err) {
@@ -178,5 +183,5 @@ export async function crawlCoinGeckoPoolsStage({
     }
   }
 
-  return { queriedChains, unresolvedChains, stoppedEarly: false };
+  return { queriedChains, priceObservationTargets, unresolvedChains, stoppedEarly: false };
 }

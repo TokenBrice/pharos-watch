@@ -247,6 +247,29 @@ describe("crawlCoin DexScreener hardening", () => {
     );
   });
 
+  it("falls back to GeckoTerminal when CoinGecko onchain returns no usable price observation", async () => {
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({ ok: true, pools: [] });
+    vi.mocked(crawlTokenPools).mockImplementationOnce(async (config) => {
+      expect(config.tokens).toEqual([{
+        sourceChain: "eth",
+        ourChain: "ethereum",
+        address: "0xabc",
+        stablecoinId: "usdc-circle",
+      }]);
+      return { stoppedEarly: false };
+    });
+
+    await crawlCoin(
+      createMockDb(),
+      "usdc-circle",
+      [{ chain: "ethereum", address: "0xAbC", decimals: 6 }],
+      "test-key",
+      new Set(),
+    );
+
+    expect(crawlTokenPools).toHaveBeenCalledTimes(1);
+  });
+
   it("preserves provider order and fallback target policy when earlier stages miss", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const events: string[] = [];
