@@ -31,10 +31,11 @@ const ADDRESS_OVERRIDES: Record<string, string> = {
 
 function addressToCoinId(address: string): string {
   if (address.includes(":")) {
-    return address;
+    const [chain, rawAddress] = address.split(":", 2);
+    return rawAddress?.startsWith("0x") ? `${chain}:${rawAddress.toLowerCase()}` : address;
   }
   if (address.startsWith("0x")) {
-    return `ethereum:${address}`;
+    return `ethereum:${address.toLowerCase()}`;
   }
   return `solana:${address}`;
 }
@@ -127,7 +128,8 @@ function isDefiLlamaContractQuoteUsable(
 
 function buildDefiLlamaCoinIdForChainAddress(chain: string, address: string): string {
   const prefix = DL_COINS_CHAIN_PREFIX_BY_CHAIN[chain] ?? chain;
-  return `${prefix}:${address}`;
+  const normalizedAddress = address.startsWith("0x") ? address.toLowerCase() : address;
+  return `${prefix}:${normalizedAddress}`;
 }
 
 function buildTrackedDeploymentCoinIds(asset: PeggedAsset): string[] {

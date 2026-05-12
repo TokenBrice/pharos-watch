@@ -1,6 +1,37 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.05` (2026-02-01 -> 2026-05-11).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.08` (2026-02-01 -> 2026-05-12).
+
+---
+
+## v5.08 - DefiLlama EVM contract fallback casing normalization (May 12, 2026)
+
+**Commit:** `unreleased`
+
+- Normalized EVM address casing before DefiLlama `/coins` contract fallback lookups so checksummed metadata addresses match lower-case upstream price keys
+- `usg-tangent` can now recover from `priceSource: missing` when DefiLlama publishes the live USG contract quote under a lower-case EVM address
+- The exact-symbol guard remains in place, so `stkGHO` is still not accepted for `sgho-aave`
+- Non-EVM identifiers, including Solana mints, keep their original case because those addresses are case-sensitive
+
+---
+
+## v5.07 - Idle CDO virtualPrice authoritative price provider (May 12, 2026)
+
+**Commit:** `unreleased`
+
+- Added an Idle Perpetual Yield Tranches authoritative price provider that reads `virtualPrice(address tranche)` on the CDO contract and multiplies the underlying-denominated NAV by the tracked parent asset's live price
+- `aa-falconx-mev-capital` now publishes a `protocol-redeem` high-confidence NAV from the CDO `virtualPrice` reading and the tracked `usdc-circle` parent price
+- The provider reuses parent-trust gating, parent provenance metadata, and the 0.5-10.0 NAV bound from the ERC-4626 NAV lane
+
+---
+
+## v5.06 - ERC-4626 NAV authoritative price provider (May 12, 2026)
+
+**Commit:** `unreleased`
+
+- Added a generic ERC-4626 NAV authoritative price provider that prices wrapper vault tokens from on-chain `convertToAssets(1 share)` times the tracked parent's live price
+- `susdt-spark`, `gtusdc-gauntlet`, `yvusdc-yearn`, `stkgho-umbrella-aave`, and `sbold-k3-capital` now publish `protocol-redeem` high-confidence prices when their parents already price through consensus
+- Each vault override carries parent provenance metadata and rejects degenerate quotes outside the 0.5-10.0 share-to-asset bound
 
 ---
 

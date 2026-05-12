@@ -408,6 +408,33 @@ describe("enrichMissingPrices", () => {
     expect(stats.finalMissing).toBe(0);
   });
 
+  it("normalizes EVM contract casing for DefiLlama contract fallback", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "usg-tangent", name: "Tangent USD", symbol: "USG", price: 0,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    mockFetch([
+      {
+        match: "coins.llama.fi/prices/current/ethereum:0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1",
+        body: {
+          coins: {
+            "ethereum:0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1": dlQuote(0.9994, "USG", { confidence: 0.95 }),
+          },
+        },
+      },
+    ]);
+
+    const stats = await enrichMissingPrices(assets);
+
+    expect(stats.pass1).toBe(1);
+    expect(assets[0].price).toBe(0.9994);
+    expect(assets[0].priceSource).toBe("defillama-contract");
+    expect(stats.finalMissing).toBe(0);
+  });
+
   it("rejects unreasonable DefiLlama contract prices and allows later fallback passes to resolve", async () => {
     const assets: PeggedAsset[] = [
       {

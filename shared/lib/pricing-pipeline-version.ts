@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.07",
+  currentVersion: "5.08",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.08",
+      title: "DefiLlama EVM contract fallback casing normalization",
+      date: "2026-05-12",
+      effectiveAt: 1778586100,
+      summary:
+        "Normalized EVM address casing before DefiLlama `/coins` contract fallback lookups so checksummed metadata addresses match lower-case upstream price keys without weakening token identity checks.",
+      impact: [
+        "`usg-tangent` can now recover from `priceSource: missing` when DefiLlama publishes the live USG contract quote under a lower-case EVM address",
+        "The DefiLlama fallback still requires exact quote-symbol agreement, so unrelated symbols such as `stkGHO` are not accepted for `sgho-aave`",
+        "Non-EVM identifiers, including Solana mints, keep their original case because those addresses are case-sensitive",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.07",
       title: "Idle CDO virtualPrice authoritative price provider",
