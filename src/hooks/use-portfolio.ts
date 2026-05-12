@@ -20,7 +20,12 @@ import {
   parsePortfolioUrlParam,
   type PortfolioHolding,
 } from "@/lib/portfolio-codec";
-import { getWindowStorage, safeStorageGetItem, safeStorageSetItem } from "@/lib/browser-storage";
+import { getWindowStorage } from "@/lib/browser-storage";
+import {
+  parseStringSearchParam,
+  readJsonStorageValue,
+  writeJsonStorageValue,
+} from "@/lib/url-storage-codecs";
 
 export { categorizeCollateral, computeGroupedExposure, type UpstreamExposure } from "@/lib/portfolio-analysis";
 
@@ -49,11 +54,10 @@ const STORAGE_KEY = "pharos:portfolio";
 
 function loadFromStorage(): PortfolioHolding[] {
   const storage = getWindowStorage("local");
-  if (!storage) return [];
-  try {
-    const raw = safeStorageGetItem(storage, STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
+  return readJsonStorageValue(
+    storage,
+    STORAGE_KEY,
+    (parsed) => {
     if (!Array.isArray(parsed)) return [];
     const validated = parsed.filter(isPortfolioHolding);
     const migrated = migratePortfolioIds(validated);
@@ -61,14 +65,14 @@ function loadFromStorage(): PortfolioHolding[] {
       saveToStorage(migrated);
     }
     return migrated;
-  } catch (e) {
-    console.warn("[usePortfolio] Failed to parse stored portfolio, resetting:", e);
-    return [];
-  }
+    },
+    [],
+    (error) => console.warn("[usePortfolio] Failed to parse stored portfolio, resetting:", error),
+  );
 }
 
 function saveToStorage(holdings: PortfolioHolding[]): void {
-  safeStorageSetItem(getWindowStorage("local"), STORAGE_KEY, JSON.stringify(holdings));
+  writeJsonStorageValue(getWindowStorage("local"), STORAGE_KEY, holdings);
 }
 
 function getInitialPortfolioState(): {
@@ -79,7 +83,7 @@ function getInitialPortfolioState(): {
   if (typeof window === "undefined") {
     return { holdings: [], isFromUrl: false, initialized: false };
   }
-  const urlParam = new URLSearchParams(window.location.search).get("p");
+  const urlParam = parseStringSearchParam(window.location.search, "p");
   if (urlParam) {
     return {
       holdings: parsePortfolioUrlParam(urlParam),

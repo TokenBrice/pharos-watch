@@ -10,6 +10,10 @@ import type {
   ReportCardsResponse,
 } from "@shared/types";
 import { decodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
+import {
+  parseEnumSearchParam,
+  parseStablecoinIdSearchParam,
+} from "@/lib/url-storage-codecs";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -61,6 +65,7 @@ export interface StressTestState {
 // ---------------------------------------------------------------------------
 
 const idToMeta = new Map<string, { name: string; symbol: string }>();
+const REPORT_CARD_GRADE_VALUES = GRADE_THRESHOLDS.map((threshold) => threshold.grade) as readonly ReportCardGrade[];
 
 for (const coin of ACTIVE_STABLECOINS) {
   idToMeta.set(coin.id, { name: coin.name, symbol: coin.symbol });
@@ -108,26 +113,20 @@ function getDowngradeOptions(currentGrade: ReportCardGrade): ReportCardGrade[] {
 export function parseStressSelectionFromSearch(
   search: string,
 ): { coinId: string | null; grade: ReportCardGrade | null } {
-  const searchParams = new URLSearchParams(search);
-  const stressParam = searchParams.get("stress");
-  if (!stressParam) {
-    return { coinId: null, grade: null };
-  }
-
-  const rawCoinId = decodeStablecoinUrlToken(stressParam);
-  const coinId = rawCoinId && isKnownCoinId(rawCoinId) ? rawCoinId : null;
+  const coinId = parseStablecoinIdSearchParam(search, "stress", {
+    decode: decodeStablecoinUrlToken,
+    isKnownCoinId,
+  });
   if (!coinId) {
     return { coinId: null, grade: null };
   }
 
-  const gradeParam = searchParams.get("grade");
-  if (!gradeParam) {
-    return { coinId, grade: null };
-  }
-
-  const normalizedGrade = gradeParam.toUpperCase();
-  const validGrade = GRADE_THRESHOLDS.find((t) => t.grade === normalizedGrade);
-  return { coinId, grade: validGrade?.grade ?? null };
+  return {
+    coinId,
+    grade: parseEnumSearchParam(search, "grade", REPORT_CARD_GRADE_VALUES, {
+      normalize: (value) => value.toUpperCase(),
+    }),
+  };
 }
 
 function parseInitialStressSelection(): { coinId: string | null; grade: ReportCardGrade | null } {
