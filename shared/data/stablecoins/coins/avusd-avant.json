@@ -6,12 +6,12 @@
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": true,
+    "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
   "collateral": "USDC deposits backing avUSD are deployed through Avant's actively managed market-neutral strategy framework, including basis trades, lending-rate arbitrage, yield trading, lending markets, liquidity provisioning, and private liquidity deals",
-  "pegMechanism": "1:1 redemption for USDC via Avant Protocol with a 0.05% redemption fee and 1–7 day settlement window",
+  "pegMechanism": "1:1 redemption for USDC via Avant Protocol with a 0.05% redemption fee and 1–7 day settlement window; avUSD itself receives no yield, while staking into the separate savUSD token is the yield-bearing route",
   "llamaId": "271",
   "detailProvider": "defillama",
   "geckoId": "avant-usd",
@@ -46,6 +46,11 @@
       "chain": "ethereum",
       "address": "0xf4c13d631450de6b12a19829e37c8e2826891dc4",
       "decimals": 18
+    },
+    {
+      "chain": "linea",
+      "address": "0x37c44fc08e403efc0946c0623cb1164a52ce1576",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {
@@ -70,10 +75,6 @@
       "risk": "high"
     }
   ],
-  "yieldConfig": {
-    "yieldSource": "Avant savings (savUSD)",
-    "yieldType": "lending-vault"
-  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

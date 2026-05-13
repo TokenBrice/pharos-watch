@@ -35,6 +35,13 @@
     "regulator": "CIMA",
     "license": "VASP Registration"
   },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x14dab79fd7b7b3f748d434812fd6a9aac460ea52",
+      "decimals": 18
+    }
+  ],
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",

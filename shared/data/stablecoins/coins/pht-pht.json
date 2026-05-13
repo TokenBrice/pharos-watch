@@ -41,6 +41,16 @@
       "chain": "ethereum",
       "address": "0xbe370ad45d44eb45174c4ec60b88839fef32c077",
       "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xe75220cb014dfb2d354bb59be26d7458bb8d0706",
+      "decimals": 18
+    },
+    {
+      "chain": "tron",
+      "address": "TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs",
+      "decimals": 18
     }
   ],
   "canBeBlacklisted": "dilutable",

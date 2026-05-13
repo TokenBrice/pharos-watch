@@ -10,6 +10,8 @@
     "rwa": false,
     "navToken": false
   },
+  "collateral": "Planned GBP-denominated reserve assets for Revolut's FCA Regulatory Sandbox GBP stablecoin proposal",
+  "pegMechanism": "Pre-launch fiat-reserve stablecoin proposal designed to maintain 1:1 value with Pound Sterling; FCA sandbox testing remains pre-authorisation, with contracts, redemption terms, and reserve reports pending",
   "detailProvider": "defillama",
   "links": [
     {
@@ -19,6 +21,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/RevolutApp"
+    },
+    {
+      "label": "FCA Sandbox",
+      "url": "https://www.fca.org.uk/firms/innovation/regulatory-sandbox/stablecoins-cohort"
     }
   ],
   "jurisdiction": {

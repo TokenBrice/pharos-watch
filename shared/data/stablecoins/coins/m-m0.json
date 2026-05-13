@@ -80,6 +80,11 @@
       "chain": "hyperevm",
       "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
       "decimals": 6
+    },
+    {
+      "chain": "plume",
+      "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "decimals": 6
     }
   ],
   "deploymentModel": "third-party-bridge",

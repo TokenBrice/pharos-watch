@@ -17,7 +17,7 @@
   "pegMechanism": "Tempo users mint pathUSD by depositing USDC.e through Bridge-supported exchange flows and redeem pathUSD back into USDC through Bridge rails",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://bridge.xyz/faq",
+    "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
     "provider": "Bridge reserve disclosures"
   },
   "links": [
@@ -35,7 +35,11 @@
     },
     {
       "label": "Bridge FAQ",
-      "url": "https://bridge.xyz/faq"
+      "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
+    },
+    {
+      "label": "Bridge Reserves",
+      "url": "https://apidocs.bridge.xyz/platform/issuance/reserves"
     }
   ],
   "contracts": [

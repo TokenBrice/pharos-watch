@@ -10,6 +10,8 @@
     "rwa": false,
     "navToken": false
   },
+  "collateral": "Planned USD-denominated reserve assets managed through Bridge Open Issuance; public reserve composition and attestations are pending mainnet launch",
+  "pegMechanism": "Pre-launch USD stablecoin built on Bridge Open Issuance and Tempo testnet infrastructure; expected to mint and redeem through Bridge/Klarna regulated channels once public issuance begins, with contracts and reserve reporting still pending",
   "detailProvider": "defillama",
   "links": [
     {
@@ -19,6 +21,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/Klarna"
+    },
+    {
+      "label": "Announcement",
+      "url": "https://investors.klarna.com/News--Events/news/news-details/2025/Klarna-Launches-KlarnaUSD-as-Stablecoin-Transactions-Hit-27-Trillion-Annually/default.aspx"
     }
   ],
   "jurisdiction": {

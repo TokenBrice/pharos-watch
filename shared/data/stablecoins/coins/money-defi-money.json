@@ -10,8 +10,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "USDC-backed defi.money collateral and strategy assets on Arbitrum and Optimism",
-  "pegMechanism": "Stablecoin minted against accepted collateral with protocol-managed risk parameters and liquidity routes",
+  "collateral": "Overcollateralized loan collateral accepted by defi.money markets on supported networks, including assets such as WBTC and ETH rather than a fixed USDC reserve portfolio",
+  "pegMechanism": "crvUSD-style loan/CDP stablecoin: users deposit approved collateral, borrow MONEY against protocol risk parameters and conversion ranges, and maintain solvency through market-specific liquidation and peg-keeper mechanics",
   "detailProvider": "coingecko",
   "geckoId": "defi-money",
   "protocolSlug": "defi-money",
@@ -51,16 +51,8 @@
   "deploymentModel": "native-multichain",
   "reserves": [
     {
-      "name": "USDC collateral",
-      "pct": 70,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "blacklistable": true
-    },
-    {
-      "name": "Protocol strategy and liquidity positions",
-      "pct": 30,
+      "name": "Approved crypto loan collateral",
+      "pct": 100,
       "risk": "high"
     }
   ],

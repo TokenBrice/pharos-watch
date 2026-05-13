@@ -11,16 +11,22 @@
     "navToken": false
   },
   "collateral": "1:1 HKD-denominated high-quality liquid assets held in segregated accounts under HKMA Stablecoins Ordinance requirements",
+  "pegMechanism": "Pre-launch HKD fiat-referenced stablecoin licensed by the HKMA; expected to maintain 1:1 HKD backing with segregated high-quality liquid reserve assets and regulated mint/redemption channels once Anchorpoint launches the business",
   "detailProvider": "defillama",
   "links": [
     {
       "label": "Website",
       "url": "https://anchorpoint.fi"
+    },
+    {
+      "label": "License announcement",
+      "url": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
     }
   ],
   "jurisdiction": {
     "country": "Hong Kong",
-    "regulator": "HKMA (Stablecoins Ordinance)"
+    "regulator": "HKMA (Stablecoins Ordinance)",
+    "license": "Stablecoin issuer licence FRS01, effective 2026-04-10"
   },
   "blacklistabilityReview": {
     "reviewedStatus": true,
@@ -34,7 +40,7 @@
   "announcedDate": "2026-03",
   "expectedLaunchDate": "2026-Q2",
   "launchPhase": "announced",
-  "launchPhaseDetail": "First licensed HKD stablecoin under Hong Kong's Stablecoins Ordinance; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets; phased B2B2C rollout targeting Q2 2026 for RWA settlement and cross-border payments",
+  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets; phased B2B2C rollout expected in the coming months / Q2 2026 for RWA settlement and cross-border payments",
   "featuredContent": [
     {
       "type": "article",
@@ -46,11 +52,11 @@
   ],
   "milestones": [
     {
-      "date": "2026-03-24",
+      "date": "2026-04-10",
       "type": "regulatory",
-      "title": "HKMA awards first stablecoin license to Anchorpoint Financial",
-      "description": "Standard Chartered / HKT / Animoca Brands JV becomes first licensed HKD stablecoin issuer under Hong Kong's Stablecoins Ordinance.",
-      "sourceUrl": "https://www.coindesk.com/policy/2026/03/24/hong-kong-awards-first-stablecoin-licenses-to-hsbc-standard-chartered-led-group"
+      "title": "HKMA grants stablecoin issuer licence to Anchorpoint Financial",
+      "description": "The HKMA grants Anchorpoint Financial Limited a stablecoin issuer licence under the Stablecoins Ordinance, effective April 10 2026.",
+      "sourceUrl": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
     }
   ]
 }

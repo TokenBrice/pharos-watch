@@ -416,8 +416,8 @@
   },
   "avusd-avant": {
     "title": "Avalanche's Quiet Contender",
-    "text": "Avant's avUSD is 95% backed by USDC deployed into delta-neutral strategies via 0xPartners, with a 5% loss-absorption reserve — structurally a USDC wrapper that earns yield through the savUSD vault while maintaining 1:1 redeemability at a 5-basis-point fee. The institutional-unregulated custody and BVI domicile mean the trust assumptions run through Avant's operational integrity rather than a regulatory framework, which is why the backstop scores a modest 68 with queue-based redemptions that can take one to seven days. Five depeg events including one that hit 321 basis points below peg suggest the peg mechanism isn't bulletproof under stress, though the peg score of 99 indicates these were brief anomalies. In the Avalanche ecosystem, being the default stable-value token with yield attached is a defensible position — the question is whether unregulated custody and a BVI entity are the right foundations for the scale Avant is targeting.",
-    "updatedAt": "2026-03-23"
+    "text": "Avant's avUSD is a USDC-backed base token for the Avant protocol, with deposited USDC routed into 0xPartners-managed market-neutral strategies and protected by a loss-absorption reserve. The token itself does not accrue yield: users stake avUSD into the separately tracked savUSD senior tranche when they want yield exposure, while avUSD remains the redeemable receipt for USDC exits at a 5-basis-point fee and one-to-seven-day settlement window. The institutional-unregulated custody and BVI domicile mean trust runs through Avant's operational integrity rather than a regulatory framework, which is why the backstop remains queue-based rather than a hard on-chain par floor. Five recorded depegs, including one at 321 basis points below peg, show the market can still stress the wrapper even when the current peg score is high.",
+    "updatedAt": "2026-05-13"
   },
   "ylds-figure": {
     "title": "The SEC-Registered Yield Coin",
@@ -470,9 +470,9 @@
     "updatedAt": "2026-03-23"
   },
   "msusd-main-street": {
-    "title": "Options Desk in Stablecoin Clothing",
-    "text": "Main Street USD is a USDC wrapper that routes reserves into delta-neutral options box spreads on centralized exchanges, delivering nearly 12% APY -- a figure that should make anyone fluent in risk-free rates raise an eyebrow. The B- safety grade at 69 marks a notable upgrade from its former C- rating, though CEX custody and exotic collateral quality remain the structural weak points. Supply has surged 38% in a month to $47M, suggesting the yield is attracting capital faster than the risk framework has matured. The 92-rated backstop via permissionless atomic USDC redemption is the genuine saving grace: holders can exit at par on-chain regardless of what the options book is doing. Seventeen depeg events and a worst positive deviation of 527 bps reveal price discovery is still rough around the edges -- the kind of volatility that separates yield-seekers from yield-survivors.",
-    "updatedAt": "2026-04-13"
+    "title": "USDC Base, Strategy Token Above",
+    "text": "Main Street USD is the liquid stablecoin in Main Street's two-token design: unstaked msUSD is described by the issuer as 1:1 backed by USDC and directly mintable or redeemable by verified users. The options-box strategy risk belongs to the separate msY staking token, where users opt into NAV-accreting yield after depositing msUSD. That distinction matters for Pharos scoring because msUSD should be modeled as a USDC-backed redemption asset, while msY carries the strategy exposure.",
+    "updatedAt": "2026-05-13"
   },
   "iusd-infinifi": {
     "title": "Credit Fund in Token Clothing",
@@ -481,8 +481,8 @@
   },
   "pht-pht": {
     "title": "Peso Stablecoin Pioneer",
-    "text": "PHT is a Philippine peso-pegged stablecoin built on a MakerDAO MCD fork, backed 100% by apcxUSDT (a 1:1 custodial USDT wrapper) in CDP vaults with Chainlink oracle price feeds — Singapore-domiciled with institutional-regulated custody. The reserve is technically high-risk not because USDT is unstable but because the apcxUSDT wrapper adds a custodial layer between PHT holders and the underlying Tether. Targeting the $38 billion Filipino remittance corridor where traditional fees eat 6%+ of every transfer, the use case is compelling but adoption requires merchant integration and fiat off-ramps that raw DeFi infrastructure doesn't provide. Ethereum-only deployment and the MCD fork architecture are battle-tested, but PHT remains a worthy experiment proving that local-currency stablecoins for emerging markets need distribution more than they need innovation.",
-    "updatedAt": "2026-03-23"
+    "text": "PHT is a Philippine peso-pegged stablecoin built on a MakerDAO MCD fork, backed 100% by apcxUSDT (a 1:1 custodial USDT wrapper) in CDP vaults with Chainlink oracle price feeds and LayerZero OFT bridging. The reserve is technically high-risk not because USDT is unstable but because the apcxUSDT wrapper adds a custodial layer between PHT holders and the underlying Tether. CoinGecko and DefiLlama now show live Ethereum, Polygon, and Tron coverage, so Pharos models it as a multichain local-currency stablecoin while keeping redemption coverage conservative.",
+    "updatedAt": "2026-05-13"
   },
   "hyusd-hylo": {
     "title": "Staked SOL, Stable Dollar",
@@ -613,11 +613,6 @@
     "title": "The RWA Middleware Layer",
     "text": "Multipli's rwaUSDi wraps 100+ tokenized treasury products, gold tokens, and market-neutral fund units into a single mintable stablecoin — 50% in tokenized T-bills (BUIDL, USDY, OUSG), 25% in aggregated treasury-backed stablecoins, 15% in tokenized gold, and 10% in institutional fund units from Nomura, Fasanara, and Edge Capital. The pitch is that lending protocols can't individually underwrite hundreds of RWA tokens, so rwaUSDi does the aggregation and due diligence — backed by a Lloyd's insurance policy covering de-pegging risk, which is a genuinely novel backstop for a stablecoin. UAE-domiciled with AFI-audited on-chain reserves, it operates on Ethereum only with KYB-gated institutional minting, making it less a retail product and more a composable RWA building block. The elegant abstraction adds a trust layer between holder and underlying assets, but with 99 peg score and only two depeg events on record, the machinery has functioned as designed.",
     "updatedAt": "2026-03-23"
-  },
-  "pusd-pleasing": {
-    "title": "Frozen in Place",
-    "text": "Pleasing USD's supply has been perfectly flat at $120M for at least a month -- identical week-over-week and month-over-month figures suggest minting and redemption have effectively ceased. The Hong Kong precious metals firm's 90% USDT wrapper with 10% tokenized gold exposure sits at a C safety grade of 58, with DEWS having cooled to CALM at 13 from its former Alert-band reading, though 16 depeg events including a 653-bps downside deviation remain on the record. Deployed on Arbitrum and ApeChain with a single DEX pool holding $215K in effective liquidity, the exit infrastructure is barely functional for a coin this size. The issuer-API redemption with multi-day settlement is the only realistic path to par, which makes PUSD less a stablecoin and more a semi-liquid claim on Pleasing International's willingness to honor withdrawals.",
-    "updatedAt": "2026-04-13"
   },
   "usdm-mega": {
     "title": "Funding the Sequencer",
@@ -885,9 +880,9 @@
     "updatedAt": "2026-04-13"
   },
   "mxnb-juno": {
-    "title": "Bitso's Quiet Peso Play",
-    "text": "MXNB is the Mexican peso stablecoin from Juno, a product of Bitso — Latin America's largest crypto exchange — operated through a licensed IFPE (electronic payment funds institution) called NVIO PAGOS MEXICO. The contract architecture tells the whole story: it's a FiatTokenV2_2, the exact same Centre/Circle codebase that powers USDC, complete with blacklisting, pausing, and upgradeability. Deployed at the same address across Ethereum, Polygon, Arbitrum, and Avalanche with quarterly attestation reports following International Valuation Standards, MXNB is a textbook regulated fiat stablecoin — just denominated in pesos instead of dollars. The transparency page reports reserves exceeding circulating supply at ~20.8M MXN, though with only 117 holders on Ethereum and a $1.1M USD market cap, the token's reach is currently closer to a pilot program than a payment network. Listed on Kraken and a handful of DEXes, MXNB is infrastructure waiting for a use case — or perhaps the use case waiting for Mexican DeFi to find it.",
-    "updatedAt": "2026-03-25"
+    "title": "Peso Stablecoin, New Issuer Jurisdiction",
+    "text": "MXNB remains a 1:1 Mexican peso stablecoin with quarterly reserve attestations and the same multichain FiatToken-style deployment across Ethereum, Polygon, Arbitrum, and Avalanche. The material change is issuer jurisdiction: beginning April 8, 2026, MXNB says issuance moved to Nvio Pagos El Salvador, S.A. de C.V., an authorised digital-asset issuer in El Salvador. The reserves are still described as Mexican peso assets held with regulated financial institutions, so Pharos keeps the fiat-backed model while updating the regulatory owner from Mexico/CNBV to El Salvador/CNAD.",
+    "updatedAt": "2026-05-13"
   },
   "cjpy-yamato": {
     "title": "ETH-Backed Yen, Quietly Running",
@@ -1154,6 +1149,11 @@
     "text": "JUSD is a long-tail dollar token with BSC and Polygon contracts and issuer/protocol documentation. Pharos models its reserves as protocol-managed crypto collateral because public materials do not provide a reviewed, granular collateral breakdown. The BSC deployment is used for curated validation, while Polygon is kept for discovery. Its main risk is not the stated dollar target, but the limited transparency around reserve composition and live redemption depth.",
     "updatedAt": "2026-05-05"
   },
+  "jusd-juicedollar": {
+    "title": "Bitcoin-backed dollar on Citrea",
+    "text": "Juice Dollar is a Citrea-native USD stablecoin minted from BTC collateral in overcollateralized positions. The design follows the Frankencoin / d-EURO lineage: no external price oracle, no admin-key intervention path in the published docs, on-chain collateral positions, and liquidation mechanics instead of issuer custody. CoinGecko classifies JUSD as a Citrea ecosystem crypto-backed stablecoin, but current public market cap is still sub-$1M, so the main risk is early-network depth and liquidation-market maturity rather than off-chain reserve opacity.",
+    "updatedAt": "2026-05-13"
+  },
   "usda-alpha-partner": {
     "title": "The Alpha Partner Dollar",
     "text": "Alpha Partner USDA is a BSC-issued dollar token with protocol-managed reserves and liquidity controls. The available docs support adding it to the catalog, but they do not support a detailed collateral split or an independent redemption score. Pharos therefore treats USDA as crypto-backed and high risk, with curated validation only checking the tracked on-chain token supply. It belongs in the long-tail cohort where metadata coverage matters but confidence remains limited.",
@@ -1226,8 +1226,8 @@
   },
   "money-defi-money": {
     "title": "The defi.money Stablecoin",
-    "text": "MONEY is a crypto-backed stablecoin from defi.money on Arbitrum and Optimism. The reserve model is mostly USDC plus protocol strategy and liquidity exposure, which creates both stablecoin dependency and strategy risk. Pharos tracks both deployments and validates curated reserves through Arbitrum. The entry is intentionally conservative because public reserve composition is not yet as detailed as the larger collateralized stablecoins.",
-    "updatedAt": "2026-05-05"
+    "text": "MONEY is defi.money's crypto-backed loan stablecoin on Arbitrum and Optimism, closer to a crvUSD-style CDP system than to a fixed USDC reserve wrapper. Users deposit approved collateral such as WBTC or ETH, then borrow MONEY against market-specific risk parameters and conversion ranges. Pharos now treats the reserve description as protocol-approved crypto loan collateral instead of a static USDC-plus-strategy split, while keeping the entry conservative because live collateral composition is still not as transparent as larger CDP systems.",
+    "updatedAt": "2026-05-13"
   },
   "fusd-freedom-dollar": {
     "title": "The Zano Privacy Dollar",
@@ -1662,11 +1662,6 @@
   "aa-falconx-mev-capital": {
     "title": "Senior tranche on MEV Capital's Falcon USDC strategy",
     "text": "AA_FalconXUSDC is the senior (AA) tranche of a Pareto/Idle CDO over an MEV-Capital-curated Morpho vault routed into Falcon Finance's USDf strategies. The Ethereum tranche holds about $76M of USDC and accrues value against USDC as borrower interest flows in; junior tranches absorb losses first, but exit liquidity depends on USDf's mint/burn rails. The peg-like framing only holds while Falcon USDf maintains liquidity — sustained USDf stress can degrade redemption pricing even when the senior class is structurally protected.",
-    "updatedAt": "2026-05-12"
-  },
-  "phpc-coins-ph": {
-    "title": "BSP-sandboxed Philippine peso stablecoin from Coins.ph",
-    "text": "PHPC is a Philippine peso-pegged stablecoin issued by Coins.ph, a BSP-licensed Virtual Asset Service Provider, under the Bangko Sentral ng Pilipinas Regulatory Sandbox Framework approved in May 2024. PHPC is backed 1:1 by Philippine peso cash, time deposits, and short-term money market instruments held in custodial banks selected by Coins.ph, and is minted and redeemed exclusively through the Coins.ph platform with full reimbursement guaranteed at the end of the sandbox window. The token is deployed on Polygon and Ronin Network; Pharos currently tracks the Polygon deployment because Ronin is not yet a supported chain. As the second active PHP-pegged issuer alongside the already-tracked PHT-pht, PHPC completes the Philippines-regulated stablecoin slice. Circulating supply is in the low single-digit USD millions, reflecting the sandbox-only operating scope.",
     "updatedAt": "2026-05-12"
   },
   "vndc-jade-labs": {

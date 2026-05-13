@@ -446,6 +446,11 @@
         "chain": "base",
         "address": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
         "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -1643,12 +1648,12 @@
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
     "collateral": "USDC deposits backing avUSD are deployed through Avant's actively managed market-neutral strategy framework, including basis trades, lending-rate arbitrage, yield trading, lending markets, liquidity provisioning, and private liquidity deals",
-    "pegMechanism": "1:1 redemption for USDC via Avant Protocol with a 0.05% redemption fee and 1–7 day settlement window",
+    "pegMechanism": "1:1 redemption for USDC via Avant Protocol with a 0.05% redemption fee and 1–7 day settlement window; avUSD itself receives no yield, while staking into the separate savUSD token is the yield-bearing route",
     "geckoId": "avant-usd",
     "links": [
       {
@@ -1680,6 +1685,11 @@
       {
         "chain": "ethereum",
         "address": "0xf4c13d631450de6b12a19829e37c8e2826891dc4",
+        "decimals": 18
+      },
+      {
+        "chain": "linea",
+        "address": "0x37c44fc08e403efc0946c0623cb1164a52ce1576",
         "decimals": 18
       }
     ],
@@ -1721,10 +1731,6 @@
           "rpcMode": "public-rpc"
         }
       }
-    },
-    "yieldConfig": {
-      "yieldSource": "Avant savings (savUSD)",
-      "yieldType": "lending-vault"
     }
   },
   {
@@ -11627,6 +11633,7 @@
       "navToken": false
     },
     "collateral": "1:1 HKD-denominated high-quality liquid assets held in segregated accounts under HKMA Stablecoins Ordinance requirements",
+    "pegMechanism": "Pre-launch HKD fiat-referenced stablecoin licensed by the HKMA; expected to maintain 1:1 HKD backing with segregated high-quality liquid reserve assets and regulated mint/redemption channels once HSBC launches the business",
     "links": [
       {
         "label": "Website",
@@ -11635,11 +11642,16 @@
       {
         "label": "Twitter",
         "url": "https://x.com/HSBC_HK"
+      },
+      {
+        "label": "License announcement",
+        "url": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
       }
     ],
     "jurisdiction": {
       "country": "Hong Kong",
-      "regulator": "HKMA (Stablecoins Ordinance)"
+      "regulator": "HKMA (Stablecoins Ordinance)",
+      "license": "Stablecoin issuer licence FRS02, effective 2026-04-10"
     },
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -11653,7 +11665,7 @@
     "announcedDate": "2026-03",
     "expectedLaunchDate": "2026-H2",
     "launchPhase": "announced",
-    "launchPhaseDetail": "Second HKMA-licensed stablecoin issuer; launching H2 2026 integrated into PayMe (3.3M users) and HSBC HK App; peer-to-peer payments and tokenized investment subscriptions; 1:1 backed by HKD-denominated high-quality liquid assets in segregated accounts; symbol and ticker not yet confirmed",
+    "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS02, effective April 10 2026; launch expected in the coming months / H2 2026 with integration into PayMe (3.3M users) and HSBC HK App; peer-to-peer payments and tokenized investment subscriptions; 1:1 backed by HKD-denominated high-quality liquid assets in segregated accounts; symbol and ticker not yet confirmed",
     "featuredContent": [
       {
         "type": "article",
@@ -11665,11 +11677,11 @@
     ],
     "milestones": [
       {
-        "date": "2026-03-24",
+        "date": "2026-04-10",
         "type": "regulatory",
-        "title": "HKMA awards stablecoin license to HSBC",
-        "description": "HSBC becomes second HKMA-licensed stablecoin issuer alongside Anchorpoint Financial under Hong Kong's Stablecoins Ordinance.",
-        "sourceUrl": "https://www.coindesk.com/policy/2026/03/24/hong-kong-awards-first-stablecoin-licenses-to-hsbc-standard-chartered-led-group"
+        "title": "HKMA grants stablecoin issuer licence to HSBC",
+        "description": "The HKMA grants The Hongkong and Shanghai Banking Corporation Limited a stablecoin issuer licence under the Stablecoins Ordinance, effective April 10 2026.",
+        "sourceUrl": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
       }
     ]
   },
@@ -11687,15 +11699,21 @@
       "navToken": false
     },
     "collateral": "1:1 HKD-denominated high-quality liquid assets held in segregated accounts under HKMA Stablecoins Ordinance requirements",
+    "pegMechanism": "Pre-launch HKD fiat-referenced stablecoin licensed by the HKMA; expected to maintain 1:1 HKD backing with segregated high-quality liquid reserve assets and regulated mint/redemption channels once Anchorpoint launches the business",
     "links": [
       {
         "label": "Website",
         "url": "https://anchorpoint.fi"
+      },
+      {
+        "label": "License announcement",
+        "url": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
       }
     ],
     "jurisdiction": {
       "country": "Hong Kong",
-      "regulator": "HKMA (Stablecoins Ordinance)"
+      "regulator": "HKMA (Stablecoins Ordinance)",
+      "license": "Stablecoin issuer licence FRS01, effective 2026-04-10"
     },
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -11709,7 +11727,7 @@
     "announcedDate": "2026-03",
     "expectedLaunchDate": "2026-Q2",
     "launchPhase": "announced",
-    "launchPhaseDetail": "First licensed HKD stablecoin under Hong Kong's Stablecoins Ordinance; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets; phased B2B2C rollout targeting Q2 2026 for RWA settlement and cross-border payments",
+    "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets; phased B2B2C rollout expected in the coming months / Q2 2026 for RWA settlement and cross-border payments",
     "featuredContent": [
       {
         "type": "article",
@@ -11721,11 +11739,11 @@
     ],
     "milestones": [
       {
-        "date": "2026-03-24",
+        "date": "2026-04-10",
         "type": "regulatory",
-        "title": "HKMA awards first stablecoin license to Anchorpoint Financial",
-        "description": "Standard Chartered / HKT / Animoca Brands JV becomes first licensed HKD stablecoin issuer under Hong Kong's Stablecoins Ordinance.",
-        "sourceUrl": "https://www.coindesk.com/policy/2026/03/24/hong-kong-awards-first-stablecoin-licenses-to-hsbc-standard-chartered-led-group"
+        "title": "HKMA grants stablecoin issuer licence to Anchorpoint Financial",
+        "description": "The HKMA grants Anchorpoint Financial Limited a stablecoin issuer licence under the Stablecoins Ordinance, effective April 10 2026.",
+        "sourceUrl": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
       }
     ]
   },
@@ -11743,6 +11761,7 @@
       "navToken": false
     },
     "collateral": "1:1 HKD-denominated high-quality liquid assets in segregated custody at licensed financial institutions; reserves to be disclosed via periodic independent attestation per HKMA Stablecoins Ordinance",
+    "pegMechanism": "Planned HKD fiat-referenced stablecoin targeting 1:1 HKD backing and regulated issuer redemption under the HKMA Stablecoins Ordinance; as of 2026-05-13, RD InnoTech remains pre-launch and was not included in the first HKMA licensed issuer batch",
     "links": [
       {
         "label": "Website",
@@ -11760,7 +11779,7 @@
     "blacklistabilityReview": {
       "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: HKDR resolves to Yes because existing metadata classifies the asset as centralized and an HKMA-licensed issuer can freeze and reissue under its compliance program.",
+      "evidence": "Inferred review retained: HKDR resolves to Yes because existing metadata classifies the proposed issuer as centralized and an HKMA-regulated launch would require issuer-level compliance controls.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
@@ -12442,7 +12461,7 @@
       {
         "chain": "polygon",
         "address": "0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
-        "decimals": 2
+        "decimals": 0
       },
       {
         "chain": "base",
@@ -12452,7 +12471,7 @@
       {
         "chain": "bsc",
         "address": "0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
-        "decimals": 2
+        "decimals": 0
       },
       {
         "chain": "klaytn",
@@ -13304,6 +13323,11 @@
         "chain": "celo",
         "address": "0xc45ecf20f3cd864b32d9794d6f76814ae8892e20",
         "decimals": 18
+      },
+      {
+        "chain": "monad",
+        "address": "0x22f6a6752800eab67b84748fefc3cc658384af72",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -13314,7 +13338,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "established-alt-l1",
-    "deploymentModel": "single-chain",
+    "deploymentModel": "native-multichain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
@@ -13361,6 +13385,8 @@
       "rwa": false,
       "navToken": false
     },
+    "collateral": "Planned trust-bank JPY backing through Shinsei Trust & Banking under Japan's Type III Electronic Payment Instrument framework; public reserve composition and attestations are pending launch",
+    "pegMechanism": "Pre-launch trust-bank-backed JPY stablecoin: Shinsei Trust & Banking is expected to issue JPYSC under Japan's regulated electronic-payment-instrument framework, with SBI VC Trade as distributor and Startale as technical lead; contracts, redemption terms, and reserve reports remain pending regulatory approval and launch",
     "links": [
       {
         "label": "Website",
@@ -13932,6 +13958,13 @@
       "regulator": "CIMA",
       "license": "VASP Registration"
     },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x14dab79fd7b7b3f748d434812fd6a9aac460ea52",
+        "decimals": 18
+      }
+    ],
     "blacklistabilityReview": {
       "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -14191,6 +14224,8 @@
       "rwa": false,
       "navToken": false
     },
+    "collateral": "Planned USD-denominated reserve assets managed through Bridge Open Issuance; public reserve composition and attestations are pending mainnet launch",
+    "pegMechanism": "Pre-launch USD stablecoin built on Bridge Open Issuance and Tempo testnet infrastructure; expected to mint and redeem through Bridge/Klarna regulated channels once public issuance begins, with contracts and reserve reporting still pending",
     "links": [
       {
         "label": "Website",
@@ -14199,6 +14234,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/Klarna"
+      },
+      {
+        "label": "Announcement",
+        "url": "https://investors.klarna.com/News--Events/news/news-details/2025/Klarna-Launches-KlarnaUSD-as-Stablecoin-Transactions-Hit-27-Trillion-Annually/default.aspx"
       }
     ],
     "jurisdiction": {
@@ -14275,6 +14314,7 @@
       "navToken": false
     },
     "collateral": "Bank-backed KRW reserves; proof-of-concept features quantum-resistant post-quantum cryptography (PQC) security via BTQ Technologies on Kaia blockchain",
+    "pegMechanism": "Pre-launch bank-led KRW stablecoin proof-of-concept on Kaia: iM Bank and Finger are testing KRW reserve reconciliation with BTQ QSSN/PQC security infrastructure; production mint, redemption, and reserve reporting terms remain pending",
     "links": [
       {
         "label": "Website",
@@ -15050,6 +15090,11 @@
         "chain": "hyperevm",
         "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "decimals": 6
+      },
+      {
+        "chain": "plume",
+        "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -15679,8 +15724,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "USDC-backed defi.money collateral and strategy assets on Arbitrum and Optimism",
-    "pegMechanism": "Stablecoin minted against accepted collateral with protocol-managed risk parameters and liquidity routes",
+    "collateral": "Overcollateralized loan collateral accepted by defi.money markets on supported networks, including assets such as WBTC and ETH rather than a fixed USDC reserve portfolio",
+    "pegMechanism": "crvUSD-style loan/CDP stablecoin: users deposit approved collateral, borrow MONEY against protocol risk parameters and conversion ranges, and maintain solvency through market-specific liquidation and peg-keeper mechanics",
     "geckoId": "defi-money",
     "protocolSlug": "defi-money",
     "links": [
@@ -15719,16 +15764,8 @@
     "deploymentModel": "native-multichain",
     "reserves": [
       {
-        "name": "USDC collateral",
-        "pct": 70,
-        "risk": "low",
-        "coinId": "usdc-circle",
-        "depType": "collateral",
-        "blacklistable": true
-      },
-      {
-        "name": "Protocol strategy and liquidity positions",
-        "pct": 30,
+        "name": "Approved crypto loan collateral",
+        "pct": 100,
         "risk": "high"
       }
     ],
@@ -15939,8 +15976,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "USDC plus a delta-neutral options and derivatives strategy reserve; yield accrues to the separate msY staking token rather than to unstaked msUSD holders",
-    "pegMechanism": "KYC-verified users mint and redeem against USDC through Main Street contracts, while secondary-market liquidity supports non-primary exits; staking msUSD into msY is a separate NAV-appreciating yield path",
+    "collateral": "USDC reserves backing unstaked msUSD 1:1; delta-neutral options-box yield accrues to the separate msY strategy token after users stake msUSD",
+    "pegMechanism": "KYC-verified users mint and redeem msUSD 1:1 against USDC through Main Street contracts, while staking msUSD into msY is a separate NAV-appreciating yield path",
     "geckoId": "main-street-usd",
     "cmcSlug": "main-street-usd",
     "links": [
@@ -15971,13 +16008,13 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
-    "collateralQuality": "exotic",
-    "custodyModel": "cex",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
-        "name": "USDC and delta-neutral options strategy reserve",
+        "name": "USDC backing for unstaked msUSD",
         "pct": 100,
-        "risk": "high",
+        "risk": "low",
         "coinId": "usdc-circle"
       }
     ],
@@ -15998,8 +16035,9 @@
         }
       },
       "params": {
-        "label": "USDC and delta-neutral strategy reserve",
-        "risk": "high"
+        "label": "USDC backing for unstaked msUSD",
+        "risk": "low",
+        "coinId": "usdc-circle"
       }
     }
   },
@@ -16419,8 +16457,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Mexican peso (MXN) fiat reserves and cash-equivalent assets held across multiple regulated financial institutions in Mexico; quarterly third-party attestation reports published following International Valuation Standards (ASA/FASB); operated through NVIO PAGOS MEXICO SAPI DE CV, a licensed IFPE",
-    "pegMechanism": "1:1 fiat-collateralized; issuance via SPEI deposit or Bitso transfer to Juno account; redemption via API burning tokens and settling to linked bank account; reserves audited quarterly to confirm they exceed circulating supply",
+    "collateral": "Mexican peso (MXN) fiat reserves and cash-equivalent assets held across multiple regulated financial institutions; beginning April 8, 2026, MXNB is issued by Nvio Pagos El Salvador, S.A. de C.V., an authorised digital-asset issuer in El Salvador",
+    "pegMechanism": "1:1 MXN fiat-collateralized stablecoin; Juno/MXNB materials describe reserve parity, token burn/redemption through issuer rails, and quarterly third-party attestations confirming reserves exceed circulating supply",
     "geckoId": "mxnb",
     "proofOfReserves": {
       "type": "independent-audit",
@@ -16445,8 +16483,8 @@
       }
     ],
     "jurisdiction": {
-      "country": "Mexico",
-      "regulator": "CNBV"
+      "country": "El Salvador",
+      "regulator": "CNAD"
     },
     "contracts": [
       {
@@ -16946,7 +16984,7 @@
       "rwa": true,
       "navToken": true
     },
-    "collateral": "Tokenised short-duration U.S. Treasury exposure routed by Nest into Superstate USTB / USCC and Janus Henderson JTRSY positions, plus stablecoin liquidity buffers",
+    "collateral": "Tokenised short-duration U.S. Treasury exposure routed by Nest into Janus Henderson JTRSY and Superstate USTB positions, plus a small stablecoin liquidity buffer",
     "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying Treasury fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
     "geckoId": "nest-treasury-vault",
     "protocolSlug": "nest-credit",
@@ -16996,20 +17034,20 @@
     "governanceQuality": "regulated-entity",
     "reserves": [
       {
-        "name": "Superstate USTB / USCC Treasury and credit positions",
-        "pct": 70,
-        "risk": "very-low",
-        "coinId": "ustb-superstate"
-      },
-      {
         "name": "Janus Henderson Anemoy Treasury Fund (JTRSY)",
-        "pct": 25,
+        "pct": 79.5,
         "risk": "very-low",
         "coinId": "jtrsy-anemoy"
       },
       {
+        "name": "Superstate USTB Treasury positions",
+        "pct": 20,
+        "risk": "very-low",
+        "coinId": "ustb-superstate"
+      },
+      {
         "name": "Stablecoin liquidity buffer (USDC / pUSD)",
-        "pct": 5,
+        "pct": 0.5,
         "risk": "low",
         "coinId": "usdc-circle"
       }
@@ -17065,13 +17103,13 @@
     "geckoId": "nusd-2",
     "proofOfReserves": {
       "type": "real-time",
-      "url": "https://accountable.neutrl.fi/",
+      "url": "https://accountable.neutrl.finance/",
       "provider": "Accountable"
     },
     "links": [
       {
         "label": "Website",
-        "url": "https://www.neutrl.fi/"
+        "url": "https://www.neutrl.finance/"
       },
       {
         "label": "Twitter",
@@ -17079,7 +17117,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.neutrl.fi/"
+        "url": "https://docs.neutrl.finance/"
       }
     ],
     "contracts": [
@@ -17095,11 +17133,11 @@
       "sources": [
         {
           "label": "Docs",
-          "url": "https://docs.neutrl.fi/"
+          "url": "https://docs.neutrl.finance/"
         },
         {
           "label": "Website",
-          "url": "https://www.neutrl.fi/"
+          "url": "https://www.neutrl.finance/"
         }
       ],
       "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
@@ -17131,7 +17169,7 @@
       "semantics": "protocol-reserve",
       "breakerScope": "nusd-neutrl",
       "display": {
-        "url": "https://accountable.neutrl.fi/",
+        "url": "https://accountable.neutrl.finance/",
         "label": "Accountable Dashboard"
       },
       "adapter": "accountable",
@@ -17519,6 +17557,14 @@
         "url": "https://x.com/onrefinance"
       },
       {
+        "label": "Docs",
+        "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-fund-onyc"
+      },
+      {
+        "label": "Transparency",
+        "url": "https://app.onre.finance/earn/transparency"
+      },
+      {
         "label": "GitHub",
         "url": "https://github.com/onre-finance"
       }
@@ -17814,7 +17860,7 @@
     "geckoId": "pathusd",
     "proofOfReserves": {
       "type": "self-reported",
-      "url": "https://bridge.xyz/faq",
+      "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
       "provider": "Bridge reserve disclosures"
     },
     "links": [
@@ -17832,7 +17878,11 @@
       },
       {
         "label": "Bridge FAQ",
-        "url": "https://bridge.xyz/faq"
+        "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
+      },
+      {
+        "label": "Bridge Reserves",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reserves"
       }
     ],
     "contracts": [
@@ -18065,6 +18115,8 @@
       "rwa": false,
       "navToken": false
     },
+    "collateral": "Synthetic gold exposure minted through Polaris CDP infrastructure using pETH / ETH-derived collateral, with no physical gold reserve or custodian",
+    "pegMechanism": "Pre-launch CDP-style pAsset: users are expected to post pETH collateral, borrow pGOLD debt that tracks one troy ounce of gold, and redeem or liquidate through Polaris protocol mechanics rather than issuer-managed bullion redemption",
     "links": [
       {
         "label": "Website",
@@ -18075,12 +18127,23 @@
         "url": "https://x.com/polarisfinance_"
       }
     ],
+    "canBeBlacklisted": false,
     "blacklistabilityReview": {
       "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: pGOLD resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
-      "reviewer": "Codex inferred-status backfill",
-      "reviewedAt": "2026-05-12"
+      "sources": [
+        {
+          "label": "pGOLD blog",
+          "url": "https://polarisfinance.io/blog/pGOLD-finishing-what-digixdao-started/"
+        },
+        {
+          "label": "Polaris overview",
+          "url": "https://polarisfinance.io/blog/polaris-mints-anything/"
+        }
+      ],
+      "evidence": "Reviewed No: pGOLD is pre-launch/testnet-only, and Polaris describes it as CDP-minted synthetic gold backed by pETH collateral rather than an issuer-managed token or custodial bullion claim with a holder freeze/blacklist surface.",
+      "reviewer": "Codex stablecoin audit",
+      "reviewedAt": "2026-05-13",
+      "upstreamSuppressionRationale": "Suppresses a resolver same-symbol/text false positive. This Polaris entry is scoped to the holder-facing pre-launch pGOLD asset; pETH is documented as immutable ETH-wrapper collateral, and no live upstream freezable token is identified."
     },
     "status": "pre-launch",
     "announcedDate": "2026-01",
@@ -18310,6 +18373,16 @@
         "chain": "ethereum",
         "address": "0xbe370ad45d44eb45174c4ec60b88839fef32c077",
         "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0xe75220cb014dfb2d354bb59be26d7458bb8d0706",
+        "decimals": 18
+      },
+      {
+        "chain": "tron",
+        "address": "TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs",
+        "decimals": 18
       }
     ],
     "canBeBlacklisted": "dilutable",
@@ -18527,6 +18600,8 @@
       "rwa": false,
       "navToken": false
     },
+    "collateral": "pETH / ETH-derived collateral posted in Polaris CDPs, with protocol revenue and liquidation flows routed to pUSD Stability Pool participants rather than offchain reserve yield",
+    "pegMechanism": "Pre-launch Liquity-style CDP stablecoin: borrowers post pETH collateral to mint pUSD, undercollateralized positions are liquidated through a Stability Pool, and pUSD holders can earn borrower-interest and liquidation-flow yield once runtime sources are live",
     "links": [
       {
         "label": "Website",
@@ -18537,12 +18612,23 @@
         "url": "https://x.com/polarisfinance_"
       }
     ],
+    "canBeBlacklisted": false,
     "blacklistabilityReview": {
       "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: pUSD resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
-      "reviewer": "Codex inferred-status backfill",
-      "reviewedAt": "2026-05-12"
+      "sources": [
+        {
+          "label": "pUSD blog",
+          "url": "https://polarisfinance.io/blog/pusd-no-counterparty/"
+        },
+        {
+          "label": "Polaris flows",
+          "url": "https://polarisfinance.io/blog/polaris-flows/"
+        }
+      ],
+      "evidence": "Reviewed No: pUSD is pre-launch/testnet-only, and Polaris describes a CDP/Stability Pool design using pETH collateral and protocol flows rather than an issuer-managed token with a holder freeze/blacklist surface.",
+      "reviewer": "Codex stablecoin audit",
+      "reviewedAt": "2026-05-13",
+      "upstreamSuppressionRationale": "Suppresses a resolver same-symbol/text false positive. This Polaris entry is scoped to the holder-facing pre-launch pUSD asset; pETH is documented as immutable ETH-wrapper collateral, and no live upstream freezable token is identified."
     },
     "status": "pre-launch",
     "announcedDate": "2026-01",
@@ -19304,6 +19390,8 @@
       "rwa": false,
       "navToken": false
     },
+    "collateral": "Planned GBP-denominated reserve assets for Revolut's FCA Regulatory Sandbox GBP stablecoin proposal",
+    "pegMechanism": "Pre-launch fiat-reserve stablecoin proposal designed to maintain 1:1 value with Pound Sterling; FCA sandbox testing remains pre-authorisation, with contracts, redemption terms, and reserve reports pending",
     "links": [
       {
         "label": "Website",
@@ -19312,6 +19400,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/RevolutApp"
+      },
+      {
+        "label": "FCA Sandbox",
+        "url": "https://www.fca.org.uk/firms/innovation/regulatory-sandbox/stablecoins-cohort"
       }
     ],
     "jurisdiction": {
@@ -19476,6 +19568,8 @@
       "rwa": false,
       "navToken": false
     },
+    "collateral": "Planned Bank of North Dakota / Fiserv reserve backing with deposits and U.S. Treasury notes with maturities no longer than 93 days, maintained 1:1 with the stablecoin during the bank-to-bank beta",
+    "pegMechanism": "Pre-launch bank-to-bank payment stablecoin pilot: BND and Fiserv plan a 1:1 USD-denominated token for North Dakota financial institutions, with public access and production contract details still unavailable",
     "links": [
       {
         "label": "Website",
@@ -21040,6 +21134,13 @@
       "reviewedAt": "2026-05-12"
     },
     "custodyModel": "institutional-regulated",
+    "reserves": [
+      {
+        "name": "USD cash and cash equivalents at SoFi Bank Federal Reserve master account",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ],
     "notices": [
       {
         "type": "info",
@@ -27521,7 +27622,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "LST/LRT assets including swETH and rswETH in overcollateralized CDP markets on Swellchain",
+    "collateral": "WETH, weETH, rswETH, and swETH in overcollateralized Liquity v2-style CDP markets on Swellchain; the configured SWELL branch is currently shut down in live on-chain telemetry",
     "pegMechanism": "Overcollateralized CDP with Liquity v2-style user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
     "links": [
       {
@@ -27565,6 +27666,28 @@
     "governanceQuality": "immutable-code",
     "infrastructures": [
       "liquity-v2"
+    ],
+    "reserves": [
+      {
+        "name": "WETH",
+        "pct": 76.6,
+        "risk": "very-low"
+      },
+      {
+        "name": "weETH (Ether.fi)",
+        "pct": 10.2,
+        "risk": "low"
+      },
+      {
+        "name": "rswETH",
+        "pct": 6.8,
+        "risk": "medium"
+      },
+      {
+        "name": "swETH",
+        "pct": 6.4,
+        "risk": "medium"
+      }
     ],
     "liveReservesConfig": {
       "version": 1,
@@ -27756,6 +27879,11 @@
       {
         "chain": "megaeth",
         "address": "0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7",
+        "decimals": 18
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xec2af1c8b110a61fd9c3fa6a554a031ca9943926",
         "decimals": 18
       }
     ],
@@ -30831,6 +30959,13 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "reserves": [
+      {
+        "name": "Productive DeFi collateral (Curve LP tokens, Pendle PTs, and related LP/yield positions)",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
     "status": "active",
     "announcedDate": "2026-03",
     "launchPhase": "beta",

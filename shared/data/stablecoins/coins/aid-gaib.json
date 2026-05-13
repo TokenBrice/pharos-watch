@@ -47,6 +47,11 @@
       "chain": "base",
       "address": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
       "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

@@ -11,6 +11,7 @@
     "navToken": false
   },
   "collateral": "1:1 HKD-denominated high-quality liquid assets in segregated custody at licensed financial institutions; reserves to be disclosed via periodic independent attestation per HKMA Stablecoins Ordinance",
+  "pegMechanism": "Planned HKD fiat-referenced stablecoin targeting 1:1 HKD backing and regulated issuer redemption under the HKMA Stablecoins Ordinance; as of 2026-05-13, RD InnoTech remains pre-launch and was not included in the first HKMA licensed issuer batch",
   "detailProvider": "defillama",
   "links": [
     {
@@ -29,7 +30,7 @@
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: HKDR resolves to Yes because existing metadata classifies the asset as centralized and an HKMA-licensed issuer can freeze and reissue under its compliance program.",
+    "evidence": "Inferred review retained: HKDR resolves to Yes because existing metadata classifies the proposed issuer as centralized and an HKMA-regulated launch would require issuer-level compliance controls.",
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },

@@ -10,7 +10,7 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "Tokenised short-duration U.S. Treasury exposure routed by Nest into Superstate USTB / USCC and Janus Henderson JTRSY positions, plus stablecoin liquidity buffers",
+  "collateral": "Tokenised short-duration U.S. Treasury exposure routed by Nest into Janus Henderson JTRSY and Superstate USTB positions, plus a small stablecoin liquidity buffer",
   "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying Treasury fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
   "detailProvider": "coingecko",
   "geckoId": "nest-treasury-vault",
@@ -61,20 +61,20 @@
   "governanceQuality": "regulated-entity",
   "reserves": [
     {
-      "name": "Superstate USTB / USCC Treasury and credit positions",
-      "pct": 70,
-      "risk": "very-low",
-      "coinId": "ustb-superstate"
-    },
-    {
       "name": "Janus Henderson Anemoy Treasury Fund (JTRSY)",
-      "pct": 25,
+      "pct": 79.5,
       "risk": "very-low",
       "coinId": "jtrsy-anemoy"
     },
     {
+      "name": "Superstate USTB Treasury positions",
+      "pct": 20,
+      "risk": "very-low",
+      "coinId": "ustb-superstate"
+    },
+    {
       "name": "Stablecoin liquidity buffer (USDC / pUSD)",
-      "pct": 5,
+      "pct": 0.5,
       "risk": "low",
       "coinId": "usdc-circle"
     }

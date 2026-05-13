@@ -17,13 +17,13 @@
   "geckoId": "nusd-2",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://accountable.neutrl.fi/",
+    "url": "https://accountable.neutrl.finance/",
     "provider": "Accountable"
   },
   "links": [
     {
       "label": "Website",
-      "url": "https://www.neutrl.fi/"
+      "url": "https://www.neutrl.finance/"
     },
     {
       "label": "Twitter",
@@ -31,7 +31,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.neutrl.fi/"
+      "url": "https://docs.neutrl.finance/"
     }
   ],
   "contracts": [
@@ -47,11 +47,11 @@
     "sources": [
       {
         "label": "Docs",
-        "url": "https://docs.neutrl.fi/"
+        "url": "https://docs.neutrl.finance/"
       },
       {
         "label": "Website",
-        "url": "https://www.neutrl.fi/"
+        "url": "https://www.neutrl.finance/"
       }
     ],
     "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
@@ -84,7 +84,7 @@
     "semantics": "protocol-reserve",
     "breakerScope": "nusd-neutrl",
     "display": {
-      "url": "https://accountable.neutrl.fi/",
+      "url": "https://accountable.neutrl.finance/",
       "label": "Accountable Dashboard"
     },
     "inputs": {

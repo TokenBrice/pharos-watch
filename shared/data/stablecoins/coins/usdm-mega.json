@@ -35,6 +35,11 @@
       "chain": "megaeth",
       "address": "0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7",
       "decimals": 18
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xec2af1c8b110a61fd9c3fa6a554a031ca9943926",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

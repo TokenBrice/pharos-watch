@@ -11,6 +11,7 @@
     "navToken": false
   },
   "collateral": "1:1 HKD-denominated high-quality liquid assets held in segregated accounts under HKMA Stablecoins Ordinance requirements",
+  "pegMechanism": "Pre-launch HKD fiat-referenced stablecoin licensed by the HKMA; expected to maintain 1:1 HKD backing with segregated high-quality liquid reserve assets and regulated mint/redemption channels once HSBC launches the business",
   "detailProvider": "defillama",
   "links": [
     {
@@ -20,11 +21,16 @@
     {
       "label": "Twitter",
       "url": "https://x.com/HSBC_HK"
+    },
+    {
+      "label": "License announcement",
+      "url": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
     }
   ],
   "jurisdiction": {
     "country": "Hong Kong",
-    "regulator": "HKMA (Stablecoins Ordinance)"
+    "regulator": "HKMA (Stablecoins Ordinance)",
+    "license": "Stablecoin issuer licence FRS02, effective 2026-04-10"
   },
   "blacklistabilityReview": {
     "reviewedStatus": true,
@@ -38,7 +44,7 @@
   "announcedDate": "2026-03",
   "expectedLaunchDate": "2026-H2",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Second HKMA-licensed stablecoin issuer; launching H2 2026 integrated into PayMe (3.3M users) and HSBC HK App; peer-to-peer payments and tokenized investment subscriptions; 1:1 backed by HKD-denominated high-quality liquid assets in segregated accounts; symbol and ticker not yet confirmed",
+  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS02, effective April 10 2026; launch expected in the coming months / H2 2026 with integration into PayMe (3.3M users) and HSBC HK App; peer-to-peer payments and tokenized investment subscriptions; 1:1 backed by HKD-denominated high-quality liquid assets in segregated accounts; symbol and ticker not yet confirmed",
   "featuredContent": [
     {
       "type": "article",
@@ -50,11 +56,11 @@
   ],
   "milestones": [
     {
-      "date": "2026-03-24",
+      "date": "2026-04-10",
       "type": "regulatory",
-      "title": "HKMA awards stablecoin license to HSBC",
-      "description": "HSBC becomes second HKMA-licensed stablecoin issuer alongside Anchorpoint Financial under Hong Kong's Stablecoins Ordinance.",
-      "sourceUrl": "https://www.coindesk.com/policy/2026/03/24/hong-kong-awards-first-stablecoin-licenses-to-hsbc-standard-chartered-led-group"
+      "title": "HKMA grants stablecoin issuer licence to HSBC",
+      "description": "The HKMA grants The Hongkong and Shanghai Banking Corporation Limited a stablecoin issuer licence under the Stablecoins Ordinance, effective April 10 2026.",
+      "sourceUrl": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
     }
   ]
 }

@@ -10,8 +10,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Mexican peso (MXN) fiat reserves and cash-equivalent assets held across multiple regulated financial institutions in Mexico; quarterly third-party attestation reports published following International Valuation Standards (ASA/FASB); operated through NVIO PAGOS MEXICO SAPI DE CV, a licensed IFPE",
-  "pegMechanism": "1:1 fiat-collateralized; issuance via SPEI deposit or Bitso transfer to Juno account; redemption via API burning tokens and settling to linked bank account; reserves audited quarterly to confirm they exceed circulating supply",
+  "collateral": "Mexican peso (MXN) fiat reserves and cash-equivalent assets held across multiple regulated financial institutions; beginning April 8, 2026, MXNB is issued by Nvio Pagos El Salvador, S.A. de C.V., an authorised digital-asset issuer in El Salvador",
+  "pegMechanism": "1:1 MXN fiat-collateralized stablecoin; Juno/MXNB materials describe reserve parity, token burn/redemption through issuer rails, and quarterly third-party attestations confirming reserves exceed circulating supply",
   "detailProvider": "coingecko",
   "geckoId": "mxnb",
   "proofOfReserves": {
@@ -37,8 +37,8 @@
     }
   ],
   "jurisdiction": {
-    "country": "Mexico",
-    "regulator": "CNBV"
+    "country": "El Salvador",
+    "regulator": "CNAD"
   },
   "contracts": [
     {

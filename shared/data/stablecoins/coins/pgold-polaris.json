@@ -10,6 +10,8 @@
     "rwa": false,
     "navToken": false
   },
+  "collateral": "Synthetic gold exposure minted through Polaris CDP infrastructure using pETH / ETH-derived collateral, with no physical gold reserve or custodian",
+  "pegMechanism": "Pre-launch CDP-style pAsset: users are expected to post pETH collateral, borrow pGOLD debt that tracks one troy ounce of gold, and redeem or liquidate through Polaris protocol mechanics rather than issuer-managed bullion redemption",
   "detailProvider": "defillama",
   "links": [
     {
@@ -21,12 +23,23 @@
       "url": "https://x.com/polarisfinance_"
     }
   ],
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
     "reviewedStatus": false,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: pGOLD resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "pGOLD blog",
+        "url": "https://polarisfinance.io/blog/pGOLD-finishing-what-digixdao-started/"
+      },
+      {
+        "label": "Polaris overview",
+        "url": "https://polarisfinance.io/blog/polaris-mints-anything/"
+      }
+    ],
+    "evidence": "Reviewed No: pGOLD is pre-launch/testnet-only, and Polaris describes it as CDP-minted synthetic gold backed by pETH collateral rather than an issuer-managed token or custodial bullion claim with a holder freeze/blacklist surface.",
+    "reviewer": "Codex stablecoin audit",
+    "reviewedAt": "2026-05-13",
+    "upstreamSuppressionRationale": "Suppresses a resolver same-symbol/text false positive. This Polaris entry is scoped to the holder-facing pre-launch pGOLD asset; pETH is documented as immutable ETH-wrapper collateral, and no live upstream freezable token is identified."
   },
   "status": "pre-launch",
   "announcedDate": "2026-01",

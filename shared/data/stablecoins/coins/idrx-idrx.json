@@ -35,7 +35,7 @@
     {
       "chain": "polygon",
       "address": "0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
-      "decimals": 2
+      "decimals": 0
     },
     {
       "chain": "base",
@@ -45,7 +45,7 @@
     {
       "chain": "bsc",
       "address": "0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
-      "decimals": 2
+      "decimals": 0
     },
     {
       "chain": "klaytn",

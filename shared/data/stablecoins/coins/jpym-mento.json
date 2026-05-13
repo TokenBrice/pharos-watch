@@ -39,6 +39,11 @@
       "chain": "celo",
       "address": "0xc45ecf20f3cd864b32d9794d6f76814ae8892e20",
       "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0x22f6a6752800eab67b84748fefc3cc658384af72",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {
@@ -49,7 +54,7 @@
     "reviewedAt": "2026-05-12"
   },
   "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
+  "deploymentModel": "native-multichain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",
