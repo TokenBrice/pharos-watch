@@ -9,15 +9,26 @@ export const STATIC_COMPARE_PAIRS = [
   ["usdt-tether", "usdc-circle"],
   ["usdt-tether", "usde-ethena"],
   ["usdt-tether", "dai-makerdao"],
+  ["usdt-tether", "usds-sky"],
   ["usdc-circle", "usde-ethena"],
   ["usdc-circle", "dai-makerdao"],
+  ["usdc-circle", "usds-sky"],
   ["usde-ethena", "dai-makerdao"],
+  ["usde-ethena", "usds-sky"],
   ["usds-sky", "dai-makerdao"],
-  ["pyusd-paypal", "usdc-circle"],
   ["rlusd-ripple", "usdc-circle"],
   ["usdt-tether", "pyusd-paypal"],
   ["usdt-tether", "rlusd-ripple"],
   ["usdc-circle", "pyusd-paypal"],
+  ["usdt-tether", "fdusd-first-digital"],
+  ["usdc-circle", "fdusd-first-digital"],
+  ["usdt-tether", "frax-frax"],
+  ["usdc-circle", "frax-frax"],
+  ["dai-makerdao", "gho-aave"],
+  ["dai-makerdao", "crvusd-curve"],
+  ["gho-aave", "crvusd-curve"],
+  ["usdt-tether", "usd0-usual"],
+  ["usdc-circle", "usd0-usual"],
 ] as const;
 
 const BACKING_COPY = {
@@ -33,8 +44,14 @@ interface StaticComparisonPage {
   shortTitle: string;
   description: string;
   intro: string;
+  summary: string;
   left: StablecoinMeta;
   right: StablecoinMeta;
+}
+
+export interface ComparisonFaqItem {
+  question: string;
+  answer: string;
 }
 
 function getStablecoinOrThrow(id: string): StablecoinMeta {
@@ -47,6 +64,32 @@ function getStablecoinOrThrow(id: string): StablecoinMeta {
 
 function buildComparisonSlug(left: StablecoinMeta, right: StablecoinMeta): string {
   return `${left.id}-vs-${right.id}`;
+}
+
+function assertStaticComparePairs() {
+  const slugs = new Set<string>();
+  const unorderedKeys = new Set<string>();
+
+  for (const [leftId, rightId] of STATIC_COMPARE_PAIRS) {
+    if (leftId === rightId) {
+      throw new Error(`Static comparison pair cannot compare a coin with itself: ${leftId}`);
+    }
+    if (FROZEN_IDS.has(leftId) || FROZEN_IDS.has(rightId)) {
+      throw new Error(`Static comparison pair includes frozen stablecoin: ${leftId} vs ${rightId}`);
+    }
+
+    const slug = `${leftId}-vs-${rightId}`;
+    if (slugs.has(slug)) {
+      throw new Error(`Duplicate static comparison slug: ${slug}`);
+    }
+    slugs.add(slug);
+
+    const unorderedKey = [leftId, rightId].sort().join("::");
+    if (unorderedKeys.has(unorderedKey)) {
+      throw new Error(`Duplicate static comparison pair: ${leftId} vs ${rightId}`);
+    }
+    unorderedKeys.add(unorderedKey);
+  }
 }
 
 function describeBlacklistability(coin: StablecoinMeta): string {
@@ -80,7 +123,29 @@ function buildComparisonIntro(left: StablecoinMeta, right: StablecoinMeta): stri
       ? `Both use ${BACKING_COPY[left.flags.backing]} designs.`
       : `${left.symbol} uses a ${BACKING_COPY[left.flags.backing]} design, while ${right.symbol} uses a ${BACKING_COPY[right.flags.backing]} design.`;
 
-  return `${left.name} and ${right.name} are two widely followed stablecoins. ${pegSentence} ${governanceSentence} ${backingSentence} This static comparison highlights structural differences before you open the live Pharos compare tool.`;
+  const yieldSentence =
+    left.flags.yieldBearing === right.flags.yieldBearing
+      ? left.flags.yieldBearing
+        ? "Both are yield-bearing or yield-forward designs, so raw APY needs to be weighed against issuer, collateral, and liquidity risk."
+        : "Neither token is primarily a yield-bearing wrapper, so the comparison centers on collateral, issuer controls, liquidity, and peg behavior."
+      : `${left.symbol} is ${left.flags.yieldBearing ? "yield-bearing" : "not yield-bearing"}, while ${right.symbol} is ${right.flags.yieldBearing ? "yield-bearing" : "not yield-bearing"}.`;
+
+  return `${left.name} and ${right.name} are two widely followed stablecoins. ${pegSentence} ${governanceSentence} ${backingSentence} ${yieldSentence} This static comparison highlights structural differences before you open the live Pharos compare tool.`;
+}
+
+function buildComparisonSummary(left: StablecoinMeta, right: StablecoinMeta): string {
+  const leftChains = left.contracts?.length ?? 0;
+  const rightChains = right.contracts?.length ?? 0;
+  const chainSentence =
+    leftChains === rightChains
+      ? `Both have ${leftChains} tracked deployments in Pharos.`
+      : `${left.symbol} has ${leftChains} tracked deployments, while ${right.symbol} has ${rightChains}.`;
+  const reserveSentence =
+    left.flags.backing === right.flags.backing
+      ? `Both sit in the ${BACKING_LABELS_SHORT[left.flags.backing].toLowerCase()} cohort.`
+      : `${left.symbol} is ${BACKING_LABELS_SHORT[left.flags.backing].toLowerCase()}, while ${right.symbol} is ${BACKING_LABELS_SHORT[right.flags.backing].toLowerCase()}.`;
+
+  return `${chainSentence} ${reserveSentence} Use the rows below to separate headline market share from the mechanics that matter during stress: redemption path, reserve signal, blacklistability, and venue depth.`;
 }
 
 function buildComparisonDescription(left: StablecoinMeta, right: StablecoinMeta): string {
@@ -94,9 +159,9 @@ export function buildLiveCompareUrl(coinIds: readonly string[]): string {
   return `/compare/?coins=${coinIds.map((coinId) => encodeURIComponent(coinId)).join(",")}`;
 }
 
-export const STATIC_COMPARISON_PAGES: StaticComparisonPage[] = STATIC_COMPARE_PAIRS
-  .filter(([leftId, rightId]) => !FROZEN_IDS.has(leftId) && !FROZEN_IDS.has(rightId))
-  .map(([leftId, rightId]) => {
+assertStaticComparePairs();
+
+export const STATIC_COMPARISON_PAGES: StaticComparisonPage[] = STATIC_COMPARE_PAIRS.map(([leftId, rightId]) => {
   const left = getStablecoinOrThrow(leftId);
   const right = getStablecoinOrThrow(rightId);
   const shortTitle = `${left.symbol} vs ${right.symbol}`;
@@ -107,14 +172,13 @@ export const STATIC_COMPARISON_PAGES: StaticComparisonPage[] = STATIC_COMPARE_PA
     shortTitle,
     description: buildComparisonDescription(left, right),
     intro: buildComparisonIntro(left, right),
+    summary: buildComparisonSummary(left, right),
     left,
     right,
   };
 });
 
-export const STATIC_COMPARISON_PAGE_BY_SLUG = new Map(
-  STATIC_COMPARISON_PAGES.map((page) => [page.slug, page]),
-);
+export const STATIC_COMPARISON_PAGE_BY_SLUG = new Map(STATIC_COMPARISON_PAGES.map((page) => [page.slug, page]));
 
 export function getStaticComparisonPagesForCoin(coinId: string): StaticComparisonPage[] {
   return STATIC_COMPARISON_PAGES.filter((page) => page.left.id === coinId || page.right.id === coinId);
@@ -137,6 +201,14 @@ export function buildComparisonResearchLinks(page: StaticComparisonPage) {
     {
       href: buildLiveCompareUrl([page.left.id, page.right.id]),
       label: `Open the live ${page.shortTitle} compare tool`,
+    },
+    {
+      href: "/safety-scores/",
+      label: "Compare live Safety Scores and contagion exposure",
+    },
+    {
+      href: "/liquidity/",
+      label: "Check DEX liquidity depth before sizing an exit",
     },
   ];
 }
@@ -165,6 +237,11 @@ export function buildComparisonAtAGlanceRows(page: StaticComparisonPage) {
       right: right.flags.yieldBearing ? "Yes" : "No",
     },
     {
+      label: "Governance + backing lens",
+      left: `${GOVERNANCE_LABELS[left.flags.governance]} / ${BACKING_LABELS_SHORT[left.flags.backing]}`,
+      right: `${GOVERNANCE_LABELS[right.flags.governance]} / ${BACKING_LABELS_SHORT[right.flags.backing]}`,
+    },
+    {
       label: "Blacklist controls",
       left: describeBlacklistability(left),
       right: describeBlacklistability(right),
@@ -178,6 +255,30 @@ export function buildComparisonAtAGlanceRows(page: StaticComparisonPage) {
       label: "Tracked chains",
       left: `${left.contracts?.length ?? 0} deployments`,
       right: `${right.contracts?.length ?? 0} deployments`,
+    },
+  ];
+}
+
+export function buildComparisonFaqItems(page: StaticComparisonPage): ComparisonFaqItem[] {
+  const { left, right } = page;
+  const leftDescriptor = `${left.name} (${left.symbol})`;
+  const rightDescriptor = `${right.name} (${right.symbol})`;
+
+  return [
+    {
+      question: `What is the main difference between ${left.symbol} and ${right.symbol}?`,
+      answer:
+        left.flags.backing === right.flags.backing && left.flags.governance === right.flags.governance
+          ? `${leftDescriptor} and ${rightDescriptor} share the same broad governance and backing labels in Pharos, so the useful comparison is in the live details: peg history, liquidity depth, reserve signal, issuer controls, chain deployments, and dependency exposure.`
+          : `${leftDescriptor} and ${rightDescriptor} differ structurally: ${left.symbol} is ${GOVERNANCE_LABELS[left.flags.governance].toLowerCase()} and ${BACKING_LABELS_SHORT[left.flags.backing].toLowerCase()}, while ${right.symbol} is ${GOVERNANCE_LABELS[right.flags.governance].toLowerCase()} and ${BACKING_LABELS_SHORT[right.flags.backing].toLowerCase()}.`,
+    },
+    {
+      question: `Which is safer: ${left.symbol} or ${right.symbol}?`,
+      answer: `Safety is not decided by ticker alone. Use this static page for the structural comparison, then open the live ${page.shortTitle} compare tool and Safety Scores page for current peg behavior, liquidity / exit capacity, dependency risk, resilience, and decentralization scoring.`,
+    },
+    {
+      question: `Why does Pharos keep a static ${left.symbol} vs ${right.symbol} page?`,
+      answer: `This page gives crawlers and readers a stable overview of the ${left.symbol} vs ${right.symbol} question while the live dashboard keeps volatile metrics fresh. It intentionally covers a capped set of high-intent comparisons instead of generating every possible stablecoin pair.`,
     },
   ];
 }

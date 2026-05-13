@@ -26,6 +26,28 @@ interface StablecoinTaxonomyShellProps {
 }
 
 const DIRECTORY_PREVIEW_COUNT = 24;
+const LINKED_DIRECTORIES = [
+  {
+    href: "/stablecoins/",
+    title: "All stablecoins",
+    description: "Return to the full active stablecoin directory.",
+  },
+  {
+    href: "/coverage/",
+    title: "Coverage matrix",
+    description: "Check which Pharos surfaces are available per asset.",
+  },
+  {
+    href: "/safety-scores/",
+    title: "Safety Scores",
+    description: "Compare risk grades and dependency exposure.",
+  },
+  {
+    href: "/liquidity/",
+    title: "DEX liquidity",
+    description: "Review exit depth and venue concentration.",
+  },
+] as const;
 
 export function StablecoinTaxonomyShell({
   title,
@@ -51,7 +73,7 @@ export function StablecoinTaxonomyShell({
       breadcrumbItems={breadcrumbItems}
       title={title}
       leadParagraphs={[intro]}
-      preface={(
+      preface={
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -101,7 +123,7 @@ export function StablecoinTaxonomyShell({
             ]),
           }}
         />
-      )}
+      }
     >
       <section className="space-y-3">
         <div className="space-y-1.5">
@@ -139,10 +161,36 @@ export function StablecoinTaxonomyShell({
         )}
       </section>
 
+      <section className="space-y-3">
+        <div className="space-y-1.5">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            How To Use This Directory
+          </h2>
+          <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+            Treat the {shortLabel} cohort as a starting filter, then verify the live risk surfaces that move fastest:
+            coverage, peg history, liquidity, reserves, and dependency exposure.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {LINKED_DIRECTORIES.map((directory) => (
+            <Link
+              key={directory.href}
+              href={directory.href}
+              className="pharos-focus-ring rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
+            >
+              <span className="block font-medium text-foreground">{directory.title}</span>
+              <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{directory.description}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {relatedPages.length > 0 && (
         <section className="space-y-3">
           <div className="space-y-1.5">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">More Stablecoin Hubs</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              More Stablecoin Hubs
+            </h2>
             <p className="text-sm text-muted-foreground">
               Move laterally into related taxonomy pages without going back to the homepage.
             </p>
@@ -155,7 +203,9 @@ export function StablecoinTaxonomyShell({
                 className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
               >
                 <span className="block font-medium text-foreground">{relatedPage.title}</span>
-                <span className="mt-1 block text-xs text-muted-foreground">{relatedPage.coins.length} tracked coins</span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {relatedPage.coins.length} tracked coins
+                </span>
               </Link>
             ))}
           </div>

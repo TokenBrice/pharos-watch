@@ -23,6 +23,8 @@ const MARKDOWN_ROUTE_PREFIXES = [
 ] as const;
 
 const PASSTHROUGH_PREFIXES = ["/_site-data/", "/_next/"] as const;
+const CANONICAL_SITE_ORIGIN = "https://pharos.watch";
+const GENERATED_MARKDOWN_ASSET_SUFFIX = "/index.md";
 
 export { buildContentSecurityPolicy };
 
@@ -70,6 +72,12 @@ function matchesMarkdownRoute(pathname: string): boolean {
   return MARKDOWN_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
+function directMarkdownAssetCanonicalPath(pathname: string): string | null {
+  if (!pathname.endsWith(GENERATED_MARKDOWN_ASSET_SUFFIX)) return null;
+  if (!MARKDOWN_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return null;
+  return `${pathname.slice(0, -GENERATED_MARKDOWN_ASSET_SUFFIX.length)}/`;
+}
+
 function matchesPassthrough(pathname: string): boolean {
   return PASSTHROUGH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
@@ -96,6 +104,15 @@ function addNegotiationCacheHeaders(headers: Headers): void {
   addVaryAccept(headers);
   headers.set("Cloudflare-CDN-Cache-Control", "no-store");
   headers.set("CDN-Cache-Control", "no-store");
+}
+
+function addDirectMarkdownAssetSeoHeaders(headers: Headers, canonicalPath: string): void {
+  const canonicalUrl = new URL(canonicalPath, CANONICAL_SITE_ORIGIN);
+  const canonicalLink = `<${canonicalUrl.toString()}>; rel="canonical"`;
+  const existingLink = headers.get("Link");
+
+  headers.set("X-Robots-Tag", "noindex, follow");
+  headers.set("Link", existingLink ? `${existingLink}, ${canonicalLink}` : canonicalLink);
 }
 
 function addCspHeaders(headers: Headers, nonce: string): void {
@@ -146,6 +163,16 @@ export const onRequest = async (ctx: MiddlewareContext): Promise<Response> => {
 
   if (matchesPassthrough(url.pathname) || !isNegotiableMethod(ctx.request.method)) {
     return ctx.next();
+  }
+
+  const directMarkdownCanonicalPath = directMarkdownAssetCanonicalPath(url.pathname);
+  if (directMarkdownCanonicalPath) {
+    const directMarkdownResponse = await ctx.next();
+    if (!directMarkdownResponse.ok) return directMarkdownResponse;
+
+    const headers = new Headers(directMarkdownResponse.headers);
+    addDirectMarkdownAssetSeoHeaders(headers, directMarkdownCanonicalPath);
+    return cloneForMethod(directMarkdownResponse, ctx.request.method, headers);
   }
 
   const shouldTryMarkdown =

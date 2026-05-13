@@ -1,8 +1,55 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const OUT_DIR = path.resolve("out");
+const DEFAULT_OUT_DIR = path.resolve("out");
 const BAILOUT_PATTERN = /BAILOUT_TO_CLIENT_SIDE_RENDERING|next-dynamic-bailout-to-csr/;
+const PHAROS_ORIGIN = "https://pharos.watch";
+const PHAROS_HOSTNAME = new URL(PHAROS_ORIGIN).hostname;
+const VOID_TAGS = new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr",
+]);
+const INVISIBLE_CONTENT_TAGS = new Set(["script", "style", "template", "svg"]);
+const TAG_PATTERNS = {
+  link: /<link\b[^>]*>/gi,
+  meta: /<meta\b[^>]*>/gi,
+};
+
+const RICHNESS_CHECKS = [
+  {
+    label: "stablecoin detail",
+    pattern: /^\/stablecoin\/[^/]+\/$/,
+    preferredRoutes: ["/stablecoin/usdt-tether/", "/stablecoin/usdc-circle/"],
+    minVisibleWords: 60,
+  },
+  {
+    label: "chain detail",
+    pattern: /^\/chains\/[^/]+\/$/,
+    preferredRoutes: ["/chains/ethereum/", "/chains/solana/"],
+    minVisibleWords: 35,
+  },
+];
+const RICHNESS_SAMPLE_LIMIT = 2;
+const LOADING_SHELL_PATTERN = /\b(?:loading|placeholder|skeleton|fetching|pending)\b/gi;
+const MAX_LOADING_WORD_RATIO = 0.15;
+const MAX_LOADING_WORD_COUNT = 4;
+
+// Sitemap entries should resolve to exported HTML. Keep this list explicit if
+// a future sitemap intentionally points at a Pages Function or non-HTML asset.
+const SITEMAP_LOCAL_HTML_EXCEPTIONS = new Set([]);
 
 function walkIndexFiles(dir) {
   const results = [];
@@ -20,8 +67,8 @@ function walkIndexFiles(dir) {
   return results;
 }
 
-function routeFromFile(filePath) {
-  const relDir = path.relative(OUT_DIR, path.dirname(filePath)).replace(/\\/g, "/");
+function routeFromFile(filePath, outDir) {
+  const relDir = path.relative(outDir, path.dirname(filePath)).replace(/\\/g, "/");
   if (!relDir) return "/";
   return `/${relDir}/`;
 }
@@ -31,18 +78,89 @@ function extractAttr(html, regex) {
   return match?.[1] ?? "";
 }
 
-function isIndexable(robots) {
-  return !/noindex/i.test(robots || "");
+function decodeHtml(value) {
+  return value
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([a-f0-9]+);/gi, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)))
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
+function parseAttributes(tag) {
+  const attrs = new Map();
+  // eslint-disable-next-line security/detect-unsafe-regex
+  const attrPattern = /([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+  let match = attrPattern.exec(tag);
+  while (match) {
+    const [, rawName, doubleQuoted, singleQuoted, unquoted] = match;
+    if (!rawName.startsWith("<") && !rawName.startsWith("/")) {
+      attrs.set(rawName.toLowerCase(), decodeHtml(doubleQuoted ?? singleQuoted ?? unquoted ?? ""));
+    }
+    match = attrPattern.exec(tag);
+  }
+  return attrs;
+}
+
+function getTags(html, tagName) {
+  const pattern = TAG_PATTERNS[tagName];
+  if (!pattern) return [];
+  return html.match(pattern) ?? [];
+}
+
+function getMetaContents(html, attrName, attrValue) {
+  return getTags(html, "meta")
+    .map((tag) => parseAttributes(tag))
+    .filter((attrs) => (attrs.get(attrName)?.toLowerCase() ?? "") === attrValue.toLowerCase())
+    .map((attrs) => attrs.get("content") ?? "")
+    .filter(Boolean);
+}
+
+function getCanonical(html) {
+  for (const tag of getTags(html, "link")) {
+    const attrs = parseAttributes(tag);
+    const relTokens = (attrs.get("rel") ?? "").toLowerCase().split(/\s+/);
+    if (relTokens.includes("canonical")) {
+      return attrs.get("href") ?? "";
+    }
+  }
+  return "";
+}
+
+function getRobotsDirectives(robotsTags) {
+  return new Set(
+    robotsTags.flatMap((robots) =>
+      robots
+        .toLowerCase()
+        .split(/[,\s]+/)
+        .map((directive) => directive.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function isIndexable(robotsTags) {
+  return !getRobotsDirectives(robotsTags).has("noindex");
+}
+
+function getRobotsConflicts(robotsTags) {
+  const directives = getRobotsDirectives(robotsTags);
+  const conflicts = [];
+  if (directives.has("noindex") && directives.has("index")) {
+    conflicts.push("noindex conflicts with index");
+  }
+  if (directives.has("nofollow") && directives.has("follow")) {
+    conflicts.push("nofollow conflicts with follow");
+  }
+  return conflicts;
 }
 
 function normalizeHref(href) {
   if (!href) return null;
-  if (
-    href.startsWith("#") ||
-    href.startsWith("mailto:") ||
-    href.startsWith("tel:") ||
-    href.startsWith("javascript:")
-  ) {
+  if (href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("javascript:")) {
     return null;
   }
 
@@ -50,7 +168,7 @@ function normalizeHref(href) {
     let target = href;
     if (target.startsWith("http://") || target.startsWith("https://")) {
       const parsed = new URL(target);
-      if (parsed.hostname !== "pharos.watch") return null;
+      if (parsed.hostname !== PHAROS_HOSTNAME) return null;
       target = parsed.pathname;
     }
 
@@ -73,41 +191,221 @@ function parseSitemapLocs(xml) {
   return new Set(locs);
 }
 
-function fail(errors, warning = []) {
-  for (const w of warning) {
-    console.warn(`WARN: ${w}`);
+function extractJsonLdBlocks(html) {
+  const blocks = [];
+  const scriptPattern = /<script\b[^>]*>[\s\S]*?<\/script>/gi;
+  let match = scriptPattern.exec(html);
+  while (match) {
+    const scriptHtml = match[0];
+    const openTagEnd = scriptHtml.indexOf(">");
+    const openTag = scriptHtml.slice(0, openTagEnd + 1);
+    const attrs = parseAttributes(openTag);
+    const type = (attrs.get("type") ?? "").split(";")[0].trim().toLowerCase();
+    if (type === "application/ld+json") {
+      blocks.push(scriptHtml.slice(openTagEnd + 1, scriptHtml.length - "</script>".length));
+    }
+    match = scriptPattern.exec(html);
   }
-  for (const e of errors) {
-    console.error(`ERROR: ${e}`);
-  }
-  process.exit(1);
+  return blocks;
 }
 
-function main() {
-  if (!fs.existsSync(OUT_DIR)) {
-    fail([`Missing build output directory: ${OUT_DIR}`]);
+function jsonPathSegment(key) {
+  return /^[A-Za-z_$][\w$]*$/.test(key) ? `.${key}` : `[${JSON.stringify(key)}]`;
+}
+
+function isSiteDataUrl(value) {
+  if (!value.includes("/_site-data/")) return false;
+  if (value.startsWith("/_site-data/")) return true;
+
+  try {
+    const parsed = new URL(value);
+    return parsed.hostname === PHAROS_HOSTNAME && parsed.pathname.startsWith("/_site-data/");
+  } catch {
+    return false;
+  }
+}
+
+function findStructuredDataSiteDataUrls(value, jsonPath = "$", results = []) {
+  if (typeof value === "string") {
+    if (isSiteDataUrl(value)) {
+      results.push({ path: jsonPath, value });
+    }
+    return results;
   }
 
-  const indexFiles = walkIndexFiles(OUT_DIR);
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => findStructuredDataSiteDataUrls(item, `${jsonPath}[${index}]`, results));
+    return results;
+  }
+
+  if (value && typeof value === "object") {
+    for (const [key, item] of Object.entries(value)) {
+      findStructuredDataSiteDataUrls(item, `${jsonPath}${jsonPathSegment(key)}`, results);
+    }
+  }
+
+  return results;
+}
+
+function getMainHtml(html) {
+  const mainOpen = html.search(/<main\b/i);
+  if (mainOpen === -1) return html;
+  const mainClose = html.search(/<\/main>/i);
+  if (mainClose === -1 || mainClose < mainOpen) return html.slice(mainOpen);
+  return html.slice(mainOpen, mainClose + "</main>".length);
+}
+
+function isHiddenElement(attrs) {
+  const classTokens = (attrs.get("class") ?? "").split(/\s+/).filter(Boolean);
+  const style = attrs.get("style") ?? "";
+  return (
+    attrs.has("hidden") ||
+    (attrs.get("aria-hidden") ?? "").toLowerCase() === "true" ||
+    classTokens.includes("hidden") ||
+    classTokens.includes("sr-only") ||
+    /(?:^|;)\s*display\s*:\s*none\s*(?:;|$)/i.test(style) ||
+    /(?:^|;)\s*visibility\s*:\s*hidden\s*(?:;|$)/i.test(style)
+  );
+}
+
+function extractVisibleText(html) {
+  const scope = getMainHtml(html);
+  const chunks = [];
+  const tokenPattern = /<!--[\s\S]*?-->|<![^>]*>|<\/?[A-Za-z][^>]*>|[^<]+/g;
+  let hiddenDepth = 0;
+  let match = tokenPattern.exec(scope);
+
+  while (match) {
+    const token = match[0];
+    if (token.startsWith("<!--") || token.startsWith("<!")) {
+      match = tokenPattern.exec(scope);
+      continue;
+    }
+
+    const closingTag = token.match(/^<\/\s*([A-Za-z][\w:-]*)/);
+    if (closingTag) {
+      if (hiddenDepth > 0) hiddenDepth -= 1;
+      match = tokenPattern.exec(scope);
+      continue;
+    }
+
+    const openingTag = token.match(/^<\s*([A-Za-z][\w:-]*)/);
+    if (openingTag) {
+      const tagName = openingTag[1].toLowerCase();
+      const isSelfClosing = /\/\s*>$/.test(token) || VOID_TAGS.has(tagName);
+      const attrs = parseAttributes(token);
+      const isInvisible = INVISIBLE_CONTENT_TAGS.has(tagName) || isHiddenElement(attrs);
+      if (!isSelfClosing && (hiddenDepth > 0 || isInvisible)) {
+        hiddenDepth += 1;
+      }
+      match = tokenPattern.exec(scope);
+      continue;
+    }
+
+    if (hiddenDepth === 0) {
+      chunks.push(token);
+    }
+    match = tokenPattern.exec(scope);
+  }
+
+  return decodeHtml(chunks.join(" ")).replace(/\s+/g, " ").trim();
+}
+
+function wordCount(text) {
+  return text ? text.split(/\s+/).filter(Boolean).length : 0;
+}
+
+function analyzeStaticRichness(record) {
+  const visibleText = extractVisibleText(record.html);
+  const words = wordCount(visibleText);
+  const loadingWords = visibleText.match(LOADING_SHELL_PATTERN)?.length ?? 0;
+  return {
+    visibleText,
+    words,
+    loadingWords,
+    loadingWordRatio: words > 0 ? loadingWords / words : 0,
+  };
+}
+
+function selectRepresentativeRichnessRecords(pageRecords, check) {
+  const candidates = pageRecords
+    .filter((record) => check.pattern.test(record.route) && isIndexable(record.robotsTags))
+    .sort((a, b) => a.route.localeCompare(b.route));
+  if (candidates.length === 0) return [];
+
+  const byRoute = new Map(candidates.map((record) => [record.route, record]));
+  const selected = [];
+  for (const route of check.preferredRoutes) {
+    const record = byRoute.get(route);
+    if (record && !selected.includes(record)) {
+      selected.push(record);
+    }
+    if (selected.length >= RICHNESS_SAMPLE_LIMIT) return selected;
+  }
+
+  for (const record of candidates) {
+    if (!selected.includes(record)) {
+      selected.push(record);
+    }
+    if (selected.length >= RICHNESS_SAMPLE_LIMIT) break;
+  }
+
+  return selected;
+}
+
+function sitemapRouteFromPharosUrl(loc) {
+  if (SITEMAP_LOCAL_HTML_EXCEPTIONS.has(loc)) return null;
+
+  let parsed;
+  try {
+    parsed = new URL(loc);
+  } catch {
+    return { error: `sitemap.xml has invalid URL: ${loc}` };
+  }
+
+  if (parsed.hostname !== PHAROS_HOSTNAME) return null;
+  if (parsed.protocol !== "https:") {
+    return { error: `sitemap.xml pharos.watch URL must use https: ${loc}` };
+  }
+  if (parsed.search || parsed.hash) {
+    return { error: `sitemap.xml pharos.watch URL must not include query or hash: ${loc}` };
+  }
+
+  const route = parsed.pathname.endsWith("/") ? parsed.pathname : `${parsed.pathname}/`;
+  return { route };
+}
+
+export function collectSeoStaticCheckResult({ outDir = DEFAULT_OUT_DIR } = {}) {
+  const errors = [];
+  const warnings = [];
+
+  if (!fs.existsSync(outDir)) {
+    return {
+      errors: [`Missing build output directory: ${outDir}`],
+      warnings,
+      pageRecords: [],
+    };
+  }
+
+  const indexFiles = walkIndexFiles(outDir);
   const pageRecords = indexFiles.map((filePath) => {
     const html = fs.readFileSync(filePath, "utf8");
+    const robotsTags = getMetaContents(html, "name", "robots");
     return {
       filePath,
-      route: routeFromFile(filePath),
+      route: routeFromFile(filePath, outDir),
       html,
       title: extractAttr(html, /<title>([^<]*)<\/title>/i),
-      description: extractAttr(html, /<meta name="description" content="([^"]*)"/i),
-      canonical: extractAttr(html, /<link rel="canonical" href="([^"]+)"/i),
-      ogTitle: extractAttr(html, /<meta property="og:title" content="([^"]*)"/i),
-      ogDescription: extractAttr(html, /<meta property="og:description" content="([^"]*)"/i),
-      twitterCard: extractAttr(html, /<meta name="twitter:card" content="([^"]*)"/i),
-      robots: extractAttr(html, /<meta name="robots" content="([^"]*)"/i),
+      description: getMetaContents(html, "name", "description")[0] ?? "",
+      canonical: getCanonical(html),
+      ogTitle: getMetaContents(html, "property", "og:title")[0] ?? "",
+      ogDescription: getMetaContents(html, "property", "og:description")[0] ?? "",
+      ogType: getMetaContents(html, "property", "og:type")[0] ?? "",
+      twitterCard: getMetaContents(html, "name", "twitter:card")[0] ?? "",
+      robotsTags,
       h1Count: (html.match(/<h1\b/gi) ?? []).length,
     };
   });
-
-  const errors = [];
-  const warnings = [];
 
   for (const record of pageRecords) {
     if (BAILOUT_PATTERN.test(record.html)) {
@@ -121,7 +419,40 @@ function main() {
     if (!record.ogDescription) errors.push(`${record.route}: missing og:description`);
     if (!record.twitterCard) errors.push(`${record.route}: missing twitter:card`);
 
-    if (isIndexable(record.robots) && record.h1Count !== 1) {
+    const robotsConflicts = getRobotsConflicts(record.robotsTags);
+    for (const conflict of robotsConflicts) {
+      errors.push(`${record.route}: conflicting robots directives (${conflict}) in ${record.robotsTags.join(" | ")}`);
+    }
+
+    const indexable = isIndexable(record.robotsTags);
+    if (indexable && !record.ogType) {
+      errors.push(`${record.route}: missing og:type`);
+    }
+
+    const jsonLdBlocks = extractJsonLdBlocks(record.html);
+    jsonLdBlocks.forEach((block, index) => {
+      let parsed;
+      try {
+        parsed = JSON.parse(block.trim());
+      } catch (error) {
+        errors.push(`${record.route}: invalid JSON-LD block #${index + 1}: ${error.message}`);
+        return;
+      }
+
+      if (indexable) {
+        const siteDataUrls = findStructuredDataSiteDataUrls(parsed);
+        for (const entry of siteDataUrls.slice(0, 5)) {
+          errors.push(
+            `${record.route}: structured data URL points under /_site-data/ at ${entry.path}: ${entry.value}`,
+          );
+        }
+        if (siteDataUrls.length > 5) {
+          errors.push(`${record.route}: structured data has ${siteDataUrls.length - 5} additional /_site-data/ URLs`);
+        }
+      }
+    });
+
+    if (indexable && record.h1Count !== 1) {
       errors.push(`${record.route}: expected exactly one <h1> on indexable page, got ${record.h1Count}`);
     }
   }
@@ -163,7 +494,7 @@ function main() {
   }
 
   for (const record of pageRecords) {
-    if (!isIndexable(record.robots)) continue;
+    if (!isIndexable(record.robotsTags)) continue;
 
     const d = depth.get(record.route);
     if (d === undefined) {
@@ -179,7 +510,7 @@ function main() {
     }
   }
 
-  const sitemapPath = path.join(OUT_DIR, "sitemap.xml");
+  const sitemapPath = path.join(outDir, "sitemap.xml");
   if (!fs.existsSync(sitemapPath)) {
     errors.push("out/sitemap.xml missing");
   } else {
@@ -194,7 +525,7 @@ function main() {
 
     const pageUrlSet = new Set(
       pageRecords
-        .filter((p) => isIndexable(p.robots))
+        .filter((p) => isIndexable(p.robotsTags))
         .map((p) => `https://pharos.watch${p.route === "/" ? "/" : p.route}`),
     );
 
@@ -204,10 +535,54 @@ function main() {
         `indexable pages missing from sitemap.xml: ${missingFromSitemap.slice(0, 10).join(", ")}${missingFromSitemap.length > 10 ? " ..." : ""}`,
       );
     }
+
+    for (const loc of locs) {
+      const sitemapRoute = sitemapRouteFromPharosUrl(loc);
+      if (!sitemapRoute) continue;
+      if (sitemapRoute.error) {
+        errors.push(sitemapRoute.error);
+        continue;
+      }
+      if (!routeSet.has(sitemapRoute.route)) {
+        errors.push(`sitemap.xml URL has no local static HTML artifact: ${loc} (expected ${sitemapRoute.route})`);
+      }
+    }
+  }
+
+  for (const check of RICHNESS_CHECKS) {
+    for (const record of selectRepresentativeRichnessRecords(pageRecords, check)) {
+      const richness = analyzeStaticRichness(record);
+      if (richness.words < check.minVisibleWords) {
+        errors.push(
+          `${record.route}: ${check.label} static HTML visible text is too thin (${richness.words} words, expected at least ${check.minVisibleWords})`,
+        );
+      }
+      if (richness.loadingWords > MAX_LOADING_WORD_COUNT && richness.loadingWordRatio > MAX_LOADING_WORD_RATIO) {
+        errors.push(
+          `${record.route}: ${check.label} static HTML is dominated by loading shell text (${richness.loadingWords}/${richness.words} loading words)`,
+        );
+      }
+    }
   }
 
   // Informational warning only: avoids failing CI for transient route count changes.
   warnings.push(`Checked ${pageRecords.length} HTML pages in out/`);
+
+  return { errors, warnings, pageRecords };
+}
+
+function fail(errors, warning = []) {
+  for (const w of warning) {
+    console.warn(`WARN: ${w}`);
+  }
+  for (const e of errors) {
+    console.error(`ERROR: ${e}`);
+  }
+  process.exit(1);
+}
+
+function main() {
+  const { errors, warnings } = collectSeoStaticCheckResult();
 
   if (errors.length > 0) {
     fail(errors, warnings);
@@ -219,4 +594,6 @@ function main() {
   console.log("OK: SEO static checks passed");
 }
 
-main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main();
+}

@@ -62,17 +62,9 @@ export function buildStablecoinDatasetJsonLd(
       { "@type": "PropertyValue", name: "dewsScore", minValue: 0, maxValue: 100 },
       { "@type": "PropertyValue", name: "safetyGrade" },
     ],
-    dateModified: options.dateModified ?? new Date().toISOString(),
+    ...(options.dateModified ? { dateModified: options.dateModified } : {}),
     spatialCoverage: { "@type": "Place", name: "Global" },
     measurementTechnique:
       "Aggregated supply and price from DefiLlama, CoinGecko, GeckoTerminal, Pyth, Chainlink and on-chain RPCs; normalized in a Cloudflare Worker pipeline.",
-    distribution: [
-      {
-        "@type": "DataDownload",
-        name: `${coin.name} detail JSON`,
-        encodingFormat: "application/json",
-        contentUrl: `${siteUrl}/_site-data/stablecoin/${coin.id}`,
-      },
-    ],
   };
 }

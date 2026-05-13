@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
@@ -15,8 +16,53 @@ const coverageDescription =
 
 import { COVERAGE_FAQ_ITEMS } from "./coverage-faq";
 
-const COVERAGE_FAQ_JSON_LD = buildFaqJsonLd(
-  COVERAGE_FAQ_ITEMS.map((item) => ({ question: item.q, answer: item.a })),
+const COVERAGE_FAQ_JSON_LD = buildFaqJsonLd(COVERAGE_FAQ_ITEMS.map((item) => ({ question: item.q, answer: item.a })));
+
+const COVERAGE_STATIC_SECTION = (
+  <section className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+    <p className="pharos-kicker">How To Read Coverage</p>
+    <div className="mt-3 grid gap-3 text-sm leading-relaxed text-muted-foreground lg:grid-cols-3">
+      <p>
+        Coverage answers whether Pharos can show a feature for a specific asset today. A blank or unavailable state is a
+        data boundary, not an implied risk grade.
+      </p>
+      <p>
+        Use the matrix before comparing{" "}
+        <Link
+          href="/depeg/"
+          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+        >
+          depegs
+        </Link>
+        ,{" "}
+        <Link
+          href="/liquidity/"
+          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+        >
+          liquidity
+        </Link>
+        ,{" "}
+        <Link
+          href="/yield/"
+          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+        >
+          yield
+        </Link>
+        , or{" "}
+        <Link
+          href="/flows/"
+          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+        >
+          mint/burn flows
+        </Link>{" "}
+        across long-tail assets.
+      </p>
+      <p>
+        Market-cap coverage shows how much of the stablecoin economy each feature reaches; coin-count coverage shows how
+        broad the underlying asset support is.
+      </p>
+    </div>
+  </section>
 );
 
 export const metadata = buildPageMetadata({
@@ -49,4 +95,5 @@ export default createClientFeaturePage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(COVERAGE_FAQ_JSON_LD) }} />
     ),
   },
+  beforeClient: COVERAGE_STATIC_SECTION,
 });

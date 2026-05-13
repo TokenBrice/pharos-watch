@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import type { PublicStatusHistoryWindow } from "@shared/types";
 import { isPublicImpactCircuitKey } from "@shared/lib/public-health";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { FaqSection } from "@/components/faq-section";
 import { PublicServiceSummarySection } from "@/components/status/public-service-summary-section";
 import { PublicStatusHistorySection } from "@/components/status/public-status-history-section";
 import { PublicStatusHero } from "@/components/status/public-status-hero";
@@ -14,22 +15,18 @@ import { useHealth } from "@/hooks/api-hooks";
 import { usePublicEndpointProbes } from "@/hooks/use-endpoint-probes";
 import { usePublicStatusHistory } from "@/hooks/use-public-status-history";
 import { buildBrowserProbeSummary, type DashboardNotice } from "@/lib/status-dashboard-model";
-import {
-  getPublicDivergenceNotice,
-  getPublicWorstCacheSummary,
-} from "@/lib/status/public-status";
+import { getPublicDivergenceNotice, getPublicWorstCacheSummary } from "@/lib/status/public-status";
+import type { FaqItem } from "@/lib/faq";
 
 const RUNWAY_WINDOW: PublicStatusHistoryWindow = "30d";
 const STATUS_SHELL_PROPS = {
   breadcrumbName: "System Status",
   path: "/status/",
   title: "System Status",
-  leadParagraphs: [
-    "Live public telemetry for route freshness, browser reachability, and ingestion drift.",
-  ],
+  leadParagraphs: ["Live public telemetry for route freshness, browser reachability, and ingestion drift."],
 } as const;
 
-export default function StatusClient() {
+export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[] }) {
   const [historyWindow, setHistoryWindow] = useState<PublicStatusHistoryWindow>("7d");
   const {
     data: healthData,
@@ -169,6 +166,23 @@ export default function StatusClient() {
   return (
     <FeaturePageShell {...STATUS_SHELL_PROPS}>
       {content}
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+          <p className="pharos-kicker">Reading Status</p>
+          <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              The page is a public reliability view, not an operator console. It favors signals that affect readers and
+              API consumers: freshness, public probes, incident runway, and whether cache-backed data is still inside
+              its expected age window.
+            </p>
+            <p>
+              For API integrations, combine this page with response headers such as X-Data-Age, Warning, Retry-After,
+              and the endpoint-specific cache profile in the API reference.
+            </p>
+          </div>
+        </div>
+        <FaqSection items={faqItems} title="System Status FAQ" />
+      </section>
     </FeaturePageShell>
   );
 }

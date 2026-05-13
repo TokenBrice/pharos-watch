@@ -11,17 +11,20 @@
 /telegram/ /pharoswatchbot/ 301
 /telegram /pharoswatchbot/ 301
 
+/report-cards /safety-scores/ 301
+/report-cards/ /safety-scores/ 301
 /report-cards/* /safety-scores/:splat 301
-/report-cards /safety-scores 301
+/risk-lab /safety-scores/ 301
+/risk-lab/ /safety-scores/ 301
 /risk-lab/* /safety-scores/:splat 301
-/risk-lab /safety-scores 301
 /blacklist/* /freezewatch/:splat 301
 /blacklist/ /freezewatch/ 301
 /blacklist /freezewatch/ 301
 /peg-tracker / 301
 /peg-tracker/ / 301
+/stability-index-alt /stability-index/ 301
+/stability-index-alt/ /stability-index/ 301
 /stability-index-alt/* /stability-index/:splat 301
-/stability-index-alt /stability-index 301
 
 # Infrastructure tagging — protocol → infrastructure rename
 /stablecoins/protocol/liquity-v1/* /stablecoins/infrastructure/liquity-v1/:splat 301

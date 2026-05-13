@@ -7,8 +7,10 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { FlowChart } from "@/components/flow-chart";
 import { FlowTable } from "@/components/flow-table";
 import { FlowBrrrOverview } from "@/components/flow-brrr-overview";
+import { FaqSection } from "@/components/faq-section";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type { FaqItem } from "@/lib/faq";
 import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
@@ -38,13 +40,7 @@ const FLOWS_SHELL_PROPS = {
   ],
 } as const;
 
-function FlowsHeaderSupplement({
-  scopeLabel,
-  syncWarning,
-}: {
-  scopeLabel: string;
-  syncWarning: string | null;
-}) {
+function FlowsHeaderSupplement({ scopeLabel, syncWarning }: { scopeLabel: string; syncWarning: string | null }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -61,7 +57,7 @@ function FlowsHeaderSupplement({
   );
 }
 
-export default function FlowsClient() {
+export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[] }) {
   const [hours, setHours] = useState(720);
   const {
     data: summaryData,
@@ -79,11 +75,7 @@ export default function FlowsClient() {
     dataUpdatedAt: chartUpdatedAt,
     refetch: refetchChart,
   } = useMintBurnFlows(hours);
-  const {
-    data: weeklyData,
-    isLoading: isWeeklyLoading,
-    refetch: refetchWeekly,
-  } = useMintBurnFlows(168);
+  const { data: weeklyData, isLoading: isWeeklyLoading, refetch: refetchWeekly } = useMintBurnFlows(168);
 
   const gauge = summaryData?.gauge;
   const coins = summaryData?.coins ?? [];
@@ -124,13 +116,15 @@ export default function FlowsClient() {
               meta: summaryMeta,
             },
             ...(hours !== 24
-              ? [{
-                  label: "Mint/Burn Flows (Chart)",
-                  dataUpdatedAt: chartUpdatedAt,
-                  error: chartError,
-                  hasData: !!chartData,
-                  meta: chartMeta,
-                }]
+              ? [
+                  {
+                    label: "Mint/Burn Flows (Chart)",
+                    dataUpdatedAt: chartUpdatedAt,
+                    error: chartError,
+                    hasData: !!chartData,
+                    meta: chartMeta,
+                  },
+                ]
               : []),
           ]}
         />
@@ -158,10 +152,7 @@ export default function FlowsClient() {
 
       <section aria-labelledby="chart-heading">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2
-            id="chart-heading"
-            className="pharos-kicker"
-          >
+          <h2 id="chart-heading" className="pharos-kicker">
             Aggregate Flows
           </h2>
           <ToggleGroup
@@ -184,6 +175,23 @@ export default function FlowsClient() {
         <div className="mt-3">
           <FlowChart hourly={hourly} isLoading={isChartLoading} />
         </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+          <p className="pharos-kicker">Flow Interpretation</p>
+          <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              Mint and burn totals are useful, but the pressure shift is the stress signal: it asks whether the current
+              flow is unusual for that coin, not just whether mints outnumber burns today.
+            </p>
+            <p>
+              Read sharp burn pressure alongside depeg alerts, DEX liquidity, and redemption-backstop coverage before
+              treating it as a standalone bank-run signal.
+            </p>
+          </div>
+        </div>
+        <FaqSection items={faqItems} title="Mint/Burn Flow FAQ" />
       </section>
     </FeaturePageShell>
   );

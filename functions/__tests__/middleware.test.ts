@@ -23,7 +23,8 @@ function ctx(request: Request, assetsFiles: Record<string, string>) {
     const asPath = new URL(request.url).pathname;
     const body = assetsFiles[asPath] ?? assetsFiles[`${asPath}index.html`];
     if (!body) return new Response("Not Found", { status: 404 });
-    return new Response(body, { status: 200, headers: { "Content-Type": "text/html" } });
+    const type = asPath.endsWith(".md") ? "text/markdown" : "text/html";
+    return new Response(body, { status: 200, headers: { "Content-Type": type } });
   });
   return { request, env, next };
 }
@@ -64,6 +65,8 @@ describe("pages middleware markdown negotiation", () => {
     const res = await onRequest(ctx(req, files));
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toMatch(/text\/markdown/);
+    expect(res.headers.get("X-Robots-Tag")).toBeNull();
+    expect(res.headers.get("Link")).toBeNull();
     expect(res.headers.get("Vary")).toContain("Accept");
     expect(res.headers.get("Cloudflare-CDN-Cache-Control")).toBe("no-store");
     expect(await res.text()).toBe("# USDT Markdown");
@@ -139,6 +142,43 @@ describe("pages middleware markdown negotiation", () => {
     });
     const res = await onRequest(ctx(req, { "/stablecoin/not-found/index.html": "<html>HTML</html>" }));
     expect(res.headers.get("Content-Type")).toMatch(/text\/html/);
+  });
+
+  it.each([
+    ["/methodology/index.md", "/methodology/"],
+    ["/stablecoin/usdt-tether/index.md", "/stablecoin/usdt-tether/"],
+    ["/changelog/index.md", "/changelog/"],
+    ["/digest/2026-05-12/index.md", "/digest/2026-05-12/"],
+    ["/docs/report-cards/index.md", "/docs/report-cards/"],
+  ])("marks direct generated markdown asset %s as noindex with canonical link", async (path, canonicalPath) => {
+    const req = new Request(`https://preview.stablecoin-dashboard.pages.dev${path}`);
+    const res = await onRequest(ctx(req, { [path]: "# Markdown export" }));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toMatch(/text\/markdown/);
+    expect(res.headers.get("X-Robots-Tag")).toBe("noindex, follow");
+    expect(res.headers.get("Link")).toBe(`<https://pharos.watch${canonicalPath}>; rel="canonical"`);
+    expect(await res.text()).toBe("# Markdown export");
+  });
+
+  it("marks direct generated markdown asset HEAD responses without a body", async () => {
+    const path = "/docs/report-cards/index.md";
+    const req = new Request(`https://pharos.watch${path}`, { method: "HEAD" });
+    const res = await onRequest(ctx(req, { [path]: "# Report cards" }));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Robots-Tag")).toBe("noindex, follow");
+    expect(res.headers.get("Link")).toBe('<https://pharos.watch/docs/report-cards/>; rel="canonical"');
+    expect(await res.text()).toBe("");
+  });
+
+  it("does not noindex unrelated markdown assets", async () => {
+    const req = new Request("https://pharos.watch/about/index.md");
+    const res = await onRequest(ctx(req, { "/about/index.md": "# About" }));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Robots-Tag")).toBeNull();
+    expect(res.headers.get("Link")).toBeNull();
   });
 
   it("adds nonce-backed CSP to inline scripts while leaving external script hosts allowlisted", async () => {

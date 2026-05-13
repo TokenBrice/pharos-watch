@@ -34,16 +34,6 @@ export const metadata: Metadata = {
     default: "Stablecoin Analytics Dashboard | Pharos",
   },
   description: siteDescription,
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
-  },
   openGraph: {
     type: "website",
     siteName: "Pharos",

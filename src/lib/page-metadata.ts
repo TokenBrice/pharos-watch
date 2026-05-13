@@ -113,6 +113,25 @@ function getMetadataDifferentiator(coin: StablecoinMeta): string | null {
 }
 
 export function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
+  if (coin.status === "pre-launch") {
+    const governancePhrase = GOVERNANCE_METADATA_PHRASES[coin.flags.governance];
+    const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+    const backingPhrase = BACKING_METADATA_PHRASES[coin.flags.backing];
+    const structure =
+      coin.flags.backing === "algorithmic"
+        ? `Planned ${pegLabel} peg; ${governancePhrase} ${backingPhrase}.`
+        : `Planned ${pegLabel} peg; ${backingPhrase}.`;
+    const description = [
+      `Pre-launch profile for ${coin.name} (${coin.symbol}).`,
+      structure,
+      "Track launch milestones before live data begins.",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    return trimTextAtWordBoundary(description, 160);
+  }
+
   const governancePhrase = GOVERNANCE_METADATA_PHRASES[coin.flags.governance];
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
   const backingPhrase = BACKING_METADATA_PHRASES[coin.flags.backing];
@@ -147,6 +166,16 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
       ogImage: buildApiOgImageUrl(`/api/og/stablecoin/${coin.id}`),
     });
   }
+
+  if (coin.status === "pre-launch") {
+    return buildPageMetadata({
+      title: `${coin.name} (${coin.symbol}) — Pre-Launch Stablecoin Profile`,
+      description: buildStablecoinDetailDescription(coin),
+      canonical: buildStablecoinUrl(coin.id),
+      ogImage: buildApiOgImageUrl(`/api/og/stablecoin/${coin.id}`),
+    });
+  }
+
   const backingLabel = BACKING_BADGE_STYLES[coin.flags.backing]?.label ?? "";
   const title = backingLabel
     ? `${coin.name} (${coin.symbol}) — ${backingLabel} Stablecoin Analytics`

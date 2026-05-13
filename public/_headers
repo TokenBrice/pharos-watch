@@ -64,7 +64,11 @@
   ! Cache-Control
   Cache-Control: public, max-age=604800, immutable
 
-/chains/*
+/chains/*.png
+  ! Cache-Control
+  Cache-Control: public, max-age=604800, immutable
+
+/chains/*.svg
   ! Cache-Control
   Cache-Control: public, max-age=604800, immutable
 

@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
+import { FaqSection } from "@/components/faq-section";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import {
   buildComparisonAtAGlanceRows,
+  buildComparisonFaqItems,
   buildComparisonResearchLinks,
   STATIC_COMPARISON_PAGE_BY_SLUG,
   STATIC_COMPARISON_PAGES,
@@ -16,23 +18,16 @@ export function generateStaticParams() {
   return buildSlugStaticParams("slug", STATIC_COMPARISON_PAGES);
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   return buildSlugPageMetadata(params, "slug", STATIC_COMPARISON_PAGE_BY_SLUG, "Comparison Not Found");
 }
 
-export default async function StaticComparisonPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function StaticComparisonPage({ params }: { params: Promise<{ slug: string }> }) {
   const page = await resolveSlugPage(params, "slug", STATIC_COMPARISON_PAGE_BY_SLUG);
   if (!page) notFound();
 
   const comparisonRows = buildComparisonAtAGlanceRows(page);
+  const faqItems = buildComparisonFaqItems(page);
   const researchLinks = buildComparisonResearchLinks(page);
   const pegSlug = PEG_SLUGS[page.left.flags.pegCurrency];
   const taxonomyLinks = [
@@ -66,6 +61,31 @@ export default async function StaticComparisonPage({
       title={`${page.left.name} (${page.left.symbol}) vs ${page.right.name} (${page.right.symbol})`}
       leadParagraphs={[page.intro]}
     >
+      <section className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+        <p className="pharos-kicker">Comparison Brief</p>
+        <p className="mt-3 max-w-4xl text-sm leading-relaxed text-muted-foreground">{page.summary}</p>
+        <div className="mt-4 flex flex-wrap gap-2 text-sm">
+          <Link
+            href="/depeg/"
+            className="pharos-focus-ring rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            Peg history
+          </Link>
+          <Link
+            href="/flows/"
+            className="pharos-focus-ring rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            Mint/burn pressure
+          </Link>
+          <Link
+            href="/yield/"
+            className="pharos-focus-ring rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            Yield context
+          </Link>
+        </div>
+      </section>
+
       <section className="grid gap-4 lg:grid-cols-2">
         {[page.left, page.right].map((coin) => (
           <article key={coin.id} className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
@@ -74,7 +94,11 @@ export default async function StaticComparisonPage({
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               <li>{coin.flags.yieldBearing ? "Yield-bearing design" : "Non-yield-bearing design"}</li>
               <li>{coin.contracts?.length ?? 0} tracked chain deployments</li>
-              <li>{coin.proofOfReserves?.provider ? `${coin.proofOfReserves.provider} reserve attestations` : "No linked proof-of-reserves provider"}</li>
+              <li>
+                {coin.proofOfReserves?.provider
+                  ? `${coin.proofOfReserves.provider} reserve attestations`
+                  : "No linked proof-of-reserves provider"}
+              </li>
             </ul>
             <Link
               href={researchLinks.find((link) => link.href.includes(coin.id))?.href ?? "/"}
@@ -157,6 +181,8 @@ export default async function StaticComparisonPage({
           </div>
         </div>
       </section>
+
+      <FaqSection items={faqItems} title={`${page.shortTitle} FAQ`} includeJsonLd />
     </FeaturePageShell>
   );
 }

@@ -3,6 +3,7 @@ import { FROZEN_IDS } from "@shared/lib/stablecoins";
 import {
   buildComparisonAtAGlanceRows,
   getPrimaryStaticComparisonPageForCoin,
+  STATIC_COMPARE_PAIRS,
   STATIC_COMPARISON_PAGES,
 } from "@/lib/compare-pages";
 
@@ -24,10 +25,30 @@ describe("compare page blacklist copy", () => {
 });
 
 describe("STATIC_COMPARISON_PAGES", () => {
-  it("excludes any pair containing a frozen coin", () => {
-    for (const page of STATIC_COMPARISON_PAGES) {
-      expect(FROZEN_IDS.has(page.left.id)).toBe(false);
-      expect(FROZEN_IDS.has(page.right.id)).toBe(false);
+  it("keeps the static pair set capped", () => {
+    expect(STATIC_COMPARE_PAIRS.length).toBeLessThanOrEqual(30);
+  });
+
+  it("does not define any pair containing a frozen coin", () => {
+    for (const [leftId, rightId] of STATIC_COMPARE_PAIRS) {
+      expect(FROZEN_IDS.has(leftId)).toBe(false);
+      expect(FROZEN_IDS.has(rightId)).toBe(false);
     }
+  });
+
+  it("does not define duplicate static comparison slugs", () => {
+    const slugs = STATIC_COMPARE_PAIRS.map(([leftId, rightId]) => `${leftId}-vs-${rightId}`);
+
+    expect(new Set(slugs).size).toBe(slugs.length);
+  });
+
+  it("does not define the same pair in reverse order", () => {
+    const canonicalPairs = STATIC_COMPARE_PAIRS.map((pair) => [...pair].sort().join("::"));
+
+    expect(new Set(canonicalPairs).size).toBe(canonicalPairs.length);
+  });
+
+  it("generates a page for each static pair", () => {
+    expect(STATIC_COMPARISON_PAGES).toHaveLength(STATIC_COMPARE_PAIRS.length);
   });
 });

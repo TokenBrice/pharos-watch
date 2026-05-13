@@ -4,6 +4,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import {
   buildApiOgImageUrl,
   buildStablecoinDetailDescription,
+  buildStablecoinDetailMetadata,
   summarizeText,
 } from "@/lib/page-metadata";
 
@@ -20,6 +21,22 @@ describe("page metadata helpers", () => {
     expect(buildStablecoinDetailDescription(usdt!)).toContain("backed by real-world assets");
     expect(buildStablecoinDetailDescription(usde!)).toContain("collateralized by crypto assets");
     expect(buildStablecoinDetailDescription(frax!)).toContain("Freeze risk inherited from upstream collateral");
+  });
+
+  it("uses pre-launch tracker wording before live stablecoin data exists", () => {
+    const preLaunch = TRACKED_META_BY_ID.get("usd-nubank");
+
+    expect(preLaunch).toBeDefined();
+
+    const description = buildStablecoinDetailDescription(preLaunch!);
+    const metadata = buildStablecoinDetailMetadata(preLaunch!);
+
+    expect(metadata.title).toBe("Nubank USD Stablecoin (USD-NU) — Pre-Launch Stablecoin Profile");
+    expect(description).toContain("Pre-launch profile");
+    expect(description).toContain("before live data begins");
+    expect(description).not.toContain("Peg score");
+    expect(description).not.toContain("liquidity");
+    expect(metadata.description).toBe(description);
   });
 
   it("prefers a full first sentence for digest descriptions", () => {
