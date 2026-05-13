@@ -177,9 +177,15 @@ describe("loadYieldHealthSummary", () => {
             manifestMissingIds: ["missing-yield-asset"],
             yieldBearingMissingFromRankings: ["missing-ranking-asset"],
             unmatchedHighTvlPoolCount: 2,
-            missingProtocols: [{ project: "new-protocol" }],
+            missingProtocols: [{ project: "new-protocol", pool: "new-pool", symbol: "USDC", chain: "Ethereum" }],
             nativeExactPoolRecommendationCount: 3,
-            sourceFamilyAdapterRecommendations: [{ project: "aave-v3" }],
+            sourceFamilyAdapterRecommendations: [{
+              project: "aave-v3",
+              poolCount: 1,
+              totalTvlUsd: 12_000_000,
+              recommendedTier: "review-needed",
+              examplePools: ["aave-usdc"],
+            }],
             lendingAllowlistRecommendationCount: 5,
           }),
         },
@@ -224,7 +230,30 @@ describe("loadYieldHealthSummary", () => {
       nativeExactPoolRecommendationCount: 3,
       sourceFamilyAdapterRecommendationCount: 1,
       lendingAllowlistRecommendationCount: 5,
+      allowedActions: ["accept", "dismiss", "intentional-gap", "watch"],
+      queuePersistence: "deferred",
     });
+    expect(summary.coverageAudit.headlineGaps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "manifest-missing",
+          title: "missing-yield-asset",
+          actionHint: "accept",
+        }),
+        expect.objectContaining({
+          kind: "missing-protocol",
+          title: "USDC on new-protocol",
+        }),
+      ]),
+    );
+    expect(summary.coverageAudit.recommendationCandidates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "source-family-adapter",
+          title: "aave-v3",
+        }),
+      ]),
+    );
   });
 
   it("treats unknown venue risk tiers as missing evidence for penalty coverage", async () => {

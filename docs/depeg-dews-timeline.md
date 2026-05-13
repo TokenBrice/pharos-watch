@@ -4,6 +4,14 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 
 ---
 
+## Boundary note — Yield source-risk scaffolding (May 13, 2026)
+
+- No methodology version change: DEWS remains warning-string-only for the Yield Anomaly sub-signal
+- Structured Yield Intelligence source-risk and rank-attribution inputs are documented as no-op scaffolding until sourced DEWS weights are defined
+- Any future score-affecting use of structured yield source-risk, source-switch, or rank-attribution fields must ship with a DEWS methodology version bump
+
+---
+
 ## v5.98 — Registry-backed depeg source families (May 12, 2026)
 
 - Depeg trust and pending-confirmation policy now resolve source families from the pricing-source registry's `depegSourceFamily` metadata, expanding composite labels such as `coingecko+geckoterminal` before family checks

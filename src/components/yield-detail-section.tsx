@@ -202,9 +202,13 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">Default safety inputs</p>
           ) : null}
           {view.sourceRiskDrivers.length > 0 ? (
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              {view.sourceRiskDrivers.map((driver) => driver.label).join(", ")}
-            </p>
+            <ul className="mt-1 space-y-1 text-[11px] text-muted-foreground">
+              {view.sourceRiskDrivers.map((driver) => (
+                <li key={driver.key}>
+                  <span className="font-medium text-foreground">{driver.label}</span>: {driver.description}
+                </li>
+              ))}
+            </ul>
           ) : (
             <p className="mt-1 text-[11px] text-muted-foreground">No populated source-risk driver.</p>
           )}

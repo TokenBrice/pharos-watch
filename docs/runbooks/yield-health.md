@@ -22,12 +22,23 @@ The admin Pipeline lane shows stale or degraded Yield Health. Public impact is l
 4. **Supplemental cache:** inspect `yieldHealth.supplemental`; `familyCount`, `freshFamilyCount`, `degradedFamilyCount`, `staleFamilyCount`, `missingFamilyCount`, and `families` identify which optional source families are stale or absent. Age above 6h means optional source families may be sparse.
 5. **Benchmark:** inspect `yieldHealth.benchmark`; fallback or age above 48h means retained benchmark data is driving yield context.
 6. **Source-risk coverage:** inspect `yieldHealth.sourceRiskCoverage`; core fields below 75% coverage are admin-watch gaps. `venueRiskTier="unknown"` counts as missing evidence, not high risk.
-7. **Coverage audit:** inspect `yieldHealth.coverageAudit`; age above 45d means the monthly coverage review is late. `headlineGapCount` and `recommendationCandidateCount` are the read-only triage queue.
+7. **Coverage audit:** inspect `yieldHealth.coverageAudit`; age above 45d means the monthly coverage review is late. `headlineGapCount`, `recommendationCandidateCount`, `headlineGaps`, and `recommendationCandidates` are the read-only triage queue.
 
 Access-gated surfaces:
 
 - Browser: `https://ops.pharos.watch/admin/` -> Pipeline -> Yield Health
 - Machine API: `GET https://ops-api.pharos.watch/api/status` with Cloudflare Access service-token headers
+
+## Threshold Table
+
+| Surface | Owner cron/cache | Warn threshold | Stale threshold | Public-critical impact | Admin-watch impact | Related runbook |
+| --- | --- | --- | --- | --- | --- | --- |
+| Rankings freshness | `sync-yield-data` -> `cache['yield-rankings']` | Age above 8 hourly producer intervals | Missing payload or age above 12 hourly producer intervals | Yes, when stale or missing | Degraded-but-not-stale rankings remain watch-only | [stale or missing rankings](./yield-rankings-stale-or-missing.md) |
+| Safety coverage | Read-time report-card hydration in `yield-rankings.provenance.safetySnapshot` | Coverage below 75% | No separate stale tier | No | Sparse safety evidence degrades Yield Health | This runbook |
+| Supplemental source age | `sync-yield-supplemental` -> `yield:supplemental-sources:v1:*` | Any family age above 6h, or missing family cache when family rows exist | Age above 72h | No | Degraded or stale optional families reduce confidence only | [supplemental snapshot](./yield-supplemental-snapshot.md) |
+| Benchmark fallback | `sync-yield-data` benchmark provenance | Fallback active, missing benchmark, or age above 48h | Age above 24d | No | Retained or old benchmark data degrades Yield Health | [benchmark fallback](./yield-benchmark-fallback-stale.md) |
+| Coverage audit age | `yield-coverage-audit` -> `cache['yield-coverage-audit']` | Age above 45d or missing audit | Age above 540d | No | Late monthly review or unavailable queue stays watch-only | This runbook |
+| Source-risk coverage | `sync-yield-data` published `sourceRisk.*` rows and retained alternates | Any core field below 75% coverage: `sourceRiskPenalty`, `rewardShare`, `sourceAgeSeconds`, `sourceDepthRatio`, `venueRiskTier`, or `sourceRiskScore` | No separate stale tier; zero coverage is degraded when ranking rows exist | No | Missing neutral-fallback evidence degrades Yield Health | This runbook |
 
 Read-only JSON checks:
 
@@ -98,7 +109,7 @@ LIMIT 10;
 - **Stale supplemental cache:** inspect `sync-yield-supplemental`. Because supplemental sources are optional, do not block the public yield page solely on this signal.
 - **Benchmark fallback:** inspect `risk_free_rates` cache and the latest `sync-yield-data` metadata. A retained fallback is acceptable briefly; treat retained data older than 48h as needing operator follow-up.
 - **Low source-risk coverage:** inspect whether missing fields are absent from current rankings, retained alternates, or both. Missing or `unknown` venue tiers are evidence gaps; do not backfill guessed tiers.
-- **Coverage-audit queue:** classify each headline gap or recommendation candidate as `accept`, `dismiss`, `intentional-gap`, or `watch` in the operator note for that audit cycle. This is a triage convention only; there is no persistent dismissal state.
+- **Coverage-audit queue:** classify each headline gap or recommendation candidate from `yieldHealth.coverageAudit.headlineGaps` and `yieldHealth.coverageAudit.recommendationCandidates` as `accept`, `dismiss`, `intentional-gap`, or `watch` in the operator note for that audit cycle. This is a triage convention only; `queuePersistence="deferred"` means there is no persistent dismissal state.
 - **Old coverage audit:** inspect `yield-coverage-audit` cron history. It is monthly and watch-tier, so a late audit is a review backlog, not a public outage.
 
 ## Abort Conditions

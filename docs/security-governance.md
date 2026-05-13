@@ -71,5 +71,3 @@ These are already in the build; documented here so they aren't accidentally regr
 ## Related docs
 
 - `docs/incident-response/safe-browsing-flag.md` — playbook when a flag is active.
-- `docs/incident-response/telegram-secret-rotation.md` — secret rotation runbook.
-- `docs/incident-response/telegram-token-rotation.md` — bot token rotation runbook.

@@ -683,5 +683,3 @@ Operator-facing playbooks for Telegram incidents:
 - [`runbooks/telegram-admin-broadcast-safety.md`](./runbooks/telegram-admin-broadcast-safety.md) — dry-run and backlog checks before sending an operator broadcast.
 - [`runbooks/telegram-operator-queries.md`](./runbooks/telegram-operator-queries.md) — D1 snippets for delivery, webhook, dead-letter, and usage-funnel incidents.
 - [`runbooks/d1-telemetry-kill-switch.md`](./runbooks/d1-telemetry-kill-switch.md) — disabling low-value telemetry writes when D1 pressure threatens product paths.
-- [`incident-response/telegram-secret-rotation.md`](./incident-response/telegram-secret-rotation.md) — rotating `TELEGRAM_WEBHOOK_SECRET` with the 24-hour overlap window.
-- [`incident-response/telegram-token-rotation.md`](./incident-response/telegram-token-rotation.md) — rotating `TELEGRAM_BOT_TOKEN` while keeping the pending queue drainable.

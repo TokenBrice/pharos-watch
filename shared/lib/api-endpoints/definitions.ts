@@ -462,6 +462,14 @@ const BASE_ENDPOINT_DEFINITIONS = [
     cacheBypass: true,
   },
   {
+    key: "yield-source-decisions",
+    path: API_PATHS.yieldSourceDecisions(),
+    methods: ["GET"],
+    adminRequired: true,
+    mutatingAdmin: false,
+    cacheBypass: true,
+  },
+  {
     key: "api-keys",
     path: API_PATHS.apiKeys(),
     methods: ["GET", "POST"],

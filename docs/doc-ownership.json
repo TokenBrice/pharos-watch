@@ -81,9 +81,7 @@
       "docs": [
         "docs/telegram-alerts.md",
         "docs/runbooks/telegram-no-delivery.md",
-        "docs/runbooks/telegram-rate-limit-storm.md",
-        "docs/incident-response/telegram-secret-rotation.md",
-        "docs/incident-response/telegram-token-rotation.md"
+        "docs/runbooks/telegram-rate-limit-storm.md"
       ],
       "notes": ["Webhook auth, dispatcher rate-limit handling, secret/token rotation, and the public PharosWatchBot landing share semantics across alerts, runbooks, and incident-response playbooks."]
     },

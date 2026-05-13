@@ -4,6 +4,12 @@ import { makeYieldHistoryRow } from "./helpers/fixtures";
 import { handleYieldHistory } from "../yield-history";
 import { YIELD_HISTORY_OWNERSHIP_HANDOFFS } from "../../lib/yield-history-ownership-handoffs";
 import { YieldHistoryResponseSchema, type YieldHistoryResponse } from "@shared/types/yield";
+import {
+  SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
+  SOURCE_RISK_GOLDEN_UPDATED_AT,
+  buildSourceRiskGoldenFixture,
+  getSourceRiskGoldenRow,
+} from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
 
 const v748HistoryPayload = {
   current: {
@@ -406,10 +412,10 @@ describe("handleYieldHistory", () => {
   });
 
   it("uses published generation metadata to cap history and expose row generation IDs", async () => {
-    const publishedAt = 1_774_526_400;
+    const publishedAt = SOURCE_RISK_GOLDEN_UPDATED_AT;
     const generatedRow = {
       ...makeYieldHistoryRow({ recorded_at: publishedAt }),
-      publication_generation_id: "yield-1774526400",
+      publication_generation_id: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
     };
     const db = mockD1([
       {
@@ -421,7 +427,7 @@ describe("handleYieldHistory", () => {
             value: JSON.stringify({
               updatedAt: publishedAt,
               publication: {
-                generationId: "yield-1774526400",
+                generationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
                 updatedAt: publishedAt,
                 cutoffAt: publishedAt,
                 schemaVersion: 1,
@@ -444,10 +450,10 @@ describe("handleYieldHistory", () => {
       history: Array<{ publicationGenerationId?: string | null }>;
     };
     expect(body.publication).toMatchObject({
-      generationId: "yield-1774526400",
+      generationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
       status: "published",
     });
-    expect(body.history[0]?.publicationGenerationId).toBe("yield-1774526400");
+    expect(body.history[0]?.publicationGenerationId).toBe(SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID);
 
     const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history"));
     expect(historyQuery?.sql).toContain("publication_state = 'published'");
@@ -455,10 +461,21 @@ describe("handleYieldHistory", () => {
   });
 
   it("attaches nested sourceRisk to generation-matched history points from the rankings cache", async () => {
-    const publishedAt = 1_774_526_400;
+    const publishedAt = SOURCE_RISK_GOLDEN_UPDATED_AT;
+    const rewardHeavyRisk = buildSourceRiskGoldenFixture("reward-heavy", {
+      sourceRiskScore: 72,
+      sourceDepthRatio: 0.18,
+      sourceAgeSeconds: 420,
+      observationCount30d: 18,
+      sourceSwitchCount30d: 1,
+      deploymentPlace: "lending-market",
+      venueProtocol: "aave-v3",
+      venueChain: "ethereum",
+      venueRiskTier: "low",
+    });
     const generatedRow = {
       ...makeYieldHistoryRow({ recorded_at: publishedAt, source_key: "aave-v3:usdt" }),
-      publication_generation_id: "yield-1774526400",
+      publication_generation_id: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
     };
     const db = mockD1([
       {
@@ -470,7 +487,7 @@ describe("handleYieldHistory", () => {
             value: JSON.stringify({
               updatedAt: publishedAt,
               publication: {
-                generationId: "yield-1774526400",
+                generationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
                 updatedAt: publishedAt,
                 cutoffAt: publishedAt,
                 schemaVersion: 1,
@@ -479,22 +496,9 @@ describe("handleYieldHistory", () => {
               rankings: [
                 {
                   id: "usdt-tether",
-                  publicationGenerationId: "yield-1774526400",
+                  publicationGenerationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
                   provenance: { sourceKey: "aave-v3:usdt" },
-                  sourceRisk: {
-                    sourceRiskPenalty: 1.35,
-                    sourceRiskScore: 72,
-                    sourceDepthRatio: 0.18,
-                    rewardShare: 0.25,
-                    sourceAgeSeconds: 420,
-                    observationCount30d: 18,
-                    sourceSwitchCount30d: 1,
-                    deploymentPlace: "lending-market",
-                    venueProtocol: "aave-v3",
-                    venueChain: "ethereum",
-                    venueRiskTier: "low",
-                    investabilityFlags: ["reward-heavy"],
-                  },
+                  sourceRisk: rewardHeavyRisk,
                 },
               ],
             }),
@@ -510,10 +514,10 @@ describe("handleYieldHistory", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as YieldHistoryResponse;
     expect(body.current?.sourceRisk).toMatchObject({
-      sourceRiskPenalty: 1.35,
+      sourceRiskPenalty: rewardHeavyRisk.sourceRiskPenalty,
       sourceRiskScore: 72,
       sourceDepthRatio: 0.18,
-      rewardShare: 0.25,
+      rewardShare: rewardHeavyRisk.rewardShare,
       sourceAgeSeconds: 420,
       observationCount30d: 18,
       sourceSwitchCount30d: 1,
@@ -524,7 +528,55 @@ describe("handleYieldHistory", () => {
       investabilityFlags: ["reward-heavy"],
     });
     expect(body.history[0]?.sourceRisk).toEqual(body.current?.sourceRisk);
+    expect((body.history[0] as unknown as Record<string, unknown> | undefined)?.sourceRiskPenalty).toBeUndefined();
     expect(() => YieldHistoryResponseSchema.parse(body)).not.toThrow();
+  });
+
+  it("ignores flattened source-risk shorthand when enriching history from rankings cache", async () => {
+    const publishedAt = SOURCE_RISK_GOLDEN_UPDATED_AT;
+    const rewardHeavyRow = getSourceRiskGoldenRow("reward-heavy");
+    const generatedRow = {
+      ...makeYieldHistoryRow({ recorded_at: publishedAt, source_key: "aave-v3:usdt" }),
+      publication_generation_id: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["yield-rankings"],
+        rows: [
+          {
+            key: "yield-rankings",
+            value: JSON.stringify({
+              updatedAt: publishedAt,
+              publication: {
+                generationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
+                updatedAt: publishedAt,
+                cutoffAt: publishedAt,
+                schemaVersion: 1,
+                status: "published",
+              },
+              rankings: [
+                {
+                  id: "usdt-tether",
+                  publicationGenerationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
+                  provenance: { sourceKey: "aave-v3:usdt" },
+                  sourceRiskPenalty: rewardHeavyRow.expectedDerivedPenalty,
+                },
+              ],
+            }),
+            updated_at: publishedAt,
+          },
+        ],
+      },
+      { match: "yield_history", rows: [generatedRow] },
+    ]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as YieldHistoryResponse;
+    expect(body.current?.sourceRisk).toBeUndefined();
+    expect((body.history[0] as unknown as Record<string, unknown> | undefined)?.sourceRiskPenalty).toBeUndefined();
   });
 
   it("keeps legacy history behavior when the rankings cache has no generation metadata", async () => {

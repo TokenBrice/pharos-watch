@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { identifyCoverageGaps } from "../yield-coverage-audit";
+import { buildCoverageAuditOperatorQueue, identifyCoverageGaps } from "../yield-coverage-audit";
 import type { DlPool } from "../yield-sync/types";
 
 describe("identifyCoverageGaps", () => {
@@ -136,6 +136,39 @@ describe("identifyCoverageGaps", () => {
         project: "small-protocol",
         recommendedTier: "review-needed",
       }),
+    );
+  });
+
+  it("builds a transient operator queue from headline gaps and recommendation candidates", () => {
+    const dlPools: DlPool[] = [
+      { pool: "susde-native", chain: "Ethereum", project: "ethena", symbol: "sUSDe", tvlUsd: 50_000_000, apy: 5, apyBase: 5, apyReward: null, apyMean30d: 5, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "morpho-usdc", chain: "Ethereum", project: "morpho-blue", symbol: "USDC", tvlUsd: 12_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "new-usdc", chain: "Ethereum", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+    ];
+    const gaps = identifyCoverageGaps(dlPools, new Set(), new Set(["morpho-blue"]));
+
+    const queue = buildCoverageAuditOperatorQueue({
+      gaps,
+      manifestMissingIds: ["missing-manifest"],
+      yieldBearingMissingFromRankings: ["missing-ranking"],
+    });
+
+    expect(queue).toMatchObject({
+      persistence: "deferred",
+      allowedActions: ["accept", "dismiss", "intentional-gap", "watch"],
+    });
+    expect(queue.headlineGaps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "manifest-missing", actionHint: "accept" }),
+        expect.objectContaining({ kind: "ranking-missing", actionHint: "watch" }),
+      ]),
+    );
+    expect(queue.recommendationCandidates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "native-exact-pool", pool: "susde-native" }),
+        expect.objectContaining({ kind: "source-family-adapter", project: "morpho-blue" }),
+        expect.objectContaining({ kind: "lending-allowlist", project: "new-lender" }),
+      ]),
     );
   });
 });

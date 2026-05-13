@@ -47,6 +47,7 @@ describe("YieldSourceBoard", () => {
     render(<YieldSourceBoard model={model} />);
 
     expect(screen.getByRole("heading", { name: "Source provenance in the current view" })).toBeTruthy();
+    expect(screen.getByText(/This is provenance coverage, not a recommendation ranking/i)).toBeTruthy();
     expect(screen.getByText("Chosen-source confidence")).toBeTruthy();
     expect(screen.queryByText(/alternate-source confidence/i)).toBeNull();
 

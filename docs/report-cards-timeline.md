@@ -134,7 +134,7 @@ The GHO reserve adapter now decomposes residual issuance across active facilitat
 - Aave V3 direct-minter facilitators contribute medium-risk residual slices; FlashMinter and unmapped facilitators contribute high-risk slices
 - Unmapped residual share accumulates into `metadata.unknownExposurePct` so material unknown exposure can degrade the GHO sync consistently with other reserve adapters
 - If the facilitator registry is unreadable in a run, the entire residual is treated as unknown so the fail-closed unknown-exposure policy still applies
-- Direct `GhoReserve` / `GhoDirectFacilitator` / RemoteGSM reads remain a follow-up tracked in [trackers/reserve-coverage.md](./trackers/reserve-coverage.md) pending verified Aave deployment addresses
+- Direct `GhoReserve` / `GhoDirectFacilitator` / RemoteGSM reads remain a follow-up pending verified Aave deployment addresses
 
 ## v7.05 — Primary-market exit bonus (2026-04-16)
 

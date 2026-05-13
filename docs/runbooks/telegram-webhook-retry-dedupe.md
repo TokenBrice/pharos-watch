@@ -52,4 +52,3 @@ Processed-update rows are retained for 7 days. Claimed webhook traffic opportuni
 
 - [`docs/telegram-alerts.md`](../telegram-alerts.md) section Update Deduplication.
 - [`telegram-no-delivery.md`](./telegram-no-delivery.md) for alert-delivery incidents.
-- [`../incident-response/telegram-secret-rotation.md`](../incident-response/telegram-secret-rotation.md) for secret overlap issues.

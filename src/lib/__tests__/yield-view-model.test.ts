@@ -193,6 +193,12 @@ describe("buildYieldViewModel", () => {
       "eurc-circle",
       "usdt-tether",
     ]);
+
+    expect(buildYieldViewModel(rows, {}).options.depth.find((option) => option.value === "hide-thin")).toEqual({
+      value: "hide-thin",
+      label: "Hide thin venues",
+      count: 2,
+    });
   });
 
   it("filters rows with changed sources from URL state", () => {

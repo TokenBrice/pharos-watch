@@ -20,6 +20,19 @@ Yield Intelligence rankings, PYS, source provenance, and detail-page yield panel
 2. **Access-gated status:** `https://ops.pharos.watch/admin/` -> Crons -> `sync-yield-data`; also inspect Endpoint probes for `/api/yield-rankings`.
 3. **Machine status:** `GET https://ops-api.pharos.watch/api/status` with Cloudflare Access service-token headers.
 4. **Public API:** `GET https://api.pharos.watch/api/yield-rankings`.
+5. **Source decisions:** `GET https://ops-api.pharos.watch/api/yield-source-decisions?limit=10`; add `&generationId=<generation_id>&stablecoin=<stablecoin_id>` to inspect selected/rejected source evidence for one asset.
+
+## Source Decision Debug Endpoint
+
+Use the admin-only read path before direct SQL for routine generation/source checks:
+
+```text
+GET https://ops-api.pharos.watch/api/yield-source-decisions?limit=10
+GET https://ops-api.pharos.watch/api/yield-source-decisions?state=failed&limit=5
+GET https://ops-api.pharos.watch/api/yield-source-decisions?generationId=<generation_id>&stablecoin=<stablecoin_id>
+```
+
+The endpoint is Cloudflare-Access-gated, `no-store`, read-only, and excluded from public OpenAPI/Postman artifacts. It returns recent `yield_publication_generations` summaries plus compact selected-source and alternate/rejected-source evidence from `yield_source_decisions` when `stablecoin` is supplied. Bounds are intentionally small: `limit` and `decisionLimit` accept `1..25`.
 
 ## Read-Only D1 Snippets
 

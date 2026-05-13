@@ -209,6 +209,7 @@ describe("yield-pys-v8-calibration", () => {
         symbol: "NEST",
         sourceRisk: {
           sourceRiskPenalty: 1.5,
+          sourceRiskScore: 88,
           rewardShare: 0.25,
           sourceDepthRatio: 0.1,
           sourceAgeSeconds: 60,
@@ -220,6 +221,7 @@ describe("yield-pys-v8-calibration", () => {
     ], "2026-05-13T00:00:00.000Z");
 
     expect(markdown).toContain("| sourceRiskPenalty | 1 | 0 | 0.0% |");
+    expect(markdown).toContain("| sourceRiskScore | 1 | 0 | 0.0% |");
     expect(markdown).toContain("| rewardShare | 1 | 0 | 0.0% |");
     expect(markdown).toContain("| venueRiskTier | 1 | 0 | 0.0% |");
   });

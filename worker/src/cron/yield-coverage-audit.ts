@@ -24,6 +24,44 @@ import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin
 
 /** Minimum TVL (USD) for a pool to be flagged as an unmatched high-TVL pool. */
 const HIGH_TVL_THRESHOLD_USD = 5_000_000;
+const OPERATOR_QUEUE_ITEM_LIMIT = 20;
+const OPERATOR_QUEUE_ACTIONS = ["accept", "dismiss", "intentional-gap", "watch"] as const;
+
+export type CoverageAuditQueueAction = typeof OPERATOR_QUEUE_ACTIONS[number];
+
+export type CoverageAuditQueueItemKind =
+  | "manifest-missing"
+  | "ranking-missing"
+  | "unmatched-high-tvl-pool"
+  | "missing-protocol"
+  | "native-exact-pool"
+  | "source-family-adapter"
+  | "lending-allowlist";
+
+export interface CoverageAuditQueueItem {
+  id: string;
+  kind: CoverageAuditQueueItemKind;
+  title: string;
+  detail: string;
+  actionHint: CoverageAuditQueueAction;
+  stablecoinIds?: string[];
+  project?: string;
+  pool?: string;
+  symbol?: string;
+  chain?: string;
+  tvlUsd?: number;
+  apy?: number;
+  poolCount?: number;
+  totalTvlUsd?: number;
+  recommendedTier?: ProtocolRecommendation["recommendedTier"];
+}
+
+export interface CoverageAuditOperatorQueue {
+  persistence: "deferred";
+  allowedActions: CoverageAuditQueueAction[];
+  headlineGaps: CoverageAuditQueueItem[];
+  recommendationCandidates: CoverageAuditQueueItem[];
+}
 
 export interface CoverageGapPool {
   pool: string;
@@ -117,6 +155,112 @@ function buildYieldBearingSymbolIndex(): Map<string, string[]> {
     bySymbol.set(symbol, ids);
   }
   return bySymbol;
+}
+
+function queueId(kind: CoverageAuditQueueItemKind, value: string): string {
+  return `${kind}:${value.toLowerCase().replace(/[^a-z0-9_.:-]+/gu, "-")}`;
+}
+
+function poolTitle(pool: CoverageGapPool): string {
+  return `${pool.symbol} on ${pool.project}`;
+}
+
+function buildPoolQueueItem(
+  kind: Extract<CoverageAuditQueueItemKind, "unmatched-high-tvl-pool" | "missing-protocol">,
+  pool: CoverageGapPool,
+  actionHint: CoverageAuditQueueAction,
+): CoverageAuditQueueItem {
+  return {
+    id: queueId(kind, pool.pool),
+    kind,
+    title: poolTitle(pool),
+    detail: `${pool.chain} pool ${pool.pool}`,
+    actionHint,
+    project: pool.project,
+    pool: pool.pool,
+    symbol: pool.symbol,
+    chain: pool.chain,
+    tvlUsd: pool.tvlUsd,
+    apy: pool.apy,
+  };
+}
+
+function buildProtocolQueueItem(
+  kind: Extract<CoverageAuditQueueItemKind, "source-family-adapter" | "lending-allowlist">,
+  recommendation: ProtocolRecommendation,
+): CoverageAuditQueueItem {
+  return {
+    id: queueId(kind, recommendation.project),
+    kind,
+    title: recommendation.project,
+    detail: `${recommendation.poolCount} pools across ${recommendation.examplePools.slice(0, 3).join(", ")}`,
+    actionHint: recommendation.recommendedTier === "high-confidence" ? "accept" : "watch",
+    project: recommendation.project,
+    poolCount: recommendation.poolCount,
+    totalTvlUsd: recommendation.totalTvlUsd,
+    recommendedTier: recommendation.recommendedTier,
+  };
+}
+
+export function buildCoverageAuditOperatorQueue({
+  gaps,
+  manifestMissingIds,
+  yieldBearingMissingFromRankings,
+}: {
+  gaps: CoverageGaps;
+  manifestMissingIds: string[];
+  yieldBearingMissingFromRankings: string[];
+}): CoverageAuditOperatorQueue {
+  const headlineGaps: CoverageAuditQueueItem[] = [
+    ...manifestMissingIds.map((stablecoinId) => ({
+      id: queueId("manifest-missing", stablecoinId),
+      kind: "manifest-missing" as const,
+      title: stablecoinId,
+      detail: "Yield-bearing tracked asset has no adapter-manifest entry.",
+      actionHint: "accept" as const,
+      stablecoinIds: [stablecoinId],
+    })),
+    ...yieldBearingMissingFromRankings.map((stablecoinId) => ({
+      id: queueId("ranking-missing", stablecoinId),
+      kind: "ranking-missing" as const,
+      title: stablecoinId,
+      detail: "Manifest-covered yield-bearing asset is absent from the latest rankings cache.",
+      actionHint: "watch" as const,
+      stablecoinIds: [stablecoinId],
+    })),
+    ...gaps.unmatchedHighTvlPools.map((pool) => buildPoolQueueItem("unmatched-high-tvl-pool", pool, "watch")),
+    ...gaps.missingProtocols.map((pool) => buildPoolQueueItem("missing-protocol", pool, "watch")),
+  ];
+
+  const recommendationCandidates: CoverageAuditQueueItem[] = [
+    ...gaps.nativeExactPoolRecommendations.map((pool) => ({
+      id: queueId("native-exact-pool", pool.pool),
+      kind: "native-exact-pool" as const,
+      title: poolTitle(pool),
+      detail: `${pool.chain} native pool for ${pool.stablecoinIds.join(", ")}`,
+      actionHint: "accept" as const,
+      stablecoinIds: pool.stablecoinIds,
+      project: pool.project,
+      pool: pool.pool,
+      symbol: pool.symbol,
+      chain: pool.chain,
+      tvlUsd: pool.tvlUsd,
+      apy: pool.apy,
+    })),
+    ...gaps.sourceFamilyAdapterRecommendations.map((recommendation) =>
+      buildProtocolQueueItem("source-family-adapter", recommendation),
+    ),
+    ...gaps.lendingAllowlistRecommendations.map((recommendation) =>
+      buildProtocolQueueItem("lending-allowlist", recommendation),
+    ),
+  ];
+
+  return {
+    persistence: "deferred",
+    allowedActions: [...OPERATOR_QUEUE_ACTIONS],
+    headlineGaps: headlineGaps.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
+    recommendationCandidates: recommendationCandidates.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
+  };
 }
 
 /**
@@ -279,6 +423,11 @@ export async function runYieldCoverageAudit(
       return manifestEntry?.status !== "intentional-gap" && !publishedYieldIds.has(coin.id);
     })
     .map((coin) => coin.id);
+  const operatorQueue = buildCoverageAuditOperatorQueue({
+    gaps,
+    manifestMissingIds,
+    yieldBearingMissingFromRankings,
+  });
 
   const reportedAt = Math.floor(Date.now() / 1000);
   const report = {
@@ -307,6 +456,7 @@ export async function runYieldCoverageAudit(
     nativeExactPoolRecommendations: gaps.nativeExactPoolRecommendations,
     sourceFamilyAdapterRecommendations: gaps.sourceFamilyAdapterRecommendations,
     lendingAllowlistRecommendations: gaps.lendingAllowlistRecommendations,
+    operatorQueue,
     manifest: YIELD_ADAPTER_MANIFEST.map((entry) => ({
       stablecoinId: entry.stablecoinId,
       status: entry.status,

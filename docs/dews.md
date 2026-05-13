@@ -134,6 +134,12 @@ Available only for yield-bearing coins with warning signals in `yield_data`. Map
 
 Score = `min(100, sum of active signal points)`.
 
+### Yield Source-Risk Boundary
+
+DEWS currently consumes yield stress only through the published `yield_data.warning_signals` array. Structured Yield Intelligence source-risk fields (`sourceRisk.*`) and rank-change attribution are present as explicit no-op scaffolding in `worker/src/lib/dews.ts`, but the cron source-state loader does not read them and they do not affect the DEWS score, band, or yield sub-signal.
+
+Missing structured yield-risk fields remain no-op legacy rows. Future use of structured source-risk, source-switch, or rank-attribution inputs in DEWS scoring requires a DEWS methodology version bump and a matching update to [depeg-dews-timeline.md](./depeg-dews-timeline.md).
+
 ---
 
 ## Edge Cases

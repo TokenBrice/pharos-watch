@@ -1,8 +1,9 @@
 "use client";
 
-import { formatElapsedSeconds, formatPercentFromRatio } from "@shared/lib/format";
+import { formatCompactUsd, formatElapsedSeconds, formatPercentFromRatio } from "@shared/lib/format";
 import type {
   StatusSectionError,
+  YieldCoverageAuditQueueItem,
   YieldHealthFieldStatus,
   YieldHealthSummary,
   YieldSourceRiskCoverageField,
@@ -18,6 +19,8 @@ const SOURCE_RISK_COVERAGE_FIELDS = [
   ["sourceDepthRatio", "Depth"],
   ["venueRiskTier", "Venue tier"],
   ["sourceRiskScore", "Score"],
+  ["observationCount30d", "Observations"],
+  ["sourceSwitchCount30d", "Switches"],
 ] satisfies Array<[YieldSourceRiskCoverageField, string]>;
 
 function statusClassName(status: YieldHealthFieldStatus): string {
@@ -60,6 +63,57 @@ function auditQueueSubtext(coverageAudit: YieldHealthSummary["coverageAudit"]): 
     return "queue unavailable";
   }
   return `${coverageAudit.headlineGapCount ?? 0} gaps · ${coverageAudit.recommendationCandidateCount ?? 0} candidates`;
+}
+
+function queueItemMeta(item: YieldCoverageAuditQueueItem): string {
+  if (item.tvlUsd != null) {
+    const apy = item.apy != null ? ` · ${item.apy.toFixed(2)}% APY` : "";
+    return `${formatCompactUsd(item.tvlUsd)} TVL${apy}`;
+  }
+  if (item.totalTvlUsd != null) {
+    const pools = item.poolCount != null ? ` · ${item.poolCount} pools` : "";
+    return `${formatCompactUsd(item.totalTvlUsd)} TVL${pools}`;
+  }
+  if (item.stablecoinIds?.length) {
+    return item.stablecoinIds.join(", ");
+  }
+  return item.kind.replaceAll("-", " ");
+}
+
+function QueueItems({
+  title,
+  items,
+}: {
+  title: string;
+  items: YieldCoverageAuditQueueItem[];
+}) {
+  return (
+    <div className="min-w-0 space-y-2">
+      <div className="text-xs font-medium text-muted-foreground">{title}</div>
+      {items.length > 0 ? (
+        <div className="space-y-2">
+          {items.map((item) => (
+            <div key={item.id} className="rounded-md border border-border/40 p-2">
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-xs font-medium text-foreground">{item.title}</div>
+                  <div className="truncate text-[11px] text-muted-foreground">{item.detail}</div>
+                </div>
+                <div className="shrink-0 rounded border border-border/50 px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">
+                  {item.actionHint}
+                </div>
+              </div>
+              <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+                {queueItemMeta(item)}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-md border border-border/40 p-2 text-xs text-muted-foreground">No current items</div>
+      )}
+    </div>
+  );
 }
 
 export function YieldHealthCard({
@@ -164,6 +218,22 @@ export function YieldHealthCard({
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-border/50 p-3">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="text-xs font-medium text-muted-foreground">Coverage audit operator queue</div>
+            <div className="text-xs text-muted-foreground">
+              Actions: {health.coverageAudit.allowedActions.join(", ")}
+            </div>
+          </div>
+          <div className="grid gap-3 xl:grid-cols-2">
+            <QueueItems title="Headline gaps" items={health.coverageAudit.headlineGaps} />
+            <QueueItems title="Recommendation candidates" items={health.coverageAudit.recommendationCandidates} />
+          </div>
+          <div className="mt-2 text-[11px] text-muted-foreground">
+            Queue state: {health.coverageAudit.queuePersistence}
           </div>
         </div>
 

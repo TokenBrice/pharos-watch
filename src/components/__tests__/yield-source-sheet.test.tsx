@@ -3,6 +3,10 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
+import {
+  SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS,
+  mergeSourceRiskGoldenFixtures,
+} from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
 import type { YieldRanking } from "@shared/types";
 
 vi.mock("@/components/ui/sheet", () => ({
@@ -104,5 +108,72 @@ describe("YieldSourceSheet", () => {
     );
 
     expect(screen.getByTestId("yield-history-chart").textContent).toContain("best-usdt");
+  });
+
+  it("shows current and previous source identity for source changes", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <YieldSourceSheet
+        ranking={{
+          ...makeRanking("usdc", "best-usdc", "alt-usdc"),
+          provenance: {
+            sourceKey: "best-usdc",
+            sourceObservedAt: 1_700_000_000,
+            sourceAgeSeconds: 60,
+            confidenceTier: "curated",
+            selectionMethod: "confidence-weighted",
+            selectionReason: "Higher confidence than retained alternates.",
+            sourceSwitch: true,
+            previousBestSourceKey: "alt-usdc",
+            usedLegacyHistory: false,
+            usedDefaultSafety: false,
+            benchmarkRecordDate: null,
+            benchmarkIsFallback: false,
+            benchmarkFallbackMode: null,
+            anomalies: [],
+          },
+        }}
+        logo={undefined}
+        riskFreeRate={0.02}
+        medianApy={0.03}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    expect(screen.getByText("Current source key:")).toBeTruthy();
+    expect(screen.getAllByText("best-usdc").length).toBeGreaterThan(0);
+    expect(screen.getByText("Previous source:")).toBeTruthy();
+    expect(screen.getAllByText("usdc-alt").length).toBeGreaterThan(0);
+    expect(screen.getByText("alt-usdc")).toBeTruthy();
+    expect(screen.getByText("Higher confidence than retained alternates.")).toBeTruthy();
+  });
+
+  it("shows source-risk driver labels from the shared golden fixture", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <YieldSourceSheet
+        ranking={{
+          ...makeRanking("usdc", "best-usdc", "alt-usdc"),
+          sourceRisk: mergeSourceRiskGoldenFixtures([
+            "reward-heavy",
+            "low-source-depth",
+            "stale-source-age",
+            "bootstrap-observation-count",
+            "source-switch-churn",
+          ]),
+        }}
+        logo={undefined}
+        riskFreeRate={0.02}
+        medianApy={0.03}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    expect(screen.getByText("Source-risk drivers")).toBeTruthy();
+    for (const label of SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS) {
+      expect(screen.getByText(label)).toBeTruthy();
+    }
   });
 });

@@ -11,26 +11,7 @@ import {
   derivePysSourceRiskPenalty,
   resolvePysSourceRiskPenalty,
 } from "../yield-scoring";
-import type { PysSourceRiskPenaltyInput } from "../yield-scoring";
-
-type SourceRiskGoldenRow = {
-  label: string;
-  input: PysSourceRiskPenaltyInput;
-  expectedPenalty: number;
-  apy30d?: number;
-  safetyScore?: number | null;
-};
-
-const SOURCE_RISK_GOLDEN_ROWS: SourceRiskGoldenRow[] = [
-  { label: "reward-heavy", input: { rewardShare: 0.9 }, expectedPenalty: 1.4 },
-  { label: "stale-source-age", input: { sourceAgeSeconds: 7 * 60 * 60 }, expectedPenalty: 1.25 },
-  { label: "low-source-depth", input: { sourceDepthRatio: 0.0005 }, expectedPenalty: 1.35 },
-  { label: "source-switch-churn", input: { sourceSwitchCount30d: 4 }, expectedPenalty: 1.3 },
-  { label: "bootstrap-observation-count", input: { observationCount30d: 3 }, expectedPenalty: 1.2 },
-  { label: "zero-apy", input: {}, expectedPenalty: 1, apy30d: 0 },
-  { label: "negative-apy", input: {}, expectedPenalty: 1, apy30d: -1 },
-  { label: "missing-safety", input: {}, expectedPenalty: 1, safetyScore: null },
-];
+import { SOURCE_RISK_GOLDEN_ROWS } from "./yield-source-risk-golden-fixtures";
 
 describe("PYS constants", () => {
   it("exports benchmark spread weight of 0.25", () => {
@@ -98,7 +79,7 @@ describe("derivePysSourceRiskPenalty", () => {
 
   it("matches source-risk golden row penalties", () => {
     for (const row of SOURCE_RISK_GOLDEN_ROWS) {
-      expect(derivePysSourceRiskPenalty(row.input), row.label).toBeCloseTo(row.expectedPenalty, 6);
+      expect(derivePysSourceRiskPenalty(row.input), row.label).toBeCloseTo(row.expectedDerivedPenalty, 6);
     }
   });
 

@@ -361,7 +361,7 @@ function buildOptions(rows: readonly YieldRanking[]): YieldViewModelOptions {
     ],
     depth: [
       { value: "all", label: "All depth", count: rows.length },
-      { value: "hide-thin", label: "Hide thin", count: rows.filter((row) => getSourceDepthLens(row) !== "thin").length },
+      { value: "hide-thin", label: "Hide thin venues", count: rows.filter((row) => getSourceDepthLens(row) !== "thin").length },
       ...(["deep", "moderate", "thin", "unknown"] as const).map((value) => ({
         value,
         label: YIELD_SOURCE_DEPTH_DEFINITIONS[value].label,

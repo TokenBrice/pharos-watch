@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import {
+  buildSourceRiskGoldenFixture,
+  getSourceRiskGoldenRow,
+} from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import {
@@ -406,6 +410,57 @@ describe("validateYieldRankingsPayloadForPublish", () => {
       sourceSwitchCount30d: null,
       deploymentPlace: "strategy-vault",
       venueRiskTier: "unknown",
+    });
+    expect((ranking as Record<string, unknown> | undefined)?.sourceRiskPenalty).toBeUndefined();
+    expect((firstAlt as unknown as Record<string, unknown> | undefined)?.sourceRiskPenalty).toBeUndefined();
+  });
+
+  it("publishes golden source-risk rows only under nested public sourceRisk", () => {
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const benchmark = makeBenchmarkMeta();
+    const rewardHeavyRow = getSourceRiskGoldenRow("reward-heavy");
+    const staleAgeRow = getSourceRiskGoldenRow("stale-source-age");
+    const best = makeEvaluatedSource({
+      sourceKey: "golden:reward-heavy",
+      yieldSource: "Golden Reward Heavy",
+      currentApy: 10,
+      apyReward: 9,
+      sourceRisk: buildSourceRiskGoldenFixture("reward-heavy"),
+      sourceRiskPenalty: rewardHeavyRow.expectedDerivedPenalty,
+      sourceRiskPenaltyReason: "provided",
+      sourceRiskPenaltyProvided: true,
+    });
+    const alt = makeEvaluatedSource({
+      sourceKey: "golden:stale-source-age",
+      yieldSource: "Golden Stale Source",
+      sourceRisk: buildSourceRiskGoldenFixture("stale-source-age"),
+      sourceRiskPenalty: staleAgeRow.expectedDerivedPenalty,
+      sourceRiskPenaltyReason: "provided",
+      sourceRiskPenaltyProvided: true,
+    });
+
+    const payload = buildYieldRankingsPayloadFromEvaluatedSources({
+      evaluatedSources: [best, alt],
+      bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+      rankingProvenanceByKey: new Map(),
+      riskFreeRate: benchmark.rate,
+      riskFreeRateMeta: benchmark,
+      riskFreeRateRegistry: { USD: benchmark, EUR: null, CHF: null },
+      dlPoolsMeta: makeYieldSourceMeta(),
+      safetySnapshot: makeSafetySnapshotMeta(),
+      medianApy: 4.5,
+      startSec,
+    });
+
+    const ranking = payload.rankings[0];
+    const firstAlt = ranking?.altSources[0];
+    expect(ranking?.sourceRisk).toMatchObject({
+      sourceRiskPenalty: rewardHeavyRow.expectedDerivedPenalty,
+      rewardShare: rewardHeavyRow.input.rewardShare,
+    });
+    expect(firstAlt?.sourceRisk).toMatchObject({
+      sourceRiskPenalty: staleAgeRow.expectedDerivedPenalty,
+      sourceAgeSeconds: staleAgeRow.input.sourceAgeSeconds,
     });
     expect((ranking as Record<string, unknown> | undefined)?.sourceRiskPenalty).toBeUndefined();
     expect((firstAlt as unknown as Record<string, unknown> | undefined)?.sourceRiskPenalty).toBeUndefined();

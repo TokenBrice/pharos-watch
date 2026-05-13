@@ -117,11 +117,25 @@ function YieldSourceSheetBody({
           {ranking.provenance?.selectionReason ? (
             <p className="mt-2 text-xs text-muted-foreground">{ranking.provenance.selectionReason}</p>
           ) : null}
-          {sourceExplorer.sourceSwitch.previousSourceDisplayLabel ? (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Previous source: <span className="font-mono text-foreground">{sourceExplorer.sourceSwitch.previousSourceDisplayLabel}</span>
-            </p>
-          ) : null}
+          <dl className="mt-2 grid gap-1 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <dt>Current source key:</dt>
+              <dd className="font-mono text-[11px] text-foreground">{selectedSource.sourceKey}</dd>
+            </div>
+            {sourceExplorer.sourceSwitch.previousSourceKey ? (
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <dt>Previous source:</dt>
+                <dd>
+                  <span className="text-foreground">
+                    {sourceExplorer.sourceSwitch.previousSourceDisplayLabel ?? sourceExplorer.sourceSwitch.previousSourceKey}
+                  </span>
+                  <span className="ml-2 font-mono text-[11px] text-muted-foreground">
+                    {sourceExplorer.sourceSwitch.previousSourceKey}
+                  </span>
+                </dd>
+              </div>
+            ) : null}
+          </dl>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-muted/20 p-3">

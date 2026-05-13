@@ -4,6 +4,14 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 
 ---
 
+## Boundary note - Neutral yieldRiskConfig scaffold (May 13, 2026)
+
+- No methodology version change: the sparse typed `yieldRiskConfig` registry starts with reviewed candidate venues only and assigns no non-unknown tiers
+- Aave, Compound, Spark, Maple, Yearn, Morpho, Pendle, and Beefy venue families have a controlled rationale/evidence home for future reviewed tiers, but current `unknown` tiers remain neutral
+- Any future non-unknown venue tier must be wired into the existing venue-tier penalty path and ship with reviewed evidence, calibration, and the matching methodology/version update
+
+---
+
 ## v8.0 - PYS Source-Risk Penalty Rollout (May 13, 2026)
 
 - PYS now consumes nested `sourceRisk.sourceRiskPenalty`, populated from measured reward share, source depth, source age, selected-source switches, bootstrap observation count, and sourced venue tier where available

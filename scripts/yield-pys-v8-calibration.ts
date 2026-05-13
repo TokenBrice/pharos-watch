@@ -21,6 +21,7 @@ const GOLDEN_FIXTURES = [
 ] as const;
 
 const CALIBRATION_FIELDS = [
+  "sourceRiskScore",
   "sourceRiskPenalty",
   "rewardShare",
   "sourceDepthRatio",
@@ -41,6 +42,7 @@ export interface Args {
 interface RankingWithRisk extends YieldRanking {
   // Legacy flat fields are accepted for old local calibration artifacts only.
   sourceRiskPenalty?: number | null;
+  sourceRiskScore?: number | null;
   rewardShare?: number | null;
   sourceDepthRatio?: number | null;
   sourceAgeSeconds?: number | null;
@@ -346,6 +348,7 @@ function classifyDriver(row: RankingWithRisk): string {
 function readRiskNumber(
   row: RankingWithRisk,
   field:
+    | "sourceRiskScore"
     | "sourceRiskPenalty"
     | "rewardShare"
     | "sourceDepthRatio"
@@ -385,6 +388,7 @@ function summarizeNullCoverage(rankings: RankingWithRisk[]): Record<CalibrationF
       const present = rankings.filter((row) => {
         if (field === "venueRiskTier") return readVenueRiskTier(row) != null;
         if (
+          field === "sourceRiskScore" ||
           field === "sourceRiskPenalty" ||
           field === "rewardShare" ||
           field === "sourceDepthRatio" ||

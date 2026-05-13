@@ -140,7 +140,7 @@ These profiles apply while the dataset is within its generic freshness runway. O
 | reserve-live         | `public, s-maxage=3600, max-age=300`   | stablecoin-reserves live mode                                                                                                                                                                                                                                                                                                     |
 | reserve-live-stale   | `public, s-maxage=1800, max-age=120`   | stablecoin-reserves live-stale mode                                                                                                                                                                                                                                                                                               |
 | reserve-fallback     | `public, s-maxage=300, max-age=60`     | stablecoin-reserves curated/template/unavailable fallback modes                                                                                                                                                                                                                                                                   |
-| no-store             | `no-store`                             | health plus all admin GET routes after router override (`status`, `status-history`, `request-source-stats`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `discovery-candidates`, `status-probe-history`) |
+| no-store             | `no-store`                             | health plus all admin GET routes after router override (`status`, `status-history`, `request-source-stats`, `yield-source-decisions`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `discovery-candidates`, `status-probe-history`) |
 
 `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The self-serve API-key endpoints explicitly return no-store responses so verification tokens and plaintext API keys are never cacheable.
 
@@ -2261,6 +2261,18 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
     "safetySnapshot": { "kind": "ok", "coverageRatio": 0.98 }
   },
   "warnings": [],
+  "publication": {
+    "generationId": "yield-1772000000",
+    "updatedAt": 1772000000,
+    "cutoffAt": 1772000000,
+    "schemaVersion": 1,
+    "status": "published"
+  },
+  "methodology": {
+    "version": "8.0",
+    "currentVersion": "8.0",
+    "changelogPath": "/methodology/yield-changelog/"
+  },
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
 }
 ```
@@ -2276,6 +2288,7 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 | `provenance`    | `object \| null` | Snapshot-level provenance for default benchmark freshness, full benchmark registry, DeFiLlama pool input freshness, safety coverage, and selection method |
 | `warnings`      | `YieldResponseWarning[]` | Optional body-level warnings for degraded but still served payloads, such as live safety hydration gaps. Clients should surface these separately from row-level `warningSignals` |
 | `publication`   | `object \| null` | Optional publication metadata for generation-aware payloads; omitted on legacy payloads                                                                     |
+| `methodology`   | `object \| undefined` | Optional Yield Intelligence methodology envelope for rankings payloads when emitted by the publisher                                                        |
 
 Optional v8 fields are nullable and omittable. Publication-generation fields are populated by the generation-aware publisher when available; legacy rows and old payloads may still omit them. Public source-risk values are nested under the `sourceRisk` object; flattened top-level fields such as `sourceRiskPenalty` or `rewardShare` are not part of the public API contract.
 
@@ -3436,6 +3449,81 @@ Malformed numeric params return `400`; out-of-range numeric params are clamped t
 - `keyedPublicApi` — summary of authenticated protected `public-api` traffic (`keyedRequests`, `unkeyedRequests`, share percentages, total keys in window, and truncation metadata)
 - `apiKeys[]` — top API keys by keyed request volume with masked token, traffic class, active/expiry metadata, rate limit, request count, and keyed/public-api share percentages
 - `scope` — explicit booleans describing that the response counts total site demand, worker load, and Pages proxy cache hits
+
+### `GET /api/yield-source-decisions`
+
+Admin-only read-only debug endpoint for the Yield Intelligence publication ledger. Returns recent `yield_publication_generations` summaries and, when `stablecoin` is supplied, compact selected-source evidence from `yield_source_decisions` for that asset.
+
+**Authentication:** admin only through `ops-api.pharos.watch` / `ops.pharos.watch/api/admin/*`. **Cache:** `no-store`. This endpoint is intentionally excluded from the public OpenAPI and Postman artifacts.
+
+**Query parameters**
+
+| Param           | Type      | Default | Description                                                                 |
+| --------------- | --------- | ------- | --------------------------------------------------------------------------- |
+| `limit`         | `integer` | `10`    | Generation summaries to return (`1`-`25`; out-of-range values return `400`) |
+| `decisionLimit` | `integer` | `5`     | Per-stablecoin decision rows to return (`1`-`25`)                           |
+| `generationId`  | `string`  | —       | Optional exact generation ID filter, e.g. `yield-1772000000`                |
+| `state`         | `string`  | —       | Optional generation state: `staged`, `published`, or `failed`               |
+| `stablecoin`    | `string`  | —       | Optional canonical stablecoin ID for selected/rejected source evidence      |
+
+**Response shape**
+
+```json
+{
+  "filters": {
+    "generationId": "yield-1772000000",
+    "state": "published",
+    "stablecoinId": "usdc-circle",
+    "limit": 10,
+    "decisionLimit": 5
+  },
+  "generations": [
+    {
+      "generationId": "yield-1772000000",
+      "startedAt": 1772000000,
+      "state": "published",
+      "cacheKey": "yield-rankings",
+      "rankingUpdatedAt": 1772000000,
+      "rankingCount": 125,
+      "sourceRowCount": 180,
+      "bestRowCount": 125,
+      "decisionCount": 125,
+      "publishedAt": 1772000003,
+      "failedAt": null,
+      "failureReason": null,
+      "metadata": { "rowsRejected": 3, "sourceSwitches": 2 },
+      "metadataMalformed": false,
+      "createdAt": 1772000000
+    }
+  ],
+  "decisions": [
+    {
+      "generationId": "yield-1772000000",
+      "stablecoinId": "usdc-circle",
+      "selected": {
+        "sourceKey": "defillama:best",
+        "confidenceTier": "curated",
+        "dataSource": "defillama",
+        "apy30d": 4.7,
+        "score": 82.5,
+        "reason": "Curated source selected"
+      },
+      "previousBestSourceKey": "price-derived:legacy",
+      "sourceSwitch": true,
+      "rejectedCount": 1,
+      "alternatives": [
+        {
+          "sourceKey": "defillama:auto",
+          "rejected": true,
+          "reason": "rejected: divergent lower-confidence source"
+        }
+      ],
+      "alternativesMalformed": false,
+      "createdAt": 1772000000
+    }
+  ]
+}
+```
 
 ### `GET /api/api-keys`
 

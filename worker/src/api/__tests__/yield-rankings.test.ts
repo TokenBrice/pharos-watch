@@ -2,6 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
+import {
+  SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
+  buildSourceRiskGoldenFixture,
+  getSourceRiskGoldenRow,
+} from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
 
 const buildReportCardsSnapshotMock = vi.hoisted(() =>
   vi.fn(async () => ({
@@ -454,6 +459,12 @@ describe("handleYieldRankings", () => {
 
   it("synthesizes publication metadata from generation-aware rows and preserves nested source risk", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const rewardHeavyRisk = buildSourceRiskGoldenFixture("reward-heavy", {
+      sourceRiskScore: 76,
+      sourceDepthRatio: 0.12,
+      venueRiskTier: "medium",
+    });
+    const staleSourceRisk = buildSourceRiskGoldenFixture("stale-source-age");
     const payload = {
       ...v748RankingsPayload,
       rankings: [
@@ -462,21 +473,12 @@ describe("handleYieldRankings", () => {
           id: "rated-coin",
           symbol: "RATE",
           name: "Rated Coin",
-          publicationGenerationId: "yield-1774526400",
-          sourceRisk: {
-            sourceRiskPenalty: 1.4,
-            sourceRiskScore: 76,
-            sourceDepthRatio: 0.12,
-            rewardShare: 0.2,
-            venueRiskTier: "medium",
-          },
+          publicationGenerationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
+          sourceRisk: rewardHeavyRisk,
           altSources: [
             {
               ...v748RankingsPayload.rankings[0].altSources[0],
-              sourceRisk: {
-                sourceRiskPenalty: 1.1,
-                venueRiskTier: "unknown",
-              },
+              sourceRisk: staleSourceRisk,
             },
           ],
         },
@@ -491,25 +493,61 @@ describe("handleYieldRankings", () => {
     expect(res.status).toBe(200);
     expect(body.methodology?.version).toBe("8.0");
     expect(body.publication).toMatchObject({
-      generationId: "yield-1774526400",
+      generationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
       status: "published",
       cutoffAt: updatedAt,
     });
     expect(body.rankings[0]).toMatchObject({
-      publicationGenerationId: "yield-1774526400",
+      publicationGenerationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
       publishedRank: 1,
       sourceRisk: {
-        sourceRiskPenalty: 1.4,
+        sourceRiskPenalty: rewardHeavyRisk.sourceRiskPenalty,
         sourceRiskScore: 76,
         sourceDepthRatio: 0.12,
-        rewardShare: 0.2,
+        rewardShare: rewardHeavyRisk.rewardShare,
         venueRiskTier: "medium",
       },
     });
     expect(body.rankings[0]?.altSources[0]?.sourceRisk).toMatchObject({
-      sourceRiskPenalty: 1.1,
+      sourceRiskPenalty: staleSourceRisk.sourceRiskPenalty,
+      sourceAgeSeconds: staleSourceRisk.sourceAgeSeconds,
       venueRiskTier: "unknown",
     });
+  });
+
+  it("does not treat flattened source-risk shorthand as public rankings evidence", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const rewardHeavyRow = getSourceRiskGoldenRow("reward-heavy");
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...v748RankingsPayload.rankings[0],
+          id: "rated-coin",
+          symbol: "RATE",
+          name: "Rated Coin",
+          sourceRiskPenalty: rewardHeavyRow.expectedDerivedPenalty,
+        },
+      ],
+      updatedAt,
+    } as unknown as YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+    const row = body.rankings[0];
+
+    expect(res.status).toBe(200);
+    expect(row?.sourceRisk).toBeUndefined();
+    expect((row as unknown as Record<string, unknown> | undefined)?.sourceRiskPenalty).toBeUndefined();
+    expect(row?.pharosYieldScore).toBe(computePYS({
+      apy30d: payload.rankings[0].apy30d,
+      safetyScore: 66,
+      apyVarianceScore: yieldStabilityToApyVarianceScore(payload.rankings[0].yieldStability),
+      scalingFactor: payload.scalingFactor,
+      benchmarkRate: payload.rankings[0].benchmarkRate ?? null,
+      sourceRiskPenalty: null,
+    }));
   });
 
   it("preserves publishedRank and assigns liveRank after safety hydration reorders rows", async () => {

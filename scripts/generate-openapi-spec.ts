@@ -173,6 +173,11 @@ function render() {
               },
             },
             publication: nullableRef("YieldPublicationMetadata"),
+            methodology: {
+              type: "object",
+              description: "Yield methodology envelope when emitted by the rankings publisher.",
+              additionalProperties: true,
+            },
             _meta: {
               type: "object",
               description: "Cache freshness metadata when present.",

@@ -2,6 +2,9 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { STATUS_CACHE_RATIO_THRESHOLDS, STATUS_YIELD_HEALTH_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type {
   CronStatus,
+  YieldCoverageAuditQueueAction,
+  YieldCoverageAuditQueueItem,
+  YieldCoverageAuditQueueItemKind,
   YieldHealthFieldStatus,
   YieldHealthSummary,
   YieldSourceRiskCoverageField,
@@ -14,6 +17,17 @@ const YIELD_RUNBOOK_URL = "https://github.com/TokenBrice/pharos-watch/blob/main/
 const YIELD_RANKINGS_CACHE_KEY = "yield-rankings";
 const YIELD_COVERAGE_AUDIT_CACHE_KEY = "yield-coverage-audit";
 const YIELD_RANKING_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];
+const COVERAGE_AUDIT_QUEUE_ITEM_LIMIT = 6;
+const COVERAGE_AUDIT_QUEUE_ACTIONS = ["accept", "dismiss", "intentional-gap", "watch"] satisfies YieldCoverageAuditQueueAction[];
+const COVERAGE_AUDIT_QUEUE_ITEM_KINDS = [
+  "manifest-missing",
+  "ranking-missing",
+  "unmatched-high-tvl-pool",
+  "missing-protocol",
+  "native-exact-pool",
+  "source-family-adapter",
+  "lending-allowlist",
+] satisfies YieldCoverageAuditQueueItemKind[];
 const SOURCE_RISK_COVERAGE_FIELDS = [
   "sourceRiskScore",
   "sourceRiskPenalty",
@@ -95,6 +109,24 @@ function getString(value: unknown): string | null {
 
 function getBoolean(value: unknown): boolean | null {
   return typeof value === "boolean" ? value : null;
+}
+
+function getStringArray(value: unknown): string[] | null {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string" && entry.length > 0)
+    : null;
+}
+
+function getQueueAction(value: unknown): YieldCoverageAuditQueueAction {
+  return COVERAGE_AUDIT_QUEUE_ACTIONS.includes(value as YieldCoverageAuditQueueAction)
+    ? value as YieldCoverageAuditQueueAction
+    : "watch";
+}
+
+function getQueueKind(value: unknown): YieldCoverageAuditQueueItemKind | null {
+  return COVERAGE_AUDIT_QUEUE_ITEM_KINDS.includes(value as YieldCoverageAuditQueueItemKind)
+    ? value as YieldCoverageAuditQueueItemKind
+    : null;
 }
 
 function ratio(numerator: number, denominator: number): number {
@@ -212,6 +244,174 @@ function sumKnown(values: Array<number | null>): number | null {
     total += value;
   }
   return hasKnownValue ? total : null;
+}
+
+function sanitizeQueueItem(value: unknown): YieldCoverageAuditQueueItem | null {
+  const row = getObject(value);
+  const kind = getQueueKind(row?.kind);
+  const id = getString(row?.id);
+  const title = getString(row?.title);
+  const detail = getString(row?.detail);
+  if (!row || !kind || !id || !title || !detail) return null;
+
+  const item: YieldCoverageAuditQueueItem = {
+    id,
+    kind,
+    title,
+    detail,
+    actionHint: getQueueAction(row.actionHint),
+  };
+  const stablecoinIds = getStringArray(row.stablecoinIds);
+  if (stablecoinIds && stablecoinIds.length > 0) item.stablecoinIds = stablecoinIds;
+  const project = getString(row.project);
+  if (project) item.project = project;
+  const pool = getString(row.pool);
+  if (pool) item.pool = pool;
+  const symbol = getString(row.symbol);
+  if (symbol) item.symbol = symbol;
+  const chain = getString(row.chain);
+  if (chain) item.chain = chain;
+  const tvlUsd = getNumber(row.tvlUsd);
+  if (tvlUsd != null) item.tvlUsd = tvlUsd;
+  const apy = getNumber(row.apy);
+  if (apy != null) item.apy = apy;
+  const poolCount = getNumber(row.poolCount);
+  if (poolCount != null) item.poolCount = poolCount;
+  const totalTvlUsd = getNumber(row.totalTvlUsd);
+  if (totalTvlUsd != null) item.totalTvlUsd = totalTvlUsd;
+  const recommendedTier = getString(row.recommendedTier);
+  if (recommendedTier === "high-confidence" || recommendedTier === "review-needed") {
+    item.recommendedTier = recommendedTier;
+  }
+  return item;
+}
+
+function readQueueItems(value: unknown): YieldCoverageAuditQueueItem[] {
+  return Array.isArray(value)
+    ? value.map(sanitizeQueueItem).filter((item): item is YieldCoverageAuditQueueItem => item != null)
+    : [];
+}
+
+function legacyPoolQueueItem(
+  kind: Extract<YieldCoverageAuditQueueItemKind, "unmatched-high-tvl-pool" | "missing-protocol" | "native-exact-pool">,
+  row: Record<string, unknown>,
+): YieldCoverageAuditQueueItem | null {
+  const pool = getString(row.pool);
+  const project = getString(row.project);
+  const symbol = getString(row.symbol);
+  const chain = getString(row.chain);
+  if (!pool || !project || !symbol || !chain) return null;
+  const stablecoinIds = getStringArray(row.stablecoinIds);
+  return {
+    id: `${kind}:${pool}`,
+    kind,
+    title: `${symbol} on ${project}`,
+    detail: kind === "native-exact-pool" && stablecoinIds?.length
+      ? `${chain} native pool for ${stablecoinIds.join(", ")}`
+      : `${chain} pool ${pool}`,
+    actionHint: kind === "native-exact-pool" ? "accept" : "watch",
+    stablecoinIds: stablecoinIds ?? undefined,
+    project,
+    pool,
+    symbol,
+    chain,
+    tvlUsd: getNumber(row.tvlUsd) ?? undefined,
+    apy: getNumber(row.apy) ?? undefined,
+  };
+}
+
+function legacyProtocolQueueItem(
+  kind: Extract<YieldCoverageAuditQueueItemKind, "source-family-adapter" | "lending-allowlist">,
+  row: Record<string, unknown>,
+): YieldCoverageAuditQueueItem | null {
+  const project = getString(row.project);
+  const poolCount = getNumber(row.poolCount);
+  const totalTvlUsd = getNumber(row.totalTvlUsd);
+  if (!project || poolCount == null || totalTvlUsd == null) return null;
+  const recommendedTier = getString(row.recommendedTier);
+  const examplePools = getStringArray(row.examplePools) ?? [];
+  return {
+    id: `${kind}:${project}`,
+    kind,
+    title: project,
+    detail: `${poolCount} pools${examplePools.length ? ` across ${examplePools.slice(0, 3).join(", ")}` : ""}`,
+    actionHint: recommendedTier === "high-confidence" ? "accept" : "watch",
+    project,
+    poolCount,
+    totalTvlUsd,
+    recommendedTier: recommendedTier === "high-confidence" || recommendedTier === "review-needed"
+      ? recommendedTier
+      : undefined,
+  };
+}
+
+function objectArray(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value)
+    ? value.map(getObject).filter((row): row is Record<string, unknown> => row != null)
+    : [];
+}
+
+function buildCoverageAuditQueue(payload: Record<string, unknown> | null): Pick<
+  YieldHealthSummary["coverageAudit"],
+  "headlineGaps" | "recommendationCandidates" | "allowedActions" | "queuePersistence"
+> {
+  const operatorQueue = getObject(payload?.operatorQueue);
+  const queuedHeadlineGaps = readQueueItems(operatorQueue?.headlineGaps);
+  const queuedRecommendations = readQueueItems(operatorQueue?.recommendationCandidates);
+  if (queuedHeadlineGaps.length > 0 || queuedRecommendations.length > 0) {
+    return {
+      headlineGaps: queuedHeadlineGaps.slice(0, COVERAGE_AUDIT_QUEUE_ITEM_LIMIT),
+      recommendationCandidates: queuedRecommendations.slice(0, COVERAGE_AUDIT_QUEUE_ITEM_LIMIT),
+      allowedActions: COVERAGE_AUDIT_QUEUE_ACTIONS,
+      queuePersistence: "deferred",
+    };
+  }
+
+  const manifestMissingIds = getStringArray(payload?.manifestMissingIds) ?? [];
+  const yieldBearingMissingFromRankings = getStringArray(payload?.yieldBearingMissingFromRankings) ?? [];
+  const headlineGaps: YieldCoverageAuditQueueItem[] = [
+    ...manifestMissingIds.map((stablecoinId) => ({
+      id: `manifest-missing:${stablecoinId}`,
+      kind: "manifest-missing" as const,
+      title: stablecoinId,
+      detail: "Yield-bearing tracked asset has no adapter-manifest entry.",
+      actionHint: "accept" as const,
+      stablecoinIds: [stablecoinId],
+    })),
+    ...yieldBearingMissingFromRankings.map((stablecoinId) => ({
+      id: `ranking-missing:${stablecoinId}`,
+      kind: "ranking-missing" as const,
+      title: stablecoinId,
+      detail: "Manifest-covered yield-bearing asset is absent from the latest rankings cache.",
+      actionHint: "watch" as const,
+      stablecoinIds: [stablecoinId],
+    })),
+    ...objectArray(payload?.unmatchedHighTvlPools).map((row) =>
+      legacyPoolQueueItem("unmatched-high-tvl-pool", row),
+    ),
+    ...objectArray(payload?.missingProtocols).map((row) =>
+      legacyPoolQueueItem("missing-protocol", row),
+    ),
+  ].filter((item): item is YieldCoverageAuditQueueItem => item != null);
+
+  const recommendationCandidates: YieldCoverageAuditQueueItem[] = [
+    ...objectArray(payload?.nativeExactPoolRecommendations).map((row) =>
+      legacyPoolQueueItem("native-exact-pool", row),
+    ),
+    ...objectArray(payload?.sourceFamilyAdapterRecommendations).map((row) =>
+      legacyProtocolQueueItem("source-family-adapter", row),
+    ),
+    ...objectArray(payload?.lendingAllowlistRecommendations).map((row) =>
+      legacyProtocolQueueItem("lending-allowlist", row),
+    ),
+  ].filter((item): item is YieldCoverageAuditQueueItem => item != null);
+
+  return {
+    headlineGaps: headlineGaps.slice(0, COVERAGE_AUDIT_QUEUE_ITEM_LIMIT),
+    recommendationCandidates: recommendationCandidates.slice(0, COVERAGE_AUDIT_QUEUE_ITEM_LIMIT),
+    allowedActions: COVERAGE_AUDIT_QUEUE_ACTIONS,
+    queuePersistence: "deferred",
+  };
 }
 
 function buildSupplementalHealth(
@@ -389,6 +589,7 @@ export async function loadYieldHealthSummary(
     sourceFamilyAdapterRecommendationCount,
     lendingAllowlistRecommendationCount,
   ]);
+  const coverageAuditQueue = buildCoverageAuditQueue(coverageAuditPayload);
 
   const status = worstStatus([
     rankingStatus,
@@ -440,6 +641,7 @@ export async function loadYieldHealthSummary(
       nativeExactPoolRecommendationCount,
       sourceFamilyAdapterRecommendationCount,
       lendingAllowlistRecommendationCount,
+      ...coverageAuditQueue,
     },
     sourceRiskCoverage,
     latestCronStatus: crons["sync-yield-data"]?.lastRun?.status ?? null,

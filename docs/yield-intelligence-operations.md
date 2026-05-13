@@ -44,20 +44,20 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
 
 `/api/status` exposes these checks under `yieldHealth`; the admin Pipeline card renders the same fields. See the [Yield Health runbook](./runbooks/yield-health.md) for inspection commands.
 
-| Surface | Owner cron/cache | Warn threshold | Stale threshold | Public-critical impact | Admin-watch impact |
-| --- | --- | --- | --- | --- | --- |
-| Rankings freshness | `sync-yield-data` -> `cache['yield-rankings']` | Age above 8 hourly producer intervals | Missing payload or age above 12 hourly producer intervals | Yes, when stale or missing | Degraded-but-not-stale rankings remain watch-only |
-| Safety coverage | Read-time report-card hydration in `yield-rankings.provenance.safetySnapshot` | Coverage below 75% | No separate stale tier | No | Sparse safety evidence degrades Yield Health |
-| Supplemental source age | `sync-yield-supplemental` -> `yield:supplemental-sources:v1:*` | Any family age above 6h or missing family cache when family rows exist | Age above 72h | No | Degraded/stale optional families reduce confidence only |
-| Benchmark fallback | `sync-yield-data` benchmark provenance | Fallback active, missing benchmark, or age above 48h | Age above 24d | No | Retained or old benchmark data degrades Yield Health |
-| Coverage audit age | `yield-coverage-audit` -> `cache['yield-coverage-audit']` | Age above 45d or missing audit | Age above 540d | No | Late monthly review or unavailable queue stays watch-only |
-| Source-risk coverage | `sync-yield-data` published `sourceRisk.*` rows and retained alternates | Any core field below 75% coverage: `sourceRiskPenalty`, `rewardShare`, `sourceAgeSeconds`, `sourceDepthRatio`, `venueRiskTier`, or `sourceRiskScore` | No separate stale tier; zero coverage is degraded when ranking rows exist | No | Missing neutral-fallback evidence degrades Yield Health |
+| Surface | Owner cron/cache | Warn threshold | Stale threshold | Public-critical impact | Admin-watch impact | Runbook |
+| --- | --- | --- | --- | --- | --- | --- |
+| Rankings freshness | `sync-yield-data` -> `cache['yield-rankings']` | Age above 8 hourly producer intervals | Missing payload or age above 12 hourly producer intervals | Yes, when stale or missing | Degraded-but-not-stale rankings remain watch-only | [stale or missing rankings](./runbooks/yield-rankings-stale-or-missing.md) |
+| Safety coverage | Read-time report-card hydration in `yield-rankings.provenance.safetySnapshot` | Coverage below 75% | No separate stale tier | No | Sparse safety evidence degrades Yield Health | [Yield Health](./runbooks/yield-health.md) |
+| Supplemental source age | `sync-yield-supplemental` -> `yield:supplemental-sources:v1:*` | Any family age above 6h or missing family cache when family rows exist | Age above 72h | No | Degraded/stale optional families reduce confidence only | [supplemental snapshot](./runbooks/yield-supplemental-snapshot.md) |
+| Benchmark fallback | `sync-yield-data` benchmark provenance | Fallback active, missing benchmark, or age above 48h | Age above 24d | No | Retained or old benchmark data degrades Yield Health | [benchmark fallback](./runbooks/yield-benchmark-fallback-stale.md) |
+| Coverage audit age | `yield-coverage-audit` -> `cache['yield-coverage-audit']` | Age above 45d or missing audit | Age above 540d | No | Late monthly review or unavailable queue stays watch-only | [Yield Health](./runbooks/yield-health.md) |
+| Source-risk coverage | `sync-yield-data` published `sourceRisk.*` rows and retained alternates | Any core field below 75% coverage: `sourceRiskPenalty`, `rewardShare`, `sourceAgeSeconds`, `sourceDepthRatio`, `venueRiskTier`, or `sourceRiskScore` | No separate stale tier; zero coverage is degraded when ranking rows exist | No | Missing neutral-fallback evidence degrades Yield Health | [Yield Health](./runbooks/yield-health.md) |
 
 `yieldHealth.statusImpact` remains public-critical only for stale or missing rankings. Safety, supplemental, benchmark, coverage-audit, and source-risk coverage gaps are admin-watch unless a later release explicitly changes that rule.
 
 ## Coverage Audit Queue
 
-The monthly coverage audit is an operator queue, not a persistent workflow store. The cached report already carries headline gaps (`manifestMissingIds`, `yieldBearingMissingFromRankings`, unmatched high-TVL pools, missing protocols) and recommendation candidates (native exact-pool, source-family adapter, and lending allowlist candidates). Operators should classify each item in the monthly audit note:
+The monthly coverage audit is an operator queue, not a persistent workflow store. The cached report carries `operatorQueue.persistence="deferred"`, the allowed action labels, headline gaps (`manifestMissingIds`, `yieldBearingMissingFromRankings`, unmatched high-TVL pools, missing protocols), and recommendation candidates (native exact-pool, source-family adapter, and lending allowlist candidates). `/api/status` exposes the bounded queue under `yieldHealth.coverageAudit.headlineGaps` and `yieldHealth.coverageAudit.recommendationCandidates` so the admin card can show representative items without loading the full cache payload. Operators should classify each item in the monthly audit note:
 
 | Action | Use when | Follow-up |
 | --- | --- | --- |
@@ -66,7 +66,7 @@ The monthly coverage audit is an operator queue, not a persistent workflow store
 | `intentional-gap` | The asset or venue should remain explicitly uncovered until a reliable APY/source path exists | Add or confirm an intentional manifest gap with rationale when a code change is warranted |
 | `watch` | The item is plausible but needs another cycle, more TVL, better timestamps, or venue review | Leave it visible for the next monthly audit and note the condition to re-check |
 
-Do not add dismissal persistence until repeated monthly reports show that the same reviewed noise is consuming operator time. Do not edit `yield-rankings` or source-risk fields to clear the queue; fix the source config, add an intentional gap, or leave the item on watch.
+Do not add dismissal persistence until repeated monthly reports show that the same reviewed noise is consuming operator time. The admin queue rows are read-only; there are no `accept`/`dismiss` buttons and no stored operator state. Do not edit `yield-rankings` or source-risk fields to clear the queue; fix the source config, add an intentional gap, or leave the item on watch.
 
 ## Failure Semantics
 

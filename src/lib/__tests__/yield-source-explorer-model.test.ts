@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { buildYieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
+import {
+  SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS,
+  mergeSourceRiskGoldenFixtures,
+} from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
 import type { YieldRanking } from "@shared/types";
 
 function ranking(overrides: Partial<YieldRanking> = {}): YieldRanking {
@@ -55,14 +59,13 @@ function ranking(overrides: Partial<YieldRanking> = {}): YieldRanking {
 describe("buildYieldSourceExplorerModel", () => {
   it("returns selected source, retained alternates, risk labels, switch metadata, and benchmark context", () => {
     const model = buildYieldSourceExplorerModel(ranking({
-      sourceRisk: {
-        sourceRiskPenalty: 1.4,
-        rewardShare: 0.8,
-        sourceDepthRatio: 0.0005,
-        sourceAgeSeconds: 8 * 60 * 60,
-        observationCount30d: 3,
-        sourceSwitchCount30d: 1,
-      },
+      sourceRisk: mergeSourceRiskGoldenFixtures([
+        "reward-heavy",
+        "low-source-depth",
+        "stale-source-age",
+        "bootstrap-observation-count",
+        "source-switch-churn",
+      ]),
       provenance: {
         sourceKey: "aave-usdc",
         sourceObservedAt: 1_700_000_000,
@@ -95,13 +98,7 @@ describe("buildYieldSourceExplorerModel", () => {
 
     expect(model.selectedSource.sourceKey).toBe("aave-usdc");
     expect(model.retainedAlternates.map((source) => source.sourceKey)).toEqual(["compound-usdc"]);
-    expect(model.sourceRiskDrivers.map((driver) => driver.label)).toEqual([
-      "reward-heavy",
-      "thin source depth",
-      "stale source",
-      "limited history",
-      "source changed",
-    ]);
+    expect(model.sourceRiskDrivers.map((driver) => driver.label)).toEqual(SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS);
     expect(model.sourceSwitch).toMatchObject({
       changed: true,
       previousSourceKey: "compound-usdc",

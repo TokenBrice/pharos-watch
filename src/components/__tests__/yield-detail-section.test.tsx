@@ -3,6 +3,11 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import YieldDetailSection from "@/components/yield-detail-section";
+import {
+  SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS,
+  buildSourceRiskGoldenFixture,
+  mergeSourceRiskGoldenFixtures,
+} from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types";
 
 const { useYieldRankingsMock, replaceParamsMock } = vi.hoisted(() => ({
@@ -180,9 +185,7 @@ describe("YieldDetailSection", () => {
     useYieldRankingsMock.mockReturnValue({
       data: makeResponse([
         makeRanking({
-          sourceRisk: {
-            sourceRiskPenalty: 2,
-          },
+          sourceRisk: buildSourceRiskGoldenFixture("reward-heavy", { sourceRiskPenalty: 2 }),
         }),
       ]),
       meta: null,
@@ -194,6 +197,50 @@ describe("YieldDetailSection", () => {
 
     expect(screen.getByText("Source Risk Penalty:")).toBeTruthy();
     expect(screen.getByText("2.00x")).toBeTruthy();
+  });
+
+  it("explains populated source-risk drivers in the detail PYS block", () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([
+        makeRanking({
+          sourceRisk: mergeSourceRiskGoldenFixtures([
+            "reward-heavy",
+            "low-source-depth",
+            "stale-source-age",
+            "bootstrap-observation-count",
+            "source-switch-churn",
+          ], { sourceRiskPenalty: 1.8 }),
+          provenance: {
+            sourceKey: "primary-source",
+            sourceObservedAt: 1_700_000_000,
+            sourceAgeSeconds: 8 * 60 * 60,
+            confidenceTier: "curated",
+            selectionMethod: "confidence-weighted",
+            selectionReason: "Higher confidence than retained alternates.",
+            sourceSwitch: true,
+            previousBestSourceKey: "previous-source",
+            usedLegacyHistory: false,
+            usedDefaultSafety: false,
+            benchmarkRecordDate: null,
+            benchmarkIsFallback: false,
+            benchmarkFallbackMode: null,
+            anomalies: [],
+          },
+        }),
+      ]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    for (const label of SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS) {
+      expect(screen.getByText(label)).toBeTruthy();
+    }
+    expect(screen.getByText(/Most APY comes from incentives, not base yield/i)).toBeTruthy();
+    expect(screen.getByText(/Venue TVL is small relative to the stablecoin supply/i)).toBeTruthy();
+    expect(screen.getByText(/Selected source changed versus the prior published snapshot/i)).toBeTruthy();
   });
 
   it("persists selected alternative sources in the URL state and forwards them to the chart", () => {

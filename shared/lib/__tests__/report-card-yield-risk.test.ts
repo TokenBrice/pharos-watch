@@ -2,6 +2,25 @@ import { describe, expect, it } from "vitest";
 import { resolveReportCardYieldRiskAdjustment } from "../report-card-yield-risk";
 
 describe("resolveReportCardYieldRiskAdjustment", () => {
+  it("keeps non-yield-bearing assets neutral", () => {
+    const adjustment = resolveReportCardYieldRiskAdjustment({
+      flags: { yieldBearing: false, navToken: false },
+      sourceRisk: {
+        sourceRiskPenalty: 1.8,
+        rewardShare: 0.95,
+        venueRiskTier: "high",
+      },
+    });
+
+    expect(adjustment).toMatchObject({
+      appliesToBaseScore: false,
+      scoreModifier: null,
+      resilienceCap: null,
+      dependencyRiskCap: null,
+      reason: "not-yield-bearing",
+    });
+  });
+
   it("keeps external lending opportunities out of the base Safety Score", () => {
     const adjustment = resolveReportCardYieldRiskAdjustment({
       flags: { yieldBearing: false, navToken: false },
@@ -19,6 +38,25 @@ describe("resolveReportCardYieldRiskAdjustment", () => {
       resilienceCap: null,
       dependencyRiskCap: null,
       reason: "external-lending-opportunity",
+    });
+  });
+
+  it("keeps yield-bearing rows without a yield config neutral", () => {
+    const adjustment = resolveReportCardYieldRiskAdjustment({
+      flags: { yieldBearing: true, navToken: false },
+      sourceRisk: {
+        sourceRiskPenalty: 1.4,
+        rewardShare: 0.9,
+        venueRiskTier: "medium",
+      },
+    });
+
+    expect(adjustment).toMatchObject({
+      appliesToBaseScore: false,
+      scoreModifier: null,
+      resilienceCap: null,
+      dependencyRiskCap: null,
+      reason: "missing-yield-config",
     });
   });
 

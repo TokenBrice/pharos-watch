@@ -97,6 +97,20 @@ export const API_PATHS = {
       routeLimit: params?.routeLimit,
       apiKeyLimit: params?.apiKeyLimit,
     }),
+  yieldSourceDecisions: (params?: {
+    generationId?: string;
+    stablecoin?: string;
+    state?: string;
+    limit?: number;
+    decisionLimit?: number;
+  }) =>
+    buildQueryPath("/api/yield-source-decisions", {
+      generationId: params?.generationId,
+      stablecoin: params?.stablecoin,
+      state: params?.state,
+      limit: params?.limit,
+      decisionLimit: params?.decisionLimit,
+    }),
   apiKeys: () => "/api/api-keys",
   apiKeyAuditLog: () => "/api/api-keys/audit-log",
   apiKeyUpdate: (id: number) => `/api/api-keys/${id}/update`,

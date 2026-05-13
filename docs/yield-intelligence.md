@@ -354,8 +354,9 @@ Yield v8 exposes optional `sourceRisk` and `rankChangeAttribution` shapes in sha
 - The `/yield` depth lens is explanatory context, not guaranteed executable capacity. It classifies rows only when both `sourceRisk.sourceDepthRatio` and `sourceTvlUsd` are present: `deep` is `>= 1%` of tracked stablecoin supply, `moderate` is `0.1%` to `< 1%`, `thin` is `< 0.1%`, and missing TVL or supply-relative depth is `unknown`.
 - DeFiLlama rows use the shared DeFiLlama input metadata timestamp/age when an individual resolved row does not carry `sourceObservedAt`, so provenance and PYS source-age penalties are based on the same freshness evidence.
 - `sourceRisk.venueRiskTier: "unknown"`, `null`, or omitted means the venue tier has not been sourced. Unknown tier is neutral, not a hidden high-risk default.
+- `worker/src/cron/yield-sync/source-risk.ts` owns the sparse typed `yieldRiskConfig` home for reviewed venue tiers. The current entries for Aave, Compound, Spark, Maple, Yearn, Morpho, Pendle, and Beefy remain `unknown` with rationale/evidence fields until approved methodology evidence assigns a non-unknown tier. Review is tied to the monthly yield coverage audit; guessed venue penalties are explicitly out of scope.
 - `sourceRisk.sourceRiskScore`, `sourceRisk.sourceDepthRatio`, `sourceRisk.rewardShare`, `sourceRisk.sourceAgeSeconds`, `sourceRisk.observationCount30d`, `sourceRisk.sourceSwitchCount30d`, `sourceRisk.deploymentPlace`, `sourceRisk.venueProtocol`, `sourceRisk.venueChain`, and `sourceRisk.investabilityFlags` are populated only when supported by existing rows, provenance, publication-generation evidence, or sourced yield-risk config. Missing precision stays missing instead of being guessed from labels.
-- v8 rollout calibration evidence is split between `docs/process/yield-pys-v8-calibration-2026-05-13.md` for source-risk golden fixtures and `docs/process/yield-pys-v8-production-sample-calibration-2026-05-13.md` for the current production snapshot. The production snapshot was regenerated after publication generation `yield-1778696402` emitted populated public ranking `sourceRisk.*` fields, so it records live source-risk coverage, rank churn, capped rows, distribution, movers, and non-USD cohorts.
+- v8 rollout calibration evidence is split between `docs/process/yield-pys-v8-calibration-2026-05-13.md` for source-risk golden fixtures and `docs/process/yield-pys-v8-production-sample-calibration-2026-05-13.md` for the current production snapshot. The production snapshot was regenerated after publication generation `yield-1778700012` emitted populated public ranking `sourceRisk.*` fields, so it records live source-risk coverage, including the current `sourceRiskScore` null-rate, plus rank churn, capped rows, distribution, movers, and non-USD cohorts.
 - External `lending-opportunity` rows do not modify the base stablecoin's Safety Score, Dependency Risk, Resilience, or overall report-card grade. They may later inform an opportunity-level yield risk label, DEWS input, or report-card modifier only after the consuming methodology explicitly versions that behavior.
 - Report-card consumers treat yield source-risk as no-op today. `shared/lib/report-card-yield-risk.ts` names the no-op reasons as `external-lending-opportunity`, `missing-yield-config`, `missing-source-risk`, and `source-risk-unconsumed`; the helper may normalize the source-risk payload, but it does not emit score modifiers, Resilience caps, or Dependency Risk caps.
 - Any future report-card score impact from yield source-risk requires a report-card methodology update and matching report-card timeline entry before runtime scoring can consume those fields.
@@ -669,13 +670,29 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
           "currentApy": 9.1,
           "apy30d": 8.8,
           "sourceTvlUsd": 31000000,
-          "dataSource": "defillama"
+          "dataSource": "defillama",
+          "sourceRisk": {
+            "sourceRiskPenalty": 1.12,
+            "sourceDepthRatio": 0.004,
+            "rewardShare": 0.18,
+            "venueRiskTier": "unknown"
+          }
         }
       ],
       "provenance": {
         "confidenceTier": "curated",
         "selectionReason": "curated canonical source selected by confidence-weighted arbitration",
         "sourceSwitch": false
+      },
+      "publicationGenerationId": "yield-1772000000",
+      "publishedRank": 3,
+      "liveRank": 3,
+      "sourceRisk": {
+        "sourceRiskPenalty": 1,
+        "sourceDepthRatio": 0.02,
+        "rewardShare": 0,
+        "sourceAgeSeconds": 900,
+        "venueRiskTier": "unknown"
       }
     }
   ],
@@ -687,15 +704,28 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
   },
   "scalingFactor": 8,
   "medianApy": 4.21,
-  "updatedAt": 1772000000
+  "updatedAt": 1772000000,
+  "publication": {
+    "generationId": "yield-1772000000",
+    "updatedAt": 1772000000,
+    "cutoffAt": 1772000000,
+    "schemaVersion": 1,
+    "status": "published"
+  },
+  "methodology": {
+    "version": "8.0",
+    "currentVersion": "8.0",
+    "changelogPath": "/methodology/yield-changelog/"
+  },
+  "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }
 }
 ```
 
-Default sort: `pharos_yield_score` DESC. `altSources` is an empty array for coins with only one yield source. `medianApy` is the TVL-weighted median of best-source `apy30d` values and is used by peer-reference warning heuristics.
+Default sort: `pharos_yield_score` DESC. `altSources` is an empty array for coins with only one yield source. `medianApy` is the TVL-weighted median of best-source `apy30d` values and is used by peer-reference warning heuristics. Generation-aware payloads include top-level `publication` and optional row-level `publicationGenerationId`; legacy rows remain valid when those fields are omitted. Rankings payloads may also include the standard Yield Intelligence `methodology` envelope.
 
 Each best-source row and alt-source row can also include `yieldSourceUrl`. The worker resolves this from the curated yield-source link registry (`worker/src/lib/yield-source-links.ts`) and falls back to coin metadata links when no source-specific override exists.
 
-`medianApy` type: `number`.
+Public source-risk evidence is nested under `sourceRisk` on selected rows and retained alternates. Missing, `null`, or `venueRiskTier: "unknown"` evidence is neutral; public examples must not expose flattened top-level fields such as `sourceRiskPenalty` or `rewardShare`.
 
 The response includes a `_meta` freshness object (see [Response Body Freshness](api-reference.md#response-body-freshness-_meta)) indicating data age and staleness status. The frontend uses this to power the `StaleDataBanner` on the yield page.
 

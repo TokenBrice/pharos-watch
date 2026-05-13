@@ -616,6 +616,35 @@ export interface YieldSourceRiskCoverageSummary {
   fields: Record<YieldSourceRiskCoverageField, YieldSourceRiskFieldCoverage>;
 }
 
+export type YieldCoverageAuditQueueAction = "accept" | "dismiss" | "intentional-gap" | "watch";
+
+export type YieldCoverageAuditQueueItemKind =
+  | "manifest-missing"
+  | "ranking-missing"
+  | "unmatched-high-tvl-pool"
+  | "missing-protocol"
+  | "native-exact-pool"
+  | "source-family-adapter"
+  | "lending-allowlist";
+
+export interface YieldCoverageAuditQueueItem {
+  id: string;
+  kind: YieldCoverageAuditQueueItemKind;
+  title: string;
+  detail: string;
+  actionHint: YieldCoverageAuditQueueAction;
+  stablecoinIds?: string[];
+  project?: string;
+  pool?: string;
+  symbol?: string;
+  chain?: string;
+  tvlUsd?: number;
+  apy?: number;
+  poolCount?: number;
+  totalTvlUsd?: number;
+  recommendedTier?: "high-confidence" | "review-needed";
+}
+
 export interface YieldHealthSummary {
   status: Exclude<YieldHealthFieldStatus, "unknown">;
   statusImpact: "public-critical" | "admin-watch";
@@ -673,6 +702,10 @@ export interface YieldHealthSummary {
     nativeExactPoolRecommendationCount: number | null;
     sourceFamilyAdapterRecommendationCount: number | null;
     lendingAllowlistRecommendationCount: number | null;
+    headlineGaps: YieldCoverageAuditQueueItem[];
+    recommendationCandidates: YieldCoverageAuditQueueItem[];
+    allowedActions: YieldCoverageAuditQueueAction[];
+    queuePersistence: "deferred";
   };
   sourceRiskCoverage: YieldSourceRiskCoverageSummary;
   latestCronStatus: string | null;

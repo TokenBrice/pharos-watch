@@ -33,7 +33,6 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [process/adding-a-stablecoin.md](./process/adding-a-stablecoin.md) - repeatable checklist for adding active and pre-launch stablecoins
 - [freezing-stablecoins.md](./freezing-stablecoins.md) - operator runbook for transitioning a tracked stablecoin into the `frozen` lifecycle phase
 - [security-governance.md](./security-governance.md) - durable security rules (token-in-URL discipline, inline-script policy) and reactive-playbook routing
-- [trackers/reserve-coverage.md](./trackers/reserve-coverage.md) - deferred live-reserve coverage candidates and blocked follow-ups
 
 ## Runbooks
 
@@ -53,8 +52,6 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 ## Incident Response
 
 - [incident-response/safe-browsing-flag.md](./incident-response/safe-browsing-flag.md) - Google Safe Browsing / browser "Dangerous site" warning recovery
-- [incident-response/telegram-secret-rotation.md](./incident-response/telegram-secret-rotation.md) - rotating `TELEGRAM_WEBHOOK_SECRET` with the dual-secret pattern
-- [incident-response/telegram-token-rotation.md](./incident-response/telegram-token-rotation.md) - rotating `TELEGRAM_BOT_TOKEN` via BotFather with the dual-token pattern
 
 ## Route And Page Contracts
 

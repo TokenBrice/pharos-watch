@@ -1,6 +1,7 @@
 import { handleStatus } from "../api/status";
 import { handleStatusHistory } from "../api/status-history";
 import { handleRequestSourceStats } from "../api/request-source-stats";
+import { handleYieldSourceDecisions } from "../api/yield-source-decisions";
 import { handleApiKeyAuditLog } from "../api/api-key-audit-log";
 import { handleApiKeys } from "../api/api-keys";
 import { handleApiKeyRequestsAdmin } from "../api/api-key-requests";
@@ -16,6 +17,7 @@ export const OPS_STATIC_ROUTES = [
   defineStaticRoute("status-history", ({ db, trustedAdmin, request }) => handleStatusHistory(db, trustedAdmin, request)),
   defineStaticRoute("request-source-stats", ({ db, trustedAdmin, request }) =>
     handleRequestSourceStats(db, trustedAdmin, request)),
+  defineStaticRoute("yield-source-decisions", handleYieldSourceDecisions),
   defineStaticRoute("api-keys", ({ db, trustedAdmin, request, apiKeyHashPepper }) =>
     handleApiKeys(db, trustedAdmin, request, apiKeyHashPepper)),
   defineStaticRoute("api-key-audit-log", ({ db, trustedAdmin, request }) =>
