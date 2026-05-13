@@ -142,6 +142,6 @@ Rows analyzed: 131
 ## Implementation Notes
 
 - This report uses a saved public site-data rankings response. The ranking payload included top-level `methodology.version = "8.0"`, top-level publication metadata, 131 row-level `publicationGenerationId` values, and 131 populated nested `sourceRisk` objects.
-- The history site-data lane still had zero populated `publicationGenerationId` and zero populated `sourceRisk` history points for `usdt-tether` at capture time; history remains legacy/null-safe until a Worker deployment and subsequent publication writes history rows with generation metadata.
+- The history site-data lane exposes generation/source-risk metadata for current publication rows where present; legacy-only series such as `usdt-tether` remain null-safe with zero populated `publicationGenerationId` and zero populated `sourceRisk` points at capture time.
 - Keep scratch calibration reports under `/agents/`; committed rollout evidence belongs under `docs/process/`.
 - Pair production-snapshot reports with golden-fixture evidence because live rankings cannot cover every driver edge case.
