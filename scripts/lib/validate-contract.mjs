@@ -41,6 +41,7 @@ export const COMMON_VALIDATE_PREBUILD_COMMANDS = [
 export const PAGES_VALIDATE_COMMANDS = [
   "npm run build",
   "npm run seo:check",
+  "npm run check:phishing-signatures",
 ];
 
 export const COMMON_VALIDATE_POSTBUILD_COMMANDS = [

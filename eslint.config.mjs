@@ -60,6 +60,34 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // Root layouts ship to every static page, so inline scripts here are seen
+    // by classifiers on URLs that have no legitimate need for the pattern.
+    // `beforeInteractive` inline scripts in particular match credential-
+    // harvesting phishing-kit signatures (read hash → parse token → store in
+    // window global → replaceState). Keep token / URL-fragment handling
+    // route-scoped via a client component on the page that actually needs it.
+    files: ["src/app/**/layout.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "JSXOpeningElement[name.name='Script'] > JSXAttribute[name.name='strategy'][value.value='beforeInteractive']",
+          message:
+            "beforeInteractive Script in a layout file matches a phishing-kit signature on every static page. Move the logic into a route-scoped client component instead.",
+        },
+        {
+          // Inline executable <script>. JSON-LD (`type="application/ld+json"`)
+          // is data, not code — explicitly allowed.
+          selector:
+            "JSXOpeningElement[name.name='script']:not(:has(JSXAttribute[name.name='type'][value.value='application/ld+json']))",
+          message:
+            "Inline executable <script> in a layout file matches phishing-kit signatures on every static page. Use next/script in a route-scoped client component, or render an external script src.",
+        },
+      ],
+    },
+  },
+  {
     files: ["worker/src/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
