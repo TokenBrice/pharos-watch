@@ -6,7 +6,7 @@ import { getCache, setCacheIfNewer, type CacheWriteResult } from "../../lib/db-c
 import { readCachedJson, validatePayloadWithSchema } from "../../lib/api-utils";
 import { PYS_SCALING_FACTOR } from "../../lib/constants";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
-import { detectWarningSignals, getRankingStaleThresholdMs } from "../yield-helpers";
+import { getRankingStaleThresholdMs } from "../yield-helpers";
 import { deleteOrphanYieldRows, deleteStaleYieldRows } from "./history";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { compareCandidates, getConfidencePriority } from "./evaluation-arbitration";
@@ -550,15 +550,7 @@ export async function persistEvaluatedYieldSources(
 
   for (const source of input.evaluatedSources) {
     const isBest = input.bestSourceKeyByCoin.get(source.id) === source.sourceKey ? 1 : 0;
-    const warningSignals = detectWarningSignals({
-      currentApy: source.currentApy,
-      apy30d: source.apy30d,
-      apyReward: source.apyReward,
-      medianApy: input.medianApy,
-      sourceTvlUsd: source.sourceTvlUsd,
-      prevTvlUsd: source.prevTvlUsd,
-    });
-    source.warnings = warningSignals;
+    const warningSignals = [...source.warnings];
     const warningSignalsJson = warningSignals.length > 0 ? JSON.stringify(warningSignals) : null;
     const safeVariance30d = source.stdDev30d != null && Number.isFinite(source.stdDev30d) ? source.stdDev30d : null;
     const safeStability =

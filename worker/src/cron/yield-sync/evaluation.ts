@@ -3,7 +3,7 @@ import { computePysComponents, computePysRewardShare, derivePysSourceRiskPenalty
 import type { YieldSourceInputMeta } from "@shared/types/yield";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
-import { computeApyVarianceScore, computePYS, computeYieldStability } from "../yield-helpers";
+import { computeApyVarianceScore, computePYS, computeYieldStability, detectWarningSignals } from "../yield-helpers";
 import type { YieldHistorySnapshotRow } from "./history";
 import { computeTvlWeightedMedianApy } from "./rankings";
 import type { ResolvedYield, ResolvedYieldEntry } from "./types";
@@ -405,6 +405,16 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
       source_tvl_usd: row.sourceTvlUsd,
     })),
   );
+  for (const source of evaluatedSources) {
+    source.warnings = detectWarningSignals({
+      currentApy: source.currentApy,
+      apy30d: source.apy30d,
+      apyReward: source.apyReward,
+      medianApy,
+      sourceTvlUsd: source.sourceTvlUsd,
+      prevTvlUsd: source.prevTvlUsd,
+    });
+  }
 
   return {
     evaluatedSources,

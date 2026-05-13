@@ -417,6 +417,45 @@ describe("syncYieldData", () => {
     );
   });
 
+  it("publishes evaluated warning signals into the yield rankings cache", async () => {
+    const db = makeDb();
+    vi.mocked(yieldHelpersModule.detectWarningSignals).mockReturnValue(["yield-spike"]);
+
+    mockFetch([
+      {
+        match: "yields.llama.fi",
+        body: {
+          data: [
+            {
+              pool: "pool-sdai-1",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 1_000_000_000,
+              apy: 9,
+              apyBase: 9,
+              apyReward: null,
+              apyMean30d: 3,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ],
+        },
+      },
+    ]);
+
+    const result = await syncYieldData(db);
+
+    expect(result.itemCount).toBe(1);
+    const cachePayload = vi.mocked(setCacheIfNewer).mock.calls.find((call) => call[1] === "yield-rankings")?.[2];
+    expect(cachePayload).toBeDefined();
+    const parsed = JSON.parse(String(cachePayload)) as {
+      rankings: Array<{ warningSignals: string[] }>;
+    };
+    expect(parsed.rankings[0]?.warningSignals).toContain("yield-spike");
+  });
+
   it("continues when published-generation repair fails before history load", async () => {
     const db = makeDb();
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
