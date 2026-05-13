@@ -4,7 +4,7 @@ import type { TelegramDispatchCronResult } from "@shared/types";
 import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-utils";
 import { getCache, setCache } from "../lib/db-cache";
-import { buildInClause } from "../lib/db";
+import { buildInClause, chunkArray } from "../lib/db";
 
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
@@ -35,6 +35,7 @@ import {
 } from "./dispatch-telegram-state";
 import {
   drainPendingQueue,
+  buildDedupeKey,
   cleanupExpiredPendingAlerts,
   loadChatsInBackoff,
   readPendingCapacitySnapshot,
@@ -54,6 +55,7 @@ import {
   finalizeTelegramAlertJobManifests,
   persistTelegramAlertJobManifests,
 } from "./telegram-alert-jobs";
+import { loadTerminalTelegramAlertTargetKeys } from "./telegram-alert-target-status";
 import { isQuietHoursActive } from "./telegram-quiet-hours";
 import { logTelegramEvent } from "../lib/telegram-log";
 import { TELEGRAM_MAX_MESSAGES_PER_RUN } from "../lib/telegram-constants";
@@ -107,6 +109,8 @@ const VALID_GLOBAL_ALERT_COLUMNS = new Set(Object.values(GLOBAL_ALERT_COLUMN_BY_
 type AlertType = keyof typeof ALERT_COLUMN_BY_TYPE;
 type LoadedSubscriberRow = Omit<SubscriberRow, "isGlobal"> & { stablecoin_id: string };
 
+type SubscriberQueueEntry = ReturnType<typeof buildSubscriberQueue>[number];
+
 function emptyPerAlertTypeTargets(): PerAlertTypeTargets {
   return {
     dews: { chats: 0, chunks: 0 },
@@ -125,6 +129,33 @@ function buildPerAlertTypeTargets(
     targets[sub.alertType].chunks += sub.chunks.length;
   }
   return targets;
+}
+
+function targetKeysForSubscriber(sub: SubscriberQueueEntry): string[] {
+  return sub.chunks.map((chunk, chunkIndex) =>
+    buildDedupeKey({
+      chatId: sub.chatId,
+      html: chunk,
+      canonicalHtml: sub.canonicalHtml,
+      disableNotification: sub.disableNotification,
+      chunkIndex,
+      alertType: sub.alertType,
+    })
+  );
+}
+
+async function filterAlreadyTerminalSubscribers(
+  db: D1Database,
+  subscriberQueue: SubscriberQueueEntry[],
+): Promise<SubscriberQueueEntry[]> {
+  const targetKeys = subscriberQueue.flatMap(targetKeysForSubscriber);
+  if (targetKeys.length === 0) return subscriberQueue;
+  const terminalKeys = await loadTerminalTelegramAlertTargetKeys(db, targetKeys);
+  if (terminalKeys.size === 0) return subscriberQueue;
+  return subscriberQueue.filter((sub) => {
+    const keys = targetKeysForSubscriber(sub);
+    return keys.length === 0 || !keys.every((key) => terminalKeys.has(key));
+  });
 }
 
 function emptyPendingCapacity() {
@@ -293,48 +324,54 @@ async function loadSubscriberRowsBatch(
   if (!VALID_ALERT_COLUMNS.has(alertColumn)) {
     throw new Error(`Invalid alert subscription column for ${type}`);
   }
-  const placeholders = stablecoinIds.map(() => "?").join(",");
   const nowSec = Math.floor(Date.now() / 1000);
-  const result = await db
-    .prepare(
-      // SAFETY: alertColumn comes from ALERT_COLUMN_BY_TYPE and is validated
-      // against the hardcoded allowlist above before interpolation.
-      `SELECT sub.stablecoin_id,
-              sub.chat_id,
-              u.last_active_at,
-              sub.dews_min_band,
-              sub.safety_mode,
-              sub.depeg_worsening_bps_step,
-              u.quiet_hours_enabled,
-              u.quiet_hours_start_utc,
-              u.quiet_hours_end_utc,
-              u.timezone
-         FROM telegram_subscriptions sub
-         JOIN telegram_subscribers u ON u.chat_id = sub.chat_id
-        WHERE sub.stablecoin_id IN (${placeholders})
-          AND sub.${alertColumn} = 1
-          AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)
-          AND (sub.alert_snooze_until_ts IS NULL OR sub.alert_snooze_until_ts <= ?)`,
-    )
-    .bind(...stablecoinIds, nowSec, nowSec)
-    .all<LoadedSubscriberRow>();
-
   const map = new Map<string, SubscriberRow[]>();
-  for (const row of result.results ?? []) {
-    const existing = map.get(row.stablecoin_id) ?? [];
-    existing.push({
-      chat_id: row.chat_id,
-      last_active_at: row.last_active_at,
-      dews_min_band: row.dews_min_band ?? null,
-      safety_mode: row.safety_mode ?? null,
-      depeg_worsening_bps_step: row.depeg_worsening_bps_step ?? null,
-      quiet_hours_enabled: row.quiet_hours_enabled ?? 0,
-      quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
-      quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
-      timezone: row.timezone ?? null,
-      isGlobal: false,
-    });
-    map.set(row.stablecoin_id, existing);
+  const seen = new Set<string>();
+  for (const idChunk of chunkArray(Array.from(new Set(stablecoinIds)))) {
+    const inClause = buildInClause(idChunk);
+    const result = await db
+      .prepare(
+        // SAFETY: alertColumn comes from ALERT_COLUMN_BY_TYPE and is validated
+        // against the hardcoded allowlist above before interpolation.
+        `SELECT sub.stablecoin_id,
+                sub.chat_id,
+                u.last_active_at,
+                sub.dews_min_band,
+                sub.safety_mode,
+                sub.depeg_worsening_bps_step,
+                u.quiet_hours_enabled,
+                u.quiet_hours_start_utc,
+                u.quiet_hours_end_utc,
+                u.timezone
+           FROM telegram_subscriptions sub
+           JOIN telegram_subscribers u ON u.chat_id = sub.chat_id
+          WHERE sub.stablecoin_id IN (${inClause.sql})
+            AND sub.${alertColumn} = 1
+            AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)
+            AND (sub.alert_snooze_until_ts IS NULL OR sub.alert_snooze_until_ts <= ?)`,
+      )
+      .bind(...inClause.binds, nowSec, nowSec)
+      .all<LoadedSubscriberRow>();
+
+    for (const row of result.results ?? []) {
+      const rowKey = `${row.stablecoin_id}:${row.chat_id}`;
+      if (seen.has(rowKey)) continue;
+      seen.add(rowKey);
+      const existing = map.get(row.stablecoin_id) ?? [];
+      existing.push({
+        chat_id: row.chat_id,
+        last_active_at: row.last_active_at,
+        dews_min_band: row.dews_min_band ?? null,
+        safety_mode: row.safety_mode ?? null,
+        depeg_worsening_bps_step: row.depeg_worsening_bps_step ?? null,
+        quiet_hours_enabled: row.quiet_hours_enabled ?? 0,
+        quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
+        quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
+        timezone: row.timezone ?? null,
+        isGlobal: false,
+      });
+      map.set(row.stablecoin_id, existing);
+    }
   }
   return map;
 }
@@ -394,22 +431,24 @@ async function loadPerCoinSnoozeMap(
   const map = new Map<string, Set<string>>();
   const unique = Array.from(new Set(stablecoinIds));
   if (unique.length === 0) return map;
-  const placeholders = unique.map(() => "?").join(",");
   const nowSec = Math.floor(Date.now() / 1000);
-  const result = await db
-    .prepare(
-      `SELECT stablecoin_id, chat_id
-         FROM telegram_subscriptions
-        WHERE stablecoin_id IN (${placeholders})
-          AND alert_snooze_until_ts IS NOT NULL
-          AND alert_snooze_until_ts > ?`,
-    )
-    .bind(...unique, nowSec)
-    .all<{ stablecoin_id: string; chat_id: string }>();
-  for (const row of result.results ?? []) {
-    const existing = map.get(row.stablecoin_id) ?? new Set<string>();
-    existing.add(row.chat_id);
-    map.set(row.stablecoin_id, existing);
+  for (const idChunk of chunkArray(unique)) {
+    const inClause = buildInClause(idChunk);
+    const result = await db
+      .prepare(
+        `SELECT stablecoin_id, chat_id
+           FROM telegram_subscriptions
+          WHERE stablecoin_id IN (${inClause.sql})
+            AND alert_snooze_until_ts IS NOT NULL
+            AND alert_snooze_until_ts > ?`,
+      )
+      .bind(...inClause.binds, nowSec)
+      .all<{ stablecoin_id: string; chat_id: string }>();
+    for (const row of result.results ?? []) {
+      const existing = map.get(row.stablecoin_id) ?? new Set<string>();
+      existing.add(row.chat_id);
+      map.set(row.stablecoin_id, existing);
+    }
   }
   return map;
 }
@@ -635,32 +674,43 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
     const resolvedCandidateIds = [...previousActiveIds].filter((stablecoinId) => !currentActiveIds.has(stablecoinId));
     if (resolvedCandidateIds.length > 0) {
       throwIfAborted(signal);
-      const inClause = buildInClause(resolvedCandidateIds);
-      const resolvedRows = await db
-        .prepare(
-          `SELECT event.stablecoin_id, event.symbol, event.peak_deviation_bps, event.started_at, event.ended_at, event.recovery_price
-             FROM depeg_events event
-             JOIN (
-               SELECT stablecoin_id, MAX(ended_at) as ended_at
-                 FROM depeg_events
-                WHERE ended_at IS NOT NULL
-                  AND stablecoin_id IN (${inClause.sql})
-                GROUP BY stablecoin_id
-             ) latest
-               ON latest.stablecoin_id = event.stablecoin_id
-              AND latest.ended_at = event.ended_at`,
-        )
-        .bind(...inClause.binds)
-        .all<{
-          stablecoin_id: string;
-          symbol: string;
-          peak_deviation_bps: number;
-          started_at: number;
-          ended_at: number;
-          recovery_price: number | null;
-        }>();
+      const resolvedRows: Array<{
+        stablecoin_id: string;
+        symbol: string;
+        peak_deviation_bps: number;
+        started_at: number;
+        ended_at: number;
+        recovery_price: number | null;
+      }> = [];
+      for (const idChunk of chunkArray(resolvedCandidateIds)) {
+        const inClause = buildInClause(idChunk);
+        const chunkRows = await db
+          .prepare(
+            `SELECT event.stablecoin_id, event.symbol, event.peak_deviation_bps, event.started_at, event.ended_at, event.recovery_price
+               FROM depeg_events event
+               JOIN (
+                 SELECT stablecoin_id, MAX(ended_at) as ended_at
+                   FROM depeg_events
+                  WHERE ended_at IS NOT NULL
+                    AND stablecoin_id IN (${inClause.sql})
+                  GROUP BY stablecoin_id
+               ) latest
+                 ON latest.stablecoin_id = event.stablecoin_id
+                AND latest.ended_at = event.ended_at`,
+          )
+          .bind(...inClause.binds)
+          .all<{
+            stablecoin_id: string;
+            symbol: string;
+            peak_deviation_bps: number;
+            started_at: number;
+            ended_at: number;
+            recovery_price: number | null;
+          }>();
+        resolvedRows.push(...(chunkRows.results ?? []));
+      }
       const resolvedByStablecoinId = new Map(
-        (resolvedRows.results ?? []).map((row) => [row.stablecoin_id, row] as const),
+        resolvedRows.map((row) => [row.stablecoin_id, row] as const),
       );
 
       for (const stablecoinId of resolvedCandidateIds) {
@@ -831,7 +881,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       perCoinSnoozeMap,
     );
 
-    const subscriberQueue = buildSubscriberQueue(
+    let subscriberQueue = buildSubscriberQueue(
       alertsByChat,
       (entry) =>
         !hasEscalation(entry.alerts) ||
@@ -848,6 +898,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
     const freshCandidateChats = subscriberQueue.length;
     const freshCandidateCount = subscriberQueue.reduce((sum, sub) => sum + sub.chunks.length, 0);
     const alertJobManifests = await persistTelegramAlertJobManifests(db, subscriberQueue, nowSec);
+    subscriberQueue = await filterAlreadyTerminalSubscribers(db, subscriberQueue);
 
     const drainOnlyRiskPriority = freshCandidateCount > 0 ? TELEGRAM_PENDING_PRIORITY.riskAlert : null;
     const drainResult = await drainPendingQueue(

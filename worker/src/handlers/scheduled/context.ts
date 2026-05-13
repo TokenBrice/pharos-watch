@@ -9,6 +9,7 @@ import { createLeaseOwner, runCronWithLease, type CronLeaseOptions } from "../..
  * only fire 2–3 times, giving poor lease-loss detection.
  */
 const PER_JOB_LEASE_OPTIONS: Record<string, Pick<CronLeaseOptions, "heartbeatSec" | "maxRenewFailures">> = {
+  "dispatch-telegram-alerts": { heartbeatSec: 30, maxRenewFailures: 3 },
   "daily-digest": { heartbeatSec: 30, maxRenewFailures: 3 },
 };
 import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";

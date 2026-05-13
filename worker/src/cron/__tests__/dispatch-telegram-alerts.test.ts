@@ -596,6 +596,64 @@ describe("dispatchTelegramAlerts", () => {
     expect(resolvedLookupQueries[0]?.binds).toHaveLength(2);
   });
 
+  it("chunks resolved depeg and fan-out IN queries above 100 changed coins", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const ids = Array.from({ length: 101 }, (_, index) => `synthetic-${index}`);
+    const previousDepegSnapshot = Object.fromEntries(ids.map((stablecoinId, index) => [
+      stablecoinId,
+      {
+        symbol: `S${index}`,
+        direction: "below",
+        deviationBps: 125,
+        price: 0.9875,
+        pegReference: 1,
+      },
+    ]));
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") return { value: JSON.stringify({}), updatedAt: now - 60 };
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify(previousDepegSnapshot), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") return { value: JSON.stringify({}), updatedAt: now - 60 };
+      return null;
+    });
+
+    const resolvedRows = ids.map((stablecoinId, index) => ({
+      stablecoin_id: stablecoinId,
+      symbol: `S${index}`,
+      peak_deviation_bps: 125,
+      started_at: now - 3_600,
+      ended_at: now - 300,
+      recovery_price: 1,
+    }));
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM depeg_events event", rows: resolvedRows },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "sub.alert_depeg = 1", rows: [] },
+      { match: "WHERE global_alert_depeg = 1", rows: [] },
+      { match: "FROM telegram_subscriptions\n          WHERE stablecoin_id IN", rows: [] },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as { eventsDetected: { depegResolved: number } };
+
+    expect(metadata.eventsDetected.depegResolved).toBe(101);
+    const inQueries = db.getHistory().filter((entry) =>
+      entry.sql.includes("FROM depeg_events event") ||
+      entry.sql.includes("sub.alert_depeg = 1") ||
+      entry.sql.includes("FROM telegram_subscriptions\n          WHERE stablecoin_id IN")
+    );
+    expect(inQueries.length).toBeGreaterThanOrEqual(6);
+    expect(inQueries.every((entry) => entry.binds.length <= 100)).toBe(true);
+    const resolvedLookupQueries = inQueries.filter((entry) => entry.sql.includes("FROM depeg_events event"));
+    expect(resolvedLookupQueries.map((entry) => entry.binds.length)).toEqual([90, 11]);
+  });
+
   it("lets a per-coin DEWS threshold override a global all-stablecoin follow", async () => {
     const now = Math.floor(Date.now() / 1000);
 
@@ -1288,7 +1346,25 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
-      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [], runMeta: { changes: 5 } },
+      {
+        match: "SELECT id, chat_id, message_html",
+        rows: Array.from({ length: 5 }, (_, index) => ({
+          id: index + 1,
+          chat_id: `expired-${index}`,
+          message_html: "<b>Expired</b>",
+          created_at: now - 3_700,
+          attempts: 0,
+          last_error_class: null,
+          dedupe_key: `expired-${index}`,
+          chunk_index: 0,
+          priority: 50,
+          source_type: "risk_alert",
+          alert_type: "depeg",
+        })),
+      },
+      { match: "INSERT INTO telegram_alert_dead_letters", rows: [] },
+      { match: "UPDATE telegram_alert_job_targets", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [], runMeta: { changes: 5 } },
     ]);
 
     const result = await dispatchTelegramAlerts(db, "bot-token");
@@ -2101,7 +2177,7 @@ describe("dispatchTelegramAlerts", () => {
     // Chat C is a global DEWS subscriber AND has a per-coin snooze on usdc-circle.
     // The dispatcher must respect the per-coin snooze and skip the alert for C.
     const db = mockD1([
-      { match: "WHERE alert_snooze_until_ts IS NOT NULL", rows: [] },
+      { match: "FROM telegram_subscribers\n        WHERE alert_snooze_until_ts", rows: [] },
       {
         match: "FROM stress_signals",
         rows: [
@@ -2119,7 +2195,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now, now], rows: [] },
       // Per-coin snooze map query (loadPerCoinSnoozeMap): chat C is snoozed for usdc-circle.
       {
-        match: "SELECT stablecoin_id, chat_id\n         FROM telegram_subscriptions",
+        match: "FROM telegram_subscriptions\n          WHERE stablecoin_id IN",
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "C" }],
       },
       {

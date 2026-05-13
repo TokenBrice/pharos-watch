@@ -5,6 +5,7 @@ import {
   makeIdempotentAdminRoute,
 } from "../lib/route-wrappers";
 import { logAdminAction } from "../lib/admin-action-audit";
+import { clearPendingAlertsForAdmin } from "../cron/telegram-pending-queue";
 
 function parseOlderThanSec(raw: string | null): number | null {
   if (!raw) return null;
@@ -34,20 +35,12 @@ export const handleClearTelegramPending = makeIdempotentAdminRoute<AdminUrlRoute
       );
     }
 
+    const nowSec = Math.floor(Date.now() / 1000);
     let deleted = 0;
     if (chatId) {
-      const result = await db
-        .prepare("DELETE FROM telegram_pending_alerts WHERE chat_id = ?")
-        .bind(chatId)
-        .run();
-      deleted = result.meta?.changes ?? 0;
+      deleted = await clearPendingAlertsForAdmin(db, { chatId }, nowSec);
     } else if (olderThanSec != null) {
-      const cutoff = Math.floor(Date.now() / 1000) - olderThanSec;
-      const result = await db
-        .prepare("DELETE FROM telegram_pending_alerts WHERE created_at < ?")
-        .bind(cutoff)
-        .run();
-      deleted = result.meta?.changes ?? 0;
+      deleted = await clearPendingAlertsForAdmin(db, { olderThanCutoffSec: nowSec - olderThanSec }, nowSec);
     }
 
     await logAdminAction(

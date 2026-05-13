@@ -503,6 +503,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     triggerMode: "isolated",
     maxConnections: 0, // DB-only cascade DELETE per inactive chat
   },
+  {
+    job: "telegram-retention-cleanup",
+    label: "Telegram audit retention cleanup",
+    group: "daily",
+    intervalSec: DAY_SECONDS,
+    scheduleKey: "daily0300Utc",
+    triggerMode: "isolated",
+    maxConnections: 0, // DB-only retention DELETEs and target reconciliation
+  },
 ] as const;
 
 export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS_BASE.map((definition) => ({

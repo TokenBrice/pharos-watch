@@ -1,6 +1,18 @@
 import { D1_BATCH_SIZE } from "./constants";
 import { runWithOverloadRetry } from "./cron-lease";
 
+export const D1_MAX_BOUND_PARAMETERS = 100;
+export const D1_SAFE_IN_CLAUSE_BIND_LIMIT = 90;
+
+export function chunkArray<T>(values: readonly T[], chunkSize: number = D1_SAFE_IN_CLAUSE_BIND_LIMIT): T[][] {
+  if (chunkSize <= 0) throw new Error("chunkArray: chunkSize must be positive");
+  const chunks: T[][] = [];
+  for (let index = 0; index < values.length; index += chunkSize) {
+    chunks.push(values.slice(index, index + chunkSize));
+  }
+  return chunks;
+}
+
 /** Execute D1 prepared statements in chunks to stay within the batch limit */
 export async function batchExecute(
   db: D1Database,
@@ -39,6 +51,9 @@ export function buildPaginatedQuery(opts: { conditions: string[]; limit: number;
  */
 export function buildInClause(values: readonly unknown[]): { sql: string; binds: unknown[] } {
   if (values.length === 0) throw new Error("buildInClause: empty array");
+  if (values.length > D1_MAX_BOUND_PARAMETERS) {
+    throw new Error(`buildInClause: ${values.length} values exceeds D1 bound-parameter limit ${D1_MAX_BOUND_PARAMETERS}`);
+  }
   return {
     sql: new Array(values.length).fill("?").join(","),
     binds: [...values],

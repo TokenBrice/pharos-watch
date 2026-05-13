@@ -1,9 +1,11 @@
 import {
+  buildDedupeKey,
   enqueuePendingAlerts,
   pendingBackoffSec,
   setTelegramGlobalBackoff,
   type PendingDrainResult,
 } from "./telegram-pending-queue";
+import { recordTelegramAlertTargetStatuses, type TelegramAlertTargetStatusUpdate } from "./telegram-alert-target-status";
 import {
   deliverFreshAlerts,
   emptyPerAlertTypeDelivery,
@@ -94,6 +96,7 @@ export async function deliverTelegramSubscriberQueue({
     blockedChats,
     retryableFreshMessages,
     perAlertType,
+    targetStatusUpdates,
   } = await deliverFreshAlerts(
     db,
     sendList,
@@ -107,6 +110,7 @@ export async function deliverTelegramSubscriberQueue({
   const deferredChats = new Set(deferredPerChat.map((sub) => sub.chatId));
   const capacityOverflow = toEnqueue.filter((sub) => !deferredChats.has(sub.chatId));
   const overflowMessages = expandSubscriberChunks(capacityOverflow, blockedChats);
+  const queuedTargetStatusUpdates: TelegramAlertTargetStatusUpdate[] = [...targetStatusUpdates];
 
   // Attribute capacity-overflow enqueues to each subscriber's dominant alert
   // type. Retry-queued enqueues were already counted inside deliverFreshAlerts
@@ -118,6 +122,11 @@ export async function deliverTelegramSubscriberQueue({
 
   if (overflowMessages.length > 0) {
     await enqueuePendingAlerts(db, overflowMessages, nowSec, {});
+    queuedTargetStatusUpdates.push(...overflowMessages.map((message) => ({
+      targetKey: buildDedupeKey(message),
+      status: "queued" as const,
+      at: nowSec,
+    })));
   }
 
   for (const deferred of deferredPerChat) {
@@ -127,6 +136,11 @@ export async function deliverTelegramSubscriberQueue({
     await enqueuePendingAlerts(db, deferredMessages, nowSec, {
       notBeforeAt: chatsInBackoff.get(deferred.chatId) ?? null,
     });
+    queuedTargetStatusUpdates.push(...deferredMessages.map((message) => ({
+      targetKey: buildDedupeKey(message),
+      status: "queued" as const,
+      at: nowSec,
+    })));
   }
 
   let globalRateLimitNotBeforeAt: number | null = null;
@@ -146,6 +160,7 @@ export async function deliverTelegramSubscriberQueue({
     });
   }
   await setTelegramGlobalBackoff(db, globalRateLimitNotBeforeAt);
+  await recordTelegramAlertTargetStatuses(db, queuedTargetStatusUpdates);
 
   const cappedOverflow = toEnqueue.length - deferredPerChat.length;
 

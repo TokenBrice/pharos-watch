@@ -8,6 +8,7 @@ import {
 import { sendBatch, type BatchMessage, type BatchResult } from "../lib/telegram";
 import {
   SEND_BATCH_SIZE,
+  buildDedupeKey,
   disableBlockedSubscriber,
   registerSubscriberBlockAndShouldDisable,
   resetSubscriberBlockCount,
@@ -97,6 +98,12 @@ export interface FreshSendOutcome {
   blockedChats: Set<string>;
   retryableFreshMessages: Array<{ message: BatchMessage; result: BatchResult }>;
   perAlertType: PerAlertTypeDelivery;
+  targetStatusUpdates: Array<{
+    targetKey: string;
+    status: "queued" | "sent" | "failed" | "expired";
+    at: number;
+    errorClass?: string | null;
+  }>;
 }
 
 function emptyAlerts(): ConsolidatedAlerts {
@@ -274,6 +281,7 @@ export async function deliverFreshAlerts(
   let blockedUsersCleanedUp = blockedUsersCleanedUpSeed;
   let blockedUsersCleanupFailed = blockedUsersCleanupFailedSeed;
   const deliveryDiagnostics: Array<{ chatId: string; ok: boolean; errorClass?: string | null }> = [];
+  const targetStatusUpdates: FreshSendOutcome["targetStatusUpdates"] = [];
   const chatsResetThisRun = new Set<string>();
 
   for (let index = 0; index < sendResults.length; index += 1) {
@@ -290,6 +298,7 @@ export async function deliverFreshAlerts(
 
     if (result.ok) {
       deliveryDiagnostics.push({ chatId: result.chatId, ok: true });
+      targetStatusUpdates.push({ targetKey: buildDedupeKey(sendPlan), status: "sent", at: nowSec });
       freshSent++;
       if (!chatsResetThisRun.has(result.chatId)) {
         chatsResetThisRun.add(result.chatId);
@@ -306,6 +315,12 @@ export async function deliverFreshAlerts(
 
     if (result.blocked) {
       deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
+      targetStatusUpdates.push({
+        targetKey: buildDedupeKey(sendPlan),
+        status: "failed",
+        at: nowSec,
+        errorClass: result.errorClass ?? "blocked",
+      });
       if (!blockedChats.has(result.chatId)) {
         blockedChats.add(result.chatId);
         const shouldDisable = await registerSubscriberBlockAndShouldDisable(db, result.chatId, nowSec);
@@ -324,9 +339,21 @@ export async function deliverFreshAlerts(
     if (result.retryable) {
       deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
       retryableFreshMessages.push({ message: sendPlan, result });
+      targetStatusUpdates.push({
+        targetKey: buildDedupeKey(sendPlan),
+        status: "queued",
+        at: nowSec,
+        errorClass: result.errorClass ?? null,
+      });
       if (bucket) bucket.enqueued++;
     } else {
       deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
+      targetStatusUpdates.push({
+        targetKey: buildDedupeKey(sendPlan),
+        status: "failed",
+        at: nowSec,
+        errorClass: result.errorClass ?? null,
+      });
       freshPermanentFailures++;
       if (bucket) bucket.failed++;
     }
@@ -351,5 +378,6 @@ export async function deliverFreshAlerts(
     blockedChats,
     retryableFreshMessages,
     perAlertType,
+    targetStatusUpdates,
   };
 }

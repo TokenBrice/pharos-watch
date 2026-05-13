@@ -124,6 +124,7 @@ export async function persistTelegramAlertJobManifests(
         action: "persist-alert-job-manifest",
         module: "telegram-alert-jobs",
       });
+      throw error;
     }
   }
 

@@ -389,6 +389,41 @@ describe("drainPendingQueue", () => {
     expect(deleteCall!.binds).toContain(10);
   });
 
+  it("chunks 101 successful pending deletes below the D1 bind limit", async () => {
+    mockSendToChat.mockResolvedValue({
+      ok: true, blocked: false, retryable: false, permanentFailure: false,
+      statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null,
+    });
+
+    const rows = Array.from({ length: 101 }, (_, index) => ({
+      id: index + 1,
+      chat_id: `chat-${index}`,
+      message_html: `<b>Sent ${index}</b>`,
+      disable_notification: 0,
+      created_at: 1000,
+      attempts: 0,
+      dedupe_key: `key-${index}`,
+      chunk_index: 0,
+      last_error_class: null,
+    }));
+    const db = mockD1([
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows },
+      { match: "UPDATE telegram_subscribers", rows: [] },
+      { match: "UPDATE telegram_alert_job_targets", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+    ]);
+
+    const result = await drainPendingQueue(db, "bot-token", 101);
+
+    expect(result.sent).toBe(101);
+    const deletes = db.getHistory().filter((entry) =>
+      entry.sql.includes("DELETE FROM telegram_pending_alerts WHERE id IN")
+    );
+    expect(deletes).toHaveLength(2);
+    expect(deletes.every((entry) => entry.binds.length <= 90)).toBe(true);
+    expect(deletes.map((entry) => entry.binds.length)).toEqual([90, 11]);
+  });
+
   it("records a first-strike 403 without zeroing alert flags and deletes the pending message", async () => {
     mockSendToChat.mockResolvedValue({
       ok: false, blocked: true, retryable: false, permanentFailure: true,
@@ -653,6 +688,7 @@ describe("drainPendingQueue", () => {
       null,
       TELEGRAM_PENDING_PRIORITY.legacy,
       null,
+      now,
       TELEGRAM_PENDING_PRIORITY.legacy,
       10,
     ]);
@@ -677,6 +713,7 @@ describe("drainPendingQueue", () => {
       TELEGRAM_PENDING_PRIORITY.riskAlert,
       TELEGRAM_PENDING_PRIORITY.legacy,
       TELEGRAM_PENDING_PRIORITY.riskAlert,
+      now,
       TELEGRAM_PENDING_PRIORITY.legacy,
       10,
     ]);
@@ -997,10 +1034,24 @@ describe("drainPendingQueue", () => {
       expect(attemptedChats.has(chatId)).toBe(true);
     }
 
-    // Expired-row cleanup: simulate the production sweep. cleanupExpiredPendingAlerts
-    // would delete the 100 expired rows on its own statement.
+    // Expired-row cleanup: simulate the production sweep. Expired rows are
+    // dead-lettered before chunked terminal deletes.
+    const expiredRows = allRows
+      .filter((row) => row.created_at < now - PENDING_TTL_SEC)
+      .map((row) => ({
+        ...row,
+        last_error_class: null,
+        dedupe_key: `expired-${row.id}`,
+        chunk_index: 0,
+        priority: TELEGRAM_PENDING_PRIORITY.legacy,
+        source_type: "risk_alert",
+        alert_type: "depeg",
+      }));
     const cleanupDb = mockD1([
-      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [], runMeta: { changes: 100 } },
+      { match: "SELECT id, chat_id, message_html", rows: expiredRows },
+      { match: "INSERT INTO telegram_alert_dead_letters", rows: [] },
+      { match: "UPDATE telegram_alert_job_targets", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [], runMeta: { changes: 100 } },
     ]);
     const expired = await cleanupExpiredPendingAlerts(cleanupDb, now);
     expect(expired).toBe(100);
@@ -1212,8 +1263,24 @@ describe("loadChatsInBackoff", () => {
 describe("cleanupExpiredPendingAlerts", () => {
   it("deletes alerts older than PENDING_TTL_SEC", async () => {
     const nowSec = 5000;
+    const expiredRows = [1, 2, 3].map((id) => ({
+      id,
+      chat_id: `chat-${id}`,
+      message_html: "<b>Expired</b>",
+      created_at: nowSec - PENDING_TTL_SEC - 1,
+      attempts: 0,
+      last_error_class: null,
+      dedupe_key: `key-${id}`,
+      chunk_index: 0,
+      priority: TELEGRAM_PENDING_PRIORITY.legacy,
+      source_type: "risk_alert",
+      alert_type: "depeg",
+    }));
     const db = mockD1([
-      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [], runMeta: { changes: 3 } },
+      { match: "SELECT id, chat_id, message_html", rows: expiredRows },
+      { match: "INSERT INTO telegram_alert_dead_letters", rows: [] },
+      { match: "UPDATE telegram_alert_job_targets", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [], runMeta: { changes: 3 } },
     ]);
 
     const expired = await cleanupExpiredPendingAlerts(db, nowSec);
@@ -1222,8 +1289,7 @@ describe("cleanupExpiredPendingAlerts", () => {
     const history = db.getHistory();
     const deleteCall = history.find((e) => e.sql.includes("DELETE FROM telegram_pending_alerts"));
     expect(deleteCall).toBeDefined();
-    // Cutoff = nowSec - PENDING_TTL_SEC = 5000 - 3600 = 1400
-    expect(deleteCall!.binds[0]).toBe(nowSec - PENDING_TTL_SEC);
+    expect(deleteCall!.binds).toEqual([1, 2, 3]);
   });
 
   it("returns 0 when no alerts expired", async () => {
@@ -1231,5 +1297,33 @@ describe("cleanupExpiredPendingAlerts", () => {
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [], runMeta: { changes: 0 } },
     ]);
     expect(await cleanupExpiredPendingAlerts(db, 5000)).toBe(0);
+  });
+
+  it("fails closed when expired alerts cannot be dead-lettered", async () => {
+    const nowSec = 5000;
+    const db = mockD1([
+      {
+        match: "SELECT id, chat_id, message_html",
+        rows: [{
+          id: 1,
+          chat_id: "chat-1",
+          message_html: "<b>Expired</b>",
+          created_at: nowSec - PENDING_TTL_SEC - 1,
+          attempts: 0,
+          last_error_class: null,
+          dedupe_key: "key-1",
+          chunk_index: 0,
+          priority: TELEGRAM_PENDING_PRIORITY.legacy,
+          source_type: "risk_alert",
+          alert_type: "depeg",
+        }],
+      },
+      { match: "INSERT INTO telegram_alert_dead_letters", rows: [], throwError: new Error("D1 write failed") },
+    ]);
+
+    expect(await cleanupExpiredPendingAlerts(db, nowSec)).toBe(0);
+    expect(db.getHistory().some((entry) =>
+      entry.sql.includes("DELETE FROM telegram_pending_alerts")
+    )).toBe(false);
   });
 });
