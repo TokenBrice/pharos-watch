@@ -26,6 +26,12 @@ export function GoogleAnalytics({ measurementId }: GoogleAnalyticsProps) {
     window.gtag = function gtag(...args: unknown[]) {
       window.dataLayer?.push(args);
     };
+    window.gtag("consent", "default", {
+      ad_storage: "granted",
+      analytics_storage: "granted",
+      ad_user_data: "granted",
+      ad_personalization: "granted",
+    });
     window.gtag("js", new Date());
     window.gtag("config", measurementId, { send_page_view: false });
 
