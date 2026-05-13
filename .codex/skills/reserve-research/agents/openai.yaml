@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reserve Research"
+  short_description: "Research stablecoin reserve composition"
+  default_prompt: "Use $reserve-research to research reserve composition for this stablecoin and add a sourced reserves array."

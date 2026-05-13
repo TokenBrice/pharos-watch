@@ -1,0 +1,67 @@
+---
+name: stablecoin-info-fetch
+description: Verify and populate per-coin metadata fields for a tracked stablecoin in the Pharos dashboard, including collateral, peg mechanism, jurisdiction, links, `geckoId`, `cmcSlug`, `contracts`, and `proofOfReserves`. Use when adding a stablecoin, filling metadata gaps, or auditing entries in `shared/data/stablecoins/coins/*.json` for one coin at a time.
+---
+
+# Stablecoin Info Fetch
+
+Verify one coin's metadata with structured APIs and primary sources first, then patch the matching JSON entry under `shared/data/stablecoins/coins/*.json` with the smallest defensible diff.
+
+## Read First
+
+- Read the current entry in `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json` for a canonical runtime view).
+- Treat the runtime stablecoin re-export as import-only; tracked metadata edits belong in the per-coin JSON registry and must match `shared/lib/stablecoins/schema.ts`.
+- If the asset is dead/cemetery-only, use `shared/data/dead-stablecoins.json` and `DeadStablecoinAssetSchema` instead of this tracked-metadata workflow.
+- Read `shared/lib/chains.ts` if contracts may change.
+- Read `docs/classification.md` or `docs/data-pipeline.md` only when those rules are directly relevant.
+- Do not change `flags`, `id`, `name`, `symbol`, `detailProvider`, `status`, or `commodityOunces` unless the user explicitly asked.
+
+## Fields In Scope
+
+- `collateral`
+- `pegMechanism`
+- `jurisdiction`
+- `links`
+- `geckoId`
+- `cmcSlug`
+- `contracts`
+- `proofOfReserves`
+
+## Workflow
+
+1. Run `stablecoin-runtime-price-marketcap-gate` before active additions or pre-launch promotions; metadata completeness does not prove runtime price + market-cap fetchability.
+
+2. Read the current coin entry and list missing or suspect fields.
+
+3. Gather sources in parallel when possible:
+- DefiLlama stablecoin detail by `llamaId`
+- CoinGecko search API for slug discovery
+- CoinGecko coin detail API for links, categories, and `detail_platforms`
+- official site, docs, transparency page, legal page
+- explorer APIs for contract verification
+- secondary reporting only when official material is incomplete
+
+4. Prefer structured APIs over page scraping. Use browser/web fallback only when the needed information is not available in an API response.
+
+5. Verify fields:
+- `collateral`: specific assets, not marketing copy
+- `pegMechanism`: how the peg actually holds
+- `jurisdiction`: only for centralized or centralized-dependent coins
+- `links`: use stable labels such as `Website`, `Twitter`, `Docs`, `GitHub`, `Proof of Reserve`
+- `geckoId`: confirm via search plus coin detail, not by guessing
+- `cmcSlug`: add only when genuinely needed for price fallback
+- `contracts`: verify name, symbol, and decimals before adding
+- `proofOfReserves`: store `{ type, url, provider? }`
+
+6. If DefiLlama reports meaningful supply on a chain that is missing from `contracts`, treat that as a gap signal and use `contract-populate` or `contract-enrich` style verification.
+
+7. Patch the coin's per-coin JSON file with minimal edits. If adding a new tracked coin, also keep `shared/data/stablecoins/canonical-order.json` aligned and regenerate `shared/data/stablecoins/coins.generated.json`.
+
+8. Regenerate `shared/data/stablecoins/coins.generated.json` and run `npm run check:stablecoin-data`; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`. Do not treat `npm run build` alone as sufficient.
+
+## Guardrails
+
+- Do not add speculative metadata.
+- Use `x.com` links, not `twitter.com`, unless the project itself still uses a different canonical URL.
+- Lowercase EVM addresses; preserve canonical case for non-EVM chains.
+- If sources conflict, keep the current value unless a stronger primary source clearly wins.
