@@ -1,6 +1,6 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98` (2026-02-18 -> 2026-05-12).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.99` (2026-02-18 -> 2026-05-13).
 
 ---
 
