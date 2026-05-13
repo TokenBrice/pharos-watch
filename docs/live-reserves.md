@@ -435,6 +435,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `usdd-data-platform`       | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `usdh-native-markets`      | `http-html`                                      | `attestation-mix`                                     | 1                |
 | `yamato`                   | `onchain-evm`                                    | `single-asset`                                        | 1                |
+| `zephyr-scanner`           | `http-json`                                      | `protocol-reserve`                                    | 1                |
 
 `reserve-protocol-dtf` keeps its legacy Reserve discovery API path for
 timestampless fallback reads, but score-grade configs can use the direct
@@ -464,6 +465,7 @@ Current unbound registered adapters are explicit:
 | Adapter                | Status   | Rationale                                                                                                            | Parked since | Next review |
 | ---------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- | ------------ | ----------- |
 | `buck-io-transparency` | `parked` | BUCK.fi transparency implementation is retained, but no tracked active coin currently binds it.                      | 2026-05-12   | 2026-11-12  |
+| `centrifuge-vault`     | `parked` | Centrifuge vault implementation is retained, but tracked Anemoy/JTRSY coverage now uses Chainlink NAV.               | 2026-05-12   | 2026-11-12  |
 | `tether`               | `parked` | Tether issuer summary adapter is retained, while current Tether assets use curated-validated or single-asset probes. | 2026-05-12   | 2026-11-12  |
 
 `parked` and `retired` adapters carry `parkedSince` and `nextReview` ISO dates in `shared/lib/live-reserve-adapter-provenance.ts`. Default cadence is a six-month review window; when `nextReview` passes, the adapter is up for one of: revival under an active coin binding, status downgrade to `retired`, or full removal alongside its tests and fixtures. The registry test asserts both fields are populated for every non-active entry.
