@@ -1230,12 +1230,10 @@ export function buildStopContinuationReason(contract) {
 }
 
 function hasStopObligations(contract) {
-  return contract.changedFiles.length > 0 && (
-    contract.families.length > 0
-    || contract.checks.length > 0
-    || contract.docsLikelyRequired.length > 0
-    || contract.warnings.length > 0
-  );
+  if (contract.changedFiles.length === 0) return false;
+  // Only nudge for medium/high-risk families. Low-risk-only changes (e.g.
+  // doc-only edits) don't justify a continuation turn or post-tool reminder.
+  return contract.families.some((family) => family.risk === "medium" || family.risk === "high");
 }
 
 function readHookInput() {

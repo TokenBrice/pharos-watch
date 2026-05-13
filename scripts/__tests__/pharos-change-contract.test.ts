@@ -191,6 +191,14 @@ describe("Codex hook outputs", () => {
     expect(output.reason).toContain("npm run check:cron-sync");
   });
 
+  it("does not block Stop or emit a reminder for low-risk-only changes", () => {
+    const contract = classifyChangedFiles(["docs/scripts.md"]);
+    expect(contract.families.every((family) => family.risk === "low")).toBe(true);
+
+    expect(buildStopHookOutput(contract)).toEqual({ continue: true });
+    expect(buildPostToolUseHookOutput(contract, {}, { dedupe: false })).toEqual({ continue: true });
+  });
+
   it("injects PostToolUse reminders without auto-running checks", () => {
     const contract = classifyChangedFiles(["worker/src/cron/sync-yield-data.ts"]);
     const output = buildPostToolUseHookOutput(contract, {}, { dedupe: false });
