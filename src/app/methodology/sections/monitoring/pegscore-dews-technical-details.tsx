@@ -215,6 +215,11 @@ function DewsTechnicalDetails() {
           publication. After that, stale or missing core liquidity inputs are recorded as source failures. The cron
           still writes rows that meet signal coverage, then marks the run degraded instead of treating the missing input as startup noise.
         </p>
+        <p>
+          The Yield Anomaly sub-signal combines legacy warning strings with populated Yield Intelligence source-risk,
+          source-switch, and rank-attribution stress evidence. Neutral, missing, or malformed structured yield rows
+          remain unavailable rather than adding zero-stress signal weight.
+        </p>
       </div>
 
       <div className="hidden md:flex items-stretch gap-4">
