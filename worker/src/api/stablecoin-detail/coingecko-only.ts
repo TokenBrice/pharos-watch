@@ -9,7 +9,6 @@ import {
   type DetailResponseHelpers,
   DETAIL_UPSTREAM_MAX_RETRIES,
   DETAIL_UPSTREAM_TIMEOUT_MS,
-  isDetailHistoryFresh,
   logUpstreamException,
   logUpstreamFailure,
 } from "./shared";
@@ -20,7 +19,7 @@ async function fetchCoinGeckoOnlyTokens(config: {
   geckoId: string;
   pegType: string;
   coingeckoApiKey?: string | null;
-}): Promise<Record<string, unknown>[]> {
+}): Promise<{ tokens: Record<string, unknown>[]; upstreamOk: boolean }> {
   const apiKey = config.coingeckoApiKey ?? null;
   const cgRes = await fetchWithRetry(
     cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`, apiKey),
@@ -31,7 +30,7 @@ async function fetchCoinGeckoOnlyTokens(config: {
 
   if (!cgRes?.ok) {
     logUpstreamFailure("coingecko-market-chart", config.stablecoinId, cgRes?.status ?? "no-response");
-    return [];
+    return { tokens: [], upstreamOk: false };
   }
 
   const cgData = (await cgRes.json()) as {
@@ -40,11 +39,14 @@ async function fetchCoinGeckoOnlyTokens(config: {
   };
 
   const priceMap = buildPriceMapByDate(cgData.prices);
-  return buildTokenRowsFromMarketCaps(
-    cgData.market_caps ?? [],
-    config.pegType,
-    priceMap,
-  );
+  return {
+    tokens: buildTokenRowsFromMarketCaps(
+      cgData.market_caps ?? [],
+      config.pegType,
+      priceMap,
+    ),
+    upstreamOk: true,
+  };
 }
 
 export async function handleCoinGeckoOnlyDetail(
@@ -65,12 +67,11 @@ export async function handleCoinGeckoOnlyDetail(
   }
 
   try {
-    const upstreamTokens = await fetchCoinGeckoOnlyTokens(config);
-    const historyFresh = isDetailHistoryFresh(upstreamTokens);
+    const { tokens: upstreamTokens, upstreamOk } = await fetchCoinGeckoOnlyTokens(config);
     await recordOutcomeSafe(
       config.db,
       CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS,
-      upstreamTokens.length > 0 && historyFresh,
+      upstreamOk,
     );
 
     const tokens = await detail.resolveTokensWithSupplyHistoryFallback(upstreamTokens, {
