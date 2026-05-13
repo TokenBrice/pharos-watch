@@ -31,7 +31,12 @@ const AUDIT_DEPEG_HISTORY_DEFAULT_LIMIT = 25;
 const AUDIT_DEPEG_HISTORY_MAX_LIMIT = 25;
 const DELETE_ID_PATTERN = /^\d+$/;
 
-class AuditMutationCommitError extends Error {}
+class AuditMutationCommitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AuditMutationCommitError";
+  }
+}
 
 interface AuditedEvent {
   id: number;
@@ -103,6 +108,21 @@ interface ContradictoryRecoveryRepairResult {
   repairedEventCount: number;
 }
 
+interface ParsedAuditRequest {
+  limit: number;
+  offset: number;
+  minSupply: number;
+  deleteIds: number[] | null;
+  repairMode: RepairMode | null;
+  dryRun: boolean;
+  symbolFilter: string | null;
+}
+
+interface AuditMutationPlan {
+  statements: D1PreparedStatement[];
+  affectedDays: Set<number>;
+}
+
 function getAbsoluteDeviationBps(price: number | null | undefined, pegReference: number): number | null {
   if (price == null || !Number.isFinite(price) || price <= 0 || !Number.isFinite(pegReference) || pegReference <= 0) {
     return null;
@@ -121,6 +141,92 @@ function parseDeleteIds(value: string): number[] | Response {
     return errorResponse(400, "Invalid delete parameter: expected positive event IDs");
   }
   return ids;
+}
+
+function parseRepairMode(value: string | null): RepairMode | null | Response {
+  if (value == null || value.length === 0) return null;
+  if (value === "synthetic-splits" || value === "contradictory-recovery-price") return value;
+  return errorResponse(400, `Unsupported repair mode: ${value}`);
+}
+
+function parseAuditRequest(url: URL, request?: Request): ParsedAuditRequest | Response {
+  const parsed = parseQueryParams(url.searchParams, {
+    limit: {
+      type: "int",
+      default: AUDIT_DEPEG_HISTORY_DEFAULT_LIMIT,
+      min: 1,
+      max: AUDIT_DEPEG_HISTORY_MAX_LIMIT,
+      rangePolicy: "reject",
+    },
+    offset: { type: "int", default: 0, min: 0, max: 100_000 },
+    "min-supply": { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER, name: "min-supply" },
+  });
+  if (parsed instanceof Response) return parsed;
+
+  const deleteParam = url.searchParams.get("delete");
+  const hasDeleteParam = deleteParam != null;
+  const repairMode = parseRepairMode(url.searchParams.get("repair"));
+  if (repairMode instanceof Response) return repairMode;
+  if (hasDeleteParam && repairMode) {
+    return errorResponse(400, "Use either delete=... or repair=..., not both");
+  }
+
+  const dryRun = url.searchParams.get("dry-run") === "true";
+  const method = request?.method ?? "GET";
+  if (method === "GET" && !dryRun) {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed. GET supports dry-run=true only; use POST for mutations." }),
+      { status: 405, headers: { "Content-Type": "application/json", Allow: "POST" } },
+    );
+  }
+
+  const deleteIds = deleteParam == null ? null : parseDeleteIds(deleteParam);
+  if (deleteIds instanceof Response) return deleteIds;
+
+  return {
+    limit: parsed.limit,
+    offset: parsed.offset,
+    minSupply: parsed["min-supply"],
+    deleteIds,
+    repairMode,
+    dryRun,
+    symbolFilter: url.searchParams.get("symbol")?.toUpperCase() ?? null,
+  };
+}
+
+async function loadClosedDepegEvents(db: D1Database): Promise<DepegRow[]> {
+  const allClosedEvents = await db
+    .prepare(
+      "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at",
+    )
+    .all<DepegRow>();
+  return allClosedEvents.results ?? [];
+}
+
+async function loadAllDepegEvents(db: D1Database): Promise<DepegRow[]> {
+  const allEvents = await db
+    .prepare(
+      "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events ORDER BY stablecoin_id, started_at",
+    )
+    .all<DepegRow>();
+  return allEvents.results ?? [];
+}
+
+function toDeletedEventSummary(event: DepegRow): { id: number; symbol: string; startedAt: number; peakBps: number } {
+  return {
+    id: event.id,
+    symbol: event.symbol,
+    startedAt: event.started_at,
+    peakBps: event.peak_deviation_bps,
+  };
+}
+
+function addAffectedDays(affectedDays: Set<number>, startedAt: number, endedAt: number): void {
+  const startDay = Math.floor(startedAt / DAY_SECONDS) * DAY_SECONDS;
+  const endDay = Math.floor(endedAt / DAY_SECONDS) * DAY_SECONDS;
+  for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
+    affectedDays.add(day);
+  }
 }
 
 function isSyntheticSplitPair(previous: DepegRow, next: DepegRow): boolean {
@@ -415,6 +521,183 @@ async function commitAuditMutation(
   return recompute.daysRecomputed;
 }
 
+function planDirectDelete(db: D1Database, events: DepegRow[]): AuditMutationPlan {
+  const affectedDays = new Set<number>();
+  const statements = events.map((event) => {
+    addAffectedDays(affectedDays, event.started_at, event.ended_at ?? event.started_at);
+    console.log(`[audit] Direct delete: ${event.symbol} id=${event.id} peak=${event.peak_deviation_bps}bps`);
+    return db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(event.id);
+  });
+  return { statements, affectedDays };
+}
+
+async function executeDirectDelete(
+  db: D1Database,
+  events: DepegRow[],
+  deleteIds: readonly number[],
+  dryRun: boolean,
+): Promise<Response> {
+  const toDelete = events.filter((event) => deleteIds.includes(event.id));
+  if (toDelete.length === 0) {
+    return errorResponse(404, "No matching events found");
+  }
+
+  if (dryRun) {
+    return jsonResponse({
+      dryRun: true,
+      deletedEvents: toDelete.map(toDeletedEventSummary),
+      daysRecomputed: 0,
+    });
+  }
+
+  const mutationPlan = planDirectDelete(db, toDelete);
+  const remainingDepegEvents = await loadRemainingDepegEvents(db, toDelete.map((event) => event.id));
+  const daysRecomputed = await commitAuditMutation(
+    db,
+    mutationPlan.statements,
+    "Direct delete failed before the stability-index repair could finish",
+    { affectedDays: mutationPlan.affectedDays, remainingDepegEvents },
+  );
+
+  return jsonResponse({
+    dryRun: false,
+    deletedEvents: toDelete.map(toDeletedEventSummary),
+    daysRecomputed,
+  });
+}
+
+function planSyntheticSplitRepair(
+  db: D1Database,
+  groups: DepegRow[][],
+  now: number,
+): AuditMutationPlan & { summaries: SyntheticSplitRepairSummary[]; repairedEventCount: number } {
+  const affectedDays = new Set<number>();
+  const statements: D1PreparedStatement[] = [];
+  const summaries: SyntheticSplitRepairSummary[] = [];
+  let repairedEventCount = 0;
+
+  for (const group of groups) {
+    const summary = summarizeSyntheticSplitGroup(group);
+    const keeper = pickSyntheticSplitKeeper(group);
+    const first = group[0];
+    const tail = group[group.length - 1];
+    let worst = keeper;
+    for (const row of group) {
+      if (Math.abs(row.peak_deviation_bps) > Math.abs(worst.peak_deviation_bps)) {
+        worst = row;
+      }
+    }
+
+    statements.push(
+      db
+        .prepare(
+          "UPDATE depeg_events SET started_at = ?, start_price = ?, peg_reference = ?, peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ? WHERE id = ?",
+        )
+        .bind(
+          first.started_at,
+          first.start_price,
+          first.peg_reference,
+          worst.peak_deviation_bps,
+          worst.peak_price ?? worst.start_price,
+          tail.ended_at,
+          tail.ended_at == null ? null : tail.recovery_price,
+          keeper.id,
+        ),
+    );
+    for (const row of group) {
+      if (row.id === keeper.id) continue;
+      statements.push(db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(row.id));
+    }
+
+    addAffectedDays(affectedDays, summary.startedAt, summary.endedAt ?? now);
+    summaries.push(summary);
+    repairedEventCount += summary.mergedIds.length;
+  }
+
+  return { statements, affectedDays, summaries, repairedEventCount };
+}
+
+async function executeSyntheticSplitRepair(
+  db: D1Database,
+  request: Pick<ParsedAuditRequest, "limit" | "offset" | "dryRun" | "symbolFilter">,
+): Promise<Response> {
+  const allRows = await loadAllDepegEvents(db);
+  const groupedCandidates = collectSyntheticSplitGroups(
+    allRows.filter((event) => (request.symbolFilter ? event.symbol.toUpperCase() === request.symbolFilter : true)),
+  );
+  const paginatedGroups = groupedCandidates.slice(request.offset, request.offset + request.limit);
+  const result: SyntheticSplitRepairResult = {
+    repair: "synthetic-splits",
+    totalMatching: groupedCandidates.length,
+    offset: request.offset,
+    limit: request.limit,
+    dryRun: request.dryRun,
+    candidateGroups: paginatedGroups.map((group) => summarizeSyntheticSplitGroup(group)),
+    repairedGroups: [],
+    repairedEventCount: 0,
+    daysRecomputed: 0,
+  };
+
+  if (request.dryRun || paginatedGroups.length === 0) {
+    return jsonResponse(result);
+  }
+
+  const mutationPlan = planSyntheticSplitRepair(db, paginatedGroups, Math.floor(Date.now() / 1000));
+  result.repairedGroups = mutationPlan.summaries;
+  result.repairedEventCount = mutationPlan.repairedEventCount;
+  result.daysRecomputed = await commitAuditMutation(
+    db,
+    mutationPlan.statements,
+    "Synthetic split repair failed before the stability-index repair could finish",
+    {
+      affectedDays: mutationPlan.affectedDays,
+      remainingDepegEvents: projectSyntheticSplitDepegEvents(allRows, paginatedGroups),
+    },
+  );
+  return jsonResponse(result);
+}
+
+function findContradictoryRecoveryCandidates(
+  events: DepegRow[],
+  symbolFilter: string | null,
+): ContradictoryRecoveryRepairSummary[] {
+  return events
+    .filter((event) => (symbolFilter ? event.symbol.toUpperCase() === symbolFilter : true))
+    .map((event) => summarizeContradictoryRecoveryEvent(event))
+    .filter((event): event is ContradictoryRecoveryRepairSummary => event !== null);
+}
+
+async function executeContradictoryRecoveryRepair(
+  db: D1Database,
+  events: DepegRow[],
+  request: Pick<ParsedAuditRequest, "limit" | "offset" | "dryRun" | "symbolFilter">,
+): Promise<Response> {
+  const filteredCandidates = findContradictoryRecoveryCandidates(events, request.symbolFilter);
+  const paginatedCandidates = filteredCandidates.slice(request.offset, request.offset + request.limit);
+  const result: ContradictoryRecoveryRepairResult = {
+    repair: "contradictory-recovery-price",
+    totalMatching: filteredCandidates.length,
+    offset: request.offset,
+    limit: request.limit,
+    dryRun: request.dryRun,
+    candidateEvents: paginatedCandidates,
+    repairedEvents: [],
+    repairedEventCount: 0,
+  };
+
+  if (request.dryRun || paginatedCandidates.length === 0) {
+    return jsonResponse(result);
+  }
+
+  const statements = paginatedCandidates.map((candidate) =>
+    db.prepare("UPDATE depeg_events SET recovery_price = NULL WHERE id = ?").bind(candidate.id)
+  );
+  await commitAuditMutation(db, statements, "Contradictory recovery-price repair failed");
+  result.repairedEvents = paginatedCandidates;
+  result.repairedEventCount = paginatedCandidates.length;
+  return jsonResponse(result);
+}
+
 export async function handleAuditDepegHistory(
   db: D1Database,
   url: URL,
@@ -425,238 +708,30 @@ export async function handleAuditDepegHistory(
     request,
     async () => {
       try {
-        // Pagination + supply filter
-        const parsed = parseQueryParams(url.searchParams, {
-          limit: {
-            type: "int",
-            default: AUDIT_DEPEG_HISTORY_DEFAULT_LIMIT,
-            min: 1,
-            max: AUDIT_DEPEG_HISTORY_MAX_LIMIT,
-            rangePolicy: "reject",
-          },
-          offset: { type: "int", default: 0, min: 0, max: 100_000 },
-          "min-supply": { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER, name: "min-supply" },
-        });
-        if (parsed instanceof Response) return parsed;
-        const { limit, offset } = parsed;
-        const minSupply = parsed["min-supply"];
-        // Direct delete: ?delete=ID1,ID2 skips CG checks and deletes specified events
-        const deleteParam = url.searchParams.get("delete");
-        const hasDeleteParam = deleteParam != null;
-        const repairModeRaw = url.searchParams.get("repair");
-        const repairMode: RepairMode | null =
-          repairModeRaw === "synthetic-splits"
-            ? "synthetic-splits"
-            : repairModeRaw === "contradictory-recovery-price"
-              ? "contradictory-recovery-price"
-              : null;
-        if (repairModeRaw && repairMode == null) {
-          return errorResponse(400, `Unsupported repair mode: ${repairModeRaw}`);
-        }
-        if (hasDeleteParam && repairMode) {
-          return errorResponse(400, "Use either delete=... or repair=..., not both");
-        }
-        // Dry run: preview deletions without touching the DB
-        const dryRun = url.searchParams.get("dry-run") === "true";
-        const method = request?.method ?? "GET";
-        if (method === "GET" && !dryRun) {
-          return new Response(
-            JSON.stringify({ error: "Method not allowed. GET supports dry-run=true only; use POST for mutations." }),
-            { status: 405, headers: { "Content-Type": "application/json", Allow: "POST" } },
-          );
-        }
-        // Optional symbol filter: ?symbol=USDC (case-insensitive)
-        const symbolFilter = url.searchParams.get("symbol")?.toUpperCase() ?? null;
-        const deleteIds = deleteParam == null ? null : parseDeleteIds(deleteParam);
-        if (deleteIds instanceof Response) return deleteIds;
+        const auditRequest = parseAuditRequest(url, request);
+        if (auditRequest instanceof Response) return auditRequest;
 
-        const allClosedEvents = await db
-          .prepare(
-            "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at",
-          )
-          .all<DepegRow>();
-        const events = allClosedEvents.results ?? [];
-
-        // Fast path: direct delete of specific event IDs (pre-verified externally)
-        if (deleteIds) {
-          const toDelete = events.filter((e) => deleteIds.includes(e.id));
-          if (toDelete.length === 0) {
-            return errorResponse(404, "No matching events found");
-          }
-
-          if (dryRun) {
-            return jsonResponse({
-              dryRun: true,
-              deletedEvents: toDelete.map((e) => ({
-                id: e.id,
-                symbol: e.symbol,
-                startedAt: e.started_at,
-                peakBps: e.peak_deviation_bps,
-              })),
-              daysRecomputed: 0,
-            });
-          }
-
-          const affectedDays = new Set<number>();
-          const deleteStatements = toDelete.map((event) => {
-            const startDay = Math.floor(event.started_at / DAY_SECONDS) * DAY_SECONDS;
-            const endDay = Math.floor((event.ended_at ?? event.started_at) / DAY_SECONDS) * DAY_SECONDS;
-            for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
-              affectedDays.add(day);
-            }
-            console.log(`[audit] Direct delete: ${event.symbol} id=${event.id} peak=${event.peak_deviation_bps}bps`);
-            return db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(event.id);
-          });
-          const remainingDepegEvents = await loadRemainingDepegEvents(db, toDelete.map((event) => event.id));
-          const daysRecomputed = await commitAuditMutation(
-            db,
-            deleteStatements,
-            "Direct delete failed before the stability-index repair could finish",
-            { affectedDays, remainingDepegEvents },
-          );
-
-          return jsonResponse({
-            dryRun: false,
-            deletedEvents: toDelete.map((e) => ({
-              id: e.id,
-              symbol: e.symbol,
-              startedAt: e.started_at,
-              peakBps: e.peak_deviation_bps,
-            })),
-            daysRecomputed,
-          });
+        if (auditRequest.repairMode === "synthetic-splits") {
+          return await executeSyntheticSplitRepair(db, auditRequest);
         }
 
-        if (repairMode === "synthetic-splits") {
-          const liveAndClosedOrOpen = await db
-            .prepare(
-              "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events ORDER BY stablecoin_id, started_at",
-            )
-            .all<DepegRow>();
-          const allRows = liveAndClosedOrOpen.results ?? [];
-          const groupedCandidates = collectSyntheticSplitGroups(
-            allRows.filter((event) =>
-              symbolFilter ? event.symbol.toUpperCase() === symbolFilter : true,
-            ),
-          );
-          const paginatedGroups = groupedCandidates.slice(offset, offset + limit);
-          const result: SyntheticSplitRepairResult = {
-            repair: repairMode,
-            totalMatching: groupedCandidates.length,
-            offset,
-            limit,
-            dryRun,
-            candidateGroups: paginatedGroups.map((group) => summarizeSyntheticSplitGroup(group)),
-            repairedGroups: [],
-            repairedEventCount: 0,
-            daysRecomputed: 0,
-          };
+        const events = await loadClosedDepegEvents(db);
 
-          if (dryRun || paginatedGroups.length === 0) {
-            return jsonResponse(result);
-          }
-
-          const affectedDays = new Set<number>();
-          const stmts: D1PreparedStatement[] = [];
-          const now = Math.floor(Date.now() / 1000);
-
-          for (const group of paginatedGroups) {
-            const summary = summarizeSyntheticSplitGroup(group);
-            const keeper = pickSyntheticSplitKeeper(group);
-            const first = group[0];
-            const tail = group[group.length - 1];
-            let worst = keeper;
-            for (const row of group) {
-              if (Math.abs(row.peak_deviation_bps) > Math.abs(worst.peak_deviation_bps)) {
-                worst = row;
-              }
-            }
-
-            stmts.push(
-              db
-                .prepare(
-                  "UPDATE depeg_events SET started_at = ?, start_price = ?, peg_reference = ?, peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ? WHERE id = ?",
-                )
-                .bind(
-                  first.started_at,
-                  first.start_price,
-                  first.peg_reference,
-                  worst.peak_deviation_bps,
-                  worst.peak_price ?? worst.start_price,
-                  tail.ended_at,
-                  tail.ended_at == null ? null : tail.recovery_price,
-                  keeper.id,
-                ),
-            );
-            for (const row of group) {
-              if (row.id === keeper.id) continue;
-              stmts.push(db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(row.id));
-            }
-
-            const startDay = Math.floor(summary.startedAt / DAY_SECONDS) * DAY_SECONDS;
-            const endTs = summary.endedAt ?? now;
-            const endDay = Math.floor(endTs / DAY_SECONDS) * DAY_SECONDS;
-            for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
-              affectedDays.add(day);
-            }
-
-            result.repairedGroups.push(summary);
-            result.repairedEventCount += summary.mergedIds.length;
-          }
-
-          result.daysRecomputed = await commitAuditMutation(
-            db,
-            stmts,
-            "Synthetic split repair failed before the stability-index repair could finish",
-            {
-              affectedDays,
-              remainingDepegEvents: projectSyntheticSplitDepegEvents(allRows, paginatedGroups),
-            },
-          );
-          return jsonResponse(result);
+        if (auditRequest.deleteIds) {
+          return await executeDirectDelete(db, events, auditRequest.deleteIds, auditRequest.dryRun);
         }
 
-        if (repairMode === "contradictory-recovery-price") {
-          const filteredCandidates = events
-            .filter((event) => (symbolFilter ? event.symbol.toUpperCase() === symbolFilter : true))
-            .map((event) => summarizeContradictoryRecoveryEvent(event))
-            .filter((event): event is ContradictoryRecoveryRepairSummary => event !== null);
-          const paginatedCandidates = filteredCandidates.slice(offset, offset + limit);
-          const result: ContradictoryRecoveryRepairResult = {
-            repair: repairMode,
-            totalMatching: filteredCandidates.length,
-            offset,
-            limit,
-            dryRun,
-            candidateEvents: paginatedCandidates,
-            repairedEvents: [],
-            repairedEventCount: 0,
-          };
-
-          if (dryRun || paginatedCandidates.length === 0) {
-            return jsonResponse(result);
-          }
-
-          const stmts = paginatedCandidates.map((candidate) =>
-            db.prepare("UPDATE depeg_events SET recovery_price = NULL WHERE id = ?").bind(candidate.id)
-          );
-          await commitAuditMutation(
-            db,
-            stmts,
-            "Contradictory recovery-price repair failed",
-          );
-          result.repairedEvents = paginatedCandidates;
-          result.repairedEventCount = paginatedCandidates.length;
-          return jsonResponse(result);
+        if (auditRequest.repairMode === "contradictory-recovery-price") {
+          return await executeContradictoryRecoveryRepair(db, events, auditRequest);
         }
 
         const result = await auditEvents(db, {
           events,
-          minSupply,
-          symbolFilter,
-          offset,
-          limit,
-          dryRun,
+          minSupply: auditRequest.minSupply,
+          symbolFilter: auditRequest.symbolFilter,
+          offset: auditRequest.offset,
+          limit: auditRequest.limit,
+          dryRun: auditRequest.dryRun,
         });
 
         return jsonResponse(result);

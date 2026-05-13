@@ -6,8 +6,22 @@ type BuildStablecoinDetailViewModelParams = Parameters<typeof buildStablecoinDet
 
 type BuildStablecoinDetailViewModelOverrides = {
   core?: Partial<BuildStablecoinDetailViewModelParams["core"]>;
-  queries?: Partial<BuildStablecoinDetailViewModelParams["queries"]>;
-  supplemental?: Partial<BuildStablecoinDetailViewModelParams["supplemental"]>;
+  queries?: {
+    supplyHistory?: Partial<BuildStablecoinDetailViewModelParams["queries"]["supplyHistory"]>;
+    stablecoinList?: Partial<BuildStablecoinDetailViewModelParams["queries"]["stablecoinList"]>;
+    pegSummary?: Partial<BuildStablecoinDetailViewModelParams["queries"]["pegSummary"]>;
+    dexLiquidity?: Partial<BuildStablecoinDetailViewModelParams["queries"]["dexLiquidity"]>;
+    reportCards?: Partial<BuildStablecoinDetailViewModelParams["queries"]["reportCards"]>;
+    redemptionBackstops?: Partial<BuildStablecoinDetailViewModelParams["queries"]["redemptionBackstops"]>;
+  };
+  supplemental?: {
+    yieldRankingsData?: BuildStablecoinDetailViewModelParams["supplemental"]["yieldRankingsData"];
+    stressSignalsData?: BuildStablecoinDetailViewModelParams["supplemental"]["stressSignalsData"];
+    flows?: Partial<BuildStablecoinDetailViewModelParams["supplemental"]["flows"]>;
+    blacklist?: Partial<BuildStablecoinDetailViewModelParams["supplemental"]["blacklist"]>;
+    reserves?: Partial<BuildStablecoinDetailViewModelParams["supplemental"]["reserves"]>;
+    nowMs?: number;
+  };
 };
 
 function makeBuildStablecoinDetailViewModelParams(
@@ -25,43 +39,69 @@ function makeBuildStablecoinDetailViewModelParams(
       ...overrides.core,
     },
     queries: {
-      supplyData: [],
-      supplyLoading: false,
-      supplyError: null,
-      listData: { peggedAssets: [] } as never,
-      listLoading: false,
-      listError: null,
-      isListError: false,
-      listUpdatedAt: 0,
-      listMeta: null,
-      pegSummaryData: undefined,
-      pegUpdatedAt: 0,
-      pegError: null,
-      pegMeta: null,
-      liquidityMap: undefined,
-      liqUpdatedAt: 0,
-      liquidityError: null,
-      liquidityMeta: null,
-      reportCardsData: undefined,
-      rcUpdatedAt: 0,
-      reportCardsError: null,
-      reportCardsMeta: null,
-      redemptionBackstopsData: undefined,
-      rbUpdatedAt: 0,
-      redemptionBackstopsError: null,
-      redemptionBackstopsMeta: null,
-      ...overrides.queries,
+      supplyHistory: {
+        data: [],
+        isLoading: false,
+        error: null,
+        ...overrides.queries?.supplyHistory,
+      },
+      stablecoinList: {
+        data: { peggedAssets: [] } as never,
+        isLoading: false,
+        isError: false,
+        error: null,
+        dataUpdatedAt: 0,
+        meta: null,
+        ...overrides.queries?.stablecoinList,
+      },
+      pegSummary: {
+        data: undefined,
+        dataUpdatedAt: 0,
+        error: null,
+        meta: null,
+        ...overrides.queries?.pegSummary,
+      },
+      dexLiquidity: {
+        data: undefined,
+        dataUpdatedAt: 0,
+        error: null,
+        meta: null,
+        ...overrides.queries?.dexLiquidity,
+      },
+      reportCards: {
+        data: undefined,
+        dataUpdatedAt: 0,
+        error: null,
+        meta: null,
+        ...overrides.queries?.reportCards,
+      },
+      redemptionBackstops: {
+        data: undefined,
+        dataUpdatedAt: 0,
+        error: null,
+        meta: null,
+        ...overrides.queries?.redemptionBackstops,
+      },
     },
     supplemental: {
-      yieldRankingsData: undefined,
-      stressSignalsData: undefined,
-      flowsData: undefined,
-      isFlowsLoading: false,
-      blacklistSummary: undefined,
-      isBlacklistLoading: false,
-      liveReserves: null,
-      liveReserveError: null,
-      ...overrides.supplemental,
+      flows: {
+        data: undefined,
+        isLoading: false,
+        ...overrides.supplemental?.flows,
+      },
+      blacklist: {
+        summary: undefined,
+        isLoading: false,
+        ...overrides.supplemental?.blacklist,
+      },
+      reserves: {
+        live: null,
+        error: null,
+        ...overrides.supplemental?.reserves,
+      },
+      yieldRankingsData: overrides.supplemental?.yieldRankingsData,
+      stressSignalsData: overrides.supplemental?.stressSignalsData,
+      nowMs: overrides.supplemental?.nowMs,
     },
   };
 }
@@ -78,45 +118,55 @@ describe("stablecoin detail view-model builder", () => {
           coin: coin!,
         },
         queries: {
-          supplyData: [{ date: 1_700_000_000, circulatingUsd: 100, price: null }],
-          listData: {
-            peggedAssets: [
-              {
-                id: "usdt-tether",
-                name: "Tether",
-                symbol: "USDT",
-                pegType: "peggedUSD",
-                price: 1,
-                circulating: { peggedUSD: 100 },
-                circulatingPrevDay: { peggedUSD: 90 },
-                circulatingPrevWeek: { peggedUSD: 80 },
-                circulatingPrevMonth: { peggedUSD: 70 },
-              },
-            ],
-            fxFallbackRates: {},
-          } as never,
-          listUpdatedAt: 1,
-          pegSummaryData: {
-            summary: {} as never,
-            coins: [{ id: "usdt-tether", pegScore: 99 }],
-          } as never,
-          pegUpdatedAt: 1,
-          liquidityMap: {
-            "usdt-tether": { liquidityScore: 88 },
-          } as never,
-          liqUpdatedAt: 1,
-          reportCardsData: {
-            cards: [{ id: "usdt-tether", overallScore: 90, dimensions: {} }],
-            dependencyGraph: { nodes: [], edges: [] },
-          } as never,
-          rcUpdatedAt: 1,
+          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: null }] },
+          stablecoinList: {
+            data: {
+              peggedAssets: [
+                {
+                  id: "usdt-tether",
+                  name: "Tether",
+                  symbol: "USDT",
+                  pegType: "peggedUSD",
+                  price: 1,
+                  circulating: { peggedUSD: 100 },
+                  circulatingPrevDay: { peggedUSD: 90 },
+                  circulatingPrevWeek: { peggedUSD: 80 },
+                  circulatingPrevMonth: { peggedUSD: 70 },
+                },
+              ],
+              fxFallbackRates: {},
+            } as never,
+            dataUpdatedAt: 1,
+          },
+          pegSummary: {
+            data: {
+              summary: {} as never,
+              coins: [{ id: "usdt-tether", pegScore: 99 }],
+            } as never,
+            dataUpdatedAt: 1,
+          },
+          dexLiquidity: {
+            data: {
+              "usdt-tether": { liquidityScore: 88 },
+            } as never,
+            dataUpdatedAt: 1,
+          },
+          reportCards: {
+            data: {
+              cards: [{ id: "usdt-tether", overallScore: 90, dimensions: {} }],
+              dependencyGraph: { nodes: [], edges: [] },
+            } as never,
+            dataUpdatedAt: 1,
+          },
         },
         supplemental: {
-          flowsData: {
-            gauge: { score: 0, band: "neutral" },
-            coins: [{ stablecoinId: "usdt-tether" }],
-            hourly: [],
-          } as never,
+          flows: {
+            data: {
+              gauge: { score: 0, band: "neutral" },
+              coins: [{ stablecoinId: "usdt-tether" }],
+              hourly: [],
+            } as never,
+          },
           nowMs: 1_700_000_000_000,
         },
       }),
@@ -146,24 +196,26 @@ describe("stablecoin detail view-model builder", () => {
           coin: coin!,
         },
         queries: {
-          supplyData: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }],
-          listData: {
-            peggedAssets: [
-              {
-                id: "usdc-circle",
-                name: "USD Coin",
-                symbol: "USDC",
-                pegType: "peggedUSD",
-                price: 1,
-                circulating: { peggedUSD: 100 },
-                circulatingPrevDay: { peggedUSD: 95 },
-                circulatingPrevWeek: { peggedUSD: 90 },
-                circulatingPrevMonth: { peggedUSD: 85 },
-              },
-            ],
-            fxFallbackRates: {},
-          } as never,
-          listUpdatedAt: 1,
+          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }] },
+          stablecoinList: {
+            data: {
+              peggedAssets: [
+                {
+                  id: "usdc-circle",
+                  name: "USD Coin",
+                  symbol: "USDC",
+                  pegType: "peggedUSD",
+                  price: 1,
+                  circulating: { peggedUSD: 100 },
+                  circulatingPrevDay: { peggedUSD: 95 },
+                  circulatingPrevWeek: { peggedUSD: 90 },
+                  circulatingPrevMonth: { peggedUSD: 85 },
+                },
+              ],
+              fxFallbackRates: {},
+            } as never,
+            dataUpdatedAt: 1,
+          },
         },
         supplemental: {
           yieldRankingsData: {
@@ -219,24 +271,26 @@ describe("stablecoin detail view-model builder", () => {
           coin: variant!,
         },
         queries: {
-          supplyData: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }],
-          listData: {
-            peggedAssets: [
-              {
-                id: "susds-sky",
-                name: "Sky Savings USDS",
-                symbol: "sUSDS",
-                pegType: "peggedUSD",
-                price: 1.02,
-                circulating: { peggedUSD: 100 },
-                circulatingPrevDay: { peggedUSD: 98 },
-                circulatingPrevWeek: { peggedUSD: 96 },
-                circulatingPrevMonth: { peggedUSD: 92 },
-              },
-            ],
-            fxFallbackRates: {},
-          } as never,
-          listUpdatedAt: 1,
+          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }] },
+          stablecoinList: {
+            data: {
+              peggedAssets: [
+                {
+                  id: "susds-sky",
+                  name: "Sky Savings USDS",
+                  symbol: "sUSDS",
+                  pegType: "peggedUSD",
+                  price: 1.02,
+                  circulating: { peggedUSD: 100 },
+                  circulatingPrevDay: { peggedUSD: 98 },
+                  circulatingPrevWeek: { peggedUSD: 96 },
+                  circulatingPrevMonth: { peggedUSD: 92 },
+                },
+              ],
+              fxFallbackRates: {},
+            } as never,
+            dataUpdatedAt: 1,
+          },
         },
       }),
     );
@@ -254,24 +308,26 @@ describe("stablecoin detail view-model builder", () => {
           coin: parent!,
         },
         queries: {
-          supplyData: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }],
-          listData: {
-            peggedAssets: [
-              {
-                id: "usds-sky",
-                name: "Sky Dollar",
-                symbol: "USDS",
-                pegType: "peggedUSD",
-                price: 1,
-                circulating: { peggedUSD: 100 },
-                circulatingPrevDay: { peggedUSD: 99 },
-                circulatingPrevWeek: { peggedUSD: 98 },
-                circulatingPrevMonth: { peggedUSD: 97 },
-              },
-            ],
-            fxFallbackRates: {},
-          } as never,
-          listUpdatedAt: 1,
+          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }] },
+          stablecoinList: {
+            data: {
+              peggedAssets: [
+                {
+                  id: "usds-sky",
+                  name: "Sky Dollar",
+                  symbol: "USDS",
+                  pegType: "peggedUSD",
+                  price: 1,
+                  circulating: { peggedUSD: 100 },
+                  circulatingPrevDay: { peggedUSD: 99 },
+                  circulatingPrevWeek: { peggedUSD: 98 },
+                  circulatingPrevMonth: { peggedUSD: 97 },
+                },
+              ],
+              fxFallbackRates: {},
+            } as never,
+            dataUpdatedAt: 1,
+          },
         },
       }),
     );
@@ -295,24 +351,26 @@ describe("stablecoin detail view-model builder", () => {
           coin: coin!,
         },
         queries: {
-          supplyData: [{ date: 1_700_000_000, circulatingUsd: 100, price: 3_000 }],
-          listData: {
-            peggedAssets: [
-              {
-                id: "xaut-tether",
-                name: "Tether Gold",
-                symbol: "XAUT",
-                pegType: "peggedGOLD",
-                price: 3_000,
-                circulating: { peggedGOLD: 100 },
-                circulatingPrevDay: { peggedGOLD: 98 },
-                circulatingPrevWeek: { peggedGOLD: 96 },
-                circulatingPrevMonth: { peggedGOLD: 92 },
-              },
-            ],
-            fxFallbackRates: { peggedGOLD: 3_000 },
-          } as never,
-          listUpdatedAt: 1,
+          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 3_000 }] },
+          stablecoinList: {
+            data: {
+              peggedAssets: [
+                {
+                  id: "xaut-tether",
+                  name: "Tether Gold",
+                  symbol: "XAUT",
+                  pegType: "peggedGOLD",
+                  price: 3_000,
+                  circulating: { peggedGOLD: 100 },
+                  circulatingPrevDay: { peggedGOLD: 98 },
+                  circulatingPrevWeek: { peggedGOLD: 96 },
+                  circulatingPrevMonth: { peggedGOLD: 92 },
+                },
+              ],
+              fxFallbackRates: { peggedGOLD: 3_000 },
+            } as never,
+            dataUpdatedAt: 1,
+          },
         },
         supplemental: {
           yieldRankingsData: {
@@ -369,27 +427,31 @@ describe("stablecoin detail view-model builder", () => {
           coin: coin!,
         },
         queries: {
-          supplyData: [
-            { date: anchorSec, circulatingUsd: 98, price: 0.98 },
-            { date: nowSec - 7 * 24 * 60 * 60, circulatingUsd: 110, price: 1.1 },
-          ],
-          listData: {
-            peggedAssets: [
-              {
-                id: "zchf-frankencoin",
-                name: "Frankencoin",
-                symbol: "ZCHF",
-                pegType: "peggedCHF",
-                price: 1.12,
-                circulating: { peggedCHF: 100 },
-                circulatingPrevDay: { peggedCHF: 99 },
-                circulatingPrevWeek: { peggedCHF: 97 },
-                circulatingPrevMonth: { peggedCHF: 95 },
-              },
+          supplyHistory: {
+            data: [
+              { date: anchorSec, circulatingUsd: 98, price: 0.98 },
+              { date: nowSec - 7 * 24 * 60 * 60, circulatingUsd: 110, price: 1.1 },
             ],
-            fxFallbackRates: { peggedCHF: 1.12 },
-          } as never,
-          listUpdatedAt: 1,
+          },
+          stablecoinList: {
+            data: {
+              peggedAssets: [
+                {
+                  id: "zchf-frankencoin",
+                  name: "Frankencoin",
+                  symbol: "ZCHF",
+                  pegType: "peggedCHF",
+                  price: 1.12,
+                  circulating: { peggedCHF: 100 },
+                  circulatingPrevDay: { peggedCHF: 99 },
+                  circulatingPrevWeek: { peggedCHF: 97 },
+                  circulatingPrevMonth: { peggedCHF: 95 },
+                },
+              ],
+              fxFallbackRates: { peggedCHF: 1.12 },
+            } as never,
+            dataUpdatedAt: 1,
+          },
         },
         supplemental: {
           nowMs: nowSec * 1000,
@@ -417,27 +479,31 @@ describe("stablecoin detail view-model builder", () => {
           coin: coin!,
         },
         queries: {
-          supplyData: [
-            { date: anchorSec, circulatingUsd: 100, price: 0.05 },
-            { date: nowSec - 7 * 24 * 60 * 60, circulatingUsd: 120, price: 0.06 },
-          ],
-          listData: {
-            peggedAssets: [
-              {
-                id: "cetes-etherfuse",
-                name: "Etherfuse CETES",
-                symbol: "CETES",
-                pegType: "peggedMXN",
-                price: 0.061,
-                circulating: { peggedMXN: 100 },
-                circulatingPrevDay: { peggedMXN: 99 },
-                circulatingPrevWeek: { peggedMXN: 97 },
-                circulatingPrevMonth: { peggedMXN: 95 },
-              },
+          supplyHistory: {
+            data: [
+              { date: anchorSec, circulatingUsd: 100, price: 0.05 },
+              { date: nowSec - 7 * 24 * 60 * 60, circulatingUsd: 120, price: 0.06 },
             ],
-            fxFallbackRates: { peggedMXN: 0.061 },
-          } as never,
-          listUpdatedAt: 1,
+          },
+          stablecoinList: {
+            data: {
+              peggedAssets: [
+                {
+                  id: "cetes-etherfuse",
+                  name: "Etherfuse CETES",
+                  symbol: "CETES",
+                  pegType: "peggedMXN",
+                  price: 0.061,
+                  circulating: { peggedMXN: 100 },
+                  circulatingPrevDay: { peggedMXN: 99 },
+                  circulatingPrevWeek: { peggedMXN: 97 },
+                  circulatingPrevMonth: { peggedMXN: 95 },
+                },
+              ],
+              fxFallbackRates: { peggedMXN: 0.061 },
+            } as never,
+            dataUpdatedAt: 1,
+          },
         },
         supplemental: {
           nowMs: nowSec * 1000,
@@ -462,8 +528,10 @@ describe("stablecoin detail view-model builder", () => {
           coin: coin!,
         },
         queries: {
-          listData: { peggedAssets: [] } as never,
-          listUpdatedAt: 1,
+          stablecoinList: {
+            data: { peggedAssets: [] } as never,
+            dataUpdatedAt: 1,
+          },
         },
       }),
     );
@@ -482,27 +550,29 @@ describe("stablecoin detail view-model builder", () => {
           coin: coin!,
         },
         queries: {
-          supplyData: [{ date: 1_700_000_000, circulatingUsd: 100, price: null }],
-          listData: {
-            peggedAssets: [
-              {
-                id: "iusd-infinifi",
-                name: "iUSD",
-                symbol: "iUSD",
-                pegType: "peggedUSD",
-                price: 1,
-                circulating: { peggedUSD: 100 },
-                circulatingPrevDay: { peggedUSD: 90 },
-                circulatingPrevWeek: { peggedUSD: 80 },
-                circulatingPrevMonth: { peggedUSD: 70 },
-              },
-            ],
-            fxFallbackRates: {},
-          } as never,
-          listUpdatedAt: 1,
+          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: null }] },
+          stablecoinList: {
+            data: {
+              peggedAssets: [
+                {
+                  id: "iusd-infinifi",
+                  name: "iUSD",
+                  symbol: "iUSD",
+                  pegType: "peggedUSD",
+                  price: 1,
+                  circulating: { peggedUSD: 100 },
+                  circulatingPrevDay: { peggedUSD: 90 },
+                  circulatingPrevWeek: { peggedUSD: 80 },
+                  circulatingPrevMonth: { peggedUSD: 70 },
+                },
+              ],
+              fxFallbackRates: {},
+            } as never,
+            dataUpdatedAt: 1,
+          },
         },
         supplemental: {
-          liveReserveError: new Error("reserve api failed"),
+          reserves: { error: new Error("reserve api failed") },
           nowMs: 1_700_000_000_000,
         },
       }),
