@@ -24,6 +24,18 @@ function weightedAverage(
   return rows.reduce((sum, row) => sum + row.value * row.tvlUsd, 0) / totalTvlUsd;
 }
 
+function commonPoolValue(
+  pools: DlPool[],
+  readValue: (pool: DlPool) => string | null | undefined,
+): string | undefined {
+  const values = new Set(
+    pools
+      .map((pool) => readValue(pool))
+      .filter((value): value is string => typeof value === "string" && value.length > 0),
+  );
+  return values.size === 1 ? [...values][0] : undefined;
+}
+
 export function buildWeightedYieldPoolGroupSource(
   config: WeightedYieldPoolGroupConfig,
   dlPools: DlPool[],
@@ -51,5 +63,7 @@ export function buildWeightedYieldPoolGroupSource(
     sourceKey: config.sourceKey,
     yieldSource: config.yieldSource,
     yieldType: config.yieldType,
+    project: commonPoolValue(pools, (pool) => pool.project),
+    chain: commonPoolValue(pools, (pool) => pool.chain),
   };
 }

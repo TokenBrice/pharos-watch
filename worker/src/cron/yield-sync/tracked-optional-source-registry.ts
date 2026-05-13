@@ -34,7 +34,7 @@ interface TrackedOptionalSourceEntry {
   run: (context: TrackedOptionalSourceContext) => Promise<ResolvedYield | null>;
 }
 
-async function loadOndoOracleAnchorRow(
+export async function loadOndoOracleAnchorRow(
   db: D1Database,
   startSec: number,
 ): Promise<{ exchange_rate: number; recorded_at: number } | null> {
@@ -45,6 +45,7 @@ async function loadOndoOracleAnchorRow(
          AND exchange_rate IS NOT NULL
          AND recorded_at <= ?
          AND recorded_at >= ?
+         AND (publication_generation_id IS NULL OR publication_state = 'published')
        ORDER BY recorded_at DESC LIMIT 1`,
     )
     .bind(ONDO_USDY_ID, startSec - 7 * DAY_SECONDS, startSec - 45 * DAY_SECONDS)
@@ -59,6 +60,7 @@ async function loadOndoOracleAnchorRow(
          AND exchange_rate IS NOT NULL
          AND recorded_at <= ?
          AND recorded_at >= ?
+         AND (publication_generation_id IS NULL OR publication_state = 'published')
        ORDER BY recorded_at DESC LIMIT 1`,
     )
     .bind(ONDO_USDY_ID, startSec - 3 * DAY_SECONDS, startSec - 14 * DAY_SECONDS)

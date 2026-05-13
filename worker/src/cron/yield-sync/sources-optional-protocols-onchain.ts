@@ -105,10 +105,20 @@ export async function fetchBprotocolLqtyOnlySource(
     );
 
     for (const rpcUrl of rpcUrls) {
-      const [lusdDeposits, lqtyIssued] = await Promise.all([
-        fetchEthCallUint256(rpcUrl, "ethereum", LIQUITY_STABILITY_POOL, LIQUITY_TOTAL_LUSD_DEPOSITS_SELECTOR, signal),
-        fetchEthCallUint256(rpcUrl, "ethereum", LIQUITY_COMMUNITY_ISSUANCE, LIQUITY_TOTAL_LQTY_ISSUED_SELECTOR, signal),
-      ]);
+      const lusdDeposits = await fetchEthCallUint256(
+        rpcUrl,
+        "ethereum",
+        LIQUITY_STABILITY_POOL,
+        LIQUITY_TOTAL_LUSD_DEPOSITS_SELECTOR,
+        signal,
+      );
+      const lqtyIssued = await fetchEthCallUint256(
+        rpcUrl,
+        "ethereum",
+        LIQUITY_COMMUNITY_ISSUANCE,
+        LIQUITY_TOTAL_LQTY_ISSUED_SELECTOR,
+        signal,
+      );
       if (lusdDeposits != null && lqtyIssued != null) {
         totalLusdDepositsRaw = lusdDeposits;
         totalLqtyIssuedRaw = lqtyIssued;

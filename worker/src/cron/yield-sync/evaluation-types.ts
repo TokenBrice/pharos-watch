@@ -17,6 +17,8 @@ export interface EvaluatedYieldSource {
   apyReward: number | null;
   sourcePool: string | null;
   sourceTvlUsd: number | null;
+  venueProtocol?: string | null;
+  venueChain?: string | null;
   sourceRisk: YieldSourceRisk | null;
   sourceRiskPenalty: number;
   sourceRiskPenaltyReason: PysSourceRiskPenaltyReason;

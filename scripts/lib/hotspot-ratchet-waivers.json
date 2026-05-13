@@ -59,9 +59,9 @@
     "disposition": "queued-p4",
     "notes": "Surfaced after frontend hotspot reductions. The pre-launch detail page still combines hero, readiness, source, and status rendering in one component; split page sections once the pre-launch surface changes again."
   },
-  "src/app/yield/client.tsx": {
+  "src/components/yield-leaderboard-table-row.tsx": {
     "disposition": "queued-p4",
-    "notes": "Surfaced after Phase 6 reduced larger hotspots. The yield client still combines filter state, table shaping, and interaction handling in one route shell; split view-model and table controls in the next yield UI cleanup pass."
+    "notes": "Yield leaderboard row rendering now owns rank, source, APY, score, warning, and expanded source-risk tooltip details. Keep waived for the v8 rollout; split score tooltip and mobile row content into focused helpers in the next yield UI cleanup pass."
   },
   "src/components/homepage-client.tsx": {
     "disposition": "queued-p4",
@@ -82,9 +82,5 @@
   "worker/src/cron/telegram-pending-queue.ts": {
     "disposition": "queued-p4",
     "notes": "Pending delivery queue owns drain selection, TTL/dead-letter handling, rate-limit backoff, two-strike blocked handling, and priority enqueue semantics. Keep waived until the durable sender promotion; then split subscriber lifecycle, enqueue/dedupe, and drain execution helpers."
-  },
-  "worker/src/api/telegram-webhook.ts": {
-    "disposition": "queued-p4",
-    "notes": "Webhook entrypoint expanded with processed-update idempotency, command cooldowns, usage analytics, group-admin denial telemetry, and reply diagnostics. Keep waived for the growth rollout; extract analytics instrumentation and command execution orchestration in the next Telegram decomposition pass."
   }
 }

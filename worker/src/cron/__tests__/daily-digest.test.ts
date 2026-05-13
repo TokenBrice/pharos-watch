@@ -1761,6 +1761,8 @@ describe("collectYieldAnomalies", () => {
     // Should be sorted by mcap * warnings.length descending
     expect(result![0].symbol).toBe("USDT");
     expect(result![0].warnings).toEqual(["spike", "divergence"]);
+    const yieldSql = db.getHistory().find((entry) => entry.sql.includes("FROM yield_data"))?.sql;
+    expect(yieldSql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
   });
 
   it("returns undefined when no rows have warnings", async () => {

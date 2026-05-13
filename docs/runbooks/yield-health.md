@@ -19,7 +19,7 @@ The admin Pipeline lane shows stale or degraded Yield Health. Public impact is l
 1. **Rankings cache:** inspect `yieldHealth.rankingUpdatedAt`, `rankingAgeSec`, and `rankingStatus` in `/api/status`.
 2. **Publisher cron:** inspect `crons["sync-yield-data"]` for latest status, error, metadata, and in-flight lease state.
 3. **Safety coverage:** inspect `yieldHealth.safetyCoverage`; coverage below `0.75` means read-time report-card hydration is sparse.
-4. **Supplemental cache:** inspect `yieldHealth.supplemental`; age above 6h means optional source families may be sparse.
+4. **Supplemental cache:** inspect `yieldHealth.supplemental`; `familyCount`, `freshFamilyCount`, `degradedFamilyCount`, `staleFamilyCount`, `missingFamilyCount`, and `families` identify which optional source families are stale or absent. Age above 6h means optional source families may be sparse.
 5. **Benchmark:** inspect `yieldHealth.benchmark`; fallback or age above 48h means retained benchmark data is driving yield context.
 6. **Coverage audit:** inspect `yieldHealth.coverageAudit`; age above 45d means the monthly coverage review is late.
 
@@ -34,6 +34,7 @@ Access-gated surfaces:
 SELECT key, updated_at, length(value) AS bytes
 FROM cache
 WHERE key IN ('yield-rankings', 'yield:supplemental-sources:v1', 'yield-coverage-audit')
+   OR key LIKE 'yield:supplemental-sources:v1:%'
 ORDER BY key;
 ```
 

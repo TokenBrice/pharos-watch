@@ -86,6 +86,7 @@ export async function loadStatusForCoin(
         `SELECT current_apy, apy_30d, yield_source, pharos_yield_score, updated_at
            FROM yield_data
           WHERE stablecoin_id = ? AND is_best = 1
+            AND (publication_generation_id IS NULL OR publication_state = 'published')
           ORDER BY pharos_yield_score DESC, apy_30d DESC
           LIMIT 1`,
       )

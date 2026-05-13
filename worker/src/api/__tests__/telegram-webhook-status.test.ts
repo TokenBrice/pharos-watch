@@ -76,5 +76,8 @@ describe("loadStatusForCoin", () => {
     const depegSql = history.find((s) => s.includes("FROM depeg_events"));
     expect(depegSql).toMatch(/\bpeak_deviation_bps\b/);
     expect(depegSql).toMatch(/\bpeg_reference\b/);
+
+    const yieldSql = history.find((s) => s.includes("FROM yield_data"));
+    expect(yieldSql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
   });
 });

@@ -16,6 +16,17 @@ function ageLabel(ageSec: number | null): string {
   return ageSec == null ? "unknown" : `${formatElapsedSeconds(ageSec)} ago`;
 }
 
+function supplementalSubtext(supplemental: YieldHealthSummary["supplemental"]): string {
+  if (supplemental.familyCount && supplemental.familyCount > 0) {
+    const fresh = supplemental.freshFamilyCount ?? 0;
+    const degraded = supplemental.degradedFamilyCount ?? 0;
+    const stale = supplemental.staleFamilyCount ?? 0;
+    const missing = supplemental.missingFamilyCount ?? 0;
+    return `${fresh}/${supplemental.familyCount} fresh · ${degraded} degraded · ${stale} stale · ${missing} missing`;
+  }
+  return ageLabel(supplemental.ageSec);
+}
+
 export function YieldHealthCard({
   health,
   error,
@@ -76,7 +87,7 @@ export function YieldHealthCard({
           <StatusMetricCard
             label="Supplemental"
             value={<span className={statusClassName(health.supplemental.status)}>{health.supplemental.status}</span>}
-            subtext={ageLabel(health.supplemental.ageSec)}
+            subtext={supplementalSubtext(health.supplemental)}
           />
           <StatusMetricCard
             label="Benchmark"

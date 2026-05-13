@@ -2260,6 +2260,7 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
     "dlPools": { "mode": "dex-cache", "ageSeconds": 240, "poolCount": 812 },
     "safetySnapshot": { "kind": "ok", "coverageRatio": 0.98 }
   },
+  "warnings": [],
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
 }
 ```
@@ -2273,6 +2274,7 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 | `medianApy`     | `number`         | TVL-weighted median APY (30d) across best-source rows, used as a peer reference in warning heuristics                                                     |
 | `updatedAt`     | `number`         | Unix seconds when the rankings were last computed                                                                                                         |
 | `provenance`    | `object \| null` | Snapshot-level provenance for default benchmark freshness, full benchmark registry, DeFiLlama pool input freshness, safety coverage, and selection method |
+| `warnings`      | `YieldResponseWarning[]` | Optional body-level warnings for degraded but still served payloads, such as live safety hydration gaps. Clients should surface these separately from row-level `warningSignals` |
 | `publication`   | `object \| null` | Optional publication metadata for generation-aware payloads; omitted on legacy payloads                                                                     |
 
 Optional v8 fields are nullable and omittable. Publication-generation fields are populated by the generation-aware publisher when available; legacy rows and old payloads may still omit them. Public source-risk values are nested under the `sourceRisk` object; flattened top-level fields such as `sourceRiskPenalty` or `rewardShare` are not part of the public API contract.
@@ -2284,6 +2286,7 @@ Optional v8 fields are nullable and omittable. Publication-generation fields are
 | `publication.cutoffAt`        | rankings/history root   | `number \| null \| undefined`                                                                                                           | Latest history timestamp approved for public reads |
 | `publication.schemaVersion`   | rankings/history root   | `number \| null \| undefined`                                                                                                           | Payload-generation schema version |
 | `publication.status`          | rankings/history root   | `"staged" \| "published" \| "failed" \| null \| undefined`                                                                              | Public payloads should expose `published`; staged/failed states are retained in D1 for operations |
+| `warnings[]`                  | rankings root           | `YieldResponseWarning[] \| undefined`                                                                                                   | Body-level degraded-response advisories; row source warnings remain in `warningSignals` |
 | `publicationGenerationId`     | ranking/history rows    | `string \| null \| undefined`                                                                                                           | Row-to-generation join identifier; `null` on legacy rows |
 | `publishedRank`               | ranking rows            | `integer >= 1 \| null \| undefined`                                                                                                     | Stable rank from the published cache order before live Safety Score hydration |
 | `liveRank`                    | ranking rows            | `integer >= 1 \| null \| undefined`                                                                                                     | Post-hydration rank assigned after live Safety Score recomputation |
@@ -3374,7 +3377,7 @@ When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue,
 
 `liquidityHealth` is derived from the latest `sync-dex-liquidity` cron metadata and summarizes row coverage, value coverage, major-asset coverage, failed sources, and current/previous coverage-class distribution for the operator dashboard.
 
-`yieldHealth` is derived only from existing yield cache rows and cron metadata: `yield-rankings`, `yield:supplemental-sources:v1`, `yield-coverage-audit`, and `crons["sync-yield-data"]`. `rankingStatus` follows the hourly `sync-yield-data` cache runway (`>8x` degraded, `>12x` stale); missing or stale rankings are public-critical because `/api/yield-rankings` and `/yield/` depend on them. Safety coverage is admin-watch unless it falls below `0.75`, supplemental cache age is admin-watch above 6h, benchmark age/fallback is admin-watch above 48h or any fallback mode, and coverage-audit age is admin-watch above 45d. `sourceRiskCoverage` reports backend-only coverage/null rates for nested `sourceRisk.*` fields across best and alternate ranking rows; `"unknown"` venue tiers count as null-equivalent coverage gaps. Loader failures return `yieldHealth: null` and `sectionErrors.yieldHealth`.
+`yieldHealth` is derived only from existing yield cache rows and cron metadata: `yield-rankings`, aggregate `yield:supplemental-sources:v1`, per-family `yield:supplemental-sources:v1:*`, `yield-coverage-audit`, and `crons["sync-yield-data"]`. `rankingStatus` follows the hourly `sync-yield-data` cache runway (`>8x` degraded, `>12x` stale); missing or stale rankings are public-critical because `/api/yield-rankings` and `/yield/` depend on them. Safety coverage is admin-watch unless it falls below `0.75`, supplemental family cache age is admin-watch above 6h, benchmark age/fallback is admin-watch above 48h or any fallback mode, and coverage-audit age is admin-watch above 45d. `yieldHealth.supplemental` reports `familyCount`, `freshFamilyCount`, `degradedFamilyCount`, `staleFamilyCount`, `missingFamilyCount`, and a `families` map keyed by source family with per-family age/source-count/status; when no per-family rows exist, aggregate supplemental age remains the fallback. `sourceRiskCoverage` reports backend-only coverage/null rates for nested `sourceRisk.*` fields across best and alternate ranking rows; `"unknown"` venue tiers count as null-equivalent coverage gaps. Loader failures return `yieldHealth: null` and `sectionErrors.yieldHealth`.
 
 `discoveryCandidates` exposes the current untracked-coverage backlog from `discovery_candidates`, ordered by market cap for the `/status` operator workflow.
 

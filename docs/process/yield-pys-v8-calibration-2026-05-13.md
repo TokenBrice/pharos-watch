@@ -1,8 +1,8 @@
-# Yield PYS v8 Calibration Artifact
+# Yield PYS v8 Golden Fixture Calibration Artifact
 
 Generated: 2026-05-13T17:55:00.000Z
 
-Scope: rollout calibration for the methodology v8 PYS source-risk layer. This artifact is evidence only and does not change runtime behavior.
+Scope: golden-fixture calibration for the methodology v8 PYS source-risk layer. This artifact proves source-risk driver behavior on controlled rows; it is not a production-universe calibration and does not change runtime behavior.
 
 ## Candidate Formula For Analysis
 
@@ -104,8 +104,9 @@ Rows analyzed: 9
 | negative-zero | zero or negative APY scores 0 and preserves deterministic rank behavior |
 | missing-safety | null safetyScore keeps existing default-safety behavior and records coverage |
 
-## Implementation Notes For PR 7
+## Production Calibration Status
 
-- Feed this script a saved `/api/yield-rankings` response after source-risk prototype fields exist.
+- Production-snapshot baseline evidence is recorded separately in `docs/process/yield-pys-v8-production-sample-calibration-2026-05-13.md`.
+- Regenerate a production report after the v8 publisher has emitted live `sourceRisk.*` fields to measure final rank churn with populated source-risk coverage.
 - Keep scratch calibration reports under `/agents/`; committed rollout evidence belongs under `docs/process/`.
-- Keep this report with the v8 rollout notes so score movements remain reviewable.
+- Keep this fixture report with the v8 rollout notes so source-risk driver behavior remains reviewable.

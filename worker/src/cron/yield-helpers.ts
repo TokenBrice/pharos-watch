@@ -324,7 +324,15 @@ export function findBestLendingPool(
     allowSymbolMatch?: boolean;
     reservedPoolIds?: Set<string>;
   },
-): { pool: string; apy: number; apyBase: number | null; apyReward: number | null; tvlUsd: number; project: string } | null {
+): {
+  pool: string;
+  apy: number;
+  apyBase: number | null;
+  apyReward: number | null;
+  tvlUsd: number;
+  project: string;
+  chain?: string;
+} | null {
   const symbolKey = normalizeDexSymbol(symbol);
   const minApy = options?.minApy ?? 0;
   const minTvlUsd = options?.minTvlUsd ?? 0;
@@ -359,6 +367,7 @@ export function findBestLendingPool(
       apyReward: best.apyReward,
       tvlUsd: best.tvlUsd,
       project: best.project,
+      chain: best.chain,
     };
   }
 
@@ -378,5 +387,6 @@ export function findBestLendingPool(
     apyReward: best.apyReward,
     tvlUsd: best.tvlUsd,
     project: best.project,
+    chain: best.chain,
   };
 }

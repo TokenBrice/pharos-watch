@@ -304,7 +304,10 @@ export async function collectYieldAnomalies(
       .prepare(
         `SELECT stablecoin_id, symbol, current_apy, apy_7d, apy_30d, warning_signals
          FROM yield_data
-         WHERE is_best = 1 AND warning_signals IS NOT NULL AND warning_signals != '[]'
+         WHERE is_best = 1
+           AND (publication_generation_id IS NULL OR publication_state = 'published')
+           AND warning_signals IS NOT NULL
+           AND warning_signals != '[]'
          ORDER BY current_apy DESC`,
       )
       .all<{

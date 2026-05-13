@@ -29,6 +29,7 @@ export interface ResolvedYield {
   yieldSource?: string;
   yieldType?: YieldType;
   project?: string;
+  chain?: string | null;
   sourceObservedAt?: number | null;
   comparisonAnchorObservedAt?: number | null;
   sourceRisk?: YieldSourceRisk | null;

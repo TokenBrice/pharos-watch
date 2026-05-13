@@ -230,6 +230,8 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         apyReward: y.apyReward,
         sourcePool: y.sourcePool,
         sourceTvlUsd: y.sourceTvlUsd,
+        venueProtocol: y.project ?? null,
+        venueChain: y.chain ?? null,
         sourceRisk: y.sourceRisk ?? null,
         sourceRiskPenalty: pysComponents.sourceRiskPenalty,
         sourceRiskPenaltyReason: pysComponents.sourceRiskPenaltyReason,

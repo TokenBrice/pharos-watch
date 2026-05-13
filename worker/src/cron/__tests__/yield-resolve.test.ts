@@ -268,13 +268,14 @@ vi.mock("../../lib/constants", () => ({
 
 import { syncYieldData } from "../sync-yield-data";
 import { batchExecute } from "../../lib/db";
-import { getCache, setCache } from "../../lib/db-cache";
+import { getCache, setCache, setCacheIfNewer } from "../../lib/db-cache";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 import * as safetyScoresModule from "../../lib/safety-scores";
 import * as yieldConfigModule from "../yield-config";
 import * as yieldSourcesModule from "../yield-sync/sources";
 import { appendOptionalYieldCandidate, type YieldCandidateAppendStatus } from "../yield-sync/resolve-helpers";
+import { loadOndoOracleAnchorRow } from "../yield-sync/tracked-optional-source-registry";
 import type { ResolvedYieldCandidate, ResolvedYieldEntry } from "../yield-sync/types";
 
 // --- Helpers ---
@@ -293,6 +294,7 @@ function makeDb() {
 function setupDefaultMocks() {
   vi.mocked(getCache).mockReset().mockResolvedValue(null);
   vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
+  vi.mocked(setCacheIfNewer).mockReset().mockResolvedValue({ written: true, skippedBecauseNewer: false });
   vi.mocked(batchExecute).mockReset().mockResolvedValue(0);
   vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
   vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue(
@@ -387,6 +389,16 @@ describe("yield source selection (confidence-weighted arbitration)", () => {
     expect(bestRow?.boundValues?.[25]).toBe(1);
     // data_source should be "defillama" (index 12)
     expect(bestRow?.boundValues?.[12]).toBe("defillama");
+
+    const rankingsCacheCall = vi.mocked(setCacheIfNewer).mock.calls.find((call) => call[1] === "yield-rankings");
+    expect(rankingsCacheCall).toBeDefined();
+    const rankingsPayload = JSON.parse(String(rankingsCacheCall?.[2])) as {
+      rankings: Array<{ id: string; sourceRisk?: { venueProtocol?: string | null; venueChain?: string | null } | null }>;
+    };
+    expect(rankingsPayload.rankings.find((row) => row.id === "sdai-maker")?.sourceRisk).toMatchObject({
+      venueProtocol: "maker",
+      venueChain: "Ethereum",
+    });
   });
 
   it("prefers deterministic rate-derived source over curated DeFiLlama when both available", async () => {
@@ -1237,8 +1249,28 @@ describe("on-chain rate bootstrapping seed", () => {
     );
     expect(historyRow).toBeDefined();
 
+    const anchorQuery = db.getHistory().find((entry) =>
+      entry.sql.includes("FROM yield_history") && entry.sql.includes("exchange_rate IS NOT NULL")
+    );
+    expect(anchorQuery?.sql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
+
     // Clean up
     configs.length = 0;
+  });
+});
+
+describe("tracked optional source anchors", () => {
+  it("filters Ondo oracle anchors to legacy or published yield history rows", async () => {
+    const nowSec = 1_747_000_000;
+    const db = mockD1([{ match: "FROM yield_history", rows: [], first: null }], { requireMatch: true });
+
+    await loadOndoOracleAnchorRow(db, nowSec);
+
+    const anchorQueries = db.getHistory().filter((entry) => entry.sql.includes("FROM yield_history"));
+    expect(anchorQueries).toHaveLength(2);
+    expect(anchorQueries.every((entry) =>
+      entry.sql.includes("publication_generation_id IS NULL OR publication_state = 'published'")
+    )).toBe(true);
   });
 });
 

@@ -68,8 +68,8 @@ export function buildYieldSourceRisk(params: {
     observationCount30d: params.source.observationCount30d ?? existing.observationCount30d ?? null,
     sourceSwitchCount30d: params.isBest ? params.source.sourceSwitchCount30d : null,
     deploymentPlace: existing.deploymentPlace ?? inferDeploymentPlace(params.source),
-    venueProtocol: existing.venueProtocol ?? inferVenueProtocol(params.source),
-    venueChain: existing.venueChain ?? inferVenueChain(params.source.sourceKey),
+    venueProtocol: existing.venueProtocol ?? params.source.venueProtocol ?? inferVenueProtocol(params.source),
+    venueChain: existing.venueChain ?? params.source.venueChain ?? inferVenueChain(params.source.sourceKey),
     venueRiskTier: existing.venueRiskTier ?? "unknown",
     investabilityFlags: existing.investabilityFlags ?? [],
   };

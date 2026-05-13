@@ -47,6 +47,32 @@ describe("buildTopMessage", () => {
     expect(db.getHistory()).toEqual([]);
   });
 
+  it("filters /top yield rows to legacy or published yield_data rows", async () => {
+    const db = mockD1([
+      {
+        match: "FROM yield_data",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            symbol: "USDC",
+            current_apy: 4.4,
+            apy_30d: 4.2,
+            yield_source: "Aave V3",
+            pharos_yield_score: 31,
+            source_tvl_usd: 12_000_000,
+          },
+        ],
+      },
+    ]);
+
+    const message = await buildTopMessage(db, "yield");
+
+    expect(message).toContain("Top risk-adjusted yields");
+    expect(message).toContain("USDC");
+    const yieldSql = db.getHistory().find((entry) => entry.sql.includes("FROM yield_data"))?.sql;
+    expect(yieldSql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
+  });
+
   it("suggests the closest /top view for one-character typos", async () => {
     const db = mockD1([], { requireMatch: true });
 

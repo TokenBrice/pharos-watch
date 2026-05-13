@@ -196,11 +196,11 @@ export function buildCalibrationReport(rankings: RankingWithRisk[], generatedAt:
     "| negative-zero | zero or negative APY scores 0 and preserves deterministic rank behavior |",
     "| missing-safety | null safetyScore keeps existing default-safety behavior and records coverage |",
     "",
-    "## Implementation Notes For PR 7",
+    "## Implementation Notes",
     "",
-    "- Feed this script a saved `/api/yield-rankings` response after source-risk prototype fields exist.",
+    "- Feed this script a saved `/api/yield-rankings` response; if the payload predates public `sourceRisk.*` fields, treat null-rate coverage as a production baseline rather than final v8 source-risk calibration.",
     "- Keep scratch calibration reports under `/agents/`; committed rollout evidence belongs under `docs/process/`.",
-    "- Keep this report with the v8 rollout notes so score movements remain reviewable.",
+    "- Pair production-snapshot reports with golden-fixture evidence when live payloads do not yet include populated source-risk fields.",
     "",
   ].join("\n");
 }

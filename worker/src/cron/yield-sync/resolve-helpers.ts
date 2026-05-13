@@ -152,7 +152,10 @@ export function appendOptionalYieldCandidate(input: AppendOptionalYieldCandidate
   resolved.push({
     id: meta.id,
     symbol: meta.symbol,
-    yield: entry.yield,
+    yield: {
+      ...entry.yield,
+      chain: entry.yield.chain ?? entry.chain ?? null,
+    },
   });
 
   return "appended";
@@ -235,7 +238,7 @@ function appendResolvedAutoDiscoveredYield(
   resolved: ResolvedYieldEntry[],
   autoDiscoveredIds: Set<string>,
   meta: { id: string; symbol: string },
-  pool: Pick<DlPool, "apy" | "apyBase" | "apyReward" | "pool" | "tvlUsd" | "project">,
+  pool: Pick<DlPool, "apy" | "apyBase" | "apyReward" | "pool" | "tvlUsd" | "project"> & { chain?: string | null },
 ): void {
   resolved.push({
     id: meta.id,
@@ -250,6 +253,7 @@ function appendResolvedAutoDiscoveredYield(
       exchangeRate: null,
       sourceKey: pool.pool,
       project: pool.project,
+      chain: pool.chain ?? null,
     },
   });
   autoDiscoveredIds.add(meta.id);
@@ -306,6 +310,7 @@ export function appendPoolFamilyYieldSources(params: {
             yieldSource: config.yieldSource,
             yieldType: config.yieldType,
             project: pool.project,
+            chain: pool.chain,
           },
         });
       }

@@ -67,7 +67,10 @@ export async function resolveTrackedYieldSources(params: {
       .prepare(
         `SELECT stablecoin_id, exchange_rate, recorded_at
          FROM yield_history
-         WHERE stablecoin_id IN (${placeholders}) AND recorded_at <= ? AND exchange_rate IS NOT NULL
+         WHERE stablecoin_id IN (${placeholders})
+           AND recorded_at <= ?
+           AND exchange_rate IS NOT NULL
+           AND (publication_generation_id IS NULL OR publication_state = 'published')
          ORDER BY stablecoin_id ASC, recorded_at DESC`,
       )
       .bind(...tier1CandidateIds, params.sevenDaysAgoSec)
@@ -189,6 +192,8 @@ export async function resolveTrackedYieldSources(params: {
           sourceKey: fullPool.pool,
           yieldSource: isVariantPool ? variant.yieldSource : undefined,
           yieldType: isVariantPool ? variant.yieldType : undefined,
+          project: fullPool.project,
+          chain: fullPool.chain,
         },
       });
       alreadyResolvedKeys.add(dlPool.pool);
