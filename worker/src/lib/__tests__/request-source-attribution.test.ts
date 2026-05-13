@@ -12,6 +12,7 @@ import {
   API_REQUEST_SOURCE_STATS_RETENTION_DAYS,
   buildApiRequestAttributionKeyedPublicApiSummary,
   buildApiRequestAttributionSplit,
+  isApiKeyRequestAttributionDisabled,
   isRequestSourceAttributionDisabled,
   mapApiKeyStatsRows,
   recordApiKeyRequestAttribution,
@@ -226,6 +227,13 @@ describe("request-source-attribution", () => {
     expect(isRequestSourceAttributionDisabled({ REQUEST_SOURCE_ATTRIBUTION_DISABLED: "1" })).toBe(true);
     expect(isRequestSourceAttributionDisabled({ REQUEST_SOURCE_ATTRIBUTION_DISABLED: "false" })).toBe(false);
     expect(isRequestSourceAttributionDisabled({})).toBe(false);
+  });
+
+  it("parses the per-key attribution kill switch", () => {
+    expect(isApiKeyRequestAttributionDisabled({ API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true" })).toBe(true);
+    expect(isApiKeyRequestAttributionDisabled({ API_KEY_REQUEST_ATTRIBUTION_DISABLED: "on" })).toBe(true);
+    expect(isApiKeyRequestAttributionDisabled({ API_KEY_REQUEST_ATTRIBUTION_DISABLED: "false" })).toBe(false);
+    expect(isApiKeyRequestAttributionDisabled({})).toBe(false);
   });
 
   it("batches same-minute stats rows and schedules prune only once per prune bucket", async () => {

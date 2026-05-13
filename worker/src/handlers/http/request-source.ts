@@ -1,6 +1,7 @@
 import { classifyBrowserRequestConsumer, resolveApiRequestRouteMetric } from "@shared/lib/request-attribution";
 import type { ApiKeyTrafficClass } from "@shared/types";
 import {
+  isApiKeyRequestAttributionDisabled,
   isRequestSourceAttributionDisabled,
   recordApiKeyRequestAttribution,
   recordWorkerRequestAttribution,
@@ -17,6 +18,7 @@ export function createRequestSourceRecorder(config: {
   requestLane: "public-api" | "site-api" | null;
   pathname: string;
   attributionDisabled?: boolean;
+  apiKeyAttributionDisabled?: boolean;
 }): () => void {
   if (config.isAdmin || !config.requestLane) {
     return () => {};
@@ -46,7 +48,7 @@ export function createRequestSourceRecorder(config: {
     if (!config.attributionDisabled) {
       attributionWrites.push(recordWorkerRequestAttribution(config.db, route, "public-api", consumerClass));
     }
-    if (config.apiKeyId != null) {
+    if (config.apiKeyId != null && !config.apiKeyAttributionDisabled) {
       attributionWrites.push(recordApiKeyRequestAttribution(config.db, config.apiKeyId));
     }
     if (attributionWrites.length === 0) {
@@ -56,4 +58,4 @@ export function createRequestSourceRecorder(config: {
   };
 }
 
-export { isRequestSourceAttributionDisabled };
+export { isApiKeyRequestAttributionDisabled, isRequestSourceAttributionDisabled };

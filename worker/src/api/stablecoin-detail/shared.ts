@@ -8,6 +8,7 @@ import { errorResponse } from "../../lib/api-utils";
 export const CACHE_TTL_SECONDS = PER_COIN_CACHE_TTL_SECONDS;
 export const DETAIL_UPSTREAM_TIMEOUT_MS = 12_000;
 export const DETAIL_UPSTREAM_MAX_RETRIES = 2;
+export const DETAIL_STALE_CACHE_MAX_AGE_SECONDS = DAY_SECONDS;
 const DETAIL_HISTORY_MAX_AGE_SECONDS = 3 * DAY_SECONDS;
 
 type DetailCacheEntry = { value: string; updatedAt: number } | null;
@@ -72,7 +73,7 @@ export function createStaleCacheHitResponse(cachedValue: string, ageSeconds: num
   return new Response(cachedValue, {
     headers: {
       "Content-Type": "application/json",
-      "Cache-Control": CACHE_PROFILES.realtime,
+      "Cache-Control": CACHE_PROFILES.noStore,
       "X-Data-Age": String(Math.max(0, ageSeconds)),
       "Warning": "110 - \"Stablecoin detail cache is stale; refresh scheduled\"",
     },
@@ -85,7 +86,15 @@ function createFreshUpstreamResponse(body: string): Response {
 
 function createStaleCacheResponse(cached: DetailCacheEntry): Response | null {
   if (!cached) return null;
-  return createJsonResponse(cached.value, CACHE_PROFILES.realtime);
+  const ageSeconds = Math.max(0, Math.floor(Date.now() / 1000) - cached.updatedAt);
+  return new Response(cached.value, {
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": CACHE_PROFILES.noStore,
+      "X-Data-Age": String(ageSeconds),
+      "Warning": "110 - \"Stablecoin detail cache is stale; refresh failed\"",
+    },
+  });
 }
 
 function staleCacheOrError(

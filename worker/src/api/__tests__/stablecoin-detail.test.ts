@@ -161,6 +161,7 @@ describe("handleStablecoinDetail", () => {
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(res.headers.get("Warning")).toContain("refresh scheduled");
     const body = (await res.json()) as { tokens: Array<{ totalCirculatingUSD?: Record<string, number> }> };
     expect(body.tokens).toHaveLength(1);
@@ -191,6 +192,31 @@ describe("handleStablecoinDetail", () => {
     const body = (await res.json()) as { tokens: unknown[] };
     expect(body.tokens).toHaveLength(1);
     await Promise.allSettled(ctx.waitUntilPromises);
+  });
+
+  it("does not serve detail cache older than the max stale window when refresh fails", async () => {
+    const cachedValue = makeDLDetailBody({ tokens: [
+      { date: 1600000000, totalCirculatingUSD: { peggedUSD: 70_000_000 }, totalCirculating: { peggedUSD: 70_000_000 } },
+    ] });
+    const now = Math.floor(Date.now() / 1000);
+
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [],
+        first: { value: cachedValue, updated_at: now - 90_000 },
+      },
+      { match: "supply_history", rows: [] },
+    ]);
+
+    fetchSpy.mockResolvedValueOnce(new Response("Server Error", { status: 500 }));
+
+    const ctx = makeCtx();
+    const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
+
+    expect(res.status).toBe(502);
+    await expect(res.json()).resolves.toEqual({ error: "Failed to fetch stablecoin usdt-tether" });
+    expect(ctx.waitUntil).not.toHaveBeenCalled();
   });
 
   it("returns stale cache on upstream timeout when cache exists", async () => {

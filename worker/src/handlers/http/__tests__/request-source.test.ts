@@ -3,16 +3,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   recordWorkerRequestAttribution: vi.fn(() => Promise.resolve()),
   recordApiKeyRequestAttribution: vi.fn(() => Promise.resolve()),
+  isApiKeyRequestAttributionDisabled: vi.fn(() => false),
   isRequestSourceAttributionDisabled: vi.fn(() => false),
 }));
 
 vi.mock("../../../lib/request-source-attribution", () => ({
   recordWorkerRequestAttribution: mocks.recordWorkerRequestAttribution,
   recordApiKeyRequestAttribution: mocks.recordApiKeyRequestAttribution,
+  isApiKeyRequestAttributionDisabled: mocks.isApiKeyRequestAttributionDisabled,
   isRequestSourceAttributionDisabled: mocks.isRequestSourceAttributionDisabled,
 }));
 
-import { createRequestSourceRecorder, isRequestSourceAttributionDisabled } from "../request-source";
+import {
+  createRequestSourceRecorder,
+  isApiKeyRequestAttributionDisabled,
+  isRequestSourceAttributionDisabled,
+} from "../request-source";
 
 function makeExecCtx() {
   return {
@@ -198,6 +204,58 @@ describe("createRequestSourceRecorder", () => {
     expect(mocks.recordApiKeyRequestAttribution).toHaveBeenCalledWith(db, 7);
   });
 
+  it("skips per-key telemetry when the per-key attribution kill switch is enabled", () => {
+    const execCtx = makeExecCtx();
+    const recorder = createRequestSourceRecorder({
+      request: new Request("https://api.pharos.watch/api/stablecoins", {
+        headers: { Origin: "https://example.com" },
+      }),
+      db,
+      execCtx,
+      isAdmin: false,
+      isSiteProxy: false,
+      apiKeyId: 7,
+      apiKeyTrafficClass: "external",
+      requestLane: "public-api",
+      pathname: "/api/stablecoins",
+      apiKeyAttributionDisabled: true,
+    });
+
+    recorder();
+
+    expect(execCtx.waitUntil).toHaveBeenCalledOnce();
+    expect(mocks.recordWorkerRequestAttribution).toHaveBeenCalledWith(
+      db,
+      { routeKey: "stablecoins", routePath: "/api/stablecoins" },
+      "public-api",
+      "external",
+    );
+    expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
+  });
+
+  it("returns a no-op recorder when both attribution switches suppress all public-api writes", () => {
+    const execCtx = makeExecCtx();
+    const recorder = createRequestSourceRecorder({
+      request: new Request("https://api.pharos.watch/api/stablecoins"),
+      db,
+      execCtx,
+      isAdmin: false,
+      isSiteProxy: false,
+      apiKeyId: 7,
+      apiKeyTrafficClass: "external",
+      requestLane: "public-api",
+      pathname: "/api/stablecoins",
+      attributionDisabled: true,
+      apiKeyAttributionDisabled: true,
+    });
+
+    recorder();
+
+    expect(execCtx.waitUntil).not.toHaveBeenCalled();
+    expect(mocks.recordWorkerRequestAttribution).not.toHaveBeenCalled();
+    expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
+  });
+
   it("skips site-api attribution when attribution is disabled", () => {
     const execCtx = makeExecCtx();
     const recorder = createRequestSourceRecorder({
@@ -226,6 +284,15 @@ describe("createRequestSourceRecorder", () => {
     expect(isRequestSourceAttributionDisabled({ REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true" })).toBe(true);
     expect(mocks.isRequestSourceAttributionDisabled).toHaveBeenCalledWith({
       REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
+    });
+  });
+
+  it("exposes the per-key attribution kill-switch parser from the request-source module", () => {
+    mocks.isApiKeyRequestAttributionDisabled.mockReturnValueOnce(true);
+
+    expect(isApiKeyRequestAttributionDisabled({ API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true" })).toBe(true);
+    expect(mocks.isApiKeyRequestAttributionDisabled).toHaveBeenCalledWith({
+      API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true",
     });
   });
 });

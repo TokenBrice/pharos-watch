@@ -258,9 +258,11 @@ describe("handleMintBurnEvents", () => {
 
     expect(cursorRes.status).toBe(200);
     const dataQuery = cursorDb.getHistory().find((entry) => entry.sql.includes("FROM mint_burn_events"));
+    expect(dataQuery?.sql).toContain("ORDER BY timestamp DESC, block_number DESC, id DESC");
     expect(dataQuery?.sql).toContain("timestamp < ?");
     expect(dataQuery?.sql).toContain("block_number < ?");
     expect(dataQuery?.sql).toContain("id < ?");
+    expect(dataQuery?.sql).toContain("(timestamp = ? AND block_number = ? AND id < ?)");
     expect(dataQuery?.binds).toContain(first.timestamp);
     expect(dataQuery?.binds).toContain(first.block_number);
     expect(dataQuery?.binds).toContain(first.id);

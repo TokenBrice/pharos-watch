@@ -22,6 +22,7 @@ const API_REQUEST_SOURCE_STATS_RETENTION_SEC = API_REQUEST_SOURCE_STATS_RETENTIO
 const REQUEST_ATTRIBUTION_FLUSH_DELAY_MS = 10;
 const REQUEST_ATTRIBUTION_BATCH_SIZE = 50;
 const REQUEST_SOURCE_ATTRIBUTION_DISABLED_ENV = "REQUEST_SOURCE_ATTRIBUTION_DISABLED";
+const API_KEY_REQUEST_ATTRIBUTION_DISABLED_ENV = "API_KEY_REQUEST_ATTRIBUTION_DISABLED";
 
 interface BufferedWorkerRequestAttribution {
   bucketStart: number;
@@ -44,6 +45,13 @@ export function resetRequestAttributionStateForTests(): void {
 
 export function isRequestSourceAttributionDisabled(env: unknown): boolean {
   const value = (env as Record<string, unknown> | null | undefined)?.[REQUEST_SOURCE_ATTRIBUTION_DISABLED_ENV];
+  if (typeof value !== "string") return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
+export function isApiKeyRequestAttributionDisabled(env: unknown): boolean {
+  const value = (env as Record<string, unknown> | null | undefined)?.[API_KEY_REQUEST_ATTRIBUTION_DISABLED_ENV];
   if (typeof value !== "string") return false;
   const normalized = value.trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";

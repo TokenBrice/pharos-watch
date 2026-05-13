@@ -2,7 +2,11 @@ import { flushPendingApiKeyPrunes } from "../../lib/api-key-rate-limit";
 import { flushPendingPrunes } from "../../lib/rate-limit";
 import { getRouteDependencies, route } from "../../router";
 import type { Env } from "../../lib/env";
-import { createRequestSourceRecorder, isRequestSourceAttributionDisabled } from "./request-source";
+import {
+  createRequestSourceRecorder,
+  isApiKeyRequestAttributionDisabled,
+  isRequestSourceAttributionDisabled,
+} from "./request-source";
 import { addCorsHeaders, handleCorsPreflight, resolveCorsOrigin } from "./cors";
 import { buildRouteContext } from "./context";
 import { createEdgeCacheContext, readEdgeCache, writeEdgeCache } from "./edge-cache";
@@ -52,6 +56,7 @@ export async function handleHttpRequestImpl(
     requestLane,
     pathname: url.pathname,
     attributionDisabled: isRequestSourceAttributionDisabled(env),
+    apiKeyAttributionDisabled: isApiKeyRequestAttributionDisabled(env),
   });
   if (gateResponse) {
     recordRequestSource();

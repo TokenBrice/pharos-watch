@@ -2,12 +2,13 @@ import { describe, it, expect } from "vitest";
 import { mockD1, type MockD1Database } from "./helpers/mock-d1";
 import { makeAsset, makeReportCardsDb } from "./helpers/fixtures";
 import { handleReportCards } from "../report-cards";
+import { METHODOLOGY_VERSION } from "@shared/lib/report-cards";
 
 function makeCachedSnapshot(updatedAt = Math.floor(Date.now() / 1000)) {
   return {
     cards: [],
     methodology: {
-      version: "7.09",
+      version: METHODOLOGY_VERSION,
       weights: {
         pegStability: 0.3,
         liquidity: 0.25,
@@ -26,6 +27,14 @@ function makeCachedSnapshot(updatedAt = Math.floor(Date.now() / 1000)) {
       dexLiquidity: { updatedAt, ageSeconds: 0, stale: false },
       redemptionBackstops: { updatedAt, ageSeconds: 0, stale: false },
     },
+  };
+}
+
+function makeCachedSnapshotEnvelope(snapshot: ReturnType<typeof makeCachedSnapshot>) {
+  return {
+    generation: 2,
+    methodologyVersion: METHODOLOGY_VERSION,
+    payload: snapshot,
   };
 }
 
@@ -66,7 +75,7 @@ describe("handleReportCards", () => {
         rows: [
           {
             key: "report-cards:snapshot",
-            value: JSON.stringify(makeCachedSnapshot(updatedAt)),
+            value: JSON.stringify(makeCachedSnapshotEnvelope(makeCachedSnapshot(updatedAt))),
             updated_at: updatedAt,
           },
         ],
@@ -81,6 +90,76 @@ describe("handleReportCards", () => {
     expect(body.updatedAt).toBe(updatedAt);
     expect(db.getHistory().some((entry) => entry.sql.includes("dex_liquidity"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("depeg_events"))).toBe(false);
+  });
+
+  it("rejects a published snapshot from an old cache generation and computes on read", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const staleSnapshot = makeCachedSnapshot(updatedAt);
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
+    const stablecoinsValue = JSON.stringify({ peggedAssets: [asset] });
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [
+          {
+            key: "report-cards:snapshot",
+            value: JSON.stringify({
+              generation: 1,
+              methodologyVersion: staleSnapshot.methodology.version,
+              payload: staleSnapshot,
+            }),
+            updated_at: updatedAt,
+          },
+          { key: "stablecoins", value: stablecoinsValue, updated_at: updatedAt },
+          { key: "bluechip-ratings", value: "{}", updated_at: updatedAt },
+        ],
+      },
+      { match: "dex_liquidity", rows: [] },
+      { match: "depeg_events", rows: [] },
+      { match: "supply_history", rows: [] },
+    ]) as MockD1Database;
+
+    const res = await handleReportCards(db);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { cards: unknown[]; updatedAt: number };
+    expect(body.cards.length).toBeGreaterThan(0);
+    expect(db.getHistory().some((entry) => entry.sql.includes("dex_liquidity"))).toBe(true);
+  });
+
+  it("rejects a published snapshot from an old methodology and computes on read", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const staleSnapshot = makeCachedSnapshot(updatedAt);
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
+    const stablecoinsValue = JSON.stringify({ peggedAssets: [asset] });
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [
+          {
+            key: "report-cards:snapshot",
+            value: JSON.stringify({
+              generation: 2,
+              methodologyVersion: "old-version",
+              payload: staleSnapshot,
+            }),
+            updated_at: updatedAt,
+          },
+          { key: "stablecoins", value: stablecoinsValue, updated_at: updatedAt },
+          { key: "bluechip-ratings", value: "{}", updated_at: updatedAt },
+        ],
+      },
+      { match: "dex_liquidity", rows: [] },
+      { match: "depeg_events", rows: [] },
+      { match: "supply_history", rows: [] },
+    ]) as MockD1Database;
+
+    const res = await handleReportCards(db);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { cards: unknown[]; updatedAt: number };
+    expect(body.cards.length).toBeGreaterThan(0);
+    expect(db.getHistory().some((entry) => entry.sql.includes("dex_liquidity"))).toBe(true);
   });
 
   it("includes cards with expected dimensions", async () => {

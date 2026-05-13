@@ -3,6 +3,7 @@ import { withErrorHandler } from "../lib/api-utils";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import {
   CACHE_TTL_SECONDS,
+  DETAIL_STALE_CACHE_MAX_AGE_SECONDS,
   createDetailResponseHelpers,
   createFreshCacheHitResponse,
   createStaleCacheHitResponse,
@@ -80,6 +81,20 @@ export const handleStablecoinDetail = withErrorHandler(
       const age = Math.floor(Date.now() / 1000) - cached.updatedAt;
       if (age < CACHE_TTL_SECONDS) {
         return createFreshCacheHitResponse(cached.value, age);
+      }
+      if (age >= DETAIL_STALE_CACHE_MAX_AGE_SECONDS) {
+        console.warn(
+          `[detail] cache too stale stablecoin=${id} age=${age} max=${DETAIL_STALE_CACHE_MAX_AGE_SECONDS}; refreshing synchronously`,
+        );
+        const response = await startStablecoinDetailRefresh({
+          db,
+          id,
+          pegType,
+          cached: null,
+          ctx,
+          coingeckoApiKey,
+        });
+        return response.clone();
       }
       scheduleStablecoinDetailRefresh({ db, id, pegType, cached, ctx, coingeckoApiKey });
       return createStaleCacheHitResponse(cached.value, age);

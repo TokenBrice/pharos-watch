@@ -1,13 +1,24 @@
 import { ReportCardsResponseSchema, type ReportCardsResponse } from "@shared/types/report-cards";
+import { METHODOLOGY_VERSION } from "@shared/lib/report-cards";
 import { decodeCachedJson } from "./cache-json";
 import { getCache, setCache } from "./db-cache";
 
 const REPORT_CARDS_SNAPSHOT_CACHE_KEY = "report-cards:snapshot";
+const REPORT_CARDS_SNAPSHOT_CACHE_GENERATION = 2;
 
 export type ReportCardsSnapshotCacheFailureReason =
   | "missing-cache"
   | "json-parse-failed"
-  | "invalid-payload";
+  | "invalid-payload"
+  | "invalid-envelope"
+  | "generation-mismatch"
+  | "methodology-mismatch";
+
+interface ReportCardsSnapshotCacheEnvelope {
+  generation: number;
+  methodologyVersion: string;
+  payload: ReportCardsResponse;
+}
 
 export type ReportCardsSnapshotCacheLoadResult =
   | { kind: "ok"; payload: ReportCardsResponse; updatedAt: number }
@@ -23,10 +34,27 @@ export async function loadPublishedReportCardsSnapshot(
       missingReason: "missing-cache",
       parseErrorReason: "json-parse-failed",
       normalize: (parsed) => {
-        const result = ReportCardsResponseSchema.safeParse(parsed);
-        return result.success
-          ? { ok: true, payload: result.data }
-          : { ok: false, reason: "invalid-payload" };
+        if (!parsed || typeof parsed !== "object" || !("payload" in parsed)) {
+          return { ok: false, reason: "invalid-envelope" };
+        }
+
+        const envelope = parsed as Partial<ReportCardsSnapshotCacheEnvelope>;
+        if (envelope.generation !== REPORT_CARDS_SNAPSHOT_CACHE_GENERATION) {
+          return { ok: false, reason: "generation-mismatch" };
+        }
+        if (envelope.methodologyVersion !== METHODOLOGY_VERSION) {
+          return { ok: false, reason: "methodology-mismatch" };
+        }
+
+        const result = ReportCardsResponseSchema.safeParse(envelope.payload);
+        if (!result.success) {
+          return { ok: false, reason: "invalid-payload" };
+        }
+        if (result.data.methodology.version !== METHODOLOGY_VERSION) {
+          return { ok: false, reason: "methodology-mismatch" };
+        }
+
+        return { ok: true, payload: result.data };
       },
     },
   );
@@ -46,5 +74,10 @@ export async function writePublishedReportCardsSnapshot(
   db: D1Database,
   snapshot: ReportCardsResponse,
 ): Promise<void> {
-  await setCache(db, REPORT_CARDS_SNAPSHOT_CACHE_KEY, JSON.stringify(snapshot));
+  const envelope: ReportCardsSnapshotCacheEnvelope = {
+    generation: REPORT_CARDS_SNAPSHOT_CACHE_GENERATION,
+    methodologyVersion: METHODOLOGY_VERSION,
+    payload: snapshot,
+  };
+  await setCache(db, REPORT_CARDS_SNAPSHOT_CACHE_KEY, JSON.stringify(envelope));
 }

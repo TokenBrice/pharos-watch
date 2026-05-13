@@ -112,7 +112,7 @@ export const handleMintBurnEvents = withErrorHandler(
       }
     >(db, {
       tableName: "mint_burn_events",
-      orderBy: "timestamp DESC",
+      orderBy: "timestamp DESC, block_number DESC, id DESC",
       conditions,
       filterBindings,
       mapRow: (row) => ({
