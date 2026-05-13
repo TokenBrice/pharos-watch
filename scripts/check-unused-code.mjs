@@ -18,6 +18,7 @@ const ROOT_ENTRYPOINT_PATTERNS = [
 ];
 
 const MODULE_ALLOWLIST = new Set([
+  "src/components/ui/command.tsx",
   "worker/src/__mocks__/resvg-stub.ts",
   "worker/src/__mocks__/satori-stub.ts",
   "worker/src/__mocks__/wasm-module-stub.ts",
@@ -40,6 +41,10 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/redemption-backstop-version.ts::getRedemptionBackstopVersionAt",
   "shared/lib/report-cards.ts::chainInfraLabel",
   "shared/lib/report-cards.ts::inferResilienceDefaults",
+  // Explicit no-op yield-risk scaffold kept public for the staged report-card integration.
+  "shared/lib/report-cards.ts::resolveReportCardYieldRiskAdjustment",
+  "shared/lib/report-cards.ts::ReportCardYieldRiskAdjustment",
+  "shared/lib/report-cards.ts::ReportCardYieldRiskNoOpReason",
   "shared/lib/safety-score-version.ts::getSafetyScoreVersionAt",
   "shared/lib/stablecoin-id-registry.ts::ALL_LIVE_COINS",
   "shared/lib/stablecoins/schema.ts::StablecoinMetaAssetSchema",
@@ -57,7 +62,12 @@ const EXPORT_ALLOWLIST = new Set([
   "src/components/ui/badge.tsx::badgeVariants",
   "src/components/ui/button.tsx::buttonVariants",
   "src/components/ui/card.tsx::CardFooter",
+  "src/components/ui/command.tsx::Command",
   "src/components/ui/command.tsx::CommandDialog",
+  "src/components/ui/command.tsx::CommandList",
+  "src/components/ui/command.tsx::CommandEmpty",
+  "src/components/ui/command.tsx::CommandGroup",
+  "src/components/ui/command.tsx::CommandItem",
   "src/components/ui/command.tsx::CommandInput",
   "src/components/ui/command.tsx::CommandShortcut",
   "src/components/ui/command.tsx::CommandSeparator",

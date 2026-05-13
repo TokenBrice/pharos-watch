@@ -165,11 +165,11 @@ function formatTvlOption(value: number): string {
   return `$${value.toLocaleString()}+`;
 }
 
-export function getYieldPegLabel(peg: PegCurrency): string {
+function getYieldPegLabel(peg: PegCurrency): string {
   return PEG_BADGE_STYLES[peg].label.replace(/\s+Peg$/, "");
 }
 
-export function getYieldRankingPeg(rankingId: string): PegCurrency | null {
+function getYieldRankingPeg(rankingId: string): PegCurrency | null {
   return TRACKED_META_BY_ID.get(rankingId)?.flags.pegCurrency ?? null;
 }
 
