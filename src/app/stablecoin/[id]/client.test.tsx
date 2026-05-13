@@ -136,6 +136,27 @@ describe("StablecoinDetailClient", () => {
     cleanup();
   });
 
+  it("renders static profile content after the safety assessment", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+
+    const { container } = render(
+      <StablecoinDetailClient
+        id={coin.id}
+        summary={null}
+        staticCoin={buildStablecoinStaticMeta(coin)}
+        staticProfileContent={<section data-testid="static-profile">Static stablecoin profile</section>}
+      />,
+    );
+
+    const safetySection = container.querySelector("#report-card");
+    const staticProfile = screen.getByTestId("static-profile");
+
+    expect(safetySection).toBeTruthy();
+    expect(
+      safetySection!.compareDocumentPosition(staticProfile) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("renders the parent variants card inside the single overview section", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const { container } = render(

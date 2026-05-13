@@ -145,11 +145,16 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
 
   return (
     <>
-      <StablecoinDetailSeoContent coin={coin} summary={summary} />
       <Suspense fallback={
         <DetailPageShellFallback coin={staticCoin} logoSrc={logosById[coin.id]} />
       }>
-        <StablecoinDetailClient id={id} summary={summary} staticCoin={staticCoin} logoSrc={logosById[coin.id]} />
+        <StablecoinDetailClient
+          id={id}
+          summary={summary}
+          staticCoin={staticCoin}
+          logoSrc={logosById[coin.id]}
+          staticProfileContent={<StablecoinDetailSeoContent coin={coin} summary={summary} />}
+        />
       </Suspense>
       <ExploreNextSection
         coin={coin}

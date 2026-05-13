@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import type { ReactNode } from "react";
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -110,7 +111,15 @@ const DETAIL_SECTION_DEFS = {
   explore: { id: "explore-next", label: "Explore" },
 } as const;
 
-function DetailLoadingShell({ coin, logoSrc }: { coin: StablecoinStaticMeta; logoSrc?: string }) {
+function DetailLoadingShell({
+  coin,
+  logoSrc,
+  staticProfileContent = null,
+}: {
+  coin: StablecoinStaticMeta;
+  logoSrc?: string;
+  staticProfileContent?: ReactNode;
+}) {
   return (
     <div className="space-y-6">
       <StablecoinDetailLoadingShell
@@ -135,6 +144,8 @@ function DetailLoadingShell({ coin, logoSrc }: { coin: StablecoinStaticMeta; log
         </div>
       </div>
 
+      {staticProfileContent ? <div className="mt-12">{staticProfileContent}</div> : null}
+
       {/* Context zone skeleton */}
       <div className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Skeleton className="h-[200px] rounded-xl" />
@@ -152,9 +163,16 @@ interface StablecoinDetailClientProps {
   summary: StablecoinDetailSummary | null;
   staticCoin: StablecoinStaticMeta;
   logoSrc?: string;
+  staticProfileContent?: ReactNode;
 }
 
-export default function StablecoinDetailClient({ id, summary, staticCoin, logoSrc }: StablecoinDetailClientProps) {
+export default function StablecoinDetailClient({
+  id,
+  summary,
+  staticCoin,
+  logoSrc,
+  staticProfileContent = null,
+}: StablecoinDetailClientProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const viewModel = useStablecoinDetailViewModel({ id, summary, logoSrc });
   const hasCollateralUsage = staticCoin.hasCollateralUsage;
@@ -165,7 +183,7 @@ export default function StablecoinDetailClient({ id, summary, staticCoin, logoSr
   });
 
   if (viewModel.status === "loading") {
-    return <DetailLoadingShell coin={staticCoin} logoSrc={logoSrc} />;
+    return <DetailLoadingShell coin={staticCoin} logoSrc={logoSrc} staticProfileContent={staticProfileContent} />;
   }
 
   if (viewModel.status === "list-error") {
@@ -313,6 +331,8 @@ export default function StablecoinDetailClient({ id, summary, staticCoin, logoSr
           </div>
         </section>
       </div>
+
+      {staticProfileContent ? <div className="mt-12">{staticProfileContent}</div> : null}
 
       {/* ── Context & details zone ── */}
       <div className="mt-12 space-y-6">

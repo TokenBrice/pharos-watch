@@ -88,18 +88,19 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 5. `FrozenStateBanner` for frozen tracked assets with `obituary` and `frozenAt` metadata
 6. `LongformScrollspyNav`
 7. `ReportCardDetail` + `SafetyScoreHistorySection`
-8. `UnderlyingAssetCard` for tracked variants, then `ParentVariantsCard` for parents with tracked children, then `NoticesAndSummarySection` (wraps `OverviewSection`, `CoinNotices`, and the nested `PriceTransparencyCard` anchor). The variant cards are contextual navigation only; they link back into the homepage owner for browse/discovery instead of introducing a dedicated variant route family.
-9. `KeyInfoCard` (wrapped in `<section id="info">`, not surfaced in the scrollspy rail)
-10. `CollateralUsageSection` when the coin is used as tracked collateral elsewhere
-11. `YieldDetailSection` when the coin is marked `yieldBearing` or the cached yield rankings include a live row for that coin
-12. `McapChart`
-13. `PegDeviationChart` (wrapped in `<section id="peg-deviation">`) only when the coin is USD-pegged and not a NAV token; not surfaced in the scrollspy rail
-14. `DistributionSection`
-15. `DexLiquidityCard`
-16. `FlowsSection`
-17. `BlacklistSection` while blacklist summary data is still loading for a supported symbol, or after load only when that supported symbol has recorded blacklist events
-18. `DepegHistory` (suppressed for NAV tokens)
-19. `FeedbackModal`
+8. `StablecoinDetailSeoContent` static profile block
+9. `UnderlyingAssetCard` for tracked variants, then `ParentVariantsCard` for parents with tracked children, then `NoticesAndSummarySection` (wraps `OverviewSection`, `CoinNotices`, and the nested `PriceTransparencyCard` anchor). The variant cards are contextual navigation only; they link back into the homepage owner for browse/discovery instead of introducing a dedicated variant route family.
+10. `KeyInfoCard` (wrapped in `<section id="info">`, not surfaced in the scrollspy rail)
+11. `CollateralUsageSection` when the coin is used as tracked collateral elsewhere
+12. `YieldDetailSection` when the coin is marked `yieldBearing` or the cached yield rankings include a live row for that coin
+13. `McapChart`
+14. `PegDeviationChart` (wrapped in `<section id="peg-deviation">`) only when the coin is USD-pegged and not a NAV token; not surfaced in the scrollspy rail
+15. `DistributionSection`
+16. `DexLiquidityCard`
+17. `FlowsSection`
+18. `BlacklistSection` while blacklist summary data is still loading for a supported symbol, or after load only when that supported symbol has recorded blacklist events
+19. `DepegHistory` (suppressed for NAV tokens)
+20. `FeedbackModal`
 
 The server shell then appends `ExploreNextSection` after the client-rendered analytics stack.
 
