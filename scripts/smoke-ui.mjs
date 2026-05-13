@@ -314,6 +314,7 @@ function buildSmokeRunCode(config) {
       while (Date.now() < timeoutAt) {
         const summary = summarize();
         if (summary.gtagType === "function" && summary.hasExpectedConfig && summary.hasPageView) {
+          await delay(3000);
           return summary;
         }
         await delay(250);
@@ -628,9 +629,25 @@ export async function run() {
         failures: [],
         requests: [],
         responses: [],
+        violations: [],
       };
       const isAnalyticsUrl = (requestUrl) =>
-        Boolean(smokeConfig.expectedGaId) && /googletagmanager|google-analytics|analytics\.google/.test(requestUrl);
+        Boolean(smokeConfig.expectedGaId)
+        && /googletagmanager|google-analytics|analytics\.google/.test(requestUrl);
+
+      if (smokeConfig.expectedGaId) {
+        await page.addInitScript(() => {
+          window.__pharosSmokeCspViolations = [];
+          document.addEventListener("securitypolicyviolation", (event) => {
+            window.__pharosSmokeCspViolations.push({
+              blockedURI: event.blockedURI,
+              effectiveDirective: event.effectiveDirective,
+              sourceFile: event.sourceFile,
+              violatedDirective: event.violatedDirective,
+            });
+          });
+        });
+      }
 
       page.on("request", (request) => {
         if (isAnalyticsUrl(request.url())) {
@@ -661,6 +678,9 @@ export async function run() {
       try {
         const smokeRunner = Function(`return (${buildSmokeRunCode(smokeConfig)});`)();
         const result = await smokeRunner(page);
+        if (smokeConfig.expectedGaId) {
+          analyticsNetwork.violations = await page.evaluate(() => window.__pharosSmokeCspViolations ?? []);
+        }
         return { ...result, analyticsNetwork };
       } catch (error) {
         throw new Error(`[smoke-ui] ${stepLabel} failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -718,8 +738,20 @@ export async function run() {
         `Expected successful gtag.js load for ${expectedGaId}; network=${JSON.stringify(network)}`,
       );
       assert(
+        network.responses.some(
+          (entry) => /google-analytics\.com\/g\/collect|analytics\.google\.com\/g\/collect/.test(entry.url)
+            && entry.status >= 200
+            && entry.status < 400,
+        ),
+        `Expected successful GA collect hit for ${expectedGaId}; network=${JSON.stringify(network)}`,
+      );
+      assert(
         network.failures.length === 0,
         `Found failed analytics request(s) for ${expectedGaId}; failures=${JSON.stringify(network.failures)}`,
+      );
+      assert(
+        network.violations.length === 0,
+        `Found analytics CSP violation(s) for ${expectedGaId}; violations=${JSON.stringify(network.violations)}`,
       );
       console.log(`[smoke-ui] OK analytics runtime ${expectedGaId}`);
     }

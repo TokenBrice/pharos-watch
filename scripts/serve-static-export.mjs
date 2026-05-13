@@ -48,10 +48,10 @@ function createCspNonce() {
 function buildContentSecurityPolicy(nonce) {
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://static.cloudflareinsights.com`,
+    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://www.googletagmanager.com https://static.cloudflareinsights.com`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' https://coin-images.coingecko.com https://*.google-analytics.com https://pbs.twimg.com https://abs.twimg.com data:",
-    "connect-src 'self' https://api.pharos.watch https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
+    "img-src 'self' https://coin-images.coingecko.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://pbs.twimg.com https://abs.twimg.com data:",
+    "connect-src 'self' https://api.pharos.watch https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://*.googletagmanager.com",
     "font-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
