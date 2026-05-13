@@ -144,8 +144,8 @@
     "notes": "Mint/burn copy is localized, but still larger than the desired long-term budget. Split the detailed pipeline tables from the overview copy when touched next."
   },
   "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx": {
-    "fileLines": 256,
-    "maxFunctionLines": 242,
+    "fileLines": 257,
+    "maxFunctionLines": 243,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -240,7 +240,7 @@
     "notes": "The public self-serve form now delegates request, verification, copy, and one-time reveal state to `use-api-key-request-form-state`. Keep future behavior in the hook or focused subcomponents instead of regrowing the presentation shell."
   },
   "src/hooks/use-api-key-request-form-state.ts": {
-    "fileLines": 206,
+    "fileLines": 198,
     "maxFunctionLines": 136,
     "branchCount": 12,
     "disposition": "stabilized",
@@ -468,7 +468,7 @@
     "notes": "Core helpers are already extracted. Next split should isolate orchestration, persistence, and fallback policy from the cron entrypoint."
   },
   "worker/src/cron/yield-config.ts": {
-    "fileLines": 60,
+    "fileLines": 62,
     "maxFunctionLines": 1,
     "branchCount": 0,
     "disposition": "deferred",
