@@ -6,7 +6,7 @@
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": true,
+    "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
@@ -89,9 +89,5 @@
       "risk": "low",
       "coinId": "usdt-tether"
     }
-  ],
-  "yieldConfig": {
-    "yieldSource": "Flying Tulip staking (sftUSD)",
-    "yieldType": "fee-sharing"
-  }
+  ]
 }

@@ -69,6 +69,11 @@
       "chain": "bsc",
       "address": "0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9",
       "decimals": 18
+    },
+    {
+      "chain": "fantom",
+      "address": "0x9879abdea01a879644185341f7af7d8343556b7a",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

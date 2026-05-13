@@ -10,7 +10,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Overcollateralized CDP markets on Ethereum and Plasma using weETH, sUSDe, WBTC, stcUSD, and XAUt0, with additional configured WETH, XPL, and LBTC branches",
+  "collateral": "Overcollateralized CDP markets on Ethereum and Plasma using weETH, sUSDe, WBTC, LBTC, and stcUSD; the live adapter reports current per-branch shares, with WETH and XPL configured as additional dormant branches",
   "pegMechanism": "Overcollateralized CDP with Liquity v2-style user-set interest rates and redemptions; production deployments mint natively on both Ethereum and Plasma",
   "llamaId": "288",
   "detailProvider": "defillama",
@@ -63,10 +63,9 @@
       "risk": "medium"
     },
     {
-      "name": "XAUt0 (tokenized gold)",
+      "name": "LBTC",
       "pct": 23.6,
-      "risk": "medium",
-      "coinId": "xaut-tether"
+      "risk": "medium"
     },
     {
       "name": "stcUSD",

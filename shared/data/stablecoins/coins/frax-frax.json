@@ -113,23 +113,29 @@
   "reserves": [
     {
       "name": "USTB (Superstate tokenized T-bills)",
-      "pct": 50,
+      "pct": 35,
       "risk": "low",
       "coinId": "ustb-superstate"
     },
     {
-      "name": "BUIDL (BlackRock tokenized T-bills/cash/repos)",
-      "pct": 42,
+      "name": "WTGXX (WisdomTree Government Money Market)",
+      "pct": 30,
       "risk": "low",
-      "coinId": "buidl-blackrock"
+      "coinId": "wtgxx-wisdomtree"
     },
     {
-      "name": "USCC (Superstate crypto arbitrage)",
-      "pct": 3,
-      "risk": "medium"
+      "name": "USDe / Convex strategy exposure",
+      "pct": 20,
+      "risk": "medium",
+      "coinId": "usde-ethena"
     },
     {
-      "name": "Other tokenized assets (WTGXX, AUSD, JTRSY)",
+      "name": "Intra-protocol Frax-owned tokens (sFRAX, frxUSD, sfrxUSD)",
+      "pct": 10,
+      "risk": "low"
+    },
+    {
+      "name": "Other tokenized assets (BUIDL, USCC, AUSD, JTRSY)",
       "pct": 5,
       "risk": "low"
     }

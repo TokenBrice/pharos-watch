@@ -59,6 +59,11 @@
       "chain": "avalanche",
       "address": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
       "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW",
+      "decimals": 9
     }
   ],
   "blacklistabilityReview": {

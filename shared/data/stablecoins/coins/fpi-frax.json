@@ -37,6 +37,11 @@
       "chain": "ethereum",
       "address": "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
       "decimals": 18
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0xfc00000000000000000000000000000000000003",
+      "decimals": 18
     }
   ],
   "canBeBlacklisted": "dilutable",

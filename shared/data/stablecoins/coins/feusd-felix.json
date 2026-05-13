@@ -10,7 +10,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "HYPE, kHYPE, wstHYPE, UBTC (feUBTC), ETH, and SOL via overcollateralized CDPs on Hyperliquid (Liquity V2 fork)",
+  "collateral": "HYPE, kHYPE, wstHYPE, and UBTC (feUBTC) via overcollateralized CDPs on Hyperliquid (Liquity V2 fork); the live adapter reports four active branches",
   "pegMechanism": "Overcollateralized CDP (Liquity V2 fork) with direct redemption for $1 of collateral; interest-rate-sorted redemption queue (lower-rate positions redeemed first); stability pools absorb liquidations",
   "llamaId": "251",
   "detailProvider": "defillama",
@@ -67,23 +67,13 @@
   "reserves": [
     {
       "name": "HYPE / kHYPE / wstHYPE (Hyperliquid native + LSTs)",
-      "pct": 60,
+      "pct": 80,
       "risk": "very-high"
     },
     {
       "name": "BTC (bridged UBTC)",
-      "pct": 15,
+      "pct": 20,
       "risk": "medium"
-    },
-    {
-      "name": "ETH (bridged)",
-      "pct": 15,
-      "risk": "medium"
-    },
-    {
-      "name": "SOL (bridged)",
-      "pct": 10,
-      "risk": "high"
     }
   ],
   "liveReservesConfig": {

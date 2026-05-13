@@ -7232,7 +7232,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Overcollateralized CDP markets on Ethereum and Plasma using weETH, sUSDe, WBTC, stcUSD, and XAUt0, with additional configured WETH, XPL, and LBTC branches",
+    "collateral": "Overcollateralized CDP markets on Ethereum and Plasma using weETH, sUSDe, WBTC, LBTC, and stcUSD; the live adapter reports current per-branch shares, with WETH and XPL configured as additional dormant branches",
     "pegMechanism": "Overcollateralized CDP with Liquity v2-style user-set interest rates and redemptions; production deployments mint natively on both Ethereum and Plasma",
     "geckoId": "ebusd-stablecoin",
     "links": [
@@ -7283,10 +7283,9 @@
         "risk": "medium"
       },
       {
-        "name": "XAUt0 (tokenized gold)",
+        "name": "LBTC",
         "pct": 23.6,
-        "risk": "medium",
-        "coinId": "xaut-tether"
+        "risk": "medium"
       },
       {
         "name": "stcUSD",
@@ -9060,7 +9059,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "HYPE, kHYPE, wstHYPE, UBTC (feUBTC), ETH, and SOL via overcollateralized CDPs on Hyperliquid (Liquity V2 fork)",
+    "collateral": "HYPE, kHYPE, wstHYPE, and UBTC (feUBTC) via overcollateralized CDPs on Hyperliquid (Liquity V2 fork); the live adapter reports four active branches",
     "pegMechanism": "Overcollateralized CDP (Liquity V2 fork) with direct redemption for $1 of collateral; interest-rate-sorted redemption queue (lower-rate positions redeemed first); stability pools absorb liquidations",
     "geckoId": "felix-feusd",
     "pythFeedId": "0x7f2e9a7365eb634c543e9ca72683a9cf778cdc16ee5b8bca73abe6d08c1410d5",
@@ -9115,23 +9114,13 @@
     "reserves": [
       {
         "name": "HYPE / kHYPE / wstHYPE (Hyperliquid native + LSTs)",
-        "pct": 60,
+        "pct": 80,
         "risk": "very-high"
       },
       {
         "name": "BTC (bridged UBTC)",
-        "pct": 15,
+        "pct": 20,
         "risk": "medium"
-      },
-      {
-        "name": "ETH (bridged)",
-        "pct": 15,
-        "risk": "medium"
-      },
-      {
-        "name": "SOL (bridged)",
-        "pct": 10,
-        "risk": "high"
       }
     ],
     "liveReservesConfig": {
@@ -9432,6 +9421,11 @@
         "chain": "ethereum",
         "address": "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
         "decimals": 18
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xfc00000000000000000000000000000000000003",
+        "decimals": 18
       }
     ],
     "canBeBlacklisted": "dilutable",
@@ -9594,23 +9588,29 @@
     "reserves": [
       {
         "name": "USTB (Superstate tokenized T-bills)",
-        "pct": 50,
+        "pct": 35,
         "risk": "low",
         "coinId": "ustb-superstate"
       },
       {
-        "name": "BUIDL (BlackRock tokenized T-bills/cash/repos)",
-        "pct": 42,
+        "name": "WTGXX (WisdomTree Government Money Market)",
+        "pct": 30,
         "risk": "low",
-        "coinId": "buidl-blackrock"
+        "coinId": "wtgxx-wisdomtree"
       },
       {
-        "name": "USCC (Superstate crypto arbitrage)",
-        "pct": 3,
-        "risk": "medium"
+        "name": "USDe / Convex strategy exposure",
+        "pct": 20,
+        "risk": "medium",
+        "coinId": "usde-ethena"
       },
       {
-        "name": "Other tokenized assets (WTGXX, AUSD, JTRSY)",
+        "name": "Intra-protocol Frax-owned tokens (sFRAX, frxUSD, sfrxUSD)",
+        "pct": 10,
+        "risk": "low"
+      },
+      {
+        "name": "Other tokenized assets (BUIDL, USCC, AUSD, JTRSY)",
         "pct": 5,
         "risk": "low"
       }
@@ -9823,25 +9823,32 @@
     "governanceQuality": "dao-governance",
     "reserves": [
       {
-        "name": "WTGXX (WisdomTree Government Money Market)",
-        "pct": 48,
-        "risk": "low"
-      },
-      {
         "name": "USTB (Superstate tokenized T-bills)",
-        "pct": 37,
+        "pct": 51,
         "risk": "low",
         "coinId": "ustb-superstate"
       },
       {
+        "name": "WTGXX (WisdomTree Government Money Market)",
+        "pct": 36,
+        "risk": "low",
+        "coinId": "wtgxx-wisdomtree"
+      },
+      {
         "name": "BUIDL (BlackRock tokenized T-bills)",
-        "pct": 13,
+        "pct": 9,
         "risk": "low",
         "coinId": "buidl-blackrock"
       },
       {
+        "name": "USDC (Circle)",
+        "pct": 3,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      },
+      {
         "name": "USDB (DBS tokenized deposits)",
-        "pct": 2,
+        "pct": 1,
         "risk": "low"
       }
     ],
@@ -9871,7 +9878,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -9953,11 +9960,7 @@
         "risk": "low",
         "coinId": "usdt-tether"
       }
-    ],
-    "yieldConfig": {
-      "yieldSource": "Flying Tulip staking (sftUSD)",
-      "yieldType": "fee-sharing"
-    }
+    ]
   },
   {
     "id": "fusd-freedom-dollar",
@@ -15919,7 +15922,7 @@
     "links": [
       {
         "label": "Docs",
-        "url": "https://docs.moveusd.com/docs/what-is-moveusd"
+        "url": "https://docs.cfx.to/docs/key-features"
       },
       {
         "label": "Market Page",
@@ -15943,7 +15946,7 @@
       "sources": [
         {
           "label": "Docs",
-          "url": "https://docs.moveusd.com/docs/what-is-moveusd"
+          "url": "https://docs.cfx.to/docs/key-features"
         }
       ],
       "evidence": "MoveUSD is issuer-managed on Solana and public docs describe a centralized CFX issuance and redemption process; available registry sources do not prove a holder-level freeze path.",
@@ -21372,8 +21375,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "SoulPeg protocol collateral and stablecoin liquidity on BSC",
-    "pegMechanism": "Protocol-issued dollar asset using collateral reserves and mint/liquidity controls described by SoulPeg; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
+    "collateral": "USDC deposited via SoulPeg's mint flow on BNB Chain, automatically routed into Venus Protocol lending markets to generate yield; spUSD itself is a freely transferable ERC-20 wrapper around a soul-bound sUSDC position",
+    "pegMechanism": "Two-token system: soul-bound sUSDC is minted 1:1 against USDC and accrues Venus lending yield for the original wallet; SPUSD (spUSD) is a 1:1 freely tradeable ERC-20 wrapper around sUSDC and is convertible 1:1 at the wrapper contract; Pharos has not source-reviewed a holder-exercisable USDC exit route for SPUSD, so no redemption backstop is modeled",
     "geckoId": "soulpeg-usd",
     "protocolSlug": "soulpeg",
     "links": [
@@ -21408,9 +21411,11 @@
     "deploymentModel": "single-chain",
     "reserves": [
       {
-        "name": "SoulPeg protocol collateral and stablecoin liquidity",
+        "name": "USDC routed through Venus lending markets (via soul-bound sUSDC)",
         "pct": 100,
-        "risk": "high"
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
       }
     ],
     "liveReservesConfig": {
@@ -23922,6 +23927,11 @@
         "chain": "avalanche",
         "address": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
         "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW",
+        "decimals": 9
       }
     ],
     "blacklistabilityReview": {
@@ -24360,6 +24370,11 @@
       {
         "chain": "bsc",
         "address": "0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9",
+        "decimals": 18
+      },
+      {
+        "chain": "fantom",
+        "address": "0x9879abdea01a879644185341f7af7d8343556b7a",
         "decimals": 18
       }
     ],
@@ -35445,6 +35460,8 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -35769,6 +35786,7 @@
       "reviewedAt": "2026-05-12"
     },
     "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
     "custodyModel": "institutional-top",
     "reserves": [
       {
@@ -35972,6 +35990,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "collateralQuality": "rwa",
     "custodyModel": "institutional-top",
     "reserves": [
       {
@@ -36818,6 +36837,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -36865,6 +36885,11 @@
     "collateral": "ETH, BTC derivatives (WBTC, cbBTC), ETH LSTs (wstETH, LsETH), gold tokens (PAXG, XAUt), tokenized RWAs (SPYon, LENDS, REALU), and governance tokens (CRV, GNO) in oracle-free overcollateralized positions; any collateral can be whitelisted by governance",
     "pegMechanism": "Auction-based collateral valuation with veto governance; no price oracle dependency",
     "geckoId": "frankencoin",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://app.frankencoin.com/",
+      "provider": "Frankencoin protocol (live collateral positions API)"
+    },
     "links": [
       {
         "label": "Website",
@@ -36897,6 +36922,11 @@
       },
       {
         "chain": "base",
+        "address": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
         "address": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
         "decimals": 18
       }

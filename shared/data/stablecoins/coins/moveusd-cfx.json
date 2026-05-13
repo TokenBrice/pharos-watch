@@ -17,7 +17,7 @@
   "links": [
     {
       "label": "Docs",
-      "url": "https://docs.moveusd.com/docs/what-is-moveusd"
+      "url": "https://docs.cfx.to/docs/key-features"
     },
     {
       "label": "Market Page",
@@ -41,7 +41,7 @@
     "sources": [
       {
         "label": "Docs",
-        "url": "https://docs.moveusd.com/docs/what-is-moveusd"
+        "url": "https://docs.cfx.to/docs/key-features"
       }
     ],
     "evidence": "MoveUSD is issuer-managed on Solana and public docs describe a centralized CFX issuance and redemption process; available registry sources do not prove a holder-level freeze path.",

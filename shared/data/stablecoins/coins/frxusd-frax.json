@@ -182,25 +182,32 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "WTGXX (WisdomTree Government Money Market)",
-      "pct": 48,
-      "risk": "low"
-    },
-    {
       "name": "USTB (Superstate tokenized T-bills)",
-      "pct": 37,
+      "pct": 51,
       "risk": "low",
       "coinId": "ustb-superstate"
     },
     {
+      "name": "WTGXX (WisdomTree Government Money Market)",
+      "pct": 36,
+      "risk": "low",
+      "coinId": "wtgxx-wisdomtree"
+    },
+    {
       "name": "BUIDL (BlackRock tokenized T-bills)",
-      "pct": 13,
+      "pct": 9,
       "risk": "low",
       "coinId": "buidl-blackrock"
     },
     {
+      "name": "USDC (Circle)",
+      "pct": 3,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
       "name": "USDB (DBS tokenized deposits)",
-      "pct": 2,
+      "pct": 1,
       "risk": "low"
     }
   ],

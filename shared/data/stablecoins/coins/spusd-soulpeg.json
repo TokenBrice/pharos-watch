@@ -10,8 +10,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "SoulPeg protocol collateral and stablecoin liquidity on BSC",
-  "pegMechanism": "Protocol-issued dollar asset using collateral reserves and mint/liquidity controls described by SoulPeg; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
+  "collateral": "USDC deposited via SoulPeg's mint flow on BNB Chain, automatically routed into Venus Protocol lending markets to generate yield; spUSD itself is a freely transferable ERC-20 wrapper around a soul-bound sUSDC position",
+  "pegMechanism": "Two-token system: soul-bound sUSDC is minted 1:1 against USDC and accrues Venus lending yield for the original wallet; SPUSD (spUSD) is a 1:1 freely tradeable ERC-20 wrapper around sUSDC and is convertible 1:1 at the wrapper contract; Pharos has not source-reviewed a holder-exercisable USDC exit route for SPUSD, so no redemption backstop is modeled",
   "detailProvider": "coingecko",
   "geckoId": "soulpeg-usd",
   "protocolSlug": "soulpeg",
@@ -47,9 +47,11 @@
   "deploymentModel": "single-chain",
   "reserves": [
     {
-      "name": "SoulPeg protocol collateral and stablecoin liquidity",
+      "name": "USDC routed through Venus lending markets (via soul-bound sUSDC)",
       "pct": 100,
-      "risk": "high"
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
     }
   ],
   "liveReservesConfig": {
