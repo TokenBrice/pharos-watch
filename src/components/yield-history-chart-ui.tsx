@@ -1,8 +1,16 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { CHART_AMBER, CHART_BLUE } from "@/lib/chart-colors";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
 import { cn } from "@/lib/utils";
@@ -224,6 +232,16 @@ export function Controls({
   onSourceChange: (sourceKey: string) => void;
   hideSourceSelector?: boolean;
 }) {
+  const selectedSourceLabel = selectedSourceKey === "best"
+    ? "Best source"
+    : getYieldHistorySourceDisplayLabel(
+        availableSources.find((source) => source.sourceKey === selectedSourceKey) ?? {
+          sourceKey: selectedSourceKey,
+          yieldSource: selectedSourceKey,
+        },
+        availableSources,
+      );
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex flex-wrap items-center gap-2">
@@ -254,25 +272,32 @@ export function Controls({
         </ToggleGroup>
 
         {availableSources.length > 0 && !hideSourceSelector ? (
-          <label className="flex cursor-pointer items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-xs text-muted-foreground">
             <span className="uppercase tracking-[0.12em]">History</span>
-            <select
-              aria-label="Select yield history source"
-              className="cursor-pointer appearance-none bg-transparent font-medium text-foreground outline-none"
-              value={selectedSourceKey}
-              onChange={(event) => onSourceChange(event.target.value)}
-            >
-              <option value="best">Best source</option>
-              {availableSources.map((source) => (
-                <option key={source.sourceKey} value={source.sourceKey}>
-                  {getYieldHistorySourceDisplayLabel(source, availableSources)}
-                </option>
-              ))}
-            </select>
-            <span aria-hidden="true" className="text-[10px] leading-none text-muted-foreground">
-              &#9662;
-            </span>
-          </label>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label="Select yield history source"
+                className="pharos-focus-ring inline-flex max-w-[18rem] items-center gap-1.5 rounded-md px-1 py-0.5 font-medium text-foreground outline-none transition-colors hover:text-foreground"
+              >
+                <span className="truncate">{selectedSourceLabel}</span>
+                <ChevronDown className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="max-h-72 w-[min(22rem,calc(100vw-2rem))]">
+                <DropdownMenuRadioGroup value={selectedSourceKey} onValueChange={onSourceChange}>
+                  <DropdownMenuRadioItem value="best" className="text-xs">
+                    Best source
+                  </DropdownMenuRadioItem>
+                  {availableSources.map((source) => (
+                    <DropdownMenuRadioItem key={source.sourceKey} value={source.sourceKey} className="text-xs">
+                      <span className="truncate">
+                        {getYieldHistorySourceDisplayLabel(source, availableSources)}
+                      </span>
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         ) : null}
       </div>
 
