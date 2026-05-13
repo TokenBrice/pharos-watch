@@ -154,9 +154,7 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
     });
   }
 
-  const publicationFilter = publication?.generationId
-    ? "AND (publication_generation_id IS NULL OR publication_state = 'published')"
-    : "";
+  const publicationFilter = "AND (publication_generation_id IS NULL OR publication_state = 'published')";
 
   const sql = mode === "source"
     ? `SELECT recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best, publication_generation_id

@@ -82,6 +82,25 @@ export const SUPPLEMENTAL_SOURCE_FAMILY_KEYS: SupplementalSourceFamilyKey[] = [
   "aaveV3",
 ];
 
+export function getSupplementalCandidateFamily(
+  sourceKey: string | null | undefined,
+): SupplementalSourceFamilyKey | null {
+  if (!sourceKey) return null;
+  if (sourceKey.startsWith("protocol-api:morpho-vault:")) return "morpho";
+  if (sourceKey.startsWith("protocol-api:pendle:")) return "pendle";
+  if (
+    sourceKey.startsWith("protocol-api:yearn:") ||
+    sourceKey.startsWith("protocol-api:kong:") ||
+    sourceKey.startsWith("protocol-api:k3:")
+  ) {
+    return "yearnKong";
+  }
+  if (sourceKey.startsWith("protocol-api:beefy:")) return "beefy";
+  if (sourceKey.startsWith("protocol-api:compound-v3-supply:")) return "compoundV3";
+  if (sourceKey.startsWith("aave-v3-onchain:")) return "aaveV3";
+  return null;
+}
+
 function buildSourceFamilyCountRecord(): SourceFamilyCountRecord {
   return {
     morpho: 0,

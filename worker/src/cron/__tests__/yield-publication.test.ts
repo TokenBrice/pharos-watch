@@ -274,7 +274,7 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
       sourceAgeSeconds: 300,
       observationCount30d: 12,
       sourceSwitchCount30d: 2,
-      deploymentPlace: null,
+      deploymentPlace: "strategy-vault",
       venueProtocol: null,
       venueChain: null,
       venueRiskTier: "unknown",
@@ -395,7 +395,10 @@ describe("validateYieldRankingsPayloadForPublish", () => {
 });
 
 describe("publishYieldCoordinatorResults", () => {
-  function makePublicationDb(cacheWriteChanges: number, options?: { cacheWriteError?: Error }) {
+  function makePublicationDb(
+    cacheWriteChanges: number,
+    options?: { cacheWriteError?: Error; finalizeError?: Error },
+  ) {
     return mockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [], first: null },
       { match: "INSERT OR REPLACE INTO yield_publication_generations", rows: [] },
@@ -408,7 +411,7 @@ describe("publishYieldCoordinatorResults", () => {
         runMeta: { changes: cacheWriteChanges },
         throwError: options?.cacheWriteError,
       },
-      { match: "UPDATE yield_publication_generations", rows: [] },
+      { match: "UPDATE yield_publication_generations", rows: [], throwError: options?.finalizeError },
       { match: "UPDATE yield_data SET publication_state", rows: [] },
       { match: "UPDATE yield_history SET publication_state", rows: [] },
       { match: "DELETE FROM yield_history", rows: [] },
@@ -499,6 +502,23 @@ describe("publishYieldCoordinatorResults", () => {
     expect(
       history.some((entry) => entry.sql.includes("UPDATE yield_data SET publication_state = ?") && entry.binds[0] === "failed"),
     ).toBe(true);
+  });
+
+  it("reports degraded when published cache succeeds but D1 finalization fails", async () => {
+    const db = makePublicationDb(1, { finalizeError: new Error("database locked") });
+
+    const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
+
+    expect(result).toMatchObject({
+      ok: true,
+      cacheWriteSkipped: false,
+      casSkipped: false,
+    });
+    if (result.ok) {
+      expect(result.degradationReasons.some((reason) =>
+        reason.startsWith("published-generation-finalization-failed:database locked"),
+      )).toBe(true);
+    }
   });
 
   it("writes bounded selected-source decision evidence with rejected-source reasons", async () => {

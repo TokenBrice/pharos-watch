@@ -30,6 +30,7 @@ import {
   buildPreviewYieldRankingsArtifacts,
   publishYieldCoordinatorResults,
 } from "./yield-sync/coordinator-persist";
+import { repairPublishedYieldGenerationFromCache } from "./yield-sync/publication";
 import {
   guardPublishedYieldCoverage,
   guardTrackedYieldCoverage,
@@ -73,6 +74,9 @@ export async function syncYieldData(
   }
 
   await purgeYieldHistoryOwnershipHandoffs(db);
+  await repairPublishedYieldGenerationFromCache(db, startSec).catch((error: unknown) => {
+    console.warn("[sync-yield-data] Failed to repair published yield generation before history load:", error);
+  });
 
   const {
     dlPools,

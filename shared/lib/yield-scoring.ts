@@ -59,6 +59,18 @@ function finiteOrNull(value: number | null | undefined): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+export function computePysRewardShare(
+  apyReward: number | null | undefined,
+  currentApy: number | null | undefined,
+): number | null {
+  const reward = finiteOrNull(apyReward);
+  const current = finiteOrNull(currentApy);
+  if (reward == null || reward < 0 || current == null || current <= 0) {
+    return null;
+  }
+  return clamp(reward / current, 0, 1);
+}
+
 export function resolvePysSourceRiskPenalty(
   sourceRiskPenalty: number | null | undefined,
 ): PysSourceRiskPenaltyResolution {

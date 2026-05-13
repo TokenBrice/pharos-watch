@@ -1,5 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { computePysComponents, derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
+import { computePysComponents, computePysRewardShare, derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
 import { computeApyVarianceScore, computePYS, computeYieldStability } from "../yield-helpers";
@@ -83,20 +83,6 @@ function computeSourceDepthRatio(sourceTvlUsd: number | null, supplyUsd: number 
     return null;
   }
   return sourceTvlUsd / supplyUsd;
-}
-
-function computeRewardShare(apyReward: number | null, currentApy: number): number | null {
-  if (
-    apyReward == null ||
-    !Number.isFinite(apyReward) ||
-    apyReward < 0 ||
-    !Number.isFinite(currentApy) ||
-    currentApy <= 0 ||
-    apyReward > currentApy
-  ) {
-    return null;
-  }
-  return apyReward / currentApy;
 }
 
 function computeSourceAgeSeconds(startSec: number, sourceObservedAt: number | null | undefined): number | null {
@@ -198,7 +184,7 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         : (input.prevTvlBySource.get(buildHistoryKey(stablecoinId, sourceKey)) ?? null);
       const sourceDepthRatio = computeSourceDepthRatio(y.sourceTvlUsd, input.stablecoinSupplyById?.get(stablecoinId));
       const observationCount30d = historySelection.usedLegacyHistory ? null : samples.length;
-      const rewardShare = computeRewardShare(y.apyReward, y.currentApy);
+      const rewardShare = computePysRewardShare(y.apyReward, y.currentApy);
       const sourceAgeSeconds = computeSourceAgeSeconds(input.startSec, y.sourceObservedAt);
       const sourceRiskPenaltyInput =
         y.sourceRisk?.sourceRiskPenalty ??

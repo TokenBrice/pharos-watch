@@ -6,6 +6,7 @@ import {
   PYS_SUSTAINABILITY_FLOOR,
   PYS_MAX_SOURCE_RISK_PENALTY,
   computePysComponents,
+  computePysRewardShare,
   computePYS,
   derivePysSourceRiskPenalty,
   resolvePysSourceRiskPenalty,
@@ -54,6 +55,19 @@ describe("resolvePysSourceRiskPenalty", () => {
       reason: "above-max-clamped",
       provided: true,
     });
+  });
+});
+
+describe("computePysRewardShare", () => {
+  it("clamps reward-heavy rows when reward APY exceeds current APY", () => {
+    expect(computePysRewardShare(12, 8)).toBe(1);
+    expect(computePysRewardShare(4, 8)).toBe(0.5);
+  });
+
+  it("keeps invalid or non-positive current APY unmeasured", () => {
+    expect(computePysRewardShare(null, 8)).toBeNull();
+    expect(computePysRewardShare(1, 0)).toBeNull();
+    expect(computePysRewardShare(-1, 8)).toBeNull();
   });
 });
 

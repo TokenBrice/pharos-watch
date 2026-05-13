@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildYieldHistoryEvaluationInputs } from "../yield-sync/coordinator-history";
-import type { YieldHistorySnapshotRow } from "../yield-sync/history";
+import { loadYieldHistorySnapshots, type YieldHistorySnapshotRow } from "../yield-sync/history";
 
 function row(overrides: Partial<YieldHistorySnapshotRow>): YieldHistorySnapshotRow {
   return {
@@ -70,5 +70,24 @@ describe("yield coordinator history", () => {
     });
 
     expect(result.sourceSwitchCount30dByCoin.get("coin-a")).toBe(2);
+  });
+
+  it("loads only published or legacy history rows for evaluation inputs", async () => {
+    const sqlSeen: string[] = [];
+    const db = {
+      prepare: (sql: string) => {
+        sqlSeen.push(sql);
+        return {
+          bind: () => ({
+            all: async () => ({ results: [] }),
+          }),
+        };
+      },
+    } as unknown as D1Database;
+
+    await loadYieldHistorySnapshots(db, ["coin-a"], 1_700_100_000, 1_699_495_200);
+
+    expect(sqlSeen).toHaveLength(3);
+    expect(sqlSeen.every((sql) => sql.includes("publication_state IS NULL OR publication_state = 'published'"))).toBe(true);
   });
 });

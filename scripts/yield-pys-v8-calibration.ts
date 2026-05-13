@@ -127,7 +127,7 @@ export function buildCalibrationReport(rankings: RankingWithRisk[], generatedAt:
     "",
     `Generated: ${generatedAt}`,
     "",
-    "Scope: calibration scaffold only. This artifact does not change runtime scoring, source arbitration, API contracts, worker jobs, or UI behavior.",
+    "Scope: rollout calibration for the methodology v8 PYS source-risk layer. This artifact is evidence only and does not change runtime behavior.",
     "",
     "## Candidate Formula For Analysis",
     "",
@@ -137,7 +137,7 @@ export function buildCalibrationReport(rankings: RankingWithRisk[], generatedAt:
     "pysV8 = clamp(round(rowUtility * sustainabilityMultiplier * scalingFactor), 0, 100)",
     "```",
     "",
-    "Unknown source-risk inputs are neutral in this scaffold. Runtime rollout must replace this analysis-only logic with typed, documented helpers and methodology versioning.",
+    "Unknown source-risk inputs are neutral. The before column recomputes the v7 baseline without source-risk penalties; the after column applies the v8 candidate penalty.",
     "",
     "## Distribution",
     "",
@@ -198,9 +198,9 @@ export function buildCalibrationReport(rankings: RankingWithRisk[], generatedAt:
     "",
     "## Implementation Notes For PR 7",
     "",
-    "- Feed this script a saved `/api/yield-rankings` response once source-risk prototype fields exist.",
-    "- Keep generated calibration reports under `/agents/`; they are temporary review artifacts.",
-    "- Do not use this scaffold as runtime scoring logic. Runtime PYS v8 belongs in a later methodology-bumped PR.",
+    "- Feed this script a saved `/api/yield-rankings` response after source-risk prototype fields exist.",
+    "- Keep scratch calibration reports under `/agents/`; committed rollout evidence belongs under `docs/process/`.",
+    "- Keep this report with the v8 rollout notes so score movements remain reviewable.",
     "",
   ].join("\n");
 }
@@ -210,7 +210,7 @@ export function scoreRows(rankings: RankingWithRisk[]): ScoredRow[] {
     const apyVarianceScore = resolveApyVarianceScore(row);
     const benchmarkRate = typeof row.benchmarkRate === "number" ? row.benchmarkRate : null;
     const scalingFactor = DEFAULT_SCALING_FACTOR;
-    const v7Score = row.pharosYieldScore ?? computePYS({
+    const v7Score = computePYS({
       apy30d: row.apy30d,
       safetyScore: row.safetyScore,
       apyVarianceScore,

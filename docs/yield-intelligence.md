@@ -352,6 +352,7 @@ Yield v8 exposes optional `sourceRisk` and `rankChangeAttribution` shapes in sha
 - `sourceRisk.sourceRiskPenalty` is the active v8 source-risk multiplier. It is derived from reliable `rewardShare`, `sourceDepthRatio`, `sourceAgeSeconds`, `sourceSwitchCount30d`, `observationCount30d`, and sourced `venueRiskTier` inputs where available. Missing, `null`, or invalid evidence is equivalent to a neutral multiplier of `1`; values below 1 clamp to 1 and values above `PYS_MAX_SOURCE_RISK_PENALTY` (`2.5`) clamp to 2.5.
 - `sourceRisk.venueRiskTier: "unknown"`, `null`, or omitted means the venue tier has not been sourced. Unknown tier is neutral, not a hidden high-risk default.
 - `sourceRisk.sourceRiskScore`, `sourceRisk.sourceDepthRatio`, `sourceRisk.rewardShare`, `sourceRisk.sourceAgeSeconds`, `sourceRisk.observationCount30d`, `sourceRisk.sourceSwitchCount30d`, `sourceRisk.deploymentPlace`, `sourceRisk.venueProtocol`, `sourceRisk.venueChain`, and `sourceRisk.investabilityFlags` are populated only when supported by existing rows, provenance, publication-generation evidence, or sourced yield-risk config. Missing precision stays missing instead of being guessed from labels.
+- v8 rollout calibration evidence is recorded in `docs/process/yield-pys-v8-calibration-2026-05-13.md`; it recomputes the v7 baseline without source-risk penalties and compares the v8 candidate against source-risk-shaped fixtures.
 - External `lending-opportunity` rows do not modify the base stablecoin's Safety Score. They may later inform an opportunity-level yield risk label, DEWS input, or report-card modifier only after the consuming methodology explicitly versions that behavior.
 - DEWS and report-card consumers treat unavailable source-risk fields and legacy rows as no-op inputs. Report-card yield-risk helpers currently normalize the source-risk payload but return explicit no-op adjustments until a separate report-card methodology version defines sourced caps or haircuts.
 
@@ -491,7 +492,7 @@ publication_generation_id TEXT,
 publication_state         TEXT  -- "staged" | "published" | "failed"
 ```
 
-Rows are written as `staged` with a `publication_generation_id`, then flipped to `published` only after the `yield-rankings` cache write succeeds. If preflight validation or cache publication fails, the generation is marked `failed`; those rows are retained for debugging but are not eligible for generation-aware public history reads.
+Rows are written as `staged` with a `publication_generation_id`, then flipped to `published` only after the `yield-rankings` cache write succeeds. If preflight validation or cache publication fails, the generation is marked `failed`; those rows are retained for debugging but are not eligible for generation-aware public history reads or future evaluation-history inputs.
 
 ### `yield_history` — Historical Data Points
 
@@ -803,19 +804,13 @@ Dashed reference line at the benchmark frame rate. On benchmark-homogeneous scop
 
 Sortable, paginated table (25 rows/page). Default sort: PYS descending. Table headers for `PYS`, `Stability`, and `Signals` use the shared methodology-hint trigger so users can read the local definition without leaving the leaderboard.
 
-The filter row above the table now combines:
-
-- **Stablecoin search:** inline search input with a popover for the top symbol/name matches; selecting a result clears the query, expands that row, and scrolls it into view.
-- **Yield type pills (multi-select):** One pill per yield type present in the currently visible dataset. Active pills use `YIELD_TYPE_STYLES[type].badge`; inactive pills use a muted outline.
-- **Hide warned checkbox:** Excludes rows with one or more active warning signals (`warningSignals.length > 0`) when enabled.
-
-Search and both filters feed rows into the shared sort/pagination pipeline. With `resetPageOnTotalChange: true`, page index automatically resets to 0 whenever those controls change the input row count.
+The filter row above the table is backed by `YieldViewModel` and URL query keys for `q`, `peg`, `type`, `warnings`, `safety`, `tvl`, `confidence`, `benchmark`, and `opportunity`. The trust rail promotes body-level API warnings from `YieldRankingsResponse.warnings`, including degraded live safety hydration, before the table. Search and filters feed rows into the shared sort/pagination pipeline, with page index reset whenever controls change the visible row set.
 
 **Columns:** Rank, Coin (logo + symbol), APY (30d), Grade, PYS, Source, Type (badge), TVL, Stability (bar + %), 30d Range, Signals, and a trailing chevron for row expansion.
 
 Stability display multiplies the raw 0–1 value by 100 for both the bar width and the percentage text.
 
-**PYS tooltip:** Hovering a non-null PYS score opens a component breakdown tooltip with Yield Efficiency (`apy30d / adjustedRiskPenalty`), the adjusted risk-penalty line, Safety (grade + score with `40` fallback), and Consistency (`max(0.3, yieldStability)` shown as a percentage).
+**PYS tooltip:** Hovering a non-null PYS score opens a component breakdown tooltip with Effective Yield, benchmark adjustment, source-risk utility/penalty when the nested `sourceRisk.sourceRiskPenalty` is above neutral, Yield Efficiency, the adjusted safety-penalty line, Safety (grade + score with `40` fallback), and Consistency (`max(0.3, yieldStability)` shown as a percentage).
 
 **Signals column (desktop/tablet):** Rows with no active warnings show an em dash. Rows with one warning show an amber outline alert icon. Rows with two or more warnings show a filled amber icon and an additional subtle amber left border on the row. Hovering the icon opens a tooltip with human-readable warning descriptions (`yield-spike`, `yield-divergence`, `negative-trend`, `reward-heavy`, `tvl-outflow`, `zero-yield`, `data-stale`).
 

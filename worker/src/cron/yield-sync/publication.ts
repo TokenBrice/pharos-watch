@@ -441,6 +441,47 @@ export async function finalizeYieldPublicationGeneration(
   ]);
 }
 
+function parsePublishedYieldPublicationMetadata(
+  cached: { value: string; updatedAt: number } | null,
+): YieldPublicationMetadata | null {
+  if (!cached) return null;
+  try {
+    const payload = JSON.parse(cached.value) as unknown;
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+    const publication = (payload as { publication?: unknown }).publication;
+    if (!publication || typeof publication !== "object" || Array.isArray(publication)) return null;
+    const generationId = (publication as { generationId?: unknown }).generationId;
+    const status = (publication as { status?: unknown }).status;
+    if (typeof generationId !== "string" || generationId.length === 0 || status !== "published") return null;
+    const updatedAt = (publication as { updatedAt?: unknown }).updatedAt;
+    const cutoffAt = (publication as { cutoffAt?: unknown }).cutoffAt;
+    return {
+      generationId,
+      status: "published",
+      updatedAt: typeof updatedAt === "number" && Number.isFinite(updatedAt) ? updatedAt : cached.updatedAt,
+      cutoffAt: typeof cutoffAt === "number" && Number.isFinite(cutoffAt) ? cutoffAt : cached.updatedAt,
+      schemaVersion: 1,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function repairPublishedYieldGenerationFromCache(
+  db: D1Database,
+  timestamp: number,
+): Promise<boolean> {
+  const cached = await getCache(db, "yield-rankings");
+  const publication = parsePublishedYieldPublicationMetadata(cached);
+  if (!publication?.generationId) return false;
+  await finalizeYieldPublicationGeneration(db, {
+    generationId: publication.generationId,
+    state: "published",
+    timestamp,
+  });
+  return true;
+}
+
 export async function validateYieldRankingsPayloadForPublish(
   db: D1Database,
   rankingsPayload: unknown,

@@ -260,4 +260,88 @@ describe("loadYieldHealthSummary", () => {
     expect(summary.supplemental.status).toBe("degraded");
     expect(summary.coverageAudit.status).toBe("degraded");
   });
+
+  it("uses fresh per-family supplemental caches when the aggregate is stale", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        {
+          key: "yield-rankings",
+          updated_at: NOW - 300,
+          value: JSON.stringify({
+            rankings: [],
+            provenance: {
+              safetySnapshot: { coverageRatio: 1, coveredCount: 1, trackedCount: 1, reason: null },
+              benchmark: { fetchedAt: NOW - 3600, ageSeconds: 3600, source: "tbill-cache", isFallback: false },
+            },
+          }),
+        },
+        {
+          key: "yield:supplemental-sources:v1",
+          updated_at: NOW - 20 * 3600,
+          value: JSON.stringify({ sourceCount: 20 }),
+        },
+        ...["morpho", "pendle", "yearnKong", "beefy", "compoundV3", "aaveV3"].map((family) => ({
+          key: `yield:supplemental-sources:v1:${family}`,
+          updated_at: NOW - 1800,
+          value: JSON.stringify({ sourceCount: 2 }),
+        })),
+        {
+          key: "yield-coverage-audit",
+          updated_at: NOW - 86400,
+          value: "{}",
+        },
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.supplemental).toMatchObject({
+      status: "healthy",
+      familyCount: 6,
+      freshFamilyCount: 6,
+      missingFamilyCount: 0,
+    });
+  });
+
+  it("surfaces partial supplemental family health", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        {
+          key: "yield-rankings",
+          updated_at: NOW - 300,
+          value: JSON.stringify({
+            rankings: [],
+            provenance: {
+              safetySnapshot: { coverageRatio: 1, coveredCount: 1, trackedCount: 1, reason: null },
+              benchmark: { fetchedAt: NOW - 3600, ageSeconds: 3600, source: "tbill-cache", isFallback: false },
+            },
+          }),
+        },
+        {
+          key: "yield:supplemental-sources:v1:morpho",
+          updated_at: NOW - 1800,
+          value: JSON.stringify({ sourceCount: 4 }),
+        },
+        {
+          key: "yield:supplemental-sources:v1:beefy",
+          updated_at: NOW - 20 * 3600,
+          value: JSON.stringify({ sourceCount: 1 }),
+        },
+        {
+          key: "yield-coverage-audit",
+          updated_at: NOW - 86400,
+          value: "{}",
+        },
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.supplemental.status).toBe("degraded");
+    expect(summary.supplemental.freshFamilyCount).toBe(1);
+    expect(summary.supplemental.degradedFamilyCount).toBe(1);
+    expect(summary.supplemental.staleFamilyCount).toBe(0);
+    expect(summary.supplemental.missingFamilyCount).toBe(4);
+    expect(summary.supplemental.families?.morpho?.sourceCount).toBe(4);
+  });
 });

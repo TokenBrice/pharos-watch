@@ -130,6 +130,7 @@ interface MakeDbOptions {
   yieldWarningRows?: Array<{
     stablecoin_id: string;
     warning_signals: string;
+    is_best?: number | null;
     publication_state?: string | null;
   }>;
   signalIds?: string[];
@@ -204,14 +205,15 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
       }
       if (sql.includes("FROM yield_data")) {
         const rows = opts.yieldWarningRows ?? [];
+        const bestRows = sql.includes("is_best = 1")
+          ? rows.filter((row) => row.is_best == null || row.is_best === 1)
+          : rows;
         if (sql.includes("publication_state")) {
           return {
-            results: rows.filter((row) => row.publication_state == null || row.publication_state === "published") as T[],
+            results: bestRows.filter((row) => row.publication_state == null || row.publication_state === "published") as T[],
           };
         }
-        return {
-          results: rows as T[],
-        };
+        return { results: bestRows as T[] };
       }
       if (sql.includes("FROM mint_burn_hourly")) {
         if (sql.includes("days_with_data")) {
@@ -427,16 +429,19 @@ describe("computeAndStoreDEWS", () => {
         {
           stablecoin_id: "usdt-tether",
           warning_signals: JSON.stringify(["yield-spike"]),
+          is_best: 1,
           publication_state: "published",
         },
         {
           stablecoin_id: "usdt-tether",
           warning_signals: JSON.stringify(["reward-heavy"]),
+          is_best: 1,
           publication_state: "failed",
         },
         {
           stablecoin_id: "usdt-tether",
           warning_signals: JSON.stringify(["tvl-outflow"]),
+          is_best: 1,
           publication_state: "staged",
         },
       ],
@@ -449,6 +454,36 @@ describe("computeAndStoreDEWS", () => {
       expect.objectContaining({
         stablecoinId: "usdt-tether",
         yieldWarnings: ["yield-spike"],
+      }),
+    );
+  });
+
+  it("uses only selected best-row yield warnings", async () => {
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen, {
+      yieldWarningRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          warning_signals: JSON.stringify(["yield-spike"]),
+          is_best: 0,
+          publication_state: "published",
+        },
+        {
+          stablecoin_id: "usdt-tether",
+          warning_signals: JSON.stringify(["reward-heavy"]),
+          is_best: 1,
+          publication_state: "published",
+        },
+      ],
+    });
+
+    await computeAndStoreDEWS(db);
+
+    expect(sqlSeen.some((sql) => sql.includes("is_best = 1"))).toBe(true);
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        yieldWarnings: ["reward-heavy"],
       }),
     );
   });

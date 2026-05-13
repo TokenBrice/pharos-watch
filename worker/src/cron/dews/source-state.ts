@@ -292,7 +292,9 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
       .prepare(
         `SELECT stablecoin_id, warning_signals
          FROM yield_data
-         WHERE warning_signals IS NOT NULL
+         WHERE is_best = 1
+           AND warning_signals IS NOT NULL
+           AND warning_signals != '[]'
            AND (publication_state IS NULL OR publication_state = 'published')`,
       )
       .all<{ stablecoin_id: string; warning_signals: string }>();

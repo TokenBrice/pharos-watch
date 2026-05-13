@@ -121,6 +121,27 @@ describe("evaluateYieldSources", () => {
     expect(clean?.sourceRiskAdjustedUtility).toBeGreaterThan(fragile?.sourceRiskAdjustedUtility ?? 0);
   });
 
+  it("penalizes reward-heavy rows when reward APY exceeds current APY", () => {
+    const result = evaluateYieldSources(baseEvaluationInput({
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "protocol-api:coin-a:reward-heavy",
+            currentApy: 8,
+            apyBase: -4,
+            apyReward: 12,
+            dataSource: "protocol-api",
+          }),
+        },
+      ],
+    }));
+
+    const source = result.evaluatedSources.find((row) => row.sourceKey === "protocol-api:coin-a:reward-heavy");
+    expect(source?.sourceRiskPenalty).toBeGreaterThanOrEqual(1.5);
+  });
+
   it("keeps APY-first ordering for same-tier candidates when source-risk is missing", () => {
     const result = evaluateYieldSources(baseEvaluationInput({
       resolved: [

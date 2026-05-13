@@ -176,17 +176,34 @@ export async function fetchCurveScrvusdCurrentRateSource(
     );
 
     for (const rpcUrl of rpcUrls) {
-      const [
-        totalAssetsRaw,
-        totalSupplyRaw,
-        profitUnlockingRateRaw,
-        fullProfitUnlockDateRaw,
-      ] = await Promise.all([
-        fetchEthCallUint256(rpcUrl, "ethereum", SCRVUSD_VAULT, SCRVUSD_TOTAL_ASSETS_SELECTOR, signal),
-        fetchEthCallUint256(rpcUrl, "ethereum", SCRVUSD_VAULT, SCRVUSD_TOTAL_SUPPLY_SELECTOR, signal),
-        fetchEthCallUint256(rpcUrl, "ethereum", SCRVUSD_VAULT, SCRVUSD_PROFIT_UNLOCKING_RATE_SELECTOR, signal),
-        fetchEthCallUint256(rpcUrl, "ethereum", SCRVUSD_VAULT, SCRVUSD_FULL_PROFIT_UNLOCK_DATE_SELECTOR, signal),
-      ]);
+      const totalAssetsRaw = await fetchEthCallUint256(
+        rpcUrl,
+        "ethereum",
+        SCRVUSD_VAULT,
+        SCRVUSD_TOTAL_ASSETS_SELECTOR,
+        signal,
+      );
+      const totalSupplyRaw = await fetchEthCallUint256(
+        rpcUrl,
+        "ethereum",
+        SCRVUSD_VAULT,
+        SCRVUSD_TOTAL_SUPPLY_SELECTOR,
+        signal,
+      );
+      const profitUnlockingRateRaw = await fetchEthCallUint256(
+        rpcUrl,
+        "ethereum",
+        SCRVUSD_VAULT,
+        SCRVUSD_PROFIT_UNLOCKING_RATE_SELECTOR,
+        signal,
+      );
+      const fullProfitUnlockDateRaw = await fetchEthCallUint256(
+        rpcUrl,
+        "ethereum",
+        SCRVUSD_VAULT,
+        SCRVUSD_FULL_PROFIT_UNLOCK_DATE_SELECTOR,
+        signal,
+      );
 
       if (
         totalAssetsRaw == null ||

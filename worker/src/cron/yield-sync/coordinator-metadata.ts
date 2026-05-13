@@ -108,6 +108,7 @@ export function buildYieldSyncMetadata(input: {
       supplementalSourceUpdatedAt: input.supplementalMeta.updatedAt,
       supplementalSourceAgeSeconds: input.supplementalMeta.ageSeconds,
       supplementalSourceCount: input.supplementalMeta.sourceCount,
+      supplementalFallbackMode: input.supplementalMeta.fallbackMode,
       onChainRatesResolved: input.onChainRatesResolved,
       onChainRatesConfigured: input.onChainRatesConfigured,
       onChainAttempted: input.onChainAttempted,

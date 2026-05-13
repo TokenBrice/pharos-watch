@@ -636,6 +636,17 @@ export interface YieldHealthSummary {
     ageSec: number | null;
     maxAgeSec: number;
     status: YieldHealthFieldStatus;
+    familyCount?: number;
+    freshFamilyCount?: number;
+    degradedFamilyCount?: number;
+    staleFamilyCount?: number;
+    missingFamilyCount?: number;
+    families?: Record<string, {
+      updatedAt: number | null;
+      ageSec: number | null;
+      sourceCount: number | null;
+      status: YieldHealthFieldStatus;
+    }>;
   };
   benchmark: {
     fetchedAt: number | null;

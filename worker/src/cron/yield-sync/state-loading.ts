@@ -18,7 +18,11 @@ import {
   type DeterministicOnChainHealthState,
 } from "./cache";
 import { fetchOnChainRates, loadDlStablecoinPools, loadRiskFreeRateRegistry } from "./sources";
-import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "./supplemental-source-families";
+import {
+  getSupplementalCandidateFamily,
+  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+  type SupplementalSourceFamilyKey,
+} from "./supplemental-source-families";
 import type { ResolvedYieldCandidate } from "./types";
 
 const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.75;
@@ -87,6 +91,7 @@ async function loadYieldSupplementalCandidates(
   startSec: number,
 ): Promise<{ candidates: ResolvedYieldCandidate[]; meta: YieldSupplementalCacheMeta }> {
   const familyCandidates: ResolvedYieldCandidate[] = [];
+  const validFamilyKeys = new Set<SupplementalSourceFamilyKey>();
   let familyCacheRows = 0;
   let degradedFamilyCaches = 0;
   let latestFamilyUpdatedAt: number | null = null;
@@ -100,22 +105,45 @@ async function loadYieldSupplementalCandidates(
       degradedFamilyCaches += 1;
       continue;
     }
+    validFamilyKeys.add(family);
     familyCandidates.push(...parsedFamily.candidates);
     latestFamilyUpdatedAt = Math.max(latestFamilyUpdatedAt ?? 0, parsedFamily.updatedAt);
   }
 
   if (familyCandidates.length > 0) {
-    const ageSeconds = latestFamilyUpdatedAt == null ? null : Math.max(0, startSec - latestFamilyUpdatedAt);
+    const missingOrDegradedFamily =
+      degradedFamilyCaches > 0 || familyCacheRows < SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length;
+    let candidates = familyCandidates;
+    let fallbackMode: string | null = missingOrDegradedFamily ? "partial-family-cache" : null;
+    let updatedAt = latestFamilyUpdatedAt;
+
+    if (missingOrDegradedFamily) {
+      const cachedAggregate = await getCache(db, YIELD_SUPPLEMENTAL_CACHE_KEY);
+      const parsedAggregate = cachedAggregate
+        ? parseYieldSupplementalSourcesCache(cachedAggregate.value, cachedAggregate.updatedAt, startSec)
+        : null;
+      if (parsedAggregate && parsedAggregate.ageSeconds <= YIELD_SUPPLEMENTAL_MAX_AGE_SEC) {
+        const aggregateBackfill = parsedAggregate.candidates.filter((candidate) => {
+          const family = getSupplementalCandidateFamily(candidate.yield?.sourceKey);
+          return family == null || !validFamilyKeys.has(family);
+        });
+        if (aggregateBackfill.length > 0) {
+          candidates = [...familyCandidates, ...aggregateBackfill];
+          updatedAt = Math.max(updatedAt ?? 0, parsedAggregate.updatedAt);
+          fallbackMode = "partial-family-cache-aggregate-merge";
+        }
+      }
+    }
+
+    const ageSeconds = updatedAt == null ? null : Math.max(0, startSec - updatedAt);
     return {
-      candidates: familyCandidates,
+      candidates,
       meta: {
         mode: "cache",
-        updatedAt: latestFamilyUpdatedAt,
+        updatedAt,
         ageSeconds,
-        sourceCount: familyCandidates.length,
-        fallbackMode: degradedFamilyCaches > 0 || familyCacheRows < SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length
-          ? "partial-family-cache"
-          : null,
+        sourceCount: candidates.length,
+        fallbackMode,
       },
     };
   }

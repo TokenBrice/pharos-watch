@@ -9,6 +9,18 @@ export type YieldBenchmarkSelectionMode = "native" | "fallback-usd" | "manual-ov
 export type YieldSafetyProvenance = "live-report-card" | "cached-publish" | "default-safety";
 export type YieldPublicationStatus = "staged" | "published" | "failed";
 export type YieldVenueRiskTier = "low" | "medium" | "high" | "unknown";
+export const YIELD_DEPLOYMENT_PLACE_VALUES = [
+  "native-wrapper",
+  "issuer-savings",
+  "lending-market",
+  "strategy-vault",
+  "lp-or-dex",
+  "rwa-fund",
+  "reward-program",
+  "rate-derived",
+  "price-derived",
+] as const;
+export type YieldDeploymentPlace = (typeof YIELD_DEPLOYMENT_PLACE_VALUES)[number];
 const YIELD_RANK_CHANGE_DRIVER_VALUES = [
   "apy",
   "benchmark",
@@ -56,7 +68,7 @@ export interface YieldSourceRisk {
   sourceAgeSeconds?: number | null;
   observationCount30d?: number | null;
   sourceSwitchCount30d?: number | null;
-  deploymentPlace?: string | null;
+  deploymentPlace?: YieldDeploymentPlace | null;
   venueProtocol?: string | null;
   venueChain?: string | null;
   venueRiskTier?: YieldVenueRiskTier | null;
@@ -204,7 +216,7 @@ const YieldSourceRiskSchema: z.ZodType<YieldSourceRisk> = z.object({
   sourceAgeSeconds: z.number().int().min(0).nullable().optional(),
   observationCount30d: z.number().int().min(0).nullable().optional(),
   sourceSwitchCount30d: z.number().int().min(0).nullable().optional(),
-  deploymentPlace: z.string().nullable().optional(),
+  deploymentPlace: z.enum(YIELD_DEPLOYMENT_PLACE_VALUES).nullable().optional(),
   venueProtocol: z.string().nullable().optional(),
   venueChain: z.string().nullable().optional(),
   venueRiskTier: z.enum(["low", "medium", "high", "unknown"]).nullable().optional(),

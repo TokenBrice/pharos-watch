@@ -480,7 +480,7 @@ describe("handleYieldHistory", () => {
     expect(body.history).toHaveLength(1);
 
     const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history"));
-    expect(historyQuery?.sql).not.toContain("publication_state = 'published'");
+    expect(historyQuery?.sql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
     expect(historyQuery?.binds[2]).toBe(publishedAt);
   });
 

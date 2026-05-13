@@ -49,11 +49,19 @@ function YieldLeaderboardTableRowBase({
     benchmarkAdjustment,
     benchmarkSpread,
     effectiveYield,
+    rowUtility,
+    sourceRiskPenalty,
     yieldEfficiency,
     sustainabilityMult,
   } = useMemo(
-    () => computePysBreakdown(row.apy30d, safetyScore, row.yieldStability, row.benchmarkRate),
-    [row.apy30d, row.benchmarkRate, row.yieldStability, safetyScore],
+    () => computePysBreakdown(
+      row.apy30d,
+      safetyScore,
+      row.yieldStability,
+      row.benchmarkRate,
+      row.sourceRisk?.sourceRiskPenalty ?? null,
+    ),
+    [row.apy30d, row.benchmarkRate, row.sourceRisk?.sourceRiskPenalty, row.yieldStability, safetyScore],
   );
   const benchmarkReferenceText = useMemo(() => getYieldBenchmarkReferenceText(row), [row]);
   const availableSources = useMemo(
@@ -158,6 +166,14 @@ function YieldLeaderboardTableRowBase({
                     <span className="text-muted-foreground">Yield Efficiency: </span>
                     <span className="font-mono tabular-nums">{yieldEfficiency.toFixed(1)}</span>
                   </div>
+                  {sourceRiskPenalty > 1 ? (
+                    <div>
+                      <span className="text-muted-foreground">Source Risk: </span>
+                      <span className="font-mono tabular-nums">{sourceRiskPenalty.toFixed(2)}x</span>
+                      <span className="text-muted-foreground"> penalty, utility </span>
+                      <span className="font-mono tabular-nums">{rowUtility.toFixed(1)}</span>
+                    </div>
+                  ) : null}
                   <div className="text-[11px] text-muted-foreground">
                     <span className="font-mono tabular-nums">{row.apy30d.toFixed(1)}%</span> APY
                     {benchmarkSpread !== null ? (
@@ -171,7 +187,14 @@ function YieldLeaderboardTableRowBase({
                     ) : null}
                     {" "} /{" "}
                     <span className="font-mono tabular-nums">{adjustedRiskPenalty.toFixed(1)}x</span>{" "}
-                    adjusted risk penalty
+                    adjusted safety penalty
+                    {sourceRiskPenalty > 1 ? (
+                      <>
+                        {" "} /{" "}
+                        <span className="font-mono tabular-nums">{sourceRiskPenalty.toFixed(2)}x</span>{" "}
+                        source penalty
+                      </>
+                    ) : null}
                   </div>
                   <div>
                     <span className="text-muted-foreground">Safety: </span>

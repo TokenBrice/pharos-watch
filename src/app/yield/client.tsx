@@ -199,6 +199,23 @@ export function YieldClient() {
         }}
       />
       <StaleDataBanner queries={[{ preset: "yieldRankings", dataUpdatedAt, error, hasData: !!data, meta }]} />
+      {data.warnings && data.warnings.length > 0 ? (
+        <section aria-label="Yield API warnings" className="space-y-2">
+          {data.warnings.map((warning) => (
+            <div
+              key={`${warning.code}:${warning.message}`}
+              className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100"
+            >
+              <p className="font-medium">{warning.message}</p>
+              {warning.reasons && warning.reasons.length > 0 ? (
+                <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-100/80">
+                  {warning.reasons.join(", ")}
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </section>
+      ) : null}
 
       <div className="flex flex-col gap-6">
         <section aria-label="Yield view trust rail" className="order-1 grid grid-cols-2 gap-3 lg:grid-cols-5">

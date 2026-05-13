@@ -757,6 +757,113 @@ describe("syncYieldData", () => {
     expect(supplementalRow).toBeDefined();
   });
 
+  it("merges aggregate supplemental candidates for missing per-family caches", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "yield:supplemental-sources:v1:morpho") {
+        return {
+          value: JSON.stringify({
+            version: 1,
+            updatedAt: nowSec,
+            source: "sync-yield-supplemental",
+            sourceCount: 1,
+            data: [
+              {
+                symbol: "sDAI",
+                chain: "ethereum",
+                address: null,
+                yield: {
+                  currentApy: 6.1,
+                  apyBase: 6.1,
+                  apyReward: null,
+                  sourcePool: "vault-sdai-morpho",
+                  sourceTvlUsd: 50_000_000,
+                  dataSource: "protocol-api",
+                  exchangeRate: null,
+                  sourceKey: "protocol-api:morpho-vault:ethereum:0xvault",
+                  yieldSource: "Morpho: sDAI Vault",
+                  yieldType: "lending-vault",
+                  sourceObservedAt: nowSec,
+                  comparisonAnchorObservedAt: null,
+                },
+              },
+            ],
+          }),
+          updatedAt: nowSec,
+        };
+      }
+      if (key === "yield:supplemental-sources:v1") {
+        return {
+          value: JSON.stringify({
+            version: 1,
+            updatedAt: nowSec,
+            source: "sync-yield-supplemental",
+            sourceCount: 2,
+            data: [
+              {
+                symbol: "sDAI",
+                chain: "ethereum",
+                address: null,
+                yield: {
+                  currentApy: 6.1,
+                  apyBase: 6.1,
+                  apyReward: null,
+                  sourcePool: "vault-sdai-morpho",
+                  sourceTvlUsd: 50_000_000,
+                  dataSource: "protocol-api",
+                  exchangeRate: null,
+                  sourceKey: "protocol-api:morpho-vault:ethereum:0xvault",
+                  yieldSource: "Morpho: sDAI Vault",
+                  yieldType: "lending-vault",
+                  sourceObservedAt: nowSec,
+                  comparisonAnchorObservedAt: null,
+                },
+              },
+              {
+                symbol: "sDAI",
+                chain: "ethereum",
+                address: null,
+                yield: {
+                  currentApy: 5.8,
+                  apyBase: 5.8,
+                  apyReward: null,
+                  sourcePool: "beefy-sdai",
+                  sourceTvlUsd: 20_000_000,
+                  dataSource: "protocol-api",
+                  exchangeRate: null,
+                  sourceKey: "protocol-api:beefy:ethereum:beefy-sdai",
+                  yieldSource: "Beefy: sDAI",
+                  yieldType: "lending-vault",
+                  sourceObservedAt: nowSec,
+                  comparisonAnchorObservedAt: null,
+                },
+              },
+            ],
+          }),
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+
+    expect(result.itemCount).toBe(2);
+    const metadata = JSON.parse(result.metadata ?? "{}") as { sourceCoverage?: { supplementalFallbackMode?: string | null } };
+    expect(metadata.sourceCoverage?.supplementalFallbackMode).toBe("partial-family-cache-aggregate-merge");
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }>;
+    expect(writeStatements.some(
+      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "protocol-api:morpho-vault:ethereum:0xvault",
+    )).toBe(true);
+    expect(writeStatements.some(
+      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "protocol-api:beefy:ethereum:beefy-sdai",
+    )).toBe(true);
+  });
+
   it("keeps a higher native wrapper APY ahead of a lower supplemental lending source that clears size gates", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);

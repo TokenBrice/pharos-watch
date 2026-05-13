@@ -17,7 +17,11 @@ import {
 import {
   getPriceDerivedApy,
 } from "./sources";
-import { resolveBenchmarkForStablecoin, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
+import {
+  resolveBenchmarkForStablecoin,
+  type ParsedYieldBenchmarkMeta,
+  type ParsedYieldBenchmarkRegistry,
+} from "./benchmarks";
 import { buildDlChainFilter, getTrackedContractAddresses } from "./identity";
 import type {
   DlPool,
@@ -32,6 +36,10 @@ import {
 } from "./tracked-optional-source-registry";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { buildWeightedYieldPoolGroupSource } from "./weighted-pools";
+
+function getBenchmarkSourceObservedAt(meta: ParsedYieldBenchmarkMeta, fallbackObservedAt: number): number {
+  return meta.lastMarketFetchedAt ?? meta.fetchedAt ?? fallbackObservedAt;
+}
 
 export async function resolveTrackedYieldSources(params: {
   db: D1Database;
@@ -239,7 +247,7 @@ export async function resolveTrackedYieldSources(params: {
           exchangeRate: null,
           sourceKey: "rate-derived",
           yieldSource: rateDerivedConfig.label,
-          sourceObservedAt: params.startSec,
+          sourceObservedAt: getBenchmarkSourceObservedAt(benchmarkSelection.meta, params.startSec),
           comparisonAnchorObservedAt: null,
         },
       });

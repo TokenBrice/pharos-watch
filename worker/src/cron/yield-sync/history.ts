@@ -67,7 +67,9 @@ export async function loadYieldHistorySnapshots(
         .prepare(
           `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, source_tvl_usd, data_source, yield_source, yield_type, exchange_rate
            FROM yield_history
-           WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND recorded_at >= ?
+           WHERE stablecoin_id IN (${resolvedIdInClause.sql})
+             AND recorded_at >= ?
+             AND (publication_state IS NULL OR publication_state = 'published')
            ORDER BY stablecoin_id ASC, recorded_at ASC`,
         )
         .bind(...resolvedIdInClause.binds, startSec - THIRTY_DAYS_SECONDS)
@@ -76,7 +78,10 @@ export async function loadYieldHistorySnapshots(
         .prepare(
           `SELECT stablecoin_id, source_key, source_tvl_usd, recorded_at
            FROM yield_history
-           WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND recorded_at <= ? AND source_tvl_usd IS NOT NULL
+           WHERE stablecoin_id IN (${resolvedIdInClause.sql})
+             AND recorded_at <= ?
+             AND source_tvl_usd IS NOT NULL
+             AND (publication_state IS NULL OR publication_state = 'published')
            ORDER BY stablecoin_id ASC, source_key ASC, recorded_at DESC`,
         )
         .bind(...resolvedIdInClause.binds, sevenDaysAgoSec)
@@ -85,7 +90,10 @@ export async function loadYieldHistorySnapshots(
         .prepare(
           `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, source_tvl_usd, data_source, yield_source, yield_type, exchange_rate
            FROM yield_history
-           WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND is_best = 1 AND recorded_at < ?
+           WHERE stablecoin_id IN (${resolvedIdInClause.sql})
+             AND is_best = 1
+             AND recorded_at < ?
+             AND (publication_state IS NULL OR publication_state = 'published')
            ORDER BY stablecoin_id ASC, recorded_at DESC`,
         )
         .bind(...resolvedIdInClause.binds, startSec)

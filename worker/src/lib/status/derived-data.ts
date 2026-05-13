@@ -54,7 +54,12 @@ const DATASET_FRESHNESS_TARGETS: Record<keyof StatusResponse["datasetFreshness"]
   mintBurn: { type: "cron", jobs: ["sync-mint-burn", "sync-mint-burn-extended"] },
   supply: { type: "table", table: "supply_history", column: "snapshot_date" },
   safetyGrades: { type: "table", table: "safety_grade_history", column: "recorded_at" },
-  yield: { type: "table", table: "yield_data", column: "updated_at" },
+  yield: {
+    type: "table",
+    table: "yield_data",
+    column: "updated_at",
+    where: "is_best = 1 AND (publication_generation_id IS NULL OR publication_state = 'published')",
+  },
   depegs: { type: "cron", jobs: ["sync-stablecoins"] },
   dews: { type: "table", table: "stress_signals", column: "computed_at" },
   digest: { type: "table", table: "daily_digest", column: "generated_at" },

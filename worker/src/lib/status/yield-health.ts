@@ -7,10 +7,11 @@ import type {
   YieldSourceRiskCoverageField,
   YieldSourceRiskCoverageSummary,
 } from "@shared/types/status";
+import { YIELD_SUPPLEMENTAL_CACHE_KEY, getYieldSupplementalFamilyCacheKey } from "../../cron/yield-sync/cache";
+import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../../cron/yield-sync/supplemental-source-families";
 
 const YIELD_RUNBOOK_URL = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/yield-health.md";
 const YIELD_RANKINGS_CACHE_KEY = "yield-rankings";
-const YIELD_SUPPLEMENTAL_CACHE_KEY = "yield:supplemental-sources:v1";
 const YIELD_COVERAGE_AUDIT_CACHE_KEY = "yield-coverage-audit";
 const YIELD_RANKING_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];
 const SOURCE_RISK_COVERAGE_FIELDS = [
@@ -103,6 +104,20 @@ function sourceRiskValuePopulated(field: YieldSourceRiskCoverageField, value: un
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function hasSourceRiskPenaltyEvidence(sourceRisk: Record<string, unknown> | null): boolean {
+  if (!sourceRisk) return false;
+  return [
+    sourceRisk.rewardShare,
+    sourceRisk.sourceDepthRatio,
+    sourceRisk.sourceAgeSeconds,
+    sourceRisk.observationCount30d,
+    sourceRisk.sourceSwitchCount30d,
+  ].some((value) => typeof value === "number" && Number.isFinite(value))
+    || sourceRisk.venueRiskTier === "low"
+    || sourceRisk.venueRiskTier === "medium"
+    || sourceRisk.venueRiskTier === "high";
+}
+
 function buildSourceRiskCoverage(rankings: unknown[] | null): YieldSourceRiskCoverageSummary {
   const sourceRows: Array<{ sourceRisk: Record<string, unknown> | null; isBest: boolean }> = [];
 
@@ -133,7 +148,9 @@ function buildSourceRiskCoverage(rankings: unknown[] | null): YieldSourceRiskCov
           ? sourceRows.filter((row) => row.isBest)
           : sourceRows;
       const populatedCount = eligibleRows.filter((row) =>
-        sourceRiskValuePopulated(field, row.sourceRisk?.[field]),
+        field === "sourceRiskPenalty"
+          ? sourceRiskValuePopulated(field, row.sourceRisk?.[field]) && hasSourceRiskPenaltyEvidence(row.sourceRisk)
+          : sourceRiskValuePopulated(field, row.sourceRisk?.[field]),
       ).length;
       const nullCount = Math.max(0, eligibleRows.length - populatedCount);
       return [
@@ -158,6 +175,90 @@ function buildSourceRiskCoverage(rankings: unknown[] | null): YieldSourceRiskCov
   };
 }
 
+function buildSupplementalHealth(
+  now: number,
+  byKey: Map<string, CacheRow>,
+): YieldHealthSummary["supplemental"] {
+  const aggregateRow = byKey.get(YIELD_SUPPLEMENTAL_CACHE_KEY) ?? null;
+  const aggregateAgeSec = ageSeconds(now, aggregateRow?.updated_at);
+  const aggregateStatus = freshnessStatus(
+    aggregateAgeSec,
+    STATUS_YIELD_HEALTH_THRESHOLDS.supplementalMaxAgeSec,
+    { missingIs: "unknown", degradedAfterOne: true },
+  );
+
+  const familyRows = SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => {
+    const row = byKey.get(getYieldSupplementalFamilyCacheKey(family)) ?? null;
+    const ageSec = ageSeconds(now, row?.updated_at);
+    const payload = safeJson(row?.value ?? null);
+    const sourceCount = getNumber(payload?.sourceCount);
+    const status = freshnessStatus(
+      ageSec,
+      STATUS_YIELD_HEALTH_THRESHOLDS.supplementalMaxAgeSec,
+      { missingIs: "unknown", degradedAfterOne: true },
+    );
+    return {
+      family,
+      updatedAt: row?.updated_at ?? null,
+      ageSec,
+      sourceCount,
+      status,
+    };
+  });
+
+  if (!familyRows.some((row) => row.updatedAt != null)) {
+    return {
+      updatedAt: aggregateRow?.updated_at ?? null,
+      ageSec: aggregateAgeSec,
+      maxAgeSec: STATUS_YIELD_HEALTH_THRESHOLDS.supplementalMaxAgeSec,
+      status: aggregateStatus,
+      familyCount: 0,
+      freshFamilyCount: 0,
+      degradedFamilyCount: 0,
+      staleFamilyCount: 0,
+      missingFamilyCount: SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
+      families: Object.fromEntries(
+        familyRows.map((row) => [
+          row.family,
+          {
+            updatedAt: row.updatedAt,
+            ageSec: row.ageSec,
+            sourceCount: row.sourceCount,
+            status: row.status,
+          },
+        ]),
+      ),
+    };
+  }
+
+  const familyStatuses = familyRows.map((row) => row.status);
+  const latestFamilyUpdatedAt = Math.max(
+    ...familyRows.map((row) => row.updatedAt ?? 0),
+  ) || null;
+  return {
+    updatedAt: latestFamilyUpdatedAt,
+    ageSec: ageSeconds(now, latestFamilyUpdatedAt),
+    maxAgeSec: STATUS_YIELD_HEALTH_THRESHOLDS.supplementalMaxAgeSec,
+    status: worstStatus(familyStatuses),
+    familyCount: familyRows.length,
+    freshFamilyCount: familyRows.filter((row) => row.status === "healthy").length,
+    degradedFamilyCount: familyRows.filter((row) => row.status === "degraded").length,
+    staleFamilyCount: familyRows.filter((row) => row.status === "stale").length,
+    missingFamilyCount: familyRows.filter((row) => row.status === "unknown").length,
+    families: Object.fromEntries(
+      familyRows.map((row) => [
+        row.family,
+        {
+          updatedAt: row.updatedAt,
+          ageSec: row.ageSec,
+          sourceCount: row.sourceCount,
+          status: row.status,
+        },
+      ]),
+    ),
+  };
+}
+
 export async function loadYieldHealthSummary(
   db: D1Database,
   now: number,
@@ -167,7 +268,8 @@ export async function loadYieldHealthSummary(
     .prepare(
       `SELECT key, value, updated_at
        FROM cache
-       WHERE key IN ('yield-rankings', 'yield:supplemental-sources:v1', 'yield-coverage-audit')`,
+       WHERE key IN ('yield-rankings', 'yield:supplemental-sources:v1', 'yield-coverage-audit')
+          OR key LIKE 'yield:supplemental-sources:v1:%'`,
     )
     .all<CacheRow>();
   const byKey = new Map((rows.results ?? []).map((row) => [row.key, row]));
@@ -191,13 +293,7 @@ export async function loadYieldHealthSummary(
       ? "degraded"
       : "healthy";
 
-  const supplementalUpdatedAt = byKey.get(YIELD_SUPPLEMENTAL_CACHE_KEY)?.updated_at ?? null;
-  const supplementalAgeSec = ageSeconds(now, supplementalUpdatedAt);
-  const supplementalStatus = freshnessStatus(
-    supplementalAgeSec,
-    STATUS_YIELD_HEALTH_THRESHOLDS.supplementalMaxAgeSec,
-    { missingIs: "unknown", degradedAfterOne: true },
-  );
+  const supplemental = buildSupplementalHealth(now, byKey);
 
   const benchmark = getObject(provenance?.benchmark);
   const benchmarkFetchedAt = getNumber(benchmark?.fetchedAt);
@@ -223,7 +319,7 @@ export async function loadYieldHealthSummary(
   const status = worstStatus([
     rankingStatus,
     safetyCoverageStatus,
-    supplementalStatus,
+    supplemental.status,
     benchmarkStatus,
     coverageAuditStatus,
   ]);
@@ -245,12 +341,7 @@ export async function loadYieldHealthSummary(
       status: safetyCoverageStatus,
       reason: getString(safetySnapshot?.reason),
     },
-    supplemental: {
-      updatedAt: supplementalUpdatedAt,
-      ageSec: supplementalAgeSec,
-      maxAgeSec: STATUS_YIELD_HEALTH_THRESHOLDS.supplementalMaxAgeSec,
-      status: supplementalStatus,
-    },
+    supplemental,
     benchmark: {
       fetchedAt: benchmarkFetchedAt,
       ageSec: benchmarkAgeSec,
