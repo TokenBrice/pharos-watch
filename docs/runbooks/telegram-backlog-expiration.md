@@ -13,7 +13,9 @@ Detection signals:
 
 ## Current Capacity Math
 
-The current sender attempts up to 3,600 fresh chunks per run and drains up to 900 pending chunks per run. At a five-minute cadence, the pending queue can drain roughly 10,800 chunks/hour when Telegram accepts sends and no new higher-priority work arrives. Risk-alert pending rows are ordered ahead of admin broadcasts; when fresh risk alerts exist, the pending-drain slice is restricted to risk-priority rows so admin broadcasts do not consume the risk-alert run budget. Dispatch also writes `telegram_alert_jobs` / `telegram_alert_job_targets` manifests before sending so target counts and dedupe keys remain auditable during rollout.
+The current sender attempts up to 3,600 fresh chunks per run and drains up to 900 pending chunks per run. `dispatch-telegram-alerts` has a 14-minute app-level timeout, but the trigger still runs every five minutes and is lease-protected. At a five-minute cadence, the pending queue can drain roughly 10,800 chunks/hour when Telegram accepts sends and no new higher-priority work arrives. Risk-alert pending rows are ordered ahead of admin broadcasts; when fresh risk alerts exist, the pending-drain slice is restricted to risk-priority rows so admin broadcasts do not consume the risk-alert run budget. Dispatch also writes `telegram_alert_jobs` / `telegram_alert_job_targets` manifests before sending so target counts, target statuses, and dedupe keys remain auditable during rollout.
+
+Pending rows are claim-based. A drain stamps `processing_owner`, `processing_started_at`, and `processing_expires_at` before sending, and a later drain can reclaim rows whose claim expired. This means a temporarily stuck row should show either a future `not_before_at` / Telegram backoff or an expired processing claim before manual intervention.
 
 Use the load harness before a planned broad send:
 
@@ -27,7 +29,7 @@ The script reports estimated drain time and D1 operation counts for 500, 1,000, 
 
 1. **Is the queue still draining?** Compare `pendingDeliveries`, `pendingDeliveryBacklog.due`, `oldestPendingDeliveryAgeSec`, `oldestPendingAgeSec`, and `estimatedDrainTimeSec` across two five-minute runs.
 2. **Are rows deferred?** A high `pendingDeliveryBacklog.deferred` count with `retryErrorClassCounts.rate_limit` points to Telegram 429 behavior. Follow [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).
-3. **Are expired rows accumulating?** If `expired > 0`, clear them after confirming the latest dispatcher run is healthy. Scheduled cleanup copies expired rows to `telegram_alert_dead_letters` before deleting them.
+3. **Are expired rows accumulating?** If `expired > 0`, clear them after confirming the latest dispatcher run is healthy. Scheduled cleanup copies expired rows to `telegram_alert_dead_letters` and marks alert-job targets `expired` before deleting live pending rows.
 4. **Is an admin broadcast pending?** Stop any planned broadcast until `oldestPendingDeliveryAgeSec < 900` and the queue is decreasing.
 5. **Is D1 under pressure?** If D1 queueing or telemetry writes are competing with dispatch, follow [`d1-telemetry-kill-switch.md`](./d1-telemetry-kill-switch.md).
 
@@ -46,7 +48,7 @@ The script reports estimated drain time and D1 operation counts for 500, 1,000, 
         "https://ops-api.pharos.watch/api/telegram-pending?older_than_sec=3600"
    ```
 
-4. **Clear one abusive chat if needed.** If one chat dominates pending rows and is not a high-priority risk recipient, clear only that chat with `?chat_id=<chatId>`.
+4. **Clear one abusive chat if needed.** If one chat dominates pending rows and is not a high-priority risk recipient, clear only that chat with `?chat_id=<chatId>`. Filtered manual clears copy rows to `telegram_alert_dead_letters` with `reason = 'manual_clear'` before deleting the live queue rows.
 5. **Do not rewrite `created_at` to extend TTL.** Extending alert life by mutating D1 rows makes latency and audit data dishonest. TTL changes should ship as a reviewed sender change with explicit severity policy.
 6. **After recovery, run a dry-run broadcast only if needed.** Follow [`telegram-admin-broadcast-safety.md`](./telegram-admin-broadcast-safety.md).
 
@@ -56,3 +58,4 @@ The script reports estimated drain time and D1 operation counts for 500, 1,000, 
 - [`docs/worker-and-api-limits.md`](../worker-and-api-limits.md) for sender budget assumptions.
 - [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md) for 429-dominated incidents.
 - [`telegram-no-delivery.md`](./telegram-no-delivery.md) for zero-send incidents.
+- [`telegram-operator-queries.md`](./telegram-operator-queries.md) for D1 diagnostics during delivery incidents.

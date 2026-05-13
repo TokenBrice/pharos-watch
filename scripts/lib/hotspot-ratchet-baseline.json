@@ -24,9 +24,9 @@
     "notes": "Shared formatting intentionally centralizes many small branchy display helpers. Keep new formatting families covered by focused helper tests or split them into narrower modules if this file grows."
   },
   "worker/src/api/stablecoin-detail.ts": {
-    "fileLines": 99,
-    "maxFunctionLines": 36,
-    "branchCount": 3,
+    "fileLines": 114,
+    "maxFunctionLines": 39,
+    "branchCount": 4,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 76,
@@ -324,9 +324,9 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 980,
-    "maxFunctionLines": 446,
-    "branchCount": 53,
+    "fileLines": 1031,
+    "maxFunctionLines": 458,
+    "branchCount": 59,
     "disposition": "deferred",
     "targetBudget": {
       "fileLines": 540,

@@ -1,4 +1,4 @@
-# Runbook: D1 Telemetry Kill Switch
+# Runbook: D1 Route/Source Telemetry Kill Switch
 
 ## Symptom
 
@@ -13,24 +13,38 @@ Detection signals:
 
 ## Kill-Switch Order
 
-1. **Disable route/source attribution if the deployed build supports it.** Set `REQUEST_SOURCE_ATTRIBUTION_DISABLED=true` on the Worker and Pages environments. This should stop low-value route/source telemetry while leaving API-key auth, D1-backed rate limiting, and per-key public API load controls intact.
-2. **Disable Pages site-data attribution by removing the Pages `DB` binding** if the narrower flag is not available in the deployed build. The same-origin `/_site-data/*` proxy still serves allowed reads without the optional binding, but Pages delivery-path telemetry is skipped.
-3. **Do not use `MAINTENANCE_MODE=true` for telemetry pressure alone.** That is a global product kill switch and returns 503 for non-OPTIONS traffic.
+1. **Disable route/source attribution if the deployed build supports it.** Set `REQUEST_SOURCE_ATTRIBUTION_DISABLED=true` on the Worker and Pages environments. This stops low-value route/source telemetry while leaving API-key auth, D1-backed rate limiting, and per-key public API load controls intact.
+2. **Disable per-key public API attribution only during keyed spikes.** Set `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true` on the Worker. This stops `api_key_request_stats` writes while preserving API-key auth, D1-backed quota enforcement, and best-effort last-used metadata updates.
+3. **Disable Pages site-data attribution by removing the Pages `DB` binding** if the narrower flag is not available in the deployed build. The same-origin `/_site-data/*` proxy still serves allowed reads without the optional binding, but Pages delivery-path telemetry is skipped.
+4. **Do not use `MAINTENANCE_MODE=true` for telemetry pressure alone.** That is a global product kill switch and returns 503 for non-OPTIONS traffic.
 
 ## Commands
 
 Worker secret:
 
 ```bash
-printf "true" | npx wrangler secret put REQUEST_SOURCE_ATTRIBUTION_DISABLED
+cd worker && printf "true" | npx wrangler secret put REQUEST_SOURCE_ATTRIBUTION_DISABLED
 ```
 
-Pages uses the Cloudflare Pages project environment variables. Set the same variable for production and preview if both are generating telemetry pressure.
+Worker per-key stats emergency secret:
+
+```bash
+cd worker && printf "true" | npx wrangler secret put API_KEY_REQUEST_ATTRIBUTION_DISABLED
+```
+
+Worker rollback:
+
+```bash
+cd worker && npx wrangler secret delete REQUEST_SOURCE_ATTRIBUTION_DISABLED
+cd worker && npx wrangler secret delete API_KEY_REQUEST_ATTRIBUTION_DISABLED
+```
+
+Pages uses the Cloudflare Pages project environment variables. Set `REQUEST_SOURCE_ATTRIBUTION_DISABLED=true` for production and preview if both are generating route/source telemetry pressure; `API_KEY_REQUEST_ATTRIBUTION_DISABLED` is Worker-only.
 
 ## Verification
 
 1. Check `/api/request-source-stats` after one or two aggregation windows. Route/source counters should stop increasing for disabled environments.
-2. Confirm protected API requests still enforce `X-API-Key` and per-key limits.
+2. If `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true` is set, confirm the `apiKeys` and `keyedPublicApi` sections stop increasing while protected API requests still enforce `X-API-Key` and per-key limits.
 3. Confirm Telegram dispatch still writes `cron_runs` metadata and pending queue rows.
 4. Remove the flag after D1 pressure clears, then verify counters resume.
 

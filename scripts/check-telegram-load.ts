@@ -125,6 +125,11 @@ export interface TelegramLoadCheckReport {
     freshAttemptsPerRun: number;
     pendingDrainAttemptsPerRun: number;
     cronIntervalSeconds: number;
+    dispatchTimeoutSeconds: number;
+    telegramBroadcastMessagesPerSecond: number;
+    telegramP95SendLatencyMs: number;
+    effectiveSendMessagesPerSecond: number;
+    d1WriteMsPerMessage: number;
     pendingTtlSeconds: number;
     normalSloSeconds: number;
     spikeMaxSeconds: number;
@@ -140,6 +145,11 @@ const EXPLORATORY_TARGET = 10_000;
 
 const FRESH_ATTEMPTS_PER_RUN = 3_600;
 const PENDING_DRAIN_ATTEMPTS_PER_RUN = Math.floor(FRESH_ATTEMPTS_PER_RUN / 4);
+const SEND_BATCH_SIZE = 4;
+const DISPATCH_TIMEOUT_SECONDS = 14 * 60;
+const TELEGRAM_BROADCAST_MESSAGES_PER_SECOND = 30;
+const TELEGRAM_P95_SEND_LATENCY_MS = 250;
+const D1_WRITE_MS_PER_MESSAGE = 20;
 const RISK_ALERT_PRIORITY = 30;
 const LEGACY_PENDING_PRIORITY = 50;
 const CRON_INTERVAL_SECONDS = 300;
@@ -148,6 +158,10 @@ const NORMAL_SLO_SECONDS = 15 * 60;
 const SPIKE_MAX_SECONDS = 60 * 60;
 const ALERTS_PER_MESSAGE_CHUNK = 16;
 const TELEGRAM_429_STORM_SECONDS = 15 * 60;
+const EFFECTIVE_SEND_MESSAGES_PER_SECOND = Math.min(
+  TELEGRAM_BROADCAST_MESSAGES_PER_SECOND,
+  SEND_BATCH_SIZE / ((TELEGRAM_P95_SEND_LATENCY_MS + D1_WRITE_MS_PER_MESSAGE) / 1000),
+);
 
 const HOT_COIN_IDS = [
   "usdc-circle",
@@ -436,10 +450,15 @@ function estimateRiskD1Ops(args: {
 
 function classifySlo(targetActiveWatchers: number, scenarioId: ScenarioId, seconds: number): SloStatus {
   if (targetActiveWatchers === EXPLORATORY_TARGET) return "exploratory";
-  if (scenarioId === "market-wide-burst" || scenarioId === "dews-safety-burst" || scenarioId === "telegram-429-storm") {
+  if (scenarioId === "market-wide-burst" || scenarioId === "telegram-429-storm") {
     return seconds <= SPIKE_MAX_SECONDS ? "slow" : "breach";
   }
   return seconds <= NORMAL_SLO_SECONDS ? "ok" : seconds <= SPIKE_MAX_SECONDS ? "slow" : "breach";
+}
+
+function estimateSendSeconds(messageCount: number): number {
+  if (messageCount <= 0) return 0;
+  return Math.ceil(messageCount / EFFECTIVE_SEND_MESSAGES_PER_SECOND);
 }
 
 function buildScenarioResult(args: {
@@ -469,7 +488,12 @@ function buildScenarioResult(args: {
     : Math.max(0, messageChunks - initialFreshAttempts);
   const pendingDrainRuns = Math.ceil(pendingEnqueued / PENDING_DRAIN_ATTEMPTS_PER_RUN);
   const stormRuns = args.stormSeconds ? Math.ceil(args.stormSeconds / CRON_INTERVAL_SECONDS) : 0;
-  const estimatedDrainSeconds = pendingDrainRuns * CRON_INTERVAL_SECONDS + stormRuns * CRON_INTERVAL_SECONDS;
+  const initialFreshSeconds = estimateSendSeconds(initialFreshAttempts);
+  const pendingScheduleSeconds = pendingDrainRuns * CRON_INTERVAL_SECONDS;
+  const pendingSendSeconds = estimateSendSeconds(pendingEnqueued);
+  const estimatedDrainSeconds = initialFreshSeconds +
+    Math.max(pendingScheduleSeconds, pendingSendSeconds) +
+    stormRuns * CRON_INTERVAL_SECONDS;
   const stormRetryWrites = args.stormSeconds ? Math.min(messageChunks, stormRuns * PENDING_DRAIN_ATTEMPTS_PER_RUN) : 0;
   const d1Operations = args.adminPendingOnly
     ? {
@@ -477,6 +501,7 @@ function buildScenarioResult(args: {
         writes: messageChunks + Math.max(0, messageChunks - blockedAttempts) + blockedAttempts + pendingDrainRuns,
         notes: [
           "Admin broadcast estimate counts one target enumeration read, pending enqueue rows, pending success/block updates, and delete batches.",
+          `Telegram pacing assumes ${EFFECTIVE_SEND_MESSAGES_PER_SECOND.toFixed(1)} messages/sec from Bot API broadcast cap, ${SEND_BATCH_SIZE}-wide sends, p95 latency, and D1 write cost.`,
         ],
       }
     : estimateRiskD1Ops({
@@ -835,6 +860,11 @@ export function buildTelegramLoadCheckReport(options: {
       freshAttemptsPerRun: FRESH_ATTEMPTS_PER_RUN,
       pendingDrainAttemptsPerRun: PENDING_DRAIN_ATTEMPTS_PER_RUN,
       cronIntervalSeconds: CRON_INTERVAL_SECONDS,
+      dispatchTimeoutSeconds: DISPATCH_TIMEOUT_SECONDS,
+      telegramBroadcastMessagesPerSecond: TELEGRAM_BROADCAST_MESSAGES_PER_SECOND,
+      telegramP95SendLatencyMs: TELEGRAM_P95_SEND_LATENCY_MS,
+      effectiveSendMessagesPerSecond: Math.round(EFFECTIVE_SEND_MESSAGES_PER_SECOND * 10) / 10,
+      d1WriteMsPerMessage: D1_WRITE_MS_PER_MESSAGE,
       pendingTtlSeconds: PENDING_TTL_SECONDS,
       normalSloSeconds: NORMAL_SLO_SECONDS,
       spikeMaxSeconds: SPIKE_MAX_SECONDS,
@@ -869,7 +899,7 @@ function parseTargets(args: string[]): number[] | null {
 function printReport(report: TelegramLoadCheckReport): void {
   console.log("Synthetic Telegram load simulation");
   console.log(
-    `Assumptions: ${report.assumptions.freshAttemptsPerRun} fresh attempts/run, ${report.assumptions.pendingDrainAttemptsPerRun} pending drain attempts/run, ${report.assumptions.cronIntervalSeconds / 60}m cron, ${report.assumptions.pendingTtlSeconds / 60}m risk pending TTL.`,
+    `Assumptions: ${report.assumptions.freshAttemptsPerRun} fresh attempts/run, ${report.assumptions.pendingDrainAttemptsPerRun} pending drain attempts/run, ${report.assumptions.cronIntervalSeconds / 60}m cron, ${report.assumptions.dispatchTimeoutSeconds / 60}m dispatch timeout, ${report.assumptions.effectiveSendMessagesPerSecond} effective msg/s, ${report.assumptions.pendingTtlSeconds / 60}m risk pending TTL.`,
   );
   console.log("");
 
@@ -916,21 +946,33 @@ function main(): void {
   }
 
   const failedPlans = report.queryPlans.filter((plan) => plan.status === "fail");
-  const targetSloBreaches = report.scenarios.filter(
+  const normalTargetSloFailures = report.scenarios.filter(
     (scenario) =>
       enforceTargetSlo &&
       scenario.targetActiveWatchers === REQUIRED_TARGET &&
-      (scenario.scenarioId === "single-depeg" || scenario.scenarioId === "market-wide-burst" || scenario.scenarioId === "dews-safety-burst") &&
+      (scenario.scenarioId === "single-depeg" || scenario.scenarioId === "dews-safety-burst") &&
+      scenario.sloStatus !== "ok",
+  );
+  const spikeTargetSloBreaches = report.scenarios.filter(
+    (scenario) =>
+      enforceTargetSlo &&
+      scenario.targetActiveWatchers === REQUIRED_TARGET &&
+      (scenario.scenarioId === "market-wide-burst" || scenario.scenarioId === "telegram-429-storm") &&
       scenario.sloStatus === "breach",
   );
 
-  if (failedPlans.length > 0 || targetSloBreaches.length > 0) {
+  if (failedPlans.length > 0 || normalTargetSloFailures.length > 0 || spikeTargetSloBreaches.length > 0) {
     if (failedPlans.length > 0) {
       console.error(`\n${failedPlans.length} query-plan check(s) failed.`);
     }
-    if (targetSloBreaches.length > 0) {
+    if (normalTargetSloFailures.length > 0) {
       console.error(
-        `\n${targetSloBreaches.length} required ${REQUIRED_TARGET.toLocaleString()}-watcher SLO scenario(s) breached.`,
+        `\n${normalTargetSloFailures.length} required ${REQUIRED_TARGET.toLocaleString()}-watcher normal SLO scenario(s) were not OK.`,
+      );
+    }
+    if (spikeTargetSloBreaches.length > 0) {
+      console.error(
+        `\n${spikeTargetSloBreaches.length} required ${REQUIRED_TARGET.toLocaleString()}-watcher spike scenario(s) breached.`,
       );
     }
     process.exit(1);

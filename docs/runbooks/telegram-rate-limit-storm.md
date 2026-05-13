@@ -42,8 +42,8 @@ Detection signals:
         "https://ops-api.pharos.watch/api/telegram-pending?chat_id=<chatId>"
    ```
 
-   Expected response: `{ "ok": true, "deleted": <number> }`. Repeating the same filtered clear after rows are gone is safe and returns `deleted: 0`.
-3. **Clear stale rows past TTL.** Filtered by age. Expired rows are also copied to `telegram_alert_dead_letters` by the dispatcher cleanup path before deletion when the scheduled job handles them.
+   Expected response: `{ "ok": true, "deleted": <number> }`. Repeating the same filtered clear after rows are gone is safe and returns `deleted: 0`. The endpoint dead-letters cleared rows with `reason = 'manual_clear'` before deleting them.
+3. **Clear stale rows past TTL.** Filtered by age. Expired rows are copied to `telegram_alert_dead_letters` by either the scheduled dispatcher cleanup (`reason = 'ttl_expired'`) or this manual endpoint (`reason = 'manual_clear'`) before deletion.
 
    ```bash
    curl -X POST \
@@ -67,3 +67,4 @@ Detection signals:
 - [`telegram-no-delivery.md`](./telegram-no-delivery.md) — when no messages are going out at all (a storm can present as no delivery).
 - [`telegram-backlog-expiration.md`](./telegram-backlog-expiration.md) — when pending rows are close to the 1-hour TTL.
 - [`telegram-admin-broadcast-safety.md`](./telegram-admin-broadcast-safety.md) — broadcasts must wait until rate-limit pressure clears.
+- [`telegram-operator-queries.md`](./telegram-operator-queries.md) — D1 diagnostics for pending, jobs, dead letters, webhook dedupe, and usage funnels.

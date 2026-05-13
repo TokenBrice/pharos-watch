@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 19 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 35 `CRON_JOB_DEFINITIONS` jobs across 18 job-bearing slots; `CRON_CONNECTION_BUDGET_ENTRIES` also includes budget-only scheduled surfaces such as Telegram registration reconciliation and the separate `*/5 * * * *` digest-trigger poll slot. The digest-trigger poll is the 19th runner slot and executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 19 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 36 `CRON_JOB_DEFINITIONS` jobs across 18 job-bearing slots; `CRON_CONNECTION_BUDGET_ENTRIES` also includes budget-only scheduled surfaces such as Telegram registration reconciliation and the separate `*/5 * * * *` digest-trigger poll slot. The digest-trigger poll is the 19th runner slot and executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -51,7 +51,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 
 The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `functions/lib/site-api-env.ts`, with the same `required` / `optional` / `reserved` / `active` shape derived from that shared manifest. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, when `SITE_API_SHARED_SECRET` is missing, when `GITHUB_PAT` / `FEEDBACK_IP_SALT` are missing for `POST /api/feedback`, when `API_KEY_HASH_PEPPER` is missing, or when the self-serve API key email verification bindings are only partially configured. The Pages ops-proxy contract now actively requires `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD` for inbound UI JWT verification. The Pages `site-data` `DB` binding is optional: binding it enables same-origin demand telemetry for `/api/request-source-stats`; without `DB`, allowed proxy reads still work but site-data attribution is skipped.
 
-Operational telemetry control: set `REQUEST_SOURCE_ATTRIBUTION_DISABLED=true` on the Worker and/or Pages site-data environment to stop low-value route/source attribution writes. This disables Worker `api_request_consumer_stats` route/source writes and Pages `site_data_request_stats` writes, while preserving API-key authentication, D1-backed rate limiting, last-used metadata updates, and per-key public API load telemetry.
+Operational telemetry control: set `REQUEST_SOURCE_ATTRIBUTION_DISABLED=true` on the Worker and/or Pages site-data environment to stop low-value route/source attribution writes. This disables Worker `api_request_consumer_stats` route/source writes and Pages `site_data_request_stats` writes, while preserving API-key authentication, D1-backed rate limiting, last-used metadata updates, and per-key public API load telemetry. During keyed public-API spikes, set `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true` on the Worker to pause only `api_key_request_stats` writes; auth, rate limiting, and last-used metadata still run.
 
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:BEGIN -->
 Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worker and Pages env modules derive their `required` / `optional` / `reserved` views from that manifest.
@@ -177,6 +177,7 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 - Valid protected `public-api` requests authenticated with API keys also write minute-bucketed per-key load into `api_key_request_stats`
 - Pages `functions/_site-data/[[path]].ts` writes same-origin site demand into `site_data_request_stats`
 - Low-value route/source attribution writes can be paused with `REQUEST_SOURCE_ATTRIBUTION_DISABLED=true`
+- Per-key public API load writes can be paused separately with `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true`
 - Worker route/source and Pages site-data counters are buffered briefly in isolate-local minute buckets and flushed through D1 batches, so bursts against the same route/source dimension collapse into one weighted counter upsert
 - both datasets are scoped to non-admin public-read traffic and exclude `/api/telegram-webhook`
 - worker load is stored by:
@@ -198,7 +199,7 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 - retention is pruned opportunistically to the latest `35` days
 - operators read the aggregate split through `GET /api/request-source-stats` on `ops-api.pharos.watch`
 
-The kill switch is for observability degradation only. It does not disable API-key auth, D1-backed quota enforcement, public self-serve request throttles, feedback throttles, admin audit logs, or Telegram security checks. Per-key `api_key_request_stats` remain enabled when Worker route/source attribution is disabled so operators can still see keyed public API load driving limiter pressure.
+The kill switches are for observability degradation only. They do not disable API-key auth, D1-backed quota enforcement, public self-serve request throttles, feedback throttles, admin audit logs, or Telegram security checks. Per-key `api_key_request_stats` remain enabled when Worker route/source attribution is disabled so operators can still see keyed public API load driving limiter pressure. Setting `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true` disables only those per-key stats rows and should be reserved for public API spikes where D1 pressure is already visible elsewhere.
 
 ### CORS Headers
 
@@ -246,9 +247,9 @@ Admin `GET` routes are also forced to `Cache-Control: no-store` by `addAdminGetN
 
 ### D1 Read Snapshots And Pagination
 
-- `GET /api/report-cards` serves the cron-published `cache["report-cards:snapshot"]` envelope in the common path. If that row is missing or malformed, the handler computes a fallback snapshot on read and returns the same wire shape.
+- `GET /api/report-cards` serves the cron-published `cache["report-cards:snapshot"]` private cache envelope in the common path. The envelope pins a cache generation and Safety Score methodology version; if it is missing, malformed, generation-mismatched, or methodology-mismatched, the handler computes a fallback snapshot on read and returns the same public wire shape.
 - `GET /api/yield-rankings` hydrates Safety Score fields from the same published report-card envelope, using compute-on-read only when the published snapshot cannot be loaded.
-- `GET /api/stablecoin/:id` serves stale D1 detail rows immediately after the 5-minute TTL expires, emits `Warning: 110` plus `X-Data-Age`, and schedules an isolate-local per-coin single-flight refresh.
+- `GET /api/stablecoin/:id` serves D1 detail rows from the per-coin cache. Rows inside the 5-minute TTL use the per-coin cache profile. Rows older than the TTL but under the 24-hour max-stale ceiling are served immediately with `Warning: 110`, `X-Data-Age`, and `Cache-Control: no-store`, then refreshed through an isolate-local per-coin single-flight background refresh. Rows older than 24 hours force a synchronous refresh path and are not used as stale fallback when refresh fails.
 - Event feeds support bounded offset pagination plus opaque keyset cursors. `/api/depeg-events` caps `offset` at `50,000`; `/api/mint-burn-events` caps `offset` at `25,000`. Callers can pass `includeTotal=false` to skip exact count queries; the response then marks `totalExact: false`.
 
 ### External API Monitoring Baseline
@@ -518,7 +519,7 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 | `telegram-disambiguation-cleanup` | `cleanExpiredDisambiguations()` | `worker/src/cron/telegram-quiet-hours.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
 | `telegram-pulse-snapshot` | `publishTelegramPulseSnapshot()` | `worker/src/api/telegram-pulse.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
 
-Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out gets its own 6-connection pool and CPU budget. Before status-tracked jobs run, the slot best-effort reconciles Telegram command suggestions, bot profile metadata, and webhook registration when a bot token is configured. Those serial Bot API calls are modeled as the budget-only `telegram-registration-reconciliation` entry in `CRON_CONNECTION_BUDGET_ENTRIES`; they are not separate `cron_runs` rows. Subscriber fan-out uses up to 4 of 6 available connections for parallel `sendBatch()` sends. Up to 3,600 subscriber message attempts per run; discovery writes durable alert job/target manifests, and overflow/retryable fresh-send failures are enqueued to `telegram_pending_alerts` in D1 for subsequent runs. After alert dispatch, the watchdog records Telegram degradation signals, the DB-only `telegram-disambiguation-cleanup` sidecar prunes expired mid-conversation state, and `telegram-pulse-snapshot` publishes the public pulse cache so `/api/telegram-pulse` is snapshot-first in the common path.
+Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out gets its own 6-connection pool and CPU budget. Before status-tracked jobs run, the slot best-effort reconciles Telegram command suggestions, bot profile metadata, and webhook registration when a bot token is configured. Those serial Bot API calls are modeled as the budget-only `telegram-registration-reconciliation` entry in `CRON_CONNECTION_BUDGET_ENTRIES`; they are not separate `cron_runs` rows. Subscriber fan-out uses up to 4 of 6 available connections for parallel `sendBatch()` sends. Up to 3,600 subscriber message attempts per run; `dispatch-telegram-alerts` has a 14-minute app timeout and 30-second lease heartbeat so the 5,000-watcher normal SLO can fit under Cloudflare's 15-minute scheduled-event ceiling. Discovery writes durable alert job/target manifests, target statuses reconcile by dedupe key, and overflow/retryable fresh-send failures are enqueued to claim-based `telegram_pending_alerts` rows in D1 for subsequent runs. After alert dispatch, the watchdog records Telegram degradation signals, the DB-only `telegram-disambiguation-cleanup` sidecar prunes expired mid-conversation state, and `telegram-pulse-snapshot` publishes the public pulse cache so `/api/telegram-pulse` is snapshot-first in the common path.
 
 Safety-grade fan-out on this lane is now gated by the generation-aware live source cache `cache["alert:safety-source-cache"]`, written only by `publish-report-card-cache`. If that source is missing, corrupt, stale, or from the wrong generation, only safety alerts are suppressed; DEWS/depeg/launch alerts continue.
 
@@ -575,8 +576,9 @@ Runs once a month on the 1st at 06:00 UTC. Scans unmatched high-TVL DeFiLlama po
 | `prune-status-probe-runs` | `runPruneStatusProbeRuns()` | `worker/src/cron/prune-status-probe-runs.ts`     | [Status Dashboard](./status-dashboard.md) |
 | `prune-cron-history`      | `runPruneCronHistory()`     | `worker/src/cron/prune-cron-history.ts`          | This doc                 |
 | `telegram-inactive-cleanup` | `runTelegramInactiveCleanup()` | `worker/src/cron/telegram-inactive-cleanup.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
+| `telegram-retention-cleanup` | `runTelegramRetentionCleanup()` | `worker/src/cron/telegram-retention-cleanup.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
 
-DB-only housekeeping slot. `prune-status-probe-runs` enforces the status-probe retention window, `prune-cron-history` deletes `cron_runs` rows older than 7 days and `cron_slot_executions` rows older than 14 days, and `telegram-inactive-cleanup` trims inactive Telegram subscriber state.
+DB-only housekeeping slot. `prune-status-probe-runs` enforces the status-probe retention window, `prune-cron-history` deletes `cron_runs` rows older than 7 days and `cron_slot_executions` rows older than 14 days, `telegram-inactive-cleanup` trims inactive Telegram subscriber state, and `telegram-retention-cleanup` prunes Telegram dead letters, alert-job audit rows, usage aggregates, chat diagnostics, and processed-update dedupe rows.
 
 ### Cron Slot Capacity and Connection Pool Budget
 
@@ -605,7 +607,7 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | 17      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
 | 18      | `0 3 * * *`        |             0 (status-probe, cron-history, and Telegram inactive-cleanup maintenance; all DB-only)  |    6     |
 
-The `*/5 * * * *` digest-trigger poll slot exists in the scheduled runner registry, but it is not represented in `CRON_JOB_DEFINITIONS` and is not part of the enforced `check:cron-connections` budget table today. It performs a lightweight D1 poll and, when a manual trigger is pending, executes `generateDailyDigest(...)` directly under the existing `daily-digest` lease.
+The `*/5 * * * *` digest-trigger poll slot exists in the scheduled runner registry but is not represented in `CRON_JOB_DEFINITIONS` because it does not create a separate `/api/status` job row. It is represented in `CRON_CONNECTION_BUDGET_ENTRIES` as the budget-only `digest-trigger-poll` entry, so `npm run check:cron-connections` enforces its one-connection peak alongside job-bearing trigger slots.
 
 **Policy for new jobs:**
 
@@ -630,7 +632,7 @@ There is no shared 10-minute alert-dedup layer in the worker today. Any cooldown
 - `dispatch-telegram-alerts` diffs DEWS/depeg/safety state plus launch promotions against cached snapshots before fan-out on a dedicated 5-minute cron slot.
 - `daily-digest` now appends pending cemetery additions and newly tracked coins to the next Telegram digest post after a deploy.
 - Telegram sends are gated by the `telegram-api` circuit breaker to avoid hammering the Bot API during upstream issues.
-- Each dispatch run sends up to 3,600 Telegram message attempts in parallel batches of 4. Overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` for subsequent runs.
+- Each dispatch run sends up to 3,600 Telegram message attempts in parallel batches of 4 under a 14-minute timeout. Overflow and retryable fresh-send failures are enqueued to claim-based `telegram_pending_alerts` rows for subsequent runs.
 - Subscriber state now supports quiet hours plus per-subscription controls such as `dews_min_band`, `safety_mode`, and `depeg_worsening_bps_step`.
 
 See [Telegram Alert Bot](./telegram-alerts.md) for command syntax, D1 tables, snapshot seeding behavior, and operational setup.
@@ -730,6 +732,7 @@ Some long-running jobs also enforce their own earlier wall-clock guard so they c
 | `sync-mint-burn-extended` | 10 min  | Long-tail mint/burn lane with its own run-state                                                                                                                                                           |
 | `sync-yield-data`         | 10 min  | Multi-source yield data aggregation                                                                                                                                                                       |
 | `sync-yield-supplemental` | 12 min  | Supplemental yield source sync; runs less frequently but covers more sources per invocation                                                                                                               |
+| `dispatch-telegram-alerts` | 14 min | Dedicated Telegram fan-out lane sized for 5,000-watcher normal SLO modeling while leaving scheduled-event headroom for logging                                                                            |
 | `daily-digest`            | 14 min  | Expanded LLM generation + persistence/distribution, still below the 15-minute scheduled-trigger ceiling                                                                                                   |
 
 Configuration: `CRON_TIMEOUT_MS` record in `worker/src/lib/cron-lease.ts`.
@@ -859,7 +862,7 @@ CREATE TABLE IF NOT EXISTS cache (
 | `fx-rates`                 | `syncFxRates`            | FX rates (EUR, GBP, etc.)                                                              |
 | `usds-status`              | `syncUsdsStatus`         | Freeze capability + implementation address                                             |
 | `bluechip-ratings`         | `syncBluechip`           | Ratings map keyed by canonical Pharos ID                                               |
-| `report-cards:snapshot`    | `publishReportCardCache` | Full report-card API envelope for `/api/report-cards` and yield hydration reads        |
+| `report-cards:snapshot`    | `publishReportCardCache` | Private generation/methodology-pinned cache envelope carrying the full report-card API payload for `/api/report-cards` and yield hydration reads |
 | `report_card_cache`        | `publishReportCardCache` | Compact Safety Score map for lightweight consumers                                     |
 | `yield-rankings`           | `syncYieldData`          | Pre-computed yield rankings + PYS scores                                               |
 | `risk_free_rate`           | `fetchTbillRate`         | Current T-bill rate for PYS computation                                                |

@@ -1,4 +1,4 @@
-import { CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES } from "../shared/lib/cron-jobs";
+import { CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES, CRON_SCHEDULES } from "../shared/lib/cron-jobs";
 
 // Group jobs by their schedule key (which maps to a cron trigger).
 const jobsByTrigger = new Map<
@@ -23,6 +23,14 @@ const headroomFullTriggers: {
   scheduleKey: string;
   totalConnections: number;
 }[] = [];
+
+const missingBudgetScheduleKeys = Object.keys(CRON_SCHEDULES).filter((scheduleKey) => !jobsByTrigger.has(scheduleKey));
+if (missingBudgetScheduleKeys.length > 0) {
+  console.error(
+    `FAIL: ${pluralize(missingBudgetScheduleKeys.length, "cron schedule")} missing from CRON_CONNECTION_BUDGET_ENTRIES: ${missingBudgetScheduleKeys.join(", ")}`,
+  );
+  failed = true;
+}
 
 function pluralize(count: number, singular: string): string {
   if (count === 1) return `${count} ${singular}`;

@@ -361,6 +361,8 @@ Lowered 5 points in v4.0 to compensate for structural deflation from removing pe
 
 `GET /api/report-cards` — all coins graded with per-dimension breakdown and methodology metadata. Cache: standard (5-min edge).
 
+The common read path uses the cron-published `report-cards:snapshot` cache row. That D1 value is a private generation/methodology-pinned envelope carrying the public response payload; if the cache generation or Safety Score methodology version no longer matches the deployed worker, the API rejects the row and computes the same public response shape on read until the cron republishes.
+
 `GET /api/redemption-backstops` — current redemption backstop and effective-exit dataset used by redeemable-asset detail views and report-card liquidity inputs. Cache: standard (`public, s-maxage=300, max-age=60`).
 
 Response includes `cards` (array of `ReportCard` with `rawInputs` for client-side recomputation), `dependencyGraph` (forward edges for dependency traversal, including canonical `weight` and `type` metadata), `methodology` (version, weights, `pegMultiplierExponent`, thresholds), `inputFreshness` (DEX and redemption freshness used for score gating), `liquidityStale`, `redemptionStale`, and `updatedAt`. See [API Reference](./api-reference.md) for the full response shape.

@@ -12,6 +12,10 @@ export const CRON_TIMEOUT_MS: Record<string, number> = {
   "sync-blacklist": 12 * 60_000,
   "sync-mint-burn": 10 * 60_000,
   "sync-mint-burn-extended": 10 * 60_000,
+  // Telegram alert fan-out targets a 15-minute normal SLO for 5k watchers.
+  // Keep the app timeout under Cloudflare's scheduled-event ceiling while
+  // leaving room for cron_runs logging and sidecar skips.
+  "dispatch-telegram-alerts": 14 * 60_000,
   // Daily digest: Anthropic budget is 12 min, wrapper caps at 14 min to leave
   // ~2 min for D1 persistence, Telegram/Twitter delivery, and cron_runs logging
   // before Cloudflare's 15-min scheduled-event ceiling.
