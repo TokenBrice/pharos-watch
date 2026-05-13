@@ -5,13 +5,20 @@ import { SNOOZE_REPLY_MARKUP } from "../lib/telegram-alerts";
 import {
   BLOCK_STRIKE_WINDOW_SEC,
   PENDING_BACKOFF_SCHEDULE_SEC,
+  PENDING_NEAR_TTL_WINDOW_SEC,
   PENDING_MAX_ATTEMPTS,
   PENDING_TTL_SEC,
   SEND_BATCH_SIZE,
+  TELEGRAM_ALERT_TTL_SEC,
+  TELEGRAM_DISPATCH_INTERVAL_SEC,
+  TELEGRAM_PENDING_DRAIN_BUDGET,
+  TELEGRAM_PENDING_PRIORITY,
   TELEGRAM_SPLIT_VERSION,
 } from "../lib/telegram-constants";
 import { logTelegramEvent } from "../lib/telegram-log";
+import { recordTelegramDeliveryOutcomes } from "../lib/telegram-usage-analytics";
 import { isQuietHoursActive } from "./telegram-quiet-hours";
+import type { TelegramAlertType } from "@shared/types/status";
 
 // ---------- Constants ----------
 
@@ -20,10 +27,14 @@ import { isQuietHoursActive } from "./telegram-quiet-hours";
 // keep working without churn.
 export {
   BLOCK_STRIKE_WINDOW_SEC,
+  PENDING_NEAR_TTL_WINDOW_SEC,
   PENDING_BACKOFF_SCHEDULE_SEC,
   PENDING_MAX_ATTEMPTS,
   PENDING_TTL_SEC,
   SEND_BATCH_SIZE,
+  TELEGRAM_DISPATCH_INTERVAL_SEC,
+  TELEGRAM_PENDING_DRAIN_BUDGET,
+  TELEGRAM_PENDING_PRIORITY,
 };
 
 const PENDING_BACKOFF_CAP_SEC = PENDING_BACKOFF_SCHEDULE_SEC[PENDING_BACKOFF_SCHEDULE_SEC.length - 1];
@@ -37,8 +48,12 @@ export interface PendingAlertRow {
   message_html: string;
   disable_notification: number;
   created_at: number;
+  expires_at: number | null;
   attempts: number;
   not_before_at: number | null;
+  priority: number | null;
+  source_type: string | null;
+  alert_type: TelegramAlertType | null;
   alert_snooze_until_ts: number | null;
   quiet_hours_enabled: number | null;
   quiet_hours_start_utc: number | null;
@@ -68,6 +83,23 @@ export interface PendingEnqueueOptions {
   notBeforeAt?: number | null;
   lastErrorClass?: TelegramSendErrorClass | null;
   retryAfterSec?: number | null;
+  sourceType?: "risk_alert" | "admin_broadcast" | "legacy";
+  priority?: number | null;
+  ttlSec?: number | null;
+}
+
+export interface PendingCapacitySnapshot {
+  total: number;
+  active: number;
+  due: number;
+  deferred: number;
+  expired: number;
+  nearTtl: number;
+  oldestPendingAgeSec: number | null;
+  oldestDuePendingAgeSec: number | null;
+  estimatedDrainTimeSec: number;
+  drainBudgetPerRun: number;
+  dispatchIntervalSec: number;
 }
 
 const DEFAULT_RETRY_DELAY_SEC = PENDING_BACKOFF_SCHEDULE_SEC[0];
@@ -102,6 +134,154 @@ export function pendingBackoffSec(priorAttempts: number, retryAfterSec: number |
   if (retryAfterSec != null && retryAfterSec > 0) return retryAfterSec;
   const idx = Math.min(Math.max(priorAttempts, 0), PENDING_BACKOFF_SCHEDULE_SEC.length - 1);
   return PENDING_BACKOFF_SCHEDULE_SEC[idx] ?? PENDING_BACKOFF_CAP_SEC;
+}
+
+export function estimateTelegramDrainTimeSec(
+  messageCount: number,
+  drainBudgetPerRun: number = TELEGRAM_PENDING_DRAIN_BUDGET,
+  dispatchIntervalSec: number = TELEGRAM_DISPATCH_INTERVAL_SEC,
+): number {
+  if (!Number.isFinite(messageCount) || messageCount <= 0) return 0;
+  const budget = Math.max(1, Math.floor(drainBudgetPerRun));
+  return Math.ceil(messageCount / budget) * dispatchIntervalSec;
+}
+
+function pendingPriorityForAlertType(alertType: TelegramAlertType | undefined): number {
+  if (!alertType) return TELEGRAM_PENDING_PRIORITY.riskAlert;
+  return TELEGRAM_PENDING_PRIORITY[alertType] ?? TELEGRAM_PENDING_PRIORITY.riskAlert;
+}
+
+function resolvePendingPriority(message: BatchMessage, options: PendingEnqueueOptions): number {
+  if (options.priority != null && Number.isFinite(options.priority)) {
+    return Math.max(0, Math.floor(options.priority));
+  }
+  if (options.sourceType === "admin_broadcast") return TELEGRAM_PENDING_PRIORITY.adminBroadcast;
+  if (options.sourceType === "legacy") return TELEGRAM_PENDING_PRIORITY.legacy;
+  return pendingPriorityForAlertType(message.alertType);
+}
+
+function resolvePendingSourceType(options: PendingEnqueueOptions): "risk_alert" | "admin_broadcast" | "legacy" {
+  return options.sourceType ?? "risk_alert";
+}
+
+function resolvePendingTtlSec(message: BatchMessage, options: PendingEnqueueOptions): number {
+  if (options.ttlSec != null && Number.isFinite(options.ttlSec) && options.ttlSec > 0) {
+    return Math.floor(options.ttlSec);
+  }
+  if (options.sourceType === "admin_broadcast") return TELEGRAM_ALERT_TTL_SEC.adminBroadcast;
+  if (options.sourceType === "legacy") return TELEGRAM_ALERT_TTL_SEC.legacy;
+  return message.alertType ? TELEGRAM_ALERT_TTL_SEC[message.alertType] : PENDING_TTL_SEC;
+}
+
+function normalizeCapacityNumber(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+}
+
+function normalizeCapacityTimestamp(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : null;
+}
+
+export async function readPendingCapacitySnapshot(
+  db: D1Database,
+  nowSec: number,
+  drainBudgetPerRun: number = TELEGRAM_PENDING_DRAIN_BUDGET,
+): Promise<PendingCapacitySnapshot> {
+  try {
+    const row = await db
+      .prepare(
+        `SELECT COUNT(*) AS total,
+                SUM(CASE WHEN COALESCE(expires_at, created_at + ?) <= ? THEN 1 ELSE 0 END) AS expired,
+                SUM(CASE
+                      WHEN COALESCE(expires_at, created_at + ?) > ?
+                       AND (not_before_at IS NULL OR not_before_at <= ?)
+                      THEN 1 ELSE 0
+                    END) AS due,
+                SUM(CASE
+                      WHEN COALESCE(expires_at, created_at + ?) > ?
+                       AND not_before_at IS NOT NULL
+                       AND not_before_at > ?
+                      THEN 1 ELSE 0
+                    END) AS deferred,
+                SUM(CASE
+                      WHEN COALESCE(expires_at, created_at + ?) > ?
+                       AND COALESCE(expires_at, created_at + ?) <= ?
+                      THEN 1 ELSE 0
+                    END) AS near_ttl,
+                MIN(CASE
+                      WHEN COALESCE(expires_at, created_at + ?) > ?
+                      THEN created_at
+                    END) AS oldest_pending_created_at,
+                MIN(CASE
+                      WHEN COALESCE(expires_at, created_at + ?) > ?
+                       AND (not_before_at IS NULL OR not_before_at <= ?)
+                      THEN created_at
+                    END) AS oldest_due_created_at
+           FROM telegram_pending_alerts`,
+      )
+      .bind(
+        PENDING_TTL_SEC, nowSec,
+        PENDING_TTL_SEC, nowSec, nowSec,
+        PENDING_TTL_SEC, nowSec, nowSec,
+        PENDING_TTL_SEC, nowSec, PENDING_TTL_SEC, nowSec + PENDING_NEAR_TTL_WINDOW_SEC,
+        PENDING_TTL_SEC, nowSec,
+        PENDING_TTL_SEC, nowSec, nowSec,
+      )
+      .first<{
+        total: number | null;
+        expired: number | null;
+        due: number | null;
+        deferred: number | null;
+        near_ttl: number | null;
+        oldest_pending_created_at: number | null;
+        oldest_due_created_at: number | null;
+      }>();
+
+    const total = normalizeCapacityNumber(row?.total);
+    const expired = normalizeCapacityNumber(row?.expired);
+    const due = normalizeCapacityNumber(row?.due);
+    const deferred = normalizeCapacityNumber(row?.deferred);
+    const nearTtl = normalizeCapacityNumber(row?.near_ttl);
+    const active = Math.max(0, total - expired);
+    const oldestPendingCreatedAt = normalizeCapacityTimestamp(row?.oldest_pending_created_at);
+    const oldestDueCreatedAt = normalizeCapacityTimestamp(row?.oldest_due_created_at);
+
+    return {
+      total,
+      active,
+      due,
+      deferred,
+      expired,
+      nearTtl,
+      oldestPendingAgeSec: oldestPendingCreatedAt == null ? null : Math.max(0, nowSec - oldestPendingCreatedAt),
+      oldestDuePendingAgeSec: oldestDueCreatedAt == null ? null : Math.max(0, nowSec - oldestDueCreatedAt),
+      estimatedDrainTimeSec: estimateTelegramDrainTimeSec(active, drainBudgetPerRun),
+      drainBudgetPerRun,
+      dispatchIntervalSec: TELEGRAM_DISPATCH_INTERVAL_SEC,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logTelegramEvent({
+      level: "warn",
+      message: `Failed to read pending capacity snapshot: ${message}`,
+      action: "read-pending-capacity",
+      module: "telegram-pending-queue",
+    });
+    return {
+      total: 0,
+      active: 0,
+      due: 0,
+      deferred: 0,
+      expired: 0,
+      nearTtl: 0,
+      oldestPendingAgeSec: null,
+      oldestDuePendingAgeSec: null,
+      estimatedDrainTimeSec: 0,
+      drainBudgetPerRun,
+      dispatchIntervalSec: TELEGRAM_DISPATCH_INTERVAL_SEC,
+    };
+  }
 }
 
 function isPendingRowSnoozed(row: PendingAlertRow, nowSec: number): boolean {
@@ -311,7 +491,9 @@ export async function drainPendingQueue(
   botToken: string,
   limit: number,
   signal?: AbortSignal,
+  options: { maxPriority?: number | null } = {},
 ): Promise<PendingDrainResult> {
+  if (limit <= 0) return emptyDrainResult();
   const nowSec = Math.floor(Date.now() / 1000);
   const globalBackoffUntil = await readTelegramGlobalBackoff(db, nowSec);
   if (globalBackoffUntil != null) {
@@ -322,20 +504,33 @@ export async function drainPendingQueue(
       notBeforeAt: globalBackoffUntil,
     };
   }
-  const cutoff = nowSec - PENDING_TTL_SEC;
+  const maxPriority = options.maxPriority ?? null;
   const rows = await db
     .prepare(
-      `SELECT p.id, p.chat_id, p.message_html, p.disable_notification, p.created_at, p.attempts,
-              p.not_before_at, u.alert_snooze_until_ts, u.quiet_hours_enabled,
+      `SELECT p.id, p.chat_id, p.message_html, p.disable_notification, p.created_at,
+              p.expires_at, p.attempts, p.not_before_at, p.priority, p.source_type,
+              p.alert_type, u.alert_snooze_until_ts, u.quiet_hours_enabled,
               u.quiet_hours_start_utc, u.quiet_hours_end_utc, u.timezone
          FROM telegram_pending_alerts p
          LEFT JOIN telegram_subscribers u ON u.chat_id = p.chat_id
-        WHERE p.created_at >= ?
+        WHERE COALESCE(p.expires_at, p.created_at + ?) > ?
           AND (p.not_before_at IS NULL OR p.not_before_at <= ?)
-        ORDER BY COALESCE(p.not_before_at, p.created_at) ASC, p.created_at ASC
+          AND (? IS NULL OR COALESCE(p.priority, ?) <= ?)
+        ORDER BY COALESCE(p.priority, ?) ASC,
+                 COALESCE(p.not_before_at, p.created_at) ASC,
+                 p.created_at ASC
         LIMIT ?`,
     )
-    .bind(cutoff, nowSec, limit)
+    .bind(
+      PENDING_TTL_SEC,
+      nowSec,
+      nowSec,
+      maxPriority,
+      TELEGRAM_PENDING_PRIORITY.legacy,
+      maxPriority,
+      TELEGRAM_PENDING_PRIORITY.legacy,
+      limit,
+    )
     .all<PendingAlertRow>();
 
   const pending = rows.results ?? [];
@@ -360,6 +555,7 @@ export async function drainPendingQueue(
   let globalRateLimited = false;
   let rateLimitRetryAfterSec: number | null = null;
   let rateLimitNotBeforeAt: number | null = null;
+  const deliveryDiagnostics: Array<{ chatId: string; ok: boolean; errorClass?: string | null }> = [];
 
   for (let i = 0; i < pending.length; i += SEND_BATCH_SIZE) {
     if (signal?.aborted || globalRateLimited) break;
@@ -386,6 +582,7 @@ export async function drainPendingQueue(
     for (const result of results) {
       attempted++;
       if (result.ok) {
+        deliveryDiagnostics.push({ chatId: result.chatId, ok: true });
         sent++;
         idsToDelete.push(result.id);
         if (!chatsResetThisLoop.has(result.chatId)) {
@@ -393,6 +590,7 @@ export async function drainPendingQueue(
           await resetSubscriberBlockCount(db, result.chatId);
         }
       } else if (result.blocked) {
+        deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
         blocked++;
         idsToDelete.push(result.id);
         const shouldDisable = await registerSubscriberBlockAndShouldDisable(db, result.chatId, nowSec);
@@ -404,6 +602,7 @@ export async function drainPendingQueue(
           }
         }
       } else if (result.retryable && result.attempts < PENDING_MAX_ATTEMPTS) {
+        deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
         // Age-based retry: keep retrying inside the TTL window (enforced at SELECT time).
         // The defensive PENDING_MAX_ATTEMPTS ceiling prevents a pathological row from looping
         // forever with sub-second backoffs.
@@ -426,11 +625,13 @@ export async function drainPendingQueue(
           }
         }
       } else if (result.retryable) {
+        deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
         // Hit the defensive attempts ceiling while still retryable.
         dropped++;
         droppedMaxAttemptsFallback++;
         idsToDelete.push(result.id);
       } else {
+        deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
         // Non-retryable, non-blocked: classify as permanent failure (e.g. 400 bad_request, 401 auth_error).
         dropped++;
         droppedPermanentFailure++;
@@ -438,6 +639,8 @@ export async function drainPendingQueue(
       }
     }
   }
+
+  await recordTelegramDeliveryOutcomes(db, deliveryDiagnostics);
 
   if (idsToDelete.length > 0) {
     const placeholders = idsToDelete.map(() => "?").join(",");
@@ -497,14 +700,17 @@ export async function enqueuePendingAlerts(
   if (messages.length === 0) return;
 
   const staleCutoff = nowSec - PENDING_TTL_SEC;
-  const stmts = messages.map((msg) =>
-    db
+  const sourceType = resolvePendingSourceType(options);
+  const stmts = messages.map((msg) => {
+    const expiresAt = nowSec + resolvePendingTtlSec(msg, options);
+    return db
       .prepare(
         `INSERT INTO telegram_pending_alerts (
            chat_id, message_html, disable_notification, created_at, not_before_at,
-           last_error_class, retry_after_sec, updated_at, dedupe_key, chunk_index
+           last_error_class, retry_after_sec, updated_at, dedupe_key, chunk_index,
+           priority, source_type, alert_type, expires_at
          )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(dedupe_key) DO UPDATE SET
            message_html = excluded.message_html,
            disable_notification = excluded.disable_notification,
@@ -524,7 +730,18 @@ export async function enqueuePendingAlerts(
            last_error_class = COALESCE(excluded.last_error_class, telegram_pending_alerts.last_error_class),
            retry_after_sec = COALESCE(excluded.retry_after_sec, telegram_pending_alerts.retry_after_sec),
            updated_at = excluded.updated_at,
-           chunk_index = excluded.chunk_index`,
+           chunk_index = excluded.chunk_index,
+           priority = MIN(COALESCE(telegram_pending_alerts.priority, excluded.priority), excluded.priority),
+           source_type = CASE
+             WHEN excluded.priority < COALESCE(telegram_pending_alerts.priority, excluded.priority)
+             THEN excluded.source_type
+             ELSE telegram_pending_alerts.source_type
+           END,
+           alert_type = COALESCE(excluded.alert_type, telegram_pending_alerts.alert_type),
+           expires_at = CASE
+             WHEN telegram_pending_alerts.created_at < ? THEN excluded.expires_at
+             ELSE COALESCE(telegram_pending_alerts.expires_at, excluded.expires_at)
+           END`,
       )
       .bind(
         msg.chatId,
@@ -537,10 +754,15 @@ export async function enqueuePendingAlerts(
         nowSec,
         buildDedupeKey(msg),
         msg.chunkIndex ?? 0,
+        resolvePendingPriority(msg, options),
+        sourceType,
+        msg.alertType ?? null,
+        expiresAt,
         staleCutoff,
         staleCutoff,
-      ),
-  );
+        staleCutoff,
+      );
+  });
   await batchExecute(db, stmts);
 }
 
@@ -571,9 +793,74 @@ export async function cleanupExpiredPendingAlerts(
   nowSec: number,
 ): Promise<number> {
   const cutoff = nowSec - PENDING_TTL_SEC;
+  const expiredRows = await db
+    .prepare(
+      `SELECT id, chat_id, message_html, created_at, attempts, last_error_class,
+              dedupe_key, chunk_index, priority, source_type, alert_type
+         FROM telegram_pending_alerts
+        WHERE created_at < ?
+           OR (expires_at IS NOT NULL AND expires_at <= ?)`,
+    )
+    .bind(cutoff, nowSec)
+    .all<{
+      id: number;
+      chat_id: string;
+      message_html: string;
+      created_at: number;
+      attempts: number | null;
+      last_error_class: string | null;
+      dedupe_key: string | null;
+      chunk_index: number | null;
+      priority: number | null;
+      source_type: string | null;
+      alert_type: string | null;
+    }>();
+
+  const rows = expiredRows.results ?? [];
+  if (rows.length > 0) {
+    try {
+      await batchExecute(db, rows.map((row) =>
+        db
+          .prepare(
+            `INSERT INTO telegram_alert_dead_letters (
+               pending_id, chat_id, message_html, source_type, alert_type, priority,
+               created_at, expired_at, attempts, last_error_class, reason, dedupe_key, chunk_index
+             )
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .bind(
+            row.id,
+            row.chat_id,
+            row.message_html,
+            row.source_type ?? "legacy",
+            row.alert_type ?? null,
+            row.priority ?? TELEGRAM_PENDING_PRIORITY.legacy,
+            row.created_at,
+            nowSec,
+            row.attempts ?? 0,
+            row.last_error_class ?? null,
+            "ttl_expired",
+            row.dedupe_key ?? null,
+            row.chunk_index ?? 0,
+          ),
+      ));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logTelegramEvent({
+        level: "warn",
+        message: `Failed to dead-letter expired pending alerts: ${message}`,
+        action: "dead-letter-expired-pending",
+        module: "telegram-pending-queue",
+      });
+    }
+  }
+
   const result = await db
-    .prepare("DELETE FROM telegram_pending_alerts WHERE created_at < ?")
-    .bind(cutoff)
+    .prepare(
+      `DELETE FROM telegram_pending_alerts WHERE created_at < ?
+         OR (expires_at IS NOT NULL AND expires_at <= ?)`,
+    )
+    .bind(cutoff, nowSec)
     .run();
   return result.meta?.changes ?? 0;
 }

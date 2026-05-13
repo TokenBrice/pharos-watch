@@ -31,6 +31,7 @@ vi.mock("../../lib/telegram", async (importOriginal) => {
 });
 
 const { dispatchTelegramAlerts } = await import("../dispatch-telegram-alerts");
+const { TELEGRAM_MAX_MESSAGES_PER_RUN } = await import("../../lib/telegram-constants");
 
 function makeSafetySourceCache(
   snapshot: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>,
@@ -346,6 +347,13 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "WHERE global_alert_depeg = 1", rows: [] },
       { match: "WHERE global_alert_safety = 1", rows: [] },
+      {
+        match: "SELECT consecutive_block_count",
+        rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - 60 }],
+      },
+      { match: "UPDATE telegram_subscribers", rows: [] },
+      { match: "UPDATE telegram_subscriptions", rows: [] },
+      { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
@@ -630,6 +638,13 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "WHERE global_alert_depeg = 1", rows: [] },
       { match: "WHERE global_alert_safety = 1", rows: [] },
+      {
+        match: "SELECT consecutive_block_count",
+        rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - 60 }],
+      },
+      { match: "UPDATE telegram_subscribers", rows: [] },
+      { match: "UPDATE telegram_subscriptions", rows: [] },
+      { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
@@ -998,7 +1013,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(dewsAlertableSnapshotCall?.[2]).toContain("\"uusd-youves\":\"ALERT\"");
   });
 
-  it("deactivates subscriber on blocked telegram response", async () => {
+  it("records a fresh-send first strike without deactivating the subscriber", async () => {
     const now = Math.floor(Date.now() / 1000);
 
     mockSendToChat.mockResolvedValue({
@@ -1038,6 +1053,7 @@ describe("dispatchTelegramAlerts", () => {
         matchBinds: ["usdc-circle", now, now],
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "99999", last_active_at: now }],
       },
+      { match: "SELECT consecutive_block_count", rows: [] },
       { match: "UPDATE telegram_subscribers", rows: [] },
       // Phase 6: cleanup expired pending
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
@@ -1046,7 +1062,79 @@ describe("dispatchTelegramAlerts", () => {
     const result = await dispatchTelegramAlerts(db, "bot-token");
     const metadata = JSON.parse(result.metadata) as { blockedUsersCleanedUp: number };
 
+    expect(metadata.blockedUsersCleanedUp).toBe(0);
+    const history = db.getHistory();
+    const strikeUpdate = history.find((entry) =>
+      entry.sql.includes("UPDATE telegram_subscribers") &&
+      entry.sql.includes("consecutive_block_count = ?")
+    );
+    expect(strikeUpdate?.binds[0]).toBe(1);
+    const flagCascade = history.find((entry) =>
+      entry.sql.includes("UPDATE telegram_subscribers") &&
+      entry.sql.includes("alert_dews=0")
+    );
+    expect(flagCascade).toBeUndefined();
+  });
+
+  it("deactivates a fresh-send blocked subscriber only on the second strike", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockSendToChat.mockResolvedValue({
+      ok: false,
+      blocked: true,
+      retryable: false,
+      permanentFailure: true,
+      statusCode: 403,
+      errorClass: "blocked",
+      delivery: "blocked",
+      retryAfterSec: null,
+    });
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [{ stablecoin_id: "usdc-circle", score: 42, band: "ALERT", signals_json: "{}" }],
+      },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      {
+        match: "sub.alert_dews = 1",
+        matchBinds: ["usdc-circle", now, now],
+        rows: [{ stablecoin_id: "usdc-circle", chat_id: "99999", last_active_at: now }],
+      },
+      {
+        match: "SELECT consecutive_block_count",
+        rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - 60 }],
+      },
+      { match: "UPDATE telegram_subscribers", rows: [] },
+      { match: "UPDATE telegram_subscriptions", rows: [] },
+      { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as { blockedUsersCleanedUp: number };
+
     expect(metadata.blockedUsersCleanedUp).toBe(1);
+    const history = db.getHistory();
+    const flagCascade = history.find((entry) =>
+      entry.sql.includes("UPDATE telegram_subscribers") &&
+      entry.sql.includes("alert_launch=0")
+    );
+    expect(flagCascade).toBeDefined();
   });
 
   it("drains pending queue before processing fresh events", async () => {
@@ -1096,8 +1184,8 @@ describe("dispatchTelegramAlerts", () => {
       return null;
     });
 
-    // Generate more subscribers than MAX_MESSAGES_PER_RUN
-    const subscriberCount = 250;
+    // Generate more subscribers than TELEGRAM_MAX_MESSAGES_PER_RUN.
+    const subscriberCount = TELEGRAM_MAX_MESSAGES_PER_RUN + 50;
     const subscribers = Array.from({ length: subscriberCount }, (_, i) => ({
       stablecoin_id: "usdc-circle",
       chat_id: `chat-${i}`,
@@ -1113,7 +1201,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM safety_grade_history", rows: [] },
       // No pending queue items
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
-      // Batched subscriber lookup returns all 250
+    // Batched subscriber lookup returns all subscribers.
       { match: "sub.alert_dews = 1", rows: subscribers },
       // INSERT for overflow (db.batch call)
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },
@@ -1126,12 +1214,24 @@ describe("dispatchTelegramAlerts", () => {
       subscribersNotified: number;
       cappedAtLimit: boolean;
       pendingEnqueued: number;
+      freshCandidateChats: number;
+      freshCandidateCount: number;
+      freshOverflow: number;
+      perAlertTypeTargets: Record<string, { chats: number; chunks: number }>;
+      fanoutQueryMs: number;
+      fanoutBuildMs: number;
     };
 
     expect(metadata.cappedAtLimit).toBe(true);
     expect(metadata.pendingEnqueued).toBeGreaterThan(0);
-    // freshBudget = 200 (no pending drained), so 200 sent + 50 enqueued
-    expect(metadata.subscribersNotified).toBeLessThanOrEqual(200);
+    expect(metadata.freshCandidateChats).toBe(subscriberCount);
+    expect(metadata.freshCandidateCount).toBe(subscriberCount);
+    expect(metadata.freshOverflow).toBe(50);
+    expect(metadata.perAlertTypeTargets.dews).toEqual({ chats: subscriberCount, chunks: subscriberCount });
+    expect(metadata.fanoutQueryMs).toBeGreaterThanOrEqual(0);
+    expect(metadata.fanoutBuildMs).toBeGreaterThanOrEqual(0);
+    // freshBudget = TELEGRAM_MAX_MESSAGES_PER_RUN (no pending drained), so max fresh cap + 50 enqueued.
+    expect(metadata.subscribersNotified).toBeLessThanOrEqual(TELEGRAM_MAX_MESSAGES_PER_RUN);
   });
 
   it("writes snapshots even when subscriber queue is capped", async () => {
@@ -1722,8 +1822,13 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM safety_grade_history", rows: [] },
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
       { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now, now], rows: [{ stablecoin_id: "usdc-circle", chat_id: "99999", last_active_at: now }] },
+      {
+        match: "SELECT consecutive_block_count",
+        rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - 60 }],
+      },
       { match: "UPDATE telegram_subscribers", rows: [] },
       { match: "UPDATE telegram_subscriptions", rows: [] },
+      { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
@@ -1957,6 +2062,13 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "WHERE global_alert_depeg = 1", rows: [] },
       { match: "WHERE global_alert_safety = 1", rows: [] },
+      {
+        match: "SELECT consecutive_block_count",
+        rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - 60 }],
+      },
+      { match: "UPDATE telegram_subscribers", rows: [] },
+      { match: "UPDATE telegram_subscriptions", rows: [] },
+      { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
@@ -2018,6 +2130,13 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "WHERE global_alert_depeg = 1", rows: [] },
       { match: "WHERE global_alert_safety = 1", rows: [] },
+      {
+        match: "SELECT consecutive_block_count",
+        rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - 60 }],
+      },
+      { match: "UPDATE telegram_subscribers", rows: [] },
+      { match: "UPDATE telegram_subscriptions", rows: [] },
+      { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
@@ -2079,6 +2198,13 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "WHERE global_alert_depeg = 1", rows: [] },
       { match: "WHERE global_alert_safety = 1", rows: [] },
+      {
+        match: "SELECT consecutive_block_count",
+        rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - 60 }],
+      },
+      { match: "UPDATE telegram_subscribers", rows: [] },
+      { match: "UPDATE telegram_subscriptions", rows: [] },
+      { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
@@ -2090,7 +2216,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.blockedUsersCleanedUp).toBe(1);
   });
 
-  it("aborts the run when the preset-subscribers query fails and surfaces the failure", async () => {
+  it("degrades preset delivery when the preset-subscribers query fails but still sends direct/global alerts", async () => {
     const now = Math.floor(Date.now() / 1000);
 
     mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
@@ -2131,6 +2257,7 @@ describe("dispatchTelegramAlerts", () => {
       },
       // Preset query fails for every alert type.
       { match: "FROM telegram_preset_subscriptions p", throwError: new Error("D1_ERROR: connection reset"), rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
     const result = await dispatchTelegramAlerts(db, "bot-token");
@@ -2147,15 +2274,14 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.presetQueryFailures).toBeGreaterThanOrEqual(1);
     expect(metadata.presetResolutionFailures).toBe(0);
     expect(metadata.snapshotSeeded).toBe(false);
-    expect(metadata.subscribersNotified).toBe(0);
-    expect(metadata.messagesSent).toBe(0);
-    expect(mockSendToChat).not.toHaveBeenCalled();
+    expect(metadata.subscribersNotified).toBe(1);
+    expect(metadata.messagesSent).toBe(1);
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
 
-    // No snapshot writes when aborting.
     const snapshotWrites = mockSetCache.mock.calls.filter(([_db, key]) =>
       typeof key === "string" && key.startsWith("alert:"),
     );
-    expect(snapshotWrites).toHaveLength(0);
+    expect(snapshotWrites.length).toBeGreaterThan(0);
 
     // The failure counter is persisted.
     const counterWrite = mockSetCache.mock.calls.find(
@@ -2164,8 +2290,75 @@ describe("dispatchTelegramAlerts", () => {
     expect(counterWrite).toBeTruthy();
     expect(counterWrite?.[2]).toBe("1");
 
-    // Circuit outcome is recorded as a failure.
-    expect(mockRecordOutcome).toHaveBeenCalledWith(expect.anything(), expect.anything(), false);
+    // Preset failure no longer poisons the Telegram API circuit when direct
+    // delivery succeeds.
+    expect(mockRecordOutcome).toHaveBeenCalledWith(expect.anything(), expect.anything(), true);
+  });
+
+  it("degrades preset delivery when dynamic preset resolution fails but keeps direct delivery", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "telegram:preset-query-failure-count") {
+        return null;
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [{ stablecoin_id: "usdc-circle", score: 42, band: "ALERT", signals_json: "{}" }],
+      },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      {
+        match: "sub.alert_dews = 1",
+        matchBinds: ["usdc-circle", now, now],
+        rows: [{ stablecoin_id: "usdc-circle", chat_id: "direct-chat", last_active_at: now }],
+      },
+      {
+        match: "FROM telegram_preset_subscriptions p",
+        rows: [{
+          chat_id: "preset-chat",
+          preset_id: "usd-top25",
+          last_active_at: now,
+          depeg_worsening_bps_step: null,
+          quiet_hours_enabled: 0,
+          quiet_hours_start_utc: null,
+          quiet_hours_end_utc: null,
+          timezone: null,
+        }],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      presetFailure: boolean;
+      presetQueryFailures: number;
+      presetResolutionFailures: number;
+      subscribersNotified: number;
+      messagesSent: number;
+    };
+
+    expect(metadata.presetFailure).toBe(true);
+    expect(metadata.presetQueryFailures).toBe(0);
+    expect(metadata.presetResolutionFailures).toBe(1);
+    expect(metadata.subscribersNotified).toBe(1);
+    expect(metadata.messagesSent).toBe(1);
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
+    expect(mockSendToChat.mock.calls[0]?.[0]).toBe("direct-chat");
   });
 
   it("clears the preset-failure counter on a successful run", async () => {
@@ -2372,11 +2565,11 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.perAlertType.depeg.sent).toBe(0);
   });
 
-  it("chunks a 120-coin depeg fan-out for one chat and overflows the 200-msg cap to pending", async () => {
+  it("chunks a 120-coin depeg fan-out for one chat and overflows the message cap to pending", async () => {
     // P1-T2: a single chat subscribed to 120 stablecoins receives one
     // consolidated depeg message that splits into multiple chunks. Many
     // additional global subscribers push total chunk demand past the
-    // MAX_MESSAGES_PER_RUN (=200) cap so the overflow lands in the pending
+    // MAX_MESSAGES_PER_RUN cap so the overflow lands in the pending
     // queue rather than being dropped, while the heavy chat is still attempted.
     const now = Math.floor(Date.now() / 1000);
 
@@ -2406,10 +2599,9 @@ describe("dispatchTelegramAlerts", () => {
       quiet_hours_end_utc: null,
     }));
 
-    // 80 extra global subscribers — each receives the same consolidated 120-coin
-    // message. 81 chats × ~3 chunks each (~243 total) comfortably exceeds the
-    // 200 fresh-send cap.
-    const globalDepegRows = Array.from({ length: 80 }, (_, i) => ({
+    // Extra global subscribers — each receives the same consolidated 120-coin
+    // message. The fixture is sized to exceed the current fresh-send cap.
+    const globalDepegRows = Array.from({ length: 1250 }, (_, i) => ({
       chat_id: `global-${i}`,
       last_active_at: now - 1000 - i, // older than megaChatId so mega is sent first
       quiet_hours_enabled: 0,
@@ -2430,7 +2622,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: depegRows },
       { match: "FROM safety_grade_history", rows: [] },
-      // Pending queue empty so freshBudget = 200 (MAX_MESSAGES_PER_RUN).
+      // Pending queue empty so freshBudget = TELEGRAM_MAX_MESSAGES_PER_RUN.
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
       { match: "sub.alert_depeg = 1", rows: directDepegRows },
       { match: "WHERE global_alert_depeg = 1", rows: globalDepegRows },
@@ -2473,12 +2665,12 @@ describe("dispatchTelegramAlerts", () => {
     expect(indices[0]).toBe(0);
     expect(indices[indices.length - 1]).toBe(megaMessages.length - 1);
 
-    // Cap and overflow: 81 chats × ~3 chunks each > 200, so the queue is
-    // capped and excess subscribers spilled into the pending queue.
+    // Cap and overflow: the queue is capped and excess subscribers spill into
+    // the pending queue.
     expect(metadata.cappedAtLimit).toBe(true);
     expect(metadata.pendingEnqueued).toBeGreaterThan(0);
     // freshAttempted is bounded by the cap.
-    expect(metadata.freshAttempted).toBeLessThanOrEqual(200);
+    expect(metadata.freshAttempted).toBeLessThanOrEqual(TELEGRAM_MAX_MESSAGES_PER_RUN);
 
     // The overflow INSERT was issued (rather than the rows being dropped).
     const enqueueCalls = db.getHistory().filter((entry) =>

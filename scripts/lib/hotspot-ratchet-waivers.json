@@ -55,14 +55,6 @@
     "disposition": "queued-p4",
     "notes": "Surfaced after merging the local yield coverage and publication-health tranche. Yield cache validation now covers rankings publication state, benchmark caches, supplemental source caches, and deterministic on-chain health; split schema parsing by cache family in a dedicated yield cleanup pass."
   },
-  "worker/src/cron/sync-stablecoins/enrich-prices-primary-provider-collection.ts": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after the larger pricing-provider shells were split. This module still combines provider target collection, cache gates, and diagnostic shaping; split target selection from provider execution in a follow-up pricing cleanup."
-  },
-  "worker/src/cron/sync-fx-rates-helpers.ts": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after the stablecoin pricing hotspots dropped out of the candidate set. FX helper policy still combines source parsing, freshness decisions, and fallback diagnostics; split provider-specific helpers in a dedicated FX cleanup pass."
-  },
   "src/components/pre-launch-detail.tsx": {
     "disposition": "queued-p4",
     "notes": "Surfaced after frontend hotspot reductions. The pre-launch detail page still combines hero, readiness, source, and status rendering in one component; split page sections once the pre-launch surface changes again."
@@ -82,5 +74,17 @@
   "worker/src/lib/redemption-backstop-capacity.ts": {
     "disposition": "queued-p4",
     "notes": "Redemption capacity resolution intentionally centralizes supply-full, supply-ratio, fixed-USD, and reserve-sync metadata semantics while v4 current-capacity behavior is still being audited. Split capacity profile construction from per-model resolution once the v4 route coverage expansion settles."
+  },
+  "worker/src/api/telegram-webhook-store.ts": {
+    "disposition": "queued-p4",
+    "notes": "Webhook state storage now covers processed-update claims, setup/disambiguation rows, callback payloads, and cooldown bookkeeping. Keep waived for the growth rollout; split processed-update idempotency and command cooldown storage into focused modules in a follow-up Telegram cleanup."
+  },
+  "worker/src/cron/telegram-pending-queue.ts": {
+    "disposition": "queued-p4",
+    "notes": "Pending delivery queue owns drain selection, TTL/dead-letter handling, rate-limit backoff, two-strike blocked handling, and priority enqueue semantics. Keep waived until the durable sender promotion; then split subscriber lifecycle, enqueue/dedupe, and drain execution helpers."
+  },
+  "worker/src/api/telegram-webhook.ts": {
+    "disposition": "queued-p4",
+    "notes": "Webhook entrypoint expanded with processed-update idempotency, command cooldowns, usage analytics, group-admin denial telemetry, and reply diagnostics. Keep waived for the growth rollout; extract analytics instrumentation and command execution orchestration in the next Telegram decomposition pass."
   }
 }

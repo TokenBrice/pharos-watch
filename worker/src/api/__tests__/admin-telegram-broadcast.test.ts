@@ -42,6 +42,22 @@ function auditRow() {
   return { match: "INSERT INTO admin_action_audit", rows: [], runMeta: { changes: 1 } };
 }
 
+function pendingCapacityRow(active: number) {
+  return {
+    match: "COUNT(*) AS total",
+    first: {
+      total: active,
+      expired: 0,
+      due: active,
+      deferred: 0,
+      near_ttl: 0,
+      oldest_pending_created_at: active > 0 ? Math.floor(Date.now() / 1000) - 60 : null,
+      oldest_due_created_at: active > 0 ? Math.floor(Date.now() / 1000) - 60 : null,
+    },
+    rows: [],
+  };
+}
+
 describe("handleAdminTelegramBroadcast", () => {
   it("rejects requests without admin auth", async () => {
     const db = mockD1();
@@ -93,17 +109,43 @@ describe("handleAdminTelegramBroadcast", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects non-boolean acknowledgeBacklogRisk with 400", async () => {
+    const db = mockD1();
+    const res = await handleAdminTelegramBroadcast({
+      db,
+      request: adminRequest({
+        messageHtml: "<b>x</b>",
+        scope: "all",
+        dryRun: false,
+        acknowledgeBacklogRisk: "yes",
+      }),
+      trustedAdmin: true,
+    });
+    expect(res.status).toBe(400);
+  });
+
   it("dry-run returns target count and a sample without enqueuing or auditing", async () => {
     const chatIds = ["1", "2", "3", "4", "5", "6", "7"];
-    const db = mockD1([allSubscriberRows(chatIds)]);
+    const db = mockD1([allSubscriberRows(chatIds), pendingCapacityRow(0)]);
     const res = await handleAdminTelegramBroadcast({
       db,
       request: adminRequest({ messageHtml: "<b>x</b>", scope: "all", dryRun: true }),
       trustedAdmin: true,
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { targetChatCount: number; sample: string[] };
+    const body = (await res.json()) as {
+      targetChatCount: number;
+      chunkCount: number;
+      targetMessageCount: number;
+      deliveryEstimate: { projectedPendingMessages: number; estimatedDrainTimeSec: number; fitsWithinMinutes: Record<string, boolean> };
+      sample: string[];
+    };
     expect(body.targetChatCount).toBe(7);
+    expect(body.chunkCount).toBe(1);
+    expect(body.targetMessageCount).toBe(7);
+    expect(body.deliveryEstimate.projectedPendingMessages).toBe(7);
+    expect(body.deliveryEstimate.estimatedDrainTimeSec).toBe(300);
+    expect(body.deliveryEstimate.fitsWithinMinutes["15"]).toBe(true);
     expect(body.sample).toEqual(["1", "2", "3", "4", "5"]);
 
     const history = db.getHistory();
@@ -147,7 +189,7 @@ describe("handleAdminTelegramBroadcast", () => {
 
   it("live mode enqueues one pending row per chat and audits the action", async () => {
     const chatIds = ["10", "20", "30"];
-    const db = mockD1([allSubscriberRows(chatIds), pendingInsertRow(), auditRow()]);
+    const db = mockD1([allSubscriberRows(chatIds), pendingCapacityRow(0), pendingInsertRow(), auditRow()]);
     const res = await handleAdminTelegramBroadcast({
       db,
       request: adminRequest({
@@ -165,6 +207,7 @@ describe("handleAdminTelegramBroadcast", () => {
     const inserts = history.filter((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"));
     expect(inserts).toHaveLength(3);
     expect(inserts.map((entry) => entry.binds[0])).toEqual(["10", "20", "30"]);
+    expect(inserts.every((entry) => entry.binds.includes("admin_broadcast"))).toBe(true);
 
     const audit = history.find((entry) => entry.sql.includes("INSERT INTO admin_action_audit"));
     expect(audit).toBeDefined();
@@ -172,8 +215,51 @@ describe("handleAdminTelegramBroadcast", () => {
     expect(audit?.binds).toContain("all");
   });
 
+  it("blocks live broadcasts projected to outlive the admin broadcast TTL without acknowledgement", async () => {
+    const db = mockD1([allSubscriberRows(["10"]), pendingCapacityRow(6_000)]);
+    const res = await handleAdminTelegramBroadcast({
+      db,
+      request: adminRequest({
+        messageHtml: "<b>Pharos maintenance</b>",
+        scope: "all",
+        dryRun: false,
+      }),
+      trustedAdmin: true,
+    });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as {
+      deliveryEstimate: { requiresAcknowledgement: boolean; adminBroadcastTtlSec: number };
+    };
+    expect(body.deliveryEstimate.requiresAcknowledgement).toBe(true);
+    expect(body.deliveryEstimate.adminBroadcastTtlSec).toBe(30 * 60);
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO admin_action_audit"))).toBe(false);
+  });
+
+  it("allows acknowledged live broadcasts with backlog risk and records short admin TTL", async () => {
+    const db = mockD1([allSubscriberRows(["10"]), pendingCapacityRow(6_000), pendingInsertRow(), auditRow()]);
+    const res = await handleAdminTelegramBroadcast({
+      db,
+      request: adminRequest({
+        messageHtml: "<b>Pharos maintenance</b>",
+        scope: "all",
+        dryRun: false,
+        acknowledgeBacklogRisk: true,
+      }),
+      trustedAdmin: true,
+    });
+    expect(res.status).toBe(200);
+
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"));
+    expect(insert?.binds).toContain("admin_broadcast");
+    expect(insert?.binds).toContain(90);
+    expect(Number(insert?.binds[13]) - Number(insert?.binds[3])).toBe(30 * 60);
+  });
+
   it("live mode with global-subscribers scope only enqueues filtered chats", async () => {
-    const db = mockD1([globalSubscriberRows(["77"]), pendingInsertRow(), auditRow()]);
+    const db = mockD1([globalSubscriberRows(["77"]), pendingCapacityRow(0), pendingInsertRow(), auditRow()]);
     const res = await handleAdminTelegramBroadcast({
       db,
       request: adminRequest({
@@ -197,7 +283,7 @@ describe("handleAdminTelegramBroadcast", () => {
   });
 
   it("live mode with no target chats returns enqueued: 0 and still audits", async () => {
-    const db = mockD1([allSubscriberRows([]), auditRow()]);
+    const db = mockD1([allSubscriberRows([]), pendingCapacityRow(0), auditRow()]);
     const res = await handleAdminTelegramBroadcast({
       db,
       request: adminRequest({ messageHtml: "<b>x</b>", scope: "all", dryRun: false }),

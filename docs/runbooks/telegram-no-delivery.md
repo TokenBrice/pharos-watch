@@ -8,14 +8,15 @@ Detection signals:
 
 - Admin `/api/status` `telegramBot` block shows zero `messagesSent` while `eventsDetected > 0`.
 - `crons["dispatch-telegram-alerts"].lastRun.metadata` reports `snapshotSeeded: true` repeatedly.
+- `crons["dispatch-telegram-alerts"].lastRun.metadata` includes capacity fields: `freshCandidateCount`, `freshOverflow`, `pendingAttempted`, `pendingSent`, `pendingRetryQueued`, `pendingExpired`, `oldestPendingAgeSec`, `estimatedDrainTimeSec`, `perAlertTypeTargets`, and fan-out timing (`fanoutQueryMs`, `fanoutBuildMs`, `fanoutTotalMs`).
 - `retryErrorClassCounts` dominated by a single runtime class (`rate_limit`, `blocked`, `bad_request`, `auth_error`, `server_error`, `timeout`, `network`, or `unknown`).
 - A specific user reports silence: pull their per-chat state via the admin endpoint below.
 
 ## Quick Diagnostic Checklist
 
 1. **Circuit breaker open?** `/api/status` -> `circuits` -> `telegram_api`. An open breaker skips fan-out entirely.
-2. **D1 healthy?** Cross-check with [`db-connectivity.md`](./db-connectivity.md). The dispatcher aborts the run on preset-query failures (see [`docs/telegram-alerts.md`](../telegram-alerts.md) section Dispatch Cron).
-3. **Pending queue draining?** `/api/status` -> `telegramBot.pendingDeliveries` and `oldestPendingDeliveryAgeSec`. A growing backlog points to a rate-limit storm — see [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).
+2. **D1 healthy?** Cross-check with [`db-connectivity.md`](./db-connectivity.md). Preset query/resolution failures degrade preset delivery only; direct and global delivery should continue with `presetFailure`, `presetQueryFailures`, and `presetResolutionFailures` set in dispatch metadata.
+3. **Pending queue draining?** `/api/status` -> `telegramBot.pendingDeliveries`, `pendingDeliveryBacklog`, and `oldestPendingDeliveryAgeSec`. A growing backlog points to a rate-limit storm or expiration risk — see [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md) and [`telegram-backlog-expiration.md`](./telegram-backlog-expiration.md).
 4. **Snapshot seeded?** `snapshotSeeded: true` for the last run means no alerts will be sent (24h staleness gate; see [`docs/telegram-alerts.md`](../telegram-alerts.md) section First-Run / Stale-Snapshot Behavior).
 5. **Single chat affected?** Inspect the chat's full state:
 
@@ -43,7 +44,7 @@ Detection signals:
 6. **No subscribers for the alert type.** Verify `/api/status` -> `telegramBot.alertTypeChats.<type>` is non-zero for the affected alert type.
 7. **Webhook drift.** The 5-minute Telegram lane reconciles the webhook automatically. Force a manual reset with `scripts/register-telegram-webhook.sh` only if reconciliation is also failing.
 8. **Force a single resend.** After the underlying cause is fixed, re-fire a specific alert to one chat via `POST https://ops-api.pharos.watch/api/admin-telegram-resend` with body `{ "chatId": "<id>", "alertType": "dews|depeg|safety|launch", "stablecoinId": "<id>" }`. The endpoint rebuilds a `synthetic_current_state` alert from current data, uses the same formatter and `sendToChat` path as the dispatch cron, and bypasses the pending queue. It is not exact historical replay. See [`docs/api-reference.md`](../api-reference.md) section `POST /api/admin-telegram-resend`.
-9. **Announce a maintenance window or recovery to subscribers.** Use `POST https://ops-api.pharos.watch/api/admin-telegram-broadcast` with body `{ "messageHtml": "<b>...</b>", "scope": "all" | "deliverable-watchers" | "global-subscribers", "dryRun": true | false }`. Prefer `deliverable-watchers` for ordinary recovery notices; use `all` only when intentionally targeting every subscriber row. Run a `dryRun: true` first to confirm `targetChatCount` matches expectations; then send the live call. The endpoint enqueues into `telegram_pending_alerts` so the standard dispatch pipeline handles fan-out, rate-limit isolation, and retries. See [`docs/api-reference.md`](../api-reference.md) section `POST /api/admin-telegram-broadcast`.
+9. **Announce a maintenance window or recovery to subscribers.** Use `POST https://ops-api.pharos.watch/api/admin-telegram-broadcast` with body `{ "messageHtml": "<b>...</b>", "scope": "all" | "deliverable-watchers" | "global-subscribers", "dryRun": true | false }`. Prefer `deliverable-watchers` for ordinary recovery notices; use `all` only when intentionally targeting every subscriber row. Run `dryRun: true` first to confirm `targetChatCount`, `targetMessageCount`, and `deliveryEstimate`; then follow [`telegram-admin-broadcast-safety.md`](./telegram-admin-broadcast-safety.md) before the live call. The endpoint enqueues low-priority `admin_broadcast` rows into `telegram_pending_alerts`, so risk alerts stay ahead of broadcasts during contention. See [`docs/api-reference.md`](../api-reference.md) section `POST /api/admin-telegram-broadcast`.
 
 ## Cross-References
 
@@ -51,4 +52,6 @@ Detection signals:
 - [`docs/worker-and-api-limits.md`](../worker-and-api-limits.md) — per-trigger 6-connection cap and rate-limit context.
 - [`docs/architecture.md`](../architecture.md) — Worker/D1 topology.
 - [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md) — when the backlog is growing fast.
+- [`telegram-backlog-expiration.md`](./telegram-backlog-expiration.md) — when pending age approaches the 1-hour TTL.
+- [`telegram-webhook-retry-dedupe.md`](./telegram-webhook-retry-dedupe.md) — when commands or callbacks disappear after webhook retries.
 - [`db-connectivity.md`](./db-connectivity.md) — when the dispatcher's D1 reads fail.

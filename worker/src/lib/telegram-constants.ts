@@ -59,6 +59,30 @@ export const TELEGRAM_SPLIT_VERSION = 1;
 /** Stale-row TTL for the pending alerts queue (1 hour). */
 export const PENDING_TTL_SEC = 3600;
 
+export const TELEGRAM_ALERT_TTL_SEC = {
+  depeg: PENDING_TTL_SEC,
+  dews: PENDING_TTL_SEC,
+  safety: PENDING_TTL_SEC,
+  launch: 30 * 60,
+  adminBroadcast: 30 * 60,
+  legacy: PENDING_TTL_SEC,
+} as const;
+
+/** The dedicated Telegram alert dispatcher runs every five minutes. */
+export const TELEGRAM_DISPATCH_INTERVAL_SEC = 5 * 60;
+
+/**
+ * Upper bound on message attempts per dispatcher run.
+ *
+ * This keeps the same `SEND_BATCH_SIZE = 4` connection footprint but allows
+ * the dedicated five-minute Telegram slot to drain a 5k-watcher broad alert
+ * inside the normal/spike SLO envelope when Bot API latency is healthy.
+ */
+export const TELEGRAM_MAX_MESSAGES_PER_RUN = 3600;
+
+/** Pending drain share reserved from the per-run Telegram send budget. */
+export const TELEGRAM_PENDING_DRAIN_BUDGET = Math.floor(TELEGRAM_MAX_MESSAGES_PER_RUN / 4);
+
 /** Parallel sends per batch (leave Workers connection headroom). */
 export const SEND_BATCH_SIZE = 4;
 
@@ -76,6 +100,25 @@ export const PENDING_BACKOFF_SCHEDULE_SEC = [60, 120, 240, 480, 600] as const;
  * transient; only after a second 403 within this window do we clear flags.
  */
 export const BLOCK_STRIKE_WINDOW_SEC = 24 * 3600;
+
+/** Pending rows older than this need operator attention before TTL risk builds. */
+export const PENDING_OLD_AGE_ALERT_SEC = 15 * 60;
+
+/** Estimated drain times above this are considered degraded. */
+export const PENDING_DRAIN_TIME_ALERT_SEC = 30 * 60;
+
+/** Rows inside this window from expiry count as near-TTL risk. */
+export const PENDING_NEAR_TTL_WINDOW_SEC = 15 * 60;
+
+export const TELEGRAM_PENDING_PRIORITY = {
+  depeg: 10,
+  dews: 20,
+  safety: 20,
+  launch: 30,
+  riskAlert: 30,
+  legacy: 50,
+  adminBroadcast: 90,
+} as const;
 
 // ---------- Webhook disambiguation ----------
 

@@ -1724,7 +1724,7 @@ Browser consumers on `pharos.watch` and `ops.pharos.watch` should use same-origi
 
 ### `GET /api/telegram-pulse`
 
-Lightweight Telegram adoption metrics for the public PharosWatchBot page. The canonical page route is `/pharoswatchbot/`; the legacy `/telegram` alias redirects there. Returns aggregate watcher/subscription counts, explicit vs preset-implied alert follows, the most subscribed coin symbols, and snapshot-backed watcher history when available.
+Lightweight Telegram adoption metrics for the public PharosWatchBot page. The canonical page route is `/pharoswatchbot/`; the legacy `/telegram` alias redirects there. Returns aggregate watcher/subscription counts, explicit vs preset-implied alert follows, the most subscribed coin symbols, and snapshot-backed watcher history when available. The common path serves the five-minute `telegram:pulse:snapshot` cache written by the Telegram cron sidecar; live aggregation is a stale/missing snapshot fallback.
 
 **Cache:** `public, max-age=300, s-maxage=300`
 
@@ -4174,17 +4174,34 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
 {
   "messageHtml": "<b>Pharos maintenance</b>\nThe bot will be offline 10:00-10:15 UTC.",
   "scope": "all",
-  "dryRun": true
+  "dryRun": true,
+  "acknowledgeBacklogRisk": false
 }
 ```
 
-`scope` is `all` (every row in `telegram_subscribers`), `deliverable-watchers` (rows with at least one active global, per-coin, or preset alert follow), or `global-subscribers` (rows where at least one `global_alert_*` flag is set). `dryRun` is required and must be a boolean. `messageHtml` must be a non-empty string and uses Telegram HTML formatting; long bodies are split via the same chunking pipeline as alerts.
+`scope` is `all` (every row in `telegram_subscribers`), `deliverable-watchers` (rows with at least one active global, per-coin, or preset alert follow), or `global-subscribers` (rows where at least one `global_alert_*` flag is set). `dryRun` is required and must be a boolean. `acknowledgeBacklogRisk` is optional and must be boolean when present; live requests need it only when the projected admin broadcast backlog exceeds the 30-minute admin TTL window. `messageHtml` must be a non-empty string and uses Telegram HTML formatting; long bodies are split via the same chunking pipeline as alerts.
 
 **Dry-run response (`dryRun: true`)**
 
 ```json
 {
   "targetChatCount": 1247,
+  "chunkCount": 1,
+  "targetMessageCount": 1247,
+  "deliveryEstimate": {
+    "currentPendingActive": 0,
+    "projectedPendingMessages": 1247,
+    "drainBudgetPerRun": 900,
+    "adminBroadcastTtlSec": 1800,
+    "estimatedDrainTimeSec": 600,
+    "requiresAcknowledgement": false,
+    "fitsWithinMinutes": {
+      "5": false,
+      "15": true,
+      "30": true,
+      "60": true
+    }
+  },
   "sample": ["100", "200", "300", "400", "500"]
 }
 ```
@@ -4195,10 +4212,15 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
 
 ```json
 {
-  "enqueued": 1247
+  "enqueued": 1247,
+  "deliveryEstimate": {
+    "projectedPendingMessages": 1247,
+    "estimatedDrainTimeSec": 600,
+    "requiresAcknowledgement": false
+  }
 }
 ```
 
 `enqueued` reports the number of target chat/chunk messages submitted to the pending queue (`targetChatCount * chunkCount`). Because the queue uses dedupe upserts, replaying the same broadcast before drain can update existing rows instead of inserting new rows. The dispatch cron drains the queue on its normal cadence.
 
-**Error responses:** `400` for invalid JSON, empty `messageHtml`, unknown `scope`, or non-boolean `dryRun`.
+**Error responses:** `400` for invalid JSON, empty `messageHtml`, unknown `scope`, non-boolean `dryRun`, or non-boolean `acknowledgeBacklogRisk`. `409` when a live request would exceed the admin broadcast TTL window and `acknowledgeBacklogRisk` is not set.

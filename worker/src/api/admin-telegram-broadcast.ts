@@ -5,7 +5,14 @@ import {
   makeIdempotentAdminRoute,
 } from "../lib/route-wrappers";
 import { logAdminAction } from "../lib/admin-action-audit";
-import { enqueuePendingAlerts } from "../cron/telegram-pending-queue";
+import {
+  enqueuePendingAlerts,
+  estimateTelegramDrainTimeSec,
+  readPendingCapacitySnapshot,
+  TELEGRAM_PENDING_DRAIN_BUDGET,
+  TELEGRAM_PENDING_PRIORITY,
+} from "../cron/telegram-pending-queue";
+import { TELEGRAM_ALERT_TTL_SEC } from "../lib/telegram-constants";
 import { splitMessage } from "../lib/telegram-alerts";
 import type { BatchMessage } from "../lib/telegram";
 
@@ -18,6 +25,7 @@ interface BroadcastRequestBody {
   messageHtml: string;
   scope: BroadcastScope;
   dryRun: boolean;
+  acknowledgeBacklogRisk: boolean;
 }
 
 function isScope(value: unknown): value is BroadcastScope {
@@ -45,7 +53,18 @@ async function parseBody(request: Request): Promise<BroadcastRequestBody | Respo
   if (typeof body.dryRun !== "boolean") {
     return adminErrorResponse(400, "dryRun must be a boolean");
   }
-  return { messageHtml, scope: body.scope, dryRun: body.dryRun };
+  if (
+    body.acknowledgeBacklogRisk !== undefined &&
+    typeof body.acknowledgeBacklogRisk !== "boolean"
+  ) {
+    return adminErrorResponse(400, "acknowledgeBacklogRisk must be a boolean when provided");
+  }
+  return {
+    messageHtml,
+    scope: body.scope,
+    dryRun: body.dryRun,
+    acknowledgeBacklogRisk: body.acknowledgeBacklogRisk === true,
+  };
 }
 
 async function loadTargetChatIds(db: D1Database, scope: BroadcastScope): Promise<string[]> {
@@ -79,6 +98,29 @@ async function loadTargetChatIds(db: D1Database, scope: BroadcastScope): Promise
   return (rows.results ?? []).map((row) => row.chat_id);
 }
 
+function buildDeliveryEstimate(currentPendingActive: number, targetMessageCount: number) {
+  const projectedPendingMessages = currentPendingActive + targetMessageCount;
+  const estimatedDrainTimeSec = estimateTelegramDrainTimeSec(
+    projectedPendingMessages,
+    TELEGRAM_PENDING_DRAIN_BUDGET,
+  );
+  const adminBroadcastTtlSec = TELEGRAM_ALERT_TTL_SEC.adminBroadcast;
+  return {
+    currentPendingActive,
+    projectedPendingMessages,
+    drainBudgetPerRun: TELEGRAM_PENDING_DRAIN_BUDGET,
+    adminBroadcastTtlSec,
+    estimatedDrainTimeSec,
+    requiresAcknowledgement: estimatedDrainTimeSec > adminBroadcastTtlSec,
+    fitsWithinMinutes: {
+      5: estimatedDrainTimeSec <= 5 * 60,
+      15: estimatedDrainTimeSec <= 15 * 60,
+      30: estimatedDrainTimeSec <= 30 * 60,
+      60: estimatedDrainTimeSec <= 60 * 60,
+    },
+  };
+}
+
 export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<AdminRouteContext>(
   "route-admin-telegram-broadcast",
   "admin-telegram-broadcast",
@@ -88,19 +130,40 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<AdminRouteC
     const { messageHtml, scope, dryRun } = parsed;
 
     const chatIds = await loadTargetChatIds(db, scope);
+    const chunks = splitMessage(messageHtml);
+    const targetMessageCount = chatIds.length * chunks.length;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const pendingCapacity = await readPendingCapacitySnapshot(db, nowSec);
+    const deliveryEstimate = buildDeliveryEstimate(pendingCapacity.active, targetMessageCount);
 
     if (dryRun) {
       return adminJsonResponse(
         {
           targetChatCount: chatIds.length,
+          chunkCount: chunks.length,
+          targetMessageCount,
+          pendingCapacity,
+          deliveryEstimate,
           sample: chatIds.slice(0, SAMPLE_SIZE),
         },
         { status: 200 },
       );
     }
 
-    const chunks = splitMessage(messageHtml);
-    const nowSec = Math.floor(Date.now() / 1000);
+    if (deliveryEstimate.requiresAcknowledgement && !parsed.acknowledgeBacklogRisk) {
+      return adminJsonResponse(
+        {
+          error: "Projected admin broadcast backlog exceeds the admin broadcast TTL window",
+          targetChatCount: chatIds.length,
+          chunkCount: chunks.length,
+          targetMessageCount,
+          pendingCapacity,
+          deliveryEstimate,
+        },
+        { status: 409 },
+      );
+    }
+
     const messages: BatchMessage[] = [];
     for (const chatId of chatIds) {
       for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
@@ -114,7 +177,11 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<AdminRouteC
       }
     }
 
-    await enqueuePendingAlerts(db, messages, nowSec);
+    await enqueuePendingAlerts(db, messages, nowSec, {
+      sourceType: "admin_broadcast",
+      priority: TELEGRAM_PENDING_PRIORITY.adminBroadcast,
+      ttlSec: TELEGRAM_ALERT_TTL_SEC.adminBroadcast,
+    });
 
     await logAdminAction(
       db,
@@ -127,6 +194,8 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<AdminRouteC
           scope,
           targetChatCount: chatIds.length,
           chunkCount: chunks.length,
+          targetMessageCount,
+          deliveryEstimate,
           enqueued: messages.length,
           messageLength: messageHtml.length,
         },
@@ -134,6 +203,6 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<AdminRouteC
       request,
     );
 
-    return adminJsonResponse({ enqueued: messages.length }, { status: 200 });
+    return adminJsonResponse({ enqueued: messages.length, deliveryEstimate }, { status: 200 });
   },
 );

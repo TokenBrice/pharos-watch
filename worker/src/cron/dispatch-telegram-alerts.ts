@@ -37,7 +37,10 @@ import {
   drainPendingQueue,
   cleanupExpiredPendingAlerts,
   loadChatsInBackoff,
+  readPendingCapacitySnapshot,
   readTelegramGlobalBackoff,
+  TELEGRAM_PENDING_DRAIN_BUDGET,
+  TELEGRAM_PENDING_PRIORITY,
 } from "./telegram-pending-queue";
 import {
   buildSubscriberQueue,
@@ -47,12 +50,41 @@ import {
   type SubscriberRow,
 } from "./dispatch-telegram-routing";
 import { deliverTelegramSubscriberQueue } from "./dispatch-telegram-delivery";
+import {
+  finalizeTelegramAlertJobManifests,
+  persistTelegramAlertJobManifests,
+} from "./telegram-alert-jobs";
 import { isQuietHoursActive } from "./telegram-quiet-hours";
 import { logTelegramEvent } from "../lib/telegram-log";
+import { TELEGRAM_MAX_MESSAGES_PER_RUN } from "../lib/telegram-constants";
 
-type DispatchResult = TelegramDispatchCronResult;
+type PerAlertTypeTargets = Record<AlertType, { chats: number; chunks: number }>;
 
-const MAX_MESSAGES_PER_RUN = 200;
+interface DispatchCapacityMetadata {
+  freshCandidateChats: number;
+  freshCandidateCount: number;
+  freshOverflow: number;
+  pendingSent: number;
+  pendingTotal: number;
+  pendingDue: number;
+  pendingDeferredCount: number;
+  pendingExpiredCount: number;
+  pendingNearTtlCount: number;
+  oldestPendingAgeSec: number | null;
+  oldestDuePendingAgeSec: number | null;
+  estimatedDrainTimeSec: number;
+  pendingDrainBudgetPerRun: number;
+  pendingCapacityBefore: Awaited<ReturnType<typeof readPendingCapacitySnapshot>>;
+  pendingCapacityAfter: Awaited<ReturnType<typeof readPendingCapacitySnapshot>>;
+  perAlertTypeTargets: PerAlertTypeTargets;
+  fanoutQueryMs: number;
+  fanoutBuildMs: number;
+  fanoutTotalMs: number;
+}
+
+type DispatchResult = TelegramDispatchCronResult & DispatchCapacityMetadata;
+
+const MAX_MESSAGES_PER_RUN = TELEGRAM_MAX_MESSAGES_PER_RUN;
 const GLOBAL_SAFETY_MIN_SCORE_DROP = 3;
 const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
 
@@ -74,6 +106,42 @@ const VALID_GLOBAL_ALERT_COLUMNS = new Set(Object.values(GLOBAL_ALERT_COLUMN_BY_
 
 type AlertType = keyof typeof ALERT_COLUMN_BY_TYPE;
 type LoadedSubscriberRow = Omit<SubscriberRow, "isGlobal"> & { stablecoin_id: string };
+
+function emptyPerAlertTypeTargets(): PerAlertTypeTargets {
+  return {
+    dews: { chats: 0, chunks: 0 },
+    depeg: { chats: 0, chunks: 0 },
+    safety: { chats: 0, chunks: 0 },
+    launch: { chats: 0, chunks: 0 },
+  };
+}
+
+function buildPerAlertTypeTargets(
+  subscriberQueue: Array<{ alertType: AlertType; chunks: string[] }>,
+): PerAlertTypeTargets {
+  const targets = emptyPerAlertTypeTargets();
+  for (const sub of subscriberQueue) {
+    targets[sub.alertType].chats += 1;
+    targets[sub.alertType].chunks += sub.chunks.length;
+  }
+  return targets;
+}
+
+function emptyPendingCapacity() {
+  return {
+    total: 0,
+    active: 0,
+    due: 0,
+    deferred: 0,
+    expired: 0,
+    nearTtl: 0,
+    oldestPendingAgeSec: null,
+    oldestDuePendingAgeSec: null,
+    estimatedDrainTimeSec: 0,
+    drainBudgetPerRun: TELEGRAM_PENDING_DRAIN_BUDGET,
+    dispatchIntervalSec: 5 * 60,
+  } satisfies Awaited<ReturnType<typeof readPendingCapacitySnapshot>>;
+}
 
 function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): DispatchResult {
   return {
@@ -105,11 +173,26 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     pendingRetryAfterSec: null,
     pendingEnqueued: 0,
     pendingExpired: 0,
+    pendingSent: 0,
+    pendingTotal: 0,
+    pendingDue: 0,
+    pendingDeferredCount: 0,
+    pendingExpiredCount: 0,
+    pendingNearTtlCount: 0,
+    oldestPendingAgeSec: null,
+    oldestDuePendingAgeSec: null,
+    estimatedDrainTimeSec: 0,
+    pendingDrainBudgetPerRun: TELEGRAM_PENDING_DRAIN_BUDGET,
+    pendingCapacityBefore: emptyPendingCapacity(),
+    pendingCapacityAfter: emptyPendingCapacity(),
     freshAttempted: 0,
     freshSent: 0,
     freshRetryQueued: 0,
     freshPermanentFailures: 0,
     freshDeferredPerChat: 0,
+    freshCandidateChats: 0,
+    freshCandidateCount: 0,
+    freshOverflow: 0,
     chatsWithActiveSnooze,
     safetyAlertSourceState: "missing",
     safetyAlertSourceAgeSeconds: null,
@@ -119,6 +202,10 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     presetResolutionFailures: 0,
     presetFailure: false,
     perAlertType: emptyPerAlertTypeDelivery(),
+    perAlertTypeTargets: emptyPerAlertTypeTargets(),
+    fanoutQueryMs: 0,
+    fanoutBuildMs: 0,
+    fanoutTotalMs: 0,
     suppressedSafetyChangesAtSeed: 0,
   };
 }
@@ -482,11 +569,22 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
     const suppressedSafetyChangesAtSeed = safetySnapshotNeedsSeed
       ? buildSafetyChanges(currentSafetySnapshot, previousSafetySnapshot ?? {}, getSymbol).changes.length
       : 0;
+    const pendingCapacityBefore = await readPendingCapacitySnapshot(db, nowSec);
 
     if (mustSeedSnapshots) {
       await writeSnapshots(db, currentSnapshots);
       await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, true);
       const result = emptyResult(true, chatsWithActiveSnooze);
+      result.pendingCapacityBefore = pendingCapacityBefore;
+      result.pendingCapacityAfter = pendingCapacityBefore;
+      result.pendingTotal = pendingCapacityBefore.active;
+      result.pendingDue = pendingCapacityBefore.due;
+      result.pendingDeferredCount = pendingCapacityBefore.deferred;
+      result.pendingExpiredCount = pendingCapacityBefore.expired;
+      result.pendingNearTtlCount = pendingCapacityBefore.nearTtl;
+      result.oldestPendingAgeSec = pendingCapacityBefore.oldestPendingAgeSec;
+      result.oldestDuePendingAgeSec = pendingCapacityBefore.oldestDuePendingAgeSec;
+      result.estimatedDrainTimeSec = pendingCapacityBefore.estimatedDrainTimeSec;
       result.safetyAlertSourceState = safetySourceAssessment.state;
       result.safetyAlertSourceAgeSeconds = safetySourceAssessment.ageSeconds;
       result.safetyAlertSourceGeneration = safetySourceAssessment.generation;
@@ -494,11 +592,6 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       result.suppressedSafetyChangesAtSeed = suppressedSafetyChangesAtSeed;
       return { itemCount: 0, metadata: JSON.stringify(result) };
     }
-    const pendingBudget = Math.floor(MAX_MESSAGES_PER_RUN / 4);
-    const drainResult = await drainPendingQueue(db, botToken, pendingBudget, signal);
-
-    throwIfAborted(signal);
-
     const dewsChanges = buildDewsChanges(
       dewsRows.filter((row) => isDewsAlertable(row.band)),
       safeDewsAlertable,
@@ -626,6 +719,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       }
     }
 
+    const fanoutQueryStartedAtMs = Date.now();
     const [
       directDewsSubs,
       directDepegSubs,
@@ -653,6 +747,8 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       loadGlobalSubscriberRows(db, "launch"),
       loadPerCoinSnoozeMap(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds]),
     ]);
+    const fanoutQueryMs = Math.max(0, Date.now() - fanoutQueryStartedAtMs);
+    const fanoutBuildStartedAtMs = Date.now();
 
     const presetResults = [presetDewsResult, presetDepegResult, presetSafetyResult];
     const presetQueryFailures = presetResults.filter((r) => r.kind === "query-failed").length;
@@ -661,21 +757,11 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
     if (presetQueryFailures > 0 || presetResolutionFailures > 0) {
       const failureCount = (await readPresetFailureCount(db)) + 1;
       await writePresetFailureCount(db, failureCount);
-      await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, false);
-      const aborted = emptyResult(false, chatsWithActiveSnooze);
-      aborted.safetyAlertSourceState = safetySourceAssessment.state;
-      aborted.safetyAlertSourceAgeSeconds = safetySourceAssessment.ageSeconds;
-      aborted.safetyAlertSourceGeneration = safetySourceAssessment.generation;
-      aborted.safetyAlertsSuppressed = safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed;
-      aborted.presetQueryFailures = presetQueryFailures;
-      aborted.presetResolutionFailures = presetResolutionFailures;
-      aborted.presetFailure = true;
-      return { itemCount: 0, metadata: JSON.stringify(aborted) };
     }
 
-    const presetDewsSubs = (presetDewsResult as { kind: "ok"; rows: Map<string, SubscriberRow[]> }).rows;
-    const presetDepegSubs = (presetDepegResult as { kind: "ok"; rows: Map<string, SubscriberRow[]> }).rows;
-    const presetSafetySubs = (presetSafetyResult as { kind: "ok"; rows: Map<string, SubscriberRow[]> }).rows;
+    const presetDewsSubs = presetDewsResult.kind === "ok" ? presetDewsResult.rows : new Map<string, SubscriberRow[]>();
+    const presetDepegSubs = presetDepegResult.kind === "ok" ? presetDepegResult.rows : new Map<string, SubscriberRow[]>();
+    const presetSafetySubs = presetSafetyResult.kind === "ok" ? presetSafetyResult.rows : new Map<string, SubscriberRow[]>();
     const dewsSubs = mergeSubscriberMaps(directDewsSubs, presetDewsSubs);
     const depegSubs = mergeSubscriberMaps(directDepegSubs, presetDepegSubs);
     const safetySubs = mergeSubscriberMaps(directSafetySubs, presetSafetySubs);
@@ -757,6 +843,20 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
           entry.timezone,
         ),
     );
+    const fanoutBuildMs = Math.max(0, Date.now() - fanoutBuildStartedAtMs);
+    const perAlertTypeTargets = buildPerAlertTypeTargets(subscriberQueue);
+    const freshCandidateChats = subscriberQueue.length;
+    const freshCandidateCount = subscriberQueue.reduce((sum, sub) => sum + sub.chunks.length, 0);
+    const alertJobManifests = await persistTelegramAlertJobManifests(db, subscriberQueue, nowSec);
+
+    const drainOnlyRiskPriority = freshCandidateCount > 0 ? TELEGRAM_PENDING_PRIORITY.riskAlert : null;
+    const drainResult = await drainPendingQueue(
+      db,
+      botToken,
+      TELEGRAM_PENDING_DRAIN_BUDGET,
+      signal,
+      { maxPriority: drainOnlyRiskPriority },
+    );
 
     const [chatsInBackoff, globalBackoffUntil] = await Promise.all([
       loadChatsInBackoff(db, nowSec),
@@ -771,6 +871,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       blockedUsersCleanupFailed,
       freshAttempted,
       freshRetryQueued,
+      freshOverflow,
       freshDeferredPerChat,
       pendingEnqueued,
       cappedAtLimit,
@@ -787,10 +888,14 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       dispatchStartedAtMs,
       signal,
     });
+    await finalizeTelegramAlertJobManifests(db, alertJobManifests, perAlertType, nowSec);
 
     await writeSnapshots(db, currentSnapshots);
     const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
-    await writePresetFailureCount(db, 0);
+    const pendingCapacityAfter = await readPendingCapacitySnapshot(db, nowSec);
+    if (presetQueryFailures === 0 && presetResolutionFailures === 0) {
+      await writePresetFailureCount(db, 0);
+    }
 
     const result: DispatchResult = {
       eventsDetected: {
@@ -811,6 +916,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       snapshotSeeded: false,
       pendingAttempted: drainResult.attempted,
       pendingDrained: drainResult.sent,
+      pendingSent: drainResult.sent,
       pendingRetryQueued: drainResult.retryQueued,
       pendingDropped: drainResult.dropped,
       pendingDroppedTtlExpired: expiredCount,
@@ -821,20 +927,38 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       pendingRetryAfterSec: drainResult.retryAfterSec,
       pendingEnqueued,
       pendingExpired: expiredCount,
+      pendingTotal: pendingCapacityAfter.active,
+      pendingDue: pendingCapacityAfter.due,
+      pendingDeferredCount: pendingCapacityAfter.deferred,
+      pendingExpiredCount: pendingCapacityAfter.expired,
+      pendingNearTtlCount: pendingCapacityAfter.nearTtl,
+      oldestPendingAgeSec: pendingCapacityAfter.oldestPendingAgeSec,
+      oldestDuePendingAgeSec: pendingCapacityAfter.oldestDuePendingAgeSec,
+      estimatedDrainTimeSec: pendingCapacityAfter.estimatedDrainTimeSec,
+      pendingDrainBudgetPerRun: pendingCapacityAfter.drainBudgetPerRun,
+      pendingCapacityBefore,
+      pendingCapacityAfter,
       freshAttempted,
       freshSent,
       freshRetryQueued,
       freshPermanentFailures,
       freshDeferredPerChat,
+      freshCandidateChats,
+      freshCandidateCount,
+      freshOverflow,
       chatsWithActiveSnooze,
       safetyAlertSourceState: safetySourceAssessment.state,
       safetyAlertSourceAgeSeconds: safetySourceAssessment.ageSeconds,
       safetyAlertsSuppressed: safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed,
       safetyAlertSourceGeneration: safetySourceAssessment.generation,
-      presetQueryFailures: 0,
-      presetResolutionFailures: 0,
-      presetFailure: false,
+      presetQueryFailures,
+      presetResolutionFailures,
+      presetFailure: presetQueryFailures > 0 || presetResolutionFailures > 0,
       perAlertType,
+      perAlertTypeTargets,
+      fanoutQueryMs,
+      fanoutBuildMs,
+      fanoutTotalMs: fanoutQueryMs + fanoutBuildMs,
       suppressedSafetyChangesAtSeed,
     };
 

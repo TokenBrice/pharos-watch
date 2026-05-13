@@ -71,6 +71,7 @@
     "check:duplicate-exports": "node scripts/check-duplicate-exports.mjs",
     "check:migrations": "node scripts/check-worker-migrations.mjs",
     "check:cron-connections": "tsx scripts/check-cron-connection-budget.ts",
+    "check:telegram-load": "tsx scripts/check-telegram-load.ts --enforce-target-slo",
     "check:sql-safety": "node scripts/check-sql-interpolation-safety.mjs",
     "check:stablecoin-data": "tsx scripts/check-stablecoin-data.ts",
     "check:build-size": "node scripts/report-build-size.mjs --check",

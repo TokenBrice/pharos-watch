@@ -64,6 +64,9 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0118     | `0118_telegram_subscriber_timezone.sql`                  | Add nullable `timezone` IANA zone to `telegram_subscribers` for resolving quiet hours locally (NULL = UTC)                                      |
 | 0119     | `0119_telegram_subscription_snooze.sql`                  | Add `alert_snooze_until_ts` to `telegram_subscriptions` so per-coin snooze can suppress fan-out for a single coin without muting the whole chat |
 | 0120     | `0120_redemption_backstop_run_rows.sql`                  | Add immutable per-run redemption backstop rows so completed snapshots survive later failed mirror writes                                        |
+| 0121     | `0121_telegram_alert_jobs.sql`                           | Add Telegram pending-delivery priority/expiry metadata, dead-letter audit rows, and durable alert job/target manifests                         |
+| 0122     | `0122_telegram_processed_updates.sql`                    | Add retry-safe Telegram webhook update claims for idempotent command processing                                                                 |
+| 0123     | `0123_telegram_usage_analytics.sql`                      | Add privacy-preserving Telegram usage aggregates, watcher lifecycle snapshots, and chat delivery diagnostics                                    |
 
 ## Retired Individual Migrations
 

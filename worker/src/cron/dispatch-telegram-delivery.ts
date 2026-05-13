@@ -34,6 +34,7 @@ export interface DeliverTelegramSubscriberQueueResult {
   blockedUsersCleanupFailed: number;
   freshAttempted: number;
   freshRetryQueued: number;
+  freshOverflow: number;
   freshDeferredPerChat: number;
   pendingEnqueued: number;
   cappedAtLimit: boolean;
@@ -69,6 +70,7 @@ export async function deliverTelegramSubscriberQueue({
       blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
       freshAttempted: 0,
       freshRetryQueued: 0,
+      freshOverflow: pendingMessages.length,
       freshDeferredPerChat: 0,
       pendingEnqueued: pendingMessages.length,
       cappedAtLimit: false,
@@ -155,6 +157,7 @@ export async function deliverTelegramSubscriberQueue({
     blockedUsersCleanupFailed,
     freshAttempted: sendList.length,
     freshRetryQueued: retryableFreshMessages.length,
+    freshOverflow: overflowMessages.length,
     freshDeferredPerChat: deferredPerChat.length,
     pendingEnqueued: overflowMessages.length + deferredPerChat.reduce((sum, sub) => sum + sub.chunks.length, 0) + retryableFreshMessages.length,
     cappedAtLimit: cappedOverflow > 0,

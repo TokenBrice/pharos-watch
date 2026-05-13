@@ -8,7 +8,10 @@ import {
   PENDING_TTL_SEC,
   SEND_BATCH_SIZE,
   SNOOZE_SECONDS,
+  TELEGRAM_ALERT_TTL_SEC,
   TELEGRAM_MESSAGE_CHUNK_LIMIT,
+  TELEGRAM_MAX_MESSAGES_PER_RUN,
+  TELEGRAM_PENDING_DRAIN_BUDGET,
   TELEGRAM_SPLIT_VERSION,
   TOP_VIEW_NAMES,
   isDepegStepValue,
@@ -51,6 +54,13 @@ describe("telegram-constants", () => {
 
   it("declares pending-queue tuning values", () => {
     expect(PENDING_TTL_SEC).toBe(3600);
+    expect(TELEGRAM_ALERT_TTL_SEC.depeg).toBe(PENDING_TTL_SEC);
+    expect(TELEGRAM_ALERT_TTL_SEC.dews).toBe(PENDING_TTL_SEC);
+    expect(TELEGRAM_ALERT_TTL_SEC.safety).toBe(PENDING_TTL_SEC);
+    expect(TELEGRAM_ALERT_TTL_SEC.launch).toBe(30 * 60);
+    expect(TELEGRAM_ALERT_TTL_SEC.adminBroadcast).toBe(30 * 60);
+    expect(TELEGRAM_MAX_MESSAGES_PER_RUN).toBe(3600);
+    expect(TELEGRAM_PENDING_DRAIN_BUDGET).toBe(900);
     expect(SEND_BATCH_SIZE).toBe(4);
     expect(PENDING_MAX_ATTEMPTS).toBe(20);
     expect(PENDING_BACKOFF_SCHEDULE_SEC).toEqual([60, 120, 240, 480, 600]);

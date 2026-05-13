@@ -20,6 +20,12 @@ export interface TelegramLogEvent {
   [key: string]: unknown;
 }
 
+const INVALID_SECRET_SPIKE_WINDOW_MS = 60_000;
+const INVALID_SECRET_SPIKE_THRESHOLD = 5;
+
+let invalidSecretWindowStartedAt = 0;
+let invalidSecretWindowCount = 0;
+
 interface TelegramLogRecord {
   ts: string;
   scope: "telegram";
@@ -64,4 +70,38 @@ export function logTelegramEvent(event: TelegramLogEvent): void {
   } else {
     console.error(line);
   }
+}
+
+export function logTelegramInvalidSecretAttempt(
+  context: {
+    hasCurrentSecret: boolean;
+    hasPreviousSecret: boolean;
+    presentedLength: number;
+  },
+): void {
+  const nowMs = Date.now();
+  if (
+    invalidSecretWindowStartedAt === 0 ||
+    nowMs - invalidSecretWindowStartedAt > INVALID_SECRET_SPIKE_WINDOW_MS
+  ) {
+    invalidSecretWindowStartedAt = nowMs;
+    invalidSecretWindowCount = 0;
+  }
+  invalidSecretWindowCount += 1;
+
+  logTelegramEvent({
+    level: "warn",
+    message: "invalid webhook secret",
+    action: "auth-invalid-secret",
+    signal: "invalid_secret",
+    invalidSecretWindowCount,
+    invalidSecretSpike: invalidSecretWindowCount >= INVALID_SECRET_SPIKE_THRESHOLD,
+    ...context,
+  });
+}
+
+/** @internal Exported for tests only. */
+export function resetTelegramInvalidSecretLogStateForTests(): void {
+  invalidSecretWindowStartedAt = 0;
+  invalidSecretWindowCount = 0;
 }

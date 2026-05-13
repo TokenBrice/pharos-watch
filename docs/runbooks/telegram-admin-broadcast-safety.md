@@ -1,0 +1,57 @@
+# Runbook: Telegram Admin Broadcast Safety
+
+## Symptom
+
+An operator needs to send a maintenance, recovery, or product notice through `POST /api/admin-telegram-broadcast`.
+
+Admin broadcasts are lower priority than risk alerts. They enqueue into `telegram_pending_alerts` as `source_type = 'admin_broadcast'` with low priority, use a 30-minute TTL, consume the same 900-pending-chunks-per-run drain path, and are skipped by the pending-drain slice when fresh risk alerts are competing for the run.
+
+## Preflight Checklist
+
+1. **Check backlog health.** `/api/status` -> `telegramBot.pendingDeliveries` should be low and decreasing. Do not broadcast if `oldestPendingDeliveryAgeSec > 900`, `crons["dispatch-telegram-alerts"].lastRun.metadata.estimatedDrainTimeSec > 1800`, `pendingNearTtlCount > 0`, `pendingDeliveryBacklog.expired > 0`, or `retryErrorClassCounts.rate_limit` dominates.
+2. **Run a dry run.**
+
+   ```bash
+   curl -X POST \
+        -H "CF-Access-Client-Id: $CF_ID" \
+        -H "CF-Access-Client-Secret: $CF_SECRET" \
+        -H "X-Pharos-Admin: 1" \
+        -H "Idempotency-Key: telegram-broadcast-dry-run-$(date +%s)" \
+        -H "Content-Type: application/json" \
+        --data '{"messageHtml":"<b>Test</b>","scope":"deliverable-watchers","dryRun":true}' \
+        https://ops-api.pharos.watch/api/admin-telegram-broadcast
+   ```
+
+3. **Estimate drain time.** Read the dry-run `targetMessageCount` and `deliveryEstimate`. Prefer waiting if `deliveryEstimate.fitsWithinMinutes["30"]` is false. The API returns `409` for a live send whose projected drain exceeds the 30-minute admin TTL unless `acknowledgeBacklogRisk` is explicitly set.
+4. **Choose the smallest scope.** Prefer `deliverable-watchers`. Use `global-subscribers` only for global-alert policy notices, and `all` only when intentionally targeting every subscriber row.
+5. **Avoid market-event windows.** Do not broadcast during an active depeg, DEWS burst, safety-grade publication issue, or Telegram 429 storm.
+
+## Live Send
+
+Use a stable idempotency key that describes the incident or notice:
+
+```bash
+curl -X POST \
+     -H "CF-Access-Client-Id: $CF_ID" \
+     -H "CF-Access-Client-Secret: $CF_SECRET" \
+     -H "X-Pharos-Admin: 1" \
+     -H "Idempotency-Key: telegram-broadcast-<incident-or-date>" \
+     -H "Content-Type: application/json" \
+     --data '{"messageHtml":"<b>Notice</b> ...","scope":"deliverable-watchers","dryRun":false}' \
+     https://ops-api.pharos.watch/api/admin-telegram-broadcast
+```
+
+If the live request returns `409`, rerun the dry run, wait for backlog to drain, narrow the scope, or repeat the live send only with `"acknowledgeBacklogRisk": true` after accepting that lower-priority rows may expire before delivery.
+
+## Post-Send Monitoring
+
+1. Watch `telegramBot.pendingDeliveries`, `oldestPendingDeliveryAgeSec`, `crons["dispatch-telegram-alerts"].lastRun.metadata.estimatedDrainTimeSec`, `pendingNearTtlCount`, and `retryErrorClassCounts` for at least two five-minute runs.
+2. If rate limits appear, stop additional broadcasts and follow [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).
+3. If pending age approaches 45 minutes, follow [`telegram-backlog-expiration.md`](./telegram-backlog-expiration.md).
+
+## Cross-References
+
+- [`docs/api-reference.md`](../api-reference.md) section `POST /api/admin-telegram-broadcast`.
+- [`docs/telegram-alerts.md`](../telegram-alerts.md) section Pending Delivery Queue.
+- [`telegram-backlog-expiration.md`](./telegram-backlog-expiration.md).
+- [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).

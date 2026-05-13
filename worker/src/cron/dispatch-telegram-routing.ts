@@ -9,7 +9,10 @@ import { sendBatch, type BatchMessage, type BatchResult } from "../lib/telegram"
 import {
   SEND_BATCH_SIZE,
   disableBlockedSubscriber,
+  registerSubscriberBlockAndShouldDisable,
+  resetSubscriberBlockCount,
 } from "./telegram-pending-queue";
+import { recordTelegramDeliveryOutcomes } from "../lib/telegram-usage-analytics";
 import type {
   PerAlertTypeDelivery,
   PerAlertTypeDeliveryStats,
@@ -264,11 +267,14 @@ export async function deliverFreshAlerts(
   const retryableFreshMessages: Array<{ message: BatchMessage; result: BatchResult }> = [];
   const resultsByChat = new Map<string, BatchResult[]>();
   const perAlertType = emptyPerAlertTypeDelivery();
+  const nowSec = Math.floor(Date.now() / 1000);
   let subscribersNotified = 0;
   let freshSent = 0;
   let freshPermanentFailures = 0;
   let blockedUsersCleanedUp = blockedUsersCleanedUpSeed;
   let blockedUsersCleanupFailed = blockedUsersCleanupFailedSeed;
+  const deliveryDiagnostics: Array<{ chatId: string; ok: boolean; errorClass?: string | null }> = [];
+  const chatsResetThisRun = new Set<string>();
 
   for (let index = 0; index < sendResults.length; index += 1) {
     const result = sendResults[index];
@@ -283,7 +289,12 @@ export async function deliverFreshAlerts(
     const bucket = alertType ? perAlertType[alertType] : null;
 
     if (result.ok) {
+      deliveryDiagnostics.push({ chatId: result.chatId, ok: true });
       freshSent++;
+      if (!chatsResetThisRun.has(result.chatId)) {
+        chatsResetThisRun.add(result.chatId);
+        await resetSubscriberBlockCount(db, result.chatId);
+      }
       if (bucket) {
         bucket.sent++;
         if (bucket.firstSendLatencyMs == null) {
@@ -294,12 +305,16 @@ export async function deliverFreshAlerts(
     }
 
     if (result.blocked) {
+      deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
       if (!blockedChats.has(result.chatId)) {
         blockedChats.add(result.chatId);
-        if (await disableBlockedSubscriber(db, result.chatId)) {
-          blockedUsersCleanedUp++;
-        } else {
-          blockedUsersCleanupFailed++;
+        const shouldDisable = await registerSubscriberBlockAndShouldDisable(db, result.chatId, nowSec);
+        if (shouldDisable) {
+          if (await disableBlockedSubscriber(db, result.chatId)) {
+            blockedUsersCleanedUp++;
+          } else {
+            blockedUsersCleanupFailed++;
+          }
         }
       }
       if (bucket) bucket.blocked++;
@@ -307,13 +322,17 @@ export async function deliverFreshAlerts(
     }
 
     if (result.retryable) {
+      deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
       retryableFreshMessages.push({ message: sendPlan, result });
       if (bucket) bucket.enqueued++;
     } else {
+      deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
       freshPermanentFailures++;
       if (bucket) bucket.failed++;
     }
   }
+
+  await recordTelegramDeliveryOutcomes(db, deliveryDiagnostics);
 
   for (const sub of subscriberQueue) {
     if (blockedChats.has(sub.chatId)) continue;

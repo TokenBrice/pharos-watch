@@ -45,6 +45,9 @@ function installCacheStore(): CacheStore {
 
 interface FakeDbConfig {
   pendingCount?: number;
+  oldestPendingAgeSec?: number | null;
+  estimatedDrainTimeSec?: number | null;
+  nearTtl?: number;
   dispatchMetadata?: Record<string, unknown> | null;
 }
 
@@ -57,8 +60,23 @@ function makeDb(config: FakeDbConfig = {}): D1Database {
   const prepare = vi.fn((sql: string) => {
     const bind = vi.fn(() => statement);
     const first = vi.fn(async () => {
-      if (sql.includes("FROM telegram_pending_alerts")) {
-        return { n: config.pendingCount ?? 0 };
+      if (sql.includes("COUNT(*) AS total")) {
+        const nowSec = Math.floor(Date.now() / 1000);
+        const pendingCount = config.pendingCount ?? 0;
+        const oldestPendingAgeSec = config.oldestPendingAgeSec ?? (pendingCount > 0 ? 60 : null);
+        const estimatedDrainTimeSec = config.estimatedDrainTimeSec ?? (pendingCount > 0 ? 300 : 0);
+        return {
+          total: pendingCount,
+          expired: 0,
+          due: pendingCount,
+          deferred: 0,
+          near_ttl: config.nearTtl ?? 0,
+          oldest_pending_created_at: oldestPendingAgeSec == null ? null : nowSec - oldestPendingAgeSec,
+          oldest_due_created_at: oldestPendingAgeSec == null ? null : nowSec - oldestPendingAgeSec,
+          // The production helper recomputes estimatedDrainTimeSec from total,
+          // but callers can set pendingCount to match the desired estimate.
+          estimated_drain_time_sec: estimatedDrainTimeSec,
+        };
       }
       if (sql.includes("FROM cron_runs WHERE job = 'dispatch-telegram-alerts'")) {
         const row = makeDispatchMetadataRow(config.dispatchMetadata ?? null);
@@ -134,7 +152,7 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
 
     expect(mockSendAlert).toHaveBeenCalledWith(
       "https://hooks.example/x",
-      "Telegram pending backlog sustained",
+      "Telegram pending delivery risk",
       expect.stringContaining("pending="),
     );
     expect(meta.pendingBacklog.triggered).toBe(true);
@@ -205,6 +223,73 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     expect(mockSendAlert).not.toHaveBeenCalled();
     expect(meta.pendingBacklog.triggered).toBe(true);
     expect(meta.pendingBacklog.alertSent).toBe(false);
+  });
+
+  it("alerts on old pending age even when queue size is below the count threshold", async () => {
+    const store = installCacheStore();
+    const nowSec = Math.floor(Date.now() / 1000);
+    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
+    store.values.set(WATCHDOG_KEYS.pendingSince, {
+      value: String(nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30),
+      updatedAt: nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30,
+    });
+    const db = makeDb({ pendingCount: 10, oldestPendingAgeSec: 20 * 60 });
+
+    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const meta = JSON.parse(result.metadata ?? "{}");
+
+    expect(mockSendAlert).toHaveBeenCalledWith(
+      "https://hooks.example/x",
+      "Telegram pending delivery risk",
+      expect.stringContaining("oldestAgeSec="),
+    );
+    expect(meta.pendingBacklog.triggered).toBe(true);
+    expect(meta.pendingBacklog.oldestAgeSec).toBe(20 * 60);
+  });
+
+  it("alerts on estimated drain time over the threshold", async () => {
+    const store = installCacheStore();
+    const nowSec = Math.floor(Date.now() / 1000);
+    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
+    store.values.set(WATCHDOG_KEYS.pendingSince, {
+      value: String(nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30),
+      updatedAt: nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30,
+    });
+    // 5,401 active pending rows at a 900/run drain budget estimates to 35 min.
+    const db = makeDb({ pendingCount: 5_401 });
+
+    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const meta = JSON.parse(result.metadata ?? "{}");
+
+    expect(mockSendAlert).toHaveBeenCalledWith(
+      "https://hooks.example/x",
+      "Telegram pending delivery risk",
+      expect.stringContaining("estimatedDrainTimeSec="),
+    );
+    expect(meta.pendingBacklog.triggered).toBe(true);
+    expect(meta.pendingBacklog.estimatedDrainTimeSec).toBe(35 * 60);
+  });
+
+  it("alerts immediately when pending rows are near TTL expiry", async () => {
+    const store = installCacheStore();
+    const nowSec = Math.floor(Date.now() / 1000);
+    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
+    store.values.set(WATCHDOG_KEYS.pendingSince, {
+      value: String(nowSec - 60),
+      updatedAt: nowSec - 60,
+    });
+    const db = makeDb({ pendingCount: 3, nearTtl: 1 });
+
+    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const meta = JSON.parse(result.metadata ?? "{}");
+
+    expect(mockSendAlert).toHaveBeenCalledWith(
+      "https://hooks.example/x",
+      "Telegram pending delivery risk",
+      expect.stringContaining("nearTtl=1"),
+    );
+    expect(meta.pendingBacklog.triggered).toBe(true);
+    expect(meta.pendingBacklog.nearTtl).toBe(1);
   });
 });
 

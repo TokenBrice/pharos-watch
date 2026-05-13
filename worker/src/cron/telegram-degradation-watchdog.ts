@@ -8,6 +8,12 @@ import type { CronResult } from "../lib/cron-logger";
 import { logTelegramEvent } from "../lib/telegram-log";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
+import {
+  PENDING_DRAIN_TIME_ALERT_SEC,
+  PENDING_NEAR_TTL_WINDOW_SEC,
+  PENDING_OLD_AGE_ALERT_SEC,
+} from "../lib/telegram-constants";
+import { readPendingCapacitySnapshot, type PendingCapacitySnapshot } from "./telegram-pending-queue";
 
 /**
  * Telegram dispatch degradation watchdog. Reads fresh signals after each
@@ -37,7 +43,12 @@ interface WatchdogAlertOutcome {
 }
 
 interface WatchdogResult {
-  pendingBacklog: WatchdogAlertOutcome & { count: number | null };
+  pendingBacklog: WatchdogAlertOutcome & {
+    count: number | null;
+    oldestAgeSec: number | null;
+    estimatedDrainTimeSec: number | null;
+    nearTtl: number | null;
+  };
   safetySource: WatchdogAlertOutcome & { state: string | null };
   zeroSend: WatchdogAlertOutcome & { streak: number };
 }
@@ -46,17 +57,14 @@ function emptyOutcome(): WatchdogAlertOutcome {
   return { triggered: false, recovered: false, alertSent: false, detail: null };
 }
 
-async function readPendingCount(db: D1Database): Promise<number | null> {
+async function readPendingCapacity(db: D1Database, nowSec: number): Promise<PendingCapacitySnapshot | null> {
   try {
-    const row = await db
-      .prepare("SELECT COUNT(*) AS n FROM telegram_pending_alerts")
-      .first<{ n: number | null }>();
-    return row?.n ?? 0;
+    return await readPendingCapacitySnapshot(db, nowSec);
   } catch (err) {
     logTelegramEvent({
       level: "warn",
-      message: "pending count unavailable",
-      action: "read-pending-count",
+      message: "pending capacity unavailable",
+      action: "read-pending-capacity",
       module: "telegram-degradation-watchdog",
       err: err instanceof Error ? err.message : String(err),
     });
@@ -109,37 +117,59 @@ async function evaluatePendingBacklog(
   alertWebhookUrl: string | null,
   nowSec: number,
 ): Promise<WatchdogResult["pendingBacklog"]> {
-  const count = await readPendingCount(db);
+  const capacity = await readPendingCapacity(db, nowSec);
+  const count = capacity?.active ?? null;
   const flagSince = await readCachedTimestamp(db, WATCHDOG_KEYS.pendingSince);
   const alreadyAlerted = await readCachedFlag(db, WATCHDOG_KEYS.pendingAlerted);
-  const outcome: WatchdogResult["pendingBacklog"] = { ...emptyOutcome(), count };
+  const oldestAgeSec = capacity?.oldestPendingAgeSec ?? null;
+  const estimatedDrainTimeSec = capacity?.estimatedDrainTimeSec ?? null;
+  const nearTtl = capacity?.nearTtl ?? null;
+  const outcome: WatchdogResult["pendingBacklog"] = {
+    ...emptyOutcome(),
+    count,
+    oldestAgeSec,
+    estimatedDrainTimeSec,
+    nearTtl,
+  };
 
-  if (count == null) {
+  if (!capacity || count == null) {
     return outcome;
   }
 
-  if (count > PENDING_BACKLOG_THRESHOLD) {
+  const countBreached = count > PENDING_BACKLOG_THRESHOLD;
+  const oldestBreached = (oldestAgeSec ?? 0) >= PENDING_OLD_AGE_ALERT_SEC;
+  const drainBreached = (estimatedDrainTimeSec ?? 0) >= PENDING_DRAIN_TIME_ALERT_SEC;
+  const nearTtlBreached = (nearTtl ?? 0) > 0;
+  const breached = countBreached || oldestBreached || drainBreached || nearTtlBreached;
+  const breachReasons = [
+    countBreached ? `pending=${count}>${PENDING_BACKLOG_THRESHOLD}` : null,
+    oldestBreached ? `oldestAgeSec=${oldestAgeSec}>=${PENDING_OLD_AGE_ALERT_SEC}` : null,
+    drainBreached ? `estimatedDrainTimeSec=${estimatedDrainTimeSec}>=${PENDING_DRAIN_TIME_ALERT_SEC}` : null,
+    nearTtlBreached ? `nearTtl=${nearTtl} within ${PENDING_NEAR_TTL_WINDOW_SEC}s of expiry` : null,
+  ].filter((reason): reason is string => reason != null);
+
+  if (breached) {
     if (flagSince == null) {
       await setCache(db, WATCHDOG_KEYS.pendingSince, String(nowSec));
-      outcome.detail = `pending=${count} (newly tripped, watching for sustained breach)`;
+      outcome.detail = `${breachReasons.join(", ")} (newly tripped, watching for sustained breach)`;
       return outcome;
     }
     const ageSec = Math.max(0, nowSec - flagSince);
-    if (ageSec >= PENDING_BACKLOG_SUSTAINED_SEC) {
+    if (ageSec >= PENDING_BACKLOG_SUSTAINED_SEC || nearTtlBreached) {
       outcome.triggered = true;
       if (!alreadyAlerted) {
         outcome.alertSent = await sendAlert(
           alertWebhookUrl,
-          "Telegram pending backlog sustained",
-          `pending=${count} > ${PENDING_BACKLOG_THRESHOLD} for ${Math.round(ageSec / 60)}min`,
+          "Telegram pending delivery risk",
+          `${breachReasons.join(", ")} for ${Math.round(ageSec / 60)}min`,
         );
         if (outcome.alertSent) {
           await setCache(db, WATCHDOG_KEYS.pendingAlerted, "1");
         }
       }
-      outcome.detail = `pending=${count}, sustainedSec=${ageSec}`;
+      outcome.detail = `${breachReasons.join(", ")}, sustainedSec=${ageSec}`;
     } else {
-      outcome.detail = `pending=${count}, ageSec=${ageSec}`;
+      outcome.detail = `${breachReasons.join(", ")}, ageSec=${ageSec}`;
     }
     return outcome;
   }

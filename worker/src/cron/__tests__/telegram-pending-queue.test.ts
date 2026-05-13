@@ -14,6 +14,8 @@ const {
   enqueuePendingAlerts,
   cleanupExpiredPendingAlerts,
   loadChatsInBackoff,
+  readPendingCapacitySnapshot,
+  estimateTelegramDrainTimeSec,
   registerSubscriberBlockAndShouldDisable,
   resetSubscriberBlockCount,
   pendingBackoffSec,
@@ -21,6 +23,8 @@ const {
   PENDING_MAX_ATTEMPTS,
   PENDING_BACKOFF_SCHEDULE_SEC,
   BLOCK_STRIKE_WINDOW_SEC,
+  TELEGRAM_PENDING_DRAIN_BUDGET,
+  TELEGRAM_PENDING_PRIORITY,
   buildDedupeKey,
 } = await import("../telegram-pending-queue");
 const { TELEGRAM_SPLIT_VERSION } = await import("../../lib/telegram-alerts");
@@ -640,9 +644,42 @@ describe("drainPendingQueue", () => {
 
     expect(mockSendToChat).not.toHaveBeenCalled();
     const selectCall = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_pending_alerts p"));
-    expect(selectCall?.sql).toContain("p.created_at >= ?");
+    expect(selectCall?.sql).toContain("COALESCE(p.expires_at, p.created_at + ?) > ?");
     expect(selectCall?.sql).toContain("p.not_before_at IS NULL OR p.not_before_at <= ?");
-    expect(selectCall?.binds).toEqual([now - PENDING_TTL_SEC, now, 10]);
+    expect(selectCall?.binds).toEqual([
+      PENDING_TTL_SEC,
+      now,
+      now,
+      null,
+      TELEGRAM_PENDING_PRIORITY.legacy,
+      null,
+      TELEGRAM_PENDING_PRIORITY.legacy,
+      10,
+    ]);
+  });
+
+  it("can restrict drain selection to risk-priority rows during fresh alert contention", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+    ]);
+
+    await drainPendingQueue(db, "bot-token", 10, undefined, {
+      maxPriority: TELEGRAM_PENDING_PRIORITY.riskAlert,
+    });
+
+    const selectCall = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_pending_alerts p"));
+    expect(selectCall?.sql).toContain("COALESCE(p.priority");
+    expect(selectCall?.binds).toEqual([
+      PENDING_TTL_SEC,
+      now,
+      now,
+      TELEGRAM_PENDING_PRIORITY.riskAlert,
+      TELEGRAM_PENDING_PRIORITY.legacy,
+      TELEGRAM_PENDING_PRIORITY.riskAlert,
+      TELEGRAM_PENDING_PRIORITY.legacy,
+      10,
+    ]);
   });
 
   it("defers currently snoozed pending rows without sending", async () => {
@@ -976,6 +1013,52 @@ describe("drainPendingQueue", () => {
       expect(attemptedChats.has(`backoff-${i}`)).toBe(false);
     }
   });
+
+  it("dead-letters expired pending rows before deleting them", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT id, chat_id, message_html",
+        rows: [{
+          id: 123,
+          chat_id: "expired-chat",
+          message_html: "<b>Expired</b>",
+          created_at: now - PENDING_TTL_SEC - 60,
+          attempts: 3,
+          last_error_class: "rate_limit",
+          dedupe_key: "expired-key",
+          chunk_index: 0,
+          priority: TELEGRAM_PENDING_PRIORITY.depeg,
+          source_type: "risk_alert",
+          alert_type: "depeg",
+        }],
+      },
+      { match: "INSERT INTO telegram_alert_dead_letters", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE", rows: [], runMeta: { changes: 1 } },
+    ]);
+
+    const deleted = await cleanupExpiredPendingAlerts(db, now);
+
+    expect(deleted).toBe(1);
+    const deadLetter = db.getHistory().find((entry) =>
+      entry.sql.includes("INSERT INTO telegram_alert_dead_letters")
+    );
+    expect(deadLetter?.binds).toEqual([
+      123,
+      "expired-chat",
+      "<b>Expired</b>",
+      "risk_alert",
+      "depeg",
+      TELEGRAM_PENDING_PRIORITY.depeg,
+      now - PENDING_TTL_SEC - 60,
+      now,
+      3,
+      "rate_limit",
+      "ttl_expired",
+      "expired-key",
+      0,
+    ]);
+  });
 });
 
 describe("enqueuePendingAlerts", () => {
@@ -997,13 +1080,71 @@ describe("enqueuePendingAlerts", () => {
     const inserts = history.filter((e) => e.sql.includes("INSERT INTO telegram_pending_alerts"));
     expect(inserts.length).toBeGreaterThan(0);
     expect(inserts[0]?.sql).toContain("dedupe_key");
+    expect(inserts[0]?.sql).toContain("priority");
+    expect(inserts[0]?.sql).toContain("source_type");
+    expect(inserts[0]?.sql).toContain("expires_at");
     expect(inserts[0]?.sql).toContain("ON CONFLICT(dedupe_key) DO UPDATE");
+  });
+
+  it("marks admin broadcasts as low-priority pending rows", async () => {
+    const db = mockD1([
+      { match: "INSERT INTO telegram_pending_alerts", rows: [] },
+    ]);
+
+    await enqueuePendingAlerts(
+      db,
+      [{ chatId: "100", html: "<b>Broadcast</b>", disableNotification: false }],
+      1000,
+      { sourceType: "admin_broadcast", priority: TELEGRAM_PENDING_PRIORITY.adminBroadcast },
+    );
+
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"));
+    expect(insert).toBeDefined();
+    expect(insert?.binds).toContain(TELEGRAM_PENDING_PRIORITY.adminBroadcast);
+    expect(insert?.binds).toContain("admin_broadcast");
   });
 
   it("does nothing for empty message list", async () => {
     const db = mockD1([]);
     await enqueuePendingAlerts(db, [], 1000);
     expect(db.getHistory()).toHaveLength(0);
+  });
+});
+
+describe("readPendingCapacitySnapshot", () => {
+  it("normalizes pending capacity metrics and estimates drain time", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "COUNT(*) AS total",
+        first: {
+          total: 80,
+          expired: 5,
+          due: 40,
+          deferred: 35,
+          near_ttl: 3,
+          oldest_pending_created_at: now - 1200,
+          oldest_due_created_at: now - 900,
+        },
+        rows: [],
+      },
+    ]);
+
+    const snapshot = await readPendingCapacitySnapshot(db, now, TELEGRAM_PENDING_DRAIN_BUDGET);
+
+    expect(snapshot).toMatchObject({
+      total: 80,
+      active: 75,
+      due: 40,
+      deferred: 35,
+      expired: 5,
+      nearTtl: 3,
+      oldestPendingAgeSec: 1200,
+      oldestDuePendingAgeSec: 900,
+    });
+    expect(snapshot.estimatedDrainTimeSec).toBe(
+      estimateTelegramDrainTimeSec(75, TELEGRAM_PENDING_DRAIN_BUDGET),
+    );
   });
 });
 
