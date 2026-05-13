@@ -328,15 +328,16 @@ describe("repo Codex hook config", () => {
     expect(config).toContain("--hook=post-tool-use");
     expect(config).toContain("[[hooks.Stop]]");
     expect(config).toContain("--hook=stop");
-    expect(config).not.toContain(".hooks]]");
-    expect(config).not.toContain("type = \"command\"");
+    expect(config).toContain("[[hooks.PreToolUse.hooks]]");
+    expect(config).toContain("type = \"command\"");
   });
 
-  it("keeps Codex hard-block hooks unscoped so native tool names are covered", () => {
+  it("uses catch-all Codex tool matchers so native tool names are covered", () => {
     const config = readFileSync(resolve(process.cwd(), ".codex/config.toml"), "utf8");
 
     expect(config).not.toContain('matcher = "Bash|apply_patch|Edit|MultiEdit|Write"');
     expect(config).not.toContain('matcher = "Bash"');
+    expect(config).toContain('matcher = ".*"');
   });
 });
 
