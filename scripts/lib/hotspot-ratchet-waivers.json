@@ -82,5 +82,17 @@
   "worker/src/cron/telegram-pending-queue.ts": {
     "disposition": "queued-p4",
     "notes": "Pending delivery queue owns drain selection, TTL/dead-letter handling, rate-limit backoff, two-strike blocked handling, and priority enqueue semantics. Keep waived until the durable sender promotion; then split subscriber lifecycle, enqueue/dedupe, and drain execution helpers."
+  },
+  "src/lib/yield-view-model.ts": {
+    "disposition": "queued-p4",
+    "notes": "Yield page view-model still centralizes ranking filters, aggregate stats, source-board projection, and table shaping. It surfaced after the detail view-model split reduced other candidates; keep explicitly waived until a dedicated yield UI model decomposition pass."
+  },
+  "src/components/pre-launch-detail.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Pre-launch detail presentation combines readiness, launch metadata, links, and timeline copy for a narrow route surface. It surfaced after nearby complexity reductions; split data shaping from rendering in a later pre-launch UI cleanup rather than widening this tranche."
+  },
+  "worker/src/lib/telegram-usage-analytics.ts": {
+    "disposition": "queued-p4",
+    "notes": "Telegram usage analytics aggregates bot activity, command patterns, delivery health, and subscriber cohorts for operator diagnostics. It surfaced after Telegram dispatch decomposition reduced higher-ranked candidates; split query construction from summary shaping in the next Telegram analytics cleanup pass."
   }
 }

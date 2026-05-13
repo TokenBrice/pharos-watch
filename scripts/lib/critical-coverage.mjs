@@ -6,11 +6,15 @@ export const CRITICAL_FILES = [
   "worker/src/lib/api-pagination.ts",
   "worker/src/lib/api-params.ts",
   "worker/src/lib/api-response.ts",
+  "worker/src/lib/api-key-auth.ts",
+  "worker/src/lib/api-key-core.ts",
+  "worker/src/lib/api-key-rate-limit.ts",
   "worker/src/lib/auth.ts",
   "worker/src/lib/evm-rpc.ts",
   "worker/src/lib/stablecoins-cache.ts",
   "worker/src/lib/safety-scores.ts",
   "worker/src/handlers/scheduled.ts",
+  "worker/src/handlers/http/gates.ts",
   "worker/src/api/health.ts",
   "worker/src/cron/sync-stablecoins.ts",
   "worker/src/cron/daily-digest.ts",
@@ -22,6 +26,8 @@ export const CRITICAL_FILES = [
   "worker/src/api/stress-signals.ts",
   "worker/src/api/mint-burn-flows.ts",
   "worker/src/api/status.ts",
+  "worker/src/api/telegram-webhook.ts",
+  "worker/src/api/telegram-webhook-callbacks.ts",
   "worker/src/lib/alerts.ts",
   "worker/src/api/stablecoin-detail.ts",
   "worker/src/cron/dex-liquidity/orchestrator.ts",
@@ -32,6 +38,8 @@ export const CRITICAL_FILES = [
   "shared/lib/report-card-blacklist-authority.ts",
   "shared/lib/report-card-blacklist-matchers.ts",
   "shared/lib/blacklist-active-records.ts",
+  "functions/api/admin/[[path]].ts",
+  "functions/_site-data/[[path]].ts",
 ];
 
 export function normalizePath(value) {

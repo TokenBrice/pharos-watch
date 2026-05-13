@@ -3,9 +3,13 @@ export const CRITICAL_TEST_FILES = [
   "src/lib/__tests__/critical-invariants.test.ts",
   "worker/src/__tests__/index.scheduled.test.ts",
   "worker/src/lib/__tests__/api-utils.test.ts",
+  "worker/src/lib/__tests__/api-keys.test.ts",
+  "worker/src/handlers/http/__tests__/gates.test.ts",
   "worker/src/lib/__tests__/alerts.test.ts",
   "worker/src/lib/__tests__/auth.test.ts",
   "worker/src/api/__tests__/telegram-webhook-auth.test.ts",
+  "worker/src/api/__tests__/telegram-webhook.test.ts",
+  "worker/src/api/__tests__/telegram-webhook-callbacks.test.ts",
   "worker/src/lib/__tests__/evm-rpc.test.ts",
   "worker/src/lib/__tests__/safety-scores.test.ts",
   "worker/src/lib/__tests__/stablecoins-cache.test.ts",
@@ -31,6 +35,8 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/cron/__tests__/sync-stablecoins.test.ts",
   "worker/src/cron/__tests__/sync-yield-data.test.ts",
   "worker/src/cron/__tests__/sync-dex-liquidity.test.ts",
+  "functions/__tests__/ops-admin-proxy.test.ts",
+  "functions/__tests__/site-data-proxy.test.ts",
 ];
 
 export function buildCriticalCoverageArgs(extraArgs = []) {
