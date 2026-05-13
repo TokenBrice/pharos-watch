@@ -23,7 +23,10 @@ const API_KEY_TIER_MAX_LENGTH = 40;
 const API_KEY_TRAFFIC_CLASS_DEFAULT: ApiKeyTrafficClass = "external";
 const API_KEY_AUTH_CACHE_TTL_MS = 300_000;
 const API_KEY_AUTH_CACHE_STALE_TTL_MS = 900_000;
+const API_KEY_AUTH_CACHE_MAX_ENTRIES = 2_048;
 const API_KEY_USAGE_UPDATE_WINDOW_SEC = 120;
+const API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES = 4_096;
+const API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES = 4_096;
 const API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER = 10;
 
 interface StatementRunResult {
@@ -170,6 +173,27 @@ const _ak = new IsolateLocalState(() => ({
 
 export function getApiKeyRuntimeState() {
   return _ak.state;
+}
+
+function pruneOldestMapEntries<K, V>(map: Map<K, V>, maxEntries: number): void {
+  while (map.size > maxEntries) {
+    const oldest = map.keys().next().value as K | undefined;
+    if (oldest === undefined) return;
+    map.delete(oldest);
+  }
+}
+
+function pruneExpiredApiKeyCache(nowMs: number): void {
+  const cache = getApiKeyRuntimeState().apiKeyCache;
+  for (const [keyPrefix, cached] of cache) {
+    if (cached.staleUntilMs <= nowMs) {
+      cache.delete(keyPrefix);
+    }
+  }
+}
+
+export function capApiKeyMapEntries<K, V>(map: Map<K, V>, maxEntries: number): void {
+  pruneOldestMapEntries(map, maxEntries);
 }
 
 export function resetApiKeyStateForTests(): void {
@@ -368,18 +392,23 @@ export function getCachedApiKeyByPrefix(
   options: { allowStale?: boolean; nowMs?: number } = {},
 ): ApiKeyRow | null {
   const nowMs = options.nowMs ?? Date.now();
-  const cached = getApiKeyRuntimeState().apiKeyCache.get(keyPrefix);
+  const cache = getApiKeyRuntimeState().apiKeyCache;
+  const cached = cache.get(keyPrefix);
   if (!cached) {
     return null;
   }
   if (cached.freshUntilMs > nowMs) {
+    cache.delete(keyPrefix);
+    cache.set(keyPrefix, cached);
     return cached.row;
   }
   if (options.allowStale && cached.staleUntilMs > nowMs) {
+    cache.delete(keyPrefix);
+    cache.set(keyPrefix, cached);
     return cached.row;
   }
   if (cached.staleUntilMs <= nowMs) {
-    getApiKeyRuntimeState().apiKeyCache.delete(keyPrefix);
+    cache.delete(keyPrefix);
   }
   return null;
 }
@@ -396,11 +425,15 @@ export async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Pro
     .first<ApiKeyRow>();
 
   if (row) {
-    getApiKeyRuntimeState().apiKeyCache.set(keyPrefix, {
+    const state = getApiKeyRuntimeState();
+    pruneExpiredApiKeyCache(nowMs);
+    state.apiKeyCache.delete(keyPrefix);
+    state.apiKeyCache.set(keyPrefix, {
       freshUntilMs: nowMs + API_KEY_AUTH_CACHE_TTL_MS,
       staleUntilMs: nowMs + API_KEY_AUTH_CACHE_STALE_TTL_MS,
       row,
     });
+    pruneOldestMapEntries(state.apiKeyCache, API_KEY_AUTH_CACHE_MAX_ENTRIES);
   }
   return row;
 }
@@ -552,4 +585,16 @@ export function getApiKeyAuthCacheTtlMs(): number {
 
 export function getApiKeyAuthCacheStaleTtlMs(): number {
   return API_KEY_AUTH_CACHE_STALE_TTL_MS;
+}
+
+export function getApiKeyAuthCacheMaxEntries(): number {
+  return API_KEY_AUTH_CACHE_MAX_ENTRIES;
+}
+
+export function getApiKeyUsageUpdateCacheMaxEntries(): number {
+  return API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES;
+}
+
+export function getApiKeyLocalRateLimitMaxEntries(): number {
+  return API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES;
 }

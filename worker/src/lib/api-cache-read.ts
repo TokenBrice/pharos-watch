@@ -2,12 +2,44 @@ import type { ZodType } from "zod";
 import { getCache } from "./db-cache";
 import { buildFreshnessMeta, addFreshnessHeaders } from "./api-freshness";
 import { errorResponse, jsonResponse, validatePayloadWithSchema, withErrorHandler } from "./api-response";
+import { IsolateLocalState } from "./isolate-local-state";
 
-export function safeJsonParse<T>(json: string | null | undefined, fallback: T): T {
+const CACHE_JSON_PARSE_FAILURE_COUNTER_MAX_ENTRIES = 256;
+
+const _cacheRead = new IsolateLocalState(() => ({
+  jsonParseFailuresByContext: new Map<string, { count: number; lastMessage: string }>(),
+}));
+
+function recordJsonParseFailure(context: string, message: string): void {
+  const counters = _cacheRead.state.jsonParseFailuresByContext;
+  const previous = counters.get(context);
+  counters.delete(context);
+  counters.set(context, {
+    count: Math.min((previous?.count ?? 0) + 1, 2147483647),
+    lastMessage: message,
+  });
+  while (counters.size > CACHE_JSON_PARSE_FAILURE_COUNTER_MAX_ENTRIES) {
+    const oldest = counters.keys().next().value as string | undefined;
+    if (oldest === undefined) break;
+    counters.delete(oldest);
+  }
+  console.warn(`[cache] Failed to parse persisted JSON (${context}); count=${counters.get(context)?.count ?? 1}:`, message);
+}
+
+export function getCacheJsonParseFailureCountersForTests(): Record<string, { count: number; lastMessage: string }> {
+  return Object.fromEntries(_cacheRead.state.jsonParseFailuresByContext);
+}
+
+export function resetCacheJsonParseFailureCountersForTests(): void {
+  _cacheRead.reset();
+}
+
+export function safeJsonParse<T>(json: string | null | undefined, fallback: T, context = "safeJsonParse"): T {
   if (json == null) return fallback;
   try {
     return JSON.parse(json) as T;
-  } catch {
+  } catch (err) {
+    recordJsonParseFailure(context, err instanceof Error ? err.message : String(err));
     return fallback;
   }
 }
@@ -21,10 +53,7 @@ export function safeJsonParseWithContext<T>(
   try {
     return JSON.parse(json) as T;
   } catch (err) {
-    console.warn(
-      `[cache] Failed to parse persisted JSON (${context}):`,
-      err instanceof Error ? err.message : String(err),
-    );
+    recordJsonParseFailure(context, err instanceof Error ? err.message : String(err));
     return fallback;
   }
 }
@@ -47,7 +76,7 @@ export function readCachedJson<T>(
     return { status: "ok", data: JSON.parse(cached.value) as T };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.warn(`[cache] Failed to parse ${endpoint} cached payload (${cacheKey}):`, message);
+    recordJsonParseFailure(`${endpoint}:${cacheKey}`, message);
     return { status: "malformed", message };
   }
 }

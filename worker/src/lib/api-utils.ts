@@ -43,8 +43,10 @@ export {
 } from "./api-history";
 export {
   createCacheHandler,
+  getCacheJsonParseFailureCountersForTests,
   readCachedJson,
   readCachedJsonOr503,
+  resetCacheJsonParseFailureCountersForTests,
   safeJsonParse,
   safeJsonParseWithContext,
   type CachedJsonReadResult,

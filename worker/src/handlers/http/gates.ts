@@ -8,6 +8,7 @@ import {
 } from "@shared/lib/site-data-lane";
 import { errorResponse } from "../../lib/api-utils";
 import {
+  authenticateApiKeyFromFreshCache,
   authenticateApiKey,
   type AuthenticatedApiKey,
   checkApiKeyRateLimit,
@@ -23,6 +24,14 @@ import { validateWorkerEnvContract } from "../../lib/env";
 import type { Env } from "../../lib/env";
 
 const LOGGED_ENV_ISSUES = new Set<string>();
+
+type AccessGateResult = {
+  isAdmin: boolean;
+  isSiteProxy: boolean;
+  apiKey: AuthenticatedApiKey | null;
+  requestLane: "public-api" | "site-api" | null;
+  response: Response | null;
+};
 
 function publicApiUnavailableResponse(): Response {
   return errorResponse(503, "Public API temporarily unavailable", {
@@ -62,13 +71,7 @@ export async function evaluateAccessGate(
   request: Request,
   url: URL,
   env: Env,
-): Promise<{
-  isAdmin: boolean;
-  isSiteProxy: boolean;
-  apiKey: AuthenticatedApiKey | null;
-  requestLane: "public-api" | "site-api" | null;
-  response: Response | null;
-}> {
+): Promise<AccessGateResult> {
   const isAdmin = await hasValidAdminCredential(request, undefined, env);
   if (isAdmin) {
     return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: null, response: null };
@@ -177,4 +180,44 @@ export async function evaluateAccessGate(
 
 export function notFoundResponse(): Response {
   return errorResponse(404, "Not found");
+}
+
+export async function evaluateCachedPublicApiReadFastGate(
+  request: Request,
+  url: URL,
+  env: Env,
+): Promise<AccessGateResult | null> {
+  if (
+    request.method !== "GET"
+    || isCacheBypassPath(url.pathname)
+    || !url.pathname.startsWith("/api/")
+    || url.pathname === "/api/telegram-webhook"
+    || url.hostname === OPS_API_HOSTNAME
+    || url.hostname === SITE_API_HOSTNAME
+    || getPublicApiAccess(url.pathname) === "exempt"
+    || isAdminLikePath(url.pathname)
+  ) {
+    return null;
+  }
+
+  const apiKeyAuth = await authenticateApiKeyFromFreshCache(
+    request.headers.get("X-API-Key"),
+    env.API_KEY_HASH_PEPPER,
+    env.API_KEY_HASH_PEPPER_PREVIOUS,
+  );
+  if (apiKeyAuth.kind !== "valid") {
+    return null;
+  }
+
+  return {
+    isAdmin: false,
+    isSiteProxy: false,
+    apiKey: apiKeyAuth.key,
+    requestLane: "public-api",
+    response: null,
+  };
+}
+
+export function checkCachedPublicApiReadFastRateLimit(apiKey: AuthenticatedApiKey): Response | null {
+  return checkIsolateLocalApiKeyRateLimit(apiKey.id, apiKey.rateLimitPerMinute);
 }

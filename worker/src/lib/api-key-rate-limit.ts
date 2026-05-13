@@ -1,6 +1,9 @@
 import {
+  capApiKeyMapEntries,
+  getApiKeyLocalRateLimitMaxEntries,
   getApiKeyRateLimitPruneWindowMultiplier,
   getApiKeyRuntimeState,
+  getApiKeyUsageUpdateCacheMaxEntries,
   getApiKeyUsageUpdateWindowSec,
   getNowSec,
   type ApiKeyDb,
@@ -59,17 +62,26 @@ export function checkIsolateLocalApiKeyRateLimit(
   const bucketStart = nowSec - (nowSec % 60);
   const retryAfterSec = bucketStart + 60 - nowSec;
   const state = getApiKeyRuntimeState();
+  for (const [keyId, entry] of state.apiKeyFallbackRateLimitById) {
+    if (entry.bucketStart !== bucketStart) {
+      state.apiKeyFallbackRateLimitById.delete(keyId);
+    }
+  }
   const existing = state.apiKeyFallbackRateLimitById.get(apiKeyId);
 
   if (!existing || existing.bucketStart !== bucketStart) {
+    state.apiKeyFallbackRateLimitById.delete(apiKeyId);
     state.apiKeyFallbackRateLimitById.set(apiKeyId, {
       bucketStart,
       count: 1,
     });
+    capApiKeyMapEntries(state.apiKeyFallbackRateLimitById, getApiKeyLocalRateLimitMaxEntries());
     return null;
   }
 
   existing.count = Math.min(existing.count + 1, 2147483647);
+  state.apiKeyFallbackRateLimitById.delete(apiKeyId);
+  state.apiKeyFallbackRateLimitById.set(apiKeyId, existing);
   if (existing.count > limit) {
     return errorResponse(429, "Rate limit exceeded", { retryAfterSec });
   }
@@ -102,5 +114,7 @@ export async function recordApiKeyUsage(
   )
     .bind(nowSec, routePath, key.id)
     .run();
+  state.apiKeyLastUsageUpdateById.delete(key.id);
   state.apiKeyLastUsageUpdateById.set(key.id, nowSec);
+  capApiKeyMapEntries(state.apiKeyLastUsageUpdateById, getApiKeyUsageUpdateCacheMaxEntries());
 }

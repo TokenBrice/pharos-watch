@@ -16,7 +16,9 @@ const mocks = vi.hoisted(() => ({
   writeEdgeCache: vi.fn(),
   isApiKeyRequestAttributionDisabled: vi.fn(() => false),
   isRequestSourceAttributionDisabled: vi.fn(() => false),
+  checkCachedPublicApiReadFastRateLimit: vi.fn(),
   evaluateAccessGate: vi.fn(),
+  evaluateCachedPublicApiReadFastGate: vi.fn(),
   handleMaintenanceMode: vi.fn(),
   notFoundResponse: vi.fn(),
   warnWorkerEnvIssuesOnce: vi.fn(),
@@ -58,7 +60,9 @@ vi.mock("../edge-cache", () => ({
 }));
 
 vi.mock("../gates", () => ({
+  checkCachedPublicApiReadFastRateLimit: mocks.checkCachedPublicApiReadFastRateLimit,
   evaluateAccessGate: mocks.evaluateAccessGate,
+  evaluateCachedPublicApiReadFastGate: mocks.evaluateCachedPublicApiReadFastGate,
   handleMaintenanceMode: mocks.handleMaintenanceMode,
   notFoundResponse: mocks.notFoundResponse,
   warnWorkerEnvIssuesOnce: mocks.warnWorkerEnvIssuesOnce,
@@ -88,6 +92,8 @@ describe("handleHttpRequestImpl", () => {
     mocks.resolveCorsOrigin.mockReturnValue("https://pharos.watch");
     mocks.handleCorsPreflight.mockReturnValue(null);
     mocks.handleMaintenanceMode.mockReturnValue(null);
+    mocks.checkCachedPublicApiReadFastRateLimit.mockReturnValue(null);
+    mocks.evaluateCachedPublicApiReadFastGate.mockResolvedValue(null);
     mocks.evaluateAccessGate.mockResolvedValue({
       isAdmin: false,
       isSiteProxy: false,

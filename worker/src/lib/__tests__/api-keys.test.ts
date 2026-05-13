@@ -6,8 +6,11 @@ import {
   checkApiKeyRateLimit,
   checkIsolateLocalApiKeyRateLimit,
   createApiKey,
+  getApiKeyAuthCacheMaxEntries,
   getApiKeyAuthCacheStaleTtlMs,
   getApiKeyAuthCacheTtlMs,
+  getApiKeyLocalRateLimitMaxEntries,
+  getApiKeyUsageUpdateCacheMaxEntries,
   listApiKeys,
   parseApiKeyToken,
   resetApiKeyStateForTests,
@@ -15,6 +18,7 @@ import {
   rotateApiKey,
   updateApiKey,
 } from "../api-keys";
+import { getApiKeyRuntimeState, lookupApiKeyByPrefix } from "../api-key-core";
 
 describe("api key helpers", () => {
   beforeEach(() => {
@@ -749,6 +753,71 @@ describe("api key helpers", () => {
     expect(checkIsolateLocalApiKeyRateLimit(7, 2, 600)).toBeNull();
     expect(checkIsolateLocalApiKeyRateLimit(7, 2, 601)).toBeNull();
     expect(checkIsolateLocalApiKeyRateLimit(7, 2, 602)?.status).toBe(429);
+  });
+
+  it("caps the isolate-local API key auth cache", async () => {
+    const secretHash = await hmacSha256Hex("pepper", "abcdefghijklmnopqrstuvwxyzABCDEF");
+    const db = mockD1([
+      {
+        match: "FROM api_keys",
+        rows: [{
+          id: 7,
+          key_prefix: "0123456789abcdef",
+          secret_hash: secretHash,
+          name: "Cached",
+          owner_email: null,
+          tier: "standard",
+          traffic_class: "external",
+          rate_limit_per_minute: 120,
+          is_active: 1,
+          expires_at: null,
+          created_at: 1,
+          updated_at: 1,
+          last_used_at: null,
+          last_used_route: null,
+        }],
+      },
+    ]);
+
+    for (let i = 0; i < getApiKeyAuthCacheMaxEntries() + 5; i++) {
+      await lookupApiKeyByPrefix(db, i.toString(16).padStart(16, "0"));
+    }
+
+    expect(getApiKeyRuntimeState().apiKeyCache.size).toBe(getApiKeyAuthCacheMaxEntries());
+  });
+
+  it("caps isolate-local fallback rate-limit buckets", () => {
+    for (let i = 0; i < getApiKeyLocalRateLimitMaxEntries() + 5; i++) {
+      expect(checkIsolateLocalApiKeyRateLimit(i + 1, 120, 600)).toBeNull();
+    }
+
+    expect(getApiKeyRuntimeState().apiKeyFallbackRateLimitById.size).toBe(getApiKeyLocalRateLimitMaxEntries());
+  });
+
+  it("caps isolate-local last-used throttling state", async () => {
+    const db = mockD1([
+      {
+        match: "UPDATE api_keys SET last_used_at = ?, last_used_route = ? WHERE id = ?",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+    ]);
+
+    for (let i = 0; i < getApiKeyUsageUpdateCacheMaxEntries() + 5; i++) {
+      await recordApiKeyUsage(db, {
+        id: i + 1,
+        keyPrefix: i.toString(16).padStart(16, "0"),
+        name: "Key",
+        ownerEmail: null,
+        tier: "standard",
+        trafficClass: "external",
+        rateLimitPerMinute: 120,
+        isActive: true,
+        expiresAt: null,
+      }, "/api/stablecoins", 1_000);
+    }
+
+    expect(getApiKeyRuntimeState().apiKeyLastUsageUpdateById.size).toBe(getApiKeyUsageUpdateCacheMaxEntries());
   });
 
   it("records an audit log entry when creating a key", async () => {

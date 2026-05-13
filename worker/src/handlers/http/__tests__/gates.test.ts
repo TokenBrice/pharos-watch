@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { verifyAccessJwt } = vi.hoisted(() => ({
+const { verifyAccessJwt, apiKeyMocks } = vi.hoisted(() => ({
   verifyAccessJwt: vi.fn(),
+  apiKeyMocks: {
+    authenticateApiKey: vi.fn(),
+    authenticateApiKeyFromFreshCache: vi.fn(),
+    checkApiKeyRateLimit: vi.fn(),
+    checkIsolateLocalApiKeyRateLimit: vi.fn(),
+    recordApiKeyUsage: vi.fn(),
+  },
 }));
 
 vi.mock("@shared/lib/cloudflare-access-jwt", async (importOriginal) => {
@@ -9,7 +16,28 @@ vi.mock("@shared/lib/cloudflare-access-jwt", async (importOriginal) => {
   return { ...actual, verifyAccessJwt };
 });
 
-import { evaluateAccessGate } from "../gates";
+vi.mock("../../../lib/api-keys", () => ({
+  authenticateApiKey: apiKeyMocks.authenticateApiKey,
+  authenticateApiKeyFromFreshCache: apiKeyMocks.authenticateApiKeyFromFreshCache,
+  checkApiKeyRateLimit: apiKeyMocks.checkApiKeyRateLimit,
+  checkIsolateLocalApiKeyRateLimit: apiKeyMocks.checkIsolateLocalApiKeyRateLimit,
+  recordApiKeyUsage: apiKeyMocks.recordApiKeyUsage,
+}));
+
+import {
+  checkCachedPublicApiReadFastRateLimit,
+  evaluateAccessGate,
+  evaluateCachedPublicApiReadFastGate,
+} from "../gates";
+
+const validKey = {
+  id: 7,
+  keyPrefix: "pharos_test",
+  name: "Test key",
+  tier: "standard",
+  trafficClass: "external",
+  rateLimitPerMinute: 60,
+};
 
 function makeEnv() {
   return {
@@ -23,6 +51,9 @@ function makeEnv() {
 describe("evaluateAccessGate", () => {
   afterEach(() => {
     verifyAccessJwt.mockReset();
+    for (const mock of Object.values(apiKeyMocks)) {
+      mock.mockReset();
+    }
   });
 
   it("preserves Access-authenticated ops-api admin routing", async () => {
@@ -80,5 +111,133 @@ describe("evaluateAccessGate", () => {
     expect(result.response?.headers.get("Allow")).toBe("GET");
     expect(result.requestLane).toBe("site-api");
     expect(result.isSiteProxy).toBe(false);
+  });
+
+  it("authenticates protected public API requests and records usage", async () => {
+    apiKeyMocks.authenticateApiKey.mockResolvedValueOnce({ kind: "valid", key: validKey });
+    apiKeyMocks.checkApiKeyRateLimit.mockResolvedValueOnce(null);
+    apiKeyMocks.recordApiKeyUsage.mockResolvedValueOnce(undefined);
+    const db = {} as D1Database;
+    const request = new Request("https://api.pharos.watch/api/stablecoins", {
+      headers: { "X-API-Key": "pharos_test_valid" },
+    });
+
+    const result = await evaluateAccessGate(request, new URL(request.url), {
+      ...makeEnv(),
+      DB: db,
+      API_KEY_HASH_PEPPER: "pepper",
+    } as never);
+
+    expect(result.response).toBeNull();
+    expect(result.apiKey).toBe(validKey);
+    expect(result.requestLane).toBe("public-api");
+    expect(apiKeyMocks.checkApiKeyRateLimit).toHaveBeenCalledWith(db, 7, 60);
+    expect(apiKeyMocks.recordApiKeyUsage).toHaveBeenCalledWith(db, validKey, "/api/stablecoins");
+  });
+
+  it("uses the isolate-local limiter when public GET rate-limit storage fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    apiKeyMocks.authenticateApiKey.mockResolvedValueOnce({ kind: "valid", key: validKey });
+    apiKeyMocks.checkApiKeyRateLimit.mockRejectedValueOnce(new Error("d1 unavailable"));
+    apiKeyMocks.checkIsolateLocalApiKeyRateLimit.mockReturnValueOnce(null);
+    apiKeyMocks.recordApiKeyUsage.mockResolvedValueOnce(undefined);
+    const request = new Request("https://api.pharos.watch/api/stablecoins", {
+      headers: { "X-API-Key": "pharos_test_valid" },
+    });
+
+    const result = await evaluateAccessGate(request, new URL(request.url), {
+      ...makeEnv(),
+      DB: {} as D1Database,
+      API_KEY_HASH_PEPPER: "pepper",
+    } as never);
+
+    expect(result.response).toBeNull();
+    expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).toHaveBeenCalledWith(7, 60);
+    expect(warn).toHaveBeenCalledWith(
+      "[public-api-auth] API key rate-limit dependency unavailable; using isolate-local fallback limiter:",
+      expect.any(Error),
+    );
+    warn.mockRestore();
+  });
+
+  it("fails closed when non-cacheable public API rate-limit storage fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    apiKeyMocks.authenticateApiKey.mockResolvedValueOnce({ kind: "valid", key: validKey });
+    apiKeyMocks.checkApiKeyRateLimit.mockRejectedValueOnce(new Error("d1 unavailable"));
+    const request = new Request("https://api.pharos.watch/api/stablecoins", {
+      method: "POST",
+      headers: { "X-API-Key": "pharos_test_valid" },
+    });
+
+    const result = await evaluateAccessGate(request, new URL(request.url), {
+      ...makeEnv(),
+      DB: {} as D1Database,
+      API_KEY_HASH_PEPPER: "pepper",
+    } as never);
+
+    expect(result.response?.status).toBe(503);
+    expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).not.toHaveBeenCalled();
+    expect(apiKeyMocks.recordApiKeyUsage).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("returns public API dependency errors distinctly from invalid keys", async () => {
+    apiKeyMocks.authenticateApiKey.mockResolvedValueOnce({ kind: "unavailable" });
+    const unavailableRequest = new Request("https://api.pharos.watch/api/stablecoins");
+
+    const unavailable = await evaluateAccessGate(
+      unavailableRequest,
+      new URL(unavailableRequest.url),
+      { ...makeEnv(), DB: {} as D1Database } as never,
+    );
+
+    apiKeyMocks.authenticateApiKey.mockResolvedValueOnce({ kind: "invalid" });
+    const invalidRequest = new Request("https://api.pharos.watch/api/stablecoins", {
+      headers: { "X-API-Key": "bad" },
+    });
+
+    const invalid = await evaluateAccessGate(
+      invalidRequest,
+      new URL(invalidRequest.url),
+      { ...makeEnv(), DB: {} as D1Database } as never,
+    );
+
+    expect(unavailable.response?.status).toBe(503);
+    expect(unavailable.response?.headers.get("Retry-After")).toBeTruthy();
+    expect(invalid.response?.status).toBe(401);
+  });
+
+  it("accepts fresh cached API-key auth only for eligible public GETs", async () => {
+    apiKeyMocks.authenticateApiKeyFromFreshCache.mockResolvedValueOnce({ kind: "valid", key: validKey });
+    const request = new Request("https://api.pharos.watch/api/stablecoins", {
+      headers: { "X-API-Key": "pharos_test_valid" },
+    });
+
+    const accepted = await evaluateCachedPublicApiReadFastGate(
+      request,
+      new URL(request.url),
+      { ...makeEnv(), API_KEY_HASH_PEPPER: "pepper" } as never,
+    );
+
+    const adminRequest = new Request("https://ops-api.pharos.watch/api/stablecoins", {
+      headers: { "X-API-Key": "pharos_test_valid" },
+    });
+    const bypassed = await evaluateCachedPublicApiReadFastGate(
+      adminRequest,
+      new URL(adminRequest.url),
+      { ...makeEnv(), API_KEY_HASH_PEPPER: "pepper" } as never,
+    );
+
+    expect(accepted?.apiKey).toBe(validKey);
+    expect(accepted?.requestLane).toBe("public-api");
+    expect(bypassed).toBeNull();
+  });
+
+  it("applies the isolate-local limiter to cached public reads", () => {
+    const rateLimitResponse = new Response("limited", { status: 429 });
+    apiKeyMocks.checkIsolateLocalApiKeyRateLimit.mockReturnValueOnce(rateLimitResponse);
+
+    expect(checkCachedPublicApiReadFastRateLimit(validKey as never)).toBe(rateLimitResponse);
+    expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).toHaveBeenCalledWith(7, 60);
   });
 });

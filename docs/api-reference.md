@@ -48,7 +48,7 @@ The public self-serve request form lives at `https://pharos.watch/api/`. It send
 
 The worker stores only the key prefix plus a peppered HMAC of the secret portion. Admin callers create, rotate, and deactivate keys through the operator lane (`ops.pharos.watch` / `ops-api.pharos.watch`); plaintext tokens are returned only once at creation/rotation time. Self-serve issuance uses the same storage model and returns the plaintext token only once after verification.
 
-For protected cacheable `GET` routes, the worker keeps a bounded isolate-local verified-key cache and a bounded isolate-local fallback limiter. During a brief D1 auth/limiter outage, a recently verified non-self-serve key can continue to read those cached routes; self-serve, unknown, or not-yet-verified keys still fail closed.
+For protected cacheable `GET` routes, the worker keeps a bounded isolate-local verified-key cache and a bounded isolate-local limiter. A recently verified non-self-serve key can use that local path for hot edge-cache hits, and can continue to read cached routes during a brief D1 auth/limiter outage. Self-serve, unknown, stale-cache, or not-yet-verified keys still fail closed.
 
 ---
 
@@ -193,7 +193,7 @@ Rate-limited responses include the retry delay in the HTTP `Retry-After` header 
 
 `POST /api/feedback` also has a form-specific limiter. Its `429` body is `{ "error": "Too many submissions. Please wait a few minutes." }`, and it should be handled as a local submission throttle rather than as a public API quota response. If the feedback limiter's D1 dependency is unavailable, the endpoint returns `503 Service Unavailable` with `{ "error": "Feedback service temporarily unavailable. Please try again." }` and `Retry-After: 60`.
 
-API-key authentication and per-key limiter storage normally rely on D1. For protected cacheable `GET` routes, the worker can continue serving a recently verified non-self-serve key during a brief D1 outage by reusing its bounded verified-key cache and a bounded isolate-local fallback limiter. Self-serve keys are refused when their D1 lookup is unavailable because revocation and claim state cannot be rechecked from stale isolate cache. Unknown or not-yet-verified keys still fail closed with `503 Service Unavailable`, `{ "error": "Public API temporarily unavailable" }`, and `Retry-After: 60`. Best-effort API-key usage timestamp updates do not fail otherwise successful reads.
+API-key authentication and per-key limiter storage normally rely on D1. For protected cacheable `GET` edge-cache hits, the worker can serve a recently verified non-self-serve key through a bounded isolate-local auth/limiter path. It can also continue serving a recently verified non-self-serve key during a brief D1 outage by reusing its bounded verified-key cache and isolate-local limiter. Self-serve keys are refused when their D1 lookup is unavailable because revocation and claim state cannot be rechecked from stale isolate cache. Unknown or not-yet-verified keys still fail closed with `503 Service Unavailable`, `{ "error": "Public API temporarily unavailable" }`, and `Retry-After: 60`. Best-effort API-key usage timestamp updates do not fail otherwise successful reads.
 
 ### Retry Guidance
 

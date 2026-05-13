@@ -593,6 +593,55 @@ describe("worker.fetch", () => {
     expect(history.some((entry) => entry.sql.includes("public_api_rate_limit"))).toBe(false);
   });
 
+  it("serves hot protected edge-cache reads from the verified-key cache without D1 auth or limiter writes", async () => {
+    cacheMatch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ cached: true, warm: 1 }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ cached: true, warm: 2 }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }));
+
+    const warmEnv = makeEnv({
+      DB: mockD1(await validKeyDbTables(), { requireMatch: true }),
+      REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
+      API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true",
+    });
+    const { ctx: warmCtx, waits: warmWaits } = makeExecutionContext();
+    const warmRes = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        headers: { "X-API-Key": VALID_API_KEY },
+      }),
+      warmEnv as never,
+      warmCtx,
+    );
+    await Promise.all(warmWaits);
+
+    expect(warmRes.status).toBe(200);
+    await expect(warmRes.json()).resolves.toEqual({ cached: true, warm: 1 });
+
+    const hotEnv = makeEnv({
+      DB: mockD1([], { requireMatch: true }),
+      REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
+      API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true",
+    });
+    const { ctx, waits } = makeExecutionContext();
+    const hotRes = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        headers: { "X-API-Key": VALID_API_KEY },
+      }),
+      hotEnv as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(hotRes.status).toBe(200);
+    await expect(hotRes.json()).resolves.toEqual({ cached: true, warm: 2 });
+    expect(hotEnv.DB.getHistory()).toHaveLength(0);
+  });
+
   it("returns 503 when API key lookup storage fails", async () => {
     const env = makeEnv({
       DB: mockD1([

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import { z } from "zod";
 import {
   errorResponse,
@@ -19,7 +19,10 @@ import {
   jsonFreshResponse,
   validatePayloadWithSchema,
   buildCacheStatuses,
+  getCacheJsonParseFailureCountersForTests,
   readCachedJson,
+  resetCacheJsonParseFailureCountersForTests,
+  safeJsonParse,
 } from "../api-utils";
 
 describe("errorResponse", () => {
@@ -38,6 +41,11 @@ describe("errorResponse", () => {
 });
 
 describe("readCachedJson", () => {
+  beforeEach(() => {
+    resetCacheJsonParseFailureCountersForTests();
+    vi.restoreAllMocks();
+  });
+
   it("returns missing when the cache row is absent", () => {
     expect(readCachedJson("status", "stablecoins", null)).toEqual({ status: "missing" });
   });
@@ -52,11 +60,29 @@ describe("readCachedJson", () => {
   });
 
   it("returns malformed when the cached json is invalid", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const result = readCachedJson("status", "stablecoins", { value: "{bad-json" });
     expect(result.status).toBe("malformed");
     if (result.status === "malformed") {
       expect(result.message).toMatch(/Unexpected|JSON|Expected/i);
     }
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[cache] Failed to parse persisted JSON (status:stablecoins); count=1:"),
+      expect.any(String),
+    );
+    expect(getCacheJsonParseFailureCountersForTests()["status:stablecoins"]?.count).toBe(1);
+  });
+
+  it("logs and counts safe JSON parse fallback failures", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    expect(safeJsonParse("{bad-json", { fallback: true }, "daily-digest:input")).toEqual({ fallback: true });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[cache] Failed to parse persisted JSON (daily-digest:input); count=1:"),
+      expect.any(String),
+    );
+    expect(getCacheJsonParseFailureCountersForTests()["daily-digest:input"]?.count).toBe(1);
   });
 });
 

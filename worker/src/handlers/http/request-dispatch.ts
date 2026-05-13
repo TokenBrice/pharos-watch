@@ -10,7 +10,14 @@ import {
 import { addCorsHeaders, handleCorsPreflight, resolveCorsOrigin } from "./cors";
 import { buildRouteContext } from "./context";
 import { createEdgeCacheContext, readEdgeCache, writeEdgeCache } from "./edge-cache";
-import { evaluateAccessGate, handleMaintenanceMode, notFoundResponse, warnWorkerEnvIssuesOnce } from "./gates";
+import {
+  checkCachedPublicApiReadFastRateLimit,
+  evaluateAccessGate,
+  evaluateCachedPublicApiReadFastGate,
+  handleMaintenanceMode,
+  notFoundResponse,
+  warnWorkerEnvIssuesOnce,
+} from "./gates";
 
 function queuePendingRateLimitPrunes(ctx: ExecutionContext): void {
   ctx.waitUntil(Promise.all([
@@ -38,6 +45,33 @@ export async function handleHttpRequestImpl(
   if (maintenanceResponse) return addCorsHeaders(maintenanceResponse, origin);
 
   const url = new URL(request.url);
+  let edgeCache = createEdgeCacheContext(request, url);
+  let cached: Response | null = null;
+  const fastGate = await evaluateCachedPublicApiReadFastGate(request, url, env);
+  if (fastGate) {
+    cached = await readEdgeCache(edgeCache);
+    if (cached) {
+      const fastRateLimitResponse = fastGate.apiKey
+        ? checkCachedPublicApiReadFastRateLimit(fastGate.apiKey)
+        : null;
+      const recordRequestSource = createRequestSourceRecorder({
+        request,
+        db: env.DB,
+        execCtx: ctx,
+        isAdmin: fastGate.isAdmin,
+        isSiteProxy: fastGate.isSiteProxy,
+        apiKeyId: fastGate.apiKey?.id ?? null,
+        apiKeyTrafficClass: fastGate.apiKey?.trafficClass ?? null,
+        requestLane: fastGate.requestLane,
+        pathname: url.pathname,
+        attributionDisabled: isRequestSourceAttributionDisabled(env),
+        apiKeyAttributionDisabled: isApiKeyRequestAttributionDisabled(env),
+      });
+      recordRequestSource();
+      return finalizeResponse(fastRateLimitResponse ?? cached, origin, ctx);
+    }
+  }
+
   const {
     isAdmin,
     isSiteProxy,
@@ -63,8 +97,10 @@ export async function handleHttpRequestImpl(
     return finalizeResponse(gateResponse, origin, ctx);
   }
 
-  const edgeCache = createEdgeCacheContext(request, url);
-  const cached = await readEdgeCache(edgeCache);
+  if (!cached) {
+    edgeCache = createEdgeCacheContext(request, url);
+    cached = await readEdgeCache(edgeCache);
+  }
   if (cached) {
     recordRequestSource();
     return finalizeResponse(cached, origin, ctx);

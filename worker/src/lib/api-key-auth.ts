@@ -34,7 +34,7 @@ export function parseApiKeyToken(token: string | null | undefined): ParsedApiKey
 async function authenticateLoadedApiKey(
   row: ApiKeyRow | null,
   parsed: ParsedApiKeyToken,
-  db: ApiKeyDb,
+  db: ApiKeyDb | null,
   pepper: string,
   pepperPrevious: string | undefined,
   nowSec: number,
@@ -65,7 +65,7 @@ async function authenticateLoadedApiKey(
     return { kind: "invalid" };
   }
 
-  if (allowPepperMigrationWrite) {
+  if (allowPepperMigrationWrite && db) {
     try {
       await db.prepare(
         "UPDATE api_keys SET secret_hash = ?, pepper_version = pepper_version + 1, updated_at = ? WHERE id = ?",
@@ -82,6 +82,38 @@ async function authenticateLoadedApiKey(
     kind: "valid",
     key: mapRowToAuthenticatedKey(row),
   };
+}
+
+export async function authenticateApiKeyFromFreshCache(
+  apiKeyHeader: string | null,
+  pepper: string | undefined,
+  pepperPrevious?: string,
+  nowSec = getNowSec(),
+): Promise<ApiKeyAuthenticationResult> {
+  const parsed = parseApiKeyToken(apiKeyHeader);
+  if (!parsed) {
+    return apiKeyHeader?.trim() ? { kind: "invalid" } : { kind: "missing" };
+  }
+
+  const effectivePepper = pepper?.trim();
+  if (!effectivePepper) {
+    return { kind: "unavailable" };
+  }
+
+  const row = getCachedApiKeyByPrefix(parsed.prefix);
+  if (!row || row.tier === "self-serve") {
+    return { kind: "unavailable" };
+  }
+
+  return authenticateLoadedApiKey(
+    row,
+    parsed,
+    null,
+    effectivePepper,
+    pepperPrevious,
+    nowSec,
+    false,
+  );
 }
 
 async function hasSelfServeRevocation(db: ApiKeyDb, row: ApiKeyRow): Promise<boolean> {

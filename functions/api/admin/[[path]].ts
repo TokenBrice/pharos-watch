@@ -1,6 +1,7 @@
 import { isAdminPath, validateEndpointMethod } from "@shared/lib/api-endpoints";
 import { verifyAccessJwt } from "@shared/lib/cloudflare-access-jwt";
 import { hasMatchingOpsUiOriginHeader, rejectIfNotOpsUiOrigin } from "../../lib/ops-origin";
+import { withNoindex } from "../../lib/noindex";
 import {
   resolvePagesOpsUiAccessConfig,
   resolveOpsApiOrigin,
@@ -83,12 +84,6 @@ function buildProxyResponse(upstreamResponse: Response, method: string): Respons
     method,
     defaultCacheControl: method === "GET" ? "no-store" : undefined,
   });
-}
-
-function withNoindex(response: Response): Response {
-  const wrapped = new Response(response.body, response);
-  wrapped.headers.set("X-Robots-Tag", "noindex, nofollow");
-  return wrapped;
 }
 
 function getCookieValue(cookieHeader: string | null, name: string): string | null {
