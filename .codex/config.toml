@@ -1,54 +1,33 @@
 [features]
-codex_hooks = true
+hooks = true
 
 [[hooks.SessionStart]]
 matcher = "startup|resume|clear"
-
-[[hooks.SessionStart.hooks]]
-type = "command"
 command = 'node "$(git rev-parse --show-toplevel)/scripts/pharos-change-contract.mjs" --hook=session-start'
 timeout = 10
 statusMessage = "Loading Pharos change contract"
 
 [[hooks.UserPromptSubmit]]
-
-[[hooks.UserPromptSubmit.hooks]]
-type = "command"
 command = 'node "$(git rev-parse --show-toplevel)/scripts/pharos-change-contract.mjs" --hook=user-prompt-submit'
 timeout = 5
 statusMessage = "Routing Pharos prompt"
 
 [[hooks.PreToolUse]]
-matcher = "Bash|apply_patch|Edit|MultiEdit|Write"
-
-[[hooks.PreToolUse.hooks]]
-type = "command"
 command = 'node "$(git rev-parse --show-toplevel)/scripts/pharos-change-contract.mjs" --hook=pre-tool-use'
 timeout = 5
 statusMessage = "Checking Pharos hard blocks"
 
 [[hooks.PermissionRequest]]
-matcher = "Bash"
-
-[[hooks.PermissionRequest.hooks]]
-type = "command"
 command = 'node "$(git rev-parse --show-toplevel)/scripts/pharos-change-contract.mjs" --hook=permission-request'
 timeout = 5
 statusMessage = "Checking Pharos production policy"
 
 [[hooks.PostToolUse]]
-matcher = "Bash|apply_patch|Edit|MultiEdit|Write"
-
-[[hooks.PostToolUse.hooks]]
-type = "command"
 command = 'node "$(git rev-parse --show-toplevel)/scripts/pharos-change-contract.mjs" --hook=post-tool-use'
 timeout = 5
 statusMessage = "Refreshing Pharos change reminder"
 
 [[hooks.Stop]]
-
-[[hooks.Stop.hooks]]
-type = "command"
 command = 'node "$(git rev-parse --show-toplevel)/scripts/pharos-change-contract.mjs" --hook=stop'
 timeout = 10
 statusMessage = "Checking Pharos change contract"

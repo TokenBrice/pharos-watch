@@ -13,6 +13,7 @@ import {
   classifyChangedFiles,
   classifyUserPrompt,
   findChangedSinceBaseline,
+  findSessionChangedFiles,
   formatContract,
   formatContractMarkdown,
   normalizeChangedFiles,
@@ -74,6 +75,38 @@ describe("session delta helpers", () => {
       "docs/scripts.md",
       "scripts/pharos-change-contract.mjs",
     ]);
+  });
+
+  it("keeps unchanged pre-session dirty files out of the active session delta", () => {
+    const fingerprints: Record<string, string> = {
+      "docs/scripts.md": "baseline-dirty",
+      "scripts/pharos-change-contract.mjs": "new-session-change",
+    };
+
+    expect(findSessionChangedFiles([
+      "docs/scripts.md",
+      "scripts/pharos-change-contract.mjs",
+    ], {
+      "docs/scripts.md": "baseline-dirty",
+    }, {
+      buildFingerprints: (files) => Object.fromEntries(files.map((file) => [file, fingerprints[file]])),
+    })).toEqual(["scripts/pharos-change-contract.mjs"]);
+  });
+
+  it("includes pre-session dirty files when their current dirty fingerprint changes", () => {
+    expect(findSessionChangedFiles(["docs/scripts.md"], {
+      "docs/scripts.md": "baseline-dirty",
+    }, {
+      buildFingerprints: () => ({ "docs/scripts.md": "modified-after-baseline" }),
+    })).toEqual(["docs/scripts.md"]);
+  });
+
+  it("does not report a pre-session dirty file after it is restored clean", () => {
+    expect(findSessionChangedFiles(["scripts/pharos-change-contract.mjs"], {
+      "docs/scripts.md": "baseline-dirty",
+    }, {
+      buildFingerprints: () => ({ "scripts/pharos-change-contract.mjs": "new-session-change" }),
+    })).toEqual(["scripts/pharos-change-contract.mjs"]);
   });
 });
 
@@ -169,6 +202,20 @@ describe("Codex hook outputs", () => {
     });
     expect(output.hookSpecificOutput?.additionalContext).toContain("npm run check:cron-sync");
     expect(output.hookSpecificOutput?.additionalContext).toContain("do not auto-run heavy checks");
+  });
+
+  it("dedupes PostToolBatch against a prior PostToolUse with the same contract", () => {
+    const contract = classifyChangedFiles(["worker/src/cron/sync-yield-data.ts"]);
+    const hookInput = { session_id: `dedupe-cross-event-${Date.now()}-${Math.random()}` };
+
+    const firstUse = buildPostToolUseHookOutput(contract, hookInput, { eventName: "PostToolUse" });
+    expect(firstUse.hookSpecificOutput?.hookEventName).toBe("PostToolUse");
+
+    const followingBatch = buildPostToolUseHookOutput(contract, hookInput, { eventName: "PostToolBatch" });
+    expect(followingBatch).toEqual({ continue: true });
+
+    const repeatUse = buildPostToolUseHookOutput(contract, hookInput, { eventName: "PostToolUse" });
+    expect(repeatUse).toEqual({ continue: true });
   });
 });
 
@@ -267,7 +314,8 @@ describe("repo Codex hook config", () => {
   it("enables the tracked repo hook set", () => {
     const config = readFileSync(resolve(process.cwd(), ".codex/config.toml"), "utf8");
 
-    expect(config).toContain("codex_hooks = true");
+    expect(config).toContain("hooks = true");
+    expect(config).not.toContain("codex_hooks");
     expect(config).toContain("[[hooks.SessionStart]]");
     expect(config).toContain("--hook=session-start");
     expect(config).toContain("[[hooks.UserPromptSubmit]]");
@@ -280,6 +328,15 @@ describe("repo Codex hook config", () => {
     expect(config).toContain("--hook=post-tool-use");
     expect(config).toContain("[[hooks.Stop]]");
     expect(config).toContain("--hook=stop");
+    expect(config).not.toContain(".hooks]]");
+    expect(config).not.toContain("type = \"command\"");
+  });
+
+  it("keeps Codex hard-block hooks unscoped so native tool names are covered", () => {
+    const config = readFileSync(resolve(process.cwd(), ".codex/config.toml"), "utf8");
+
+    expect(config).not.toContain('matcher = "Bash|apply_patch|Edit|MultiEdit|Write"');
+    expect(config).not.toContain('matcher = "Bash"');
   });
 });
 

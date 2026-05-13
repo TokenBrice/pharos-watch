@@ -244,6 +244,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - Default CLI mode reads the current dirty diff, including untracked files. Use `--staged` for staged-only review, `--base-ref` / `--head-ref` for a specific comparison, `--file <path>` for deterministic single-file checks, `--json` for machine-readable output, or `--markdown` for the GitHub PR comment body.
 - `SessionStart` injects compact Pharos routing context. If files are already changed, it includes matched task families, docs to read, likely docs to update, checks to consider, and core rules.
 - `Stop` emits Codex continuation JSON once per turn when changed files match an actionable contract. The continuation asks the agent to run relevant checks/docs updates or state why they were unnecessary or unavailable; `stop_hook_active=true` is respected to avoid loops.
+- Codex `PreToolUse`, `PermissionRequest`, and `PostToolUse` handlers are intentionally unscoped by matcher in `.codex/config.toml` because Codex native command/apply-patch tool names differ from Claude's `Bash` / `Edit` names. The shared script still only blocks deterministic unsafe operations.
 - The PR workflow uses `pull_request` and only comments for same-repo PRs, so it does not run untrusted fork code with a write token.
 - This script is advisory. It should steer agents toward the right Pharos docs/checks, not replace `npm run test:merge-gate`, CI, or human review.
 

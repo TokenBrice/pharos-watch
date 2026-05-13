@@ -540,7 +540,10 @@ function getSessionId(hookInput = {}) {
     ?? hookInput.sessionId
     ?? hookInput.conversation_id
     ?? hookInput.conversationId
+    ?? hookInput.thread_id
+    ?? hookInput.threadId
     ?? process.env.CODEX_SESSION_ID
+    ?? process.env.CODEX_THREAD_ID
     ?? process.env.CLAUDE_SESSION_ID
     ?? "default";
   const sanitized = String(raw).replace(/[^a-zA-Z0-9_.-]/g, "_").slice(0, 160);
@@ -608,6 +611,14 @@ export function findChangedSinceBaseline(currentFingerprints, baselineFingerprin
     .sort();
 }
 
+export function findSessionChangedFiles(currentChangedFiles, baselineFingerprints = {}, {
+  buildFingerprints = buildFileFingerprints,
+} = {}) {
+  const normalizedChangedFiles = normalizeChangedFiles(currentChangedFiles);
+  const currentFingerprints = buildFingerprints(normalizedChangedFiles);
+  return findChangedSinceBaseline(currentFingerprints, baselineFingerprints);
+}
+
 function readSessionState(hookInput = {}) {
   const statePath = getSessionStatePath(hookInput);
   if (!existsSync(statePath)) return null;
@@ -656,12 +667,7 @@ export function readChangedFilesSinceSessionStart(hookInput = {}, changedFiles =
     return normalizedChangedFiles;
   }
 
-  const filesToCompare = unique([
-    ...normalizedChangedFiles,
-    ...(state.baselineChangedFiles ?? Object.keys(state.baselineFingerprints)),
-  ]);
-  const currentFingerprints = buildFileFingerprints(filesToCompare);
-  return findChangedSinceBaseline(currentFingerprints, state.baselineFingerprints);
+  return findSessionChangedFiles(normalizedChangedFiles, state.baselineFingerprints);
 }
 
 function fileMatchesRule(file, rule) {
@@ -1373,10 +1379,11 @@ export function buildPostToolUseHookOutput(contract, hookInput = {}, { eventName
   }
 
   if (dedupe) {
+    // Hash excludes eventName so PostToolUse and PostToolBatch dedupe each other
+    // when they fire on the same contract state.
     const reminderHash = hashJson({
       checks: contract.checks,
       docsLikelyRequired: contract.docsLikelyRequired,
-      eventName,
       families: contract.families.map((family) => family.id),
       warnings: contract.warnings,
     });
