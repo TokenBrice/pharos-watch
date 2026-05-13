@@ -82,25 +82,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href={API_URL} />
-        <Script id="api-key-verify-url-sanitizer" strategy="beforeInteractive">
-          {`(function(){
-            try {
-              var hash = window.location.hash;
-              var raw = hash && hash.charAt(0) === '#' ? hash.slice(1) : '';
-              window.__PHAROS_SANITIZED_PATH__ = window.location.pathname + window.location.search;
-              if (raw.indexOf('verify=') !== 0) return;
-              var params = new URLSearchParams(raw);
-              var token = params.get('verify');
-              if (token) window.__PHAROS_API_KEY_VERIFY_TOKEN__ = String(token).trim();
-              params.delete('verify');
-              var next = params.toString();
-              var nextHash = next ? '#' + next : '';
-              window.history.replaceState(null, '', window.__PHAROS_SANITIZED_PATH__ + nextHash);
-            } catch (_) {
-              window.__PHAROS_SANITIZED_PATH__ = window.location.pathname + window.location.search;
-            }
-          })();`}
-        </Script>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {gaId && (
@@ -110,7 +91,7 @@ export default function RootLayout({
               {`window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());
-                var pharosPagePath = window.__PHAROS_SANITIZED_PATH__ || (window.location.pathname + window.location.search);
+                var pharosPagePath = window.location.pathname + window.location.search;
                 gtag('config', ${JSON.stringify(gaId)}, { send_page_view: false });
                 gtag('event', 'page_view', {
                   page_path: pharosPagePath,

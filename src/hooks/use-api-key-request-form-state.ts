@@ -7,7 +7,6 @@ import {
   readVerificationTokenFromUrl,
   stripVerificationTokenFromUrl,
   submitApiKeyRequest,
-  takePreSanitizedVerificationToken,
   verifyApiKeyRequestToken,
 } from "@/lib/api-key-self-serve";
 import {
@@ -29,7 +28,7 @@ function useVerificationTokenEffect(verifyToken: (token: string) => Promise<void
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const token = takePreSanitizedVerificationToken() ?? readVerificationTokenFromUrl();
+    const token = readVerificationTokenFromUrl();
     if (!token || consumedVerificationTokenRef.current === token) return;
     consumedVerificationTokenRef.current = token;
     stripVerificationTokenFromUrl();

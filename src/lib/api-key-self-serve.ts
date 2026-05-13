@@ -10,13 +10,6 @@ import type {
 } from "@shared/types";
 import { buildApiUrl } from "@/lib/api";
 
-declare global {
-  interface Window {
-    __PHAROS_API_KEY_VERIFY_TOKEN__?: string;
-    __PHAROS_SANITIZED_PATH__?: string;
-  }
-}
-
 interface ApiErrorPayload {
   error?: string;
   message?: string;
@@ -124,14 +117,4 @@ export function stripVerificationTokenFromUrl(): void {
     "",
     `${window.location.pathname}${window.location.search}${nextHash}`,
   );
-}
-
-export function takePreSanitizedVerificationToken(): string | null {
-  if (typeof window === "undefined") return null;
-  const token = window.__PHAROS_API_KEY_VERIFY_TOKEN__?.trim();
-  if (token) {
-    delete window.__PHAROS_API_KEY_VERIFY_TOKEN__;
-    return token;
-  }
-  return null;
 }

@@ -10,7 +10,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.history.replaceState(null, "", "/");
-  delete window.__PHAROS_API_KEY_VERIFY_TOKEN__;
   Object.defineProperty(navigator, "clipboard", {
     configurable: true,
     value: undefined,
@@ -144,25 +143,6 @@ describe("ApiKeyRequestForm", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(fetchMock).not.toHaveBeenCalled();
     expect(window.location.search).toContain(`verify=qs-${suffix}`);
-  });
-
-  it("uses a pre-sanitized verification token without putting it back into the URL", async () => {
-    const suffix = randomUUID().slice(0, 8);
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify(issuedResponse(suffix, `ph_test_${suffix}_token`)), {
-      status: 201,
-      headers: { "Content-Type": "application/json" },
-    }));
-    vi.stubGlobal("fetch", fetchMock);
-
-    window.__PHAROS_API_KEY_VERIFY_TOKEN__ = `pre-scrubbed-${suffix}`;
-    window.history.replaceState(null, "", "/api/");
-    render(<ApiKeyRequestForm />);
-
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
-    const [, init] = fetchMock.mock.calls[0] ?? [];
-    expect(JSON.parse(String((init as RequestInit).body)).token).toBe(`pre-scrubbed-${suffix}`);
-    expect(window.location.href).not.toContain("pre-scrubbed");
-    expect(window.__PHAROS_API_KEY_VERIFY_TOKEN__).toBeUndefined();
   });
 
   it("does not display the durable request id after a pending submission", async () => {
