@@ -52,10 +52,12 @@ describe("publishReportCardCache", () => {
     const result = await publishReportCardCache({} as D1Database);
 
     expect(result.itemCount).toBe(1);
-    expect(mockSetCache).toHaveBeenCalledTimes(1);
-    expect(mockSetCache.mock.calls[0]?.[1]).toBe("alert:safety-source-cache");
-    expect(mockSetCache.mock.calls[0]?.[2]).toContain("\"generation\"");
-    expect(mockSetCache.mock.calls[0]?.[2]).toContain("\"methodologyVersion\":\"7.09\"");
-    expect(mockSetCache.mock.calls[0]?.[2]).toContain("\"usdc-circle\"");
+    expect(mockSetCache).toHaveBeenCalledTimes(2);
+    expect(mockSetCache.mock.calls[0]?.[1]).toBe("report-cards:snapshot");
+    expect(mockSetCache.mock.calls[0]?.[2]).toContain("\"cards\"");
+    expect(mockSetCache.mock.calls[1]?.[1]).toBe("alert:safety-source-cache");
+    expect(mockSetCache.mock.calls[1]?.[2]).toContain("\"generation\"");
+    expect(mockSetCache.mock.calls[1]?.[2]).toContain("\"methodologyVersion\":\"7.09\"");
+    expect(mockSetCache.mock.calls[1]?.[2]).toContain("\"usdc-circle\"");
   });
 });

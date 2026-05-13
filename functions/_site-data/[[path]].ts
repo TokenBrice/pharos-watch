@@ -10,7 +10,7 @@ import {
   buildUpstreamHeaders as buildUpstreamHeadersShared,
   buildProxyResponse as buildProxyResponseShared,
 } from "../lib/proxy-utils";
-import { recordSiteDataRequest } from "../lib/request-attribution";
+import { isRequestSourceAttributionDisabled, recordSiteDataRequest } from "../lib/request-attribution";
 import { rejectIfNotSiteDataUiOrigin } from "../lib/site-data-origin";
 import {
   resolveSiteApiOrigin,
@@ -122,12 +122,24 @@ async function queueSiteDataTelemetry(
   deliveryPath: "pages-cache-hit" | "pages-upstream-fetch" | "pages-upstream-timeout" | "pages-upstream-error",
   upstreamLane: "" | "site-api" = "",
 ): Promise<void> {
-  const route = resolveApiRequestRouteMetric(upstreamPath);
-  if (!route || !context.env.DB) {
+  if (isRequestSourceAttributionDisabled(context.env)) {
     return;
   }
 
-  const promise = recordSiteDataRequest(context.env.DB, route, deliveryPath, upstreamLane);
+  const route = resolveApiRequestRouteMetric(upstreamPath);
+  if (!context.env.DB) {
+    return;
+  }
+
+  if (!route) {
+    console.warn(`[site-data-proxy] Attribution route unavailable for ${upstreamPath}`);
+    return;
+  }
+
+  const promise = recordSiteDataRequest(context.env.DB, route, deliveryPath, upstreamLane)
+    .catch((error: unknown) => {
+      console.warn("[site-data-proxy] Failed to record site-data attribution:", error);
+    });
   if (typeof context.waitUntil === "function") {
     context.waitUntil(promise);
     return;

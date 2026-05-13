@@ -1,11 +1,7 @@
 #!/usr/bin/env node
 
 import { pathToFileURL } from "url";
-import {
-  assert,
-  parseNonNegativeInt,
-  parsePositiveInt,
-} from "./lib/smoke-runtime.mjs";
+import { assert, parseNonNegativeInt, parsePositiveInt } from "./lib/smoke-runtime.mjs";
 
 const DEFAULT_URL = process.env.SMOKE_UI_URL ?? "https://pharos.watch";
 const DEFAULT_MODE = process.env.SMOKE_UI_MODE ?? "local";
@@ -110,8 +106,7 @@ async function launchChromiumBrowser(chromium) {
   try {
     return await chromium.launch(launchOptions);
   } catch (error) {
-    const hasExplicitBrowser =
-      Boolean(launchOptions.channel) || Boolean(launchOptions.executablePath);
+    const hasExplicitBrowser = Boolean(launchOptions.channel) || Boolean(launchOptions.executablePath);
     if (hasExplicitBrowser || !isMissingPlaywrightBrowserError(error)) {
       throw error;
     }
@@ -280,6 +275,54 @@ function buildSmokeRunCode(config) {
     }, { waitTimeoutMs: config.waitTimeoutMs });
   }
 
+  async function captureAnalyticsRuntime() {
+    if (!config.expectedGaId) {
+      return null;
+    }
+
+    return page.evaluate(async ({ expectedGaId, waitTimeoutMs }) => {
+      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const serializeValue = (value) => {
+        if (value instanceof Date) return "[Date]";
+        if (value && typeof value === "object") {
+          try {
+            return JSON.parse(JSON.stringify(value));
+          } catch {
+            return "[unserializable]";
+          }
+        }
+        return value;
+      };
+      const summarize = () => {
+        const dataLayer = Array.isArray(window.dataLayer) ? window.dataLayer : [];
+        const entries = dataLayer.map((entry) => Array.from(entry).map(serializeValue));
+        const pageViewEntry = entries.find((entry) => entry[0] === "event" && entry[1] === "page_view");
+        return {
+          dataLayerLength: dataLayer.length,
+          gtagType: typeof window.gtag,
+          hasExpectedConfig: entries.some((entry) => entry[0] === "config" && entry[1] === expectedGaId),
+          hasPageView: Boolean(pageViewEntry),
+          pageViewPath:
+            pageViewEntry && pageViewEntry[2] && typeof pageViewEntry[2] === "object"
+              ? pageViewEntry[2].page_path ?? null
+              : null,
+          timedOut: false,
+        };
+      };
+
+      const timeoutAt = Date.now() + Math.min(waitTimeoutMs, 10000);
+      while (Date.now() < timeoutAt) {
+        const summary = summarize();
+        if (summary.gtagType === "function" && summary.hasExpectedConfig && summary.hasPageView) {
+          return summary;
+        }
+        await delay(250);
+      }
+
+      return { ...summarize(), timedOut: true };
+    }, { expectedGaId: config.expectedGaId, waitTimeoutMs: config.waitTimeoutMs });
+  }
+
   async function measureOverflow(route, waitMs, options = {}) {
     const routeUrl = joinUrl(config.baseUrl, route);
     await page.goto(routeUrl, { timeout: config.waitTimeoutMs, waitUntil: "domcontentloaded" });
@@ -390,6 +433,7 @@ function buildSmokeRunCode(config) {
   }
 
   let homepage = null;
+  let analyticsRuntime = null;
   if (config.runHomepage !== false) {
     await page.goto(config.baseUrl, { timeout: config.waitTimeoutMs, waitUntil: "domcontentloaded" });
 
@@ -402,6 +446,11 @@ function buildSmokeRunCode(config) {
         await waitForRetryDelay(config.uiRetryDelayMs);
         await page.goto(config.baseUrl, { timeout: config.waitTimeoutMs, waitUntil: "domcontentloaded" });
       }
+    }
+
+    analyticsRuntime = await captureAnalyticsRuntime();
+    if (config.expectedGaId) {
+      await waitForRetryDelay(1000);
     }
   }
 
@@ -450,7 +499,7 @@ function buildSmokeRunCode(config) {
     }
   }
 
-  return { homepage, overflowChecks };
+  return { analyticsRuntime, homepage, overflowChecks };
 }`;
 }
 
@@ -511,18 +560,6 @@ export function getAnalyticsPayloadUrls(url) {
   );
 }
 
-async function hasGaConfigInitInPayload(url, expectedGaId, fetchImpl = fetch) {
-  for (const payloadUrl of getAnalyticsPayloadUrls(url)) {
-    const response = await fetchImpl(payloadUrl).catch(() => null);
-    if (!response?.ok) continue;
-    const text = await response.text();
-    if (hasGaConfigInit(text, expectedGaId)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 export async function verifyAnalyticsSnippet(url, expectedGaId, fetchImpl = fetch) {
   if (!expectedGaId) {
     return;
@@ -535,13 +572,6 @@ export async function verifyAnalyticsSnippet(url, expectedGaId, fetchImpl = fetc
   assert(
     html.includes(`https://www.googletagmanager.com/gtag/js?id=${expectedGaId}`),
     `Expected GA script tag for ${expectedGaId} in ${url}`,
-  );
-  if (hasGaConfigInit(html, expectedGaId)) {
-    return;
-  }
-  assert(
-    await hasGaConfigInitInPayload(url, expectedGaId, fetchImpl),
-    `Expected GA config init for ${expectedGaId} in ${url} or its static payload`,
   );
 }
 
@@ -574,6 +604,7 @@ export async function run() {
     uiRetryCount,
     uiRetryDelayMs,
     waitTimeoutMs,
+    expectedGaId,
   };
   const overflowWorkerCount = getOverflowWorkerCount(mode, config.routes.length, skipOverflow);
   const overflowRouteChunks = chunkOverflowRoutes(config.routes, overflowWorkerCount);
@@ -593,9 +624,44 @@ export async function run() {
     const runSmokeSession = async (smokeConfig, stepLabel) => {
       const context = await browser.newContext();
       const page = await context.newPage();
+      const analyticsNetwork = {
+        failures: [],
+        requests: [],
+        responses: [],
+      };
+      const isAnalyticsUrl = (requestUrl) =>
+        Boolean(smokeConfig.expectedGaId) && /googletagmanager|google-analytics|analytics\.google/.test(requestUrl);
+
+      page.on("request", (request) => {
+        if (isAnalyticsUrl(request.url())) {
+          analyticsNetwork.requests.push({
+            method: request.method(),
+            resourceType: request.resourceType(),
+            url: request.url(),
+          });
+        }
+      });
+      page.on("response", (response) => {
+        if (isAnalyticsUrl(response.url())) {
+          analyticsNetwork.responses.push({
+            status: response.status(),
+            url: response.url(),
+          });
+        }
+      });
+      page.on("requestfailed", (request) => {
+        if (isAnalyticsUrl(request.url())) {
+          analyticsNetwork.failures.push({
+            errorText: request.failure()?.errorText ?? "unknown",
+            url: request.url(),
+          });
+        }
+      });
+
       try {
         const smokeRunner = Function(`return (${buildSmokeRunCode(smokeConfig)});`)();
-        return await smokeRunner(page);
+        const result = await smokeRunner(page);
+        return { ...result, analyticsNetwork };
       } catch (error) {
         throw new Error(`[smoke-ui] ${stepLabel} failed: ${error instanceof Error ? error.message : String(error)}`);
       } finally {
@@ -630,6 +696,39 @@ export async function run() {
     }
     console.log(`[smoke-ui] OK ${summary.title}`);
     console.log(`[smoke-ui] OK table rows=${summary.rows}, knownTicker=${summary.hasKnownTicker}`);
+
+    if (expectedGaId) {
+      const runtime = homepageResult.analyticsRuntime;
+      assert(runtime, `Expected analytics runtime result for ${expectedGaId}`);
+      assert(
+        runtime.gtagType === "function",
+        `Expected window.gtag to be initialized for ${expectedGaId}; got ${runtime.gtagType}`,
+      );
+      assert(
+        runtime.hasExpectedConfig,
+        `Expected dataLayer config event for ${expectedGaId}; runtime=${JSON.stringify(runtime)}`,
+      );
+      assert(
+        runtime.hasPageView,
+        `Expected dataLayer page_view event for ${expectedGaId}; runtime=${JSON.stringify(runtime)}`,
+      );
+
+      const network = homepageResult.analyticsNetwork ?? { failures: [], requests: [], responses: [] };
+      const collectResponses = network.responses.filter((entry) => {
+        if (!entry.url.includes("google-analytics.com/g/collect")) return false;
+        const collectUrl = new URL(entry.url);
+        return collectUrl.searchParams.get("tid") === expectedGaId && collectUrl.searchParams.get("en") === "page_view";
+      });
+      assert(
+        collectResponses.some((entry) => entry.status >= 200 && entry.status < 300),
+        `Expected successful GA4 page_view collect request for ${expectedGaId}; network=${JSON.stringify(network)}`,
+      );
+      assert(
+        network.failures.length === 0,
+        `Found failed analytics request(s) for ${expectedGaId}; failures=${JSON.stringify(network.failures)}`,
+      );
+      console.log(`[smoke-ui] OK analytics runtime ${expectedGaId}`);
+    }
 
     const overflowChecks = [];
     if (!skipOverflow && overflowRouteChunks.length > 0) {

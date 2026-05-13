@@ -39,12 +39,18 @@ export const handleDepegEvents = withErrorHandler(
 
     return buildPaginatedEventResponse<DepegRow, ReturnType<typeof rowToDepegEvent>>(db, {
       tableName: "depeg_events",
-      orderBy: "started_at DESC",
+      orderBy: "started_at DESC, id DESC",
       conditions,
       filterBindings,
       mapRow: rowToDepegEvent,
       searchParams: params,
-      pagination: { defaultLimit: 100, minLimit: 1, maxLimit: 1000 },
+      pagination: { defaultLimit: 100, minLimit: 1, maxLimit: 1000, maxOffset: 50_000 },
+      cursor: {
+        columns: [
+          { column: "started_at", type: "number", direction: "DESC", getValue: (row) => row.started_at },
+          { column: "id", type: "number", direction: "DESC", getValue: (row) => row.id },
+        ],
+      },
       freshness: {
         producerJob: "sync-stablecoins",
         maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegEvents,

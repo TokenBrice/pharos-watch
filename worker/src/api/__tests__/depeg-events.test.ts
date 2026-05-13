@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1, type MockD1Database } from "./helpers/mock-d1";
 import { makeDepegRow } from "./helpers/fixtures";
 import { handleDepegEvents } from "../depeg-events";
 
@@ -83,5 +83,54 @@ describe("handleDepegEvents", () => {
     const res = await handleDepegEvents(mockD1([]), new URL("https://x/api/depeg-events?limit=1001"));
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({ error: "Invalid limit: must be between 1 and 1000" });
+  });
+
+  it("rejects offsets above the endpoint cap", async () => {
+    const res = await handleDepegEvents(mockD1([]), new URL("https://x/api/depeg-events?offset=50001"));
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid offset: must be between 0 and 50000" });
+  });
+
+  it("can skip the exact total count for cursor-style callers", async () => {
+    const db = mockD1([
+      { match: "depeg_events", rows: [row] },
+    ]) as MockD1Database;
+
+    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?includeTotal=false"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { events: unknown[]; total: number; totalExact: boolean };
+    expect(body.events).toHaveLength(1);
+    expect(body.total).toBe(1);
+    expect(body.totalExact).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("COUNT(*) as total"))).toBe(false);
+  });
+
+  it("emits and accepts a keyset cursor", async () => {
+    const first = makeDepegRow({ id: 3, started_at: 1_700_000_003 });
+    const second = makeDepegRow({ id: 2, started_at: 1_700_000_002 });
+    const db = mockD1([
+      { match: "depeg_events", rows: [first, second] },
+    ]) as MockD1Database;
+
+    const firstRes = await handleDepegEvents(db, new URL("https://x/api/depeg-events?limit=1&includeTotal=false"));
+    const firstBody = (await firstRes.json()) as { events: unknown[]; nextCursor: string | null };
+    expect(firstBody.events).toHaveLength(1);
+    expect(firstBody.nextCursor).toBeTypeOf("string");
+
+    const cursorDb = mockD1([
+      { match: "depeg_events", rows: [second] },
+    ]) as MockD1Database;
+    const cursorRes = await handleDepegEvents(
+      cursorDb,
+      new URL(`https://x/api/depeg-events?limit=1&includeTotal=false&cursor=${firstBody.nextCursor}`),
+    );
+
+    expect(cursorRes.status).toBe(200);
+    const dataQuery = cursorDb.getHistory().find((entry) => entry.sql.includes("FROM depeg_events"));
+    expect(dataQuery?.sql).toContain("started_at < ?");
+    expect(dataQuery?.sql).toContain("id < ?");
+    expect(dataQuery?.binds).toContain(first.started_at);
+    expect(dataQuery?.binds).toContain(first.id);
   });
 });

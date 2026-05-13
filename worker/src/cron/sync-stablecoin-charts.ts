@@ -168,11 +168,15 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
   }
 
   throwIfAborted(signal);
+  let supplementalHistoryChunks = 0;
+  let supplementalHistoryMaxBindCount = 0;
   if (STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.length > 0) {
     const supplementalIds = STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map((config) => config.id);
     const overlayRows: SupplyHistoryChartRow[] = [];
     for (const idChunk of chunkArray(supplementalIds, SUPPLEMENTAL_HISTORY_IN_CHUNK_SIZE)) {
       const supplementalIn = buildInClause(idChunk);
+      supplementalHistoryChunks++;
+      supplementalHistoryMaxBindCount = Math.max(supplementalHistoryMaxBindCount, supplementalIn.binds.length);
       const overlayRowsResult = await db
         .prepare(
           `SELECT stablecoin_id, snapshot_date, circulating_usd
@@ -237,6 +241,8 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
       rawPoints: normalizedRaw.length,
       downsampledPoints: downsampled.length,
       fxFixes: fixes,
+      supplementalHistoryChunks,
+      supplementalHistoryMaxBindCount,
       cacheKey: "stablecoin-charts",
       syncStartSec,
       cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",

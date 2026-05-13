@@ -5,6 +5,7 @@ import {
 } from "../lib/alert-safety-source-cache";
 import { setCache } from "../lib/db-cache";
 import { writeReportCardCache } from "../lib/report-card-cache";
+import { writePublishedReportCardsSnapshot } from "../lib/report-cards-snapshot-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { FROZEN_IDS } from "@shared/lib/stablecoins";
 
@@ -23,6 +24,7 @@ export async function publishReportCardCache(
   }
 
   const writableCards = snapshot.cards.filter((card) => !FROZEN_IDS.has(card.id));
+  await writePublishedReportCardsSnapshot(db, snapshot);
   const { writtenCount } = await writeReportCardCache(db, writableCards, snapshot.updatedAt);
   await setCache(
     db,
@@ -38,6 +40,7 @@ export async function publishReportCardCache(
     itemCount: writtenCount,
     metadata: JSON.stringify({
       updatedAt: snapshot.updatedAt,
+      snapshotCards: snapshot.cards.length,
       liquidityStale: snapshot.liquidityStale,
       redemptionStale: snapshot.redemptionStale,
     }),

@@ -5,16 +5,27 @@ import {
   buildReportCardsSnapshot,
   ReportCardsSnapshotUnavailableError,
 } from "../lib/report-cards-snapshot";
+import { loadPublishedReportCardsSnapshot } from "../lib/report-cards-snapshot-cache";
+import type { ReportCardsResponse } from "@shared/types/report-cards";
 
 export const handleReportCards = withErrorHandler("report-cards", async (db: D1Database): Promise<Response> => {
-  let snapshot;
-  try {
-    snapshot = await buildReportCardsSnapshot(db);
-  } catch (err) {
-    if (err instanceof ReportCardsSnapshotUnavailableError) {
-      return errorResponse(503, err.message);
+  const cached = await loadPublishedReportCardsSnapshot(db);
+  let snapshot: ReportCardsResponse;
+  if (cached.kind === "ok") {
+    snapshot = cached.payload;
+  } else {
+    console.warn(
+      `[report-cards] Published snapshot unavailable; computing on read reason=${cached.reason}` +
+      (cached.updatedAt != null ? ` updatedAt=${cached.updatedAt}` : ""),
+    );
+    try {
+      snapshot = await buildReportCardsSnapshot(db);
+    } catch (err) {
+      if (err instanceof ReportCardsSnapshotUnavailableError) {
+        return errorResponse(503, err.message);
+      }
+      throw err;
     }
-    throw err;
   }
 
   return jsonFreshResponse(snapshot, {

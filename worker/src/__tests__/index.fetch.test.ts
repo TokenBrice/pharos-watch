@@ -651,6 +651,7 @@ describe("worker.fetch", () => {
 
     const warmEnv = makeEnv({
       DB: mockD1(await validKeyDbTables(), { requireMatch: true }),
+      REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
     });
     const { ctx: warmCtx, waits: warmWaits } = makeExecutionContext();
 
@@ -669,6 +670,7 @@ describe("worker.fetch", () => {
     vi.advanceTimersByTime(getApiKeyAuthCacheTtlMs() + 1);
 
     const degradedEnv = makeEnv({
+      REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
       DB: mockD1([
         {
           match: "FROM api_keys",

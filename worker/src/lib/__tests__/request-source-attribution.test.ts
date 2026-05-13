@@ -12,6 +12,7 @@ import {
   API_REQUEST_SOURCE_STATS_RETENTION_DAYS,
   buildApiRequestAttributionKeyedPublicApiSummary,
   buildApiRequestAttributionSplit,
+  isRequestSourceAttributionDisabled,
   mapApiKeyStatsRows,
   recordApiKeyRequestAttribution,
   mapLaneStatsRows,
@@ -220,7 +221,14 @@ describe("request-source-attribution", () => {
     expect(API_REQUEST_SOURCE_STATS_RETENTION_DAYS).toBe(REQUEST_ATTRIBUTION_RETENTION_DAYS);
   });
 
-  it("records stats rows and schedules prune only once per prune bucket", async () => {
+  it("parses the route/source attribution kill switch", () => {
+    expect(isRequestSourceAttributionDisabled({ REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true" })).toBe(true);
+    expect(isRequestSourceAttributionDisabled({ REQUEST_SOURCE_ATTRIBUTION_DISABLED: "1" })).toBe(true);
+    expect(isRequestSourceAttributionDisabled({ REQUEST_SOURCE_ATTRIBUTION_DISABLED: "false" })).toBe(false);
+    expect(isRequestSourceAttributionDisabled({})).toBe(false);
+  });
+
+  it("batches same-minute stats rows and schedules prune only once per prune bucket", async () => {
     const db = mockD1([
       {
         match: "INSERT INTO api_request_consumer_stats",
@@ -239,28 +247,30 @@ describe("request-source-attribution", () => {
       },
     ], { requireMatch: true });
 
-    await recordWorkerRequestAttribution(
-      db,
-      { routeKey: "stablecoins", routePath: "/api/stablecoins" },
-      "public-api",
-      "site",
-      1_710_000_000,
-    );
-    await recordWorkerRequestAttribution(
-      db,
-      { routeKey: "stablecoins", routePath: "/api/stablecoins" },
-      "public-api",
-      "site",
-      1_710_000_030,
-    );
+    await Promise.all([
+      recordWorkerRequestAttribution(
+        db,
+        { routeKey: "stablecoins", routePath: "/api/stablecoins" },
+        "public-api",
+        "site",
+        1_710_000_000,
+      ),
+      recordWorkerRequestAttribution(
+        db,
+        { routeKey: "stablecoins", routePath: "/api/stablecoins" },
+        "public-api",
+        "site",
+        1_710_000_030,
+      ),
+    ]);
 
     const history = db.getHistory();
     const insertStatements = history.filter((entry) => entry.sql.includes("INSERT INTO api_request_consumer_stats"));
     const pruneStatements = history.filter((entry) => entry.sql.includes("DELETE FROM api_request_consumer_stats"));
     const apiKeyPruneStatements = history.filter((entry) => entry.sql.includes("DELETE FROM api_key_request_stats"));
 
-    expect(insertStatements).toHaveLength(2);
-    expect(insertStatements[0]?.binds.slice(1)).toEqual(["stablecoins", "/api/stablecoins", "public-api", "site"]);
+    expect(insertStatements).toHaveLength(1);
+    expect(insertStatements[0]?.binds.slice(1)).toEqual(["stablecoins", "/api/stablecoins", "public-api", "site", 2]);
     expect(pruneStatements).toHaveLength(1);
     expect(apiKeyPruneStatements).toHaveLength(1);
   });

@@ -68,6 +68,17 @@ export function createFreshCacheHitResponse(cachedValue: string, ageSeconds: num
   );
 }
 
+export function createStaleCacheHitResponse(cachedValue: string, ageSeconds: number): Response {
+  return new Response(cachedValue, {
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": CACHE_PROFILES.realtime,
+      "X-Data-Age": String(Math.max(0, ageSeconds)),
+      "Warning": "110 - \"Stablecoin detail cache is stale; refresh scheduled\"",
+    },
+  });
+}
+
 function createFreshUpstreamResponse(body: string): Response {
   return createJsonResponse(body, buildPerCoinCacheControl(CACHE_TTL_SECONDS));
 }

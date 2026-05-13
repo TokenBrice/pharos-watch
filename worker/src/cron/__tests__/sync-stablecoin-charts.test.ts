@@ -172,6 +172,18 @@ describe("syncStablecoinCharts", () => {
 
     const result = await syncStablecoinCharts(db);
     expect(result.status).toBeUndefined();
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      supplementalHistoryChunks: number;
+      supplementalHistoryMaxBindCount: number;
+    };
+    expect(metadata.supplementalHistoryChunks).toBeGreaterThan(1);
+    expect(metadata.supplementalHistoryMaxBindCount).toBeLessThanOrEqual(90);
+
+    const supplyHistoryQueries = (db as MockD1Database)
+      .getHistory()
+      .filter((entry) => entry.sql.includes("FROM supply_history"));
+    expect(supplyHistoryQueries.length).toBe(metadata.supplementalHistoryChunks);
+    expect(Math.max(...supplyHistoryQueries.map((entry) => entry.binds.length))).toBeLessThanOrEqual(90);
 
     const insert = getCacheInsert(db as MockD1Database);
     const cached = JSON.parse(String(insert?.binds[1])) as Array<{ totalCirculatingUSD: Record<string, number> }>;

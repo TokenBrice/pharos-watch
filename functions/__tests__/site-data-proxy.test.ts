@@ -30,7 +30,13 @@ function makeTestDb(): TestD1Database {
 
   return {
     prepare: (sql: string) => buildStatement(sql),
-    batch: async () => [],
+    batch: async (statements: D1PreparedStatement[]) => {
+      const results: unknown[] = [];
+      for (const statement of statements) {
+        results.push(await statement.run());
+      }
+      return results as Awaited<ReturnType<D1Database["batch"]>>;
+    },
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
     getHistory: () => history.map((entry) => ({ sql: entry.sql, binds: [...entry.binds] })),
@@ -241,7 +247,64 @@ describe("site-data proxy", () => {
       && entry.binds[1] === "stablecoin-summary"
       && entry.binds[2] === "/api/stablecoin-summary/:id"
       && entry.binds[3] === "pages-upstream-fetch"
-      && entry.binds[4] === "site-api")).toBe(true);
+      && entry.binds[4] === "site-api"
+      && entry.binds[5] === 1)).toBe(true);
+  });
+
+  it("records site-data attribution through waitUntil when the Pages DB binding is present", async () => {
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, max-age=60",
+        "Content-Type": "application/json",
+      },
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+    const db = makeTestDb();
+    const ctx = makeWaitUntil();
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoin/usdt-tether", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(db),
+      params: { path: ["stablecoin", "usdt-tether"] },
+      waitUntil: ctx.waitUntil,
+    });
+
+    expect(response.status).toBe(200);
+    expect(ctx.waitUntil).toHaveBeenCalled();
+
+    await ctx.flush();
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO site_data_request_stats")
+      && entry.binds[1] === "stablecoin-detail"
+      && entry.binds[2] === "/api/stablecoin/:id"
+      && entry.binds[3] === "pages-upstream-fetch"
+      && entry.binds[4] === "site-api"
+      && entry.binds[5] === 1)).toBe(true);
+  });
+
+  it("honors the route/source attribution kill switch for Pages site-data requests", async () => {
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, max-age=60",
+        "Content-Type": "application/json",
+      },
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+    const db = makeTestDb();
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(db, { REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true" }),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO site_data_request_stats"))).toBe(false);
   });
 
   it("returns the upstream response when the background Pages cache write fails", async () => {

@@ -65,7 +65,7 @@ Markdown variants are generated for `/methodology/`, methodology changelogs, `/c
 
 `npm run audit:pricing-providers` checks the configured CEX and RedStone provider contracts against live metadata and is covered by mocked unit tests for success, regional blocking, provider drift, non-OK responses, and malformed metadata shapes. Optional live source-shape probes can be run with `tsx scripts/audit-pricing-provider-config.ts --live-source-shapes`; this adds Jupiter V3 shape validation and, when `CMC_API_KEY` is set, a CoinMarketCap category shape check. Stablecoins sync metadata also emits `pricingSourceAuditReport`, which summarizes source distribution risks such as missing prices, fallback/cache reliance, low-confidence pricing, assets without an independent hard source, and structured provider rejection counts.
 
-When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` also verifies that the homepage artifact includes the expected GA script tag and `gtag('config', ...)` initialization before it runs the browser checks. The config init may live in the root static RSC payload (`/index.txt`) on newer Next.js static exports rather than directly in `index.html`.
+When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` first verifies that the homepage artifact includes the expected GA script tag, then the browser smoke verifies runtime analytics initialization: `window.gtag`, the expected `config` entry, the `page_view` entry, and a successful GA4 `page_view` collect request.
 
 ## CI Pipeline
 
@@ -118,7 +118,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - waits for the aggregate `validate / validate` job before publishing to Cloudflare Pages production
    - captures the current production Pages deployment id best-effort, publishes the verified local artifact with the Wrangler retry loop, and then runs live public UI, ops, and transport smokes in parallel inside the same job; the live UI smoke is homepage/GA/data-state only because the full overflow sweep already ran against the exact local artifact
    - rolls Pages production back to the captured previous deployment when the live public UI smoke fails and a previous deployment id was available
-   - when `SMOKE_UI_EXPECT_GA_ID` is configured, that smoke step also verifies the built homepage artifact still contains the expected GA snippet
+   - when `SMOKE_UI_EXPECT_GA_ID` is configured, that smoke step verifies the built homepage artifact contains the expected GA script and that the browser emits a successful GA4 `page_view` collect request
 7. `smoke-ops`:
 
 - Run `npm run test:smoke-ops`

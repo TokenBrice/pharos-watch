@@ -136,7 +136,14 @@ export const handleMintBurnEvents = withErrorHandler(
         priceSource: row.price_source,
       }),
       searchParams: params,
-      pagination: { defaultLimit: 50, minLimit: 1, maxLimit: 500 },
+      pagination: { defaultLimit: 50, minLimit: 1, maxLimit: 500, maxOffset: 25_000 },
+      cursor: {
+        columns: [
+          { column: "timestamp", type: "number", direction: "DESC", getValue: (row) => row.timestamp },
+          { column: "block_number", type: "number", direction: "DESC", getValue: (row) => row.block_number },
+          { column: "id", type: "string", direction: "DESC", getValue: (row) => row.id },
+        ],
+      },
       freshness: {
         producerJob: "sync-mint-burn",
         maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnEvents,

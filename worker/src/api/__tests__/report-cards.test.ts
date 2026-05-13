@@ -1,7 +1,33 @@
 import { describe, it, expect } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1, type MockD1Database } from "./helpers/mock-d1";
 import { makeAsset, makeReportCardsDb } from "./helpers/fixtures";
 import { handleReportCards } from "../report-cards";
+
+function makeCachedSnapshot(updatedAt = Math.floor(Date.now() / 1000)) {
+  return {
+    cards: [],
+    methodology: {
+      version: "7.09",
+      weights: {
+        pegStability: 0.3,
+        liquidity: 0.25,
+        resilience: 0.2,
+        decentralization: 0.15,
+        dependencyRisk: 0.1,
+      },
+      pegMultiplierExponent: 1.15,
+      thresholds: [{ grade: "A", min: 85 }],
+    },
+    dependencyGraph: { edges: [] },
+    updatedAt,
+    liquidityStale: false,
+    redemptionStale: false,
+    inputFreshness: {
+      dexLiquidity: { updatedAt, ageSeconds: 0, stale: false },
+      redemptionBackstops: { updatedAt, ageSeconds: 0, stale: false },
+    },
+  };
+}
 
 describe("handleReportCards", () => {
   it("returns 503 when stablecoins cache is missing", async () => {
@@ -30,6 +56,31 @@ describe("handleReportCards", () => {
     expect(body.methodology).toHaveProperty("thresholds");
     expect(Array.isArray(body.cards)).toBe(true);
     expect(Array.isArray(body.dependencyGraph.edges)).toBe(true);
+  });
+
+  it("serves the published snapshot without recomputing the report cards", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [
+          {
+            key: "report-cards:snapshot",
+            value: JSON.stringify(makeCachedSnapshot(updatedAt)),
+            updated_at: updatedAt,
+          },
+        ],
+      },
+    ]) as MockD1Database;
+
+    const res = await handleReportCards(db);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { cards: unknown[]; updatedAt: number };
+    expect(body.cards).toEqual([]);
+    expect(body.updatedAt).toBe(updatedAt);
+    expect(db.getHistory().some((entry) => entry.sql.includes("dex_liquidity"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("depeg_events"))).toBe(false);
   });
 
   it("includes cards with expected dimensions", async () => {

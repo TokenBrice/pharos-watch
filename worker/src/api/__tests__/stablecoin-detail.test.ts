@@ -26,12 +26,20 @@ vi.mock("../../lib/fetch-retry", () => ({
 
 const { handleStablecoinDetail } = await import("../stablecoin-detail");
 
+type TestExecutionContext = ExecutionContext & {
+  waitUntilPromises: Promise<unknown>[];
+};
+
 /** Minimal ExecutionContext stub that captures waitUntil calls */
-function makeCtx(): ExecutionContext {
+function makeCtx(): TestExecutionContext {
+  const waitUntilPromises: Promise<unknown>[] = [];
   return {
-    waitUntil: vi.fn(),
+    waitUntil: vi.fn((promise: Promise<unknown>) => {
+      waitUntilPromises.push(Promise.resolve(promise));
+    }),
     passThroughOnException: vi.fn(),
-  } as unknown as ExecutionContext;
+    waitUntilPromises,
+  } as unknown as TestExecutionContext;
 }
 
 /** Helper to build a DefiLlama-style detail response body */
@@ -130,7 +138,7 @@ describe("handleStablecoinDetail", () => {
     expect(ctx.waitUntil).toHaveBeenCalled();
   });
 
-  it("refreshes from upstream when cache is stale and upstream succeeds", async () => {
+  it("serves stale cache immediately and refreshes in the background", async () => {
     const staleCachedValue = makeDLDetailBody({ tokens: [
       { date: 1690000000, totalCirculatingUSD: { peggedUSD: 80_000_000 }, totalCirculating: { peggedUSD: 80_000_000 } },
     ] });
@@ -153,13 +161,13 @@ describe("handleStablecoinDetail", () => {
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     expect(res.status).toBe(200);
-    // Should use fresh upstream data, not the stale cache
-    expect(fetchSpy).toHaveBeenCalled();
+    expect(res.headers.get("Warning")).toContain("refresh scheduled");
     const body = (await res.json()) as { tokens: Array<{ totalCirculatingUSD?: Record<string, number> }> };
     expect(body.tokens).toHaveLength(1);
-    expect(body.tokens[0]?.totalCirculatingUSD?.peggedUSD).toBe(120_000_000);
-    // Should queue a cache write with the fresh data
+    expect(body.tokens[0]?.totalCirculatingUSD?.peggedUSD).toBe(80_000_000);
     expect(ctx.waitUntil).toHaveBeenCalled();
+    await Promise.allSettled(ctx.waitUntilPromises);
+    expect(fetchSpy).toHaveBeenCalled();
   });
 
   it("returns stale cache when upstream fails but cache exists", async () => {
@@ -182,6 +190,7 @@ describe("handleStablecoinDetail", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { tokens: unknown[] };
     expect(body.tokens).toHaveLength(1);
+    await Promise.allSettled(ctx.waitUntilPromises);
   });
 
   it("returns stale cache on upstream timeout when cache exists", async () => {
@@ -203,6 +212,34 @@ describe("handleStablecoinDetail", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { tokens: unknown[] };
     expect(body.tokens).toHaveLength(1);
+    await Promise.allSettled(ctx.waitUntilPromises);
+  });
+
+  it("deduplicates concurrent stale refreshes for the same coin", async () => {
+    const cachedValue = makeDLDetailBody();
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [],
+        first: { value: cachedValue, updated_at: now - 900 },
+      },
+    ]);
+    let resolveFetch!: (response: Response) => void;
+    fetchSpy.mockReturnValue(new Promise<Response>((resolve) => {
+      resolveFetch = resolve;
+    }));
+
+    const ctxA = makeCtx();
+    const ctxB = makeCtx();
+    const resA = await handleStablecoinDetail(db, "usdt-tether", ctxA);
+    const resB = await handleStablecoinDetail(db, "usdt-tether", ctxB);
+
+    expect(resA.status).toBe(200);
+    expect(resB.status).toBe(200);
+    resolveFetch(new Response(makeDLDetailBody({ price: 1 }), { status: 200 }));
+    await Promise.allSettled([...ctxA.waitUntilPromises, ...ctxB.waitUntilPromises]);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("calls ctx.waitUntil to cache the response", async () => {
@@ -294,7 +331,7 @@ describe("handleStablecoinDetail", () => {
     expect(await res.json()).toEqual({ error: "Failed to fetch commodity token data" });
   });
 
-  it("logs parse failure context and returns stale cache when detail JSON is invalid", async () => {
+  it("logs parse failure context during stale background refresh", async () => {
     const cachedValue = makeDLDetailBody();
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
@@ -312,6 +349,7 @@ describe("handleStablecoinDetail", () => {
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     expect(res.status).toBe(200);
+    await Promise.allSettled(ctx.waitUntilPromises);
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("source=defillama-stablecoin-detail-parse"));
     errorSpy.mockRestore();
   });

@@ -163,15 +163,12 @@ describe("chunkOverflowRoutes", () => {
 });
 
 describe("verifyAnalyticsSnippet", () => {
-  it("accepts GA config init from the root static RSC payload", async () => {
+  it("accepts the GA script tag before runtime analytics checks run", async () => {
     const fetchMock = async (url: string) => {
       if (url === "https://pharos.watch/") {
         return new Response(
           '<link rel="preload" href="https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04" as="script"/>',
         );
-      }
-      if (url === "https://pharos.watch/index.txt") {
-        return new Response("gtag('config', \\\"G-6TS0KG8H04\\\");");
       }
       return new Response("not found", { status: 404 });
     };

@@ -15,6 +15,7 @@ import {
 } from "../lib/api-utils";
 import { CACHE_PROFILES, DEFAULT_SAFETY_SCORE } from "../lib/constants";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
+import { loadPublishedReportCardsSnapshot } from "../lib/report-cards-snapshot-cache";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { normalizeStablecoinChartPoints } from "../lib/stablecoin-charts-payload";
 import {
@@ -225,8 +226,16 @@ export const handleYieldRankings = createCacheHandler(
     transform: async (payload, { db, cached }) => {
       const validatedPayload = payload as YieldRankingsResponse;
       try {
-        const snapshot = await buildReportCardsSnapshot(db);
-        const hydrated = hydrateYieldRankingsWithLiveSafety(validatedPayload, snapshot.cards);
+        const publishedSnapshot = await loadPublishedReportCardsSnapshot(db);
+        const cards = publishedSnapshot.kind === "ok"
+          ? publishedSnapshot.payload.cards
+          : (await buildReportCardsSnapshot(db)).cards;
+        if (publishedSnapshot.kind !== "ok") {
+          console.warn(
+            `[yield-rankings] Published report-card snapshot unavailable; computed fallback reason=${publishedSnapshot.reason}`,
+          );
+        }
+        const hydrated = hydrateYieldRankingsWithLiveSafety(validatedPayload, cards);
         if (hydrated.degradationReasons.length > 0) {
           return buildYieldRankingsResponse(hydrated.payload, cached, hydrated.degradationReasons);
         }

@@ -1,6 +1,7 @@
 import { classifyBrowserRequestConsumer, resolveApiRequestRouteMetric } from "@shared/lib/request-attribution";
 import type { ApiKeyTrafficClass } from "@shared/types";
 import {
+  isRequestSourceAttributionDisabled,
   recordApiKeyRequestAttribution,
   recordWorkerRequestAttribution,
 } from "../../lib/request-source-attribution";
@@ -15,6 +16,7 @@ export function createRequestSourceRecorder(config: {
   apiKeyTrafficClass: ApiKeyTrafficClass | null;
   requestLane: "public-api" | "site-api" | null;
   pathname: string;
+  attributionDisabled?: boolean;
 }): () => void {
   if (config.isAdmin || !config.requestLane) {
     return () => {};
@@ -26,7 +28,7 @@ export function createRequestSourceRecorder(config: {
   }
 
   if (config.requestLane === "site-api") {
-    if (!config.isSiteProxy) {
+    if (!config.isSiteProxy || config.attributionDisabled) {
       return () => {};
     }
 
@@ -40,12 +42,18 @@ export function createRequestSourceRecorder(config: {
   const consumerClass =
     config.apiKeyTrafficClass ?? classifyBrowserRequestConsumer(config.request);
   return () => {
-    const attributionWrites: Promise<void>[] = [
-      recordWorkerRequestAttribution(config.db, route, "public-api", consumerClass),
-    ];
+    const attributionWrites: Promise<void>[] = [];
+    if (!config.attributionDisabled) {
+      attributionWrites.push(recordWorkerRequestAttribution(config.db, route, "public-api", consumerClass));
+    }
     if (config.apiKeyId != null) {
       attributionWrites.push(recordApiKeyRequestAttribution(config.db, config.apiKeyId));
+    }
+    if (attributionWrites.length === 0) {
+      return;
     }
     config.execCtx.waitUntil(Promise.all(attributionWrites).then(() => {}));
   };
 }
+
+export { isRequestSourceAttributionDisabled };

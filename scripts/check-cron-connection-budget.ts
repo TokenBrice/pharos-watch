@@ -1,15 +1,19 @@
-import { CRON_CONNECTION_BUDGET, CRON_JOB_DEFINITIONS } from "../shared/lib/cron-jobs";
+import { CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES } from "../shared/lib/cron-jobs";
 
 // Group jobs by their schedule key (which maps to a cron trigger).
-const jobsByTrigger = new Map<string, { job: string; maxConnections: number; connectionGroup: string }[]>();
+const jobsByTrigger = new Map<
+  string,
+  { job: string; maxConnections: number; connectionGroup: string; statusTracked: boolean }[]
+>();
 
-for (const def of CRON_JOB_DEFINITIONS) {
+for (const def of CRON_CONNECTION_BUDGET_ENTRIES) {
   const key = def.scheduleKey;
   if (!jobsByTrigger.has(key)) jobsByTrigger.set(key, []);
   jobsByTrigger.get(key)!.push({
     job: def.job,
-    maxConnections: def.maxConnections ?? 0,
+    maxConnections: def.maxConnections,
     connectionGroup: def.connectionGroup ?? def.job,
+    statusTracked: def.statusTracked,
   });
 }
 
@@ -21,7 +25,13 @@ const headroomFullTriggers: {
 }[] = [];
 
 function pluralize(count: number, singular: string): string {
-  return `${count} ${singular}${count === 1 ? "" : "s"}`;
+  if (count === 1) return `${count} ${singular}`;
+  if (singular.endsWith("y")) return `${count} ${singular.slice(0, -1)}ies`;
+  return `${count} ${singular}s`;
+}
+
+function formatJob(job: { job: string; statusTracked: boolean }): string {
+  return job.statusTracked ? job.job : `${job.job} [budget-only]`;
 }
 
 for (const [scheduleKey, jobs] of jobsByTrigger) {
@@ -29,7 +39,7 @@ for (const [scheduleKey, jobs] of jobsByTrigger) {
   for (const job of jobs) {
     const group = groups.get(job.connectionGroup) ?? { peak: 0, jobs: [] };
     group.peak = Math.max(group.peak, job.maxConnections);
-    group.jobs.push(job.job);
+    group.jobs.push(formatJob(job));
     groups.set(job.connectionGroup, group);
   }
   const totalConnections = Array.from(groups.values()).reduce((sum, group) => sum + group.peak, 0);
@@ -48,7 +58,7 @@ for (const [scheduleKey, jobs] of jobsByTrigger) {
       headroomFullTriggers.push({ scheduleKey, totalConnections, groups });
     }
     console.log(
-      `${headroomFull ? "HEADROOM FULL" : "OK"}: "${scheduleKey}" — ${totalConnections}/${CRON_CONNECTION_BUDGET.maxPerTrigger} connections (${pluralize(groups.size, "group")}, ${pluralize(jobs.length, "job")})`,
+      `${headroomFull ? "HEADROOM FULL" : "OK"}: "${scheduleKey}" — ${totalConnections}/${CRON_CONNECTION_BUDGET.maxPerTrigger} connections (${pluralize(groups.size, "group")}, ${pluralize(jobs.length, "budget entry")})`,
     );
   }
 }
@@ -68,5 +78,8 @@ if (failed) {
       }
     }
   }
-  console.log(`\nAll ${jobsByTrigger.size} triggers within connection budget.`);
+  const budgetOnlyCount = CRON_CONNECTION_BUDGET_ENTRIES.filter((entry) => !entry.statusTracked).length;
+  console.log(
+    `\nAll ${jobsByTrigger.size} triggers within connection budget (${pluralize(budgetOnlyCount, "budget-only entry")} included).`,
+  );
 }

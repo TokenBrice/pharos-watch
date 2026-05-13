@@ -206,6 +206,66 @@ describe("handleMintBurnEvents", () => {
     await expect(res.json()).resolves.toEqual({ error: "Invalid limit: must be between 1 and 500" });
   });
 
+  it("rejects offsets above the endpoint cap", async () => {
+    const db = mockD1([]);
+    const res = await handleMintBurnEvents(
+      db,
+      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&offset=25001"),
+    );
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid offset: must be between 0 and 25000" });
+  });
+
+  it("can skip exact total counts for cursor-style callers", async () => {
+    const db = mockD1([
+      { match: "mint_burn_events", rows: [row] },
+    ]) as MockD1Database;
+
+    const res = await handleMintBurnEvents(
+      db,
+      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&includeTotal=false"),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { events: unknown[]; total: number; totalExact: boolean };
+    expect(body.events).toHaveLength(1);
+    expect(body.total).toBe(1);
+    expect(body.totalExact).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("COUNT(*) as total"))).toBe(false);
+  });
+
+  it("emits and accepts a keyset cursor", async () => {
+    const first = makeMintBurnRow({ id: "mb-3", timestamp: 1_700_000_003, block_number: 103 });
+    const second = makeMintBurnRow({ id: "mb-2", timestamp: 1_700_000_002, block_number: 102 });
+    const db = mockD1([
+      { match: "mint_burn_events", rows: [first, second] },
+    ]) as MockD1Database;
+
+    const firstRes = await handleMintBurnEvents(
+      db,
+      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&limit=1&includeTotal=false"),
+    );
+    const firstBody = (await firstRes.json()) as { nextCursor: string | null };
+    expect(firstBody.nextCursor).toBeTypeOf("string");
+
+    const cursorDb = mockD1([
+      { match: "mint_burn_events", rows: [second] },
+    ]) as MockD1Database;
+    const cursorRes = await handleMintBurnEvents(
+      cursorDb,
+      new URL(`https://x/api/mint-burn-events?stablecoin=usdt-tether&limit=1&includeTotal=false&cursor=${firstBody.nextCursor}`),
+    );
+
+    expect(cursorRes.status).toBe(200);
+    const dataQuery = cursorDb.getHistory().find((entry) => entry.sql.includes("FROM mint_burn_events"));
+    expect(dataQuery?.sql).toContain("timestamp < ?");
+    expect(dataQuery?.sql).toContain("block_number < ?");
+    expect(dataQuery?.sql).toContain("id < ?");
+    expect(dataQuery?.binds).toContain(first.timestamp);
+    expect(dataQuery?.binds).toContain(first.block_number);
+    expect(dataQuery?.binds).toContain(first.id);
+  });
+
   it("includes X-Data-Age header", async () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },

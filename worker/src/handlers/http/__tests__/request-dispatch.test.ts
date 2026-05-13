@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   createEdgeCacheContext: vi.fn(),
   readEdgeCache: vi.fn(),
   writeEdgeCache: vi.fn(),
+  isRequestSourceAttributionDisabled: vi.fn(() => false),
   evaluateAccessGate: vi.fn(),
   handleMaintenanceMode: vi.fn(),
   notFoundResponse: vi.fn(),
@@ -35,6 +36,7 @@ vi.mock("../../../router", () => ({
 
 vi.mock("../request-source", () => ({
   createRequestSourceRecorder: mocks.createRequestSourceRecorder,
+  isRequestSourceAttributionDisabled: mocks.isRequestSourceAttributionDisabled,
 }));
 
 vi.mock("../cors", () => ({
@@ -92,6 +94,7 @@ describe("handleHttpRequestImpl", () => {
       response: null,
     });
     mocks.createRequestSourceRecorder.mockReturnValue(mocks.recordRequestSource);
+    mocks.isRequestSourceAttributionDisabled.mockReturnValue(false);
     mocks.createEdgeCacheContext.mockReturnValue({ cacheKey: new Request("https://api.pharos.watch/api/stablecoins"), skipCache: false });
     mocks.readEdgeCache.mockResolvedValue(null);
     mocks.getRouteDependencies.mockReturnValue(["coingeckoApiKey"]);

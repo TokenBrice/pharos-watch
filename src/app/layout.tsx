@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Header } from "@/components/header";
@@ -7,6 +6,7 @@ import { Sidebar, SidebarProvider, SidebarSpacer } from "@/components/sidebar";
 import { Footer } from "@/components/footer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { FeedbackButton } from "@/components/feedback-button";
+import { GoogleAnalytics } from "@/components/google-analytics";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
 import { RegimeBar } from "@/components/regime-bar";
 import { RouteChrome } from "@/components/route-chrome";
@@ -69,25 +69,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href={API_URL} />
+        {gaId && <link rel="preload" href={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} as="script" />}
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {gaId && (
-          <>
-            <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy="afterInteractive" />
-            <Script id="gtag-init" strategy="afterInteractive">
-              {`window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                var pharosPagePath = window.location.pathname + window.location.search;
-                gtag('config', ${JSON.stringify(gaId)}, { send_page_view: false });
-                gtag('event', 'page_view', {
-                  page_path: pharosPagePath,
-                  page_location: window.location.origin + pharosPagePath,
-                  page_title: document.title
-                });`}
-            </Script>
-          </>
-        )}
+        {gaId && <GoogleAnalytics measurementId={gaId} />}
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"

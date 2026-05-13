@@ -5,8 +5,68 @@ import {
   CACHE_TTL_SECONDS,
   createDetailResponseHelpers,
   createFreshCacheHitResponse,
+  createStaleCacheHitResponse,
 } from "./stablecoin-detail/shared";
 import { routeStablecoinDetail } from "./stablecoin-detail/router";
+
+const detailRefreshesInFlight = new Map<string, Promise<Response>>();
+
+function startStablecoinDetailRefresh(config: {
+  db: D1Database;
+  id: string;
+  pegType: string;
+  cached: { value: string; updatedAt: number } | null;
+  ctx: ExecutionContext;
+  coingeckoApiKey?: string | null;
+}): Promise<Response> {
+  const cacheKey = `detail:${config.id}`;
+  const existing = detailRefreshesInFlight.get(cacheKey);
+  if (existing) return existing;
+
+  const refresh = (async () => {
+    const detail = createDetailResponseHelpers({
+      db: config.db,
+      stablecoinId: config.id,
+      pegType: config.pegType,
+      cached: config.cached,
+      execCtx: config.ctx,
+    });
+    return routeStablecoinDetail(
+      {
+        db: config.db,
+        stablecoinId: config.id,
+        pegType: config.pegType,
+        coingeckoApiKey: config.coingeckoApiKey,
+      },
+      detail,
+    );
+  })().finally(() => {
+    detailRefreshesInFlight.delete(cacheKey);
+  });
+
+  detailRefreshesInFlight.set(cacheKey, refresh);
+  return refresh;
+}
+
+function scheduleStablecoinDetailRefresh(config: {
+  db: D1Database;
+  id: string;
+  pegType: string;
+  cached: { value: string; updatedAt: number };
+  ctx: ExecutionContext;
+  coingeckoApiKey?: string | null;
+}): void {
+  const refresh = startStablecoinDetailRefresh(config);
+  config.ctx.waitUntil(
+    refresh
+      .then((response) => response.body?.cancel().catch(() => undefined))
+      .catch((err) => {
+        console.warn(
+          `[detail] background refresh failed stablecoin=${config.id} error=${String(err).slice(0, 300)}`,
+        );
+      }),
+  );
+}
 
 export const handleStablecoinDetail = withErrorHandler(
   "stablecoin-detail",
@@ -21,15 +81,18 @@ export const handleStablecoinDetail = withErrorHandler(
       if (age < CACHE_TTL_SECONDS) {
         return createFreshCacheHitResponse(cached.value, age);
       }
+      scheduleStablecoinDetailRefresh({ db, id, pegType, cached, ctx, coingeckoApiKey });
+      return createStaleCacheHitResponse(cached.value, age);
     }
 
-    const detail = createDetailResponseHelpers({
+    const response = await startStablecoinDetailRefresh({
       db,
-      stablecoinId: id,
+      id,
       pegType,
-      cached,
-      execCtx: ctx,
+      cached: null,
+      ctx,
+      coingeckoApiKey,
     });
-    return routeStablecoinDetail({ db, stablecoinId: id, pegType, coingeckoApiKey }, detail);
+    return response.clone();
   },
 );

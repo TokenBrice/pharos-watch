@@ -147,7 +147,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - runs only when `detect-changes` reports `pages_changed=true`
    - waits for `upload-worker-version` only when Worker promotion was also required for the push, then uses the uploaded Worker's preview URL for digest sync and local `/_site-data/*` proxying so CI rehearses the static export against the candidate API while validation and Worker promotion continue on their own runners
    - executes the Pages build/local-smoke/publish path in one job:
-     - fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, sending `DIGEST_API_KEY` from GitHub repository secrets and forwarding `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, `npm run check:phishing-signatures`, and `npm run check:classifier-sensitive-copy`, serves the same local artifact with `npm run serve:static-export`, proxies direct `/api/*` calls to the selected public API base, proxies `/_site-data/*` to the CI-provided `STATIC_EXPORT_SITE_API_BASE` worker target and injects `SITE_API_SHARED_SECRET` for that hop, and verifies the expected GA snippet in the homepage shell or root static RSC payload when `SMOKE_UI_EXPECT_GA_ID` is configured
+     - fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, sending `DIGEST_API_KEY` from GitHub repository secrets and forwarding `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, `npm run check:phishing-signatures`, and `npm run check:classifier-sensitive-copy`, serves the same local artifact with `npm run serve:static-export`, proxies direct `/api/*` calls to the selected public API base, proxies `/_site-data/*` to the CI-provided `STATIC_EXPORT_SITE_API_BASE` worker target and injects `SITE_API_SHARED_SECRET` for that hop, and verifies the expected GA script plus runtime `page_view` collection when `SMOKE_UI_EXPECT_GA_ID` is configured
      - the local static-export server treats exact `/api` and `/api/` as the public API access page, serves checked-in/static route payload artifacts below `/api/` when present, and proxies endpoint-like `/api/*` requests including JSON `POST` bodies to the selected public API base
    - uses `SMOKE_UI_BROWSER_CHANNEL=chrome` and `SMOKE_UI_OVERFLOW_WORKERS=6` for the local smoke so the full local overflow route set remains covered without downloading a Playwright-managed browser in the release job
    - waits for the aggregate `validate / validate` job before Cloudflare Pages production publish
@@ -156,7 +156,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 6. `smoke-ui-live`
    - worker-only deploy path runs inside `deploy-worker` after production API smoke
    - Pages-including deploy path runs inside `pages-release` after `deploy-pages`
-   - verifies the live Pages frontend works against the production API, including the expected GA snippet when configured
+   - verifies the live Pages frontend works against the production API, including expected GA runtime collection when configured
 7. `smoke-ops`
    - private post-deploy ops smoke against `ops.pharos.watch/admin/` and `ops-api.pharos.watch`
    - runs inside `pages-release` after `deploy-pages` on Pages-including deploys, or inside `deploy-worker` on worker-only deploys
