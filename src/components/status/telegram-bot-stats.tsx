@@ -18,10 +18,6 @@ interface TelegramBotStatsProps {
   nowSeconds: number;
 }
 
-function formatMetric(value: number): string {
-  return Number.isInteger(value) ? value.toString() : value.toFixed(1);
-}
-
 function renderDelta(label: string, value: number | null) {
   return (
     <div className="flex items-center justify-between gap-4 text-sm">
@@ -78,9 +74,9 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
       detail: `${telegramBot.subscribedChats} chats currently have saved coin follows`,
     },
     {
-      label: "Coin Follows",
+      label: "Alert Follows",
       value: telegramBot.totalSubscriptions,
-      detail: `avg ${formatMetric(telegramBot.avgSubscriptionsPerSubscribedChat)} per subscribed chat`,
+      detail: `${telegramBot.explicitCoinSubscriptions ?? telegramBot.totalSubscriptions} explicit, ${telegramBot.presetImpliedCoinSubscriptions ?? 0} preset-implied`,
     },
     {
       label: "Pending Queue",
@@ -137,8 +133,21 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
               {renderMetric("Backlog deferred", pendingBacklog?.deferred)}
               {renderMetric("Backlog expired", pendingBacklog?.expired)}
               {renderMetric("Preset query failures", telegramBot.presetQueryFailures ?? 0)}
+              {renderMetric("Preset followers", telegramBot.activePresetFollowers ?? 0)}
               {renderMetric("Inactive cleaned 7d", telegramBot.inactiveSubscribersCleanedThisWeek)}
             </div>
+            {telegramBot.lifecycleSnapshot ? (
+              <div className="border-t pt-3">
+                <div className="mb-2 text-xs font-medium text-muted-foreground">
+                  Lifecycle snapshot
+                </div>
+                {renderMetric("Snapshot date", telegramBot.lifecycleSnapshot.date)}
+                {renderMetric("New watchers", telegramBot.lifecycleSnapshot.newWatchers)}
+                {renderMetric("Churned watchers", telegramBot.lifecycleSnapshot.churnedWatchers)}
+                {renderMetric("Reactivated watchers", telegramBot.lifecycleSnapshot.reactivatedWatchers)}
+                {renderMetric("Preset-implied follows", telegramBot.lifecycleSnapshot.presetImpliedCoinFollows)}
+              </div>
+            ) : null}
             {retryErrorClasses.length > 0 ? (
               <div className="border-t pt-3">
                 <div className="mb-2 text-xs font-medium text-muted-foreground">
@@ -258,7 +267,12 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
                   <div key={coin.stablecoinId} className="flex items-center justify-between gap-4 text-sm">
                     <div className="min-w-0">
                       <div className="font-medium text-foreground">{coin.symbol}</div>
-                      <div className="truncate text-xs text-muted-foreground">{coin.stablecoinId}</div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {coin.stablecoinId}
+                        {coin.presetImpliedSubscribers ? (
+                          <> · {coin.explicitSubscribers ?? coin.subscribers} explicit + {coin.presetImpliedSubscribers} preset</>
+                        ) : null}
+                      </div>
                     </div>
                     <Badge variant="secondary" className="font-mono tabular-nums">
                       {coin.subscribers}

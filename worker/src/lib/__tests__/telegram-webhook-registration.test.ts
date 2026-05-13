@@ -40,7 +40,7 @@ async function expectedWebhookCacheValue(
 
 function expectedCommandsCacheValue(): string {
   return JSON.stringify({
-    version: 4,
+    version: 5,
     scopes: {
       all_private_chats: TELEGRAM_BOT_COMMANDS,
       all_group_chats: TELEGRAM_BOT_GROUP_COMMANDS,
@@ -50,7 +50,7 @@ function expectedCommandsCacheValue(): string {
 
 function expectedProfileCacheValue(): string {
   return JSON.stringify({
-    version: 2,
+    version: 3,
     name: TELEGRAM_BOT_NAME,
     short_description: TELEGRAM_BOT_SHORT_DESCRIPTION,
     description: TELEGRAM_BOT_DESCRIPTION,
@@ -358,6 +358,7 @@ describe("reconcileTelegramCommandRegistration", () => {
       "top",
       "why",
       "coverage",
+      "health",
       "list",
       "subscribe",
       "unsubscribe",
@@ -380,6 +381,7 @@ describe("reconcileTelegramCommandRegistration", () => {
       "subscribe",
       "unsubscribe",
       "list",
+      "health",
       "status",
       "mute",
       "help",

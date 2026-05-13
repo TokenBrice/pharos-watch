@@ -1,4 +1,5 @@
 import { escapeHtml } from "../../lib/telegram";
+import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import {
   parseSubscribeArgs,
   resolveTicker,
@@ -29,9 +30,21 @@ export const handleSubscribe: WebhookCommandHandler = async (ctx, args) => {
       const match = resolveTicker(invalidTarget);
       const suggestion = match.status === "not_found" ? match.suggestion : undefined;
       await ctx.replyToChat(buildNotFoundMessage(invalidTarget, suggestion));
+      await recordTelegramUsageEvent(db, {
+        eventType: "subscribe",
+        actionDetail: "validation",
+        outcome: "failure",
+        failureClass: "target_not_found",
+      });
       return;
     }
     await ctx.replyToChat(escapeHtml(validationError));
+    await recordTelegramUsageEvent(db, {
+      eventType: "subscribe",
+      actionDetail: "validation",
+      outcome: "failure",
+      failureClass: "invalid_args",
+    });
     return;
   }
 
@@ -59,6 +72,12 @@ export const handleSubscribe: WebhookCommandHandler = async (ctx, args) => {
   const presetCoins = await resolvePresetCoins(db, presetIds);
   if (presetCoins == null) {
     await ctx.replyToChat(buildPresetUnavailableMessage());
+    await recordTelegramUsageEvent(db, {
+      eventType: "subscribe",
+      actionDetail: "preset",
+      outcome: "failure",
+      failureClass: "preset_unavailable",
+    });
     return;
   }
 

@@ -1,12 +1,13 @@
 /**
  * Five-minute Telegram trigger (2,7,12,... * * * *):
  *   serial:
- *     dispatch-telegram-alerts (4) -> telegram-degradation-watchdog (0) -> telegram-disambiguation-cleanup (0)
+ *     dispatch-telegram-alerts (4) -> telegram-degradation-watchdog (0) -> telegram-disambiguation-cleanup (0) -> telegram-pulse-snapshot (0)
  *
  * Subscriber alerts use a dedicated isolated Telegram lane.
  * Connection budget: 4/6 peak
  */
 import { dispatchTelegramAlerts } from "../../cron/dispatch-telegram-alerts";
+import { publishTelegramPulseSnapshot } from "../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../cron/telegram-degradation-watchdog";
 import { cleanExpiredDisambiguations } from "../../cron/telegram-quiet-hours";
 import { logTelegramEvent } from "../../lib/telegram-log";
@@ -39,6 +40,12 @@ function buildTelegramSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlo
           kind: "db-only-sidecar",
           errorMessage: "[cron] telegram-disambiguation-cleanup failed:",
           run: (signal) => cleanExpiredDisambiguations(runtime.db, signal),
+        },
+        {
+          job: "telegram-pulse-snapshot",
+          kind: "db-only-sidecar",
+          errorMessage: "[cron] telegram-pulse-snapshot failed:",
+          run: () => publishTelegramPulseSnapshot(runtime.db).then(() => undefined),
         },
       ],
     },

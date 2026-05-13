@@ -1,4 +1,5 @@
 import { escapeHtml } from "../../lib/telegram";
+import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import { buildGlobalAlertSummaryMessage } from "../telegram-webhook-messages";
 import { parseSetCommand } from "../telegram-webhook-parsing";
 import {
@@ -24,6 +25,11 @@ export const handleSet: WebhookCommandHandler = async (ctx, args) => {
       return;
     }
     await applyGlobalSetting(db, chatId, username, parsed);
+    await recordTelegramUsageEvent(db, {
+      eventType: "global_alert_change",
+      actionDetail: parsed.setting,
+      outcome: parsed.enabled ? "opt_in" : "opt_out",
+    });
     const subscriber = await loadSubscriberByChat(db, chatId);
     await ctx.replyToChat(buildGlobalAlertSummaryMessage("Updated all-stablecoin alerts.", subscriber));
     return;

@@ -1,3 +1,4 @@
+import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import { unixNow, upsertSubscriberRow } from "../telegram-webhook-store";
 import type { WebhookCommandHandler } from "./context";
 
@@ -8,6 +9,11 @@ export const handleUnmuteHours: WebhookCommandHandler = async (ctx) => {
     username,
     nowSec: unixNow(),
     quietHours: { enabled: false },
+  });
+  await recordTelegramUsageEvent(db, {
+    eventType: "quiet_hours_change",
+    actionDetail: "unmutehours",
+    outcome: "disabled",
   });
   await ctx.replyToChat("Quiet hours disabled.");
 };

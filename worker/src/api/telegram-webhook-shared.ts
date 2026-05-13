@@ -45,6 +45,7 @@ Other useful setups:
 <code>/top depeg</code> — ranked live risk views
 <code>/why USDC</code> — short safety-grade explanation
 <code>/set all dews on</code> — global alerts across every tracked coin
+<code>/health</code> — delivery diagnostics for this chat
 Inline buttons on each alert let you snooze 1h / 4h / 24h.
 
 <b>Groups</b>
@@ -96,6 +97,9 @@ Explain the current Safety Score in plain language
 
 <code>/coverage &lt;ticker&gt;</code>
 Show which Pharos data surfaces currently cover one coin
+
+<code>/health</code>
+Show delivery diagnostics for this chat: queued alerts, quiet hours, snooze, and recent failure class
 
 <code>/mute 22-07</code>
 Quiet hours in your <code>/timezone</code> (defaults to UTC; notifications silenced, messages still delivered)

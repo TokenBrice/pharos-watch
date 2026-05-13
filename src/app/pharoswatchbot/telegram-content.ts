@@ -221,6 +221,12 @@ export const TELEGRAM_COMMAND_GROUPS = [
         example: null,
       },
       {
+        command: "/health",
+        description:
+          "Self-diagnostic for this chat: last successful delivery, queued alerts, quiet hours, snooze, and recent failure class.",
+        example: null,
+      },
+      {
         command: "/cancel",
         description: "Cancel a pending ticker-selection prompt (when a symbol matches multiple coins).",
         example: null,

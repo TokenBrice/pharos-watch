@@ -1,4 +1,5 @@
 import { escapeHtml } from "../../lib/telegram";
+import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import { isValidIanaTimezone } from "../../cron/telegram-quiet-hours";
 import {
   loadSubscriberByChat,
@@ -79,6 +80,11 @@ export const handleTimezone: WebhookCommandHandler = async (ctx, args) => {
   }
 
   await setSubscriberTimezone(db, chatId, username, trimmed);
+  await recordTelegramUsageEvent(db, {
+    eventType: "timezone_change",
+    actionDetail: "iana",
+    outcome: "set",
+  });
   await ctx.replyToChat(
     escapeHtml(
       `Timezone set to ${trimmed}. Quiet hours from /mute will now be interpreted in this zone.`,

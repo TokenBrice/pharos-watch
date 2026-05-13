@@ -106,8 +106,8 @@ export function TelegramPulseStrip() {
       </span>
       <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
       <span className="text-muted-foreground">
-        <span className="font-semibold text-foreground font-mono">{formatCount(data.coinSubscriptions)}</span> per-coin
-        alert follows
+        <span className="font-semibold text-foreground font-mono">{formatCount(data.coinSubscriptions)}</span> alert
+        follows
       </span>
       <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
       <span className="text-muted-foreground">
@@ -172,6 +172,30 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
   const alertTypeChats = data.alertTypeChats;
   const telemetryItems = [
     {
+      label: "Explicit follows",
+      value: data.explicitCoinSubscriptions,
+    },
+    {
+      label: "Preset-implied",
+      value: data.presetImpliedCoinSubscriptions,
+    },
+    {
+      label: "Preset followers",
+      value: data.activePresetFollowers,
+    },
+    {
+      label: "New today",
+      value: data.newWatchersToday,
+    },
+    {
+      label: "Reactivated today",
+      value: data.reactivatedWatchersToday,
+    },
+    {
+      label: "Churned today",
+      value: data.churnedWatchersToday,
+    },
+    {
       label: "DEWS chats",
       value: alertTypeChats?.dews,
     },
@@ -230,13 +254,14 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
         </div>
         <div className="border-b border-border/55 pb-5 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-6">
           <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
-            Per-coin alert follows
+            Alert follows
           </p>
           <p className="mt-3 font-mono text-4xl font-semibold leading-[0.95] tabular-nums text-foreground sm:text-5xl lg:text-[3.5rem]">
             {formatCount(data.coinSubscriptions)}
           </p>
           <p className="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
-            explicit coin-level follows across chats
+            {(data.explicitCoinSubscriptions ?? data.coinSubscriptions).toLocaleString("en-US")} explicit,{" "}
+            {(data.presetImpliedCoinSubscriptions ?? 0).toLocaleString("en-US")} preset-implied
           </p>
         </div>
         <div>
@@ -282,10 +307,12 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
-              All-time Telegram chat growth
+              Telegram chat lifecycle
             </p>
             <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-              Cumulative current active chats by the day each chat first subscribed.
+              {data.historySource === "snapshot"
+                ? "Daily active watcher snapshots. Past points stay fixed when chats churn."
+                : "Cumulative current active chats by the day each chat first subscribed."}
             </p>
           </div>
           {latestHistoryPoint ? (

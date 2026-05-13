@@ -23,6 +23,7 @@ describe("mapTelegramBotStats", () => {
         last_subscriber_activity_at: "1710000000",
         custom_preference_chats: "3",
         quiet_hours_enabled_chats: "2",
+        active_preset_followers: "2",
       },
       pendingDisambiguations: { pending_count: "11" },
       pendingDeliveries: { pending_count: "12" },
@@ -38,9 +39,34 @@ describe("mapTelegramBotStats", () => {
         { error_class: "server_error", pending_count: "2" },
       ],
       topStablecoins: [
-        { stablecoin_id: "usdc-circle", subscribers: "5" },
+        {
+          stablecoin_id: "usdc-circle",
+          subscribers: "8",
+          explicit_subscribers: "5",
+          preset_implied_subscribers: "3",
+        },
         { stablecoin_id: "unknown-stablecoin", subscribers: "2" },
       ],
+      lifecycleSnapshot: {
+        day: "2026-05-13",
+        snapshotAt: 1_710_000_100,
+        activeWatchers: 10,
+        newWatchers: 2,
+        churnedWatchers: 1,
+        reactivatedWatchers: 0,
+        explicitCoinFollows: 30,
+        presetImpliedCoinFollows: 12,
+        activePresetFollowers: 2,
+        alertTypeOptIns: {
+          dews: 7,
+          depeg: 6,
+          safety: 5,
+          launch: 4,
+          allTypes: 4,
+        },
+        quietHoursEnabledChats: 2,
+        pendingDeliveries: 12,
+      },
     });
 
     expect(result).toEqual({
@@ -50,7 +76,10 @@ describe("mapTelegramBotStats", () => {
       subscribedChats: 8,
       emptyAlertChats: 1,
       mutedChatsWithSubscriptions: 2,
-      totalSubscriptions: 30,
+      totalSubscriptions: 42,
+      explicitCoinSubscriptions: 30,
+      presetImpliedCoinSubscriptions: 12,
+      activePresetFollowers: 2,
       avgSubscriptionsPerSubscribedChat: 3.5,
       pendingDisambiguations: 11,
       pendingDeliveries: 12,
@@ -65,9 +94,41 @@ describe("mapTelegramBotStats", () => {
         allTypes: 4,
       },
       topStablecoins: [
-        { stablecoinId: "usdc-circle", symbol: "USDC", subscribers: 5 },
-        { stablecoinId: "unknown-stablecoin", symbol: "unknown-stablecoin", subscribers: 2 },
+        {
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          subscribers: 8,
+          explicitSubscribers: 5,
+          presetImpliedSubscribers: 3,
+        },
+        {
+          stablecoinId: "unknown-stablecoin",
+          symbol: "unknown-stablecoin",
+          subscribers: 2,
+          explicitSubscribers: 2,
+          presetImpliedSubscribers: 0,
+        },
       ],
+      lifecycleSnapshot: {
+        date: "2026-05-13",
+        snapshotAt: 1710000100,
+        activeWatchers: 10,
+        newWatchers: 2,
+        churnedWatchers: 1,
+        reactivatedWatchers: 0,
+        explicitCoinFollows: 30,
+        presetImpliedCoinFollows: 12,
+        activePresetFollowers: 2,
+        alertTypeOptIns: {
+          dews: 7,
+          depeg: 6,
+          safety: 5,
+          launch: 4,
+          allTypes: 4,
+        },
+        quietHoursEnabledChats: 2,
+        pendingDeliveries: 12,
+      },
       oldestPendingDeliveryAgeSec: 60,
       retryErrorClassCounts: {
         rate_limit: 4,
@@ -100,6 +161,7 @@ describe("mapTelegramBotStats", () => {
         last_subscriber_activity_at: "bad",
         custom_preference_chats: null,
         quiet_hours_enabled_chats: null,
+        active_preset_followers: null,
       },
       pendingDisambiguations: null,
       pendingDeliveries: { pending_count: "bad" },
@@ -114,6 +176,9 @@ describe("mapTelegramBotStats", () => {
       emptyAlertChats: 0,
       mutedChatsWithSubscriptions: 0,
       totalSubscriptions: 0,
+      explicitCoinSubscriptions: 0,
+      presetImpliedCoinSubscriptions: 0,
+      activePresetFollowers: 0,
       avgSubscriptionsPerSubscribedChat: 0,
       pendingDisambiguations: 0,
       pendingDeliveries: 0,
@@ -127,7 +192,15 @@ describe("mapTelegramBotStats", () => {
         launch: 0,
         allTypes: 0,
       },
-      topStablecoins: [{ stablecoinId: "usdt-tether", symbol: "USDT", subscribers: 0 }],
+      topStablecoins: [
+        {
+          stablecoinId: "usdt-tether",
+          symbol: "USDT",
+          subscribers: 0,
+          explicitSubscribers: 0,
+          presetImpliedSubscribers: 0,
+        },
+      ],
     });
   });
 });
@@ -198,6 +271,8 @@ describe("getTelegramBotStats", () => {
       stablecoinId: "usdpt-western-union",
       symbol: "USDPT",
       subscribers: 2,
+      explicitSubscribers: 2,
+      presetImpliedSubscribers: 0,
     });
     expect(result.presetQueryFailures).toBeUndefined();
   });

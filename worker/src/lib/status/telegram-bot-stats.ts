@@ -1,5 +1,10 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { TelegramBotStats } from "@shared/types/status";
+import {
+  loadTelegramTopFollowedCoins,
+  refreshTelegramLifecycleSnapshotIfStale,
+  type TelegramCurrentLifecycleSnapshot,
+} from "../telegram-usage-analytics";
 
 interface TelegramBotAggregateRow {
   total_chats: number | string | null;
@@ -18,6 +23,7 @@ interface TelegramBotAggregateRow {
   last_subscriber_activity_at: number | string | null;
   custom_preference_chats: number | string | null;
   quiet_hours_enabled_chats: number | string | null;
+  active_preset_followers?: number | string | null;
 }
 
 interface TelegramBotPendingRow {
@@ -40,6 +46,8 @@ interface TelegramBotRetryErrorClassRow {
 interface TelegramBotTopStablecoinRow {
   stablecoin_id: string;
   subscribers: number | string | null;
+  explicit_subscribers?: number | string | null;
+  preset_implied_subscribers?: number | string | null;
 }
 
 const TELEGRAM_PENDING_ALERT_TTL_SEC = 3600;
@@ -60,6 +68,7 @@ const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
         OR s.alert_depeg = 1
         OR s.alert_safety = 1
         OR s.alert_launch = 1
+        OR COALESCE(preset.active_preset_count, 0) > 0
       THEN 1 ELSE 0
     END
   ) AS alert_enabled_chats,
@@ -70,10 +79,16 @@ const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
         OR s.global_alert_depeg = 1
         OR s.global_alert_safety = 1
         OR s.global_alert_launch = 1
+        OR COALESCE(preset.active_preset_count, 0) > 0
       THEN 1 ELSE 0
     END
   ) AS deliverable_chats,
-  SUM(CASE WHEN COALESCE(sub.sub_count, 0) > 0 THEN 1 ELSE 0 END) AS subscribed_chats,
+  SUM(
+    CASE
+      WHEN COALESCE(sub.sub_count, 0) > 0 OR COALESCE(preset.active_preset_count, 0) > 0
+      THEN 1 ELSE 0
+    END
+  ) AS subscribed_chats,
   SUM(
     CASE
       WHEN (s.alert_dews = 1 OR s.alert_depeg = 1 OR s.alert_safety = 1 OR s.alert_launch = 1)
@@ -82,24 +97,27 @@ const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
         AND s.global_alert_safety = 0
         AND s.global_alert_launch = 0
         AND COALESCE(sub.sub_count, 0) = 0
+        AND COALESCE(preset.active_preset_count, 0) = 0
       THEN 1 ELSE 0
     END
   ) AS empty_alert_chats,
   SUM(
     CASE
-      WHEN COALESCE(sub.sub_count, 0) > 0 AND COALESCE(sub.active_sub_count, 0) = 0
+      WHEN (COALESCE(sub.sub_count, 0) > 0 OR COALESCE(preset.preset_count, 0) > 0)
+        AND COALESCE(sub.active_sub_count, 0) = 0
+        AND COALESCE(preset.active_preset_count, 0) = 0
       THEN 1 ELSE 0
     END
   ) AS muted_chats_with_subscriptions,
-  SUM(CASE WHEN COALESCE(sub.dews_enabled, 0) = 1 OR s.global_alert_dews = 1 THEN 1 ELSE 0 END) AS dews_chats,
-  SUM(CASE WHEN COALESCE(sub.depeg_enabled, 0) = 1 OR s.global_alert_depeg = 1 THEN 1 ELSE 0 END) AS depeg_chats,
-  SUM(CASE WHEN COALESCE(sub.safety_enabled, 0) = 1 OR s.global_alert_safety = 1 THEN 1 ELSE 0 END) AS safety_chats,
+  SUM(CASE WHEN COALESCE(sub.dews_enabled, 0) = 1 OR COALESCE(preset.dews_enabled, 0) = 1 OR s.global_alert_dews = 1 THEN 1 ELSE 0 END) AS dews_chats,
+  SUM(CASE WHEN COALESCE(sub.depeg_enabled, 0) = 1 OR COALESCE(preset.depeg_enabled, 0) = 1 OR s.global_alert_depeg = 1 THEN 1 ELSE 0 END) AS depeg_chats,
+  SUM(CASE WHEN COALESCE(sub.safety_enabled, 0) = 1 OR COALESCE(preset.safety_enabled, 0) = 1 OR s.global_alert_safety = 1 THEN 1 ELSE 0 END) AS safety_chats,
   SUM(CASE WHEN COALESCE(sub.launch_enabled, 0) = 1 OR s.global_alert_launch = 1 THEN 1 ELSE 0 END) AS launch_chats,
   SUM(
     CASE
-      WHEN (COALESCE(sub.dews_enabled, 0) = 1 OR s.global_alert_dews = 1)
-        AND (COALESCE(sub.depeg_enabled, 0) = 1 OR s.global_alert_depeg = 1)
-        AND (COALESCE(sub.safety_enabled, 0) = 1 OR s.global_alert_safety = 1)
+      WHEN (COALESCE(sub.dews_enabled, 0) = 1 OR COALESCE(preset.dews_enabled, 0) = 1 OR s.global_alert_dews = 1)
+        AND (COALESCE(sub.depeg_enabled, 0) = 1 OR COALESCE(preset.depeg_enabled, 0) = 1 OR s.global_alert_depeg = 1)
+        AND (COALESCE(sub.safety_enabled, 0) = 1 OR COALESCE(preset.safety_enabled, 0) = 1 OR s.global_alert_safety = 1)
         AND (COALESCE(sub.launch_enabled, 0) = 1 OR s.global_alert_launch = 1)
       THEN 1 ELSE 0
     END
@@ -108,7 +126,8 @@ const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
   AVG(CASE WHEN COALESCE(sub.sub_count, 0) > 0 THEN sub.sub_count END) AS avg_subscriptions_per_subscribed_chat,
   MAX(s.last_active_at) AS last_subscriber_activity_at,
   SUM(CASE WHEN COALESCE(sub.custom_preferences, 0) = 1 THEN 1 ELSE 0 END) AS custom_preference_chats,
-  SUM(CASE WHEN COALESCE(s.quiet_hours_enabled, 0) = 1 THEN 1 ELSE 0 END) AS quiet_hours_enabled_chats
+  SUM(CASE WHEN COALESCE(s.quiet_hours_enabled, 0) = 1 THEN 1 ELSE 0 END) AS quiet_hours_enabled_chats,
+  SUM(CASE WHEN COALESCE(preset.active_preset_count, 0) > 0 THEN 1 ELSE 0 END) AS active_preset_followers
 FROM telegram_subscribers s
 LEFT JOIN (
   SELECT chat_id,
@@ -136,7 +155,22 @@ LEFT JOIN (
          ) AS custom_preferences
     FROM telegram_subscriptions
    GROUP BY chat_id
-) sub ON sub.chat_id = s.chat_id`;
+) sub ON sub.chat_id = s.chat_id
+LEFT JOIN (
+  SELECT chat_id,
+         COUNT(*) AS preset_count,
+         SUM(
+           CASE
+             WHEN alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1
+             THEN 1 ELSE 0
+           END
+         ) AS active_preset_count,
+         MAX(CASE WHEN alert_dews = 1 THEN 1 ELSE 0 END) AS dews_enabled,
+         MAX(CASE WHEN alert_depeg = 1 THEN 1 ELSE 0 END) AS depeg_enabled,
+         MAX(CASE WHEN alert_safety = 1 THEN 1 ELSE 0 END) AS safety_enabled
+    FROM telegram_preset_subscriptions
+   GROUP BY chat_id
+) preset ON preset.chat_id = s.chat_id`;
 
 const TELEGRAM_PENDING_DISAMBIGUATION_SQL =
   "SELECT COUNT(*) AS pending_count FROM telegram_pending_disambiguation WHERE expires_at > ?";
@@ -166,16 +200,6 @@ const TELEGRAM_RETRY_ERROR_CLASSES_SQL = `SELECT last_error_class AS error_class
  GROUP BY last_error_class
  ORDER BY pending_count DESC, last_error_class ASC
  LIMIT 10`;
-const TELEGRAM_TOP_STABLECOINS_SQL = `SELECT stablecoin_id, COUNT(*) AS subscribers
-  FROM telegram_subscriptions
- WHERE alert_dews = 1
-    OR alert_depeg = 1
-    OR alert_safety = 1
-    OR alert_launch = 1
- GROUP BY stablecoin_id
- ORDER BY subscribers DESC, stablecoin_id ASC
- LIMIT 5`;
-
 function coerceCount(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -232,8 +256,13 @@ async function loadTelegramRetryErrorClasses(db: D1Database): Promise<TelegramBo
 }
 
 async function loadTelegramTopStablecoins(db: D1Database): Promise<TelegramBotTopStablecoinRow[]> {
-  const result = await db.prepare(TELEGRAM_TOP_STABLECOINS_SQL).all<TelegramBotTopStablecoinRow>();
-  return result.results ?? [];
+  const rows = await loadTelegramTopFollowedCoins(db, 5);
+  return rows.map((row) => ({
+    stablecoin_id: row.stablecoinId,
+    subscribers: row.subscribers,
+    explicit_subscribers: row.explicitSubscribers,
+    preset_implied_subscribers: row.presetImpliedSubscribers,
+  }));
 }
 
 async function loadInactiveSubscribersCleanedThisWeek(
@@ -280,6 +309,7 @@ export function mapTelegramBotStats(input: {
   topStablecoins: TelegramBotTopStablecoinRow[];
   presetQueryFailures?: number;
   inactiveSubscribersCleanedThisWeek?: number | null;
+  lifecycleSnapshot?: TelegramCurrentLifecycleSnapshot | null;
 }): TelegramBotStats {
   const {
     aggregate,
@@ -290,6 +320,7 @@ export function mapTelegramBotStats(input: {
     topStablecoins,
     presetQueryFailures,
     inactiveSubscribersCleanedThisWeek,
+    lifecycleSnapshot,
   } = input;
   const now = input.now ?? Math.floor(Date.now() / 1000);
 
@@ -303,6 +334,11 @@ export function mapTelegramBotStats(input: {
     return acc;
   }, {});
 
+  const explicitCoinSubscriptions = coerceCount(aggregate?.total_subscriptions);
+  const presetImpliedCoinSubscriptions = lifecycleSnapshot?.presetImpliedCoinFollows ?? 0;
+  const activePresetFollowers =
+    lifecycleSnapshot?.activePresetFollowers ?? coerceCount(aggregate?.active_preset_followers);
+
   const stats: TelegramBotStats = {
     totalChats: coerceCount(aggregate?.total_chats),
     alertEnabledChats: coerceCount(aggregate?.alert_enabled_chats),
@@ -310,7 +346,10 @@ export function mapTelegramBotStats(input: {
     subscribedChats: coerceCount(aggregate?.subscribed_chats),
     emptyAlertChats: coerceCount(aggregate?.empty_alert_chats),
     mutedChatsWithSubscriptions: coerceCount(aggregate?.muted_chats_with_subscriptions),
-    totalSubscriptions: coerceCount(aggregate?.total_subscriptions),
+    totalSubscriptions: explicitCoinSubscriptions + presetImpliedCoinSubscriptions,
+    explicitCoinSubscriptions,
+    presetImpliedCoinSubscriptions,
+    activePresetFollowers,
     avgSubscriptionsPerSubscribedChat: roundMetric(aggregate?.avg_subscriptions_per_subscribed_chat, 1),
     pendingDisambiguations: coerceCount(pendingDisambiguations?.pending_count),
     pendingDeliveries: pendingCount,
@@ -328,8 +367,27 @@ export function mapTelegramBotStats(input: {
       stablecoinId: row.stablecoin_id,
       symbol: TRACKED_META_BY_ID.get(row.stablecoin_id)?.symbol ?? row.stablecoin_id,
       subscribers: coerceCount(row.subscribers),
+      explicitSubscribers: coerceCount(row.explicit_subscribers ?? row.subscribers),
+      presetImpliedSubscribers: coerceCount(row.preset_implied_subscribers),
     })),
   };
+
+  if (lifecycleSnapshot) {
+    stats.lifecycleSnapshot = {
+      date: lifecycleSnapshot.day,
+      snapshotAt: lifecycleSnapshot.snapshotAt,
+      activeWatchers: lifecycleSnapshot.activeWatchers,
+      newWatchers: lifecycleSnapshot.newWatchers,
+      churnedWatchers: lifecycleSnapshot.churnedWatchers,
+      reactivatedWatchers: lifecycleSnapshot.reactivatedWatchers,
+      explicitCoinFollows: lifecycleSnapshot.explicitCoinFollows,
+      presetImpliedCoinFollows: lifecycleSnapshot.presetImpliedCoinFollows,
+      activePresetFollowers: lifecycleSnapshot.activePresetFollowers,
+      alertTypeOptIns: lifecycleSnapshot.alertTypeOptIns,
+      quietHoursEnabledChats: lifecycleSnapshot.quietHoursEnabledChats,
+      pendingDeliveries: lifecycleSnapshot.pendingDeliveries,
+    };
+  }
 
   if (pendingDeliveryTelemetry) {
     stats.oldestPendingDeliveryAgeSec =
@@ -366,6 +424,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     topStablecoins,
     presetQueryFailures,
     inactiveSubscribersCleanedThisWeek,
+    lifecycleSnapshot,
   ] = await Promise.all([
     loadTelegramBotAggregate(db),
     loadTelegramPendingCount(db, TELEGRAM_PENDING_DISAMBIGUATION_SQL, now),
@@ -375,6 +434,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     loadTelegramTopStablecoins(db),
     loadPresetQueryFailureCount(db),
     loadInactiveSubscribersCleanedThisWeek(db, now),
+    refreshTelegramLifecycleSnapshotIfStale(db, now).catch(() => null),
   ]);
 
   return mapTelegramBotStats({
@@ -387,5 +447,6 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     topStablecoins,
     presetQueryFailures,
     inactiveSubscribersCleanedThisWeek,
+    lifecycleSnapshot,
   });
 }

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
-import { upsertSubscriberRow } from "../telegram-webhook-store";
+import {
+  pruneTelegramProcessedUpdates,
+  upsertSubscriberRow,
+} from "../telegram-webhook-store";
 
 describe("upsertSubscriberRow", () => {
   it("updates only quiet-hours columns on a mute-only call", async () => {
@@ -34,5 +37,25 @@ describe("upsertSubscriberRow", () => {
       "alert_depeg = MAX(telegram_subscribers.alert_depeg, excluded.alert_depeg)",
     );
     expect(entry.sql).not.toContain("alert_safety = MAX");
+  });
+});
+
+describe("pruneTelegramProcessedUpdates", () => {
+  it("deletes processed update rows older than the retention cutoff", async () => {
+    const db = mockD1([
+      {
+        match: "DELETE FROM telegram_processed_updates WHERE received_at < ?",
+        rows: [],
+        runMeta: { changes: 7 },
+      },
+    ]);
+
+    const pruned = await pruneTelegramProcessedUpdates(db, {
+      nowSec: 1_700_000_000,
+      retentionSec: 60,
+    });
+
+    expect(pruned).toBe(7);
+    expect(db.getHistory()[0]?.binds).toEqual([1_699_999_940]);
   });
 });

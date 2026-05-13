@@ -138,11 +138,21 @@ export async function withAdmin(
   return handler();
 }
 
+let timingSafeCompareKeyPromise: Promise<CryptoKey> | null = null;
+
+function getTimingSafeCompareKey(): Promise<CryptoKey> {
+  timingSafeCompareKeyPromise ??= crypto.subtle.generateKey(
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  ) as Promise<CryptoKey>;
+  return timingSafeCompareKeyPromise;
+}
+
 /** Timing-safe string comparison using Web Crypto API.
  *
- * HMACs both inputs with an ephemeral key so the comparison always
- * operates on fixed-length (32-byte) digests — no early return on
- * length mismatch, no timing leak on input length.
+ * HMACs both inputs with an isolate-local key so the comparison operates on
+ * fixed-length (32-byte) digests without generating a fresh key per request.
  */
 export async function timingSafeCompare(a: string, b: string): Promise<boolean> {
   if (a.length === 0 || b.length === 0) {
@@ -150,13 +160,9 @@ export async function timingSafeCompare(a: string, b: string): Promise<boolean> 
     return false;
   }
   const encoder = new TextEncoder();
-  const ephemeralKey = await crypto.subtle.generateKey(
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  ) as CryptoKey;
-  const aSig = new Uint8Array(await crypto.subtle.sign("HMAC", ephemeralKey, encoder.encode(a)));
-  const bSig = new Uint8Array(await crypto.subtle.sign("HMAC", ephemeralKey, encoder.encode(b)));
+  const key = await getTimingSafeCompareKey();
+  const aSig = new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(a)));
+  const bSig = new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(b)));
   let result = 0;
   for (let i = 0; i < aSig.byteLength; i++) result |= aSig[i] ^ bSig[i];
   return result === 0;

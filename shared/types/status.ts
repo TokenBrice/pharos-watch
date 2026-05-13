@@ -215,6 +215,8 @@ interface TelegramBotTopStablecoin {
   stablecoinId: string;
   symbol: string;
   subscribers: number;
+  explicitSubscribers?: number;
+  presetImpliedSubscribers?: number;
 }
 
 export interface TelegramAlertTypeChats {
@@ -231,6 +233,21 @@ export interface TelegramPendingDeliveryBacklog {
   expired: number;
 }
 
+export interface TelegramWatcherLifecycleSnapshot {
+  date: string;
+  snapshotAt: number;
+  activeWatchers: number;
+  newWatchers: number;
+  churnedWatchers: number;
+  reactivatedWatchers: number;
+  explicitCoinFollows: number;
+  presetImpliedCoinFollows: number;
+  activePresetFollowers: number;
+  alertTypeOptIns: TelegramAlertTypeChats;
+  quietHoursEnabledChats: number;
+  pendingDeliveries: number;
+}
+
 export interface TelegramBotStats {
   totalChats: number;
   alertEnabledChats: number;
@@ -239,6 +256,9 @@ export interface TelegramBotStats {
   emptyAlertChats: number;
   mutedChatsWithSubscriptions: number;
   totalSubscriptions: number;
+  explicitCoinSubscriptions?: number;
+  presetImpliedCoinSubscriptions?: number;
+  activePresetFollowers?: number;
   avgSubscriptionsPerSubscribedChat: number;
   pendingDisambiguations: number;
   pendingDeliveries: number;
@@ -257,23 +277,35 @@ export interface TelegramBotStats {
    * not produced a successful run within the window (e.g. fresh deploy).
    */
   inactiveSubscribersCleanedThisWeek?: number | null;
+  lifecycleSnapshot?: TelegramWatcherLifecycleSnapshot;
 }
 
 /** Slim public-facing stats for the PharosWatchBot landing page. */
 export interface TelegramWatcherHistoryPoint {
-  /** YYYY-MM-DD UTC day bucket from telegram_subscribers.created_at. */
+  /** YYYY-MM-DD UTC day bucket. Snapshot-backed once lifecycle rows exist. */
   date: string;
   /** UTC day timestamp in milliseconds, for frontend time-axis charts. */
   timestamp: number;
-  /** New currently active watchers first seen on this day. */
+  /** New active watchers captured in this daily bucket. */
   newWatchers: number;
-  /** Cumulative currently active watcher count through this day. */
+  /** Active watcher count at the daily snapshot, or cumulative fallback for pre-snapshot data. */
   activeWatchers: number;
+  /** Aggregate churn estimate for snapshot-backed points. */
+  churnedWatchers?: number;
+  /** Aggregate reactivation estimate for snapshot-backed points. */
+  reactivatedWatchers?: number;
 }
 
 export interface TelegramPulse {
   activeWatchers: number;
   coinSubscriptions: number;
+  explicitCoinSubscriptions?: number;
+  presetImpliedCoinSubscriptions?: number;
+  activePresetFollowers?: number;
+  newWatchersToday?: number;
+  churnedWatchersToday?: number;
+  reactivatedWatchersToday?: number;
+  historySource?: "snapshot" | "live-fallback";
   topCoins: string[];
   watcherHistory: TelegramWatcherHistoryPoint[];
   alertTypeChats: TelegramAlertTypeChats;

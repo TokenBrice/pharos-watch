@@ -8,6 +8,7 @@ import { handleBrief } from "./brief";
 import { handleTop } from "./top";
 import { handleWhy } from "./why";
 import { handleCoverage } from "./coverage";
+import { handleHealth } from "./health";
 import { handleSubscribe } from "./subscribe";
 import { handleUnsubscribe } from "./unsubscribe";
 import { handleSet } from "./set";
@@ -39,6 +40,7 @@ export const COMMAND_HANDLERS: Record<string, WebhookCommandHandler> = {
   "/top": handleTop,
   "/why": handleWhy,
   "/coverage": handleCoverage,
+  "/health": handleHealth,
   "/subscribe": handleSubscribe,
   "/unsubscribe": handleUnsubscribe,
   "/set": handleSet,

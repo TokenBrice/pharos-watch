@@ -101,6 +101,23 @@ export interface CronJobMeta extends CronJobDefinition {
   statusImpact: CronStatusImpact;
 }
 
+export interface CronConnectionBudgetDefinition {
+  job: string;
+  label: string;
+  scheduleKey: CronScheduleKey;
+  /** Maximum outbound fetch connections this scheduled work may use (of the 6-per-trigger pool). */
+  maxConnections: number;
+  /** Work with the same trigger and connection group is chained, so its peak is max(), not sum(). */
+  connectionGroup?: string;
+  /** False for scheduled side work that is not represented as a separate cron_runs job. */
+  statusTracked: boolean;
+  notes?: string;
+}
+
+export interface CronConnectionBudgetMeta extends CronConnectionBudgetDefinition {
+  schedule: CronScheduleExpression;
+}
+
 export const CRON_GROUPS: readonly CronGroupDefinition[] = [
   {
     key: "quarter-hourly",
@@ -216,6 +233,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
     maxConnections: 4, // Telegram sendMessage batches run with SEND_BATCH_SIZE=4
+    connectionGroup: "five-minute-telegram-chain",
   },
   {
     job: "telegram-degradation-watchdog",
@@ -225,6 +243,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
     maxConnections: 0, // DB-only inspection plus optional webhook alert
+    connectionGroup: "five-minute-telegram-chain",
   },
   {
     job: "telegram-disambiguation-cleanup",
@@ -234,6 +253,17 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
     maxConnections: 0, // DB-only DELETE of expired pending disambiguation rows
+    connectionGroup: "five-minute-telegram-chain",
+  },
+  {
+    job: "telegram-pulse-snapshot",
+    label: "Telegram pulse snapshot",
+    group: "five-minute",
+    intervalSec: 300,
+    scheduleKey: "fiveMinuteTelegramAlerts",
+    triggerMode: "isolated",
+    maxConnections: 0, // DB-only materialization for the public pulse endpoint
+    connectionGroup: "five-minute-telegram-chain",
   },
   {
     job: "sync-blacklist",
@@ -485,6 +515,44 @@ export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS
     definition.job === "sync-mint-burn"
       ? "critical"
       : "watch",
+}));
+
+const CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS: readonly CronConnectionBudgetDefinition[] = [
+  {
+    job: "telegram-registration-reconciliation",
+    label: "Telegram registration reconciliation",
+    scheduleKey: "fiveMinuteTelegramAlerts",
+    maxConnections: 1,
+    connectionGroup: "five-minute-telegram-chain",
+    statusTracked: false,
+    notes:
+      "Best-effort command, profile, and webhook reconciliation runs serially before dispatch when 15-minute cache markers expire.",
+  },
+  {
+    job: "digest-trigger-poll",
+    label: "Manual digest trigger poll",
+    scheduleKey: "digestTriggerPoll",
+    maxConnections: 1,
+    connectionGroup: "digest-trigger-poll-chain",
+    statusTracked: false,
+    notes:
+      "Polls the force-run cache key every 5 minutes; when pending, it runs daily-digest under the existing daily-digest lease.",
+  },
+] as const;
+
+export const CRON_CONNECTION_BUDGET_ENTRIES: readonly CronConnectionBudgetMeta[] = [
+  ...CRON_JOB_DEFINITIONS_BASE.map((definition) => ({
+    job: definition.job,
+    label: definition.label,
+    scheduleKey: definition.scheduleKey,
+    maxConnections: definition.maxConnections ?? 0,
+    connectionGroup: definition.connectionGroup,
+    statusTracked: true,
+  })),
+  ...CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS,
+].map((definition) => ({
+  ...definition,
+  schedule: CRON_SCHEDULES[definition.scheduleKey],
 }));
 
 /** Job name → expected interval in seconds, derived from definitions. */

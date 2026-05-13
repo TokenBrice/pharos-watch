@@ -1,4 +1,5 @@
 import { escapeHtml } from "../../lib/telegram";
+import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import { formatQuietHours } from "../telegram-webhook-messages";
 import { parseQuietHours } from "../telegram-webhook-parsing";
 import { unixNow, upsertSubscriberRow } from "../telegram-webhook-store";
@@ -20,6 +21,11 @@ export const handleMute: WebhookCommandHandler = async (ctx, args) => {
       startHourUtc: parsed.startHourUtc,
       endHourUtc: parsed.endHourUtc,
     },
+  });
+  await recordTelegramUsageEvent(db, {
+    eventType: "quiet_hours_change",
+    actionDetail: "mute",
+    outcome: "enabled",
   });
   await ctx.replyToChat(
     escapeHtml(

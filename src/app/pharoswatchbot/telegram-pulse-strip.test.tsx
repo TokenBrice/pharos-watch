@@ -15,6 +15,13 @@ const mockUseTelegramPulse = vi.mocked(useTelegramPulse);
 const pulse: TelegramPulse = {
   activeWatchers: 1842,
   coinSubscriptions: 5621,
+  explicitCoinSubscriptions: 5000,
+  presetImpliedCoinSubscriptions: 621,
+  activePresetFollowers: 81,
+  newWatchersToday: 12,
+  churnedWatchersToday: 3,
+  reactivatedWatchersToday: 5,
+  historySource: "snapshot",
   topCoins: ["USDT", "USDC", "USDe", "DAI", "USD1"],
   watcherHistory: [
     {
@@ -76,8 +83,14 @@ describe("TelegramPulseBoard", () => {
     render(<TelegramPulseBoard />);
 
     expect(screen.getByText("Active Telegram chats")).toBeTruthy();
-    expect(screen.getByText("Per-coin alert follows")).toBeTruthy();
+    expect(screen.getByText("Alert follows")).toBeTruthy();
     expect(screen.getByText("Most followed")).toBeTruthy();
+    expect(screen.getByText("Explicit follows")).toBeTruthy();
+    expect(screen.getByText("Preset-implied")).toBeTruthy();
+    expect(screen.getByText("Preset followers")).toBeTruthy();
+    expect(screen.getByText("New today")).toBeTruthy();
+    expect(screen.getByText("Reactivated today")).toBeTruthy();
+    expect(screen.getByText("Churned today")).toBeTruthy();
     expect(screen.getByText("DEWS chats")).toBeTruthy();
     expect(screen.getByText("Depeg chats")).toBeTruthy();
     expect(screen.getByText("Safety chats")).toBeTruthy();
@@ -87,8 +100,9 @@ describe("TelegramPulseBoard", () => {
     expect(screen.getByText("Queued deliveries")).toBeTruthy();
     expect(screen.getByText("1,701")).toBeTruthy();
     expect(screen.getByText("42")).toBeTruthy();
+    expect(screen.getByText(/Past points stay fixed/i)).toBeTruthy();
     const telemetry = screen.getByLabelText("Telegram aggregate alert telemetry");
-    expect(within(telemetry).getByText("3")).toBeTruthy();
+    expect(within(telemetry).getAllByText("3").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders loading placeholders", () => {

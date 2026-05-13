@@ -11,17 +11,17 @@ const TELEGRAM_COMMANDS_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_PROFILE_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_ALLOWED_UPDATES = ["message", "callback_query"] as const;
 const TELEGRAM_WEBHOOK_CACHE_VERSION = 2;
-const TELEGRAM_COMMANDS_CACHE_VERSION = 4;
-const TELEGRAM_PROFILE_CACHE_VERSION = 2;
+const TELEGRAM_COMMANDS_CACHE_VERSION = 5;
+const TELEGRAM_PROFILE_CACHE_VERSION = 3;
 
 // Profile metadata shown on the bot's About page, card preview, and chat
 // header. Kept in code so changes flow through git review and the 15-minute
 // reconciliation loop self-heals any drift introduced via BotFather.
 export const TELEGRAM_BOT_NAME = "Pharos Watch";
 export const TELEGRAM_BOT_SHORT_DESCRIPTION =
-  "Stablecoin alerts: DEWS stress, depeg events, safety grade changes, and launches. Track 312 coins.";
+  "Stablecoin alerts: DEWS stress, depeg events, safety grade changes, and launches. Track the Pharos universe.";
 export const TELEGRAM_BOT_DESCRIPTION =
-  "Pharos Watch tracks 312 stablecoins and pushes alerts when something matters: DEWS stress bands, depeg events, safety grade changes, and new launches. Subscribe to curated presets like usd-top25, or build a custom watchlist of any tracked coin. Learn more at https://pharos.watch/pharoswatchbot/";
+  "Pharos Watch pushes alerts when something matters across the Pharos stablecoin universe: DEWS stress bands, depeg events, safety grade changes, and new launches. Subscribe to curated presets like usd-top25, or build a custom watchlist of any tracked coin. Learn more at https://pharos.watch/pharoswatchbot/";
 
 export const TELEGRAM_BOT_COMMANDS = [
   { command: "start", description: "Get started with Pharos alerts" },
@@ -31,6 +31,7 @@ export const TELEGRAM_BOT_COMMANDS = [
   { command: "top", description: "Rank current views: depeg, dews, yield, liquidity, chains, safety" },
   { command: "why", description: "Explain one coin Safety Score (e.g. /why USDC)" },
   { command: "coverage", description: "Show which Pharos data surfaces cover one coin" },
+  { command: "health", description: "Show delivery diagnostics for this chat" },
   { command: "list", description: "Show your current subscriptions and settings" },
   { command: "subscribe", description: "Subscribe to alerts (e.g. /subscribe usd-top-50 depeg-step 250)" },
   { command: "unsubscribe", description: "Remove coin subscriptions" },
@@ -48,6 +49,7 @@ export const TELEGRAM_BOT_GROUP_COMMANDS = [
   { command: "subscribe", description: "Subscribe to alerts (e.g. /subscribe usd-top-50 depeg-step 250)" },
   { command: "unsubscribe", description: "Remove coin subscriptions" },
   { command: "list", description: "Show your current subscriptions and settings" },
+  { command: "health", description: "Show delivery diagnostics for this chat" },
   { command: "status", description: "Current peg, DEWS, and safety for one coin (e.g. /status USDC)" },
   { command: "mute", description: "Enable quiet hours in UTC (e.g. /mute 22-07)" },
   { command: "help", description: "Command reference" },

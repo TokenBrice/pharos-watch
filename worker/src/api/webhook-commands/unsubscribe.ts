@@ -1,4 +1,5 @@
 import { parseTargetArgs, resolveTicker } from "../../lib/telegram-alerts";
+import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import {
   buildNotFoundMessage,
   buildPresetUnavailableMessage,
@@ -19,11 +20,23 @@ export const handleUnsubscribe: WebhookCommandHandler = async (ctx, args) => {
   const parsed = parseTargetArgs(args, { resolutionScope: "tracked" });
   if (args.trim().length === 0) {
     await ctx.replyToChat("Specify ticker(s) or preset(s) to unsubscribe, or use /unsubscribe all");
+    await recordTelegramUsageEvent(db, {
+      eventType: "unsubscribe",
+      actionDetail: "validation",
+      outcome: "failure",
+      failureClass: "missing_target",
+    });
     return;
   }
 
   if (parsed.includeAll && (parsed.tickers.length > 0 || parsed.presetIds.length > 0)) {
     await ctx.replyToChat('Use /unsubscribe all by itself, or specify ticker/preset targets without "all".');
+    await recordTelegramUsageEvent(db, {
+      eventType: "unsubscribe",
+      actionDetail: "validation",
+      outcome: "failure",
+      failureClass: "mixed_all",
+    });
     return;
   }
 
@@ -32,6 +45,12 @@ export const handleUnsubscribe: WebhookCommandHandler = async (ctx, args) => {
     const match = resolveTicker(invalidTarget, "tracked");
     const suggestion = match.status === "not_found" ? match.suggestion : undefined;
     await ctx.replyToChat(buildNotFoundMessage(invalidTarget, suggestion));
+    await recordTelegramUsageEvent(db, {
+      eventType: "unsubscribe",
+      actionDetail: "validation",
+      outcome: "failure",
+      failureClass: "target_not_found",
+    });
     return;
   }
 
@@ -57,6 +76,12 @@ export const handleUnsubscribe: WebhookCommandHandler = async (ctx, args) => {
   const presetCoins = await resolvePresetCoins(db, presetIds);
   if (presetCoins == null) {
     await ctx.replyToChat(buildPresetUnavailableMessage());
+    await recordTelegramUsageEvent(db, {
+      eventType: "unsubscribe",
+      actionDetail: "preset",
+      outcome: "failure",
+      failureClass: "preset_unavailable",
+    });
     return;
   }
 

@@ -60,6 +60,7 @@ import {
 } from "./telegram-webhook-shared";
 import { SNOOZE_SECONDS, isDepegStepValue } from "../lib/telegram-constants";
 import { logTelegramEvent } from "../lib/telegram-log";
+import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
 import { requireGroupAdminForCallback } from "./telegram-webhook-auth";
 
 // Re-export so any caller importing `SNOOZE_SECONDS` from this module keeps working.
@@ -119,7 +120,7 @@ async function requireAdminForMutatingCallback(
   chatId: string,
   denialText: string = "Only group admins can change alert settings.",
 ): Promise<boolean> {
-  return requireGroupAdminForCallback(
+  const allowed = await requireGroupAdminForCallback(
     db,
     botToken,
     cb.id,
@@ -128,6 +129,14 @@ async function requireAdminForMutatingCallback(
     callbackActorUserId(cb),
     denialText,
   );
+  if (!allowed) {
+    await recordTelegramUsageEvent(db, {
+      eventType: "group_admin_denial",
+      actionDetail: cb.data?.split(":")[0] ?? "callback",
+      outcome: "denied",
+    });
+  }
+  return allowed;
 }
 
 export interface TelegramCallbackQuery {
@@ -292,6 +301,11 @@ export async function handleCallbackQuery(
       });
       return;
     }
+    await recordTelegramUsageEvent(db, {
+      eventType: "snooze_change",
+      actionDetail: "chat",
+      outcome: "set",
+    });
     await answerCallbackQuery(cb.id, botToken, {
       text: `Snoozed for ${arg}. Use /list to verify or tap a longer window.`,
     });
@@ -346,6 +360,11 @@ export async function handleCallbackQuery(
       return;
     }
     const meta = TRACKED_META_BY_ID.get(arg);
+    await recordTelegramUsageEvent(db, {
+      eventType: "snooze_change",
+      actionDetail: "coin",
+      outcome: "set",
+    });
     await answerCallbackQuery(cb.id, botToken, {
       text: `Snoozed ${meta?.symbol ?? arg} for ${durationToken}.`,
     });
@@ -423,6 +442,11 @@ export async function handleCallbackQuery(
         new Set(["dews", "depeg"]),
         [arg],
       );
+      await recordTelegramUsageEvent(db, {
+        eventType: "subscribe",
+        actionDetail: "quicksub",
+        outcome: "success",
+      });
     } catch (err) {
       console.error("[telegram-webhook] quicksub write failed:", err);
       await answerCallbackQuery(cb.id, botToken, {
@@ -577,6 +601,11 @@ export async function handleCallbackQuery(
     const username = isGroup ? null : cb.from?.username ?? null;
     try {
       await setSubscriberTimezone(db, chatId, username, zone);
+      await recordTelegramUsageEvent(db, {
+        eventType: "timezone_change",
+        actionDetail: "quick_pick",
+        outcome: "set",
+      });
     } catch (err) {
       logTelegramEvent({
         message: "timezone write failed",
@@ -855,6 +884,16 @@ async function executeConfirmedBulk(
     const alertTypes = new Set(payload.alertTypes);
     if (payload.subscribeAll) {
       await upsertGlobalAlertTypes(db, chatId, username, alertTypes);
+      await recordTelegramUsageEvent(db, {
+        eventType: "subscribe",
+        actionDetail: "all",
+        outcome: "success",
+      });
+      await recordTelegramUsageEvent(db, {
+        eventType: "global_alert_change",
+        actionDetail: "bulk_confirm",
+        outcome: "opt_in",
+      });
       return;
     }
     await upsertSubscriberAndSubscriptions(db, chatId, username, alertTypes, payload.coinIds, {
@@ -864,7 +903,17 @@ async function executeConfirmedBulk(
       await upsertPresetSubscriptions(db, chatId, payload.presetIds, alertTypes, {
         depegWorseningBpsStep: payload.depegWorseningBpsStep,
       });
+      await recordTelegramUsageEvent(db, {
+        eventType: "preset_follow",
+        actionDetail: "preset",
+        outcome: "success",
+      });
     }
+    await recordTelegramUsageEvent(db, {
+      eventType: "subscribe",
+      actionDetail: payload.presetIds.length > 0 ? "preset" : "coin",
+      outcome: "success",
+    });
     return;
   }
 
@@ -891,10 +940,30 @@ async function executeConfirmedBulk(
         )
         .bind(now, chatId),
     ]);
+    await recordTelegramUsageEvent(db, {
+      eventType: "unsubscribe",
+      actionDetail: "all",
+      outcome: "success",
+    });
+    await recordTelegramUsageEvent(db, {
+      eventType: "global_alert_change",
+      actionDetail: "bulk_confirm",
+      outcome: "opt_out",
+    });
     return;
   }
   await removeSubscriptions(db, chatId, payload.coinIds);
   if (payload.presetIds.length > 0) {
     await removePresetSubscriptions(db, chatId, payload.presetIds);
+    await recordTelegramUsageEvent(db, {
+      eventType: "preset_unfollow",
+      actionDetail: "preset",
+      outcome: "success",
+    });
   }
+  await recordTelegramUsageEvent(db, {
+    eventType: "unsubscribe",
+    actionDetail: payload.presetIds.length > 0 ? "preset" : "coin",
+    outcome: "success",
+  });
 }

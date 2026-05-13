@@ -7,12 +7,19 @@ vi.stubGlobal("fetch", fetchSpy);
 const { handleTelegramWebhook } = await import("../telegram-webhook");
 const { resolveTicker } = await import("../../lib/telegram-alerts");
 const { FROZEN_STABLECOINS } = await import("@shared/lib/stablecoins");
+const { resetTelegramInvalidSecretLogStateForTests } = await import("../../lib/telegram-log");
 
 function makeWebhookRequest(
   chatId: number,
   text: string,
   secret = "test-secret",
-  options: { chatType?: string; fromId?: number; fromUsername?: string; includeFrom?: boolean } = {},
+  options: {
+    chatType?: string;
+    fromId?: number;
+    fromUsername?: string;
+    includeFrom?: boolean;
+    updateId?: number;
+  } = {},
 ): Request {
   const message: Record<string, unknown> = {
     chat: { id: chatId, username: "testuser", type: options.chatType ?? "private" },
@@ -28,6 +35,7 @@ function makeWebhookRequest(
       "X-Telegram-Bot-Api-Secret-Token": secret,
     },
     body: JSON.stringify({
+      ...(options.updateId != null ? { update_id: options.updateId } : {}),
       message,
     }),
   });
@@ -65,10 +73,12 @@ describe("handleTelegramWebhook", () => {
   beforeEach(() => {
     fetchSpy.mockReset();
     fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    resetTelegramInvalidSecretLogStateForTests();
   });
 
   it("returns 200 for invalid secret", async () => {
     const db = mockD1([]);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const res = await handleTelegramWebhook(
       db,
       makeWebhookRequest(123, "/start", "wrong-secret"),
@@ -78,6 +88,16 @@ describe("handleTelegramWebhook", () => {
 
     expect(res.status).toBe(200);
     expect(fetchSpy).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(1);
+    const record = JSON.parse(String(warn.mock.calls[0]?.[0] ?? "{}")) as {
+      action?: string;
+      signal?: string;
+      invalidSecretWindowCount?: number;
+    };
+    expect(record.action).toBe("auth-invalid-secret");
+    expect(record.signal).toBe("invalid_secret");
+    expect(record.invalidSecretWindowCount).toBe(1);
+    warn.mockRestore();
   });
 
   it("returns 200 for missing secret without logging timing-safe compare misconfiguration", async () => {
@@ -117,6 +137,130 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("Welcome");
   });
 
+  it("skips duplicate update ids that are already processed", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT OR IGNORE INTO telegram_processed_updates",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      {
+        match: "SELECT status, received_at FROM telegram_processed_updates WHERE update_id = ?",
+        rows: [],
+        first: { status: "processed", received_at: 1_700_000_000 },
+      },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/help", "test-secret", { updateId: 500 }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(
+      db.getHistory().some((entry) => entry.sql.includes("FROM telegram_pending_disambiguation")),
+    ).toBe(false);
+  });
+
+  it("reclaims failed update ids so Telegram retries can process them", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT OR IGNORE INTO telegram_processed_updates",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      {
+        match: "SELECT status, received_at FROM telegram_processed_updates WHERE update_id = ?",
+        rows: [],
+        first: { status: "failed", received_at: 1_700_000_000 },
+      },
+      {
+        match: "UPDATE telegram_processed_updates",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      { match: "telegram_pending_disambiguation", rows: [] },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/help", "test-secret", { updateId: 501 }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(sentMessageBody().text).toContain("Commands");
+    const processedUpdate = db.getHistory().find(
+      (entry) =>
+        entry.sql.includes("UPDATE telegram_processed_updates") &&
+        entry.sql.includes("status = 'processed'"),
+    );
+    expect(processedUpdate).toBeDefined();
+  });
+
+  it("processes older out-of-order update ids without using the old high-watermark cache", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT OR IGNORE INTO telegram_processed_updates",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "UPDATE telegram_processed_updates",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/help", "test-secret", { updateId: 100 }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(sentMessageBody().text).toContain("Commands");
+    expect(
+      db.getHistory().some((entry) => entry.binds.includes("telegram:last-update-id")),
+    ).toBe(false);
+  });
+
+  it("rate-limits expensive commands per chat with a graceful reply", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "INSERT INTO cache (key, value, updated_at)",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      {
+        match: "SELECT updated_at FROM cache WHERE key = ?",
+        rows: [],
+        first: { updated_at: 1_700_000_000 },
+      },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/brief"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(sentMessageBody().text).toContain("Please try /brief again");
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM daily_digest"))).toBe(false);
+    nowSpy.mockRestore();
+  });
+
   it("returns 200 for non-command text", async () => {
     const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
     const res = await handleTelegramWebhook(db, makeWebhookRequest(123, "hello"), "test-secret", "bot-token");
@@ -145,6 +289,55 @@ describe("handleTelegramWebhook", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(sentMessageBody().text).toContain("Commands");
     expect(sentMessageBody().text).toContain("/presets");
+  });
+
+  it("replies to /health with chat delivery diagnostics", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "FROM telegram_subscribers",
+        first: {
+          alert_dews: 1,
+          alert_depeg: 0,
+          alert_safety: 0,
+          alert_launch: 0,
+          global_alert_dews: 1,
+          global_alert_depeg: 0,
+          global_alert_safety: 0,
+          global_alert_launch: 0,
+          quiet_hours_enabled: 1,
+          quiet_hours_start_utc: 22,
+          quiet_hours_end_utc: 7,
+          timezone: null,
+          alert_snooze_until_ts: null,
+          consecutive_block_count: 0,
+          consecutive_block_first_at: null,
+        },
+        rows: [],
+      },
+      { match: "FROM telegram_preset_subscriptions", rows: [{ preset_id: "usd-top25", alert_dews: 1, alert_depeg: 1, alert_safety: 0, depeg_worsening_bps_step: null }] },
+      { match: "COUNT(*) AS active_count", first: { active_count: 3 }, rows: [] },
+      { match: "SELECT last_error_class", first: { last_error_class: "rate_limit" }, rows: [] },
+      { match: "COUNT(*) AS pending_count", first: { pending_count: 2 }, rows: [] },
+      {
+        match: "FROM telegram_chat_delivery_diagnostics",
+        first: {
+          last_successful_delivery_at: Math.floor(Date.now() / 1000) - 60,
+          last_successful_reply_at: Math.floor(Date.now() / 1000) - 60,
+          recent_failure_class: null,
+        },
+        rows: [],
+      },
+    ]);
+
+    const res = await handleTelegramWebhook(db, makeWebhookRequest(123, "/health"), "test-secret", "bot-token");
+
+    expect(res.status).toBe(200);
+    const text = latestSendMessageBody().text;
+    expect(text).toContain("Bot Health");
+    expect(text).toContain("Queued alerts for this chat: 2");
+    expect(text).toContain("Recent failure class: rate_limit");
+    expect(text).toContain("Alert readiness: 3 explicit coin follows; 1 dynamic preset");
   });
 
   it("/settings sends the chat-level settings keyboard", async () => {
@@ -421,14 +614,18 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody(1).text).toContain("No digest brief is available yet");
   });
 
-  it("handles direct /top usage without touching D1", async () => {
+  it("handles direct /top usage without running the expensive top view", async () => {
     const db = mockD1([]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/top"), "test-secret", "bot-token");
 
     expect(sentMessageBody().text).toBe("Usage: /top depeg|dews|yield|liquidity|chains|safety");
-    expect(db.getHistory()).toHaveLength(1);
-    expect(db.getHistory()[0]?.sql).toContain("FROM telegram_pending_disambiguation");
+    const history = db.getHistory();
+    expect(history[0]?.sql).toContain("FROM telegram_pending_disambiguation");
+    expect(
+      history.some((entry) => entry.binds.some((bind) => String(bind).includes("telegram:command-cooldown"))),
+    ).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("FROM depeg_events"))).toBe(false);
   });
 
   it("handles direct /why and /coverage commands", async () => {

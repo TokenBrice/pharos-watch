@@ -15,6 +15,7 @@
  */
 
 import { answerCallbackQuery, editMessage, sendToChat } from "../lib/telegram";
+import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
 import { resolveTicker } from "../lib/telegram-alerts";
 import {
   buildNotFoundMessage,
@@ -124,6 +125,11 @@ export async function handleSettingsCallback(
       return;
     }
     await toggleGlobalAlert(db, chatId, username, subArg);
+    await recordTelegramUsageEvent(db, {
+      eventType: "global_alert_change",
+      actionDetail: subArg,
+      outcome: "toggled",
+    });
     await renderHome(db, chatId, botToken, target);
     await answerCallbackQuery(cb.id, botToken, { text: `Updated global ${subArg}.` });
     return;
@@ -136,6 +142,11 @@ export async function handleSettingsCallback(
     }
     const enabled = subArg === "1";
     await setQuietHours(db, chatId, username, enabled);
+    await recordTelegramUsageEvent(db, {
+      eventType: "quiet_hours_change",
+      actionDetail: "settings",
+      outcome: enabled ? "enabled" : "disabled",
+    });
     await renderHome(db, chatId, botToken, target);
     await answerCallbackQuery(cb.id, botToken, {
       text: enabled ? "Quiet hours enabled." : "Quiet hours disabled.",
@@ -149,6 +160,11 @@ export async function handleSettingsCallback(
       return;
     }
     await clearSnoozeViaSettings(db, chatId, username);
+    await recordTelegramUsageEvent(db, {
+      eventType: "snooze_change",
+      actionDetail: "settings",
+      outcome: "cleared",
+    });
     await renderHome(db, chatId, botToken, target);
     await answerCallbackQuery(cb.id, botToken, { text: "Snooze cleared." });
     return;
@@ -180,6 +196,11 @@ export async function handleSettingsCallback(
       await answerCallbackQuery(cb.id, botToken, { text: "Unknown setting." });
       return;
     }
+    await recordTelegramUsageEvent(db, {
+      eventType: "subscribe",
+      actionDetail: `settings_${setting}`,
+      outcome: value === "0" ? "opt_out" : "opt_in",
+    });
     await renderCoin(db, chatId, coinId, botToken, target);
     await answerCallbackQuery(cb.id, botToken, { text: applied });
     return;

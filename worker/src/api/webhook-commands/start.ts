@@ -1,3 +1,7 @@
+import {
+  classifyTelegramStartSource,
+  recordTelegramUsageEvent,
+} from "../../lib/telegram-usage-analytics";
 import { parseStartPayload } from "../telegram-webhook-parsing";
 import { sendWizardIntro } from "../telegram-webhook-setup";
 import { START_MESSAGE } from "../telegram-webhook-shared";
@@ -9,6 +13,22 @@ import { handleWhy } from "./why";
 import { handleCoverage } from "./coverage";
 
 export const handleStart: WebhookCommandHandler = async (ctx, args) => {
+  const sourceCategory = classifyTelegramStartSource(args);
+  await recordTelegramUsageEvent(ctx.db, {
+    eventType: "start",
+    sourceCategory,
+    actionDetail: sourceCategory,
+    outcome: "received",
+  });
+  if (sourceCategory !== "none") {
+    await recordTelegramUsageEvent(ctx.db, {
+      eventType: "deep_link",
+      sourceCategory,
+      actionDetail: "/start",
+      outcome: "received",
+    });
+  }
+
   const payload = parseStartPayload(args);
   switch (payload.kind) {
     case "subscribe":

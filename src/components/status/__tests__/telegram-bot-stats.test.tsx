@@ -13,6 +13,9 @@ const telegramBot: NonNullable<StatusResponse["telegramBot"]> = {
   emptyAlertChats: 1,
   mutedChatsWithSubscriptions: 2,
   totalSubscriptions: 15,
+  explicitCoinSubscriptions: 11,
+  presetImpliedCoinSubscriptions: 4,
+  activePresetFollowers: 2,
   avgSubscriptionsPerSubscribedChat: 2.5,
   pendingDisambiguations: 1,
   pendingDeliveries: 7,
@@ -32,6 +35,26 @@ const telegramBot: NonNullable<StatusResponse["telegramBot"]> = {
   retryErrorClassCounts: { rate_limit: 5, auth_error: 1 },
   presetQueryFailures: 2,
   inactiveSubscribersCleanedThisWeek: 6,
+  lifecycleSnapshot: {
+    date: "2026-05-13",
+    snapshotAt: 1_771_856_400,
+    activeWatchers: 8,
+    newWatchers: 2,
+    churnedWatchers: 1,
+    reactivatedWatchers: 1,
+    explicitCoinFollows: 11,
+    presetImpliedCoinFollows: 4,
+    activePresetFollowers: 2,
+    alertTypeOptIns: {
+      dews: 5,
+      depeg: 4,
+      safety: 3,
+      launch: 2,
+      allTypes: 1,
+    },
+    quietHoursEnabledChats: 3,
+    pendingDeliveries: 7,
+  },
 };
 
 afterEach(() => {
@@ -48,6 +71,9 @@ describe("TelegramBotStats", () => {
     expect(screen.getByText("Backlog deferred")).toBeTruthy();
     expect(screen.getByText("Backlog expired")).toBeTruthy();
     expect(screen.getByText("Preset query failures")).toBeTruthy();
+    expect(screen.getByText("Preset followers")).toBeTruthy();
+    expect(screen.getByText("Lifecycle snapshot")).toBeTruthy();
+    expect(screen.getByText("Preset-implied follows")).toBeTruthy();
     expect(screen.getByText("Inactive cleaned 7d")).toBeTruthy();
     expect(screen.getByText("Pending retry classes")).toBeTruthy();
     expect(screen.getByText("rate_limit")).toBeTruthy();

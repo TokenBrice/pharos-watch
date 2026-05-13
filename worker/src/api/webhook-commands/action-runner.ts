@@ -6,6 +6,10 @@
 import { escapeHtml, sendToChat } from "../../lib/telegram";
 import { logTelegramEvent } from "../../lib/telegram-log";
 import {
+  recordTelegramReplyOutcome,
+  recordTelegramUsageEvent,
+} from "../../lib/telegram-usage-analytics";
+import {
   splitMessage,
   type ResolvedCoin,
   type TickerResolutionScope,
@@ -161,7 +165,17 @@ const completionHandlers: CompletionHandlerMap = {
       await upsertPresetSubscriptions(context.db, context.chatId, presetIds, alertTypes, {
         depegWorseningBpsStep: payload.depegWorseningBpsStep,
       });
+      await recordTelegramUsageEvent(context.db, {
+        eventType: "preset_follow",
+        actionDetail: "preset",
+        outcome: "success",
+      });
     }
+    await recordTelegramUsageEvent(context.db, {
+      eventType: "subscribe",
+      actionDetail: presetIds.length > 0 ? "preset" : "coin",
+      outcome: "success",
+    });
     const subscriptions = await loadSubscriptionsByIds(
       context.db,
       context.chatId,
@@ -187,7 +201,17 @@ const completionHandlers: CompletionHandlerMap = {
     );
     if (presetIds.length > 0) {
       await removePresetSubscriptions(context.db, context.chatId, presetIds);
+      await recordTelegramUsageEvent(context.db, {
+        eventType: "preset_unfollow",
+        actionDetail: "preset",
+        outcome: "success",
+      });
     }
+    await recordTelegramUsageEvent(context.db, {
+      eventType: "unsubscribe",
+      actionDetail: presetIds.length > 0 ? "preset" : "coin",
+      outcome: "success",
+    });
     if (presetIds.length > 0) {
       return buildPresetUnsubscribeSummaryMessage(coins, {
         presetIds,
@@ -278,6 +302,7 @@ async function persistAndPromptBulkConfirm(
     initiatorUserId: context.initiatorUserId,
   });
   await replyToChat(
+    context.db,
     context.chatId,
     buildBulkConfirmMessage(
       gate.kind,
@@ -301,7 +326,7 @@ export function makeActionRunner(
 ): BoundActionRunner {
   const reply = async (message: string) => {
     if (message === GATED_SENTINEL) return;
-    await replyToChat(context.chatId, message, botToken);
+    await replyToChat(context.db, context.chatId, message, botToken);
   };
   return ({ tickers, actionType, actionPayload, alertTypes, initialCoins, clearPendingOnTerminal, resolutionScope }) =>
     runCoinResolutionFlow({
@@ -331,6 +356,7 @@ export function makeActionRunner(
  * messages without needing the chat-scoped helpers from the dispatch context.
  */
 async function replyToChat(
+  db: D1Database,
   chatId: string,
   message: string,
   botToken: string,
@@ -344,7 +370,18 @@ async function replyToChat(
       disableWebPagePreview: true,
       ...(isLastChunk && options.replyMarkup != null ? { replyMarkup: options.replyMarkup } : {}),
     });
+    await recordTelegramReplyOutcome(db, {
+      chatId,
+      ok: result.ok,
+      errorClass: result.errorClass,
+    });
     if (!result.ok) {
+      await recordTelegramUsageEvent(db, {
+        eventType: "reply_failure",
+        actionDetail: "reply",
+        outcome: "failed",
+        failureClass: result.errorClass ?? "unknown",
+      });
       logTelegramEvent({
         level: "warn",
         message: "reply send failed",

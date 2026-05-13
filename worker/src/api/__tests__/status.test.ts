@@ -1513,7 +1513,13 @@ describe("handleStatus", () => {
         customPreferenceChats: number;
         quietHoursEnabledChats: number;
         alertTypeChats: { dews: number; depeg: number; safety: number; launch: number; allTypes: number };
-        topStablecoins: Array<{ stablecoinId: string; symbol: string; subscribers: number }>;
+        topStablecoins: Array<{
+          stablecoinId: string;
+          symbol: string;
+          subscribers: number;
+          explicitSubscribers: number;
+          presetImpliedSubscribers: number;
+        }>;
       } | null;
     };
 
@@ -1533,8 +1539,20 @@ describe("handleStatus", () => {
       allTypes: 5,
     });
     expect(body.telegramBot?.topStablecoins).toEqual([
-      { stablecoinId: "usdc-circle", symbol: "USDC", subscribers: 7 },
-      { stablecoinId: "usde-ethena", symbol: "USDe", subscribers: 4 },
+      {
+        stablecoinId: "usdc-circle",
+        symbol: "USDC",
+        subscribers: 7,
+        explicitSubscribers: 7,
+        presetImpliedSubscribers: 0,
+      },
+      {
+        stablecoinId: "usde-ethena",
+        symbol: "USDe",
+        subscribers: 4,
+        explicitSubscribers: 4,
+        presetImpliedSubscribers: 0,
+      },
     ]);
   });
 

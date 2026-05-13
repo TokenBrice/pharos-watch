@@ -1,5 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { timingSafeCompare, hasValidAdminCredential, requireAdmin, withAdmin } from "../../lib/auth";
+import {
+  resetTelegramInvalidSecretLogStateForTests,
+} from "../../lib/telegram-log";
+import { validateTelegramWebhookSecret } from "../telegram-webhook-auth";
 
 describe("timingSafeCompare", () => {
   it("returns true for matching strings", async () => {
@@ -13,6 +17,49 @@ describe("timingSafeCompare", () => {
   });
   it("returns false when both empty", async () => {
     expect(await timingSafeCompare("", "")).toBe(false);
+  });
+});
+
+describe("validateTelegramWebhookSecret", () => {
+  it("accepts current and previous secrets", async () => {
+    const current = new Request("https://x/api/telegram-webhook", {
+      headers: { "X-Telegram-Bot-Api-Secret-Token": "current" },
+    });
+    const previous = new Request("https://x/api/telegram-webhook", {
+      headers: { "X-Telegram-Bot-Api-Secret-Token": "previous" },
+    });
+
+    expect(await validateTelegramWebhookSecret(current, "current", "previous")).toBe("valid");
+    expect(await validateTelegramWebhookSecret(previous, "current", "previous")).toBe("valid");
+  });
+
+  it("treats missing secrets as a quiet no-op", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const request = new Request("https://x/api/telegram-webhook");
+
+    expect(await validateTelegramWebhookSecret(request, "current")).toBe("missing");
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("logs invalid secrets as a separate spike signal", async () => {
+    resetTelegramInvalidSecretLogStateForTests();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const request = new Request("https://x/api/telegram-webhook", {
+      headers: { "X-Telegram-Bot-Api-Secret-Token": "wrong" },
+    });
+
+    expect(await validateTelegramWebhookSecret(request, "current")).toBe("invalid");
+
+    const record = JSON.parse(String(warn.mock.calls[0]?.[0] ?? "{}")) as {
+      action?: string;
+      signal?: string;
+      invalidSecretWindowCount?: number;
+    };
+    expect(record.action).toBe("auth-invalid-secret");
+    expect(record.signal).toBe("invalid_secret");
+    expect(record.invalidSecretWindowCount).toBe(1);
+    warn.mockRestore();
   });
 });
 

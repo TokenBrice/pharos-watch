@@ -50,6 +50,9 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 const COIN_COUNT = TRACKED_STABLECOIN_COUNT;
+const BOT_URL = "https://t.me/PharosWatchBot";
+const SETUP_DEEP_LINK = `${BOT_URL}?start=setup`;
+const RECOMMENDED_SETUP_DEEP_LINK = `${BOT_URL}?start=sub_dews-depeg_usd-top25`;
 
 const TELEGRAM_ACTION_ICONS = {
   bot: Bot,
@@ -324,7 +327,7 @@ export default function PharosWatchBotPage() {
       containerClassName="mx-auto max-w-6xl"
       headerActions={
         <Button asChild size="sm" className="gap-2">
-          <a href="https://t.me/PharosWatchBot" target="_blank" rel="noopener noreferrer">
+          <a href={SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
             Open Bot
             <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
           </a>
@@ -371,7 +374,7 @@ export default function PharosWatchBotPage() {
                   does.
                 </h2>
                 <p className="max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-[17px]">
-                  <TelegramLink href="https://t.me/PharosWatchBot">@PharosWatchBot</TelegramLink> watches depegs, DEWS
+                  <TelegramLink href={BOT_URL}>@PharosWatchBot</TelegramLink> watches depegs, DEWS
                   threat bands, safety-grade changes, and launch promotions across the tracked universe. Start with one
                   low-noise preset, then tune thresholds as your watchlist grows.
                 </p>
@@ -426,8 +429,8 @@ export default function PharosWatchBotPage() {
                   <TelegramPulseStrip />
                 </div>
                 <Button asChild size="lg" className="shrink-0 gap-2">
-                  <a href="https://t.me/PharosWatchBot" target="_blank" rel="noopener noreferrer">
-                    Open Bot
+                  <a href={RECOMMENDED_SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
+                    Use Recommended Setup
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </a>
                 </Button>
@@ -695,7 +698,7 @@ export default function PharosWatchBotPage() {
             <div className="max-w-3xl space-y-2">
               <p className="pharos-kicker">Start watching</p>
               <h2 id="start-bot-cta" className="text-xl font-semibold tracking-tight text-foreground">
-                Open the bot, paste the command.
+                Open the bot with the recommended setup.
               </h2>
               <p className="text-sm leading-relaxed text-muted-foreground">
                 Digest and community are right here if you want slower context after.
@@ -705,7 +708,7 @@ export default function PharosWatchBotPage() {
               <CommandLine command={RECOMMENDED_FIRST_COMMAND} />
               <div className="flex flex-wrap gap-3">
                 <Button size="sm" asChild className="gap-2">
-                  <a href="https://t.me/PharosWatchBot" target="_blank" rel="noopener noreferrer">
+                  <a href={RECOMMENDED_SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
                     <Bot className="h-4 w-4" />
                     Start Bot
                   </a>

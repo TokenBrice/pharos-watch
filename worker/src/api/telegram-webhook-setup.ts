@@ -9,6 +9,7 @@
  */
 
 import { escapeHtml, sendToChat } from "../lib/telegram";
+import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
 import {
   listTelegramPresets,
   resolveTelegramPresetTargets,
@@ -289,9 +290,21 @@ export async function handleSetupBranch(
   }
 
   if (arg === "recommended") {
+    await recordTelegramUsageEvent(context.db, {
+      eventType: "setup_choice",
+      sourceCategory: "wizard",
+      actionDetail: "recommended",
+      outcome: "selected",
+    });
     return openRecommendedConfirm(context, state);
   }
   if (arg === "custom") {
+    await recordTelegramUsageEvent(context.db, {
+      eventType: "setup_choice",
+      sourceCategory: "wizard",
+      actionDetail: "custom",
+      outcome: "selected",
+    });
     const nextState: SetupWizardState = {
       ...state,
       step: "custom-types",
@@ -316,6 +329,12 @@ export async function handleSetupBranch(
   }
   if (arg === "skip") {
     await clearSetupState(context.db, context.chatId);
+    await recordTelegramUsageEvent(context.db, {
+      eventType: "setup_choice",
+      sourceCategory: "wizard",
+      actionDetail: "skip",
+      outcome: "selected",
+    });
     await sendToChat(context.chatId, START_MESSAGE, context.botToken, { disableWebPagePreview: true });
     return { text: "OK." };
   }
@@ -533,6 +552,17 @@ export async function handleSetupConfirm(
   if (state.target.kind === "all") {
     await upsertGlobalAlertTypes(context.db, context.chatId, context.username, alertTypes);
     await clearSetupState(context.db, context.chatId);
+    await recordTelegramUsageEvent(context.db, {
+      eventType: "setup_complete",
+      sourceCategory: state.step === "confirm-recommended" ? "recommended" : "custom",
+      actionDetail: "all",
+      outcome: "success",
+    });
+    await recordTelegramUsageEvent(context.db, {
+      eventType: "global_alert_change",
+      actionDetail: "setup",
+      outcome: "opt_in",
+    });
     await sendToChat(
       context.chatId,
       escapeHtml(`Subscribed: ${alertTypesSummary(state.alertTypes)} on all tracked coins.`),
@@ -566,6 +596,17 @@ export async function handleSetupConfirm(
       [state.target.presetId as TelegramPresetId],
       alertTypes,
     );
+    await recordTelegramUsageEvent(context.db, {
+      eventType: "setup_complete",
+      sourceCategory: state.step === "confirm-recommended" ? "recommended" : "custom",
+      actionDetail: "preset",
+      outcome: "success",
+    });
+    await recordTelegramUsageEvent(context.db, {
+      eventType: "preset_follow",
+      actionDetail: "setup",
+      outcome: "success",
+    });
     const subscriptions = await loadSubscriptionsByIds(context.db, context.chatId, coinIds);
     const intro = `Subscribed via ${presetLabelById(state.target.presetId)} (${coins.length} coins). Use /list anytime.`;
     await sendToChat(
@@ -586,6 +627,12 @@ export async function handleSetupConfirm(
     [state.target.coinId],
     { clearPending: true },
   );
+  await recordTelegramUsageEvent(context.db, {
+    eventType: "setup_complete",
+    sourceCategory: "custom",
+    actionDetail: "ticker",
+    outcome: "success",
+  });
   const subscriptions = await loadSubscriptionsByIds(context.db, context.chatId, [state.target.coinId]);
   await sendToChat(
     context.chatId,
