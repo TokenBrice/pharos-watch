@@ -25,7 +25,7 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 - Legacy `v7.48` payloads remain valid without `publication`, `sourceRisk`, rank, or attribution fields because missing source-risk inputs resolve to the neutral penalty
 - Report-card yield-risk helpers normalize the source-risk payload but still return explicit no-op adjustments until a separate report-card methodology version defines sourced caps or haircuts
 - Current yield source-risk does not affect Safety Score, Dependency Risk, Resilience, or overall report-card grades; future score-affecting use requires a report-card methodology update and matching report-card timeline entry
-- DEWS continues to use yield anomaly warning signals rather than structured `sourceRisk.*`, source-switch, or rank-attribution fields until a future DEWS methodology version defines scored consumption
+- DEWS methodology v5.99 now consumes populated structured `sourceRisk.*`, source-switch, and rank-attribution stress evidence inside the existing Yield Anomaly sub-signal; missing or neutral structured rows remain no-ops
 
 ---
 

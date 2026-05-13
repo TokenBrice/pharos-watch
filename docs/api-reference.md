@@ -2315,9 +2315,9 @@ Optional v8 fields are nullable and omittable. Publication-generation fields are
 | `sourceRisk.venueChain`       | ranking/history/source rows | `string \| null \| undefined`                                                                                                       | Optional venue chain label |
 | `sourceRisk.venueRiskTier`    | ranking/history/source rows | `"low" \| "medium" \| "high" \| "unknown" \| null \| undefined`                                                                     | Optional sourced venue tier; unknown remains neutral |
 | `sourceRisk.investabilityFlags` | ranking/history/source rows | `string[] \| undefined`                                                                                                             | Optional investability caveats |
-| `rankChangeAttribution`       | ranking rows            | `object \| null \| undefined`                                                                                                           | Reserved for future rank-change explanations |
+| `rankChangeAttribution`       | ranking rows            | `object \| null \| undefined`                                                                                                           | Optional previous-rank/PYS delta attribution with primary driver and contribution hints |
 
-Current `v8.0` scoring treats missing source-risk evidence as neutral: omitted or `null` `sourceRisk`, `sourceRisk.sourceRiskPenalty`, or `sourceRisk.venueRiskTier` values resolve to a neutral source-risk penalty and do not change DEWS or report-card scoring. Saved payloads used by calibration tooling should normalize from the nested `sourceRisk.*` fields before analysis rather than assuming flattened row properties.
+Current `v8.0` scoring treats missing source-risk evidence as neutral: omitted or `null` `sourceRisk`, `sourceRisk.sourceRiskPenalty`, or `sourceRisk.venueRiskTier` values resolve to a neutral source-risk penalty and do not change PYS or report-card scoring. DEWS methodology v5.99 consumes only populated structured yield stress evidence inside its Yield Anomaly sub-signal; neutral, malformed, or missing structured rows remain no-ops. Saved payloads used by calibration tooling should normalize from the nested `sourceRisk.*` fields before analysis rather than assuming flattened row properties.
 
 **`YieldRanking`**
 
@@ -2361,7 +2361,7 @@ Current `v8.0` scoring treats missing source-risk evidence as neutral: omitted o
 | `publishedRank`          | `number \| null \| undefined`                                  | Stable publication-order rank from the cached generation                                                                                            |
 | `liveRank`               | `number \| null \| undefined`                                  | Post-hydration rank from the response order after live Safety Score recomputation                                                                     |
 | `sourceRisk`             | `object \| null \| undefined`                                  | Optional nested source-risk payload. Runtime rows derive or resolve `sourceRisk.sourceRiskPenalty` before PYS v8 scoring; missing or unknown values remain neutral              |
-| `rankChangeAttribution`  | `object \| null \| undefined`                                  | Reserved optional rank-change attribution scaffold                                                                                                  |
+| `rankChangeAttribution`  | `object \| null \| undefined`                                  | Optional rank-change attribution with previous rank/PYS, delta, primary driver, and driver contribution hints                                       |
 
 When present, `YieldRanking.provenance` includes:
 

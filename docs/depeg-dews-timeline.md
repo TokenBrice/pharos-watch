@@ -4,11 +4,12 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.98`
 
 ---
 
-## Boundary note — Yield source-risk scaffolding (May 13, 2026)
+## v5.99 — Structured Yield Source-Risk DEWS Input (May 13, 2026)
 
-- No methodology version change: DEWS remains warning-string-only for the Yield Anomaly sub-signal
-- Structured Yield Intelligence source-risk and rank-attribution inputs are documented as no-op scaffolding until sourced DEWS weights are defined
-- Any future score-affecting use of structured yield source-risk, source-switch, or rank-attribution fields must ship with a DEWS methodology version bump
+- DEWS now consumes populated Yield Intelligence `sourceRisk.*` and `rankChangeAttribution.*` fields inside the existing Yield Anomaly sub-signal
+- Structured yield source-risk evidence is additive with existing `yield_data.warning_signals`, and the Yield Anomaly sub-signal still caps at 100
+- Neutral or missing structured source-risk rows remain no-ops, so legacy warning-only rows do not become available zero-stress yield signals
+- The DEWS source-state loader reads structured evidence from the published `yield-rankings` cache; malformed or unavailable cache evidence degrades source metadata without blocking legacy warning strings
 
 ---
 

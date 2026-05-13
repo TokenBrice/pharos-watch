@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) estimating depeg probability. Com
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v5.98`
+- **Current methodology version:** `v5.99`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
@@ -44,7 +44,7 @@ Only signals where `available = true` participate. Weights are redistributed pro
 | Cross-Source Divergence | `diverg` | 0.15   | `dex_prices` + cache    | Fragmented pricing, trust breakdown                                                  |
 | Blacklist Activity      | `black`  | 0.10   | `blacklist_events`      | Issuer emergency freeze surge                                                        |
 | Mint/Burn Flow          | `flow`   | 0.10   | `mint_burn_hourly`      | Redemption surge vs minting                                                          |
-| Yield Anomaly           | `yield`  | 0.05   | `yield_data`            | Yield warning signals (spike, divergence, TVL outflow, negative trend, reward-heavy) |
+| Yield Anomaly           | `yield`  | 0.05   | `yield_data` + `yield-rankings` cache | Yield warning signals plus populated source-risk and rank-attribution stress evidence |
 
 Weights sum to 1.15 but only available signals participate, so redistribution normalizes by actual available weight. When `S_flow` and `S_yield` are both unavailable (most coins), effective weight is 1.00 across the 6 original signals.
 
@@ -122,7 +122,7 @@ Available only when `mint_burn_hourly` data exists and is >= 7 days old. A matur
 
 ### S_yield — Yield Anomaly
 
-Available only for yield-bearing coins with warning signals in `yield_data`. Maps active warning signals to stress points:
+Available for yield-bearing coins with warning signals in `yield_data` or populated structured yield stress in the published `yield-rankings` cache. Maps active warning signals to stress points:
 
 | Warning Signal     | Points |
 | ------------------ | ------ |
@@ -134,11 +134,20 @@ Available only for yield-bearing coins with warning signals in `yield_data`. Map
 
 Score = `min(100, sum of active signal points)`.
 
-### Yield Source-Risk Boundary
+Structured Yield Intelligence source-risk and rank-attribution evidence adds these stress points inside the same Yield Anomaly sub-signal:
 
-DEWS currently consumes yield stress only through the published `yield_data.warning_signals` array. Structured Yield Intelligence source-risk fields (`sourceRisk.*`) and rank-change attribution are present as explicit no-op scaffolding in `worker/src/lib/dews.ts`, but the cron source-state loader does not read them and they do not affect the DEWS score, band, or yield sub-signal.
+| Structured input | Points |
+| --- | ---: |
+| `sourceRisk.rewardShare > 0.5` | 20 |
+| `sourceRisk.sourceDepthRatio < 0.001` | 35 |
+| `sourceRisk.sourceAgeSeconds > 6h` | 15 |
+| `sourceRisk.sourceSwitchCount30d > 0` | 20 |
+| `sourceRisk.sourceRiskPenalty >= 1.5` | 20 |
+| `sourceRisk.venueRiskTier = "high"` | 25 |
+| `rankChangeAttribution.primaryDriver = "source-switch"` | 20 |
+| `rankChangeAttribution.primaryDriver = "source-risk"` | 20 |
 
-Missing structured yield-risk fields remain no-op legacy rows. Future use of structured source-risk, source-switch, or rank-attribution inputs in DEWS scoring requires a DEWS methodology version bump and a matching update to [depeg-dews-timeline.md](./depeg-dews-timeline.md).
+Structured evidence is additive with warning-string evidence and the final Yield Anomaly sub-signal still caps at 100. Neutral structured rows do not become available zero-stress signals; missing, malformed, or neutral source-risk evidence remains a no-op so legacy warning-only behavior is preserved.
 
 ---
 
@@ -179,12 +188,13 @@ Missing structured yield-risk fields remain no-op legacy rows. Future use of str
 3. Read `blacklist_events` counts (24h + 7d)
 4. Read previous `stress_signals` for smoothing
 5. Read `mint_burn_hourly` aggregates
-6. Compute DEWS per PSI-eligible coin
-7. Batch write to `stress_signals` (only for coins where `computeDEWS()` returned a score)
-8. Retire current `stress_signals` rows for PSI-eligible assets that are explicitly present in the stablecoins cache with zero current circulating supply
-9. Daily snapshot to `stress_signal_history` (first run of UTC day)
-10. Purge rows for IDs no longer in the current PSI-eligible universe (chunked ID deletes, 90 IDs/chunk, to stay under D1 bind-variable limits)
-11. Prune old data
+6. Read `yield_data.warning_signals` and structured `sourceRisk` / `rankChangeAttribution` evidence from the published `yield-rankings` cache
+7. Compute DEWS per PSI-eligible coin
+8. Batch write to `stress_signals` (only for coins where `computeDEWS()` returned a score)
+9. Retire current `stress_signals` rows for PSI-eligible assets that are explicitly present in the stablecoins cache with zero current circulating supply
+10. Daily snapshot to `stress_signal_history` (first run of UTC day)
+11. Purge rows for IDs no longer in the current PSI-eligible universe (chunked ID deletes, 90 IDs/chunk, to stay under D1 bind-variable limits)
+12. Prune old data
 
 ---
 
@@ -205,7 +215,7 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
-  "methodology": { "version": "5.98", "versionLabel": "...", "currentVersion": "5.98", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "5.99", "versionLabel": "...", "currentVersion": "5.99", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
@@ -223,7 +233,7 @@ Unknown IDs return `404` with `Unknown stablecoin`; tracked-but-non-active IDs r
     ...
   ],
   "malformedRows": 0,
-  "methodology": { "version": "5.98", "versionLabel": "...", "currentVersion": "5.98", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "5.99", "versionLabel": "...", "currentVersion": "5.99", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
