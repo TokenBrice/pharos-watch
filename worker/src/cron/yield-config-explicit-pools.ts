@@ -39,5 +39,27 @@ export const EXPLICIT_YIELD_SOURCE_POOL_MAP: Record<string, ExplicitYieldPoolCon
       expectedSymbol: "XAUT",
       expectedChain: "ethereum",
     },
+    {
+      // XAUT - lista-lending BSC alt venue
+      poolId: "b89d44a1-052a-4ec8-8dba-7802340fee27",
+      yieldSource: "Lista Lending (XAUT)",
+      yieldType: "lending-opportunity",
+      dataSource: "defillama-auto",
+      expectedProject: "lista-lending",
+      expectedSymbol: "XAUT",
+      expectedChain: "bsc",
+    },
+  ],
+  "paxg-paxos": [
+    {
+      // PAXG - Hydration omnipool single-side LP on Polkadot
+      poolId: "d4a6ef0e-dbcb-4dbf-bdfc-b766808f402e",
+      yieldSource: "Hydration Omnipool (PAXG)",
+      yieldType: "lending-opportunity",
+      dataSource: "defillama",
+      expectedProject: "hydration-dex",
+      expectedSymbol: "PAXG",
+      expectedChain: "polkadot",
+    },
   ],
 };

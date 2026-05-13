@@ -181,7 +181,7 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 
 **Exact weighted pool groups:** `YIELD_WEIGHTED_POOL_GROUPS` can collapse multiple exact DeFiLlama pool UUIDs into one TVL-weighted APY row when Pharos tracks one protocol asset but the yield wrapper is deployed as chain-isolated, non-fungible vaults. This is currently used for `dusd-dtrinity`, where Ethereum and Fraxtal sdUSD dStake pools publish under one synthetic DeFiLlama source key.
 
-**Exact-pool overrides:** `EXPLICIT_YIELD_SOURCE_POOL_MAP` can publish curated non-stablecoin venues when the pool UUID, project, chain, and symbol all match and the usual APY / TVL quality gates still pass. This is currently used for `xaut-tether` via Yo Protocol. These overrides stay outside generic gold/silver auto-discovery, which prevents basket venues such as Multipli's mixed-RWA pools from being treated as single-asset commodity yield sources.
+**Exact-pool overrides:** `EXPLICIT_YIELD_SOURCE_POOL_MAP` can publish curated non-stablecoin venues when the pool UUID, project, chain, and symbol all match and the usual APY / TVL quality gates still pass. This is currently used for `xaut-tether` via Yo Protocol. These overrides stay outside generic gold/silver auto-discovery, which prevents basket venues such as Multipli's mixed-RWA pools from being treated as single-asset commodity yield sources. On 2026-05-13, XAUT gained a second curated venue on Lista Lending (BSC) alongside the existing Yo Protocol pin, and PAXG was added as a non-yield-bearing exact-pool entry on Hydration (Polkadot).
 
 **Variant mapping:** `YIELD_VARIANT_MAP` entries supply labels and pool matching for wrapper/savings tokens:
 
@@ -292,6 +292,7 @@ For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), 
 | Tier 4 | radiant-v2, fraxlend-v2, clearpool, centrifuge, sturdy-v2, goldfinch, truefi, lagoon, liqwid, lista-lending, loopscale, more-markets, navi-lending, overnight-finance, smardex-usdn, vesper, felix-cdp, sovryn-dex |
 | Tier A (2026-03-25, >$50M TVL) | wildcat-protocol, tectonic, upshift, venus-flux, avantis, cap, resupply, zerobase-cedefi |
 | Tier B (2026-03-25, $10M–$50M TVL) | convex-finance, yo-protocol, clearpool-lending, 3jane-lending, hyperlend-pooled, zest-v2, liquity-v2, echelon-market, termmax, beefy, gearbox |
+| Tier C (2026-05-13, $10M+ TVL audit) | autofinance, neverland, metrom, mystic-finance-lending, bitway, frankencoin |
 
 **Discovery logic:** Filters DL pools by `exposure === "single"`, `stablecoin === true`, project in allowlist, and reserved-pool exclusion. Resolution prefers underlying-token address matches over symbol matches. Symbol-only matching is allowed only when the coin remains unambiguous after chain scoping; otherwise the candidate is dropped. Current quality gates require `apy >= 0.1`, an ecosystem-aware absolute TVL floor (`$100K` standard, `$25K` on the smaller-chain allowlist), and for tracked stablecoins a supply-relative floor of `0.1%` of the asset's current circulating supply.
 

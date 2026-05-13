@@ -66,6 +66,13 @@ const LENDING_PROTOCOLS = {
   "termmax": { label: "TermMax" },
   "beefy": { label: "Beefy" },
   "gearbox": { label: "Gearbox" },
+  // Tier C — 2026-05-13 audit additions
+  "autofinance": { label: "AutoFinance" },
+  "neverland": { label: "Neverland" },
+  "metrom": { label: "Metrom" },
+  "mystic-finance-lending": { label: "Mystic Finance" },
+  "bitway": { label: "Bitway" },
+  "frankencoin": { label: "Frankencoin" },
 } as const;
 
 export const LENDING_PROTOCOL_ALLOWLIST = new Set(Object.keys(LENDING_PROTOCOLS));
@@ -97,6 +104,9 @@ export const AUTO_LENDING_POOL_MAP: Record<string, string> = {
   "dllr-sovryn": "436e4129-667b-44d6-8322-ea59ce9b587c",
   "doc-money-on-chain": "17b8f0d7-38e1-4080-9d2c-da1f5706e199",
   "tgbp-tokenised": "61a6a976-f70f-4f38-b4a4-a5d3fda6832c",
+  "reusd-resupply": "a1b05c10-6d01-4b64-9247-4e86ca82a291",
+  "xusd-babelfish": "59901fb6-d071-4923-822a-af871670a7fb",
+  "usda-anzens": "fa66f3f5-24ba-4929-8549-9b811b68ef48",
 };
 
 /**
@@ -108,4 +118,6 @@ export const AUTO_LENDING_SAFETY_BYPASS_IDS = new Set([
   "usdx-hex-trust",
   "usdo-openeden",
   "usdm-moneta",
+  // xusd-babelfish: Rootstock-only, but Sovryn is the canonical Bitcoin-side venue
+  "xusd-babelfish",
 ]);
