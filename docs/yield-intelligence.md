@@ -269,6 +269,10 @@ Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD d
 | YLDS  | 50 | Figure Markets, T-bill rate - 50 bps formula |
 | mTBILL | 0 | Midas, tracks T-bill rate directly |
 | OUSG  | 50 | Ondo US Government Bond fund, 0.50% management fee |
+| BENJI | 20 | Franklin Templeton FOBXX gov MMF, 0.20% mgmt fee |
+| WTGXX | 25 | WisdomTree Government MMF Digital Fund, 0.25% mgmt fee |
+| USTBL | 10 | Spiko US T-Bills MMF (UCITS), 0.10% TER |
+| EUTBL | 15 | Spiko EU T-Bills MMF (UCITS), 0.10% TER, EUR-denominated (€STR benchmark) |
 
 Note: USTB and thBILL were previously rate-derived but have been promoted to Tier 1 `ON_CHAIN_RATE_CONFIGS` (ERC-4626 `convertToAssets`).
 
