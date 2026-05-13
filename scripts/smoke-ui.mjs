@@ -561,6 +561,22 @@ export function getAnalyticsPayloadUrls(url) {
   );
 }
 
+export function isExpectedGaPageViewCollectUrl(url, expectedGaId) {
+  if (!expectedGaId || !/\/g\/collect\b/.test(url)) return false;
+  if (!/google-analytics\.com|analytics\.google\.com/.test(url)) return false;
+
+  const collectUrl = new URL(url);
+  return collectUrl.searchParams.get("tid") === expectedGaId && collectUrl.searchParams.get("en") === "page_view";
+}
+
+export function isToleratedGaCollectFailure(failure, successfulCollectUrls) {
+  return (
+    failure?.errorText === "net::ERR_ABORTED"
+    && typeof failure.url === "string"
+    && successfulCollectUrls.has(failure.url)
+  );
+}
+
 export async function verifyAnalyticsSnippet(url, expectedGaId, fetchImpl = fetch) {
   if (!expectedGaId) {
     return;
@@ -733,13 +749,27 @@ export async function run() {
         `Expected dataLayer page_view event for ${expectedGaId}; runtime=${JSON.stringify(runtime)}`,
       );
       const network = homepageResult.analyticsNetwork ?? { failures: [], requests: [], responses: [] };
+      const collectResponses = network.responses.filter(
+        (entry) =>
+          isExpectedGaPageViewCollectUrl(entry.url, expectedGaId)
+          && entry.status >= 200
+          && entry.status < 400,
+      );
       assert(
         network.responses.some((entry) => entry.url.includes("googletagmanager.com/gtag/js") && entry.status === 200),
         `Expected successful gtag.js load for ${expectedGaId}; network=${JSON.stringify(network)}`,
       );
       assert(
-        network.failures.length === 0,
-        `Found failed analytics request(s) for ${expectedGaId}; failures=${JSON.stringify(network.failures)}`,
+        collectResponses.length > 0,
+        `Expected successful GA4 page_view collect request for ${expectedGaId}; network=${JSON.stringify(network)}`,
+      );
+      const successfulCollectUrls = new Set(collectResponses.map((entry) => entry.url));
+      const unexpectedFailures = network.failures.filter(
+        (failure) => !isToleratedGaCollectFailure(failure, successfulCollectUrls),
+      );
+      assert(
+        unexpectedFailures.length === 0,
+        `Found failed analytics request(s) for ${expectedGaId}; failures=${JSON.stringify(unexpectedFailures)}`,
       );
       assert(
         network.violations.length === 0,

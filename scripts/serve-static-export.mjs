@@ -104,7 +104,7 @@ let siteDataResolverPromise;
 
 async function getSiteDataResolver() {
   if (!siteDataResolverPromise) {
-    siteDataResolverPromise = import("../shared/lib/site-data-routes.ts").then(
+    siteDataResolverPromise = import("../shared/lib/site-data-lane.ts").then(
       (module) => module.resolveSiteDataUpstreamPath,
     );
   }

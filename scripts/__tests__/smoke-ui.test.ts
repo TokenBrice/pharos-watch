@@ -7,6 +7,8 @@ import {
   getOverflowRoutes,
   getOverflowWorkerCount,
   hasGaConfigInit,
+  isExpectedGaPageViewCollectUrl,
+  isToleratedGaCollectFailure,
   verifyAnalyticsSnippet,
 } from "../smoke-ui.mjs";
 
@@ -58,6 +60,46 @@ describe("getAnalyticsPayloadUrls", () => {
       "https://pharos.watch/__next._index.txt",
       "https://pharos.watch/__next._full.txt",
     ]);
+  });
+});
+
+describe("isExpectedGaPageViewCollectUrl", () => {
+  it("accepts successful GA4 page_view collect URLs from both GA hosts", () => {
+    expect(
+      isExpectedGaPageViewCollectUrl(
+        "https://analytics.google.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view",
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(true);
+    expect(
+      isExpectedGaPageViewCollectUrl(
+        "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view",
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects non-pageview or wrong-measurement collect URLs", () => {
+    expect(
+      isExpectedGaPageViewCollectUrl(
+        "https://analytics.google.com/g/collect?v=2&tid=G-OTHER&en=page_view",
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(false);
+    expect(
+      isExpectedGaPageViewCollectUrl(
+        "https://analytics.google.com/g/collect?v=2&tid=G-6TS0KG8H04&en=scroll",
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("isToleratedGaCollectFailure", () => {
+  it("tolerates Playwright net::ERR_ABORTED reports for collect URLs that also returned success", () => {
+    const url = "https://analytics.google.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view";
+    expect(isToleratedGaCollectFailure({ errorText: "net::ERR_ABORTED", url }, new Set([url]))).toBe(true);
+    expect(isToleratedGaCollectFailure({ errorText: "net::ERR_ABORTED", url }, new Set())).toBe(false);
   });
 });
 

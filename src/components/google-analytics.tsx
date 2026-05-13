@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 declare global {
   interface Window {
-    dataLayer?: unknown[][];
+    dataLayer?: Array<IArguments | unknown[]>;
     gtag?: (...args: unknown[]) => void;
   }
 }
@@ -23,14 +23,16 @@ export function GoogleAnalytics({ measurementId }: GoogleAnalyticsProps) {
     bootstrapped.current = true;
 
     window.dataLayer = window.dataLayer ?? [];
-    window.gtag = function gtag(...args: unknown[]) {
-      window.dataLayer?.push(args);
+    window.gtag = function gtag() {
+      // Match Google's standard snippet: gtag.js processes native arguments entries, not rest-parameter arrays.
+      // eslint-disable-next-line prefer-rest-params
+      window.dataLayer?.push(arguments);
     };
     window.gtag("consent", "default", {
-      ad_storage: "granted",
+      ad_storage: "denied",
       analytics_storage: "granted",
-      ad_user_data: "granted",
-      ad_personalization: "granted",
+      ad_user_data: "denied",
+      ad_personalization: "denied",
     });
     window.gtag("js", new Date());
     window.gtag("config", measurementId, { send_page_view: false });

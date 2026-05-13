@@ -64,6 +64,18 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "xmd-metal-dollar::USDC, PYUSD, and Paxos dollar stablecoin basket::USDC",
     "XMD's reserve slice aggregates a multi-stablecoin Paxos-dollar basket, so no single tracked stablecoin coinId is representative.",
   ],
+  [
+    "frax-frax::Intra-protocol Frax-owned tokens (sFRAX, frxUSD, sfrxUSD)::FRAX",
+    "FRAX's intra-protocol slice is a mixed self/protocol-owned bucket, not an upstream reserve asset that should inherit a single coinId.",
+  ],
+  [
+    "frax-frax::Intra-protocol Frax-owned tokens (sFRAX, frxUSD, sfrxUSD)::FRXUSD",
+    "FRAX's intra-protocol slice mixes frxUSD and related Frax-owned wrappers, so no single tracked coinId is representative.",
+  ],
+  [
+    "frax-frax::Other tokenized assets (BUIDL, USCC, AUSD, JTRSY)::BUIDL",
+    "FRAX's other-tokenized-assets slice aggregates BUIDL with USCC, AUSD, and JTRSY, so no single tracked coinId is representative.",
+  ],
 ]);
 
 describe("reserve coinId validation", () => {

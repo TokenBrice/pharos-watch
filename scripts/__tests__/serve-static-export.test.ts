@@ -135,6 +135,43 @@ describe("serve-static-export", () => {
     });
   });
 
+  it("proxies allowlisted /_site-data paths to their API upstream paths", async () => {
+    const upstream = createServer((req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({
+        url: req.url,
+        siteSecret: req.headers["x-pharos-site-proxy-secret"] ?? null,
+      }));
+    });
+    const upstreamBaseUrl = await listen(upstream);
+
+    const app = createStaticExportServer({
+      apiBaseUrl: "http://127.0.0.1:1",
+      siteApiBaseUrl: upstreamBaseUrl,
+      port: 0,
+      rootDir: await makeRoot(),
+    });
+    const baseUrl = await listen(app.server);
+    const previousSecret = process.env.STATIC_EXPORT_SITE_API_SHARED_SECRET;
+    process.env.STATIC_EXPORT_SITE_API_SHARED_SECRET = "site-secret";
+
+    try {
+      const response = await fetch(`${baseUrl}/_site-data/stablecoins?limit=1`);
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual({
+        url: "/api/stablecoins?limit=1",
+        siteSecret: "site-secret",
+      });
+    } finally {
+      if (previousSecret == null) {
+        delete process.env.STATIC_EXPORT_SITE_API_SHARED_SECRET;
+      } else {
+        process.env.STATIC_EXPORT_SITE_API_SHARED_SECRET = previousSecret;
+      }
+    }
+  });
+
   it("proxies POST bodies and headers for self-serve API endpoints", async () => {
     const upstream = createServer((req, res) => {
       let body = "";
